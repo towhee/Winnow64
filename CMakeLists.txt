@@ -10,13 +10,23 @@ if(NOT DEFINED CMAKE_OSX_DEPLOYMENT_TARGET)
     set(CMAKE_OSX_DEPLOYMENT_TARGET "12.0" CACHE STRING "Minimum macOS version")
 endif()
 
-project(Winnow VERSION 2.06 LANGUAGES C CXX)
+project(Winnow VERSION 3.0 LANGUAGES C CXX)
 
 # Single source of truth for the app version. project(VERSION ...) above feeds:
 #   - Main/winnow_version.h (generated below) -> the in-app version string
 #   - the macOS bundle CFBundleShortVersionString (set in bundle properties)
 #   - the deploy scripts, which read the version back from the built artifact
 # Bump the version in the project() line above and nowhere else.
+#
+# WINNOW_VERSION_LABEL is the user-facing version (About, update check, DMG /
+# installer name) and may carry a pre-release tag such as "3_beta". The numeric
+# PROJECT_VERSION stays in the fields Apple and Windows require to be numeric
+# (CFBundleShortVersionString, rc FILEVERSION). Leave the label empty for a plain
+# release and it falls back to PROJECT_VERSION.
+set(WINNOW_VERSION_LABEL "3_beta")
+if(NOT WINNOW_VERSION_LABEL)
+    set(WINNOW_VERSION_LABEL "${PROJECT_VERSION}")
+endif()
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/winnow_version.h.in"
     "${CMAKE_CURRENT_BINARY_DIR}/Main/winnow_version.h"

@@ -12,6 +12,12 @@
       - Remove keeps sky that is PALER than the reference sky above the stroke -- a fixed
         threshold removed it on Joffrey Lake, which is why the split is adaptive (Otsu);
       - Add fills holes that look like the mask colour, never the foreground around them;
+      - Add fills holes PALER than the mask colour (sky through branches, Paradise
+        Meadows) with no masked pixel near the stroke, and leaves trees AND snow out --
+        a fixed 0.08 "looks like the mask" added nothing there, which is why the split
+        is relative (k-means in chroma space);
+      - Add leaves lit snow out beside pale horizon sky -- same RGB lightness, told apart
+        only by chroma;
       - Fix Edge moves a mis-registered soft edge back onto the real one;
       - nothing outside the stroke's region changes, bit for bit.
 */
@@ -23,6 +29,8 @@ const cv::Vec3f kSky(0.40f, 0.60f, 0.90f);
 const cv::Vec3f kPaleSky(0.52f, 0.68f, 0.92f);   // ~0.15 from kSky: paler horizon sky
 const cv::Vec3f kSnow(0.95f, 0.95f, 0.95f);
 const cv::Vec3f kTrees(0.10f, 0.18f, 0.08f);
+const cv::Vec3f kHaze(0.60f, 0.66f, 0.80f);      // ~0.23 from kSky: sky through branches
+const cv::Vec3f kHorizon(0.72f, 0.78f, 0.87f);   // pale horizon sky, near snow in RGB
 
 cv::Mat solid(const cv::Vec3f &c) { return cv::Mat(H, W, CV_32FC3, cv::Scalar(c[0], c[1], c[2])); }
 
@@ -51,6 +59,8 @@ private slots:
     void removeTakesIntruderKeepsSky();
     void removeKeepsPalerHorizonSky();
     void addFillsHolesNotTrees();
+    void addFillsPaleHolesFarFromMask();
+    void addLeavesSnowOut();
     void fixEdgeSnapsToRealEdge();
     void outsideRegionUntouched();
 };
@@ -131,6 +141,79 @@ void TstMaskRefine::addFillsHolesNotTrees()
     const float holeA = meanWhere(m, hole), treeA = meanWhere(m, tree);
     QVERIFY2(holeA > 0.9f, qPrintable(QString("hole alpha %1").arg(holeA)));
     QVERIFY2(treeA < 0.05f, qPrintable(QString("tree alpha %1").arg(treeA)));
+}
+
+/* Paradise Meadows in miniature: trees with snow clumps and hazy sky holes, and the only
+   masked sky (deeper blue) in a far corner, outside the stroke's context box. */
+void TstMaskRefine::addFillsPaleHolesFarFromMask()
+{
+    cv::Mat rgb = solid(kTrees);
+    cv::rectangle(rgb, {200, 0}, {W - 1, 30}, cv::Scalar(kSky[0], kSky[1], kSky[2]), -1);
+    const int holes[3][2] = {{50, 100}, {90, 130}, {120, 95}};
+    const int snow[2][2] = {{70, 110}, {110, 140}};
+    for (auto &c : holes) cv::circle(rgb, {c[0], c[1]}, 7, cv::Scalar(kHaze[0], kHaze[1], kHaze[2]), -1);
+    for (auto &c : snow) cv::circle(rgb, {c[0], c[1]}, 7, cv::Scalar(kSnow[0], kSnow[1], kSnow[2]), -1);
+    std::vector<float> m(size_t(W) * H, 0.0f);
+    for (int y = 0; y <= 30; ++y) for (int x = 200; x < W; ++x) m[size_t(y) * W + x] = 1.0f;
+    std::vector<float> roi(m.size(), 0.0f);
+    for (int y = 80; y <= 155; ++y) for (int x = 30; x <= 140; ++x) roi[size_t(y) * W + x] = 1.0f;
+    MaskRefine::apply(m, roi, rgb, W, H, MaskRefine::Mode::Add);
+
+    auto within = [](int x, int y, const int (*c)[2], int n, int r) {
+        for (int i = 0; i < n; ++i)
+            if ((x - c[i][0]) * (x - c[i][0]) + (y - c[i][1]) * (y - c[i][1]) <= r * r) return true;
+        return false;
+    };
+    std::vector<bool> hole(m.size()), snowSel(m.size()), tree(m.size());
+    for (int y = 85; y <= 150; ++y)
+        for (int x = 35; x <= 135; ++x) {
+            const size_t k = size_t(y) * W + x;
+            hole[k] = within(x, y, holes, 3, 4);
+            snowSel[k] = within(x, y, snow, 2, 4);
+            tree[k] = !within(x, y, holes, 3, 11) && !within(x, y, snow, 2, 11);
+        }
+    const float holeA = meanWhere(m, hole), snowA = meanWhere(m, snowSel);
+    const float treeA = meanWhere(m, tree);
+    QVERIFY2(holeA > 0.9f, qPrintable(QString("hole alpha %1").arg(holeA)));
+    QVERIFY2(snowA < 0.05f, qPrintable(QString("snow alpha %1").arg(snowA)));
+    QVERIFY2(treeA < 0.05f, qPrintable(QString("tree alpha %1").arg(treeA)));
+
+    // Pure function of its inputs: the render caches depend on it (k-means is seeded).
+    std::vector<float> m2(size_t(W) * H, 0.0f);
+    for (int y = 0; y <= 30; ++y) for (int x = 200; x < W; ++x) m2[size_t(y) * W + x] = 1.0f;
+    MaskRefine::apply(m2, roi, rgb, W, H, MaskRefine::Mode::Add);
+    QVERIFY(m2 == m);
+}
+
+/* Masked sky above, snowy treetops below with pale horizon sky between them. */
+void TstMaskRefine::addLeavesSnowOut()
+{
+    cv::Mat rgb = solid(kSky);
+    cv::rectangle(rgb, {0, 90}, {W - 1, H - 1}, cv::Scalar(kSnow[0], kSnow[1], kSnow[2]), -1);
+    const int holes[3][2] = {{70, 110}, {120, 115}, {170, 108}};
+    for (auto &c : holes)
+        cv::circle(rgb, {c[0], c[1]}, 6, cv::Scalar(kHorizon[0], kHorizon[1], kHorizon[2]), -1);
+    std::vector<float> m(size_t(W) * H, 0.0f);
+    for (int y = 0; y < 90; ++y) for (int x = 0; x < W; ++x) m[size_t(y) * W + x] = 1.0f;
+    std::vector<float> roi(m.size(), 0.0f);
+    for (int y = 80; y <= 130; ++y) for (int x = 40; x <= 200; ++x) roi[size_t(y) * W + x] = 1.0f;
+    MaskRefine::apply(m, roi, rgb, W, H, MaskRefine::Mode::Add);
+
+    std::vector<bool> hole(m.size()), snowSel(m.size());
+    for (int y = 0; y < H; ++y)
+        for (int x = 0; x < W; ++x) {
+            bool inHole = false, nearHole = false;
+            for (auto &c : holes) {
+                const int d2 = (x - c[0]) * (x - c[0]) + (y - c[1]) * (y - c[1]);
+                inHole |= d2 <= 3 * 3;
+                nearHole |= d2 <= 10 * 10;
+            }
+            hole[size_t(y) * W + x] = inHole;
+            snowSel[size_t(y) * W + x] = y >= 96 && y <= 126 && x >= 46 && x <= 194 && !nearHole;
+        }
+    const float holeA = meanWhere(m, hole), snowA = meanWhere(m, snowSel);
+    QVERIFY2(holeA > 0.9f, qPrintable(QString("hole alpha %1").arg(holeA)));
+    QVERIFY2(snowA < 0.05f, qPrintable(QString("snow alpha %1").arg(snowA)));
 }
 
 /* A crisp sky/ridge step at y = 90, but the mask's edge is soft and sits 4 px too low --

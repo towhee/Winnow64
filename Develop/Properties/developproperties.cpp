@@ -559,8 +559,48 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
     syncRawPanel();
 }
 
+void DevelopProperties::syncLensPanel()
+{
+    EditParams g;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (!s.scopes.isEmpty()) g = s.scopes.at(0).params;
+    emit lensStateChanged(g.wantsRemoveCA(G::autoRemoveCA, currentIsRaw()),
+                          qRound(g.defringePurple * 100.0f), qRound(g.defringeGreen * 100.0f));
+}
+
+void DevelopProperties::setGlobalRemoveCA(bool on)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    const int want = on ? 1 : 0;
+    if (s.scopes[0].params.removeCA == want) return;
+    s.scopes[0].params.removeCA = want;
+    noteScopeEdit("Global", "Remove chromatic aberration", on ? "On" : "Off",
+                  "global/removeCA");
+    emit paramsChanged();
+}
+
+void DevelopProperties::setGlobalDefringe(bool purple, int value0to100)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    const float f = qBound(0, value0to100, 100) / 100.0f;
+    float &field = purple ? s.scopes[0].params.defringePurple
+                          : s.scopes[0].params.defringeGreen;
+    if (field == f) return;
+    field = f;
+    noteScopeEdit("Global", purple ? "Defringe purple" : "Defringe green",
+                  QString::number(value0to100),
+                  purple ? "global/defringePurple" : "global/defringeGreen");
+    emit paramsChanged();
+}
+
 void DevelopProperties::syncRawPanel()
 {
+    /* Lens corrections apply to JPEGs too, so this runs before the raw-only gate. */
+    syncLensPanel();
     if (!rawPanel) return;
     const bool raw = currentIsRaw();
     /* Raw-decode strip: raw files only. */
@@ -1448,6 +1488,15 @@ bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
         return o.value("strokes").toArray().isEmpty();
     if (m.tool == int(MaskTool::ColorRange))
         return o.value("samples").toArray().isEmpty();
+    /* ONE-CLICK masks: for Subject / Sky / Background, choosing the tool IS the whole
+       edit -- the model draws the mask -- so "still as created" is not "never made".
+       Test 2 used to call a fresh Sky submask untouched: the settle timer never
+       committed it, and the next Add Submask flushed it away ("Cancel submask",
+       2026-10-07), leaving the scope empty and the Refine Brush greyed for want of a
+       mask to refine. */
+    if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
+        m.tool == int(MaskTool::Background))
+        return false;
 
     return m.tool     == pendingPristine.tool
         && m.inverted == pendingPristine.inverted
@@ -7753,12 +7802,15 @@ const FloatField kFloatFields[] = {
     {"grainAmount",         &EditParams::grainAmount},
     {"grainSize",           &EditParams::grainSize},
     {"grainRoughness",      &EditParams::grainRoughness},
+    {"defringePurple",      &EditParams::defringePurple},
+    {"defringeGreen",       &EditParams::defringeGreen},
 };
 struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
     {"viewTransform", &EditParams::viewTransform},
     {"denoiseRaw", &EditParams::denoiseRaw},
+    {"removeCA", &EditParams::removeCA},
 };
 
 /* The tone curve cannot go in kFloatFields: it is three ARRAYS, and the table above is

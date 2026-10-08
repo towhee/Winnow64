@@ -244,8 +244,10 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         sixth data repair: JPEG/PNG GPS was decoded from a fixed base of 12 instead of
         the Exif start, so it clears the freshness stamp of every JPEG/PNG row holding
         a coordinate and the next scan re-reads it; version 20 added image.change_seq and
-        catalog_meta, the change sequence the library snapshot is checked against. */
-    QCOMPARE(CacheDb::schemaVersion(), 20);
+        catalog_meta, the change sequence the library snapshot is checked against;
+        version 21 added NO table -- the seventh data repair: picks became session-only,
+        so it clears image.pick, which an unpick never reached. */
+    QCOMPARE(CacheDb::schemaVersion(), 21);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

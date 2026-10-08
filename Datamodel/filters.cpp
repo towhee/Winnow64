@@ -3993,7 +3993,7 @@ void Filters::setSoloMode(bool isSolo)
 void Filters::applyCss(const QString &css)
 {
 /*
-    The Filters tree reads two sizes smaller than the rest of the app, the same size as
+    The Filters tree reads smaller than the rest of the app (85%), the same size as
     the Folders tree (G::panelFontSize).
 */
     if (G::isLogger) G::log("Filters::applyCss");

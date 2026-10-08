@@ -214,6 +214,22 @@ elseif(WIN32)
     target_link_libraries(tst_maskrefine PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
+# tst_lenscorrect tests Develop/lenscorrect.h -- lateral CA correction (radial R/B scale
+# estimated from the image) and defringe (edge colour pulled to the two-sided linear mix)
+# -- on synthetic scenes with known truth: a known shift recovered, clean colour edges left
+# alone, an axial fringe removed, clipped highlights untouched. OpenCV core + imgproc.
+winnow_add_unit_test(tst_lenscorrect unit/tst_lenscorrect.cpp)
+if(APPLE)
+    target_include_directories(tst_lenscorrect PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_lenscorrect PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_lenscorrect PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(tst_lenscorrect PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_lenscorrect PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
 # tst_devpreview tests Cache/devpreviewcache.cpp, the on-disk cache of develop
 # previews (already in the shared closure above).
 winnow_add_unit_test(tst_devpreview unit/tst_devpreview.cpp)

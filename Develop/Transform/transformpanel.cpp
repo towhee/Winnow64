@@ -28,6 +28,8 @@
 #include <QSignalBlocker>
 #include <QRegularExpression>
 #include <QKeyEvent>
+#include <QCheckBox>
+#include <QSlider>
 
 namespace {
 /* Padlock icon for the aspect-lock toggle, painted rather than loaded, so it needs no
@@ -143,6 +145,17 @@ TransformPanel::TransformPanel(QWidget *parent, QSettings *settings)
     if (G::isLogger) G::log("TransformPanel::TransformPanel");
     loadCustomAspects();
     buildUi();
+}
+
+void TransformPanel::setLens(bool caOn, int purple0to100, int green0to100)
+{
+    if (!caCheck) return;
+    const QSignalBlocker b1(caCheck), b2(fringePurple), b3(fringeGreen);
+    caCheck->setChecked(caOn);
+    fringePurple->setValue(purple0to100);
+    fringeGreen->setValue(green0to100);
+    fringePurpleVal->setText(QString::number(purple0to100));
+    fringeGreenVal->setText(QString::number(green0to100));
 }
 
 void TransformPanel::buildUi()
@@ -362,6 +375,62 @@ void TransformPanel::buildUi()
     grid->addWidget(warpModeBtn,  2, 0);
     grid->addWidget(warpHint,     2, 1, 1, 2);
     grid->addWidget(warpResetBtn, 2, 4);
+
+    /* -------- Lens (Global recipe values, not a mode) --------
+       Remove chromatic aberration re-aligns red and blue to green radially (lateral CA);
+       Defringe pulls the coloured rim along high-contrast edges back to the colour a true
+       mix of the two sides would have. Both run on the whole image before every other
+       develop step -- see Develop/lenscorrect.h. */
+    QLabel *lensLbl = new QLabel(tr("Lens"), this);
+    lensLbl->setStyleSheet(G::labelCss(G::textColor));
+    caCheck = new QCheckBox(tr("Remove chromatic aberration"), this);
+    caCheck->setToolTip(tr("Re-align red and blue with green, measured from this image: "
+                           "removes the colour fringe that grows toward the corners. "
+                           "Preferences can turn it on for every raw file."));
+    connect(caCheck, &QCheckBox::toggled, this, &TransformPanel::removeCAToggled);
+    BarBtn *lensResetBtn = new BarBtn();
+    lensResetBtn->setIcon(":/images/icon16/reset.png", G::iconOpacity);
+    lensResetBtn->setToolTip(tr("Turn chromatic aberration removal and defringe off"));
+    connect(lensResetBtn, &BarBtn::clicked, this, [this]{
+        emit removeCAToggled(false);
+        emit defringeChanged(true, 0);
+        emit defringeChanged(false, 0);
+    });
+    auto makeFringe = [&](bool purple, QSlider *&slider, QLabel *&val) {
+        QLabel *lbl = new QLabel(purple ? tr("Purple") : tr("Green"), this);
+        lbl->setStyleSheet(G::labelCss(G::textColor));
+        lbl->setToolTip(purple
+            ? tr("Defringe the cyan, blue, purple and magenta rim along high-contrast edges")
+            : tr("Defringe the green rim along high-contrast edges"));
+        slider = new QSlider(Qt::Horizontal, this);
+        slider->setRange(0, 100);
+        slider->setToolTip(lbl->toolTip());
+        val = new QLabel("0", this);
+        val->setStyleSheet(G::labelCss(G::textColor));
+        val->setMinimumWidth(24);
+        connect(slider, &QSlider::valueChanged, this, [this, purple, val](int v){
+            val->setText(QString::number(v));
+            emit defringeChanged(purple, v);
+        });
+        QHBoxLayout *row = new QHBoxLayout;
+        row->setSpacing(6);
+        row->addWidget(slider, 1);
+        row->addWidget(val);
+        return std::make_pair(lbl, row);
+    };
+    auto purpleRow = makeFringe(true, fringePurple, fringePurpleVal);
+    auto greenRow  = makeFringe(false, fringeGreen, fringeGreenVal);
+    QLabel *fringeLbl = new QLabel(tr("Defringe"), this);
+    fringeLbl->setStyleSheet(G::labelCss(G::textColor));
+
+    grid->addWidget(lensLbl,          3, 0);
+    grid->addWidget(caCheck,          3, 1, 1, 3);
+    grid->addWidget(lensResetBtn,     3, 4);
+    grid->addWidget(fringeLbl,        4, 0);
+    grid->addWidget(purpleRow.first,  4, 1);
+    grid->addLayout(purpleRow.second, 4, 2, 1, 2);
+    grid->addWidget(greenRow.first,   5, 1);
+    grid->addLayout(greenRow.second,  5, 2, 1, 2);
 
     /* -------- Assemble -------- */
     /* The bottom margin reserves the panel separator rule drawn in paintEvent. */

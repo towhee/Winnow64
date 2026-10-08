@@ -281,6 +281,18 @@ void Preferences::itemChange(QModelIndex idx)
                                G::buildDevPreviewsInBackground);
     }
 
+    if (source == "autoRemoveCA") {
+        G::autoRemoveCA = v.toBool();
+        mw->settings->setValue("Develop/autoRemoveCA", G::autoRemoveCA);
+        /* An unset recipe follows it: the Lens checkbox and the current render change.
+           (Metadata::defaultRenderKey / devPreviewKey hash it, so cached previews built
+           under the other setting are simply not served.) */
+        if (mw->developProperties) {
+            mw->developProperties->syncLensPanel();
+            emit mw->developProperties->paramsChanged();
+        }
+    }
+
     if (source == "imageCacheSize") {
         QString size = v.toString();
 
@@ -1571,6 +1583,25 @@ void Preferences::addDevPreviews()
     i.captionIsEditable = false;
     i.value = G::buildDevPreviewsInBackground;
     i.key = "buildDevPreviewsInBackground";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Auto-remove chromatic aberration on raw files
+    i.name = "autoRemoveCA";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Remove chromatic aberration on raw files";
+    i.tooltip = "Re-align red and blue with green on every raw file you have not\n"
+                "set yourself: removes the colour fringe that grows toward the\n"
+                "corners, measured from each image.\n\n"
+                "An image where you ticked or unticked \"Remove chromatic\n"
+                "aberration\" in the Transform panel keeps your choice.\n"
+                "JPEGs are never corrected automatically: most cameras already\n"
+                "did it.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoRemoveCA;
+    i.key = "autoRemoveCA";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

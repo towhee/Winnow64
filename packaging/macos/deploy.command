@@ -89,11 +89,18 @@ NOTARIZED_APP_PATH=""
 NOTARIZED_ZIP_PATH=""
 DMG_PATH=""
 
-# Read CFBundleShortVersionString from a built bundle and (re)compute names.
+# Resolve the version label (WINNOW_VERSION from the generated winnow_version.h,
+# e.g. "3_beta" — the same source the Windows script reads; Qt's Info.plist
+# template has no free-form version key) and (re)compute names. Falls back to the
+# bundle's numeric CFBundleShortVersionString when the header is absent.
 function resolve_version() {
     local app="$1"
-    WINNOW_VERSION=$(/usr/libexec/PlistBuddy -c "Print CFBundleShortVersionString" \
-        "$app/Contents/Info.plist" 2>/dev/null)
+    local header="${BUILD_DIR}/Main/winnow_version.h"
+    WINNOW_VERSION=""
+    [[ -f "$header" ]] && WINNOW_VERSION=$(sed -n \
+        's/^#define[[:space:]]*WINNOW_VERSION[[:space:]]*"\([^"]*\)".*/\1/p' "$header")
+    [[ -z "$WINNOW_VERSION" ]] && WINNOW_VERSION=$(/usr/libexec/PlistBuddy \
+        -c "Print CFBundleShortVersionString" "$app/Contents/Info.plist" 2>/dev/null)
     if [[ -z "$WINNOW_VERSION" || "$WINNOW_VERSION" == "1.0" ]]; then
         echo "⚠️  Bundle version is '$WINNOW_VERSION' — expected the project version."
         echo "    Ensure CMakeLists project(VERSION ...) is set and the app was rebuilt."
@@ -173,6 +180,14 @@ function deployQt() {
     fi
     echo "⚙️  Running macdeployqt…"
     "$QTBIN_DIR/macdeployqt" "$STAGING_APP_PATH" -appstore-compliant -verbose=2 || return 1
+
+    # Winnow only uses QSQLITE. macdeployqt copies every SQL driver Qt ships, and
+    # some link client libraries outside the bundle (Qt 6.11's qsqlmimer ->
+    # /usr/local/lib/libmimerapi.dylib), which fails the vanilla-Mac check.
+    local sqldir="$STAGING_APP_PATH/Contents/PlugIns/sqldrivers"
+    if [[ -d "$sqldir" ]]; then
+        find "$sqldir" -type f -name "*.dylib" ! -name "libqsqlite.dylib" -print -delete
+    fi
     echo "   ✓ Qt frameworks deployed"
 }
 
