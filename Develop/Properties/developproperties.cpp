@@ -1230,6 +1230,20 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     Q_UNUSED(first)
     noteMaskInteraction();
     emit paramsChanged();        // overlay/tint (red committed, blue pending)
+
+    /* Object Mask starts empty and waits for a traced boundary, which is not obvious. The
+       first 3 uses get a popup; after that the hint stays in the status bar only. */
+    if (tool == int(MaskTool::Object)) {
+        const QString hint = "Use the brush to outline the object(s)";
+        const int n = setting->value("Develop/objectMaskHintCount", 0).toInt();
+        if (n < 3) {
+            setting->setValue("Develop/objectMaskHintCount", n + 1);
+            if (G::popup) G::popup->showPopupNow(hint, 3000);
+        }
+        else if (G::relay) {
+            emit G::relay->updateStatus(true, hint, "DevelopProperties::beginMaskTool");
+        }
+    }
 }
 
 bool DevelopProperties::sharpenMaskPreviewActive() const
@@ -2738,6 +2752,8 @@ void DevelopProperties::showMaskMenu()
     int op = int(MaskOp::Add), tool = -1;
     if (!SubmaskDialog::choose(this, scope->components.isEmpty(), op, tool)) return;
     onMaskToolChosen(tool, op);
+    // a submask just created by request: show the overlay so the user sees it build
+    emit maskOverlayShowRequested();
 }
 
 void DevelopProperties::deleteMask(int index)

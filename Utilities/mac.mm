@@ -5,6 +5,7 @@
 #import <AppKit/NSSharingService.h>
 #import <Cocoa/Cocoa.h>
 #import <sys/mount.h>
+#import <objc/runtime.h>
 #import <IOKit/IOBSD.h>
 #import <IOKit/usb/IOUSBLib.h>
 #import <IOKit/storage/IOMedia.h>
@@ -518,4 +519,83 @@ QStringList Mac::listMountedVolumes()
     IOObjectRelease(iter);
     return usbList;
 */
+}
+
+/*
+    DRAG COUNT BADGE. A multi-file drag on macOS is one NSDraggingItem per URL (Qt's
+    QCocoaDrag::maybeDragMultipleItems), and AppKit badges the cursor with that number.
+    A thumbnail drag carries each image's sidecars as URLs too (G::includeSidecars), so
+    over a target that only takes images -- the Collections panel -- the badge
+    over-counts. AppKit lets the DESTINATION correct it through
+    NSDraggingInfo.numberOfValidItemsForDrop, but Qt never touches it and does not
+    expose the dragging info, so QNSView's draggingEntered:/draggingUpdated: are wrapped
+    here. Qt delivers the QDragEnter/QDragMove event SYNCHRONOUSLY inside those calls:
+    the wrapper clears the request, calls Qt, and if a widget asked for a count during
+    the event (setDragBadgeCount) applies it. When no widget asks -- the drag moved on to
+    another widget -- the count AppKit started with is put back, so the correction never
+    leaks onto other targets. Keyed by draggingSequenceNumber so a new drag starts
+    clean.
+*/
+namespace {
+int gDragBadgeRequest = -1;     // set by the widget during the current Qt event
+NSInteger gDragBadgeSaved = -1; // AppKit's own count while ours is showing
+NSInteger gDragBadgeSequence = -1;
+IMP gOrigDraggingEntered = nullptr;
+IMP gOrigDraggingUpdated = nullptr;
+
+void applyDragBadge(id<NSDraggingInfo> sender)
+{
+    if (sender.draggingSequenceNumber != gDragBadgeSequence) {
+        gDragBadgeSequence = sender.draggingSequenceNumber;
+        gDragBadgeSaved = -1;
+    }
+    if (gDragBadgeRequest > 0) {
+        if (gDragBadgeSaved < 0) gDragBadgeSaved = sender.numberOfValidItemsForDrop;
+        sender.numberOfValidItemsForDrop = gDragBadgeRequest;
+    }
+    else if (gDragBadgeSaved >= 0) {
+        sender.numberOfValidItemsForDrop = gDragBadgeSaved;
+        gDragBadgeSaved = -1;
+    }
+}
+
+NSDragOperation badgedDraggingEntered(id self, SEL cmd, id<NSDraggingInfo> sender)
+{
+    gDragBadgeRequest = -1;
+    using Fn = NSDragOperation (*)(id, SEL, id<NSDraggingInfo>);
+    const NSDragOperation op = reinterpret_cast<Fn>(gOrigDraggingEntered)(self, cmd, sender);
+    applyDragBadge(sender);
+    return op;
+}
+
+NSDragOperation badgedDraggingUpdated(id self, SEL cmd, id<NSDraggingInfo> sender)
+{
+    gDragBadgeRequest = -1;
+    using Fn = NSDragOperation (*)(id, SEL, id<NSDraggingInfo>);
+    const NSDragOperation op = reinterpret_cast<Fn>(gOrigDraggingUpdated)(self, cmd, sender);
+    applyDragBadge(sender);
+    return op;
+}
+}  // namespace
+
+void Mac::installDragBadgeHook()
+{
+    if (gOrigDraggingEntered) return;
+    Class cls = NSClassFromString(@"QNSView");
+    if (!cls) {
+        qWarning() << "Mac::installDragBadgeHook: QNSView not found";
+        return;
+    }
+    Method entered = class_getInstanceMethod(cls, @selector(draggingEntered:));
+    Method updated = class_getInstanceMethod(cls, @selector(draggingUpdated:));
+    if (!entered || !updated) return;
+    gOrigDraggingEntered = method_setImplementation(
+        entered, reinterpret_cast<IMP>(badgedDraggingEntered));
+    gOrigDraggingUpdated = method_setImplementation(
+        updated, reinterpret_cast<IMP>(badgedDraggingUpdated));
+}
+
+void Mac::setDragBadgeCount(int n)
+{
+    gDragBadgeRequest = n;
 }

@@ -810,6 +810,7 @@ void ImageView::endMaskEdit()
        hidden) would leave the red tint painted over the image. */
     const bool wasAvailable = maskTintAvailable();
     if (!scopeMaskTint.isNull()) { scopeMaskTint = QImage(); viewport()->update(); }
+    scopeHasMask = false;
     if (!maskEditMode) {
         if (wasAvailable) emit maskTintAvailabilityChanged(false);
         return;
@@ -1496,11 +1497,24 @@ void ImageView::setScopeMaskTint(const QImage &tint)
 
 void ImageView::clearScopeMaskTint()
 {
+    /* MW's "nothing to tint" path: no mask on the active scope (or no image), so the
+       availability goes with the veil. */
     maskBrushVeilStale = false;
-    if (scopeMaskTint.isNull()) return;
-    scopeMaskTint = QImage();
-    if (!maskTintAvailable()) emit maskTintAvailabilityChanged(false);
-    viewport()->update();
+    const bool wasAvailable = maskTintAvailable();
+    scopeHasMask = false;
+    if (!scopeMaskTint.isNull()) {
+        scopeMaskTint = QImage();
+        viewport()->update();
+    }
+    if (wasAvailable && !maskTintAvailable()) emit maskTintAvailabilityChanged(false);
+}
+
+void ImageView::setScopeHasMask(bool hasMask)
+{
+    if (hasMask == scopeHasMask) return;
+    const bool wasAvailable = maskTintAvailable();
+    scopeHasMask = hasMask;
+    if (maskTintAvailable() != wasAvailable) emit maskTintAvailabilityChanged(!wasAvailable);
 }
 
 void ImageView::setSharpenMaskImage(const QImage &mask)
@@ -1588,7 +1602,7 @@ void ImageView::toggleMaskTint()
     /* "M"/"O": flip the mask overlay tint hidden/shown so the user can see the image
        without the red coverage. Works while editing a mask AND while a committed-mask
        tint is displayed (maskEditMode off but a tint is present). */
-    if (!maskEditMode && scopeMaskTint.isNull()) return;
+    if (!maskTintAvailable()) return;
     maskTintHidden = !maskTintHidden;
     emit maskTintVisibilityChanged(!maskTintHidden);
     viewport()->update();
@@ -1600,7 +1614,7 @@ void ImageView::hideMaskTint()
        the way so the user sees the effect on the masked pixels. Re-shown only by an
        explicit toggle ("M"/"O", the tint button, the scope menu). Applies to the
        committed-mask display too. */
-    if (maskTintHidden || (!maskEditMode && scopeMaskTint.isNull())) return;
+    if (maskTintHidden || !maskTintAvailable()) return;
     maskTintHidden = true;
     emit maskTintVisibilityChanged(false);
     viewport()->update();
@@ -1608,10 +1622,10 @@ void ImageView::hideMaskTint()
 
 void ImageView::showMaskTint()
 {
-    /* Un-hide the tint. NOT CONNECTED since 2026-10-07: the overlay starts hidden and is
-       shown only by an explicit toggle (toggleMaskTint). This was the scope-selection
-       auto-show (DevelopProperties::maskTintShowRequested), kept for when the auto-show
-       rules are decided. */
+    /* Un-hide the tint. The overlay starts hidden and is shown by an explicit toggle
+       (toggleMaskTint) or here, when a new submask is chosen in SubmaskDialog
+       (DevelopProperties::maskOverlayShowRequested). The scope-selection auto-show
+       (maskTintShowRequested) has been disconnected since 2026-10-07. */
     if (!maskTintHidden) return;
     maskTintHidden = false;
     emit maskTintVisibilityChanged(true);

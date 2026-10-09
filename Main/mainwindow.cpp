@@ -11732,8 +11732,57 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     if (needsSubject)   ensureSubjectMask(fPath, *work, mj.global, degrees);   // Background = inverted subject
     else if (isSky)     ensureSkyMask(fPath, *work, mj.global, degrees);
     else if (isDepth)   ensureDepthMask(fPath, *work, mj.global, degrees);
-    else if (isObject)  ensureObjectMask(fPath, *work, mj.global, degrees, paramsJson);  // warms encoder; decodes if a stroke exists
+    // Object: warms the encoder; decodes if a stroke exists
+    else if (isObject)  ensureObjectMask(fPath, *work, mj.global, degrees, paramsJson);
     imageView->viewport()->update();   // heal the tint now the ref exists
+    if (!isObject) reportEmptyAiMask(tool, fPath);
+}
+
+void MW::reportEmptyAiMask(int tool, const QString &fPath)
+{
+/*
+    An automatic mask that comes back with no coverage looks exactly like a mask that has
+    not been built yet -- the tint simply never appears -- so say so. Two outcomes count:
+    no ref at all (the model failed to load or inference failed) and a ref that selects
+    essentially nothing (fewer than kMinCovered of its pixels above 0.5 -- the model found
+    no subject / no sky). Called only from the user's gesture (onAiMaskEditBegin), never
+    from the render paths, so a slider drag on an empty mask does not repeat the popup.
+    Object Mask is excluded: its coverage follows the user's trace, and an unclosed trace
+    is "nothing yet", not a failure. Depth reports only a failed build: its field is
+    continuous, and an empty selection is the user's Near/Far band, not the model.
+*/
+    if (G::isLogger) G::log("MW::reportEmptyAiMask");
+    constexpr double kMinCovered = 0.001;
+    // Subject coverage is float 0..1, Sky is uint8 0..255: half of full scale either way
+    auto coveredFraction = [](const auto &cov, auto half) {
+        if (cov.empty()) return 0.0;
+        size_t n = 0;
+        for (auto v : cov) if (v > half) ++n;
+        return double(n) / double(cov.size());
+    };
+
+    QString name, msg;
+    if (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background)) {
+        name = (tool == int(MaskTool::Subject)) ? "Select Subject" : "Select Background";
+        const auto r = SubjectMask::getRef(fPath);
+        if (!r) msg = name + " failed: the subject model did not produce a result.";
+        else if (coveredFraction(r->cov, 0.5f) < kMinCovered)
+            msg = (tool == int(MaskTool::Subject))
+                ? "Select Subject returned nothing: no subject was found in this image."
+                : "Select Background found no subject in this image,<br>"
+                  "so the mask covers the whole image.";
+    }
+    else if (tool == int(MaskTool::Sky)) {
+        const auto r = SkyMask::getRef(fPath);
+        if (!r) msg = "Select Sky failed: the sky model did not produce a result.";
+        else if (coveredFraction(r->cov, uint8_t(127)) < kMinCovered)
+            msg = "Select Sky returned nothing: no sky was found in this image.";
+    }
+    else if (tool == int(MaskTool::Depth)) {
+        if (!DepthMask::getRef(fPath))
+            msg = "Depth Range failed: the depth model did not produce a result.";
+    }
+    if (!msg.isEmpty() && G::popup) G::popup->showPopup(msg, 4000);
 }
 
 void MW::updateMaskOverlayTint()
@@ -11775,14 +11824,6 @@ void MW::updateMaskOverlayTint()
     if (imageView->maskStrokeInFlight()
         && developProperties->pendingMaskOp() == int(MaskOp::Add)) return;
     if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
-    /* HIDDEN -> do not build it. drawForeground will not paint the veil while it is
-       hidden ("O" off, or an adjustment slider pushed it out of the way), so every
-       millisecond spent compositing one is wasted -- and at the proxy resolution this
-       builds at, that was the largest single item on the GUI thread during a brush drag.
-       The stored QImage is deliberately left alone rather than cleared: it is not drawn,
-       and re-showing rebuilds it (MW listens to maskTintVisibilityChanged), so there is
-       no flash of an empty overlay in between. */
-    if (!imageView->maskTintVisible()) return;
 
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
@@ -11818,6 +11859,19 @@ void MW::updateMaskOverlayTint()
         masks.append(components.at(i));
     }
     if (masks.isEmpty()) { imageView->clearScopeMaskTint(); return; }
+    /* There IS a mask to tint, so the tint toggle must work even though the veil may
+       not be built yet -- it starts hidden, and the hidden early-out below never builds
+       it. Report that before the early-out, or "O" / the tint button refuse with the
+       Global-scope message on a mask scope. */
+    imageView->setScopeHasMask(true);
+    /* HIDDEN -> do not build it. drawForeground will not paint the veil while it is
+       hidden ("O" off, or an adjustment slider pushed it out of the way), so every
+       millisecond spent compositing one is wasted -- and at the proxy resolution this
+       builds at, that was the largest single item on the GUI thread during a brush drag.
+       The stored QImage is deliberately left alone rather than cleared: it is not drawn,
+       and re-showing rebuilds it (MW listens to maskTintVisibilityChanged), so there is
+       no flash of an empty overlay in between. */
+    if (!imageView->maskTintVisible()) return;
     const bool hasPending = (pendIdx >= 0);
     const bool hasFocus   = (focusIdx >= 0);
     if (hasPending) masks[pendIdx].op = developProperties->pendingMaskOp();

@@ -7566,3 +7566,5 @@ DEPLOYMENT
 
 http://165.227.46.158/winnow_mac/beta/Winnow3_beta.dmg
 http://winnow.ca/winnow_mac/beta/Winnow3_beta.dmg
+Users/roryhill/Pictures/Zenfolio/pbase2048/pbase2048 Archive/_R0A3082.jpg
+Users/roryhill/Pictures/4K/2024-10-08_0278 Focus Stack.jpg

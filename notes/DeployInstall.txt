@@ -14,7 +14,7 @@ migan, lama, sam2_encoder, sam2_decoder, ~771 MB together -- are downloaded on d
 
     https://winnow.ca/winnow/models/<stem>-<version>.onnx
 
-the first time a user runs a feature that needs one. They land in
+the first time a user runs a fDocumentationeature that needs one. They land in
 <AppData>/Winnow/Models. See Utilities/modelstore.h for the design.
 
 *** THE ONE RULE: THAT SERVER DIRECTORY IS APPEND-ONLY. ***

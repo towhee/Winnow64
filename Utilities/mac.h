@@ -40,6 +40,12 @@ public:
     static void share(QList<QUrl> &urls, WId wId);
     static QStringList listMountedVolumes();
 
+    /* DRAG COUNT BADGE. installDragBadgeHook() once at start-up; a drop target then
+       calls setDragBadgeCount(n) from its dragEnter/dragMove handler to make the
+       Finder-style count on the drag cursor read n while over it. See mac.mm. */
+    static void installDragBadgeHook();
+    static void setDragBadgeCount(int n);
+
 private:
     typedef struct {
         CFUUIDRef dispuuid;

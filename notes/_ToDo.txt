@@ -17,6 +17,7 @@ BUGS / TO
 - UI should be consistent - diff sliders in transfor change
 - Drag thumb to collection.  Drag another thumb to collection without clicking once on
   thumb without dragging.  "Already in ..."
+- apply content masks to multiple images
 - If a file has both flat keywords and nested, only use the nested ones unless there is a
   flat keyword without a matching nested one..
 - Make new mask one step, incl name in Add submask dialog.

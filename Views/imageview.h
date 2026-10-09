@@ -229,6 +229,7 @@ public slots:
        clear when no tool is expanded. */
     void setScopeMaskTint(const QImage &tint);
     void clearScopeMaskTint();
+    void setScopeHasMask(bool hasMask);
 
     /* The Detail panel's SHARPENING mask preview (MW::updateSharpenMaskPreview): the
        sharpen edge gate as a GRAYSCALE image -- white sharpened, black protected -- shown
@@ -282,11 +283,15 @@ public slots:
        it: the veil is a full-resolution overlay rebuilt on every drag tick, and while
        it is hidden drawForeground ignores it, so building it is pure cost. */
     bool maskTintVisible() const { return !maskTintHidden; }
-    /* Whether there is anything to tint at all: a mask tool is expanded, or a committed
-       mask's composite is on display. False on the Global scope (no mask), where the
-       tint toggle has nothing to act on -- the action-row button reads this to show
-       itself as unavailable instead of silently doing nothing. */
-    bool maskTintAvailable() const { return maskEditMode || !scopeMaskTint.isNull(); }
+    /* Whether there is anything to tint at all: a mask tool is expanded, or the active
+       scope has a committed mask (scopeHasMask, pushed by MW::updateMaskOverlayTint).
+       False on the Global scope (no mask), where the tint toggle has nothing to act on
+       -- the action-row button reads this to show itself as unavailable instead of
+       silently doing nothing. It must NOT key off the built veil (scopeMaskTint): MW
+       skips building it while hidden, and the tint starts hidden, so that would refuse
+       the very toggle that shows it. */
+    bool maskTintAvailable() const
+         { return maskEditMode || scopeHasMask || !scopeMaskTint.isNull(); }
     /* True while the in-flight stroke is an ERASE (Opt held AND the submask already had
        coverage to erase). Only then does Opt belong to the stroke, so only then must MW
        stop reading it as the Subtract op modifier -- an Opt stroke on an empty submask
@@ -802,6 +807,9 @@ private:
        tint button, "M"/"O", the scope menu) -- by request, 2026-10-07: the automatic
        re-show on scope selection got in the way. When to auto-show is to be decided. */
     bool    maskTintHidden = true;
+    /* The active scope has a committed mask to tint, whether or not its veil is built
+       (see maskTintAvailable). */
+    bool    scopeHasMask = false;
     /* The geometry the displayed render carries (see setDevelopGeometry), with the
        input->output pixel transform and output size cached: the warp case builds a
        homography, and the overlays ask for it on every paint. */
