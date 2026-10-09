@@ -366,6 +366,11 @@ void KeywordTree::contextMenuEvent(QContextMenuEvent *event)
                      "in the keyword list and in the images.");
     connect(tidy, &QAction::triggered, this, &KeywordTree::tidyRequested);
 
+    QAction *audit = menu.addAction("Audit keywords...");
+    audit->setToolTip("Find images whose keywords do not match how they look, compared "
+                      "with your other images carrying the same keywords.");
+    connect(audit, &QAction::triggered, this, &KeywordTree::auditRequested);
+
     QAction *build = menu.addAction("Build vocabulary from catalog");
     build->setToolTip("Add a keyword for everything the catalog has indexed. "
                       "Never removes anything.");

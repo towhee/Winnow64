@@ -13,8 +13,6 @@ class QLabel;
 class QButtonGroup;
 class QSettings;
 class BarBtn;
-class QCheckBox;
-class QSlider;
 
 /*
     The Develop dock's Transform (crop + straighten + perspective) panel: a compact control strip
@@ -36,11 +34,6 @@ class QSlider;
             Crop : aspect combo + aspect-lock padlock + flip (F) + reset
             Level: straighten-angle field                        + reset
             Warp : perspective hint                              + reset
-            Lens : Remove chromatic aberration checkbox          + reset
-                   Defringe Purple / Green sliders (0..100)
-          The Lens rows are not a mode: they are Global-scope recipe values
-          (EditParams::removeCA / defringePurple / defringeGreen) that DevelopProperties
-          owns and pushes back in through setLens -- see Develop/lenscorrect.h.
 
     Custom aspects, the last-used aspect, the lock state, the flip (portrait) state and the
     selected mode persist to QSettings under "Develop/Transform/".
@@ -59,10 +52,6 @@ public:
     QString aspectKey() const;      // the selected entry's key, e.g. "asShot", "3:2", "21:9"
     double  aspectRatio() const;    // w/h of the selected entry; 0.0 for "As shot" (free)
     int     mode() const { return currentMode; }
-
-    /* Sync the Lens rows to the current image's Global recipe (no signals emitted). caOn
-       is the EFFECTIVE state (an unset recipe on a raw follows the preference). */
-    void setLens(bool caOn, int purple0to100, int green0to100);
 
     /* Sync the Preview eye to the current image's stored Geometry::show (no signal emitted). */
     void setPreviewShown(bool shown);
@@ -92,8 +81,6 @@ signals:
     void resetRequested();                 // header reset: all transforms to identity
     void closeRequested();                 // header [X]: close panel (commits session)
     void resetModeRequested(int mode);     // per-row reset: clear just this mode's contribution
-    void removeCAToggled(bool on);         // Lens: "Remove chromatic aberration" clicked
-    void defringeChanged(bool purple, int value0to100);   // Lens: a Defringe slider moved
 
 public slots:
     void toggleAspectLock();               // lock button click, or the "A" key (see eventFilter)
@@ -161,11 +148,6 @@ private:
     BarBtn      *previewBtn   = nullptr;    // eye: show/ignore the transform (Geometry::show)
     BarBtn      *headerResetBtn = nullptr;  // clear crop/straighten/warp back to identity
     BarBtn      *closeBtn     = nullptr;    // [X] at the extreme right: close the panel
-    QCheckBox   *caCheck      = nullptr;    // Lens: remove chromatic aberration
-    QSlider     *fringePurple = nullptr;    // Lens: defringe, purple group (cyan..magenta)
-    QSlider     *fringeGreen  = nullptr;    // Lens: defringe, green group
-    QLabel      *fringePurpleVal = nullptr;
-    QLabel      *fringeGreenVal  = nullptr;
 
     bool previewShown = true;              // mirror of the current image's Geometry::show
     bool aspectLocked = false;

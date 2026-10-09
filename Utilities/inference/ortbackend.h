@@ -19,8 +19,15 @@ class OrtBackend : public InferenceBackend
 {
 public:
     /* Load onnxPath. pref biases EP selection (Auto/NPU/GPU pick the platform accelerator;
-       CPU forces the CPU EP). Never throws: on failure the backend is simply not loaded. */
-    explicit OrtBackend(const QString &onnxPath, InferenceDevice pref = InferenceDevice::Auto);
+       CPU forces the CPU EP). Never throws: on failure the backend is simply not loaded.
+
+       compileCacheDir (macOS, pref GPU only): keep CoreML's compiled ML Program there.
+       A ViT compiles for ~90 s, every launch, without it; with it a later load takes
+       well under a second. The directory must be specific to the model's VERSION --
+       ORT keys the cache on the model, not on its bytes, so a re-exported model in a
+       reused directory would run the old compiled graph. */
+    explicit OrtBackend(const QString &onnxPath, InferenceDevice pref = InferenceDevice::Auto,
+                        const QString &compileCacheDir = {});
     ~OrtBackend() override;
 
     /* Is ONNX Runtime compiled into this build at all (WINNOW_HAVE_ORT)? Static and free:

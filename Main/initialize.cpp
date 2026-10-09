@@ -2962,14 +2962,6 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
     /* Per-row reset: clear just the crop / straighten / warp contribution. */
     connect(transformPanel, &TransformPanel::resetModeRequested, this, &MW::resetDevelopTransformMode);
-    /* Lens rows: Global recipe values owned by DevelopProperties, pushed back on every
-       rebuild (image switch, History, undo) through lensStateChanged. */
-    connect(transformPanel, &TransformPanel::removeCAToggled,
-            developProperties, &DevelopProperties::setGlobalRemoveCA);
-    connect(transformPanel, &TransformPanel::defringeChanged,
-            developProperties, &DevelopProperties::setGlobalDefringe);
-    connect(developProperties, &DevelopProperties::lensStateChanged,
-            transformPanel, &TransformPanel::setLens);
     /* Transform Preview eye: a LIVE result toggle while the crop tool is active. ON = commit the
        overlay's crop, drop the overlay and render the cropped/warped RESULT; OFF = back to full-frame
        editing with the overlay. (The panel is only visible while crop-editing, so that is the only
@@ -3700,6 +3692,7 @@ void MW::createKeywordsDock()
     });
     connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
     connect(keywordTree, &KeywordTree::tidyRequested, this, &MW::tidyFlatKeywords);
+    connect(keywordTree, &KeywordTree::auditRequested, this, &MW::auditKeywords);
     /*  QUEUED: the drop is still inside the dragged tag's QDrag::exec(), and
         refreshKeywordsDock rebuilds the tag zone -- deleting that very tag under it. */
     connect(keywordTree, &KeywordTree::tagFiled, this,

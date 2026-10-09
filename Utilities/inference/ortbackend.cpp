@@ -1,4 +1,6 @@
 #include "Utilities/inference/ortbackend.h"
+
+#include <QDir>
 #include "Main/global.h"
 
 /*
@@ -43,7 +45,8 @@ struct OrtBackend::Impl {
     bool loaded = false;
 };
 
-OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref)
+OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
+                       const QString &compileCacheDir)
     : d(std::make_unique<Impl>())
 {
     if (G::isLogger) G::log("OrtBackend::OrtBackend", onnxPath);
@@ -70,14 +73,28 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref)
                the broader op set. Note this only sets the target device: ops the
                CoreML EP cannot map are still partitioned to the CPU EP regardless of
                the flag. */
-            uint32_t coremlFlags = 0;
-            const char *coremlName = "CoreML";
-            if (pref == InferenceDevice::GPU) {
-                coremlFlags = COREML_FLAG_USE_CPU_AND_GPU | COREML_FLAG_CREATE_MLPROGRAM;
-                coremlName = "CoreML/GPU";
+            if (pref == InferenceDevice::GPU && !compileCacheDir.isEmpty()
+                && QDir().mkpath(compileCacheDir)) {
+                /* The same GPU + ML Program target as the flags below, through the
+                   provider-options API, which is the only one that takes a compiled-
+                   model cache. See the header. */
+                so.AppendExecutionProvider("CoreML", {
+                    {"ModelFormat", "MLProgram"},
+                    {"MLComputeUnits", "CPUAndGPU"},
+                    {"ModelCacheDirectory", compileCacheDir.toStdString()}});
+                d->backend = "CoreML/GPU (cached)";
             }
-            Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CoreML(so, coremlFlags));
-            d->backend = coremlName;
+            else {
+                uint32_t coremlFlags = 0;
+                const char *coremlName = "CoreML";
+                if (pref == InferenceDevice::GPU) {
+                    coremlFlags = COREML_FLAG_USE_CPU_AND_GPU | COREML_FLAG_CREATE_MLPROGRAM;
+                    coremlName = "CoreML/GPU";
+                }
+                Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CoreML(so,
+                                                                                  coremlFlags));
+                d->backend = coremlName;
+            }
 #elif defined(Q_OS_WIN)
             /* DirectML requires sequential execution and no memory pattern. */
             so.DisableMemPattern();
@@ -177,7 +194,7 @@ bool OrtBackend::IsCompiledIn() { return true; }
 
 struct OrtBackend::Impl {};
 
-OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice)
+OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice, const QString &)
 {
     if (G::isLogger) G::log("OrtBackend::OrtBackend (ORT not built in)", onnxPath);
     qWarning("OrtBackend: built without ONNX Runtime (WINNOW_HAVE_ORT off); "

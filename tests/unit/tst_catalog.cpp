@@ -246,8 +246,9 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         a coordinate and the next scan re-reads it; version 20 added image.change_seq and
         catalog_meta, the change sequence the library snapshot is checked against;
         version 21 added NO table -- the seventh data repair: picks became session-only,
-        so it clears image.pick, which an unpick never reached. */
-    QCOMPARE(CacheDb::schemaVersion(), 21);
+        so it clears image.pick, which an unpick never reached; version 22 added
+        image_embedding, the SigLIP image vectors Audit Keywords compares. */
+    QCOMPARE(CacheDb::schemaVersion(), 22);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -256,7 +257,8 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
     QVERIFY(db.isOpen());
     const auto tables = db.tables();
     for (const char *t : {"devpreview", "image", "keyword", "image_keyword",
-                          "keyword_context", "image_fts", "thumb", "image_version"})
+                          "keyword_context", "image_fts", "thumb", "image_version",
+                          "image_embedding"})
         QVERIFY2(tables.contains(t), t);
 }
 

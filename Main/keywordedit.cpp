@@ -5,6 +5,9 @@
 #include "Dialogs/keywordmergedlg.h"
 #include "Dialogs/keywordretagdlg.h"
 #include "Dialogs/keywordtidydlg.h"
+#include "Datamodel/keywordauditstore.h"
+#include "Utilities/inference/imageembedder.h"
+#include "Utilities/modelstore.h"
 #include "Metadata/keywordpaths.h"
 
 #include <QApplication>
@@ -1819,4 +1822,177 @@ void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imag
                                                 QItemSelectionModel::NoUpdate);
     }
     refreshKeywordsDock();
+}
+
+void MW::auditKeywords()
+{
+/*
+    AUDIT KEYWORDS. Opens (or raises) the review; the audit itself runs only when the
+    user presses Run, on KeywordAuditJob's thread. See Dialogs/keywordauditdlg.h.
+
+    THE DIALOG IS KEPT, not recreated, so closing it to look at an image and opening it
+    again from the menu returns to the same findings and decisions.
+
+    WHY IT CANNOT RUN is said in the dialog, greyed, rather than in a popup after the
+    click: no inference runtime in this build, or no catalog. A missing MODEL is not a
+    reason -- Run offers to download it (ModelStore::ensure), as Select Subject does.
+*/
+    if (G::isLogger) G::log("MW::auditKeywords");
+
+    if (!keywordAuditDlg) {
+        keywordAuditDlg = new KeywordAuditDlg(this);
+
+        connect(keywordAuditDlg, &KeywordAuditDlg::runRequested, this, [this] {
+            if (keywordAuditJob && keywordAuditJob->isRunning()) return;
+            if (!ModelStore::ensure({ModelStore::Model::SigLipImage}, keywordAuditDlg))
+                return;
+            const QHash<QString, QString> vocab = KeywordAuditStore::vocabulary();
+            if (vocab.isEmpty()) {
+                keywordAuditDlg->setProgress(tr("Your keyword list is empty. Audit "
+                                                "Keywords learns each keyword in the "
+                                                "Keywords panel from the images that "
+                                                "carry it."), 0, 0);
+                return;
+            }
+            const QSet<QString> dismissed = KeywordAuditStore::dismissed();
+            const QList<QString> skipKeys = KeywordAuditStore::skipped().keys();
+            const QSet<QString> skipped(skipKeys.begin(), skipKeys.end());
+
+            if (!keywordAuditJob) {
+                keywordAuditJob = new KeywordAuditJob;
+                connect(keywordAuditJob, &KeywordAuditJob::progress, this,
+                        [this](const QString &stage, int done, int total) {
+                    if (keywordAuditDlg) keywordAuditDlg->setProgress(stage, done, total);
+                });
+                connect(keywordAuditJob, &KeywordAuditJob::finished, this,
+                        [this](const KeywordAuditOutcome &o) {
+                    if (!keywordAuditDlg) return;
+                    keywordAuditDlg->setRunning(false);
+                    keywordAuditDlg->setOutcome(o);
+                });
+            }
+            keywordAuditDlg->setRunning(true);
+            KeywordAuditJob *job = keywordAuditJob;
+            QMetaObject::invokeMethod(job, [job, vocab, dismissed, skipped] {
+                job->run(vocab, dismissed, skipped);
+            }, Qt::QueuedConnection);
+        });
+
+        connect(keywordAuditDlg, &KeywordAuditDlg::stopRequested, this, [this] {
+            if (keywordAuditJob) keywordAuditJob->stop();
+        });
+
+        connect(keywordAuditDlg, &KeywordAuditDlg::applyRequested, this,
+                [this](const QVector<KeywordAuditDlg::Fix> &fixes) {
+            int failed = 0;
+            const int written = applyKeywordAuditFixes(fixes, failed);
+            if (keywordAuditDlg) keywordAuditDlg->applied(written, failed);
+        });
+
+        /*  The image in its folder, selected: in place when that folder is what is
+            loaded, otherwise by loading it. */
+        connect(keywordAuditDlg, &KeywordAuditDlg::showImageRequested, this,
+                [this](const QString &imagePath) {
+            QString path = imagePath;                   // setCurrentPath takes a ref
+            if (dm && dm->proxyIndexFromKey(path).isValid()) sel->setCurrentPath(path);
+            else folderAndFileSelectionChange(path, "MW::auditKeywords");
+        });
+    }
+
+    QString reason;
+    if (!ImageEmbedder::IsSupportedBuild())
+        reason = tr("Audit Keywords needs the AI model runtime (ONNX Runtime), which this "
+                    "build of Winnow does not include.");
+    else if (!Catalog::instance().isAvailable())
+        reason = tr("Audit Keywords works on the catalog, which is not available.");
+    keywordAuditDlg->setUnavailableReason(reason);
+
+    keywordAuditDlg->show();
+    keywordAuditDlg->raise();
+    keywordAuditDlg->activateWindow();
+}
+
+int MW::applyKeywordAuditFixes(const QVector<KeywordAuditDlg::Fix> &fixes, int &failed)
+{
+/*
+    Carry out what the user approved in the audit: per image, keywords to remove and
+    keywords to add. The retag's shape exactly (MW::retagKeywordPath) -- driven from the
+    CATALOG rows, because most audited images are not loaded; composed by
+    composeKeywordWrite, written by writeKeywordsToSidecar (which respects
+    G::modifySourceFiles), published by publishKeywordWrite -- so an image fixed here
+    and one tagged from the dock end up with the same shape.
+
+    GROUPED BY IMAGE, so an image with two decisions (a Replace and an Add) is written
+    once. A REMOVE takes the exact path off and nothing else: the ancestors stay if the
+    file lists them, and an image that loses its last Bird keeps "Fauna|Bird" only if
+    something else implies it.
+
+    PATHS COME FROM THE AUDIT'S OWN CATALOG ROWS, never from a view's row numbers, so
+    there is no proxy mapping here to get wrong.
+*/
+    if (G::isLogger) G::log("MW::applyKeywordAuditFixes");
+    failed = 0;
+    if (!metadata || fixes.isEmpty()) return 0;
+    Catalog &cat = Catalog::instance();
+    if (!cat.isAvailable()) { failed = fixes.size(); return 0; }
+
+    QStringList order;
+    QHash<QString, QPair<QStringList, QStringList>> byPath;   // path -> (remove, add)
+    for (const KeywordAuditDlg::Fix &f : fixes) {
+        if (!byPath.contains(f.path)) order << f.path;
+        auto &e = byPath[f.path];
+        if (!f.remove.isEmpty()) e.first << f.remove;
+        if (!f.add.isEmpty()) e.second << f.add;
+    }
+    const QHash<QString, CatalogRow> rows = cat.rowsForPaths(order);
+
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(order.size());
+    G::popup->setProgress(0);
+
+    int written = 0;
+    for (int i = 0; i < order.size(); ++i) {
+        const QString &path = order.at(i);
+        const auto it = rows.constFind(path);
+        if (it == rows.cend()) { ++failed; continue; }
+        const CatalogRow &r = it.value();
+
+        QSet<QString> removeFold;
+        for (const QString &k : byPath[path].first) removeFold.insert(keywordFold(k));
+        QStringList next;
+        QSet<QString> seen;
+        for (const QString &p : keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths)) {
+            const QString fold = keywordFold(p);
+            if (removeFold.contains(fold) || seen.contains(fold)) continue;
+            seen.insert(fold);
+            next << p;
+        }
+        for (const QString &k : byPath[path].second) {
+            const QString fold = keywordFold(k);
+            if (seen.contains(fold)) continue;
+            seen.insert(fold);
+            next << k;
+        }
+        next.sort(Qt::CaseInsensitive);
+
+        QStringList subject, hierarchical;
+        composeKeywordWrite(next, subject, hierarchical);
+        if (metadata->writeKeywordsToSidecar(path, subject, hierarchical)) {
+            ++written;
+            publishKeywordWrite(r, subject, hierarchical);
+        }
+        else {
+            ++failed;
+        }
+
+        G::popup->setProgress(i + 1);
+        G::popup->pulse();
+    }
+    G::popup->setProgressVisible(false);
+
+    if (keywordVocab) keywordVocab->refreshCounts();
+    rebuildKeywordFilters("MW::applyKeywordAuditFixes");
+    G::popup->showPopup(QString("Updated %1 image%2.")
+                            .arg(written).arg(written == 1 ? "" : "s"), 3000);
+    return written;
 }

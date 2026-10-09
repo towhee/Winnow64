@@ -2104,6 +2104,14 @@ void MW::createHelpActions()
        the silent parameter — a manual check is always loud. */
     connect(checkForUpdateAction, &QAction::triggered, this, [this]{ checkForUpdate(false); });
 
+    /* Audit Keywords: find images whose keywords do not match how they look. In the
+       Edit menu and the Keywords panel's context menu. */
+    auditKeywordsAction = new QAction(tr("Audit Keywords..."), this);
+    auditKeywordsAction->setObjectName("auditKeywords");
+    auditKeywordsAction->setShortcutVisibleInContextMenu(true);
+    addAction(auditKeywordsAction);
+    connect(auditKeywordsAction, &QAction::triggered, this, &MW::auditKeywords);
+
     manageModelsAction = new QAction(tr("Manage AI models"), this);
     manageModelsAction->setObjectName("ManageAIModels");
     manageModelsAction->setShortcutVisibleInContextMenu(true);
@@ -2596,6 +2604,7 @@ void MW::createEditMenu()
     // editMenu->addAction(popPickHistoryAction);
     // editMenu->addSeparator();
     editMenu->addAction(tokenTemplateEditorAction);
+    editMenu->addAction(auditKeywordsAction);
     editMenu->addSeparator();
     ratingsMenu = editMenu->addMenu("Ratings");
     ratingsMenu->addAction(rate0Action);

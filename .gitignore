@@ -98,8 +98,12 @@ ReleaseExtras/sam2_decoder.onnx
 ReleaseExtras/sam2_encoder.onnx
 ReleaseExtras/migan.onnx
 ReleaseExtras/lama.onnx
+ReleaseExtras/siglip2_image.onnx
 tools/_pmrid_dl/
 tools/_model_catalog_out/
+tools/_kwaudit_venv/
+tools/_kwaudit_out/
+tools/__pycache__/
 ReleaseExtras 2/tools/README.md
 ReleaseExtras 2/tools/export_sam2.sh
 ReleaseExtras 2/tools/export_sam2.py

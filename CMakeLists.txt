@@ -372,6 +372,18 @@ set(WINNOW_SOURCES
     Dialogs/keywordmergedlg.h
     Dialogs/keywordtidydlg.cpp
     Dialogs/keywordtidydlg.h
+    Dialogs/keywordauditdlg.cpp
+    Dialogs/keywordauditdlg.h
+    Main/keywordauditjob.cpp
+    Main/keywordauditjob.h
+    Main/keywordauditprobe.cpp
+    Main/keywordauditprobe.h
+    Datamodel/keywordauditstore.cpp
+    Datamodel/keywordauditstore.h
+    Utilities/visualaudit.cpp
+    Utilities/visualaudit.h
+    Cache/embeddingstore.cpp
+    Cache/embeddingstore.h
     Main/status.cpp
     Main/test.cpp
     Main/viewmodes.cpp
@@ -409,6 +421,7 @@ set(WINNOW_SOURCES
     Utilities/inference/ortbackend.cpp
     Utilities/inference/miganfill.cpp
     Utilities/inference/lamafill.cpp
+    Utilities/inference/imageembedder.cpp
     Utilities/subjectpredictor.cpp
     Utilities/objectmaskpredictor.cpp
     Utilities/skypredictor.cpp
@@ -711,6 +724,7 @@ set(WINNOW_HEADERS
     Utilities/inference/ortbackend.h
     Utilities/inference/miganfill.h
     Utilities/inference/lamafill.h
+    Utilities/inference/imageembedder.h
     Utilities/subjectpredictor.h
     Utilities/objectmaskpredictor.h
     Utilities/skypredictor.h

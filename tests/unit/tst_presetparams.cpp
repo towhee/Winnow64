@@ -31,6 +31,7 @@ private slots:
     void cameraProfileIsReadAsAString();
     void viewTransformIsReadAsAnInt();
     void aNumericFieldIsStillRaw();
+    void lensKeysAreGlobalAndRaw();
     void unknownKeysAreIgnored();
 };
 
@@ -70,6 +71,28 @@ void TstPresetParams::aNumericFieldIsStillRaw()
     EditParams p;
     DevelopPresets::assignParam("exposure", QVariant(0.5), p);
     QCOMPARE(p.exposure, 0.5f);
+}
+
+void TstPresetParams::lensKeysAreGlobalAndRaw()
+{
+    /*
+        The lens corrections travel in the preset's Global group. QSettings hands values
+        back as STRINGS, so they are fed in that way. removeCA is a tri-state read with
+        toInt(): "-1" must come back as unset (follow the preference), not as 0 (off).
+        The defringe amounts are raw 0..1, not the dock's 0..100.
+    */
+    EditParams p;
+    DevelopPresets::assignParam("removeCA", QVariant("1"), p);
+    QCOMPARE(p.removeCA, 1);
+    DevelopPresets::assignParam("removeCA", QVariant("-1"), p);
+    QCOMPARE(p.removeCA, -1);
+    DevelopPresets::assignParam("removeCA", QVariant("0"), p);
+    QCOMPARE(p.removeCA, 0);
+
+    DevelopPresets::assignParam("defringePurple", QVariant("0.4"), p);
+    DevelopPresets::assignParam("defringeGreen", QVariant("0.25"), p);
+    QCOMPARE(p.defringePurple, 0.4f);
+    QCOMPARE(p.defringeGreen, 0.25f);
 }
 
 void TstPresetParams::unknownKeysAreIgnored()
