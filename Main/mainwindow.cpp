@@ -1570,6 +1570,8 @@ void MW::closeEvent(QCloseEvent *event)
     /* No more created files queued at an MW that is going away. */
     FileOps::setCreatedHook({});
     if (catalogScanner) catalogScanner->shutdown();
+    /* The same for an audit that is still embedding or scoring: stop it and wait. */
+    if (keywordAuditJob) keywordAuditJob->shutdown();
 
     if (filterDock->isVisible()) {
         folderDock->raise();

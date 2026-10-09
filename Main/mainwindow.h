@@ -51,6 +51,8 @@
 #include "Utilities/queryexpr.h"
 #include "Views/loadcurtain.h"
 #include "Main/catalogscanner.h"
+#include "Main/keywordauditjob.h"
+#include "Dialogs/keywordauditdlg.h"
 #include "Cache/cachedb.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
@@ -1987,6 +1989,7 @@ private:
     // Help Menu
     QAction *checkForUpdateAction;
     QAction *manageModelsAction;
+    QAction *auditKeywordsAction;
     QAction *aboutAction;
     QAction *helpAction;
     QAction *helpShortcutsAction;
@@ -2361,6 +2364,9 @@ private:
     KeywordTags *keywordTags = nullptr;
     /* Walks the designated roots on its own low-priority thread. */
     CatalogScanner *catalogScanner = nullptr;
+    /* Audit Keywords: the job (own thread, created on first use) and its review. */
+    KeywordAuditJob *keywordAuditJob = nullptr;
+    QPointer<KeywordAuditDlg> keywordAuditDlg;
     /* What the background scanner may walk: one ordered table of include/exclude rows,
        each with its own subfolder reach. In QSettings, NOT in the index database:
        CacheDb::moveAside discards that file without asking, and this is user intent
@@ -3113,6 +3119,14 @@ private:
         is published. */
     void publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
                              const QStringList &hierarchical);
+    /*  AUDIT KEYWORDS: open the review (Dialogs/keywordauditdlg.h) of images whose
+        keywords do not match how they look, compared with the user's own keyworded
+        images (Utilities/visualaudit.h). */
+    void auditKeywords();
+    /*  Write the changes the user approved in the audit -- per image, the keywords to
+        remove and add -- from the CATALOG rows, so unloaded images are reached. Returns
+        files written; failed receives the ones that could not be (offline, read-only). */
+    int applyKeywordAuditFixes(const QVector<KeywordAuditDlg::Fix> &fixes, int &failed);
     void createMetadataDock();
     void createThumbDock();
     void createEmbelDock();

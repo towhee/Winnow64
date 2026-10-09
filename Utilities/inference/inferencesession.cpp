@@ -5,8 +5,9 @@
     Backend selection lives here and nowhere else (the escape-hatch seam). For now every model
     runs on ONNX Runtime via OrtBackend; a future native backend would be chosen per model here.
 */
-InferenceSession::InferenceSession(const QString &onnxPath, InferenceDevice pref)
-    : backend(std::make_unique<OrtBackend>(onnxPath, pref))
+InferenceSession::InferenceSession(const QString &onnxPath, InferenceDevice pref,
+                                   const QString &compileCacheDir)
+    : backend(std::make_unique<OrtBackend>(onnxPath, pref, compileCacheDir))
 {
 }
 

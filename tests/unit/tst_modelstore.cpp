@@ -74,7 +74,7 @@ private slots:
     void catalogIsWellFormed()
     {
         const QVector<ModelStore::ModelInfo> &cat = ModelStore::catalog();
-        QCOMPARE(cat.size(), 9);
+        QCOMPARE(cat.size(), 11);       // + SkySegFormer (Select Sky), SigLipImage (Audit)
 
         QSet<int> seen;
         for (const ModelStore::ModelInfo &mi : cat) {

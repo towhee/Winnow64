@@ -18,6 +18,8 @@
       o the keyword vocabulary -- table vocab (Datamodel/keywordvocab.h): the hierarchy
         keywords are filed into, with synonyms and the export flag. It lived in index.db
         until schema 2 here, which is how a reset of the index could take it with it.
+      o Audit Keywords' verdicts and excluded keywords -- tables audit_verdict and
+        audit_skip (Datamodel/keywordauditstore.h), schema 3
 
     SO THIS FILE IS NEVER MOVED ASIDE. One it cannot open, or one written by a newer
     Winnow, leaves its features unavailable -- each panel greys with unavailableReason()

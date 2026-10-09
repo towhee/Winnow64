@@ -117,6 +117,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
+        if (l.params.removeCA >= 0) p.removeCA = 0;     // see the showEffects fold
         return p;
     }
     if (!l.showBasic)      EditParams::resetGroup(p, EditParams::Group::Basic);
@@ -125,7 +126,13 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     if (!l.showCalibrate)  EditParams::resetGroup(p, EditParams::Group::Calibrate);
     if (!l.showColorGrade) EditParams::resetGroup(p, EditParams::Group::ColorGrade);
     if (!l.showDetail)     EditParams::resetGroup(p, EditParams::Group::Detail);
-    if (!l.showEffects)    EditParams::resetGroup(p, EditParams::Group::Effects);
+    if (!l.showEffects) {
+        EditParams::resetGroup(p, EditParams::Group::Effects);
+        /* An explicit removeCA previews as OFF; the reset's unset would still follow
+           G::autoRemoveCA on a raw. An unset recipe stays unset: forcing 0 there would
+           make an untouched scope non-identity (and composited). */
+        if (l.params.removeCA >= 0) p.removeCA = 0;
+    }
     return p;
 }
 

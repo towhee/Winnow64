@@ -40,6 +40,7 @@ MODELS=(
     "lama|Spot Heal|0"
     "sam2_encoder|Object Mask|0"
     "sam2_decoder|Object Mask|0"
+    "siglip2_image|Audit Keywords|0"
 )
 
 ALL=0

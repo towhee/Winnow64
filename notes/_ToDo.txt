@@ -14,9 +14,11 @@ BUGS / TO
 - One possible colour problem in Embellish export, not checked: after writing the file it
   still copies the source file's colour profile into it. The new render is sRGB, so a
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
+- UI should be consistent - diff sliders in transfor change
 - Drag thumb to collection.  Drag another thumb to collection without clicking once on
   thumb without dragging.  "Already in ..."
-- Picked images at startup.
+- If a file has both flat keywords and nested, only use the nested ones unless there is a
+  flat keyword without a matching nested one..
 - Make new mask one step, incl name in Add submask dialog.
 - Fine tune overlay tint - when active
 - Fine-tune keywords managing

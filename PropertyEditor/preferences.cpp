@@ -284,7 +284,7 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "autoRemoveCA") {
         G::autoRemoveCA = v.toBool();
         mw->settings->setValue("Develop/autoRemoveCA", G::autoRemoveCA);
-        /* An unset recipe follows it: the Lens checkbox and the current render change.
+        /* An unset recipe follows it: the Effects Remove CA box and the current render change.
            (Metadata::defaultRenderKey / devPreviewKey hash it, so cached previews built
            under the other setting are simply not served.) */
         if (mw->developProperties) {
@@ -1594,8 +1594,8 @@ void Preferences::addDevPreviews()
     i.tooltip = "Re-align red and blue with green on every raw file you have not\n"
                 "set yourself: removes the colour fringe that grows toward the\n"
                 "corners, measured from each image.\n\n"
-                "An image where you ticked or unticked \"Remove chromatic\n"
-                "aberration\" in the Transform panel keeps your choice.\n"
+                "An image where you ticked or unticked \"Remove CA\" in the\n"
+                "Develop Effects section keeps your choice.\n"
                 "JPEGs are never corrected automatically: most cameras already\n"
                 "did it.";
     i.hasValue = true;

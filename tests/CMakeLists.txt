@@ -198,6 +198,24 @@ elseif(WIN32)
     target_link_libraries(tst_skyrefine PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
+# tst_visualaudit tests Utilities/visualaudit.cpp, the scoring behind Audit Keywords,
+# on synthetic embeddings with planted mistakes: a mislabel is caught with the right
+# alternative, a mislabelled burst is ONE finding, ancestors are never reported missing,
+# a randomly applied keyword is skipped as not visual, and dismissed/skipped findings stay
+# hidden. OpenCV core for the gemm/solve.
+winnow_add_unit_test(tst_visualaudit unit/tst_visualaudit.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/visualaudit.cpp)
+if(APPLE)
+    target_include_directories(tst_visualaudit PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_visualaudit PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_visualaudit PRIVATE opencv_core)
+elseif(WIN32)
+    target_include_directories(tst_visualaudit PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_visualaudit PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
 # tst_maskrefine tests Develop/maskrefine.h, the Refine Brush: a painted region in which
 # the folded mask is re-matted against the photo (Add / Remove / Fix Edge), on synthetic
 # scenes built to provoke the failures each rule was added for. Header-only, OpenCV core +

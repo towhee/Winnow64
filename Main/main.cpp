@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Cache/catalogprobe.h"
+#include "Main/keywordauditprobe.h"
 #include <QApplication>
 #include "qtsingleapplication.h"
 #include <QMediaPlayer>
@@ -188,6 +189,11 @@ int main(int argc, char *argv[])
        and writes nothing else, and exits before any window is created. */
     bool isCatalogProbe = false;
     QString catalogProbeFilter;
+    /*  Winnow --keywordaudit [keyword substring] -- Audit Keywords on the real index and
+        keyword list, headless (Main/keywordauditprobe.h). Real paths like the two
+        probes beside it; it stores any image vectors it computes, as the dialog would. */
+    bool isKeywordAuditProbe = false;
+    QString keywordAuditFilter;
     /*  Winnow --catalogload [folder] -- the real index, the real load path, headless.
         Like --catalogprobe it must NOT enter QStandardPaths test mode, because the whole
         point is the catalog the user actually has. */
@@ -229,11 +235,14 @@ int main(int argc, char *argv[])
         else if (arg == "--soaktest") isSoakTest = true;
         else if (arg == "--devtest") isDevTest = true;
         else if (arg == "--catalogprobe") isCatalogProbe = true;
+        else if (arg == "--keywordaudit") isKeywordAuditProbe = true;
         else if (arg == "--catalogload") isCatalogLoad = true;
         else if (arg == "--perfprobe") isPerfProbeArg = true;
         else if (arg == "--ingestprobe") isIngestProbeArg = true;
         else if (arg == "--panelprobe") isPanelProbeArg = true;
         else if (isCatalogProbe && catalogProbeFilter.isEmpty()) catalogProbeFilter = arg;
+        else if (isKeywordAuditProbe && keywordAuditFilter.isEmpty())
+            keywordAuditFilter = arg;
         else if (isCatalogLoad && catalogLoadFilter.isEmpty()) catalogLoadFilter = arg;
         else if (isMetaTest && metaTestFile.isEmpty()) metaTestFile = arg;
         else if (isSelfTest && selfTestFolder.isEmpty()) selfTestFolder = arg;
@@ -248,12 +257,13 @@ int main(int argc, char *argv[])
        fresh rather than handing its arguments to a running Winnow -- and deliberately not
        for the test-mode settings isolation below. */
     const bool isTestMode = isSelfTest || isMetaTest || isSoakTest || isDevTest
-                            || isCatalogProbe || isCatalogLoad;
-    const bool usesRealIndex = isCatalogProbe || isCatalogLoad;
+                            || isCatalogProbe || isCatalogLoad || isKeywordAuditProbe;
+    const bool usesRealIndex = isCatalogProbe || isCatalogLoad || isKeywordAuditProbe;
     if (isTestMode && !usesRealIndex) QStandardPaths::setTestModeEnabled(true);
     /*  Told separately from the settings isolation above, which the probe runs opt out
         of: this says "a harness is driving", which is true for all of them. */
-    G::isAutomatedRun = isTestMode || isCatalogProbe || isCatalogLoad;
+    G::isAutomatedRun = isTestMode || isCatalogProbe || isCatalogLoad
+                        || isKeywordAuditProbe;
 
     // /*Single instance version
     QtSingleApplication instance("Winnow", argc, argv);
@@ -348,6 +358,11 @@ int main(int argc, char *argv[])
         measured. */
     if (isCatalogProbe) {
         const int rc = CatalogProbe::run(catalogProbeFilter);
+        std::_Exit(rc);
+    }
+    /* Before MW for the same reason: Audit Keywords against the real index, no window. */
+    if (isKeywordAuditProbe) {
+        const int rc = KeywordAuditProbe::run(keywordAuditFilter);
         std::_Exit(rc);
     }
 

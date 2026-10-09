@@ -59,6 +59,9 @@ signals:
         Emitted rather than done here for the same reason as the rest of this class --
         it rewrites IMAGES, and this view never touches one. MW::tidyFlatKeywords. */
     void tidyRequested();
+    /*  "Audit keywords...": review images whose keywords do not match how they look.
+        MW::auditKeywords. */
+    void auditRequested();
     /*  A plain single click on a keyword: filter the images on it. Delayed by the
         double-click interval and cancelled by a double-click -- see the constructor. */
     void filterRequested(const QString &path);

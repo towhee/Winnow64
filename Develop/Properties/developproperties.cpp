@@ -561,11 +561,17 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
 
 void DevelopProperties::syncLensPanel()
 {
+    /* The rows exist only while Global is the active scope (addEffects); otherwise the
+       setters below find no row and do nothing. */
     EditParams g;
     const EditStack s = stackCache.value(currentImagePath);
     if (!s.scopes.isEmpty()) g = s.scopes.at(0).params;
-    emit lensStateChanged(g.wantsRemoveCA(G::autoRemoveCA, currentIsRaw()),
-                          qRound(g.defringePurple * 100.0f), qRound(g.defringeGreen * 100.0f));
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setCheckboxValue("removeCA", g.wantsRemoveCA(G::autoRemoveCA, currentIsRaw()));
+    setSliderReal("defringePurple", g.defringePurple * 100.0);
+    setSliderReal("defringeGreen",  g.defringeGreen  * 100.0);
+    isPopulating = wasPop;
 }
 
 void DevelopProperties::setGlobalRemoveCA(bool on)
@@ -599,8 +605,6 @@ void DevelopProperties::setGlobalDefringe(bool purple, int value0to100)
 
 void DevelopProperties::syncRawPanel()
 {
-    /* Lens corrections apply to JPEGs too, so this runs before the raw-only gate. */
-    syncLensPanel();
     if (!rawPanel) return;
     const bool raw = currentIsRaw();
     /* Raw-decode strip: raw files only. */
@@ -5888,6 +5892,29 @@ void DevelopProperties::addEffects()
     addSlider("grainRoughness", "   Roughness", "How patchy / irregular the grain is.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
 
+    /* Lens corrections (Develop/lenscorrect.h): Global-only recipe values applied to
+       the base image before any scope develops, so every mask and guide sees the
+       corrected edges. A mask scope cannot carry them, so its Effects section has no
+       such rows. Remove CA re-aligns red and blue to green radially (lateral CA); the
+       fringe sliders pull the coloured rim along high-contrast edges back to a true mix
+       of the two sides. Both 0..100 sliders map to 0..1. */
+    if (activeScopeIndex == 0) {
+        addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "LensDivider");
+        addCheckbox("removeCA", "Remove CA",
+                    "Remove lateral chromatic aberration: re-align red and blue with\n"
+                    "green, measured from this image. Removes the colour fringe that\n"
+                    "grows toward the corners. Preferences can turn it on for every\n"
+                    "raw file.",
+                    parIdx, "EffectsHeader");
+        addSlider("defringePurple", "Purple fringe:",
+                  "Defringe the cyan, blue, purple and magenta rim along\n"
+                  "high-contrast edges.",
+                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+        addSlider("defringeGreen", "Green fringe:",
+                  "Defringe the green rim along high-contrast edges.",
+                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    }
+
     addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "EndDivider");
 }
 
@@ -6079,6 +6106,19 @@ void DevelopProperties::itemChange(QModelIndex idx)
                  QString("cal/%1/%2").arg(source).arg(calActiveMask));
         refreshCalibrateRow();          // move the wheel dot with the slider
         emit paramsChanged();
+        return;
+    }
+
+    /* Lens corrections: Global-only recipe values with their own setters (removeCA is
+       tri-state, and both always write scope 0). The rows exist only on Global. */
+    if (source == "removeCA") {
+        noteNonMaskInteraction();
+        setGlobalRemoveCA(v.toBool());
+        return;
+    }
+    if (source == "defringePurple" || source == "defringeGreen") {
+        noteNonMaskInteraction();
+        setGlobalDefringe(source == "defringePurple", qRound(v.toDouble()));
         return;
     }
 
@@ -7004,6 +7044,15 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
            its two sliders as one control, and amounts alone cannot express "off". */
         preset.globals.insert("denoiseRaw", base.denoiseRaw);
     }
+    /* Lens corrections: Global-only, so read from scope 0 like the raw NR. removeCA
+       travels as stored -- an unset (-1) value stays "follow the preference" on the
+       target rather than being frozen to this image's effective state. */
+    if (gk.contains("lensCA"))
+        preset.globals.insert("removeCA", base.removeCA);
+    if (gk.contains("defringe")) {
+        preset.globals.insert("defringePurple", base.defringePurple);
+        preset.globals.insert("defringeGreen", base.defringeGreen);
+    }
     if (gk.contains("histogram")) {
         preset.globals.insert("toneShadowCenter", base.toneShadowCenter);
         preset.globals.insert("toneCrossover", base.toneCrossover);
@@ -7061,6 +7110,11 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
     gg.leaves.append({"demosaic", "Raw demosaic", isRaw});
     gg.leaves.append({"rawNoise", "Raw noise reduction",
         isRaw && !usingApple && rawNoiseChanged});
+    /* The lens rows sit in the Global scope's Effects section, but they belong to no
+       scope's adjustments (always scope 0), so they are per-image items here. */
+    gg.leaves.append({"lensCA", "Remove chromatic aberration", base.removeCA >= 0});
+    gg.leaves.append({"defringe", "Defringe (Purple + Green)",
+        base.defringePurple != def.defringePurple || base.defringeGreen != def.defringeGreen});
     gg.leaves.append({"histogram", "Histogram tonal ranges",
         base.toneShadowCenter != def.toneShadowCenter ||
         base.toneCrossover != def.toneCrossover ||
@@ -7459,8 +7513,17 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
             for (double v : s.geometry.quad) q << QString::number(v);
             it.value() = q.join(',');
         }
-        else {
+        /* paramsToJson OMITS a field at its default (the tri-states when unset, the
+           defringe amounts at 0), and an absent key would be stored as an invalid
+           QVariant that reads back as 0 -- turning "unset" into "off". */
+        else if (bj.contains(k)) {
             it.value() = bj.value(k).toVariant();
+        }
+        else if (k == "denoiseRaw" || k == "removeCA") {
+            it.value() = -1;
+        }
+        else {
+            it.value() = 0.0;
         }
     }
     if (!preset.spots.isEmpty()) preset.spots = s.spots;
@@ -8163,6 +8226,7 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("grainAmount",        p.grainAmount        * 100.0);   // "Grain"
     setSliderReal("grainSize",          p.grainSize          * 100.0);
     setSliderReal("grainRoughness",     p.grainRoughness     * 100.0);
+    syncLensPanel();                  // Global's Remove CA / fringe rows (scope 0 always)
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     refreshCurveRow();

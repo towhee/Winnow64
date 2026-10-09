@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 21;
+constexpr int kSchemaVersion = 22;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1620,6 +1620,30 @@ bool CacheDb::migrate(QSqlDatabase &db)
         Re-runnable.
     */
         if (!q.exec("UPDATE image SET pick = 0 WHERE pick <> 0")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 22) {
+    /*
+        IMAGE EMBEDDINGS, for Audit Keywords (Utilities/keywordaudit.h). ADDITIVE: one
+        new table.
+
+        One SigLIP image vector per image, keyed on pathkey like thumb and devpreview,
+        stored as little-endian float16 (768 x 2 = 1.5 KB an image, ~240 MB at 160k).
+        model names the network that produced the vector, so a different model is a
+        miss rather than a silent mix of incomparable vectors; srcsize/srcmtime are the
+        same freshness stamp the thumb table carries. Derived and rebuildable like
+        everything else in this file -- the user's verdicts on audit findings are user
+        data and live in userdata.db. Re-runnable.
+    */
+        if (!q.exec("CREATE TABLE IF NOT EXISTS image_embedding ("
+                    "  pathkey  TEXT    PRIMARY KEY,"
+                    "  model    TEXT    NOT NULL,"
+                    "  srcsize  INTEGER NOT NULL DEFAULT 0,"
+                    "  srcmtime INTEGER NOT NULL DEFAULT 0,"
+                    "  vec      BLOB    NOT NULL)")) {
             db.rollback();
             return false;
         }

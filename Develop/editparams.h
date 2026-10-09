@@ -275,7 +275,7 @@ struct EditParams {
     /*
         LENS CORRECTIONS (Develop/lenscorrect.h), Global scope only, applied to the BASE
         image before any scope develops -- so every mask, guide and scope sees corrected
-        edges. Set from the Transform panel's Lens group.
+        edges. Set from the Global scope's Effects section.
 
         removeCA -- lateral chromatic aberration, TRI-STATE like denoiseRaw and for the
         same reason (an untouched raw must keep its recipe and devPreview key):
@@ -374,6 +374,9 @@ struct EditParams {
        in Lightroom. localDenoise* moved here from Effects; the saved preset format is
        unaffected (presets store a flat map of field names, section titles only group the
        checklist UI), but a scope's showDetail rather than showEffects now gates them. */
+    /* Effects also holds the Global-only lens corrections (removeCA, defringePurple/
+       Green), whose rows sit in the Global scope's Effects section; a mask scope never
+       sets them, so resetting its Effects is unaffected. */
     enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
@@ -438,6 +441,9 @@ struct EditParams {
             p.grainAmount = def.grainAmount;                 // "Grain" (film grain)
             p.grainSize = def.grainSize;
             p.grainRoughness = def.grainRoughness;
+            p.removeCA = def.removeCA;                       // lens (Global only)
+            p.defringePurple = def.defringePurple;
+            p.defringeGreen = def.defringeGreen;
             break;
         }
     }

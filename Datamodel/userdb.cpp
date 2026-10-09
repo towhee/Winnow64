@@ -19,8 +19,9 @@ const char *kOldDbName = "collections.db";
 /*  The schema this build writes (PRAGMA user_version). ADDITIVE ONLY, as for the index:
     a new table or column is a new version and a new block in migrate().
       1  node, member (collections, queries, places)
-      2  vocab (the keyword vocabulary), imported once from index.db */
-constexpr int kSchemaVersion = 2;
+      2  vocab (the keyword vocabulary), imported once from index.db
+      3  audit_verdict, audit_skip (Audit Keywords: findings judged, keywords excluded) */
+constexpr int kSchemaVersion = 3;
 
 }  // namespace
 
@@ -225,6 +226,26 @@ bool UserDb::migrate(QSqlDatabase &d)
             "CREATE UNIQUE INDEX IF NOT EXISTS vocab_pathkey ON vocab(pathfold)",
             "CREATE INDEX IF NOT EXISTS vocab_namefold ON vocab(namefold)",
             "CREATE INDEX IF NOT EXISTS vocab_parent   ON vocab(parent)",
+        };
+        if (!runAll(ddl)) { d.rollback(); return false; }
+    }
+    if (version < 3) {
+        /*  AUDIT KEYWORDS' MEMORY (Datamodel/keywordauditstore.h). A finding the user
+            judged "keywords are right" must not come back on the next audit, and a
+            keyword they excluded stays excluded -- both are decisions, so they live
+            here and not in the rebuildable index. Keyed like member, on the image's
+            pathkey; keyword is the FOLDED path, the vocabulary's identity. */
+        const QStringList ddl = {
+            "CREATE TABLE IF NOT EXISTS audit_verdict ("
+            "  pathkey TEXT    NOT NULL,"
+            "  kind    TEXT    NOT NULL,"           // suspect | missing
+            "  keyword TEXT    NOT NULL,"
+            "  verdict TEXT    NOT NULL,"           // correct
+            "  at      INTEGER NOT NULL DEFAULT 0,"
+            "  PRIMARY KEY (pathkey, kind, keyword))",
+            "CREATE TABLE IF NOT EXISTS audit_skip ("
+            "  keyword TEXT PRIMARY KEY,"
+            "  display TEXT NOT NULL DEFAULT '')",
         };
         if (!runAll(ddl)) { d.rollback(); return false; }
     }

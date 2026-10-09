@@ -659,9 +659,6 @@ public slots:
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
-    /* The current image's lens state, for the Transform panel's Lens rows. caOn is the
-       EFFECTIVE state: an unset recipe on a raw follows G::autoRemoveCA. */
-    void lensStateChanged(bool caOn, int purple0to100, int green0to100);
     /* An image's edits were just written to its sidecar, together with a new cached
        thumbnail preview (or, when thumb is null, with the old one cleared because no
        preview could be made for the new recipe). MW updates the grid from this. */
@@ -1463,13 +1460,15 @@ private:
     void syncRawPanel();
     void setGlobalDenoise(bool luma, int value0to100);
 public:
-    /* LENS CORRECTIONS (Transform panel -> MW -> here). Always scope 0, like the denoise:
-       they are applied to the base before any scope develops (Develop/lenscorrect.h).
-       removeCA is written EXPLICITLY (1 / 0) for the reason setDenoiseRawFlag gives. */
+    /* LENS CORRECTIONS (the Effects section's Remove CA / fringe rows, Global scope
+       only). Always scope 0, like the denoise: they are applied to the base before any
+       scope develops (Develop/lenscorrect.h). removeCA is written EXPLICITLY (1 / 0) for
+       the reason setDenoiseRawFlag gives. */
     void setGlobalRemoveCA(bool on);
     void setGlobalDefringe(bool purple, int value0to100);
-    /* Push the current image's lens state out (lensStateChanged) -- called from
-       syncRawPanel (the end of every tree rebuild) and when the preference changes. */
+    /* Load the current image's lens state into the Effects rows -- called from
+       populateSlidersFromStack and when the auto-remove preference changes. The CA box
+       shows the EFFECTIVE state: an unset recipe on a raw follows G::autoRemoveCA. */
     void syncLensPanel();
 private:
     /* The "Denoise" checkbox writes its state into the Global scope's

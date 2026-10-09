@@ -298,6 +298,9 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "denoiseChroma")       p.denoiseChroma       = f;
     /* Tri-state, so toInt() not toFloat(): -1 unset / 0 off / 1 on. */
     else if (key == "denoiseRaw")          p.denoiseRaw          = v.toInt();
+    else if (key == "removeCA")            p.removeCA            = v.toInt();   // tri-state
+    else if (key == "defringePurple")      p.defringePurple      = f;
+    else if (key == "defringeGreen")       p.defringeGreen       = f;
     else if (key == "toneShadowCenter")    p.toneShadowCenter    = f;
     else if (key == "toneCrossover")       p.toneCrossover       = f;
     else if (key == "toneHighlightCenter") p.toneHighlightCenter = f;

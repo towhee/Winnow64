@@ -7286,6 +7286,280 @@ I've rewritten the Refine Brush's Add mode so it adds the hazy sky holes. It wor
 
   Separately, MEMORY.md is over its size limit and its last entry is being cut off. The index entries need shortening at some point.
 
+
+
+------------------------------------------------------------------------------------------
+AUTO KEYWORDING
+------------------------------------------------------------------------------------------
+
+Keyword Audit: find keywording mistakes with SigLIP image embeddings
+
+ Context
+
+ You want a model to check your existing keywords against the images, on the expectation
+ that many disagreements will be your own keywording mistakes. So the main feature is an
+ audit that finds three kinds of problem:
+
+ - Wrong keyword: e.g. an image tagged Heron that looks like the Egret images.
+ - Missing keyword: the image looks like your Heron images but isn't tagged Heron.
+ - Unfiled or stray tags that look like nothing else under that keyword.
+
+ Auto-tagging suggestions follow from the same machinery later.
+
+ The core method compares each image with your own tagged images, not with SigLIP's
+ idea of the word. For every keyword in your list, the positives are the images carrying
+ it and the negatives are the other keyworded images. An image's score for that keyword
+ comes from a model that was not trained on that image (cross-fitting). A wrong tag
+ therefore can't vouch for itself. Keywords that aren't visual (people, events,
+ "Portfolio") reveal themselves with a low cross-validated AUC and are skipped automatically.
+
+ This needs only SigLIP's image tower. That fits the existing ORT layer, which passes
+ floats only and has no tokenizer. Text zero-shot (the tokenizer and int64 tensors) is a
+ later, optional phase, and the prototype decides whether it is worth building.
+
+ Phase 0: Prototype and measure (Python, no app changes)
+
+ tools/keyword_audit_proto.py, alongside tools/export_pmrid.py, run in a venv.
+
+ 1. Read index.db read-only:
+    - thumbnail JPEGs from the thumb table;
+    - keyword paths from image.keywords_literal + image.keywordpaths, expanded the
+      same way as keywordEffectivePaths and keywordPrefixExpand in
+      Metadata/keywordpaths.h;
+    - your keyword list from userdata.db vocab.
+ 2. Embed the images with SigLIP 2. Compare base-patch16-256, which matches the 256 px
+    thumbnails, against so400m-patch14-384.
+ 3. For each vocab node with at least 8 positives, use 5-fold cross-fitting with both
+    kNN-vote and logistic regression. Report the per-keyword AUC and skip a keyword when
+    its AUC is below about 0.8.
+ 4. Burst handling: group near-duplicates (cosine > ~0.95, same folder, close capture
+    times) into one unit. The unit is scored as a whole and is never its own neighbour.
+    Otherwise a burst that was tagged together hides its own mistake.
+ 5. Ancestor rule: a parent keyword is implied by its children. Never flag a parent
+    as "missing" when a descendant is present. Score wrong-leaf confusions against
+    siblings ("tagged Heron, looks like Egret").
+ 6. Missing-keyword rule: only images that already carry some keywords count as
+    negatives. Unkeyworded images become suggestions, not mistakes.
+ 7. Write an HTML report: per keyword, the top suspects and top missing candidates with
+    thumbnails and scores; plus zero-shot text scores side by side for comparison.
+
+ Decision gate: you mark a sample of flags as real mistake / not a mistake, which
+ gives the precision.
+
+ This settles:
+ - whether to build the feature at all;
+ - which model size;
+ - kNN or logistic regression;
+ - the thresholds;
+ - whether the text tower adds anything (Phase 3).
+
+ Phase 1: Embeddings in the app
+
+ Model
+ - tools/export_siglip.py exports the image tower only to ONNX, with fixed input
+   shape and fp16. It checks the torch output against ORT.
+ - Add ModelStore::Model::SigLipImage plus a catalog row, run
+   tools/gen_model_catalog.sh and upload. Getting the model goes through
+   ModelStore::ensure() (Utilities/modelstore.cpp).
+ - New Utilities/imageembedder.h/.cpp:
+   - a lazily created static SharedSession() following ImageFormats/Raw/pmrid.cpp,
+     with InferenceDevice::Auto (ANE on Mac, DirectML on Windows);
+   - gated on InferenceSession::BackendCompiledIn();
+   - preprocessing (resize, then SigLIP's mean/std of 0.5) is done by hand, as in
+     SubjectPredictor::predict;
+   - the output vector is L2-normalised.
+
+ Image source
+ - ThumbCache::getBatch / getImage (Cache/thumbcache.h). Its size/mtime stamp
+   already guards against stale thumbnails.
+ - On a miss, fall back to Thumb::loadThumb (the embedded preview).
+
+ Storage
+ - index.db schema v22 (Cache/cachedb.cpp, an additive, re-runnable block):
+   image_embedding(pathkey TEXT PRIMARY KEY, model TEXT, srcsize, srcmtime, dim, vec BLOB).
+   Embeddings are derived data, so the rebuildable index.db is the right home.
+ - A model change produces a different model string, and rows from the old model are
+   simply re-embedded.
+
+ Job
+ - Main/keywordembedder.h/.cpp: a QObject on its own QThread, modelled on
+   Main/catalogscanner.h.
+ - It works through the Catalog::allPaths() pages and skips images that are already
+   embedded with matching stamps.
+ - It pauses during folder loads (shouldPause / waitWhilePaused), aborts atomically,
+   and shows a status-bar progress row as the devPreview builder does.
+ - Rough cost: about 43k thumbnails at a few ms each, so minutes, and it is incremental
+   afterwards.
+
+ Phase 2: The audit and review UI
+
+ Scoring
+ - Utilities/keywordaudit.h/.cpp is pure functions: it takes embeddings plus keyword
+   sets and returns findings, so it can be unit-tested.
+ - It ports the rules Phase 0 settled on: cross-fitting, burst units, ancestor/sibling
+   logic, AUC skip.
+ - Each finding is {paths (a burst unit), kind: Suspect|Missing, keyword, alternative, score}.
+ - Inputs come from Catalog::searchRows(CatalogQuery{}, 0) (all rows with keywords) and
+   the KeywordVocab tree walk (the pattern at Main/keywordedit.cpp:1245).
+ - Runs off the GUI thread.
+
+ Review dialog
+ - New Dialogs/keywordauditdlg.h/.cpp, non-modal, in the style of KeywordTidyDlg
+   ("a review list, not a button").
+ - Findings are grouped by keyword and show thumbnails.
+ - Actions per finding:
+   - Remove X
+   - Replace X with Y
+   - Add X
+   - Correct as is (dismiss)
+   - Show in browser, which shows the images in the grid or loupe for a proper look
+ - A per-keyword "Don't audit this keyword" setting.
+ - An "Apply" plan, so nothing is written per click.
+
+ Writes
+ - Applied like MW::retagKeywordPath (Main/keywordedit.cpp:614):
+   a. composeKeywordWrite
+   b. Metadata::writeKeywordsToSidecar, which respects G::modifySourceFiles
+   c. MW::publishKeywordWrite, which re-stamps and commits
+ - Then rebuildKeywordFilters.
+ - Each writer's mapping from rows to paths is checked first (the earlier proxy-row
+   incident).
+
+ Remembered decisions
+ - userdata.db (Datamodel/userdb.cpp, schema v3) gets:
+   - keyword_audit_verdict(path, keyword_path, verdict, at), so findings you dismissed
+     don't come back when the audit is rerun;
+   - keyword_audit_skip(keyword_path).
+ - These are your own data, so they belong in userdata.db and not in index.db.
+
+ Where to find it (it must be discoverable)
+ - An "Audit Keywords…" item in the Keywords dock context menu
+   (Views/keywordtree.cpp:327) and in the main menu.
+ - If the image vectors are missing, the item still works: it runs the embed job first,
+   with progress shown.
+ - If no ORT build is available, the item is greyed out with the reason shown alongside.
+
+ Headless probe
+ - --keywordaudit [filter] following CatalogProbe::run (Main/main.cpp:349).
+ - It writes the findings report to stdout so the thresholds can be re-measured against
+   the real index.
+
+ Phase 3: Optional, if Phase 0 shows it adds value
+
+ - Zero-shot text scoring for keywords with too few examples, and "Suggest keywords" for
+   unkeyworded images.
+ - Needs:
+   - the SigLIP 2 text tower;
+   - a C++ SentencePiece tokenizer plus its vocab;
+   - an int64 input path in Tensor / OrtBackend::Run.
+ - Scoped separately.
+
+ Files
+
+ - New:
+   - tools/keyword_audit_proto.py
+   - tools/export_siglip.py
+   - Utilities/imageembedder.*
+   - Utilities/keywordaudit.*
+   - Main/keywordembedder.*
+   - Dialogs/keywordauditdlg.*
+   - tests/unit/tst_keywordaudit.cpp
+ - Modified:
+   - Utilities/modelstore.cpp
+   - Cache/cachedb.cpp (v22)
+   - Datamodel/userdb.cpp (v3)
+   - Views/keywordtree.cpp
+   - Main/menusandactions.cpp
+   - Main/main.cpp
+   - CMakeLists.txt
+   - tests/CMakeLists.txt
+   - notes/Documentation.txt: a new "Keyword Audit" subsection under KEYWORDS AND
+     CATALOGUING, plus the ToC
+
+ Verification
+
+ - Phase 0: you review the HTML report. Precision on a sample of about 50 flags is
+   the go/no-go number.
+ - Unit test tst_keywordaudit, on synthetic embeddings. It checks that:
+   - a planted mislabel is flagged, with the right alternative;
+   - a mislabelled burst is caught as one unit;
+   - a parent is never flagged missing when a child is present;
+   - a non-visual keyword is skipped by the AUC rule;
+   - dismissed verdicts are filtered out.
+ - Migration: the cachedb/userdb tests rewind user_version and run the migration
+   again.
+ - Embedder parity: the C++ vector matches the Python vector (cosine > 0.999) on
+   tests/fixtures/images.
+ - Probe: --keywordaudit on the real index reproduces Phase 0's findings.
+ - In-app:
+   - run the audit;
+   - Replace one finding and check the sidecar, the Filters counts and the Keywords
+     dock highlight;
+   - dismiss one finding and rerun to confirm it doesn't come back;
+   - check on Windows (DirectML).
+ - ctest --test-dir build/<preset> --output-on-failure
+
+Step 1: Put the model where Winnow looks for it
+
+The audit needs a 185 MB model file. Normally Winnow would download it from winnow.ca, but it isn't uploaded there yet. Instead, copy the file I created into Winnow's models
+folder. Run this in Terminal:
+
+cp ~/Projects/Winnow64/ReleaseExtras/siglip2_image.onnx ~/Library/Application\ Support/Winnow/Models/
+
+You only do this once. Winnow checks the file's fingerprint the first time and then accepts it.
+
+Step 2: Build the Release configuration in Qt Creator
+
+1. Quit Winnow. Your Release build is running right now.
+2. In Qt Creator, switch the build configuration to Release, not Debug. Debug has the AI runtime switched off, so the feature would only show a greyed-out message there.
+3. Build and run as usual.
+
+Step 3: Run the audit
+
+1. In Winnow, choose Edit > Audit Keywords… (or right-click in the Keywords panel and choose Audit keywords…).
+2. Click Run Audit at the top right of the window.
+3. Wait, and watch the progress text:
+   - "Preparing the image model for this computer": about 1½ minutes, the first time only.
+   - "Reading images … of …": about 8 minutes for your whole catalog, the first time only. Later runs only process new or changed images. You can keep browsing; it pauses while a
+     folder loads.
+   - "Scoring keywords": about half a minute.
+4. The list of findings appears, most confident first.
+
+Step 4: Review the findings
+
+Click a finding, or use the arrow keys. On the right you'll see the image, what's wrong ("Tagged Egret, but looks like your Heron images"), and three of your own Egret and Heron
+photos for comparison. Decide with a key:
+
+┌─────┬─────────────────────────────────────────────┐
+│ Key │                   Meaning                   │
+├─────┼─────────────────────────────────────────────┤
+│ R   │ Replace the keyword with the suggested one  │
+├─────┼─────────────────────────────────────────────┤
+│ D   │ Remove the keyword                          │
+├─────┼─────────────────────────────────────────────┤
+│ A   │ Add the missing keyword                     │
+├─────┼─────────────────────────────────────────────┤
+│ C   │ The keywords are right (it won't ask again) │
+├─────┼─────────────────────────────────────────────┤
+│ S   │ Show the image in Winnow                    │
+├─────┼─────────────────────────────────────────────┤
+│ U   │ Undo the decision on this finding           │
+└─────┴─────────────────────────────────────────────┘
+
+The list jumps to the next finding after each decision.
+
+Nothing is written to your images until you click Apply Changes at the bottom. You can try things freely; if you close the window, it asks whether to apply or discard.
+
+Optional: the Keywords tab
+
+This tab shows how reliably each keyword can be judged from pictures. Tick Don't audit for keywords a picture can't show, such as a client or project name.
+
+If something doesn't work
+
+Tell me what the window says. Every reason it can't run is shown in the window. Two things to watch for:
+- If the Run Audit button is greyed out, it's probably the Debug build (step 2).
+- If it asks to download the model, the file didn't land in the folder from step 1.
+
 ------------------------------------------------------------------------------------------
 DEPLOYMENT
 ------------------------------------------------------------------------------------------
