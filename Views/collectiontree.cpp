@@ -2,10 +2,15 @@
 #include "File/hoverdelegate.h"
 #include "Main/global.h"
 #include "Utilities/queryexpr.h"
+#include "Utilities/fileops.h"
+#ifdef Q_OS_MAC
+#include "Utilities/mac.h"
+#endif
 
 #include <QApplication>
 #include <QContextMenuEvent>
 #include <QDrag>
+#include <QFileInfo>
 #include <QHeaderView>
 #include <QMenu>
 #include <QMessageBox>
@@ -53,6 +58,23 @@ void acceptWithoutMoving(QDropEvent *event)
     event->accept();
 }
 
+/*  The images in a URL drag: its sidecars (G::includeSidecars) are not, and the drop
+    skips them (MW::addPathsToCollection), so the drag cursor's count badge must too. */
+void showImageCountBadge(const QMimeData *m)
+{
+#ifdef Q_OS_MAC
+    const QStringList &sidecar = FileOps::sidecarSuffixes();
+    int images = 0;
+    for (const QUrl &u : m->urls())
+        if (u.isLocalFile()
+            && !sidecar.contains(QFileInfo(u.toLocalFile()).suffix(), Qt::CaseInsensitive))
+            ++images;
+    Mac::setDragBadgeCount(images);
+#else
+    Q_UNUSED(m)                     // Windows drags carry no count badge
+#endif
+}
+
 }  // namespace
 
 CollectionTree::CollectionTree(CollectionStore::Kind kind, const QString &countMetric,
@@ -61,6 +83,9 @@ CollectionTree::CollectionTree(CollectionStore::Kind kind, const QString &countM
       countMargin(countMargin)
 {
     if (G::isLogger) G::log("CollectionTree::CollectionTree");
+#ifdef Q_OS_MAC
+    Mac::installDragBadgeHook();    // once per process; see showImageCountBadge
+#endif
     setObjectName(kind == CollectionStore::Kind::Collection ? "collectionTree"
                                                             : "queryTree");
     nodeIcon = kind == CollectionStore::Kind::Query
@@ -612,7 +637,10 @@ void CollectionTree::dragEnterEvent(QDragEnterEvent *event)
         event->setDropAction(Qt::MoveAction);
         event->accept();
     }
-    else if (acceptsImages() && m->hasUrls() && isEnabled()) acceptWithoutMoving(event);
+    else if (acceptsImages() && m->hasUrls() && isEnabled()) {
+        showImageCountBadge(m);
+        acceptWithoutMoving(event);
+    }
     else event->ignore();
 }
 
@@ -638,6 +666,7 @@ void CollectionTree::dragMoveEvent(QDragMoveEvent *event)
         event->accept();
         return;
     }
+    if (acceptsImages() && m->hasUrls()) showImageCountBadge(m);
     if (acceptsImages() && m->hasUrls() && target) {
         delegate->setHoveredIndex(indexFromItem(target, 0));
         acceptWithoutMoving(event);

@@ -2803,6 +2803,9 @@ void MW::createDevelopDock()
        tint (maskTintShowRequested -> ImageView::showMaskTint) and it got in the way. The
        overlay is now shown only by an explicit toggle; the signal and showMaskTint are
        kept so the auto-show rules can be re-wired here once they are decided. */
+    /* The one auto-show: a new submask chosen in SubmaskDialog turns the overlay on. */
+    connect(developProperties, &DevelopProperties::maskOverlayShowRequested,
+            imageView, &ImageView::showMaskTint);
     /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
     connect(developProperties, &DevelopProperties::maskOverlayToggleRequested,
             this, &MW::toggleMaskOverlay);

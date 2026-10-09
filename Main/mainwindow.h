@@ -2825,6 +2825,10 @@ private:
        has adjusted a slider. Connected to DevelopProperties::maskEditBegin; no-op for other tools. */
     void onAiMaskEditBegin(int tool, int op, bool inverted, const QString &paramsJson,
                            double feather);
+    /* Popup when an automatic mask (Subject/Background/Sky/Depth) built from the user's
+       gesture came back empty or failed -- otherwise it is indistinguishable from "not
+       built yet". */
+    void reportEmptyAiMask(int tool, const QString &fPath);
     /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a
        submask is being defined: composite the active scope's submasks -- INCLUDING
        the pending one, with the op the modifiers are previewing -- into a

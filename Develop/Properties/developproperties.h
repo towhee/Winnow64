@@ -734,6 +734,9 @@ signals:
     void maskTintShowRequested();
     /* The scope menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
+    /* A new submask was chosen in SubmaskDialog -> ImageView shows the tint. Separate
+       from maskTintShowRequested (the disconnected auto-show) so it is the one rule. */
+    void maskOverlayShowRequested();
     /* Rebuild the overlay tint ALONE (previewed op changed, overlay colour changed).
        Deliberately NOT paramsChanged: nothing about the developed image has changed, and
        paramsChanged would pay a proxy + full-res re-render per modifier press. */
