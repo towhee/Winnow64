@@ -1090,6 +1090,9 @@ private:
 
     /* Item builders. div converts the integer slider amount to a double (eg /100), and
        defaults to identity (0) so an absent value is a no-op edit. */
+    /* Control-group separator row, styled by G::groupSeparatorHeight / Width / Color
+       (WidgetCSS::styleGlobals). */
+    void addGroupDivider(QModelIndex parIdx, QString parentName, QString name);
     void addHeader(const QString &name, const QString &parent,
                    const QString &caption, const QString &tooltip, int previewGroup = -1);
     void addSlider(const QString &key, const QString &caption, const QString &tooltip,
@@ -1318,8 +1321,6 @@ private:
     bool scopeItemsCollapsed = false;   // the '>' arrow: hide the scope's top items
     bool isBulkExpandCollapse = false;  // guard: Expand/Collapse all vs Solo handler
 
-    int dividerHeight = 5;      // seeded here too: buildTree runs before the ctor sets it
-    QColor divColor;
 
 
     /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =

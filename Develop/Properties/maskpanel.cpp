@@ -205,7 +205,7 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     levelTitle = new QLabel(tr("Mask"), levelBand);
     levelTitle->setToolTip("Settings for the FOLDED mask -- every submask combined.\n"
                            "The rows inside Submasks below act on one submask each.");
-    levelTitle->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
+    levelTitle->setStyleSheet(G::labelCss(G::scopeSubheaderColor, G::strFontSize.toInt()));
 
     /* No band eye here, unlike Submasks: there is nothing to show or hide -- Edge and
        Halo reshape the mask rather than contributing to it, and both already have a
@@ -242,11 +242,6 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
        not move (they stay aligned with the tree's). */
     maskLevelEditor->setIndentation(G::headerLeftInset + G::subHeaderIndent
                                     + G::subHeaderIndent / 2);
-    /* On the dock's own background, not the lighter subpanel surface: the mask-level
-       block and the Submasks band under it are the frame around the SELECTED submask's
-       details, and those details keep G::panelContentBg so they read as the thing being
-       edited (see paintEvent and SubmaskList::paintEvent). */
-    maskLevelEditor->setRowBackground(G::backgroundColor);
     bl->addWidget(maskLevelEditor);
     levelBody->setVisible(!levelCollapsed);
     lw->addWidget(levelBody);
@@ -259,27 +254,17 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
 void MaskPanel::paintEvent(QPaintEvent *)
 {
     /* Header gradient behind the "Mask" band, drawn by the PANEL (the band itself is
-       translucent) -- the same two shades SubmaskList paints behind its own band, so the
-       two sections cannot drift apart. mapTo, not geometry(): the band is a grandchild
-       here, where SubmaskList's is a direct child. */
+       translucent). mapTo, not geometry(): the band is a grandchild here. */
     QPainter p(this);
-    /* Subpanel content background (G::panelContentBg), the lift every Develop subpanel's
-       contents carry. Painted before the early return below: the panel has content --
-       the scope row and its buttons -- even when the Mask band is hidden. */
-    p.fillRect(rect(), G::panelContentBg());
+    /* Subpanel content background (G::panelContentBg) for the WHOLE panel -- the Mask
+       block, the Submasks band and the submask details alike. Painted before the early
+       return below: the panel has content even when the Mask band is hidden. */
+    p.fillRect(rect(), G::panelContentBg);
     if (!levelBand || !levelWrap || !levelWrap->isVisible()) return;
-    /* The mask-level block (its band, its Edge/Halo rows and the gaps around them) sits
-       on the dock background instead, continued behind the Submasks band by
-       SubmaskList::paintEvent: everything above the selected submask's details frames
-       them rather than belonging to them. */
-    p.fillRect(QRect(levelWrap->mapTo(this, QPoint(0, 0)), levelWrap->size()),
-               G::backgroundColor);
-    const int a = G::backgroundShade + 5;
-    const int b = G::backgroundShade - 15;
     const QRect r(levelBand->mapTo(this, QPoint(0, 0)), levelBand->size());
     QLinearGradient g(0, r.top(), 0, r.bottom());
-    g.setColorAt(0, QColor(a, a, a));
-    g.setColorAt(1, QColor(b, b, b));
+    g.setColorAt(0, G::headerGradientTop);
+    g.setColorAt(1, G::headerGradientBottom);
     p.fillRect(r, g);
 }
 
@@ -401,7 +386,10 @@ void MaskPanel::syncLevelVisible()
     if (!levelWrap) return;
     levelWrap->setVisible(levelShown);
     if (levelBody) levelBody->setVisible(!levelCollapsed);
-    if (submaskList) submaskList->setVisible(!maskFolded());
+    if (submaskList) {
+        submaskList->setVisible(!maskFolded());
+        submaskList->setTopRule(levelShown);
+    }
     syncAttrVisible();              // the settings block folds with everything else
     update();                       // the band moved: repaint its gradient
 }

@@ -126,53 +126,62 @@ int fontSize = 12;                  // kept in step with strFontSize
 qreal dpi;                          // current logical screen dots per inch
 qreal ptToPx;                       // font points to pixels conversion factor
 
-// application colors
-int textShade = 190;                // text default luminousity
-int backgroundShade;                // app background luminousity
-QColor textColor = QColor(textShade,textShade,textShade);
-QColor backgroundColor;             // define after app stylesheet defined
-QColor disabledColor;               // define after app stylesheet defined
-QColor header1Color;                // define after app stylesheet defined
-QColor header2Color;                // define after app stylesheet defined
-QColor header3Color;                //
-
-QColor borderColor;                 // define after app stylesheet defined
-QColor tabWidgetBorderColor;        // define after app stylesheet defined
-QColor unfiledKeywordColor = QColor(0x9a, 0x5a, 0x5a); // Filters + Keywords dock
-QColor appliedKeywordColor = QColor(0xb4, 0xa4, 0x5a); // Keywords dock: on this image
-QColor frameLineColor;              // define after app stylesheet defined (mb)
-int frameLineWidth = 1;
-int frameLineRadius = 6;             // = WidgetCSS brInteractive (buttons)
-QColor pushButtonBackgroundColor;   // define after app stylesheet defined
-QColor scrollBarHandleBackgroundColor; // = QColor(20,30,20);
-QColor helpColor = QColor(37,65,40);
-QColor appleBlue = QColor(21,113,211);      // #1571D3
-QColor selectionColor = QColor(68,95,118);  // #445f76
-QColor mouseOverColor = QColor(40,54,66);
-QString lightgray = "#aaaaaa";
-QString darkgray = "#111111";
-QString lightpurple = "#5f496e";
-QString darkpurple = "#3d0066";
-QString lightblue = "#1f4e85";
-QString darkblue = "#0a1633";
-QString lightyellow = "#857a1f";
-QString darkyellow = "#1a1800";
-QString lightorange = "#854a1f";
-QString darkorange = "#1a0d00";
-QString lightred = "#850000";
-QString darkred = "#110000";
-QString lightcyan = "#1f8585";
-QString darkcyan = "#001a1a";
-QString lightgreen = "#1f851f";
-QString darkgreen = "#001a00";
-QString lightteal = "#1f8567";
-QString darkteal = "#00261c";
-QString lightmaroon = "#5e1a1a";
-QString darkmaroon = "#1a0000";
-QString lightpink = "#854963";
-QString darkpink = "#3d0022";
-QString lightmagenta = "#850085";
-QString darkmagenta = "#1a001a";
+/*  Application colours and UI style values. ALL are ASSIGNED in WidgetCSS::styleGlobals
+    (Main/widgetcss.cpp) -- the one place to experiment with the app's look. */
+int textShade;
+int backgroundShade;                // app background luminousity (settings)
+QColor textColor;
+QColor backgroundColor;             // from backgroundShade (settings / MW)
+QColor disabledColor;
+QColor header1Color;
+QColor header2Color;
+QColor header3Color;
+QColor scopeSubheaderColor;
+QColor borderColor;
+QColor tabWidgetBorderColor;
+QColor unfiledKeywordColor;
+QColor appliedKeywordColor;
+QColor frameLineColor;
+int frameLineWidth;
+int frameLineRadius;
+QColor pushButtonBackgroundColor;
+QColor scrollBarHandleBackgroundColor;
+QColor helpColor;
+QColor appleBlue;
+QColor selectionColor;
+QColor mouseOverColor;
+QColor panelContentBg;
+QColor groupSeparatorColor;
+int groupSeparatorWidth;
+int groupSeparatorHeight;
+int groupSeparatorInset;
+QColor panelSeparatorColor;
+QColor headerGradientTop;
+QColor headerGradientBottom;
+QString lightgray;
+QString darkgray;
+QString lightpurple;
+QString darkpurple;
+QString lightblue;
+QString darkblue;
+QString lightyellow;
+QString darkyellow;
+QString lightorange;
+QString darkorange;
+QString lightred;
+QString darkred;
+QString lightcyan;
+QString darkcyan;
+QString lightgreen;
+QString darkgreen;
+QString lightteal;
+QString darkteal;
+QString lightmaroon;
+QString darkmaroon;
+QString lightpink;
+QString darkpink;
+QString lightmagenta;
+QString darkmagenta;
 
 QString css;                        // app stylesheet;
 
@@ -185,24 +194,18 @@ QString cssWarning  = "QLabel,QLineEdit,QComboBox {color:yellow;}";
 QString cssOk       = "QLabel,QLineEdit,QComboBox {color:green;}";
 QString cssInactive = "QLabel,QLineEdit,QComboBox {color:gray;}";
 
-static int transparency = 50;
-QColor labelNoneColor(85,85,85,transparency);                // Background Gray
-QColor labelRedColor(QColor(60,20,20));          // Dark red
-QColor labelYellowColor(QColor(80,55,15));     // Dark yellow
-QColor labelGreenColor(QColor(20,40,20));        // Dark green
-QColor labelBlueColor(QColor(20,20,60));         // Dark blue
-//    QColor labelBlueColor(QColor(20,45,100));         // Dark blue
-//    QColor labelBlueColor(QColor(32,58,124));         // Dark blue
+QColor labelNoneColor;              // pick labels: set in WidgetCSS::styleGlobals
+QColor labelRedColor;
+QColor labelYellowColor;
+QColor labelGreenColor;
+QColor labelBlueColor;
+QColor labelPurpleColor;
 QColor maskOverlayColor(QColor(220,40,40));    // Develop mask overlay (see global.h)
 bool maskOverlayGrayscale = false;             // desaturate under the overlay (global.h)
 
-QColor labelPurpleColor(QColor(50,30,70));     // Dark purple
-//    QColor labelPurpleColor(QColor(60,30,90));     // Dark purple
-//    QColor labelPurpleColor(QColor(54,37,95));     // Dark purple
-
 QStringList ratings, labelColors;
 
-double iconOpacity = 0.5;           // 0.0 - 1.0 (higher is brighter)
+double iconOpacity;                 // set in WidgetCSS::styleGlobals
 
 // ui
 int wheelSensitivity = 50;          // percent of maximum sensitivity, 1 - 100
@@ -366,49 +369,17 @@ bool stopCopyingFiles;
 bool isThreadTrackingOn;
 bool showAllTableColumns;
 
-int scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
-int propertyWidgetMarginLeft = 5;
-int propertyWidgetMarginRight = 2;
-/* Clear space between an expand/collapse arrow and the header title it precedes, in the
-   Develop/property panels: the property tree rows (PropertyDelegate) and the widget
-   header bands (RawPanel, MaskPanel, SubmaskList). Raise it to give crowded titles more
-   breathing room. */
-int decorationTitleGap = 3;
-/* Develop Scope/Edits panel TRAILING BUTTONS: every header and row there ends with the
-   same [eye] [:] pair (see ScopeHeader / SubmaskList / DevelopProperties::addHeader).
-   headerBtnGap is the clear space between the two; headerBtnRightInset is the space from
-   the panel's right edge to the menu button. Both are shared by the widget headers and by
-   the tree's section headers (BarBtnEditor), which is what makes the pair line up on
-   every line. */
-int headerBtnGap = 6;
-int headerBtnRightInset = 6;
-/* Develop SUB-HEADER OFFSET: the Edits header (ScopeHeader) collapses everything below
-   it, so the headers it hides -- the Mask and Submasks bands and the tree's Basic /
-   Color / ... sections -- are offset this far right of it, arrow AND title, to read as
-   its children. Only the header content shifts: the rows under each sub-header keep
-   their own indentation, so the sliders keep their full width. 0 lines them all up flush
-   again. */
-int subHeaderIndent = 10;
-/* Develop HEADER LEFT INSET: clear space from the panel's left edge to the expand/
-   collapse arrow of EVERY header in the dock -- the Raw band, the Edits (scope) band and
-   the sub-headers it folds away (Mask, Submasks and the tree's Basic / Color / ...
-   sections). The arrows otherwise start hard against the edge. Applied on top of
-   subHeaderIndent for the sub-headers, so they keep their offset under the Edits arrow,
-   and only to the header content: the rows under each header are untouched. 0 puts the
-   arrows back against the edge. */
-int headerLeftInset = 5;
-/* Develop PANEL SEPARATOR: every Develop dock panel (Raw, Edits, Mask,
-   Transform, Fill Replace) draws a rule this high across its bottom edge in
-   G::panelSeparatorColor, so stacked panels read as distinct blocks. Each panel
-   reserves the space as its layout's bottom margin. 0 removes the rule everywhere. */
-int panelBorderHeight = 3;
-/* Develop HEADER CAPTION TRIM: PropertyDelegate::paint centres a section header's
-   arrow and caption on the row LESS this many pixels at the bottom (its r4), which
-   sits them fractionally high in the band -- the tree's own look. The widget-built
-   header bands (RawPanel, MaskPanel, SubmaskList) reproduce it as their layout's
-   bottom margin, with no top margin, so "Raw" and "Mask" sit at the same height in
-   their bands as "Basic" and "Color" do in theirs. 0 centres everything instead. */
-int headerCaptionTrim = 3;
+// UI layout metrics: set in WidgetCSS::styleGlobals
+int scrollBarThickness;
+int propertyWidgetMarginLeft;
+int propertyWidgetMarginRight;
+int decorationTitleGap;
+int headerBtnGap;
+int headerBtnRightInset;
+int subHeaderIndent;
+int headerLeftInset;
+int panelBorderHeight;
+int headerCaptionTrim;
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 

@@ -2897,7 +2897,7 @@ void MW::createDevelopDock()
        extra bottom margin reserves the rule's space. */
     developActionRow->setStyleSheet(
         QString("QWidget#developActionRow { border-bottom: %1px solid %2; }")
-            .arg(G::panelBorderHeight).arg(G::panelSeparatorColor().name()));
+            .arg(G::panelBorderHeight).arg(G::panelSeparatorColor.name()));
     QHBoxLayout *developActionLayout = new QHBoxLayout(developActionRow);
     developActionLayout->setContentsMargins(0, 0, 0, 8 + G::panelBorderHeight);
     developActionLayout->setSpacing(0);

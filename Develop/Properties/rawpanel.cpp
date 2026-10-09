@@ -157,23 +157,28 @@ void RawPanel::buildUi()
     rb->addWidget(denoiseBlock);
 
     /* Divider below the "Render using" row, matching the rules the property tree draws
-       between the Basic / Color / Effects groups: a centred 1px line, inset 6px, in
-       G::groupSeparatorColor (see DevelopProperties::addDivider), with an extra 3px of
-       breathing room above it. It lives in denoiseBlock so it hides with the denoise
+       between the Basic / Color / Effects groups: a G::groupSeparatorWidth line centred
+       in G::groupSeparatorHeight, inset G::groupSeparatorInset, in
+       G::groupSeparatorColor (see DevelopProperties::addGroupDivider), with an extra 3px
+       of breathing room above it. It lives in denoiseBlock so it hides with the denoise
        group on the Apple engine rather than dangling under the last visible row. */
     QWidget *demDivider = new QWidget(denoiseBlock);
     /* Translucent like every other container here: a plain QWidget takes the app
        stylesheet's opaque background, which slabs a dark band across the panel's
-       lifted content background instead of just showing the 1px rule. */
+       lifted content background instead of just showing the rule. */
     demDivider->setAttribute(Qt::WA_TranslucentBackground);
-    demDivider->setFixedHeight(8);
+    const int sepH = G::groupSeparatorHeight;
+    const int sepW = qMin(G::groupSeparatorWidth, sepH);
+    const int sepAbove = (sepH - sepW) / 2;
+    demDivider->setFixedHeight(3 + sepH);
     QVBoxLayout *ddl = new QVBoxLayout(demDivider);
-    ddl->setContentsMargins(6, 5, 6, 2);
+    ddl->setContentsMargins(G::groupSeparatorInset, 3 + sepAbove,
+                            G::groupSeparatorInset, sepH - sepW - sepAbove);
     ddl->setSpacing(0);
     QFrame *demRule = new QFrame(demDivider);
-    demRule->setFixedHeight(1);
+    demRule->setFixedHeight(sepW);
     demRule->setStyleSheet(QString("background: %1; border: none;")
-                               .arg(G::groupSeparatorColor().name()));
+                               .arg(G::groupSeparatorColor.name()));
     ddl->addWidget(demRule);
     nb->addWidget(demDivider);
 
@@ -291,17 +296,15 @@ void RawPanel::paintEvent(QPaintEvent *)
     /* Subpanel content background (G::panelContentBg): everything BELOW the header band,
        which keeps the gradient painted just after this. */
     p.fillRect(0, headerBand->geometry().bottom() + 1, width(),
-               height() - headerBand->geometry().bottom() - 1, G::panelContentBg());
-    const int a = G::backgroundShade + 5;
-    const int b = G::backgroundShade - 15;
+               height() - headerBand->geometry().bottom() - 1, G::panelContentBg);
     const QRect r = headerBand->geometry();
     QLinearGradient g(0, r.top(), 0, r.bottom());
-    g.setColorAt(0, QColor(a, a, a));
-    g.setColorAt(1, QColor(b, b, b));
+    g.setColorAt(0, G::headerGradientTop);
+    g.setColorAt(1, G::headerGradientBottom);
     p.fillRect(r, g);
     /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::panelSeparatorColor());
+               G::panelSeparatorColor);
 }
 
 void RawPanel::setEditSource(bool raw)

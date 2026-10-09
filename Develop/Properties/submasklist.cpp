@@ -57,7 +57,7 @@ void SubmaskList::buildUi()
     connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
 
     titleLabel = new QLabel(tr("Submasks"), headerBand);
-    titleLabel->setStyleSheet(G::labelCss(G::header3Color, G::strFontSize.toInt()));
+    titleLabel->setStyleSheet(G::labelCss(G::scopeSubheaderColor, G::strFontSize.toInt()));
 
     addBtn = new BarBtn();
     addBtn->setToolTip("Add a submask to this mask (M)");
@@ -118,13 +118,26 @@ void SubmaskList::paintEvent(QPaintEvent *)
        already says where this block starts, and a second gradient inside it read as a
        second panel. The band still carries its arrow, caption and buttons; only the fill
        behind it changed. */
-    p.fillRect(rect(), G::panelContentBg());
-    /* The BAND, though, continues the mask-level block's dock background above it
-       (MaskPanel::paintEvent): the lighter surface starts at the submask rows, which are
-       what the details below them belong to. */
-    if (headerBand)
-        p.fillRect(QRect(headerBand->mapTo(this, QPoint(0, 0)), headerBand->size()),
-                   G::backgroundColor);
+    p.fillRect(rect(), G::panelContentBg);
+    /* Separator between the Mask block above and this section, in the gap setTopRule
+       opens above the band, drawn as PropertyDelegate draws the tree's group dividers:
+       centred in the gap, inset from both sides. */
+    if (topRule && headerBand) {
+        const int gap = headerBand->mapTo(this, QPoint(0, 0)).y();
+        const int w = G::groupSeparatorWidth;
+        const int inset = G::groupSeparatorInset;
+        if (gap > 0)
+            p.fillRect(inset, (gap - w) / 2, width() - 2 * inset, w, G::groupSeparatorColor);
+    }
+}
+
+void SubmaskList::setTopRule(bool on)
+{
+    if (topRule == on) return;
+    topRule = on;
+    /* The gap the separator sits in is the outer layout's top margin. */
+    if (layout()) layout()->setContentsMargins(0, on ? G::groupSeparatorHeight : 0, 0, 0);
+    update();
 }
 
 QString SubmaskList::opName(int op)
@@ -225,7 +238,7 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     opBtn->setStyleSheet(
         "QPushButton { min-width: 0; padding: 0; border: none; border-radius: 9px;"
                      " background: transparent; }"
-        "QPushButton:hover:enabled { background: " + G::groupSeparatorColor().name() + "; }");
+        "QPushButton:hover:enabled { background: " + G::groupSeparatorColor.name() + "; }");
     if (index == 0) {
         /* Inert, but NOT setEnabled(false): that greys the glyph, and a dim "+" beside
            the crisp ones below it reads as "this submask is disabled" or as a fault,

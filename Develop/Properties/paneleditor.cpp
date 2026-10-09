@@ -30,6 +30,7 @@ PanelEditor::PanelEditor(QWidget *parent) : PropertyEditor(parent)
     /* Fill every non-header row with the subpanel content background, as the Develop tree
        does -- these rows ARE that panel's contents (see DevelopProperties::initialize). */
     propertyDelegate->isAlternatingRows = false;
+    propertyDelegate->headerColor = G::scopeSubheaderColor;
 
     /* Column split identical to DevelopProperties (owners align via setCaptionWidth). */
     stringToFitCaptions = "=captions column=";
@@ -40,12 +41,6 @@ PanelEditor::PanelEditor(QWidget *parent) : PropertyEditor(parent)
 void PanelEditor::setCaptionWidth(int w)
 {
     if (w > 0) setColumnWidth(CapColumn, w);
-}
-
-void PanelEditor::setRowBackground(const QColor &c)
-{
-    propertyDelegate->rowBackground = c;
-    viewport()->update();
 }
 
 void PanelEditor::clearRows()

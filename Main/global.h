@@ -783,6 +783,11 @@ Q_NAMESPACE
     extern QColor header1Color;
     extern QColor header2Color;
     extern QColor header3Color;
+    /*  Caption colour for the subpanel headers inside a Develop scope (Basic, Color,
+        Mask, Submasks, ...). Not the Scope or Raw bands, which sit above the scope and
+        keep header2Color. Separate from header2Color so these can differ from the rest
+        of the app's property editors (Preferences, Embellish). */
+    extern QColor scopeSubheaderColor;
     extern QColor borderColor;
     extern QColor tabWidgetBorderColor;
     /*  A keyword an image carries that is NOT in the keyword list. One colour so the
@@ -957,37 +962,16 @@ Q_NAMESPACE
         return css;
     }
 
-    /* Develop SUBPANEL CONTENT background: ten shades above the dock's own background, so
-       each subpanel's contents (the scopes strip, the Raw and Transform bodies, the Edits
-       tree's non-header rows) read as a surface distinct from the header bands over them
-       -- those keep the backgroundShade +5 -> -15 gradient -- and from the action row
-       under the dock title bar, which stays on the plain background. Tracks
-       backgroundShade, so it follows the Preferences brightness slider. */
-    inline QColor panelContentBg() {
-        const int s = backgroundShade + 10;
-        return QColor(s, s, s);
-    }
-
-    /* CONTROL-GROUP separator: the thin rule drawn BETWEEN groups of controls inside a
-       subpanel -- the dividers between the Basic tone/WB/presence groups in the Edits
-       tree (PropertyEditor::addDivider) and the Raw panel's rule under "Render using".
-       Brighter than the lifted content it sits on (panelContentBg + 20), so a group break
-       reads inside a panel without competing with the panel separator below. */
-    inline QColor groupSeparatorColor() {
-        const int s = backgroundShade + 30;
-        return QColor(s, s, s);
-    }
-
-    /* PANEL separator: the rule along the bottom edge of each Develop subpanel, and under
-       the dock's action row. The same shade the dock frames use (WidgetCSS::l5,
-       backgroundShade + 5, drawn by the QMainWindow::separator rule in
-       WidgetCSS::mainWindow) so a panel boundary inside a dock reads as the same kind of
-       structural division as the boundary between docks -- quieter than the group rules
-       inside a panel, which mark something the eye is meant to follow. */
-    inline QColor panelSeparatorColor() {
-        const int s = backgroundShade + 5;
-        return QColor(s, s, s);
-    }
+    /* Develop panel surfaces and separators. Values and their rationale live in
+       WidgetCSS::styleGlobals (Main/widgetcss.cpp). */
+    extern QColor panelContentBg;       // subpanel content surface
+    extern QColor groupSeparatorColor;  // rule between control groups inside a panel
+    extern int groupSeparatorWidth;     // ditto: line thickness (px)
+    extern int groupSeparatorHeight;    // ditto: vertical space the separator occupies
+    extern int groupSeparatorInset;     // ditto: horizontal inset from each panel edge
+    extern QColor panelSeparatorColor;  // rule along each panel's bottom edge
+    extern QColor headerGradientTop;    // section header band gradient, top
+    extern QColor headerGradientBottom; // ditto, bottom
 
     /* A colour blended halfway into the panel background: he DISABLED form of anything
        that carries meaning through colour rather than text (a selection band, a hue
