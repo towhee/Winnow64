@@ -443,12 +443,11 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            (see isAlternatingRows) so the trees that leave their rows unfilled -- the
            Preferences and Embellish ones -- keep showing the viewport through. */
         if (!isAlternatingRows)
-            painter->fillRect(r0, rowBackground.isValid() ? rowBackground
-                                                          : G::panelContentBg());
+            painter->fillRect(r0, G::panelContentBg);
         const int lineH = index.data(UR_DividerLineHeight).toInt();
         const QColor lineColor = index.data(UR_DividerColor).value<QColor>();
         if (lineH > 0 && lineColor.alpha() > 0) {
-            const int margin = 6;                        // horizontal inset of the rule
+            const int margin = G::groupSeparatorInset;   // horizontal inset of the rule
             const int yMid = r0.center().y() - lineH / 2;
             painter->fillRect(QRect(r0.left() + margin, yMid,
                                     r0.width() - 2 * margin, lineH), lineColor);
@@ -485,24 +484,19 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         ;
         // */
 
-    int a = G::backgroundShade + 5;
-    int b = G::backgroundShade - 15;
     int c = G::backgroundShade + 30;
     int d = G::backgroundShade;
-    int e = G::backgroundShade + 10;
     int t = G::textShade;
     int u = G::textShade - 30;          // leaf items
 
     QLinearGradient rootCategoryBackground;
     rootCategoryBackground.setStart(0, r.top());
     rootCategoryBackground.setFinalStop(0, r.bottom());
-    rootCategoryBackground.setColorAt(0, QColor(a,a,a));
-    rootCategoryBackground.setColorAt(1, QColor(b,b,b));
+    rootCategoryBackground.setColorAt(0, G::headerGradientTop);
+    rootCategoryBackground.setColorAt(1, G::headerGradientBottom);
 
     QColor categoryRowBackground(QColor(d,d,d));
-    /* rowBackground overrides the subpanel content shade where an owner wants its rows on
-       a different surface (MaskPanel's Edge/Halo rows, on G::backgroundColor). */
-    QColor valueRowBackground = rowBackground.isValid() ? rowBackground : QColor(e,e,e);
+    QColor valueRowBackground = G::panelContentBg;
 
     QFont font;
     font = painter->font();
@@ -510,7 +504,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     font.setPointSize(fontSize);
     painter->setFont(font);
 
-    QPen catPen(G::header2Color);           // root items l
+    QPen catPen(headerColor.isValid() ? headerColor : G::header2Color);  // root items
     QPen hdrPen(G::header3Color);           // root items same other items
     QPen regPen(QColor(t,t,t));             // other items have silver text
     QPen selPen("#1b8a83");                 // selected items have torquoise text

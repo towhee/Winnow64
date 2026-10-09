@@ -95,16 +95,15 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        presets. Seed one name so it is valid before any image. */
     scopeList = QStringList() << "Global";
 
-    /* Divider metrics BEFORE the first buildTree, not after. addDivider stamps the row's
-       height from dividerHeight at build time, so building with it still unset gave every
-       divider a ZERO height -- and a zero-height LAST row makes QTreeView::viewportSizeHint
-       fall back to its generic 4-line default (QRect::isValid() is false for a 0-height
-       rect), which in fit mode collapsed the whole block to ~3 rows. That is what made the
-       Calibrate / Color Grade / Detail / Effects headers vanish when Effects (the last
-       section, ending in a divider) was expanded before any folder was loaded: every later
-       rebuild ran with the metrics set, so it only ever bit the as-started tree. */
-    dividerHeight = 5;
-    divColor = G::groupSeparatorColor();
+    /* Divider metrics (G::groupSeparator*, set by WidgetCSS::styleGlobals in
+       MW::createAppStyle, before the docks are built) must be non-zero by the first
+       buildTree. addGroupDivider stamps the row's height at build time, and building
+       with it unset gave every divider a ZERO height -- a zero-height LAST row makes
+       QTreeView::viewportSizeHint fall back to its generic 4-line default
+       (QRect::isValid() is false for a 0-height rect), which in fit mode collapsed the
+       whole block to ~3 rows: the Calibrate / Color Grade / Detail / Effects headers
+       vanished when Effects (the last section, ending in a divider) was expanded before
+       any folder was loaded. */
 
     buildTree();        // active scope's top items + Basic / Color / Effects
 
@@ -192,6 +191,7 @@ void DevelopProperties::initialize()
        rows on the plain dock background. Headers are unaffected: they paint their own
        gradient band. */
     propertyDelegate->isAlternatingRows = false;
+    propertyDelegate->headerColor = G::scopeSubheaderColor;
     setMouseTracking(false);
     setHeaderHidden(true);
     ignoreFontSizeChangeSignals = false;
@@ -3327,7 +3327,7 @@ void DevelopProperties::paintEvent(QPaintEvent *event)
        band sizeHint reserves for this rule, so it always draws. */
     if (fitToContents || ruleY < viewport()->height() - G::panelBorderHeight) {
         p.fillRect(0, ruleY, viewport()->width(), G::panelBorderHeight,
-                   G::panelSeparatorColor());
+                   G::panelSeparatorColor);
     }
 }
 
@@ -3343,6 +3343,13 @@ void DevelopProperties::drawBranches(QPainter *, const QRect &, const QModelInde
 /* ----------------------------------------------------------------------------------------
    Item builders
    ---------------------------------------------------------------------------------------- */
+
+void DevelopProperties::addGroupDivider(QModelIndex parIdx, QString parentName,
+                                        QString name)
+{
+    addDivider(G::groupSeparatorHeight, G::groupSeparatorWidth, G::groupSeparatorColor,
+               parIdx, parentName, name);
+}
 
 void DevelopProperties::addHeader(const QString &name, const QString &parent,
                                   const QString &caption, const QString &tooltip, int previewGroup)
@@ -3395,7 +3402,7 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
        sections, with lineHeight 0 so nothing is drawn. addDivider leaves capIdx on the
        divider, so restore the header index: every caller takes parIdx = capIdx on return. */
     const QModelIndex hdrIdx = capIdx;
-    addDivider(dividerHeight, 0, Qt::transparent, hdrIdx, name, name + "TopSpacer");
+    addDivider(G::groupSeparatorHeight, 0, Qt::transparent, hdrIdx, name, name + "TopSpacer");
     capIdx = hdrIdx;
 }
 
@@ -4165,7 +4172,7 @@ void DevelopProperties::addBasic()
         repopulation), and re-synced by findData under a QSignalBlocker.
     */
     addViewTransformRow(parIdx);
-    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ProfileDivider");
+    addGroupDivider(parIdx, "BasicHeader", "ProfileDivider");
 
     addWhiteBalanceRow(parIdx);
     addSlider("temp",       "Temp",       "Colour temperature of the light, in Kelvin.",
@@ -4173,7 +4180,7 @@ void DevelopProperties::addBasic()
               int(WhiteBalance::kMinKelvin), int(WhiteBalance::kMaxKelvin), 0,
               G::lightblue, G::lightyellow, 0, /*logScale*/ true);
     addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -150, 150, 0,   G::lightgreen, G::lightmagenta);
-    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "WBDevider");
+    addGroupDivider(parIdx, "BasicHeader", "WBDevider");
 
     addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, G::darkgray, G::lightgray);
     addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
@@ -4181,11 +4188,11 @@ void DevelopProperties::addBasic()
     addSlider("shadows",    "Shadows",    "Recover or deepen the shadows.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("whites",     "Whites",     "Set the white point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("blacks",     "Blacks",     "Set the black point.",                parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
-    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "ToneDevider");
+    addGroupDivider(parIdx, "BasicHeader", "ToneDevider");
     addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("clarity",    "Clarity",    "Midtone punch (+) or soft glow (-).", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
-    addDivider(dividerHeight, 1, divColor, parIdx, "BasicHeader", "BasicEndDivider");
+    addGroupDivider(parIdx, "BasicHeader", "BasicEndDivider");
     // demo colors
     // addSlider("blue", "Blue", "Blue.", parIdx, "BasicHeader", -100, 100, 0, G::darkblue, G::lightblue);
     // addSlider("yellow", "Yellow", "Yellow.", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
@@ -4391,7 +4398,7 @@ void DevelopProperties::addCurves()
         setIndexWidget(splitIdx, rw);
     }
 
-    addDivider(dividerHeight, 1, divColor, parIdx, "CurvesHeader", "CurvesEndDivider");
+    addGroupDivider(parIdx, "CurvesHeader", "CurvesEndDivider");
 
     applyCurveMode();
 }
@@ -4642,13 +4649,13 @@ void DevelopProperties::addColor()
     addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, "#000000", "#ff0000");
     addSlider("green",      "Green",      "Per-channel green gain.",               parIdx, "ColorHeader", -100, 100, 0, "#000000", "#00ff00");
     addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, "#000000", "#0000ff");
-    addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "RGBDevider");
+    addGroupDivider(parIdx, "ColorHeader", "RGBDevider");
     addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("saturation", "Saturation", "Global saturation (grey at -100).",     parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
-    addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "HSLDevider");
+    addGroupDivider(parIdx, "ColorHeader", "HSLDevider");
     addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
-    addDivider(dividerHeight, 1, divColor, parIdx, "ColorHeader", "ColorEndDivider");
+    addGroupDivider(parIdx, "ColorHeader", "ColorEndDivider");
 }
 
 /* --------------------------------------------------------------------------------------
@@ -4748,7 +4755,7 @@ void DevelopProperties::addCalibrate()
        They nudge whichever primaries are checked -- by a DELTA, so several checked
        primaries keep their differences (see setCalAxis), which is what the wheel does
        too once more than one primary is checked. */
-    addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateWheelDivider");
+    addGroupDivider(parIdx, "CalibrateHeader", "CalibrateWheelDivider");
     addSlider("calHue", "Hue",
               "Hue shift of the checked primaries (+/-30 degrees at full scale).",
               parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
@@ -4756,7 +4763,7 @@ void DevelopProperties::addCalibrate()
               "Chroma scale of the checked primaries (-100 = grey, +100 = 2x).",
               parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
 
-    addDivider(dividerHeight, 1, divColor, parIdx, "CalibrateHeader", "CalibrateEndDivider");
+    addGroupDivider(parIdx, "CalibrateHeader", "CalibrateEndDivider");
 }
 
 /*
@@ -5555,7 +5562,7 @@ void DevelopProperties::addColorGrade()
     /* Window SHAPE: panel-wide, not per-range, so they sit below the divider. Blending
        defaults to 50 and Balance to 0, which reproduce the fixed split the panel used
        before they existed. */
-    addDivider(dividerHeight, 1, divColor, parIdx, "ColorGradeHeader", "GradeDivider");
+    addGroupDivider(parIdx, "ColorGradeHeader", "GradeDivider");
     addSlider("gradeBlending", "Blending",
               "How much the shadow / midtone / highlight ranges overlap "
               "(50 = the default split).",
@@ -5564,7 +5571,7 @@ void DevelopProperties::addColorGrade()
               "Slide the split between the ranges: right favours highlights, "
               "left favours shadows.",
               parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
-    addDivider(dividerHeight, 1, divColor, parIdx, "ColorGradeHeader", "ColorGradeEndDivider");
+    addGroupDivider(parIdx, "ColorGradeHeader", "ColorGradeEndDivider");
 }
 
 int DevelopProperties::firstActiveGradeRange() const
@@ -5823,7 +5830,7 @@ void DevelopProperties::addDetail()
     /* A plain spacer (no rule) between the preview and the first slider: the graphic
        otherwise butts straight up against the Sharpening row. Same idiom as the spacer
        under every section header (addHeader). */
-    addDivider(dividerHeight, 0, Qt::transparent, parIdx, "DetailHeader",
+    addDivider(G::groupSeparatorHeight, 0, Qt::transparent, parIdx, "DetailHeader",
                "DetailPreviewSpacer");
 
     /* Sharpening: capture sharpening, an unsharp mask on luminance (see Develop::Sharpen
@@ -5859,7 +5866,7 @@ void DevelopProperties::addDetail()
               "is sharpened, black is protected.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
 
-    addDivider(dividerHeight, 1, divColor, parIdx, "DetailHeader", "DenoiseDivider");
+    addGroupDivider(parIdx, "DetailHeader", "DenoiseDivider");
 
     /* Local noise reduction: per-scope, maskable Develop ops on the decoded image
        (localDenoiseLuma / localDenoiseChroma). Lives here rather than under Effects
@@ -5874,7 +5881,7 @@ void DevelopProperties::addDetail()
     addSlider("localDenoiseChroma", "   Color", "Local colour (chroma) noise reduction.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
 
-    addDivider(dividerHeight, 1, divColor, parIdx, "DetailHeader", "DetailEndDivider");
+    addGroupDivider(parIdx, "DetailHeader", "DetailEndDivider");
 }
 
 void DevelopProperties::addEffects()
@@ -5893,7 +5900,7 @@ void DevelopProperties::addEffects()
     addSlider("vignetteFeather", "   Feather", "How far the vignette reaches inward.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
 
-    addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "GrainDivider");
+    addGroupDivider(parIdx, "EffectsHeader", "GrainDivider");
 
     /* Grain: monochromatic film grain added to luminance (see Develop::Grain). Amount is
        the strength, size the particle size (scaled to the image so the proxy matches full
@@ -5915,7 +5922,7 @@ void DevelopProperties::addEffects()
        fringe sliders pull the coloured rim along high-contrast edges back to a true mix
        of the two sides. Both 0..100 sliders map to 0..1. */
     if (activeScopeIndex == 0) {
-        addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "LensDivider");
+        addGroupDivider(parIdx, "EffectsHeader", "LensDivider");
         addCheckbox("removeCA", "Remove CA",
                     "Remove lateral chromatic aberration: re-align red and blue with\n"
                     "green, measured from this image. Removes the colour fringe that\n"
@@ -5931,7 +5938,7 @@ void DevelopProperties::addEffects()
                   parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
     }
 
-    addDivider(dividerHeight, 1, divColor, parIdx, "EffectsHeader", "EndDivider");
+    addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()

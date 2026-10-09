@@ -262,7 +262,7 @@ public:
     void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
-    void setCategoryBackground(const int &a, const int &b);
+    void setCategoryBackground();      // re-reads G::headerGradientTop/Bottom
     void setCategoryBackground(QTreeWidgetItem *cat);
     void setSearchNewFolder();
     void setCategoryFilterStatus(QTreeWidgetItem *item);

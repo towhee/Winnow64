@@ -48,11 +48,9 @@ protected:
     void paintEvent(QPaintEvent *) override
     {
         QPainter p(this);
-        const int a = G::backgroundShade + 5;
-        const int b = G::backgroundShade - 15;
         QLinearGradient g(0, 0, 0, height());
-        g.setColorAt(0, QColor(a, a, a));
-        g.setColorAt(1, QColor(b, b, b));
+        g.setColorAt(0, G::headerGradientTop);
+        g.setColorAt(1, G::headerGradientBottom);
         p.fillRect(rect(), g);
     }
 

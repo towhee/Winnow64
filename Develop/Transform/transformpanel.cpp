@@ -118,7 +118,7 @@ bool parseAspect(const QString &text, double &w, double &h)
 }
 
 /* A section-header band that paints the same top-to-bottom gradient as the property-tree
-   headers (see PropertyDelegate::paint: backgroundShade +5 -> -15). Plain QWidget subclass with no
+   headers (see PropertyDelegate::paint: G::headerGradientTop -> Bottom). Plain QWidget subclass with no
    _Q_OBJECT (needs no moc) -- it only overrides paintEvent. */
 class GradientHeader : public QWidget
 {
@@ -127,11 +127,9 @@ public:
 protected:
     void paintEvent(QPaintEvent *) override {
         QPainter p(this);
-        const int a = G::backgroundShade + 5;
-        const int b = G::backgroundShade - 15;
         QLinearGradient g(0, 0, 0, height());
-        g.setColorAt(0, QColor(a, a, a));
-        g.setColorAt(1, QColor(b, b, b));
+        g.setColorAt(0, G::headerGradientTop);
+        g.setColorAt(1, G::headerGradientBottom);
         p.fillRect(rect(), g);
     }
 };
@@ -790,10 +788,10 @@ void TransformPanel::paintEvent(QPaintEvent *event)
     /* Subpanel content background (G::panelContentBg). The whole panel lifts: the
        GradientHeader is a CHILD, and children paint after their parent, so its band
        covers this fill with the header gradient. */
-    p.fillRect(rect(), G::panelContentBg());
+    p.fillRect(rect(), G::panelContentBg);
     /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::panelSeparatorColor());
+               G::panelSeparatorColor);
 }
 
 void TransformPanel::changeEvent(QEvent *event)

@@ -39,7 +39,7 @@
         paint a slab over the panel. The bar's background is explicitly transparent.
 
     The bar carries the same panel separator rule as every other Develop panel boundary
-    (G::panelBorderHeight in G::panelSeparatorColor()), on the side facing the panel
+    (G::panelBorderHeight in G::panelSeparatorColor), on the side facing the panel
     contents. That colour is derived from G::backgroundShade, and a per-widget stylesheet is
     NOT regenerated when the Preferences brightness slider moves, so MW::setBackgroundShade
     calls Restyle().
@@ -67,7 +67,7 @@ namespace PanelButtonBar
             QString("QWidget#panelButtonBar { background: transparent; %1: %2px solid %3; }")
                 .arg(side)
                 .arg(G::panelBorderHeight)
-                .arg(G::panelSeparatorColor().name()));
+                .arg(G::panelSeparatorColor.name()));
     }
 
     /*  Build a QPushButton that triggers action. The label defaults to the action's text
@@ -170,7 +170,7 @@ namespace PanelButtonBar
     }
 
     /*  Re-apply the separator colour to every bar under root. Called from
-        MW::setBackgroundShade, where G::panelSeparatorColor() changes. */
+        MW::setBackgroundShade, where G::panelSeparatorColor changes. */
     inline void Restyle(QWidget *root)
     {
         if (!root) return;

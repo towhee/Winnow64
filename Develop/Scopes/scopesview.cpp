@@ -108,10 +108,10 @@ void ScopesView::paintEvent(QPaintEvent *event)
     QPainter p(this);
     /* Subpanel content background (G::panelContentBg): the strip is all content, no
        header band, so the whole widget lifts. The scopes themselves paint over it. */
-    p.fillRect(rect(), G::panelContentBg());
+    p.fillRect(rect(), G::panelContentBg);
     /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
-               G::panelSeparatorColor());
+               G::panelSeparatorColor);
 }
 
 void ScopesView::setData(const ScopeData &d)

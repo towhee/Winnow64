@@ -1,8 +1,174 @@
 #include "Main/widgetcss.h"
 #include "Main/global.h"
 
+void WidgetCSS::styleGlobals()
+{
+    const int bg = G::backgroundShade;
+    auto shade = [](int s) { return QColor(s, s, s); };
+
+    /* ---------------------------------------------------------------------------------
+       TEXT AND HEADER COLOURS
+       --------------------------------------------------------------------------------- */
+    G::textShade = 190;                         // text default luminousity
+    G::textColor = shade(G::textShade);
+    G::disabledColor = shade(bg + 40);
+    G::header1Color = QColor(108,193,232);      // #6cc1e8  dock titles
+    G::header2Color = QColor(81,141,169);       // #518da9
+    G::header3Color = QColor(66,115,138);       // #42738a
+    // G::header3Color = QColor(50,82,98);
+    /* Caption colour for the subpanel headers inside a Develop scope (Basic, Color, Mask,
+       Submasks, ...). Not the Scope or Raw bands, which keep header2Color. */
+    G::scopeSubheaderColor = G::textColor;
+    G::helpColor = QColor(37,65,40);
+    G::appleBlue = QColor(21,113,211);          // #1571D3
+    G::unfiledKeywordColor = QColor(0x9a, 0x5a, 0x5a);  // Filters + Keywords dock
+    G::appliedKeywordColor = QColor(0xb4, 0xa4, 0x5a);  // Keywords dock: on this image
+
+    /* ---------------------------------------------------------------------------------
+       WIDGET CHROME
+       --------------------------------------------------------------------------------- */
+    G::borderColor = shade(bg + 40);
+    G::tabWidgetBorderColor = shade(bg + 60);
+    G::pushButtonBackgroundColor = shade(bg - 10);
+    G::frameLineColor = shade(bg + 15);         // menu background shade (mb)
+    G::frameLineWidth = 1;
+    G::frameLineRadius = 6;                     // = brInteractive (buttons)
+    G::scrollBarHandleBackgroundColor = QColor(bg, bg + 3, bg);
+    G::selectionColor = QColor(68,95,118);      // #445f76
+    G::mouseOverColor = QColor(40,54,66);
+    G::iconOpacity = 0.5;                       // 0.0 - 1.0 (higher is brighter)
+
+    /* Pick label colours */
+    const int transparency = 50;
+    G::labelNoneColor = QColor(85,85,85,transparency);  // Background Gray
+    G::labelRedColor = QColor(60,20,20);                // Dark red
+    G::labelYellowColor = QColor(80,55,15);             // Dark yellow
+    G::labelGreenColor = QColor(20,40,20);              // Dark green
+    G::labelBlueColor = QColor(20,20,60);               // Dark blue
+    // G::labelBlueColor = QColor(20,45,100);
+    // G::labelBlueColor = QColor(32,58,124);
+    G::labelPurpleColor = QColor(50,30,70);             // Dark purple
+    // G::labelPurpleColor = QColor(60,30,90);
+    // G::labelPurpleColor = QColor(54,37,95);
+
+    /* Named palette */
+    G::lightgray = "#aaaaaa";
+    G::darkgray = "#111111";
+    G::lightpurple = "#5f496e";
+    G::darkpurple = "#3d0066";
+    G::lightblue = "#1f4e85";
+    G::darkblue = "#0a1633";
+    G::lightyellow = "#857a1f";
+    G::darkyellow = "#1a1800";
+    G::lightorange = "#854a1f";
+    G::darkorange = "#1a0d00";
+    G::lightred = "#850000";
+    G::darkred = "#110000";
+    G::lightcyan = "#1f8585";
+    G::darkcyan = "#001a1a";
+    G::lightgreen = "#1f851f";
+    G::darkgreen = "#001a00";
+    G::lightteal = "#1f8567";
+    G::darkteal = "#00261c";
+    G::lightmaroon = "#5e1a1a";
+    G::darkmaroon = "#1a0000";
+    G::lightpink = "#854963";
+    G::darkpink = "#3d0022";
+    G::lightmagenta = "#850085";
+    G::darkmagenta = "#1a001a";
+
+    /* SECTION HEADER GRADIENT: the vertical top -> bottom band behind every section
+       header -- property-tree root rows (PropertyDelegate: Develop sections, Preferences,
+       Embellish), the Filters categories, the InfoView categories, and the widget-built
+       bands (GradientHeader, ScopeHeader, RawPanel, MaskPanel, Transform, Replace,
+       History). */
+    G::headerGradientTop = shade(bg + 5);
+    G::headerGradientBottom = shade(qMax(0, bg - 15));
+
+    /* ---------------------------------------------------------------------------------
+       DEVELOP PANEL SURFACES AND SEPARATORS
+       --------------------------------------------------------------------------------- */
+    /* SUBPANEL CONTENT background: ten shades above the dock's own background, so each
+       subpanel's contents (the scopes strip, the Raw and Transform bodies, the Edits
+       tree's non-header rows) read as a surface distinct from the header bands over them
+       -- those keep the headerGradient band -- and from the action row under the dock
+       title bar, which stays on the plain background. */
+    G::panelContentBg = shade(bg + 10);
+
+    /* CONTROL-GROUP SEPARATOR: the rule drawn BETWEEN groups of controls inside a
+       subpanel -- the dividers between the Basic tone/WB/presence groups in the Edits
+       tree (PropertyEditor::addDivider), the Raw panel's rule under "Render using" and
+       the Mask panel's rule above Submasks. Brighter than the lifted content it sits on
+       (panelContentBg + 20), so a group break reads inside a panel without competing
+       with the panel separator below.
+         Color   line colour
+         Width   line thickness, px
+         Height  vertical space the separator occupies (the line is centred in it)
+         Inset   clear space from each side of the panel to the line's ends */
+    G::groupSeparatorColor = shade(bg + 30);
+    G::groupSeparatorWidth = 1;
+    G::groupSeparatorHeight = 8;
+    G::groupSeparatorInset = 6;
+
+    /* PANEL SEPARATOR: the rule along the bottom edge of each Develop subpanel, and under
+       the dock's action row. The same shade the dock frames use (l5, drawn by the
+       QMainWindow::separator rule in mainWindow()) so a panel boundary inside a dock
+       reads as the same kind of structural division as the boundary between docks --
+       quieter than the group rules inside a panel. Its height is panelBorderHeight
+       below. */
+    G::panelSeparatorColor = shade(bg + 5);
+
+    /* ---------------------------------------------------------------------------------
+       LAYOUT METRICS
+       --------------------------------------------------------------------------------- */
+    G::scrollBarThickness = 14;        // Also set in winnowstyle.css for vertical and horizontal
+    G::propertyWidgetMarginLeft = 5;
+    G::propertyWidgetMarginRight = 2;
+    /* Clear space between an expand/collapse arrow and the header title it precedes, in the
+       Develop/property panels: the property tree rows (PropertyDelegate) and the widget
+       header bands (RawPanel, MaskPanel, SubmaskList). Raise it to give crowded titles more
+       breathing room. */
+    G::decorationTitleGap = 3;
+    /* Develop Scope/Edits panel TRAILING BUTTONS: every header and row there ends with the
+       same [eye] [:] pair (see ScopeHeader / SubmaskList / DevelopProperties::addHeader).
+       headerBtnGap is the clear space between the two; headerBtnRightInset is the space from
+       the panel's right edge to the menu button. Both are shared by the widget headers and by
+       the tree's section headers (BarBtnEditor), which is what makes the pair line up on
+       every line. */
+    G::headerBtnGap = 6;
+    G::headerBtnRightInset = 6;
+    /* Develop SUB-HEADER OFFSET: the Edits header (ScopeHeader) collapses everything below
+       it, so the headers it hides -- the Mask and Submasks bands and the tree's Basic /
+       Color / ... sections -- are offset this far right of it, arrow AND title, to read as
+       its children. Only the header content shifts: the rows under each sub-header keep
+       their own indentation, so the sliders keep their full width. 0 lines them all up flush
+       again. */
+    G::subHeaderIndent = 10;
+    /* Develop HEADER LEFT INSET: clear space from the panel's left edge to the expand/
+       collapse arrow of EVERY header in the dock -- the Raw band, the Edits (scope) band and
+       the sub-headers it folds away (Mask, Submasks and the tree's Basic / Color / ...
+       sections). The arrows otherwise start hard against the edge. Applied on top of
+       subHeaderIndent for the sub-headers, so they keep their offset under the Edits arrow,
+       and only to the header content: the rows under each header are untouched. 0 puts the
+       arrows back against the edge. */
+    G::headerLeftInset = 5;
+    /* Develop PANEL SEPARATOR: every Develop dock panel (Raw, Edits, Mask,
+       Transform, Fill Replace) draws a rule this high across its bottom edge in
+       G::panelSeparatorColor, so stacked panels read as distinct blocks. Each panel
+       reserves the space as its layout's bottom margin. 0 removes the rule everywhere. */
+    G::panelBorderHeight = 3;
+    /* Develop HEADER CAPTION TRIM: PropertyDelegate::paint centres a section header's
+       arrow and caption on the row LESS this many pixels at the bottom (its r4), which
+       sits them fractionally high in the band -- the tree's own look. The widget-built
+       header bands (RawPanel, MaskPanel, SubmaskList) reproduce it as their layout's
+       bottom margin, with no top margin, so "Raw" and "Mask" sit at the same height in
+       their bands as "Basic" and "Color" do in theirs. 0 centres everything instead. */
+    G::headerCaptionTrim = 3;
+}
+
 QString WidgetCSS::css()
 {
+    styleGlobals();
     fg = G::textShade;
     bg = G::backgroundShade;
     mb = bg + 15;
@@ -30,22 +196,12 @@ QString WidgetCSS::css()
     l50 = bg + 50;
     l60 = bg + 60;
 
-    textColor = QColor(fg,fg,fg);
-    disabledColor = QColor(l40,l40,l40);
-    G::disabledColor = disabledColor;
-    header1Color = QColor(108,193,232);     // #6cc1e8
-    header2Color = QColor(81,141,169);      // #518da9
-    header3Color = QColor(66,115,138);      // #42738a
-    G::header1Color = header1Color;         // dock titles,
-    G::header2Color = header2Color;
-    // header3Color = QColor(50,82,98);
-    G::header3Color = header3Color;
-    G::tabWidgetBorderColor = QColor(l60,l60,l60);
-    G::pushButtonBackgroundColor = QColor(d10,d10,d10);
-    borderColor = QColor(l40,l40,l40);
-    G::borderColor = borderColor;
-    G::frameLineColor = QColor(mb,mb,mb);
-    G::scrollBarHandleBackgroundColor = QColor(bg,l3,bg);
+    textColor = G::textColor;
+    disabledColor = G::disabledColor;
+    header1Color = G::header1Color;
+    header2Color = G::header2Color;
+    header3Color = G::header3Color;
+    borderColor = G::borderColor;
     selectionColor = G::selectionColor;
     mouseOverColor = G::mouseOverColor;  // not being used, matches what happens in treeview on windows
     progressBarBackgroundColor = QColor(d10,d10,d10);

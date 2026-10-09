@@ -40,14 +40,12 @@ void InfoDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option, 
     int y1 = option.rect.top();
     int y2 = option.rect.bottom();
 
-    int a = G::backgroundShade + 5;
-    int b = G::backgroundShade - 15;
 
     QLinearGradient categoryBackground;
     categoryBackground.setStart(0, y1);
     categoryBackground.setFinalStop(0, y2);
-    categoryBackground.setColorAt(0, QColor(a,a,a));
-    categoryBackground.setColorAt(1, QColor(b,b,b));
+    categoryBackground.setColorAt(0, G::headerGradientTop);
+    categoryBackground.setColorAt(1, G::headerGradientBottom);
 
     int hOffset = 11;
     int vOffset = 1;

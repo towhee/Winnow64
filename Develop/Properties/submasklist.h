@@ -70,6 +70,11 @@ public:
        row wears afterwards, so the two cannot drift. */
     static QString opGlyph(int op);
 
+    /* Control-group separator above the band (G::groupSeparator*), set by MaskPanel
+       while the "Mask" block sits above it. With no Mask block the band is the panel's
+       top row: no separator. */
+    void setTopRule(bool on);
+
 signals:
     void addRequested();                          // [+] / "Add submask"
     void submaskSelected(int index);              // row click: re-open it for editing
@@ -101,6 +106,7 @@ private:
     void emitDeferred(std::function<void()> fn);
 
     QWidget     *headerBand    = nullptr;
+    bool         topRule       = false;
     BarBtn      *collapseBtn   = nullptr;
     QLabel      *titleLabel    = nullptr;
     BarBtn      *addBtn        = nullptr;

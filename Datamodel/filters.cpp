@@ -116,13 +116,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     itemIsExcludedColor = QColor(0xd0, 0x60, 0x60);
     itemIsUnfiledColor = G::unfiledKeywordColor;
 
-    int a = G::backgroundShade + 5;
-    int b = G::backgroundShade - 15;
 
     categoryBackground.setStart(0, 0);
     categoryBackground.setFinalStop(0, 18);
-    categoryBackground.setColorAt(0, QColor(a,a,a));
-    categoryBackground.setColorAt(1, QColor(b,b,b));
+    categoryBackground.setColorAt(0, G::headerGradientTop);
+    categoryBackground.setColorAt(1, G::headerGradientBottom);
     categoryFont = this->font();
 
     /*  The prompt in the Search category row when there is no query. It is also what
@@ -179,7 +177,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     createDynamicFilters();
     createGroups();
     updateKeywordModeLabel();       // the any/all control is there from the start
-    setCategoryBackground(a, b);
+    setCategoryBackground();
 
     setItemDelegate(new FiltersDelegate(this));
 
@@ -635,7 +633,7 @@ void Filters::setCategoryBackground(QTreeWidgetItem *cat)
     cat->setBackground(3, categoryBackground);
 }
 
-void Filters::setCategoryBackground(const int &a, const int &b)
+void Filters::setCategoryBackground()
 {
 /*
     Sets the background gradient for the category items. This function is also called when the
@@ -643,10 +641,10 @@ void Filters::setCategoryBackground(const int &a, const int &b)
 */
     if (G::isLogger) G::log("Filters::setCategoryBackground");
     if (debugFilters)
-        qDebug() << "Filters::setCategoryBackground(const int &a, const int &b)"
+        qDebug() << "Filters::setCategoryBackground()"
                     ;
-    categoryBackground.setColorAt(0, QColor(a,a,a));
-    categoryBackground.setColorAt(1, QColor(b,b,b));
+    categoryBackground.setColorAt(0, G::headerGradientTop);
+    categoryBackground.setColorAt(1, G::headerGradientBottom);
 
     setCategoryBackground(search);
     setCategoryBackground(picks);

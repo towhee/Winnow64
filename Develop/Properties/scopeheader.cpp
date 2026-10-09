@@ -234,7 +234,7 @@ void ScopeHeader::updateScopeBar()
 
 void ScopeHeader::paintEvent(QPaintEvent *)
 {
-    /* The property-header gradient (backgroundShade +5 -> -15) behind the scope bar,
+    /* The property-header gradient (G::headerGradientTop -> Bottom) behind the scope bar,
        which stands in for a panel header band. Everything below sits on the dock
        background.
        NO containment rail and NO panel separator: the bar and the editor below it are
@@ -242,12 +242,10 @@ void ScopeHeader::paintEvent(QPaintEvent *)
        of, and a rule under the bar would cut the block in two. */
     if (!scopeBar || !scopeBar->isVisible()) return;
     QPainter p(this);
-    const int a = G::backgroundShade + 5;
-    const int b = G::backgroundShade - 15;
     const QRect r = scopeBar->geometry();
     QLinearGradient g(0, r.top(), 0, r.bottom());
-    g.setColorAt(0, QColor(a, a, a));
-    g.setColorAt(1, QColor(b, b, b));
+    g.setColorAt(0, G::headerGradientTop);
+    g.setColorAt(1, G::headerGradientBottom);
     p.fillRect(r, g);
 }
 
