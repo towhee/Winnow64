@@ -435,7 +435,14 @@ void Reader::readIcon()
             writer holds for a whole batch transaction -- so every Reader thread queued
             behind the writer to have its work thrown away. Measured on 1,048 raws with
             the cache warm, that was essentially the entire load. */
-        if (!image.isNull() && !fromThumbCache && !isVersion) {
+        /*  NOR WHEN IT IS THE DEVELOPED THUMBNAIL. ThumbCache is keyed by path and holds
+            the CAMERA's picture; putImage's own guard trusts m->developEdited, and a flag
+            that was ever wrong for this row (a stale m, a model column not yet updated)
+            stored the developed render as the camera thumb. Nothing invalidates it when
+            the recipe is later reset -- the file's size and mtime never change -- so an
+            unedited image went on showing an old edit's crop and colour (seen on a D7200
+            NEF, 2026-10-10). The source of the pixels is the only reliable answer. */
+        if (!image.isNull() && !fromThumbCache && !isVersion && !thumb->lastWasDevThumb) {
             QElapsedTimer tCache;
             if (G::isPerfProbe) tCache.start();
             ThumbCache::instance().putImage(fPath, image, m && m->developEdited);

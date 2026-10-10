@@ -200,14 +200,14 @@ QString MW::devPreviewBuildKey(const QString &fPath) const
     /* Only an edited image pays the sidecar read. A recipe reset to identity reads back
        empty here and correctly falls through to the default render. */
     const QString blob = edited ? developProperties->developBlobFor(fPath) : QString();
-    if (!blob.isEmpty()) return Metadata::devPreviewKey(blob);
+    if (!blob.isEmpty()) return Metadata::devPreviewKey(blob, fPath);
 
     /* An unedited VERSION looks exactly like its source's default render, which the
        master's own entry already holds (ImageDecoder::loadDevPreview reads it there). */
     if (VersionKey::isVersion(fPath)) return QString();
     if (!RawFormat::HasSensorDecoder(QFileInfo(fPath).suffix().toLower()))
         return QString();
-    return Metadata::defaultRenderKey();
+    return Metadata::defaultRenderKey(fPath);
 }
 
 void MW::devPreviewBuildNext()
@@ -345,7 +345,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
        stack cache are out of step -- and writing either tier would record a picture under a
        description it does not match. Drop it; the next pass rebuilds from a settled state. */
     const QString blob = developProperties->developBlobFor(fPath);
-    const QString recipeKey = Metadata::devPreviewKey(blob);   // empty when blob is empty
+    const QString recipeKey = Metadata::devPreviewKey(blob, fPath);   // empty when blob is empty
     if (!recipeKey.isEmpty() && recipeKey != key) {
         devPreviewBuildStepDone();
         return;

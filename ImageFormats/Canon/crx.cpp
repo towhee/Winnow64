@@ -370,7 +370,7 @@ bool CanonCR3Raw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     uint16_t black[4] = {0, 0, 0, 0};
     if (left > 4) {
         double sum[4] = {0, 0, 0, 0}; size_t cnt[4] = {0, 0, 0, 0};
-        const int mb = left - 2;                              // skip the transition columns
+        const int mb = left / 2;            // outer half: inner border is lit (canon.cpp)
         for (int y = 0; y < fH; ++y)
             for (int x = 2; x < mb; ++x) {
                 const int idx = ((y & 1) << 1) | (x & 1);

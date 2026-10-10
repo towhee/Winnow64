@@ -573,7 +573,7 @@ bool Thumb::loadVersionThumb(const QString &key, int dmRow, QImage &image,
 
     const ImageVersion v = Versions::readVersion(srcPath, id);
     if (v.id && v.isDeveloped() && !v.preview.isEmpty()
-        && v.previewKey == Metadata::devPreviewKey(v.develop)) {
+        && v.previewKey == Metadata::devPreviewKey(v.develop, key)) {
         if (image.loadFromData(QByteArray::fromBase64(v.preview), "JPG") && !image.isNull()) {
             if (qMax(image.width(), image.height()) > G::maxIconSize)
                 image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio,
@@ -628,6 +628,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     setBusy();
     abort = false;
+    lastWasDevThumb = false;
     this->dmRow = dmRow;
 
     if (G::instanceClash(instance, "Thumb::loadThumb")) {
@@ -672,6 +673,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
     {
         ScopedIconNs _t(G::probeIconDevThumbNs, G::isPerfProbe);
         if (!abort && loadDevThumb(fPath, image)) {
+            lastWasDevThumb = true;
             setIdle();
             if (G::isPerfProbe) G::probeIconCount.fetch_add(1, std::memory_order_relaxed);
             return true;

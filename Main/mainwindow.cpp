@@ -7441,7 +7441,7 @@ QImage MW::devPreview(const QString &fPath)
     if (blob.isEmpty()) return QImage();          // no edits: the camera JPG is correct
 
     const QByteArray jpg = DevPreviewCache::instance().get(
-        fPath, Metadata::devPreviewKey(blob).toLatin1());
+        fPath, Metadata::devPreviewKey(blob, fPath).toLatin1());
     if (jpg.isEmpty()) return QImage();
 
     QImage im;

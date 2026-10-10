@@ -19,6 +19,10 @@ public:
     bool loadThumb(QString &fPath, int dmRow, QImage &image,
                    int instance, const ImageMetadata &m, QString src);
     void presetOffset(uint offset, uint length);
+    /*  True when the last loadThumb answered with the DEVELOPED thumbnail from the
+        sidecar (loadDevThumb) rather than the camera's picture. Reader::readIcon must
+        never put such an image into ThumbCache, which holds camera thumbnails only. */
+    bool lastWasDevThumb = false;
     /*  The icon for a VERSION row (key = path + "/#v" + id, Utilities/versionkey.h):
         the version's own developed preview when current, else the source file's
         original camera thumbnail. metadata is the caller's (reader-local) Metadata,

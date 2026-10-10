@@ -213,7 +213,7 @@ void MW::newVersion()
         const QByteArray thumb = Metadata::readDevThumb(key);    // key-checked
         if (!v.develop.isEmpty() && !thumb.isEmpty()) {
             v.preview = thumb.toBase64();
-            v.previewKey = Metadata::devPreviewKey(v.develop);
+            v.previewKey = Metadata::devPreviewKey(v.develop, key);
         }
         versionValuesFromRow(dm, dmRow, v);
 
@@ -226,7 +226,7 @@ void MW::newVersion()
         /* The loupe preview too, so the new version opens looking like its origin
            instead of decoding. Same recipe, same hash. */
         if (!v.develop.isEmpty()) {
-            const QByteArray hash = Metadata::devPreviewKey(v.develop).toLatin1();
+            const QByteArray hash = Metadata::devPreviewKey(v.develop, key).toLatin1();
             const QByteArray jpg = DevPreviewCache::instance().get(key, hash);
             if (!jpg.isEmpty()) DevPreviewCache::instance().put(newKey, hash, jpg);
         }
@@ -388,8 +388,8 @@ void MW::setVersionAsMaster()
 
     // loupe previews, swapped with their recipes (each keeps its own hash)
     DevPreviewCache &dpc = DevPreviewCache::instance();
-    const QByteArray mHash = Metadata::devPreviewKey(masterRecipe).toLatin1();
-    const QByteArray vHash = Metadata::devPreviewKey(versionRecipe).toLatin1();
+    const QByteArray mHash = Metadata::devPreviewKey(masterRecipe, master).toLatin1();
+    const QByteArray vHash = Metadata::devPreviewKey(versionRecipe, key).toLatin1();
     const QByteArray mLoupe = masterRecipe.isEmpty() ? QByteArray() : dpc.get(master, mHash);
     const QByteArray vLoupe = versionRecipe.isEmpty() ? QByteArray() : dpc.get(key, vHash);
 

@@ -247,8 +247,12 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         catalog_meta, the change sequence the library snapshot is checked against;
         version 21 added NO table -- the seventh data repair: picks became session-only,
         so it clears image.pick, which an unpick never reached; version 22 added
-        image_embedding, the SigLIP image vectors Audit Keywords compares. */
-    QCOMPARE(CacheDb::schemaVersion(), 22);
+        image_embedding, the SigLIP image vectors Audit Keywords compares; version 23
+        added NO table -- the eighth data repair: it drops the thumb rows of every
+        image with develop_history, because Reader::readIcon could cache an image's
+        DEVELOPED thumbnail as its camera thumb and nothing invalidated it once the
+        recipe was reset. */
+    QCOMPARE(CacheDb::schemaVersion(), 23);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
