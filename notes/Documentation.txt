@@ -5072,13 +5072,13 @@ ISOLATING THE SELECTION is the pre-existing "Grayscale background" item on the a
 
   that.
 
-UI (compact, per the mockup): four Shadows / Midtones / Highlights / GLOBAL checkboxes on one row, one shared hue/saturation wheel, a Luminance slider, then Blending + Balance below a divider.
+UI (compact, per the mockup): four Shadows / Midtones / Highlights / GLOBAL radio buttons on one row (exclusive), one shared hue/saturation wheel, a Luminance slider, then Blending + Balance below a divider.
 
-- The wheel (Develop/Properties/colorgradewheel.*) is a directly-embedded index widget (setIndexWidget on a full-width first-column-spanned row), NOT a delegate editor. Hue = angle, saturation = radius; it draws all three range dots (active bright, inactive dim) and a drag moves EVERY checked range to the cursor's hue/sat -- so one checked range edits it alone, all three checked = a global tint.
+- The wheel (Develop/Properties/colorgradewheel.*) is a directly-embedded index widget (setIndexWidget on a full-width first-column-spanned row), NOT a delegate editor. Hue = angle, saturation = radius; it draws all three range dots (active bright, inactive dim) and a drag moves the SELECTED range's dot to the cursor's hue/sat. (setActiveMask still accepts several bits, but the panel only ever sets one.)
 
-- The checkboxes are UI selection state (gradeActiveMask), not EditParams: they pick which range(s) the wheel + Luminance slider write. Default: Mid checked.
+- The radio buttons are UI selection state (gradeActiveMask, exactly one bit), not EditParams: they pick which range the wheel + Luminance slider edit. Default: Midtones. EXCLUSIVE since 2026-10-10: with checkboxes, ticking two made the wheel and the Luminance slider show only the first range's values while writing all of them, so the readout lied about the second. A mask carried over with several bits keeps its lowest (firstActiveGradeRange).
 
-- Luminance (key "gradeLum") writes to every checked range; on load it shows the lowest checked range's value.
+- Luminance (key "gradeLum") writes to the selected range and shows that range's value.
 
 - GLOBAL is a fourth range that is NOT tone-selective: it applies its tint and luminance to every pixel at weight 1, on top of the three windowed ranges. In the pipeline it is simply range [3] with no tonal weight (see applyPointOps).
 

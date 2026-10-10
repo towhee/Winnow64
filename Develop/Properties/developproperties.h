@@ -969,11 +969,11 @@ private:
 
     /* ---- Color Grade (colour grading) ------------------------------------------------
        The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
-       editor; it edits whichever range(s) the Dark/Mid/Light checkboxes select
-       (gradeActiveMask bits: 0x1 shadow, 0x2 mid, 0x4 high). The Luminance slider writes
-       the same active range(s). Recreated on every tree rebuild. */
+       editor; it edits the ONE range the exclusive radio buttons select (gradeActiveMask,
+       one bit of 0x1 shadow, 0x2 mid, 0x4 high, 0x8 global). The Luminance slider writes
+       the same range. Recreated on every tree rebuild. */
     QPointer<ColorGradeWheel> colorGradeWheel;
-    int  gradeActiveMask = 0x2;             // midtones checked by default
+    int  gradeActiveMask = 0x2;             // midtones selected by default
     void onGradeWheelChanged(bool commit);  // wheel drag -> active-scope grade params
     void refreshColorGradeRow();            // push stored grade to the wheel + Lum slider
     void setGradeLum(float lum);            // write Lum to every active range

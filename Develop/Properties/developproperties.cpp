@@ -5477,9 +5477,10 @@ void DevelopProperties::addColorGrade()
               "Tonal-range colour grading (shadows / midtones / highlights).", PV_ColorGrade);
     QModelIndex parIdx = capIdx;
 
-    /* Range selector: three checkboxes on one spanned row (Dark/Mid/Light), matching the
-       compact panel mockup. They are UI state (gradeActiveMask), not EditParams; they
-       pick which range(s) the wheel + Luminance slider write. */
+    /* Range selector: four radio buttons on one spanned row (Shadows / Midtones /
+       Highlights / Global), exclusive, so the wheel and the Luminance slider always edit
+       exactly ONE range and always show that range's own values. They are UI state
+       (gradeActiveMask, one bit set), not EditParams. */
     clearItemInfo(i);
     i.name = "gradeRanges";
     i.parIdx = parIdx;
@@ -5498,27 +5499,26 @@ void DevelopProperties::addColorGrade()
         QHBoxLayout *hb = new QHBoxLayout(rw);
         hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
         hb->setSpacing(10);
-        QCheckBox *dark  = new QCheckBox("Shadows",    rw);
-        QCheckBox *mid   = new QCheckBox("Midtones",   rw);
-        QCheckBox *light = new QCheckBox("Highlights", rw);
-        QCheckBox *glob  = new QCheckBox("Global",     rw);
+        QRadioButton *dark  = new QRadioButton("Shadows",    rw);
+        QRadioButton *mid   = new QRadioButton("Midtones",   rw);
+        QRadioButton *light = new QRadioButton("Highlights", rw);
+        QRadioButton *glob  = new QRadioButton("Global",     rw);
         glob->setToolTip("Tint every pixel, whatever its tone.");
-        dark->setChecked(gradeActiveMask  & 0x1);
-        mid->setChecked(gradeActiveMask   & 0x2);
-        light->setChecked(gradeActiveMask & 0x4);
-        glob->setChecked(gradeActiveMask  & 0x8);
-        auto upd = [this, dark, mid, light, glob]{
-            gradeActiveMask = (dark->isChecked()  ? 0x1 : 0) |
-                              (mid->isChecked()   ? 0x2 : 0) |
-                              (light->isChecked() ? 0x4 : 0) |
-                              (glob->isChecked()  ? 0x8 : 0);
+        QButtonGroup *group = new QButtonGroup(rw);   // exclusive by default
+        group->addButton(dark,  0x1);
+        group->addButton(mid,   0x2);
+        group->addButton(light, 0x4);
+        group->addButton(glob,  0x8);
+        /* Older builds allowed several ranges at once; keep the first of them. */
+        const int range = firstActiveGradeRange();
+        gradeActiveMask = 1 << range;
+        if (QAbstractButton *b = group->button(gradeActiveMask)) b->setChecked(true);
+        connect(group, &QButtonGroup::idToggled, this, [this](int id, bool on){
+            if (!on) return;             // the button being unchecked; its partner follows
+            gradeActiveMask = id;
             if (colorGradeWheel) colorGradeWheel->setActiveMask(gradeActiveMask);
             refreshColorGradeRow();      // point the Lum slider at the new active range
-        };
-        connect(dark,  &QCheckBox::toggled, this, [upd](bool){ upd(); });
-        connect(mid,   &QCheckBox::toggled, this, [upd](bool){ upd(); });
-        connect(light, &QCheckBox::toggled, this, [upd](bool){ upd(); });
-        connect(glob,  &QCheckBox::toggled, this, [upd](bool){ upd(); });
+        });
         hb->addWidget(dark);
         hb->addWidget(mid);
         hb->addWidget(light);
@@ -5551,7 +5551,7 @@ void DevelopProperties::addColorGrade()
 
     /* Luminance for the checked range(s). Integer -100..100 like the colour sliders. */
     addSlider("gradeLum", "Luminance",
-              "Brighten / darken the checked tonal range(s).",
+              "Brighten / darken the selected tonal range.",
               parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
 
     /* Window SHAPE: panel-wide, not per-range, so they sit below the divider. Blending
@@ -6102,8 +6102,9 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
-    /* Color Grade Luminance slider: writes every range the Dark/Mid/Light checkboxes
-       select (not a plain applyKeyToParams key -- it needs gradeActiveMask context). */
+    /* Color Grade Luminance slider: writes the range the Shadows/Midtones/Highlights/
+       Global radio buttons select (not a plain applyKeyToParams key -- it needs
+       gradeActiveMask context). */
     if (source == "gradeLum") {
         if (currentImagePath.isEmpty()) return;
         noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
