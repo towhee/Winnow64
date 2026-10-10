@@ -352,14 +352,32 @@ void TransformPanel::buildUi()
     grid->addLayout(lockFlipRow,  0, 3);
     grid->addWidget(cropResetBtn, 0, 4);
 
-    grid->addWidget(levelModeBtn, 1, 0);
-    grid->addWidget(angleLbl,     1, 1);
-    grid->addWidget(angleEdit,    1, 2, Qt::AlignLeft);
-    grid->addWidget(levelResetBtn,1, 4);
+    /* The control-group divider every Develop panel uses (see
+       DevelopProperties::addGroupDivider) above the Level and Warp rows. The slot is
+       G::groupSeparatorHeight less the grid's row spacing on either side (the spacing a
+       divider row in the property tree takes), plus 12px of extra room above and below
+       the line, which paintEvent centres in the slot. */
+    const int ruleExtra = 12;
+    auto addRule = [&](int row) {
+        QWidget *rule = new QWidget(this);
+        rule->setAttribute(Qt::WA_TranslucentBackground);
+        rule->setFixedHeight(qMax(G::groupSeparatorWidth,
+                                  G::groupSeparatorHeight - 2 * grid->verticalSpacing())
+                             + 2 * ruleExtra);
+        rowRules.append(rule);
+        grid->addWidget(rule, row, 0, 1, 5);
+    };
 
-    grid->addWidget(warpModeBtn,  2, 0);
-    grid->addWidget(warpHint,     2, 1, 1, 2);
-    grid->addWidget(warpResetBtn, 2, 4);
+    addRule(1);
+    grid->addWidget(levelModeBtn, 2, 0);
+    grid->addWidget(angleLbl,     2, 1);
+    grid->addWidget(angleEdit,    2, 2, Qt::AlignLeft);
+    grid->addWidget(levelResetBtn,2, 4);
+
+    addRule(3);
+    grid->addWidget(warpModeBtn,  4, 0);
+    grid->addWidget(warpHint,     4, 1, 1, 2);
+    grid->addWidget(warpResetBtn, 4, 4);
 
     /* -------- Assemble -------- */
     /* The bottom margin reserves the panel separator rule drawn in paintEvent. */
@@ -369,7 +387,10 @@ void TransformPanel::buildUi()
     lay->addWidget(header);
     QVBoxLayout *bodyWrap = new QVBoxLayout;
     bodyWrap->setContentsMargins(6, 0, 6, 6);
+    bodyWrap->setSpacing(0);
+    bodyWrap->addSpacing(12);       // breathing room above the Crop row
     bodyWrap->addLayout(grid);
+    bodyWrap->addSpacing(12);       // and below the Warp row
     lay->addLayout(bodyWrap);
 
     /* Restore the persisted lock state, aspect selection and mode. */
@@ -789,6 +810,16 @@ void TransformPanel::paintEvent(QPaintEvent *event)
        GradientHeader is a CHILD, and children paint after their parent, so its band
        covers this fill with the header gradient. */
     p.fillRect(rect(), G::panelContentBg);
+    /* Group dividers above Level and Warp: a G::groupSeparatorWidth line centred in each
+       translucent placeholder, inset G::groupSeparatorInset from the panel edges like
+       the property tree's dividers. */
+    const int sepW = G::groupSeparatorWidth;
+    const int inset = G::groupSeparatorInset;
+    for (QWidget *rule : rowRules) {
+        const QRect g = rule->geometry();
+        p.fillRect(inset, g.top() + (g.height() - sepW) / 2, width() - 2 * inset, sepW,
+                   G::groupSeparatorColor);
+    }
     /* Separator rule across the bottom edge (space reserved by the layout margin). */
     p.fillRect(0, height() - G::panelBorderHeight, width(), G::panelBorderHeight,
                G::panelSeparatorColor);

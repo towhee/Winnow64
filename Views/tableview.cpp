@@ -1,4 +1,5 @@
 #include "Views/tableview.h"
+#include "Metadata/keywordpaths.h"
 #include "Main/mainwindow.h"
 
 extern MW *m5;
@@ -722,12 +723,17 @@ KeywordsItemDelegate::KeywordsItemDelegate(QObject* parent): QStyledItemDelegate
 {
 }
 
-QString KeywordsItemDelegate::displayText(const QVariant& value, const QLocale& /*locale*/) const
+void KeywordsItemDelegate::initStyleOption(QStyleOptionViewItem *option,
+                                           const QModelIndex &index) const
 {
-    if (value.toStringList().count() == 0)
-        return QString();
-
-    return Utilities::stringListToString(value.toStringList());
+    /* The cell holds the literal dc:subject list, but nested keywords win: a flat entry is
+       shown only when no hierarchical path names it (keywordEffectivePaths), so the column
+       agrees with the Info panel and Filters. */
+    QStyledItemDelegate::initStyleOption(option, index);
+    const QStringList subject = index.data(Qt::EditRole).toStringList();
+    const QStringList paths =
+        index.siblingAtColumn(G::KeywordPathsColumn).data(Qt::EditRole).toStringList();
+    option->text = Utilities::stringListToString(keywordEffectivePaths(subject, paths));
 }
 
 FileSizeItemDelegate::FileSizeItemDelegate(QObject* parent): QStyledItemDelegate(parent)

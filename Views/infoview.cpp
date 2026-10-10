@@ -1,4 +1,5 @@
 #include "Views/infoview.h"
+#include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
@@ -667,7 +668,11 @@ void InfoView::updateInfo(const int &row)
     ok->setData(ok->index(UrlRow, 1, tagInfoIdx), s);
     s = dm->sf->index(row, G::GPSCoordColumn).data().toString();
     ok->setData(ok->index(GPSCoordRow, 1, tagInfoIdx), s);
-    s = Utilities::stringListToString(dm->sf->index(row, G::KeywordsColumn).data().toStringList());
+    /* Nested keywords win: a flat dc:subject entry is shown only when no hierarchical path
+       names it (keywordEffectivePaths), the same rule Filters and the catalog use. */
+    s = Utilities::stringListToString(keywordEffectivePaths(
+            dm->sf->index(row, G::KeywordsColumn).data().toStringList(),
+            dm->sf->index(row, G::KeywordPathsColumn).data().toStringList()));
     ok->setData(ok->index(KeywordRow, 1, tagInfoIdx), s);
 
     this->fPath = fPath;        // not used, convenience value for future use

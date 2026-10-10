@@ -18,6 +18,7 @@
 #include "Develop/Presets/presetsview.h"
 #include "Main/dockwidget.h"
 #include "Main/global.h"
+#include "Utilities/htmlwindow.h"
 
 /* ------------------------------------------------------------------ PanelSectionHeader */
 
@@ -343,17 +344,13 @@ void HistoryPanel::showHistoryMenu()
 
 void HistoryPanel::showHistoryHelp()
 {
-    if (G::popup) G::popup->showPopup(
-        "<b>Develop History</b><br>"
-        "Every develop action for this image, newest first.<br>"
-        "Hover an entry to preview that state; click it to go back to it.<br>"
-        "Editing from an earlier entry discards the entries after it.<br><br>"
-        "Press \\ to flip the image between <b>Before</b> (the bottom entry) and "
-        "<b>After</b> (where you are now). It stays on Before until you press \\ "
-        "again, edit, or move to another image.<br><br>"
-        "History is per image and is kept between sessions. It is set aside if the "
-        "image was changed somewhere Winnow did not see (another computer, a restored "
-        "sidecar) -- the edits themselves are always kept.", 7000);
+    /* A help page in an HtmlWindow, like every other Develop band's help (see
+       DevelopProperties::sectionHelp). */
+    if (G::isLogger) G::log("HistoryPanel::showHistoryHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - History",
+                   ":/Docs/develophistoryhelp.html",
+                   QSize(700, 600), r, window());
 }
 
 void HistoryPanel::showPresetsHelp()

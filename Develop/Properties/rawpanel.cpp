@@ -87,10 +87,10 @@ void RawPanel::buildUi()
        built below are parented to it and get the same treatment. */
     body->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *bl = new QVBoxLayout(body);
-    /* The 9px top margin is the panel's own 4px inset plus the 5px spacer the property
-       tree puts under every section header (DevelopProperties::addHeader), so the first
-       row here clears the "Raw" band by the same amount as Basic/Color/Effects. */
-    bl->setContentsMargins(0, 9, 0, 6);
+    /* Top margin: the panel's own 4px inset, plus the 5px spacer the property tree puts
+       under every section header (DevelopProperties::addHeader), plus 4px of extra
+       clearance between the "Raw" band and the Edit row. */
+    bl->setContentsMargins(0, 13, 0, 6);
     bl->setSpacing(4);
     outer->addWidget(body);
 
@@ -126,7 +126,9 @@ void RawPanel::buildUi()
     rawBlock = new QWidget(body);
     rawBlock->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *rb = new QVBoxLayout(rawBlock);
-    rb->setContentsMargins(0, 0, 0, 0);
+    /* 4px top margin: extra space between the Edit row and "Render using". Inside
+       rawBlock so it hides with the block. */
+    rb->setContentsMargins(0, 4, 0, 0);
     rb->setSpacing(4);
     bl->addWidget(rawBlock);
 
@@ -193,6 +195,7 @@ void RawPanel::buildUi()
     nrl->addWidget(nrLbl);
     nrl->addStretch(1);
     nb->addWidget(nrRow);
+    nb->addSpacing(4);              // extra space between the caption and its controls
 
     /* Run row: "Denoise"/"Denoised" + "Auto run". */
     QWidget *runRow = new QWidget(denoiseBlock);

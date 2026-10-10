@@ -107,7 +107,7 @@ void WidgetCSS::styleGlobals()
          Inset   clear space from each side of the panel to the line's ends */
     G::groupSeparatorColor = shade(bg + 30);
     G::groupSeparatorWidth = 1;
-    G::groupSeparatorHeight = 8;
+    G::groupSeparatorHeight = qRound(G::fontSize * 1.33);
     G::groupSeparatorInset = 6;
 
     /* PANEL SEPARATOR: the rule along the bottom edge of each Develop subpanel, and under

@@ -190,7 +190,9 @@ class KeywordsItemDelegate : public QStyledItemDelegate {
     Q_OBJECT
 public:
     explicit KeywordsItemDelegate(QObject* parent = nullptr);
-    virtual QString displayText(const QVariant & value, const QLocale & locale) const override;
+protected:
+    void initStyleOption(QStyleOptionViewItem *option,
+                         const QModelIndex &index) const override;
 };
 
 class FileSizeItemDelegate : public QStyledItemDelegate {
