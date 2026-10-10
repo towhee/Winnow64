@@ -7668,7 +7668,7 @@ void DevelopProperties::topUpDevPreviews(const QString &fPath)
     const QString blob = developBlobFor(fPath);
     if (blob.isEmpty()) return;                       // unedited: camera render is correct
 
-    const QByteArray key = Metadata::devPreviewKey(blob).toLatin1();
+    const QByteArray key = Metadata::devPreviewKey(blob, fPath).toLatin1();
     if (fPath == toppedUpPath && key == toppedUpKey) return;   // already handled
 
     const bool loupeOk = DevPreviewCache::instance().contains(fPath, key);
@@ -7785,7 +7785,7 @@ void DevelopProperties::flushImage(const QString &fPath)
 
     if (!blob.isEmpty() && !loupeJpg.isEmpty()) {
         DevPreviewCache::instance().put(
-            fPath, Metadata::devPreviewKey(blob).toLatin1(), loupeJpg);
+            fPath, Metadata::devPreviewKey(blob, fPath).toLatin1(), loupeJpg);
     }
     else {
         /* No usable preview for this recipe: drop any older one so the loupe never paints

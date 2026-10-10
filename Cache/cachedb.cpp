@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 22;
+constexpr int kSchemaVersion = 23;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1644,6 +1644,30 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  srcsize  INTEGER NOT NULL DEFAULT 0,"
                     "  srcmtime INTEGER NOT NULL DEFAULT 0,"
                     "  vec      BLOB    NOT NULL)")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 23) {
+    /*
+        A DATA REPAIR, like schema 8: user_version is the one-shot marker. Drops the
+        thumb rows of every image ever edited in Develop.
+
+        Reader::readIcon could store an image's DEVELOPED thumbnail (from its sidecar)
+        in this path-keyed table of CAMERA thumbnails whenever the developEdited flag it
+        consulted was wrong for the row. Once the recipe was reset the poisoned row was
+        served as the camera thumb indefinitely: size and mtime stamp the FILE, which a
+        recipe change never touches. readIcon now gates on where the pixels came from
+        (Thumb::lastWasDevThumb), so no new row can be poisoned; this clears the old.
+
+        develop_history (schema 18) has a row for every image the Develop dock has
+        recorded history for, so it covers exactly the population that could have had
+        a developed thumbnail. A camera thumb dropped by mistake is simply re-read from
+        the file on its next load. Re-runnable.
+    */
+        if (!q.exec("DELETE FROM thumb WHERE pathkey IN"
+                    " (SELECT pathkey FROM develop_history)")) {
             db.rollback();
             return false;
         }

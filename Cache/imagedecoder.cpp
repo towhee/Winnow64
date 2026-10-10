@@ -312,12 +312,17 @@ bool ImageDecoder::loadDevPreview()
 
            Any other format falls through: its file already IS the default render. */
         if (!RawFormat::HasSensorDecoder(ext)) return false;
-        key = Metadata::defaultRenderKey();
+        key = Metadata::defaultRenderKey(fPath);
+    }
+    else {
+        /* The column holds the BASE key (it outlives a build in the catalog); fold in
+           this format's decoder revision so a decoder fix misses the old pixels. */
+        key = Metadata::renderKey(key, rowKey);
     }
 
     /* By row KEY: a version's developed preview is its own, not its master's -- except
        the DEFAULT render, which is the file's and so is held under the source. */
-    const bool isDefault = key.startsWith('R') && key == Metadata::defaultRenderKey();
+    const bool isDefault = key.startsWith('R') && key == Metadata::defaultRenderKey(fPath);
     const QByteArray jpg =
         DevPreviewCache::instance().get(isDefault ? fPath : rowKey, key.toLatin1());
     if (jpg.isEmpty()) return false;          // no preview, or one for an older recipe

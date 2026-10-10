@@ -653,6 +653,7 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/rawformat.h
     ImageFormats/Raw/tiffwalk.h
     ImageFormats/Raw/rawimage.h
+    ImageFormats/Raw/decoderrevision.h
     ImageFormats/Sony/sony.h
     ImageFormats/Tiff/rorytiff.h
     ImageFormats/Tiff/tiff.h

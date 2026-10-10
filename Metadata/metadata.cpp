@@ -11,6 +11,7 @@
 #include "Cache/devpreviewcache.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
+#include "ImageFormats/Raw/decoderrevision.h"
 #include "Metadata/versions.h"
 #include "Develop/editstack.h"
 #include "Develop/Transform/croptransform.h"
@@ -681,7 +682,34 @@ QString Metadata::devPreviewKey(const QString &blob)
     return QString::fromLatin1(h.toHex().left(12));
 }
 
-QString Metadata::defaultRenderKey()
+QString Metadata::devPreviewKey(const QString &blob, const QString &fPath)
+{
+    return renderKey(devPreviewKey(blob), fPath);
+}
+
+QString Metadata::renderKey(const QString &baseKey, const QString &fPath)
+{
+/*
+    Folds the sensor decoder's revision for fPath's format into a base key, so a decoder
+    fix (RawDecoder::revision bumped for that format) misses every devPreview and sidecar
+    thumbnail it rendered, and nothing else.
+
+    Applied at the point of USE, not stored: the base key lives in G::DevPreviewKeyColumn
+    and in the catalog, which outlive a build, so a revision baked in there would keep
+    serving the old pixels from rows restored without a sidecar re-read. Revision 0 is
+    the identity, so formats never bumped keep their existing keys and caches.
+*/
+    if (baseKey.isEmpty()) return baseKey;
+    const QString src = VersionKey::isVersion(fPath) ? VersionKey::sourceOf(fPath) : fPath;
+    const int rev = RawDecoder::revision(QFileInfo(src).suffix());
+    if (rev == 0) return baseKey;
+    const QString d = baseKey + QString("|decoder=%1").arg(rev);
+    const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
+    return baseKey.startsWith('R') ? "R" + QString::fromLatin1(h.toHex().left(11))
+                                   : QString::fromLatin1(h.toHex().left(12));
+}
+
+QString Metadata::defaultRenderKey(const QString &fPath)
 {
 /*
     The devPreview key for a raw with NO develop recipe -- the "default render": the image
@@ -700,7 +728,8 @@ QString Metadata::defaultRenderKey()
                it. This is why autoRunDenoise is a global (see Main/global.h).
       v        Bump when a pipeline change makes existing default renders wrong. Previews
                under the old key are simply never asked for again and age out via the LRU;
-               nothing has to find and delete them.
+               nothing has to find and delete them. A fix confined to ONE format's
+               decoder bumps RawDecoder::revision instead (renderKey), sparing the rest.
 
     Prefixed 'R' -- not a hex digit -- so the default-render and recipe key spaces are
     provably disjoint and a recipe hash can never be mistaken for a render hash.
@@ -710,7 +739,7 @@ QString Metadata::defaultRenderKey()
                           .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString());   // see devPreviewKey
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
-    return "R" + QString::fromLatin1(h.toHex().left(11));
+    return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);
 }
 
 void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB64)
@@ -737,7 +766,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
         const QString src = VersionKey::sourceOf(fPath);
         const int id = VersionKey::idOf(fPath);
         const QString preview = blob.isEmpty() ? QString() : previewB64;
-        const QString key = preview.isEmpty() ? QString() : devPreviewKey(blob);
+        const QString key = preview.isEmpty() ? QString() : devPreviewKey(blob, fPath);
         bool found = false;
         Versions::update(src, [&](VersionSet &set) {
             ImageVersion *v = set.find(id);
@@ -804,7 +833,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     const QString preview = blob.isEmpty() ? QString() : previewB64;
     xmp.setItem("developpreview", preview.toLatin1());
     xmp.setItem("developpreviewkey",
-                preview.isEmpty() ? QByteArray() : devPreviewKey(blob).toLatin1());
+                preview.isEmpty() ? QByteArray() : devPreviewKey(blob, fPath).toLatin1());
 
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
@@ -856,7 +885,7 @@ QByteArray Metadata::readDevThumb(QString fPath)
         const ImageVersion v = Versions::readVersion(VersionKey::sourceOf(fPath),
                                                      VersionKey::idOf(fPath));
         if (v.develop.isEmpty() || v.preview.isEmpty()) return QByteArray();
-        if (v.previewKey != devPreviewKey(v.develop)) return QByteArray();
+        if (v.previewKey != devPreviewKey(v.develop, fPath)) return QByteArray();
         return QByteArray::fromBase64(v.preview);
     }
 
@@ -872,7 +901,7 @@ QByteArray Metadata::readDevThumb(QString fPath)
     sidecarFile.close();
 
     if (blob.isEmpty() || preview.isEmpty()) return QByteArray();
-    if (key != devPreviewKey(blob)) return QByteArray();
+    if (key != devPreviewKey(blob, fPath)) return QByteArray();
     return QByteArray::fromBase64(preview.toLatin1());
 }
 
@@ -1574,7 +1603,9 @@ bool Metadata::parseSidecar()
         const QString vb64 = xmp.getItem("versions");
         if (!vb64.isEmpty()) {
             const VersionSet set = VersionSet::fromBase64(vb64, VersionSet::Detail::Recipe);
-            m.versions = Versions::summaries(set, &Metadata::devPreviewKey);
+            /* The BASE key (one-argument overload): summaries feed the key column. */
+            m.versions = Versions::summaries(
+                set, static_cast<QString (*)(const QString &)>(&Metadata::devPreviewKey));
             // summaries keeps the set's order
             for (int i = 0; i < m.versions.size() && i < set.versions.size(); ++i)
                 developCropFactors(set.versions.at(i).develop, m.width, m.height,

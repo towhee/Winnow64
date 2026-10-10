@@ -181,8 +181,17 @@ public:
     static QByteArray readDevThumb(QString fPath);
 
     /* 12-char hash identifying a develop blob, stamped beside the preview so staleness is
-       detectable. One definition, used by both the writer and every reader. */
+       detectable. One definition, used by both the writer and every reader. This is the
+       BASE key, the one persisted in G::DevPreviewKeyColumn and the catalog; anything
+       that reads or writes a cached preview uses the path overload below. */
     static QString devPreviewKey(const QString &blob);
+    /* The key a cached preview of fPath is actually stored under: devPreviewKey(blob)
+       through renderKey. fPath may be a version key. */
+    static QString devPreviewKey(const QString &blob, const QString &fPath);
+    /* A base key (devPreviewKey(blob) or the default-render key) with fPath's sensor-
+       decoder revision folded in (ImageFormats/Raw/decoderrevision.h). Revision 0
+       returns baseKey unchanged; an 'R' default-render key stays 'R'-prefixed. */
+    static QString renderKey(const QString &baseKey, const QString &fPath);
     /*  The develop geometry's effect on the image size, as output/source per axis, for a
         recipe blob and the file's dimensions and EXIF orientation. 1,1 for an empty blob,
         an identity geometry, or one with Transform Preview off (the render bypasses it).
@@ -190,8 +199,8 @@ public:
     static void developCropFactors(const QString &blob, int width, int height,
                                    int orientation, float &fx, float &fy);
     /* devPreview key for a raw with no recipe (the default render); hashes the renderer,
-       not the recipe. See the .cpp. */
-    static QString defaultRenderKey();
+       not the recipe, plus fPath's decoder revision. See the .cpp. */
+    static QString defaultRenderKey(const QString &fPath);
 
 
     QFile file;

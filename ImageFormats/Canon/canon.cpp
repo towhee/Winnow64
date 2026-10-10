@@ -401,12 +401,16 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    /* Black level from the masked optical-black columns (x < left) of the full sensor, before
-       cropping them away. Self-calibrating, so no per-model black table is needed. */
+    /* Black level from the masked optical-black columns of the full sensor, before
+       cropping them away. Self-calibrating, so no per-model black table is needed.
+       SensorInfo's left border is the crop edge, NOT the end of the masked strip: on
+       the 7D Mark II (left 84) columns 72-83 are already lit image data (~2700 vs
+       2047). Averaging them in raised black by ~83 DN, which crushed the weaker R/B
+       channels more than G and turned the image green. Only the outer half is used. */
     uint16_t black = 0;
     if (left > 2) {
         double sum = 0; size_t cnt = 0;
-        const int mb = left - 2;                            // skip the transition columns
+        const int mb = left / 2;
         for (int y = 0; y < H; ++y)
             for (int x = 0; x < mb; ++x) { sum += full[size_t(y) * W + x]; ++cnt; }
         if (cnt) black = uint16_t(sum / double(cnt) + 0.5);
