@@ -131,7 +131,7 @@ private:
        both are open. Run after every expand / collapse. */
     void applySplit();
     void showHistoryMenu();
-    static void showHistoryHelp();
+    void showHistoryHelp();
     static void showPresetsHelp();
 
     QSettings          *setting     = nullptr;

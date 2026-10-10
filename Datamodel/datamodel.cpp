@@ -1233,6 +1233,11 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
     if (idx.isValid() && role == Qt::ToolTipRole && columnTooltipIsItsOwnText(idx.column())) {
         const QVariant v = data(idx, Qt::EditRole);
         if (!v.isValid()) return QVariant();
+        /* The Keywords cell shows nested keywords in place of the flat entries they
+           consume (see KeywordsItemDelegate), so its tooltip says the same. */
+        if (idx.column() == G::KeywordsColumn)
+            return Utilities::stringListToString(keywordEffectivePaths(v.toStringList(),
+                data(idx.siblingAtColumn(G::KeywordPathsColumn), Qt::EditRole).toStringList()));
         if (v.typeId() == QMetaType::QStringList)
             return Utilities::stringListToString(v.toStringList());
         return v.toString();

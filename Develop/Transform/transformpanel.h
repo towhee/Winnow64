@@ -135,6 +135,11 @@ private:
 
     QSettings   *setting = nullptr;
 
+    /* Placeholders for the group dividers above the Level and Warp rows: they reserve
+       the space in the grid and paintEvent draws the G::groupSeparator* line in them,
+       so the colour tracks theme changes. */
+    QList<QWidget*> rowRules;
+
     QToolButton *cropModeBtn  = nullptr;
     QToolButton *levelModeBtn = nullptr;
     QToolButton *warpModeBtn  = nullptr;

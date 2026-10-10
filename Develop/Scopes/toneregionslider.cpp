@@ -112,9 +112,10 @@ void ToneRegionSlider::paintEvent(QPaintEvent *)
     QLinearGradient g(track.topLeft(), track.topRight());
     g.setColorAt(0.0, QColor(0, 0, 0));
     g.setColorAt(1.0, QColor(235, 235, 235));
+    /* No outline: a grey frame round the track (it had one, in 70 grey) is nearly the
+       panel colour at the light end, so the gradient read as shorter than the dark
+       handle bar under it. Unframed, the two share exactly the same left/right edges. */
     p.fillRect(track, g);
-    p.setPen(QColor(70, 70, 70));
-    p.drawRect(track.adjusted(0, 0, -1, 0));
 
     /* Handles: small house/triangle markers hanging below the track, like Lightroom. */
     p.setRenderHint(QPainter::Antialiasing, true);

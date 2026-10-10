@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>History</h1>
+
+<h2>What it does</h2>
+<p>History lists every develop action on the current image, <b>newest first</b>, with the
+value it set &mdash; "Exposure &nbsp;+0.35", "Sky: Contrast &nbsp;-12", "Crop".  The bottom
+entry is always <b>Original</b>: the image with no develop edits at all.  An image that
+already had edits the first time Winnow saw it shows <b>Saved settings</b> just above
+Original.</p>
+
+<p>A whole slider drag is one entry, not one per tick, so the list reads as the steps you
+actually took.</p>
+
+<h2>Going back</h2>
+<ul>
+<li><b>Hover</b> an entry to preview that state on the image.  Nothing changes until you
+click; moving off the list puts the current state back.</li>
+<li><b>Click</b> an entry to go back to it.  The sliders, masks and crop all return to
+that state, and the entries above it are dimmed.</li>
+<li>Click a dimmed entry to go forward again.  But <b>edit</b> from an earlier entry and
+the dimmed entries are discarded &mdash; like undo, a new edit starts a new branch.</li>
+</ul>
+
+<h2>Before / After</h2>
+<p>Press <b>\</b> (Develop menu &gt; Before / After) to flip the image to <b>Before</b>
+&mdash; the Original entry &mdash; and press it again for <b>After</b>, where you are
+now.  Unlike a hover it stays on Before until you press <b>\</b> again, make an edit,
+move to another image, or open a mask or spot tool.</p>
+
+<h2>Multiple images</h2>
+<p>An edit made with several images selected lands on all of them, and each one gets its
+own History entry.  The entries are linked: going back to that step on one image moves
+the other <b>selected</b> images back to the same step.</p>
+
+<h2>What is kept</h2>
+<p>History is per image and is kept between sessions.  Each image keeps its last 100
+steps; when older ones are dropped, a row above Original says how many.  Original itself
+is never dropped.</p>
+
+<p>If the image was edited somewhere Winnow did not see &mdash; on another computer, or
+from a restored sidecar &mdash; its history no longer leads to the picture on screen, so
+it is set aside and starts again from Original and Saved settings.  The edits themselves
+are always kept: they live in the sidecar, and History is only the record of how you got
+there.</p>
+
+<h2>The panel</h2>
+<ul>
+<li>Press <b>H</b> to show the History panel in Develop.  It shares the dock with
+<b>Presets</b> (<b>P</b>); drag the divider between them to share the space.</li>
+<li>Click a band's arrow or title to fold that section away.</li>
+<li>Right-click anywhere in the panel for <b>Expand all</b>, <b>Collapse all</b> and
+<b>Solo mode</b> (only one section open at a time).</li>
+<li><b>Copy</b> and <b>Paste</b> at the foot of the panel copy develop settings from this
+image and paste them onto another.</li>
+</ul>
+
+<h2>Related</h2>
+<ul>
+<li><b>Edits</b> &mdash; its menu's <b>Reset all edits</b> wipes the recipe and the
+history together.</li>
+<li><b>Presets</b> &mdash; applying a preset is one History entry, so clicking the entry
+below it undoes the preset.</li>
+</ul>
+
+</body>
+</html>

@@ -5932,6 +5932,19 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                 IngestProbe::Instance().NoteLoupe(loaded ? IngestProbe::Cached
                                                          : IngestProbe::Miss);
             if (loaded) {
+                /* Develop cache HIT: loadImage just painted the decode WITHOUT the
+                   saved recipe, and applyDevelopPreviewIfEdited below only SCHEDULES
+                   the render, so the undeveloped picture would own the loupe until it
+                   lands. Paint the cached develop preview over it in this same call,
+                   so the decode never reaches the screen. Same substitution as the
+                   miss branch below, MW::setOperationMode and
+                   MW::refreshViewsOnCacheChange. */
+                if (currentDevelopEditsVisible()) {
+                    const QImage cachedPreview = devPreview(fPath);
+                    if (!cachedPreview.isNull()
+                        && imageView->loadImageInterim(fPath, cachedPreview))
+                        developInterimIsDevPreview = true;
+                }
                 if (!mapUp && (G::mode == "Loupe"
                                || G::fileSelectionChangeSource == "IconMouseDoubleClick")) {
                     loupeDisplay(fun);

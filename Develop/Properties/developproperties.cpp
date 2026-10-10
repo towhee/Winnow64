@@ -3625,75 +3625,74 @@ QIcon DevelopProperties::curveSamplerIcon(bool armed)
 void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
 {
 /*
-    The 1:1 preview at the head of the Detail section: a caption row carrying the label
-    and the target button, then the preview itself as a tall spanned row -- the same
-    two-part shape the Curves panel uses for its mode row + plot.
+    The 1:1 preview at the head of the Detail section: ONE spanned row holding "1:1" and
+    the target button down its left side and the preview square beside them, the
+    square's top level with the button. The square is sized to the patch it shows (the
+    patch is square), so there is no unused black well either side of it.
 */
     if (G::isLogger) G::log("DevelopProperties::addDetailPreviewRow");
 
-    /* Caption row: "1:1" plus the target button, in the caption cell. */
-    clearItemInfo(i);
-    i.name = "detailPreviewRow";
-    i.parIdx = parIdx;
-    i.parentName = "DetailHeader";
-    i.captionText = "1:1";
-    i.tooltip = "A patch of the image at 100%, live while you drag.\n"
-                "Sharpening is measured in pixels, so it can only be judged at 1:1 --\n"
-                "in a fit view the screen downsamples away the detail the slider added.";
-    i.isIndent = true;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.key = "detailPreviewRow";
-    i.delegateType = DT_None;           // we own the cells
-    addItem(i);
-    const QModelIndex rowCapIdx = capIdx;
-    model->setData(rowCapIdx, 4, UR_ExtraRowHeight);
+    /* Side of the preview square = the ROI it renders, in logical (= image) pixels. */
+    const int side = G::propertyRowHeight() + 170;
+    const int vPad = 2;                 // above and below the row's contents
 
-    if (rowCapIdx.isValid()) {
-        QWidget *capW = new QWidget;
-        capW->setAttribute(Qt::WA_TranslucentBackground);
-        QHBoxLayout *chb = new QHBoxLayout(capW);
-        chb->setContentsMargins(0, 0, 0, 0);
-        chb->setSpacing(6);
-        QLabel *lbl = new QLabel("1:1");
-        lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));  // no opaque slab
-        lbl->setAttribute(Qt::WA_TransparentForMouseEvents);   // clicks reach the tree
-        BarBtn *tgt = new BarBtn();
-        tgt->setIcon(detailTargetIcon(false));
-        tgt->setIconSize(QSize(16, 16));
-        tgt->setToolTip("Choose which part of the image the 1:1 preview shows:\n"
-                        "click here, then click the spot on the photo. Esc cancels.\n"
-                        "You can also drag inside the preview to move around.");
-        tgt->setEnabled(!currentImagePath.isEmpty());
-        connect(tgt, &BarBtn::clicked, this, &DevelopProperties::toggleDetailPick);
-        detailPickBtn = tgt;
-        chb->addWidget(lbl);
-        chb->addWidget(tgt);
-        chb->addStretch(1);
-        setIndexWidget(rowCapIdx, capW);
-    }
-
-    /* The preview: a tall full-width spanned row, like the curve plot. Square-ish -- the
-       widget shows a square patch centred in whatever width the dock happens to be. */
     clearItemInfo(i);
     i.name = "detailPreview";
     i.parIdx = parIdx;
     i.parentName = "DetailHeader";
     i.captionText = "";
+    i.tooltip = "A patch of the image at 100%, live while you drag.\n"
+                "Sharpening is measured in pixels, so it can only be judged at 1:1 --\n"
+                "in a fit view the screen downsamples away the detail the slider added.";
     i.isIndent = true;
     i.hasValue = false;
     i.captionIsEditable = false;
     addItem(i);
     const QModelIndex prevIdx = capIdx;
-    model->setData(prevIdx, 170, UR_ExtraRowHeight);
+    model->setData(prevIdx, side + 2 * vPad - G::propertyRowHeight(), UR_ExtraRowHeight);
     setFirstColumnSpanned(prevIdx.row(), parIdx, true);
-    {
-        DetailPreview *dp = new DetailPreview;
-        detailPreview = dp;
-        connect(dp, &DetailPreview::pointNudged, this,
-                &DevelopProperties::nudgeDetailPoint);
-        setIndexWidget(prevIdx, dp);
-    }
+
+    QWidget *row = new QWidget;
+    row->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *hb = new QHBoxLayout(row);
+    hb->setContentsMargins(0, vPad, 0, vPad);
+    hb->setSpacing(0);
+
+    /* Left column: "1:1" + the target button, pinned to the top. */
+    QWidget *capW = new QWidget(row);
+    capW->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *chb = new QHBoxLayout(capW);
+    chb->setContentsMargins(0, 0, 0, 0);
+    chb->setSpacing(6);
+    QLabel *lbl = new QLabel("1:1");
+    lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));  // no opaque slab
+    lbl->setAttribute(Qt::WA_TransparentForMouseEvents);   // clicks reach the tree
+    BarBtn *tgt = new BarBtn();
+    tgt->setIcon(detailTargetIcon(false));
+    tgt->setIconSize(QSize(16, 16));
+    tgt->setToolTip("Choose which part of the image the 1:1 preview shows:\n"
+                    "click here, then click the spot on the photo. Esc cancels.\n"
+                    "You can also drag inside the preview to move around.");
+    tgt->setEnabled(!currentImagePath.isEmpty());
+    connect(tgt, &BarBtn::clicked, this, &DevelopProperties::toggleDetailPick);
+    detailPickBtn = tgt;
+    chb->addWidget(lbl);
+    chb->addWidget(tgt);
+    capW->setFixedWidth(capW->sizeHint().width());
+    hb->addWidget(capW, 0, Qt::AlignTop);
+
+    /* The square, centred in the row: a spacer the width of the left column on the right
+       balances it, so the column does not push the square off centre. */
+    DetailPreview *dp = new DetailPreview(row);
+    dp->setFixedSize(side, side);
+    detailPreview = dp;
+    connect(dp, &DetailPreview::pointNudged, this, &DevelopProperties::nudgeDetailPoint);
+    hb->addStretch(1);
+    hb->addWidget(dp, 0, Qt::AlignTop);
+    hb->addStretch(1);
+    hb->addSpacing(capW->width());
+
+    setIndexWidget(prevIdx, row);
 }
 
 /* True when a patch render is worth doing at all: the widget is genuinely on screen (the
@@ -4453,10 +4452,6 @@ void DevelopProperties::updateEditorGeometries()
     };
     centre(curveEditor);
     centre(curveSplitsRow);
-    /* The Detail 1:1 preview is the same shape of row -- a full-width spanned graphic --
-       and was left hard against the panel's right edge with the tree indentation all on
-       its left. Centring gives it the same clear margin on both sides as the curve plot. */
-    centre(detailPreview);
     /* This is also where an expand / collapse / scroll of the Edits tree lands, which is
        exactly what moves the plot on and off screen. */
     updateCurvePickState();

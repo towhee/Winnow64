@@ -2316,6 +2316,15 @@ void IconView::startDrag(Qt::DropActions)
 
     isMouseDrag = false;
 
+    /* DRAG WHAT IS UNDER THE MOUSE. Selection is applied on mouse RELEASE, so a drag that
+       starts on an unselected thumbnail would otherwise carry the PREVIOUS selection --
+       a second thumb dropped on a collection reported "Already in", and a drop on a
+       folder moved the wrong files. Like the Finder, the pressed thumb becomes the
+       selection first. */
+    const QModelIndex pressIdx = indexAt(mousePressPos);
+    if (pressIdx.isValid() && !selectionModel()->isRowSelected(pressIdx.row()))
+        m2->sel->select(pressIdx, Qt::NoModifier, "IconView::startDrag");
+
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {
         QString msg = "Empty selection.";
