@@ -49,6 +49,10 @@ class DevelopProperties : public PropertyEditor
 public:
     DevelopProperties(QWidget *parent, QSettings *setting);
 
+    /* The pipette glyph, drawn, not a resource. Public: the WB dropper and MW's screen
+       sampler button (the Develop action row) share it. */
+    static QIcon dropperIcon(bool armed);
+
     QStringList scopeList;      // this image's scopes: "Global", then each mask
 
     /* The params the renderer should apply for the current image (the active scope's params).
@@ -885,7 +889,6 @@ private:
        workingImageNeeded) when the cache has no entry. Null if it could not be made
        ready in this call -- a raw decode is asynchronous. */
     std::shared_ptr<const WorkingImage> ensureWorkingImage();
-    static QIcon dropperIcon(bool armed);   // drawn, not a resource
     /* The Curves pointer toggle's glyph, drawn for the same reasons dropperIcon is: a
        curve with a crosshair sitting on it. */
     static QIcon curveSamplerIcon(bool armed);

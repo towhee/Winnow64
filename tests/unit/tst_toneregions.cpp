@@ -55,6 +55,7 @@
 
 #include <QtTest>
 #include <vector>
+#include <algorithm>
 #include <cmath>
 #include <QImage>
 
@@ -131,6 +132,44 @@ std::vector<int> render(const EditParams &pIn)
     return v;
 }
 
+/* A frame W x H whose columns [0, rampFrom) are a flat fill at perceptual s=fill and
+   whose remaining columns are the evenly-spread perceptual ramp, repeated on every row.
+   The fill sets how much of the frame is bright, which is what Highlights - adapts to. */
+WorkingImage makeFrame(int w, int h, int rampFrom, float fill)
+{
+    WorkingImage img;
+    img.width = w; img.height = h; img.white = 1.0f;
+    img.sceneReferred = false;
+    img.space = ColorSpaceMath::kWorking;
+    img.rgb.resize(size_t(w) * h * 3);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const float s = x < rampFrom ? fill
+                                         : float(x - rampFrom) / float(w - 1 - rampFrom);
+            const float v = std::pow(s, 2.2f);
+            float *px = img.rgb.data() + (size_t(y) * w + x) * 3;
+            px[0] = px[1] = px[2] = v;
+        }
+    return img;
+}
+
+/* Render any frame under p (None view, like render()) and return row 0, 8-bit red. */
+std::vector<int> renderRow(WorkingImage img, const EditParams &pIn)
+{
+    EditParams p = pIn;
+    p.viewTransform = int(OutputTransform::ViewTransform::None);
+    Develop dev;
+    if (!dev.Apply(img, p)) return {};
+    QImage out;
+    OutputTransform ot;
+    if (!ot.ToImage(img, out, OutputTransform::Space::sRGB,
+                    OutputTransform::ViewTransform::None)) return {};
+    std::vector<int> v(img.width);
+    const uchar *line = out.constScanLine(0);
+    for (int i = 0; i < img.width; ++i) v[i] = line[i * 3];
+    return v;
+}
+
 } // namespace
 
 class tst_toneregions : public QObject
@@ -145,6 +184,10 @@ private slots:
     void opposingSlidersStayMonotone();
     void regionsDoNotSlideWithContrast();
     void shadowsIsAGainNotAnOffset();
+    void highlightsRecoverAPushPastWhite();
+    void highlightsRecoveryDoesNotCompound();
+    void highlightsAdaptsToTheFrame();
+    void highlightsStatisticIsTheFrameNotTheCrop();
 };
 
 /*
@@ -408,6 +451,159 @@ void tst_toneregions::shadowsIsAGainNotAnOffset()
                                 "offset does that, a gain keeps the ratio")
                         .arg(b[lo]).arg(b[hi]).arg(inRatio, 0, 'f', 2)
                         .arg(u[lo]).arg(u[hi]).arg(outRatio, 0, 'f', 2)));
+}
+
+/*
+    6a. HIGHLIGHTS -100 RECOVERS WHAT EXPOSURE PUSHED PAST WHITE. Exposure +3 pushes the
+    top three stops of the ramp past white, and the data is still there -- the point pass
+    carries it as linear values up to 8.0. The display-axis band cannot reach it (those
+    values sit at display 1, where its weight is zero): before the recovery stage,
+    Highlights -100 left every one of them at 255. Full slider must bring them all back
+    below white, in order and distinct; -50 must bring back some of them.
+*/
+void tst_toneregions::highlightsRecoverAPushPastWhite()
+{
+    EditParams base; base.exposure = 3.0f;
+    EditParams rec  = base; rec.highlights  = -100.0f;
+    EditParams half = base; half.highlights = -50.0f;
+
+    const std::vector<int> b = render(base), r = render(rec), h = render(half);
+    QVERIFY(!b.empty() && !r.empty() && !h.empty());
+
+    auto blown = [](const std::vector<int> &v) {
+        return int(std::count(v.begin(), v.end(), 255));
+    };
+    const int firstBlown = int(std::find(b.begin(), b.end(), 255) - b.begin());
+    QVERIFY2(blown(b) >= 60,
+             qPrintable(QString("setup: Exposure +3 blew only %1 samples").arg(blown(b))));
+
+    QVERIFY2(r[kRampN - 1] <= 252,
+             qPrintable(QString("Highlights -100 left the top at %1; everything Exposure "
+                                "pushed past white must come back").arg(r[kRampN - 1])));
+    int distinct = 1;
+    for (int i = 1; i < kRampN; ++i) {
+        QVERIFY2(r[i] >= r[i - 1],
+                 qPrintable(QString("recovered ramp inverts at sample %1 (%2 -> %3)")
+                            .arg(i).arg(r[i - 1]).arg(r[i])));
+        if (i > firstBlown && r[i] != r[i - 1]) ++distinct;
+    }
+    QVERIFY2(distinct >= 12,
+             qPrintable(QString("the %1 blown samples recovered to only %2 distinct "
+                                "levels; recovery must keep them apart")
+                        .arg(kRampN - firstBlown).arg(distinct)));
+    QVERIFY2(blown(h) < blown(b) && blown(h) > blown(r),
+             qPrintable(QString("Highlights -50 should recover part of the blowout: "
+                                "%1 blown at 0, %2 at -50, %3 at -100")
+                        .arg(blown(b)).arg(blown(h)).arg(blown(r))));
+}
+
+/*
+    6b. RECOVERY DOES NOT COMPOUND WITH THE BAND. A version that undid the push in the
+    highlights outright -- back to their Exposure-0 tones -- passed 6a and then failed in
+    the app: the band pulled the same tones again, a pushed snow scene came out DARKER
+    than the unedited one (90th percentile 126 against 162) and its tonal range fell to a
+    fifth. Recovery is "no longer blown", not "unexposed", so a positive push at
+    Highlights -100 must not render a highlight darker than the unpushed, unedited ramp.
+    Up to level 235: above it the pushed top lands just under white BY DESIGN, so the
+    unedited ramp's own last few levels are squeezed beneath it (255 renders 244).
+*/
+void tst_toneregions::highlightsRecoveryDoesNotCompound()
+{
+    EditParams plain;
+    EditParams rec; rec.exposure = 1.5f; rec.highlights = -100.0f;
+
+    const std::vector<int> u = render(plain), r = render(rec);
+    QVERIFY(!u.empty() && !r.empty());
+
+    for (int i = 0; i < kRampN; ++i) {
+        if (u[i] < 100 || u[i] > 235) continue;
+        QVERIFY2(r[i] >= u[i] - 2,
+                 qPrintable(QString("sample %1: Exposure +1.5 with Highlights -100 rendered "
+                                    "%2, darker than the unedited %3; recovery and the band "
+                                    "are pulling the same tones twice")
+                            .arg(i).arg(r[i]).arg(u[i])));
+    }
+}
+
+/*
+    7. HIGHLIGHTS - ADAPTS TO THE FRAME. Lightroom's Highlights pulls a dark frame's few
+    highlights hard and a bright frame's many highlights gently -- strength x the band's
+    mean weight over the frame is roughly constant (the budget, develop.cpp). The fixed
+    0.22 band this replaced pulled level ~200 of a snow field 52 levels where Lightroom
+    pulled 11. Same ramp in both frames; one frame is otherwise dark (fill at s=0.15),
+    the other otherwise bright (s=0.85). The SAME ramp level must be pulled at least
+    twice as hard in the dark frame.
+*/
+void tst_toneregions::highlightsAdaptsToTheFrame()
+{
+    constexpr int W = 512, From = 256;
+    EditParams base, hi; hi.highlights = -100.0f;
+    const WorkingImage dark = makeFrame(W, 4, From, 0.15f);
+    const WorkingImage bright = makeFrame(W, 4, From, 0.85f);
+    const std::vector<int> d0 = renderRow(dark, base), d1 = renderRow(dark, hi);
+    const std::vector<int> b0 = renderRow(bright, base), b1 = renderRow(bright, hi);
+    QVERIFY(!d0.empty() && !d1.empty() && !b0.empty() && !b1.empty());
+
+    const int x = From + int(0.80f * (W - 1 - From));          // ramp at s = 0.80
+    const int pullDark = d0[x] - d1[x], pullBright = b0[x] - b1[x];
+    QVERIFY2(pullBright > 0 && pullDark >= 2 * pullBright,
+             qPrintable(QString("Highlights -100 pulled level %1 by %2 in the dark frame "
+                                "and %3 in the bright one; a dark frame's highlights must "
+                                "take at least twice the pull")
+                        .arg(d0[x]).arg(pullDark).arg(pullBright)));
+}
+
+/*
+    8. THE STRENGTH IS THE FRAME'S, NOT THE BUFFER'S. The Detail panel renders a CROP of
+    the full image. Measured on its own pixels, a crop of the bright end of a mostly dark
+    frame would see a bright image, take a gentle pull and render unlike the loupe. The
+    crop shares the frame's statistics sample (Develop::StatSample, filled from the full
+    image before copyMetadata) and must render each pixel within a level of the full
+    frame. The control -- the same crop filling the sample from itself -- must differ,
+    or this test could not see the bug.
+*/
+void tst_toneregions::highlightsStatisticIsTheFrameNotTheCrop()
+{
+    constexpr int W = 512, From = 256, CropX = 384;
+    EditParams hi; hi.highlights = -100.0f;
+    const WorkingImage full = makeFrame(W, 4, From, 0.15f);
+
+    auto crop = [&](bool shareFrame) {
+        WorkingImage c;
+        c.width = W - CropX; c.height = full.height;
+        if (shareFrame) {
+            Develop::StatSample(full);
+            copyMetadata(c, full);
+        }
+        else {
+            WorkingImage meta = full;                    // a fresh, unfilled slot
+            meta.statSlot = std::make_shared<StatSampleSlot>();
+            copyMetadata(c, meta);
+        }
+        c.rgb.resize(size_t(c.width) * c.height * 3);
+        for (int y = 0; y < c.height; ++y)
+            std::copy(full.rgb.begin() + (size_t(y) * W + CropX) * 3,
+                      full.rgb.begin() + (size_t(y) * W + W) * 3,
+                      c.rgb.begin() + size_t(y) * c.width * 3);
+        return c;
+    };
+
+    const std::vector<int> f = renderRow(full, hi);
+    const std::vector<int> shared = renderRow(crop(true), hi);
+    const std::vector<int> own = renderRow(crop(false), hi);
+    QVERIFY(!f.empty() && !shared.empty() && !own.empty());
+
+    int worst = 0, ownWorst = 0;
+    for (int i = 0; i < W - CropX; ++i) {
+        worst = std::max(worst, std::abs(shared[i] - f[CropX + i]));
+        ownWorst = std::max(ownWorst, std::abs(own[i] - f[CropX + i]));
+    }
+    QVERIFY2(worst <= 1,
+             qPrintable(QString("the crop rendered up to %1 levels away from the same "
+                                "pixels in the full frame").arg(worst)));
+    QVERIFY2(ownWorst >= 3,
+             qPrintable(QString("control: a crop measuring itself differed by only %1 "
+                                "levels, so this test cannot see the bug").arg(ownWorst)));
 }
 
 QTEST_APPLESS_MAIN(tst_toneregions)

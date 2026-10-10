@@ -1250,6 +1250,11 @@ void MW::createUtilActions()
     addAction(developSpotAction);
     connect(developSpotAction, &QAction::triggered, this, &MW::toggleDevelopReplace);
 
+    screenSamplerAction = new QAction(tr("Screen Sampler"), this);
+    screenSamplerAction->setObjectName("screenSampler");
+    addAction(screenSamplerAction);
+    connect(screenSamplerAction, &QAction::triggered, this, &MW::toggleScreenSampler);
+
     developWbSamplerAction = new QAction(tr("White Balance Sampler\tW"), this);
     developWbSamplerAction->setObjectName("developWbSampler");
     developWbSamplerAction->setShortcutVisibleInContextMenu(true);
@@ -2810,6 +2815,7 @@ void MW::createDevelopMenu()
     developMenu->addAction(developTransformAction);
     developMenu->addAction(developSpotAction);
     developMenu->addAction(developWbSamplerAction);
+    developMenu->addAction(screenSamplerAction);
     developMenu->addAction(developBeforeAfterAction);
     developMenu->addSeparator();
     /* Scopes submenu: the same four actions the strip's right-click menu shows. Ticked

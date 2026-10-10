@@ -120,6 +120,12 @@ public:
     */
     static void ParametricCurve(const EditParams &p, float *out, int n);
 
+    /* The whole-frame statistics sample of img (see StatSampleSlot in workingimage.h):
+       ~128 px on the long edge, filled once into the slot img shares with its copies,
+       proxies and crops. Call it on the FULL image before cutting a crop, or the crop
+       fills the shared slot from itself. Null for an invalid image or a sample. */
+    static std::shared_ptr<const WorkingImage> StatSample(const WorkingImage &img);
+
 private:
     /* Spatial op: local (maskable) NR, owns a full-image pass, run BEFORE the fused point pass
        (fixed pipeline order). Two independent strengths: EditParams::localDenoiseLuma = luminance
@@ -279,7 +285,21 @@ private:
         float gradeShadowEnd  = 0.5f; // perceptual L where the shadow window closes
         float gradeHighStart  = 0.5f; // perceptual L where the highlight window opens
     };
-    static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img);
+    /* hiWeight: in/out. The mean Highlights band weight over the WHOLE FRAME, which sets
+       the band's strength. Pass the value the frame's StatSample measured, or < 0 to
+       measure it on img itself (then written back). */
+    static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img,
+                                        float *hiWeight = nullptr);
+
+    /* What the last Apply measured into hiWeight (< 0: not needed). Read by the Apply
+       that developed this frame's sample, for the image itself. */
+    float lastHiWeight = -1.0f;
+
+    /* The point coefficients the last Apply of a StatSample built. They depend on the
+       params, the metadata and hiWeight -- never on the pixels otherwise -- and the
+       sample shares all three with its image, so the image's Apply reuses them instead
+       of building the same tone table a second time. */
+    std::shared_ptr<const PointCoeffs> lastCoeffs;
 
     /* The fused per-pixel pass, parallelised over row ranges. */
     void applyPointOps(WorkingImage &img, const PointCoeffs &c);

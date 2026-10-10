@@ -3203,6 +3203,18 @@ void MW::createDevelopDock()
     developActionLayout->addWidget(developSpotBtn);
     developActionLayout->addSpacing(10);
 
+    /* Screen Sampler: a 5x5 colour average from ANYWHERE on screen -- another app's
+       window included -- into a readout with a recent list, for comparing renders across
+       apps. The WB dropper's pipette glyph, ghosted while armed like that dropper. */
+    developSamplerBtn = new BarBtn();
+    developSamplerBtn->setIcon(DevelopProperties::dropperIcon(false));
+    developSamplerBtn->setToolTip("Screen sampler: click anywhere on any screen -- in any "
+                                  "app -- to read the 5x5 average colour.\n"
+                                  "Opens a readout that keeps recent samples to compare.");
+    connect(developSamplerBtn, &BarBtn::clicked, this, &MW::toggleScreenSampler);
+    developActionLayout->addWidget(developSamplerBtn);
+    developActionLayout->addSpacing(10);
+
     /* Mask overlay tint on/off ("O"). The button has no glyph: it IS the swatch -- its
        icon is filled with the current overlay colour (G::maskOverlayColor, picked in the
        Mask panel), so the row shows at a glance which colour the veil speaks and whether

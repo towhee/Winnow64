@@ -30,6 +30,7 @@
 #include "Develop/depthmask.h"
 #include "Develop/objectmask.h"
 #include "Develop/develop.h"
+#include "Utilities/screensampler.h"
 #include "Develop/sharpen.h"        // updateSharpenMaskPreview: the edge gate
 #include "Develop/detailroi.h"      // Detail panel 1:1 preview: the patch geometry
 #include <opencv2/imgproc.hpp>     // updateSharpenMaskPreview: GaussianBlur + Sobel
@@ -10877,6 +10878,10 @@ static WorkingImage cutDetailRoi(const WorkingImage &full, const DetailRoi::Rect
     if (r.isEmpty() || !full.isValid()) return roi;
     roi.width = r.w;
     roi.height = r.h;
+    /* Fill the frame's statistics sample from the FULL image before the crop shares
+       its slot -- or the crop would fill it from itself, and Highlights -, whose
+       strength is a whole-frame statistic, would render the patch unlike the loupe. */
+    Develop::StatSample(full);
     copyMetadata(roi, full);
     roi.renderScale = 1.0f;
     roi.rgb.resize(size_t(r.w) * size_t(r.h) * 3);
@@ -13949,6 +13954,26 @@ void MW::toggleDevelopReplace()
     const bool arming = !developProperties->isSpotActive();
     if (arming && developTransformVisible) toggleDevelopTransform();
     developProperties->onSpotToolToggled(arming);
+}
+
+void MW::toggleScreenSampler()
+{
+/*
+    Open the Screen Sampler and arm it, or disarm it if it is already aiming. Not gated
+    on Develop mode: it reads the screen, not the image, so it is as useful beside a
+    Browse view as beside the loupe. Built on first use; the action-row button follows
+    its armed state (ghost pipette + blue border while aiming, like the WB dropper).
+*/
+    if (G::isLogger) G::log("MW::toggleScreenSampler");
+    if (!screenSampler) {
+        screenSampler = new ScreenSampler(this);
+        connect(screenSampler, &ScreenSampler::armedChanged, this, [this](bool armed) {
+            if (!developSamplerBtn) return;
+            developSamplerBtn->setIcon(DevelopProperties::dropperIcon(armed));
+            developSamplerBtn->setActive(armed);
+        });
+    }
+    screenSampler->toggle();
 }
 
 void MW::toggleDevelopWbSampler()

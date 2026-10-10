@@ -61,6 +61,7 @@
 #include "Main/showhidebar.h"
 
 class QToolBar;
+class ScreenSampler;
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
 #include "Develop/workingimage.h"
@@ -1246,6 +1247,10 @@ private slots:
        claims W for Warp while it is active (arbiter rule 1a), so this only runs when no
        Transform session is up. */
     void toggleDevelopWbSampler();
+    /* Action-row pipette after the spot tool (and Develop > Screen Sampler): open the
+       Screen Sampler and arm it -- a 5x5 colour average from anywhere on screen, for
+       comparing renders across apps. See Utilities/screensampler.h. */
+    void toggleScreenSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
     /* "\" in Develop mode: flip the loupe between Before (the first History entry, the
        baseline at the bottom of History) and After (the current state). */
@@ -1877,6 +1882,9 @@ private:
     BarBtn *developScopesBtn = nullptr;
     BarBtn *developTransformBtn = nullptr;
     BarBtn *developSpotBtn = nullptr;
+    BarBtn *developSamplerBtn = nullptr;   // Screen Sampler (pipette)
+    ScreenSampler *screenSampler = nullptr;   // built on first use
+    QAction *screenSamplerAction = nullptr;
     BarBtn *developMaskTintBtn = nullptr;  // mask overlay tint on/off (O)
     BarBtn *developPresetBtn = nullptr;    // shows/raises the Presets dock (P)
     /* Scopes-strip "choice" = a ScopesView::ScopeLayout, or this sentinel for hidden. */

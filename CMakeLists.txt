@@ -382,6 +382,8 @@ set(WINNOW_SOURCES
     Datamodel/keywordauditstore.h
     Utilities/visualaudit.cpp
     Utilities/visualaudit.h
+    Utilities/screensampler.cpp
+    Utilities/screensampler.h
     Cache/embeddingstore.cpp
     Cache/embeddingstore.h
     Main/status.cpp

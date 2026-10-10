@@ -19,6 +19,7 @@
 #include <QFuture>
 #include <QVector>
 #include <QtGlobal>
+#include <QDebug>
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
@@ -151,8 +152,36 @@ struct ToneOp {
 /* Bands. */
 constexpr ToneOp kBlacksUp    = {0.12f, 1.3f, 0.00f, 0.10f, 1.00f};
 constexpr ToneOp kHighsUp     = {0.20f, 0.8f, 0.10f, 0.78f, 1.00f};
-constexpr ToneOp kHighsDown   = {0.22f, 1.0f, 0.10f, 0.90f, 1.00f};
+constexpr ToneOp kHighsDown   = {0.117f, 1.0f, 0.05f, 0.92f, 1.00f};  // amp: see below
 constexpr ToneOp kWhitesDown  = {0.10f, 0.9f, 0.15f, 0.94f, 1.00f};
+
+/*
+    HIGHLIGHTS - IS IMAGE-ADAPTIVE (refit 2026-10-10). Lightroom Classic exports of two
+    raws -- the ILCE-1 above, and an E-M1 snow scene at Exposure 0 and +1.5 -- show ONE
+    band shape (kHighsDown: up from 0.05, peak 0.92, down to white) times a strength that
+    differs by image: 0.28 on the dark ILCE-1 frame, 0.08 on the snow at Exposure 0, 0.05
+    on the snow at +1.5. The 0.22 fixed amp fitted on the ILCE-1 alone was 15.9 levels RMS
+    off on the snow and 35.3 at +1.5, where it pulled the median down 52 levels to
+    Lightroom's 11. Linear in the slider (-50 is half of -100), and close to 1-D WITHIN a
+    frame (the surround at any radius adds at most 0.1 of variance explained) -- so the
+    adaptation is one number per image, not a local operator.
+
+    THE NUMBER IS A BUDGET. strength x the band's mean weight over the frame's (per
+    channel) histogram came out at 8.0 / 11.5 / 9.3 levels: Lightroom spreads a roughly
+    fixed average pull over whatever is bright, so a dark frame's few highlights take a
+    hard pull and a snow field a gentle one. One shared budget, kHighsDownBudget, predicts
+    all five Lightroom curves at 0.75-3.3 levels RMS, and each image held out of the fit
+    is still predicted at 1.5-4.8. kHighsDownAmpMax keeps a near-black frame (mean weight
+    ~0) from asking for an unbounded pull. kHighsDown.amp is what is used with no frame to
+    measure -- the Curves panel's Parametric plot -- and is the strength for a frame whose
+    mean weight is 0.30.
+
+    The mean weight is measured on the frame's StatSample (Develop::Apply), never on the
+    buffer being rendered: a proxy, the settle render and a Detail patch (a crop) must
+    all draw the same curve. Highlights + is not refitted (no data) and stays fixed.
+*/
+constexpr float kHighsDownBudget = 0.035f;   // mean display shift at -100 (8.9 levels)
+constexpr float kHighsDownAmpMax = 0.35f;
 
 /*
     SHADOWS IS A GAIN, NOT A BAND (refit 2026-10-05 against Lightroom Classic exports of
@@ -184,6 +213,36 @@ constexpr float kShadowGainStops = 2.34f;   // full-slider gain at black, in sto
 constexpr float kShadowGainDecay = 0.089f;  // e-folding length of the fast part (display)
 constexpr float kShadowGainTail  = 0.058f;  // share of the weight in the slow tail
 constexpr float kShadowGainEnd   = 0.874f;  // where the tail reaches zero (display)
+
+/*
+    HIGHLIGHTS - ALSO RECOVERS WHAT EXPOSURE PUSHED PAST WHITE (2026-10-10). The band
+    above cannot reach it: it lives on the display axis, which clamps at white, so every
+    value pushed past the view's clip sits at d0 = 1, where the band's weight is zero,
+    although the data under it is intact. Push Exposure +3 and the top of the frame is
+    255 at any Highlights setting.
+
+    So Highlights - with a positive Exposure runs a second, scene-linear stage BEFORE
+    everything else in applyToneShape: in x = log2(n), identity below a knee, then
+        x' = knee + L (1 - exp(-(x - knee) / L))
+    which leaves the knee with slope 1 (no crease) and is monotone everywhere. L is solved
+    so the BRIGHTEST VALUE THE PUSH CAN HAVE CREATED -- the view's clip point times 2^e,
+    i.e. an original whose top sat right at the clip -- lands on kRecoverDisplay (level
+    250) at -100, and halfway in stops at -50. The knee sits at most kRecoverKneeMax
+    below the landing point, so the stage only ever reshapes the shoulder; the band does
+    the rest, as it does at Exposure 0.
+
+    IT NEEDS NO IMAGE, and that is the second version of that decision. The first
+    MEASURED the frame's top, and the measurement differed by render (proxy, full res, a
+    Detail patch is a crop, a mask scope develops from the accumulator) -- so each would
+    have drawn a different curve. A third version undid the push in the highlights
+    outright (back to their Exposure-0 tones) and was rejected in an in-app trial: on a
+    snow scene the un-push and the band both pulled the same tones, the interquartile
+    range fell from 44 levels to 9 and the frame went flat grey. Recovery has to stop at
+    "no longer blown", not "unexposed".
+*/
+constexpr float kRecoverDisplay     = 0.98f;   // where the pushed top lands at -100
+constexpr float kRecoverClipDisplay = 0.998f;  // at or past this the view has clipped
+constexpr float kRecoverKneeMax     = 1.0f;    // knee: stops below the landing, at most
 
 /* Endpoint moves. R is how far full slider drags the point, on the display axis. */
 constexpr float kBlackPointRange = 0.220f, kBlackPointExpo = 1.6f;
@@ -237,16 +296,18 @@ inline float linearToDisplay(float v)
     return v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
-/* One signed control -> its display-space shift at d. */
+/* One signed control -> its display-space shift at d. downAmp replaces down.amp: the
+   negative direction's strength is resolved per frame (Highlights -, see the budget). */
 inline float toneOpShift(float amount, const ToneOp &up, const ToneOp &down,
-                         float d, float shift, float reach)
+                         float downAmp, float d, float shift, float reach)
 {
     if (amount == 0.0f) return 0.0f;
     const float mag = std::fabs(amount);
     const ToneOp &op = (amount > 0.0f) ? up : down;
     const float w = toneBand(d, op, shift, reach);
     if (w == 0.0f) return 0.0f;
-    return (amount > 0.0f ? 1.0f : -1.0f) * op.amp * std::pow(mag, op.expo) * w;
+    const float amp = (amount > 0.0f) ? op.amp : downAmp;
+    return (amount > 0.0f ? 1.0f : -1.0f) * amp * std::pow(mag, op.expo) * w;
 }
 
 /* The PARAMETRIC tone shape -- the contrast slope, the two endpoint moves and the two
@@ -259,9 +320,62 @@ struct ToneShape {
     float bk = 0.0f, sh = 0.0f, hi = 0.0f, wh = 0.0f;   // slider amounts, -1..1
     float blackPoint = 0.0f, whitePoint = 1.0f;         // display-axis endpoint moves
     float shShift = 0.0f, hiShift = 0.0f, reach = 0.0f; // from the region handles
+    float hiDownAmp = kHighsDown.amp;                   // Highlights -: frame-adaptive
     OutputTransform::ViewTransform view = OutputTransform::ViewTransform::None;
     bool  active = false;
+    /* Highlight recovery (Highlights - with a positive Exposure); see the note by
+       kRecoverDisplay. Resolved in buildToneShape from the params alone. */
+    bool  recover = false;
+    float recKnee = 0.0f, recL = 1.0f;                  // log2(n) knee, compression scale
+    float lutMaxN = kToneLutMaxN;                       // linear n the LUT spans
 };
+
+/* Resolve the Highlights - recovery from the params: Highlights negative and Exposure
+   positive, or nothing can have been pushed past white. Runs last in buildToneShape,
+   because it needs the view and the contrast slope. See the note by kRecoverDisplay. */
+inline void setHighlightRecovery(ToneShape &t, float exposure)
+{
+    t.recover = false;
+    if (!(t.hi < 0.0f) || !(exposure > 0.0f)) return;
+
+    /* Positions on the input axis (log2 n) of display levels AFTER the contrast slope --
+       carried back through it, because recovery runs first and contrast would otherwise
+       push the landed top straight back over. */
+    auto inputX = [&t](float display) {
+        const float s = OutputTransform::PerceptualFromDisplay(display, t.view,
+                                                               kToneLutMaxN);
+        const float sPre = t.pivot + (s - t.pivot) / t.slope;
+        return sPre > 0.0f ? kGamma * std::log2(sPre) : -100.0f;
+    };
+    const float xClip = inputX(kRecoverClipDisplay);
+    const float xTop  = xClip + exposure;            // the most the push can have made
+    /* Barely pushed lands barely under the clip, so the landing point is continuous in
+       Exposure rather than jumping to kRecoverDisplay the moment it leaves 0. */
+    const float xTarget = qMax(inputX(kRecoverDisplay), xClip - exposure);
+    const float over = xTop - xTarget;
+
+    const float a = qMin(1.0f, -t.hi);
+    const float knee = qMin(over, kRecoverKneeMax);  // stops below the landing point
+    const float U  = over + knee;                    // top's distance above the knee
+    const float Ut = knee + (1.0f - a) * over;       // ... and where it has to land
+    if (!(U > 0.0f) || Ut >= U * 0.9999f) return;
+
+    /* Solve L (1 - exp(-U/L)) = Ut. The left side rises from 0 to U as L does, so the
+       root is bracketed by [Ut, the first doubling that overshoots]. */
+    auto g = [U](float L) { return L * (1.0f - std::exp(-U / L)); };
+    float lo = Ut, hi = Ut * 2.0f;
+    while (g(hi) < Ut && hi < 1e6f) hi *= 2.0f;
+    for (int i = 0; i < 50; ++i) {
+        const float mid = 0.5f * (lo + hi);
+        (g(mid) < Ut ? lo : hi) = mid;
+    }
+    t.recKnee = xTarget - knee;
+    t.recL    = 0.5f * (lo + hi);
+    t.recover = true;
+    t.active  = true;
+    /* The table has to reach the pushed data; past it, pixels take the last entry. */
+    t.lutMaxN = kToneLutMaxN * std::exp2(exposure);
+}
 
 inline ToneShape buildToneShape(const EditParams &p)
 {
@@ -301,6 +415,7 @@ inline ToneShape buildToneShape(const EditParams &p)
     t.view = OutputTransform::ViewFromInt(p.viewTransform);
     t.active = (t.slope != 1.0f) || (t.bk != 0.0f) || (t.sh != 0.0f) ||
                (t.hi != 0.0f) || (t.wh != 0.0f);
+    setHighlightRecovery(t, p.exposure);
     return t;
 }
 
@@ -328,6 +443,17 @@ inline ToneShape buildToneShape(const EditParams &p)
 */
 inline float applyToneShape(const ToneShape &t, float s)
 {
+    /* Highlight recovery first: it reshapes the INPUT, so the handles' d0 and everything
+       below see the recovered value. Below the knee it is the identity. */
+    if (t.recover && s > 0.0f) {
+        const float x = kGamma * std::log2(s);
+        if (x > t.recKnee) {
+            const float u = x - t.recKnee;
+            const float xr = t.recKnee + t.recL * (1.0f - std::exp(-u / t.recL));
+            s = std::exp2(xr * kInvGamma);
+        }
+    }
+
     /* d0 -- where this tone sits on the histogram the handles are drawn under -- is taken
        BEFORE the contrast slope, so raising Contrast cannot slide the region a handle
        selects out from under it. d is the value actually being moved, so it is taken
@@ -346,7 +472,7 @@ inline float applyToneShape(const ToneShape &t, float s)
         d = linearToDisplay(displayToLinear(d) *
                             std::exp2(t.sh * kShadowGainStops *
                                       shadowGainWeight(d0, t.shShift, t.reach)));
-    d += toneOpShift(t.hi, kHighsUp, kHighsDown, d0, t.hiShift, t.reach);
+    d += toneOpShift(t.hi, kHighsUp, kHighsDown, t.hiDownAmp, d0, t.hiShift, t.reach);
     /* Blacks + and Whites - are the non-clipping directions, so they are bands. Their
        opposite directions were consumed by the endpoint moves above. */
     if (t.bk > 0.0f) d += kBlacksUp.amp  * std::pow(t.bk,  kBlacksUp.expo)
@@ -355,7 +481,7 @@ inline float applyToneShape(const ToneShape &t, float s)
                           * toneBand(d0, kWhitesDown, t.hiShift, t.reach);
 
     if (d <= 0.0f) return 0.0f;
-    return OutputTransform::PerceptualFromDisplay(d, t.view, kToneLutMaxN);
+    return OutputTransform::PerceptualFromDisplay(d, t.view, t.lutMaxN);
 }
 
 /* Texture (spatial op): mid-frequency luminance local contrast. The base-blur radius is a
@@ -695,6 +821,48 @@ void Develop::ToWorkingSpace(WorkingImage &img, const EditParams *p)
 bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
 {
     if (!img.isValid()) return false;
+    lastHiWeight = -1.0f;
+    lastCoeffs.reset();
+
+    /*
+        THE FRAME'S STATISTICS SAMPLE GOES FIRST, through this same Apply with the same
+        params, so it is in exactly the state img will be in at every stage. Its
+        measurement of the Highlights band's mean weight sets img's band strength (see
+        kHighsDownBudget), so a proxy, the settle render and a Detail patch -- a crop,
+        whose own pixels are not the frame -- all draw one curve; its point coefficients
+        are reused for img, so the tone table is built once. And the DEVELOPED sample is
+        handed on with img below, so a mask scope that develops from this result
+        measures what the Global scope produced, not the raw frame. A ~128 px pass; the
+        sample's own Apply does not recurse (statSample).
+    */
+    float hiWeight = -1.0f;
+    std::shared_ptr<const PointCoeffs> sampleCoeffs;
+    std::shared_ptr<const WorkingImage> developedSample;
+    if (!img.statSample) {
+        if (const std::shared_ptr<const WorkingImage> s0 = StatSample(img)) {
+            WorkingImage s;
+            s.width = s0->width;
+            s.height = s0->height;
+            s.rgb = s0->rgb;
+            copyMetadata(s, img);                   // img's metadata NOW (profile, space)
+            s.renderScale = img.renderScale * float(std::max(s.width, s.height)) /
+                            float(std::max(img.width, img.height));
+            s.statSlot.reset();
+            s.statSample = true;
+            Develop sd;
+            sd.Apply(s, p);
+            hiWeight = sd.lastHiWeight;
+            sampleCoeffs = sd.lastCoeffs;
+            developedSample = std::make_shared<const WorkingImage>(std::move(s));
+        }
+    }
+    /* img's pixels are about to change, so it gets a NEW slot holding the developed
+       sample -- never a write into the slot it shares with the cached original. */
+    auto handOnSample = [&img, &developedSample]() {
+        if (!developedSample) return;
+        img.statSlot = std::make_shared<StatSampleSlot>();
+        img.statSlot->sample = developedSample;
+    };
 
     /* The input profile is NOT an edit -- a raw arrives in camera-native primaries and
        has to be converted whatever the params say, so this precedes the identity
@@ -711,6 +879,7 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     if (p.isIdentity()) {                                // see the note below
         img.cam.profile.reset();
         img.look.reset();
+        handOnSample();
         return true;
     }
 
@@ -730,7 +899,10 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     Denoise(img, p);
     if (t) t->denoiseMs = probe.restart();
 
-    PointCoeffs c = buildPointCoeffs(p, img);
+    const PointCoeffs c = sampleCoeffs ? *sampleCoeffs
+                                       : buildPointCoeffs(p, img, &hiWeight);
+    lastHiWeight = hiWeight;
+    if (img.statSample) lastCoeffs = std::make_shared<const PointCoeffs>(c);
     if (c.active) applyPointOps(img, c);
     /* preMat carried the camera-native -> working conversion, so the pixels are in the
        working space now and the tag has to say so: every op after this point, and
@@ -772,7 +944,34 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
         just ran; leaving it to every render site is how one of them forgets.
     */
     img.cam.profile.reset();
+    handOnSample();
     return true;
+}
+
+std::shared_ptr<const WorkingImage> Develop::StatSample(const WorkingImage &img)
+{
+    if (img.statSample || !img.statSlot || !img.isValid()) return nullptr;
+    constexpr int kLongEdge = 128;
+    StatSampleSlot &slot = *img.statSlot;
+    std::lock_guard<std::mutex> lock(slot.mutex);
+    if (slot.sample) return slot.sample;
+
+    auto s = std::make_shared<WorkingImage>();
+    const int longEdge = std::max(img.width, img.height);
+    const double f = std::min(1.0, double(kLongEdge) / longEdge);
+    s->width  = std::max(1, int(img.width  * f + 0.5));
+    s->height = std::max(1, int(img.height * f + 0.5));
+    s->rgb.resize(size_t(s->width) * size_t(s->height) * 3);
+    const cv::Mat src(img.height, img.width, CV_32FC3, const_cast<float *>(img.rgb.data()));
+    cv::Mat dst(s->height, s->width, CV_32FC3, s->rgb.data());
+    /* INTER_AREA: each sample is the MEAN of the pixels it covers, which is what keeps a
+       statistic over it close to the same statistic over the full frame. */
+    cv::resize(src, dst, dst.size(), 0, 0, cv::INTER_AREA);
+    copyMetadata(*s, img);
+    s->statSlot.reset();
+    s->statSample = true;
+    slot.sample = s;
+    return slot.sample;
 }
 
 /* Local luminance noise reduction (spatial op). Ratio-preserving: edge-preserving smoothing of
@@ -1266,7 +1465,8 @@ void Develop::Grain(WorkingImage &img, const EditParams &p)
     });
 }
 
-Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const WorkingImage &img)
+Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const WorkingImage &img,
+                                               float *hiWeight)
 {
     PointCoeffs c;
 
@@ -1306,71 +1506,6 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
     c.channelGain[2] = wbGain[2] * exposureGain * bGain;
 
     c.white = (img.white > 0.0f ? img.white : 1.0f);
-
-    /* Perceptual tone curve = contrast + the four tone-region controls + the Curves
-       panel's point curves, baked into a per-channel 1-D LUT (see PointCoeffs). Everything here is in the PERCEPTUAL (gamma) domain, NOT scene-linear:
-       a contrast/tone curve in linear pivots around 0.18 and sends highlights (several stops
-       above the pivot) far too high. Encoding to ~gamma first puts mid-grey near 0.46 so the
-       curve shapes tones evenly, like a normal tone control.
-
-       Contrast is a gentle slope about mid-grey: the -100..100 slider normalises to amount
-       -1..1, mapping to 1 + 0.4*amount -> [0.6, 1.4] (kContrastSlopeRange); >1 steepens.
-       The tone regions add a Gaussian-weighted lift on top (see kToneShift / toneWeight). */
-    const ToneShape shape = buildToneShape(p);
-
-    /* The Curves panel's tone curve (Develop/tonecurve.h). Channel 0 is the RGB
-       composite; 1/2/3 are the per-channel Red / Green / Blue curves layered on top of
-       it. Built once here (n <= 16 control points each), then evaluated per LUT entry --
-       never per pixel. */
-    ToneCurve::Spline curve[ToneCurve::kChannels];
-    for (int ch = 0; ch < ToneCurve::kChannels; ++ch)
-        curve[ch].build(p.curveX[ch], p.curveY[ch], p.curveN[ch]);
-    const bool curveActive = !p.curvesAreIdentity();
-
-    c.toneActive = shape.active || curveActive;
-    if (c.toneActive) {
-        const float sMax = std::pow(kToneLutMaxN, kInvGamma);
-        c.toneLutSMax = sMax;
-        for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
-            /* s = the perceptual input value this table entry represents. */
-            float s = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
-            s = applyToneShape(shape, s);                    // contrast + tone regions
-            /* The tone curve runs AFTER the parametric controls above, matching
-               Lightroom's order: the RGB composite first, then that channel's own curve
-               on the composite's output. Both extrapolate past x = 1 with their end
-               slope, so the ~3 stops of highlight headroom in this table stay smooth. */
-            if (curveActive) s = curve[0].eval(s);
-            for (int ch = 0; ch < 3; ++ch) {
-                float sc = curveActive ? curve[ch + 1].eval(s) : s;
-                if (sc < 0.0f) sc = 0.0f;                    // crush blacks gracefully
-                /* decode -> white-normalised linear */
-                c.toneLut[ch][j] = std::pow(sc, kGamma);
-            }
-        }
-        /* MONOTONICITY, enforced once over the finished table. A brighter input must never
-           render darker than a dimmer one: a locally inverted tone shows as a bright halo
-           inside a smooth ramp, and it is the same failure Develop/tonecurve.h picks
-           Fritsch-Carlson over a plain cubic to avoid on the point curve. The parametric
-           side had no equivalent guard, and opposing sliders could invert it -- Blacks +100
-           with Shadows -100 did, 20 samples into a 256-step ramp.
-
-           HERE RATHER THAN INSIDE applyToneShape, because this is the one place the WHOLE
-           composed curve exists: the parametric shape, the RGB composite curve and the
-           per-channel curve, in the order they render. Clamping any one of them alone would
-           still let the composition invert. It costs one pass over 1024 entries per render
-           and nothing per pixel.
-
-           Develop::ParametricCurve does NOT see this clamp -- it draws the parametric shape
-           only, which is what the Curves panel's Parametric view is a view of. Where the
-           clamp fires, the plot therefore shows a dip the render does not have. Left that
-           way deliberately: the alternative is a plot that stops responding to a slider the
-           user is still dragging, which reads as a broken control rather than a limit. */
-        for (int ch = 0; ch < 3; ++ch) {
-            float *lut = c.toneLut[ch];
-            for (int j = 1; j < PointCoeffs::kLutSize; ++j)
-                if (lut[j] < lut[j - 1]) lut[j] = lut[j - 1];
-        }
-    }
 
     /* HSL (hue/saturation/luminance): a cross-channel block applied after the tone curve. Hue
        rotates about the neutral (1,1,1) axis (Rodrigues rotation of RGB space, which fixes the
@@ -1482,6 +1617,139 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
         c.preMatClamps = c.calActive;    // the calibrate block clamps; the fold must too
         c.calActive    = false;                                  // folded into preMat
         c.channelGain[0] = c.channelGain[1] = c.channelGain[2] = 1.0f;   // ditto
+    }
+
+    /* Perceptual tone curve = contrast + the four tone-region controls + the Curves
+       panel's point curves, baked into a per-channel 1-D LUT (see PointCoeffs). Everything here is in the PERCEPTUAL (gamma) domain, NOT scene-linear:
+       a contrast/tone curve in linear pivots around 0.18 and sends highlights (several stops
+       above the pivot) far too high. Encoding to ~gamma first puts mid-grey near 0.46 so the
+       curve shapes tones evenly, like a normal tone control.
+
+       Contrast is a gentle slope about mid-grey: the -100..100 slider normalises to amount
+       -1..1, mapping to 1 + 0.4*amount -> [0.6, 1.4] (kContrastSlopeRange); >1 steepens.
+       The tone regions add a Gaussian-weighted lift on top (see kToneShift / toneWeight).
+
+       Built AFTER the front matrix above: Highlights -'s strength depends on where the
+       frame's pixels sit on the display axis, which is those pixels through exactly
+       that matrix (exposure, white balance, profile). */
+    ToneShape shape = buildToneShape(p);
+    if (shape.hi < 0.0f) {
+        float wMean = hiWeight ? *hiWeight : -1.0f;
+        if (wMean < 0.0f) {
+            /* The band's mean weight over this image, per channel -- the statistic the
+               budget was fitted on. The front stages mirror applyPointOps; d0 is taken
+               where applyToneShape takes it, before the contrast slope. The values are
+               binned on the perceptual axis and the band evaluated once per bin: a few
+               thousand DisplayPosition calls instead of three per pixel, which was the
+               whole cost of a StatSample's develop. Strided to at most ~64k pixels; on a
+               StatSample (the normal caller) that is all of them. */
+            constexpr int kBins = 2048;
+            constexpr float kBinSMax = 4.0f;             // n up to ~21; above: exact
+            std::vector<long long> bins(kBins, 0);
+            const int w = img.width, h = img.height;
+            const int step = qMax(1, int(std::ceil(std::sqrt(double(w) * h / 65536.0))));
+            const float invWhite = 1.0f / c.white;
+            const float *pm = c.preMat, *cm = c.calMat, *g = c.channelGain;
+            auto weightAt = [&shape](float sv) {
+                const float d0 = OutputTransform::DisplayPosition(sv, shape.view);
+                return toneBand(d0, kHighsDown, shape.hiShift, shape.reach);
+            };
+            double sum = 0.0;
+            long long n = 0;
+            for (int y = 0; y < h; y += step) {
+                const float *row = img.rgb.data() + size_t(y) * size_t(w) * 3;
+                for (int x = 0; x < w; x += step) {
+                    const float *px = row + size_t(x) * 3;
+                    float v[3] = {px[0], px[1], px[2]};
+                    if (c.preMatActive) {
+                        const float r = v[0], gg = v[1], b = v[2];
+                        v[0] = pm[0] * r + pm[1] * gg + pm[2] * b;
+                        v[1] = pm[3] * r + pm[4] * gg + pm[5] * b;
+                        v[2] = pm[6] * r + pm[7] * gg + pm[8] * b;
+                    }
+                    for (int k = 0; k < 3; ++k) v[k] *= g[k];
+                    if (c.calActive) {
+                        const float r = v[0], gg = v[1], b = v[2];
+                        v[0] = cm[0] * r + cm[1] * gg + cm[2] * b;
+                        v[1] = cm[3] * r + cm[4] * gg + cm[5] * b;
+                        v[2] = cm[6] * r + cm[7] * gg + cm[8] * b;
+                    }
+                    for (int k = 0; k < 3; ++k) {
+                        const float nv = v[k] * invWhite;
+                        const float sv = nv > 0.0f ? std::pow(nv, kInvGamma) : 0.0f;
+                        if (sv < kBinSMax) ++bins[size_t(sv * (kBins / kBinSMax))];
+                        else sum += weightAt(sv);
+                    }
+                    n += 3;
+                }
+            }
+            for (int i = 0; i < kBins; ++i)
+                if (bins[size_t(i)])
+                    sum += bins[size_t(i)] * weightAt((i + 0.5f) * (kBinSMax / kBins));
+            wMean = n ? float(sum / double(n)) : 0.0f;
+            if (hiWeight) *hiWeight = wMean;
+        }
+        shape.hiDownAmp = qMin(kHighsDownAmpMax, kHighsDownBudget / qMax(wMean, 1e-4f));
+        // TEMP highlights debug -- remove
+        if (!img.statSample)
+            qDebug().nospace() << "HLBAND exp=" << p.exposure << " hi=" << shape.hi
+                               << " meanW=" << wMean << " amp=" << shape.hiDownAmp
+                               << " recover=" << shape.recover
+                               << " img=" << img.width << "x" << img.height;
+    }
+
+    /* The Curves panel's tone curve (Develop/tonecurve.h). Channel 0 is the RGB
+       composite; 1/2/3 are the per-channel Red / Green / Blue curves layered on top of
+       it. Built once here (n <= 16 control points each), then evaluated per LUT entry --
+       never per pixel. */
+    ToneCurve::Spline curve[ToneCurve::kChannels];
+    for (int ch = 0; ch < ToneCurve::kChannels; ++ch)
+        curve[ch].build(p.curveX[ch], p.curveY[ch], p.curveN[ch]);
+    const bool curveActive = !p.curvesAreIdentity();
+
+    c.toneActive = shape.active || curveActive;
+    if (c.toneActive) {
+        const float sMax = std::pow(shape.lutMaxN, kInvGamma);
+        c.toneLutSMax = sMax;
+        for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
+            /* s = the perceptual input value this table entry represents. */
+            float s = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
+            s = applyToneShape(shape, s);                    // contrast + tone regions
+            /* The tone curve runs AFTER the parametric controls above, matching
+               Lightroom's order: the RGB composite first, then that channel's own curve
+               on the composite's output. Both extrapolate past x = 1 with their end
+               slope, so the ~3 stops of highlight headroom in this table stay smooth. */
+            if (curveActive) s = curve[0].eval(s);
+            for (int ch = 0; ch < 3; ++ch) {
+                float sc = curveActive ? curve[ch + 1].eval(s) : s;
+                if (sc < 0.0f) sc = 0.0f;                    // crush blacks gracefully
+                /* decode -> white-normalised linear */
+                c.toneLut[ch][j] = std::pow(sc, kGamma);
+            }
+        }
+        /* MONOTONICITY, enforced once over the finished table. A brighter input must never
+           render darker than a dimmer one: a locally inverted tone shows as a bright halo
+           inside a smooth ramp, and it is the same failure Develop/tonecurve.h picks
+           Fritsch-Carlson over a plain cubic to avoid on the point curve. The parametric
+           side had no equivalent guard, and opposing sliders could invert it -- Blacks +100
+           with Shadows -100 did, 20 samples into a 256-step ramp.
+
+           HERE RATHER THAN INSIDE applyToneShape, because this is the one place the WHOLE
+           composed curve exists: the parametric shape, the RGB composite curve and the
+           per-channel curve, in the order they render. Clamping any one of them alone would
+           still let the composition invert. It costs one pass over 1024 entries per render
+           and nothing per pixel.
+
+           Develop::ParametricCurve does NOT see this clamp -- it draws the parametric shape
+           only, which is what the Curves panel's Parametric view is a view of. Where the
+           clamp fires, the plot therefore shows a dip the render does not have. Left that
+           way deliberately: the alternative is a plot that stops responding to a slider the
+           user is still dragging, which reads as a broken control rather than a limit. */
+        for (int ch = 0; ch < 3; ++ch) {
+            float *lut = c.toneLut[ch];
+            for (int j = 1; j < PointCoeffs::kLutSize; ++j)
+                if (lut[j] < lut[j - 1]) lut[j] = lut[j - 1];
+        }
     }
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||

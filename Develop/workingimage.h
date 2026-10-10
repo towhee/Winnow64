@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <memory>
+#include <mutex>
 #include <QString>
 #include "Develop/colorspace.h"
 
@@ -13,6 +14,20 @@
 namespace Dcp { struct Profile; }
 /* Likewise the profile's look, built by Develop and applied by OutputTransform. */
 struct OutputLook;
+
+struct WorkingImage;
+/*
+    A SMALL COPY OF THE WHOLE FRAME, for the image statistics an adaptive op needs (the
+    Highlights band's strength -- see Develop::StatSample). The slot is SHARED by every
+    copy, proxy and crop of one image through copyMetadata, so a Detail patch (a crop)
+    and a proxy measure the same full frame the settle render does. Filled lazily, once,
+    under the mutex; Develop::Apply hands its output image a NEW slot holding the sample
+    developed with the same params, so pixels and sample never disagree about state.
+*/
+struct StatSampleSlot {
+    std::mutex mutex;
+    std::shared_ptr<const WorkingImage> sample;
+};
 
 /*
     The shared, high-precision representation that both decode paths converge on and the
@@ -140,6 +155,11 @@ struct WorkingImage {
        sidecar and make the proxy and settle renders miss each other's cache entries. */
     float renderScale = 1.0f;
 
+    /* The whole-frame statistics sample (see StatSampleSlot). statSample marks the
+       sample itself, so developing it does not recurse into a sample of the sample. */
+    std::shared_ptr<StatSampleSlot> statSlot = std::make_shared<StatSampleSlot>();
+    bool statSample = false;
+
     bool isValid() const {
         return width > 0 && height > 0 &&
                rgb.size() == static_cast<size_t>(width) * static_cast<size_t>(height) * 3;
@@ -232,6 +252,7 @@ inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)
     dst.sceneReferred = src.sceneReferred;
     dst.look          = src.look;
     dst.renderScale   = src.renderScale;
+    dst.statSlot      = src.statSlot;
 }
 
 /*
