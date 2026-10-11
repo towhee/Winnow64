@@ -401,7 +401,8 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             QString dstThumb = lastFileExportedThumbPath;
             thumbList << dstThumb;
             // copy all metadata tags from src to dst
-            et.copyAllTags(src, dst);
+            // embellished pixels are upright: the source's Orientation must not follow
+            et.copyAllTags(src, dst, /*excludeIcc*/ false, /*upright*/ true);
             // copy ICC from src to dst
             et.copyICC(src, dst);
             // add thumbnail to dst

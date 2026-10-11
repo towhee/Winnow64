@@ -1,5 +1,6 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/cameraprofilestore.h"
+#include "Develop/cameraprofile.h"
 #include "Cache/devpreviewcache.h"
 #include "Develop/editrotate.h"
 #include "Develop/Properties/scopeheader.h"
@@ -3467,9 +3468,30 @@ void DevelopProperties::addCheckbox(const QString &key, const QString &caption, 
 
 CameraColor DevelopProperties::currentCam() const
 {
+/*
+    The current image's colour characterisation, with AS SHOT SOLVED THE WAY THE RENDER
+    SOLVES IT. The cached image's asShotK/asShotTint were solved at decode against the
+    built-in per-model matrix; when a camera profile is selected, the render re-solves
+    them against the profile's matrices (WorkingImageCache's attachProfile) and renders
+    at THAT temperature. Returning the cached pair made the Temp box show the built-in
+    answer under a profile -- 5020 K for an E-M1 frame Adobe Standard renders at 5106 K --
+    and made a Tint-only drag commit the wrong Kelvin. Same profile lookup and the same
+    CameraNative gate as attachProfile, so the two cannot disagree. cam.profile itself is
+    left unset: only the readout's as-shot pair changes, not what callers think is
+    attached.
+*/
     if (currentImagePath.isEmpty()) return CameraColor();
     auto work = WorkingImageCache::instance().get(currentImagePath);
-    return work ? work->cam : CameraColor();
+    if (!work) return CameraColor();
+    CameraColor cam = work->cam;
+    if (cam.valid && work->space == ColorSpaceMath::ColorSpace::CameraNative) {
+        const EditStack s = stackCache.value(currentImagePath);
+        const QString name = s.scopes.isEmpty() ? QString()
+                                                : s.scopes[0].params.cameraProfile;
+        if (const auto prof = CameraProfileStore::instance().profile(cam.cameraModel, name))
+            CameraProfile::resolveAsShot(*prof, cam);
+    }
+    return cam;
 }
 
 std::shared_ptr<const WorkingImage> DevelopProperties::ensureWorkingImage()
@@ -5129,6 +5151,8 @@ void DevelopProperties::setCameraProfile(const QString &name)
                   "global/cameraProfile");
     /* A different profile may or may not carry a tone curve ("Profile curve"). */
     refreshViewTransformRow();
+    /* ...and reads "as shot" as a different temperature (see currentCam). */
+    refreshWbRow();
     emit paramsChanged();
 }
 
@@ -5154,6 +5178,9 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
         ? "How scene brightness is mapped for display.\n"
           "Standard roll-off: the default -- the ordinary rendering, where every other "
           "raw developer lands.\n"
+          "Standard roll-off (hue-preserving): the same tone, applied so bright "
+          "saturated colours keep their hue -- skies stay blue instead of turning cyan, "
+          "as Lightroom renders them.\n"
           "Soft roll-off: longer, wider roll-off -- saturated highlights desaturate "
           "toward white instead of shifting hue.\n"
           "Camera contrast: the contrast of this camera maker's own JPEGs -- brighter "
@@ -5227,6 +5254,8 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
        it. "AgX" is short for silver halide and is guessable by nobody. The help page names
        both so the terms stay searchable for anyone who has read about them elsewhere. */
     combo->addItem("Standard roll-off", int(OutputTransform::ViewTransform::Filmic));
+    combo->addItem(viewTransformName(int(OutputTransform::ViewTransform::FilmicHue)),
+                   int(OutputTransform::ViewTransform::FilmicHue));
     combo->addItem("Soft roll-off", int(OutputTransform::ViewTransform::AgX));
     /* The camera-style pair: shapes taken from cameras' own renderings, finished with the
        same roll-off. Profile curve's availability follows the PROFILE, so its text and
@@ -5298,6 +5327,8 @@ QString DevelopProperties::viewTransformName(int vt)
     case OutputTransform::ViewTransform::Filmic:         return "Standard roll-off";
     case OutputTransform::ViewTransform::CameraContrast: return "Camera contrast";
     case OutputTransform::ViewTransform::ProfileCurve:   return "Profile curve";
+    case OutputTransform::ViewTransform::FilmicHue:
+        return "Standard roll-off (hue-preserving)";
     default: break;
     }
     return "None";

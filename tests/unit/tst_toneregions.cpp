@@ -188,6 +188,7 @@ private slots:
     void highlightsRecoveryDoesNotCompound();
     void highlightsAdaptsToTheFrame();
     void highlightsStatisticIsTheFrameNotTheCrop();
+    void highlightsPullsTheRegion();
 };
 
 /*
@@ -269,20 +270,32 @@ void tst_toneregions::whitesAndBlacksLeaveTheOppositeEndAlone()
     the assertion passes on a clamp rather than on the property. Only a downward pull
     reveals whether the lobe reaches the endpoint -- it dragged white to ~235 under the
     old operator. A test that can only fail in one direction has to be pointed that way.
+
+    WHITE IS A WHITE REGION, not the ramp's last sample. Highlights - is local (2026-10-11):
+    a pixel is pulled as its neighbourhood sits, and the last sample of a ramp is a white
+    pixel whose neighbours are all darker, so it takes a small region pull (2 levels) by
+    design -- the gradient's end is not the endpoint. The ramp therefore runs into a flat
+    white tail, and the property is measured in the middle of the tail.
 */
 void tst_toneregions::highlightsDoNotDragTheWhitePoint()
 {
     EditParams base;
     EditParams hi = base; hi.highlights = -100.0f;
 
-    const std::vector<int> b = render(base), h = render(hi);
+    constexpr int kTail = 64, W = kRampN + kTail;
+    WorkingImage img = makeRamp();
+    img.width = W;
+    img.rgb.resize(size_t(W) * 3);
+    std::fill(img.rgb.begin() + size_t(kRampN) * 3, img.rgb.end(), 1.0f);
+
+    const std::vector<int> b = renderRow(img, base), h = renderRow(img, hi);
     QVERIFY(!b.empty() && !h.empty());
 
-    QVERIFY2(std::abs(h[kRampN - 1] - b[kRampN - 1]) <= 1,
+    const int x = kRampN + kTail / 2;
+    QVERIFY2(std::abs(h[x] - b[x]) <= 1,
              qPrintable(QString("Highlights -100 moved WHITE by %1 levels (%2 -> %3); "
                                 "the highlights region must not reach the endpoint")
-                        .arg(h[kRampN - 1] - b[kRampN - 1])
-                        .arg(b[kRampN - 1]).arg(h[kRampN - 1])));
+                        .arg(h[x] - b[x]).arg(b[x]).arg(h[x])));
 }
 
 /*
@@ -573,7 +586,11 @@ void tst_toneregions::highlightsStatisticIsTheFrameNotTheCrop()
         c.width = W - CropX; c.height = full.height;
         if (shareFrame) {
             Develop::StatSample(full);
+            Develop::LocalSample(full);
             copyMetadata(c, full);
+            /* As cutDetailRoi does: where the crop sits, for the frame's local base. */
+            c.frameX = CropX; c.frameY = 0;
+            c.frameW = W;     c.frameH = full.height;
         }
         else {
             WorkingImage meta = full;                    // a fresh, unfilled slot
@@ -604,6 +621,81 @@ void tst_toneregions::highlightsStatisticIsTheFrameNotTheCrop()
     QVERIFY2(ownWorst >= 3,
              qPrintable(QString("control: a crop measuring itself differed by only %1 "
                                 "levels, so this test cannot see the bug").arg(ownWorst)));
+}
+
+/*
+    9. HIGHLIGHTS - IS LOCAL WITHOUT HALOS (2026-10-11). Lightroom pulls a bright region
+    as a region: texture inside it rides along (its fine contrast even rises) and nothing
+    haloes at the region's edge. Winnow does it with a local Laplacian filter on the
+    frame's LocalSample (develop.cpp, kHighsLocalSigma), which v4's guided-filter region
+    did not: bright fronds beside dark trunks were left unpulled, a milky halo. On a dark
+    frame holding a bright pool of low-contrast checker texture:
+      - the checker keeps more of its contrast than under the per-pixel band -- the same
+        frame rendered as a crop with no LocalSample, which is the per-pixel fallback;
+      - a pool pixel 2 px inside the edge is pulled within a level of the pool's centre,
+        and dark background 3 px outside within a level of background far away.
+*/
+void tst_toneregions::highlightsPullsTheRegion()
+{
+    constexpr int W = 512, H = 256;
+    constexpr float kDark = 0.15f, kPool = 0.55f, kAmp = 0.03f;
+    WorkingImage img;
+    img.width = W; img.height = H; img.white = 1.0f;
+    img.sceneReferred = false;
+    img.space = ColorSpaceMath::kWorking;
+    img.rgb.resize(size_t(W) * H * 3);
+    for (int y = 0; y < H; ++y)
+        for (int x = 0; x < W; ++x) {
+            float s = kDark;
+            if (x >= 128 && x < 384 && y >= 64 && y < 192)
+                s = kPool + (((x / 2 + y / 2) & 1) ? kAmp : -kAmp);
+            const float v = std::pow(s, 2.2f);
+            float *px = img.rgb.data() + (size_t(y) * W + x) * 3;
+            px[0] = px[1] = px[2] = v;
+        }
+
+    auto renderAll = [&](const EditParams &pIn, bool local) {
+        EditParams p = pIn;
+        p.viewTransform = int(OutputTransform::ViewTransform::None);
+        WorkingImage w = img;
+        w.statSlot = std::make_shared<StatSampleSlot>();
+        if (!local) {
+            /* A crop of an unfilled local slot: the per-pixel fallback, same frame. */
+            Develop::StatSample(w);
+            w.frameX = 0; w.frameY = 0; w.frameW = W; w.frameH = H;
+        }
+        Develop dev;
+        QImage out;
+        OutputTransform ot;
+        if (!dev.Apply(w, p) ||
+            !ot.ToImage(w, out, OutputTransform::Space::sRGB,
+                        OutputTransform::ViewTransform::None)) return QImage();
+        return out;
+    };
+    EditParams base, hi; hi.highlights = -100.0f;
+    const QImage b = renderAll(base, true), r = renderAll(hi, true);
+    const QImage perPixel = renderAll(hi, false);
+    QVERIFY(!b.isNull() && !r.isNull() && !perPixel.isNull());
+    auto at = [](const QImage &q, int x, int y) { return int(q.constScanLine(y)[x * 3]); };
+    auto pull = [&](int x, int y) { return at(b, x, y) - at(r, x, y); };
+    auto texture = [&](const QImage &q) { return std::abs(at(q, 256, 128) - at(q, 258, 128)); };
+
+    QVERIFY2(texture(r) >= texture(perPixel) + 1,
+             qPrintable(QString("the pool's checker kept %1 levels of contrast under the "
+                                "local operator and %2 under the per-pixel band (from %3); "
+                                "the region's texture must ride along")
+                        .arg(texture(r)).arg(texture(perPixel)).arg(texture(b))));
+
+    const int centre = pull(256, 128), edgeIn = pull(130, 128);
+    QVERIFY2(std::abs(edgeIn - centre) <= 1,
+             qPrintable(QString("a pool pixel 2 px inside the edge was pulled %1 levels, "
+                                "the centre %2: the region's edge haloes")
+                        .arg(edgeIn).arg(centre)));
+    const int nearPull = pull(128 - 3, 128), farPull = pull(16, 16);
+    QVERIFY2(std::abs(nearPull - farPull) <= 1,
+             qPrintable(QString("dark background 3 px from the pool was pulled %1 levels "
+                                "against %2 far away: the region leaks (a halo)")
+                        .arg(nearPull).arg(farPull)));
 }
 
 QTEST_APPLESS_MAIN(tst_toneregions)

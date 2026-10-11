@@ -562,6 +562,13 @@ WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLo
     const float achieved = static_cast<float>(std::max(dw, dh)) /
                            static_cast<float>(longEdge);
     dst.renderScale = src.renderScale * achieved;
+    /* A crop's place in its frame is in its own pixels, so it shrinks with them. */
+    if (src.frameW > 0) {
+        dst.frameX = int(src.frameX * f + 0.5);
+        dst.frameY = int(src.frameY * f + 0.5);
+        dst.frameW = std::max(1, int(src.frameW * f + 0.5));
+        dst.frameH = std::max(1, int(src.frameH * f + 0.5));
+    }
     dst.rgb.resize(static_cast<size_t>(dw) * static_cast<size_t>(dh) * 3);
     cv::Mat dstMat(dh, dw, CV_32FC3, dst.rgb.data());
     cv::resize(srcMat, dstMat, cv::Size(dw, dh), 0, 0, cv::INTER_AREA);

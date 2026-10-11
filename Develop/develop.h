@@ -126,6 +126,12 @@ public:
        fills the shared slot from itself. Null for an invalid image or a sample. */
     static std::shared_ptr<const WorkingImage> StatSample(const WorkingImage &img);
 
+    /* The frame's LOCAL sample: ~1024 px on the long edge, filled once into the same slot,
+       for whole-frame spatial statistics too fine for the StatSample (Highlights -'s
+       local Laplacian). Never filled from a crop: call it on the FULL image before
+       cutting one. Null for an invalid image, a sample, or a crop of an unfilled slot. */
+    static std::shared_ptr<const WorkingImage> LocalSample(const WorkingImage &img);
+
 private:
     /* Spatial op: local (maskable) NR, owns a full-image pass, run BEFORE the fused point pass
        (fixed pipeline order). Two independent strengths: EditParams::localDenoiseLuma = luminance
@@ -284,7 +290,35 @@ private:
         float gradeLum[4]     = {};   // [range] luminance gain delta (0 = none)
         float gradeShadowEnd  = 0.5f; // perceptual L where the shadow window closes
         float gradeHighStart  = 0.5f; // perceptual L where the highlight window opens
+
+        /* Highlights - is LOCAL (see the note by kHighsLocalSigma in develop.cpp).
+           hiLocal says the tables below are built. Given a region-correction field
+           (applyPointOps' hiField) the fused pass does not use toneLut: it takes each
+           channel to the DISPLAY axis without the band (hiDispLut, by s), adds the
+           band's own shift (hiShiftLut, by s) plus the field's correction for where the
+           pixel sits, and comes back through hiBackLut[ch] (display -> white-normalised
+           linear, Curves included). The field is built and read on the band's own axis:
+           hiPosLut is d0 by s, hiShiftByPos the band's shift by d0 over [0, 1]. With no
+           field toneLut, which always holds the full per-pixel curve, is used. */
+        static constexpr int kBackSize = 4096;
+        bool  hiLocal = false;
+        float hiDispLut[kLutSize] = {};
+        float hiShiftLut[kLutSize] = {};
+        float hiPosLut[kLutSize] = {};
+        float hiBackLut[3][kBackSize] = {};
+        float hiShiftByPos[kBackSize] = {};
     };
+
+    /* The local Highlights - correction on a whole-frame grid: correction = a * d0 + b
+       (the guided upsample of a local Laplacian run on the frame's LocalSample), read
+       bilinearly per pixel through WorkingImage::frameX.. so a crop reads it in place. */
+    struct HiField {
+        int w = 0, h = 0;
+        std::vector<float> a, b;
+    };
+    static std::shared_ptr<const HiField> buildHiField(const WorkingImage &local,
+                                                       const EditParams &p,
+                                                       const PointCoeffs &c);
     /* hiWeight: in/out. The mean Highlights band weight over the WHOLE FRAME, which sets
        the band's strength. Pass the value the frame's StatSample measured, or < 0 to
        measure it on img itself (then written back). */
@@ -301,8 +335,10 @@ private:
        of building the same tone table a second time. */
     std::shared_ptr<const PointCoeffs> lastCoeffs;
 
-    /* The fused per-pixel pass, parallelised over row ranges. */
-    void applyPointOps(WorkingImage &img, const PointCoeffs &c);
+    /* The fused per-pixel pass, parallelised over row ranges. hiField: the local
+       Highlights - correction (null = per pixel, through toneLut). */
+    void applyPointOps(WorkingImage &img, const PointCoeffs &c,
+                       const HiField *hiField = nullptr);
 };
 
 #endif // DEVELOP_H

@@ -86,7 +86,12 @@ public:
         CameraContrast = 3,
         /* "Profile curve": the selected profile's own ProfileToneCurve, with the same
            roll-off above its knee. Renders as Filmic when the profile carries none. */
-        ProfileCurve   = 4
+        ProfileCurve   = 4,
+        /* "Standard roll-off (hue-preserving)": Filmic's curve, applied the way the DNG
+           SDK applies a tone curve (CameraCurve::ApplyRGBTone) rather than per channel,
+           so a bright saturated colour keeps its hue -- Lightroom's behaviour. Appended:
+           the values are a published sidecar format. */
+        FilmicHue      = 5
     };
 
     /* EditParams::viewTransform (an int, so it rides the existing int machinery) -> the
@@ -108,6 +113,7 @@ public:
         case int(ViewTransform::Filmic):         return ViewTransform::Filmic;
         case int(ViewTransform::CameraContrast): return ViewTransform::CameraContrast;
         case int(ViewTransform::ProfileCurve):   return ViewTransform::ProfileCurve;
+        case int(ViewTransform::FilmicHue):      return ViewTransform::FilmicHue;
         default: break;
         }
         return ViewTransform::None;

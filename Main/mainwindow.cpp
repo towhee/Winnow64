@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Develop/workingdump.h"
 #include "Utilities/versionkey.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "Metadata/keywordpaths.h"
@@ -10882,8 +10883,14 @@ static WorkingImage cutDetailRoi(const WorkingImage &full, const DetailRoi::Rect
        its slot -- or the crop would fill it from itself, and Highlights -, whose
        strength is a whole-frame statistic, would render the patch unlike the loupe. */
     Develop::StatSample(full);
+    Develop::LocalSample(full);           // and Highlights -'s local field, likewise
     copyMetadata(roi, full);
     roi.renderScale = 1.0f;
+    // Where the patch sits: the frame's Highlights - base must land as on the loupe.
+    roi.frameX = r.x;
+    roi.frameY = r.y;
+    roi.frameW = full.width;
+    roi.frameH = full.height;
     roi.rgb.resize(size_t(r.w) * size_t(r.h) * 3);
     for (int y = 0; y < r.h; ++y) {
         const float *srcRow = full.rgb.data() + (size_t(y + r.y) * full.width + r.x) * 3;
@@ -14236,6 +14243,26 @@ bool MW::prepareExport(QStringList &targets)
     return true;
 }
 
+static void dumpWorkingForCalibration(const WorkingImage &src, const EditParams &p,
+                                      int degrees, const QString &fPath)
+{
+/*
+    DEV-ONLY CALIBRATION DUMP, off unless WINNOW_DUMP_WORKING names a folder: a Develop
+    export then also writes <folder>/<base name>.wkg -- see Develop/workingdump.h for the
+    format and the tools that read it. Exact for a profile with no look (Winnow
+    Standard); a camera profile's look (OutputLook) is not carried.
+*/
+    static const QString dir = qEnvironmentVariable("WINNOW_DUMP_WORKING");
+    if (dir.isEmpty() || !src.isValid()) return;
+    WorkingImage w = src;
+    Develop::ToWorkingSpace(w, &p);
+    const QString path = dir + "/" + QFileInfo(fPath).completeBaseName() + ".wkg";
+    if (WorkingDump::write(w, degrees, path))
+        qWarning() << "dumpWorkingForCalibration: wrote" << path;
+    else
+        qWarning() << "dumpWorkingForCalibration: cannot write" << path;
+}
+
 void MW::developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
@@ -14439,6 +14466,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                                       outSpace, decodedHere, done]() {
                 const std::shared_ptr<const WorkingImage> lensSrc =
                     lensCorrectedSource(fPath, src, mj.global, src.get());
+                dumpWorkingForCalibration(*lensSrc, mj.global, degrees, fPath);
                 QImage out = developCompositeStack(*lensSrc, mj, degrees,
                                                    /*fullRes*/true, 0, 0, fPath,
                                                    nullptr, depth, space);

@@ -353,7 +353,12 @@ void ImageExporter::copySourceMetadata(const QString &srcPath, const QString &ds
 
     ExifTool et;
     et.setOverWrite(true);
-    if (s.copyMetadata) et.copyAllTags(srcPath, dstPath, /*excludeIcc*/ true);
+    /* Every pixel source hands over UPRIGHT pixels (a raw is rotated in the develop
+       render, everything else comes from the rotated decode), so the source's Orientation
+       must not come along: a portrait raw exported as a portrait TIFF still tagged 8 is
+       rotated a second time by any reader that honours the tag. */
+    if (s.copyMetadata)
+        et.copyAllTags(srcPath, dstPath, /*excludeIcc*/ true, /*upright*/ true);
     if (s.embedThumbnail && !img.isNull()) {
         /* addThumb needs a thumbnail FILE; write one beside the export and remove it
            again, as EmbelExport does. */

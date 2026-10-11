@@ -1,0 +1,127 @@
+[
+  {
+    "name": "Horne +2.5 -100",
+    "raw": "~/Photos/2020-2029/2022 √/202209 √/2022-09-07_Horne Lake √/2022-09-07_0019.orf",
+    "baseline": {
+      "exposure": 2.5
+    },
+    "target": {
+      "exposure": 2.5,
+      "highlights": -100
+    },
+    "lr_baseline": "2022-09-07_0019_LR_Exposure+2.5_Highlights_0.tif",
+    "lr_target": "2022-09-07_0019_LR_Exposure+2.5_Highlights_-100.tif",
+    "halo": true,
+    "crop": [
+      2500,
+      3300,
+      500,
+      1700
+    ]
+  },
+  {
+    "name": "Horne +2.5 -50",
+    "raw": "~/Photos/2020-2029/2022 √/202209 √/2022-09-07_Horne Lake √/2022-09-07_0019.orf",
+    "baseline": {
+      "exposure": 2.5
+    },
+    "target": {
+      "exposure": 2.5,
+      "highlights": -50
+    },
+    "lr_baseline": "2022-09-07_0019_LR_Exposure+2.5_Highlights_0.tif",
+    "lr_target": "2022-09-07_0019_LR_Exposure+2.5_Highlights_-50.tif"
+  },
+  {
+    "name": "Horne 0 -100",
+    "raw": "~/Photos/2020-2029/2022 √/202209 √/2022-09-07_Horne Lake √/2022-09-07_0019.orf",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2022-09-07_0019_LR_Exposure0_Highlights_0.tif",
+    "lr_target": "2022-09-07_0019_LR_Exposure0_Highlights_-100.tif",
+    "halo": true,
+    "crop": [
+      2500,
+      3300,
+      500,
+      1700
+    ]
+  },
+  {
+    "name": "ILCE 0 -100",
+    "raw": "~/Photos/2020-2029/2022 √/202204 √/2022-04-12_Nora √/2022-04-12_0002.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2022-04-12_0002_LR_Highlights_0.tif",
+    "lr_target": "2022-04-12_0002_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "ILCE 0 -50",
+    "raw": "~/Photos/2020-2029/2022 √/202204 √/2022-04-12_Nora √/2022-04-12_0002.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -50
+    },
+    "lr_baseline": "2022-04-12_0002_LR_Highlights_0.tif",
+    "lr_target": "2022-04-12_0002_LR_Highlights_-50.tif"
+  },
+  {
+    "name": "ILCE +1.5 -100",
+    "raw": "~/Photos/2020-2029/2022 √/202204 √/2022-04-12_Nora √/2022-04-12_0002.arw",
+    "baseline": {
+      "exposure": 1.5
+    },
+    "target": {
+      "exposure": 1.5,
+      "highlights": -100
+    },
+    "lr_baseline": "2022-04-12_0002_LR_Exposure+1.5_Highlights_0.tif",
+    "lr_target": "2022-04-12_0002_LR_Exposure+1.5_Highlights_-100.tif"
+  },
+  {
+    "name": "Paradise 0 -100",
+    "raw": "~/Photos/2010-2019 √/2017 √/201701 √/2017-01-10_Paradise Meadows √/2017-01-10_0025.ORF",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2017-01-10_LR_Highlights_0.tif",
+    "lr_target": "2017-01-10_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Paradise +1.5 -100",
+    "raw": "~/Photos/2010-2019 √/2017 √/201701 √/2017-01-10_Paradise Meadows √/2017-01-10_0025.ORF",
+    "baseline": {
+      "exposure": 1.5
+    },
+    "target": {
+      "exposure": 1.5,
+      "highlights": -100
+    },
+    "lr_baseline": "2017-01-10_LR_Highlights_0_Exposure+1.5.tif",
+    "lr_target": "2017-01-10_LR_Highlights_-100_Exposure+1.5.tif",
+    "crop": [
+      900,
+      1700,
+      1400,
+      2600
+    ]
+  },
+  {
+    "name": "Paradise +1.5 -50",
+    "raw": "~/Photos/2010-2019 √/2017 √/201701 √/2017-01-10_Paradise Meadows √/2017-01-10_0025.ORF",
+    "baseline": {
+      "exposure": 1.5
+    },
+    "target": {
+      "exposure": 1.5,
+      "highlights": -50
+    },
+    "lr_baseline": "2017-01-10_LR_Highlights_0_Exposure+1.5.tif",
+    "lr_target": "2017-01-10_LR_Highlights_-50_Exposure+1.5.tif"
+  }
+]

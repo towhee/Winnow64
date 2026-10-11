@@ -181,7 +181,57 @@ constexpr ToneOp kWhitesDown  = {0.10f, 0.9f, 0.15f, 0.94f, 1.00f};
     all draw the same curve. Highlights + is not refitted (no data) and stays fixed.
 */
 constexpr float kHighsDownBudget = 0.035f;   // mean display shift at -100 (8.9 levels)
-constexpr float kHighsDownAmpMax = 0.35f;
+constexpr float kHighsDownAmpMax = 0.60f;   // was 0.35; see THE STRENGTH below
+
+/*
+    HIGHLIGHTS - IS ALSO LOCAL, AND A PUSH RAISES ITS BUDGET (refit 2026-10-11, against
+    Lightroom Classic exports of an OM-1 forest frame -- a sunlit fern pool in dark woods
+    -- at Exposure +2.5, Highlights 0 / -50 / -100, plus the three frames above).
+
+    The "close to 1-D" finding above holds for the frames it was measured on, but not for
+    a small bright REGION in a dark frame. There Lightroom pulls the whole pool down as
+    one piece, 1-1.5 stops at -100: the dark gaps between fronds go down with the bright
+    fronds, trunks standing in front of the pool are left alone, nothing haloes, and fine
+    contrast inside the pool RISES. The pixel's own level explained 41% of its gain.
+
+    THE OPERATOR IS A LOCAL LAPLACIAN FILTER (Paris, Hasinoff & Kautz 2011, in the fast
+    form of Aubry et al. 2014), carrying the fitted band in its remapping function: at
+    each pyramid level a tone within kHighsLocalSigma of the local reference g takes the
+    band's shift AT g (so a region moves as a region and its detail rides along), and a
+    tone further from g takes its OWN shift (so an edge is per pixel and cannot halo). It
+    runs on the band's own axis (d0) for luminance, on the frame's ~1024 px LocalSample;
+    what it adds beyond the per-pixel band is guided-upsampled to the render and added to
+    each channel's own per-pixel shift (Develop::buildHiField, PointCoeffs::hiShiftByPos).
+    One field per frame, so a proxy, the settle render, an export and a Detail patch (a
+    crop, WorkingImage::frameX..) agree.
+
+    REPLACED A GUIDED-FILTER REGION (same day, shipped as v4 and pulled): read on a 128 px
+    grid, its region estimate leaked across the trunks, and bright fronds beside them were
+    judged to be in a dark region and left unpulled -- a milky halo the RMS fit could not
+    see. Scored with a halo term (pull on bright pixels 2-10 px from dark objects, vs
+    Lightroom): guided 128 px +12.8 levels short, guided at full resolution +9.1, this
+    filter -0.6 at the 1024 px sample, upsampled. RMS against Lightroom (forest -100 /
+    -50, snow +1.5, snow 0, ILCE -100), per-pixel band -> this: 15.3 / 5.5 / 3.5 / 5.4 /
+    4.3 -> 11.2 / 4.7 / 3.2 / 5.2 / 4.0.
+
+    THE STRENGTH IS THE OPEN QUESTION. Fitted through the real pipeline (developrender
+    on calibration dumps of three raws, scored on each app's pull against its own
+    Highlights 0 render): Lightroom's mean pull over the frame at -100 is a steady 8-12
+    levels on four renders and 18.9 on the forest frame. A second pushed frame (ILCE at
+    +1.5) sits at 9.9, so the push does NOT explain the forest -- it is the only very
+    high-contrast scene in the set (38% near black, 14% bright), which one frame cannot
+    establish.
+    kHighsDownBudgetPerEV = 0.3 with kHighsDownAmpMax raised 0.35 -> 0.60 is the
+    compromise: mean RMS over eight renders 6.26 -> 5.85, forest -100 16.1 -> 11.2, at
+    +0.8 levels on ILCE +1.5 and +1.5 on snow +1.5; Exposure-0 frames unchanged. A plateau
+    above the band's peak and a steeper slider exponent were tried and bought 0.04.
+*/
+constexpr float kHighsLocalSigma      = 0.07f;   // detail/edge split, display units of d0
+constexpr int   kHighsLocalLevels     = 12;      // reference levels (fast local LLF)
+constexpr int   kHighsLocalLong       = 1024;    // LocalSample long edge
+constexpr int   kHighsLocalUpRadius   = 2;       // guided upsample radius, sample px
+constexpr float kHighsLocalUpEps      = 1e-4f;   // guided upsample regulariser
+constexpr float kHighsDownBudgetPerEV = 0.3f;    // budget x (1 + this x max(0, Exposure))
 
 /*
     SHADOWS IS A GAIN, NOT A BAND (refit 2026-10-05 against Lightroom Classic exports of
@@ -441,7 +491,13 @@ inline ToneShape buildToneShape(const EditParams &p)
     are evaluated pre-contrast: a handle names a place on the histogram the user is looking
     at, and the endpoint moves would otherwise slide that place out from under it.
 */
-inline float applyToneShape(const ToneShape &t, float s)
+/* applyToneShape in two parts, for the LOCAL Highlights - (see the note by
+   kHighsLocalSigma): d is the finished display value WITHOUT the Highlights shift,
+   d0 the position the bands read their weights at. Every move after the shadows gain is
+   an additive shift weighted by d0 alone, so they commute, and adding the Highlights
+   shift last is the same curve as adding it between them. */
+struct ToneParts { float d, d0; };
+inline ToneParts toneShapeParts(const ToneShape &t, float s)
 {
     /* Highlight recovery first: it reshapes the INPUT, so the handles' d0 and everything
        below see the recovered value. Below the knee it is the identity. */
@@ -472,14 +528,25 @@ inline float applyToneShape(const ToneShape &t, float s)
         d = linearToDisplay(displayToLinear(d) *
                             std::exp2(t.sh * kShadowGainStops *
                                       shadowGainWeight(d0, t.shShift, t.reach)));
-    d += toneOpShift(t.hi, kHighsUp, kHighsDown, t.hiDownAmp, d0, t.hiShift, t.reach);
     /* Blacks + and Whites - are the non-clipping directions, so they are bands. Their
        opposite directions were consumed by the endpoint moves above. */
     if (t.bk > 0.0f) d += kBlacksUp.amp  * std::pow(t.bk,  kBlacksUp.expo)
                           * toneBand(d0, kBlacksUp,  t.shShift, t.reach);
     if (t.wh < 0.0f) d -= kWhitesDown.amp * std::pow(-t.wh, kWhitesDown.expo)
                           * toneBand(d0, kWhitesDown, t.hiShift, t.reach);
+    return {d, d0};
+}
 
+/* The Highlights band's display shift for a tone whose (recovered) position is d0. */
+inline float toneHighlightShift(const ToneShape &t, float d0)
+{
+    return toneOpShift(t.hi, kHighsUp, kHighsDown, t.hiDownAmp, d0, t.hiShift, t.reach);
+}
+
+inline float applyToneShape(const ToneShape &t, float s)
+{
+    const ToneParts tp = toneShapeParts(t, s);
+    const float d = tp.d + toneHighlightShift(t, tp.d0);
     if (d <= 0.0f) return 0.0f;
     return OutputTransform::PerceptualFromDisplay(d, t.view, t.lutMaxN);
 }
@@ -835,6 +902,11 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
         measures what the Global scope produced, not the raw frame. A ~128 px pass; the
         sample's own Apply does not recurse (statSample).
     */
+    /* The LOCAL sample likewise, and for the same reason taken before img's pixels
+       change: Highlights -'s local Laplacian runs on it (see buildHiField). */
+    const std::shared_ptr<const WorkingImage> local0 =
+        (p.highlights < 0.0f && !img.statSample) ? LocalSample(img) : nullptr;
+
     float hiWeight = -1.0f;
     std::shared_ptr<const PointCoeffs> sampleCoeffs;
     std::shared_ptr<const WorkingImage> developedSample;
@@ -849,6 +921,7 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
                             float(std::max(img.width, img.height));
             s.statSlot.reset();
             s.statSample = true;
+            s.frameX = s.frameY = s.frameW = s.frameH = 0;   // the sample IS the frame
             Develop sd;
             sd.Apply(s, p);
             hiWeight = sd.lastHiWeight;
@@ -903,7 +976,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
                                        : buildPointCoeffs(p, img, &hiWeight);
     lastHiWeight = hiWeight;
     if (img.statSample) lastCoeffs = std::make_shared<const PointCoeffs>(c);
-    if (c.active) applyPointOps(img, c);
+    const std::shared_ptr<const HiField> hiField =
+        (c.active && c.hiLocal && local0) ? buildHiField(*local0, p, c) : nullptr;
+    if (c.active) applyPointOps(img, c, hiField.get());
     /* preMat carried the camera-native -> working conversion, so the pixels are in the
        working space now and the tag has to say so: every op after this point, and
        OutputTransform, read img.space to pick their luma weights and matrices. */
@@ -970,8 +1045,208 @@ std::shared_ptr<const WorkingImage> Develop::StatSample(const WorkingImage &img)
     copyMetadata(*s, img);
     s->statSlot.reset();
     s->statSample = true;
+    s->frameX = s->frameY = s->frameW = s->frameH = 0;  // the sample IS the frame
     slot.sample = s;
     return slot.sample;
+}
+
+std::shared_ptr<const WorkingImage> Develop::LocalSample(const WorkingImage &img)
+{
+    if (img.statSample || !img.statSlot || !img.isValid()) return nullptr;
+    StatSampleSlot &slot = *img.statSlot;
+    std::lock_guard<std::mutex> lock(slot.mutex);
+    if (slot.local) return slot.local;
+    if (img.frameW > 0) return nullptr;                 // a crop is not the frame
+
+    auto s = std::make_shared<WorkingImage>();
+    const int longEdge = std::max(img.width, img.height);
+    const double f = std::min(1.0, double(kHighsLocalLong) / longEdge);
+    s->width  = std::max(1, int(img.width  * f + 0.5));
+    s->height = std::max(1, int(img.height * f + 0.5));
+    s->rgb.resize(size_t(s->width) * size_t(s->height) * 3);
+    const cv::Mat src(img.height, img.width, CV_32FC3, const_cast<float *>(img.rgb.data()));
+    cv::Mat dst(s->height, s->width, CV_32FC3, s->rgb.data());
+    cv::resize(src, dst, dst.size(), 0, 0, cv::INTER_AREA);
+    copyMetadata(*s, img);
+    s->statSlot.reset();
+    s->statSample = true;                               // never developed into a sample
+    s->frameX = s->frameY = s->frameW = s->frameH = 0;
+    slot.local = s;
+    return slot.local;
+}
+
+/*
+    THE LOCAL HIGHLIGHTS - FIELD (see the note by kHighsLocalSigma).
+
+    1. The frame's LocalSample through the point pass's front stages (input profile, white
+       balance, exposure, calibrate) to luminance, and onto the band's own axis: I = d0.
+    2. A fast local Laplacian on I (Aubry et al. 2014): for each of kHighsLocalLevels
+       reference tones g, remap I by r_g(i) = i + T(g) - g where |i - g| is small and
+       T(i) - i where it is large (a Gaussian split of width kHighsLocalSigma), take r_g's
+       Laplacian pyramid, and give each output coefficient the two reference pyramids
+       bracketing the input's own Gaussian-pyramid value there. T(d) = d + the band's
+       shift at d (PointCoeffs::hiShiftByPos). The coarsest level takes T directly.
+    3. correction = (result - I) - shift(I): what the region adds beyond the per-pixel band.
+    4. A guided upsample (guide I, radius kHighsLocalUpRadius): correction ~ a * I + b,
+       locally. The fused pass reads a, b bilinearly and evaluates them on each pixel's own
+       d0, which puts the field's edges back on the full-resolution pixels.
+*/
+std::shared_ptr<const Develop::HiField> Develop::buildHiField(const WorkingImage &localIn,
+                                                              const EditParams &p,
+                                                              const PointCoeffs &c)
+{
+    if (!localIn.isValid() || !c.hiLocal) return nullptr;
+    WorkingImage local = localIn;
+    /* preMat carries camera-native -> working when it is active; when it is not (an
+       active Denoise or profile table converted img up front), convert the copy here. */
+    if (local.space == ColorSpaceMath::ColorSpace::CameraNative && !c.preMatActive)
+        ToWorkingSpace(local, &p);
+
+    const int w = local.width, h = local.height;
+    const float invWhite = 1.0f / c.white;
+    const float sMax = c.toneLutSMax;
+    const int lutLast = PointCoeffs::kLutSize - 1;
+    const float lutScale = lutLast / sMax;
+    const int backLast = PointCoeffs::kBackSize - 1;
+    auto posOf = [&](float Y) {
+        const float fi = std::pow(qMax(0.0f, Y), kInvGamma) * lutScale;
+        if (fi >= lutLast) return c.hiPosLut[lutLast];
+        const int i = int(fi);
+        return c.hiPosLut[i] + (c.hiPosLut[i + 1] - c.hiPosLut[i]) * (fi - i);
+    };
+    auto shiftAt = [&](float d) {
+        const float fk = qBound(0.0f, d, 1.0f) * backLast;
+        const int k = qMin(int(fk), backLast - 1);
+        return c.hiShiftByPos[k] + (c.hiShiftByPos[k + 1] - c.hiShiftByPos[k]) * (fk - k);
+    };
+
+    cv::Mat I(h, w, CV_32F);
+    const float *pm = c.preMat, *cm = c.calMat, *g = c.channelGain;
+    parallelFor(size_t(w) * h, [&](size_t i0, size_t i1) {
+        float *out = I.ptr<float>();
+        for (size_t i = i0; i < i1; ++i) {
+            const float *px = local.rgb.data() + i * 3;
+            float v[3] = {px[0], px[1], px[2]};
+            if (c.preMatActive) {
+                const float r = v[0], gg = v[1], b = v[2];
+                v[0] = pm[0] * r + pm[1] * gg + pm[2] * b;
+                v[1] = pm[3] * r + pm[4] * gg + pm[5] * b;
+                v[2] = pm[6] * r + pm[7] * gg + pm[8] * b;
+            }
+            for (int k = 0; k < 3; ++k) v[k] *= g[k];
+            if (c.calActive) {
+                const float r = v[0], gg = v[1], b = v[2];
+                v[0] = cm[0] * r + cm[1] * gg + cm[2] * b;
+                v[1] = cm[3] * r + cm[4] * gg + cm[5] * b;
+                v[2] = cm[6] * r + cm[7] * gg + cm[8] * b;
+            }
+            out[i] = posOf((kLumR * v[0] + kLumG * v[1] + kLumB * v[2]) * invWhite);
+        }
+    });
+
+    /* Pyramid depth: down to ~8 px on the short edge. */
+    const int levels = qMax(1, int(std::floor(std::log2(double(qMin(w, h))))) - 3);
+    std::vector<cv::Mat> G(levels + 1);
+    G[0] = I;
+    for (int l = 0; l < levels; ++l) cv::pyrDown(G[l], G[l + 1]);
+
+    /* One remapped image's Laplacian pyramid per reference tone, in parallel. */
+    const int K = kHighsLocalLevels;
+    const float step = 1.0f / (K - 1);
+    const float inv2s2 = 1.0f / (2.0f * kHighsLocalSigma * kHighsLocalSigma);
+    std::vector<std::vector<cv::Mat>> lap(static_cast<size_t>(K));
+    QVector<int> ks(K);
+    for (int k = 0; k < K; ++k) ks[k] = k;
+    constexpr int kRemapN = 2048;                       // remap tabulated over I in [0, 1]
+    QtConcurrent::blockingMap(ks, [&](int k) {
+        const float gref = k * step;
+        const float tg = shiftAt(gref);
+        /* r_g depends only on the tone and the reference: tabulate it, so the per-pixel
+           cost is one interpolated read rather than an exp and a shift lookup. */
+        std::vector<float> table(kRemapN + 1);
+        for (int j = 0; j <= kRemapN; ++j) {
+            const float iv = float(j) / kRemapN;
+            const float d = iv - gref;
+            const float f = std::exp(-d * d * inv2s2);
+            table[size_t(j)] = iv + tg * f + shiftAt(iv) * (1.0f - f);
+        }
+        cv::Mat R(h, w, CV_32F);
+        const float *in = I.ptr<float>();
+        float *r = R.ptr<float>();
+        for (int i = 0; i < w * h; ++i) {
+            const float fj = qBound(0.0f, in[i], 1.0f) * kRemapN;
+            const int j = qMin(int(fj), kRemapN - 1);
+            r[i] = table[size_t(j)] + (table[size_t(j) + 1] - table[size_t(j)]) * (fj - j);
+        }
+        std::vector<cv::Mat> &L = lap[size_t(k)];
+        L.resize(size_t(levels));
+        cv::Mat cur = R;
+        for (int l = 0; l < levels; ++l) {
+            cv::Mat down, up;
+            cv::pyrDown(cur, down);
+            cv::pyrUp(down, up, cur.size());
+            L[size_t(l)] = cur - up;
+            cur = down;
+        }
+    });
+
+    /* Each output coefficient from the two reference pyramids bracketing the input's own
+       Gaussian-pyramid value there (a hat weight over the references). */
+    std::vector<cv::Mat> out(size_t(levels) + 1);
+    for (int l = 0; l < levels; ++l) {
+        out[size_t(l)] = cv::Mat::zeros(G[l].size(), CV_32F);
+        const int n = G[l].rows * G[l].cols;
+        const float *gp = G[l].ptr<float>();
+        float *op = out[size_t(l)].ptr<float>();
+        std::vector<const float *> lp(static_cast<size_t>(K));
+        for (int k = 0; k < K; ++k) lp[size_t(k)] = lap[size_t(k)][size_t(l)].ptr<float>();
+        const float *const *lk = lp.data();
+        parallelFor(size_t(n), [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                const float t = qBound(0.0f, gp[i], 1.0f) / step;
+                const int k0 = qMin(int(t), K - 2);
+                const float fr = t - k0;
+                op[i] = lk[k0][i] * (1.0f - fr) + lk[k0 + 1][i] * fr;
+            }
+        });
+    }
+    {
+        cv::Mat top = G[levels].clone();
+        float *tp = top.ptr<float>();
+        for (int i = 0; i < top.rows * top.cols; ++i) tp[i] += shiftAt(tp[i]);
+        out[size_t(levels)] = top;
+    }
+    cv::Mat x = out[size_t(levels)];
+    for (int l = levels - 1; l >= 0; --l) {
+        cv::Mat up;
+        cv::pyrUp(x, up, out[size_t(l)].size());
+        x = up + out[size_t(l)];
+    }
+
+    /* What the region adds beyond the per-pixel band, then its guided upsample. */
+    cv::Mat corr(h, w, CV_32F);
+    {
+        const float *in = I.ptr<float>(), *xp = x.ptr<float>();
+        float *cp = corr.ptr<float>();
+        for (int i = 0; i < w * h; ++i) cp[i] = (xp[i] - in[i]) - shiftAt(in[i]);
+    }
+    const cv::Size ks2(2 * kHighsLocalUpRadius + 1, 2 * kHighsLocalUpRadius + 1);
+    cv::Mat mI, mC, mIC, mII;
+    cv::boxFilter(I, mI, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(corr, mC, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(I.mul(corr), mIC, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(I.mul(I), mII, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::Mat a = (mIC - mI.mul(mC)) / (mII - mI.mul(mI) + kHighsLocalUpEps);
+    cv::Mat b = mC - a.mul(mI);
+    cv::boxFilter(a, a, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(b, b, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+
+    auto field = std::make_shared<HiField>();
+    field->w = w;
+    field->h = h;
+    field->a.assign(a.ptr<float>(), a.ptr<float>() + size_t(w) * h);
+    field->b.assign(b.ptr<float>(), b.ptr<float>() + size_t(w) * h);
+    return field;
 }
 
 /* Local luminance noise reduction (spatial op). Ratio-preserving: edge-preserving smoothing of
@@ -1689,13 +1964,10 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
             wMean = n ? float(sum / double(n)) : 0.0f;
             if (hiWeight) *hiWeight = wMean;
         }
-        shape.hiDownAmp = qMin(kHighsDownAmpMax, kHighsDownBudget / qMax(wMean, 1e-4f));
-        // TEMP highlights debug -- remove
-        if (!img.statSample)
-            qDebug().nospace() << "HLBAND exp=" << p.exposure << " hi=" << shape.hi
-                               << " meanW=" << wMean << " amp=" << shape.hiDownAmp
-                               << " recover=" << shape.recover
-                               << " img=" << img.width << "x" << img.height;
+        const float budget = kHighsDownBudget *
+                             (1.0f + kHighsDownBudgetPerEV * qMax(0.0f, p.exposure));
+        shape.hiDownAmp = qMin(kHighsDownAmpMax, budget / qMax(wMean, 1e-4f));
+
     }
 
     /* The Curves panel's tone curve (Develop/tonecurve.h). Channel 0 is the RGB
@@ -1750,6 +2022,55 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
             for (int j = 1; j < PointCoeffs::kLutSize; ++j)
                 if (lut[j] < lut[j - 1]) lut[j] = lut[j - 1];
         }
+
+        /* The local Highlights - tables (see PointCoeffs::hiLocal). The same monotonicity
+           guard, moved to the display axis: the band-free curve is clamped, the full
+           curve is clamped, and the shift is their difference -- so with no region
+           correction a pixel renders exactly toneLut, and the shift stays <= 0. */
+        if (shape.hi < 0.0f) {
+            float dispMax = 0.0f, fullMax = 0.0f, posMax = 0.0f;
+            for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
+                const float s = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
+                const ToneParts tp = toneShapeParts(shape, s);
+                const float full = tp.d + toneHighlightShift(shape, tp.d0);
+                dispMax = qMax(dispMax, tp.d);
+                fullMax = qMax(fullMax, full);
+                posMax = qMax(posMax, tp.d0);
+                c.hiDispLut[j]  = dispMax;
+                c.hiShiftLut[j] = qMin(0.0f, fullMax - dispMax);
+                c.hiPosLut[j]   = posMax;
+            }
+            for (int k = 0; k < PointCoeffs::kBackSize; ++k) {
+                const float d = float(k) / (PointCoeffs::kBackSize - 1);
+                float s = d > 0.0f ? OutputTransform::PerceptualFromDisplay(d, shape.view,
+                                                                             shape.lutMaxN)
+                                   : 0.0f;
+                if (curveActive) s = curve[0].eval(s);
+                for (int ch = 0; ch < 3; ++ch) {
+                    float sc = curveActive ? curve[ch + 1].eval(s) : s;
+                    if (sc < 0.0f) sc = 0.0f;
+                    float v = std::pow(sc, kGamma);
+                    if (k > 0) v = qMax(v, c.hiBackLut[ch][k - 1]);
+                    c.hiBackLut[ch][k] = v;
+                }
+            }
+            /* The band's shift by d0 -- the axis the field is built and read on --
+               inverting hiPosLut. */
+            int j = 0;
+            for (int k = 0; k < PointCoeffs::kBackSize; ++k) {
+                const float d = float(k) / (PointCoeffs::kBackSize - 1);
+                while (j < PointCoeffs::kLutSize - 1 && c.hiPosLut[j] < d) ++j;
+                float shift = c.hiShiftLut[j];
+                if (j > 0 && c.hiPosLut[j] > c.hiPosLut[j - 1]) {
+                    const float t = (d - c.hiPosLut[j - 1]) /
+                                    (c.hiPosLut[j] - c.hiPosLut[j - 1]);
+                    shift = c.hiShiftLut[j - 1] +
+                            (c.hiShiftLut[j] - c.hiShiftLut[j - 1]) * qBound(0.0f, t, 1.0f);
+                }
+                c.hiShiftByPos[k] = shift;
+            }
+            c.hiLocal = true;
+        }
     }
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
@@ -1772,7 +2093,8 @@ void Develop::ParametricCurve(const EditParams &p, float *out, int n)
     }
 }
 
-void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
+void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
+                            const HiField *hiField)
 {
     const int w = img.width;
     const int h = img.height;
@@ -1845,6 +2167,44 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
         return (lut[i] + (lut[i + 1] - lut[i]) * frac) * white;
     };
 
+    /* Local Highlights - (see PointCoeffs::hiLocal): the channel's band-free display
+       value at its own s, plus its own band shift and the field's region correction
+       (never past 0: Highlights - does not brighten), back through that channel's
+       display -> linear table. */
+    const HiField *hb = hiField;
+    const bool doHiLocal = doTone && c.hiLocal && hb && hb->w > 0 && hb->h > 0;
+    const float *hiDisp = c.hiDispLut;
+    const float *hiShift = c.hiShiftLut;
+    const float *hiPos = c.hiPosLut;
+    const int backLast = PointCoeffs::kBackSize - 1;
+    auto atS = [=](const float *t, float sv) {
+        const float fi = sv * lutScale;
+        if (fi >= lutLast) return t[lutLast];
+        const int i = static_cast<int>(fi);
+        return t[i] + (t[i + 1] - t[i]) * (fi - i);
+    };
+    auto toneChLocal = [=](const float *back, float v, float corr) -> float {
+        float n = v * invWhite;
+        if (n < 0.0f) n = 0.0f;
+        const float s = std::pow(n, kInvGamma);
+        float shift = atS(hiShift, s) + corr;
+        if (shift > 0.0f) shift = 0.0f;
+        float d = atS(hiDisp, s) + shift;
+        if (d < 0.0f) d = 0.0f;
+        const float fk = d * backLast;
+        if (fk >= backLast) return back[backLast] * white;
+        const int k = static_cast<int>(fk);
+        return (back[k] + (back[k + 1] - back[k]) * (fk - k)) * white;
+    };
+    /* This buffer's pixels on the field's grid: a crop (the Detail patch) maps through the
+       frame it was cut from, so it reads the field where the loupe does. */
+    const int frameW = img.frameW > 0 ? img.frameW : w;
+    const int frameH = img.frameH > 0 ? img.frameH : h;
+    const int frameX = img.frameW > 0 ? img.frameX : 0;
+    const int frameY = img.frameH > 0 ? img.frameY : 0;
+    const float gsx = doHiLocal ? float(hb->w) / frameW : 0.0f;
+    const float gsy = doHiLocal ? float(hb->h) / frameH : 0.0f;
+
     /* One fused per-pixel kernel over a band of rows. Point ops apply PER CHANNEL (R,G,B
        interleaved), so the inner loop walks a pixel at a time: per-channel linear gain (white
        balance + exposure) then the perceptual tone curve, matching the fixed pipeline order
@@ -1853,6 +2213,21 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
         const int span = w * 3;
         for (int y = y0; y < y1; ++y) {
             float *row = rgb + static_cast<size_t>(y) * span;
+            /* The field grid's two rows bracketing this one, for the bilinear read. */
+            const float *aRow0 = nullptr, *aRow1 = nullptr;
+            const float *bRow0 = nullptr, *bRow1 = nullptr;
+            float fy = 0.0f;
+            if (doHiLocal) {
+                const float gy = qBound(0.0f, (y + frameY + 0.5f) * gsy - 0.5f,
+                                        float(hb->h - 1));
+                const int gy0 = static_cast<int>(gy);
+                const int gy1 = qMin(gy0 + 1, hb->h - 1);
+                fy = gy - gy0;
+                aRow0 = hb->a.data() + size_t(gy0) * hb->w;
+                aRow1 = hb->a.data() + size_t(gy1) * hb->w;
+                bRow0 = hb->b.data() + size_t(gy0) * hb->w;
+                bRow1 = hb->b.data() + size_t(gy1) * hb->w;
+            }
             for (int x = 0; x < w; ++x) {
                 float *px = row + static_cast<size_t>(x) * 3;
                 if (doPre) {
@@ -1889,7 +2264,28 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c)
                     px[1] = (cg < 0.0f) ? 0.0f : cg;
                     px[2] = (cb < 0.0f) ? 0.0f : cb;
                 }
-                if (doTone) {
+                if (doHiLocal) {
+                    /* The field's correction where this pixel sits: a * d0 + b, the guided
+                       upsample of the frame's local Laplacian, read bilinearly. */
+                    const float gx = qBound(0.0f, (x + frameX + 0.5f) * gsx - 0.5f,
+                                            float(hb->w - 1));
+                    const int gx0 = static_cast<int>(gx);
+                    const int gx1 = qMin(gx0 + 1, hb->w - 1);
+                    const float fx = gx - gx0;
+                    auto bilerp = [=](const float *r0, const float *r1) {
+                        const float t = r0[gx0] + (r0[gx1] - r0[gx0]) * fx;
+                        const float u = r1[gx0] + (r1[gx1] - r1[gx0]) * fx;
+                        return t + (u - t) * fy;
+                    };
+                    float Y = (kLumR * px[0] + kLumG * px[1] + kLumB * px[2]) * invWhite;
+                    if (Y < 0.0f) Y = 0.0f;
+                    const float pos = atS(hiPos, std::pow(Y, kInvGamma));
+                    const float corr = bilerp(aRow0, aRow1) * pos + bilerp(bRow0, bRow1);
+                    px[0] = toneChLocal(c.hiBackLut[0], px[0], corr);
+                    px[1] = toneChLocal(c.hiBackLut[1], px[1], corr);
+                    px[2] = toneChLocal(c.hiBackLut[2], px[2], corr);
+                }
+                else if (doTone) {
                     px[0] = toneCh(lutR, px[0]);
                     px[1] = toneCh(lutG, px[1]);
                     px[2] = toneCh(lutB, px[2]);

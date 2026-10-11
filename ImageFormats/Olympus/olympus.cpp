@@ -631,9 +631,13 @@ bool OlympusRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorI
         : QString();
     info.hasColorMatrix = xyzToCamForModel(model, info.xyzToCam);
 
-    /* IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C). The MakerNote is a 12-byte
-       "OLYMPUS" header with the embedded IFD at +12 and offsets relative to its start,
-       then ImageProcessing (0x2040) -> WB_RBLevels (0x0100, 2 SHORTs R,B, G == 256). */
+    /* IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C), then ImageProcessing (0x2040) ->
+       WB_RBLevels (0x0100, SHORTs R,B, G == 256). Two MakerNote headers, offsets relative
+       to the MakerNote's start in both:
+           "OLYMPUS\0" "II" 03 00               12 bytes, IFD at +12   (E-M1 and older)
+           "OM SYSTEM\0\0\0" "II" 04 00         16 bytes, IFD at +16   (OM-1 and later)
+       Accepting only the first left every OM System raw on the matrix-derived neutral --
+       an OM-1 forest frame shot at ~5050 K rendered as 6500 K, strongly yellow-green. */
     if (!ifd0.contains(0x8769)) return info.hasColorMatrix;
     Ifd exif; QList<quint32> es; quint32 en = 0;
     if (!r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) || !exif.contains(0x927C))
@@ -641,11 +645,14 @@ bool OlympusRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorI
 
     const quint32 mnAbs = r.ifdPointer(exif[0x927C]);
     if (!file.seek(mnAbs)) return info.hasColorMatrix;
-    const QByteArray h = file.read(12);
-    if (h.size() != 12 || !h.startsWith("OLYMPUS")) return info.hasColorMatrix;
+    const QByteArray h = file.read(16);
+    int ifdRel = 0;
+    if (h.size() >= 12 && h.startsWith("OLYMPUS")) ifdRel = 12;
+    else if (h.size() == 16 && h.startsWith("OM SYSTEM")) ifdRel = 16;
+    else return info.hasColorMatrix;
 
     Reader mr;
-    mr.initEmbedded(&file, mnAbs, 12, uchar(h[8]) == 'M');
+    mr.initEmbedded(&file, mnAbs, quint32(ifdRel), uchar(h[ifdRel - 4]) == 'M');
     Ifd mn; QList<quint32> ms; quint32 mnn = 0;
     if (!mr.readIfd(mr.firstIfd(), mn, ms, mnn) || !mn.contains(0x2040))
         return info.hasColorMatrix;

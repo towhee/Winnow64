@@ -148,7 +148,7 @@ int ExifTool::close()
     return process.exitCode();
 }
 
-void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc)
+void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc, bool upright)
 {
     if (!ensureRunning("ExifTool::copyAllTags")) return;
     QByteArray args;
@@ -158,6 +158,11 @@ void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc)
     /* "--TAG" excludes: keep the ICC profile the writer already embedded, which describes
        the pixels we actually produced, rather than the source's. */
     if (excludeIcc) args += "--icc_profile:all\n";
+    /* An assignment in the copy command overrides the copied value. It has to be THIS
+       write: a separate one afterwards is refused outright on a file whose copied
+       MakerNote ExifTool cannot fully parse (OM System raws: "MakerNotes tag 0x2010 IFD
+       format not handled" is a minor error, and minor errors block a rewrite). */
+    if (upright) args += "-orientation#=1\n";
     if (isOverWrite) args += "-overwrite_original\n";
     args += dst.toUtf8() + "\n";
     args += "-execute\n";

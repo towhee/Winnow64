@@ -193,13 +193,11 @@ ScreenSampler::ScreenSampler(QWidget *parent)
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     table->setToolTip("R G B in percent; H in degrees, S and L in percent.\n"
-                      "Cmd+C copies the table as text.  Esc closes the sampler.");
+                      "Copy puts the table on the clipboard as text.  Esc closes the "
+                      "sampler.");
 
-    /* Cmd+C (Ctrl+C on Windows) copies the whole table; Esc closes the sampler. Window
-       shortcuts, so they work wherever focus sits in this window. */
-    QShortcut *copySc = new QShortcut(QKeySequence::Copy, this);
-    copySc->setContext(Qt::WindowShortcut);
-    connect(copySc, &QShortcut::activated, this, &ScreenSampler::copyTable);
+    /* Esc closes the sampler. A window shortcut, so it works wherever focus sits in
+       this window. */
     QShortcut *escSc = new QShortcut(QKeySequence(Qt::Key_Escape), this);
     escSc->setContext(Qt::WindowShortcut);
     connect(escSc, &QShortcut::activated, this, &QWidget::close);
@@ -208,6 +206,9 @@ ScreenSampler::ScreenSampler(QWidget *parent)
     sampleBtn->setToolTip("Pick a point anywhere on screen.  Right-click cancels the "
                           "pick; Esc closes the sampler.");
     connect(sampleBtn, &QPushButton::clicked, this, &ScreenSampler::arm);
+    QPushButton *copyBtn = new QPushButton("Copy");
+    copyBtn->setToolTip("Copy the table to the clipboard as tab-separated text");
+    connect(copyBtn, &QPushButton::clicked, this, &ScreenSampler::copyTable);
     QPushButton *clearBtn = new QPushButton("Clear");
     connect(clearBtn, &QPushButton::clicked, this, [this] {
         table->setRowCount(0);
@@ -216,6 +217,7 @@ ScreenSampler::ScreenSampler(QWidget *parent)
 
     QHBoxLayout *btns = new QHBoxLayout;
     btns->addStretch(1);
+    btns->addWidget(copyBtn);
     btns->addWidget(clearBtn);
     btns->addWidget(sampleBtn);
     QVBoxLayout *lay = new QVBoxLayout(this);
@@ -413,7 +415,7 @@ void ScreenSampler::addSample(const float rgb[3])
         table->setItem(row, k + 1, it);
     }
     table->scrollToBottom();
-    status->setText(QString("Sample %1 taken.  Cmd+C copies the table.").arg(sampleCount));
+    status->setText(QString("Sample %1 taken.").arg(sampleCount));
 }
 
 void ScreenSampler::copyTable()

@@ -27,6 +27,7 @@ struct WorkingImage;
 struct StatSampleSlot {
     std::mutex mutex;
     std::shared_ptr<const WorkingImage> sample;
+    std::shared_ptr<const WorkingImage> local;   // ~1024 px, Develop::LocalSample
 };
 
 /*
@@ -155,6 +156,12 @@ struct WorkingImage {
        sidecar and make the proxy and settle renders miss each other's cache entries. */
     float renderScale = 1.0f;
 
+    /* Where this buffer sits in its FRAME, in this buffer's own pixels. frameW == 0 (the
+       default) means the buffer IS the frame. Only a crop sets it -- the Detail patch,
+       cutDetailRoi -- so that a whole-frame field (Highlights -'s local base, built on
+       the StatSample) lands on the patch's pixels where it lands on the loupe's. */
+    int frameX = 0, frameY = 0, frameW = 0, frameH = 0;
+
     /* The whole-frame statistics sample (see StatSampleSlot). statSample marks the
        sample itself, so developing it does not recurse into a sample of the sample. */
     std::shared_ptr<StatSampleSlot> statSlot = std::make_shared<StatSampleSlot>();
@@ -253,6 +260,10 @@ inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)
     dst.look          = src.look;
     dst.renderScale   = src.renderScale;
     dst.statSlot      = src.statSlot;
+    dst.frameX        = src.frameX;
+    dst.frameY        = src.frameY;
+    dst.frameW        = src.frameW;
+    dst.frameH        = src.frameH;
 }
 
 /*

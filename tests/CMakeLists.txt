@@ -346,6 +346,31 @@ if(APPLE)
     target_link_libraries(tonecurvedump PRIVATE opencv_core opencv_imgproc)
 endif()
 
+# developrender is a CALIBRATION TOOL like tonecurvedump: it renders a calibration dump
+# (a .wkg a Develop export writes when WINNOW_DUMP_WORKING is set) through Develop::Apply
+# with any params, for fitting tone operators against Lightroom. Built, never run by ctest.
+add_executable(developrender unit/developrender.cpp ${WINNOW_CORE_TEST_SOURCES}
+    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+target_include_directories(developrender PRIVATE ${WINNOW_TEST_INCLUDE_DIRS})
+target_link_libraries(developrender PRIVATE
+    Qt6::Core Qt6::Widgets Qt6::Concurrent Qt6::Test Qt6::Sql)
+if(APPLE)
+    target_compile_options(developrender PRIVATE -include arm_acle.h)
+    target_include_directories(developrender PRIVATE ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(developrender PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(developrender PRIVATE opencv_core opencv_imgproc)
+elseif(WIN32)
+    target_include_directories(developrender PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(developrender PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
+
 # tst_toneregions is the characterization gate for the Basic panel's four tone controls
 # (blacks | shadows | highlights | whites). It pins the KIND of operator each one is --
 # endpoint moves for whites/blacks, disjoint regions for shadows/highlights, a monotone

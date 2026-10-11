@@ -13,6 +13,7 @@
     test, so a change to either side has to be made twice to pass.
 */
 #include <QtTest>
+#include <algorithm>
 #include <cmath>
 #include <vector>
 #include "Develop/outputtransform.h"
@@ -123,6 +124,7 @@ private slots:
     void agxKeepsNeutralsNeutral();
     void agxIsMonotonic();
     void agxDesaturatesHighlightsWithoutHueMarch();
+    void filmicHueKeepsNeutralsAndHue();
     void outputBytesAreUnchanged();
 
 private:
@@ -500,6 +502,60 @@ void TestOutputTransform::agxIsMonotonic()
     Asserted two ways: the off-channels must climb steadily with exposure, and they must
     stay level with EACH OTHER -- a spread between them IS a hue shift.
 */
+/*
+    STANDARD ROLL-OFF (HUE-PRESERVING) is Filmic's curve applied the DNG SDK way
+    (ApplyRGBTone): the brightest and darkest channel take the curve, the middle one is
+    interpolated between them. Two properties are what it is FOR, and both are pinned.
+
+    1. NEUTRALS ARE UNTOUCHED. On a grey the three channels are equal, so RGBTone IS the
+       per-channel curve: every grey must render exactly as under Standard roll-off.
+
+    2. HUE HOLDS AS A COLOUR BRIGHTENS. Measured against a Lightroom render of a snow
+       scene, per-channel Filmic turned bright blues 11-19 degrees toward cyan (the
+       shoulder compresses blue more than green). A sky blue pushed up three stops must
+       drift less than half as far under FilmicHue as under Filmic.
+*/
+static float hueOf(const int c[3])
+{
+    const float r = c[0], g = c[1], b = c[2];
+    const float mx = std::max({r, g, b}), mn = std::min({r, g, b}), d = mx - mn;
+    if (d <= 0.0f) return 0.0f;
+    float h = (mx == r) ? std::fmod((g - b) / d, 6.0f)
+            : (mx == g) ? (b - r) / d + 2.0f : (r - g) / d + 4.0f;
+    h *= 60.0f;
+    return h < 0.0f ? h + 360.0f : h;
+}
+
+void TestOutputTransform::filmicHueKeepsNeutralsAndHue()
+{
+    using VT = OutputTransform::ViewTransform;
+    for (float g : {0.005f, 0.05f, 0.18f, 0.6f, 1.5f, 3.0f}) {
+        const float in[3] = {g, g, g};
+        int a[3], b[3];
+        renderOne16(in, VT::Filmic, a);
+        renderOne16(in, VT::FilmicHue, b);
+        for (int c = 0; c < 3; ++c)
+            QVERIFY2(std::abs(a[c] - b[c]) <= 64,       // 64 of 65535: table interpolation
+                     qPrintable(QString("grey %1: Filmic %2, FilmicHue %3")
+                                .arg(g).arg(a[c]).arg(b[c])));
+    }
+
+    const float sky[3] = {0.06f, 0.16f, 0.42f};          // linear sRGB, a clear-sky blue
+    auto drift = [&](VT vt) {
+        int lo[3], hi[3];
+        const float dim[3]  = {sky[0] * 0.25f, sky[1] * 0.25f, sky[2] * 0.25f};
+        const float hot[3]  = {sky[0] * 2.0f,  sky[1] * 2.0f,  sky[2] * 2.0f};
+        renderOne16(dim, vt, lo);
+        renderOne16(hot, vt, hi);
+        return std::fabs(std::fmod(hueOf(hi) - hueOf(lo) + 540.0f, 360.0f) - 180.0f);
+    };
+    const float dFilmic = drift(VT::Filmic), dHue = drift(VT::FilmicHue);
+    qInfo("sky hue drift over 3 stops: Filmic %.1f deg, FilmicHue %.1f deg", dFilmic, dHue);
+    QVERIFY2(dHue < 0.5f * dFilmic,
+             qPrintable(QString("FilmicHue drifted %1 deg against Filmic's %2; it must hold "
+                                "hue at least twice as well").arg(dHue).arg(dFilmic)));
+}
+
 void TestOutputTransform::agxDesaturatesHighlightsWithoutHueMarch()
 {
     int prevOff = -1;

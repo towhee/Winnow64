@@ -10,6 +10,12 @@
 #include <tiffio.h>
 #include <cstdarg>
 #include <cstdlib>
+#include <cstdio>
+#include <memory>
+#include "Develop/develop.h"
+#include "Develop/workingdump.h"
+#include "ImageFormats/Raw/rawformat.h"
+#include "Metadata/metadata.h"
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #include <QAccessibleWidget>
@@ -105,8 +111,77 @@ static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list 
     fflush(stderr);
 }
 
+/*
+    Winnow --dumpworking <raw> <out.wkg> [engine=apple]
+
+    HEADLESS CALIBRATION DUMP: decode one raw's sensor image with the in-house decoder
+    (the same decodeRawWorking path the export's denoise base uses; engine=apple takes
+    the Core Image engine instead, as the Develop dock's Demosaic setting can), convert
+    it to the working space with its as-shot white balance, write it as a .wkg
+    (Develop/workingdump.h) and exit. No window, no catalog, no settings, and it runs
+    beside an open Winnow -- it
+    branches before the single-instance check. With tests/unit/developrender this closes
+    the calibration loop without the UI: dump once per raw, render any recipe, compare
+    against Lightroom. Returns 0 on success.
+*/
+static int runDumpWorking(int argc, char *argv[], const QString &raw, const QString &out,
+                          bool appleEngine)
+{
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QApplication app(argc, argv);
+    G::isAutomatedRun = true;
+    /* The engine is a Develop-dock setting, not a launch default; calibration wants the
+       in-house decoder (full sensor area, the pipeline Winnow owns) unless told otherwise. */
+    G::decodeRawEngine = appleEngine ? G::DecodeRawEngine::appleDecodeRawEngine
+                                     : G::DecodeRawEngine::winnowDecodeRawEngine;
+
+    Metadata metadata;
+    const QFileInfo info(raw);
+    if (!info.exists() ||
+        !metadata.loadImageMetadata(info, -1, 0, true, true, false, false,
+                                    "dumpworking", /*isRemote*/true)) {
+        std::fprintf(stderr, "dumpworking: cannot read metadata: %s\n", qPrintable(raw));
+        return 1;
+    }
+    const ImageMetadata m = metadata.m;
+
+    std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(info.suffix().toLower());
+    QFile file(raw);
+    if (!rawFormat || !file.open(QIODevice::ReadOnly)) {
+        std::fprintf(stderr, "dumpworking: no raw decoder for %s\n", qPrintable(raw));
+        return 1;
+    }
+    QImage throwaway;
+    const EditParams identity;
+    std::shared_ptr<const WorkingImage> work;
+    const bool ok = rawFormat->Decode(file, m, throwaway, &identity, nullptr, &work);
+    file.close();
+    if (!ok || !work || !work->isValid()) {
+        std::fprintf(stderr, "dumpworking: sensor decode failed: %s\n", qPrintable(raw));
+        return 1;
+    }
+
+    WorkingImage w = *work;
+    Develop::ToWorkingSpace(w, &identity);
+    /* The loupe's rotation, as developOrientationDegrees reads it from the model. */
+    const int degrees = m.orientation == 3 ? 180 : m.orientation == 6 ? 90
+                      : m.orientation == 8 ? 270 : 0;
+    if (!WorkingDump::write(w, degrees, out)) {
+        std::fprintf(stderr, "dumpworking: cannot write %s\n", qPrintable(out));
+        return 1;
+    }
+    std::fprintf(stdout, "dumpworking: %s -> %s (%dx%d, %d deg)\n", qPrintable(raw),
+                 qPrintable(out), w.width, w.height, degrees);
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
+    if (argc >= 4 && QString::fromLocal8Bit(argv[1]) == "--dumpworking")
+        return runDumpWorking(argc, argv, QString::fromLocal8Bit(argv[2]),
+                              QString::fromLocal8Bit(argv[3]),
+                              argc >= 5 && QString::fromLocal8Bit(argv[4]) == "engine=apple");
+
 #ifdef Q_OS_MAC
     // Suppress the system-appended "Start Dictation" / "Emoji & Symbols" items
     // in the Edit menu. Must run before the menu (and ideally the app) is built.

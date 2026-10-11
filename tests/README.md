@@ -199,3 +199,29 @@ under sustained bouncing — independent of the sanitizer in use.
 
 Tests assume CMake. Disable the whole suite with `-DWINNOW_BUILD_TESTS=OFF`
 (does not affect the `Winnow` app target).
+
+## Calibration against Lightroom (develop operators)
+
+Not a pass/fail layer: a loop for fitting Develop operators to Lightroom exports without
+the Winnow UI. Exact for the Winnow Standard profile (no profile look).
+
+```sh
+CMAKE=/Users/roryhill/Qt/Tools/CMake/CMake.app/Contents/bin/cmake
+$CMAKE --build build/mac-debug --target Winnow developrender
+
+# One-off per raw (lrcompare.py does this itself when a dump is missing):
+build/mac-debug/Winnow.app/Contents/MacOS/Winnow --dumpworking <raw> ~/Pictures/_LRref/<base>.wkg
+
+# Render any recipe through the real Develop::Apply:
+build/mac-debug/tests/developrender <in.wkg> <out.tif> exposure=2.5 highlights=-100
+build/mac-debug/tests/developrender <in.wkg> <out.tif> recipe=<sidecar or params .json>
+
+# Score every case in tests/calibration/cases.json against its Lightroom pair:
+python3 tests/calibration/lrcompare.py [--only "Horne +2.5 -100"] [--sheet crops.jpg]
+```
+
+`lrcompare.py` compares each app's change against its OWN baseline render, so profile and
+colour differences drop out; see its docstring for the case format. Lightroom exports go
+in `~/Pictures/_LRref` (override with `LRREF`): 16-bit sRGB TIFF, no crop, baseline and
+target differing only in the control under test. The dump format is documented in
+`Develop/workingdump.h`.

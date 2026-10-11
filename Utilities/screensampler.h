@@ -19,8 +19,8 @@ class SamplerLoupe;
 
     WHAT IT IS FOR: comparing renders across apps. Sample a spot in Lightroom's window,
     then the same spot in Winnow's, and the two readings sit side by side in the
-    table (RGB as percentages, HSL as degrees and percentages; Cmd+C copies it as
-    tab-separated text, Esc closes the sampler). The in-image droppers (Color Range,
+    table (RGB as percentages, HSL as degrees and percentages; the Copy button
+    puts it on the clipboard as tab-separated text, Esc closes the sampler). The in-image droppers (Color Range,
     white balance) read Winnow's own pixels; this one reads what the DISPLAY shows,
     whoever drew it.
 

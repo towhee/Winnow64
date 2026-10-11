@@ -88,6 +88,12 @@ first.</p>
 roll-off.  Familiar and contrasty, close to how the camera would have rendered the shot,
 and close to what Lightroom shows you for the same file.  It is also where <b>Reset
 Basic</b> puts you.  (This is the transform published as <i>Filmic</i>.)</li>
+<li><b>Standard roll-off (hue-preserving)</b> is the same tone, applied the way Lightroom
+applies its curve: the brightest and darkest channel of each colour take the curve and the
+middle one is placed between them, so a colour keeps its hue as the curve brightens or
+darkens it.  Under plain Standard roll-off each channel takes the curve on its own, and a
+bright blue sky drifts toward cyan; here it stays blue.  The trade: a very bright saturated
+colour stays saturated right up to white instead of fading toward it.</li>
 <li><b>Soft roll-off</b> rolls highlights off far more gradually, and &mdash; the real
 difference &mdash; a bright saturated colour fades toward <i>white</i> as it brightens
 instead of changing hue.  Under Standard roll-off a saturated red pushed hard drifts
@@ -169,6 +175,13 @@ so they reach all the way to the midtones, and they are the two that can clip.</
 <p>Shadows <b>multiplies</b> the light in the dark tones rather than adding to it, as
 Lightroom's does.  Pure black stays black, and the contrast between dark tones is kept,
 so opening the shadows reveals the detail in them instead of greying them out.</p>
+
+<p>Pulling Highlights <b>down</b> adapts to the picture, as Lightroom's does.  A dark
+frame's few highlights get a firmer pull than a bright frame's many, and a bright
+<b>area</b> &mdash; a sunlit patch in a dark forest &mdash; is brought down as a whole,
+darker gaps inside it included, while its texture is kept and the edges around it stay
+clean.  After a positive Exposure push the pull is stronger again, to bring back what
+the push brightened.</p>
 
 <p>Where the two regions sit is adjustable: the handles under the histogram scope (and
 under the parametric curve in the Curves panel) place the shadows and highlights peaks,

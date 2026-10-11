@@ -184,6 +184,8 @@ void TestInputProfile::defaultViewTransformIsFilmic()
     QCOMPARE(int(OutputTransform::ViewTransform::ProfileCurve),   4);
     QCOMPARE(OutputTransform::ViewFromInt(3), OutputTransform::ViewTransform::CameraContrast);
     QCOMPARE(OutputTransform::ViewFromInt(4), OutputTransform::ViewTransform::ProfileCurve);
+    QCOMPARE(int(OutputTransform::ViewTransform::FilmicHue), 5);
+    QCOMPARE(OutputTransform::ViewFromInt(5), OutputTransform::ViewTransform::FilmicHue);
 
     /* An unknown value (a sidecar from a later build) resolves to the IDENTITY rather
        than to whatever the cast happens to land on -- the output stage does not invent a

@@ -275,7 +275,10 @@ inline float AgxCurve(float v)
 inline float ViewCurve(OutputTransform::ViewTransform vt, float v)
 {
     switch (vt) {
-    case OutputTransform::ViewTransform::Filmic: return FilmicTone(v);
+    /* FilmicHue applies this same curve, hue-preservingly, on the camera path; per
+       channel is the right stand-in here, where only a tone's POSITION is asked. */
+    case OutputTransform::ViewTransform::Filmic:
+    case OutputTransform::ViewTransform::FilmicHue: return FilmicTone(v);
     case OutputTransform::ViewTransform::AgX:    return AgxCurve(v);
     /* The camera curves are image-specific (maker, profile) and applied hue-preservingly
        by the camera path in ToImage, never through here. This per-channel stand-in --
@@ -296,6 +299,7 @@ inline float ViewCurve(OutputTransform::ViewTransform vt, float v)
 inline bool ViewClampsToWhite(OutputTransform::ViewTransform vt)
 {
     return vt == OutputTransform::ViewTransform::Filmic
+        || vt == OutputTransform::ViewTransform::FilmicHue
         || vt == OutputTransform::ViewTransform::AgX
         || vt == OutputTransform::ViewTransform::CameraContrast
         || vt == OutputTransform::ViewTransform::ProfileCurve;
@@ -329,7 +333,8 @@ inline OutputTransform::ViewTransform EffectiveView(OutputTransform::ViewTransfo
 inline bool IsCameraCurve(OutputTransform::ViewTransform vt)
 {
     return vt == OutputTransform::ViewTransform::CameraContrast
-        || vt == OutputTransform::ViewTransform::ProfileCurve;
+        || vt == OutputTransform::ViewTransform::ProfileCurve
+        || vt == OutputTransform::ViewTransform::FilmicHue;
 }
 
 /*
@@ -378,6 +383,7 @@ ViewMatrices ViewMatricesFor(OutputTransform::ViewTransform vt,
     case OutputTransform::ViewTransform::Filmic:
     case OutputTransform::ViewTransform::CameraContrast:
     case OutputTransform::ViewTransform::ProfileCurve:
+    case OutputTransform::ViewTransform::FilmicHue:
         break;
 
     case OutputTransform::ViewTransform::AgX: {
@@ -654,6 +660,28 @@ struct CameraPath {
     const CameraCurve::Curve *curve = nullptr;   // non-null: RGBTone with this curve
 };
 
+/*
+    Standard roll-off's curve as a CameraCurve::Curve, so FilmicHue can ride the camera
+    path's hue-preserving ApplyRGBTone with no new per-pixel code. Tabulated on the same
+    log2 window the camera curves use; FilmicTone has reached white (v = 2.32) well
+    before the window's top, and below its bottom the curve is linear into black like
+    theirs. Built once.
+*/
+const CameraCurve::Curve &FilmicCurve()
+{
+    static const CameraCurve::Curve c = [] {
+        CameraCurve::Curve k;
+        k.lut.resize(CameraCurve::kLutSize + 1);
+        for (int i = 0; i <= CameraCurve::kLutSize; ++i) {
+            const float l = CameraCurve::kLogMin + (CameraCurve::kLogMax - CameraCurve::kLogMin)
+                                                       * float(i) / float(CameraCurve::kLutSize);
+            k.lut[size_t(i)] = FilmicTone(std::exp2(l));
+        }
+        return k;
+    }();
+    return c;
+}
+
 CameraPath CameraPathFor(OutputTransform::ViewTransform vt, const WorkingImage &img)
 {
     CameraPath cp;
@@ -668,6 +696,8 @@ CameraPath CameraPathFor(OutputTransform::ViewTransform vt, const WorkingImage &
     if (profileCurve && look) cp.curve = &look->profileCurve;
     else if (vt == OutputTransform::ViewTransform::CameraContrast)
         cp.curve = &CameraCurve::ForCameraModel(img.cam.cameraModel);
+    else if (vt == OutputTransform::ViewTransform::FilmicHue)
+        cp.curve = &FilmicCurve();
     return cp;
 }
 
