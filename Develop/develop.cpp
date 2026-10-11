@@ -24,6 +24,7 @@
 #include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 
 /* Luma weights for the WORKING space, folded at compile time from
@@ -180,7 +181,8 @@ constexpr ToneOp kWhitesDown  = {0.10f, 0.9f, 0.15f, 0.94f, 1.00f};
     buffer being rendered: a proxy, the settle render and a Detail patch (a crop) must
     all draw the same curve. Highlights + is not refitted (no data) and stays fixed.
 */
-constexpr float kHighsDownBudget = 0.035f;   // mean display shift at -100 (8.9 levels)
+constexpr float kHighsDownBudget = 0.020f;   // mean display shift at -100 (was 0.035
+                                             // before the frame-relative term, below)
 constexpr float kHighsDownAmpMax = 0.60f;   // was 0.35; see THE STRENGTH below
 
 /*
@@ -232,6 +234,40 @@ constexpr int   kHighsLocalLong       = 1024;    // LocalSample long edge
 constexpr int   kHighsLocalUpRadius   = 2;       // guided upsample radius, sample px
 constexpr float kHighsLocalUpEps      = 1e-4f;   // guided upsample regulariser
 constexpr float kHighsDownBudgetPerEV = 0.3f;    // budget x (1 + this x max(0, Exposure))
+
+/*
+    HIGHLIGHTS - ALSO PULLS BY HOW FAR A REGION STANDS ABOVE THE FRAME (2026-10-11).
+    Measured in log luminance, Lightroom's -100 removes a FRACTION of each tone's distance
+    above the frame's log-mean: 0.57 of it on the forest frame at Exposure 0 (81% near
+    black, a lit fern pool), 0.32 on ILCE, 0.23 on snow at +1.5 -- the further the
+    highlights stand above the frame, the harder the pull. The display-axis band cannot
+    see that: it pulls a level the same in every frame, so on the dark forest it pulled
+    level 32-96 tones by 6-27 levels where Lightroom pulls 24-50.
+
+    So a second term rides on the band: a gain in display-linear light of 2^-(amount^q *
+    k * (L - anchor)^p), L the log2 display-linear luminance of the band-free DISPLAY
+    value (one value on a clipped span must get one gain, or Whites + inverts) and anchor
+    the frame's log-mean of it (from the StatSample, so every render shares it), tapered
+    to nothing at white -- so white is left to the recovery stage, and -50 leaves part of
+    a push blown, as Lightroom's does (0.51% -> 0.14% -> 0% blown at 0 / -50 / -100). It
+    is carried BY REGION, through a second local Laplacian on L (buildHiField): applied
+    per pixel it compressed texture by a third, since a brighter pixel took more drop
+    than its neighbours. The band's budget drops to make room. q > 1 because Lightroom's
+    -50 is well under half its -100 on bright tones.
+
+    Fitted through the real pipeline (tests/calibration/lrcompare.py, nine Lightroom
+    pairs, coordinate search): mean RMS 6.56 -> 6.26; forest 0 12.2 -> 10.1, ILCE +1.5
+    7.2 -> 6.5, snow +1.5 5.2 -> 3.8; ILCE 0 5.5 -> 6.1 and snow 0 7.0 -> 8.1 pay for it.
+    A taper starting below 0.92 or leaving pull at white scored up to 0.2 better but
+    broke the white / partial-recovery / no-compounding properties above. Applying the
+    curve only to what a region adds beyond the pixel (tried first) scored 6.82.
+*/
+constexpr float kHighsAnchorK         = 0.12f;   // stops removed per stop^p above anchor
+constexpr float kHighsAnchorP         = 1.5f;    // power on the distance above anchor
+constexpr float kHighsAnchorQ         = 1.5f;    // power on the slider amount
+constexpr float kHighsAnchorTaper     = 1.0f;    // share of the term gone at white
+constexpr float kHighsAnchorTaperFrom = 0.92f;    // display d where the taper starts
+constexpr float kHighsAnchorSigma     = 1.0f;    // its region split, stops of L
 
 /*
     SHADOWS IS A GAIN, NOT A BAND (refit 2026-10-05 against Lightroom Classic exports of
@@ -972,10 +1008,14 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     Denoise(img, p);
     if (t) t->denoiseMs = probe.restart();
 
-    const PointCoeffs c = sampleCoeffs ? *sampleCoeffs
-                                       : buildPointCoeffs(p, img, &hiWeight);
+    /* Held by pointer, never by value: PointCoeffs carries its tone tables inline (~150
+       KB), and Apply nests -- the frame's sample is developed through this same function
+       first -- so two copies on a 512 KB pool-thread stack overflowed it. */
+    const std::shared_ptr<const PointCoeffs> coeffs =
+        sampleCoeffs ? sampleCoeffs : buildPointCoeffs(p, img, &hiWeight);
+    const PointCoeffs &c = *coeffs;
     lastHiWeight = hiWeight;
-    if (img.statSample) lastCoeffs = std::make_shared<const PointCoeffs>(c);
+    if (img.statSample) lastCoeffs = coeffs;
     const std::shared_ptr<const HiField> hiField =
         (c.active && c.hiLocal && local0) ? buildHiField(*local0, p, c) : nullptr;
     if (c.active) applyPointOps(img, c, hiField.get());
@@ -1091,6 +1131,113 @@ std::shared_ptr<const WorkingImage> Develop::LocalSample(const WorkingImage &img
        locally. The fused pass reads a, b bilinearly and evaluates them on each pixel's own
        d0, which puts the field's edges back on the full-resolution pixels.
 */
+/*
+    A fast local Laplacian filter (Aubry et al. 2014) of I over the value range [lo, hi]:
+    each of kHighsLocalLevels reference values g remaps I by r_g(i) = i + T(g) - g for
+    |i - g| well inside sigma and T(i) - i well outside it (a Gaussian split), and each
+    output coefficient takes the two reference pyramids bracketing the input's own
+    Gaussian-pyramid value there. shift(v) = T(v) - v. Returns the filtered image.
+*/
+template <class Shift>
+static cv::Mat localLaplacian(const cv::Mat &I, float lo, float hi, float sigma, Shift shift)
+{
+    const int w = I.cols, h = I.rows;
+    const int levels = qMax(1, int(std::floor(std::log2(double(qMin(w, h))))) - 3);
+    std::vector<cv::Mat> G(levels + 1);
+    G[0] = I;
+    for (int l = 0; l < levels; ++l) cv::pyrDown(G[l], G[l + 1]);
+
+    const int K = kHighsLocalLevels;
+    const float range = qMax(1e-6f, hi - lo);
+    const float step = range / (K - 1);
+    const float inv2s2 = 1.0f / (2.0f * sigma * sigma);
+    std::vector<std::vector<cv::Mat>> lap(static_cast<size_t>(K));
+    QVector<int> ks(K);
+    for (int k = 0; k < K; ++k) ks[k] = k;
+    constexpr int kRemapN = 2048;                       // remap tabulated over [lo, hi]
+    QtConcurrent::blockingMap(ks, [&](int k) {
+        const float gref = lo + k * step;
+        const float tg = shift(gref);
+        /* r_g depends only on the value and the reference: tabulate it, so the per-pixel
+           cost is one interpolated read. */
+        std::vector<float> table(kRemapN + 1);
+        for (int j = 0; j <= kRemapN; ++j) {
+            const float iv = lo + range * float(j) / kRemapN;
+            const float d = iv - gref;
+            const float f = std::exp(-d * d * inv2s2);
+            table[size_t(j)] = iv + tg * f + shift(iv) * (1.0f - f);
+        }
+        cv::Mat R(h, w, CV_32F);
+        const float *in = I.ptr<float>();
+        float *r = R.ptr<float>();
+        for (int i = 0; i < w * h; ++i) {
+            const float fj = qBound(0.0f, (in[i] - lo) / range, 1.0f) * kRemapN;
+            const int j = qMin(int(fj), kRemapN - 1);
+            r[i] = table[size_t(j)] + (table[size_t(j) + 1] - table[size_t(j)]) * (fj - j);
+        }
+        std::vector<cv::Mat> &L = lap[size_t(k)];
+        L.resize(size_t(levels));
+        cv::Mat cur = R;
+        for (int l = 0; l < levels; ++l) {
+            cv::Mat down, up;
+            cv::pyrDown(cur, down);
+            cv::pyrUp(down, up, cur.size());
+            L[size_t(l)] = cur - up;
+            cur = down;
+        }
+    });
+
+    std::vector<cv::Mat> out(size_t(levels) + 1);
+    for (int l = 0; l < levels; ++l) {
+        out[size_t(l)] = cv::Mat::zeros(G[l].size(), CV_32F);
+        const int n = G[l].rows * G[l].cols;
+        const float *gp = G[l].ptr<float>();
+        float *op = out[size_t(l)].ptr<float>();
+        std::vector<const float *> lp(static_cast<size_t>(K));
+        for (int k = 0; k < K; ++k) lp[size_t(k)] = lap[size_t(k)][size_t(l)].ptr<float>();
+        const float *const *lk = lp.data();
+        parallelFor(size_t(n), [=](size_t i0, size_t i1) {
+            for (size_t i = i0; i < i1; ++i) {
+                const float t = qBound(0.0f, (gp[i] - lo) / step, float(K - 1));
+                const int k0 = qMin(int(t), K - 2);
+                const float fr = t - k0;
+                op[i] = lk[k0][i] * (1.0f - fr) + lk[k0 + 1][i] * fr;
+            }
+        });
+    }
+    {
+        cv::Mat top = G[levels].clone();
+        float *tp = top.ptr<float>();
+        for (int i = 0; i < top.rows * top.cols; ++i) tp[i] += shift(tp[i]);
+        out[size_t(levels)] = top;
+    }
+    cv::Mat x = out[size_t(levels)];
+    for (int l = levels - 1; l >= 0; --l) {
+        cv::Mat up;
+        cv::pyrUp(x, up, out[size_t(l)].size());
+        x = up + out[size_t(l)];
+    }
+    return x;
+}
+
+/* The guided upsample of v with guide I: v ~ a * I + b locally, averaged once more. */
+static void guidedCoefficients(const cv::Mat &I, const cv::Mat &v, std::vector<float> &aOut,
+                               std::vector<float> &bOut)
+{
+    const cv::Size ks(2 * kHighsLocalUpRadius + 1, 2 * kHighsLocalUpRadius + 1);
+    cv::Mat mI, mV, mIV, mII;
+    cv::boxFilter(I, mI, CV_32F, ks, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(v, mV, CV_32F, ks, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(I.mul(v), mIV, CV_32F, ks, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(I.mul(I), mII, CV_32F, ks, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::Mat a = (mIV - mI.mul(mV)) / (mII - mI.mul(mI) + kHighsLocalUpEps);
+    cv::Mat b = mV - a.mul(mI);
+    cv::boxFilter(a, a, CV_32F, ks, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    cv::boxFilter(b, b, CV_32F, ks, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
+    aOut.assign(a.ptr<float>(), a.ptr<float>() + a.total());
+    bOut.assign(b.ptr<float>(), b.ptr<float>() + b.total());
+}
+
 std::shared_ptr<const Develop::HiField> Develop::buildHiField(const WorkingImage &localIn,
                                                               const EditParams &p,
                                                               const PointCoeffs &c)
@@ -1108,22 +1255,24 @@ std::shared_ptr<const Develop::HiField> Develop::buildHiField(const WorkingImage
     const int lutLast = PointCoeffs::kLutSize - 1;
     const float lutScale = lutLast / sMax;
     const int backLast = PointCoeffs::kBackSize - 1;
-    auto posOf = [&](float Y) {
+    auto atS = [&](const float *t, float Y) {
         const float fi = std::pow(qMax(0.0f, Y), kInvGamma) * lutScale;
-        if (fi >= lutLast) return c.hiPosLut[lutLast];
+        if (fi >= lutLast) return t[lutLast];
         const int i = int(fi);
-        return c.hiPosLut[i] + (c.hiPosLut[i + 1] - c.hiPosLut[i]) * (fi - i);
+        return t[i] + (t[i + 1] - t[i]) * (fi - i);
     };
-    auto shiftAt = [&](float d) {
+    auto bandShiftAt = [&](float d) {
         const float fk = qBound(0.0f, d, 1.0f) * backLast;
         const int k = qMin(int(fk), backLast - 1);
         return c.hiShiftByPos[k] + (c.hiShiftByPos[k + 1] - c.hiShiftByPos[k]) * (fk - k);
     };
 
-    cv::Mat I(h, w, CV_32F);
+    /* Luminance after the front stages, onto the band's axis (I = d0) and as log2 of the
+       band-free display value in display-linear light (J), the frame-relative term's. */
+    cv::Mat I(h, w, CV_32F), J(h, w, CV_32F);
     const float *pm = c.preMat, *cm = c.calMat, *g = c.channelGain;
     parallelFor(size_t(w) * h, [&](size_t i0, size_t i1) {
-        float *out = I.ptr<float>();
+        float *oi = I.ptr<float>(), *oj = J.ptr<float>();
         for (size_t i = i0; i < i1; ++i) {
             const float *px = local.rgb.data() + i * 3;
             float v[3] = {px[0], px[1], px[2]};
@@ -1140,112 +1289,43 @@ std::shared_ptr<const Develop::HiField> Develop::buildHiField(const WorkingImage
                 v[1] = cm[3] * r + cm[4] * gg + cm[5] * b;
                 v[2] = cm[6] * r + cm[7] * gg + cm[8] * b;
             }
-            out[i] = posOf((kLumR * v[0] + kLumG * v[1] + kLumB * v[2]) * invWhite);
+            const float Y = (kLumR * v[0] + kLumG * v[1] + kLumB * v[2]) * invWhite;
+            oi[i] = atS(c.hiPosLut, Y);
+            oj[i] = atS(c.hiLogLumLut, Y);
         }
     });
-
-    /* Pyramid depth: down to ~8 px on the short edge. */
-    const int levels = qMax(1, int(std::floor(std::log2(double(qMin(w, h))))) - 3);
-    std::vector<cv::Mat> G(levels + 1);
-    G[0] = I;
-    for (int l = 0; l < levels; ++l) cv::pyrDown(G[l], G[l + 1]);
-
-    /* One remapped image's Laplacian pyramid per reference tone, in parallel. */
-    const int K = kHighsLocalLevels;
-    const float step = 1.0f / (K - 1);
-    const float inv2s2 = 1.0f / (2.0f * kHighsLocalSigma * kHighsLocalSigma);
-    std::vector<std::vector<cv::Mat>> lap(static_cast<size_t>(K));
-    QVector<int> ks(K);
-    for (int k = 0; k < K; ++k) ks[k] = k;
-    constexpr int kRemapN = 2048;                       // remap tabulated over I in [0, 1]
-    QtConcurrent::blockingMap(ks, [&](int k) {
-        const float gref = k * step;
-        const float tg = shiftAt(gref);
-        /* r_g depends only on the tone and the reference: tabulate it, so the per-pixel
-           cost is one interpolated read rather than an exp and a shift lookup. */
-        std::vector<float> table(kRemapN + 1);
-        for (int j = 0; j <= kRemapN; ++j) {
-            const float iv = float(j) / kRemapN;
-            const float d = iv - gref;
-            const float f = std::exp(-d * d * inv2s2);
-            table[size_t(j)] = iv + tg * f + shiftAt(iv) * (1.0f - f);
-        }
-        cv::Mat R(h, w, CV_32F);
-        const float *in = I.ptr<float>();
-        float *r = R.ptr<float>();
-        for (int i = 0; i < w * h; ++i) {
-            const float fj = qBound(0.0f, in[i], 1.0f) * kRemapN;
-            const int j = qMin(int(fj), kRemapN - 1);
-            r[i] = table[size_t(j)] + (table[size_t(j) + 1] - table[size_t(j)]) * (fj - j);
-        }
-        std::vector<cv::Mat> &L = lap[size_t(k)];
-        L.resize(size_t(levels));
-        cv::Mat cur = R;
-        for (int l = 0; l < levels; ++l) {
-            cv::Mat down, up;
-            cv::pyrDown(cur, down);
-            cv::pyrUp(down, up, cur.size());
-            L[size_t(l)] = cur - up;
-            cur = down;
-        }
-    });
-
-    /* Each output coefficient from the two reference pyramids bracketing the input's own
-       Gaussian-pyramid value there (a hat weight over the references). */
-    std::vector<cv::Mat> out(size_t(levels) + 1);
-    for (int l = 0; l < levels; ++l) {
-        out[size_t(l)] = cv::Mat::zeros(G[l].size(), CV_32F);
-        const int n = G[l].rows * G[l].cols;
-        const float *gp = G[l].ptr<float>();
-        float *op = out[size_t(l)].ptr<float>();
-        std::vector<const float *> lp(static_cast<size_t>(K));
-        for (int k = 0; k < K; ++k) lp[size_t(k)] = lap[size_t(k)][size_t(l)].ptr<float>();
-        const float *const *lk = lp.data();
-        parallelFor(size_t(n), [=](size_t i0, size_t i1) {
-            for (size_t i = i0; i < i1; ++i) {
-                const float t = qBound(0.0f, gp[i], 1.0f) / step;
-                const int k0 = qMin(int(t), K - 2);
-                const float fr = t - k0;
-                op[i] = lk[k0][i] * (1.0f - fr) + lk[k0 + 1][i] * fr;
-            }
-        });
-    }
-    {
-        cv::Mat top = G[levels].clone();
-        float *tp = top.ptr<float>();
-        for (int i = 0; i < top.rows * top.cols; ++i) tp[i] += shiftAt(tp[i]);
-        out[size_t(levels)] = top;
-    }
-    cv::Mat x = out[size_t(levels)];
-    for (int l = levels - 1; l >= 0; --l) {
-        cv::Mat up;
-        cv::pyrUp(x, up, out[size_t(l)].size());
-        x = up + out[size_t(l)];
-    }
-
-    /* What the region adds beyond the per-pixel band, then its guided upsample. */
-    cv::Mat corr(h, w, CV_32F);
-    {
-        const float *in = I.ptr<float>(), *xp = x.ptr<float>();
-        float *cp = corr.ptr<float>();
-        for (int i = 0; i < w * h; ++i) cp[i] = (xp[i] - in[i]) - shiftAt(in[i]);
-    }
-    const cv::Size ks2(2 * kHighsLocalUpRadius + 1, 2 * kHighsLocalUpRadius + 1);
-    cv::Mat mI, mC, mIC, mII;
-    cv::boxFilter(I, mI, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
-    cv::boxFilter(corr, mC, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
-    cv::boxFilter(I.mul(corr), mIC, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
-    cv::boxFilter(I.mul(I), mII, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
-    cv::Mat a = (mIC - mI.mul(mC)) / (mII - mI.mul(mI) + kHighsLocalUpEps);
-    cv::Mat b = mC - a.mul(mI);
-    cv::boxFilter(a, a, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
-    cv::boxFilter(b, b, CV_32F, ks2, cv::Point(-1, -1), true, cv::BORDER_REFLECT);
 
     auto field = std::make_shared<HiField>();
     field->w = w;
     field->h = h;
-    field->a.assign(a.ptr<float>(), a.ptr<float>() + size_t(w) * h);
-    field->b.assign(b.ptr<float>(), b.ptr<float>() + size_t(w) * h);
+
+    /* 1. The band, carried by region (see the note by kHighsLocalSigma): what the region
+          adds beyond the per-pixel band, guided-upsampled on d0. */
+    {
+        const cv::Mat x = localLaplacian(I, 0.0f, 1.0f, kHighsLocalSigma, bandShiftAt);
+        cv::Mat corr(h, w, CV_32F);
+        const float *in = I.ptr<float>(), *xp = x.ptr<float>();
+        float *cp = corr.ptr<float>();
+        for (int i = 0; i < w * h; ++i) cp[i] = (xp[i] - in[i]) - bandShiftAt(in[i]);
+        guidedCoefficients(I, corr, field->a, field->b);
+    }
+
+    /* 2. The frame-relative term, carried by region the same way (see the note by
+          kHighsAnchorK): the whole log gain, guided-upsampled on J. */
+    {
+        const float *dl = c.hiDropByL;
+        auto dropShift = [&](float L) {
+            const float fl = qBound(0.0f, (L - PointCoeffs::kHiLMin) /
+                                              -PointCoeffs::kHiLMin, 1.0f) * backLast;
+            const int k = qMin(int(fl), backLast - 1);
+            return -(dl[k] + (dl[k + 1] - dl[k]) * (fl - k));
+        };
+        const cv::Mat x = localLaplacian(J, PointCoeffs::kHiLMin, 0.0f,
+                                         kHighsAnchorSigma, dropShift);
+        cv::Mat lg = x - J;
+        cv::min(lg, 0.0, lg);
+        guidedCoefficients(J, lg, field->ga, field->gb);
+    }
     return field;
 }
 
@@ -1740,10 +1820,13 @@ void Develop::Grain(WorkingImage &img, const EditParams &p)
     });
 }
 
-Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const WorkingImage &img,
-                                               float *hiWeight)
+std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const EditParams &p,
+                                                                      const WorkingImage &img,
+                                                                      float *hiWeight)
 {
-    PointCoeffs c;
+    /* On the heap: the tables make PointCoeffs too big for a pool thread's stack. */
+    const std::shared_ptr<PointCoeffs> coeffs = std::make_shared<PointCoeffs>();
+    PointCoeffs &c = *coeffs;
 
     /* Exposure: a scene-linear gain of 2^EV (a +1 EV slider doubles the linear value). */
     const float exposureGain = (p.exposure != 0.0f) ? std::exp2(p.exposure) : 1.0f;
@@ -1908,6 +1991,9 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
        frame's pixels sit on the display axis, which is those pixels through exactly
        that matrix (exposure, white balance, profile). */
     ToneShape shape = buildToneShape(p);
+    constexpr int kLumBins = 2048;
+    constexpr float kLumBinSMax = 4.0f;
+    std::vector<long long> lumBins;    // Highlights -: frame luminance, for the anchor
     if (shape.hi < 0.0f) {
         float wMean = hiWeight ? *hiWeight : -1.0f;
         if (wMean < 0.0f) {
@@ -1967,6 +2053,39 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
         const float budget = kHighsDownBudget *
                              (1.0f + kHighsDownBudgetPerEV * qMax(0.0f, p.exposure));
         shape.hiDownAmp = qMin(kHighsDownAmpMax, budget / qMax(wMean, 1e-4f));
+
+        /* The frame's luminance on the perceptual axis, binned -- the anchor (its
+           log-mean in display-linear light) is resolved once the tone tables exist. */
+        {
+            const int w = img.width, h = img.height;
+            const int step = qMax(1, int(std::ceil(std::sqrt(double(w) * h / 65536.0))));
+            const float invWhite = 1.0f / c.white;
+            const float *pm = c.preMat, *cm = c.calMat, *g = c.channelGain;
+            lumBins.assign(kLumBins, 0);
+            for (int y = 0; y < h; y += step) {
+                const float *row = img.rgb.data() + size_t(y) * size_t(w) * 3;
+                for (int x = 0; x < w; x += step) {
+                    const float *px = row + size_t(x) * 3;
+                    float v[3] = {px[0], px[1], px[2]};
+                    if (c.preMatActive) {
+                        const float r = v[0], gg = v[1], b = v[2];
+                        v[0] = pm[0] * r + pm[1] * gg + pm[2] * b;
+                        v[1] = pm[3] * r + pm[4] * gg + pm[5] * b;
+                        v[2] = pm[6] * r + pm[7] * gg + pm[8] * b;
+                    }
+                    for (int k = 0; k < 3; ++k) v[k] *= g[k];
+                    if (c.calActive) {
+                        const float r = v[0], gg = v[1], b = v[2];
+                        v[0] = cm[0] * r + cm[1] * gg + cm[2] * b;
+                        v[1] = cm[3] * r + cm[4] * gg + cm[5] * b;
+                        v[2] = cm[6] * r + cm[7] * gg + cm[8] * b;
+                    }
+                    const float Y = (kLumR * v[0] + kLumG * v[1] + kLumB * v[2]) * invWhite;
+                    const float sv = Y > 0.0f ? std::pow(Y, kInvGamma) : 0.0f;
+                    ++lumBins[size_t(qBound(0, int(sv * (kLumBins / kLumBinSMax)), kLumBins - 1))];
+                }
+            }
+        }
 
     }
 
@@ -2070,13 +2189,63 @@ Develop::PointCoeffs Develop::buildPointCoeffs(const EditParams &p, const Workin
                 c.hiShiftByPos[k] = shift;
             }
             c.hiLocal = true;
+
+            /* The frame-relative term. Anchor = the frame's log-mean luminance, measured
+               on the band-free DISPLAY value in display-linear light (not d0: Whites +
+               clips the display flat, and one flat value must get one gain, or the
+               clipped span inverts); a tone L above it loses amount * k * (L -
+               anchor)^p stops, tapered toward white. */
+            double acc = 0.0;
+            long long cnt = 0;
+            const float lutScaleS = (PointCoeffs::kLutSize - 1) / sMax;
+            auto dispAtS = [&](float sv) {
+                const float fi = qMin(sv * lutScaleS, float(PointCoeffs::kLutSize - 1));
+                const int i = qMin(int(fi), PointCoeffs::kLutSize - 2);
+                return c.hiDispLut[i] + (c.hiDispLut[i + 1] - c.hiDispLut[i]) * (fi - i);
+            };
+            auto logLin = [](float d) {
+                return std::log2(qMax(displayToLinear(qBound(0.0f, d, 1.0f)), 1e-6f));
+            };
+            for (int i = 0; i < kLumBins; ++i) {
+                if (!lumBins.empty() && lumBins[size_t(i)]) {
+                    acc += lumBins[size_t(i)] *
+                           logLin(dispAtS((i + 0.5f) * (kLumBinSMax / kLumBins)));
+                    cnt += lumBins[size_t(i)];
+                }
+            }
+            const float anchor = cnt ? float(acc / double(cnt)) : -6.0f;
+            const float amount = std::pow(qMin(1.0f, -shape.hi), kHighsAnchorQ);
+            const float aK = kHighsAnchorK, aP = kHighsAnchorP, aT = kHighsAnchorTaper;
+            auto dropAt = [&](float L) {
+                const float d = linearToDisplay(std::exp2(qMin(0.0f, L)));
+                const float u = qMax(0.0f, L - anchor);
+                const float taper = 1.0f - aT * toneSmooth((d - kHighsAnchorTaperFrom) /
+                                                           (1.0f - kHighsAnchorTaperFrom));
+                return amount * aK * std::pow(u, aP) * taper;
+            };
+            for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
+                const float sv = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
+                const float L = logLin(dispAtS(sv));
+                c.hiLogLumLut[j] = L;
+                c.hiGainByS[j] = std::exp2(-dropAt(L));
+            }
+            for (int k = 0; k < PointCoeffs::kBackSize; ++k) {
+                const float L = PointCoeffs::kHiLMin *
+                                (1.0f - float(k) / (PointCoeffs::kBackSize - 1));
+                c.hiDropByL[k] = dropAt(L);
+            }
+            for (int k = 0; k < PointCoeffs::kBackSize; ++k) {
+                const float t = float(k) / (PointCoeffs::kBackSize - 1);
+                c.hiLinOfD[k] = displayToLinear(t);
+                c.hiDOfRootLin[k] = linearToDisplay(t * t);
+            }
         }
     }
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
                c.hslActive || c.gradeActive || c.preMatActive;
-    return c;
+    return coeffs;
 }
 
 /* Sample the parametric tone shape over the DISPLAY range [0,1] for the Curves panel.
@@ -2172,10 +2341,21 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
        (never past 0: Highlights - does not brighten), back through that channel's
        display -> linear table. */
     const HiField *hb = hiField;
-    const bool doHiLocal = doTone && c.hiLocal && hb && hb->w > 0 && hb->h > 0;
+    const bool doHiLocal = doTone && c.hiLocal;
+    const bool doHiField = doHiLocal && hb && hb->w > 0 && hb->h > 0;
+    const float *hiGain = c.hiGainByS;
+    const float *hiLogLum = c.hiLogLumLut;
+    const float *hiLinOfD = c.hiLinOfD;
+    const float *hiDOfRootLin = c.hiDOfRootLin;
     const float *hiDisp = c.hiDispLut;
     const float *hiShift = c.hiShiftLut;
     const float *hiPos = c.hiPosLut;
+    /* Pointers, never c itself, inside the row lambda: it captures by value, and naming
+       c there copies the whole PointCoeffs -- its tables run to ~300 KB -- onto a pool
+       thread's 512 KB stack (a SIGBUS stack overflow in ___chkstk_darwin, 2026-10-11). */
+    const float *hiBackR = c.hiBackLut[0];
+    const float *hiBackG = c.hiBackLut[1];
+    const float *hiBackB = c.hiBackLut[2];
     const int backLast = PointCoeffs::kBackSize - 1;
     auto atS = [=](const float *t, float sv) {
         const float fi = sv * lutScale;
@@ -2183,7 +2363,12 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
         const int i = static_cast<int>(fi);
         return t[i] + (t[i + 1] - t[i]) * (fi - i);
     };
-    auto toneChLocal = [=](const float *back, float v, float corr) -> float {
+    auto atBack = [=](const float *t, float u) {
+        const float fu = qBound(0.0f, u, 1.0f) * backLast;
+        const int k = qMin(static_cast<int>(fu), backLast - 1);
+        return t[k] + (t[k + 1] - t[k]) * (fu - k);
+    };
+    auto toneChLocal = [=](const float *back, float v, float corr, float gain) -> float {
         float n = v * invWhite;
         if (n < 0.0f) n = 0.0f;
         const float s = std::pow(n, kInvGamma);
@@ -2191,6 +2376,8 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
         if (shift > 0.0f) shift = 0.0f;
         float d = atS(hiDisp, s) + shift;
         if (d < 0.0f) d = 0.0f;
+        /* The frame-relative term: a gain on the channel's display-linear light. */
+        if (gain < 1.0f) d = atBack(hiDOfRootLin, std::sqrt(atBack(hiLinOfD, d) * gain));
         const float fk = d * backLast;
         if (fk >= backLast) return back[backLast] * white;
         const int k = static_cast<int>(fk);
@@ -2202,8 +2389,8 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const int frameH = img.frameH > 0 ? img.frameH : h;
     const int frameX = img.frameW > 0 ? img.frameX : 0;
     const int frameY = img.frameH > 0 ? img.frameY : 0;
-    const float gsx = doHiLocal ? float(hb->w) / frameW : 0.0f;
-    const float gsy = doHiLocal ? float(hb->h) / frameH : 0.0f;
+    const float gsx = doHiField ? float(hb->w) / frameW : 0.0f;
+    const float gsy = doHiField ? float(hb->h) / frameH : 0.0f;
 
     /* One fused per-pixel kernel over a band of rows. Point ops apply PER CHANNEL (R,G,B
        interleaved), so the inner loop walks a pixel at a time: per-channel linear gain (white
@@ -2216,8 +2403,10 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
             /* The field grid's two rows bracketing this one, for the bilinear read. */
             const float *aRow0 = nullptr, *aRow1 = nullptr;
             const float *bRow0 = nullptr, *bRow1 = nullptr;
+            const float *gaRow0 = nullptr, *gaRow1 = nullptr;
+            const float *gbRow0 = nullptr, *gbRow1 = nullptr;
             float fy = 0.0f;
-            if (doHiLocal) {
+            if (doHiField) {
                 const float gy = qBound(0.0f, (y + frameY + 0.5f) * gsy - 0.5f,
                                         float(hb->h - 1));
                 const int gy0 = static_cast<int>(gy);
@@ -2227,6 +2416,10 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                 aRow1 = hb->a.data() + size_t(gy1) * hb->w;
                 bRow0 = hb->b.data() + size_t(gy0) * hb->w;
                 bRow1 = hb->b.data() + size_t(gy1) * hb->w;
+                gaRow0 = hb->ga.data() + size_t(gy0) * hb->w;
+                gaRow1 = hb->ga.data() + size_t(gy1) * hb->w;
+                gbRow0 = hb->gb.data() + size_t(gy0) * hb->w;
+                gbRow1 = hb->gb.data() + size_t(gy1) * hb->w;
             }
             for (int x = 0; x < w; ++x) {
                 float *px = row + static_cast<size_t>(x) * 3;
@@ -2265,25 +2458,34 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                     px[2] = (cb < 0.0f) ? 0.0f : cb;
                 }
                 if (doHiLocal) {
-                    /* The field's correction where this pixel sits: a * d0 + b, the guided
-                       upsample of the frame's local Laplacian, read bilinearly. */
-                    const float gx = qBound(0.0f, (x + frameX + 0.5f) * gsx - 0.5f,
-                                            float(hb->w - 1));
-                    const int gx0 = static_cast<int>(gx);
-                    const int gx1 = qMin(gx0 + 1, hb->w - 1);
-                    const float fx = gx - gx0;
-                    auto bilerp = [=](const float *r0, const float *r1) {
-                        const float t = r0[gx0] + (r0[gx1] - r0[gx0]) * fx;
-                        const float u = r1[gx0] + (r1[gx1] - r1[gx0]) * fx;
-                        return t + (u - t) * fy;
-                    };
                     float Y = (kLumR * px[0] + kLumG * px[1] + kLumB * px[2]) * invWhite;
                     if (Y < 0.0f) Y = 0.0f;
-                    const float pos = atS(hiPos, std::pow(Y, kInvGamma));
-                    const float corr = bilerp(aRow0, aRow1) * pos + bilerp(bRow0, bRow1);
-                    px[0] = toneChLocal(c.hiBackLut[0], px[0], corr);
-                    px[1] = toneChLocal(c.hiBackLut[1], px[1], corr);
-                    px[2] = toneChLocal(c.hiBackLut[2], px[2], corr);
+                    const float sY = std::pow(Y, kInvGamma);
+                    /* The field's correction where this pixel sits: a * d0 + b, the
+                       guided upsample of the frame's local Laplacian, read bilinearly. */
+                    float corr = 0.0f;
+                    float gain = atS(hiGain, sY);
+                    if (doHiField) {
+                        const float gx = qBound(0.0f, (x + frameX + 0.5f) * gsx - 0.5f,
+                                                float(hb->w - 1));
+                        const int gx0 = static_cast<int>(gx);
+                        const int gx1 = qMin(gx0 + 1, hb->w - 1);
+                        const float fx = gx - gx0;
+                        auto bilerp = [=](const float *r0, const float *r1) {
+                            const float t = r0[gx0] + (r0[gx1] - r0[gx0]) * fx;
+                            const float u = r1[gx0] + (r1[gx1] - r1[gx0]) * fx;
+                            return t + (u - t) * fy;
+                        };
+                        const float pos = atS(hiPos, sY);
+                        corr = bilerp(aRow0, aRow1) * pos + bilerp(bRow0, bRow1);
+                        /* The frame-relative term by region: log2 gain = ga * L + gb. */
+                        const float lg = bilerp(gaRow0, gaRow1) * atS(hiLogLum, sY) +
+                                         bilerp(gbRow0, gbRow1);
+                        gain = std::exp2(qMin(0.0f, lg));
+                    }
+                    px[0] = toneChLocal(hiBackR, px[0], corr, gain);
+                    px[1] = toneChLocal(hiBackG, px[1], corr, gain);
+                    px[2] = toneChLocal(hiBackB, px[2], corr, gain);
                 }
                 else if (doTone) {
                     px[0] = toneCh(lutR, px[0]);

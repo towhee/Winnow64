@@ -58,6 +58,8 @@
 #include <algorithm>
 #include <cmath>
 #include <QImage>
+#include <QtConcurrent>
+#include <QThreadPool>
 
 #include "Develop/develop.h"
 #include "Develop/workingimage.h"
@@ -189,6 +191,7 @@ private slots:
     void highlightsAdaptsToTheFrame();
     void highlightsStatisticIsTheFrameNotTheCrop();
     void highlightsPullsTheRegion();
+    void highlightsDevelopsOnAPoolThread();
 };
 
 /*
@@ -696,6 +699,30 @@ void tst_toneregions::highlightsPullsTheRegion()
              qPrintable(QString("dark background 3 px from the pool was pulled %1 levels "
                                 "against %2 far away: the region leaks (a halo)")
                         .arg(nearPull).arg(farPull)));
+}
+
+/*
+    10. DEVELOP FITS ON A POOL THREAD'S STACK (2026-10-11). The app develops on
+    QThreadPool threads, whose stacks are 512 KB on macOS -- not the 8 MB main thread
+    every other test here runs on. PointCoeffs carries its tone tables inline (~150 KB),
+    and Apply nests (the frame's StatSample is developed through Apply first), so
+    holding it by value -- or naming it inside the fused pass's by-value lambda, which
+    copies it -- overflowed that stack: a SIGBUS in ___chkstk_darwin the moment
+    Highlights - was used on a real raw. This develops the local-Highlights path on the
+    global pool, with a LocalSample, exactly as a render tick does.
+*/
+void tst_toneregions::highlightsDevelopsOnAPoolThread()
+{
+    WorkingImage img = makeFrame(512, 256, 256, 0.15f);
+    img.sceneReferred = true;
+    EditParams p;
+    p.exposure = 1.5f;
+    p.highlights = -100.0f;
+    QFuture<bool> f = QtConcurrent::run(QThreadPool::globalInstance(), [img, p]() mutable {
+        Develop dev;
+        return dev.Apply(img, p);
+    });
+    QVERIFY2(f.result(), "Develop::Apply failed on a pool thread");
 }
 
 QTEST_APPLESS_MAIN(tst_toneregions)

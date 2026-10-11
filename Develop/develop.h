@@ -307,6 +307,20 @@ private:
         float hiPosLut[kLutSize] = {};
         float hiBackLut[3][kBackSize] = {};
         float hiShiftByPos[kBackSize] = {};
+        /* The frame-relative term (see the note by kHighsAnchorK in develop.cpp): a gain
+           in display-linear light by the pixel's LUMINANCE s (hiGainByS, 1 = none; the
+           per-pixel fallback when there is no field), with the two tables that take a
+           channel's display value to display-linear light and back (hiLinOfD by d;
+           hiDOfRootLin by sqrt of linear, for precision near black). */
+        float hiGainByS[kLutSize] = {};
+        float hiLinOfD[kBackSize] = {};
+        float hiDOfRootLin[kBackSize] = {};
+        /* The same term on its own axis, for the region field: L = log2 of the band-free
+           display value in display-linear light, by s (hiLogLumLut), and the stops it
+           loses, by L over [kHiLMin, 0] (hiDropByL). */
+        static constexpr float kHiLMin = -16.0f;
+        float hiLogLumLut[kLutSize] = {};
+        float hiDropByL[kBackSize] = {};
     };
 
     /* The local Highlights - correction on a whole-frame grid: correction = a * d0 + b
@@ -314,7 +328,8 @@ private:
        bilinearly per pixel through WorkingImage::frameX.. so a crop reads it in place. */
     struct HiField {
         int w = 0, h = 0;
-        std::vector<float> a, b;
+        std::vector<float> a, b;      // the band's region correction, by d0
+        std::vector<float> ga, gb;    // the frame-relative term's log2 gain, by L
     };
     static std::shared_ptr<const HiField> buildHiField(const WorkingImage &local,
                                                        const EditParams &p,
@@ -322,8 +337,9 @@ private:
     /* hiWeight: in/out. The mean Highlights band weight over the WHOLE FRAME, which sets
        the band's strength. Pass the value the frame's StatSample measured, or < 0 to
        measure it on img itself (then written back). */
-    static PointCoeffs buildPointCoeffs(const EditParams &p, const WorkingImage &img,
-                                        float *hiWeight = nullptr);
+    static std::shared_ptr<const PointCoeffs> buildPointCoeffs(const EditParams &p,
+                                                               const WorkingImage &img,
+                                                               float *hiWeight = nullptr);
 
     /* What the last Apply measured into hiWeight (< 0: not needed). Read by the Apply
        that developed this frame's sample, for the image itself. */
