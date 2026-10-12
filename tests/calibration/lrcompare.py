@@ -42,8 +42,7 @@ Usage:
   --sheet  write a contact sheet of each case's crop: Lightroom target | Winnow target.
 
 Needs numpy and opencv-python (Homebrew python has both). Renders are cached by recipe
-in $LRREF/.lrcompare_cache (delete it after changing Develop code -- the key does not
-include the binary).
+and developrender's mtime in $LRREF/.lrcompare_cache, with each pair's registration.
 """
 import argparse, hashlib, json, os, subprocess, sys
 import numpy as np
@@ -125,25 +124,93 @@ def align(tool, ref):
     return best[1], best[2]
 
 
+def register(tool, ref, key, cache):
+    """Homography taking Lightroom pixels to Winnow render pixels (1/4 res), refined by ECC
+    on log luminance from the integer offset -- Lightroom applies the lens profile's
+    distortion correction, which no offset can match. Cached per (render, export)."""
+    f = os.path.join(cache, 'reg_' + key + '.npy')
+    if os.path.exists(f):
+        return np.load(f)
+    dy, dx = align(tool, ref)
+    M = np.array([[1, 0, dx], [0, 1, dy], [0, 0, 1]], np.float32)
+    a = np.log2(np.maximum(lum(ref), 1e-4)).astype(np.float32)
+    b = np.log2(np.maximum(lum(tool), 1e-4)).astype(np.float32)
+    for lvl in (4, 2, 1):
+        sa = cv2.resize(a, None, fx=1 / lvl, fy=1 / lvl, interpolation=cv2.INTER_AREA)
+        sb = cv2.resize(b, None, fx=1 / lvl, fy=1 / lvl, interpolation=cv2.INTER_AREA)
+        S = np.diag([lvl, lvl, 1]).astype(np.float32)
+        m = np.linalg.inv(S) @ M @ S
+        try:
+            _, m = cv2.findTransformECC(sa, sb, m.astype(np.float32), cv2.MOTION_HOMOGRAPHY,
+                                        (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 100, 1e-6),
+                                        None, 5)
+            M = S @ m @ np.linalg.inv(S)
+        except cv2.error:
+            pass
+    np.save(f, M)
+    return M
+
+
+def flowfield(tool, ref, M, key, cache):
+    """What the homography leaves -- the radial part of the lens correction -- as a
+    smooth dense flow (DIS optical flow on log luminance, Gaussian-smoothed so it carries
+    geometry, not content). Returns absolute sampling maps into the Winnow render."""
+    f = os.path.join(cache, 'flow_' + key + '.npy')
+    H, W = ref.shape[:2]
+    if os.path.exists(f):
+        fl = np.load(f)
+    else:
+        a = np.log2(np.maximum(lum(ref), 1e-4))
+        b = np.log2(np.maximum(lum(warp_h(tool, M, ref.shape)), 1e-4))
+        b = np.nan_to_num(b, nan=float(np.nanmean(b)))
+        u8 = lambda x: np.clip((x + 12) * 20, 0, 255).astype(np.uint8)
+        dis = cv2.DISOpticalFlow_create(cv2.DISOPTICAL_FLOW_PRESET_MEDIUM)
+        fl = dis.calc(u8(a), u8(b), None)
+        for k in range(2):
+            fl[..., k] = cv2.GaussianBlur(fl[..., k], (0, 0), 25)
+        np.save(f, fl)
+    gx, gy = np.meshgrid(np.arange(W, dtype=np.float32), np.arange(H, dtype=np.float32))
+    x, y = gx + fl[..., 0], gy + fl[..., 1]           # points in the homography-warped frame
+    Mi = M.astype(np.float64)
+    den = Mi[2, 0] * x + Mi[2, 1] * y + Mi[2, 2]
+    mx = (Mi[0, 0] * x + Mi[0, 1] * y + Mi[0, 2]) / den
+    my = (Mi[1, 0] * x + Mi[1, 1] * y + Mi[1, 2]) / den
+    return mx.astype(np.float32), my.astype(np.float32)
+
+
+def warp_h(img, M, shape):
+    return cv2.warpPerspective(img, M.astype(np.float64), (shape[1], shape[0]),
+                               flags=cv2.INTER_LINEAR | cv2.WARP_INVERSE_MAP,
+                               borderMode=cv2.BORDER_CONSTANT, borderValue=np.nan)
+
+
+def warp(img, maps):
+    return cv2.remap(img, maps[0], maps[1], cv2.INTER_LINEAR,
+                     borderMode=cv2.BORDER_CONSTANT, borderValue=np.nan)
+
+
 def score_case(case, rnd):
     wkg = rnd.dump(case)
     l0, l1 = read16(P(case['lr_baseline'])), read16(P(case['lr_target']))
     t0, t1 = rnd.render(wkg, case['baseline']), rnd.render(wkg, case['target'])
-    dy, dx = align(t0, l0)
-    H, W = l0.shape[:2]
-    t0, t1 = t0[dy:dy + H, dx:dx + W], t1[dy:dy + H, dx:dx + W]
+    key = hashlib.md5(json.dumps([wkg, P(case['lr_baseline']),
+                                  os.path.getmtime(P(case['lr_baseline']))]).encode()).hexdigest()
+    M = register(t0, l0, key, rnd.cache)
+    maps = flowfield(t0, l0, M, key, rnd.cache)
+    t0, t1 = warp(t0, maps), warp(t1, maps)
     pw, pl = (lum(t0) - lum(t1)) * 255, (lum(l0) - lum(l1)) * 255
-    err = pw - pl
-    r = {'rms': float(np.sqrt((err ** 2).mean())), 'bias': float(err.mean()),
-         'offset': (dy * SCALE, dx * SCALE)}
+    ok = np.isfinite(pw)
+    ok[:8], ok[-8:], ok[:, :8], ok[:, -8:] = False, False, False, False
+    err = np.where(ok, pw - pl, 0)
+    r = {'rms': float(np.sqrt((err[ok] ** 2).mean())), 'bias': float(err[ok].mean()), 'maps': maps}
     if case.get('halo'):
         y = lum(l0).astype(np.float32)
         dark = (cv2.GaussianBlur(y, (0, 0), 2) < 0.05).astype(np.uint8)
         dist = cv2.distanceTransform(1 - dark, cv2.DIST_L2, 5)
-        bright = y > 0.3
+        bright = (y > 0.3) & ok
         near, far = bright & (dist >= 2) & (dist <= 10), bright & (dist >= 40)
         r['near'], r['far'] = float(err[near].mean()), float(err[far].mean())
-        r['bands'] = [float(err[(y >= lo) & (y < hi)].mean())
+        r['bands'] = [float(err[(y >= lo) & (y < hi) & ok].mean())
                       for lo, hi in ((0.55, 0.75), (0.75, 0.9), (0.9, 1.01))]
     return r
 
@@ -158,9 +225,10 @@ def sheet(cases, rnd, out):
         lr = cv2.imread(P(case['lr_target']), cv2.IMREAD_UNCHANGED)[..., :3]
         wn = cv2.imread(rnd.render(wkg, case['target'], full=True), cv2.IMREAD_UNCHANGED)[..., :3]
         r = score_case(case, rnd)
-        oy, ox = r['offset']
+        mx, my = (cv2.resize(m, (lr.shape[1], lr.shape[0])) * SCALE for m in r['maps'])
+        wn = cv2.remap(wn, mx, my, cv2.INTER_LINEAR)
         a = (lr[y0:y1, x0:x1] >> 8).astype(np.uint8)
-        b = (wn[oy + y0:oy + y1, ox + x0:ox + x1] >> 8).astype(np.uint8)
+        b = (wn[y0:y1, x0:x1] >> 8).astype(np.uint8)
         for im, label in ((a, 'Lightroom ' + case['name']), (b, 'Winnow')):
             cv2.putText(im, label, (12, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.2, (255, 255, 255), 3)
         rows.append(np.concatenate([a, b], 1))

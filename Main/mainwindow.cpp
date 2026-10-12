@@ -1927,6 +1927,7 @@ bool MW::developShortcutIntercept(QEvent *event)
        arrives. */
     if (e->key() == Qt::Key_Escape && !e->isAutoRepeat() && !isOverride && developProperties
         && !developProperties->isWbDropperActive() && !developCropEditing
+        && !developProperties->isPointColorPickActive()
         && developProperties->escapeMaskTool()) {
         event->accept();
         return true;
@@ -1965,6 +1966,15 @@ bool MW::developShortcutIntercept(QEvent *event)
         && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
         event->accept();
         if (!isOverride) developProperties->cancelWbDropper();
+        return true;
+    }
+
+    /* 1b(i). Esc disarms the Point Color eyedropper -- armed from the dock, same reason
+       as the WB dropper above. */
+    if (developProperties && developProperties->isPointColorPickActive()
+        && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
+        event->accept();
+        if (!isOverride) developProperties->cancelPointColorPick();
         return true;
     }
 
@@ -11043,6 +11053,10 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                 }
                 paramsKeys[i] = QJsonDocument(EditStack::paramsToJson(L.params))
                                     .toJson(QJsonDocument::Compact);
+                /* Visualize Range is not in the sidecar JSON (it is view state), but it
+                   changes the scope's pixels, so the cache key has to carry it. */
+                if (L.params.pointColorVisualize >= 0)
+                    paramsKeys[i] += "#pcv" + QByteArray::number(L.params.pointColorVisualize);
             }
             first = cache->firstDirty(maskKeys, paramsKeys);
         }
@@ -11306,7 +11320,11 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
     const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
     int fw = small.width, fh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    /* Point Color's Visualize Range is a VIEW of the loupe; a range mask must threshold
+       the real colours, not the greyed-out preview of them. */
+    EditParams refBase = base;
+    refBase.pointColorVisualize = -1;
+    const QImage img = developComposite(small, refBase, degrees, /*fullRes*/true, fw, fh);
     if (img.isNull()) return;
     const QImage rgb = img.convertToFormat(QImage::Format_ARGB32);
 
@@ -12451,6 +12469,9 @@ void MW::renderDevelopPreview(bool fullRes)
     if (!fullRes) {
         baseKey = QJsonDocument(EditStack::paramsToJson(mj.global))
                       .toJson(QJsonDocument::Compact);
+        /* Global's Visualize Range changes the base pixels but not its JSON. */
+        if (mj.global.pointColorVisualize >= 0)
+            baseKey += "#pcv" + QByteArray::number(mj.global.pointColorVisualize);
         cacheSurvived = developStackCache.reset(fPath, srcImg->width, srcImg->height,
                                                 degrees);
         cache = &developStackCache;
@@ -14922,6 +14943,37 @@ void MW::onCurvePointPicked(double xFraction, double yFraction)
                          developShownImage.height() - 1);
     const QRgb p = developShownImage.pixel(x, y);
     developProperties->addCurvePointFromPixel(qRed(p), qGreen(p), qBlue(p));
+}
+
+void MW::onPointColorPicked(double xFraction, double yFraction)
+{
+/*
+    The Point Color eyedropper landed (ImageView::pointColorPicked). Average a 5x5 patch
+    of developShownImage around the click -- the colour the user is LOOKING AT, which is
+    what Point Color selects on (it works on the display axis) -- and let the dock add
+    it as a new point. Averaged like the WB dropper: one pixel of a noisy image is a poor
+    estimate of the local colour.
+*/
+    if (G::isLogger) G::log("MW::onPointColorPicked");
+    if (!developProperties) return;
+    if (developShownImage.isNull()) {
+        developProperties->cancelPointColorPick();
+        return;
+    }
+    const int w = developShownImage.width(), h = developShownImage.height();
+    const int cx = qBound(0, static_cast<int>(xFraction * w), w - 1);
+    const int cy = qBound(0, static_cast<int>(yFraction * h), h - 1);
+    double r = 0, g = 0, b = 0;
+    int n = 0;
+    for (int y = qMax(0, cy - 2); y <= qMin(h - 1, cy + 2); ++y)
+        for (int x = qMax(0, cx - 2); x <= qMin(w - 1, cx + 2); ++x) {
+            const QRgb p = developShownImage.pixel(x, y);
+            r += qRed(p); g += qGreen(p); b += qBlue(p);
+            ++n;
+        }
+    if (n == 0) return;
+    developProperties->addPointColorFromPixel(float(r / n / 255.0), float(g / n / 255.0),
+                                              float(b / n / 255.0));
 }
 
 bool MW::isValidPath(QString &path)

@@ -152,6 +152,7 @@ set(WINNOW_SOURCES
     Develop/Properties/huesatwheel.cpp
     Develop/Properties/primarywheel.cpp
     Develop/Properties/colorgradewheel.cpp
+    Develop/Properties/pointcolorwidget.cpp
     Develop/Properties/colorrangewheel.cpp
     Develop/Properties/curveeditor.cpp
     Develop/Properties/detailpreview.cpp
@@ -523,6 +524,7 @@ set(WINNOW_HEADERS
     Develop/huesatmap.h
     Develop/calibrate.h
     Develop/colorgrade.h
+    Develop/pointcolor.h
     Develop/colorspace.h
     Develop/tonecurve.h
     Develop/editparams.h
@@ -536,6 +538,7 @@ set(WINNOW_HEADERS
     Develop/Properties/huesatwheel.h
     Develop/Properties/primarywheel.h
     Develop/Properties/colorgradewheel.h
+    Develop/Properties/pointcolorwidget.h
     Develop/Properties/colorrangewheel.h
     Develop/Properties/curveeditor.h
     Develop/Properties/scopeheader.h

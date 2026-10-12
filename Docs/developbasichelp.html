@@ -10,7 +10,8 @@
 <h2>What it does</h2>
 <p>Basic is the panel almost every edit starts in: the <b>white balance</b> the image is
 rendered at, the <b>tone</b> of it &mdash; exposure, contrast and the four tonal regions
-&mdash; and two <b>presence</b> controls, Texture and Dehaze.  Get Basic right and the
+&mdash; and the <b>presence</b> controls: Texture, Clarity, Dehaze, Vibrance and
+Saturation.  Get Basic right and the
 rest of the module is refinement.</p>
 
 <h2>Profile</h2>
@@ -227,6 +228,18 @@ Clarity.  Using all four together is normal.</p>
 
 <p>Strong positive Dehaze deepens shadows, so it often wants a little Shadows back
 afterwards.  Clarity does not, which is frequently the reason to reach for it instead.</p>
+
+<h2>Vibrance and Saturation</h2>
+<ul>
+<li><b>Vibrance</b> is saturation weighted toward the <b>muted</b> colours: colours that
+are already saturated move little, colours that are nearly grey move most.  It is the
+safer of the two for people and skies &mdash; skin tones are moderately saturated, so they
+hold while a flat sky comes up.</li>
+<li><b>Saturation</b> scales colourfulness uniformly.  &minus;100 is fully grey; positive
+values push every colour, including the ones that were already strong.</li>
+</ul>
+<p>A common pairing is a healthy Vibrance with a small negative Saturation.  Both run
+after the tone curve, on the rendered image.</p>
 
 <h2>Working with the sliders</h2>
 <ul>

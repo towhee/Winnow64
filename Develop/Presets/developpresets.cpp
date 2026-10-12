@@ -237,6 +237,11 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     };
     if (key == "curveComposite") { assignCurves(v.toString(), 0, 0); return; }
     if (key == "curveChannels")  { assignCurves(v.toString(), 1, 3); return; }
+    /* Point Color: one string, PointColor's shared encoding; replaces every point. */
+    if (key == "pointColors") {
+        PointColor::decode(v.toString(), p.pointColorN, p.pointColor);
+        return;
+    }
 
     const float f = v.toFloat();
     if      (key == "temp")                p.temp                = f;

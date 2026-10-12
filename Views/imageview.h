@@ -201,6 +201,12 @@ public slots:
     void beginDetailPick();
     void endDetailPick();
     bool detailPickArmed() const { return detailPickMode; }
+    /* Point Color eyedropper: arm/disarm "click a colour to adjust". One-shot like the WB
+       dropper -- a click emits pointColorPicked with the DISPLAYED normalized point (the
+       space developShownImage is indexed in, as for the Curves picker) and the dock
+       disarms us. */
+    void beginPointColorPick();
+    void endPointColorPick();
     /* Curves panel point picker: arm/disarm "click a pixel to add a point to the tone
        curve". Unlike the dropper and the Detail picker this is NOT one-shot -- the dock
        holds it armed while its toggle is on, the Curves panel is expanded and the mode is
@@ -410,6 +416,8 @@ signals:
     /* The Detail 1:1 preview's location picker was clicked at this normalized point. */
     void detailPointPicked(double nx, double ny);
     void detailPickExited();        // dismissed with Esc
+    void pointColorPicked(double xFraction, double yFraction);
+    void pointColorPickExited();    // dismissed with Esc
     /* The Curves point picker was clicked at this normalized image point. */
     void curvePointPicked(double nx, double ny);
     /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
@@ -554,6 +562,7 @@ private:
        small marker whenever it is set so the user can see WHERE the preview is looking --
        without it the preview is a patch of pixels with no context. */
     bool    detailPickMode = false;
+    bool    pointColorPickMode = false;   // the Point Color eyedropper is armed
     /* The Curves panel's point picker is armed (see beginCurvePick). It is a passive
        toggle that stays armed, so it yields the canvas to any explicit tool -- see
        curvePickOwnsMouse. */

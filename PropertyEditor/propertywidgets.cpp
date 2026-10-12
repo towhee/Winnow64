@@ -139,6 +139,17 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     // slider groove background
     QString bg = QString("background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop: 0.0 %1, stop: 1.0 %2);")
                      .arg(sCol.trimmed(), eCol.trimmed());
+    /* UR_Color "spectrum": a full hue ramp (0..360 deg left to right) for hue sliders,
+       e.g. Develop Color Grade's Hue. Same HSV hues as HueSatWheel's rim so the slider
+       and the wheel read alike. A stop every 30 deg keeps the ramp from banding. */
+    if (sCol.trimmed() == "spectrum") {
+        QString stops;
+        for (int deg = 0; deg <= 360; deg += 30) {
+            const QColor c = QColor::fromHsvF(qMin(0.9999, deg / 360.0), 1.0, 1.0);
+            stops += QString(", stop: %1 %2").arg(deg / 360.0).arg(c.name());
+        }
+        bg = "background: qlineargradient(x1:0, y1:0, x2:1, y2:0" + stops + ");";
+    }
     // divisor if converting integer slider value to double
     div = idx.data(UR_Div).toInt();
     int step = idx.data(UR_DivPx).toInt();

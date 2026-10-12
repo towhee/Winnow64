@@ -1300,6 +1300,7 @@ private slots:
     /* A click on the image while the Curves panel's point picker is armed: sample that
        pixel and hand it to the dock, which adds a control point at its tone. */
     void onCurvePointPicked(double xFraction, double yFraction);
+    void onPointColorPicked(double xFraction, double yFraction);
     void infoViewChanged(QStandardItem* item);
 //    void filterLastDay();
     void filterDockTabMousePress();

@@ -276,20 +276,39 @@ private:
         float vibAmount  = 0.0f;
         float lumGain    = 1.0f;
 
-        /* Colour grading (Color Grade panel) -- tonal-range tinting applied after HSL in
-           the same fused pass. For each of the four ranges [0]=shadows, [1]=midtones,
-           [2]=highlights, [3]=GLOBAL: gradeTint is a zero-luma RGB chroma push (hue+sat
-           pre-scaled) ADDED to the pixel, gradeLum a per-range luminance gain delta.
-           Ranges 0-2 are weighted per pixel by smooth tonal windows of the pixel's luma;
-           range 3 is NOT tone-selective and applies at weight 1 everywhere, so it needs
-           no window (see applyPointOps). gradeShadowEnd / gradeHighStart are those
-           windows' split points, derived once from the panel's Blending + Balance
-           sliders. gradeActive == false => identity (skip the block). */
+        /* Colour grading (Color Grade panel), applied after HSL in the same fused pass,
+           on the DISPLAY axis the way Lightroom does it (Develop/colorgrade.h has the
+           model and its measurement). Per pixel: each channel goes scene-linear ->
+           display-linear through the active view transform (gradeFwd), the pixel's L*
+           picks the summed push of all four ranges (gradePush: hue + Luminance, with
+           Blending / Balance baked in), the push is added in gamma-2.2 ProPhoto (gradeEnc / gradeDec), and the
+           CHANGE comes back to scene-linear through gradeInv. Applied as a delta
+           (n + inv(v') - inv(v)) so a channel the view has already clipped still moves
+           rather than snapping to the clip point. gradeActive == false => identity. */
+        static constexpr int kGradeTfN = 2048;   // transfer tables
+        static constexpr int kGradeWN  = 1024;   // per-L* push table
         bool  gradeActive = false;
-        float gradeTint[4][3] = {};   // [range][rgb], zero-luma chroma offset
-        float gradeLum[4]     = {};   // [range] luminance gain delta (0 = none)
-        float gradeShadowEnd  = 0.5f; // perceptual L where the shadow window closes
-        float gradeHighStart  = 0.5f; // perceptual L where the highlight window opens
+        float gradeNMax   = 8.0f;               // scene n gradeFwd spans (sqrt-spaced)
+        float gradeEncMax = 1.5f;               // ProPhoto value gradeEnc spans (sqrt)
+        float gradeDecMax = 1.5f;               // encoded value gradeDec spans (linear)
+        float gradeFwd[kGradeTfN] = {};         // n -> display-linear v
+        float gradeInv[kGradeTfN] = {};         // v (sqrt-spaced on 0..1) -> n
+        float gradeEnc[kGradeTfN] = {};         // P -> P^(1/2.2)
+        float gradeDec[kGradeTfN] = {};         // e -> e^2.2
+        float gradePush[kGradeWN][3] = {};      // by sqrt(Y): summed encoded push
+
+        /* Point Color (Develop/pointcolor.h), applied after HSL and BEFORE Color Grade
+           on the same display axis: it reuses gradeFwd / gradeInv, which are built when
+           either is active. Per pixel: display-linear -> OKLab (pcToLms folds the
+           working -> sRGB gamut change into OKLab's M1), each point's weighted change
+           summed, back through pcFromLms, and the CHANGE carried to scene-linear.
+           pcVisualize >= 0 greys every pixel by how little that point selects it. */
+        bool  pcActive = false;
+        int   pcN = 0;
+        int   pcVisualize = -1;
+        PointColor::Coef pc[PointColor::kMaxPts];
+        float pcToLms[9] = {};
+        float pcFromLms[9] = {};
 
         /* Highlights - is LOCAL (see the note by kHighsLocalSigma in develop.cpp).
            hiLocal says the tables below are built. Given a region-correction field

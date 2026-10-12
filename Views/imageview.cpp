@@ -903,6 +903,24 @@ void ImageView::endDetailPick()
     viewport()->update();
 }
 
+void ImageView::beginPointColorPick()
+{
+    if (G::isLogger) G::log("ImageView::beginPointColorPick");
+    pointColorPickMode = true;
+    setCursor(dropperCursor);           // the pipette is now "in the user's hand"
+    viewport()->update();
+}
+
+void ImageView::endPointColorPick()
+{
+    if (!pointColorPickMode) return;
+    if (G::isLogger) G::log("ImageView::endPointColorPick");
+    pointColorPickMode = false;
+    if (!developToolActive())
+        setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    viewport()->update();
+}
+
 void ImageView::beginCurvePick()
 {
     if (curvePickMode) return;
@@ -1297,7 +1315,7 @@ double ImageView::spotSizeMin() const
 bool ImageView::developToolActive() const
 {
     return cropActive() || maskToolUsesMouse() || spotEditMode || wbPickMode
-           || detailPickMode || curvePickMode;
+           || detailPickMode || curvePickMode || pointColorPickMode;
 }
 
 /* See the header: the Curves picker is a toggle, not a one-shot tool, so it defers to
@@ -1305,7 +1323,7 @@ bool ImageView::developToolActive() const
 bool ImageView::curvePickOwnsMouse() const
 {
     return curvePickMode && !cropActive() && !maskToolUsesMouse() && !spotEditMode
-           && !wbPickMode && !detailPickMode;
+           && !wbPickMode && !detailPickMode && !pointColorPickMode;
 }
 
 /* See the header: DISPLAYED (post-geometry) normalized coords, the space
@@ -4872,6 +4890,10 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         emit detailPickExited();
         return;
     }
+    if (pointColorPickMode && event->key() == Qt::Key_Escape) {
+        emit pointColorPickExited();
+        return;
+    }
     /* Spot removal: [ / ] resize the brush, Escape disarms the tool. */
     if (spotEditMode) {
         if (event->key() == Qt::Key_BracketLeft)  {
@@ -5003,6 +5025,16 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         const QPointF n = maskViewportToNorm(event->pos());
         if (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0)
             emit detailPointPicked(n.x(), n.y());
+        return;
+    }
+
+    /* Point Color eyedropper: the same one-shot contract, but in DISPLAYED coords
+       (displayedNormAt), because the point indexes developShownImage -- the geometry
+       stage's output -- exactly as the Curves picker below does. */
+    if (!spacePanOverride && pointColorPickMode && event->button() == Qt::LeftButton) {
+        suppressClickZoom = true;
+        QPointF n;
+        if (displayedNormAt(event->pos(), n)) emit pointColorPicked(n.x(), n.y());
         return;
     }
 
@@ -5325,6 +5357,12 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
        consume the move so the canvas cannot pan while aiming. */
     if (!spacePanOverride && detailPickMode) {
         setCursor(Qt::CrossCursor);
+        event->accept();
+        return;
+    }
+    /* Point Color eyedropper: the pipette, re-asserted for the same reason. */
+    if (!spacePanOverride && pointColorPickMode) {
+        setCursor(dropperCursor);
         event->accept();
         return;
     }

@@ -2763,6 +2763,16 @@ void MW::createDevelopDock()
             imageView, &ImageView::endCurvePick);
     connect(imageView, &ImageView::curvePointPicked,
             this, &MW::onCurvePointPicked);
+    /* Point Color eyedropper: one-shot like the WB dropper, but the click is read off
+       the DISPLAYED image like the Curves picker (MW::onPointColorPicked). */
+    connect(developProperties, &DevelopProperties::pointColorPickBegin,
+            imageView, &ImageView::beginPointColorPick);
+    connect(developProperties, &DevelopProperties::pointColorPickEnd,
+            imageView, &ImageView::endPointColorPick);
+    connect(imageView, &ImageView::pointColorPicked,
+            this, &MW::onPointColorPicked);
+    connect(imageView, &ImageView::pointColorPickExited,
+            developProperties, &DevelopProperties::cancelPointColorPick);
     connect(developProperties, &DevelopProperties::detailRoiNeeded,
             this, &MW::onDetailRoiNeeded);
     connect(developProperties, &DevelopProperties::detailPointNudged,

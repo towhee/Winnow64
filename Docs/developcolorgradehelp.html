@@ -16,7 +16,7 @@ mood and not the tint.</p>
 
 <h2>The controls</h2>
 <p>The <b>Shadows</b>, <b>Midtones</b>, <b>Highlights</b> and <b>Global</b> buttons do
-not adjust anything: they choose which range the wheel and the Luminance slider below
+not adjust anything: they choose which range the wheel and the sliders below
 them edit.  Only one can be selected at a time.  Global tints every
 pixel whatever its tone, which is the quickest way to lay a uniform wash over the
 picture.</p>
@@ -26,7 +26,12 @@ picture.</p>
 that range takes on that colour; drag it back to the middle and the range is untouched.
 <b>Double-click</b> the wheel to return the selected range to neutral.</p>
 
-<p>The <b>Luminance</b> slider under the wheel brightens or darkens the selected range
+<p>The <b>Hue</b> and <b>Saturation</b> sliders under the wheel are the same adjustment
+as numbers: Hue is the dot's angle (0&ndash;360&deg;) and Saturation its distance from the
+centre (0&ndash;100).  Moving a slider moves the dot, and dragging the dot moves the
+sliders, so use whichever is easier &mdash; the sliders are handy for small, exact
+changes with the arrow keys.</p>
+<p>The <b>Luminance</b> slider brightens or darkens the selected range
 &mdash; the "and slightly lift the shadows" half of a grade, without going back to the
 tone panel.</p>
 
@@ -63,8 +68,11 @@ neutral: it changes what red means.  Color Grade deliberately <i>does</i> tint n
 &mdash; that is the effect.  Different jobs; both are available, and they stack.</p>
 
 <h2>Where it sits in the pipeline</h2>
-<p>Grading runs after the tone curve, on the rendered image, because the ranges it targets
-are the tones you can see rather than the scene's linear values.</p>
+<p>Grading runs after the tone curve and is measured on the image as it is
+<b>displayed</b>: the ranges follow the tones you can see, and the colour is added in a
+perceptual space, so a grade is as strong in the shadows as it looks in the midtones
+rather than flooding the dark areas.  Its strength, ranges and hues were measured against
+Lightroom's Color Grading, so the same settings give a closely matching result.</p>
 
 <h2>What is saved</h2>
 <p>Hue, saturation and luminance for each of the four ranges, plus Blending and Balance,

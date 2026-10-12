@@ -223,5 +223,7 @@ python3 tests/calibration/lrcompare.py [--only "Horne +2.5 -100"] [--sheet crops
 `lrcompare.py` compares each app's change against its OWN baseline render, so profile and
 colour differences drop out; see its docstring for the case format. Lightroom exports go
 in `~/Pictures/_LRref` (override with `LRREF`): 16-bit sRGB TIFF, no crop, baseline and
-target differing only in the control under test. The dump format is documented in
+target differing only in the control under test. Lightroom applies lens distortion
+correction, so the renders are registered to its exports by homography plus a smooth
+optical flow (cached per pair). The dump format is documented in
 `Develop/workingdump.h`.

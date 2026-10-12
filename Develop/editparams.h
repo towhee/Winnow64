@@ -3,6 +3,7 @@
 
 #include <QString>
 #include "Develop/tonecurve.h"
+#include "Develop/pointcolor.h"
 
 /*
     Parametric, non-destructive develop adjustments (Lightroom-style). One versioned
@@ -206,6 +207,29 @@ struct EditParams {
     QString cameraProfile;
 
 
+    /* Point Color (the Point Color panel, Lightroom's Color Mixer > Point Color) -- up to
+       PointColor::kMaxPts sampled colours, each shifting the hue / saturation / lightness
+       of the pixels near it. A fixed array for the same reasons as the tone curve
+       (defaulted operator==, cheap copies); slots past pointColorN are ALWAYS default, so
+       the comparison never sees stale data -- PointColor::decode and the panel's delete
+       both keep that true. Applied in the fused pass after HSL, before Color Grade; maths
+       and the shared string encoding in Develop/pointcolor.h. Identity = every point
+       inert (a sample with no shift changes nothing) -- but isIdentity() counts any
+       sample, so it persists. */
+    int   pointColorN = 0;
+    PointColor::Point pointColor[PointColor::kMaxPts] = {};
+
+    /* VIEW STATE, NOT AN EDIT: the index of the point whose selection "Visualize Range"
+       is showing (the rest of the image goes grey), or -1. Never serialised
+       (paramsToJson skips it), never in a preset or the multi-image diff, and set only
+       on the INTERACTIVE render job (DevelopProperties::stackJob) -- an export or a
+       devPreview renders the stored recipe, where it is always -1. */
+    int   pointColorVisualize = -1;
+
+    bool pointColorIsIdentity() const {
+        return PointColor::isIdentity(pointColorN, pointColor);
+    }
+
     /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
        each ADDS a chroma tint of the given hue at the given saturation and NUDGES that
@@ -361,8 +385,8 @@ struct EditParams {
     /* Adjustment groups, matching the Develop panel's section headers (Basic / Color / Effects).
        These drive the per-section Preview (show/ignore) and Reset (restore defaults) controls: a
        group is a fixed subset of the fields above. Note the grouping follows the UI, not the field
-       comments -- texture/dehaze sit under Basic, and the tone splits belong to Basic for
-       Reset (they are irrelevant to Preview since the tone sliders they modulate are zeroed anyway).
+       comments -- texture/dehaze/vibrance/saturation sit under Basic, and the tone splits
+       belong to Basic for Reset (they are irrelevant to Preview since the tone sliders they modulate are zeroed anyway).
        localDenoiseLuma ("Denoise", local post-demosaic NR) is under Detail. denoiseLuma/denoiseChroma
        are decode-time global NR (the Global scope's "Denoise raw", baked before Develop runs) so they
        are in NO group and cannot be previewed/reset via params. */
@@ -377,7 +401,8 @@ struct EditParams {
     /* Effects also holds the Global-only lens corrections (removeCA, defringePurple/
        Green), whose rows sit in the Global scope's Effects section; a mask scope never
        sets them, so resetting its Effects is unaffected. */
-    enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects };
+    enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects,
+                       PointColor };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
        fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
@@ -392,6 +417,7 @@ struct EditParams {
             p.whites = def.whites; p.blacks = def.blacks;
             p.texture = def.texture; p.clarity = def.clarity;
             p.dehaze = def.dehaze;
+            p.vibrance = def.vibrance; p.saturation = def.saturation;
             p.toneShadowCenter = def.toneShadowCenter;
             p.toneCrossover = def.toneCrossover;
             p.toneHighlightCenter = def.toneHighlightCenter;
@@ -407,8 +433,12 @@ struct EditParams {
             break;
         case Group::Color:
             p.red = def.red; p.green = def.green; p.blue = def.blue;
-            p.hue = def.hue; p.saturation = def.saturation;
-            p.vibrance = def.vibrance; p.luminance = def.luminance;
+            p.hue = def.hue; p.luminance = def.luminance;
+            break;
+        case Group::PointColor:
+            p.pointColorN = def.pointColorN;
+            for (int i = 0; i < PointColor::kMaxPts; ++i) p.pointColor[i] = def.pointColor[i];
+            p.pointColorVisualize = def.pointColorVisualize;
             break;
         case Group::Calibrate:
             p.calRedHue = def.calRedHue;     p.calRedSat = def.calRedSat;
@@ -490,7 +520,10 @@ struct EditParams {
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&
-               curvesAreIdentity();
+               curvesAreIdentity() &&
+               /* A sample with no shift moves no pixel, but it IS the user's work: count
+                  it, or the sidecar is never written and the sample is gone on return. */
+               pointColorN == 0;
     }
 };
 

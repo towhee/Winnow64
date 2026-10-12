@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Point Color</h1>
+
+<h2>What it does</h2>
+<p>Point Color changes <b>one particular colour</b> in the image and leaves the rest
+alone.  You pick the colour by clicking it in the image, then shift its hue, saturation
+and luminance.  It is the Point Color half of Lightroom's Color Mixer.</p>
+
+<p>A sampled colour is more specific than a hue band.  It is a hue <i>and</i> a
+saturation <i>and</i> a brightness, so you can warm one skin tone without touching an
+orange wall of the same hue, or deepen one blue in a sky without moving the blue of a
+shirt.</p>
+
+<h2>Sampling a colour</h2>
+<p>Click the <b>eyedropper</b>, then click the colour in the image.  Winnow averages a
+small patch around the click, adds a <b>swatch</b> for it and selects it.  The eyedropper
+puts itself away after each sample (press <b>Esc</b> to put it away without sampling).
+You can sample up to eight colours.</p>
+
+<p>Click a swatch to select it: the controls below always edit the selected colour.  To
+delete one, select it and click the <b>&times;</b> at the right of the swatch row, or
+right-click its swatch for <b>Delete Point</b> and <b>Delete All Points</b>.</p>
+
+<p>Winnow samples what you see on screen, so sample with your other adjustments in
+place.  If an existing point has already shifted a colour, sampling that same spot again
+picks up the shifted colour.</p>
+
+<h2>The colour field</h2>
+<p>The large panel is the neighbourhood of the selected colour.  Hue runs across it, with
+the sampled hue in the middle.  Saturation runs up it, from grey at the bottom to vivid
+at the top.  The narrow strip beside it is luminance.</p>
+
+<p>The <b>small ring</b> marks the colour you sampled.  The <b>large ring</b> marks where
+your shifts are taking it.  Drag the large ring in the field to shift hue and saturation
+together, or in the strip to shift luminance.  The bar underneath shows the colour
+before and after.</p>
+
+<h2>The sliders</h2>
+<ul>
+<li><b>Hue Shift</b>, <b>Sat. Shift</b> and <b>Lum. Shift</b> are the field's three
+directions as numbers.  Drag the field and the sliders follow, or move a slider and the
+ring moves.</li>
+<li><b>Variance</b> changes how much the selected colours differ from each other.  Move
+it left to pull them together toward the sampled colour, which evens out blotchy skin or
+patchy foliage.  Move it right to spread them apart.</li>
+<li><b>Range</b> sets how far from the sampled colour the change reaches.  Move it left
+for only the closest matches, or right to take in more of the image.  The three indented
+sliders under it (<b>Hue</b>, <b>Saturation</b>, <b>Luminance</b>) adjust one direction
+each.  For example, raise Luminance range to catch the same colour in shadow and in
+light.</li>
+<li><b>Visualize Range</b> shows what the selected colour is changing.  Affected pixels
+stay in colour and everything else turns grey, so you can see the range before you
+shift anything.  It is a view only.  It is not saved, and it switches itself off when
+you pick up the eyedropper.</li>
+</ul>
+
+<p>Greys are never selected.  A colour with almost no saturation has no hue to match
+on, so the change fades out as a pixel approaches neutral.</p>
+
+<p>The section's <b>[&#8942;]</b> menu has <b>Show Point Color changes</b> (a
+before/after that keeps your values) and <b>Reset Point Color</b> (removes every
+point).</p>
+
+<h2>Where it sits in the pipeline</h2>
+<p>Point Color runs after the Color panel's adjustments and before Color Grade.  It
+measures colours as they look on screen, through the current tone mapping, which is why
+the colour you click is the colour that gets selected.  Like the other adjustments it
+works on masks too: sample and shift inside a mask to change a colour in just that
+area.</p>
+
+</body>
+</html>

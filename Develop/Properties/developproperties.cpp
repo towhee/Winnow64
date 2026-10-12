@@ -183,6 +183,8 @@ void DevelopProperties::initialize()
     if (G::isLogger) G::log("DevelopProperties::initialize");
 
     setSolo(setting->value("Develop/isSolo", false).toBool());
+    combinedColorPanel = setting->value("Develop/combinedColorPanel", true).toBool();
+    colorPanelMode = qBound(0, setting->value("Develop/colorPanelMode", 0).toInt(), 2);
     setIndentation(10);
     setAlternatingRowColors(false);
     /* Fill every NON-header row with the subpanel content background (the delegate's
@@ -342,6 +344,10 @@ void DevelopProperties::buildTree()
     const bool exCurves  = expandedOr("CurvesHeader",
                                       sectionExpanded("CurvesHeader", false));
     const bool exColor   = expandedOr("ColorHeader",   sectionExpanded("ColorHeader",   false));
+    const bool exPointColor = expandedOr("PointColorHeader",
+                                         sectionExpanded("PointColorHeader", false));
+    const bool exColorPanel = expandedOr("ColorPanelHeader",
+                                         sectionExpanded("ColorPanelHeader", false));
     const bool exDetail  = expandedOr("DetailHeader",  sectionExpanded("DetailHeader",  false));
     const bool exEffects = expandedOr("EffectsHeader", sectionExpanded("EffectsHeader", false));
 
@@ -353,7 +359,7 @@ void DevelopProperties::buildTree()
        setIndexWidget editors are freed rather than leaked on each rebuild. */
     btns.clear();
     basicEyeBtn = curvesEyeBtn = colorEyeBtn = calibrateEyeBtn = colorGradeEyeBtn =
-        detailEyeBtn = effectsEyeBtn = nullptr;
+        detailEyeBtn = effectsEyeBtn = pointColorEyeBtn = colorPanelEyeBtn = nullptr;
     if (model->rowCount() > 0) {
         close(QModelIndex());
         model->removeRows(0, model->rowCount());
@@ -371,9 +377,15 @@ void DevelopProperties::buildTree()
     if (activeScopeIndex != 0) addMaskItems();
     addBasic();
     addCurves();        // Lightroom's order: the tone curve sits directly under Basic
-    addColor();
-    addCalibrate();
-    addColorGrade();
+    if (combinedColorPanel) {
+        addColorPanel();    // Tone / Hue / RGB in one section
+    }
+    else {
+        addColor();
+        addPointColor();    // directly under Color, as the user asked
+        addCalibrate();
+        addColorGrade();
+    }
     addDetail();        // sharpening + local NR, in pipeline order before Effects
     addEffects();
     /* The headers were just re-added with their plain captions, so the cached " *"
@@ -392,6 +404,8 @@ void DevelopProperties::buildTree()
     setExpandOn("BasicHeader",   exBasic);
     setExpandOn("CurvesHeader",  exCurves);
     setExpandOn("ColorHeader",   exColor);
+    setExpandOn("PointColorHeader", exPointColor);
+    setExpandOn("ColorPanelHeader", exColorPanel);
     setExpandOn("DetailHeader",  exDetail);
     setExpandOn("EffectsHeader", exEffects);
 
@@ -417,7 +431,8 @@ void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expa
        collapse, but their state is transient). */
     const QString name = idx.data(UR_Name).toString();
     if (name == "BasicHeader" || name == "ColorHeader" || name == "DetailHeader" ||
-        name == "EffectsHeader")
+        name == "EffectsHeader" || name == "PointColorHeader" ||
+        name == "ColorPanelHeader")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
 
@@ -1731,7 +1746,7 @@ void DevelopProperties::resetActiveScope()
        the mask geometry, which defines WHERE the scope applies). */
     l->params = EditParams();
     l->showScope = l->showBasic = l->showColor = l->showCalibrate =
-        l->showColorGrade = l->showEffects = true;
+        l->showColorGrade = l->showEffects = l->showPointColor = true;
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
     emit paramsChanged();
@@ -1931,7 +1946,8 @@ void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepS
 
     /* The adjustment sections. The base PropertyEditor already collapses tree siblings
        when a root expands; this also covers the Raw panel / Scope row cases. */
-    for (const char *h : {"BasicHeader", "ColorHeader", "EffectsHeader"}) {
+    for (const char *h : {"BasicHeader", "ColorHeader", "ColorPanelHeader",
+                          "EffectsHeader"}) {
         if (keepSection == QLatin1String(h)) continue;
         const QModelIndex idx = findCaptionIndex(h);
         if (idx.isValid()) collapse(idx);
@@ -2358,6 +2374,7 @@ EditParams::Group DevelopProperties::paramsGroup(int group)
     case PV_Color:      return EditParams::Group::Color;
     case PV_Calibrate:  return EditParams::Group::Calibrate;
     case PV_ColorGrade: return EditParams::Group::ColorGrade;
+    case PV_PointColor: return EditParams::Group::PointColor;
     case PV_Detail:     return EditParams::Group::Detail;
     case PV_Effects:    return EditParams::Group::Effects;
     default:          return EditParams::Group::Basic;   // PV_Basic (+ PV_Scope, unused)
@@ -2372,6 +2389,8 @@ QString DevelopProperties::groupLabel(int group)
     case PV_Color:      return "Color";
     case PV_Calibrate:  return "Calibrate";
     case PV_ColorGrade: return "Color Grade";
+    case PV_PointColor: return "Point Color";
+    case PV_ColorPanel: return "Color";
     case PV_Detail:     return "Detail";
     case PV_Effects:    return "Effects";
     case PV_Scope:      return "all";
@@ -2388,6 +2407,8 @@ bool *DevelopProperties::previewFlag(EditScope *l, int group)
     case PV_Color:      return &l->showColor;
     case PV_Calibrate:  return &l->showCalibrate;
     case PV_ColorGrade: return &l->showColorGrade;
+    case PV_PointColor: return &l->showPointColor;
+    case PV_ColorPanel: return nullptr;     // three flags: see togglePreviewSection
     case PV_Detail:     return &l->showDetail;
     case PV_Effects:    return &l->showEffects;
     default:          return &l->showBasic;             // PV_Basic
@@ -2420,15 +2441,43 @@ void DevelopProperties::showSectionMenu(int group)
     /* No show/hide item here: the eye button beside this menu already toggles the
        section's changes. */
     QMenu menu(this);
-    QAction *aReset = menu.addAction(tr("Reset %1").arg(label));
+    /* The combined Color panel resets the mode on show first, then all three. */
+    static const char *kModeName[] = {"Tone", "Hue", "RGB"};
+    QAction *aResetMode = nullptr;
+    if (group == PV_ColorPanel) {
+        aResetMode = menu.addAction(tr("Reset %1").arg(kModeName[colorPanelMode]));
+        aResetMode->setEnabled(!currentImagePath.isEmpty());
+    }
+    QAction *aReset = menu.addAction(group == PV_ColorPanel ? tr("Reset Tone, Hue and RGB")
+                                                            : tr("Reset %1").arg(label));
     aReset->setEnabled(!currentImagePath.isEmpty());
+    /* The layout switch, while the combined panel awaits sign-off: offered on every
+       colour section so either layout leads back to the other. */
+    QAction *aLayout = nullptr;
+    if (group == PV_ColorPanel || group == PV_Color || group == PV_PointColor ||
+        group == PV_Calibrate || group == PV_ColorGrade) {
+        menu.addSeparator();
+        aLayout = menu.addAction(combinedColorPanel ? tr("Use Separate Color Panels")
+                                                    : tr("Use Combined Color Panel"));
+    }
     /* Every section carries its own help page (Docs/develop<section>help.html), always
        the last item, so "what does this panel do?" is one click from the panel. */
     menu.addSeparator();
-    QAction *aHelp = menu.addAction(tr("%1 help").arg(label));
+    QAction *aHelp = menu.addAction(group == PV_ColorPanel
+                                        ? tr("%1 help").arg(kModeName[colorPanelMode])
+                                        : tr("%1 help").arg(label));
 
     QAction *chosen = menu.exec(QCursor::pos());
     if (!chosen) return;
+    if (chosen == aResetMode) {
+        const int g = colorPanelModeGroup();
+        QTimer::singleShot(0, this, [this, g]{ resetSection(g); });
+        return;
+    }
+    if (chosen == aLayout) {
+        QTimer::singleShot(0, this, [this]{ setCombinedColorPanel(!combinedColorPanel); });
+        return;
+    }
     /* Reset repopulates the tree, which destroys the button this click is being
        handled in, so fire on the next tick (same rule as the scope + submask rows). */
     if (chosen == aReset)
@@ -2449,6 +2498,10 @@ void DevelopProperties::refreshPreviewButtons()
     set(colorEyeBtn,    l ? l->showColor    : true);
     set(calibrateEyeBtn,  l ? l->showCalibrate  : true);
     set(colorGradeEyeBtn, l ? l->showColorGrade : true);
+    set(pointColorEyeBtn, l ? l->showPointColor : true);
+    /* The combined panel's eye is open only while all three of its groups show. */
+    set(colorPanelEyeBtn, l ? (l->showColorGrade && l->showPointColor && l->showCalibrate)
+                            : true);
     set(detailEyeBtn,   l ? l->showDetail   : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
     /* The whole-mask eye lives in the ScopeHeader widget, not the tree. */
@@ -2459,6 +2512,16 @@ void DevelopProperties::togglePreviewSection(int group)
 {
     if (G::isLogger) G::log("DevelopProperties::togglePreviewSection");
     EditScope *l = activeScope();
+    if (group == PV_ColorPanel) {
+        /* One eye for three groups: any showing -> hide all, else show all. */
+        if (!l) return;
+        const bool show = !(l->showColorGrade && l->showPointColor && l->showCalibrate);
+        l->showColorGrade = l->showPointColor = l->showCalibrate = show;
+        noteEdit((show ? "Show " : "Hide ") + groupLabel(group));
+        refreshPreviewButtons();
+        emit paramsChanged();
+        return;
+    }
     bool *f = previewFlag(l, group);
     if (!f) return;
     *f = !*f;                     // non-destructive: values kept, only the fold changes
@@ -2477,8 +2540,14 @@ void DevelopProperties::resetSection(int group)
         EditParams::resetGroup(p, EditParams::Group::Color);
         EditParams::resetGroup(p, EditParams::Group::Calibrate);
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+        EditParams::resetGroup(p, EditParams::Group::PointColor);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
+    }
+    else if (group == PV_ColorPanel) {
+        EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+        EditParams::resetGroup(p, EditParams::Group::PointColor);
+        EditParams::resetGroup(p, EditParams::Group::Calibrate);
     }
     else {
         EditParams::resetGroup(p, paramsGroup(group));
@@ -2551,6 +2620,8 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         else if (name == "ColorHeader")      group = PV_Color;
         else if (name == "CalibrateHeader")  group = PV_Calibrate;
         else if (name == "ColorGradeHeader") group = PV_ColorGrade;
+        else if (name == "PointColorHeader") group = PV_PointColor;
+        else if (name == "ColorPanelHeader") group = PV_ColorPanel;
         else if (name == "DetailHeader")     group = PV_Detail;
         else if (name == "EffectsHeader")    group = PV_Effects;
         if (group >= 0) {
@@ -2723,7 +2794,8 @@ void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
        peers -- the Demosaic row is itself a scope item (it hides when the scope
        collapses), so expanding it must NOT collapse the scope. */
     const QString name = idx.data(UR_Name).toString();
-    if (name != "BasicHeader" && name != "ColorHeader" && name != "EffectsHeader") return;
+    if (name != "BasicHeader" && name != "ColorHeader" && name != "ColorPanelHeader" &&
+        name != "EffectsHeader") return;
     soloCollapseOthers(SoloOwner::Section, name);
 }
 
@@ -2803,6 +2875,7 @@ void DevelopProperties::cancelCanvasTools()
     if (G::isLogger) G::log("DevelopProperties::cancelCanvasTools");
     cancelWbDropper();
     cancelDetailPick();
+    cancelPointColorPick();
     if (spotMode) onSpotToolToggled(false);
     setCurveSamplerActive(false);
     /* escapeMaskTool steps down one level per call (discard a pending submask, close a
@@ -3375,6 +3448,8 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         else if (previewGroup == PV_Color)    colorEyeBtn    = eye;
         else if (previewGroup == PV_Calibrate)  calibrateEyeBtn  = eye;
         else if (previewGroup == PV_ColorGrade) colorGradeEyeBtn = eye;
+        else if (previewGroup == PV_PointColor) pointColorEyeBtn = eye;
+        else if (previewGroup == PV_ColorPanel) colorPanelEyeBtn = eye;
         else if (previewGroup == PV_Detail)   detailEyeBtn   = eye;
         else if (previewGroup == PV_Effects)  effectsEyeBtn  = eye;
         btns.append(eye);
@@ -4213,6 +4288,9 @@ void DevelopProperties::addBasic()
     addSlider("texture",    "Texture",    "Enhance or smooth fine detail.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("clarity",    "Clarity",    "Midtone punch (+) or soft glow (-).", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
+    addGroupDivider(parIdx, "BasicHeader", "PresenceDevider");
+    addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "BasicHeader", -100, 100, 0, G::darkgray, G::lightgray);
+    addSlider("saturation", "Saturation", "Global saturation (grey at -100).",   parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addGroupDivider(parIdx, "BasicHeader", "BasicEndDivider");
     // demo colors
     // addSlider("blue", "Blue", "Blue.", parIdx, "BasicHeader", -100, 100, 0, G::darkblue, G::lightblue);
@@ -4474,6 +4552,7 @@ void DevelopProperties::updateEditorGeometries()
     };
     centre(curveEditor);
     centre(curveSplitsRow);
+    centre(colorPanelModesRow);   // the Tone / Hue / RGB radios
     /* This is also where an expand / collapse / scroll of the Edits tree lands, which is
        exactly what moves the plot on and off screen. */
     updateCurvePickState();
@@ -4656,11 +4735,12 @@ void DevelopProperties::refreshCurveRow()
 void DevelopProperties::addColor()
 {
     if (G::isLogger) G::log("DevelopProperties::addColor");
-    addHeader("ColorHeader", "???", "Color", "RGB and HSL adjustments.", PV_Color);
+    addHeader("ColorHeader", "???", "Color", "RGB gain, hue and luminance adjustments.", PV_Color);
     QModelIndex parIdx = capIdx;
 
     /* All integer sliders -100..100 (div 0), default 0 (identity), matching EditParams.
-       RGB = per-channel gain; HSL = global hue rotation / saturation / luminance. */
+       RGB = per-channel gain; then global hue rotation / luminance. Saturation and
+       Vibrance live at the bottom of Basic (Lightroom's Presence group). */
     /* RGB grooves ramp black -> the channel's own primary, so each slider names its
        channel at a glance (black->red, black->green, black->blue). */
     addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, "#000000", "#ff0000");
@@ -4668,10 +4748,7 @@ void DevelopProperties::addColor()
     addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, "#000000", "#0000ff");
     addGroupDivider(parIdx, "ColorHeader", "RGBDevider");
     addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
-    addSlider("saturation", "Saturation", "Global saturation (grey at -100).",     parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
-    addGroupDivider(parIdx, "ColorHeader", "HSLDevider");
-    addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addGroupDivider(parIdx, "ColorHeader", "ColorEndDivider");
 }
 
@@ -4699,13 +4776,19 @@ void DevelopProperties::addCalibrate()
               "Camera calibration: hue + saturation of the R/G/B primaries.",
               PV_Calibrate);
     QModelIndex parIdx = capIdx;
+    addCalibrateBody(parIdx, "CalibrateHeader");
+}
 
+/* The section's rows under `parent` -- its own header, or the combined Color
+   panel's (addColorPanel). */
+void DevelopProperties::addCalibrateBody(const QModelIndex &parIdx, const QString &parent)
+{
     /* Primary selector: three checkboxes on one spanned row, mirroring the Color Grade
        range row. UI state (calActiveMask), not EditParams. */
     clearItemInfo(i);
     i.name = "calPrimaries";
     i.parIdx = parIdx;
-    i.parentName = "CalibrateHeader";
+    i.parentName = parent;
     i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
@@ -4723,6 +4806,8 @@ void DevelopProperties::addCalibrate()
         QCheckBox *red   = new QCheckBox("Red",   rw);
         QCheckBox *green = new QCheckBox("Green", rw);
         QCheckBox *blue  = new QCheckBox("Blue",  rw);
+        for (QCheckBox *c : {red, green, blue})       // panel background, see gradeRanges
+            c->setStyleSheet("QCheckBox { background: transparent; }");
         red->setChecked(calActiveMask   & 0x1);
         green->setChecked(calActiveMask & 0x2);
         blue->setChecked(calActiveMask  & 0x4);
@@ -4747,7 +4832,7 @@ void DevelopProperties::addCalibrate()
     clearItemInfo(i);
     i.name = "calWheel";
     i.parIdx = parIdx;
-    i.parentName = "CalibrateHeader";
+    i.parentName = parent;
     i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
@@ -4772,15 +4857,15 @@ void DevelopProperties::addCalibrate()
        They nudge whichever primaries are checked -- by a DELTA, so several checked
        primaries keep their differences (see setCalAxis), which is what the wheel does
        too once more than one primary is checked. */
-    addGroupDivider(parIdx, "CalibrateHeader", "CalibrateWheelDivider");
+    addGroupDivider(parIdx, parent, "CalibrateWheelDivider");
     addSlider("calHue", "Hue",
               "Hue shift of the checked primaries (+/-30 degrees at full scale).",
-              parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
     addSlider("calSat", "Saturation",
               "Chroma scale of the checked primaries (-100 = grey, +100 = 2x).",
-              parIdx, "CalibrateHeader", -100, 100, 0, G::darkgray, G::lightgray);
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
 
-    addGroupDivider(parIdx, "CalibrateHeader", "CalibrateEndDivider");
+    addGroupDivider(parIdx, parent, "CalibrateEndDivider");
 }
 
 /*
@@ -5507,7 +5592,13 @@ void DevelopProperties::addColorGrade()
     addHeader("ColorGradeHeader", "???", "Color Grade",
               "Tonal-range colour grading (shadows / midtones / highlights).", PV_ColorGrade);
     QModelIndex parIdx = capIdx;
+    addColorGradeBody(parIdx, "ColorGradeHeader");
+}
 
+/* The section's rows under `parent` -- its own header, or the combined Color
+   panel's (addColorPanel). */
+void DevelopProperties::addColorGradeBody(const QModelIndex &parIdx, const QString &parent)
+{
     /* Range selector: four radio buttons on one spanned row (Shadows / Midtones /
        Highlights / Global), exclusive, so the wheel and the Luminance slider always edit
        exactly ONE range and always show that range's own values. They are UI state
@@ -5515,7 +5606,7 @@ void DevelopProperties::addColorGrade()
     clearItemInfo(i);
     i.name = "gradeRanges";
     i.parIdx = parIdx;
-    i.parentName = "ColorGradeHeader";
+    i.parentName = parent;
     i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
@@ -5535,6 +5626,11 @@ void DevelopProperties::addColorGrade()
         QRadioButton *light = new QRadioButton("Highlights", rw);
         QRadioButton *glob  = new QRadioButton("Global",     rw);
         glob->setToolTip("Tint every pixel, whatever its tone.");
+        /* The app QSS gives every QWidget the widget background, which paints a band
+           behind each caption on the tree's panel colour; the Raw and Fill Replace
+           panels' radios clear it the same way. */
+        for (QRadioButton *r : {dark, mid, light, glob})
+            r->setStyleSheet("QRadioButton { background: transparent; }");
         QButtonGroup *group = new QButtonGroup(rw);   // exclusive by default
         group->addButton(dark,  0x1);
         group->addButton(mid,   0x2);
@@ -5562,7 +5658,7 @@ void DevelopProperties::addColorGrade()
     clearItemInfo(i);
     i.name = "gradeWheel";
     i.parIdx = parIdx;
-    i.parentName = "ColorGradeHeader";
+    i.parentName = parent;
     i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
@@ -5580,24 +5676,37 @@ void DevelopProperties::addColorGrade()
         setIndexWidget(wheelIdx, wheel);
     }
 
+    /* Hue / Saturation: the wheel's two axes as sliders (Lightroom shows the same pair
+       under its wheels), so the selected range can be read as numbers and nudged by the
+       arrow keys. They write the same params the wheel does and track it both ways (see
+       setGradeHueSat / refreshColorGradeRow). Hue 0..360 deg, Saturation 0..100 (the
+       wheel radius, stored as 0..1). */
+    addSlider("gradeHue", "Hue",
+              "Hue of the selected tonal range's tint (degrees around the wheel).",
+              parIdx, parent, 0, 360, 0, "spectrum", "");   // hue ramp groove
+    addSlider("gradeSat", "Saturation",
+              "Strength of the selected tonal range's tint (distance from the wheel "
+              "centre).",
+              parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray);
+
     /* Luminance for the checked range(s). Integer -100..100 like the colour sliders. */
     addSlider("gradeLum", "Luminance",
               "Brighten / darken the selected tonal range.",
-              parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
 
     /* Window SHAPE: panel-wide, not per-range, so they sit below the divider. Blending
        defaults to 50 and Balance to 0, which reproduce the fixed split the panel used
        before they existed. */
-    addGroupDivider(parIdx, "ColorGradeHeader", "GradeDivider");
+    addGroupDivider(parIdx, parent, "GradeDivider");
     addSlider("gradeBlending", "Blending",
               "How much the shadow / midtone / highlight ranges overlap "
               "(50 = the default split).",
-              parIdx, "ColorGradeHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+              parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
     addSlider("gradeBalance", "Balance",
               "Slide the split between the ranges: right favours highlights, "
               "left favours shadows.",
-              parIdx, "ColorGradeHeader", -100, 100, 0, G::darkgray, G::lightgray);
-    addGroupDivider(parIdx, "ColorGradeHeader", "ColorGradeEndDivider");
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
+    addGroupDivider(parIdx, parent, "ColorGradeEndDivider");
 }
 
 int DevelopProperties::firstActiveGradeRange() const
@@ -5617,6 +5726,22 @@ void DevelopProperties::setGradeLum(float lum)
     if (gradeActiveMask & 0x2) p.gradeMidLum    = lum;
     if (gradeActiveMask & 0x4) p.gradeHighLum   = lum;
     if (gradeActiveMask & 0x8) p.gradeGlobalLum = lum;
+}
+
+/* Hue or Saturation slider -> the selected range's grade hue/sat (an absolute write: the
+   radio buttons are exclusive, so there is exactly one range and nothing to keep apart).
+   sat arrives on the slider's 0..100 scale and is stored as the wheel's 0..1. */
+void DevelopProperties::setGradeHueSat(bool isHue, float v)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditParams &p = activeParams();
+    float *hue[4] = {&p.gradeShadowHue, &p.gradeMidHue, &p.gradeHighHue, &p.gradeGlobalHue};
+    float *sat[4] = {&p.gradeShadowSat, &p.gradeMidSat, &p.gradeHighSat, &p.gradeGlobalSat};
+    for (int r = 0; r < 4; ++r) {
+        if (!(gradeActiveMask & (1 << r))) continue;
+        if (isHue) *hue[r] = qBound(0.0f, v, 360.0f);
+        else       *sat[r] = qBound(0.0f, v / 100.0f, 1.0f);
+    }
 }
 
 /* Wheel drag -> the active scope's grade hue/sat for every checked range, then preview.
@@ -5646,12 +5771,14 @@ void DevelopProperties::onGradeWheelChanged(bool commit)
     /* One entry for the whole wheel drag, keyed by which ranges it is moving. */
     noteEdit("Color grade", QString(),
              QString("grade/wheel/%1").arg(gradeActiveMask));
+    refreshColorGradeRow();      // the Hue / Saturation readout tracks the drag
     emit paramsChanged();
 }
 
-/* Push the active scope's stored grade into the wheel dots + the Luminance slider (which
-   shows the lowest checked range's value). Guards the slider set so it does not feed back
-   as an edit. Called on image/scope load and whenever the range checkboxes change. */
+/* Push the active scope's stored grade into the wheel dots + the Hue / Saturation /
+   Luminance sliders (which show the selected range's values). Guards the slider set so it
+   does not feed back as an edit. Called on image/scope load, whenever the range radio
+   buttons change, and on every wheel drag / Hue-Sat nudge so the two faces track. */
 void DevelopProperties::refreshColorGradeRow()
 {
     EditParams p;
@@ -5669,13 +5796,371 @@ void DevelopProperties::refreshColorGradeRow()
         colorGradeWheel->setActiveMask(gradeActiveMask);
     }
     const int r = firstActiveGradeRange();
-    const float lum = (r == 0) ? p.gradeShadowLum : (r == 1) ? p.gradeMidLum
-                                                  : (r == 2) ? p.gradeHighLum
-                                                             : p.gradeGlobalLum;
+    const float hue[4] = {p.gradeShadowHue, p.gradeMidHue, p.gradeHighHue, p.gradeGlobalHue};
+    const float sat[4] = {p.gradeShadowSat, p.gradeMidSat, p.gradeHighSat, p.gradeGlobalSat};
+    const float lum[4] = {p.gradeShadowLum, p.gradeMidLum, p.gradeHighLum, p.gradeGlobalLum};
     const bool wasPop = isPopulating;
     isPopulating = true;                 // don't let setValue echo back as an edit
-    setSliderReal("gradeLum", lum);
+    setSliderReal("gradeHue", qRound(hue[r]));
+    setSliderReal("gradeSat", qRound(sat[r] * 100.0f));
+    setSliderReal("gradeLum", lum[r]);
     isPopulating = wasPop;
+}
+
+/* --------------------------------------------------------------------------------------
+   The combined Color panel
+
+   One "Color" section in place of the separate colour panels: three radio buttons pick
+   which adjustment it shows -- Tone = Color Grade, Hue = Point Color, RGB = Calibrate.
+   Only the selected body is BUILT (each body is the same builder its own section uses,
+   under this header), so every key, widget pointer and refresh path is exactly as in
+   the separate layout; a switch rebuilds the tree, deferred because the click is inside
+   a row the rebuild destroys. The mode is UI state, remembered across sessions.
+   ------------------------------------------------------------------------------------ */
+
+int DevelopProperties::colorPanelModeGroup() const
+{
+    switch (colorPanelMode) {
+    case 1:  return PV_PointColor;
+    case 2:  return PV_Calibrate;
+    default: return PV_ColorGrade;
+    }
+}
+
+void DevelopProperties::setCombinedColorPanel(bool on)
+{
+    if (G::isLogger) G::log("DevelopProperties::setCombinedColorPanel");
+    if (combinedColorPanel == on) return;
+    combinedColorPanel = on;
+    setting->setValue("Develop/combinedColorPanel", on);
+    buildTree();
+}
+
+void DevelopProperties::addColorPanel()
+{
+    if (G::isLogger) G::log("DevelopProperties::addColorPanel");
+    addHeader("ColorPanelHeader", "???", "Color",
+              "Colour: Tone (grading by tonal range), Hue (adjust sampled colours) and "
+              "RGB (re-point the primaries).", PV_ColorPanel);
+    QModelIndex parIdx = capIdx;
+
+    clearItemInfo(i);
+    i.name = "colorPanelModes";
+    i.parIdx = parIdx;
+    i.parentName = "ColorPanelHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex modesIdx = capIdx;
+    /* EQUAL GAPS above (to the header) and below (to the divider's rule). Above sits the
+       header's TopSpacer, a full groupSeparatorHeight; below, the divider draws its rule
+       at its own MIDDLE, half that. So the row grows by the missing half and spends it
+       as a bottom margin, lifting the buttons by exactly that much. */
+    const int halfSep = G::groupSeparatorHeight / 2;
+    model->setData(modesIdx, 6 + halfSep, UR_ExtraRowHeight);
+    setFirstColumnSpanned(modesIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        colorPanelModesRow = rw;           // centred in the panel, updateEditorGeometries
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(0, 0, 0, halfSep);
+        hb->setSpacing(10);
+        hb->addStretch(1);
+        QRadioButton *tone = new QRadioButton("Tone", rw);
+        QRadioButton *hue  = new QRadioButton("Hue",  rw);
+        QRadioButton *rgb  = new QRadioButton("RGB",  rw);
+        tone->setToolTip("Grade by tonal range: tint the shadows, midtones, highlights "
+                         "or the whole image.");
+        hue->setToolTip("Sample colours in the image and shift their hue, saturation "
+                        "and luminance.");
+        rgb->setToolTip("Re-point the red, green and blue primaries (camera "
+                        "calibration).");
+        for (QRadioButton *r : {tone, hue, rgb})      // panel background, see gradeRanges
+            r->setStyleSheet("QRadioButton { background: transparent; }");
+        QButtonGroup *group = new QButtonGroup(rw);   // exclusive by default
+        group->addButton(tone, 0);
+        group->addButton(hue,  1);
+        group->addButton(rgb,  2);
+        if (QAbstractButton *b = group->button(colorPanelMode)) b->setChecked(true);
+        connect(group, &QButtonGroup::idToggled, this, [this](int id, bool on){
+            if (!on || id == colorPanelMode) return;
+            colorPanelMode = id;
+            setting->setValue("Develop/colorPanelMode", id);
+            /* The eyedropper belongs to Hue: leaving it puts the dropper away. */
+            if (id != 1) cancelPointColorPick();
+            QTimer::singleShot(0, this, [this]{ buildTree(); });
+        });
+        hb->addWidget(tone);
+        hb->addWidget(hue);
+        hb->addWidget(rgb);
+        hb->addStretch(1);               // stretch both sides: centred in the row
+        setIndexWidget(modesIdx, rw);
+    }
+    addGroupDivider(parIdx, "ColorPanelHeader", "ColorPanelModesDivider");
+
+    switch (colorPanelMode) {
+    case 1:  addPointColorBody(parIdx, "ColorPanelHeader"); break;
+    case 2:  addCalibrateBody(parIdx, "ColorPanelHeader");  break;
+    default: addColorGradeBody(parIdx, "ColorPanelHeader"); break;
+    }
+}
+
+/* --------------------------------------------------------------------------------------
+   Point Color
+
+   Lightroom's Color Mixer > Point Color, without the Mixer. The eyedropper samples a
+   colour off the image (one-shot, like the WB dropper); each sample is a swatch, and the
+   sliders below the PointColorWidget edit the SELECTED one (pointColorSel -- UI state,
+   like gradeActiveMask). The sliders are not plain applyKeyToParams keys: they need the
+   selection, so itemChange routes the pc* keys through setPointColorSlider. Maths and
+   encoding in Develop/pointcolor.h.
+   ------------------------------------------------------------------------------------ */
+
+void DevelopProperties::addPointColor()
+{
+    if (G::isLogger) G::log("DevelopProperties::addPointColor");
+    addHeader("PointColorHeader", "???", "Point Color",
+              "Sample colours from the image and shift each one's hue, saturation and "
+              "luminance.", PV_PointColor);
+    QModelIndex parIdx = capIdx;
+    addPointColorBody(parIdx, "PointColorHeader");
+}
+
+/* The section's rows under `parent` -- its own header, or the combined Color
+   panel's (addColorPanel). */
+void DevelopProperties::addPointColorBody(const QModelIndex &parIdx, const QString &parent)
+{
+    /* The dropper / swatches / field / before|after widget, on one tall spanned row. */
+    clearItemInfo(i);
+    i.name = "pointColorWidget";
+    i.parIdx = parIdx;
+    i.parentName = parent;
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex wIdx = capIdx;
+    model->setData(wIdx, PointColorWidget::preferredHeight() - 16, UR_ExtraRowHeight);
+    setFirstColumnSpanned(wIdx.row(), parIdx, true);
+    {
+        PointColorWidget *w = new PointColorWidget;
+        pointColorWidget = w;
+        w->setDropperIcons(dropperIcon(false), dropperIcon(true));
+        w->setPickArmed(pointColorPickActive);
+        connect(w, &PointColorWidget::pickToggled, this, [this]{
+            setPointColorPickActive(!pointColorPickActive);
+        });
+        connect(w, &PointColorWidget::pointSelected, this, [this](int idx){
+            pointColorSel = idx;
+            refreshPointColorRow();
+            if (pointColorVisualize) emit paramsChanged();   // show the new point's range
+        });
+        connect(w, &PointColorWidget::pointDeleted, this, [this](int idx){
+            deletePointColor(idx);
+        });
+        connect(w, &PointColorWidget::allPointsDeleted, this, [this]{
+            deletePointColor(-1);
+        });
+        connect(w, &PointColorWidget::shiftsDragged,
+                this, &DevelopProperties::onPointColorShiftsDragged);
+        setIndexWidget(wIdx, w);
+    }
+
+    /* The selected point's shifts. Integer -100..100, 0 = no change. */
+    addSlider("pcHueShift", "Hue Shift",
+              "Rotate the hue of the selected colour.",
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
+    addSlider("pcSatShift", "Sat. Shift",
+              "Saturate or desaturate the selected colour.",
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
+    addSlider("pcLumShift", "Lum. Shift",
+              "Brighten or darken the selected colour.",
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
+    addSlider("pcVariance", "Variance",
+              "Spread the selected colours apart (right) or pull them together toward "
+              "the sample (left) -- left evens out uneven skin or foliage.",
+              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
+
+    /* Which pixels count as "the selected colour". Range widens or narrows all three
+       at once; the indented three refine one axis each. 50 = the nominal width. */
+    addGroupDivider(parIdx, parent, "PointColorRangeDivider");
+    addSlider("pcRange", "Range",
+              "How far from the sampled colour the adjustment reaches.",
+              parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addSlider("pcHueRange", "   Hue",
+              "How far in hue from the sample the adjustment reaches.",
+              parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addSlider("pcSatRange", "   Saturation",
+              "How far in saturation from the sample the adjustment reaches.",
+              parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addSlider("pcLumRange", "   Luminance",
+              "How far in luminance from the sample the adjustment reaches.",
+              parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addCheckbox("pcVisualize", "Visualize Range",
+                "Show the pixels the selected point affects in colour and everything "
+                "else in grey. A view only: nothing is saved.",
+                parIdx, parent, pointColorVisualize);
+    addGroupDivider(parIdx, parent, "PointColorEndDivider");
+}
+
+void DevelopProperties::setPointColorPickActive(bool on)
+{
+    /* Arming needs an image to sample and a free slot to put the sample in. */
+    if (on && (currentImagePath.isEmpty() ||
+               activeParams().pointColorN >= PointColor::kMaxPts))
+        on = false;
+    if (pointColorPickActive == on) return;
+    pointColorPickActive = on;
+    /* The dropper reads the DISPLAYED image, so it must not sample the grey of a
+       visualised range: showing the real colours again is the only sensible state. */
+    if (on && pointColorVisualize) {
+        pointColorVisualize = false;
+        const bool wasPop = isPopulating;
+        isPopulating = true;
+        setCheckboxValue("pcVisualize", false);
+        isPopulating = wasPop;
+        emit paramsChanged();
+    }
+    if (pointColorWidget) pointColorWidget->setPickArmed(on);
+    if (on) emit pointColorPickBegin();
+    else    emit pointColorPickEnd();
+}
+
+/* The eyedropper landed (MW::onPointColorPicked, from the DISPLAYED image). Append the
+   sample with neutral shifts and select it, so the sliders immediately edit it. */
+void DevelopProperties::addPointColorFromPixel(float r, float g, float b)
+{
+    if (G::isLogger) G::log("DevelopProperties::addPointColorFromPixel");
+    setPointColorPickActive(false);         // one-shot, like the WB dropper
+    if (currentImagePath.isEmpty()) return;
+    noteNonMaskInteraction();
+    EditParams &p = activeParams();
+    if (p.pointColorN >= PointColor::kMaxPts) return;
+    PointColor::Point pt;
+    /* Four decimals: finer than an 8-bit display step, and a stable sidecar string. */
+    auto q = [](float v) { return std::round(qBound(0.0f, v, 1.0f) * 10000.0f) / 10000.0f; };
+    pt.r = q(r);
+    pt.g = q(g);
+    pt.b = q(b);
+    p.pointColor[p.pointColorN] = pt;
+    pointColorSel = p.pointColorN;
+    ++p.pointColorN;
+    noteEdit("Point color sample", QString::number(pointColorSel + 1),
+             QString("pointColor/add/%1").arg(pointColorSel));
+    refreshPointColorRow();
+    updateSectionHeaderCaptions();
+    emit paramsChanged();
+}
+
+void DevelopProperties::deletePointColor(int index)
+{
+    if (G::isLogger) G::log("DevelopProperties::deletePointColor");
+    if (currentImagePath.isEmpty()) return;
+    EditParams &p = activeParams();
+    if (p.pointColorN <= 0) return;
+    if (index < 0) {
+        EditParams::resetGroup(p, EditParams::Group::PointColor);
+        noteEdit("Delete all point colors");
+    }
+    else {
+        if (index >= p.pointColorN) return;
+        for (int k = index; k + 1 < p.pointColorN; ++k) p.pointColor[k] = p.pointColor[k + 1];
+        --p.pointColorN;
+        /* The vacated slot back to default: EditParams::operator== compares them all. */
+        p.pointColor[p.pointColorN] = PointColor::Point();
+        noteEdit("Delete point color", QString::number(index + 1));
+        if (pointColorSel >= index) pointColorSel = qMax(0, pointColorSel - 1);
+    }
+    refreshPointColorRow();
+    updateSectionHeaderCaptions();
+    emit paramsChanged();
+}
+
+/* One pc* slider -> the selected point. Values arrive on the slider's own scale, which
+   is also how they are stored. */
+void DevelopProperties::setPointColorSlider(const QString &key, float v)
+{
+    EditParams &p = activeParams();
+    if (pointColorSel < 0 || pointColorSel >= p.pointColorN) return;
+    PointColor::Point &pt = p.pointColor[pointColorSel];
+    if      (key == "pcHueShift") pt.hueShift = qBound(-100.0f, v, 100.0f);
+    else if (key == "pcSatShift") pt.satShift = qBound(-100.0f, v, 100.0f);
+    else if (key == "pcLumShift") pt.lumShift = qBound(-100.0f, v, 100.0f);
+    else if (key == "pcVariance") pt.variance = qBound(-100.0f, v, 100.0f);
+    else if (key == "pcRange")    pt.range    = qBound(0.0f, v, 100.0f);
+    else if (key == "pcHueRange") pt.hueRange = qBound(0.0f, v, 100.0f);
+    else if (key == "pcSatRange") pt.satRange = qBound(0.0f, v, 100.0f);
+    else if (key == "pcLumRange") pt.lumRange = qBound(0.0f, v, 100.0f);
+}
+
+/* The field / strip drag: write the selected point's three shifts, keep the sliders in
+   step, and render. One history row per drag (the mergeKey). */
+void DevelopProperties::onPointColorShiftsDragged(float hue, float sat, float lum,
+                                                  bool commit)
+{
+    if (currentImagePath.isEmpty()) return;
+    noteNonMaskInteraction();
+    EditParams &p = activeParams();
+    if (pointColorSel < 0 || pointColorSel >= p.pointColorN) return;
+    PointColor::Point &pt = p.pointColor[pointColorSel];
+    pt.hueShift = hue;
+    pt.satShift = sat;
+    pt.lumShift = lum;
+    noteEdit("Point color", QString(),
+             QString("pointColor/drag/%1").arg(pointColorSel));
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setSliderReal("pcHueShift", hue);
+    setSliderReal("pcSatShift", sat);
+    setSliderReal("pcLumShift", lum);
+    isPopulating = wasPop;
+    Q_UNUSED(commit)
+    emit paramsChanged();
+}
+
+/* Stored points -> the widget and the sliders (which show the selected point). Greys
+   the sliders when there is no point to edit -- the widget says why, in their place. */
+void DevelopProperties::refreshPointColorRow()
+{
+    EditParams p;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (!s.scopes.isEmpty()) {
+        const int idx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
+                            ? activeScopeIndex : 0;
+        p = s.scopes[idx].params;
+    }
+    if (pointColorSel >= p.pointColorN) pointColorSel = p.pointColorN - 1;
+    if (pointColorSel < 0 && p.pointColorN > 0) pointColorSel = 0;
+    const bool have = pointColorSel >= 0;
+    if (pointColorWidget) {
+        pointColorWidget->setPoints(p.pointColorN, p.pointColor, pointColorSel);
+        pointColorWidget->setPickArmed(pointColorPickActive);
+    }
+    const PointColor::Point pt = have ? p.pointColor[pointColorSel] : PointColor::Point();
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setSliderReal("pcHueShift", pt.hueShift);
+    setSliderReal("pcSatShift", pt.satShift);
+    setSliderReal("pcLumShift", pt.lumShift);
+    setSliderReal("pcVariance", pt.variance);
+    setSliderReal("pcRange",    pt.range);
+    setSliderReal("pcHueRange", pt.hueRange);
+    setSliderReal("pcSatRange", pt.satRange);
+    setSliderReal("pcLumRange", pt.lumRange);
+    setCheckboxValue("pcVisualize", pointColorVisualize);
+    isPopulating = wasPop;
+    static const char *keys[] = {"pcHueShift", "pcSatShift", "pcLumShift", "pcVariance",
+                                 "pcRange", "pcHueRange", "pcSatRange", "pcLumRange",
+                                 "pcVisualize"};
+    for (const char *k : keys) {
+        const QModelIndex vIdx = sourceIdx.value(k);
+        if (vIdx.isValid() && vIdx.data(UR_Editor).value<void*>() != nullptr)
+            setItemEnabled(k, have);
+    }
 }
 
 /* Convert the Color Range mask's [r,g,b] samples to (hueDeg, sat) points for the wheel,
@@ -5984,6 +6469,8 @@ void DevelopProperties::updateSectionHeaderCaptions()
         {"BasicHeader",      "Basic",       PV_Basic},
         {"CurvesHeader",     "Curves",      PV_Curves},
         {"ColorHeader",      "Color",       PV_Color},
+        {"PointColorHeader", "Point Color", PV_PointColor},
+        {"ColorPanelHeader", "Color",       PV_ColorPanel},
         {"CalibrateHeader",  "Calibrate",   PV_Calibrate},
         {"ColorGradeHeader", "Color Grade", PV_ColorGrade},
         {"DetailHeader",     "Detail",      PV_Detail},
@@ -5996,8 +6483,16 @@ void DevelopProperties::updateSectionHeaderCaptions()
 
     for (int i = 0; i < int(sizeof(hdrs) / sizeof(HdrDef)); ++i) {
         const HdrDef &h = hdrs[i];
-        const bool edited = haveParams &&
-            !EditParams::groupIsDefault(s.scopes.at(scopeIdx).params, paramsGroup(h.group));
+        bool edited = false;
+        if (haveParams) {
+            const EditParams &sp = s.scopes.at(scopeIdx).params;
+            if (h.group == PV_ColorPanel)      // the combined panel: any of its three
+                edited = !EditParams::groupIsDefault(sp, EditParams::Group::ColorGrade) ||
+                         !EditParams::groupIsDefault(sp, EditParams::Group::PointColor) ||
+                         !EditParams::groupIsDefault(sp, EditParams::Group::Calibrate);
+            else
+                edited = !EditParams::groupIsDefault(sp, paramsGroup(h.group));
+        }
         if (hdrStar[i] == int(edited)) continue;     // caption already correct
         const QModelIndex idx = findCaptionIndex(h.name);
         if (!idx.isValid()) continue;
@@ -6145,6 +6640,20 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
+    /* Color Grade Hue / Saturation sliders: the wheel's axes for the selected range.
+       The wheel dot follows (refreshColorGradeRow). */
+    if (source == "gradeHue" || source == "gradeSat") {
+        if (currentImagePath.isEmpty()) return;
+        noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
+        setGradeHueSat(source == "gradeHue", v.toFloat());
+        noteEdit(source == "gradeHue" ? "Color grade hue" : "Color grade saturation",
+                 historyValueText(idx, v),
+                 QString("grade/%1/%2").arg(source).arg(gradeActiveMask));
+        refreshColorGradeRow();         // move the wheel dot with the slider
+        emit paramsChanged();
+        return;
+    }
+
     /* Calibrate Hue / Saturation sliders: nudge every primary the R/G/B checkboxes
        select (not plain applyKeyToParams keys -- they need calActiveMask context). The
        history key carries the mask, so nudging red then green reads as two steps. */
@@ -6155,6 +6664,31 @@ void DevelopProperties::itemChange(QModelIndex idx)
         noteEdit("Calibrate", historyValueText(idx, v),
                  QString("cal/%1/%2").arg(source).arg(calActiveMask));
         refreshCalibrateRow();          // move the wheel dot with the slider
+        emit paramsChanged();
+        return;
+    }
+
+    /* Point Color sliders: write the point the swatches select (setPointColorSlider).
+       The mergeKey carries the point, so nudging two points reads as two steps.
+       Visualize Range is VIEW state, not an edit -- no history, no sidecar; it only
+       changes what stackJob() asks the render for. */
+    if (source == "pcVisualize") {
+        pointColorVisualize = v.toBool();
+        emit paramsChanged();
+        return;
+    }
+    if (source.startsWith("pc") && source.size() > 2 && source.at(2).isUpper()) {
+        if (currentImagePath.isEmpty()) return;
+        noteNonMaskInteraction();
+        setPointColorSlider(source, v.toFloat());
+        noteEdit(QString("Point color ") + idx.siblingAtColumn(0).data().toString()
+                     .trimmed().toLower(),
+                 historyValueText(idx, v),
+                 QString("pointColor/%1/%2").arg(source).arg(pointColorSel));
+        if (pointColorWidget) {
+            const EditParams &p = activeParams();
+            pointColorWidget->setPoints(p.pointColorN, p.pointColor, pointColorSel);
+        }
         emit paramsChanged();
         return;
     }
@@ -6265,6 +6799,15 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
         activeScopeIndex < s.scopes.size()) {
         EditScope &sc = s.scopes[activeScopeIndex];
         if (pendingIdx < sc.components.size()) sc.components[pendingIdx].op = pendingOp;
+    }
+    /* Point Color's Visualize Range: a VIEW of the active scope's selected point,
+       written into this local copy only -- never into the stored stack, so the sidecar,
+       an export and the devPreview builder (all stackJobFor) never see it. */
+    if (!previewActive && pointColorVisualize && activeScopeIndex >= 0 &&
+        activeScopeIndex < s.scopes.size()) {
+        EditParams &vp = s.scopes[activeScopeIndex].params;
+        if (pointColorSel >= 0 && pointColorSel < vp.pointColorN)
+            vp.pointColorVisualize = pointColorSel;
     }
     /* Transform Preview: previewed off -> bypass geometry at render (identity), while
        the stored crop/warp stays in the cache so the overlay still draws (see
@@ -6480,6 +7023,8 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        previews now, while the frame still exists. */
     topUpDevPreviews(currentImagePath);
     cancelWbDropper();                  // an armed dropper does not follow the image
+    cancelPointColorPick();             // nor does the Point Color eyedropper
+    pointColorSel = -1;                 // the new image's first point (if any)
     /* The pointer marker DOES follow the image -- the toggle is a view preference, like
        the curve mode -- but the pixel it is marking does not: drop the stale sample and
        wait for the next hover. */
@@ -6842,6 +7387,8 @@ const PresetLeafDef kBasicLeaves[] = {
     {"texture",      "Texture"},
     {"clarity",      "Clarity"},
     {"dehaze",       "Dehaze"},
+    {"vibrance",     "Vibrance"},
+    {"saturation",   "Saturation"},
 };
 /* Two leaves, not one: a look built on the composite curve is often wanted WITHOUT the
    per-channel colour crossover that came with it. */
@@ -6854,9 +7401,12 @@ const PresetLeafDef kColorLeaves[] = {
     {"green",      "Green"},
     {"blue",       "Blue"},
     {"hue",        "Hue"},
-    {"saturation", "Saturation"},
     {"luminance",  "Luminance"},
-    {"vibrance",   "Vibrance"},
+};
+/* ONE leaf: the samples are meaningless apart (a preset carrying them is a "move these
+   colours" look, e.g. a skin-tone fix), and applying it REPLACES the target's points. */
+const PresetLeafDef kPointColorLeaves[] = {
+    {"pointColors", "Point colors"},
 };
 const PresetLeafDef kCalibrateLeaves[] = {
     {"calRed",   "Red primary"},
@@ -6890,6 +7440,8 @@ const PresetSectionDef kSections[] = {
     {"Basic",     kBasicLeaves,    int(sizeof(kBasicLeaves)    / sizeof(PresetLeafDef))},
     {"Curves",    kCurvesLeaves,   int(sizeof(kCurvesLeaves)   / sizeof(PresetLeafDef))},
     {"Color",     kColorLeaves,    int(sizeof(kColorLeaves)    / sizeof(PresetLeafDef))},
+    {"Point Color", kPointColorLeaves,
+                  int(sizeof(kPointColorLeaves) / sizeof(PresetLeafDef))},
     {"Calibrate", kCalibrateLeaves, int(sizeof(kCalibrateLeaves) / sizeof(PresetLeafDef))},
     {"Color Grade", kColorGradeLeaves, int(sizeof(kColorGradeLeaves) / sizeof(PresetLeafDef))},
     {"Detail",    kDetailLeaves,   int(sizeof(kDetailLeaves)   / sizeof(PresetLeafDef))},
@@ -6926,6 +7478,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "saturation")   return p.saturation != def.saturation;
     if (key == "luminance")    return p.luminance  != def.luminance;
     if (key == "vibrance")     return p.vibrance   != def.vibrance;
+    if (key == "pointColors")  return p.pointColorN > 0;
     if (key == "calRed")       return p.calRedHue   != def.calRedHue ||
                                       p.calRedSat   != def.calRedSat;
     if (key == "calGreen")     return p.calGreenHue != def.calGreenHue ||
@@ -7066,6 +7619,8 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("grainSize", p.grainSize);
         out.insert("grainRoughness", p.grainRoughness);
     }
+    if (lk.contains("pointColors"))
+        out.insert("pointColors", PointColor::encode(p.pointColorN, p.pointColor));
 }
 
 DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
@@ -7665,9 +8220,10 @@ bool DevelopProperties::renderMatchesStoredRecipe() const
     stored recipe: a hovered History row (previewActive), the Transform preview eye
     (geometry.show -- off means the frame is UNCROPPED and unstraightened), and the
     Replace eye (spotsShown). Any of them makes the frame unsafe to cache as "what this
-    image looks like".
+    image looks like". So does Point Color's Visualize Range, which greys most of it.
 */
     if (previewActive) return false;
+    if (pointColorVisualize) return false;
     if (!spotsShown) return false;
     if (currentImagePath.isEmpty()) return false;
     return stackCache.value(currentImagePath).geometry.show;
@@ -7944,6 +8500,24 @@ constexpr const char *kCurvesField = "curves";
    marks it "(not installed)" rather than rendering something wrong. */
 constexpr const char *kProfileField = "cameraProfile";
 
+/* Point Color's samples: a non-scalar field like the curves, so the same named
+   pseudo-field + differs/copy pair. The whole point list travels as one: propagating
+   "point 2's hue shift" to an image whose point 2 is a different colour would be
+   nonsense. */
+constexpr const char *kPointColorField = "pointColors";
+bool pointColorsDiffer(const EditParams &a, const EditParams &b)
+{
+    if (a.pointColorN != b.pointColorN) return true;
+    for (int k = 0; k < a.pointColorN; ++k)
+        if (!(a.pointColor[k] == b.pointColor[k])) return true;
+    return false;
+}
+void copyPointColors(const EditParams &src, EditParams &dst)
+{
+    dst.pointColorN = src.pointColorN;
+    for (int k = 0; k < PointColor::kMaxPts; ++k) dst.pointColor[k] = src.pointColor[k];
+}
+
 bool curvesDiffer(const EditParams &a, const EditParams &b)
 {
     for (int c = 0; c < ToneCurve::kChannels; ++c) {
@@ -8015,6 +8589,7 @@ QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const Edit
     for (const IntField &f : kIntFields)
         if (a.*(f.m) != b.*(f.m)) changed.insert(QString::fromLatin1(f.name));
     if (curvesDiffer(a, b)) changed.insert(QString::fromLatin1(kCurvesField));
+    if (pointColorsDiffer(a, b)) changed.insert(QString::fromLatin1(kPointColorField));
     if (a.cameraProfile != b.cameraProfile)
         changed.insert(QString::fromLatin1(kProfileField));
     return changed;
@@ -8028,6 +8603,7 @@ void DevelopProperties::copyParamFields(const EditParams &src, EditParams &dst,
     for (const IntField &f : kIntFields)
         if (fields.contains(QString::fromLatin1(f.name))) dst.*(f.m) = src.*(f.m);
     if (fields.contains(QString::fromLatin1(kCurvesField))) copyCurves(src, dst);
+    if (fields.contains(QString::fromLatin1(kPointColorField))) copyPointColors(src, dst);
     if (fields.contains(QString::fromLatin1(kProfileField))) dst.cameraProfile = src.cameraProfile;
 }
 
@@ -8282,6 +8858,7 @@ void DevelopProperties::populateSlidersFromStack()
     refreshCurveRow();
     refreshCalibrateRow();            // primaries -> the wheel + the Hue/Sat sliders
     refreshColorGradeRow();           // push grade values into the wheel + Lum slider
+    refreshPointColorRow();           // points -> swatches/field + the selected sliders
     isPopulating = false;
     refreshWbRow();                 // Temp/Tint resolved + the preset dropdown
     refreshViewTransformRow();      // the Calibrate view-transform combo
@@ -8332,6 +8909,8 @@ void DevelopProperties::sectionHelp(int group)
     case PV_Color:      doc = "developcolorhelp";      break;
     case PV_Calibrate:  doc = "developcalibratehelp";  break;
     case PV_ColorGrade: doc = "developcolorgradehelp"; break;
+    case PV_PointColor: doc = "developpointcolorhelp"; break;
+    case PV_ColorPanel: sectionHelp(colorPanelModeGroup()); return;   // the shown mode
     case PV_Detail:     doc = "developdetailhelp";     break;
     case PV_Effects:    doc = "developeffectshelp";    break;
     default:            howThisWorks();  return;       // PV_Scope: the module page

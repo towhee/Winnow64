@@ -123,5 +123,105 @@
     },
     "lr_baseline": "2017-01-10_LR_Highlights_0_Exposure+1.5.tif",
     "lr_target": "2017-01-10_LR_Highlights_-50_Exposure+1.5.tif"
+  },
+  {
+    "name": "Neck Point 0 -100",
+    "raw": "~/Photos/2010-2019 √/2011 √/201107 √/2011-07-25_Neck Point √/2011-07-25_0017.NEF",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2011-07-25_0017_LR_Highlights_0.tif",
+    "lr_target": "2011-07-25_0017_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Eva 0 -100",
+    "raw": "~/Photos/2010-2019 √/2017 √/201709 √/2017-09-26_Eva √/2017-09-26_0291.dng",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2017-09-26_0291_LR_Highlights_0.tif",
+    "lr_target": "2017-09-26_0291_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Lillian 0 -100",
+    "raw": "~/Photos/2010-2019 √/2018 √/201801 √/2018-01-14_Lillian 100 days old √/2018-01-14_0010.NEF",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2018-01-14_0010_LR_Highlights_0.tif",
+    "lr_target": "2018-01-14_0010_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "French Beach 0 -100",
+    "raw": "~/Photos/2020-2029/2022 √/202208 √/2022-08-08_French Beach √/2022-08-08_0079.orf",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2022-08-08_0079_LR_Highlights_0.tif",
+    "lr_target": "2022-08-08_0079_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Backyard sunset 0 -100",
+    "raw": "~/Photos/2020-2029/2025/202501 √/2025-01-07_Backyard √/2025-01-07_0001.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2025-01-07_0001_LR_Highlights_0.tif",
+    "lr_target": "2025-01-07_0001_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Doumac 7 0 -100",
+    "raw": "~/Temp/Photos_to_be_curated/2026/202609/2026-09-06_Doumac Park/2026-09-06_0007.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2026-09-06_0007_LR_Highlights_0.tif",
+    "lr_target": "2026-09-06_0007_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Doumac 10 0 -100",
+    "raw": "~/Temp/Photos_to_be_curated/2026/202609/2026-09-06_Doumac Park/2026-09-06_0010.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2026-09-06_0010_LR_Highlights_0.tif",
+    "lr_target": "2026-09-06_0010_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Lagoon duck 0 -100",
+    "raw": "~/Temp/Photos_to_be_curated/2026/202609/2026-09-23_Esquimalt Lagoon/2026-09-23_0013.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2026-09-23_0013_LR_Highlights_0.tif",
+    "lr_target": "2026-09-23_0013_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Lagoon bird 0 -100",
+    "raw": "~/Temp/Photos_to_be_curated/2026/202609/2026-09-23_Esquimalt Lagoon/2026-09-23_0022.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2026-09-23_0022_LR_Highlights_0.tif",
+    "lr_target": "2026-09-23_0022_LR_Highlights_-100.tif"
+  },
+  {
+    "name": "Silver Rill sun 0 -100",
+    "raw": "~/Temp/Photos_to_be_curated/2026/202610/2026-10-03_Silver Rill/2026-10-03_0049.arw",
+    "baseline": {},
+    "target": {
+      "highlights": -100
+    },
+    "lr_baseline": "2026-10-03_0049_LR_Highlights_0.tif",
+    "lr_target": "2026-10-03_0049_LR_Highlights_-100.tif"
   }
 ]

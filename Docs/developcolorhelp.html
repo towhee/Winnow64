@@ -8,8 +8,9 @@
 <h1>Color</h1>
 
 <h2>What it does</h2>
-<p>Color holds the blunt, global colour controls: three <b>channel gains</b>, and four
-<b>HSL</b> adjustments that act on every pixel at once.  Nothing here selects a colour or
+<p>Color holds the blunt, global colour controls: three <b>channel gains</b>, and
+<b>Hue</b> and <b>Luminance</b> adjustments that act on every pixel at once.
+(<b>Vibrance</b> and <b>Saturation</b> are at the bottom of the <b>Basic</b> panel.)  Nothing here selects a colour or
 a tonal range &mdash; that is what Color Grade, Calibrate and the Color Range mask are
 for.  Reach for this panel when the whole picture needs the same push.</p>
 
@@ -23,23 +24,14 @@ that, use <b>Calibrate</b>, which re-points what red <i>means</i> and leaves neu
 alone.  The gains are here for cast correction that Temp and Tint cannot reach, such as
 mixed lighting or an old scan.</p>
 
-<h2>Hue, Saturation, Luminance</h2>
+<h2>Hue, Luminance</h2>
 <ul>
 <li><b>Hue</b> rotates every hue in the image.  Small amounts shift the overall colour
 character; large amounts are a special effect.</li>
-<li><b>Saturation</b> scales colourfulness uniformly.  &minus;100 is fully grey; positive
-values push every colour, including the ones that were already strong.</li>
 <li><b>Luminance</b> raises or lowers overall brightness after the tone curve.  It is not
 Exposure: exposure works in linear light and is the correct control for "the frame was a
 stop dark", while Luminance moves the rendered image.</li>
 </ul>
-
-<h2>Vibrance</h2>
-<p><b>Vibrance</b> is saturation weighted toward the <b>muted</b> colours: colours that
-are already saturated move little, colours that are nearly grey move most.  It is the
-safer of the two for people and skies &mdash; skin tones are moderately saturated, so they
-hold while a flat sky comes up.  A common pairing is a healthy Vibrance with a small
-negative Saturation.</p>
 
 <h2>Working with the sliders</h2>
 <ul>
@@ -63,12 +55,12 @@ adjust inside that scope.</li>
 
 <h2>Where it sits in the pipeline</h2>
 <p>The RGB gains are applied with the white balance, in linear light at the front of the
-pipeline.  Hue, Saturation, Luminance and Vibrance run <b>after</b> the tone curve, on the
+pipeline.  Hue and Luminance run <b>after</b> the tone curve, on the
 pixels you can already see &mdash; which is why they feel more direct, and less forgiving,
 than Calibrate's primaries.</p>
 
 <h2>What is saved</h2>
-<p>All seven values are part of the develop recipe, stored per scope in the sidecar, so
+<p>All five values are part of the develop recipe, stored per scope in the sidecar, so
 the panel can act globally or be confined to a mask.  They travel with presets, Copy /
 Paste Settings, History and multi-image editing.</p>
 

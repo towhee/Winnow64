@@ -65,25 +65,10 @@ constexpr float kRgbGain      = 0.5f;
 constexpr float kHslFullScale = 100.0f;
 constexpr float kHueMaxRad    = 1.04719755f;   // 60 degrees at full slider
 
-/* Colour grading (Color Grade panel) -- tonal-range tinting. Each range's hue+sat becomes
-   a zero-luma RGB chroma push scaled by kGradeTintStrength (added at full sat), and
-   its -100..100 luminance a gain delta scaled by kGradeLumStrength (+/-100 -> +/-50% in
-   that range). Weighted per pixel by smooth tonal windows split at kGradeShadowEnd /
-   kGradeHighStart in the perceptual (gamma) domain. See buildPointCoeffs' grade block. */
-constexpr float kGradeTintStrength = 0.5f;
-constexpr float kGradeLumStrength  = 0.5f;
+/* Colour grading (Color Grade panel): the whole model -- push space, windows, strength,
+   Luminance, Blending / Balance -- is the measured Lightroom one in Develop/colorgrade.h.
+   The Luminance slider's -100..100 is normalised by this. */
 constexpr float kGradeLumFullScale = 100.0f;
-constexpr float kGradeShadowEnd    = 0.5f;    // perceptual L: shadow weight reaches 0
-constexpr float kGradeHighStart    = 0.5f;    // perceptual L: highlight weight starts
-
-/* How far the Blending and Balance sliders may move those two split points. Blending
-   pushes them apart / together about the base; Balance slides both the same way. The
-   DEFAULTS (blending 50, balance 0) must land exactly on the two constants above, or
-   every already-graded image would shift the first time it is reopened. */
-constexpr float kGradeBlendRange   = 0.30f;
-constexpr float kGradeBalanceRange = 0.20f;
-constexpr float kGradeSplitMin     = 0.05f;   // keep both strictly inside (0,1): the
-constexpr float kGradeSplitMax     = 0.95f;   // weights divide by them
 
 /* Tone controls (highlights/shadows/whites/blacks), applied after contrast (pipeline order
    #5), all in the PERCEPTUAL (gamma) domain. Sliders are integer -100..100 (normalised to
@@ -181,8 +166,9 @@ constexpr ToneOp kWhitesDown  = {0.10f, 0.9f, 0.15f, 0.94f, 1.00f};
     buffer being rendered: a proxy, the settle render and a Detail patch (a crop) must
     all draw the same curve. Highlights + is not refitted (no data) and stays fixed.
 */
-constexpr float kHighsDownBudget = 0.020f;   // mean display shift at -100 (was 0.035
-                                             // before the frame-relative term, below)
+constexpr float kHighsDownBudget = 0.017f;   // mean display shift at -100 (0.035 before
+                                             // the frame-relative term, 0.020 before its
+                                             // range scaling; both below)
 constexpr float kHighsDownAmpMax = 0.60f;   // was 0.35; see THE STRENGTH below
 
 /*
@@ -262,12 +248,42 @@ constexpr float kHighsDownBudgetPerEV = 0.3f;    // budget x (1 + this x max(0, 
     broke the white / partial-recovery / no-compounding properties above. Applying the
     curve only to what a region adds beyond the pixel (tried first) scored 6.82.
 */
-constexpr float kHighsAnchorK         = 0.12f;   // stops removed per stop^p above anchor
-constexpr float kHighsAnchorP         = 1.5f;    // power on the distance above anchor
+/*
+    ...AND HARDER THE FURTHER THE FRAME'S HIGHLIGHTS STAND ABOVE IT (2026-10-11). With ten
+    more Lightroom pairs at Exposure 0 (17 frames: forest, beach, snow, portraits, birds,
+    a sunset, the sun in frame) one shared shape times a per-frame strength still explained
+    Lightroom's gain, but the strength ran from 0.4 (snow) to 3.2 (a sunset band over a
+    dark field) -- and the best single predictor (R2 0.72 of log strength) was the frame's
+    RANGE above its anchor, the 99th percentile minus the log-mean, in stops. Lightroom
+    also darkens a high-range frame as a whole: at the anchor itself -1.2 stops on the
+    forest at 0 and -2.6 on the sunset, against -0.2 on snow and portraits.
+
+    So the term is amount^q * e^(b * (range - r0)) * (k * (L - anchor)^p + o), still
+    tapered to nothing at white, the o part the whole-frame darkening (it rides on every
+    tone, so it lowers a dark frame's shadows a little in display terms and its mids
+    more). Fitted through the real pipeline on all 19 lrcompare pairs (coordinate search,
+    after the registration fix -- Lightroom corrects lens distortion, which had
+    misaligned seven of them): mean RMS 6.02 -> 4.76; forest 0 8.4 -> 3.4, forest +2.5
+    10.6 -> 8.3, snow 0 7.4 -> 5.2, sunset 14.7 -> 7.2; worst cost ILCE +1.5 5.7 -> 7.1
+    and the flat seascape 1.7 -> 3.5. sigma 2.5 scored 0.03 better but haloed a pool edge
+    by 2 levels (tst_toneregions highlightsPullsTheRegion); 1.9 is the largest that does
+    not. Still short: the forest at +2.5. Lightroom compresses its tones almost evenly
+    (baseline 75 -> 63, 200 -> 114, 225 -> 133); this pulls 75 -> 58 but 200 -> 127 and
+    225 -> 150, so the sunlit ferns stay bright. Not the taper (starting it at 0.99 moved
+    that frame 8.33 -> 8.10), and a larger per-EV budget fixed the top but over-pulled the
+    mids and the other two pushes. Note Lightroom's push + -100 renders that frame's
+    bright tones 30-50 levels DARKER than its unpushed, unedited render -- which
+    tst_toneregions highlightsRecoveryDoesNotCompound forbids; that held on snow only.
+*/
+constexpr float kHighsAnchorK         = 0.16f;   // stops removed per stop^p above anchor
+constexpr float kHighsAnchorP         = 1.125f;  // power on the distance above anchor
+constexpr float kHighsAnchorO         = 0.30f;   // stops removed from every tone (whole frame)
+constexpr float kHighsAnchorRangeB    = 0.35f;   // strength x e^(b (range - r0))
+constexpr float kHighsAnchorRange0    = 4.5f;    // range (stops, p99 - anchor) where x1
 constexpr float kHighsAnchorQ         = 1.5f;    // power on the slider amount
 constexpr float kHighsAnchorTaper     = 1.0f;    // share of the term gone at white
-constexpr float kHighsAnchorTaperFrom = 0.92f;    // display d where the taper starts
-constexpr float kHighsAnchorSigma     = 1.0f;    // its region split, stops of L
+constexpr float kHighsAnchorTaperFrom = 0.92f;   // display d where the taper starts
+constexpr float kHighsAnchorSigma     = 1.9f;    // its region split, stops of L
 
 /*
     SHADOWS IS A GAIN, NOT A BAND (refit 2026-10-05 against Lightroom Classic exports of
@@ -338,9 +354,8 @@ constexpr float kWhitePointRange = 0.310f, kWhitePointExpo = 1.8f;
    hand-edited sidecar can get near it; full slider stops at 0.31. */
 constexpr float kPointMax = 0.90f;
 
-/* Smoothstep, the same Hermite shape ColorGrade::gradeTonalWeights uses for its tonal
-   partition (Develop/colorgrade.h) -- C1 at both ends, so a band's edge cannot show as a
-   crease in a smooth ramp the way a clamped linear ramp does. */
+/* Smoothstep -- C1 at both ends, so a band's edge cannot show as a crease in a smooth
+   ramp the way a clamped linear ramp does. */
 inline float toneSmooth(float x)
 {
     if (x <= 0.0f) return 0.0f;
@@ -1898,32 +1913,107 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
         Calibrate::buildMatrix(p.calRedHue, p.calRedSat, p.calGreenHue, p.calGreenSat,
                                p.calBlueHue, p.calBlueSat, c.calMat);
 
-    /* Colour grading: turn each range's (hue, sat, lum) into a pre-scaled zero-luma RGB
-       tint vector + a luminance gain delta. HSV(hue, 1, 1) gives a fully-saturated hue
-       colour; subtracting its Rec.709 luma leaves a chroma-only push that shifts colour
-       without brightness. sat scales it, so a sat-0 range contributes nothing. */
-    const float gHue[4] = {p.gradeShadowHue, p.gradeMidHue, p.gradeHighHue,
-                           p.gradeGlobalHue};
-    const float gSat[4] = {p.gradeShadowSat, p.gradeMidSat, p.gradeHighSat,
-                           p.gradeGlobalSat};
-    const float gLum[4] = {p.gradeShadowLum, p.gradeMidLum, p.gradeHighLum,
-                           p.gradeGlobalLum};
-    for (int r = 0; r < 4; ++r) {
-        ColorGrade::gradeTintVector(gHue[r], gSat[r], kGradeTintStrength, c.gradeTint[r]);
-        c.gradeLum[r] = (gLum[r] / kGradeLumFullScale) * kGradeLumStrength;
-    }
-    c.gradeActive = false;
-    for (int r = 0; r < 4 && !c.gradeActive; ++r)
-        c.gradeActive = (c.gradeTint[r][0] != 0.0f || c.gradeTint[r][1] != 0.0f ||
-                         c.gradeTint[r][2] != 0.0f || c.gradeLum[r] != 0.0f);
+    /* Colour grading (see PointCoeffs and Develop/colorgrade.h). Each range's hue + sat
+       becomes a push vector in gamma-2.2 ProPhoto, amp * sat * (dir - offset); the amp
+       comes from the range's measured window at the pixel's L*, so the four ranges fold
+       into ONE table of summed push by luminance. The transfer tables follow the active
+       view transform, because the windows and the push were measured on what Lightroom
+       DISPLAYS -- keyed on scene values the windows land in the wrong place. */
+    {
+        const float gHue[4] = {p.gradeShadowHue, p.gradeMidHue, p.gradeHighHue,
+                               p.gradeGlobalHue};
+        const float gSat[4] = {p.gradeShadowSat, p.gradeMidSat, p.gradeHighSat,
+                               p.gradeGlobalSat};
+        const float gLum[4] = {p.gradeShadowLum, p.gradeMidLum, p.gradeHighLum,
+                               p.gradeGlobalLum};
+        /* Per range, the push at window amplitude 1: sat * (dir - offset) for the hue,
+           plus kLumScale * lum on every channel for Luminance (a uniform offset in the
+           same space, shaped by the same window -- see colorgrade.h). */
+        float vec[4][3] = {};
+        c.gradeActive = false;
+        for (int r = 0; r < 4; ++r) {
+            const float sat = qBound(0.0f, gSat[r], 1.0f);
+            const float off = ColorGrade::gradeLightOffset(r, p.gradeBlending,
+                                                           p.gradeBalance);
+            const float lum = ColorGrade::kLumScale * (gLum[r] / kGradeLumFullScale);
+            float dir[3] = {0.0f, 0.0f, 0.0f};
+            if (sat > 0.0f) ColorGrade::gradePushDir(gHue[r], dir);
+            for (int k = 0; k < 3; ++k) vec[r][k] = sat * (dir[k] - off) + lum;
+            if (sat > 0.0f || lum != 0.0f) c.gradeActive = true;
+        }
+        /* Point Color: the points that move something, as precomputed coefficients. A
+           visualised point is kept even when inert -- showing its selection is the
+           whole point of the toggle before anything has been shifted. */
+        c.pcN = 0;
+        c.pcVisualize = -1;
+        for (int i = 0; i < p.pointColorN && i < PointColor::kMaxPts; ++i) {
+            const bool vis = (i == p.pointColorVisualize);
+            if (p.pointColor[i].isInert() && !vis) continue;
+            if (vis) c.pcVisualize = c.pcN;
+            c.pc[c.pcN++] = PointColor::makeCoef(p.pointColor[i]);
+        }
+        c.pcActive = c.pcN > 0;
+        if (c.pcActive) {
+            PointColor::workingToLms(c.pcToLms);
+            PointColor::lmsToWorking(c.pcFromLms);
+        }
 
-    /* Window shape from the panel-wide Blending / Balance sliders. At their defaults this
-       returns the two base constants unchanged, so old grades render as before. */
-    ColorGrade::gradeSplitPoints(p.gradeBlending, p.gradeBalance,
-                                 kGradeShadowEnd, kGradeHighStart,
-                                 kGradeBlendRange, kGradeBalanceRange,
-                                 kGradeSplitMin, kGradeSplitMax,
-                                 c.gradeShadowEnd, c.gradeHighStart);
+        if (c.gradeActive) {
+            /* Summed push by display luminance, sqrt-spaced so the shadows (where L*
+               moves fastest) get the resolution. */
+            for (int i = 0; i < PointCoeffs::kGradeWN; ++i) {
+                const float u = float(i) / (PointCoeffs::kGradeWN - 1);
+                const float L = ColorGrade::lstarFromY(u * u);
+                float push[3] = {0.0f, 0.0f, 0.0f};
+                for (int r = 0; r < 4; ++r) {
+                    const float amp = ColorGrade::gradeWindowAmp(r, L, p.gradeBlending,
+                                                                 p.gradeBalance);
+                    for (int k = 0; k < 3; ++k) push[k] += amp * vec[r][k];
+                }
+                for (int k = 0; k < 3; ++k) c.gradePush[i][k] = push[k];
+            }
+        }
+        if (c.gradeActive || c.pcActive) {
+            /* Scene n -> display-linear v through the view transform (the chain ToImage
+               runs: DisplayPosition, then undo its sRGB transfer), and the inverse by a
+               monotone walk of the same samples. Where the view clips (v flat at 1) the
+               walk takes the FIRST n to reach it. */
+            const OutputTransform::ViewTransform view =
+                OutputTransform::ViewFromInt(p.viewTransform);
+            const int N = PointCoeffs::kGradeTfN;
+            c.gradeNMax = kToneLutMaxN;
+            for (int i = 0; i < N; ++i) {
+                const float u = float(i) / (N - 1);
+                const float n = c.gradeNMax * u * u;
+                c.gradeFwd[i] = displayToLinear(
+                    OutputTransform::DisplayPosition(std::pow(n, kInvGamma), view));
+            }
+            int j = 0;
+            for (int i = 0; i < N; ++i) {
+                const float u = float(i) / (N - 1);
+                const float v = u * u;
+                while (j < N - 2 && c.gradeFwd[j + 1] < v) ++j;
+                const float f0 = c.gradeFwd[j], f1 = c.gradeFwd[j + 1];
+                float t = (f1 > f0) ? (v - f0) / (f1 - f0) : 0.0f;
+                t = qBound(0.0f, t, 1.0f);
+                const float u0 = float(j) / (N - 1), u1 = float(j + 1) / (N - 1);
+                const float uu = u0 + (u1 - u0) * t;
+                c.gradeInv[i] = c.gradeNMax * uu * uu;
+            }
+        }
+        if (c.gradeActive) {
+            /* The push's own encoding, ProPhoto P <-> P^(1/2.2). */
+            const int N = PointCoeffs::kGradeTfN;
+            c.gradeEncMax = 1.5f;
+            c.gradeDecMax = std::pow(c.gradeEncMax, 1.0f / ColorGrade::kPushGamma) + 0.5f;
+            for (int i = 0; i < N; ++i) {
+                const float u = float(i) / (N - 1);
+                c.gradeEnc[i] = std::pow(c.gradeEncMax * u * u,
+                                         1.0f / ColorGrade::kPushGamma);
+                c.gradeDec[i] = std::pow(c.gradeDecMax * u, ColorGrade::kPushGamma);
+            }
+        }
+    }
 
     /*
         FOLD THE FRONT OF THE PIPELINE INTO ONE MATRIX.
@@ -2193,8 +2283,8 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
             /* The frame-relative term. Anchor = the frame's log-mean luminance, measured
                on the band-free DISPLAY value in display-linear light (not d0: Whites +
                clips the display flat, and one flat value must get one gain, or the
-               clipped span inverts); a tone L above it loses amount * k * (L -
-               anchor)^p stops, tapered toward white. */
+               clipped span inverts); a tone L loses amount * (k * (L - anchor)^p + o)
+               stops, scaled by the frame's range and tapered toward white. */
             double acc = 0.0;
             long long cnt = 0;
             const float lutScaleS = (PointCoeffs::kLutSize - 1) / sMax;
@@ -2214,14 +2304,31 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
                 }
             }
             const float anchor = cnt ? float(acc / double(cnt)) : -6.0f;
+            /* The frame's range above the anchor: its 99th percentile, same axis. */
+            float top = anchor;
+            if (cnt) {
+                long long run = 0;
+                for (int i = 0; i < kLumBins; ++i) {
+                    run += lumBins[size_t(i)];
+                    if (run >= cnt * 99 / 100) {
+                        top = logLin(dispAtS((i + 0.5f) * (kLumBinSMax / kLumBins)));
+                        break;
+                    }
+                }
+            }
+            const float range = qMax(0.0f, top - anchor);
+            /* Stronger the further the frame's highlights stand above its anchor (see
+               the note by kHighsAnchorRangeB). */
+            const float rangeGain = std::exp(kHighsAnchorRangeB * (range - kHighsAnchorRange0));
             const float amount = std::pow(qMin(1.0f, -shape.hi), kHighsAnchorQ);
-            const float aK = kHighsAnchorK, aP = kHighsAnchorP, aT = kHighsAnchorTaper;
+            const float aK = kHighsAnchorK * rangeGain, aP = kHighsAnchorP;
+            const float aO = kHighsAnchorO * rangeGain, aT = kHighsAnchorTaper;
             auto dropAt = [&](float L) {
                 const float d = linearToDisplay(std::exp2(qMin(0.0f, L)));
                 const float u = qMax(0.0f, L - anchor);
                 const float taper = 1.0f - aT * toneSmooth((d - kHighsAnchorTaperFrom) /
                                                            (1.0f - kHighsAnchorTaperFrom));
-                return amount * aK * std::pow(u, aP) * taper;
+                return amount * (aK * std::pow(u, aP) + aO) * taper;
             };
             for (int j = 0; j < PointCoeffs::kLutSize; ++j) {
                 const float sv = (static_cast<float>(j) / (PointCoeffs::kLutSize - 1)) * sMax;
@@ -2244,7 +2351,7 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
-               c.hslActive || c.gradeActive || c.preMatActive;
+               c.hslActive || c.gradeActive || c.pcActive || c.preMatActive;
     return coeffs;
 }
 
@@ -2281,6 +2388,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const bool doPreClamp = c.preMatClamps;
     const bool doHsl  = c.hslActive;
     const bool doGrade = c.gradeActive;
+    const bool doPoint = c.pcActive;
 
     /* Fused front matrix (input profile + gains + calibrate), local like the rest. */
     const float pm0 = c.preMat[0], pm1 = c.preMat[1], pm2 = c.preMat[2];
@@ -2302,17 +2410,34 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const bool  doVib = (vibA != 0.0f);
     const float lumG = c.lumGain;
 
-    /* Colour-grading coeffs (per-range zero-luma tint + luminance delta). Locals so the
-       grade block folds into the inner loop like the HSL constants. Tonal weights split the
-       pixel's PERCEPTUAL lightness (gamma-encoded luma), matching the slider feel. */
-    const float gt00 = c.gradeTint[0][0], gt01 = c.gradeTint[0][1], gt02 = c.gradeTint[0][2];
-    const float gt10 = c.gradeTint[1][0], gt11 = c.gradeTint[1][1], gt12 = c.gradeTint[1][2];
-    const float gt20 = c.gradeTint[2][0], gt21 = c.gradeTint[2][1], gt22 = c.gradeTint[2][2];
-    /* Range 3 is Global: no tonal window, so it is added at weight 1. */
-    const float gt30 = c.gradeTint[3][0], gt31 = c.gradeTint[3][1], gt32 = c.gradeTint[3][2];
-    const float gl0 = c.gradeLum[0], gl1 = c.gradeLum[1], gl2 = c.gradeLum[2];
-    const float gl3 = c.gradeLum[3];
-    const float gShadowEnd = c.gradeShadowEnd, gHighStart = c.gradeHighStart;
+    /* Colour grading: the tables live in c (see PointCoeffs); the two matrices and the
+       table scales are hoisted so they fold into the inner loop. lerpU reads a table
+       indexed by u in [0,1] (sqrt-spaced tables pass sqrt of their argument). */
+    const float *gFwd = c.gradeFwd, *gInv = c.gradeInv;
+    const float *gEnc = c.gradeEnc, *gDec = c.gradeDec;
+    /* A pointer, never c itself: processRows captures [=], and naming c there copies
+       the whole PointCoeffs onto a 512 KB pool-thread stack. */
+    const float (*gPush)[3] = c.gradePush;
+    const float gInvNMax = 1.0f / c.gradeNMax;
+    const float gInvEncMax = 1.0f / c.gradeEncMax;
+    const float gInvDecMax = 1.0f / c.gradeDecMax;
+    const float *gToPP = ColorGrade::kRec2020ToProPhoto;
+    const float *gFromPP = ColorGrade::kProPhotoToRec2020;
+    auto lerpU = [](const float *t, int n, float u) -> float {
+        if (u <= 0.0f) return t[0];
+        const float f = u * (n - 1);
+        if (f >= n - 1) return t[n - 1];
+        const int i = static_cast<int>(f);
+        return t[i] + (t[i + 1] - t[i]) * (f - i);
+    };
+    constexpr int gTfN = PointCoeffs::kGradeTfN;
+    constexpr int gWN  = PointCoeffs::kGradeWN;
+
+    /* Point Color: pointers again, never c (see gPush). */
+    const PointColor::Coef *pcK = c.pc;
+    const int pcN = c.pcN;
+    const int pcVis = c.pcVisualize;
+    const float *pcTo = c.pcToLms, *pcFrom = c.pcFromLms;
 
     /* Perceptual tone curve via the precomputed LUT (contrast + tone regions, see
        buildPointCoeffs). The table is indexed by the perceptual value s = (v/white)^(1/gamma)
@@ -2518,30 +2643,84 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                     px[1] = (g < 0.0f) ? 0.0f : g;
                     px[2] = (b < 0.0f) ? 0.0f : b;
                 }
+                if (doPoint) {
+                    /* Display-linear (through the view), OKLab, the summed weighted
+                       change of every point, and the CHANGE back to scene-linear -- the
+                       Color Grade route, see PointCoeffs::pcActive. */
+                    float n[3], v[3];
+                    for (int k = 0; k < 3; ++k) {
+                        n[k] = px[k] * invWhite;
+                        if (n[k] < 0.0f) n[k] = 0.0f;
+                        v[k] = lerpU(gFwd, gTfN, std::sqrt(n[k] * gInvNMax));
+                    }
+                    float lab[3];
+                    PointColor::toLab(pcTo, v, lab);
+                    const float C = std::sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
+                    const float hh = std::atan2(lab[2], lab[1]);
+                    float d[3] = {0.0f, 0.0f, 0.0f};
+                    float wVis = 0.0f;
+                    bool any = false;
+                    for (int i = 0; i < pcN; ++i) {
+                        float di[3] = {0.0f, 0.0f, 0.0f};
+                        const float wi = PointColor::accumulate(pcK[i], lab, C, hh, di);
+                        if (wi <= 0.0f) continue;
+                        any = true;
+                        if (i == pcVis) wVis = wi;
+                        for (int k = 0; k < 3; ++k) d[k] += di[k];
+                    }
+                    if (any || pcVis >= 0) {
+                        float o[3] = {lab[0] + d[0], lab[1] + d[1], lab[2] + d[2]};
+                        if (o[0] < 0.0f) o[0] = 0.0f;
+                        if (pcVis >= 0) { o[1] *= wVis; o[2] *= wVis; }
+                        float v2[3];
+                        PointColor::fromLab(pcFrom, o, v2);
+                        for (int k = 0; k < 3; ++k) {
+                            const float vk = v2[k] < 0.0f ? 0.0f
+                                                          : (v2[k] > 1.0f ? 1.0f : v2[k]);
+                            const float dn = lerpU(gInv, gTfN, std::sqrt(vk))
+                                           - lerpU(gInv, gTfN, std::sqrt(v[k]));
+                            const float out = (n[k] + dn) * white;
+                            px[k] = out < 0.0f ? 0.0f : out;
+                        }
+                    }
+                }
                 if (doGrade) {
-                    /* Split the pixel's perceptual lightness into three smooth tonal
-                       windows (shadows/mid/highlights, weights sum to 1), then apply each
-                       range's luminance gain + zero-luma chroma tint, weighted by its
-                       window -- plus the Global range, which is not tone-selective and so
-                       rides in at weight 1. Tint is in 0..1 RGB units, scaled to the
-                       working range by white. The perceptual encode pow is the only
-                       transcendental. */
-                    float Yg = kLumR * px[0] + kLumG * px[1] + kLumB * px[2];
-                    float n = Yg * invWhite;
-                    if (n < 0.0f) n = 0.0f; else if (n > 1.0f) n = 1.0f;
-                    const float L = std::pow(n, kInvGamma);          // perceptual 0..1
-                    float wS, wM, wH;
-                    ColorGrade::gradeTonalWeights(L, gShadowEnd, gHighStart, wS, wM, wH);
-                    const float lumMul = 1.0f + wS * gl0 + wM * gl1 + wH * gl2 + gl3;
-                    const float tR = (wS * gt00 + wM * gt10 + wH * gt20 + gt30) * white;
-                    const float tG = (wS * gt01 + wM * gt11 + wH * gt21 + gt31) * white;
-                    const float tB = (wS * gt02 + wM * gt12 + wH * gt22 + gt32) * white;
-                    float r = px[0] * lumMul + tR;
-                    float g = px[1] * lumMul + tG;
-                    float b = px[2] * lumMul + tB;
-                    px[0] = (r < 0.0f) ? 0.0f : r;
-                    px[1] = (g < 0.0f) ? 0.0f : g;
-                    px[2] = (b < 0.0f) ? 0.0f : b;
+                    /* Out to the display axis (per channel, through the view), find the
+                       pixel's L* -> the summed push (hue + Luminance), add it in
+                       gamma-2.2 ProPhoto, then carry the CHANGE back to scene-linear.
+                       See PointCoeffs. */
+                    float n[3], v[3];
+                    for (int k = 0; k < 3; ++k) {
+                        n[k] = px[k] * invWhite;
+                        if (n[k] < 0.0f) n[k] = 0.0f;
+                        v[k] = lerpU(gFwd, gTfN, std::sqrt(n[k] * gInvNMax));
+                    }
+                    float Y = kLumR * v[0] + kLumG * v[1] + kLumB * v[2];
+                    Y = Y < 0.0f ? 0.0f : (Y > 1.0f ? 1.0f : Y);
+                    const float fY = std::sqrt(Y) * (gWN - 1);
+                    const int   iY = fY >= gWN - 1 ? gWN - 2 : static_cast<int>(fY);
+                    const float tY = fY - iY;
+                    const float *p0 = gPush[iY], *p1 = gPush[iY + 1];
+                    float e[3];
+                    for (int k = 0; k < 3; ++k) {
+                        float P = gToPP[3 * k] * v[0] + gToPP[3 * k + 1] * v[1]
+                                + gToPP[3 * k + 2] * v[2];
+                        if (P < 0.0f) P = 0.0f;
+                        e[k] = lerpU(gEnc, gTfN, std::sqrt(P * gInvEncMax))
+                             + p0[k] + (p1[k] - p0[k]) * tY;
+                    }
+                    float P2[3];
+                    for (int k = 0; k < 3; ++k)
+                        P2[k] = lerpU(gDec, gTfN, (e[k] < 0.0f ? 0.0f : e[k]) * gInvDecMax);
+                    for (int k = 0; k < 3; ++k) {
+                        float v2 = (gFromPP[3 * k] * P2[0] + gFromPP[3 * k + 1] * P2[1]
+                                  + gFromPP[3 * k + 2] * P2[2]);
+                        v2 = v2 < 0.0f ? 0.0f : (v2 > 1.0f ? 1.0f : v2);
+                        const float dn = lerpU(gInv, gTfN, std::sqrt(v2))
+                                       - lerpU(gInv, gTfN, std::sqrt(v[k]));
+                        const float o = (n[k] + dn) * white;
+                        px[k] = o < 0.0f ? 0.0f : o;
+                    }
                 }
             }
         }

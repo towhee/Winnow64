@@ -101,6 +101,9 @@ winnow_add_unit_test(tst_geo unit/tst_geo.cpp ${CMAKE_SOURCE_DIR}/Utilities/geo.
 winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
 # tst_calibrate tests Develop/calibrate.h (header-only, same as colorgrade).
 winnow_add_unit_test(tst_calibrate unit/tst_calibrate.cpp)
+# tst_pointcolor tests Develop/pointcolor.h + its EditParams / sidecar plumbing
+# (header-only; Qt Core for the shared string encoding and the JSON round trip).
+winnow_add_unit_test(tst_pointcolor unit/tst_pointcolor.cpp)
 # tst_tonecurve tests Develop/tonecurve.h (header-only; needs Qt Core only, for the
 # QString encoding the sidecar and presets share).
 winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)

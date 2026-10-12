@@ -12,6 +12,7 @@
 #include "Dialogs/savedeveloppresetdlg.h"    // PresetGroup: the checklist model
 #include "Develop/workingimage.h"
 #include "Develop/Properties/colorgradewheel.h"
+#include "Develop/Properties/pointcolorwidget.h"
 #include "Develop/Properties/primarywheel.h"
 #include "Develop/Properties/colorrangewheel.h"
 #include "Develop/Properties/curveeditor.h"
@@ -626,6 +627,14 @@ public slots:
        switches Point/Parametric, and the panel collapses or the dock hides -- so
        updateCurvePickState() re-evaluates them and emits only on a CHANGE. It is called
        from every place any of the three can move (see the definition). */
+    /* ---- Point Color eyedropper -------------------------------------------------------
+       One-shot, like the WB dropper. MW reads the clicked pixel off developShownImage
+       (what the user is looking at) and hands it to addPointColorFromPixel. */
+    void setPointColorPickActive(bool on);
+    void cancelPointColorPick() { setPointColorPickActive(false); }
+    bool isPointColorPickActive() const { return pointColorPickActive; }
+    void addPointColorFromPixel(float r, float g, float b);   // sRGB-encoded 0..1
+
     bool wantsCurvePointPick() const;
     void updateCurvePickState();
     void addCurvePointFromPixel(int r, int g, int b);
@@ -710,6 +719,9 @@ signals:
        this mode is NOT one-shot -- it stays armed until one of its conditions goes. */
     void curvePickBegin();
     void curvePickEnd();
+    /* Point Color eyedropper: arm/disarm ImageView's one-shot "click a colour" mode. */
+    void pointColorPickBegin();
+    void pointColorPickEnd();
     /* The user dragged inside the preview: move the sample point by this many image
        pixels. Resolved by MW, which owns the image's orientation. */
     void detailPointNudged(int dx, int dy);
@@ -796,6 +808,25 @@ private:
     void addColor();
     void addCalibrate();
     void addColorGrade();
+    void addPointColor();
+    /* The section bodies, so each can sit under its own header (the separate layout) or
+       under the combined Color panel's. */
+    void addColorGradeBody(const QModelIndex &parIdx, const QString &parent);
+    void addPointColorBody(const QModelIndex &parIdx, const QString &parent);
+    void addCalibrateBody(const QModelIndex &parIdx, const QString &parent);
+    /* ---- The combined Color panel (2026-10-12, pending sign-off) -------------------
+       ONE "Color" section whose Tone / Hue / RGB radio buttons show the Color Grade,
+       Point Color or Calibrate rows -- only the selected body is built, and a switch
+       rebuilds the tree. combinedColorPanel picks this layout or the separate sections
+       (QSettings "Develop/combinedColorPanel"); the separate one is the fallback until
+       the user signs off, then goes. Its header is PV_ColorPanel, which stands for all
+       three groups (eye, Reset, the edited star). */
+    void addColorPanel();
+    bool combinedColorPanel = true;
+    int  colorPanelMode = 0;               // 0 Tone, 1 Hue, 2 RGB
+    QPointer<QWidget> colorPanelModesRow;  // the radios' row, centred in the panel
+    int  colorPanelModeGroup() const;      // the PV_* the selected mode shows
+    void setCombinedColorPanel(bool on);
     void addDetail();
     void addEffects();
 
@@ -916,7 +947,7 @@ private:
        table, so this array must be at least as long as that table -- grow both together.
        Lets updateSectionHeaderCaptions skip the model search when nothing flipped -- it
        runs on every params change. */
-    int hdrStar[7] = {-1, -1, -1, -1, -1, -1, -1};
+    int hdrStar[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
 
     /* ---- Calibrate (RGB primaries) ---------------------------------------------------
        Same select-then-adjust grammar as Color Grade: R/G/B checkboxes pick which
@@ -973,14 +1004,32 @@ private:
     /* ---- Color Grade (colour grading) ------------------------------------------------
        The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
        editor; it edits the ONE range the exclusive radio buttons select (gradeActiveMask,
-       one bit of 0x1 shadow, 0x2 mid, 0x4 high, 0x8 global). The Luminance slider writes
-       the same range. Recreated on every tree rebuild. */
+       one bit of 0x1 shadow, 0x2 mid, 0x4 high, 0x8 global). The Hue / Saturation /
+       Luminance sliders write the same range. Recreated on every tree rebuild. */
     QPointer<ColorGradeWheel> colorGradeWheel;
     int  gradeActiveMask = 0x2;             // midtones selected by default
     void onGradeWheelChanged(bool commit);  // wheel drag -> active-scope grade params
     void refreshColorGradeRow();            // push stored grade to the wheel + Lum slider
     void setGradeLum(float lum);            // write Lum to every active range
+    void setGradeHueSat(bool isHue, float v);  // Hue/Sat slider -> the active range
     int  firstActiveGradeRange() const;     // lowest checked range (drives Lum slider)
+
+    /* ---- Point Color ----------------------------------------------------------------
+       PointColorWidget (dropper, swatches, field, before|after) is an embedded index
+       widget like the wheels, recreated on every tree rebuild; the sliders under it edit
+       the ONE point it has selected (pointColorSel, UI state like gradeActiveMask). The
+       eyedropper is one-shot like the WB dropper: pointColorPickBegin/End arm ImageView,
+       a click comes back through MW::onPointColorPicked as the DISPLAYED pixel, and
+       addPointColorFromPixel appends the sample. "Visualize Range" (pointColorVisualize)
+       is view state: stackJob() writes it into the RENDER JOB only. */
+    QPointer<PointColorWidget> pointColorWidget;
+    int  pointColorSel = -1;
+    bool pointColorPickActive = false;
+    bool pointColorVisualize = false;
+    void refreshPointColorRow();           // stored points -> widget + the sliders
+    void onPointColorShiftsDragged(float hue, float sat, float lum, bool commit);
+    void deletePointColor(int index);      // -1 = all
+    void setPointColorSlider(const QString &key, float v);
 
     /* ---- Color Range mask wheel ------------------------------------------------------
        Embedded index widget (like colorGradeWheel) shown above the Color Range mask's
@@ -1039,7 +1088,8 @@ private:
        Codes are append-only: hdrStar is indexed by them. */
     enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
                         PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4,
-                        PV_Curves = 5, PV_Detail = 6 };
+                        PV_Curves = 5, PV_Detail = 6, PV_PointColor = 7,
+                        PV_ColorPanel = 8 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     /* The section header's trailing menu button (the vertical ellipsis), built right after
        its eye so every header in the dock ends with the same pair -- eye, then menu. It
@@ -1059,7 +1109,8 @@ private:
     BarBtn *basicEyeBtn = nullptr, *curvesEyeBtn = nullptr,
            *colorEyeBtn = nullptr, *colorGradeEyeBtn = nullptr,
            *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr,
-           *detailEyeBtn = nullptr;
+           *detailEyeBtn = nullptr, *pointColorEyeBtn = nullptr,
+           *colorPanelEyeBtn = nullptr;
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 

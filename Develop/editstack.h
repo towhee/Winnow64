@@ -101,6 +101,7 @@ struct EditScope {
     bool showColor      = true;
     bool showCalibrate  = true;
     bool showColorGrade = true;
+    bool showPointColor = true;
     bool showDetail     = true;
     bool showEffects    = true;
 };
@@ -115,6 +116,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
         EditParams::resetGroup(p, EditParams::Group::Color);
         EditParams::resetGroup(p, EditParams::Group::Calibrate);
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+        EditParams::resetGroup(p, EditParams::Group::PointColor);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
         if (l.params.removeCA >= 0) p.removeCA = 0;     // see the showEffects fold
@@ -125,6 +127,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     if (!l.showColor)      EditParams::resetGroup(p, EditParams::Group::Color);
     if (!l.showCalibrate)  EditParams::resetGroup(p, EditParams::Group::Calibrate);
     if (!l.showColorGrade) EditParams::resetGroup(p, EditParams::Group::ColorGrade);
+    if (!l.showPointColor) EditParams::resetGroup(p, EditParams::Group::PointColor);
     if (!l.showDetail)     EditParams::resetGroup(p, EditParams::Group::Detail);
     if (!l.showEffects) {
         EditParams::resetGroup(p, EditParams::Group::Effects);
@@ -214,6 +217,7 @@ struct EditStack {
                               !l.showScope || !l.showBasic || !l.showCurves ||
                               !l.showColor ||
                               !l.showCalibrate || !l.showColorGrade ||
+                              !l.showPointColor ||
                               !l.showDetail || !l.showEffects))
                 return false;
         return true;
@@ -257,6 +261,12 @@ struct EditStack {
         o["saturation"]      = p.saturation;
         o["vibrance"]        = p.vibrance;
         o["luminance"]       = p.luminance;
+        /* Point Color: one key holding PointColor's encoding, written ONLY when there are
+           points, so a sidecar (and every recipe key hashed from it) written before the
+           panel existed is byte-identical to the one written now. pointColorVisualize
+           is view state and is deliberately absent. */
+        if (p.pointColorN > 0)
+            o["pointColors"] = PointColor::encode(p.pointColorN, p.pointColor);
         o["calRedHue"]       = p.calRedHue;
         o["calRedSat"]       = p.calRedSat;
         o["calGreenHue"]     = p.calGreenHue;
@@ -338,6 +348,9 @@ struct EditStack {
         p.saturation      = static_cast<float>(o.value("saturation").toDouble(p.saturation));
         p.vibrance        = static_cast<float>(o.value("vibrance").toDouble(p.vibrance));
         p.luminance       = static_cast<float>(o.value("luminance").toDouble(p.luminance));
+        if (o.contains("pointColors"))
+            PointColor::decode(o.value("pointColors").toString(), p.pointColorN,
+                               p.pointColor);
         p.calRedHue       = static_cast<float>(o.value("calRedHue").toDouble(p.calRedHue));
         p.calRedSat       = static_cast<float>(o.value("calRedSat").toDouble(p.calRedSat));
         p.calGreenHue     = static_cast<float>(o.value("calGreenHue").toDouble(p.calGreenHue));
@@ -400,6 +413,7 @@ struct EditStack {
             if (!l.showColor)      lo["showColor"]      = false;
             if (!l.showCalibrate)  lo["showCalibrate"]  = false;
             if (!l.showColorGrade) lo["showColorGrade"] = false;
+            if (!l.showPointColor) lo["showPointColor"] = false;
             if (!l.showDetail)     lo["showDetail"]     = false;
             if (!l.showEffects)    lo["showEffects"]    = false;
             QJsonArray marr;
@@ -499,6 +513,7 @@ struct EditStack {
                first, then let the current one win if both are present. */
             l.showColorGrade = lo.value("showColorMix").toBool(l.showColorGrade);
             l.showColorGrade = lo.value("showColorGrade").toBool(l.showColorGrade);
+            l.showPointColor = lo.value("showPointColor").toBool(l.showPointColor);
             l.showDetail = lo.value("showDetail").toBool(l.showDetail);
             l.showEffects = lo.value("showEffects").toBool(l.showEffects);
             const QJsonArray marr = lo.value("masks").toArray();
@@ -659,6 +674,9 @@ struct EditStack {
             if (clampF(*sats[i], 0.0f, 1.0f,   0.0f)) ++fixed;
             if (clampF(*lums[i], -100.0f, 100.0f, 0.0f)) ++fixed;
         }
+        /* Point Color: clamp every live point (a preset or a history snapshot reaches
+           here without passing through decode) and keep the tail at defaults. */
+        if (PointColor::sanitize(p.pointColorN, p.pointColor)) ++fixed;
         /* Window shape: defaults are 50 / 0, NOT 0 / 0 -- restoring a bad blending to 0
            would silently re-shape every range. */
         if (clampF(p.gradeBlending, 0.0f, 100.0f, def.gradeBlending)) ++fixed;
