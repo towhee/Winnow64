@@ -118,6 +118,10 @@ public:
         filters admit, so the next one can be clicked. GUI thread. */
     bool acceptsRowIgnoring(int sourceRow, int ignoreColumn) const;
 
+    /*  The compiled filters as they stand (see the private section below). Flush a
+        pending compile first when the answer must match the tree. */
+    FilterPredicatePtr filterPredicate() const;
+
 public slots:
     void filterChange(QString src = "");
     void suspend(bool suspendFiltering, QString src = "");
@@ -165,8 +169,8 @@ private:
     /*  The compiled filters, published as a shared_ptr<const> exactly as
         ProxySnapshot is in modelsync.h: filterAcceptsRow takes its own
         reference and evaluates that, so the GUI thread can swap in a rebuilt
-        predicate without pulling items out from under a row being tested. */
-    FilterPredicatePtr filterPredicate() const;
+        predicate without pulling items out from under a row being tested.
+        filterPredicate() itself is public (BuildFilters' faceted counts). */
     mutable QMutex mPredicateMutex;
     FilterPredicatePtr mPredicate;
 

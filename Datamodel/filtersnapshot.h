@@ -1,6 +1,7 @@
 #ifndef FILTERSNAPSHOT_H
 #define FILTERSNAPSHOT_H
 
+#include <QHash>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -110,10 +111,25 @@ struct FilterSnapshot {
     QVector<int> extraColumns;
     QVector<QTreeWidgetItem *> extraItems;
 
+    /*  FACETED FILTERED COUNTS. rescue[row] is the column of the ONE category that keeps
+        this row out of the proxy (FilterPredicate::soleRejectorColumn), or -1; empty when
+        nothing is filtered or a load is running. facetColumn maps each category header to
+        the column its checks compare -- taken from the header's ColumnRole on the GUI
+        thread, because it is not always the snapshot slot's column (Folders compares
+        G::FolderPathsAllColumn, counts G::FolderPathColumn). A category's filtered count
+        is then over countsFor(row, its facetColumn): the rows every OTHER category
+        admits. */
+    QVector<int> rescue;
+    QHash<const QTreeWidgetItem *, int> facetColumn;
+
     int rowCount() const { return values ? values->rows : 0; }
     bool isEmpty() const { return rowCount() == 0; }
     const FilterSnapshotRow &row(int i) const { return values->row(i); }
     bool admitted(int i) const { return i < inProxy.size() && inProxy.at(i); }
+    bool countsFor(int i, int column) const
+    {
+        return admitted(i) || (column >= 0 && rescue.value(i, -1) == column);
+    }
 };
 
 #endif // FILTERSNAPSHOT_H

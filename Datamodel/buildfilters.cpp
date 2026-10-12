@@ -1,4 +1,5 @@
 #include "buildfilters.h"
+#include "Utilities/versionkey.h"
 
 /*
     Classes involved in filtering:
@@ -725,7 +726,102 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
             }
         }
     }
+    addFacets(snap);
     return out;
+}
+
+void BuildFilters::addFacets(FilterSnapshot &snap) const
+{
+/*
+    FACETED FILTERED COUNTS. GUI thread, from makeSnapshot.
+
+    The Avail column counts each category over the rows every OTHER category admits:
+    checks within a category are OR-ed, so checking Rating 5 must leave Rating 4 showing
+    what checking it would add, while every other category narrows. A row outside the
+    proxy belongs to category C's count exactly when C is the only category rejecting
+    it (FilterPredicate::soleRejectorColumn), so ONE predicate evaluation per rejected
+    row answers every category -- recorded as snap.rescue[row] = that category's column.
+
+    The rows that would stay hidden whatever the checks are never rescued: the hidden
+    raw half of a raw+jpg pair and a version in a collapsed group. The latter skips
+    SortFilter's "unless its master is filtered out" refinement, which is a per-row
+    master lookup for an edge the count can afford to miss.
+
+    The cells are read in one RowStore pass, EditRole, which is what filterAcceptsRow
+    compares (DataModel::data serves covered columns straight from the store). A
+    column the store does not cover is read through the model afterwards, for the
+    rejected rows only.
+*/
+    // the column each category header's checks compare -- the worker cannot read it
+    for (const Sink &sk : sinks(snap))
+        if (sk.item) snap.facetColumn.insert(sk.item, sk.item->data(0, G::ColumnRole).toInt());
+    if (filters->keywords)
+        snap.facetColumn.insert(filters->keywords,
+                                filters->keywords->data(0, G::ColumnRole).toInt());
+
+    if (dm == nullptr || dm->sf == nullptr) return;
+    if (G::isModifyingDatamodel || G::isLoadRunning) return;   // proxy admits everything
+    const int rows = snap.inProxy.size();
+    if (snap.proxyRows >= rows) return;                     // nothing rejected
+
+    dm->sf->flushPendingCompile();
+    const FilterPredicatePtr pred = dm->sf->filterPredicate();
+    if (!pred || pred->acceptsEverything()) return;
+
+    // every column a filtering category reads
+    QSet<int> columns;
+    for (const FilterCategory &c : pred->categories) {
+        if (!c.isFiltering()) continue;
+        columns.insert(c.column);
+        columns.unite(c.exprColumns);
+    }
+    QVector<QPair<int, int>> cells;
+    QHash<int, int> cellOf;             // column -> index into cells / vals
+    QVector<int> offStore;              // columns read through the model
+    for (int column : std::as_const(columns)) {
+        if (column < 0) continue;
+        if (RowStore::covers(column, Qt::EditRole)) {
+            cellOf.insert(column, cells.size());
+            cells.append({column, Qt::EditRole});
+        }
+        else offStore.append(column);
+    }
+    const int kVersionId = cells.size();
+    cells.append({G::PathColumn, G::VersionIdRole});
+    const int kKey = cells.size();
+    cells.append({G::PathColumn, G::KeyRole});
+
+    const bool showAll = dm->sf->showAllVersions();
+    snap.rescue.fill(-1, rows);
+    QVector<int> pending;               // rejected rows still to judge (off-store columns)
+    auto judge = [&](int row, const std::function<QVariant(int)> &valueFor) {
+        const int c = pred->soleRejectorColumn(valueFor);
+        if (c >= 0) snap.rescue[row] = c;
+    };
+    dm->rowStore.forEachRow(cells, [&](int row, const QVariant *val) {
+        if (row >= rows || snap.inProxy.at(row)) return;
+        if (row < snap.rowCount() && snap.row(row).hiddenRaw) return;
+        if (!showAll && val[kVersionId].toInt() > 0
+            && !dm->sf->versionsExpanded(VersionKey::sourceOf(val[kKey].toString())))
+            return;
+        if (!offStore.isEmpty()) { pending.append(row); return; }
+        judge(row, [&](int column) {
+            const int i = cellOf.value(column, -1);
+            return i >= 0 ? val[i] : QVariant();
+        });
+    });
+
+    // outside forEachRow: its callback must not call back into the store
+    if (pending.isEmpty()) return;
+    QVector<QVariant> val(cells.size());
+    for (int row : std::as_const(pending)) {
+        dm->rowStore.readRow(row, cells, val.data());
+        judge(row, [&](int column) {
+            const int i = cellOf.value(column, -1);
+            if (i >= 0) return val.at(i);
+            return dm->index(row, column).data(Qt::EditRole);
+        });
+    }
 }
 
 /*  Build a snapshot and hand it to the next run(). GUI thread only. */
@@ -737,19 +833,20 @@ void BuildFilters::publishSnapshot()
 }
 
 QMap<QString,int> BuildFilters::countSlot(const FilterSnapshot &snap, int slot,
-                                         bool filtered) const
+                                         bool filtered, int facetColumn) const
 {
 /*
     Count one category over the snapshot. "filtered" counts the rows the proxy
-    admits; unfiltered counts every row except the hidden raw half of a
-    raw+jpg pair.
+    admits plus, with facetColumn (the category's own column), the rows only that
+    category rejects -- see addFacets; unfiltered counts every row except the
+    hidden raw half of a raw+jpg pair.
 */
     QMap<QString,int> map;
     const int n = snap.rowCount();
     for (int i = 0; i < n; ++i) {
         if (abort) return map;
         const FilterSnapshotRow &r = snap.row(i);
-        if (filtered ? !snap.admitted(i) : r.hiddenRaw) continue;
+        if (filtered ? !snap.countsFor(i, facetColumn) : r.hiddenRaw) continue;
         // past the fixed slots: a session category's value (FilterSnapshotRow::extra)
         if (slot >= FilterCat::SlotCount) map[r.extra.value(slot - FilterCat::SlotCount)]++;
         else map[r.v[slot]]++;
@@ -758,14 +855,14 @@ QMap<QString,int> BuildFilters::countSlot(const FilterSnapshot &snap, int slot,
 }
 
 QMap<QString,int> BuildFilters::countKeywords(const FilterSnapshot &snap,
-                                             bool filtered) const
+                                             bool filtered, int facetColumn) const
 {
     QMap<QString,int> map;
     const int n = snap.rowCount();
     for (int i = 0; i < n; ++i) {
         if (abort) return map;
         const FilterSnapshotRow &r = snap.row(i);
-        if (filtered ? !snap.admitted(i) : r.hiddenRaw) continue;
+        if (filtered ? !snap.countsFor(i, facetColumn) : r.hiddenRaw) continue;
         for (const QString &k : r.keywords) map[k]++;
     }
     return map;
@@ -820,17 +917,21 @@ void BuildFilters::updateFilteredCounts(const FilterSnapshot &snap, FilterOps &o
 */
     if (debugBuildFilters) qDebug() << "BuildFilters::updateFilteredCounts";
 
-    ops.append({FilterOp::SearchCount, countSlot(snap, FilterCat::Search, true),
+    ops.append({FilterOp::SearchCount,
+                countSlot(snap, FilterCat::Search, true,
+                          snap.facetColumn.value(filters->search, -1)),
                 nullptr, true, QString()});
 
     for (const Sink &s : sinks(snap)) {
         if (abort) return;
         if (s.slot == FilterCat::Search) continue;   // handled above
-        ops.append({FilterOp::FilteredCount, countSlot(snap, s.slot, true),
+        ops.append({FilterOp::FilteredCount,
+                    countSlot(snap, s.slot, true, snap.facetColumn.value(s.item, -1)),
                     s.item, false, QString()});
     }
     if (abort) return;
-    ops.append({FilterOp::FilteredCount, countKeywords(snap, true),
+    ops.append({FilterOp::FilteredCount,
+                countKeywords(snap, true, snap.facetColumn.value(filters->keywords, -1)),
                 filters->keywords, false, QString()});
 
     ops.append({FilterOp::Update, {}, nullptr, false, QString()});
@@ -884,7 +985,9 @@ void BuildFilters::updateCategoryItems(const FilterSnapshot &snap, FilterOps &op
         ops.append({FilterOp::CategoryItems, countKeywords(snap, false),
                     filters->keywords, false, QString()});
         if (abort) return;
-        ops.append({FilterOp::FilteredCount, countKeywords(snap, true),
+        ops.append({FilterOp::FilteredCount,
+                    countKeywords(snap, true,
+                                  snap.facetColumn.value(filters->keywords, -1)),
                     filters->keywords, false, QString()});
         return;
     case Category::MissingThumbEdit:
@@ -907,7 +1010,8 @@ void BuildFilters::updateCategoryItems(const FilterSnapshot &snap, FilterOps &op
     if (abort) return;
 
     // update filtered counts for category
-    ops.append({FilterOp::FilteredCount, countSlot(snap, slot, true),
+    ops.append({FilterOp::FilteredCount,
+                countSlot(snap, slot, true, snap.facetColumn.value(cat, -1)),
                 cat, false, QString()});
 
     ops.append({FilterOp::MenuUpdate, {}, nullptr, false,

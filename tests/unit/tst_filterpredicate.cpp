@@ -45,6 +45,7 @@ private slots:
     void queryExpressionsCombineLikeItems();
     void mapPinIsBoolAndCanBeIgnored();
     void overlappingPlacesAreOrAndExcludable();
+    void soleRejectorDrivesFacetedCounts();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -88,6 +89,44 @@ void tst_filterpredicate::mapPinIsBoolAndCanBeIgnored()
     QVERIFY(!ex.accepts(fetch(inPin)));
     QVERIFY(ex.accepts(fetch(outPin)));
     QVERIFY(ex.accepts(fetch(inPin), G::MapPinColumn));
+}
+
+void tst_filterpredicate::soleRejectorDrivesFacetedCounts()
+{
+    /*  The Filters panel counts each category over the rows every OTHER category admits
+        (BuildFilters::addFacets), so checking Rating 5 leaves Rating 4 showing what
+        checking it would add. A row outside the proxy counts for a category exactly when
+        that category alone rejects it. */
+    FilterPredicate p;
+    p.categories << cat(G::RatingColumn, { "5" }) << cat(G::TypeColumn, { "NEF" });
+
+    Row match  { { G::RatingColumn, "5" }, { G::TypeColumn, "NEF" } };
+    Row rated4 { { G::RatingColumn, "4" }, { G::TypeColumn, "NEF" } };
+    Row jpg    { { G::RatingColumn, "5" }, { G::TypeColumn, "JPG" } };
+    Row both   { { G::RatingColumn, "4" }, { G::TypeColumn, "JPG" } };
+    QCOMPARE(p.soleRejectorColumn(fetch(match)), -1);
+    QCOMPARE(p.soleRejectorColumn(fetch(rated4)), int(G::RatingColumn));
+    QCOMPARE(p.soleRejectorColumn(fetch(jpg)), int(G::TypeColumn));
+    QCOMPARE(p.soleRejectorColumn(fetch(both)), -2);
+
+    // an exclusion is a rejection by its own category, and set aside with it
+    FilterPredicate ex;
+    ex.categories << cat(G::RatingColumn, {}, { "4" });
+    QCOMPARE(ex.soleRejectorColumn(fetch(rated4)), int(G::RatingColumn));
+
+    /*  Keywords in ALL mode AND their checks, so another check narrows: the category is
+        not set aside, and a row it alone rejects is rescued by nothing. */
+    FilterCategory kw = cat(G::KeywordsAllColumn, { "A", "B" });
+    kw.matchAll = true;
+    FilterPredicate all;
+    all.categories << kw;
+    Row onlyA { { G::KeywordsAllColumn, QStringList{ "A" } } };
+    QCOMPARE(all.soleRejectorColumn(fetch(onlyA)), -2);
+    kw.matchAll = false;
+    FilterPredicate any;
+    any.categories << kw << cat(G::RatingColumn, { "5" });
+    Row noKw { { G::KeywordsAllColumn, QStringList{ "C" } }, { G::RatingColumn, "5" } };
+    QCOMPARE(any.soleRejectorColumn(fetch(noKw)), int(G::KeywordsAllColumn));
 }
 
 void tst_filterpredicate::overlappingPlacesAreOrAndExcludable()

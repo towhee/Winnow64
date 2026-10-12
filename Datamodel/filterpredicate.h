@@ -168,6 +168,71 @@ struct FilterPredicate
         return dataValue == filterValue;
     }
 
+    /*  CAN THIS CATEGORY BE SET ASIDE when counting its own items (see
+        soleRejectorColumn)? Not when its checks are AND-ed (matchAll), because then
+        another check narrows the result and the filtered count is already the right
+        number; and not when it has no column of its own (Queries) to be counted by. */
+    static bool ignorable(const FilterCategory &cat)
+    {
+        return !cat.matchAll && cat.column >= 0;
+    }
+
+    /*  ONE CATEGORY'S VERDICT on a row: does it admit it? The body of accepts(), per
+        category, so accepts() and soleRejectorColumn() cannot disagree. */
+    template <typename Fetch>
+    static bool categoryAccepts(const FilterCategory &cat, Fetch &&valueFor)
+    {
+        /*  EXPRESSIONS FIRST: an excluded one rejects outright, as a value exclusion
+            does; an included one that matches satisfies the category's OR. A
+            category holding only expressions never reads its own column. */
+        bool exprHit = false;
+        if (!cat.includeExprs.isEmpty() || !cat.excludeExprs.isEmpty()) {
+            const std::function<QVariant(int)> fn = valueFor;
+            for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return false;
+            for (const auto &e : cat.includeExprs)
+                if (e->matches(fn)) { exprHit = true; break; }
+            if (cat.includes.isEmpty() && cat.excludes.isEmpty() && !cat.includeAll)
+                return cat.includeExprs.isEmpty() || exprHit;
+        }
+
+        const QVariant dataValue = valueFor(cat.column);
+
+        if (cat.compareAsText) {
+            const QString text = dataValue.toString().trimmed();
+            for (const QVariant &ex : cat.excludes)
+                if (text == ex.toString().trimmed()) return false;
+            if (cat.includes.isEmpty() || exprHit) return true;
+            for (const QVariant &in : cat.includes)
+                if (text == in.toString().trimmed()) return true;
+            return false;
+        }
+
+        /*  Exclusions first and answered immediately: no other category can
+            readmit a row the user has said to leave out. */
+        for (const QVariant &ex : cat.excludes)
+            if (excludeHit(dataValue, ex)) return false;
+
+        /*  includeAll matches without comparing; an empty include list is
+            the category not narrowing anything -- the old
+            isCategoryUnchecked, which an exclusion deliberately did not
+            clear. */
+        if (cat.includeAll || exprHit) return true;
+        if (cat.includes.isEmpty()) {
+            // expressions were included and none matched
+            return cat.includeExprs.isEmpty();
+        }
+
+        if (cat.matchAll) {
+            for (const QVariant &in : cat.includes)
+                if (!includeHit(dataValue, in)) return false;   // missing one
+            return true;
+        }
+
+        for (const QVariant &in : cat.includes)
+            if (includeHit(dataValue, in)) return true;
+        return false;                           // no match in category
+    }
+
     /*  IS THIS ROW VISIBLE. Takes a callable rather than a model so the whole
         decision can be tested without one -- valueFor(column) returns what
         data(Qt::EditRole) would return for that column of the row.
@@ -186,64 +251,32 @@ struct FilterPredicate
         for (const FilterCategory &cat : categories) {
             if (!cat.isFiltering()) continue;
             if (ignoreColumn >= 0 && cat.column == ignoreColumn) continue;
-
-            /*  EXPRESSIONS FIRST: an excluded one rejects outright, as a value exclusion
-                does; an included one that matches satisfies the category's OR. A
-                category holding only expressions never reads its own column. */
-            bool exprHit = false;
-            if (!cat.includeExprs.isEmpty() || !cat.excludeExprs.isEmpty()) {
-                const std::function<QVariant(int)> fn = valueFor;
-                for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return false;
-                for (const auto &e : cat.includeExprs)
-                    if (e->matches(fn)) { exprHit = true; break; }
-                if (cat.includes.isEmpty() && cat.excludes.isEmpty() && !cat.includeAll) {
-                    if (!cat.includeExprs.isEmpty() && !exprHit) return false;
-                    continue;
-                }
-            }
-
-            const QVariant dataValue = valueFor(cat.column);
-
-            if (cat.compareAsText) {
-                const QString text = dataValue.toString().trimmed();
-                for (const QVariant &ex : cat.excludes)
-                    if (text == ex.toString().trimmed()) return false;
-                if (cat.includes.isEmpty() || exprHit) continue;
-                bool isMatch = false;
-                for (const QVariant &in : cat.includes)
-                    if (text == in.toString().trimmed()) { isMatch = true; break; }
-                if (!isMatch) return false;
-                continue;
-            }
-
-            /*  Exclusions first and answered immediately: no other category can
-                readmit a row the user has said to leave out. */
-            for (const QVariant &ex : cat.excludes)
-                if (excludeHit(dataValue, ex)) return false;
-
-            /*  includeAll matches without comparing; an empty include list is
-                the category not narrowing anything -- the old
-                isCategoryUnchecked, which an exclusion deliberately did not
-                clear. */
-            if (cat.includeAll || exprHit) continue;
-            if (cat.includes.isEmpty()) {
-                // expressions were included and none matched
-                if (!cat.includeExprs.isEmpty()) return false;
-                continue;
-            }
-
-            if (cat.matchAll) {
-                for (const QVariant &in : cat.includes)
-                    if (!includeHit(dataValue, in)) return false;   // missing one
-                continue;
-            }
-
-            bool isMatch = false;
-            for (const QVariant &in : cat.includes)
-                if (includeHit(dataValue, in)) { isMatch = true; break; }
-            if (!isMatch) return false;         // no match in category
+            if (!categoryAccepts(cat, valueFor)) return false;
         }
         return true;
+    }
+
+    /*  WHICH CATEGORY ALONE KEEPS THIS ROW OUT. The Filters panel's Avail column is
+        FACETED: an item's count is taken over the rows every OTHER category admits,
+        because checks within a category are OR-ed -- checking Rating 5 must not zero
+        Rating 4, which checking would add. A row outside the proxy counts toward
+        category C exactly when C is the only category rejecting it, so one evaluation
+        per rejected row answers every category at once (BuildFilters::makeSnapshot).
+
+        Returns -1 when the row is accepted, the rejecting category's column when
+        exactly one rejects it and that one is ignorable(), and -2 otherwise (two or
+        more reject, or the one that does cannot be set aside). */
+    template <typename Fetch>
+    int soleRejectorColumn(Fetch &&valueFor) const
+    {
+        int sole = -1;
+        for (const FilterCategory &cat : categories) {
+            if (!cat.isFiltering()) continue;
+            if (categoryAccepts(cat, valueFor)) continue;
+            if (sole != -1 || !ignorable(cat)) return -2;
+            sole = cat.column;
+        }
+        return sole;
     }
 };
 

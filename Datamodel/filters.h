@@ -537,7 +537,7 @@ public:
     bool checkKeywordItem(const QString &path);
 
 
-    /*  What the panel is showing for one keyword: the Filter column (filtered = true) or
+    /*  What the panel is showing for one keyword: the Avail column (filtered = true) or
         the All column. -1 when the keyword has no item, which is deliberately distinct
         from 0. */
     int keywordItemCount(const QString &path, bool filtered = false) const;
@@ -629,7 +629,7 @@ private:
     QAction *addUnfiledAction(QMenu &menu);
     /*  "Match all checked keywords", appended beside the unfiled toggle. */
     QAction *addKeywordModeAction(QMenu &menu);
-    /*  The any/all label in the Keywords header's Filter column: dimmed while fewer than
+    /*  The any/all label in the Keywords header's Avail column: dimmed while fewer than
         two keywords are included, because the mode changes nothing until then. Called
         from setEachCatTextColor, which runs after every build and filter change. */
     void updateKeywordModeLabel();

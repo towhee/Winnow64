@@ -161,9 +161,9 @@ private:
     void publishSnapshot();
 
     QMap<QString,int> countSlot(const FilterSnapshot &snap, int slot,
-                                bool filtered) const;
+                                bool filtered, int facetColumn = -1) const;
     QMap<QString,int> countKeywords(const FilterSnapshot &snap,
-                                    bool filtered) const;
+                                    bool filtered, int facetColumn = -1) const;
 
     /*  dispatchOps hands the recorded ops to the GUI thread -- inline when the
         caller already IS the GUI thread (updateCategory's runSync path), else
@@ -180,6 +180,9 @@ private:
         const char *name;
     };
     QVector<Sink> sinks(const FilterSnapshot &snap) const;
+    /*  Faceted filtered counts: which category alone rejects each row outside the
+        proxy, and each category header's column. GUI thread, from makeSnapshot. */
+    void addFacets(FilterSnapshot &snap) const;
     void time(QString msg);
     void setIdle();
     void setBusy();

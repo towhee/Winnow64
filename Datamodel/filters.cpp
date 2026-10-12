@@ -125,10 +125,15 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setColumnWidth(2, 50);  // number of proxy rows containing the value (filtered)
     setColumnWidth(3, 50);  // number of datamodel rows containing the value
 
-    // Headerlabel set in search header: {"", "Value", "Filter", "Raw+Jpg", "All"}
+    // Headerlabel set in search header: {"", "Value", "Avail", "Raw+Jpg", "All"}
     header()->setDefaultAlignment(Qt::AlignCenter);
-    QStringList hdrLabels = {"", "Value", "Filter", "All"};
+    QStringList hdrLabels = {"", "Value", "Avail", "All"};
     this->setHeaderLabels(hdrLabels);
+    /*  "Avail", not "Filter": the count is FACETED -- taken over the rows every OTHER
+        category admits (BuildFilters::addFacets) -- so it is what checking the item
+        would make available, not what is showing. */
+    headerItem()->setToolTip(2, "Images available for this item, based on the current "
+                                "filtration.");
     /* how to add pixmap to a header
     model()->setHeaderData(0, Qt::Horizontal, QVariant::fromValue(QIcon(":/images/branch-closed-winnow.png")), Qt::DecorationRole);
     */
@@ -1718,7 +1723,7 @@ void Filters::setShowUnfiledOnly(bool showUnfiled)
 int Filters::keywordItemCount(const QString &path, bool filtered) const
 {
 /*
-    What the panel is SHOWING for one keyword: the filtered count (the "Filter" column) or
+    What the panel is SHOWING for one keyword: the filtered count (the "Avail" column) or
     the unfiltered one (the "All" column). -1 when there is no such item at all, which is
     a different answer from 0 and the distinction the drop's self-check needs -- "the
     keyword is not in the tree" and "the keyword is in the tree claiming no images" have
@@ -2062,7 +2067,7 @@ void Filters::setKeywordsMatchAll(bool all)
 void Filters::updateKeywordModeLabel()
 {
 /*
-    "any" or "all" in the Filter column of the Keywords header -- where the header row
+    "any" or "all" in the Avail column of the Keywords header -- where the header row
     has room, and above the column that counts what passes. Always SHOWN, so the choice
     can be found; DIMMED while it changes nothing (fewer than two keywords included), and
     lit in the filtering colour when "all" is actually narrowing.
