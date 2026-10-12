@@ -721,6 +721,10 @@ Q_NAMESPACE
        Develop/autoRemoveCA, default off. Global for autoRunDenoise's reason: it changes
        the default render, so Metadata::defaultRenderKey / devPreviewKey must hash it. */
     extern bool autoRemoveCA;
+    /* "Lens profile on raw files": an UNSET EditParams::lensProfile follows it for a raw.
+       Develop/autoLensProfile, default off; hashed by defaultRenderKey / devPreviewKey
+       for autoRemoveCA's reason. */
+    extern bool autoLensProfile;
 
     /* Gate for the OPTIONAL debounce-while-editing write of per-image Develop settings to the XMP
        sidecar (a short time after edits settle). Navigate-away / quit / pre-op flushes always run

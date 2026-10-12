@@ -93,6 +93,21 @@ void TstPresetParams::lensKeysAreGlobalAndRaw()
     DevelopPresets::assignParam("defringeGreen", QVariant("0.25"), p);
     QCOMPARE(p.defringePurple, 0.4f);
     QCOMPARE(p.defringeGreen, 0.25f);
+
+    /* The lens profile: lensProfile is removeCA's tri-state; the amounts are raw 0..2
+       (1 = as calibrated), not the dock's 0..200; lensProfileId is a STRING key, the
+       kind the chain silently drops without its own branch. */
+    DevelopPresets::assignParam("lensProfile", QVariant("-1"), p);
+    QCOMPARE(p.lensProfile, -1);
+    DevelopPresets::assignParam("lensProfile", QVariant("1"), p);
+    QCOMPARE(p.lensProfile, 1);
+    DevelopPresets::assignParam("lensDistortion", QVariant("0.5"), p);
+    DevelopPresets::assignParam("lensVignetting", QVariant("1.5"), p);
+    QCOMPARE(p.lensDistortion, 0.5f);
+    QCOMPARE(p.lensVignetting, 1.5f);
+    DevelopPresets::assignParam("lensProfileId",
+                                QVariant("Nikon|Nikon AF-S Zoom-Nikkor 24-70mm f/2.8G ED|1"), p);
+    QCOMPARE(p.lensProfileId, QString("Nikon|Nikon AF-S Zoom-Nikkor 24-70mm f/2.8G ED|1"));
 }
 
 void TstPresetParams::unknownKeysAreIgnored()

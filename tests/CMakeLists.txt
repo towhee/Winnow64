@@ -251,6 +251,25 @@ elseif(WIN32)
     target_link_libraries(tst_lenscorrect PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
+# tst_lensprofile tests Develop/lensdb.cpp + Develop/lensprofile.h -- lensfun lens profile
+# correction (distortion, TCA, vignetting) -- against liblensfun's own answers
+# (unit/lensprofile_oracle.h, from fixtures/lensfun_oracle.py): the database loads the
+# same cameras and lenses, EXIF picks the same lens, and output pixels sample the same
+# photo positions. Links the bundled database (Develop/LensDb/lensfun.qrc) and OpenCV core.
+winnow_add_unit_test(tst_lensprofile unit/tst_lensprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/lensdb.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/LensDb/lensfun.qrc)
+if(APPLE)
+    target_include_directories(tst_lensprofile PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_lensprofile PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_lensprofile PRIVATE opencv_core)
+elseif(WIN32)
+    target_include_directories(tst_lensprofile PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_lensprofile PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
 # tst_devpreview tests Cache/devpreviewcache.cpp, the on-disk cache of develop
 # previews (already in the shared closure above).
 winnow_add_unit_test(tst_devpreview unit/tst_devpreview.cpp)

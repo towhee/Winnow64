@@ -284,9 +284,19 @@ void Preferences::itemChange(QModelIndex idx)
     if (source == "autoRemoveCA") {
         G::autoRemoveCA = v.toBool();
         mw->settings->setValue("Develop/autoRemoveCA", G::autoRemoveCA);
-        /* An unset recipe follows it: the Effects Remove CA box and the current render change.
+        /* An unset recipe follows it: the Lens Remove CA box and the current render change.
            (Metadata::defaultRenderKey / devPreviewKey hash it, so cached previews built
            under the other setting are simply not served.) */
+        if (mw->developProperties) {
+            mw->developProperties->syncLensPanel();
+            emit mw->developProperties->paramsChanged();
+        }
+    }
+
+    if (source == "autoLensProfile") {
+        G::autoLensProfile = v.toBool();
+        mw->settings->setValue("Develop/autoLensProfile", G::autoLensProfile);
+        /* Same as autoRemoveCA: an unset recipe follows it. */
         if (mw->developProperties) {
             mw->developProperties->syncLensPanel();
             emit mw->developProperties->paramsChanged();
@@ -1595,13 +1605,32 @@ void Preferences::addDevPreviews()
                 "set yourself: removes the colour fringe that grows toward the\n"
                 "corners, measured from each image.\n\n"
                 "An image where you ticked or unticked \"Remove CA\" in the\n"
-                "Develop Effects section keeps your choice.\n"
+                "Develop Lens section keeps your choice.\n"
                 "JPEGs are never corrected automatically: most cameras already\n"
                 "did it.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::autoRemoveCA;
     i.key = "autoRemoveCA";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Lens profile corrections on raw files
+    i.name = "autoLensProfile";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Apply lens profile on raw files";
+    i.tooltip = "Correct distortion, chromatic aberration and vignetting from the\n"
+                "lensfun profile of the lens in the EXIF, on every raw file you\n"
+                "have not set yourself.\n\n"
+                "An image where you ticked or unticked \"Lens profile\" in the\n"
+                "Develop Lens section keeps your choice.\n"
+                "JPEGs are never corrected automatically: most cameras already\n"
+                "did it.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoLensProfile;
+    i.key = "autoLensProfile";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);

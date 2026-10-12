@@ -1,6 +1,7 @@
 ﻿#include "Main/mainwindow.h"
 #include "Develop/workingdump.h"
 #include "Utilities/versionkey.h"
+#include "Utilities/rowtrail.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "Metadata/keywordpaths.h"
 #include <QtConcurrent>
@@ -24,6 +25,7 @@
 #include "Develop/maskhalo.h"
 #include "Develop/maskrefine.h"
 #include "Develop/lenscorrect.h"
+#include "Develop/lensdb.h"
 #include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
@@ -1943,8 +1945,8 @@ bool MW::developShortcutIntercept(QEvent *event)
 
        The test is MEMBERSHIP OF THE TABLE, not the A-Z range it once was: "\"
        (Before/After) is a table key a slider has no more use for than a letter, and
-       restricting the exemption to letters left it going to the global Show-image-count
-       action whenever a slider had the focus. Nothing in the table is a key an editor
+       restricting the exemption to letters left it going to the global action on "\"
+       (now Original / Developed, disabled in Develop) whenever a slider had the focus. Nothing in the table is a key an editor
        needs -- arrows and digits are deliberately absent -- so membership is the right
        question. */
     const int key = e->key();
@@ -4987,6 +4989,7 @@ void MW::refreshStaleRows(const QStringList &paths)
     skips committing a hydrated catalog scope precisely because these are the only rows
     in it worth writing.
 */
+    RowTrail::Tag _trailTag("MW::refreshStaleRows");
     IngestProbe::Scope _ip("MW::refreshStaleRows");
     if (G::isLogger) G::log("MW::refreshStaleRows", QString::number(paths.size()));
     if (paths.isEmpty() || !dm) return;
@@ -5036,6 +5039,12 @@ void MW::refreshStaleRows(const QStringList &paths)
     }
     staleRecommitAttempts = 0;
     staleRecommitTimer->start();
+
+    /*  DIAGNOSTIC: the cleared rows must come back; if one does not, record why. */
+    const quint64 gen = modelResetGen;
+    QTimer::singleShot(20000, this, [this, gen]{
+        if (modelResetGen == gen) checkBlankRows("20 s after refreshStaleRows");
+    });
 }
 
 QVector<CatalogRow> MW::catalogRowsForStale()
@@ -5209,12 +5218,172 @@ void MW::drainStaleRecommit()
                  "MW::drainStaleRecommit");
         staleRecommit.clear();
         staleRecommitAttempts = 0;
+        checkBlankRows("stale re-commit gave up");
         return;
     }
     /*  Progress resets the allowance: a batch that is landing a few rows at a time is
         working, however long it takes. */
     if (!fixed.isEmpty()) staleRecommitAttempts = 0;
     if (staleRecommitTimer) staleRecommitTimer->start();
+}
+
+void MW::checkBlankRows(const QString &why, bool confirm, const QStringList &candidates,
+                        int attempt)
+{
+/*
+    THE INTERMITTENT BLANK THUMBNAIL, CAUGHT IN THE ACT.
+
+    Seen at startup: one cell in the grid is empty -- no frame, no label (the delegate
+    paints nothing for a row without an icon) -- and it cannot be selected. Once the icon
+    was seen for an instant before it vanished, so something REMOVED it, or reset the row,
+    and the loader never came back for it. Nothing in the model says which; the RowTrail
+    does, if it is read before the session ends. This reads it.
+
+    PHASE 1 (confirm = false): once the load has settled, collect the rows in the icon
+    range that have no icon (videos and offline files excepted -- they legitimately have
+    none). PHASE 2, 5 s later: report the ones that are STILL blank, so a row whose read
+    is merely slow is not reported. Each path is reported once per session.
+
+    Report: <AppData>/Log/blank_rows.txt -- this side (model state, load flags, the row's
+    RowTrail), then MetaRead appends its own view from its thread. An issue is logged
+    pointing at the file.
+*/
+    if (!dm || !dm->sf || G::stop) return;
+    if (G::isLoadRunning || G::isModifyingDatamodel || loadCurtainUp) {
+        /*  Not settled: look again later. This used to just return, trusting the load's
+            metadataComplete to schedule its own check -- but a check that fires while a
+            load flag is still up (a Library restore, a catalog fill) was simply lost, and
+            the 2026-10-12 recurrence wrote no report at all. Bounded. */
+        if (attempt < 12) {
+            const quint64 gen = modelResetGen;
+            QTimer::singleShot(10000, this, [this, why, confirm, candidates, gen, attempt]{
+                if (modelResetGen == gen)
+                    checkBlankRows(why, confirm, candidates, attempt + 1);
+            });
+        }
+        return;
+    }
+
+    const int sfCount = dm->sf->rowCount();
+    if (!confirm) {
+        /*  Still loading thumbnails (a large catalog scope takes a while): look again
+            later rather than report rows that are merely not read yet. Bounded, because
+            MetaRead's idle flag can stay unset after a restore. */
+        if (!G::iconChunkLoaded && metaRead && metaRead->isBusy() && attempt < 6) {
+            const quint64 gen = modelResetGen;
+            QTimer::singleShot(10000, this, [this, why, gen, attempt]{
+                if (modelResetGen == gen) checkBlankRows(why, false, {}, attempt + 1);
+            });
+            return;
+        }
+        const int first = qMax(0, int(dm->startIconRange));
+        const int last = qMin(sfCount - 1, int(dm->endIconRange));
+        QStringList blank;
+        for (int sfRow = first; sfRow <= last; ++sfRow) {
+            if (!isBlankThumbRow(sfRow)) continue;
+            const QString fPath =
+                dm->sf->index(sfRow, G::PathColumn).data(G::KeyRole).toString();
+            if (fPath.isEmpty() || blankRowsReported.contains(fPath)) continue;
+            blank << fPath;
+            if (blank.size() >= 50) break;
+        }
+        if (blank.isEmpty()) return;
+        const quint64 gen = modelResetGen;
+        QTimer::singleShot(5000, this, [this, why, blank, gen]{
+            if (modelResetGen != gen) return;
+            checkBlankRows(why, true, blank);
+        });
+        return;
+    }
+
+    writeBlankRowReport(why, candidates);
+}
+
+bool MW::isBlankThumbRow(int sfRow) const
+{
+    const QModelIndex sfIdx = dm->sf->index(sfRow, 0);
+    if (!sfIdx.data(Qt::DecorationRole).isNull()) return false;
+    if (dm->sf->index(sfRow, G::VideoColumn).data().toBool()) return false;
+    if (dm->sf->index(sfRow, G::AvailabilityColumn).data().toInt()
+        != int(Catalog::Availability::Present)) return false;
+    return true;
+}
+
+int MW::writeBlankRowReport(const QString &why, const QStringList &candidates)
+{
+/*
+    The report half of checkBlankRows, shared with Help > Diagnostics > Blank thumbnail
+    report (MW::diagnosticsBlankRows). Writes the candidates that are still blank.
+*/
+    const int sfCount = dm->sf->rowCount();
+    QStringList still;
+    QList<int> dmRows, sfRows;
+    for (const QString &fPath : candidates) {
+        const int sfRow = dm->proxyRowFromKey(fPath);
+        if (sfRow < 0 || !isBlankThumbRow(sfRow)) continue;
+        still << fPath;
+        dmRows << dm->rowFromKey(fPath);
+        sfRows << sfRow;
+    }
+    if (still.isEmpty()) return 0;
+
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                        + "/Log";
+    QDir().mkpath(dir);
+    const QString logPath = dir + "/blank_rows.txt";
+    QFile f(logPath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) return 0;
+    QTextStream out(&f);
+    out << "\n\n===== Blank thumbnail report @ "
+        << QDateTime::currentDateTime().toString(Qt::ISODate) << " =====\n"
+        << "why: " << why << "\n"
+        << "scope " << int(G::scope) << "  rows dm " << dm->rowCount() << " sf " << sfCount
+        << "  instance " << dm->instance
+        << "  iconRange " << dm->startIconRange << "-" << dm->endIconRange
+        << "  iconChunkSize " << dm->iconChunkSize
+        << "\niconChunkLoaded " << bool(G::iconChunkLoaded)
+        << "  allMetadataAttempted " << bool(G::allMetadataAttempted)
+        << "  isLoadRunning " << bool(G::isLoadRunning)
+        << "  isModifyingDatamodel " << bool(G::isModifyingDatamodel)
+        << "  sfSuspended " << dm->sf->isSuspended()
+        << "  metaRead idle " << (metaRead && metaRead->isIdle())
+        << "  metadataCompleteDone " << metadataCompleteDone
+        << "  settledRepairs " << settledRepairs
+        << "  staleRecommit " << staleRecommit.size() << "\n";
+
+    for (int i = 0; i < still.size(); ++i) {
+        const QString &fPath = still.at(i);
+        const int dmRow = dmRows.at(i);
+        blankRowsReported.insert(fPath);
+        auto v = [&](int col) { return dm->index(dmRow, col).data(); };
+        out << "\n--- " << fPath << "\n"
+            << "dmRow " << dmRow << "  sfRow " << sfRows.at(i)
+            << "  status " << v(G::MetadataStatusColumn).toInt()
+            << "  iconLoaded " << v(G::IconLoadedColumn).toBool()
+            << "  metadataReading " << v(G::MetadataReadingColumn).toBool()
+            << "  dm icon " << !dm->index(dmRow, 0).data(Qt::DecorationRole).isNull()
+            << "  staleRecommit " << staleRecommit.contains(fPath)
+            << "  current " << (sfRows.at(i) == dm->currentSfRow) << "\n"
+            << "RowTrail (seconds since first event):\n";
+        const QStringList trail = RowTrail::history(fPath);
+        if (trail.isEmpty()) out << "  (no events recorded)\n";
+        for (const QString &line : trail) out << "  " << line << "\n";
+    }
+    out.flush();
+    f.close();
+
+    G::issue("Warning",
+             QString("%1 blank thumbnail(s) after the load settled (%2). Details: %3")
+                 .arg(still.size()).arg(why, logPath),
+             "MW::checkBlankRows");
+    qWarning().noquote() << "MW::checkBlankRows:" << still.size()
+                         << "blank thumbnail(s); report in" << logPath;
+
+    if (metaRead)
+        QMetaObject::invokeMethod(metaRead, "appendBlankRowState", Qt::QueuedConnection,
+                                  Q_ARG(QList<int>, dmRows), Q_ARG(QList<int>, sfRows),
+                                  Q_ARG(QString, logPath));
+    return still.size();
 }
 
 void MW::armGuiStallWatchdog()
@@ -7623,6 +7792,14 @@ void MW::metadataComplete(QString src)
     metadataCompleteDone = true;
 
     IngestProbe::Scope _ip("MW::metadataComplete");
+
+    /*  DIAGNOSTIC: the intermittent blank, unselectable thumbnail -- see checkBlankRows. */
+    {
+        const quint64 gen = modelResetGen;
+        QTimer::singleShot(15000, this, [this, gen]{
+            if (modelResetGen == gen) checkBlankRows("15 s after metadataComplete");
+        });
+    }
     if (G::isLogger || G::isFlowLogger)
     {
         int rows = dm->rowCount();
@@ -10171,8 +10348,21 @@ void buildRefineGuide(const WorkingImage &src, std::vector<float> &guide)
 }
 
 /*
-    LENS CORRECTIONS ON THE BASE (Develop/lenscorrect.h; EditParams::removeCA /
+    LENS CORRECTIONS ON THE BASE (Develop/lensprofile.h + Develop/lenscorrect.h;
+    EditParams::lensProfile / lensDistortion / lensVignetting / lensProfileId / removeCA /
     defringePurple / defringeGreen, Global scope only).
+
+    ORDER: the lens PROFILE first (devignette, then undistort + the profile's TCA in one
+    resample -- lensfun's order), then the image-measured CA when the profile has no TCA
+    of its own (or is off), then defringe. A profile with TCA REPLACES the estimate: the
+    two would otherwise both correct the same aberration.
+
+    THE PROFILE MOVES PIXELS, so everything built from the base must see it too: the AI
+    mask guides and the range reference are corrected the same way before they are
+    developed (correctGuideForLens), their per-path caches are dropped when the lens
+    GEOMETRY changes (noteLensGeometry), and the Detail patch is resampled from the full
+    frame with the same mapping (cutDetailRoi). User-drawn masks need nothing: they live
+    in output-normalized coordinates, which are the corrected frame's.
 
     Applied to the SOURCE every render path composites from -- the proxy, the settled
     full resolution base, the export base -- so every scope, mask and guide downstream
@@ -10217,6 +10407,65 @@ cv::Matx33d workingFromImage(const WorkingImage &img)
 }
 }   // namespace
 
+/* The lens profile one render applies, or none. key identifies the whole correction
+   (for the source cache); geomKey only the part that MOVES pixels (distortion + TCA),
+   which is what the AI mask guides must be rebuilt for -- a vignetting tick must not
+   re-run a two-second sky model. */
+struct LensProfileState {
+    bool on = false;
+    LensProfile::Coeffs coeffs;
+    LensProfile::Amounts amounts;
+    QString key, geomKey;
+};
+
+/* The lens profile's lookup from a metadata record (export / background renders, which
+   carry their own ImageMetadata rather than reading the model). */
+LensDb::Shot lensShotFromMetadata(const ImageMetadata &m)
+{
+    LensDb::Shot s;
+    s.cameraMake = m.make;
+    s.cameraModel = m.model;
+    s.lens = m.lens;
+    s.focal = float(m.focalLengthNum);
+    s.aperture = float(m.apertureNum);
+    return s;
+}
+
+LensProfileState lensProfileState(const LensDb::Shot &shot, const EditParams &g, bool isRaw)
+{
+    LensProfileState st;
+    if (!g.wantsLensProfile(G::autoLensProfile, isRaw)) return st;
+    const LensDb::Resolved r = LensDb::resolve(shot, g.lensProfileId);
+    if (!r.ok()) return st;
+    st.coeffs = r.coeffs;
+    st.amounts.distortion = g.lensDistortion;
+    st.amounts.vignetting = g.lensVignetting;
+    st.amounts.tca = g.wantsRemoveCA(G::autoRemoveCA, isRaw);
+    st.on = LensProfile::active(st.coeffs, st.amounts);
+    if (!st.on) return st;
+    const bool tca = st.amounts.tca && st.coeffs.hasTca();
+    if (LensProfile::geometryActive(st.coeffs, st.amounts))
+        st.geomKey = QString("%1|f%2|d%3|t%4").arg(r.lens->id()).arg(double(shot.focal))
+                         .arg(double(st.coeffs.hasDistortion() ? g.lensDistortion : 0.0f))
+                         .arg(tca ? 1 : 0);
+    st.key = QString("%1|a%2|v%3").arg(st.geomKey.isEmpty() ? r.lens->id() : st.geomKey)
+                 .arg(double(shot.aperture))
+                 .arg(double(st.coeffs.vig ? g.lensVignetting : 0.0f));
+    return st;
+}
+
+/* src corrected by the profile into dst (pixels and metadata; dst's buffer is reused). */
+void applyLensProfile(const WorkingImage &src, WorkingImage &dst, const LensProfileState &st)
+{
+    copyMetadata(dst, src);
+    dst.width = src.width;
+    dst.height = src.height;
+    dst.rgb.resize(src.rgb.size());
+    const double scale = LensProfile::autoScale(st.coeffs, st.amounts, src.width, src.height);
+    LensProfile::applyRegion(src.rgb.data(), src.width, src.height, dst.rgb.data(),
+                             0, 0, src.width, src.height, st.coeffs, st.amounts, scale);
+}
+
 /* The CA coefficients for fPath, measuring them from `full` if they are not known yet. */
 LensCorrect::CACoeffs caCoeffsFor(const QString &fPath, const WorkingImage *full)
 {
@@ -10237,20 +10486,23 @@ LensCorrect::CACoeffs caCoeffsFor(const QString &fPath, const WorkingImage *full
 
 std::shared_ptr<const WorkingImage> lensCorrectedSource(
     const QString &fPath, const std::shared_ptr<const WorkingImage> &src,
-    const EditParams &g, const WorkingImage *fullForEstimate)
+    const EditParams &g, const WorkingImage *fullForEstimate, const LensDb::Shot &shot)
 {
     if (!src || !src->isValid()) return src;
-    const bool doCA = g.wantsRemoveCA(G::autoRemoveCA, src->sceneReferred);
+    const LensProfileState lp = lensProfileState(shot, g, src->sceneReferred);
+    /* A profile that carries TCA corrects it already (when Remove CA is on). */
+    const bool profileTca = lp.on && lp.amounts.tca && lp.coeffs.hasTca();
+    const bool doCA = g.wantsRemoveCA(G::autoRemoveCA, src->sceneReferred) && !profileTca;
     const bool doFringe = g.wantsDefringe();
-    if (!doCA && !doFringe) return src;
+    if (!lp.on && !doCA && !doFringe) return src;
     LensCorrect::CACoeffs ca;
     if (doCA) ca = caCoeffsFor(fPath, fullForEstimate ? fullForEstimate : src.get());
-    if (!ca.any() && !doFringe) return src;
+    if (!lp.on && !ca.any() && !doFringe) return src;
 
-    const QString key = QString("%1|%2x%3|ca=%4,%5|fr=%6,%7")
+    const QString key = QString("%1|%2x%3|ca=%4,%5|fr=%6,%7|lp=%8")
                             .arg(fPath).arg(src->width).arg(src->height)
                             .arg(ca.any() ? ca.kR : 0.0f).arg(ca.any() ? ca.kB : 0.0f)
-                            .arg(g.defringePurple).arg(g.defringeGreen);
+                            .arg(g.defringePurple).arg(g.defringeGreen).arg(lp.key);
     {
         QMutexLocker lk(&g_lensMutex);
         for (const LensCacheEntry &e : g_lensCache) {
@@ -10259,7 +10511,14 @@ std::shared_ptr<const WorkingImage> lensCorrectedSource(
         }
     }
 
-    auto out = std::make_shared<WorkingImage>(*src);
+    /* The profile resamples src straight into the new buffer, so src is not copied
+       first only to be overwritten. */
+    std::shared_ptr<WorkingImage> out;
+    if (lp.on) {
+        out = std::make_shared<WorkingImage>();
+        applyLensProfile(*src, *out, lp);
+    }
+    else out = std::make_shared<WorkingImage>(*src);
     const int w = out->width, h = out->height;
     cv::Mat m(h, w, CV_32FC3, out->rgb.data());
     if (ca.any()) LensCorrect::applyCA(m, ca);
@@ -10878,12 +11137,17 @@ struct DetailRoiJob {
     double nx = 0.5, ny = 0.5;          // sample point, normalized, ORIENTED frame
     int size = 0;                       // patch side, full-res px
     const WorkingImage *fullSrc = nullptr;   // full-res base to cut the patch from
+    LensProfileState lens;              // the lens profile the loupe shows, if any
     QImage out;                         // the render's product
 };
 
 /* Cut the ROI out of the full-res base. renderScale is forced to 1.0 -- that is the whole
-   point of the exercise, and copyMetadata would otherwise carry the base's own value. */
-static WorkingImage cutDetailRoi(const WorkingImage &full, const DetailRoi::Rect &r)
+   point of the exercise, and copyMetadata would otherwise carry the base's own value.
+   With a lens profile on, the patch is RESAMPLED from the full frame through the same
+   mapping the loupe's source went through, so it shows the corrected pixels at the same
+   place (the corrected frame has the same dimensions, so r means the same there). */
+static WorkingImage cutDetailRoi(const WorkingImage &full, const DetailRoi::Rect &r,
+                                 const LensProfileState &lens = LensProfileState())
 {
     WorkingImage roi;
     if (r.isEmpty() || !full.isValid()) return roi;
@@ -10902,6 +11166,13 @@ static WorkingImage cutDetailRoi(const WorkingImage &full, const DetailRoi::Rect
     roi.frameW = full.width;
     roi.frameH = full.height;
     roi.rgb.resize(size_t(r.w) * size_t(r.h) * 3);
+    if (lens.on) {
+        const double scale = LensProfile::autoScale(lens.coeffs, lens.amounts,
+                                                    full.width, full.height);
+        LensProfile::applyRegion(full.rgb.data(), full.width, full.height, roi.rgb.data(),
+                                 r.x, r.y, r.w, r.h, lens.coeffs, lens.amounts, scale);
+        return roi;
+    }
     for (int y = 0; y < r.h; ++y) {
         const float *srcRow = full.rgb.data() + (size_t(y + r.y) * full.width + r.x) * 3;
         float *dstRow = roi.rgb.data() + size_t(y) * r.w * 3;
@@ -10950,7 +11221,7 @@ static QImage renderDetailRoiImage(const DetailRoiJob &job,
     const WorkingImage &full = *job.fullSrc;
     const DetailRoi::Rect r =
         DetailRoi::sourceRoi(job.nx, job.ny, full.width, full.height, degrees, job.size);
-    WorkingImage roi = cutDetailRoi(full, r);
+    WorkingImage roi = cutDetailRoi(full, r, job.lens);
     if (!roi.isValid()) return QImage();
 
     std::vector<WorkingImageCache::StackScope> roiScopes;
@@ -11308,8 +11579,12 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
     never rebuild it -- they only re-threshold the cached reference.
 */
     if (G::isLogger) G::log("MW::ensureRangeRef");
+    noteLensGeometry(fPath, work, base);
+    /* The params JSON misses what the lens profile resolves to (an unset recipe follows
+       the preference), so the applied correction is part of the key. */
     const QByteArray key =
-        QJsonDocument(EditStack::paramsToJson(base)).toJson(QJsonDocument::Compact);
+        QJsonDocument(EditStack::paramsToJson(base)).toJson(QJsonDocument::Compact)
+        + lensProfileState(lensShotFor(fPath), base, work.sceneReferred).key.toUtf8();
     if (fPath == developRangeRefPath && key == developRangeRefBaseKey && RangeMask::getRef(fPath))
         return;                                       // already current
 
@@ -11317,7 +11592,8 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
        any component's signature -- the one thing the fold-prefix cache cannot see. */
     maskFoldCacheClear();
 
-    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    correctGuideForLens(small, fPath, base);
     int fw = small.width, fh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     /* Point Color's Visualize Range is a VIEW of the loupe; a range mask must threshold
@@ -11359,6 +11635,7 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     image on the user's add/select action) with a busy cursor.
 */
     if (G::isLogger) G::log("MW::ensureSubjectMask");
+    noteLensGeometry(fPath, work, base);
     if (fPath == developSubjectRefPath && SubjectMask::getRef(fPath)) return;   // already current
 
     /* Lazily load u2net.onnx. It is DOWNLOADED ON DEMAND, so it may legitimately be
@@ -11377,7 +11654,8 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     }
     if (!subjectPredictor->isLoaded()) return;
 
-    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    correctGuideForLens(small, fPath, base);
     int fw = small.width, fh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
@@ -11409,6 +11687,7 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     composite.
 */
     if (G::isLogger) G::log("MW::ensureSkyMask");
+    noteLensGeometry(fPath, work, base);
     if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) return;      // already current
 
     if (!skyPredictor) {                    // downloaded on demand -- see ensureSubjectMask
@@ -11423,7 +11702,8 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     if (!skyPredictor->isLoaded()) return;
 
     constexpr int kSkyMatteLongEdge = 4096;
-    const WorkingImage small = WorkingImageCache::downscaled(work, kSkyMatteLongEdge);
+    WorkingImage small = WorkingImageCache::downscaled(work, kSkyMatteLongEdge);
+    correctGuideForLens(small, fPath, base);
     int fw = small.width, fh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
@@ -11449,6 +11729,7 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     synchronous on the GUI thread with a busy cursor. Lazily loads midas.onnx.
 */
     if (G::isLogger) G::log("MW::ensureDepthMask");
+    noteLensGeometry(fPath, work, base);
     if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) return;      // already current
 
     if (!depthPredictor) {                  // downloaded on demand -- see ensureSubjectMask
@@ -11461,7 +11742,8 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     }
     if (!depthPredictor->isLoaded()) return;
 
-    const WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    WorkingImage small = WorkingImageCache::downscaled(work, 1024);
+    correctGuideForLens(small, fPath, base);
     int fw = small.width, fh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
@@ -11586,6 +11868,7 @@ void MW::ensureObjectMask(const QString &fPath, const WorkingImage &work,
     export -- see ObjectMaskPredictor). A component with no brush yet just warms the encoder.
 */
     if (G::isLogger) G::log("MW::ensureObjectMask");
+    noteLensGeometry(fPath, work, base);
     const QString refKey = objectRefKey(fPath, paramsJson);
     if (ObjectMask::getRef(refKey)) return;                 // this brush already decoded
 
@@ -11687,7 +11970,8 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     const int longEdge = std::clamp(q > 1e-6 ? int(std::lround(kEncode / q)) : kEncode,
                                     kEncode, std::min(kMaxGuideLong, std::max(nativeLong, kEncode)));
 
-    const WorkingImage small = WorkingImageCache::downscaled(work, longEdge);
+    WorkingImage small = WorkingImageCache::downscaled(work, longEdge);
+    correctGuideForLens(small, fPath, base);
     gw = small.width; gh = small.height;
     if (degrees == 90 || degrees == 270) std::swap(gw, gh);
     if (gw <= 0 || gh <= 0) return false;
@@ -12329,6 +12613,10 @@ void MW::renderDevelopPreview(bool fullRes)
 */
     if (G::isLogger) G::log("MW::renderDevelopPreview");
 
+    /* A new render request means the user is looking at the develop again (an edit,
+       navigation, a tool): the Opt+"\" camera preview comes down. */
+    if (developCameraShown) clearDevelopCameraPreview();
+
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
@@ -12395,6 +12683,7 @@ void MW::renderDevelopPreview(bool fullRes)
        (built once per image, sized a little over the loupe viewport so a modest zoom still
        looks reasonable mid-drag). */
     const WorkingImage *srcImg = base.get();
+    const LensDb::Shot lensShot = lensShotFor(fPath);     // GUI thread: reads the model
     if (!fullRes) {
         if (developProxyPath != fPath || !developProxy) {
             const QSize vp = imageView->viewport()->size();
@@ -12472,6 +12761,10 @@ void MW::renderDevelopPreview(bool fullRes)
         /* Global's Visualize Range changes the base pixels but not its JSON. */
         if (mj.global.pointColorVisualize >= 0)
             baseKey += "#pcv" + QByteArray::number(mj.global.pointColorVisualize);
+        /* Nor does the lens profile an unset recipe takes from the preference, or the
+           lens it resolves to: key the correction actually applied. */
+        const LensProfileState lp = lensProfileState(lensShot, mj.global, work->sceneReferred);
+        if (lp.on) baseKey += "#lens" + lp.key.toUtf8();
         cacheSurvived = developStackCache.reset(fPath, srcImg->width, srcImg->height,
                                                 degrees);
         cache = &developStackCache;
@@ -12531,6 +12824,7 @@ void MW::renderDevelopPreview(bool fullRes)
             roiJob.ny = n.y();
             roiJob.size = size;
             roiJob.fullSrc = roiHold.get();
+            roiJob.lens = lensProfileState(lensShot, mj.global, base->sceneReferred);
         }
     }
 
@@ -12538,7 +12832,8 @@ void MW::renderDevelopPreview(bool fullRes)
     const std::shared_ptr<const WorkingImage> lensFull = base;
     developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
                             reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
-                            baseKey, faithful, recipe, roiJob, roiHold, lensFull]() mutable {
+                            baseKey, faithful, recipe, roiJob, roiHold, lensFull,
+                            lensShot]() mutable {
         QElapsedTimer wt;
         wt.start();
         WorkingImageCache::RenderTimings rt;
@@ -12546,7 +12841,7 @@ void MW::renderDevelopPreview(bool fullRes)
         MaskBuildStats ms;
         QSize displaySize;
         const std::shared_ptr<const WorkingImage> lensSrc =
-            lensCorrectedSource(fPath, proxySrc, mj.global, lensFull.get());
+            lensCorrectedSource(fPath, proxySrc, mj.global, lensFull.get(), lensShot);
         QImage out = developCompositeStack(*lensSrc, mj, degrees, fullRes, fw, fh, fPath,
                                            wantTime ? &rt : nullptr,
                                            WorkingImageCache::OutDepth::Eight,
@@ -12575,6 +12870,9 @@ void MW::renderDevelopPreview(bool fullRes)
                The re-arm below still renders the newest state either way. */
             const bool current = (dm && fPath == dm->currentKey)
                                  && geomGen == developProxyGeomGen;
+            /* The Opt+"\" camera preview is latched over this image: keep the frame (the
+               devPreview and the Detail patch still want it) but leave the loupe alone. */
+            const bool cameraUp = developCameraShown && developCameraPath == fPath;
             /* Now that every frame is shown, the GUI-thread cost of showing one is on the
                hot path -- QPixmap::fromImage at proxy resolution plus the scope sample --
                so it gets probed like every other stage rather than assumed cheap. */
@@ -12585,8 +12883,10 @@ void MW::renderDevelopPreview(bool fullRes)
                 /* Pair the geometry with the pixels it produced, BEFORE they are shown:
                    the overlays map mask coordinates (pre-geometry) onto this frame, so a
                    stale pairing would draw them in the wrong place for one tick. */
-                imageView->setDevelopGeometry(appliedGeom, orientedSize);
-                imageView->setDevelopPreview(out, displaySize);
+                if (!cameraUp) {
+                    imageView->setDevelopGeometry(appliedGeom, orientedSize);
+                    imageView->setDevelopPreview(out, displaySize);
+                }
                 /* Keep the frame: the sharpening mask preview is derived from the pixels
                    on screen, so it must be rebuilt from each one -- a Masking drag with
                    Opt held is exactly the case that has to stay live. */
@@ -12790,6 +13090,70 @@ QString MW::cameraModelFor(const QString &fPath) const
     return dm->index(row, G::CameraModelColumn).data().toString();
 }
 
+LensDb::Shot MW::lensShotFor(const QString &fPath) const
+{
+    LensDb::Shot s;
+    if (!dm || fPath.isEmpty()) return s;
+    const int row = dm->rowFromKey(fPath);
+    if (row < 0) return s;
+    s.cameraMake  = dm->index(row, G::CameraMakeColumn).data().toString();
+    s.cameraModel = dm->index(row, G::CameraModelColumn).data().toString();
+    s.lens        = dm->index(row, G::LensColumn).data().toString();
+    s.focal       = float(dm->index(row, G::FocalLengthColumn).data().toDouble());
+    s.aperture    = float(dm->index(row, G::ApertureColumn).data().toDouble());
+    return s;
+}
+
+void MW::correctGuideForLens(WorkingImage &guide, const QString &fPath,
+                             const EditParams &base) const
+{
+    const LensProfileState lp = lensProfileState(lensShotFor(fPath), base,
+                                                 guide.sceneReferred);
+    if (!lp.on) return;
+    WorkingImage out;
+    applyLensProfile(guide, out, lp);
+    guide = std::move(out);
+}
+
+void MW::noteLensGeometry(const QString &fPath, const WorkingImage &work,
+                          const EditParams &base)
+{
+    const QString key = lensProfileState(lensShotFor(fPath), base,
+                                         work.sceneReferred).geomKey;
+    auto it = developLensGeomKeys.find(fPath);
+    if (it != developLensGeomKeys.end() && it.value() == key) return;
+    /* First sight of the path: nothing can have been built under another geometry, since
+       every builder comes through here first -- unless the table was just emptied, which
+       is why emptying it drops every reference below too. */
+    const bool changed = it != developLensGeomKeys.end();
+    if (!changed && developLensGeomKeys.size() > 64) {
+        developLensGeomKeys.clear();
+        { QMutexLocker lk(&SubjectMask::refMutex()); SubjectMask::refStore().clear(); }
+        { QMutexLocker lk(&SkyMask::refMutex());     SkyMask::refStore().clear(); }
+        { QMutexLocker lk(&DepthMask::refMutex());   DepthMask::refStore().clear(); }
+        { QMutexLocker lk(&ObjectMask::refMutex());  ObjectMask::refStore().clear(); }
+        developSubjectRefPath.clear();
+        developSkyRefPath.clear();
+        developDepthRefPath.clear();
+        developObjectImagePath.clear();
+    }
+    developLensGeomKeys.insert(fPath, key);
+    if (!changed) return;
+
+    /* The geometry moved: this image's references were built on other pixels. Object
+       refs are keyed by path + brush, so the whole (small) store goes. */
+    { QMutexLocker lk(&SubjectMask::refMutex()); SubjectMask::refStore().remove(fPath); }
+    { QMutexLocker lk(&SkyMask::refMutex());     SkyMask::refStore().remove(fPath); }
+    { QMutexLocker lk(&DepthMask::refMutex());   DepthMask::refStore().remove(fPath); }
+    { QMutexLocker lk(&ObjectMask::refMutex());  ObjectMask::refStore().clear(); }
+    if (developSubjectRefPath == fPath) developSubjectRefPath.clear();
+    if (developSkyRefPath == fPath) developSkyRefPath.clear();
+    if (developDepthRefPath == fPath) developDepthRefPath.clear();
+    if (developObjectImagePath == fPath) developObjectImagePath.clear();
+    if (developRangeRefPath == fPath) developRangeRefPath.clear();
+    maskFoldCacheClear();
+}
+
 void MW::applyDevelopPreviewIfEdited()
 {
 /*
@@ -12897,14 +13261,15 @@ void MW::renderDevelopFullResAsync()
     updateDevelopRenderingHint();
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
     std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
+    const LensDb::Shot lensShot = lensShotFor(fPath);     // GUI thread: reads the model
     developRenderPool->start([this, src, clean, mj, degrees, fPath, gen, faithful,
-                              recipe]() {
+                              recipe, lensShot]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
         const bool probe = G::isReportDevelopTime;
         if (probe) t.start();
         const std::shared_ptr<const WorkingImage> lensSrc =
-            lensCorrectedSource(fPath, src, mj.global, src.get());
+            lensCorrectedSource(fPath, src, mj.global, src.get(), lensShot);
         const QImage out = developCompositeStack(*lensSrc, mj, degrees, /*fullRes*/true, 0, 0,
                                                  fPath, probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
@@ -13176,8 +13541,11 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
     if (!out.isNull() && currentImage && gen == developParamsGen && geomCurrent) {
         /* gen and geometry unchanged => the recipe is still the one this render used, so
            the current state is the right pairing for the overlays. */
-        pushDevelopGeometryToView();
-        imageView->setDevelopPreview(out);
+        /* Not while the Opt+"\" camera preview is latched over this image. */
+        if (!(developCameraShown && developCameraPath == fPath)) {
+            pushDevelopGeometryToView();
+            imageView->setDevelopPreview(out);
+        }
         updateDevelopScopes(out);
         developFullFrame = out;
         developFullFramePath = fPath;
@@ -14036,8 +14404,9 @@ void MW::toggleDevelopBeforeAfter()
     in now. DevelopProperties owns the latch and the render (toggleBeforeAfter); this is
     the mode gate, matching the other Develop-local keys.
 
-    Outside Develop "\" keeps its global meaning (Show image count), so this is only
-    reached from the menu there -- hence the message rather than a silent no-op.
+    Outside Develop "\" is Original / Developed (togglePreviewSource) -- the same
+    comparison for a browsed image -- so this is only reached from the menu there, hence
+    the message rather than a silent no-op.
 */
     if (G::isLogger) G::log("MW::toggleDevelopBeforeAfter");
     if (G::operationMode != G::OperationMode::Develop) {
@@ -14048,6 +14417,109 @@ void MW::toggleDevelopBeforeAfter()
         return;
     }
     if (developProperties) developProperties->toggleBeforeAfter();
+}
+
+void MW::toggleCameraPreview()
+{
+/*
+    Opt+"\" (and the View / Develop menus): the camera's picture vs the developed one.
+
+    Outside Develop the Original that togglePreviewSource shows IS the camera's picture --
+    Preview mode never decodes a raw, it shows the embedded JPEG -- so the two keys agree
+    there and this simply delegates. In Develop "\" is Before / After (an unedited RENDER
+    of the raw), and this is the other question: how does my edit compare with what the
+    camera made of the same frame?
+*/
+    if (G::isLogger) G::log("MW::toggleCameraPreview");
+    if (G::operationMode == G::OperationMode::Develop) toggleDevelopCameraPreview();
+    else togglePreviewSource();
+}
+
+void MW::clearDevelopCameraPreview()
+{
+    if (!developCameraShown) return;
+    developCameraShown = false;
+    developCameraPath.clear();
+    updateStatus(true, "", "MW::clearDevelopCameraPreview");   // "Preview" -> "Developed"
+}
+
+void MW::toggleDevelopCameraPreview()
+{
+/*
+    Latch the current image's camera preview (Pixmap::load: the embedded JPEG of a raw,
+    the file itself otherwise -- oriented and colour managed exactly as Preview mode shows
+    it) onto the loupe in place of the live render, or take it down again.
+
+    The latch is a FLAG, not a render: both render completions (renderDevelopPreview's
+    proxy hand-off and onDevelopFullResReady) skip the loupe while it is up for their
+    image, so a settle render already in flight cannot paint over it. Any NEW render
+    request clears it at the top of renderDevelopPreview -- an edit, a History step,
+    navigation, opening a tool -- because each of those means the user is back to looking
+    at the develop, and leaving the camera picture up would misreport the edit.
+
+    Declined while a mask, spot or Transform tool owns the canvas: their overlays map
+    through the develop geometry, which the camera's full uncropped frame does not have
+    (the same guard as Before / After).
+*/
+    if (G::isLogger) G::log("MW::toggleDevelopCameraPreview");
+    if (!imageView || !developProperties || !dm) return;
+    auto say = [](const QString &msg, int ms) {
+        if (G::popup)
+            G::popup->showPopup(msg, ms, true, 0.75, Qt::AlignHCenter,
+                                Qt::AlignBottom | Qt::AlignRight);
+    };
+
+    if (developCameraShown) {
+        clearDevelopCameraPreview();
+        developParamsChange();          // proxy now, crisp full-res on settle
+        say("Developed", 500);
+        return;
+    }
+
+    QString fPath = dm->currentKey;
+    if (fPath.isEmpty() || currentIsVideo()) return;
+    if (developCropEditing || developProperties->isMaskPanelOpen()
+        || developProperties->isSpotActive()) {
+        if (G::popup)
+            G::popup->showPopup("Close the tool to compare with the camera preview.", 2500);
+        return;
+    }
+
+    QImage cam;
+    Pixmap pix(this, dm, metadata);
+    if (!pix.load(fPath, cam) || cam.isNull()) {
+        if (G::popup)
+            G::popup->showPopup("This image has no camera preview to compare with.", 2500);
+        return;
+    }
+
+    /* Before / After is the other comparison on this canvas: take it down first, so the
+       latch and the menu check agree. That queues an After render on the 0 ms proxy
+       timer, which would clear this latch the moment it ran -- stop it. A full-res settle
+       may still run; its completion respects the latch. */
+    if (developProperties->isShowingBefore()) {
+        developProperties->toggleBeforeAfter();
+        developProxyRenderTimer->stop();
+    }
+
+    /* Present it at the size the uncropped render would have (the frame's oriented
+       dimensions), keeping the camera's own aspect: an embedded preview is usually far
+       smaller than the sensor, and showing it at its pixel size would refit the loupe
+       and lose the user's zoom. */
+    QSize shown = cam.size();
+    if (auto work = WorkingImageCache::instance().get(fPath)) {
+        const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+        const int fw = (degrees == 90 || degrees == 270) ? work->height : work->width;
+        if (fw > 0)
+            shown = QSize(fw, qRound(double(fw) * cam.height() / cam.width()));
+    }
+
+    developCameraShown = true;
+    developCameraPath = fPath;
+    imageView->setDevelopGeometry(Geometry(), shown);
+    imageView->setDevelopPreview(cam, shown);
+    updateStatus(true, "", "MW::toggleDevelopCameraPreview");
+    say(isFileRaw(fPath) ? "Camera Preview" : "Original", 500);
 }
 
 void MW::toggleMaskOverlay()
@@ -14324,6 +14796,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     const DevelopProperties::StackRenderJob mj = developProperties->stackJobFor(fPath);
     ImageMetadata m = mSnap ? *mSnap : dm->imMetadata(fPath);
     if (m.fPath.isEmpty()) m.fPath = fPath;
+    const LensDb::Shot lensShot = lensShotFromMetadata(m);   // the lens profile's lookup
     if (m.ext.isEmpty()) m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
     /* A raw that Winnow decodes from the sensor: only that decode marks a base
        sceneReferred, so any other base under this path is a preview stand-in.
@@ -14371,7 +14844,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
        caches it as a side effect, so an image already visited is a cache hit. */
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, degreesSnap, sensorRaw, requireSensor,
-                              done]() mutable {
+                              lensShot, done]() mutable {
         auto work = WorkingImageCache::instance().get(fPath);
         /* A cached base is only usable here if it IS the sensor image. The cache is keyed
            by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
@@ -14465,7 +14938,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
            concurrently with the live session's use of the same path-keyed caches. */
         QMetaObject::invokeMethod(this, [this, fPath, work, src, mj, depth, space, outSpace,
-                                         decodedHere, degreesSnap, done]() {
+                                         decodedHere, degreesSnap, lensShot, done]() {
             const int degrees = !work->sceneReferred ? 0
                               : degreesSnap >= 0     ? degreesSnap
                                                      : developOrientationDegrees(*work, fPath);
@@ -14484,9 +14957,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                "Denoise raw" is set, else the clean one. work is kept alive alongside it
                because the mask fields registered above are keyed to those pixels. */
             developRenderPool->start([this, fPath, work, src, mj, degrees, depth, space,
-                                      outSpace, decodedHere, done]() {
+                                      outSpace, decodedHere, lensShot, done]() {
                 const std::shared_ptr<const WorkingImage> lensSrc =
-                    lensCorrectedSource(fPath, src, mj.global, src.get());
+                    lensCorrectedSource(fPath, src, mj.global, src.get(), lensShot);
                 dumpWorkingForCalibration(*lensSrc, mj.global, degrees, fPath);
                 QImage out = developCompositeStack(*lensSrc, mj, degrees,
                                                    /*fullRes*/true, 0, 0, fPath,

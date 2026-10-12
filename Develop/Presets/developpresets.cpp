@@ -307,6 +307,12 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "removeCA")            p.removeCA            = v.toInt();   // tri-state
     else if (key == "defringePurple")      p.defringePurple      = f;
     else if (key == "defringeGreen")       p.defringeGreen       = f;
+    else if (key == "lensProfile")         p.lensProfile         = v.toInt();   // tri-state
+    else if (key == "lensDistortion")      p.lensDistortion      = f;
+    else if (key == "lensVignetting")      p.lensVignetting      = f;
+    /* By lens id; a lens the target's camera cannot take does not resolve, and the
+       Lens row says so. */
+    else if (key == "lensProfileId")       p.lensProfileId       = v.toString();
     else if (key == "toneShadowCenter")    p.toneShadowCenter    = f;
     else if (key == "toneCrossover")       p.toneCrossover       = f;
     else if (key == "toneHighlightCenter") p.toneHighlightCenter = f;

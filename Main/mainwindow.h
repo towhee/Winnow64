@@ -152,6 +152,7 @@ struct KeywordMove;
 class PlaceList;
 class PlaceDlg;
 class QNetworkAccessManager;
+namespace LensDb { struct Shot; }
 class QNetworkReply;
 
 class MW : public QMainWindow
@@ -794,6 +795,15 @@ public slots:
     /*  Commit the rows the verification passes had re-read, whenever they are ready --
         not only when a load completes. See the definition. */
     void drainStaleRecommit();
+    /*  DIAGNOSTIC: after a load settles, find visible-range rows that still have no
+        thumbnail and write what happened to them (RowTrail + model + MetaRead state) to
+        <AppData>/Log/blank_rows.txt. Two-phase: a row must stay blank for 5 s. */
+    void checkBlankRows(const QString &why, bool confirm = false,
+                        const QStringList &candidates = {}, int attempt = 0);
+    /*  checkBlankRows' predicate: no icon, not a video, file present. */
+    bool isBlankThumbRow(int sfRow) const;
+    /*  Write the candidates that are still blank to blank_rows.txt; returns how many. */
+    int writeBlankRowReport(const QString &why, const QStringList &candidates);
     /*  HEADLESS CATALOG LOAD, against the user's real index: what clicking Catalog
         actually costs. --catalogload <optional path filter>. Prints the time to the
         first batch and to the last, then exits. See Cache/catalogprobe.h for why this
@@ -1136,6 +1146,13 @@ private slots:
        camera profile is looked up by (CameraProfileStore). Empty when the row is unknown
        or the file carries no model. */
     QString cameraModelFor(const QString &fPath) const;
+public:
+    /* What the lens profile lookup needs from an image's EXIF (camera, lens, focal
+       length, aperture), read from the datamodel row. GUI thread. A plain method, NOT a
+       slot: this section is "private slots:", and moc would need LensDb::Shot complete
+       to generate an invoker for it (only forward-declared here). */
+    LensDb::Shot lensShotFor(const QString &fPath) const;
+private slots:
     /* True when the current selection is a video. The Develop module operates on decoded still
        frames, so every Develop entry point (dock load + preview/full-res render) is gated on this to
        avoid trying to develop a video. */
@@ -1255,6 +1272,15 @@ private slots:
     /* "\" in Develop mode: flip the loupe between Before (the first History entry, the
        baseline at the bottom of History) and After (the current state). */
     void toggleDevelopBeforeAfter();
+    /* Opt+"\" in every mode: flip between the camera's picture (the embedded preview of a
+       raw, the file itself otherwise) and the developed one. Outside Develop that is
+       togglePreviewSource; in Develop it latches the camera preview over the live render
+       (toggleDevelopCameraPreview). */
+    void toggleCameraPreview();
+    void toggleDevelopCameraPreview();
+    /* Drop the Develop camera-preview latch WITHOUT re-rendering (the caller is about to
+       show something else). Safe to call when it is not up. */
+    void clearDevelopCameraPreview();
     /* Repaint the tint swatch (it lives on the Mask band): it is filled with the overlay
        colour and it carries the blue active border while the tint is shown. */
     void refreshDevelopMaskTintBtn();
@@ -1861,7 +1887,8 @@ private:
     QActionGroup *previewSourceGroup = nullptr;
     QAction *previewSourceOriginalAction = nullptr;
     QAction *previewSourceDevelopedAction = nullptr;
-    QAction *togglePreviewSourceAction = nullptr;   // Y shortcut
+    QAction *togglePreviewSourceAction = nullptr;   // "\" and Y shortcuts
+    QAction *toggleCameraPreviewAction = nullptr;   // Opt+"\": camera preview / developed
     QAction *buildDevPreviewsAction = nullptr;
     QAction *clearDevPreviewCacheAction = nullptr;
 
@@ -1873,7 +1900,7 @@ private:
     QAction *developAddToMaskAction;      // M
     QAction *developSpotAction;         // S
     QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
-    QAction *developBeforeAfterAction = nullptr;  // "\" (global: Show image count)
+    QAction *developBeforeAfterAction = nullptr;  // "\" (global: Original / Developed)
     QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
     QAction *developCopySettingsAction = nullptr;  // Cmd+Opt+C (real, mode-gated)
@@ -2036,6 +2063,7 @@ private:
     QAction *diagnosticsMemoryAction;
     QAction *diagnosticsDataModelAction;
     QAction *diagnosticsDataModelAllRowsAction;
+    QAction *diagnosticsBlankRowsAction;
     QAction *diagnosticsEmbellishAction;
     QAction *diagnosticsFiltersAction;
     QAction *diagnosticsKeywordsAction;
@@ -2544,7 +2572,9 @@ private:
     /*  THE QUERY BUILDER's entry points: the Search row's "Build query...", "Save as
         Query...", and the Queries panel's New / Edit. */
     void openQueryBuilderForSearch();
-    void saveQueryAs(const Query::Expr &e);
+    /*  Name a query and add it to the Queries panel. notSaved: filter categories the
+        query could not hold, named in the dialog (Filters "Save as a query..."). */
+    void saveQueryAs(const Query::Expr &e, const QStringList &notSaved = {});
     void newQuery(qint64 parent);
     void editQuery(qint64 id);
     /*  What a builder value box offers as it is typed into: the values the loaded
@@ -2643,6 +2673,11 @@ private:
     /* True while the crop tool is being edited: the render pipeline then SUPPRESSES the geometry
        (shows the full frame for the overlay); committing the crop clears it and re-renders cropped. */
     bool developCropEditing = false;
+    /* Opt+"\" in Develop: the camera's own preview is on the loupe in place of the render.
+       While it is up, render completions for developCameraPath leave the loupe alone; any
+       new render request (an edit, navigation, a tool) takes it down. */
+    bool developCameraShown = false;
+    QString developCameraPath;
     /* Transform Preview eye "live result toggle" (only meaningful while developCropEditing): true =
        peek at the cropped/warped RESULT (overlay dropped, geometry applied in the render); false =
        normal editing (full frame + overlay). Reset on enter/exit crop. */
@@ -2856,6 +2891,17 @@ private:
     void syncPendingMaskOp();
     QString developSubjectRefPath;
     class SubjectPredictor *subjectPredictor = nullptr;
+    /* LENS PROFILE vs the AI mask guides. A profile that moves pixels (distortion, TCA)
+       must be applied to every guide the masks are built from, or a mask lands where the
+       uncorrected subject was. correctGuideForLens does that to a guide image;
+       noteLensGeometry, called first by every ensure* builder, drops the image's cached
+       references when its lens GEOMETRY changes (developLensGeomKeys: path -> the
+       geometry the references were built under), so they rebuild. */
+    void correctGuideForLens(WorkingImage &guide, const QString &fPath,
+                             const EditParams &base) const;
+    void noteLensGeometry(const QString &fPath, const WorkingImage &work,
+                          const EditParams &base);
+    QHash<QString, QString> developLensGeomKeys;
     /* AI "Select Sky" mask: a sky alpha matte (SkyMask store) built once per image by
        ensureSkyMask (skyseg.onnx + sky_segformer.onnx, lazily loaded). Keyed on path
        only. Twin of the Subject mask. */
@@ -2914,6 +2960,8 @@ private:
     /*  Consecutive drains that committed nothing while rows were still pending. Bounds
         the retry; see MW::drainStaleRecommit. */
     int staleRecommitAttempts = 0;
+    /*  Paths MW::checkBlankRows has already reported this session (once each). */
+    QSet<QString> blankRowsReported;
     Thumb *refreshThumb = nullptr;    // lazily created; refreshes a single icon after in-place replace
     ImageCache *imageCache;
     QThread imageCacheThread;
@@ -3365,6 +3413,9 @@ private:
     int pickedSfInstance = -1;
     int pickedSfRows = -1;
     QString getRawRendered();
+    /* Which picture of the current image is on screen: "Preview" (the camera's embedded
+       preview), "Original" (the file itself, or Develop's Before) or "Developed". */
+    QString getPictureShown();
     QString getSelectedFileSize();
     double macActualDevicePixelRatio(QPoint loc, QScreen *screen);
     bool isFolderValid(QString fPath, bool report, bool isRemembered = false);
@@ -3408,6 +3459,7 @@ private:
     void diagnosticsMemory();
     void diagnosticsDataModel();
     void diagnosticsDataModelAllRows();
+    void diagnosticsBlankRows();
     void diagnosticsEmbellish();
     void diagnosticsErrors();
     void diagnosticsFilters();

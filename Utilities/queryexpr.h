@@ -129,6 +129,16 @@ struct Node
     bool operator==(const Node &o) const;
 };
 
+/*
+    "THE COLUMN HOLDS ONE OF THESE VALUES", as a query: a Filters panel category's checks
+    (Filters::activeFiltersAsQuery). values are what the column holds, compared the way
+    the field's type compares -- one any-of rule for an enum or a list, an exact match per
+    value otherwise. A BLANK value is "is empty" (rating 0, for a rating, which reads
+    blank as unrated). exclude means none of them. Built to survive toText() and parse(),
+    because a saved Query is evaluated from its text.
+*/
+Node matchValues(const Field &f, const QStringList &values, bool exclude);
+
 class Expr
 {
 public:

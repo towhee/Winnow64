@@ -1216,13 +1216,30 @@ void MW::createUtilActions()
     connect(previewSourceDevelopedAction, &QAction::triggered, this,
             [this]() { setPreviewSource(G::PreviewSource::Developed); });
 
-    togglePreviewSourceAction = new QAction(tr("Original / Developed"), this);
+    /* "\" is the primary key, matching Develop's Before / After on the same key (the
+       arbiter takes "\" in Develop, so this action never sees it there). Y is the older
+       binding and stays. Set here rather than in loadShortcuts so an existing profile
+       gets "\" too; the text names both keys the way deleteImagesAction does. */
+    togglePreviewSourceAction = new QAction(tr("Original / Developed\t\\, Y"), this);
     togglePreviewSourceAction->setObjectName("togglePreviewSource");
-    togglePreviewSourceAction->setShortcut(QKeySequence("Y"));
+    togglePreviewSourceAction->setShortcuts({QKeySequence("\\"), QKeySequence("Y")});
     togglePreviewSourceAction->setShortcutVisibleInContextMenu(true);
     addAction(togglePreviewSourceAction);
     connect(togglePreviewSourceAction, &QAction::triggered,
             this, &MW::togglePreviewSource);
+
+    /* Opt+"\": the camera's picture vs the developed one, in EVERY mode -- so unlike the
+       three above it is never disabled. Outside Develop the Original IS the camera's
+       picture (Preview mode does not decode raws), so it does what "\" does; in Develop
+       it puts the embedded preview over the live render. Alt+key is outside the Develop
+       arbiter's table, so the QAction shortcut fires in both modes. */
+    toggleCameraPreviewAction = new QAction(tr("Camera Preview / Developed"), this);
+    toggleCameraPreviewAction->setObjectName("toggleCameraPreview");
+    toggleCameraPreviewAction->setShortcut(QKeySequence("Alt+\\"));
+    toggleCameraPreviewAction->setShortcutVisibleInContextMenu(true);
+    addAction(toggleCameraPreviewAction);
+    connect(toggleCameraPreviewAction, &QAction::triggered,
+            this, &MW::toggleCameraPreview);
 
     /* ---- Develop mode local shortcuts ------------------------------------------------
        These actions are given NO key sequence.  Qt allows only one QAction per sequence
@@ -2305,6 +2322,12 @@ void MW::createHelpActions()
     addAction(diagnosticsDataModelAllRowsAction);
     connect(diagnosticsDataModelAllRowsAction, &QAction::triggered, this, &MW::diagnosticsDataModelAllRows);
 
+    diagnosticsBlankRowsAction = new QAction(tr("Blank thumbnail report"), this);
+    diagnosticsBlankRowsAction->setObjectName("diagnosticsBlankRows");
+    diagnosticsBlankRowsAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsBlankRowsAction);
+    connect(diagnosticsBlankRowsAction, &QAction::triggered, this, &MW::diagnosticsBlankRows);
+
     diagnosticsMetadataCacheAction = new QAction(tr("MetadataCache diagnostics"), this);
     diagnosticsMetadataCacheAction->setObjectName("diagnosticsMetadataCache");
     diagnosticsMetadataCacheAction->setShortcutVisibleInContextMenu(true);
@@ -2817,6 +2840,7 @@ void MW::createDevelopMenu()
     developMenu->addAction(developWbSamplerAction);
     developMenu->addAction(screenSamplerAction);
     developMenu->addAction(developBeforeAfterAction);
+    developMenu->addAction(toggleCameraPreviewAction);
     developMenu->addSeparator();
     /* Scopes submenu: the same four actions the strip's right-click menu shows. Ticked
        to match the strip as it opens (syncDevelopScopesMenu). */
@@ -2931,6 +2955,7 @@ void MW::createViewMenu()
     viewMenu->addAction(previewSourceOriginalAction);
     viewMenu->addAction(previewSourceDevelopedAction);
     viewMenu->addAction(togglePreviewSourceAction);
+    viewMenu->addAction(toggleCameraPreviewAction);
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(iconNumberVisibleAction);
@@ -3089,6 +3114,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsMetadataAction);
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAction);
     helpDiagnosticsMenu->addAction(diagnosticsDataModelAllRowsAction);
+    helpDiagnosticsMenu->addAction(diagnosticsBlankRowsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsMemoryAction);
@@ -3879,7 +3905,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         openUsbAction->setShortcut(QKeySequence("Ctrl+O"));
         ingestAction->setShortcut(QKeySequence("Q"));
         renameAction->setShortcut(QKeySequence("Ctrl+F2"));
-        showImageCountAction->setShortcut(QKeySequence("\\"));
         combineRawJpgAction->setShortcut(QKeySequence("Alt+J"));
         revealFileAction->setShortcut(QKeySequence("Ctrl+R"));
         refreshFoldersAction->setShortcut(QKeySequence("Ctrl+F5"));
@@ -4096,7 +4121,7 @@ void MW::loadDevelopShortcuts()
        arbiter's value-editor guard tests the table rather than the A-Z range -- focus
        sits on a Develop dock slider for most of a session and a slider has no more use
        for "\" than it has for a letter. */
-    developShortcuts[Qt::Key_Backslash] = developBeforeAfterAction; // global: Image count
+    developShortcuts[Qt::Key_Backslash] = developBeforeAfterAction; // global: Orig/Developed
     /* No Develop-local G: the scopes strip is chosen from its right-click menu and the
        Develop menu's Scopes submenu, so G keeps its global meaning -- and in Develop that
        meaning is the way out: Preview mode, Grid view (see asGridAction). */

@@ -34,6 +34,7 @@ public:
     void syncInstance();
     // void cleanupIcons();
     QString diagnostics();
+    QString rowStateText(int dmRow, int sfRow);
     /*  Per-row loader state for sf rows first..last that have no icon (probe only).
         Runs on the metaReadThread: invoke it BlockingQueued from the GUI thread. */
     Q_INVOKABLE QString rowStateReport(int first, int last);
@@ -139,6 +140,9 @@ public slots:
        Prints this thread's view of it -- in-flight / success sets, RowSync flags, the
        readers' cycling flags, the a/b cursors, the icon range. Call it queued. */
     void probeStaleRow(int dmRow, int sfRow);
+    /* MW::checkBlankRows found these rows blank after the load settled: append this
+       thread's view of each (probeStaleRow's text + rowStateReport) to logPath. Queued. */
+    void appendBlankRowState(QList<int> dmRows, QList<int> sfRows, QString logPath);
     void dispatchFinished(QString src);
     void allFinished(QString src);
     void abortProcessing();

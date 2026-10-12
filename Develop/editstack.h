@@ -104,6 +104,7 @@ struct EditScope {
     bool showPointColor = true;
     bool showDetail     = true;
     bool showEffects    = true;
+    bool showLens       = true;     // Global only: the Lens section
 };
 
 /* The params the renderer should apply for one scope: a COPY of the stored params with any
@@ -119,7 +120,9 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
         EditParams::resetGroup(p, EditParams::Group::PointColor);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
-        if (l.params.removeCA >= 0) p.removeCA = 0;     // see the showEffects fold
+        EditParams::resetGroup(p, EditParams::Group::Lens);
+        if (l.params.removeCA >= 0) p.removeCA = 0;         // see the showLens fold
+        if (l.params.lensProfile >= 0) p.lensProfile = 0;
         return p;
     }
     if (!l.showBasic)      EditParams::resetGroup(p, EditParams::Group::Basic);
@@ -129,12 +132,14 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     if (!l.showColorGrade) EditParams::resetGroup(p, EditParams::Group::ColorGrade);
     if (!l.showPointColor) EditParams::resetGroup(p, EditParams::Group::PointColor);
     if (!l.showDetail)     EditParams::resetGroup(p, EditParams::Group::Detail);
-    if (!l.showEffects) {
-        EditParams::resetGroup(p, EditParams::Group::Effects);
-        /* An explicit removeCA previews as OFF; the reset's unset would still follow
-           G::autoRemoveCA on a raw. An unset recipe stays unset: forcing 0 there would
-           make an untouched scope non-identity (and composited). */
+    if (!l.showEffects)    EditParams::resetGroup(p, EditParams::Group::Effects);
+    if (!l.showLens) {
+        EditParams::resetGroup(p, EditParams::Group::Lens);
+        /* An explicit removeCA / lensProfile previews as OFF; the reset's unset would
+           still follow the auto preference on a raw. An unset recipe stays unset:
+           forcing 0 there would make an untouched scope non-identity (and composited). */
         if (l.params.removeCA >= 0) p.removeCA = 0;
+        if (l.params.lensProfile >= 0) p.lensProfile = 0;
     }
     return p;
 }
@@ -218,7 +223,7 @@ struct EditStack {
                               !l.showColor ||
                               !l.showCalibrate || !l.showColorGrade ||
                               !l.showPointColor ||
-                              !l.showDetail || !l.showEffects))
+                              !l.showDetail || !l.showEffects || !l.showLens))
                 return false;
         return true;
     }
@@ -309,6 +314,10 @@ struct EditStack {
         if (p.removeCA >= 0)          o["removeCA"]       = p.removeCA;
         if (p.defringePurple > 0.0f)  o["defringePurple"] = p.defringePurple;
         if (p.defringeGreen  > 0.0f)  o["defringeGreen"]  = p.defringeGreen;
+        if (p.lensProfile >= 0)       o["lensProfile"]    = p.lensProfile;
+        if (p.lensDistortion != 1.0f) o["lensDistortion"] = p.lensDistortion;
+        if (p.lensVignetting != 1.0f) o["lensVignetting"] = p.lensVignetting;
+        if (!p.lensProfileId.isEmpty()) o["lensProfileId"] = p.lensProfileId;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
         o["localDenoiseChroma"]= p.localDenoiseChroma;
         o["sharpenAmount"]   = p.sharpenAmount;
@@ -383,6 +392,10 @@ struct EditStack {
         p.removeCA        = o.value("removeCA").toInt(p.removeCA);       // absent = unset
         p.defringePurple  = static_cast<float>(o.value("defringePurple").toDouble(p.defringePurple));
         p.defringeGreen   = static_cast<float>(o.value("defringeGreen").toDouble(p.defringeGreen));
+        p.lensProfile     = o.value("lensProfile").toInt(p.lensProfile); // absent = unset
+        p.lensDistortion  = static_cast<float>(o.value("lensDistortion").toDouble(p.lensDistortion));
+        p.lensVignetting  = static_cast<float>(o.value("lensVignetting").toDouble(p.lensVignetting));
+        p.lensProfileId   = o.value("lensProfileId").toString(p.lensProfileId);
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
         p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
         p.sharpenAmount   = static_cast<float>(o.value("sharpenAmount").toDouble(p.sharpenAmount));
@@ -420,6 +433,7 @@ struct EditStack {
             if (!l.showPointColor) lo["showPointColor"] = false;
             if (!l.showDetail)     lo["showDetail"]     = false;
             if (!l.showEffects)    lo["showEffects"]    = false;
+            if (!l.showLens)       lo["showLens"]       = false;
             QJsonArray marr;
             for (const MaskComponent &m : l.components) {
                 QJsonObject mo;
@@ -520,6 +534,7 @@ struct EditStack {
             l.showPointColor = lo.value("showPointColor").toBool(l.showPointColor);
             l.showDetail = lo.value("showDetail").toBool(l.showDetail);
             l.showEffects = lo.value("showEffects").toBool(l.showEffects);
+            l.showLens = lo.value("showLens").toBool(l.showLens);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
                 const QJsonObject mo = mv.toObject();
@@ -696,6 +711,9 @@ struct EditStack {
         if (p.removeCA < -1 || p.removeCA > 1)     { p.removeCA = def.removeCA; ++fixed; }
         if (clampF(p.defringePurple, 0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.defringeGreen,  0.0f, 1.0f, 0.0f)) ++fixed;
+        if (p.lensProfile < -1 || p.lensProfile > 1) { p.lensProfile = def.lensProfile; ++fixed; }
+        if (clampF(p.lensDistortion, 0.0f, 2.0f, def.lensDistortion)) ++fixed;
+        if (clampF(p.lensVignetting, 0.0f, 2.0f, def.lensVignetting)) ++fixed;
         if (clampF(p.localDenoiseLuma,   0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.localDenoiseChroma, 0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.sharpenAmount,  0.0f, 1.5f, 0.0f)) ++fixed;

@@ -1,5 +1,6 @@
 #include "metaread.h"
 #include "Main/global.h"
+#include "Utilities/rowtrail.h"
 
 namespace {
 /* RAII nanosecond accumulator for the Phase-2 perf probe. Adds elapsed time to acc on
@@ -243,12 +244,36 @@ void MetaRead::invalidateLoadedIcons()
 
 void MetaRead::probeStaleRow(int dmRow, int sfRow)
 {
+    qDebug().noquote() << "[PERF] stale row (MetaRead):" << rowStateText(dmRow, sfRow);
+}
+
+void MetaRead::appendBlankRowState(QList<int> dmRows, QList<int> sfRows, QString logPath)
+{
+/*
+    The MetaRead half of MW::checkBlankRows' report, written from this thread because
+    the sets it prints (rowsReading, readSuccessThisCycle, cycling) are this thread's.
+*/
+    QFile f(logPath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Append | QIODevice::Text)) return;
+    QTextStream out(&f);
+    out << "\n--- MetaRead view (its own thread) ---\n";
+    for (int i = 0; i < dmRows.size() && i < sfRows.size(); ++i) {
+        out << "dmRow " << dmRows.at(i) << ": " << rowStateText(dmRows.at(i), sfRows.at(i))
+            << "\n";
+        if (sfRows.at(i) >= 0) out << rowStateReport(sfRows.at(i), sfRows.at(i)) << "\n";
+    }
+    out << "===== end blank-row report =====\n";
+}
+
+QString MetaRead::rowStateText(int dmRow, int sfRow)
+{
     auto sync = dm->rowSync();
     auto snap = dm->proxySnapshot();
     QString cyc;
     for (bool c : cycling) cyc += c ? '1' : '0';
-    qDebug().noquote()
-        << "[PERF] stale row (MetaRead): dmRow =" << dmRow << " sfRow =" << sfRow
+    QString txt;
+    QDebug(&txt).noquote()
+        << "dmRow =" << dmRow << " sfRow =" << sfRow
         << " snap sfRow->dmRow =" << (snap ? snap->dmRow(sfRow) : -2)
         << " rowsReading =" << rowsReading.contains(dmRow)
         << " readSuccessThisCycle =" << readSuccessThisCycle.contains(dmRow)
@@ -266,6 +291,7 @@ void MetaRead::probeStaleRow(int dmRow, int sfRow)
         << " sfRowCount =" << rowCountSf()
         << " awaitingDecodeRow =" << awaitingDecodeRow.load()
         << " queuedReaderEvents =" << dm->queuedReaderEvents.load();
+    return txt;
 }
 
 void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
@@ -370,6 +396,34 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         if (G::isPerfProbe)
             dm->probeRearmNs.fetch_add(probeTimer.nsecsElapsed(),
                                        std::memory_order_relaxed);
+    }
+    /*  VISIBLE RE-ARM, EVERY CALL, BOTH MODES. The brute-force skip above assumes
+        nothing discards an icon behind the loader's back, and the intermittent blank
+        thumbnail proves something does: on 2026-10-12 (Library, collection filter, 23
+        rows, chunk 10000) two visible rows had no icon, every reader was idle, and the
+        cycle had finished -- the rows sat in readSuccessThisCycle, so needToRead refused
+        them for the rest of the session. Re-arming only the visible rows costs a
+        screenful of lookups per call and makes any such loss heal on the next selection
+        or scroll. Each heal is recorded (RowTrail + issue log) so the cause that drops
+        the icon stays visible rather than masked. */
+    else {
+        const int first = qMax(0, qMax(firstIconRow, dm->firstVisibleIcon));
+        const int last  = qMin(sfRowCount - 1, qMin(lastIconRow, dm->lastVisibleIcon));
+        QStringList healed;
+        for (int row = first; row <= last; ++row) {
+            if (iconLoadedAt(row)) continue;
+            const int dmRow = dmRowOf(row);
+            if (dmRow < 0 || !readSuccessThisCycle.remove(dmRow)) continue;
+            const QString fPath = pathAt(row);
+            RowTrail::note(fPath, dmRow, "MetaRead visible re-arm");
+            healed << fPath;
+        }
+        if (!healed.isEmpty())
+            G::issue("Warning",
+                     QString("Re-armed %1 visible row(s) whose icon was lost after a "
+                             "successful read: %2").arg(healed.size())
+                         .arg(healed.join(", ")),
+                     "MetaRead::setStartRow");
     }
 
 
@@ -1215,6 +1269,9 @@ inline bool MetaRead::needToRead(int sfRow)
     else {
         rowsReading.insert(dmRow);
     }
+    RowTrail::note(pathAt(sfRow), dmRow, "MetaRead dispatch",
+                   QString("sfRow %1 meta %2 icon %3 inst %4")
+                       .arg(sfRow).arg(needMeta).arg(needIcon).arg(instance));
 
     if (G::isPerfProbe) dm->probeDispatched.fetch_add(1, std::memory_order_relaxed);
     return true;
@@ -1423,6 +1480,8 @@ void MetaRead::processReturningReader(int id, Reader *r)
     if (dmRow >= 0) {
         readSuccessThisCycle.insert(dmRow);
         if (!isVideoDm(dmRow)) rowsReading.remove(dmRow);
+        RowTrail::note(rfPath, dmRow, "MetaRead return",
+                       "status " + r->statusText.value(r->status));
     }
     int sfRow = -1;
     {
@@ -1725,6 +1784,14 @@ void MetaRead::dispatch(int id, bool isReturning)
     r = readers[id];
 
     if (abort || dm->sf->isSuspended()) {
+        /*  PROBE: a RETURNING reader dropped here is never processed -- its row stays in
+            rowsReading (needToRead then answers "already reading" until the instance
+            changes) and cycling[id] stays true. Prime suspect for the blank-thumbnail
+            row; see MW::checkBlankRows. */
+        if (isReturning)
+            RowTrail::note(r->fPathSnapshot(), r->dmRow, "MetaRead return IGNORED",
+                           QString("abort %1 sfSuspended %2 reader %3")
+                               .arg(bool(abort)).arg(dm->sf->isSuspended()).arg(id));
         r->status = Reader::Status::Ready;
         suspendedReturnCount.fetch_add(1, std::memory_order_relaxed);
         return;

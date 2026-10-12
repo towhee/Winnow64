@@ -217,6 +217,11 @@ void MW::createCollectionsDock()
     connect(filters, &Filters::saveAsQueryRequested, this, [this](const QString &text) {
         saveQueryAs(Query::Expr::parse(text));
     });
+    /*  The Filters menu's "Save as a query...": every active filter as one query. */
+    connect(filters, &Filters::saveFiltersAsQueryRequested, this,
+            [this](const QString &text, const QStringList &notSaved) {
+        saveQueryAs(Query::Expr::parse(text), notSaved);
+    });
 
     refreshCollectionNodes();
     refreshCollectionMembership();
@@ -654,15 +659,21 @@ void MW::openQueryBuilderForSearch()
     filters->setSearchText(dlg.expr().toText());
 }
 
-void MW::saveQueryAs(const Query::Expr &e)
+void MW::saveQueryAs(const Query::Expr &e, const QStringList &notSaved)
 {
     if (G::isLogger) G::log("MW::saveQueryAs");
     if (e.isEmpty()) {
         if (G::popup) G::popup->showPopup(tr("There is no query to save."), 2000);
         return;
     }
+    /*  Said BEFORE the name is typed, so a query that will not reproduce the panel
+        exactly is never saved by surprise. */
+    QString label = tr("Name:");
+    if (!notSaved.isEmpty())
+        label = tr("Not included -- a query has no field for: %1\n\nName:")
+                    .arg(notSaved.join(", "));
     bool ok = false;
-    const QString name = QInputDialog::getText(this, tr("Save as Query"), tr("Name:"),
+    const QString name = QInputDialog::getText(this, tr("Save as Query"), label,
                                                QLineEdit::Normal, e.toText().left(60), &ok)
                              .trimmed();
     if (!ok || name.isEmpty()) return;

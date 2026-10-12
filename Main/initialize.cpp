@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Develop/lensdb.h"
 #ifdef Q_OS_MAC
 #include <execinfo.h>
 #endif
@@ -2671,6 +2672,7 @@ void MW::createDevelopDock()
             [this](bool showingBefore){
                 if (developBeforeAfterAction)
                     developBeforeAfterAction->setChecked(showingBefore);
+                updateStatus(true, "", "DevelopProperties::beforeAfterChanged");
             });
     /* The dock's "Edit: Raw / Embedded Preview" selector drives G::useRaw through the same path as
        the status-bar button (toggleUseRaw is a private slot, hence the signal hop). */
@@ -2890,6 +2892,8 @@ void MW::createDevelopDock()
         developScopesLayout = ScopesView::Both;
     G::autoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
     G::autoRemoveCA = settings->value("Develop/autoRemoveCA", false).toBool();
+    G::autoLensProfile = settings->value("Develop/autoLensProfile", false).toBool();
+    LensDb::preload();       // parse the lens database off the GUI thread, ahead of need
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
@@ -3954,6 +3958,10 @@ void MW::setOperationMode(G::OperationMode mode)
        reads Developed) while in Develop and restored to the user's Preview-mode choice on
        the way out. G::previewSource itself is untouched by the mode. */
     syncPreviewSourceEnabled();
+    /* The Opt+"\" camera-preview latch is a Develop loupe state; it must not outlive the
+       mode (a later Develop session would suppress its first renders). */
+    clearDevelopCameraPreview();
+    updateStatus(true, "", "MW::setOperationMode");     // Preview / Original / Developed
 
     /* ... and the thumbnails have to follow, because the mode is half of which picture
        they show: the effective source is (Develop ? Developed : G::previewSource). With

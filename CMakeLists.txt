@@ -143,6 +143,7 @@ set(WINNOW_SOURCES
     # Develop
     Develop/cameraprofile.cpp
     Develop/cameraprofilestore.cpp
+    Develop/lensdb.cpp
     Develop/develop.cpp
     Develop/inputtransform.cpp
     Develop/outputtransform.cpp
@@ -434,6 +435,7 @@ set(WINNOW_SOURCES
     Utilities/icc.cpp
     Utilities/ingestprobe.cpp
     Utilities/panelprobe.cpp
+    Utilities/rowtrail.cpp
     Utilities/inputdlg.cpp
     Utilities/performance.cpp
     Utilities/popup.cpp
@@ -519,6 +521,8 @@ set(WINNOW_HEADERS
     Develop/cameracurvedata.h
     Develop/cameraprofile.h
     Develop/cameraprofilestore.h
+    Develop/lensdb.h
+    Develop/lensprofile.h
     Develop/develop.h
     Develop/outputlook.h
     Develop/huesatmap.h
@@ -740,6 +744,7 @@ set(WINNOW_HEADERS
     Utilities/icc.h
     Utilities/ingestprobe.h
     Utilities/panelprobe.h
+    Utilities/rowtrail.h
     Utilities/inputdlg.h
     Utilities/movingavg.h
     Utilities/performance.h
@@ -823,7 +828,8 @@ set(WINNOW_FORMS
 # Display-only; no TREE = flat list. Mirrors the `notes` source_group below.
 source_group("UI" FILES ${WINNOW_FORMS})
 
-set(WINNOW_RESOURCES winnow.qrc)
+# lensfun's lens database (Develop/LensDb, CC BY-SA), compiled in as :/lensfun/*.xml.
+set(WINNOW_RESOURCES winnow.qrc Develop/LensDb/lensfun.qrc)
 
 # -----------------------------------------------------------------------------
 # Notes folder — listed so it shows up in the IDE project tree.

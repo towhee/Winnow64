@@ -301,9 +301,9 @@ struct EditParams {
     }
 
     /*
-        LENS CORRECTIONS (Develop/lenscorrect.h), Global scope only, applied to the BASE
-        image before any scope develops -- so every mask, guide and scope sees corrected
-        edges. Set from the Global scope's Effects section.
+        LENS CORRECTIONS (Develop/lenscorrect.h, Develop/lensprofile.h), Global scope
+        only, applied to the BASE image before any scope develops -- so every mask, guide
+        and scope sees corrected edges. Set from the Global scope's Lens section.
 
         removeCA -- lateral chromatic aberration, TRI-STATE like denoiseRaw and for the
         same reason (an untouched raw must keep its recipe and devPreview key):
@@ -325,6 +325,33 @@ struct EditParams {
         return removeCA >= 0 ? removeCA > 0 : (autoRaw && isRaw);
     }
     bool wantsDefringe() const { return defringePurple > 0.0f || defringeGreen > 0.0f; }
+
+    /*
+        LENS PROFILE (lensfun calibration; Develop/lensdb.h finds it, lensprofile.h
+        applies it): distortion, transverse CA and vignetting for the lens in the EXIF.
+
+        lensProfile -- TRI-STATE, removeCA's pattern and reason:
+          -1  unset  follow G::autoLensProfile for a raw; off for anything else (a JPEG
+                     was usually corrected in camera). DEFAULT, omitted from the sidecar.
+           0  off
+           1  on
+        Read it through wantsLensProfile().
+        lensDistortion / lensVignetting -- how much of the profile's correction, 0..2,
+        1 = as calibrated (the panel shows 0..200).
+        lensProfileId -- the lens the user picked (LensDb::Lens::id, "maker|model|crop");
+        empty = matched automatically from the EXIF.
+
+        The profile's TCA follows removeCA: with Remove CA on, a profile that has TCA
+        replaces the estimate measured from the image.
+    */
+    int     lensProfile    = -1;
+    float   lensDistortion = 1.0f;
+    float   lensVignetting = 1.0f;
+    QString lensProfileId;
+
+    bool wantsLensProfile(bool autoRaw, bool isRaw) const {
+        return lensProfile >= 0 ? lensProfile > 0 : (autoRaw && isRaw);
+    }
 
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
@@ -402,11 +429,12 @@ struct EditParams {
        in Lightroom. localDenoise* moved here from Effects; the saved preset format is
        unaffected (presets store a flat map of field names, section titles only group the
        checklist UI), but a scope's showDetail rather than showEffects now gates them. */
-    /* Effects also holds the Global-only lens corrections (removeCA, defringePurple/
-       Green), whose rows sit in the Global scope's Effects section; a mask scope never
-       sets them, so resetting its Effects is unaffected. */
+    /* Lens = the Global-only lens corrections (profile, removeCA, defringe), the Global
+       scope's Lens section. They sat under Effects until the Lens section existed; the
+       preset format is unaffected (presets store field names, not sections). A mask
+       scope never sets them. */
     enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects,
-                       PointColor };
+                       PointColor, Lens };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
        fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
@@ -476,7 +504,13 @@ struct EditParams {
             p.grainAmount = def.grainAmount;                 // "Grain" (film grain)
             p.grainSize = def.grainSize;
             p.grainRoughness = def.grainRoughness;
-            p.removeCA = def.removeCA;                       // lens (Global only)
+            break;
+        case Group::Lens:
+            p.lensProfile = def.lensProfile;
+            p.lensDistortion = def.lensDistortion;
+            p.lensVignetting = def.lensVignetting;
+            p.lensProfileId = def.lensProfileId;
+            p.removeCA = def.removeCA;
             p.defringePurple = def.defringePurple;
             p.defringeGreen = def.defringeGreen;
             break;
@@ -522,6 +556,8 @@ struct EditParams {
                denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
                denoiseRaw < 0 &&        // unset = "follow the preference" = untouched
                removeCA < 0 && defringePurple == 0.0f && defringeGreen == 0.0f &&
+               lensProfile < 0 && lensDistortion == 1.0f && lensVignetting == 1.0f &&
+               lensProfileId.isEmpty() &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&

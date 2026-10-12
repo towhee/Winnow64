@@ -1214,10 +1214,21 @@
          <string>Original / Developed</string>
         </property>
         <property name="text">
-         <string>Y</string>
+         <string>\   or   Y</string>
         </property>
         <property name="text">
-         <string>Toggle the thumbnails and the loupe between image preview and developed.</string>
+         <string>Toggle the thumbnails and the loupe between image preview and developed. In Develop mode \ is Before / After.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Camera Preview / Developed</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + \</string>
+        </property>
+        <property name="text">
+         <string>Toggle between the camera's embedded preview and the developed image, in every mode (in Develop, over the live render)</string>
         </property>
        </item>
        <item>
@@ -1261,7 +1272,7 @@
          <string>\</string>
         </property>
         <property name="text">
-         <string>Before is no edits, after is current edits</string>
+         <string>Before is no edits, after is current edits. Opt/Alt + \ compares with the camera preview instead</string>
         </property>
        </item>
        <item>

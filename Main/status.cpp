@@ -101,6 +101,9 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             base += spacer +" Selected: " + s;
             // Picked count
             base += spacer + "Picked: " + getPicked();
+            // Which picture is shown: Preview / Original / Developed
+            const QString shown = getPictureShown();
+            if (!shown.isEmpty()) base += spacer + shown;
             // Raw rendering
             base += spacer + getRawRendered();
         }
@@ -388,6 +391,40 @@ QString MW::getRawRendered()
         return "RAW";
     }
     return "";
+}
+
+QString MW::getPictureShown()
+{
+/*
+    The status-bar word after "Picked:" naming the picture of the current image on screen.
+
+      Preview    the camera's embedded preview: a raw browsed with Original chosen (Preview
+                 mode never decodes a raw), or Develop's Opt+"\" camera latch.
+      Original   the file itself (a JPG/TIFF/... browsed with Original chosen), or
+                 Develop's Before ("\").
+      Developed  Develop's live render, or a browsed image that HAS a devPreview while
+                 Developed is chosen. One without a devPreview has only its own picture,
+                 so it reads Preview / Original like the rows above.
+
+    Callers that change any of these inputs (setPreviewSource, the two Develop latches,
+    setOperationMode) call updateStatus so the word follows.
+*/
+    if (G::isLogger) G::log("MW::getPictureShown");
+    if (!dm || !dm->sf) return "";
+    const QString fPath = dm->currentKey;
+    if (fPath.isEmpty() || currentIsVideo()) return "";
+    const QString camera = isFileRaw(fPath) ? "Preview" : "Original";
+
+    if (G::operationMode == G::OperationMode::Develop) {
+        if (developCameraShown && developCameraPath == fPath) return camera;
+        if (developProperties && developProperties->isShowingBefore()) return "Original";
+        return "Developed";
+    }
+
+    if (G::previewSource == G::PreviewSource::Developed &&
+        !dm->sf->index(dm->currentSfRow, G::DevPreviewKeyColumn).data().toString().isEmpty())
+        return "Developed";
+    return camera;
 }
 
 QString MW::getSelectedFileSize()
@@ -834,7 +871,7 @@ void MW::syncPreviewSourceEnabled()
                 : QString("What you are looking at:\n"
                           "  Original \u2014 the camera's picture, as shot\n"
                           "  Developed \u2014 your develop edits applied\n"
-                          "Shortcut: Y"));
+                          "Shortcut: \\ or Y"));
     }
 
     for (QAction *a : {previewSourceOriginalAction, previewSourceDevelopedAction,
@@ -865,6 +902,13 @@ void MW::togglePreviewSource()
     setPreviewSource(G::previewSource == G::PreviewSource::Developed
                          ? G::PreviewSource::Original
                          : G::PreviewSource::Developed);
+    /* The status-bar combo is hidden, so a key press needs to say which picture is up --
+       placed and timed like Develop's Before / After message on the same key. */
+    if (G::popup)
+        G::popup->showPopup(G::previewSource == G::PreviewSource::Developed ? "Developed"
+                                                                            : "Original",
+                            500, true, 0.75, Qt::AlignHCenter,
+                            Qt::AlignBottom | Qt::AlignRight);
 }
 
 void MW::setPreviewSource(G::PreviewSource source)
@@ -892,6 +936,7 @@ void MW::setPreviewSource(G::PreviewSource source)
     G::previewSource = source;
 
     syncPreviewSourceEnabled();     // combo row + the radio pair
+    updateStatus(true, "", "MW::setPreviewSource");   // Preview / Original / Developed
 
     settings->setValue("previewSource", static_cast<int>(G::previewSource));
 

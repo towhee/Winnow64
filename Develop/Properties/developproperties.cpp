@@ -18,6 +18,7 @@
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
 #include "Develop/whitebalance.h"
+#include "Develop/lensdb.h"
 #include "Develop/calibrate.h"
 #include "Develop/outputtransform.h"
 #include "Develop/rangemask.h"
@@ -350,6 +351,7 @@ void DevelopProperties::buildTree()
                                          sectionExpanded("ColorPanelHeader", false));
     const bool exDetail  = expandedOr("DetailHeader",  sectionExpanded("DetailHeader",  false));
     const bool exEffects = expandedOr("EffectsHeader", sectionExpanded("EffectsHeader", false));
+    const bool exLens    = expandedOr("LensHeader",    sectionExpanded("LensHeader",    false));
 
     isPopulating = true;
     isRebuildingMasks = true;
@@ -359,7 +361,8 @@ void DevelopProperties::buildTree()
        setIndexWidget editors are freed rather than leaked on each rebuild. */
     btns.clear();
     basicEyeBtn = curvesEyeBtn = colorEyeBtn = calibrateEyeBtn = colorGradeEyeBtn =
-        detailEyeBtn = effectsEyeBtn = pointColorEyeBtn = colorPanelEyeBtn = nullptr;
+        detailEyeBtn = effectsEyeBtn = lensEyeBtn = pointColorEyeBtn = colorPanelEyeBtn =
+        nullptr;
     if (model->rowCount() > 0) {
         close(QModelIndex());
         model->removeRows(0, model->rowCount());
@@ -387,6 +390,7 @@ void DevelopProperties::buildTree()
         addColorGrade();
     }
     addDetail();        // sharpening + local NR, in pipeline order before Effects
+    addLens();          // Global only: the lens profile, Remove CA, defringe (LR's order)
     addEffects();
     /* The headers were just re-added with their plain captions, so the cached " *"
        state is stale -- force a full re-evaluation. */
@@ -408,6 +412,7 @@ void DevelopProperties::buildTree()
     setExpandOn("ColorPanelHeader", exColorPanel);
     setExpandOn("DetailHeader",  exDetail);
     setExpandOn("EffectsHeader", exEffects);
+    setExpandOn("LensHeader",    exLens);
 
     populateSlidersFromStack();
     refreshPreviewButtons();
@@ -432,7 +437,7 @@ void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expa
     const QString name = idx.data(UR_Name).toString();
     if (name == "BasicHeader" || name == "ColorHeader" || name == "DetailHeader" ||
         name == "EffectsHeader" || name == "PointColorHeader" ||
-        name == "ColorPanelHeader")
+        name == "ColorPanelHeader" || name == "LensHeader")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
 
@@ -577,17 +582,75 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
 
 void DevelopProperties::syncLensPanel()
 {
-    /* The rows exist only while Global is the active scope (addEffects); otherwise the
+    /* The rows exist only while Global is the active scope (addLens); otherwise the
        setters below find no row and do nothing. */
     EditParams g;
     const EditStack s = stackCache.value(currentImagePath);
     if (!s.scopes.isEmpty()) g = s.scopes.at(0).params;
     const bool wasPop = isPopulating;
     isPopulating = true;
-    setCheckboxValue("removeCA", g.wantsRemoveCA(G::autoRemoveCA, currentIsRaw()));
+    const bool raw = currentIsRaw();
+    setCheckboxValue("lensProfile", g.wantsLensProfile(G::autoLensProfile, raw));
+    setSliderReal("lensDistortion", g.lensDistortion * 100.0);
+    setSliderReal("lensVignetting", g.lensVignetting * 100.0);
+    setCheckboxValue("removeCA", g.wantsRemoveCA(G::autoRemoveCA, raw));
     setSliderReal("defringePurple", g.defringePurple * 100.0);
     setSliderReal("defringeGreen",  g.defringeGreen  * 100.0);
+    repopulateLensCombo();          // the matched lens is per image; also the row enables
     isPopulating = wasPop;
+}
+
+void DevelopProperties::setGlobalLensProfile(bool on)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    const int want = on ? 1 : 0;
+    if (s.scopes[0].params.lensProfile == want) return;
+    s.scopes[0].params.lensProfile = want;
+    noteScopeEdit("Global", "Lens profile", on ? "On" : "Off", "global/lensProfile");
+    repopulateLensCombo();          // the amount rows follow the checkbox
+    emit paramsChanged();
+}
+
+void DevelopProperties::setGlobalLensAmount(bool distortion, int value0to200)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    const float f = qBound(0, value0to200, 200) / 100.0f;
+    float &field = distortion ? s.scopes[0].params.lensDistortion
+                              : s.scopes[0].params.lensVignetting;
+    if (field == f) return;
+    field = f;
+    noteScopeEdit("Global", distortion ? "Lens distortion" : "Lens vignetting",
+                  QString::number(value0to200),
+                  distortion ? "global/lensDistortion" : "global/lensVignetting");
+    emit paramsChanged();
+}
+
+void DevelopProperties::setGlobalLensProfileId(const QString &id)
+{
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    if (s.scopes[0].params.lensProfileId == id) return;
+    s.scopes[0].params.lensProfileId = id;
+    const LensDb::Lens *L = id.isEmpty() ? nullptr : LensDb::Database::instance().lensById(id);
+    noteScopeEdit("Global", "Lens", L ? L->displayName() : QStringLiteral("Auto"),
+                  "global/lensProfileId");
+    /* Picking a lens is asking for its correction: an image whose profile is off (or
+       unset with the preference off) would otherwise show no change at all. */
+    const EditParams &g = s.scopes[0].params;
+    if (!id.isEmpty() && !g.wantsLensProfile(G::autoLensProfile, currentIsRaw())) {
+        s.scopes[0].params.lensProfile = 1;
+        const bool wasPop = isPopulating;
+        isPopulating = true;
+        setCheckboxValue("lensProfile", true);
+        isPopulating = wasPop;
+    }
+    repopulateLensCombo();
+    emit paramsChanged();
 }
 
 void DevelopProperties::setGlobalRemoveCA(bool on)
@@ -1745,8 +1808,9 @@ void DevelopProperties::resetActiveScope()
     /* Restore this scope's adjustments to their defaults and un-hide every group (non-destructive to
        the mask geometry, which defines WHERE the scope applies). */
     l->params = EditParams();
-    l->showScope = l->showBasic = l->showColor = l->showCalibrate =
-        l->showColorGrade = l->showEffects = l->showPointColor = true;
+    l->showScope = l->showBasic = l->showCurves = l->showColor = l->showCalibrate =
+        l->showColorGrade = l->showPointColor = l->showDetail = l->showEffects =
+        l->showLens = true;
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
     emit paramsChanged();
@@ -1947,7 +2011,7 @@ void DevelopProperties::soloCollapseOthers(SoloOwner owner, const QString &keepS
     /* The adjustment sections. The base PropertyEditor already collapses tree siblings
        when a root expands; this also covers the Raw panel / Scope row cases. */
     for (const char *h : {"BasicHeader", "ColorHeader", "ColorPanelHeader",
-                          "EffectsHeader"}) {
+                          "EffectsHeader", "LensHeader"}) {
         if (keepSection == QLatin1String(h)) continue;
         const QModelIndex idx = findCaptionIndex(h);
         if (idx.isValid()) collapse(idx);
@@ -2377,6 +2441,7 @@ EditParams::Group DevelopProperties::paramsGroup(int group)
     case PV_PointColor: return EditParams::Group::PointColor;
     case PV_Detail:     return EditParams::Group::Detail;
     case PV_Effects:    return EditParams::Group::Effects;
+    case PV_Lens:       return EditParams::Group::Lens;
     default:          return EditParams::Group::Basic;   // PV_Basic (+ PV_Scope, unused)
     }
 }
@@ -2393,6 +2458,7 @@ QString DevelopProperties::groupLabel(int group)
     case PV_ColorPanel: return "Color";
     case PV_Detail:     return "Detail";
     case PV_Effects:    return "Effects";
+    case PV_Lens:       return "Lens";
     case PV_Scope:      return "all";
     default:            return "Basic";
     }
@@ -2411,6 +2477,7 @@ bool *DevelopProperties::previewFlag(EditScope *l, int group)
     case PV_ColorPanel: return nullptr;     // three flags: see togglePreviewSection
     case PV_Detail:     return &l->showDetail;
     case PV_Effects:    return &l->showEffects;
+    case PV_Lens:       return &l->showLens;
     default:          return &l->showBasic;             // PV_Basic
     }
 }
@@ -2504,6 +2571,7 @@ void DevelopProperties::refreshPreviewButtons()
                             : true);
     set(detailEyeBtn,   l ? l->showDetail   : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
+    set(lensEyeBtn,     l ? l->showLens     : true);
     /* The whole-mask eye lives in the ScopeHeader widget, not the tree. */
     if (scopeHeader) scopeHeader->setPreviewShown(l ? l->showScope : true);
 }
@@ -2543,6 +2611,7 @@ void DevelopProperties::resetSection(int group)
         EditParams::resetGroup(p, EditParams::Group::PointColor);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
+        EditParams::resetGroup(p, EditParams::Group::Lens);
     }
     else if (group == PV_ColorPanel) {
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
@@ -2624,6 +2693,7 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         else if (name == "ColorPanelHeader") group = PV_ColorPanel;
         else if (name == "DetailHeader")     group = PV_Detail;
         else if (name == "EffectsHeader")    group = PV_Effects;
+        else if (name == "LensHeader")       group = PV_Lens;
         if (group >= 0) {
             aResetSection = menu.addAction(tr("Reset %1").arg(groupLabel(group)));
             aResetSection->setEnabled(haveImage);
@@ -2795,7 +2865,7 @@ void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
        collapses), so expanding it must NOT collapse the scope. */
     const QString name = idx.data(UR_Name).toString();
     if (name != "BasicHeader" && name != "ColorHeader" && name != "ColorPanelHeader" &&
-        name != "EffectsHeader") return;
+        name != "EffectsHeader" && name != "LensHeader") return;
     soloCollapseOthers(SoloOwner::Section, name);
 }
 
@@ -3452,6 +3522,7 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         else if (previewGroup == PV_ColorPanel) colorPanelEyeBtn = eye;
         else if (previewGroup == PV_Detail)   detailEyeBtn   = eye;
         else if (previewGroup == PV_Effects)  effectsEyeBtn  = eye;
+        else if (previewGroup == PV_Lens)     lensEyeBtn     = eye;
         btns.append(eye);
         btns.append(makeSectionMenuBtn(previewGroup));   // menu last, as on every band
         /* Same gap the scope + submask ROWS put between their [eye] and [:], so the pair
@@ -5723,6 +5794,9 @@ void DevelopProperties::addColorPanel()
         group->addButton(tone, 0);
         group->addButton(hue,  1);
         group->addButton(rgb,  2);
+        colorPanelRadios[0] = tone;        // updateSectionHeaderCaptions stars them
+        colorPanelRadios[1] = hue;
+        colorPanelRadios[2] = rgb;
         if (QAbstractButton *b = group->button(colorPanelMode)) b->setChecked(true);
         connect(group, &QButtonGroup::idToggled, this, [this](int id, bool on){
             if (!on || id == colorPanelMode) return;
@@ -6273,30 +6347,186 @@ void DevelopProperties::addEffects()
     addSlider("grainRoughness", "   Roughness", "How patchy / irregular the grain is.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
 
-    /* Lens corrections (Develop/lenscorrect.h): Global-only recipe values applied to
-       the base image before any scope develops, so every mask and guide sees the
-       corrected edges. A mask scope cannot carry them, so its Effects section has no
-       such rows. Remove CA re-aligns red and blue to green radially (lateral CA); the
-       fringe sliders pull the coloured rim along high-contrast edges back to a true mix
-       of the two sides. Both 0..100 sliders map to 0..1. */
-    if (activeScopeIndex == 0) {
-        addGroupDivider(parIdx, "EffectsHeader", "LensDivider");
-        addCheckbox("removeCA", "Remove CA",
-                    "Remove lateral chromatic aberration: re-align red and blue with\n"
-                    "green, measured from this image. Removes the colour fringe that\n"
-                    "grows toward the corners. Preferences can turn it on for every\n"
-                    "raw file.",
-                    parIdx, "EffectsHeader");
-        addSlider("defringePurple", "Purple fringe:",
-                  "Defringe the cyan, blue, purple and magenta rim along\n"
-                  "high-contrast edges.",
-                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
-        addSlider("defringeGreen", "Green fringe:",
-                  "Defringe the green rim along high-contrast edges.",
-                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
+}
+
+void DevelopProperties::addLens()
+{
+/*
+    The Lens section, Global scope only: every row here is applied to the BASE image
+    before any scope develops (MW's lensCorrectedSource), so every mask, guide and scope
+    sees the corrected frame -- which is also why a mask scope cannot carry them and does
+    not get the section.
+
+    Lens profile (Develop/lensdb.h, Develop/lensprofile.h): lensfun's calibration for the
+    lens in the EXIF -- distortion, transverse chromatic aberration and vignetting --
+    with the lens overridable and the distortion / vignetting amounts 0..200%. Then the
+    image-measured corrections that were in Effects before this section existed: Remove
+    CA (whose estimate a profile's own TCA replaces) and the two fringe sliders.
+*/
+    if (G::isLogger) G::log("DevelopProperties::addLens");
+    if (activeScopeIndex != 0) return;
+    addHeader("LensHeader", "???", "Lens",
+              "Lens corrections: the lens profile (distortion, chromatic aberration,\n"
+              "vignetting), Remove CA and defringe. Applied to the whole image before\n"
+              "any mask, so they live in the Global scope only.", PV_Lens);
+    QModelIndex parIdx = capIdx;
+
+    addCheckbox("lensProfile", "Lens profile",
+                "Correct this lens's distortion, chromatic aberration and vignetting\n"
+                "from its lensfun profile, found from the lens in the EXIF.\n"
+                "Preferences can turn it on for every raw file. Off by default for\n"
+                "JPEGs, which the camera has usually corrected already.",
+                parIdx, "LensHeader");
+    addLensProfileRow(parIdx);
+    addSlider("lensDistortion", "   Distortion",
+              "How much of the profile's distortion correction: 100 = as calibrated,\n"
+              "0 = none, 200 = twice. The frame is re-scaled so no empty corners show.",
+              parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
+    addSlider("lensVignetting", "   Vignetting",
+              "How much of the profile's vignetting correction: 100 = as calibrated,\n"
+              "0 = none, 200 = twice. Needs the aperture in the EXIF.",
+              parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
+
+    addGroupDivider(parIdx, "LensHeader", "LensCADivider");
+    addCheckbox("removeCA", "Remove CA",
+                "Remove lateral chromatic aberration: re-align red and blue with\n"
+                "green. Uses the lens profile's measurement when the profile is on and\n"
+                "has one, otherwise measures it from this image. Removes the colour\n"
+                "fringe that grows toward the corners. Preferences can turn it on for\n"
+                "every raw file.",
+                parIdx, "LensHeader");
+    addSlider("defringePurple", "Purple fringe:",
+              "Defringe the cyan, blue, purple and magenta rim along\n"
+              "high-contrast edges.",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    addSlider("defringeGreen", "Green fringe:",
+              "Defringe the green rim along high-contrast edges.",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray);
+
+    addGroupDivider(parIdx, "LensHeader", "LensEndDivider");
+}
+
+/* lensfun's database is CC BY-SA: the attribution rides on the row that uses it. */
+static const char *kLensfunCredit =
+    "Lens profiles from the lensfun project (lensfun.github.io), CC BY-SA 3.0.";
+
+void DevelopProperties::addLensProfileRow(const QModelIndex &parIdx)
+{
+    clearItemInfo(i);
+    i.name = "lensProfileId";
+    i.parIdx = parIdx;
+    i.parentName = "LensHeader";
+    i.captionText = "   Lens";
+    i.tooltip = QString("Which lens profile is used. Auto matches the lens named in the "
+                        "EXIF; choose a lens here when the match is wrong or the EXIF names "
+                        "none (an adapted or manual lens).\n\n") + kLensfunCredit;
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "lensProfileId";
+    i.delegateType = DT_None;       // we own the value cell
+    addItem(i);
+
+    const QModelIndex valIdx = findValueIndex("lensProfileId");
+    if (!valIdx.isValid()) return;
+
+    QWidget *cell = new QWidget;
+    cell->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *vhb = new QHBoxLayout(cell);
+    vhb->setContentsMargins(0, 0, 10, 0);
+    vhb->setSpacing(0);
+
+    QComboBox *combo = new QComboBox;
+    /* Lens names run long ("Nikon AF-S Zoom-Nikkor 24-70mm f/2.8G ED"): the combo takes
+       the cell's width and elides; only its popup is allowed to be wide. Letting the
+       combo size to its contents would widen the whole dock. */
+    combo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+    combo->setSizeAdjustPolicy(QComboBox::AdjustToMinimumContentsLengthWithIcon);
+    combo->setMinimumContentsLength(8);
+    lensProfileCombo = combo;
+    connect(combo, QOverload<int>::of(&QComboBox::activated), this,
+            [this, combo](int ix){ setGlobalLensProfileId(combo->itemData(ix).toString()); });
+    vhb->addWidget(combo);
+    setIndexWidget(valIdx, cell);
+    repopulateLensCombo();
+}
+
+void DevelopProperties::repopulateLensCombo()
+{
+    if (!lensProfileCombo) return;
+
+    EditParams g;
+    if (!currentImagePath.isEmpty()) {
+        const EditStack &s = stackCache[currentImagePath];
+        if (!s.scopes.isEmpty()) g = s.scopes[0].params;
+    }
+    const LensDb::Shot shot = mw ? mw->lensShotFor(currentImagePath) : LensDb::Shot();
+    const LensDb::Database &db = LensDb::Database::instance();
+    const LensDb::Resolved autoMatch = LensDb::resolve(shot);
+    const LensDb::Resolved used = g.lensProfileId.isEmpty()
+                                      ? autoMatch : LensDb::resolve(shot, g.lensProfileId);
+
+    QSignalBlocker block(lensProfileCombo);
+    lensProfileCombo->clear();
+    /* The automatic entry says what it found -- or why it found nothing -- so the reason
+       is where the user is already looking, not in a popup. */
+    const QString autoText = autoMatch.lens
+        ? "Auto: " + autoMatch.lens->displayName()
+        : "Auto (" + autoMatch.reason + ")";
+    lensProfileCombo->addItem(autoText, QString());
+
+    const QVector<const LensDb::Lens *> fits = db.lensesFor(autoMatch.camera);
+    if (!fits.isEmpty()) lensProfileCombo->insertSeparator(lensProfileCombo->count());
+    /* A name the database uses twice (one lens, calibrated on two sensor sizes) gets its
+       crop factor, or the two rows would be indistinguishable. */
+    QHash<QString, int> nameCount;
+    for (const LensDb::Lens *L : fits) ++nameCount[L->displayName()];
+    for (const LensDb::Lens *L : fits) {
+        QString name = L->displayName();
+        if (nameCount.value(name) > 1)
+            name += QString("  (crop %1)").arg(double(L->cropFactor));
+        lensProfileCombo->addItem(name, L->id());
     }
 
-    addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
+    int ix = 0;
+    if (!g.lensProfileId.isEmpty()) {
+        ix = lensProfileCombo->findData(g.lensProfileId);
+        if (ix < 0) {
+            /* A picked lens this camera cannot take (or one gone from the database):
+               shown, marked and selected, never silently swapped for Auto. */
+            const LensDb::Lens *L = db.lensById(g.lensProfileId);
+            const QString name = L ? L->displayName()
+                                   : g.lensProfileId.section(QLatin1Char('|'), 1, 1);
+            lensProfileCombo->addItem(name + "  (" + (used.reason.isEmpty()
+                                          ? QStringLiteral("not for this camera")
+                                          : used.reason) + ")",
+                                      g.lensProfileId);
+            ix = lensProfileCombo->count() - 1;
+        }
+    }
+    lensProfileCombo->setCurrentIndex(ix);
+
+    /* What the selected profile corrects, for the tooltip -- and the two amount rows are
+       live only when the profile is on AND has that correction for this shot. */
+    QStringList corrects;
+    if (used.ok()) {
+        if (used.coeffs.hasDistortion()) corrects << "distortion";
+        if (used.coeffs.hasTca())        corrects << "chromatic aberration";
+        if (used.coeffs.vig)             corrects << "vignetting";
+    }
+    QString tip;
+    if (used.lens) tip = used.lens->displayName() + "\n";
+    tip += used.ok() ? "Corrects: " + corrects.join(", ")
+                     : "No correction: " + (used.reason.isEmpty() ? QString("no profile")
+                                                                  : used.reason);
+    if (!shot.lens.isEmpty()) tip += "\nEXIF lens: " + shot.lens;
+    tip += QString("\n\n") + kLensfunCredit;
+    lensProfileCombo->setToolTip(tip);
+
+    const bool on = g.wantsLensProfile(G::autoLensProfile, currentIsRaw());
+    setItemEnabled("lensDistortion", on && used.ok() && used.coeffs.hasDistortion());
+    setItemEnabled("lensVignetting", on && used.ok() && used.coeffs.vig);
 }
 
 void DevelopProperties::updateSectionHeaderCaptions()
@@ -6322,6 +6552,7 @@ void DevelopProperties::updateSectionHeaderCaptions()
         {"ColorGradeHeader", "Color Grade", PV_ColorGrade},
         {"DetailHeader",     "Detail",      PV_Detail},
         {"EffectsHeader",    "Effects",     PV_Effects},
+        {"LensHeader",       "Lens",        PV_Lens},
     };
     const EditStack s = stackCache.value(currentImagePath);
     const bool haveParams = !currentImagePath.isEmpty() && !s.scopes.isEmpty();
@@ -6345,6 +6576,22 @@ void DevelopProperties::updateSectionHeaderCaptions()
         if (!idx.isValid()) continue;
         model->setData(idx, edited ? QString(QString(h.label) + " *") : QString(h.label));
         hdrStar[i] = int(edited);
+    }
+
+    /* The combined Color panel's mode radios get the same " *" per group (Tone =
+       ColorGrade, Hue = PointColor, RGB = Calibrate), so an edit in a mode that isn't
+       showing is still visible. setText only on a flip: the row re-centres on resize. */
+    static const char *kModeLabel[] = {"Tone", "Hue", "RGB"};
+    static const EditParams::Group kModeGroup[] = {EditParams::Group::ColorGrade,
+                                                   EditParams::Group::PointColor,
+                                                   EditParams::Group::Calibrate};
+    for (int m = 0; m < 3; ++m) {
+        QRadioButton *r = colorPanelRadios[m];
+        if (!r) continue;
+        const bool edited = haveParams &&
+            !EditParams::groupIsDefault(s.scopes.at(scopeIdx).params, kModeGroup[m]);
+        const QString text = edited ? QString(kModeLabel[m]) + " *" : QString(kModeLabel[m]);
+        if (r->text() != text) r->setText(text);
     }
 }
 
@@ -6537,6 +6784,16 @@ void DevelopProperties::itemChange(QModelIndex idx)
     if (source == "defringePurple" || source == "defringeGreen") {
         noteNonMaskInteraction();
         setGlobalDefringe(source == "defringePurple", qRound(v.toDouble()));
+        return;
+    }
+    if (source == "lensProfile") {
+        noteNonMaskInteraction();
+        setGlobalLensProfile(v.toBool());
+        return;
+    }
+    if (source == "lensDistortion" || source == "lensVignetting") {
+        noteNonMaskInteraction();
+        setGlobalLensAmount(source == "lensDistortion", qRound(v.toDouble()));
         return;
     }
 
@@ -7511,6 +7768,14 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         preset.globals.insert("defringePurple", base.defringePurple);
         preset.globals.insert("defringeGreen", base.defringeGreen);
     }
+    /* The lens profile travels whole: on/off (as stored, like removeCA), both amounts,
+       and the hand-picked lens (empty = match each target's own EXIF). */
+    if (gk.contains("lensProfile")) {
+        preset.globals.insert("lensProfile", base.lensProfile);
+        preset.globals.insert("lensDistortion", base.lensDistortion);
+        preset.globals.insert("lensVignetting", base.lensVignetting);
+        preset.globals.insert("lensProfileId", base.lensProfileId);
+    }
     if (gk.contains("histogram")) {
         preset.globals.insert("toneShadowCenter", base.toneShadowCenter);
         preset.globals.insert("toneCrossover", base.toneCrossover);
@@ -7568,8 +7833,11 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
     gg.leaves.append({"demosaic", "Raw demosaic", isRaw});
     gg.leaves.append({"rawNoise", "Raw noise reduction",
         isRaw && !usingApple && rawNoiseChanged});
-    /* The lens rows sit in the Global scope's Effects section, but they belong to no
-       scope's adjustments (always scope 0), so they are per-image items here. */
+    /* The Lens section's rows belong to no scope's adjustments (always scope 0), so they
+       are per-image items here. */
+    gg.leaves.append({"lensProfile", "Lens profile",
+        base.lensProfile >= 0 || base.lensDistortion != def.lensDistortion ||
+        base.lensVignetting != def.lensVignetting || !base.lensProfileId.isEmpty()});
     gg.leaves.append({"lensCA", "Remove chromatic aberration", base.removeCA >= 0});
     gg.leaves.append({"defringe", "Defringe (Purple + Green)",
         base.defringePurple != def.defringePurple || base.defringeGreen != def.defringeGreen});
@@ -7977,8 +8245,14 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
         else if (bj.contains(k)) {
             it.value() = bj.value(k).toVariant();
         }
-        else if (k == "denoiseRaw" || k == "removeCA") {
+        else if (k == "denoiseRaw" || k == "removeCA" || k == "lensProfile") {
             it.value() = -1;
+        }
+        else if (k == "lensDistortion" || k == "lensVignetting") {
+            it.value() = 1.0;
+        }
+        else if (k == "lensProfileId") {
+            it.value() = QString();
         }
         else {
             it.value() = 0.0;
@@ -8327,6 +8601,8 @@ const FloatField kFloatFields[] = {
     {"grainRoughness",      &EditParams::grainRoughness},
     {"defringePurple",      &EditParams::defringePurple},
     {"defringeGreen",       &EditParams::defringeGreen},
+    {"lensDistortion",      &EditParams::lensDistortion},
+    {"lensVignetting",      &EditParams::lensVignetting},
 };
 struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
@@ -8334,6 +8610,7 @@ const IntField kIntFields[] = {
     {"viewTransform", &EditParams::viewTransform},
     {"denoiseRaw", &EditParams::denoiseRaw},
     {"removeCA", &EditParams::removeCA},
+    {"lensProfile", &EditParams::lensProfile},
 };
 
 /* The tone curve cannot go in kFloatFields: it is three ARRAYS, and the table above is
@@ -8353,6 +8630,12 @@ constexpr const char *kCurvesField = "curves";
    per image against that image's OWN model, so it simply does not resolve, and the panel
    marks it "(not installed)" rather than rendering something wrong. */
 constexpr const char *kProfileField = "cameraProfile";
+
+/* The lens the user picked (a QString, like the camera profile). It propagates across a
+   selection like any other control -- the common case is a batch shot on one manual lens
+   whose EXIF says nothing -- and on an image whose camera cannot take that lens it simply
+   does not resolve, which the Lens row reports. */
+constexpr const char *kLensIdField = "lensProfileId";
 
 /* Point Color's samples: a non-scalar field like the curves, so the same named
    pseudo-field + differs/copy pair. The whole point list travels as one: propagating
@@ -8446,6 +8729,8 @@ QSet<QString> DevelopProperties::diffParamFields(const EditParams &a, const Edit
     if (pointColorsDiffer(a, b)) changed.insert(QString::fromLatin1(kPointColorField));
     if (a.cameraProfile != b.cameraProfile)
         changed.insert(QString::fromLatin1(kProfileField));
+    if (a.lensProfileId != b.lensProfileId)
+        changed.insert(QString::fromLatin1(kLensIdField));
     return changed;
 }
 
@@ -8459,6 +8744,7 @@ void DevelopProperties::copyParamFields(const EditParams &src, EditParams &dst,
     if (fields.contains(QString::fromLatin1(kCurvesField))) copyCurves(src, dst);
     if (fields.contains(QString::fromLatin1(kPointColorField))) copyPointColors(src, dst);
     if (fields.contains(QString::fromLatin1(kProfileField))) dst.cameraProfile = src.cameraProfile;
+    if (fields.contains(QString::fromLatin1(kLensIdField))) dst.lensProfileId = src.lensProfileId;
 }
 
 EditStack &DevelopProperties::stackFor(const QString &fPath)
@@ -8773,6 +9059,7 @@ void DevelopProperties::sectionHelp(int group)
     case PV_ColorPanel: sectionHelp(colorPanelModeGroup()); return;   // the shown mode
     case PV_Detail:     doc = "developdetailhelp";     break;
     case PV_Effects:    doc = "developeffectshelp";    break;
+    case PV_Lens:       doc = "developlenshelp";       break;
     default:            howThisWorks();  return;       // PV_Scope: the module page
     }
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());

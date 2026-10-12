@@ -676,7 +676,8 @@ QString Metadata::devPreviewKey(const QString &blob)
     const QString d = blob + QString("|engine=%1|autoDenoise=%2")
                                  .arg(int(G::decodeRawEngine))
                                  .arg(G::autoRunDenoise ? 1 : 0)
-                    + (G::autoRemoveCA ? QString("|autoCA=1") : QString());
+                    + (G::autoRemoveCA ? QString("|autoCA=1") : QString())
+                    + (G::autoLensProfile ? QString("|autoLens=1") : QString());
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
     return QString::fromLatin1(h.toHex().left(12));
@@ -737,7 +738,8 @@ QString Metadata::defaultRenderKey(const QString &fPath)
     const QString d = QString("defaultRender|v1|engine=%1|autoDenoise=%2")
                           .arg(int(G::decodeRawEngine))
                           .arg(G::autoRunDenoise ? 1 : 0)
-                    + (G::autoRemoveCA ? QString("|autoCA=1") : QString());   // see devPreviewKey
+                    + (G::autoRemoveCA ? QString("|autoCA=1") : QString())    // see devPreviewKey
+                    + (G::autoLensProfile ? QString("|autoLens=1") : QString());
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);
 }

@@ -895,6 +895,32 @@ void MW::diagnosticsMemory()
 
 void MW::diagnosticsDataModel() {diagnosticsReport(dm->diagnostics(), "Winnow Diagnostics: Data Model");}
 void MW::diagnosticsDataModelAllRows() {diagnosticsReport(dm->diagnosticsAllRows(), "Winnow Diagnostics: Data Model All Rows");}
+
+void MW::diagnosticsBlankRows()
+{
+/*
+    Help > Diagnostics > Blank thumbnail report: write the RowTrail of every row that
+    has no thumbnail RIGHT NOW to <AppData>/Log/blank_rows.txt. The automatic checks
+    (MW::checkBlankRows) only look at fixed moments after a load; this is for a blank
+    seen at any other time. A blank cell cannot be selected, so Current Row
+    Diagnostics cannot reach it. Scans every row in the proxy, ignoring load state
+    and the once-per-session filter.
+*/
+    if (!dm || !dm->sf) return;
+    QStringList blank;
+    const int sfCount = dm->sf->rowCount();
+    for (int sfRow = 0; sfRow < sfCount; ++sfRow) {
+        if (!isBlankThumbRow(sfRow)) continue;
+        const QString fPath =
+            dm->sf->index(sfRow, G::PathColumn).data(G::KeyRole).toString();
+        if (!fPath.isEmpty()) blank << fPath;
+        if (blank.size() >= 200) break;
+    }
+    const int n = blank.isEmpty() ? 0 : writeBlankRowReport("manual report", blank);
+    if (n == 0) G::popup->showPopup("No blank thumbnails found", 2000);
+    else G::popup->showPopup(QString("%1 blank thumbnail(s) written to "
+                                     "Log/blank_rows.txt").arg(n), 3000);
+}
 void MW::diagnosticsEmbellish() {diagnosticsReport(embelProperties->diagnostics(), "Winnow Diagnostics: Embellish");}
 void MW::diagnosticsFilters() {diagnosticsReport(filters->diagnostics(), "Winnow Diagnostics: Filters");}
 void MW::diagnosticsFSTree() {diagnosticsReport(fsTree->diagnostics(), "Winnow Diagnostics: FSTree");}

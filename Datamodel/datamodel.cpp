@@ -7,6 +7,7 @@
 #include "Metadata/keywordpaths.h"
 #include "Utilities/searchterms.h"
 #include "Utilities/ingestprobe.h"
+#include "Utilities/rowtrail.h"
 #include "Metadata/indexmetadata.h"
 
 /*
@@ -1356,6 +1357,9 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
             // and "loaded" (Loaded only). Each row contributes 0 or 1 to each.
             const int newStatus = value.toInt();
             if (newStatus != oldStatus) {
+                RowTrail::note(rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString(),
+                               idx.row(), "status",
+                               QString("%1 -> %2").arg(oldStatus).arg(newStatus));
                 const bool wasAttempted = (oldStatus != G::MetaNotAttempted);
                 const bool isAttempted  = (newStatus != G::MetaNotAttempted);
                 if (isAttempted != wasAttempted)
@@ -1379,6 +1383,9 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         else {
             const bool newVal = value.toBool();
             if (newVal != oldVal) {
+                if (col == G::IconLoadedColumn)
+                    RowTrail::note(rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString(),
+                                   idx.row(), "iconLoaded", newVal ? "0 -> 1" : "1 -> 0");
                 std::atomic<int> *counter =
                     col == G::IconLoadedColumn ? &iconLoadedCount : &videoRowCount;
                 counter->fetch_add(newVal ? 1 : -1, std::memory_order_relaxed);
@@ -1416,6 +1423,8 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
             const QIcon ic = iconStore.icon(oldKey);
             iconStore.remove(oldKey);
             iconStore.insert(newKey, ic);
+            RowTrail::note(oldKey, idx.row(), "icon re-keyed", "to " + newKey);
+            RowTrail::note(newKey, idx.row(), "icon re-keyed", "from " + oldKey);
         }
     }
 
@@ -1425,8 +1434,15 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
                                   : QString();
         if (!fPath.isEmpty()) {
             const QIcon ic = qvariant_cast<QIcon>(value);
-            if (!value.isValid() || ic.isNull()) iconStore.remove(fPath);
-            else                                 iconStore.insert(fPath, ic);
+            if (!value.isValid() || ic.isNull()) {
+                if (iconStore.contains(fPath))
+                    RowTrail::note(fPath, idx.row(), "icon REMOVED");
+                iconStore.remove(fPath);
+            }
+            else {
+                RowTrail::note(fPath, idx.row(), "icon stored");
+                iconStore.insert(fPath, ic);
+            }
         }
     }
 
@@ -5222,6 +5238,10 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
         G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
+        RowTrail::note(rowStore.value(dmIdx.row(), G::PathColumn, G::KeyRole).toString(),
+                       dmIdx.row(), "setIcon DROPPED",
+                       QString("instance %1 != %2, src %3").arg(fromInstance).arg(instance.load())
+                           .arg(src));
         return;
     }
 
@@ -5285,6 +5305,8 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         way. Removals are rare -- a repair or an insert -- so the exact O(span) recount is
         affordable here and cannot drift. */
     if (pm.isNull()) {
+        RowTrail::note(rowStore.value(dmIdx.row(), G::PathColumn, G::KeyRole).toString(),
+                       dmIdx.row(), "setIcon(null)", "src " + src);
         {
             const QSignalBlocker blocker(this);
             setData(dmIdx, QVariant(), Qt::DecorationRole);
@@ -5375,6 +5397,7 @@ void DataModel::clearDevelopIcon(int dmRow)
     skips rows that already have an icon, so clearing is what makes a re-read happen.
     Mirrors clearIconsOutsideChunkRange, which uses the same mechanism for eviction.
 */
+    RowTrail::Tag _trailTag("DataModel::clearDevelopIcon");
     if (G::isLogger) G::log("DataModel::clearDevelopIcon");
 
     QModelIndex dmIdx = index(dmRow, 0);
@@ -5433,9 +5456,17 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
 
     if (G::isLogger) G::log("DataModel::setIcon1", "src = " + src);
 
+    /*  Every way this can decline an icon is recorded: a reader whose icon is dropped
+        here has still RETURNED, so MetaRead counts the row as read this cycle. */
+    auto trailDrop = [&](const QString &why) {
+        RowTrail::note(rowStore.value(dmRow, G::PathColumn, G::KeyRole).toString(), dmRow,
+                       "setIcon1 DROPPED", why + ", src " + src);
+    };
+
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
         G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmRow);
+        trailDrop(QString("instance %1 != %2").arg(fromInstance).arg(instance.load()));
         return;
     }
 
@@ -5452,17 +5483,22 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     if (loadingModel) {
         errMsg = "Model is still loading..";
         G::issue("Warning", errMsg, "DataModel::setIcon", dmRow);
+        trailDrop("loadingModel");
         return;
     }
 
     if (G::stop) {
+        trailDrop("G::stop");
         return;
     }
 
     /* Once the heap cap latches, libmalloc state is fragile; further QPixmap
        allocation here can store/destroy buffers that crash later when freed
        (mirrors addMetadataForItem's bail at line ~1532). */
-    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) return;
+    if (G::memoryOverrunFlag.load(std::memory_order_relaxed)) {
+        trailDrop("memoryOverrunFlag");
+        return;
+    }
 
     QModelIndex dmIdx = index(dmRow,0);
 
@@ -5929,6 +5965,7 @@ void DataModel::evictHiddenIcons()
     MW::filterChange, queues MetaRead::initialize right after this, which clears that
     set, and every later filter change does the same before its dispatch.
 */
+    RowTrail::Tag _trailTag("DataModel::evictHiddenIcons");
     if (!G::isGuiThread() || !sf) return;
     const int rows = rowCount();
     if (iconChunkSize >= rows) return;
@@ -5964,6 +6001,7 @@ void DataModel::evictHiddenIcons()
 
 void DataModel::clearIconsOutsideChunkRange(int instance)
 {
+    RowTrail::Tag _trailTag("DataModel::clearIconsOutsideChunkRange");
     if (instance != this->instance) return;
 
     if (isDebug)
@@ -7202,10 +7240,19 @@ QString DataModel::diagnosticsAllRows()
     QTextStream rpt;
     rpt.setString(&reportString);
     rpt << diagnostics();
-    for (int row = 0; row < rowCount(); row++) {
+    /*  The rows in the current (filtered) view, capped: a Library scope is 150k+ rows
+        and walking every one of them beachballed the app. */
+    const int kMaxRows = 2000;
+    const int sfRows = sf->rowCount();
+    for (int sfRow = 0; sfRow < sfRows && sfRow < kMaxRows; sfRow++) {
+        const int row = sf->mapToSource(sf->index(sfRow, 0)).row();
+        if (row < 0) continue;
         rpt << "\n";
         getDiagnosticsForRow(row, rpt);
     }
+    if (sfRows > kMaxRows)
+        rpt << "\n\n(" << sfRows - kMaxRows << " more rows not shown; filter the view "
+               "to narrow the report)";
 
     return reportString;
 }

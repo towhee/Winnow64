@@ -467,6 +467,20 @@ void MW::filterChange(QString source)
     }
     phase("dispatch");
 
+    /*  DIAGNOSTIC: the intermittent blank thumbnail -- see MW::checkBlankRows. The
+        2026-10-12 recurrence was in a filtered (collection) view, and no load-time check
+        covers a blank that appears after a filter change. Only the last of a burst of
+        changes schedules the check. */
+    {
+        static quint64 filterCheckGen = 0;
+        const quint64 fGen = ++filterCheckGen;
+        const quint64 gen = modelResetGen;
+        QTimer::singleShot(15000, this, [this, fGen, gen]{
+            if (fGen == filterCheckGen && modelResetGen == gen)
+                checkBlankRows("15 s after filterChange");
+        });
+    }
+
     QApplication::restoreOverrideCursor();
 
     if (G::isPerfProbe)

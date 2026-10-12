@@ -824,10 +824,20 @@ private:
     bool combinedColorPanel = true;
     int  colorPanelMode = 0;               // 0 Tone, 1 Hue, 2 RGB
     QPointer<QWidget> colorPanelModesRow;  // the radios' row, centred in the panel
+    QPointer<QRadioButton> colorPanelRadios[3];  // Tone/Hue/RGB, " *" when edited
     int  colorPanelModeGroup() const;      // the PV_* the selected mode shows
     void setCombinedColorPanel(bool on);
     void addDetail();
     void addEffects();
+    /* The Lens section (Global scope only): the lensfun profile (on/off, the lens, the
+       distortion and vignetting amounts), then Remove CA and the fringe sliders. */
+    void addLens();
+    /* The "Profile" row: a combo whose first entry is the automatic match (with the
+       matched lens or the reason there is none) and the rest every profiled lens that
+       fits this camera. repopulateLensCombo refills it per image. */
+    void addLensProfileRow(const QModelIndex &parIdx);
+    void repopulateLensCombo();
+    QPointer<QComboBox> lensProfileCombo;
 
     /* ---- White balance row (Basic, above Temp) -----------------------------------
        A dropper toggle in the caption cell and the preset dropdown in the value cell,
@@ -946,7 +956,7 @@ private:
        table, so this array must be at least as long as that table -- grow both together.
        Lets updateSectionHeaderCaptions skip the model search when nothing flipped -- it
        runs on every params change. */
-    int hdrStar[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int hdrStar[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
     /* ---- Curves (tone curve) ----------------------------------------------------------
        An embedded index widget like the wheels, re-created on every tree rebuild. The
@@ -1076,7 +1086,7 @@ private:
     enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
                         PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4,
                         PV_Curves = 5, PV_Detail = 6, PV_PointColor = 7,
-                        PV_ColorPanel = 8 };
+                        PV_ColorPanel = 8, PV_Lens = 9 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     /* The section header's trailing menu button (the vertical ellipsis), built right after
        its eye so every header in the dock ends with the same pair -- eye, then menu. It
@@ -1095,7 +1105,7 @@ private:
     bool *previewFlag(EditScope *l, int group);        // the bool a PV_* code maps to on a scope
     BarBtn *basicEyeBtn = nullptr, *curvesEyeBtn = nullptr,
            *colorEyeBtn = nullptr, *colorGradeEyeBtn = nullptr,
-           *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr,
+           *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr, *lensEyeBtn = nullptr,
            *detailEyeBtn = nullptr, *pointColorEyeBtn = nullptr,
            *colorPanelEyeBtn = nullptr;
 
@@ -1505,15 +1515,19 @@ private:
     void syncRawPanel();
     void setGlobalDenoise(bool luma, int value0to100);
 public:
-    /* LENS CORRECTIONS (the Effects section's Remove CA / fringe rows, Global scope
+    /* LENS CORRECTIONS (the Lens section: profile, Remove CA, fringe; Global scope
        only). Always scope 0, like the denoise: they are applied to the base before any
-       scope develops (Develop/lenscorrect.h). removeCA is written EXPLICITLY (1 / 0) for
-       the reason setDenoiseRawFlag gives. */
+       scope develops (Develop/lensprofile.h, Develop/lenscorrect.h). removeCA and
+       lensProfile are written EXPLICITLY (1 / 0) for the reason setDenoiseRawFlag gives. */
     void setGlobalRemoveCA(bool on);
     void setGlobalDefringe(bool purple, int value0to100);
-    /* Load the current image's lens state into the Effects rows -- called from
-       populateSlidersFromStack and when the auto-remove preference changes. The CA box
-       shows the EFFECTIVE state: an unset recipe on a raw follows G::autoRemoveCA. */
+    void setGlobalLensProfile(bool on);
+    void setGlobalLensAmount(bool distortion, int value0to200);
+    void setGlobalLensProfileId(const QString &id);   // "" = automatic
+    /* Load the current image's lens state into the Lens rows -- called from
+       populateSlidersFromStack and when an auto preference changes. The checkboxes show
+       the EFFECTIVE state: an unset recipe on a raw follows G::autoRemoveCA /
+       G::autoLensProfile. */
     void syncLensPanel();
 private:
     /* The "Denoise" checkbox writes its state into the Global scope's

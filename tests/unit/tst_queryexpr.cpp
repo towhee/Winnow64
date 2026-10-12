@@ -34,6 +34,7 @@ private slots:
     void columnsRead();
     void theRestOfTheDatamodel();
     void monthIsANumber();
+    void filterValuesSurviveText();
 
 private:
     using Row = QHash<int, QVariant>;
@@ -295,6 +296,50 @@ void tst_queryexpr::monthIsANumber()
     QVERIFY(!hit("month:<6", june));
     QVERIFY(!hit("month:>5", Row{{G::MonthColumn, "2"}}));
     QVERIFY(!hit("month:>5", Row{{G::MonthColumn, ""}}));   // no capture date
+}
+
+void tst_queryexpr::filterValuesSurviveText()
+{
+    /*  Query::matchValues -- a Filters category's checks as a query, for the Filters
+        menu's "Save as a query...". A saved Query is evaluated from its TEXT, so each
+        shape must match the same rows after toText() and parse(). */
+    auto viaText = [](const Query::Node &n, const Row &row) {
+        Query::Expr e;
+        e.root.kids << n;
+        return hit(e.toText(), row);
+    };
+    const Query::Field &label = *Query::field("label");
+    const Query::Field &rating = *Query::field("rating");
+    const Query::Field &title = *Query::field("title");
+    const Query::Field &kw = *Query::field("keyword");
+    const Query::Field &iso = *Query::field("iso");
+
+    const Row red{{G::LabelColumn, "Red"}};
+    const Row none{{G::LabelColumn, ""}};
+    QVERIFY(viaText(Query::matchValues(label, {"Red", "Blue"}, false), red));
+    QVERIFY(!viaText(Query::matchValues(label, {"Red"}, true), red));
+    QVERIFY(viaText(Query::matchValues(label, {""}, false), none));      // no label
+    QVERIFY(!viaText(Query::matchValues(label, {""}, false), red));
+    QVERIFY(viaText(Query::matchValues(label, {"", "Blue"}, false), none));
+    QVERIFY(!viaText(Query::matchValues(label, {""}, true), none));
+
+    QVERIFY(viaText(Query::matchValues(rating, {"3", "4"}, false), Row{{G::RatingColumn, "4"}}));
+    QVERIFY(viaText(Query::matchValues(rating, {""}, false), Row{{G::RatingColumn, ""}}));
+    QVERIFY(!viaText(Query::matchValues(rating, {""}, false), Row{{G::RatingColumn, "2"}}));
+    QVERIFY(viaText(Query::matchValues(iso, {"   800"}, false), Row{{G::ISOColumn, 800}}));
+
+    const Row heron{{G::TitleColumn, "Great Blue Heron"}};
+    QVERIFY(viaText(Query::matchValues(title, {"Great Blue Heron", "Eagle"}, false), heron));
+    QVERIFY(!viaText(Query::matchValues(title, {"Heron"}, false), heron));   // exact, not contains
+    QVERIFY(!viaText(Query::matchValues(title, {"Eagle", "Great Blue Heron"}, true), heron));
+    QVERIFY(viaText(Query::matchValues(title, {""}, false), Row{{G::TitleColumn, ""}}));
+
+    const Row bird{{G::KeywordsAllColumn, QStringList{"Fauna", "Fauna|Bird", "Smith, John"}}};
+    QVERIFY(viaText(Query::matchValues(kw, {"Fauna|Bird", "Flora"}, false), bird));
+    QVERIFY(viaText(Query::matchValues(kw, {"Smith, John"}, false), bird));  // comma quoted
+    QVERIFY(!viaText(Query::matchValues(kw, {"Fauna|Bird"}, true), bird));
+    QVERIFY(viaText(Query::matchValues(kw, {""}, false),
+                    Row{{G::KeywordsAllColumn, QStringList()}}));
 }
 
 QTEST_MAIN(tst_queryexpr)

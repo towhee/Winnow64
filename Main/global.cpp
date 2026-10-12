@@ -286,6 +286,7 @@ qint64 thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;    // 5 GB ~ 250k thumbnai
 bool buildDevPreviewsInBackground = false;
 bool autoRunDenoise = true;
 bool autoRemoveCA = false;
+bool autoLensProfile = false;
 
 bool useBatchedFolderInsert = true;    // batched per-folder insert (one rowsInserted + one dataChanged); cuts Phase-1 insert ~34%. Z-A reorder fixed: dynamic sort disabled during load, restored once at end (see DataModel::scheduleProcessing / restoreProxySortAfterLoad)
 bool throttleFolderLoadMsg = true;     // throttle addFolder progress message to ~50ms (per-folder centralMsg repaint cost ~1.3s/1333 folders)

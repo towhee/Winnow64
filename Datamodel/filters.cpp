@@ -34,6 +34,34 @@ public:
         int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
         return QSize(option.rect.width(), height);
     }
+
+    /*  A CHECKABLE ITEM STARTS checkGap TO THE RIGHT, so its box is clear of the expand
+        arrow before it. Painting, the click test on the box (editorEvent) and the Search
+        row's editor all take the SAME shifted rect, or the box drawn and the box clicked
+        would part company. */
+    static QStyleOptionViewItem shifted(const QStyleOptionViewItem &option,
+                                        const QModelIndex &index)
+    {
+        QStyleOptionViewItem o(option);
+        if (index.column() == 0 && (index.flags() & Qt::ItemIsUserCheckable))
+            o.rect.setLeft(o.rect.left() + Filters::checkGap);
+        return o;
+    }
+    void paint(QPainter *painter, const QStyleOptionViewItem &option,
+               const QModelIndex &index) const override
+    {
+        QStyledItemDelegate::paint(painter, shifted(option, index), index);
+    }
+    bool editorEvent(QEvent *event, QAbstractItemModel *model,
+                     const QStyleOptionViewItem &option, const QModelIndex &index) override
+    {
+        return QStyledItemDelegate::editorEvent(event, model, shifted(option, index), index);
+    }
+    void updateEditorGeometry(QWidget *editor, const QStyleOptionViewItem &option,
+                              const QModelIndex &index) const override
+    {
+        QStyledItemDelegate::updateEditorGeometry(editor, shifted(option, index), index);
+    }
 };
 
 Filters::Filters(QWidget *parent) : QTreeWidget(parent)
@@ -86,6 +114,8 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 */
     if (G::isLogger) G::log("Filters::Filters");
     viewport()->setObjectName("FiltersViewport");
+    // hover feedback over the expand arrows -- see mouseMoveEvent
+    viewport()->setMouseTracking(true);
     setRootIsDecorated(false);
     setSelectionMode(QAbstractItemView::NoSelection);
     setColumnCount(4);
@@ -228,6 +258,10 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterOnAction->setToolTip("Add a filter category for any column that does not have "
                                "one, such as Aspect Ratio.\nIt lasts until Winnow quits.");
     connect(filterOnAction, &QAction::triggered, this, &Filters::filterOnRequested);
+
+    saveFiltersAsQueryAction = new QAction("Save as a query...", this);
+    connect(saveFiltersAsQueryAction, &QAction::triggered,
+            this, &Filters::saveFiltersAsQuery);
 }
 
 void Filters::createPredefinedFilters()
@@ -2101,6 +2135,23 @@ void Filters::addFilterActions(QMenu &menu)
                                         : "Filter on... - Folders scope only");
         menu.addAction(filterOnAction);
     }
+    /*  "Save as a query..." -- greyed WITH THE REASON when nothing a query can hold is
+        filtering, and the categories it would leave out named in the tooltip. */
+    if (saveFiltersAsQueryAction) {
+        QStringList notSaved;
+        const bool any = !activeFiltersAsQuery(&notSaved).isEmpty();
+        saveFiltersAsQueryAction->setEnabled(any);
+        saveFiltersAsQueryAction->setText(
+            any ? "Save as a query..."
+                : notSaved.isEmpty() ? "Save as a query... - no filters set"
+                                     : "Save as a query... - no filters a query can hold");
+        QString tip = "Save every active filter as one query in the Queries panel.";
+        if (!notSaved.isEmpty())
+            tip += "\nLeft out (a query has no field for them): " + notSaved.join(", ");
+        saveFiltersAsQueryAction->setToolTip(tip);
+        menu.addAction(saveFiltersAsQueryAction);
+        menu.setToolTipsVisible(true);
+    }
     if (actions().isEmpty()) return;
     menu.addSeparator();
     menu.addActions(actions());
@@ -2124,7 +2175,8 @@ void Filters::showSearchQueryMenu(const QPoint &globalPos)
 
     THE QUERY BUILDER AND THE QUERIES PANEL ARE WHERE THESE GO. "Build query..." opens
     the Query Builder on the row's text (MW does it: the builder is a dialog this widget
-    does not own); "Save as Query..." adds the row's query to the Queries panel; "Load
+    does not own); "Save search as Query..." adds the row's query to the Queries panel
+    ("Save as a query...", from addFilterActions, saves EVERY filter); "Load
     query" lists the saved Queries. The row, the builder and a Query are one grammar
     (Utilities/queryexpr.h), so each is a view of the others.
 */
@@ -2137,8 +2189,8 @@ void Filters::showSearchQueryMenu(const QPoint &globalPos)
     QAction *build = menu.addAction(tr("Build query..."));
 
     QAction *save = menu.addAction(query.isEmpty()
-                                   ? tr("Save as Query... (no query to save)")
-                                   : tr("Save as Query..."));
+                                   ? tr("Save search as Query... (no query to save)")
+                                   : tr("Save search as Query..."));
     save->setEnabled(!query.isEmpty());
 
     QMenu *loadMenu = menu.addMenu(tr("Load query"));
@@ -2552,6 +2604,99 @@ void Filters::setLibrarySetsAvailable(bool available)
     }
     updateGroupVisibility();
     itemCheckStateHasChanged = false;
+}
+
+Query::Expr Filters::activeFiltersAsQuery(QStringList *notSaved) const
+{
+/*
+    See the declaration. Walks the same checks SortFilter::compileFilters walks and gives
+    them the same meaning, but as query RULES, so the result can be saved, edited in the
+    Query Builder and still mean the same thing when the folder changes.
+
+    THE VALUE IS THE ITEM'S FILTER VALUE (data(1)), trimmed -- ISO and focal length carry
+    padding for sorting. Collections are the exception: the column holds ids, and a query
+    names a collection (collection:"Trip 2024"; MW's resolver maps it back).
+*/
+    Query::Expr e;
+    auto fieldFor = [](int column) -> const Query::Field * {
+        for (const Query::Field &f : Query::fields())
+            if (f.column == column) return &f;
+        return nullptr;
+    };
+
+    for (QTreeWidgetItem *cat : categoryHeaders()) {
+        if (cat == nullptr) continue;
+        const bool isQueryCat = cat == search || cat == queries;
+        QStringList inc, exc;
+        QList<Query::Node> incExprs, excExprs;
+        bool incAll = false;                    // a checked Query with no rules
+        for (QTreeWidgetItem *item : itemsInCategory(cat)) {
+            const Qt::CheckState state = item->checkState(0);
+            if (state == Qt::Unchecked) continue;
+            const bool exclude = state == Qt::PartiallyChecked;
+            if (isQueryCat) {
+                const QString text = queryTextFor(item);
+                if (text.isEmpty()) {
+                    // the Search row's placeholder filters nothing; an empty Query matches all
+                    if (cat == queries && !exclude) incAll = true;
+                    continue;
+                }
+                Query::Node n = Query::Expr::parse(text).root;
+                if (item == searchFalse) {
+                    Query::Node none = Query::Node::group(Query::Node::None);
+                    none.kids << n;
+                    n = none;
+                }
+                (exclude ? excExprs : incExprs) << n;
+                continue;
+            }
+            const QString v = cat == collections ? item->text(0)
+                                                 : item->data(1, Qt::EditRole).toString();
+            (exclude ? exc : inc) << v;
+        }
+        if (inc.isEmpty() && exc.isEmpty() && incExprs.isEmpty() && excExprs.isEmpty())
+            continue;
+
+        const Query::Field *f =
+            isQueryCat ? nullptr : fieldFor(cat->data(0, G::ColumnRole).toInt());
+        if (!isQueryCat && f == nullptr) {
+            if (notSaved) *notSaved << cat->text(0);
+            continue;
+        }
+
+        // the includes: ANY of the values and the included queries
+        Query::Node any = Query::Node::group(Query::Node::Any);
+        if (!inc.isEmpty()) {
+            if (cat->data(0, MatchAllRole).toBool() && inc.size() > 1) {
+                Query::Node all = Query::Node::group(Query::Node::All);
+                for (const QString &v : std::as_const(inc))
+                    all.kids << Query::matchValues(*f, {v}, false);
+                any.kids << all;
+            }
+            else any.kids << Query::matchValues(*f, inc, false);
+        }
+        any.kids << incExprs;
+        if (!incAll && !any.kids.isEmpty())
+            e.root.kids << (any.kids.size() == 1 ? any.kids.first() : any);
+
+        // the excludes: each rejects on its own
+        if (!exc.isEmpty()) e.root.kids << Query::matchValues(*f, exc, true);
+        for (const Query::Node &n : std::as_const(excExprs)) {
+            Query::Node none = Query::Node::group(Query::Node::None);
+            none.kids << n;
+            e.root.kids << none;
+        }
+    }
+    return e;
+}
+
+void Filters::saveFiltersAsQuery()
+{
+    if (G::isLogger) G::log("Filters::saveFiltersAsQuery");
+    QStringList notSaved;
+    const Query::Expr e = activeFiltersAsQuery(&notSaved);
+    if (e.isEmpty()) return;
+    emit saveFiltersAsQueryRequested(e.toText(), notSaved);
 }
 
 QString Filters::queryTextFor(const QTreeWidgetItem *item) const
@@ -4065,6 +4210,21 @@ void Filters::mousePressEvent(QMouseEvent *event)
         return;
     }
 
+    /*  AN ITEM'S EXPAND ARROW EXPANDS, AND NOTHING ELSE. The arrow is drawn where
+        drawBranches puts it, which for a category's first-level items is shifted right
+        into the cell -- so Qt's own branch test (the unshifted slot) missed the arrow's
+        right half, the click fell through to the cell and toggled the checkbox. The
+        drawn arrow's padded rect is tested here instead, and the release swallowed so
+        itemClickedSignal cannot toggle the box either. No solo mode below category
+        level, as before. */
+    QTreeWidgetItem *arrowItem = nullptr;
+    if (event->button() == Qt::LeftButton && overExpander(p, &arrowItem)
+        && !isGroupHeader(arrowItem) && !isCategoryHeader(arrowItem)) {
+        arrowItem->setExpanded(!arrowItem->isExpanded());
+        swallowNextRelease = true;
+        return;
+    }
+
     // ignore mouse clicks on decoration to the header
     if (p.x() < indentation) p.setX(indentation);
     QTreeWidgetItem *item = itemFromIndex(idx);
@@ -4190,34 +4350,112 @@ void Filters::drawBranches(QPainter *painter, const QRect &rect,
     const QTreeWidgetItem *item = itemFromIndex(index);
     if (isGroupHeader(item) || isCategoryHeader(item)) return;
 
-    /*  A CATEGORY'S FIRST-LEVEL ITEMS PUT THEIR ARROW UNDER THE HEADER'S. The header's
-        arrow is its ICON, drawn at the start of its cell; an item's arrow is the
-        stylesheet's branch glyph, centred in the last indentation slot of the branch
-        area -- a few pixels to the left, so a nested category (Folders, Keywords)
-        showed a column of arrows that did not line up with the headers above them.
-        Shift the glyph so its centre is the header icon's centre. Deeper levels keep
-        Qt's own placement: they align with each other, not with a header. */
-    QTreeWidgetItem *cat = item ? item->parent() : nullptr;
-    if (isCategoryHeader(cat)) {
-        QStyleOptionViewItem opt;
-        initViewItemOption(&opt);
-        opt.rect = visualRect(indexFromItem(cat, 0));
-        opt.features |= QStyleOptionViewItem::HasDecoration;
-        opt.icon = cat->icon(0);
-        const QRect deco = style()->subElementRect(QStyle::SE_ItemViewItemDecoration,
-                                                   &opt, this);
-        const int ind = indentation;                      // = QTreeView::indentation()
-        const int slotCentre = rect.right() + 1 - ind / 2;   // QTreeView's last slot
-        const int dx = deco.center().x() - slotCentre;
-        if (dx != 0) {
-            painter->save();
-            painter->translate(dx, 0);
-            QTreeWidget::drawBranches(painter, rect, index);
-            painter->restore();
-            return;
-        }
+    const int dx = branchShift(item, rect);
+    if (dx != 0) {
+        painter->save();
+        painter->translate(dx, 0);
+        QTreeWidget::drawBranches(painter, rect, index);
+        painter->restore();
+        return;
     }
     QTreeWidget::drawBranches(painter, rect, index);
+}
+
+int Filters::branchShift(const QTreeWidgetItem *item, const QRect &branchRect) const
+{
+/*
+    A CATEGORY'S FIRST-LEVEL ITEMS PUT THEIR ARROW UNDER THE HEADER'S. The header's
+    arrow is its ICON, drawn at the start of its cell; an item's arrow is the
+    stylesheet's branch glyph, centred in the last indentation slot of the branch area
+    -- a few pixels to the left, so a nested category (Folders, Keywords) showed a
+    column of arrows that did not line up with the headers above them. The glyph is
+    shifted so its centre is the header icon's centre. Deeper levels keep Qt's own
+    placement: they align with each other, not with a header.
+
+    branchRect is the row's branch area (what drawBranches is given): it ends where the
+    item's cell begins. Shared with expanderHitRect, so the arrow clicked is the arrow
+    drawn.
+*/
+    QTreeWidgetItem *cat = item ? item->parent() : nullptr;
+    if (!isCategoryHeader(cat)) return 0;
+    QStyleOptionViewItem opt;
+    initViewItemOption(&opt);
+    opt.rect = visualRect(indexFromItem(cat, 0));
+    opt.features |= QStyleOptionViewItem::HasDecoration;
+    opt.icon = cat->icon(0);
+    const QRect deco = style()->subElementRect(QStyle::SE_ItemViewItemDecoration,
+                                               &opt, this);
+    const int slotCentre = branchRect.right() + 1 - indentation / 2;  // the last slot
+    return deco.center().x() - slotCentre;
+}
+
+QRect Filters::expanderHitRect(QTreeWidgetItem *item) const
+{
+/*
+    See the declaration. The target is the arrow's indentation-wide slot, padded a few
+    pixels on the left and top-to-bottom of the row -- a forgiving target -- but CUT OFF
+    before the checkbox (cell start + checkGap), so the two can never overlap however
+    the arrow is shifted.
+*/
+    if (item == nullptr) return QRect();
+    const QRect cell = visualRect(indexFromItem(item, 0));
+    if (!cell.isValid()) return QRect();
+
+    if (isGroupHeader(item) || isCategoryHeader(item)) {
+        QStyleOptionViewItem opt;
+        initViewItemOption(&opt);
+        opt.rect = cell;
+        opt.features |= QStyleOptionViewItem::HasDecoration;
+        opt.icon = item->icon(0);
+        const QRect deco = style()->subElementRect(QStyle::SE_ItemViewItemDecoration,
+                                                   &opt, this);
+        return QRect(deco.left() - 3, cell.top(), deco.width() + 6, cell.height());
+    }
+    if (item->childCount() == 0) return QRect();
+
+    const QRect branch(cell.left() - indentation, cell.top(), indentation, cell.height());
+    const int centre = branch.right() + 1 - indentation / 2 + branchShift(item, branch);
+    const int left = centre - indentation / 2 - 3;
+    const int right = qMin(centre + indentation / 2 + 2, cell.left() + checkGap - 1);
+    return QRect(QPoint(left, cell.top()), QPoint(right, cell.bottom()));
+}
+
+bool Filters::overExpander(const QPoint &p, QTreeWidgetItem **item) const
+{
+    QTreeWidgetItem *it = itemAt(p);
+    const bool hit = it != nullptr && expanderHitRect(it).contains(p);
+    if (item) *item = hit ? it : nullptr;
+    return hit;
+}
+
+void Filters::mouseMoveEvent(QMouseEvent *event)
+{
+/*
+    A POINTING HAND OVER AN EXPAND ARROW, so the arrow reads as its own control and not
+    as part of the checkbox row it sits on. Set on the viewport, which is what the
+    cursor is over.
+*/
+    if (overExpander(event->pos())) viewport()->setCursor(Qt::PointingHandCursor);
+    else viewport()->unsetCursor();
+    QTreeWidget::mouseMoveEvent(event);
+}
+
+void Filters::mouseDoubleClickEvent(QMouseEvent *event)
+{
+/*
+    A QUICK SECOND CLICK ON AN ARROW IS ANOTHER ARROW CLICK. Qt delivers it as a
+    double-click, not a press, so mousePressEvent never sees it -- and the base class
+    would hand it to the checkbox (or expand/collapse a second time via
+    expandsOnDoubleClick). Toggle once more, as the click the user made.
+*/
+    QTreeWidgetItem *arrowItem = nullptr;
+    if (event->button() == Qt::LeftButton && overExpander(event->pos(), &arrowItem)
+        && !isGroupHeader(arrowItem) && !isCategoryHeader(arrowItem)) {
+        arrowItem->setExpanded(!arrowItem->isExpanded());
+        swallowNextRelease = true;
+        return;
+    }
+    QTreeWidget::mouseDoubleClickEvent(event);
 }
 
 void Filters::mouseReleaseEvent(QMouseEvent * event)

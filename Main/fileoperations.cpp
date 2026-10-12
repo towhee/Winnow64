@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Utilities/versionkey.h"
+#include "Utilities/rowtrail.h"
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
 #include <QSet>
@@ -337,6 +338,7 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
 
     See "DataModel On-the-Fly Insert and Delete" in notes/Documentation.txt.
 */
+    RowTrail::Tag _trailTag("MW::applyModelChange");
     if (G::isLogger || G::isFlowLogger) G::log("MW::applyModelChange", src);
     if (added.isEmpty() && removed.isEmpty() && !reconcileDisk) return;
 

@@ -169,7 +169,7 @@ QList<Op> opsFor(Type t)
                                Op::Between, Op::NotEmpty, Op::Empty};
     case Type::Date:   return {Op::Is, Op::IsNot, Op::Lt, Op::Gt, Op::Between,
                                Op::NotEmpty, Op::Empty};
-    case Type::Enum:   return {Op::AnyOf, Op::NoneOf};
+    case Type::Enum:   return {Op::AnyOf, Op::NoneOf, Op::NotEmpty, Op::Empty};
     case Type::List:   return {Op::AnyOf, Op::NoneOf, Op::NotEmpty, Op::Empty};
     }
     return {};
@@ -233,6 +233,31 @@ bool opFromName(const QString &name, Op &op)
 
 bool opTakesNoValue(Op op) { return op == Op::Empty || op == Op::NotEmpty; }
 bool opTakesTwoValues(Op op) { return op == Op::Between; }
+
+Node matchValues(const Field &f, const QStringList &values, bool exclude)
+{
+    QList<Node> rules;
+    QStringList listed;                 // an enum's or a list's non-blank values
+    for (const QString &raw : values) {
+        const QString v = raw.trimmed();
+        if (f.type == Type::Enum || f.type == Type::List) {
+            if (v.isEmpty()) rules << Node::rule(f.key, Op::Empty, {});
+            else if (!listed.contains(v)) listed << v;
+        }
+        else if (v.isEmpty()) {
+            rules << (emptyIsZero(f.key) ? Node::rule(f.key, Op::Is, {"0"})
+                                         : Node::rule(f.key, Op::Empty, {}));
+        }
+        else if (f.type == Type::Words) rules << Node::rule(f.key, Op::Contains, {v});
+        else rules << Node::rule(f.key, Op::Is, {v});
+    }
+    if (!listed.isEmpty()) rules.prepend(Node::rule(f.key, Op::AnyOf, listed));
+
+    Node g = Node::group(exclude ? Node::None : Node::Any);
+    g.kids = rules;
+    if (!exclude && rules.size() == 1) return rules.first();
+    return g;
+}
 
 bool Node::operator==(const Node &o) const
 {
@@ -740,6 +765,8 @@ bool ruleMatches(const Node &n, const std::function<QVariant(int)> &valueFor)
     }
     case Type::Enum: {
         const QString s = canon(data.toString());
+        if (n.op == Op::Empty)    return s.isEmpty();       // no label
+        if (n.op == Op::NotEmpty) return !s.isEmpty();
         const bool hit = n.prepValues.contains(s);
         if (n.op == Op::NoneOf) return !hit;
         return n.prepValues.isEmpty() || hit;

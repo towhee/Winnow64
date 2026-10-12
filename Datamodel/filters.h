@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "Utilities/utilities.h"
 #include "Cache/catalog.h"
+#include "Utilities/queryexpr.h"
 
 class Filters : public QTreeWidget
 {
@@ -240,6 +241,12 @@ public:
         row's text for searchTrue/searchFalse (unless it is the placeholder), a Query
         item's QueryTextRole. Read by SortFilter::compileFilters. */
     QString queryTextFor(const QTreeWidgetItem *item) const;
+    /*  EVERY ACTIVE FILTER AS ONE QUERY: each filtering category ANDed, its includes ORed
+        (ANDed for "Match all checked keywords"), its excludes as NONE -- the meaning
+        SortFilter::compileFilters gives the same checks. A category with no query field
+        (Map pins, Places, Availability, Compare, some "Filter on..." columns) is left
+        out and named in notSaved. Empty when nothing a query can hold is filtering. */
+    Query::Expr activeFiltersAsQuery(QStringList *notSaved = nullptr) const;
     /*  The saved Queries the Search row's "Load query" menu lists: name -> query text.
         MW pushes them whenever the Queries change. */
     void setSavedQueries(const QList<QPair<QString, QString>> &queries)
@@ -357,8 +364,11 @@ signals:
     /*  The Search row's "Build query..." -- MW opens the Query Builder on
         currentSearchText() and writes the result back with setSearchText. */
     void queryBuilderRequested();
-    /*  "Save as Query..." -- MW names it and adds it to the Queries panel. */
+    /*  "Save search as Query..." -- MW names it and adds it to the Queries panel. */
     void saveAsQueryRequested(const QString &queryText);
+    /*  "Save as a query..." -- EVERY active filter as one query (activeFiltersAsQuery).
+        notSaved names the filtering categories a query has no field for. */
+    void saveFiltersAsQueryRequested(const QString &queryText, const QStringList &notSaved);
     /*  Whether any category header is lit in the filtering colour -- emitted only when
         that changes. MW colours the Filters title bar with it. */
     void filteringChanged(bool isFiltering);
@@ -417,10 +427,17 @@ protected:
     void paintEvent(QPaintEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void mouseMoveEvent(QMouseEvent *event) override;
+    void mouseDoubleClickEvent(QMouseEvent *event) override;
     void drawBranches(QPainter *painter, const QRect &rect,
                       const QModelIndex &index) const override;
 
 public:
+    /*  THE GAP BETWEEN AN EXPAND ARROW AND THE CHECKBOX AFTER IT, in px. FiltersDelegate
+        moves every check indicator (and its text) right by this, so a click aimed at the
+        arrow has somewhere to land that is not the box. */
+    static constexpr int checkGap = 8;
+
     /*  ITEM DATA ROLES on column 0. Both are state the item must CARRY rather than have
         recomputed, because styleFilterItem is the one place appearance is written and it
         runs on every check, rebuild and restore -- it cannot go and ask the vocabulary,
@@ -652,6 +669,17 @@ private:
         than in MW's filterActions because its enabled state and text follow the scope,
         which only this class knows at the moment the menu opens. */
     QAction *filterOnAction = nullptr;
+    /*  "Save as a query...", appended after it -- enabled and labelled when the menu
+        opens, from activeFiltersAsQuery. */
+    QAction *saveFiltersAsQueryAction = nullptr;
+    /*  THE EXPAND ARROW, WHERE IT IS DRAWN. branchShift is how far drawBranches moves a
+        category's first-level arrow to sit under the header's. expanderHitRect is the
+        arrow's click target (padded, and stopped short of the checkbox) for an item with
+        children, or the icon of a header; null for anything else. */
+    int branchShift(const QTreeWidgetItem *item, const QRect &branchRect) const;
+    QRect expanderHitRect(QTreeWidgetItem *item) const;
+    bool overExpander(const QPoint &p, QTreeWidgetItem **item = nullptr) const;
+    void saveFiltersAsQuery();
     struct ItemState {
         /*  KEYED ON THE TOP-LEVEL CATEGORY AND THE ITEM'S FILTER VALUE, not on the
             item's parent and its label. Those were the same thing while every category
