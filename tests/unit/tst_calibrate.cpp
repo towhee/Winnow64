@@ -180,6 +180,34 @@ private slots:
         QVERIFY(dG < dR);
         QVERIFY(dB < dR);
     }
+
+    /* Shadows Tint moves colour, not brightness: the gains keep working-space luma, a
+       positive tint is MAGENTA (green down, red + blue up), and the window confines it
+       to the shadows -- full at black, nothing from kShadowTintEnd up. */
+    void shadowTintIsLumaPreservingAndShadowOnly()
+    {
+        QCOMPARE(Calibrate::shadowWindow(0.0f), 1.0f);
+        QCOMPARE(Calibrate::shadowWindow(Calibrate::kShadowTintEnd), 0.0f);
+        QCOMPARE(Calibrate::shadowWindow(0.9f), 0.0f);
+        QVERIFY(Calibrate::shadowWindow(0.1f) > Calibrate::shadowWindow(0.3f));
+
+        float g[3];
+        Calibrate::shadowTintGains(100.0f, 1.0f, g);
+        QVERIFY(g[1] < 1.0f && g[0] > 1.0f && g[2] > 1.0f);     // magenta
+        /* The gains alone hold a grey's luma; applyShadowTint holds ANY pixel's. */
+        const float grey[3] = {0.05f, 0.05f, 0.05f};
+        const float tg[3] = {grey[0] * g[0], grey[1] * g[1], grey[2] * g[2]};
+        QVERIFY(std::fabs(luma(tg) - luma(grey)) < 1e-6f);
+        float px[3] = {0.05f, 0.04f, 0.03f};
+        const float y0 = luma(px);
+        Calibrate::applyShadowTint(100.0f, 1.0f, px);
+        QVERIFY(std::fabs(luma(px) - y0) < 1e-6f);
+        QVERIFY(px[1] < 0.04f);                                  // and it did tint
+        Calibrate::shadowTintGains(-100.0f, 1.0f, g);
+        QVERIFY(g[1] > 1.0f && g[0] < 1.0f);                    // green
+        Calibrate::shadowTintGains(80.0f, 0.0f, g);              // outside the window
+        for (float x : g) QCOMPARE(x, 1.0f);
+    }
 };
 
 QTEST_APPLESS_MAIN(tst_calibrate)

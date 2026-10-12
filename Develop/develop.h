@@ -230,6 +230,10 @@ private:
            curve. Its columns are the rotated/chroma-scaled primaries, built so neutrals
            are fixed. calActive == false => identity (skip the block). */
         bool  calActive = false;
+        /* Calibration's Shadows Tint (Calibrate::shadowTintGains), applied per pixel
+           right after the primaries -- it depends on the pixel's luma, so it cannot fold
+           into calMat / preMat. 0 = off. */
+        float calShadowTint = 0.0f;
         float calMat[9] = {1.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f};
 
         /*

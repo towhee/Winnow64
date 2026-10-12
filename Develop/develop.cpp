@@ -1909,6 +1909,7 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
        than HSL. All six sliders at 0 leaves the identity matrix, which we skip. */
     c.calActive = !Calibrate::isIdentity(p.calRedHue, p.calRedSat, p.calGreenHue,
                                          p.calGreenSat, p.calBlueHue, p.calBlueSat);
+    c.calShadowTint = p.calShadowTint;
     if (c.calActive)
         Calibrate::buildMatrix(p.calRedHue, p.calRedSat, p.calGreenHue, p.calGreenSat,
                                p.calBlueHue, p.calBlueSat, c.calMat);
@@ -2351,7 +2352,8 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
-               c.hslActive || c.gradeActive || c.pcActive || c.preMatActive;
+               c.hslActive || c.gradeActive || c.pcActive || c.preMatActive ||
+               c.calShadowTint != 0.0f;
     return coeffs;
 }
 
@@ -2384,6 +2386,8 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const bool doGain = (g0 != 1.0f) || (g1 != 1.0f) || (g2 != 1.0f);
     const bool doTone = c.toneActive;
     const bool doCal  = c.calActive;
+    const float shTint = c.calShadowTint;
+    const bool doShTint = shTint != 0.0f;
     const bool doPre  = c.preMatActive;
     const bool doPreClamp = c.preMatClamps;
     const bool doHsl  = c.hslActive;
@@ -2581,6 +2585,14 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                     px[0] = (cr < 0.0f) ? 0.0f : cr;
                     px[1] = (cg < 0.0f) ? 0.0f : cg;
                     px[2] = (cb < 0.0f) ? 0.0f : cb;
+                }
+                if (doShTint) {
+                    /* Shadows Tint: a luma-preserving green/magenta cast weighted by a
+                       shadow window, after the primaries and before the tone curve. */
+                    float Y = (kLumR * px[0] + kLumG * px[1] + kLumB * px[2]) * invWhite;
+                    if (Y < 0.0f) Y = 0.0f;
+                    Calibrate::applyShadowTint(
+                        shTint, Calibrate::shadowWindow(std::pow(Y, kInvGamma)), px);
                 }
                 if (doHiLocal) {
                     float Y = (kLumR * px[0] + kLumG * px[1] + kLumB * px[2]) * invWhite;

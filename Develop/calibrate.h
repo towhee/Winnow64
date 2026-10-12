@@ -133,6 +133,55 @@ inline bool isIdentity(float redHue, float redSat, float greenHue, float greenSa
            greenSat == 0.0f && blueHue == 0.0f && blueSat == 0.0f;
 }
 
+/* ---- Shadows Tint ------------------------------------------------------------------
+   Lightroom's Calibration > Shadows > Tint: a green (-100) / magenta (+100) cast in the
+   SHADOWS only -- the correction for a camera whose blacks lean green or magenta. Per
+   pixel, in the same linear slot as the primaries: green is scaled by (1 - a) and red +
+   blue by (1 + b), with b chosen so a GREY keeps its luma; applyShadowTint then rescales
+   so every pixel keeps its OWN luma (the cast moves colour, not brightness).
+   a = kShadowTintMax * tint/100 * w, where w is a smooth shadow window over the
+   pixel's perceptual luma s = (Y / white)^(1/2.2): 1 at black, falling to
+   0 at kShadowTintEnd.
+
+   NOT YET CALIBRATED against Lightroom: kShadowTintMax and kShadowTintEnd are first
+   estimates. */
+constexpr float kShadowTintMax = 0.25f;   // green scale change at +/-100, full window
+constexpr float kShadowTintEnd = 0.5f;    // perceptual luma where the window closes
+
+/* The shadow window at perceptual luma s. */
+inline float shadowWindow(float s)
+{
+    if (s <= 0.0f) return 1.0f;
+    if (s >= kShadowTintEnd) return 0.0f;
+    const float t = 1.0f - s / kShadowTintEnd;
+    return t * t * (3.0f - 2.0f * t);
+}
+
+/* The per-channel gains for tint (-100..100) at window weight w. Luma-preserving. */
+inline void shadowTintGains(float tint, float w, float g[3])
+{
+    const float a = kShadowTintMax * (tint / kFullScale) * w;
+    const float b = a * kLumG / (kLumR + kLumB);
+    g[0] = 1.0f + b;
+    g[1] = 1.0f - a;
+    g[2] = 1.0f + b;
+}
+
+/* Tint one linear pixel in place at window weight w, holding its working-space luma. */
+inline void applyShadowTint(float tint, float w, float px[3])
+{
+    if (w <= 0.0f || tint == 0.0f) return;
+    float g[3];
+    shadowTintGains(tint, w, g);
+    const float y0 = kLumR * px[0] + kLumG * px[1] + kLumB * px[2];
+    for (int k = 0; k < 3; ++k) px[k] *= g[k];
+    const float y1 = kLumR * px[0] + kLumG * px[1] + kLumB * px[2];
+    if (y1 > 1e-12f) {
+        const float k = y0 / y1;
+        px[0] *= k; px[1] *= k; px[2] *= k;
+    }
+}
+
 } // namespace Calibrate
 
 #endif // CALIBRATE_H

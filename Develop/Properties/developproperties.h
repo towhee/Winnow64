@@ -13,7 +13,6 @@
 #include "Develop/workingimage.h"
 #include "Develop/Properties/colorgradewheel.h"
 #include "Develop/Properties/pointcolorwidget.h"
-#include "Develop/Properties/primarywheel.h"
 #include "Develop/Properties/colorrangewheel.h"
 #include "Develop/Properties/curveeditor.h"
 #include "Develop/Properties/detailpreview.h"
@@ -948,18 +947,6 @@ private:
        Lets updateSectionHeaderCaptions skip the model search when nothing flipped -- it
        runs on every params change. */
     int hdrStar[9] = {-1, -1, -1, -1, -1, -1, -1, -1, -1};
-
-    /* ---- Calibrate (RGB primaries) ---------------------------------------------------
-       Same select-then-adjust grammar as Color Grade: R/G/B checkboxes pick which
-       primaries the wheel writes (calActiveMask bits 0x1/0x2/0x4). The wheel is an
-       embedded index widget, and each dot is a DELTA from its primary's home angle --
-       see primarywheel.h. Recreated on every tree rebuild. */
-    QPointer<PrimaryWheel> primaryWheel;
-    int  calActiveMask = 0x1;                 // red checked by default
-    void onPrimaryWheelChanged(bool commit);  // wheel drag -> active-scope cal params
-    void refreshCalibrateRow();               // push stored primaries to wheel + sliders
-    void setCalAxis(bool isHue, float v);     // nudge one axis of every checked primary
-    int  firstActivePrimary() const;          // lowest checked primary (the sliders' reference)
 
     /* ---- Curves (tone curve) ----------------------------------------------------------
        An embedded index widget like the wheels, re-created on every tree rebuild. The

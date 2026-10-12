@@ -273,6 +273,9 @@ struct EditStack {
         o["calGreenSat"]     = p.calGreenSat;
         o["calBlueHue"]      = p.calBlueHue;
         o["calBlueSat"]      = p.calBlueSat;
+        /* Written only when set, so sidecars (and the recipe keys hashed from them)
+           written before Shadows Tint existed are unchanged. */
+        if (p.calShadowTint != 0.0f) o["calShadowTint"] = p.calShadowTint;
         /* Consumed by OutputTransform, not Develop -- but it must be HERE, because this
            function is both the sidecar format AND the per-scope render-cache key
            (MW::developCompositeStack). A field the pipeline reads but this omits renders
@@ -357,6 +360,7 @@ struct EditStack {
         p.calGreenSat     = static_cast<float>(o.value("calGreenSat").toDouble(p.calGreenSat));
         p.calBlueHue      = static_cast<float>(o.value("calBlueHue").toDouble(p.calBlueHue));
         p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
+        p.calShadowTint   = static_cast<float>(o.value("calShadowTint").toDouble(p.calShadowTint));
         p.viewTransform   = o.value("viewTransform").toInt(p.viewTransform);
         p.cameraProfile   = o.value("cameraProfile").toString(p.cameraProfile);
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
@@ -643,6 +647,7 @@ struct EditStack {
         if (clampF(p.calGreenSat, -100.0f, 100.0f, def.calGreenSat)) ++fixed;
         if (clampF(p.calBlueHue,  -100.0f, 100.0f, def.calBlueHue))  ++fixed;
         if (clampF(p.calBlueSat,  -100.0f, 100.0f, def.calBlueSat))  ++fixed;
+        if (clampF(p.calShadowTint, -100.0f, 100.0f, def.calShadowTint)) ++fixed;
         /* An UNKNOWN value falls back to the default rather than failing: a sidecar
            written by a later build that added a transform must still open here, showing
            the default look, not refuse to load. */

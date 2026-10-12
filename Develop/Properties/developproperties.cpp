@@ -4757,11 +4757,9 @@ void DevelopProperties::addColor()
 
    Lightroom's Calibration panel: a hue shift + saturation scale for each of the three
    PRIMARIES of the working space, built into one 3x3 matrix and applied in linear light
-   before the tone curve. Same select-then-adjust grammar as Color Grade -- R / G / B
-   checkboxes pick which primaries the wheel writes (calActiveMask), then one shared wheel
-   whose dots are DELTAS from each primary's home angle (see primarywheel.h). With one
-   primary checked a drag places its dot; with several it nudges them all by the same
-   amount, so a drag cannot flatten a calibration that already had them set apart.
+   before the tone curve, plus Shadows Tint (a green/magenta cast in the shadows). Laid
+   out as Lightroom lays it out: one slider per value, -100..100. (Until 2026-10-12 it was
+   R/G/B checkboxes driving one shared wheel; the user asked for Lightroom's sliders.)
 
    Distinct from the Color panel's Red/Green/Blue, which are per-channel linear GAINS
    folded into the white-balance vector -- a cruder second white balance. Both exist; the
@@ -4783,88 +4781,37 @@ void DevelopProperties::addCalibrate()
    panel's (addColorPanel). */
 void DevelopProperties::addCalibrateBody(const QModelIndex &parIdx, const QString &parent)
 {
-    /* Primary selector: three checkboxes on one spanned row, mirroring the Color Grade
-       range row. UI state (calActiveMask), not EditParams. */
-    clearItemInfo(i);
-    i.name = "calPrimaries";
-    i.parIdx = parIdx;
-    i.parentName = parent;
-    i.captionText = "";
-    i.isIndent = true;
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    addItem(i);
-    const QModelIndex primIdx = capIdx;
-    model->setData(primIdx, 6, UR_ExtraRowHeight);
-    setFirstColumnSpanned(primIdx.row(), parIdx, true);
-    {
-        QWidget *rw = new QWidget;
-        rw->setAttribute(Qt::WA_TranslucentBackground);
-        QHBoxLayout *hb = new QHBoxLayout(rw);
-        hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
-        hb->setSpacing(10);
-        QCheckBox *red   = new QCheckBox("Red",   rw);
-        QCheckBox *green = new QCheckBox("Green", rw);
-        QCheckBox *blue  = new QCheckBox("Blue",  rw);
-        for (QCheckBox *c : {red, green, blue})       // panel background, see gradeRanges
-            c->setStyleSheet("QCheckBox { background: transparent; }");
-        red->setChecked(calActiveMask   & 0x1);
-        green->setChecked(calActiveMask & 0x2);
-        blue->setChecked(calActiveMask  & 0x4);
-        auto upd = [this, red, green, blue]{
-            calActiveMask = (red->isChecked()   ? 0x1 : 0) |
-                            (green->isChecked() ? 0x2 : 0) |
-                            (blue->isChecked()  ? 0x4 : 0);
-            if (primaryWheel) primaryWheel->setActiveMask(calActiveMask);
-            refreshCalibrateRow();       // the sliders now read a different primary
-        };
-        connect(red,   &QCheckBox::toggled, this, [upd](bool){ upd(); });
-        connect(green, &QCheckBox::toggled, this, [upd](bool){ upd(); });
-        connect(blue,  &QCheckBox::toggled, this, [upd](bool){ upd(); });
-        hb->addWidget(red);
-        hb->addWidget(green);
-        hb->addWidget(blue);
-        hb->addStretch(1);
-        setIndexWidget(primIdx, rw);
-    }
-
-    /* The shared wheel: a tall, full-width spanned row hosting the PrimaryWheel. */
-    clearItemInfo(i);
-    i.name = "calWheel";
-    i.parIdx = parIdx;
-    i.parentName = parent;
-    i.captionText = "";
-    i.isIndent = true;
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    addItem(i);
-    const QModelIndex wheelIdx = capIdx;
-    model->setData(wheelIdx, 150, UR_ExtraRowHeight);
-    setFirstColumnSpanned(wheelIdx.row(), parIdx, true);
-    {
-        PrimaryWheel *wheel = new PrimaryWheel;
-        primaryWheel = wheel;
-        wheel->setActiveMask(calActiveMask);
-        connect(wheel, &PrimaryWheel::primaryChanged,   this,
-                [this]{ onPrimaryWheelChanged(false); });
-        connect(wheel, &PrimaryWheel::primaryCommitted, this,
-                [this]{ onPrimaryWheelChanged(true); });
-        setIndexWidget(wheelIdx, wheel);
-    }
-
-    /* The wheel's two axes as sliders, so the primaries can be NUDGED (arrow keys step
-       one unit, PageUp/Dn ten) and read as numbers -- the wheel alone shows neither.
-       They nudge whichever primaries are checked -- by a DELTA, so several checked
-       primaries keep their differences (see setCalAxis), which is what the wheel does
-       too once more than one primary is checked. */
-    addGroupDivider(parIdx, parent, "CalibrateWheelDivider");
-    addSlider("calHue", "Hue",
-              "Hue shift of the checked primaries (+/-30 degrees at full scale).",
-              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
-    addSlider("calSat", "Saturation",
-              "Chroma scale of the checked primaries (-100 = grey, +100 = 2x).",
-              parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
-
+    /* Lightroom's Calibration panel: Shadows Tint, then each primary's Hue and
+       Saturation, all -100..100. Plain sliders keyed by their EditParams field names, so
+       the generic applyKeyToParams path (and its history) carries them. The grooves run
+       the way Lightroom's do: green -> magenta for the tint, and for each primary from
+       one neighbouring hue to the other (Hue) or grey -> the primary (Saturation). The
+       grooves name the primary, so the captions are plain "Hue" / "Saturation" (the
+       user's call); itemChange gives History the primary's name instead. */
+    addSlider("calShadowTint", "Tint",
+              "Shadows only: left adds green, right adds magenta.",
+              parIdx, parent, -100, 100, 0, "#3fa93f", "#c040c0");
+    addGroupDivider(parIdx, parent, "CalibrateShadowsDivider");
+    addSlider("calRedHue", "Hue",
+              "Shift the red primary toward magenta (left) or orange (right).",
+              parIdx, parent, -100, 100, 0, "#d0306a", "#e08a30");
+    addSlider("calRedSat", "Saturation",
+              "Desaturate (left) or saturate (right) the red primary.",
+              parIdx, parent, -100, 100, 0, G::darkgray, "#d03a3a");
+    addGroupDivider(parIdx, parent, "CalibrateRedDivider");
+    addSlider("calGreenHue", "Hue",
+              "Shift the green primary toward yellow (left) or cyan (right).",
+              parIdx, parent, -100, 100, 0, "#b0b030", "#30b0a0");
+    addSlider("calGreenSat", "Saturation",
+              "Desaturate (left) or saturate (right) the green primary.",
+              parIdx, parent, -100, 100, 0, G::darkgray, "#3fa93f");
+    addGroupDivider(parIdx, parent, "CalibrateGreenDivider");
+    addSlider("calBlueHue", "Hue",
+              "Shift the blue primary toward cyan (left) or purple (right).",
+              parIdx, parent, -100, 100, 0, "#30a8b0", "#6040c0");
+    addSlider("calBlueSat", "Saturation",
+              "Desaturate (left) or saturate (right) the blue primary.",
+              parIdx, parent, -100, 100, 0, G::darkgray, "#3a5ad0");
     addGroupDivider(parIdx, parent, "CalibrateEndDivider");
 }
 
@@ -5460,119 +5407,6 @@ void DevelopProperties::refreshViewTransformRow()
 
 /* Lowest checked primary: which one the Hue / Saturation sliders READ (they write all of
    them). Mirrors firstActiveGradeRange. */
-int DevelopProperties::firstActivePrimary() const
-{
-    if (calActiveMask & 0x1) return 0;   // red
-    if (calActiveMask & 0x2) return 1;   // green
-    if (calActiveMask & 0x4) return 2;   // blue
-    return 0;                            // nothing checked: default to red
-}
-
-/* One axis of the Hue / Saturation sliders -> every CHECKED primary, applied as a DELTA
-   rather than an absolute: each checked primary moves by the same amount, so primaries
-   that were set to different values keep their difference.
-
-   It is tempting to write v straight into all of them (that is what a wheel drag does
-   with ONE primary checked -- the dot lands under the pointer). But a slider nudge is an
-   INCREMENT, not a placement: check Red and Green
-   after setting them to +20 and -10, press the arrow key once, and an absolute write
-   collapses green onto red. One keystroke would silently destroy a setting the user could
-   not see, because the slider only ever shows the first checked primary. Relative is also
-   what the wheel does whenever it is nudging rather than placing -- under Shift, or with
-   more than one primary checked (see PrimaryWheel::applyPos) -- so every incremental path
-   through this panel agrees.
-
-   The delta is measured against the value the slider was SHOWING, which refreshCalibrate-
-   Row guarantees is the first checked primary's (firstActivePrimary). Each primary is
-   clamped on its own, so one of the others hitting the rail does not stop the rest; the
-   group does stop when the REFERENCE rails, because the readout can no longer move and
-   the delta reads as zero -- the same thing a grouped slider does anywhere else. */
-void DevelopProperties::setCalAxis(bool isHue, float v)
-{
-    if (currentImagePath.isEmpty()) return;
-    EditParams &p = activeParams();
-    const int c = firstActivePrimary();
-    float *hue[3] = {&p.calRedHue, &p.calGreenHue, &p.calBlueHue};
-    float *sat[3] = {&p.calRedSat, &p.calGreenSat, &p.calBlueSat};
-    float **axis = isHue ? hue : sat;
-    const float d = v - *axis[c];               // what the user asked the readout to move
-    if (d == 0.0f) return;
-    const float lim = Calibrate::kFullScale;
-    for (int i = 0; i < 3; ++i) {
-        if (!(calActiveMask & (1 << i))) continue;
-        *axis[i] = qBound(-lim, *axis[i] + d, lim);
-    }
-}
-
-/* Wheel drag -> the active scope's cal params for every checked primary, then preview.
-   commit marks the drag-release. One history entry per drag, keyed by which primaries it
-   is moving (a custom editor gets no history for free -- see the checklist). */
-void DevelopProperties::onPrimaryWheelChanged(bool commit)
-{
-    if (currentImagePath.isEmpty() || !primaryWheel) return;
-    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
-    EditParams &p = activeParams();
-    if (calActiveMask & 0x1) {
-        p.calRedHue = primaryWheel->hue(0);
-        p.calRedSat = primaryWheel->sat(0);
-    }
-    if (calActiveMask & 0x2) {
-        p.calGreenHue = primaryWheel->hue(1);
-        p.calGreenSat = primaryWheel->sat(1);
-    }
-    if (calActiveMask & 0x4) {
-        p.calBlueHue = primaryWheel->hue(2);
-        p.calBlueSat = primaryWheel->sat(2);
-    }
-    noteEdit("Calibrate", QString(),
-             QString("cal/wheel/%1").arg(calActiveMask));
-    refreshCalibrateRow();       // the Hue / Saturation readout tracks the drag
-    emit paramsChanged();
-}
-
-/* Push the active scope's stored primaries into the wheel dots AND the Hue / Saturation
-   sliders. Called on image/scope load (populateSlidersFromStack), on every wheel drag and
-   slider nudge (so the two faces of the adjustment track each other), and when the R/G/B
-   checkboxes change which primary the sliders read. */
-void DevelopProperties::refreshCalibrateRow()
-{
-    EditParams p;
-    const EditStack s = stackCache.value(currentImagePath);
-    if (!s.scopes.isEmpty()) {
-        const int idx = (activeScopeIndex >= 0 && activeScopeIndex < s.scopes.size())
-                            ? activeScopeIndex : 0;
-        p = s.scopes[idx].params;
-    }
-    if (primaryWheel) {
-        primaryWheel->setPrimary(0, p.calRedHue,   p.calRedSat);
-        primaryWheel->setPrimary(1, p.calGreenHue, p.calGreenSat);
-        primaryWheel->setPrimary(2, p.calBlueHue,  p.calBlueSat);
-        primaryWheel->setActiveMask(calActiveMask);
-    }
-    /* The sliders show the LOWEST checked primary, the same compromise the Color Grade
-       Luminance slider makes -- and it is also the baseline setCalAxis measures its delta
-       against, so this readout must be written on every change. Guarded, or setValue
-       echoes back through itemChange as a fresh edit. */
-    const int c = firstActivePrimary();
-    const float hue = (c == 0) ? p.calRedHue : (c == 1) ? p.calGreenHue : p.calBlueHue;
-    const float sat = (c == 0) ? p.calRedSat : (c == 1) ? p.calGreenSat : p.calBlueSat;
-    const bool wasPop = isPopulating;
-    isPopulating = true;
-    setSliderReal("calHue", hue);
-    setSliderReal("calSat", sat);
-    isPopulating = wasPop;
-    /* No primary checked = nothing for them to write (the wheel ignores clicks too), so
-       grey the pair rather than leave live-looking sliders that do nothing. The reason is
-       in view: the unchecked R/G/B row directly above. Guarded because setItemEnabled
-       dereferences the row's editor, which a tree rebuild may not have realized yet. */
-    const bool anyPrimary = calActiveMask != 0;
-    for (const QString &k : {QStringLiteral("calHue"), QStringLiteral("calSat")}) {
-        const QModelIndex vIdx = sourceIdx.value(k);
-        if (vIdx.isValid() && vIdx.data(UR_Editor).value<void*>() != nullptr)
-            setItemEnabled(k, anyPrimary);
-    }
-}
-
 /* --------------------------------------------------------------------------------------
    Color Grade (colour grading)
 
@@ -5844,6 +5678,18 @@ void DevelopProperties::addColorPanel()
               "RGB (re-point the primaries).", PV_ColorPanel);
     QModelIndex parIdx = capIdx;
 
+    /* THE GAPS around the radios are EXPLICIT, kModeGapPt points (12 px at the default
+       12 pt font, scaling with it) above them to the header band and below them to the
+       divider's rule. So the header's TopSpacer is shrunk to its 1 px minimum here (it
+       would otherwise put a full groupSeparatorHeight above), and the radio row is sized
+       to exactly gap + radios + gap, less what the neighbours already contribute: that
+       1 px above, and half the divider below (it draws its rule at its own middle). */
+    constexpr double kModeGapPt = 12.0;
+    const int gap = qMax(2, int(std::lround(G::strFontSize.toInt() * G::ptToPx
+                                            * kModeGapPt / 12.0)));
+    const int halfSep = G::groupSeparatorHeight / 2;
+    model->setData(model->index(0, CapColumn, parIdx), 1, UR_DividerHeight);  // TopSpacer
+
     clearItemInfo(i);
     i.name = "colorPanelModes";
     i.parIdx = parIdx;
@@ -5854,19 +5700,12 @@ void DevelopProperties::addColorPanel()
     i.captionIsEditable = false;
     addItem(i);
     const QModelIndex modesIdx = capIdx;
-    /* EQUAL GAPS above (to the header) and below (to the divider's rule). Above sits the
-       header's TopSpacer, a full groupSeparatorHeight; below, the divider draws its rule
-       at its own MIDDLE, half that. So the row grows by the missing half and spends it
-       as a bottom margin, lifting the buttons by exactly that much. */
-    const int halfSep = G::groupSeparatorHeight / 2;
-    model->setData(modesIdx, 6 + halfSep, UR_ExtraRowHeight);
     setFirstColumnSpanned(modesIdx.row(), parIdx, true);
     {
         QWidget *rw = new QWidget;
         colorPanelModesRow = rw;           // centred in the panel, updateEditorGeometries
         rw->setAttribute(Qt::WA_TranslucentBackground);
         QHBoxLayout *hb = new QHBoxLayout(rw);
-        hb->setContentsMargins(0, 0, 0, halfSep);
         hb->setSpacing(10);
         hb->addStretch(1);
         QRadioButton *tone = new QRadioButton("Tone", rw);
@@ -5897,6 +5736,14 @@ void DevelopProperties::addColorPanel()
         hb->addWidget(hue);
         hb->addWidget(rgb);
         hb->addStretch(1);               // stretch both sides: centred in the row
+        /* Now the radios exist, size the row around them (see the gap note above). */
+        int radioH = 0;
+        for (QRadioButton *r : {tone, hue, rgb}) radioH = qMax(radioH, r->sizeHint().height());
+        const int top = qMax(0, gap - 1);
+        const int bottom = qMax(0, gap - halfSep);
+        hb->setContentsMargins(0, top, 0, bottom);
+        model->setData(modesIdx, top + radioH + bottom - G::propertyRowHeight(),
+                       UR_ExtraRowHeight);
         setIndexWidget(modesIdx, rw);
     }
     addGroupDivider(parIdx, "ColorPanelHeader", "ColorPanelModesDivider");
@@ -6654,19 +6501,6 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
-    /* Calibrate Hue / Saturation sliders: nudge every primary the R/G/B checkboxes
-       select (not plain applyKeyToParams keys -- they need calActiveMask context). The
-       history key carries the mask, so nudging red then green reads as two steps. */
-    if (source == "calHue" || source == "calSat") {
-        if (currentImagePath.isEmpty()) return;
-        noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
-        setCalAxis(source == "calHue", v.toFloat());
-        noteEdit("Calibrate", historyValueText(idx, v),
-                 QString("cal/%1/%2").arg(source).arg(calActiveMask));
-        refreshCalibrateRow();          // move the wheel dot with the slider
-        emit paramsChanged();
-        return;
-    }
 
     /* Point Color sliders: write the point the swatches select (setPointColorSlider).
        The mergeKey carries the point, so nudging two points reads as two steps.
@@ -6722,8 +6556,16 @@ void DevelopProperties::itemChange(QModelIndex idx)
         if (curveEditor) curveEditor->setParams(activeParams());
         /* History caption = the row's own caption ("Exposure"); the whole drag folds
            into one entry (mergeKey), so the list reads one step per slider. */
-        noteEdit(idx.siblingAtColumn(0).data().toString(), historyValueText(idx, v),
-                 historyScopeLabel() + "/" + source);
+        /* The Calibrate captions are a bare "Hue" / "Saturation" (the groove colour
+           names the primary), which would read ambiguously in History. */
+        static const QHash<QString, QString> kCalHistory = {
+            {"calShadowTint", "Shadows tint"},
+            {"calRedHue", "Red hue"},     {"calRedSat", "Red saturation"},
+            {"calGreenHue", "Green hue"}, {"calGreenSat", "Green saturation"},
+            {"calBlueHue", "Blue hue"},   {"calBlueSat", "Blue saturation"}};
+        const QString action = kCalHistory.value(source,
+                                                 idx.siblingAtColumn(0).data().toString());
+        noteEdit(action, historyValueText(idx, v), historyScopeLabel() + "/" + source);
         emit paramsChanged();
     }
 }
@@ -6734,6 +6576,14 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
        denoise sliders. Map the dock key onto the matching EditParams field. */
     const float f = v.toFloat();
     if      (key == "temp")       p.temp       = f;
+    /* Calibrate (the Color panel's RGB mode): keys ARE the field names, stored raw. */
+    else if (key == "calShadowTint") p.calShadowTint = f;
+    else if (key == "calRedHue")     p.calRedHue     = f;
+    else if (key == "calRedSat")     p.calRedSat     = f;
+    else if (key == "calGreenHue")   p.calGreenHue   = f;
+    else if (key == "calGreenSat")   p.calGreenSat   = f;
+    else if (key == "calBlueHue")    p.calBlueHue    = f;
+    else if (key == "calBlueSat")    p.calBlueSat    = f;
     else if (key == "tint")       p.tint       = f;
     else if (key == "exposure")   p.exposure   = f;
     else if (key == "contrast")   p.contrast   = f;
@@ -7409,6 +7259,7 @@ const PresetLeafDef kPointColorLeaves[] = {
     {"pointColors", "Point colors"},
 };
 const PresetLeafDef kCalibrateLeaves[] = {
+    {"calShadowTint", "Shadows tint"},
     {"calRed",   "Red primary"},
     {"calGreen", "Green primary"},
     {"calBlue",  "Blue primary"},
@@ -7479,6 +7330,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "luminance")    return p.luminance  != def.luminance;
     if (key == "vibrance")     return p.vibrance   != def.vibrance;
     if (key == "pointColors")  return p.pointColorN > 0;
+    if (key == "calShadowTint") return p.calShadowTint != def.calShadowTint;
     if (key == "calRed")       return p.calRedHue   != def.calRedHue ||
                                       p.calRedSat   != def.calRedSat;
     if (key == "calGreen")     return p.calGreenHue != def.calGreenHue ||
@@ -7562,6 +7414,7 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         ToneCurve::setIdentity(t.curveN[0], t.curveX[0], t.curveY[0]);
         out.insert("curveChannels", ToneCurve::encode(t.curveN, t.curveX, t.curveY));
     }
+    if (lk.contains("calShadowTint")) out.insert("calShadowTint", p.calShadowTint);
     if (lk.contains("calRed")) {
         out.insert("calRedHue", p.calRedHue);
         out.insert("calRedSat", p.calRedSat);
@@ -8444,6 +8297,7 @@ const FloatField kFloatFields[] = {
     {"calGreenSat",         &EditParams::calGreenSat},
     {"calBlueHue",          &EditParams::calBlueHue},
     {"calBlueSat",          &EditParams::calBlueSat},
+    {"calShadowTint",       &EditParams::calShadowTint},
     {"gradeShadowHue",      &EditParams::gradeShadowHue},
     {"gradeShadowSat",      &EditParams::gradeShadowSat},
     {"gradeShadowLum",      &EditParams::gradeShadowLum},
@@ -8856,7 +8710,13 @@ void DevelopProperties::populateSlidersFromStack()
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     refreshCurveRow();
-    refreshCalibrateRow();            // primaries -> the wheel + the Hue/Sat sliders
+    setSliderReal("calShadowTint", p.calShadowTint);   // Calibrate (RGB)
+    setSliderReal("calRedHue",     p.calRedHue);
+    setSliderReal("calRedSat",     p.calRedSat);
+    setSliderReal("calGreenHue",   p.calGreenHue);
+    setSliderReal("calGreenSat",   p.calGreenSat);
+    setSliderReal("calBlueHue",    p.calBlueHue);
+    setSliderReal("calBlueSat",    p.calBlueSat);
     refreshColorGradeRow();           // push grade values into the wheel + Lum slider
     refreshPointColorRow();           // points -> swatches/field + the selected sliders
     isPopulating = false;

@@ -122,6 +122,10 @@ struct EditParams {
     float calRedHue   = 0.0f, calRedSat   = 0.0f;
     float calGreenHue = 0.0f, calGreenSat = 0.0f;
     float calBlueHue  = 0.0f, calBlueSat  = 0.0f;
+    /* Calibration's Shadows Tint (-100..100): green (-) / magenta (+) in the SHADOWS
+       only, luma-preserving, in the same linear slot as the primaries -- Lightroom's
+       Calibration > Shadows > Tint. Math in Develop/calibrate.h (shadowTintGains). */
+    float calShadowTint = 0.0f;
 
     /* The VIEW TRANSFORM (the first row of the Basic panel) -- how scene-linear data is
        mapped to a displayable range. An OutputTransform::ViewTransform cast to int:
@@ -444,6 +448,7 @@ struct EditParams {
             p.calRedHue = def.calRedHue;     p.calRedSat = def.calRedSat;
             p.calGreenHue = def.calGreenHue; p.calGreenSat = def.calGreenSat;
             p.calBlueHue = def.calBlueHue;   p.calBlueSat = def.calBlueSat;
+            p.calShadowTint = def.calShadowTint;
             break;
         case Group::ColorGrade:
             p.gradeShadowHue = def.gradeShadowHue; p.gradeShadowSat = def.gradeShadowSat;
@@ -503,7 +508,7 @@ struct EditParams {
                red == 0.0f && green == 0.0f && blue == 0.0f &&
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&
-               calBlueHue == 0.0f && calBlueSat == 0.0f &&
+               calBlueHue == 0.0f && calBlueSat == 0.0f && calShadowTint == 0.0f &&
                /* Against the DEFAULT, not against zero: the default view transform is
                   Filmic, not the identity None, so a literal 0 here would read every
                   untouched raw as edited (and every raw explicitly set to None as

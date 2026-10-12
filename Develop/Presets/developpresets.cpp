@@ -273,6 +273,7 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "calGreenSat")         p.calGreenSat         = f;
     else if (key == "calBlueHue")          p.calBlueHue          = f;
     else if (key == "calBlueSat")          p.calBlueSat          = f;
+    else if (key == "calShadowTint")       p.calShadowTint       = f;
     else if (key == "gradeShadowHue")      p.gradeShadowHue      = f;
     else if (key == "gradeShadowSat")      p.gradeShadowSat      = f;
     else if (key == "gradeShadowLum")      p.gradeShadowLum      = f;

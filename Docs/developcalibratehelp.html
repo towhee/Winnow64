@@ -18,55 +18,30 @@ whole image responds to that new definition of red.</p>
 a neutral pixel comes out neutral &mdash; calibration re-points colour without tinting the
 image or shifting the white balance.</p>
 
+<p>The one deliberate exception is <b>Tint</b>, whose whole job is to tint the
+shadows, greys included.</p>
+
 <h2>The controls</h2>
-<p>The <b>Red</b>, <b>Green</b> and <b>Blue</b> checkboxes do not adjust anything: they
-choose which primaries the wheel and sliders below them write to.  Red is checked to
-start with.  Check two or three and one gesture moves them all.</p>
-
-<p>The <b>wheel</b> is the adjustment (with the Hue and Saturation sliders under it as
-its numeric twin &mdash; see <i>Small adjustments</i> below).  Each primary has a lettered dot (R, G, B) that
-starts on its own spoke at mid radius &mdash; red at 3 o'clock, green and blue 120&deg;
-and 240&deg; round.  The faint dotted lines are those home positions, so a dot's distance
-from its spoke <i>is</i> the shift you have made.  Drag and:</p>
+<p>In the combined Color panel this is the <b>RGB</b> mode.  Every slider runs from
+&minus;100 to +100 with 0 meaning no change, and double-clicking a slider returns it to 0.
+Click a slider and the <b>arrow keys</b> nudge it one unit at a time.</p>
 
 <ul>
-<li><b>Around the wheel</b> shifts that primary's <b>hue</b>, up to &plusmn;30&deg; at
-full scale.  Enough to move red toward orange or toward magenta, not enough for it to
-wander into a neighbouring primary.</li>
-<li><b>In and out</b> scales that primary's <b>saturation</b>.  The rim doubles its
-chroma; the centre desaturates it completely.  Brightness is held steady, so this is a
-colour control, not a second exposure.</li>
+<li><b>Tint</b> (the first slider) adds green (left) or magenta (right) to the <b>shadows
+only</b>.  It is the fix for a camera whose blacks lean green or magenta while the
+midtones are right.  Brightness is held steady, and the effect fades out above the
+shadows.</li>
+<li>Then a <b>Hue</b> and <b>Saturation</b> pair for each primary, red, green and blue
+from the top.  The slider colours show which primary a pair belongs to.</li>
+<li><b>Hue</b> shifts that primary's hue, up to &plusmn;30&deg; at full scale.  The
+slider's colours show which way it goes: red moves toward magenta or orange, green toward
+yellow or cyan, blue toward cyan or purple.</li>
+<li><b>Saturation</b> scales that primary's saturation.  +100 doubles it and &minus;100 removes it.  Brightness is held
+steady, so this is a colour control, not a second exposure.</li>
 </ul>
 
-<p>With <b>one</b> primary checked the dot simply follows the pointer.  With <b>two or
-three</b> checked they instead all move by the same amount as the pointer does, which is
-why the dots no longer sit under it &mdash; three dots cannot.  This is deliberate: it
-means primaries you had already set to different values keep their difference, and one
-stray drag cannot flatten a calibration you had built up.</p>
-
-<p><b>Double-click</b> the wheel to return the checked primaries to their home position.
-The section's <b>[&#8942;]</b> menu has <b>Show Calibrate changes</b> (a before/after
-that keeps your values) and <b>Reset Calibrate</b>.</p>
-
-<h2>Small adjustments</h2>
-<p>Calibration is mostly a subtle control, and the whole disc is only 30&deg; of hue, so
-a plain drag is a blunt instrument.  There are two ways to work finely.</p>
-
-<ul>
-<li><b>Hold Shift while dragging.</b>  The dots then move a quarter as far as the
-pointer does.  Press Shift at any point in a drag &mdash; the dots carry on from where
-they are rather than jumping.</li>
-<li><b>Use the Hue and Saturation sliders</b> below the wheel.  They act on the same
-checked primaries the wheel does, and they show the value, which the wheel cannot.
-Click one and the <b>arrow keys</b> nudge it a single unit at a time; <b>Page Up</b> and
-<b>Page Down</b> move by ten.  Double-click a slider to return that axis to zero.</li>
-</ul>
-
-<p>The two are one control seen two ways: drag the wheel and the numbers follow, nudge a
-slider and the dot moves.  With more than one primary checked the sliders read the first
-of them and <i>nudge</i> them all by the same amount, so primaries you had set to
-different values keep their difference &mdash; the same thing the wheel does when more
-than one is checked.</p>
+<p>The section's <b>[&#8942;]</b> menu has <b>Reset</b>, and its eye is a before/after
+that keeps your values.</p>
 
 <h2>Why the sliders interact</h2>
 <p>Move red toward green and you will see green's own response drop.  That is correct,
@@ -108,7 +83,7 @@ have one.  Because everything downstream inherits the new primaries, calibration
 setting <b>before</b> the tone and colour work, not after.</p>
 
 <h2>What is saved</h2>
-<p>The six values (hue and saturation for each primary) are part of the develop recipe,
+<p>The seven values (the shadows tint, and hue and saturation for each primary) are part of the develop recipe,
 stored per scope in the sidecar alongside every other adjustment, so they travel with
 presets, Copy/Paste Settings, History and multi-image editing like anything else.  Masked
 scopes have their own Calibrate section, so a calibration can be confined to a mask.</p>
