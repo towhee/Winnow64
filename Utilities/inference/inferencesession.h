@@ -18,10 +18,12 @@
 class InferenceSession
 {
 public:
-    /* compileCacheDir: see OrtBackend's constructor (macOS CoreML, GPU only). */
+    /* compileCacheDir: see OrtBackend's constructor (macOS CoreML, GPU only).
+       fixedDims: see FixedDims (inferencebackend.h). */
     explicit InferenceSession(const QString &onnxPath,
                               InferenceDevice pref = InferenceDevice::Auto,
-                              const QString &compileCacheDir = {});
+                              const QString &compileCacheDir = {},
+                              const FixedDims &fixedDims = {});
     ~InferenceSession();
 
     bool IsLoaded() const;

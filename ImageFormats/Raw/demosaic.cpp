@@ -1,4 +1,52 @@
 #include "ImageFormats/Raw/demosaic.h"
+#include <opencv2/core.hpp>
+#include <atomic>
+#include <mutex>
+
+namespace {
+
+/*
+    Run rowFn(y) for every row of an H-row image across OpenCV's thread pool. A demosaic
+    writes each output row from a read-only mosaic, so rows are independent and the result
+    is identical to the serial loop. Single-threaded, a 50 MP bilinear pass took ~550 ms
+    and every denoise decode ran two (measured 2026-10-13).
+
+    cv::parallel_for_, not Develop's parallelFor: this runs on ImageCache decoder threads
+    and developRenderPool workers, and OpenCV's pool is separate from the QThreadPool
+    those may belong to, so a caller waiting on its own pool cannot stall (the same
+    choice as lenscorrect.h / skyrefine.h).
+
+    abort is still polled every row; once one stripe sees it the rest stop at their next
+    row and false is returned. progress gets the count of rows done so far every 32 rows,
+    from whichever worker crosses the boundary (try_lock: a busy reporter skips a tick
+    rather than queueing) -- the callers marshal it to the GUI thread themselves.
+*/
+template <class RowFn>
+bool ParallelRows(int H, const QAtomicInt *abort,
+                  const std::function<void(int, int)> &progress, RowFn rowFn)
+{
+    std::atomic<bool> stop{false};
+    std::atomic<int> done{0};
+    std::mutex progressMutex;
+    cv::parallel_for_(cv::Range(0, H), [&](const cv::Range &r) {
+        for (int y = r.start; y < r.end; ++y) {
+            if (stop.load(std::memory_order_relaxed)) return;
+            if (abort && abort->loadAcquire()) {
+                stop.store(true, std::memory_order_relaxed);
+                return;
+            }
+            rowFn(y);
+            const int d = done.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (progress && (d & 31) == 0 && progressMutex.try_lock()) {
+                progress(d, H);
+                progressMutex.unlock();
+            }
+        }
+    });
+    return !stop.load();
+}
+
+} // namespace
 
 bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo,
                    const QAtomicInt *abort, const std::function<void(int, int)> &progress)
@@ -31,9 +79,7 @@ bool Demosaic::XTransWindow(const RawImage &raw, std::vector<float> &rgb,
 
     rgb.assign(static_cast<size_t>(W) * static_cast<size_t>(H) * 3, 0.0f);
 
-    for (int y = 0; y < H; ++y) {
-        if (abort && abort->loadAcquire()) return false;
-        if (progress && (y & 31) == 0) progress(y, H);   // status bar, every 32 rows
+    return ParallelRows(H, abort, progress, [&](int y) {
         for (int x = 0; x < W; ++x) {
             float sum[3] = {0, 0, 0};
             int   cnt[3] = {0, 0, 0};
@@ -56,8 +102,7 @@ bool Demosaic::XTransWindow(const RawImage &raw, std::vector<float> &rgb,
             rgb[o + nativeC] =
                 static_cast<float>(raw.cfa[static_cast<size_t>(y) * W + x]) * scale;
         }
-    }
-    return true;
+    });
 }
 
 int Demosaic::BayerColorAt(CfaPattern pattern, int row, int col)
@@ -97,12 +142,10 @@ bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
 
     rgb.assign(static_cast<size_t>(W) * static_cast<size_t>(H) * 3, 0.0f);
 
-    for (int y = 0; y < H; ++y) {
-        /* Poll abort once per row (cheap relative to a full row of pixels) so a long
-           sensor decode bails promptly on shutdown / navigation rather than blocking the
-           decoder thread -- and with it the BlockingQueuedConnection in ImageCache::stop. */
-        if (abort && abort->loadAcquire()) return false;
-        if (progress && (y & 31) == 0) progress(y, H);   // status bar, every 32 rows
+    /* ParallelRows polls abort once per row (cheap relative to a full row of pixels) so a
+       long sensor decode bails promptly on shutdown / navigation rather than blocking the
+       decoder thread -- and with it the BlockingQueuedConnection in ImageCache::stop. */
+    return ParallelRows(H, abort, progress, [&](int y) {
         for (int x = 0; x < W; ++x) {
             float sum[3] = {0, 0, 0};
             int   cnt[3] = {0, 0, 0};
@@ -128,6 +171,5 @@ bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
             rgb[o + nativeC] =
                 static_cast<float>(raw.cfa[static_cast<size_t>(y) * W + x]) * scale;
         }
-    }
-    return true;
+    });
 }

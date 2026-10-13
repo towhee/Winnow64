@@ -1,6 +1,9 @@
 #include "Main/mainwindow.h"
 #include "Utilities/panelprobe.h"
 #include "Develop/workingimagecache.h"
+#include "ImageFormats/Raw/rawformat.h"
+#include "ImageFormats/Raw/pmrid.h"
+#include "ImageFormats/Raw/pmridcache.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/catalog.h"
 #include "Cache/mountsnapshot.h"
@@ -651,6 +654,10 @@ QString MW::developDiagnostics()
         << "   key = " << (developDenoisedKey.isEmpty() ? "(clean)" : developDenoisedKey);
     rpt << "\n" << "  developPmridFull = " << dims(developPmridFull)
         << "   key = " << (developPmridKey.isEmpty() ? "(none)" : developPmridKey);
+    rpt << "\n" << "  PmridCache = " << G::s(PmridCache::instance().count()) << " entries, "
+        << G::s(int(PmridCache::instance().currentBytes() / (1024 * 1024))) << " MB"
+        << "   this image = "
+        << (PmridCache::instance().get(fPath, currentImageIso()) ? "cached" : "no");
     rpt << "\n" << "  developDenoiseInFlightKey = "
         << (developDenoiseInFlightKey.isEmpty() ? "(idle)" : developDenoiseInFlightKey);
     /* Noise model (k,b): the PMRID::resolveKB tier that produced the CURRENT image's base
@@ -666,6 +673,10 @@ QString MW::developDiagnostics()
         rpt << "\n" << "  noise model = (no current PMRID base -- not yet run/rebuilt "
                        "for this image)";
     }
+    /* Where the last denoise spent its time (session-wide, may be another image: the
+       file name is in the line). */
+    rpt << "\n" << "  last " << RawFormat::LastDenoiseTiming().Summary();
+    rpt << "\n" << "    " << RawFormat::LastDenoiseTiming().pmrid.Summary();
     rpt << "\n";
 
     // SCENE-LINEAR RE-DECODE + RENDER STATE

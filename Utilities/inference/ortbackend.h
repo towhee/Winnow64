@@ -25,9 +25,12 @@ public:
        A ViT compiles for ~90 s, every launch, without it; with it a later load takes
        well under a second. The directory must be specific to the model's VERSION --
        ORT keys the cache on the model, not on its bytes, so a re-exported model in a
-       reused directory would run the old compiled graph. */
+       reused directory would run the old compiled graph.
+
+       fixedDims: see FixedDims (inferencebackend.h). */
     explicit OrtBackend(const QString &onnxPath, InferenceDevice pref = InferenceDevice::Auto,
-                        const QString &compileCacheDir = {});
+                        const QString &compileCacheDir = {},
+                        const FixedDims &fixedDims = {});
     ~OrtBackend() override;
 
     /* Is ONNX Runtime compiled into this build at all (WINNOW_HAVE_ORT)? Static and free:

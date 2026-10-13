@@ -9,6 +9,7 @@
 #include "Views/libtree.h"
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/applerawdecode.h"
+#include "ImageFormats/Raw/pmrid.h"
 #include "Utilities/fileops.h"
 #include "Utilities/gradientheader.h"
 #include "Cache/devpreviewcache.h"
@@ -2700,6 +2701,9 @@ void MW::createDevelopDock()
 #endif
                 G::decodeRawEngine = useApple ? G::DecodeRawEngine::appleDecodeRawEngine
                                               : G::DecodeRawEngine::winnowDecodeRawEngine;
+                // PMRID runs on this engine only: warm it now (see setOperationMode)
+                if (!useApple && G::operationMode == G::OperationMode::Develop)
+                    PMRID::WarmUpAsync();
                 /* Clear the WHOLE WorkingImageCache, not just the current file: the
                    clean bases are engine-specific and ImageDecoder::load() now reuses
                    ANY cached scene-linear entry (the redundant-decode short-circuit), so
@@ -3963,6 +3967,12 @@ void MW::setOperationMode(G::OperationMode mode)
     for (QAction *a : {developSavePresetAction, developCopySettingsAction,
                        developPasteSettingsAction})
         if (a) a->setEnabled(inDevelop);
+
+    /* Pay PMRID's ~1.8 s first-run cost in the background now rather than in the user's
+       first "Denoise raw" (see PMRID::WarmUpAsync; once per process). Before the
+       no-change return so a launch that restores Develop also warms it. */
+    if (inDevelop && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine)
+        PMRID::WarmUpAsync();
 
     if (G::operationMode == mode) {                     // no change
         return;

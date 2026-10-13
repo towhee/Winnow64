@@ -46,7 +46,7 @@ struct OrtBackend::Impl {
 };
 
 OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
-                       const QString &compileCacheDir)
+                       const QString &compileCacheDir, const FixedDims &fixedDims)
     : d(std::make_unique<Impl>())
 {
     if (G::isLogger) G::log("OrtBackend::OrtBackend", onnxPath);
@@ -59,6 +59,8 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
 
     Ort::SessionOptions so;
     so.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+    for (const auto &[name, value] : fixedDims)
+        so.AddFreeDimensionOverrideByName(name.c_str(), value);
 
     /* Try the platform accelerator EP first; on any failure fall through to a plain CPU
        session (ORT runs every node on CPU when no EP claims it). */
@@ -194,7 +196,8 @@ bool OrtBackend::IsCompiledIn() { return true; }
 
 struct OrtBackend::Impl {};
 
-OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice, const QString &)
+OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice, const QString &,
+                       const FixedDims &)
 {
     if (G::isLogger) G::log("OrtBackend::OrtBackend (ORT not built in)", onnxPath);
     qWarning("OrtBackend: built without ONNX Runtime (WINNOW_HAVE_ORT off); "

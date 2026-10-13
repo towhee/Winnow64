@@ -268,6 +268,7 @@ set(WINNOW_SOURCES
     ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
     ImageFormats/Raw/pmrid.cpp
+    ImageFormats/Raw/pmridcache.cpp
     ImageFormats/Raw/rawformat.cpp
     ImageFormats/Raw/tiffwalk.cpp
     ImageFormats/Sony/sony.cpp
@@ -661,6 +662,7 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h
     ImageFormats/Raw/pmrid.h
+    ImageFormats/Raw/pmridcache.h
     ImageFormats/Raw/rawformat.h
     ImageFormats/Raw/tiffwalk.h
     ImageFormats/Raw/rawimage.h

@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 #include <QString>
 
@@ -27,6 +28,16 @@
 /* Where the caller would like the model to run. Auto lets the backend pick the best available
    (NPU -> GPU -> CPU). The backend downgrades silently if a preference is unavailable. */
 enum class InferenceDevice { Auto, NPU, GPU, CPU };
+
+/*
+    Pin a model's SYMBOLIC input dimensions to fixed values at session creation (ORT's
+    free-dimension override), e.g. {{"H", 512}, {"W", 512}}. A model exported with dynamic
+    axes then compiles as a static graph without re-exporting or re-hashing the file.
+    CoreML needs this: with a dynamic shape the ML Program re-specialises on first use
+    (~2 s for PMRID) and the older NeuralNetwork format splits the graph. Every Run must
+    then feed exactly those dimensions. Empty = leave the model's shapes as exported.
+*/
+using FixedDims = std::vector<std::pair<std::string, int64_t>>;
 
 /*
     A dense float tensor in row-major order over `shape` (typically NCHW, e.g. {1,4,H,W}).

@@ -38,6 +38,7 @@
 #include "Develop/detailroi.h"      // Detail panel 1:1 preview: the patch geometry
 #include <opencv2/imgproc.hpp>     // updateSharpenMaskPreview: GaussianBlur + Sobel
 #include "ImageFormats/Raw/pmrid.h"
+#include "ImageFormats/Raw/pmridcache.h"
 #include "Utilities/inference/miganfill.h"
 #include "Utilities/inference/lamafill.h"
 #include "Utilities/modelstore.h"
@@ -3622,6 +3623,7 @@ void MW::resetDevelopCachesForNewFolder()
     developDenoisedKey.clear();
     developPmridFull.reset();
     developPmridKey.clear();
+    PmridCache::instance().clear();    // the shared full-strength bases, same reason
     developPmridResSource.clear();     // drop the noise-model snapshot with its base
     developPmridResK = developPmridResB = 0.0;
     developPmridResHadNP = false;
@@ -13683,11 +13685,19 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     std::shared_ptr<const WorkingImage> src = rawDenoiseCleanBaseOk(clean) ? clean : nullptr;
     const EditParams b = base;
     developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
+        /* Job wall time, start to published blend (the decode's own stage breakdown is
+           logged by RawFormat::Decode) -- see the "Denoise raw job" line below. */
+        QElapsedTimer jobT;
+        jobT.start();
+        double decodeMs = 0.0;
         /* Resolve both bases. The PMRID base and the clean base come from ONE decode
            (shared UnpackCfa) when either is missing; a pure amount change (both cached)
            skips the decode and just re-blends. clean is taken from the caller, else
            WorkingImageCache, else the decode's outClean. */
         std::shared_ptr<const WorkingImage> pmrid = pmridCached;
+        /* The shared base another decode made -- e.g. the ImageCache decode of this
+           image's saved recipe -- so the model does not run a second time. */
+        if (!pmrid) pmrid = PmridCache::instance().get(m.fPath, m.ISONum);
         std::shared_ptr<const WorkingImage> cached = WorkingImageCache::instance().get(fPath);
         const bool cachedOk = rawDenoiseCleanBaseOk(cached);
         std::shared_ptr<const WorkingImage> cleanBase = src ? src
@@ -13720,9 +13730,12 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             /* Ask for the clean base only when we don't already have it, so the common
                amount-change decode (clean cached, PMRID evicted) skips a demosaic. */
             std::shared_ptr<const WorkingImage> decodedClean;
+            QElapsedTimer decodeT;
+            decodeT.start();
             auto decodedPmrid =
                 dec.decodeRawWorking(m, true, prog, cleanBase ? nullptr : &decodedClean,
                                      &denoiseApplied);
+            decodeMs = decodeT.nsecsElapsed() / 1e6;
             if (decodedPmrid) {
                 if (!pmrid) pmrid = decodedPmrid;
                 if (!cleanBase && decodedClean) {
@@ -13763,8 +13776,19 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         }
         /* Blend clean <-> PMRID by the luma/chroma amounts (cheap, per-settle). */
         auto blended = std::make_shared<WorkingImage>();
+        QElapsedTimer blendT;
+        blendT.start();
         Develop::BlendRawDenoise(*cleanBase, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
+        const double blendMs = blendT.nsecsElapsed() / 1e6;
         std::shared_ptr<const WorkingImage> result = blended;
+        const double jobMs = jobT.nsecsElapsed() / 1e6;
+        /* A pure amount change (both bases cached) shows decode 0 -- the re-blend path. */
+        qInfo().noquote() << QString("Denoise raw job %1: total %2 ms | decode %3, "
+                                     "blend %4, %5")
+                                 .arg(QFileInfo(fPath).fileName())
+                                 .arg(jobMs, 0, 'f', 1).arg(decodeMs, 0, 'f', 1)
+                                 .arg(blendMs, 0, 'f', 1)
+                                 .arg(decodeMs > 0.0 ? "decoded" : "re-blend only");
 
         QMetaObject::invokeMethod(this, [this, result, pmrid, freshClean, key, pkey, fPath,
                                          decodeRes, capturedRes]() {
@@ -14926,6 +14950,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         std::shared_ptr<const WorkingImage> src = work;
         if (wantDenoise) {
             std::shared_ptr<const WorkingImage> pmrid = pmridCached;
+            if (!pmrid) pmrid = PmridCache::instance().get(m.fPath, m.ISONum);
             bool applied = (pmrid != nullptr);
             if (!pmrid) {
                 ImageDecoder dec(0, dm, metadata);

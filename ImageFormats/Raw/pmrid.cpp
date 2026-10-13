@@ -6,8 +6,12 @@
 #include "Utilities/modelstore.h"
 
 #include <QDir>
+#include <QStandardPaths>
 #include <QFile>
 #include <QCoreApplication>
+#include <QElapsedTimer>
+#include <QThreadPool>
+#include <atomic>
 #include <algorithm>
 #include <cmath>
 #include <memory>
@@ -27,7 +31,6 @@ namespace {
 
 constexpr int   kTile      = 512;     // packed-grid tile (px); 512 is a multiple of 32
 constexpr int   kOverlap   = 32;
-constexpr int   kPadMult   = 32;      // net downsamples 4x2 -> H,W must be multiples of 32
 constexpr float kV         = 959.0f;  // OPPO signal scale the KSigma operates in
 constexpr float kInpScale  = 256.0f;  // net input scaling
 constexpr double kAnchor   = 1600.0;  // OPPO anchor ISO (KSigma target)
@@ -261,24 +264,123 @@ Resolution LastResolution()
     return g_lastRes;
 }
 
+/* Last timing snapshot (see pmrid.h). g_sessionLoadMs is written once, inside call_once. */
+static std::mutex g_timingMutex;
+static Timing g_lastTiming;
+static double g_sessionLoadMs = 0.0;
+static double g_warmUpMs = 0.0;          // first Run, paid by WarmUpAsync; guarded by g_timingMutex
+static bool g_sessionRunYet = false;     // guarded by g_timingMutex
+
+Timing LastTiming()
+{
+    std::lock_guard<std::mutex> lock(g_timingMutex);
+    return g_lastTiming;
+}
+
+QString Timing::Summary() const
+{
+    if (!valid) return "PMRID: not run this session";
+    auto ms = [](double v) { return QString::number(v, 'f', 1); };
+    const double other = totalMs - (kbMs + packMs + tileInMs + inferMs + tileOutMs + unpackMs);
+    return QString("PMRID %1x%2 via %3: total %4 ms | kb %5, pack %6, tileIn %7, "
+                   "infer %8 (%9 tiles of 4x%10x%11: first %12%13, min %14, max %15, "
+                   "mean %16), tileOut %17, unpack %18, other %19 | session load %20 ms")
+        .arg(width).arg(height).arg(backend, ms(totalMs), ms(kbMs), ms(packMs),
+             ms(tileInMs), ms(inferMs)).arg(tiles).arg(tileH).arg(tileW)
+        .arg(ms(inferFirstMs), firstRunOfSession ? " [session's 1st run]" : "",
+             ms(inferMinMs), ms(inferMaxMs), ms(tiles ? inferMs / tiles : 0.0),
+             ms(tileOutMs), ms(unpackMs), ms(other), ms(sessionLoadMs))
+        + (warmUpMs > 0.0 ? QString(", warm-up run %1 ms").arg(ms(warmUpMs)) : QString());
+}
+
+/*
+    CoreML's compiled ML Program for pmrid.onnx (small; ~150 ms to rebuild, so this only
+    trims the first load -- 9 ms warm). One directory per catalog VERSION because ORT reuses
+    a compiled graph by key, not by bytes (see OrtBackend); older versions' directories
+    are pruned. Same scheme as ImageEmbedder.
+*/
+static QString compileCacheDir()
+{
+#ifdef Q_OS_MAC
+    const QString root = QStandardPaths::writableLocation(QStandardPaths::CacheLocation)
+                         + "/CoreML";
+    const QString mine = QString("pmrid-v%1")
+        .arg(ModelStore::info(ModelStore::Model::Pmrid).version);
+    const QDir dir(root);
+    for (const QString &old : dir.entryList({"pmrid-v*"}, QDir::Dirs))
+        if (old != mine) QDir(dir.filePath(old)).removeRecursively();
+    return dir.filePath(mine);
+#else
+    return {};
+#endif
+}
+
 static InferenceSession *SharedSession()
 {
     static std::once_flag once;
     static std::unique_ptr<InferenceSession> session;
     std::call_once(once, [] {
+        QElapsedTimer loadT;
+        loadT.start();
         /* pmrid.onnx stays BUNDLED inside the app (4 MB), so it can never be
            absent-then-present and call_once is still correct here. */
         const QString path = ModelStore::path(ModelStore::Model::Pmrid);
-        /* CoreML/ANE is safe for PMRID (the graph partitions cleanly -- unlike TreeNet), so let
-           the backend pick the best device. */
-        session = std::make_unique<InferenceSession>(path, InferenceDevice::Auto);
+        /*
+            GPU ML Program, STATIC 512x512 (2026-10-13). Measured per 4x512x512 tile
+            (tools/pmrid.onnx, ORT CoreML EP, M-series MacBook Pro):
+                Auto (NeuralNetwork format, dynamic H/W)  88 ms  <- what shipped; the
+                    graph split into 5 CoreML partitions with CPU hops between
+                ML Program, dynamic H/W                    5.7 ms, but ~2 s to
+                    re-specialise on the first Run of every session
+                ML Program, H/W pinned to 512 (GPU)        5.4 ms, 40 ms first Run
+                ML Program, CPU + Neural Engine            66 ms
+            Output matches the CPU EP to 2e-7 (fp32). So ~15x on the model, which was
+            ~93% of a denoise decode. The dims are pinned by FixedDims at load rather
+            than by re-exporting, so the bundled file -- and its ModelStore hash -- stay
+            as they are; every tile is therefore fed at exactly kTile (see Apply).
+        */
+        session = std::make_unique<InferenceSession>(
+            path, InferenceDevice::GPU, compileCacheDir(),
+            FixedDims{{"H", kTile}, {"W", kTile}});
         if (!session->IsLoaded())
             qWarning("PMRID: %s not found or failed to load at %s (raw denoise disabled)",
                      kModelFile, path.toUtf8().constData());
         else if (G::isLogger)
             G::log("PMRID::SharedSession loaded", session->BackendName());
+        g_sessionLoadMs = loadT.nsecsElapsed() / 1e6;
     });
     return session.get();
+}
+
+void WarmUpAsync()
+{
+    static std::atomic<bool> started{false};
+    if (started.exchange(true)) return;
+    if (!IsSupportedBuild()) return;
+    QThreadPool::globalInstance()->start([] {
+        InferenceSession *s = SharedSession();
+        if (!s || !s->IsLoaded() || s->InputNames().empty() || s->OutputNames().empty())
+            return;
+        /* Zeros are fine: this is for CoreML's first-execution preparation, not output. */
+        Tensor in;
+        in.shape = {1, 4, kTile, kTile};
+        in.data.assign(static_cast<size_t>(4) * kTile * kTile, 0.0f);
+        std::vector<Tensor> outs;
+        QElapsedTimer t;
+        t.start();
+        const bool ok = s->Run({s->InputNames()[0]}, {in}, {s->OutputNames()[0]}, outs);
+        const double runMs = t.nsecsElapsed() / 1e6;
+        {
+            std::lock_guard<std::mutex> lock(g_timingMutex);
+            g_sessionRunYet = true;
+            g_warmUpMs = runMs;
+        }
+        qInfo().noquote() << QString("PMRID warm-up via %1: session load %2 ms, first run "
+                                     "%3 ms%4")
+                                 .arg(s->BackendName())
+                                 .arg(g_sessionLoadMs, 0, 'f', 1).arg(runMs, 0, 'f', 1)
+                                 .arg(ok ? "" : " (Run FAILED)");
+    });
 }
 
 bool IsSupportedBuild()
@@ -293,12 +395,20 @@ bool IsAvailable()
     return s && s->IsLoaded() && !s->InputNames().empty() && !s->OutputNames().empty();
 }
 
-bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progress)
+bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progress,
+           Timing *outTiming)
 {
     if (!raw.isValid()) return false;
 
     int dy, dx;
     if (!rggbOrigin(raw.pattern, dy, dx)) return false;   // non-Bayer: leave untouched
+
+    /* Stage timing for LastTiming (see pmrid.h). lap() returns ms since the last lap. */
+    QElapsedTimer totalT, lapT;
+    totalT.start();
+    lapT.start();
+    auto lap = [&lapT]() { const double v = lapT.nsecsElapsed() / 1e6; lapT.restart(); return v; };
+    Timing tm;
 
     InferenceSession *s = SharedSession();
     if (!s || !s->IsLoaded()) return false;
@@ -310,7 +420,9 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
     const float white = raw.white > 0 ? float(raw.white) : 1.0f;
     const float invWhite = 1.0f / white;
     double k, b;
+    lap();                                  // session load is reported on its own
     const KBSource kbSrc = resolveKB(raw, model, iso > 0 ? iso : 100, k, b);
+    tm.kbMs = lap();
     const Cvt cvt = cvtCoeffs(k, b);
     {
         std::lock_guard<std::mutex> lock(g_resMutex);
@@ -338,6 +450,8 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
         }
     }
 
+    tm.packMs = lap();
+
     /* Feathered accumulator for the denoised packed image. */
     std::vector<float> acc(4 * pk, 0.0f);
     std::vector<float> wsum(pk, 0.0f);
@@ -350,10 +464,10 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
 
     for (int ty0 : ys) {
         const int th = std::min(kTile, Hpk - ty0);
-        const int thp = ((th + kPadMult - 1) / kPadMult) * kPadMult;   // pad to mult of 32
+        const int thp = kTile;     // the session's graph is a static kTile x kTile
         for (int tx0 : xs) {
             const int tw = std::min(kTile, Wpk - tx0);
-            const int twp = ((tw + kPadMult - 1) / kPadMult) * kPadMult;
+            const int twp = kTile;   // a short edge tile is edge-replicated up to it
             const size_t tpp = static_cast<size_t>(thp) * twp;
 
             /* Build padded, VST-transformed, x256 input tile (edge-replicated padding). */
@@ -373,8 +487,19 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
                 }
             }
 
+            if (tileDone == 0) { tm.tileW = twp; tm.tileH = thp; }
+            tm.tileInMs += lap();
+
             std::vector<Tensor> outs;
             if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) return false;
+            const double inferMs = lap();
+            tm.inferMs += inferMs;
+            if (tileDone == 0) {
+                tm.inferFirstMs = tm.inferMinMs = tm.inferMaxMs = inferMs;
+            } else {
+                tm.inferMinMs = std::min(tm.inferMinMs, inferMs);
+                tm.inferMaxMs = std::max(tm.inferMaxMs, inferMs);
+            }
             const Tensor &out = outs[0];
             if (out.data.size() != 4 * tpp) return false;
 
@@ -391,10 +516,16 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
                     }
                 }
             }
-            if (progress) progress(++tileDone, tileTotal);
+            tm.tileOutMs += lap();
+            /* Count every tile, not just when there is a progress sink: the saved-edit
+               pass passes none, and the timing's first/min/max key off tileDone. */
+            ++tileDone;
+            if (progress) progress(tileDone, tileTotal);
+            lap();                          // the progress marshal is not tile work
         }
     }
 
+    lap();
     /* Unpack the denoised packed image back into the mosaic (RGGB-phase region). */
     for (int y = 0; y < Hpk; ++y) {
         for (int x = 0; x < Wpk; ++x) {
@@ -411,7 +542,23 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
             put(sy + 1, sx + 1, acc[3 * pk + o]);
         }
     }
+    tm.unpackMs = lap();
 
+    tm.valid = true;
+    tm.backend = s->BackendName();
+    tm.width = W;
+    tm.height = H;
+    tm.tiles = tileTotal;
+    tm.sessionLoadMs = g_sessionLoadMs;
+    tm.totalMs = totalT.nsecsElapsed() / 1e6;
+    {
+        std::lock_guard<std::mutex> lock(g_timingMutex);
+        tm.firstRunOfSession = !g_sessionRunYet;
+        tm.warmUpMs = g_warmUpMs;
+        g_sessionRunYet = true;
+        g_lastTiming = tm;
+    }
+    if (outTiming) *outTiming = tm;
 
     if (G::isLogger)
         G::log("PMRID::Apply", QString("%1x%2 iso=%3 via %4 kb=[%5,%6] (%7)")

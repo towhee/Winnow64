@@ -2,6 +2,7 @@
 #include "ImageFormats/Raw/demosaic.h"
 #include "ImageFormats/Raw/rawcolor.h"
 #include "ImageFormats/Raw/pmrid.h"
+#include "ImageFormats/Raw/pmridcache.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Develop/workingimage.h"
 #include "Develop/develop.h"
@@ -9,6 +10,10 @@
 #include "Main/global.h"
 #include <algorithm>
 #include <QHash>
+#include <QElapsedTimer>
+#include <QFileInfo>
+#include <mutex>
+#include <optional>
 
 /* Per-format sensor decoders register here as each UnpackCfa() lands (phase 2+). */
 #include "ImageFormats/Sony/sony.h"     // class SonyRaw
@@ -64,6 +69,48 @@ bool RawFormat::HasSensorDecoder(const QString &ext)
     return rawFactories().contains(ext);
 }
 
+/* Last denoise-decode timing snapshot (see rawformat.h). */
+static std::mutex g_denoiseTimingMutex;
+static RawFormat::DenoiseTiming g_lastDenoiseTiming;
+
+RawFormat::DenoiseTiming RawFormat::LastDenoiseTiming()
+{
+    std::lock_guard<std::mutex> lock(g_denoiseTimingMutex);
+    return g_lastDenoiseTiming;
+}
+
+QString RawFormat::DenoiseTiming::Summary() const
+{
+    if (!valid) return "Denoise decode: not run this session";
+    auto ms = [](double v) { return QString::number(v, 'f', 1); };
+    const double other = totalMs - (pmridWaitMs + unpackMs + blackMs + cleanDemosaicMs +
+                                    cleanColorMs +
+                                    mosaicCopyMs + pmridMs + denDemosaicMs + denColorMs +
+                                    blendMs);
+    const QString reuse = pmridReuse.isEmpty() ? QString("ran")
+                                               : "reused, " + pmridReuse;
+    return QString("Denoise decode (%1) %2: total %3 ms | cache wait %4, unpack %5, "
+                   "black %6, clean demosaic %7, clean color %8, mosaic copy %9, "
+                   "PMRID %10 (%11), denoised demosaic %12, denoised color %13, blend %14, "
+                   "other %15")
+        .arg(interactive ? "interactive" : "saved edit", file, ms(totalMs), ms(pmridWaitMs),
+             ms(unpackMs), ms(blackMs), ms(cleanDemosaicMs), ms(cleanColorMs),
+             ms(mosaicCopyMs))
+        .arg(ms(pmridMs), reuse, ms(denDemosaicMs), ms(denColorMs), ms(blendMs), ms(other));
+}
+
+/* Publish a denoise-decode timing and print it with PMRID's breakdown -- one denoise run
+   is a deliberate, infrequent event, so the two lines are always logged. */
+static void PublishDenoiseTiming(const RawFormat::DenoiseTiming &t)
+{
+    {
+        std::lock_guard<std::mutex> lock(g_denoiseTimingMutex);
+        g_lastDenoiseTiming = t;
+    }
+    qInfo().noquote() << t.Summary();
+    if (t.pmrid.valid) qInfo().noquote() << "  " + t.pmrid.Summary();
+}
+
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        const EditParams *edit, const QAtomicInt *abort,
                        std::shared_ptr<const WorkingImage> *outWork,
@@ -91,6 +138,15 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     BlockingQueuedConnection waits for the whole demosaic and the UI beachballs.
 */
     const auto aborted = [abort]{ return abort && abort->loadAcquire(); };
+
+    /* Stage timing, published only when PMRID actually ran (PublishDenoiseTiming). */
+    QElapsedTimer totalT, lapT;
+    totalT.start();
+    lapT.start();
+    auto lap = [&lapT]() { const double v = lapT.nsecsElapsed() / 1e6; lapT.restart(); return v; };
+    DenoiseTiming dt;
+    dt.file = QFileInfo(file.fileName()).fileName();
+    dt.interactive = denoiseRaw;
 
     /* Reported to the caller only if PMRID really ran (see the header). Default false so
        every early return -- unsupported format, abort, Apple engine -- reads as "not
@@ -143,7 +199,78 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     }
 #endif
 
-    if (!decoded) {
+    /*
+        SHARED PMRID BASE (PmridCache). Every decode that needs the full-strength denoised
+        base -- the interactive pass (denoiseRaw) or a saved "Denoise raw" recipe -- gets it
+        through the cache, so the Develop denoise and the ImageCache decode of the same
+        image never both run the model. Winnow engine only, so on that engine the Apple
+        branch above never ran and decoded is still false.
+
+        CLAIM EARLY, WAIT LATE. tryAcquire up front, without blocking: Hit = reuse, Claimed
+        = this decode makes it and publishes it (the Claim abandons on every early return,
+        and a waiter takes over), InFlight = another decode is making it. An InFlight
+        decode does NOT wait yet: it unpacks and demosaics its own CLEAN base first, in
+        parallel with the producer, and blocks (awaitPmrid) only at the point it needs the
+        denoised one. Waiting up front serialised that ~0.7 s behind the whole producer
+        (measured 2026-10-13: the second decode finished 0.7 s after the first).
+
+        ONE PRODUCER PATH. The denoised base is always made by makeDenoised() from a
+        mosaic -- PMRID::Apply, then demosaic + RawColor -- and the clean base (*work) is
+        always the main demosaic, so the interactive and saved-edit passes differ only in
+        which of the two the caller gets.
+    */
+    const bool winnowEngine = G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine;
+    /* WANTED, not merely non-zero: the two amounts default NON-ZERO, so they cannot say
+       whether denoise was asked for -- EditParams::denoiseRaw does (falling back to the
+       Auto run preference when the recipe says nothing). Note the two spellings in this
+       scope: the `denoiseRaw` PARAMETER is "this decode is the full-strength PMRID pass",
+       edit->denoiseRaw is the stored intent. */
+    const bool savedDenoise = !denoiseRaw && edit && winnowEngine &&
+                              edit->wantsDenoiseRaw(G::autoRunDenoise) &&
+                              (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f);
+    const bool wantPmrid = !decoded && ((denoiseRaw && winnowEngine) || savedDenoise);
+    std::shared_ptr<const WorkingImage> pmridHit;
+    std::optional<PmridCache::Claim> pmridClaim;
+    bool pmridPending = false;          // InFlight elsewhere: awaitPmrid() before use
+    if (wantPmrid) {
+        lap();
+        const PmridCache::Result r =
+            PmridCache::instance().tryAcquire(file.fileName(), m.ISONum, pmridHit);
+        dt.pmridWaitMs += lap();
+        if (r == PmridCache::Result::Claimed) pmridClaim.emplace(file.fileName(), m.ISONum);
+        else if (r == PmridCache::Result::Hit) dt.pmridReuse = "cached";
+        else pmridPending = true;
+    }
+    /* Block for the base another decode is making. Ends Hit/Waited (reuse) or Claimed
+       (its producer gave up: make it here). False = aborted while waiting. */
+    auto awaitPmrid = [&]() -> bool {
+        lap();
+        const PmridCache::Result r =
+            PmridCache::instance().acquire(file.fileName(), m.ISONum, abort, pmridHit);
+        dt.pmridWaitMs += lap();
+        pmridPending = false;
+        if (r == PmridCache::Result::Aborted) return false;
+        if (r == PmridCache::Result::Claimed) pmridClaim.emplace(file.fileName(), m.ISONum);
+        else dt.pmridReuse = (r == PmridCache::Result::Hit) ? "cached" : "waited";
+        return true;
+    };
+
+    /* An interactive pass that wants only the denoised base has nothing of its own to do
+       while another decode makes it, so it waits now -- and on a reuse skips the decode. */
+    if (denoiseRaw && pmridPending && !outClean && !awaitPmrid()) {
+        errMsg = "Aborted";
+        return false;
+    }
+    /* The base the caller gets (outWork) and the identity render below start from: work,
+       unless this is the interactive pass and a denoised base was reused or made. */
+    std::shared_ptr<const WorkingImage> resultBase;
+    if (denoiseRaw && pmridHit) {
+        resultBase = pmridHit;
+        dt.valid = true;
+        if (outDenoiseApplied) *outDenoiseApplied = true;
+    }
+
+    if (!decoded && !(denoiseRaw && pmridHit && !outClean)) {
         /* Engine B (portable): in-house sensor decode. */
         RawImage raw;
         if (!UnpackCfa(file, m, raw)) {
@@ -155,102 +282,138 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             return false;
         }
         if (aborted()) { errMsg = "Aborted"; return false; }
+        dt.unpackMs = lap();
 
         SubtractBlack(raw);
+        dt.blackMs = lap();
 
-        /* Combined status-bar progress for a "Denoise raw" decode: the clean pre-PMRID
-           demosaic, the PMRID model, and the denoised demosaic each drive a slice of one
-           0..1000 bar so the user sees continuous movement, not an empty bar through the
-           demosaics. Inert when the caller passed no progress sink (a normal decode). */
+        /* Combined status-bar progress for a "Denoise raw" decode: the clean demosaic,
+           the PMRID model, and the denoised demosaic each drive a slice of one 0..1000 bar
+           so the user sees continuous movement, not an empty bar through the demosaics.
+           Inert when the caller passed no progress sink (a normal decode). */
         auto stage = [&denoiseProgress](int base, int span, int done, int total) {
             if (denoiseProgress && total > 0)
                 denoiseProgress(base + span * done / total, 1000);
         };
 
-        /* PMRID pre-demosaic raw denoise (in-house/Winnow engine only). Runs at full
-           strength on the mosaic before demosaic; the caller (MW::ensureRawDenoise)
-           requests it to build the denoised base and blends the user's amount. No-op for
-           non-Bayer patterns or if the model is absent. */
-        if (denoiseRaw && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
-            /* Clean base for the blend, from the SAME mosaic demosaiced before PMRID --
-               so one UnpackCfa yields both the clean and denoised bases
-               (MW::ensureRawDenoise) instead of a second full decode. PMRID::Apply
-               mutates raw in place, so this must run first. Demosaic/RawColor do not
-               mutate raw, so raw stays valid for the denoised pass below. */
-            if (outClean) {
-                Demosaic cleanDemosaic;
-                std::vector<float> rgbClean;
-                RawColor cleanColor;
-                auto cleanWork = std::make_shared<WorkingImage>();
-                auto cleanProg = [&stage](int d, int t) { stage(0, 250, d, t); };
-                if (cleanDemosaic.Run(raw, rgbClean, Demosaic::Bilinear, abort, cleanProg) &&
-                    cleanColor.ToCameraNative(raw, rgbClean, *cleanWork)) {
-                    cleanWork->cam.cameraModel = m.model;
-                    *outClean = cleanWork;
+        Demosaic demosaic;
+        RawColor color;
+
+        /* PMRID pre-demosaic denoise of mosaic (MUTATED in place -- pass a copy if the
+           mosaic is still needed), then demosaic + RawColor: the full-strength base.
+           nullptr when PMRID did not run (non-Bayer, no model) or a stage failed; then
+           mosaic is unmodified (Apply returns true iff it changed it). */
+        auto makeDenoised = [&](RawImage &mosaic, bool withProgress)
+            -> std::shared_ptr<WorkingImage> {
+            lap();
+            PMRID::ProgressFn pmridProg;
+            std::function<void(int, int)> denProg;
+            if (withProgress) {
+                pmridProg = [&stage](int d, int t) { stage(250, 500, d, t); };
+                denProg   = [&stage](int d, int t) { stage(750, 250, d, t); };
+            }
+            const bool applied = PMRID::Apply(mosaic, m.ISONum, m.model, pmridProg,
+                                              &dt.pmrid);
+            dt.pmridMs = lap();
+            if (!applied || aborted()) return nullptr;
+            std::vector<float> rgbDen;
+            auto den = std::make_shared<WorkingImage>();
+            const bool demosaiced =
+                demosaic.Run(mosaic, rgbDen, Demosaic::Bilinear, abort, denProg);
+            dt.denDemosaicMs = lap();
+            if (!demosaiced || !color.ToCameraNative(mosaic, rgbDen, *den)) return nullptr;
+            dt.denColorMs = lap();
+            den->cam.cameraModel = m.model;
+            return den;
+        };
+
+        /* The CLEAN base: every decode but an interactive pass that did not ask for
+           outClean (that one wants only the denoised base). */
+        const bool needClean = !denoiseRaw || outClean;
+        auto demosaicClean = [&]() -> bool {
+            std::vector<float> rgb;
+            /* The clean demosaic is the first slice of a denoise bar; a plain decode with
+               a progress sink gives it the whole bar (MW::ensureDevelopWork on open). */
+            std::function<void(int, int)> demProg;
+            if (denoiseRaw) demProg = [&stage](int d, int t) { stage(0, 250, d, t); };
+            else if (denoiseProgress) demProg = [&stage](int d, int t) { stage(0, 1000, d, t); };
+            lap();
+            if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort, demProg)) {
+                errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
+                return false;
+            }
+            dt.cleanDemosaicMs = lap();
+            if (!color.ToCameraNative(raw, rgb, *work)) {
+                errMsg = "Colour conversion failed.";
+                return false;
+            }
+            dt.cleanColorMs = lap();
+            /* The camera profile a render may later select is found by MODEL, and nothing
+               downstream of here knows the file -- WorkingImageCache hands back an image
+               with no path attached. RawColor cannot fill it: it is handed the RawImage,
+               not the metadata. See CameraColor::cameraModel. */
+            work->cam.cameraModel = m.model;
+            return true;
+        };
+        if (needClean && !demosaicClean()) return false;
+        if (aborted()) { errMsg = "Aborted"; return false; }
+
+        if (denoiseRaw) {
+            /* Interactive full-strength pass (MW::ensureRawDenoise). */
+            if (outClean) *outClean = work;
+            if (pmridPending && !awaitPmrid()) { errMsg = "Aborted"; return false; }
+            if (pmridHit) {
+                resultBase = pmridHit;
+                dt.valid = true;
+                if (outDenoiseApplied) *outDenoiseApplied = true;
+            }
+            else if (pmridClaim) {
+                /* raw's last use, so denoise it in place -- no copy. */
+                if (auto den = makeDenoised(raw, true)) {
+                    pmridClaim->publish(den);
+                    resultBase = den;
+                    dt.valid = true;
+                    if (outDenoiseApplied) *outDenoiseApplied = true;
                 }
                 if (aborted()) { errMsg = "Aborted"; return false; }
             }
-            const bool applied = PMRID::Apply(raw, m.ISONum, m.model,
-                                              [&stage](int d, int t) { stage(250, 500, d, t); });
-            if (outDenoiseApplied) *outDenoiseApplied = applied;
-            if (aborted()) { errMsg = "Aborted"; return false; }
+            /* Nothing denoised (non-Bayer, no model, not the Winnow engine): the caller
+               gets the clean image, as before -- decode it if it was skipped above. raw
+               is unmodified, since Apply changes it only when it applies. */
+            if (!resultBase && !needClean && !demosaicClean()) return false;
         }
 
-        Demosaic demosaic;
-        std::vector<float> rgb;
-        /* The denoised (post-PMRID) demosaic is the last slice of the progress bar. */
-        std::function<void(int, int)> demProg;
-        if (denoiseRaw) demProg = [&stage](int d, int t) { stage(750, 250, d, t); };
-        /* A clean (non-denoise) decode with a progress sink: the demosaic drives the
-           whole bar -- lets MW::ensureDevelopWork show demosaic progress on open. */
-        else if (denoiseProgress) demProg = [&stage](int d, int t) { stage(0, 1000, d, t); };
-        if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort, demProg)) {
-            errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
-            return false;
-        }
-
-        RawColor color;
-        if (!color.ToCameraNative(raw, rgb, *work)) {
-            errMsg = "Colour conversion failed.";
-            return false;
-        }
-        /* The camera profile a render may later select is found by MODEL, and nothing
-           downstream of here knows the file -- WorkingImageCache hands back an image with
-           no path attached. RawColor cannot fill it: it is handed the RawImage, not the
-           metadata. See CameraColor::cameraModel. */
-        work->cam.cameraModel = m.model;
-
-        /* Developed display/export base for a saved "Denoise raw" edit (the normal cache decode,
-           denoiseRaw == false; the denoiseRaw path already put the full-strength result in *work).
-           PMRID is pre-demosaic, so denoise a COPY of the mosaic, demosaic it a second time, and
-           blend toward the clean *work by the saved amounts -- matching the interactive render
-           (MW::ensureRawDenoise) while leaving *work (the cached base) clean. Winnow engine + Bayer
-           only; PMRID::Apply returns false otherwise, so we skip the extra work.
-
-           WANTED, not merely non-zero: the two amounts default NON-ZERO, so they cannot
-           say whether denoise was asked for -- EditParams::denoiseRaw does (falling back
-           to the Auto run preference when the recipe says nothing). Note the two spellings
-           in this scope: the `denoiseRaw` PARAMETER is "this decode is the full-strength
-           PMRID pass", edit->denoiseRaw is the stored intent. */
-        if (!denoiseRaw && edit && edit->wantsDenoiseRaw(G::autoRunDenoise) &&
-            (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f) &&
-            G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
-            RawImage rawDen = raw;
-            const bool applied = PMRID::Apply(rawDen, m.ISONum, m.model);
-            if (outDenoiseApplied) *outDenoiseApplied = applied;
-            if (applied) {
-                std::vector<float> rgbDen;
-                WorkingImage pmridWork;
-                if (demosaic.Run(rawDen, rgbDen, Demosaic::Bilinear, abort) &&
-                    color.ToCameraNative(rawDen, rgbDen, pmridWork)) {
-                    pmridWork.cam.cameraModel = m.model;
-                    denoisedBase = std::make_shared<WorkingImage>();
-                    Develop::BlendRawDenoise(*work, pmridWork, edit->denoiseLuma,
-                                             edit->denoiseChroma, *denoisedBase);
+        /* Developed display/export base for a saved "Denoise raw" edit: blend the
+           full-strength base toward the clean *work by the saved amounts -- matching the
+           interactive render (MW::ensureRawDenoise) while leaving *work (the cached
+           base) clean. */
+        if (savedDenoise) {
+            if (pmridPending && !awaitPmrid()) { errMsg = "Aborted"; return false; }
+            std::shared_ptr<const WorkingImage> den = pmridHit;
+            if (!den && pmridClaim) {
+                lap();
+                RawImage rawDen = raw;        // keep raw clean (it is *work's source)
+                dt.mosaicCopyMs = lap();
+                if (auto made = makeDenoised(rawDen, false)) {
+                    pmridClaim->publish(made);
+                    den = made;
                 }
+                if (aborted()) { errMsg = "Aborted"; return false; }
             }
-            if (aborted()) { errMsg = "Aborted"; return false; }
+            if (den) {
+                lap();
+                denoisedBase = std::make_shared<WorkingImage>();
+                Develop::BlendRawDenoise(*work, *den, edit->denoiseLuma,
+                                         edit->denoiseChroma, *denoisedBase);
+                dt.blendMs = lap();
+                dt.valid = true;
+            }
+            if (outDenoiseApplied) *outDenoiseApplied = (den != nullptr);
         }
+    }
+    if (dt.valid) {
+        dt.totalMs = totalT.nsecsElapsed() / 1e6;
+        PublishDenoiseTiming(dt);
     }
     if (aborted()) { errMsg = "Aborted"; return false; }
 
@@ -258,7 +421,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        stays CLEAN -- no denoise, no develop: the interactive develop path applies "Denoise raw" on
        top of this cached image with its own async cache (see MW::ensureRawDenoise), and the
        non-identity render below runs on a private copy so the cached image is never mutated. */
-    if (outWork) *outWork = work;
+    if (!resultBase) resultBase = work;
+    if (outWork) *outWork = resultBase;
 
     /* RAW develops in its native linear float (better than an 8-bit round trip), so the develop
        stage runs here rather than in ImageDecoder for raw files. This is the NON-interactive path
@@ -275,7 +439,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         edit ? OutputTransform::ViewFromInt(edit->viewTransform)
              : OutputTransform::ViewTransform::None;
     if (edit && !edit->isIdentity()) {
-        WorkingImage developed = denoisedBase ? *denoisedBase : *work;
+        WorkingImage developed = denoisedBase ? *denoisedBase : *resultBase;
         Develop develop;
         develop.Apply(developed, *edit);
         if (aborted()) { errMsg = "Aborted"; return false; }
@@ -293,8 +457,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        so passing them straight through renders sensor data -- the green cast of an
        unbalanced raw. Convert a COPY: *work is the shared cache base and must stay
        camera-native for the develop path's own stage 0. */
-    if (work->space == ColorSpaceMath::ColorSpace::CameraNative) {
-        WorkingImage converted = *work;
+    if (resultBase->space == ColorSpaceMath::ColorSpace::CameraNative) {
+        WorkingImage converted = *resultBase;
         Develop::ToWorkingSpace(converted);
         if (!output.ToImage(converted, out, OutputTransform::Space::sRGB, view)) {
             errMsg = "Output transform failed.";
@@ -303,7 +467,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         return true;
     }
 
-    if (!output.ToImage(*work, out, OutputTransform::Space::sRGB, view)) {
+    if (!output.ToImage(*resultBase, out, OutputTransform::Space::sRGB, view)) {
         errMsg = "Output transform failed.";
         return false;
     }

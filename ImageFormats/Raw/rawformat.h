@@ -11,6 +11,7 @@
 #include "ImageFormats/Raw/rawimage.h"
 #include "Develop/editparams.h"
 #include "Develop/workingimage.h"
+#include "ImageFormats/Raw/pmrid.h"
 
 /*
     Base class for full-sensor RAW decoding. The shared, camera-agnostic pipeline lives
@@ -80,6 +81,31 @@ public:
                 bool *outDenoiseApplied = nullptr);
 
     QString lastError() const { return errMsg; }
+
+    /* Stage timing of the most recent decode that ran PMRID -- either the interactive
+       full-strength pass (denoiseRaw, MW::ensureRawDenoise) or the saved-edit pass (a
+       display/export decode carrying a "Denoise raw" recipe). The probe for making
+       denoised renders faster; PMRID::LastTiming() breaks pmridMs down further. Written
+       on a decode thread, read anywhere (locked snapshot). All times in ms; a stage that
+       did not run stays 0. */
+    struct DenoiseTiming {
+        bool valid = false;
+        QString file;               // fileName() of the decode
+        bool interactive = false;   // denoiseRaw pass vs saved-edit pass
+        double unpackMs = 0.0;      // UnpackCfa
+        double blackMs = 0.0;       // SubtractBlack
+        double cleanDemosaicMs = 0.0, cleanColorMs = 0.0;    // clean base for the blend
+        double mosaicCopyMs = 0.0;  // saved-edit pass: RawImage copy PMRID mutates
+        double pmridMs = 0.0;
+        double denDemosaicMs = 0.0, denColorMs = 0.0;        // denoised base
+        double blendMs = 0.0;       // saved-edit pass: Develop::BlendRawDenoise
+        double pmridWaitMs = 0.0;   // PmridCache::acquire (blocked on another decode)
+        QString pmridReuse;         // "" = PMRID ran here, "cached" / "waited" = reused
+        double totalMs = 0.0;       // Decode entry -> denoised base ready
+        PMRID::Timing pmrid;        // THIS decode's PMRID breakdown
+        QString Summary() const;
+    };
+    static DenoiseTiming LastDenoiseTiming();
 
     /*
         The COLOUR half of a decode on its own: the model's XYZ->camera matrix and the

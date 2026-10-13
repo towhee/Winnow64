@@ -6,8 +6,9 @@
     runs on ONNX Runtime via OrtBackend; a future native backend would be chosen per model here.
 */
 InferenceSession::InferenceSession(const QString &onnxPath, InferenceDevice pref,
-                                   const QString &compileCacheDir)
-    : backend(std::make_unique<OrtBackend>(onnxPath, pref, compileCacheDir))
+                                   const QString &compileCacheDir,
+                                   const FixedDims &fixedDims)
+    : backend(std::make_unique<OrtBackend>(onnxPath, pref, compileCacheDir, fixedDims))
 {
 }
 
