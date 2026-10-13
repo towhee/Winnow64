@@ -5,6 +5,8 @@
 #include <QCoreApplication>
 #include <QHash>
 #include <QMutex>
+#include <QSet>
+#include <QThreadPool>
 #include <atomic>
 #include <dlfcn.h>
 #include <vector>
@@ -94,6 +96,43 @@ bool DecodedVersions(const QString &path, QList<int> &newestFirst, int &used)
 void SetDecodedCallback(std::function<void(const QString &path)> cb)
 {
     decodedCallback = std::move(cb);       // GUI thread, once, before any decode
+}
+
+void RequestVersions(const QString &path)
+{
+/*
+    THE LIST UP FRONT, WHATEVER IS RENDERING. Decode records the versions as a side
+    effect, which left the "Render using" list holding a bare "Apple Raw" and a promise
+    whenever Winnow was the engine -- the Apple decode never ran, so the user could not
+    see what Apple offered for this image without first switching to it.
+
+    Opening the file with CIRAWFilter and asking supportedDecoderVersions is the only
+    reliable source (the camera model is not -- see Documentation "Apple decoder
+    version") and costs 50-200 ms, so it runs on the global pool; Record posts the same
+    queued callback a decode does. One request per path: an image already known, or
+    already being asked about, is not opened again. The recorded "used" version is the
+    one a decode WOULD use under the current pin; a real decode overwrites it.
+*/
+    if (path.isEmpty()) return;
+    static QSet<QString> inFlight;          // under chosenMutex
+    {
+        QMutexLocker lock(&chosenMutex);
+        if (chosenByPath.contains(path) || inFlight.contains(path)) return;
+        inFlight.insert(path);
+    }
+    QThreadPool::globalInstance()->start([path] {
+        if (@available(macOS 12.0, *)) {
+            @autoreleasepool {
+                NSURL *url = [NSURL fileURLWithPath:path.toNSString()];
+                CIRAWFilter *f = [CIRAWFilter filterWithImageURL:url];
+                NSArray<NSString *> *supported = f ? f.supportedDecoderVersions : nil;
+                if (supported.count)
+                    Record(path, supported, PickVersion(supported, VersionPin()));
+            }
+        }
+        QMutexLocker lock(&chosenMutex);
+        inFlight.remove(path);
+    });
 }
 
 bool Decode(const QString &path, WorkingImage &out, QString &err)

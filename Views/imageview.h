@@ -64,6 +64,10 @@ public:
     QPointF developCaptureScrollPct;
     qreal   developCaptureZoom = 1.0;
     bool    developCaptureIsFit = true;
+    /*  The last Develop render shown: its image and its pixmap's cacheKey. A size change
+        while both still match is a re-render of that image -- see setDevelopPreview. */
+    QString developShownPath;
+    qint64  developShownKey = 0;
     bool    developCaptureLocked = false;  // suspend tracking while (re)framing the view
     /* The interim preview is a small embedded JPG, so the zoom that framed the full size
        image must be scaled up to frame the same content. Tracking divides it back out so

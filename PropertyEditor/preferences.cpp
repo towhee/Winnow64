@@ -658,8 +658,9 @@ void Preferences::addGeneral()
     i.tooltip = "Winnow always starts in the source that was showing when it last\n"
                 "closed -- the Library or Folders. With this on, what was loaded\n"
                 "comes back too:\n\n"
-                "  Library: the sort and the filters it had.\n"
-                "  Folders: the folders that were selected, and their filters.\n\n"
+                "  Library: the sort, the filters and the selected images.\n"
+                "  Folders: the folders that were selected, their filters and\n"
+                "           the selected images.\n\n"
                 "Hold Shift at launch to skip reopening folders. Filters are applied\n"
                 "when the Filters panel is showing, so a filter is never applied\n"
                 "where you cannot see it.";

@@ -58,6 +58,11 @@ bool DecodedVersions(const QString &path, QList<int> &newestFirst, int &used);
    once at start-up. */
 void SetDecodedCallback(std::function<void(const QString &path)> cb);
 
+/* Find out, without decoding, which versions path supports: opens it with Core Image
+   on a pool thread (50-200 ms), records the list for DecodedVersions and posts the
+   decoded callback. No-op if path is already known or being asked about. */
+void RequestVersions(const QString &path);
+
 } // namespace AppleRawDecode
 
 #endif // APPLERAWDECODE_H

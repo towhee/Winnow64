@@ -557,16 +557,20 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
     connect(rawPanel, &RawPanel::editSourceChanged, this, &DevelopProperties::onEditSourceChanged);
     /* Demosaic: ask MW to switch engine + re-decode, then reflect the engine (which shows
        or hides the denoise block). */
+    /*  THE PANEL SHOWS THE ENGINE IN EFFECT, not the one asked for: MW may refuse
+        (Apple off-mac falls back to Winnow), and the denoise block -- Winnow only --
+        must follow what will actually render. demosaicEngineChanged is a direct
+        connection, so G::decodeRawEngine is already set when reflectEngine reads it. */
     connect(rawPanel, &RawPanel::demosaicChanged, this, [this](bool apple){
         emit demosaicEngineChanged(apple);
-        if (rawPanel) rawPanel->setEngine(apple);
+        reflectEngine();
     });
     /* A version is an Apple engine choice too: the pin first, so the re-decode the
        engine switch triggers already uses it. */
     connect(rawPanel, &RawPanel::appleVersionChanged, this, [this](int pin){
         emit appleDecoderVersionChanged(pin);
         emit demosaicEngineChanged(true);
-        if (rawPanel) rawPanel->setEngine(true);
+        reflectEngine();
     });
     connect(rawPanel, &RawPanel::denoiseRunToggled, this, [this](bool on){
         setDenoiseRawFlag(on);
@@ -691,6 +695,13 @@ void DevelopProperties::setGlobalDefringe(bool purple, int value0to100)
     emit paramsChanged();
 }
 
+void DevelopProperties::reflectEngine()
+{
+    if (!rawPanel) return;
+    rawPanel->setEngine(G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
+    updateDenoiseAvailability();
+}
+
 void DevelopProperties::syncAppleDecoderVersions()
 {
     if (!rawPanel) return;
@@ -700,7 +711,14 @@ void DevelopProperties::syncAppleDecoderVersions()
     /* Recorded under the FILE decoded; a version (virtual copy) decodes its source. */
     const QString src = VersionKey::isVersion(currentImagePath)
                             ? VersionKey::sourceOf(currentImagePath) : currentImagePath;
-    if (!AppleRawDecode::DecodedVersions(src, versions, used)) { versions.clear(); used = 0; }
+    if (!AppleRawDecode::DecodedVersions(src, versions, used)) {
+        versions.clear();
+        used = 0;
+        /* Not decoded by Apple this session (Winnow is rendering, or the decode is
+           still running): ask Core Image directly, so the list is complete before the
+           user opens it. The answer comes back through the decoded callback. */
+        AppleRawDecode::RequestVersions(src);
+    }
 #endif
     rawPanel->setAppleVersions(versions, used);
 }
@@ -6709,6 +6727,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
        it here (emit to MW) and skip applyKeyToParams / the normal preview render. */
     if (source == "demosaic") {
         emit demosaicEngineChanged(v.toString() == "Apple");   // MW sets decodeRawEngine
+        reflectEngine();
         /* The engine drives whether the raw-denoise children (and so the expand arrow)
            exist -- Winnow yes, Apple no. Rebuild the tree to add/remove them, but DEFER
            it: doing it inline would delete this combo's live editor mid-signal.
@@ -8122,8 +8141,13 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
        preset looks different. */
     if (preset.globals.contains("demosaicEngine")) {
         const QString eng = preset.globals.value("demosaicEngine").toString().toLower();
-        if (eng == "apple" || eng == "winnow")
+        if (eng == "apple" || eng == "winnow") {
             emit demosaicEngineChanged(eng == "apple");
+            /*  A preset (or Paste Settings) switching engine used to leave the Raw panel
+                on the old one -- its "Render using" and its denoise block, which is
+                Winnow-only, both out of step with what rendered. */
+            reflectEngine();
+        }
         else
             warnOnce("unknownEngine",
                      source + " names an unknown raw decoder (\"" + eng +

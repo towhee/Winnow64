@@ -32,6 +32,35 @@ RawPanel::RawPanel(QWidget *parent, QSettings *settings) : QWidget(parent), sett
     buildUi();
 }
 
+/*
+    A rule matching the ones the property tree draws between the Basic / Color / Effects
+    groups: a G::groupSeparatorWidth line centred in G::groupSeparatorHeight, inset
+    G::groupSeparatorInset, in G::groupSeparatorColor (see
+    DevelopProperties::addGroupDivider), with an extra 3px of breathing room above it.
+    Translucent like every other container here: a plain QWidget takes the app
+    stylesheet's opaque background, which slabs a dark band across the panel's lifted
+    content background instead of just showing the rule.
+*/
+static QWidget *makeGroupRule(QWidget *parent)
+{
+    QWidget *divider = new QWidget(parent);
+    divider->setAttribute(Qt::WA_TranslucentBackground);
+    const int sepH = G::groupSeparatorHeight;
+    const int sepW = qMin(G::groupSeparatorWidth, sepH);
+    const int sepAbove = (sepH - sepW) / 2;
+    divider->setFixedHeight(3 + sepH);
+    QVBoxLayout *l = new QVBoxLayout(divider);
+    l->setContentsMargins(G::groupSeparatorInset, 3 + sepAbove,
+                          G::groupSeparatorInset, sepH - sepW - sepAbove);
+    l->setSpacing(0);
+    QFrame *rule = new QFrame(divider);
+    rule->setFixedHeight(sepW);
+    rule->setStyleSheet(QString("background: %1; border: none;")
+                            .arg(G::groupSeparatorColor.name()));
+    l->addWidget(rule);
+    return divider;
+}
+
 void RawPanel::buildUi()
 {
     const QString capCss = G::labelCss(G::textColor, G::strFontSize.toInt());
@@ -127,11 +156,13 @@ void RawPanel::buildUi()
     rawBlock = new QWidget(body);
     rawBlock->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *rb = new QVBoxLayout(rawBlock);
-    /* 4px top margin: extra space between the Edit row and "Render using". Inside
-       rawBlock so it hides with the block. */
-    rb->setContentsMargins(0, 4, 0, 0);
+    rb->setContentsMargins(0, 0, 0, 0);
     rb->setSpacing(4);
     bl->addWidget(rawBlock);
+
+    /* Rule between the Edit row and "Render using". Inside rawBlock so it hides with
+       the block on Embedded Preview rather than dangling under the Edit row. */
+    rb->addWidget(makeGroupRule(rawBlock));
 
     /* Demosaic engine. */
     QWidget *demRow = new QWidget(rawBlock);
@@ -164,31 +195,10 @@ void RawPanel::buildUi()
     nb->setSpacing(4);
     rb->addWidget(denoiseBlock);
 
-    /* Divider below the "Render using" row, matching the rules the property tree draws
-       between the Basic / Color / Effects groups: a G::groupSeparatorWidth line centred
-       in G::groupSeparatorHeight, inset G::groupSeparatorInset, in
-       G::groupSeparatorColor (see DevelopProperties::addGroupDivider), with an extra 3px
-       of breathing room above it. It lives in denoiseBlock so it hides with the denoise
-       group on the Apple engine rather than dangling under the last visible row. */
-    QWidget *demDivider = new QWidget(denoiseBlock);
-    /* Translucent like every other container here: a plain QWidget takes the app
-       stylesheet's opaque background, which slabs a dark band across the panel's
-       lifted content background instead of just showing the rule. */
-    demDivider->setAttribute(Qt::WA_TranslucentBackground);
-    const int sepH = G::groupSeparatorHeight;
-    const int sepW = qMin(G::groupSeparatorWidth, sepH);
-    const int sepAbove = (sepH - sepW) / 2;
-    demDivider->setFixedHeight(3 + sepH);
-    QVBoxLayout *ddl = new QVBoxLayout(demDivider);
-    ddl->setContentsMargins(G::groupSeparatorInset, 3 + sepAbove,
-                            G::groupSeparatorInset, sepH - sepW - sepAbove);
-    ddl->setSpacing(0);
-    QFrame *demRule = new QFrame(demDivider);
-    demRule->setFixedHeight(sepW);
-    demRule->setStyleSheet(QString("background: %1; border: none;")
-                               .arg(G::groupSeparatorColor.name()));
-    ddl->addWidget(demRule);
-    nb->addWidget(demDivider);
+    /* Rule below the "Render using" row. It lives in denoiseBlock so it hides with the
+       denoise group on the Apple engine rather than dangling under the last visible
+       row. */
+    nb->addWidget(makeGroupRule(denoiseBlock));
 
     /* Group caption for the raw denoise controls that follow. */
     QWidget *nrRow = new QWidget(denoiseBlock);
@@ -336,10 +346,11 @@ void RawPanel::rebuildEngineCombo()
 {
 /*
     One Apple entry per decoder version THIS IMAGE supports, newest first, then Winnow.
-    Item data is the version, 0 for the unnumbered entry shown before the image has been
-    decoded (the list comes from the decode: Core Image opening the file is the only
-    reliable source, 50-200 ms, and the camera model alone is not -- see
-    notes/Documentation.txt "Apple decoder version"), and -1 for Winnow.
+    Item data is the version, 0 for the unnumbered entry shown for the moment it takes
+    Core Image to open the file and say (AppleRawDecode::RequestVersions, 50-200 ms on a
+    pool thread, whichever engine is rendering -- the camera model alone is not a
+    reliable source, see notes/Documentation.txt "Apple decoder version"), and -1 for
+    Winnow.
 
     The selection is the version the decode actually USED, which differs from the pin
     when the image does not support the pinned version.
@@ -354,9 +365,9 @@ void RawPanel::rebuildEngineCombo()
 #endif
     if (appleVersions.isEmpty()) {
         engineCombo->addItem(appleName, 0);
-        engineCombo->setItemData(0, tr("Apple Core Image. The decoder versions this "
-                                       "image supports are listed once it has been "
-                                       "decoded."), Qt::ToolTipRole);
+        engineCombo->setItemData(0, tr("Apple Core Image. Reading which decoder "
+                                       "versions this image supports..."),
+                                 Qt::ToolTipRole);
     }
     for (int i = 0; i < appleVersions.size(); ++i) {
         const int v = appleVersions.at(i);

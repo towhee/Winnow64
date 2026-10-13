@@ -602,6 +602,7 @@ void MW::setScope(G::Scope s, QString src)
             restoreFiltersPending = false;
         }
         libraryRestoreSortPending = false;
+        if (pendingSelectionScope == G::Scope::Catalog) cancelSelectionRestore();
         lowerLoadCurtain("MW::setScope leaving the Library");
         /*  PARK IT, if it is whole: the folder load this is the start of reaches
             MW::reset, which moves the model aside instead of clearing it. */
@@ -613,6 +614,9 @@ void MW::setScope(G::Scope s, QString src)
         foldersFilterRestorePending = false;
         restoreFiltersPending = false;
     }
+    /*  Nor a Folders selection restore. */
+    if (changed && s == G::Scope::Catalog && pendingSelectionScope == G::Scope::Folders)
+        cancelSelectionRestore();
     G::scope = s;
     updateCollectionsAvailability();
     updateLibraryOnlyActions();
@@ -1174,26 +1178,12 @@ void MW::restoreParkedLibrary(const QSet<QString> &changed)
         restoreFiltersPending = true;
         libraryFilterRestorePending = true;
     }
-    if (!v.currentKey.isEmpty()) {
-        folderAndFileChangePath = v.currentKey;
-        /*  AND ONCE THE SORT HAS LANDED, BY KEY. metadataComplete resets the sort and then
-            applies the Library's, after folderChanged has started MetaRead at a proxy row
-            -- so the row it selects can name another image by then (ctest
-            library_snapshot, intermittently). metadataLoaded is emitted at the end of
-            metadataComplete, past every sort, in the same call as the cover coming down,
-            so the correction is never seen. */
-        const QString key = v.currentKey;
-        auto once = std::make_shared<QMetaObject::Connection>();
-        *once = connect(this, &MW::metadataLoaded, this, [this, key, once]{
-            disconnect(*once);
-            if (G::isPerfProbe)
-                qDebug().noquote() << "[PERF] restore: current at metadataLoaded ="
-                                   << dm->currentKey << " parked =" << key;
-            if (G::scope == G::Scope::Catalog && dm->currentKey != key
-                && dm->rowFromKey(key) >= 0)
-                sel->select(key);
-        });
-    }
+    /*  The current image, put back by key once the sort has landed -- see
+        queueSelectionRestore. At start-up the saved LibraryState selection is already
+        queued for the same image and is kept, being the whole selection rather than
+        only the current image. */
+    if (!v.currentKey.isEmpty())
+        queueSelectionRestore({v.currentKey}, G::Scope::Catalog);
 
     dm->abort = false;
     /*  Queued, as loadCatalogScope queues its fill: stop() has just torn the readers
@@ -1441,6 +1431,7 @@ void MW::saveLibraryState()
     settings->setValue("sortColumn", sortColumn);
     settings->setValue("isReverseSort", sortReverseAction->isChecked());
     settings->setValue("filters", filters->persistableState());
+    settings->setValue("selection", selectionKeysToSave());
     settings->endGroup();
 }
 
@@ -1466,6 +1457,7 @@ void MW::saveFoldersState()
     settings->setValue("roots", saved);
     settings->setValue("filters", filters && dm && dm->rowCount()
                                       ? filters->persistableState() : QVariantMap());
+    settings->setValue("selection", selectionKeysToSave());
     settings->endGroup();
 }
 
@@ -1493,10 +1485,12 @@ void MW::restoreFoldersState()
     if (G::isLogger) G::log("MW::restoreFoldersState");
     QStringList saved;
     QVariantMap f;
+    QStringList selection;
     if (settings->childGroups().contains("FoldersState")) {
         settings->beginGroup("FoldersState");
         saved = settings->value("roots").toStringList();
         f = settings->value("filters").toMap();
+        selection = settings->value("selection").toStringList();
         settings->endGroup();
     }
     else if (!lastDir.isEmpty()) {
@@ -1520,9 +1514,13 @@ void MW::restoreFoldersState()
 
     const QString src = "MW::restoreFoldersState";
     const FolderRoot &first = roots.first();
+    /*  Before the select: folderChanged reads folderAndFileChangePath as the load's
+        start row, and the first load begins inside fsTree->select. */
+    queueSelectionRestore(selection, G::Scope::Folders, roots.size());
     if (!fsTree->select(first.path, first.recurse ? "Recurse" : "None", src)) {
         foldersFilterRestorePending = false;
         restoreFiltersPending = false;
+        cancelSelectionRestore();
         return;
     }
     for (int i = 1; i < roots.size(); ++i)
@@ -1554,7 +1552,9 @@ void MW::queueLibraryStateRestore()
     const int col = settings->value("sortColumn", G::NameColumn).toInt();
     const bool reverse = settings->value("isReverseSort", false).toBool();
     const QVariantMap f = settings->value("filters").toMap();
+    const QStringList selection = settings->value("selection").toStringList();
     settings->endGroup();
+    queueSelectionRestore(selection, G::Scope::Catalog);
     if (G::isPerfProbe)
         qDebug().noquote() << "[PERF] queueLibraryStateRestore  sortColumn =" << col
                            << " reverse =" << reverse << " items ="
@@ -1592,6 +1592,112 @@ void MW::applyRestoredLibrarySort()
     if (libraryRestoreReverse != sortReverseAction->isChecked())
         toggleSortDirection(libraryRestoreReverse ? Tog::on : Tog::off);
     sortChange("MW::applyRestoredLibrarySort");
+}
+
+QStringList MW::selectionKeysToSave() const
+{
+/*
+    The selection as keys, the CURRENT IMAGE FIRST -- it is what the load starts at and
+    what the loupe shows. A selection larger than kMax saves the current image alone: a
+    Select All of a whole library is not a choice worth a megabyte of settings.ini, and
+    putting back half of one would be worse than putting back none.
+*/
+    constexpr int kMax = 5000;
+    QStringList keys;
+    if (!dm || dm->currentKey.isEmpty()) return keys;
+    keys << dm->currentKey;
+    if (!sel || !sel->sm) return keys;
+    const QModelIndexList rows = sel->sm->selectedRows();
+    if (rows.size() > kMax) return keys;
+    for (const QModelIndex &idx : rows) {
+        const QString key = idx.data(G::KeyRole).toString();
+        if (!key.isEmpty() && key != dm->currentKey) keys << key;
+    }
+    return keys;
+}
+
+void MW::queueSelectionRestore(const QStringList &keys, G::Scope scope, int loads)
+{
+/*
+    Put a saved selection back after the next load in scope. TWO HALVES, as
+    restoreParkedLibrary found it needed for the current image alone:
+
+      - folderAndFileChangePath makes the current image the load's START ROW
+        (MW::folderChanged), so the loupe, the image cache and MetaRead begin there
+        rather than at row 0;
+      - the selection itself is applied BY KEY at metadataLoaded, which is emitted
+        at the end of metadataComplete past every sort (the Library's restored one
+        included). A proxy row taken earlier can name another image by then.
+
+    A filter restore lands later still (when its build finishes), and filterChange
+    saves and recovers the selection around it -- the rows were visible under the
+    same filters when the selection was saved.
+
+    LOADS: how many loads the restore may span. Folders restores several roots as a
+    first load plus one add per further root, each ending in its own metadataLoaded; an
+    image in a later root is not in the model at the first. Each one applies what is
+    there, and the restore ends when every key is found or the loads run out.
+
+    A SECOND QUEUE FOR THE SAME CURRENT IMAGE KEEPS THE LONGER LIST: at start-up the
+    snapshot path (restoreParkedLibrary) queues its current image after the LibraryState
+    selection has been queued, and must not shrink it to one image.
+*/
+    if (keys.isEmpty() || keys.first().isEmpty()) return;
+    if (!pendingSelectionKeys.isEmpty() && pendingSelectionScope == scope
+        && pendingSelectionKeys.first() == keys.first()
+        && pendingSelectionKeys.size() >= keys.size()) {
+        folderAndFileChangePath = keys.first();
+        return;
+    }
+    cancelSelectionRestore();
+    pendingSelectionKeys = keys;
+    pendingSelectionScope = scope;
+    pendingSelectionLoads = qMax(1, loads);
+    folderAndFileChangePath = keys.first();
+    selectionRestoreConn = connect(this, &MW::metadataLoaded,
+                                   this, &MW::applySelectionRestore);
+}
+
+void MW::applySelectionRestore()
+{
+    const QStringList keys = pendingSelectionKeys;
+    const G::Scope scope = pendingSelectionScope;
+    if (keys.isEmpty() || G::scope != scope || !dm || !sel) {
+        cancelSelectionRestore();
+        return;
+    }
+
+    QList<int> rows;
+    for (int i = 1; i < keys.size(); ++i) {
+        const int r = dm->proxyRowFromKey(keys.at(i));
+        if (r >= 0) rows << r;
+    }
+    const bool haveCurrent = dm->rowFromKey(keys.first()) >= 0;
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] restore selection: current" << keys.first()
+                           << (haveCurrent ? "found" : "GONE") << " others"
+                           << rows.size() << "of" << keys.size() - 1;
+    /*  The current image may be gone (deleted, filtered out of a smaller Library); the
+        first surviving one then becomes current, as a click on it would. */
+    if (haveCurrent) {
+        if (dm->currentKey != keys.first()) sel->select(keys.first());
+        if (!rows.isEmpty()) sel->selectRows(rows, true);
+    }
+    else if (!rows.isEmpty()) {
+        sel->selectRows(rows, false);
+    }
+
+    /*  Done when everything is found or no load is left to bring the rest in. */
+    const bool allFound = haveCurrent && rows.size() == keys.size() - 1;
+    if (allFound || --pendingSelectionLoads <= 0) cancelSelectionRestore();
+}
+
+void MW::cancelSelectionRestore()
+{
+    if (selectionRestoreConn) disconnect(selectionRestoreConn);
+    selectionRestoreConn = QMetaObject::Connection();
+    pendingSelectionKeys.clear();
+    pendingSelectionLoads = 0;
 }
 
 void MW::applyDeferredSort()

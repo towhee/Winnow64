@@ -684,22 +684,52 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
        pixmap size constantly while the displayed size stays put. */
     const QSize oldSize = pmItem->displaySize();
     const bool sizeChanged = (shown != oldSize);
+    /*  IS THE FRAME ON SCREEN OUR OWN LAST RENDER OF THIS IMAGE? Then a size change is a
+        RE-RENDER -- the raw engine or the Apple decoder version switched, and the
+        decoders crop the sensor a few pixels differently (D850: Winnow 8288 x 5520,
+        Core Image 8256 x 5504) -- not a new image, and the view the user is in stays.
+        It used to re-fit unless a navigation capture happened to exist for the image,
+        which the first image after a folder load never has: a re-render at 100% came
+        back at fit. The pixmap's cacheKey is the proof, as every other path that
+        replaces the pixmap (loadImage, the interim placeholder) changes it. */
+    const bool reRender = sizeChanged && !developShownPath.isEmpty()
+                          && developShownPath == currentImagePath
+                          && pmItem->pixmap().cacheKey() == developShownKey;
+    const bool liveIsFit = isFit;
+    const qreal liveZoom = zoom;
+    const QPointF livePan = isScrollable ? getScrollPct() : scrollPct;
     /* Mid-drag the proxy is stretched fast (matching the old FastTransformation upscale);
        a full-res render needs no stretch at all. */
     pmItem->setTransformationMode(shown == image.size() ? Qt::SmoothTransformation
                                                         : Qt::FastTransformation);
     pmItem->setPixmapScaled(QPixmap::fromImage(image), shown);
     pmItem->setVisible(true);
+    developShownPath = currentImagePath;
+    developShownKey = pmItem->pixmap().cacheKey();
     if (sizeChanged) {
         imAspect = shown.height() ? double(shown.width()) / shown.height() : 1.0;
         const double oldAspect =
             oldSize.height() ? double(oldSize.width()) / oldSize.height() : 0.0;
         const bool aspectSame = oldAspect > 0.0 && qAbs(imAspect - oldAspect) < 0.01;
+        /* A re-render of the image on screen, same framing: keep the live view. Fit
+           re-fits to the new size; a zoom keeps its number (100% stays 100%) and the
+           pan keeps its fraction. */
+        if (aspectSame && reRender) {
+            developCaptureLocked = true;    // not a user reframing to track
+            setSceneRect(scene->itemsBoundingRect());
+            zoomFit = getFitScaleFactor(rect(), scene->itemsBoundingRect());
+            isFit = liveIsFit;
+            if (isFit) setFitZoom();
+            else zoom = liveZoom;
+            scale();
+            if (!isFit && isScrollable) setScrollBars(livePan);
+            developCaptureLocked = false;
+        }
         /* Same framing, higher res AND a captured view for this image: the demosaic
            finished and the developed image is replacing the interim preview -- restore
            the captured zoom/pan so it doesn't jump. Otherwise (aspect changed = crop
            applied/removed, or no capture) treat like a new image and re-fit. */
-        if (!(aspectSame && applyDevelopCapturedView())) {
+        else if (!(aspectSame && applyDevelopCapturedView())) {
             interimZoomScale = 1.0;     // full size image again
             resetFitZoom();
         }

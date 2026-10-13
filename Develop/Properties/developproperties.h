@@ -672,6 +672,9 @@ public slots:
        used, into the Raw panel's "Render using" list. MW calls it when a decode of the
        current image finishes (AppleRawDecode::SetDecodedCallback). */
     void syncAppleDecoderVersions();
+    /* Put the engine IN EFFECT (G::decodeRawEngine) on the Raw panel: "Render using"
+       and the denoise block, shown only for Winnow. Called after every engine change. */
+    void reflectEngine();
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)

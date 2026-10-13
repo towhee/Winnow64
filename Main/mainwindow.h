@@ -577,6 +577,18 @@ public:
     void saveLibraryState();
     void queueLibraryStateRestore();
     void applyRestoredLibrarySort();
+    /*  THE SELECTION, part of "Reopen as it was left": saved with the Library and
+        Folders states (current image first), put back once the load has sorted --
+        see queueSelectionRestore. Pending until metadataLoaded; cancelled by a scope
+        change, like the filter restore. */
+    QStringList selectionKeysToSave() const;
+    void queueSelectionRestore(const QStringList &keys, G::Scope scope, int loads = 1);
+    void applySelectionRestore();
+    void cancelSelectionRestore();
+    QStringList pendingSelectionKeys;
+    G::Scope pendingSelectionScope = G::Scope::Folders;
+    int pendingSelectionLoads = 0;          // metadataLoaded events still to wait for
+    QMetaObject::Connection selectionRestoreConn;
     QString updateSkipVersion;          // version the user chose to skip (suppresses startup dialog)
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
