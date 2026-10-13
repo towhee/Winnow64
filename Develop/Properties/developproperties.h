@@ -553,7 +553,9 @@ public slots:
        it opens the Save Develop Preset checklist dialog (name, source scope, the ticked
        settings) and hands the result to the DevelopPresets store. No-op with a message
        when there is no current image or it has no edits. Reached via Cmd+Shift+N, the
-       Develop dock context menu and the Presets dock's [+].
+       Develop dock context menu and the Presets dock's [+]. The dialog also asks for the
+       preset's CATEGORY (or a new one); saveDevelopPresetIn pre-selects one (a category
+       header's "New Preset in ..."), otherwise the last category used this session.
 
        previewPreset / endPresetPreview are the Presets list's HOVER: show the preset
        applied on the loupe without touching the stored stack or the sliders (the same
@@ -562,6 +564,7 @@ public slots:
        updatePresetFromCurrent / renamePreset / deletePreset serve the list's context
        menu. */
     void saveDevelopPreset();
+    void saveDevelopPresetIn(const QString &category);
     void previewPreset(const QString &name);
     void endPresetPreview();
     void applyPreset(const QString &name);
@@ -1369,6 +1372,7 @@ private:
     DevelopHistory *history = nullptr;
     HistoryView *historyView = nullptr;
     DevelopPresets *presets = nullptr;
+    QString lastPresetCategory;     // the Save dialog's default category this session
     PresetsView *presetsView = nullptr;
     EditStack previewStack;
     bool previewActive = false;

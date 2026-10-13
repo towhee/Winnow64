@@ -64,6 +64,13 @@ public:
                          Mode mode = Mode::SavePreset,
                          QWidget *parent = nullptr);
 
+    /* SavePreset only: adds a Category combo under the name -- the existing categories
+       in panel order, then "New Category...", which prompts for a name and adds it to
+       the combo. A new category is NOT created here; the caller creates it on Save, so
+       cancelling leaves no empty category behind. */
+    void    setCategories(const QStringList &categories, const QString &current);
+    QString category() const;       // empty when setCategories was never called
+
     QString presetName() const;     // always empty in CopySettings (there is no name)
     int     scopeIndex() const;     // index into the scopeNames handed in
     /* Checked leaf keys per group title (only the leaves the user left checked). */
@@ -78,7 +85,12 @@ private:
     void applyScopeChanged(int scope);   // re-check the scope groups for that scope
     void updateSaveEnabled();
 
+    void onCategoryActivated(int index);
+
+    QFormLayout *form      = nullptr;
     QLineEdit   *nameEdit  = nullptr;   // null in CopySettings
+    QComboBox   *categoryCombo = nullptr;   // null until setCategories
+    int          categoryPrev  = 0;         // restored when "New Category..." is cancelled
     QComboBox   *scopeCombo = nullptr;
     QTreeWidget *tree      = nullptr;
     QPushButton *saveBtn   = nullptr;   // "Save" / "Copy"

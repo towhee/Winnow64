@@ -31,6 +31,18 @@
         Develop Presets/<name>/Edits/<key>  = the captured scope's EditParams values
         Develop Presets/<name>/Global/spots = array of FillSpot paramsJson
 
+    CATEGORIES. The panel groups presets under user-named header categories, in a
+    user-chosen order (drag to reorder). That organisation lives under its OWN root,
+    so the preset data above -- a published format -- is untouched by it:
+
+        Develop Preset Layout/categories    = array of { name, presets, collapsed }
+
+    "Winnow" (kWinnowCategory) is PERMANENT: layout() always contains it, it cannot be
+    renamed or deleted, and it is where every preset not placed anywhere else lands --
+    presets saved before categories existed, a deleted category's presets, a preset
+    written without a category. layout() reconciles the stored list against the
+    presets that really exist on every call, so the two can never disagree for long.
+
     VERSION / MIGRATION. A preset lives in QSettings indefinitely and is applied by a
     straight assignment of its stored value into an EditParams field, so a preset key is
     effectively a PUBLISHED FORMAT. Adding keys is always safe (an absent key is a no-op:
@@ -67,6 +79,13 @@ struct DevelopPreset {
     bool isEmpty() const { return globals.isEmpty() && params.isEmpty() && spots.isEmpty(); }
 };
 
+/* One header category of the Presets panel, in display order. */
+struct PresetCategory {
+    QString     name;
+    QStringList presets;            // preset names, in display order
+    bool        collapsed = false;  // header folded in the panel
+};
+
 class DevelopPresets : public QObject
 {
     Q_OBJECT
@@ -76,9 +95,30 @@ public:
     QStringList   names() const;                  // sorted, case-insensitive
     bool          contains(const QString &name) const;
     DevelopPreset read(const QString &name) const;
-    void          write(const DevelopPreset &p);  // overwrites any preset of that name
+    /* Overwrites any preset of that name. category empty = leave an existing preset
+       where it is (a new one goes to the end of Winnow); otherwise the preset moves to
+       the end of that category, which is created if it does not exist yet. */
+    void          write(const DevelopPreset &p, const QString &category = QString());
     bool          rename(const QString &from, const QString &to);
     void          remove(const QString &name);
+
+    /* ---- Categories (see the class comment) ---------------------------------------
+       All of these keep the preset data alone; only the layout is rewritten. Every
+       mutation except setCategoryCollapsed emits changed() -- folding a header is the
+       view's own business, so the list does not rebuild for it. */
+    static constexpr const char *kWinnowCategory = "Winnow";
+    QVector<PresetCategory> layout() const;         // reconciled, display order
+    QStringList categoryNames() const;              // display order
+    QString     categoryOf(const QString &preset) const;
+    bool        hasCategory(const QString &name) const;     // case-insensitive
+    bool        addCategory(const QString &name);           // false: empty or exists
+    bool        renameCategory(const QString &from, const QString &to);  // not Winnow
+    void        removeCategory(const QString &name);        // presets move to Winnow
+    /* toIndex is the insertion point counted BEFORE the item is taken out, i.e. the
+       gap the user dropped on; the store corrects for the removal. */
+    void        moveCategory(const QString &name, int toIndex);
+    void        movePreset(const QString &preset, const QString &category, int toIndex);
+    void        setCategoryCollapsed(const QString &name, bool collapsed);
 
     /* ---- The develop CLIPBOARD (Copy / Paste Develop Settings) --------------------
        Copy captures exactly what a preset captures -- the same checklist, the same
@@ -113,6 +153,8 @@ signals:
 
 private:
     static constexpr const char *kRoot = "Develop Presets";
+    /* The category layout's own root (see the class comment). */
+    static constexpr const char *kLayoutRoot = "Develop Preset Layout";
     /* The clipboard's own root and its single fixed slot name. Separate from kRoot so the
        buffer is invisible to names() / contains() and cannot collide with a preset the
        user happens to name "clipboard". */
@@ -133,6 +175,10 @@ private:
        the same layout, differing only in where they live and who may enumerate them. */
     DevelopPreset readGroup(const char *root, const QString &name) const;
     void          writeGroup(const char *root, const DevelopPreset &p);
+
+    /* Persist a layout as given (no reconcile, no changed()). */
+    void          saveLayout(const QVector<PresetCategory> &cats);
+    static int    indexOfCategory(const QVector<PresetCategory> &cats, const QString &name);
 
     QSettings *setting;
 };

@@ -7967,7 +7967,12 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
 
 void DevelopProperties::saveDevelopPreset()
 {
-    if (G::isLogger) G::log("DevelopProperties::saveDevelopPreset");
+    saveDevelopPresetIn(QString());
+}
+
+void DevelopProperties::saveDevelopPresetIn(const QString &category)
+{
+    if (G::isLogger) G::log("DevelopProperties::saveDevelopPresetIn", category);
     if (currentImagePath.isEmpty()) {
         if (G::popup) G::popup->showPopup("No image to save a develop preset from.");
         return;
@@ -7985,10 +7990,19 @@ void DevelopProperties::saveDevelopPreset()
     SaveDevelopPresetDlg dlg(buildChecklistGroups(s), currentScopeNames(), changedPerScope,
                              activeScopeIndex, presets->names(),
                              SaveDevelopPresetDlg::Mode::SavePreset, mw);
+    /* Default category: the one asked for, else the last used (if it still exists),
+       else the permanent Winnow. */
+    QString defCat = category.isEmpty() ? lastPresetCategory : category;
+    if (defCat.isEmpty() || !presets->hasCategory(defCat))
+        defCat = DevelopPresets::kWinnowCategory;
+    dlg.setCategories(presets->categoryNames(), defCat);
     if (dlg.exec() != QDialog::Accepted) return;
 
-    presets->write(buildPreset(dlg.presetName(), dlg.scopeIndex(), dlg.selected(), s));
-    if (G::popup) G::popup->showPopup("Saved develop preset \"" + dlg.presetName() + "\".");
+    lastPresetCategory = dlg.category();
+    presets->write(buildPreset(dlg.presetName(), dlg.scopeIndex(), dlg.selected(), s),
+                   dlg.category());
+    if (G::popup) G::popup->showPopup("Saved develop preset \"" + dlg.presetName() +
+                                      "\" in " + dlg.category() + ".");
 }
 
 /* ---- Applying a preset ------------------------------------------------------------ */
@@ -8079,7 +8093,7 @@ void DevelopProperties::bindPresetsView(PresetsView *view)
     connect(presetsView, &PresetsView::presetChosen,
             this, &DevelopProperties::applyPreset);
     connect(presetsView, &PresetsView::newPresetRequested,
-            this, &DevelopProperties::saveDevelopPreset);
+            this, &DevelopProperties::saveDevelopPresetIn);
     connect(presetsView, &PresetsView::updateRequested,
             this, &DevelopProperties::updatePresetFromCurrent);
     connect(presetsView, &PresetsView::renameRequested,

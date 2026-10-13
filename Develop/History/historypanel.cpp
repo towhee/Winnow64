@@ -362,8 +362,13 @@ void HistoryPanel::showPresetsHelp()
         "A preset holds only the settings you ticked when you saved it, so "
         "applying it leaves everything else alone.<br>"
         "It is applied to the scope selected in the Develop panel.<br><br>"
-        "Click + (or Cmd+Shift+N) to make one from the current image. "
-        "Right-click a preset to update, rename or delete it.<br><br>"
+        "Click + (or Cmd+Shift+N) to make one from the current image; you choose "
+        "its category (or make a new one) as you save it. "
+        "Right-click a preset to update, rename, move or delete it.<br><br>"
+        "Presets are grouped under category headings; Winnow is permanent. Click a "
+        "heading to fold it, drag presets to reorder them or move them between "
+        "categories, and drag a heading to reorder the categories. Right-click a "
+        "heading to rename or delete it (its presets move to Winnow).<br><br>"
         "For a one-off, skip the preset: Cmd+Opt+C copies the settings you tick "
         "and Cmd+Opt+V pastes them onto another image.", 7000);
 }

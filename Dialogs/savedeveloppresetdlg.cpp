@@ -27,7 +27,7 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
     QVBoxLayout *lay = new QVBoxLayout(this);
 
     /* Preset name (none when copying) + the scope the values are captured from. */
-    QFormLayout *form = new QFormLayout;
+    form = new QFormLayout;
     if (!isCopy) {
         nameEdit = new QLineEdit(this);
         nameEdit->setPlaceholderText(tr("Untitled preset"));
@@ -143,6 +143,57 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
     applyScopeChanged(scopeCombo->currentIndex());
     updateSaveEnabled();
     resize(460, 580);
+}
+
+void SaveDevelopPresetDlg::setCategories(const QStringList &categories,
+                                         const QString &current)
+{
+    if (!nameEdit || categoryCombo) return;     // SavePreset only, once
+    categoryCombo = new QComboBox(this);
+    categoryCombo->addItems(categories);
+    categoryCombo->insertSeparator(categoryCombo->count());
+    categoryCombo->addItem(tr("New Category..."));
+    const int i = categoryCombo->findText(current, Qt::MatchFixedString);
+    categoryCombo->setCurrentIndex(i >= 0 ? i : 0);
+    categoryPrev = categoryCombo->currentIndex();
+    categoryCombo->setToolTip(tr("The Presets panel heading this preset is filed under. "
+                                 "Drag presets in the panel to move them later."));
+    form->insertRow(1, tr("Category:"), categoryCombo);
+    connect(categoryCombo, &QComboBox::activated, this,
+            &SaveDevelopPresetDlg::onCategoryActivated);
+}
+
+void SaveDevelopPresetDlg::onCategoryActivated(int index)
+{
+/*
+    The last item is "New Category...": prompt, then insert the name above the separator
+    and select it. A name that already exists just selects that category; cancelling
+    puts the previous choice back.
+*/
+    const int newItem = categoryCombo->count() - 1;
+    if (index != newItem) {
+        categoryPrev = index;
+        return;
+    }
+    bool ok = false;
+    const QString name = QInputDialog::getText(this, tr("New category"),
+        tr("Category name:"), QLineEdit::Normal, QString(), &ok).trimmed();
+    if (!ok || name.isEmpty()) {
+        categoryCombo->setCurrentIndex(categoryPrev);
+        return;
+    }
+    int i = categoryCombo->findText(name, Qt::MatchFixedString);
+    if (i < 0 || i >= newItem - 1) {
+        i = newItem - 1;                        // the separator's slot
+        categoryCombo->insertItem(i, name);
+    }
+    categoryCombo->setCurrentIndex(i);
+    categoryPrev = i;
+}
+
+QString SaveDevelopPresetDlg::category() const
+{
+    return categoryCombo ? categoryCombo->currentText() : QString();
 }
 
 QString SaveDevelopPresetDlg::presetName() const

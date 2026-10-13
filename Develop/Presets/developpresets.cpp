@@ -1,6 +1,8 @@
 #include "Develop/Presets/developpresets.h"
 #include "Main/global.h"
 
+#include <QSet>
+
 /*
     See developpresets.h. Reads / writes named develop presets in QSettings. Everything
     here is deliberately key-by-key: a preset holds only the settings the user ticked,
@@ -98,11 +100,27 @@ void DevelopPresets::migrate(DevelopPreset &p)
     p.version = kVersion;
 }
 
-void DevelopPresets::write(const DevelopPreset &p)
+void DevelopPresets::write(const DevelopPreset &p, const QString &category)
 {
     if (!setting || p.name.isEmpty()) return;
     if (G::isLogger) G::log("DevelopPresets::write", p.name);
     writeGroup(kRoot, p);
+    /* A named category places the preset at its end -- unless it is already in that
+       category, where re-saving it must not shuffle it. Without one, layout() files an
+       unplaced preset under Winnow on its own. */
+    if (!category.isEmpty()) {
+        QVector<PresetCategory> cats = layout();
+        int ci = indexOfCategory(cats, category);
+        if (ci < 0 || !cats[ci].presets.contains(p.name)) {
+            for (PresetCategory &c : cats) c.presets.removeAll(p.name);
+            if (ci < 0) {
+                cats.append({category, {}, false});
+                ci = cats.size() - 1;
+            }
+            cats[ci].presets.append(p.name);
+            saveLayout(cats);
+        }
+    }
     setting->sync();                    // flush now (QSettings otherwise defers it)
     emit changed();
 }
@@ -196,10 +214,17 @@ bool DevelopPresets::rename(const QString &from, const QString &to)
        store holds, so there is no need to walk the QSettings tree by hand. */
     DevelopPreset p = read(from);
     if (p.name.isEmpty()) return false;
+    /* Keep its place: rename the layout entry in situ, captured BEFORE the old preset
+       goes (layout() drops entries for presets that no longer exist). */
+    QVector<PresetCategory> cats = layout();
+    for (PresetCategory &c : cats)
+        for (QString &n : c.presets)
+            if (n == from) n = to;
     p.name = to;
     setting->beginGroup(kRoot);
     setting->remove(from);
     setting->endGroup();
+    saveLayout(cats);
     write(p);                           // emits changed()
     return true;
 }
@@ -208,11 +233,200 @@ void DevelopPresets::remove(const QString &name)
 {
     if (!setting || name.isEmpty()) return;
     if (G::isLogger) G::log("DevelopPresets::remove", name);
+    /* Drop its layout entry too, so a later preset of the same name starts fresh at
+       the end of its category instead of reappearing in the deleted one's slot. */
+    QVector<PresetCategory> cats = layout();
+    for (PresetCategory &c : cats) c.presets.removeAll(name);
     setting->beginGroup(kRoot);
     setting->remove(name);
     setting->endGroup();
+    saveLayout(cats);
     setting->sync();
     emit changed();
+}
+
+/* ---- Categories -------------------------------------------------------------------- */
+
+int DevelopPresets::indexOfCategory(const QVector<PresetCategory> &cats, const QString &name)
+{
+    for (int i = 0; i < cats.size(); ++i)
+        if (cats[i].name.compare(name, Qt::CaseInsensitive) == 0) return i;
+    return -1;
+}
+
+QVector<PresetCategory> DevelopPresets::layout() const
+{
+/*
+    The stored layout, reconciled against the presets that actually exist: entries for
+    vanished presets and duplicates are dropped, Winnow is guaranteed (first, if it was
+    somehow missing), and every preset not placed anywhere -- including all presets saved
+    before categories existed -- is appended to Winnow in name order.
+*/
+    QVector<PresetCategory> cats;
+    if (!setting) return cats;
+    const QStringList all = names();
+    QSet<QString> placed;
+
+    setting->beginGroup(kLayoutRoot);
+    const int n = setting->beginReadArray("categories");
+    for (int i = 0; i < n; ++i) {
+        setting->setArrayIndex(i);
+        PresetCategory c;
+        c.name = setting->value("name").toString().trimmed();
+        c.collapsed = setting->value("collapsed", false).toBool();
+        if (c.name.isEmpty() || indexOfCategory(cats, c.name) >= 0) continue;
+        /* toStringList: a one-item list may read back as a plain QString on some
+           backends, and an empty one as an invalid QVariant -- both convert correctly. */
+        const QStringList stored = setting->value("presets").toStringList();
+        for (const QString &p : stored) {
+            if (p.isEmpty() || placed.contains(p) || !all.contains(p)) continue;
+            c.presets.append(p);
+            placed.insert(p);
+        }
+        cats.append(c);
+    }
+    setting->endArray();
+    setting->endGroup();
+
+    int wi = indexOfCategory(cats, kWinnowCategory);
+    if (wi < 0) {
+        cats.prepend({kWinnowCategory, {}, false});
+        wi = 0;
+    }
+    cats[wi].name = kWinnowCategory;    // canonical spelling
+    for (const QString &p : all)        // names() is already sorted
+        if (!placed.contains(p)) cats[wi].presets.append(p);
+    return cats;
+}
+
+void DevelopPresets::saveLayout(const QVector<PresetCategory> &cats)
+{
+    if (!setting) return;
+    setting->beginGroup(kLayoutRoot);
+    setting->remove("");
+    setting->beginWriteArray("categories", cats.size());
+    for (int i = 0; i < cats.size(); ++i) {
+        setting->setArrayIndex(i);
+        setting->setValue("name", cats[i].name);
+        setting->setValue("presets", cats[i].presets);
+        setting->setValue("collapsed", cats[i].collapsed);
+    }
+    setting->endArray();
+    setting->endGroup();
+    setting->sync();
+}
+
+QStringList DevelopPresets::categoryNames() const
+{
+    QStringList list;
+    for (const PresetCategory &c : layout()) list.append(c.name);
+    return list;
+}
+
+QString DevelopPresets::categoryOf(const QString &preset) const
+{
+    for (const PresetCategory &c : layout())
+        if (c.presets.contains(preset)) return c.name;
+    return QString();
+}
+
+bool DevelopPresets::hasCategory(const QString &name) const
+{
+    return indexOfCategory(layout(), name) >= 0;
+}
+
+bool DevelopPresets::addCategory(const QString &name)
+{
+    const QString n = name.trimmed();
+    if (!setting || n.isEmpty()) return false;
+    if (G::isLogger) G::log("DevelopPresets::addCategory", n);
+    QVector<PresetCategory> cats = layout();
+    if (indexOfCategory(cats, n) >= 0) return false;
+    cats.append({n, {}, false});
+    saveLayout(cats);
+    emit changed();
+    return true;
+}
+
+bool DevelopPresets::renameCategory(const QString &from, const QString &to)
+{
+    const QString n = to.trimmed();
+    if (!setting || n.isEmpty()) return false;
+    if (from.compare(kWinnowCategory, Qt::CaseInsensitive) == 0) return false;
+    if (G::isLogger) G::log("DevelopPresets::renameCategory", from);
+    QVector<PresetCategory> cats = layout();
+    const int ci = indexOfCategory(cats, from);
+    if (ci < 0) return false;
+    /* A pure case change of its own name is allowed; any other clash is not. */
+    const int clash = indexOfCategory(cats, n);
+    if (clash >= 0 && clash != ci) return false;
+    cats[ci].name = n;
+    saveLayout(cats);
+    emit changed();
+    return true;
+}
+
+void DevelopPresets::removeCategory(const QString &name)
+{
+    if (!setting || name.compare(kWinnowCategory, Qt::CaseInsensitive) == 0) return;
+    if (G::isLogger) G::log("DevelopPresets::removeCategory", name);
+    QVector<PresetCategory> cats = layout();
+    const int ci = indexOfCategory(cats, name);
+    if (ci < 0) return;
+    /* Deleting a category never deletes presets: they go to the end of Winnow. */
+    const QStringList orphans = cats[ci].presets;
+    cats.remove(ci);
+    cats[indexOfCategory(cats, kWinnowCategory)].presets.append(orphans);
+    saveLayout(cats);
+    emit changed();
+}
+
+void DevelopPresets::moveCategory(const QString &name, int toIndex)
+{
+    QVector<PresetCategory> cats = layout();
+    const int from = indexOfCategory(cats, name);
+    if (from < 0) return;
+    toIndex = qBound(0, toIndex, cats.size());
+    if (toIndex > from) --toIndex;      // the gap shifts once the item is taken out
+    if (toIndex == from) return;
+    if (G::isLogger) G::log("DevelopPresets::moveCategory", name);
+    cats.move(from, toIndex);
+    saveLayout(cats);
+    emit changed();
+}
+
+void DevelopPresets::movePreset(const QString &preset, const QString &category, int toIndex)
+{
+    QVector<PresetCategory> cats = layout();
+    const int to = indexOfCategory(cats, category);
+    if (to < 0) return;
+    int from = -1, fromPos = -1;
+    for (int i = 0; i < cats.size() && from < 0; ++i) {
+        fromPos = cats[i].presets.indexOf(preset);
+        if (fromPos >= 0) from = i;
+    }
+    if (from < 0) return;
+    toIndex = qBound(0, toIndex, int(cats[to].presets.size()));
+    if (from == to) {
+        if (toIndex > fromPos) --toIndex;
+        if (toIndex == fromPos) return;
+    }
+    if (G::isLogger) G::log("DevelopPresets::movePreset", preset);
+    cats[from].presets.removeAt(fromPos);
+    cats[to].presets.insert(toIndex, preset);
+    /* Dropping into a folded category opens it, so the preset is seen to land. */
+    cats[to].collapsed = false;
+    saveLayout(cats);
+    emit changed();
+}
+
+void DevelopPresets::setCategoryCollapsed(const QString &name, bool collapsed)
+{
+    QVector<PresetCategory> cats = layout();
+    const int ci = indexOfCategory(cats, name);
+    if (ci < 0 || cats[ci].collapsed == collapsed) return;
+    cats[ci].collapsed = collapsed;
+    saveLayout(cats);
 }
 
 void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditParams &p)
