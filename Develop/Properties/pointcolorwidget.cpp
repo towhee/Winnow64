@@ -1,6 +1,7 @@
 #include "pointcolorwidget.h"
 
 #include <QPainter>
+#include <QPainterPath>
 #include <QMouseEvent>
 #include <QContextMenuEvent>
 #include <QHelpEvent>
@@ -19,7 +20,8 @@ constexpr int   kStripW     = 18;
 constexpr int   kStripGap   = 8;
 constexpr int   kBarGap     = 8;
 constexpr int   kBarH       = 14;
-constexpr float kFieldHueSpanDeg = 75.0f;   // field = sample hue +/- this
+constexpr float kFieldHueSpanDeg = 75.0f;   // field = centre hue +/- this, at least
+constexpr float kFieldHueMarginDeg = 35.0f; //   and this beyond the samples' arc
 constexpr float kDegToRad = PointColor::kPi / 180.0f;
 
 QColor srgbColor(float r, float g, float b)
@@ -28,13 +30,19 @@ QColor srgbColor(float r, float g, float b)
     return QColor(c8(r), c8(g), c8(b));
 }
 
-QColor sampleColor(const PointColor::Point &p) { return srgbColor(p.r, p.g, p.b); }
-
-/* The sample as the shifts take it (Variance aside: it has no effect on the sample). */
-QColor shiftedColor(const PointColor::Point &p)
+QColor sampleColor(const PointColor::Point &p, int i = 0)
 {
-    float L, C, h;
-    PointColor::sampleLch(p, L, C, h);
+    float r, g, b;
+    p.sample(i, r, g, b);
+    return srgbColor(r, g, b);
+}
+
+/* Sample i as the shifts take it (Variance aside: it barely moves a sample). */
+QColor shiftedColor(const PointColor::Point &p, int i = 0)
+{
+    float sr, sg, sb, L, C, h;
+    p.sample(i, sr, sg, sb);
+    PointColor::rgbLch(sr, sg, sb, L, C, h);
     float r, g, b;
     PointColor::lchToSrgb(PointColor::shiftedLightness(p, L),
                           PointColor::shiftedChroma(p, C),
@@ -66,7 +74,15 @@ void PointColorWidget::setPoints(int count, const PointColor::Point *p, int sele
     for (int i = 0; i < PointColor::kMaxPts; ++i)
         pts[i] = (i < n && p) ? p[i] : PointColor::Point();
     sel = (selected >= 0 && selected < n) ? selected : (n > 0 ? n - 1 : -1);
-    if (hasSel()) PointColor::sampleLch(pts[sel], Ls, Cs, hs);
+    if (hasSel()) {
+        env = PointColor::envelope(pts[sel]);
+        Ls = env.Lc();
+        Cs = env.Cc();
+        hs = env.hc;
+        hueSpan = qMin(PointColor::kPi,
+                       qMax(kFieldHueSpanDeg * kDegToRad,
+                            env.hh + kFieldHueMarginDeg * kDegToRad));
+    }
     update();
 }
 
@@ -77,11 +93,18 @@ void PointColorWidget::setDropperIcons(const QIcon &idle, const QIcon &armedIcon
     update();
 }
 
-void PointColorWidget::setPickArmed(bool on)
+void PointColorWidget::setPickArmed(bool on, bool addMode)
 {
-    if (armed == on) return;
+    addMode = on && addMode;
+    if (armed == on && armedAdd == addMode) return;
     armed = on;
+    armedAdd = addMode;
     update();
+}
+
+bool PointColorWidget::canAddSample() const
+{
+    return hasSel() && pts[sel].extraN < PointColor::kMaxExtra;
 }
 
 /* ---- Geometry ---------------------------------------------------------------------- */
@@ -93,13 +116,24 @@ QRect PointColorWidget::dropperRect() const
 
 QRect PointColorWidget::swatchRect(int i) const
 {
+    /* Tighten the gap rather than run under the add-sample dropper on a narrow dock. */
     const int x0 = dropperRect().right() + 10;
-    return QRect(x0 + i * (kSwatch + kSwatchGap), (kRowH - kSwatch) / 2, kSwatch, kSwatch);
+    int step = kSwatch + kSwatchGap;
+    if (n > 1) {
+        const int avail = addSampleRect().left() - 8 - x0 - kSwatch;
+        step = qBound(kSwatch + 2, avail / (n - 1), step);
+    }
+    return QRect(x0 + i * step, (kRowH - kSwatch) / 2, kSwatch, kSwatch);
 }
 
 QRect PointColorWidget::deleteRect() const
 {
     return QRect(width() - kPad - 16, (kRowH - 16) / 2, 16, 16);
+}
+
+QRect PointColorWidget::addSampleRect() const
+{
+    return QRect(deleteRect().left() - 8 - 22, (kRowH - 22) / 2, 22, 22);
 }
 
 QRect PointColorWidget::fieldRect() const
@@ -125,17 +159,17 @@ int PointColorWidget::swatchAt(const QPoint &pos) const
     return -1;
 }
 
-/* Chroma at the top of the field: room for Sat Shift +100 (x2) on the sample, with a
-   floor so a muted sample still shows a useful spread of colour. */
+/* Chroma at the top of the field: room for Sat Shift +100 (x2) on the centre and for
+   every sample, with a floor so a muted sample still shows a useful spread of colour. */
 float PointColorWidget::fieldCMax() const
 {
-    return qMax(0.12f, Cs * (1.0f + PointColor::kSatUpMax) * 1.1f);
+    return qMax(0.12f, qMax(Cs * (1.0f + PointColor::kSatUpMax), env.Cmax) * 1.1f);
 }
 
 QPointF PointColorWidget::fieldPos(float h, float C) const
 {
     const QRectF f = fieldRect();
-    const float dh = PointColor::wrapPi(h - hs) / (kFieldHueSpanDeg * kDegToRad);
+    const float dh = PointColor::wrapPi(h - hs) / hueSpan;
     const float x = qBound(-1.0f, dh, 1.0f) * 0.5f + 0.5f;
     const float y = 1.0f - qBound(0.0f, C / fieldCMax(), 1.0f);
     return QPointF(f.left() + x * f.width(), f.top() + y * f.height());
@@ -151,9 +185,11 @@ void PointColorWidget::rebuildFieldImage()
 {
     const QRect f = fieldRect();
     const QRect s = stripRect();
-    if (imgFor == f.size() && imgL == Ls && imgC == Cs && imgH == hs) return;
+    if (imgFor == f.size() && imgL == Ls && imgC == Cs && imgH == hs && imgSpan == hueSpan
+        && imgCMax == fieldCMax())
+        return;
     imgFor = f.size();
-    imgL = Ls; imgC = Cs; imgH = hs;
+    imgL = Ls; imgC = Cs; imgH = hs; imgSpan = hueSpan; imgCMax = fieldCMax();
     const int fw = qMax(1, f.width()), fh = qMax(1, f.height());
     fieldImg = QImage(fw, fh, QImage::Format_RGB32);
     const float cMax = fieldCMax();
@@ -162,7 +198,7 @@ void PointColorWidget::rebuildFieldImage()
         const float C = cMax * (1.0f - (y + 0.5f) / fh);
         for (int x = 0; x < fw; ++x) {
             const float t = (x + 0.5f) / fw * 2.0f - 1.0f;
-            const float h = hs + t * kFieldHueSpanDeg * kDegToRad;
+            const float h = hs + t * hueSpan;
             float r, g, b;
             PointColor::lchToSrgb(Ls, C, h, r, g, b);
             line[x] = srgbColor(r, g, b).rgb();
@@ -190,28 +226,55 @@ void PointColorWidget::paintEvent(QPaintEvent *)
     const QColor frame(120, 120, 120);
     const QColor text(170, 170, 170);
 
-    /* Dropper: greyed when the point list is full (the tooltip says why). */
-    const QRect dr = dropperRect();
+    /* Droppers: the new-point one, and (with a point selected) the add-sample one at
+       the right. Each is outlined while it is the armed one, and greyed when it has no
+       room (the tooltips say why). */
     const bool full = n >= PointColor::kMaxPts;
-    if (armed) {
-        p.setPen(QPen(QColor(10, 132, 255), 1.5));
-        p.setBrush(Qt::NoBrush);
-        p.drawRoundedRect(QRectF(dr).adjusted(0.5, 0.5, -0.5, -0.5), 4, 4);
-    }
-    const QIcon &ic = armed ? dropArmed : dropIdle;
-    if (!ic.isNull()) {
+    auto dropper = [&](const QRect &dr, bool isArmed, bool dim, bool plus) {
+        if (isArmed) {
+            p.setPen(QPen(QColor(10, 132, 255), 1.5));
+            p.setBrush(Qt::NoBrush);
+            p.drawRoundedRect(QRectF(dr).adjusted(0.5, 0.5, -0.5, -0.5), 4, 4);
+        }
+        const QIcon &ic = isArmed ? dropArmed : dropIdle;
         p.save();
-        if (full && !armed) p.setOpacity(0.3);
-        ic.paint(&p, dr.adjusted(3, 3, -3, -3));
+        if (dim && !isArmed) p.setOpacity(p.opacity() * 0.3);
+        if (!ic.isNull()) ic.paint(&p, dr.adjusted(3, 3, -3, -3));
+        if (plus) {
+            /* A small "+" badge at the bottom right: add to, rather than add. */
+            const QPointF c(dr.right() - 4.0, dr.bottom() - 4.0);
+            p.setPen(Qt::NoPen);
+            p.setBrush(QColor(40, 40, 40));
+            p.drawEllipse(c, 4.5, 4.5);
+            p.setPen(QPen(isArmed ? QColor(10, 132, 255) : QColor(220, 220, 220), 1.4));
+            p.drawLine(QPointF(c.x() - 2.5, c.y()), QPointF(c.x() + 2.5, c.y()));
+            p.drawLine(QPointF(c.x(), c.y() - 2.5), QPointF(c.x(), c.y() + 2.5));
+        }
         p.restore();
-    }
+    };
+    dropper(dropperRect(), armed && !armedAdd, full, false);
+    if (hasSel()) dropper(addSampleRect(), armed && armedAdd, !canAddSample(), true);
 
-    /* Swatches, then the delete cross for the selected one. */
+    /* Swatches -- one vertical stripe per sample -- then the delete cross for the
+       selected one. */
     for (int i = 0; i < n; ++i) {
         const QRectF r = swatchRect(i);
+        const QRectF in = r.adjusted(0.5, 0.5, -0.5, -0.5);
+        const int m = pts[i].sampleCount();
+        p.save();
+        QPainterPath clip;
+        clip.addRoundedRect(in, 3, 3);
+        p.setClipPath(clip);
+        p.setPen(Qt::NoPen);
+        for (int k = 0; k < m; ++k) {
+            p.setBrush(sampleColor(pts[i], k));
+            p.drawRect(QRectF(in.left() + in.width() * k / m, in.top(),
+                              in.width() / m + 0.5, in.height()));
+        }
+        p.restore();
         p.setPen(QPen(frame, 1));
-        p.setBrush(sampleColor(pts[i]));
-        p.drawRoundedRect(r.adjusted(0.5, 0.5, -0.5, -0.5), 3, 3);
+        p.setBrush(Qt::NoBrush);
+        p.drawRoundedRect(in, 3, 3);
         if (i == sel) {
             p.setPen(QPen(Qt::white, 2));
             p.setBrush(Qt::NoBrush);
@@ -249,8 +312,11 @@ void PointColorWidget::paintEvent(QPaintEvent *)
     p.drawRect(QRectF(f).adjusted(0.5, 0.5, -0.5, -0.5));
     p.drawRect(QRectF(s).adjusted(0.5, 0.5, -0.5, -0.5));
 
-    /* Rings: small = the sample, large = where the shifts take it. */
+    /* Rings: small = the samples, large = where the shifts take the centre. With
+       several samples a dashed box marks the region they span -- everything inside it
+       is fully selected (see MULTIPLE SAMPLES in pointcolor.h). */
     const PointColor::Point &pt = pts[sel];
+    const int m = pt.sampleCount();
     const float ht = PointColor::shiftedHue(pt, hs);
     const float Ct = PointColor::shiftedChroma(pt, Cs);
     const float Lt = PointColor::shiftedLightness(pt, Ls);
@@ -261,20 +327,44 @@ void PointColorWidget::paintEvent(QPaintEvent *)
         p.setPen(QPen(Qt::white, w));
         p.drawEllipse(c, rad, rad);
     };
-    ring(fieldPos(hs, Cs), 3.0, 1.2);
-    ring(fieldPos(ht, Ct), 6.5, 1.6);
+    auto dashed = [&p](const QRectF &r) {
+        p.setBrush(Qt::NoBrush);
+        p.setPen(QPen(QColor(0, 0, 0, 140), 2.6));
+        p.drawRect(r);
+        p.setPen(QPen(Qt::white, 1.0, Qt::DashLine));
+        p.drawRect(r);
+    };
     const qreal sx = s.center().x() + 0.5;
-    ring(QPointF(sx, stripY(Ls)), 3.0, 1.2);
+    if (m > 1) {
+        const float h0 = env.hueGate ? hs - env.hh : hs - hueSpan;
+        const float h1 = env.hueGate ? hs + env.hh : hs + hueSpan;
+        const QPointF a = fieldPos(h0, env.Cmax), z = fieldPos(h1, env.Cmin);
+        dashed(QRectF(a, z).normalized().adjusted(-3, -3, 3, 3));
+        dashed(QRectF(QPointF(s.left() + 2.5, stripY(env.Lmax) - 3),
+                      QPointF(s.right() - 1.5, stripY(env.Lmin) + 3)));
+    }
+    for (int k = 0; k < m; ++k) {
+        float sr, sg, sb, L, C, h;
+        pt.sample(k, sr, sg, sb);
+        PointColor::rgbLch(sr, sg, sb, L, C, h);
+        ring(fieldPos(h, C), 3.0, 1.2);
+        ring(QPointF(sx, stripY(L)), 3.0, 1.2);
+    }
+    ring(fieldPos(ht, Ct), 6.5, 1.6);
     ring(QPointF(sx, stripY(Lt)), 6.0, 1.6);
 
-    /* Before | after. */
+    /* Before | after, one stripe per sample on each side. */
     QRectF left(b.left(), b.top(), b.width() / 2.0, b.height());
     QRectF right(left.right(), b.top(), b.width() - left.width(), b.height());
     p.setPen(Qt::NoPen);
-    p.setBrush(sampleColor(pt));
-    p.drawRect(left);
-    p.setBrush(shiftedColor(pt));
-    p.drawRect(right);
+    for (int k = 0; k < m; ++k) {
+        p.setBrush(sampleColor(pt, k));
+        p.drawRect(QRectF(left.left() + left.width() * k / m, left.top(),
+                          left.width() / m + 0.5, left.height()));
+        p.setBrush(shiftedColor(pt, k));
+        p.drawRect(QRectF(right.left() + right.width() * k / m, right.top(),
+                          right.width() / m + 0.5, right.height()));
+    }
     p.setPen(QPen(frame, 1));
     p.setBrush(Qt::NoBrush);
     p.drawRect(QRectF(b).adjusted(0.5, 0.5, -0.5, -0.5));
@@ -290,7 +380,7 @@ void PointColorWidget::dragTo(const QPoint &pos, bool commit)
         const QRectF f = fieldRect();
         const float x = qBound(0.0f, float((pos.x() - f.left()) / f.width()), 1.0f);
         const float y = qBound(0.0f, float((pos.y() - f.top()) / f.height()), 1.0f);
-        const float ht = hs + (x * 2.0f - 1.0f) * kFieldHueSpanDeg * kDegToRad;
+        const float ht = hs + (x * 2.0f - 1.0f) * hueSpan;
         const float Ct = (1.0f - y) * fieldCMax();
         pt.hueShift = std::round(PointColor::hueShiftFor(hs, ht));
         pt.satShift = std::round(PointColor::satShiftFor(Cs, Ct));
@@ -318,6 +408,10 @@ void PointColorWidget::mousePressEvent(QMouseEvent *e)
         if (sw != sel) emit pointSelected(sw);
         return;
     }
+    if (hasSel() && addSampleRect().contains(pos)) {
+        if (canAddSample() || (armed && armedAdd)) emit addSampleToggled();
+        return;
+    }
     if (hasSel() && deleteRect().contains(pos)) {
         emit pointDeleted(sel);
         return;
@@ -334,7 +428,8 @@ void PointColorWidget::mouseMoveEvent(QMouseEvent *e)
     const QPoint pos = e->position().toPoint();
     if (drag != None) { dragTo(pos, false); return; }
     const bool overControl = dropperRect().contains(pos) || swatchAt(pos) >= 0 ||
-                             (hasSel() && deleteRect().contains(pos));
+                             (hasSel() && (deleteRect().contains(pos) ||
+                                           addSampleRect().contains(pos)));
     const bool overPlot = hasSel() && (fieldRect().contains(pos) ||
                                        stripRect().contains(pos));
     setCursor(overPlot ? Qt::CrossCursor
@@ -355,9 +450,16 @@ void PointColorWidget::contextMenuEvent(QContextMenuEvent *e)
     QMenu menu(this);
     QAction *del = menu.addAction(tr("Delete Point"));
     QAction *all = menu.addAction(tr("Delete All Points"));
+    menu.addSeparator();
+    QAction *last = menu.addAction(tr("Remove Last Added Sample"));
+    QAction *clr = menu.addAction(tr("Remove Added Samples"));
+    last->setEnabled(pts[sw].extraN > 0);
+    clr->setEnabled(pts[sw].extraN > 0);
     QAction *hit = menu.exec(e->globalPos());
     if (hit == del) emit pointDeleted(sw);
     else if (hit == all) emit allPointsDeleted();
+    else if (hit == last) emit lastSampleRemoved(sw);
+    else if (hit == clr) emit addedSamplesCleared(sw);
 }
 
 bool PointColorWidget::event(QEvent *e)
@@ -370,18 +472,32 @@ bool PointColorWidget::event(QEvent *e)
             tip = n >= PointColor::kMaxPts
                       ? tr("All %1 points are in use -- delete one to sample another.")
                             .arg(PointColor::kMaxPts)
-                      : tr("Sample a colour: click here, then click the image.");
-        else if (swatchAt(pos) >= 0)
-            tip = tr("Select this point. Right-click to delete.");
+                      : tr("Sample a colour as a new point: click here, then click the "
+                           "image. Shift-click the image to add the sample to the "
+                           "selected point instead.");
+        else if (hasSel() && addSampleRect().contains(pos))
+            tip = canAddSample()
+                      ? tr("Add a sample to the selected point: click here, then click "
+                           "the image. Its colours widen the hue, saturation and "
+                           "luminance the point adjusts. Shift-click the image to keep "
+                           "adding samples.")
+                      : tr("This point already has %1 samples -- remove one (right-click "
+                           "its swatch) to add another.").arg(PointColor::kMaxSamples);
+        else if (const int sw = swatchAt(pos); sw >= 0)
+            tip = pts[sw].extraN > 0
+                      ? tr("Select this point (%1 samples). Right-click to delete it or "
+                           "remove samples.").arg(pts[sw].sampleCount())
+                      : tr("Select this point. Right-click to delete.");
         else if (hasSel() && deleteRect().contains(pos))
             tip = tr("Delete the selected point.");
         else if (hasSel() && fieldRect().contains(pos))
             tip = tr("Drag to shift hue (across) and saturation (up / down). The small "
-                     "ring is the sampled colour, the large one where it is going.");
+                     "rings are the sampled colours, the large one where they are "
+                     "going.");
         else if (hasSel() && stripRect().contains(pos))
             tip = tr("Drag to shift luminance.");
         else if (hasSel() && barRect().contains(pos))
-            tip = tr("The sampled colour, and the colour it becomes.");
+            tip = tr("The sampled colours, and the colours they become.");
         if (tip.isEmpty()) QToolTip::hideText();
         else QToolTip::showText(he->globalPos(), tip, this);
         return true;

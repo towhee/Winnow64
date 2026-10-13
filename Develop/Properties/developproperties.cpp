@@ -27,6 +27,7 @@
 #include "Utilities/versionkey.h"
 #include "Dialogs/savedeveloppresetdlg.h"
 #include <QDir>
+#include <QUuid>
 #include <QFileInfo>
 #include <QPainterPath>
 #include <QStandardItemModel>
@@ -5937,9 +5938,19 @@ void DevelopProperties::addPointColorBody(const QModelIndex &parIdx, const QStri
         PointColorWidget *w = new PointColorWidget;
         pointColorWidget = w;
         w->setDropperIcons(dropperIcon(false), dropperIcon(true));
-        w->setPickArmed(pointColorPickActive);
+        w->setPickArmed(pointColorPickActive, pointColorPickAdd);
+        /* A dropper button toggles ITS mode: pressing the other one switches over. */
         connect(w, &PointColorWidget::pickToggled, this, [this]{
-            setPointColorPickActive(!pointColorPickActive);
+            setPointColorPickActive(!pointColorPickActive || pointColorPickAdd, false);
+        });
+        connect(w, &PointColorWidget::addSampleToggled, this, [this]{
+            setPointColorPickActive(!pointColorPickActive || !pointColorPickAdd, true);
+        });
+        connect(w, &PointColorWidget::lastSampleRemoved, this, [this](int idx){
+            removePointColorSamples(idx, false);
+        });
+        connect(w, &PointColorWidget::addedSamplesCleared, this, [this](int idx){
+            removePointColorSamples(idx, true);
         });
         connect(w, &PointColorWidget::pointSelected, this, [this](int idx){
             pointColorSel = idx;
@@ -5993,14 +6004,31 @@ void DevelopProperties::addPointColorBody(const QModelIndex &parIdx, const QStri
     addGroupDivider(parIdx, parent, "PointColorEndDivider");
 }
 
-void DevelopProperties::setPointColorPickActive(bool on)
+void DevelopProperties::setPointColorPickActive(bool on, bool addSample)
 {
-    /* Arming needs an image to sample and a free slot to put the sample in. */
-    if (on && (currentImagePath.isEmpty() ||
-               activeParams().pointColorN >= PointColor::kMaxPts))
-        on = false;
-    if (pointColorPickActive == on) return;
+    /* Arming needs an image to sample and a free slot to put the sample in: a free
+       point for a new one, a free sample in the selected point for an added one. */
+    if (on && currentImagePath.isEmpty()) on = false;
+    if (on) {
+        const EditParams &p = activeParams();
+        if (addSample) {
+            if (pointColorSel < 0 || pointColorSel >= p.pointColorN ||
+                p.pointColor[pointColorSel].extraN >= PointColor::kMaxExtra)
+                on = false;
+        }
+        else if (p.pointColorN >= PointColor::kMaxPts) on = false;
+    }
+    addSample = on && addSample;
+    if (pointColorPickActive == on) {
+        /* Already armed: only the mode can change (no re-arm of ImageView needed). */
+        if (pointColorPickAdd != addSample) {
+            pointColorPickAdd = addSample;
+            if (pointColorWidget) pointColorWidget->setPickArmed(on, addSample);
+        }
+        return;
+    }
     pointColorPickActive = on;
+    pointColorPickAdd = addSample;
     /* The dropper reads the DISPLAYED image, so it must not sample the grey of a
        visualised range: showing the real colours again is the only sensible state. */
     if (on && pointColorVisualize) {
@@ -6011,24 +6039,42 @@ void DevelopProperties::setPointColorPickActive(bool on)
         isPopulating = wasPop;
         emit paramsChanged();
     }
-    if (pointColorWidget) pointColorWidget->setPickArmed(on);
+    if (pointColorWidget) pointColorWidget->setPickArmed(on, addSample);
     if (on) emit pointColorPickBegin();
     else    emit pointColorPickEnd();
 }
 
 /* The eyedropper landed (MW::onPointColorPicked, from the DISPLAYED image). Append the
-   sample with neutral shifts and select it, so the sliders immediately edit it. */
-void DevelopProperties::addPointColorFromPixel(float r, float g, float b)
+   sample with neutral shifts and select it, so the sliders immediately edit it -- or,
+   from the add-sample dropper or on a Shift-click (extend), add it to the SELECTED
+   point's samples, widening the colours that point reaches. A Shift-click keeps the
+   dropper armed so several samples can be taken in a row. */
+void DevelopProperties::addPointColorFromPixel(float r, float g, float b, bool extend)
 {
     if (G::isLogger) G::log("DevelopProperties::addPointColorFromPixel");
-    setPointColorPickActive(false);         // one-shot, like the WB dropper
-    if (currentImagePath.isEmpty()) return;
+    const bool toSelected = pointColorPickAdd || extend;
+    if (currentImagePath.isEmpty()) { setPointColorPickActive(false); return; }
     noteNonMaskInteraction();
     EditParams &p = activeParams();
-    if (p.pointColorN >= PointColor::kMaxPts) return;
-    PointColor::Point pt;
     /* Four decimals: finer than an 8-bit display step, and a stable sidecar string. */
     auto q = [](float v) { return std::round(qBound(0.0f, v, 1.0f) * 10000.0f) / 10000.0f; };
+    if (toSelected && pointColorSel >= 0 && pointColorSel < p.pointColorN) {
+        PointColor::Point &sp = p.pointColor[pointColorSel];
+        if (!sp.addSample(q(r), q(g), q(b))) { setPointColorPickActive(false); return; }
+        /* Stay armed on a Shift-click while the point has room; else one-shot. */
+        if (!extend || sp.extraN >= PointColor::kMaxExtra) setPointColorPickActive(false);
+        noteEdit("Point color add sample",
+                 QString("%1 (%2 samples)").arg(pointColorSel + 1).arg(sp.sampleCount()),
+                 QString("pointColor/sample/%1/%2").arg(pointColorSel).arg(sp.extraN));
+        refreshPointColorRow();
+        emit paramsChanged();
+        return;
+    }
+    /* A new point. A Shift-click with nothing selected yet starts the first point and
+       stays armed, so the next Shift-click adds to it. */
+    if (!extend || p.pointColorN + 1 >= PointColor::kMaxPts) setPointColorPickActive(false);
+    if (p.pointColorN >= PointColor::kMaxPts) return;
+    PointColor::Point pt;
     pt.r = q(r);
     pt.g = q(g);
     pt.b = q(b);
@@ -6042,12 +6088,34 @@ void DevelopProperties::addPointColorFromPixel(float r, float g, float b)
     emit paramsChanged();
 }
 
+/* Drop the point's most recent added sample (all = every added one), narrowing it back
+   toward its first sample. The first sample itself goes only with the point. */
+void DevelopProperties::removePointColorSamples(int index, bool all)
+{
+    if (G::isLogger) G::log("DevelopProperties::removePointColorSamples");
+    if (currentImagePath.isEmpty()) return;
+    EditParams &p = activeParams();
+    if (index < 0 || index >= p.pointColorN) return;
+    PointColor::Point &pt = p.pointColor[index];
+    if (pt.extraN <= 0) return;
+    if (all) pt.clearExtraSamples();
+    else pt.removeLastSample();
+    /* The selected point may no longer be full: the add-sample dropper's state is
+       re-evaluated by the refresh below. */
+    noteEdit(all ? "Point color remove added samples" : "Point color remove sample",
+             QString("%1 (%2 samples)").arg(index + 1).arg(pt.sampleCount()));
+    pointColorSel = index;
+    refreshPointColorRow();
+    emit paramsChanged();
+}
+
 void DevelopProperties::deletePointColor(int index)
 {
     if (G::isLogger) G::log("DevelopProperties::deletePointColor");
     if (currentImagePath.isEmpty()) return;
     EditParams &p = activeParams();
     if (p.pointColorN <= 0) return;
+    if (pointColorPickAdd) setPointColorPickActive(false);   // its target is going
     if (index < 0) {
         EditParams::resetGroup(p, EditParams::Group::PointColor);
         noteEdit("Delete all point colors");
@@ -6124,7 +6192,7 @@ void DevelopProperties::refreshPointColorRow()
     const bool have = pointColorSel >= 0;
     if (pointColorWidget) {
         pointColorWidget->setPoints(p.pointColorN, p.pointColor, pointColorSel);
-        pointColorWidget->setPickArmed(pointColorPickActive);
+        pointColorWidget->setPickArmed(pointColorPickActive, pointColorPickAdd);
     }
     const PointColor::Point pt = have ? p.pointColor[pointColorSel] : PointColor::Point();
     const bool wasPop = isPopulating;
@@ -7300,6 +7368,13 @@ void DevelopProperties::noteScopeEdit(const QString &scope, const QString &actio
        latch so a History HOVER (which also runs through no edit path) is untouched. */
     if (beforeAfterActive) endHistoryPreview();
     dirty.insert(currentImagePath);
+    /* The AI mask scopes this commit changed -- BEFORE the step is recorded, because
+       this is where an AI scope first gets its link, and the step must hold it: a
+       revert to a step without it would make the next edit mint a second link and a
+       second copy of the scope on every other image. Our own writes are not edits. */
+    QHash<QString, ScopeSync> scopeChanges;
+    if (!propagateSuspended && !isPopulating && !isRestoringHistory)
+        scopeChanges = diffLinkedScopes(stackCache[currentImagePath]);
     /* Do not record our own writes: isPopulating is pushing saved values into the
        editors, isRestoringHistory is a revert repopulating the panel. */
     if (history && !isPopulating && !isRestoringHistory && !action.isEmpty()) {
@@ -7309,7 +7384,7 @@ void DevelopProperties::noteScopeEdit(const QString &scope, const QString &actio
     /* Multi-image editing: whatever this commit changed in the GLOBAL scope is queued
        for the other selected images. Hooked here rather than at each edit site so it
        covers every develop action by construction -- present and future. */
-    queuePropagation(action, value, mergeKey);
+    queuePropagation(action, value, mergeKey, scopeChanges);
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
 }
@@ -8935,10 +9010,162 @@ void DevelopProperties::syncPropagateBase()
     const EditStack s = stackCache.value(currentImagePath);
     propagateBase = s.scopes.isEmpty() ? EditParams() : s.scopes.at(0).params;
     propagateGeomBase = s.geometry;
+    propagateScopesBase = s.scopes;
+}
+
+bool DevelopProperties::isPortableScope(const EditScope &l)
+{
+    if (l.components.isEmpty()) return false;
+    for (const MaskComponent &m : l.components)
+        if (m.tool != int(MaskTool::Subject) && m.tool != int(MaskTool::Sky) &&
+            m.tool != int(MaskTool::Background))
+            return false;
+    return true;
+}
+
+namespace {
+
+bool sameComponents(const EditScope &a, const EditScope &b)
+{
+    if (a.components.size() != b.components.size()) return false;
+    for (int i = 0; i < a.components.size(); ++i) {
+        const MaskComponent &x = a.components.at(i), &y = b.components.at(i);
+        if (x.tool != y.tool || x.op != y.op || x.enabled != y.enabled ||
+            x.inverted != y.inverted || x.feather != y.feather || x.edge != y.edge ||
+            x.paramsJson != y.paramsJson)
+            return false;
+    }
+    return true;
+}
+
+// the scope-level settings a linked scope carries besides its params and submasks
+bool sameScopeState(const EditScope &a, const EditScope &b)
+{
+    return a.combine == b.combine && a.maskEdge == b.maskEdge &&
+           a.maskHalo == b.maskHalo && a.enabled == b.enabled &&
+           a.showScope == b.showScope && a.showBasic == b.showBasic &&
+           a.showCurves == b.showCurves && a.showColor == b.showColor &&
+           a.showCalibrate == b.showCalibrate && a.showColorGrade == b.showColorGrade &&
+           a.showPointColor == b.showPointColor && a.showDetail == b.showDetail &&
+           a.showEffects == b.showEffects && a.showLens == b.showLens;
+}
+
+void copyScopeState(const EditScope &src, EditScope &dst)
+{
+    dst.combine = src.combine;   dst.maskEdge = src.maskEdge;
+    dst.maskHalo = src.maskHalo; dst.enabled = src.enabled;
+    dst.showScope = src.showScope;           dst.showBasic = src.showBasic;
+    dst.showCurves = src.showCurves;         dst.showColor = src.showColor;
+    dst.showCalibrate = src.showCalibrate;   dst.showColorGrade = src.showColorGrade;
+    dst.showPointColor = src.showPointColor; dst.showDetail = src.showDetail;
+    dst.showEffects = src.showEffects;       dst.showLens = src.showLens;
+}
+
+int scopeIndexForLink(const EditStack &s, const QString &link)
+{
+    for (int i = 1; i < s.scopes.size(); ++i)
+        if (s.scopes.at(i).link == link) return i;
+    return -1;
+}
+
+}  // namespace
+
+QHash<QString, DevelopProperties::ScopeSync> DevelopProperties::diffLinkedScopes(EditStack &s)
+{
+/*
+    Which linked mask scopes this commit changed. A scope is matched to its state at the
+    last commit by link; one with no link yet by position, which is right for the only
+    case that needs it -- the commit that first gives it a submask, made in place.
+
+    A LINK IS ASSIGNED HERE, and only here: to an AI-only scope (isPortableScope) that
+    this commit changed while other images are selected. Assigning it on a commit that
+    sends it means the scope it names is created on the targets in the same batch; an
+    AI scope edited on one image alone never gets one, so nothing appears elsewhere
+    unasked. The selection is read only when a link is wanted, not on every drag tick.
+*/
+    QHash<QString, ScopeSync> out;
+    int multi = -1;                          // otherSelectedPaths, resolved on demand
+    QSet<QString> live;
+    for (int i = 1; i < s.scopes.size(); ++i) {
+        EditScope &sc = s.scopes[i];
+        const bool portable = isPortableScope(sc);
+        if (!portable && sc.link.isEmpty()) continue;
+        const EditScope *was = nullptr;
+        if (!sc.link.isEmpty()) {
+            for (int j = 1; j < propagateScopesBase.size(); ++j)
+                if (propagateScopesBase.at(j).link == sc.link) {
+                    was = &propagateScopesBase.at(j);
+                    break;
+                }
+        }
+        else if (i < propagateScopesBase.size() && propagateScopesBase.at(i).link.isEmpty())
+            was = &propagateScopesBase.at(i);
+
+        ScopeSync d;
+        if (was) {
+            d.fields = diffParamFields(was->params, sc.params);
+            d.mask = portable && !sameComponents(*was, sc);
+            d.state = !sameScopeState(*was, sc);
+        }
+        else d.mask = d.state = true;        // new since the last commit
+        if (d.fields.isEmpty() && !d.mask && !d.state) {
+            if (!sc.link.isEmpty()) live.insert(sc.link);
+            continue;
+        }
+        if (sc.link.isEmpty()) {
+            if (multi < 0) multi = otherSelectedPaths().isEmpty() ? 0 : 1;
+            if (!multi) continue;
+            sc.link = QUuid::createUuid().toString(QUuid::WithoutBraces);
+            d.mask = d.state = true;         // the targets have none of it yet
+        }
+        live.insert(sc.link);
+        out.insert(sc.link, d);
+    }
+    // a linked scope deleted on this image is deleted on the others
+    for (int j = 1; j < propagateScopesBase.size(); ++j) {
+        const QString &link = propagateScopesBase.at(j).link;
+        if (!link.isEmpty() && !live.contains(link)) out[link].removed = true;
+    }
+    return out;
+}
+
+void DevelopProperties::applyLinkedScopes(const EditStack &src, EditStack &t,
+                                          const QHash<QString, ScopeSync> &sync) const
+{
+    for (auto it = sync.constBegin(); it != sync.constEnd(); ++it) {
+        const QString &link = it.key();
+        const ScopeSync &d = it.value();
+        const int si = scopeIndexForLink(src, link);
+        const int ti = scopeIndexForLink(t, link);
+        if (d.removed || si < 0) {
+            if (ti > 0) t.scopes.removeAt(ti);
+            continue;
+        }
+        const EditScope &from = src.scopes.at(si);
+        const bool portable = isPortableScope(from);
+        if (ti < 0) {
+            /* Not on this image yet: the whole scope, params and all, under a name that
+               is unique HERE. Only while it is AI-only: a geometry submask was drawn on
+               the current image and means nothing on this one. */
+            if (!portable) continue;
+            EditScope copy = from;
+            QSet<QString> names;
+            for (const EditScope &l : t.scopes) names.insert(l.name);
+            for (int n = 2; names.contains(copy.name); ++n)
+                copy.name = from.name + " " + QString::number(n);
+            t.scopes.append(copy);
+            continue;
+        }
+        EditScope &to = t.scopes[ti];
+        copyParamFields(from.params, to.params, d.fields);
+        if (d.state) copyScopeState(from, to);
+        if (d.mask && portable) to.components = from.components;
+    }
 }
 
 void DevelopProperties::queuePropagation(const QString &action, const QString &value,
-                                         const QString &mergeKey)
+                                         const QString &mergeKey,
+                                         const QHash<QString, ScopeSync> &scopeChanges)
 {
     if (currentImagePath.isEmpty()) return;
     const EditStack s = stackCache.value(currentImagePath);
@@ -8952,6 +9179,7 @@ void DevelopProperties::queuePropagation(const QString &action, const QString &v
     if (propagateSuspended || isPopulating || isRestoringHistory) {
         propagateBase = now;
         propagateGeomBase = s.geometry;
+        propagateScopesBase = s.scopes;
         return;
     }
 
@@ -8959,25 +9187,34 @@ void DevelopProperties::queuePropagation(const QString &action, const QString &v
     changed += diffGeometryFields(propagateGeomBase, s.geometry);
     propagateBase = now;                 // consumed either way: it is the new baseline
     propagateGeomBase = s.geometry;
-    if (changed.isEmpty()) return;       // a mask/spot edit -- stays per-image
+    propagateScopesBase = s.scopes;      // already holds any link noteScopeEdit gave
+    // anything else -- a brush or gradient mask, a spot -- stays per-image
+    if (changed.isEmpty() && scopeChanges.isEmpty()) return;
 
     /* ONE BATCH PER HISTORY STEP. A batch is linked to the current image's step by a
        syncId, so a commit that is a different step (another gesture, or a non-coalescing
        action) closes the open batch first -- otherwise two steps on this image would map
        onto one step on the others, and reverting between them could not be matched. */
-    if (!pendingFields.isEmpty() &&
-        (mergeKey.isEmpty() || mergeKey != propagateMergeKey))
+    const bool batchOpen = !pendingFields.isEmpty() || !pendingScopes.isEmpty();
+    if (batchOpen && (mergeKey.isEmpty() || mergeKey != propagateMergeKey))
         flushPropagation();
 
     /* The batch belongs to the selection that was live when it OPENED, so a selection
        change mid-drag cannot redirect edits the user has already made -- and a drag
        (which commits continuously) reads the selection once, not once per tick. */
-    if (pendingFields.isEmpty()) {
+    if (pendingFields.isEmpty() && pendingScopes.isEmpty()) {
         propagateTargets = otherSelectedPaths();
         if (propagateTargets.isEmpty()) return;   // single image: nothing to fan out to
         propagateSyncId = ++nextSyncId;
     }
     pendingFields += changed;
+    for (auto it = scopeChanges.constBegin(); it != scopeChanges.constEnd(); ++it) {
+        ScopeSync &p = pendingScopes[it.key()];
+        p.fields += it.value().fields;
+        p.mask |= it.value().mask;
+        p.state |= it.value().state;
+        p.removed |= it.value().removed;
+    }
     propagateAction = action;
     propagateValue  = value;
     propagateMergeKey = mergeKey;
@@ -8992,15 +9229,18 @@ void DevelopProperties::queuePropagation(const QString &action, const QString &v
 void DevelopProperties::flushPropagation()
 {
     if (propagateTimer) propagateTimer->stop();
-    if (pendingFields.isEmpty() || propagateTargets.isEmpty()) {
+    if ((pendingFields.isEmpty() && pendingScopes.isEmpty()) || propagateTargets.isEmpty()) {
         pendingFields.clear();
+        pendingScopes.clear();
         propagateTargets.clear();
         return;
     }
     const QSet<QString> fields = pendingFields;
+    const QHash<QString, ScopeSync> scopes = pendingScopes;
     const QStringList targets = propagateTargets;
     const quint64 syncId = propagateSyncId;
     pendingFields.clear();
+    pendingScopes.clear();
     propagateTargets.clear();
     propagateMergeKey.clear();
 
@@ -9024,16 +9264,31 @@ void DevelopProperties::flushPropagation()
        would defeat the coalescing it exists for. */
     QStringList names = fields.values();
     names.sort();
-    const QString mergeKey = "sync/" + names.join(',');
+    QString mergeKey = "sync/" + names.join(',');
+    /* A linked mask scope's step is labelled with that scope, as it is on the current
+       image, and coalesces only with edits to the same scope and fields. */
+    QString scopeLabel = QStringLiteral("Global");
+    QStringList links = scopes.keys();
+    links.sort();
+    for (const QString &link : links) {
+        const ScopeSync &d = scopes.value(link);
+        QStringList f = d.fields.values();
+        f.sort();
+        mergeKey += "|" + link + ":" + f.join(',') + (d.mask ? "+m" : "")
+                  + (d.state ? "+s" : "") + (d.removed ? "+x" : "");
+        const int si = scopeIndexForLink(cur, link);
+        if (fields.isEmpty() && si > 0) scopeLabel = cur.scopes.at(si).name;
+    }
     for (const QString &p : targets) {
         EditStack &t = stackFor(p);
         if (history) history->seed(p, t);          // no-op once it has history
         copyParamFields(src, t.scopes[0].params, fields);
         copyGeometryFields(cur.geometry, t.geometry, fields);
+        applyLinkedScopes(cur, t, scopes);
         EditStack::sanitize(t);
         dirty.insert(p);
         if (history)
-            history->record(p, "Global", propagateAction, propagateValue, mergeKey, t,
+            history->record(p, scopeLabel, propagateAction, propagateValue, mergeKey, t,
                             syncId);
     }
     /* Seeding and recording touched every target; touch the image on screen last so a

@@ -631,11 +631,15 @@ public slots:
        from every place any of the three can move (see the definition). */
     /* ---- Point Color eyedropper -------------------------------------------------------
        One-shot, like the WB dropper. MW reads the clicked pixel off developShownImage
-       (what the user is looking at) and hands it to addPointColorFromPixel. */
-    void setPointColorPickActive(bool on);
+       (what the user is looking at) and hands it to addPointColorFromPixel. addSample:
+       armed by the add-sample dropper, so the click adds a sample to the SELECTED point
+       instead of making a new one. extend (Shift-click) does the same from either
+       dropper and keeps it armed for the next sample. */
+    void setPointColorPickActive(bool on, bool addSample = false);
     void cancelPointColorPick() { setPointColorPickActive(false); }
     bool isPointColorPickActive() const { return pointColorPickActive; }
-    void addPointColorFromPixel(float r, float g, float b);   // sRGB-encoded 0..1
+    void addPointColorFromPixel(float r, float g, float b,      // sRGB-encoded 0..1
+                                bool extend = false);
 
     bool wantsCurvePointPick() const;
     void updateCurvePickState();
@@ -1034,15 +1038,19 @@ private:
        the ONE point it has selected (pointColorSel, UI state like gradeActiveMask). The
        eyedropper is one-shot like the WB dropper: pointColorPickBegin/End arm ImageView,
        a click comes back through MW::onPointColorPicked as the DISPLAYED pixel, and
-       addPointColorFromPixel appends the sample. "Visualize Range" (pointColorVisualize)
-       is view state: stackJob() writes it into the RENDER JOB only. */
+       addPointColorFromPixel appends the sample -- as a new point, or as another sample
+       of the selected one (pointColorPickAdd / Shift-click). "Visualize Range"
+       (pointColorVisualize) is view state: stackJob() writes it into the RENDER JOB
+       only. */
     QPointer<PointColorWidget> pointColorWidget;
     int  pointColorSel = -1;
     bool pointColorPickActive = false;
+    bool pointColorPickAdd = false;        // armed by the add-sample dropper
     bool pointColorVisualize = false;
     void refreshPointColorRow();           // stored points -> widget + the sliders
     void onPointColorShiftsDragged(float hue, float sat, float lum, bool commit);
     void deletePointColor(int index);      // -1 = all
+    void removePointColorSamples(int index, bool all);   // added samples only
     void setPointColorSlider(const QString &key, float v);
 
     /* ---- Color Range mask wheel ------------------------------------------------------
@@ -1282,10 +1290,17 @@ private:
          Develop/whitebalance.h), and Exposure +0.5 means +0.5 EV everywhere. This is
          what Auto Sync does and it is the only rule that makes a mixed selection
          (some images already edited) predictable.
-       o GLOBAL SCOPE ONLY. Only scope 0's EditParams travel. A mask scope's params
-         describe pixels chosen from THIS image's content, so an edit made inside a
-         mask scope stays on the current image -- the same rule presets follow (the
-         mask never travels). Mask geometry and spot heals are per-image for the same
+       o GLOBAL SCOPE, PLUS AI MASKS. Scope 0's EditParams travel. A mask scope
+         usually describes pixels chosen on THIS image -- a brush stroke, a gradient
+         placed on its horizon -- so an edit made inside one stays on the current image,
+         the same rule presets follow (the mask never travels). THE EXCEPTION is a scope
+         built only from Subject / Sky / Background submasks: the model redraws that
+         selection from each image's own pixels, so "the sky" means the same thing on
+         every image. Such a scope is LINKED (EditScope::link) and travels whole --
+         created on each selected image that lacks it, its submask list, mask settings
+         and changed params copied to each that has it, deleted from each when deleted
+         here. A linked scope that later gains a geometry submask (a Refine Brush
+         stroke) stops sending its submasks but still sends its params. Mask geometry and spot heals are per-image for the same
          reason and are never propagated by an adjustment. Crop, straighten and warp
          DO travel (normalized, so a crop lands proportionally on every image): each is
          a pseudo-field diffed against propagateGeomBase, so cropping one image does
@@ -1303,8 +1318,10 @@ private:
        read, so commits accumulate into pendingFields and land once edits settle
        (kPropagateMs). propagateTargets is captured when a batch OPENS, so changing the
        selection mid-drag cannot redirect edits already made. */
+    struct ScopeSync;
     void queuePropagation(const QString &action, const QString &value,
-                          const QString &mergeKey);
+                          const QString &mergeKey,
+                          const QHash<QString, ScopeSync> &scopeChanges);
     void syncPropagateBase();                  // adopt the current stack as the diff base
     /* Whole-object merge into the other selected images; returns how many it wrote. */
     int  propagatePreset(const DevelopPreset &preset, const QString &label);
@@ -1318,6 +1335,23 @@ private:
     static void copyParamFields(const EditParams &src, EditParams &dst,
                                 const QSet<QString> &fields);
     EditParams propagateBase;              // current image scope-0 params at last commit
+    QVector<EditScope> propagateScopesBase;  // current image's scopes at last commit
+    /* What a batch carries for one linked scope (EditScope::link). */
+    struct ScopeSync {
+        QSet<QString> fields;              // params that moved (diffParamFields names)
+        bool mask = false;                 // the submask list changed
+        bool state = false;                // combine / edge / halo / enabled / eyes
+        bool removed = false;              // deleted on the current image
+    };
+    QHash<QString, ScopeSync> pendingScopes;     // keyed by link
+    /* Diff the current image's linked mask scopes against propagateScopesBase, assigning
+       a link to an AI-only scope edited while others are selected. */
+    QHash<QString, ScopeSync> diffLinkedScopes(EditStack &s);
+    /* Apply one batch's linked-scope changes to a target image's stack. */
+    void applyLinkedScopes(const EditStack &src, EditStack &t,
+                           const QHash<QString, ScopeSync> &sync) const;
+    /* True for a mask scope whose every submask is Subject, Sky or Background. */
+    static bool isPortableScope(const EditScope &l);
     Geometry propagateGeomBase;            // current image geometry at last commit
     QSet<QString> pendingFields;           // fields waiting to be copied to the targets
     QStringList propagateTargets;          // captured when the batch opened

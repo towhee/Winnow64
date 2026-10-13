@@ -84,6 +84,13 @@ struct EditScope {
        Needs a real edge to find, so it is meaningless on a purely gradient mask and the
        panel disables its row there. See Develop/maskhalo.h. */
     float      maskHalo = 0.0f;
+    /* MULTI-IMAGE LINK. Scopes on different images that are "the same AI mask" share
+       this id, so an edit made to one while several images are selected finds its
+       counterpart on each of the others (DevelopProperties::queuePropagation). Set only
+       on a scope built purely from Subject/Sky/Background submasks -- a selection the
+       model redraws from each image's own pixels -- the first time it is edited with
+       more than one image selected. Empty = this image only. Sidecar key "link". */
+    QString    link;
     /* RETIRED KEY: sidecars written during the halo evaluation carry "maskHaloMode", the
        algorithm selector. Only one algorithm survived, so it is no longer read or
        written -- but the NAME must never be reused for anything else. */
@@ -434,6 +441,7 @@ struct EditStack {
             lo["combine"] = l.combine;
             lo["maskEdge"] = l.maskEdge;
             lo["maskHalo"] = l.maskHalo;
+            if (!l.link.isEmpty()) lo["link"] = l.link;
             /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
                untouched scope serializes exactly as before (forward/backward tolerant). */
             if (!l.showScope)      lo["showLayer"]      = false;
@@ -533,6 +541,7 @@ struct EditStack {
             l.combine = lo.value("combine").toInt(l.combine);
             l.maskEdge = static_cast<float>(lo.value("maskEdge").toDouble(l.maskEdge));
             l.maskHalo = static_cast<float>(lo.value("maskHalo").toDouble(l.maskHalo));
+            l.link = lo.value("link").toString();
             l.showScope = lo.value("showLayer").toBool(l.showScope);
             l.showBasic = lo.value("showBasic").toBool(l.showBasic);
             l.showCurves = lo.value("showCurves").toBool(l.showCurves);

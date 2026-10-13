@@ -54,6 +54,9 @@ private slots:
     void decodeClampsAndDropsMalformed();
     void sidecarOmitsKeyWithoutPoints();
     void paramsGroupAndIdentity();
+    void addedSampleWidensHue();
+    void envelopeWrapsAcrossPi();
+    void encodeDecodeAddedSamples();
 };
 
 void tst_pointcolor::labRoundTripIsLossless()
@@ -206,6 +209,91 @@ void tst_pointcolor::paramsGroupAndIdentity()
     QVERIFY(!EditParams::groupIsDefault(p, EditParams::Group::PointColor));
     EditParams::resetGroup(p, EditParams::Group::PointColor);
     QVERIFY(p == EditParams());
+}
+
+/* A second sample a hue step away fully selects everything between the two -- which a
+   one-sample point at the same Range reaches only partly -- and nothing beyond the
+   falloff past either end. */
+void tst_pointcolor::addedSampleWidensHue()
+{
+    float to[9];
+    PointColor::workingToLms(to);
+    PointColor::Point one = orange();
+    one.range = 25.0f;                        // narrow, so the gap is outside its reach
+    PointColor::Point two = one;
+    QVERIFY(two.addSample(0.85f, 0.30f, 0.45f));   // a pinker red
+    QCOMPARE(two.sampleCount(), 2);
+    const PointColor::Coef k1 = PointColor::makeCoef(one);
+    const PointColor::Coef k2 = PointColor::makeCoef(two);
+    /* Both samples are fully selected by the two-sample point. */
+    PointColor::Point s2;
+    s2.r = 0.85f; s2.g = 0.30f; s2.b = 0.45f;
+    float v[3];
+    sampleToWorking(one, v);
+    QVERIFY(std::fabs(weightOf(k2, to, v) - 1.0f) < 1e-3f);
+    sampleToWorking(s2, v);
+    QVERIFY(std::fabs(weightOf(k2, to, v) - 1.0f) < 1e-3f);
+    QVERIFY(weightOf(k1, to, v) < 0.5f);      // the one-sample point barely reaches it
+    /* The opposite hue is still untouched. */
+    PointColor::Point blue;
+    blue.r = 0.20f; blue.g = 0.45f; blue.b = 0.85f;
+    sampleToWorking(blue, v);
+    QCOMPARE(weightOf(k2, to, v), 0.0f);
+    /* One sample's envelope is the sample: the coefficients are unchanged. */
+    const PointColor::Envelope e = PointColor::envelope(one);
+    float L, C, h;
+    PointColor::sampleLch(one, L, C, h);
+    QCOMPARE(e.hh, 0.0f);
+    QCOMPARE(e.Lmin, L);
+    QCOMPARE(e.Cmax, C);
+    QCOMPARE(e.hc, h);
+    two.removeLastSample();
+    QVERIFY(two == one);
+}
+
+/* Samples either side of the -pi/+pi seam span the short arc through it, not the long
+   way round. */
+void tst_pointcolor::envelopeWrapsAcrossPi()
+{
+    PointColor::Point p;
+    /* Two blue-greens straddling OKLab's h = +/-pi (a < 0, b ~ 0). */
+    float r, g, b;
+    PointColor::lchToSrgb(0.6f, 0.08f, PointColor::kPi - 0.15f, r, g, b);
+    p.r = r; p.g = g; p.b = b;
+    PointColor::lchToSrgb(0.6f, 0.08f, -PointColor::kPi + 0.15f, r, g, b);
+    QVERIFY(p.addSample(r, g, b));
+    const PointColor::Envelope e = PointColor::envelope(p);
+    QVERIFY(e.hueGate);
+    QVERIFY(e.hh < 0.25f);
+    QVERIFY(std::fabs(std::fabs(e.hc) - PointColor::kPi) < 0.05f);
+}
+
+void tst_pointcolor::encodeDecodeAddedSamples()
+{
+    PointColor::Point pts[PointColor::kMaxPts];
+    pts[0] = orange();
+    pts[0].addSample(0.9f, 0.3f, 0.4f);
+    pts[0].addSample(0.6f, 0.35f, 0.2f);
+    pts[1].r = 0.1f; pts[1].g = 0.5f; pts[1].b = 0.2f;
+    const QString enc = PointColor::encode(2, pts);
+    /* The one-sample point's group keeps its eleven fields. */
+    QCOMPARE(enc.split(';').at(0).split(',').size(), PointColor::kFields + 6);
+    QCOMPARE(enc.split(';').at(1).split(',').size(), PointColor::kFields);
+    int n = 0;
+    PointColor::Point out[PointColor::kMaxPts];
+    QVERIFY(PointColor::decode(enc, n, out));
+    QCOMPARE(n, 2);
+    for (int i = 0; i < PointColor::kMaxPts; ++i) QVERIFY(out[i] == pts[i]);
+    /* A trailing partial triple is malformed: the group is dropped. */
+    QVERIFY(!PointColor::decode("0.5,0.4,0.3,0,0,0,0,50,50,50,50,0.1,0.2", n, out));
+    QCOMPARE(n, 0);
+    /* A stale tail past extraN is cleared by sanitize. */
+    PointColor::Point s[PointColor::kMaxPts];
+    s[0] = orange();
+    s[0].extra[5] = 0.7f;
+    int m = 1;
+    QVERIFY(PointColor::sanitize(m, s));
+    QCOMPARE(s[0].extra[5], 0.0f);
 }
 
 QTEST_APPLESS_MAIN(tst_pointcolor)

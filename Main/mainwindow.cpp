@@ -15461,8 +15461,9 @@ void MW::onPointColorPicked(double xFraction, double yFraction)
     The Point Color eyedropper landed (ImageView::pointColorPicked). Average a 5x5 patch
     of developShownImage around the click -- the colour the user is LOOKING AT, which is
     what Point Color selects on (it works on the display axis) -- and let the dock add
-    it as a new point. Averaged like the WB dropper: one pixel of a noisy image is a poor
-    estimate of the local colour.
+    it as a new point, or (Shift held) as another sample of the selected point. Averaged
+    like the WB dropper: one pixel of a noisy image is a poor estimate of the local
+    colour.
 */
     if (G::isLogger) G::log("MW::onPointColorPicked");
     if (!developProperties) return;
@@ -15482,8 +15483,9 @@ void MW::onPointColorPicked(double xFraction, double yFraction)
             ++n;
         }
     if (n == 0) return;
+    const bool extend = QGuiApplication::keyboardModifiers() & Qt::ShiftModifier;
     developProperties->addPointColorFromPixel(float(r / n / 255.0), float(g / n / 255.0),
-                                              float(b / n / 255.0));
+                                              float(b / n / 255.0), extend);
 }
 
 bool MW::isValidPath(QString &path)

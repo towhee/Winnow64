@@ -64,6 +64,7 @@ private slots:
     void seedIgnoresWhenRecipeMoved();
     void forgetRemovesSaved();
     void stampSurvivesSidecarRoundTrip();
+    void scopeLinkSurvivesSidecarRoundTrip();
     void unrecordedChangeStillRestores();
     void capKeepsTrueOriginal();
     void legacyBaselineGetsOriginal();
@@ -266,6 +267,26 @@ void TstHistoryStore::stampSurvivesSidecarRoundTrip()
     QCOMPARE(HistoryEntry::recipeStamp(back), HistoryEntry::recipeStamp(s));
     QCOMPARE(HistoryEntry::recipeStamp(EditStack()),
              HistoryEntry::recipeStamp(EditStack::fromBase64(QString())));
+}
+
+void TstHistoryStore::scopeLinkSurvivesSidecarRoundTrip()
+{
+    /* A linked AI mask scope finds its counterparts on other images by EditScope::link;
+       lost on a round trip, the next multi-image edit would add a second copy. An
+       unlinked scope writes no key at all. */
+    EditStack s = stackWithExposure(0.2f, 1);
+    EditScope sky;
+    sky.name = "Mask 1";
+    MaskComponent m;
+    m.tool = int(MaskTool::Sky);
+    sky.components << m;
+    sky.link = "3f1c0d8e-0000-4000-8000-000000000001";
+    s.scopes << sky << EditScope();
+    const EditStack back = EditStack::fromBase64(s.toBase64());
+    QCOMPARE(back.scopes.size(), 3);
+    QCOMPARE(back.scopes.at(1).link, sky.link);
+    QVERIFY(back.scopes.at(2).link.isEmpty());
+    QVERIFY(!s.toJson().value("scopes").toArray().at(2).toObject().contains("link"));
 }
 
 void TstHistoryStore::unrecordedChangeStillRestores()
