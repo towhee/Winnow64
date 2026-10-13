@@ -689,6 +689,10 @@ signals:
        only. Deliberately not paramsChanged -- that also arms the full-res settle render,
        which a passing cursor must not trigger. */
     void historyPreviewChanged();
+    /* A History row was CHOSEN: the current image's stack (geometry included) was just
+       replaced. MW re-seeds the crop overlay from it when the crop tool is open, since
+       the overlay holds its own rectangle and would otherwise commit it back. */
+    void historyApplied();
     /* The Before / After latch went up or down ("\"). MW ticks the Develop menu item from
        it, so the menu reports which side is on screen. */
     void beforeAfterChanged(bool showingBefore);

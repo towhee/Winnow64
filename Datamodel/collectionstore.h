@@ -111,6 +111,12 @@ public:
     /*  Make id a child of newParent (0 = top level), last among its new siblings.
         Refused onto itself, onto one of its own descendants, or across kinds. */
     bool reparent(qint64 id, qint64 newParent);
+    /*  Make id a child of newParent (0 = top level) placed just before the sibling
+        beforeId, or last when beforeId is 0. The new siblings are renumbered 0..n-1, so
+        the order survives a sibling deleted between them. Same refusals as reparent,
+        plus a beforeId that is not a child of newParent. Reordering in place is a move
+        to the parent it already has. */
+    bool move(qint64 id, qint64 newParent, qint64 beforeId);
     /*  True when making id a child of target would put a node inside itself. */
     bool wouldCycle(qint64 id, qint64 target);
     /*  id and every node beneath it. */

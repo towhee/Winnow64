@@ -7497,6 +7497,7 @@ void DevelopProperties::applyHistoryEntry(int index)
     syncPropagateBase();                // the restored state is the new diff baseline
     revertSelectionToMatch(index);      // linked multi-image steps revert with it
 
+    emit historyApplied();              // re-seed the crop overlay before the render
     emit paramsChanged();               // full render + settled full-res
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);

@@ -32,8 +32,11 @@ class HoverDelegate;
       Cmd+click     add or remove this collection, keeping the others
       Shift+click   every visible collection from the last one clicked to this one
 
-    DRAGS. A collection dragged onto another becomes its child; dragged onto the blank
-    space below the rows it goes back to the top level. Thumbnails dragged onto a
+    DRAGS. A collection dragged onto the MIDDLE of another becomes its last child; onto
+    the top or bottom quarter of a row it goes BEFORE or AFTER that row, as its sibling,
+    which is how the order is changed (a line marks where it will land; after an open
+    branch means its first child). Dragged onto the blank space below the rows it goes
+    last at the top level. Thumbnails dragged onto a
     collection are added to it -- ALWAYS as a CopyAction, on enter, move and drop: a
     MoveAction accepted here would make IconView::startDrag trash the files.
 
@@ -107,6 +110,7 @@ protected:
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dragLeaveEvent(QDragLeaveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
 
 private:
     enum Role { IdRole = Qt::UserRole + 1 };
@@ -116,8 +120,19 @@ private:
     QList<QTreeWidgetItem *> visibleItems() const;
     void requestFor(QTreeWidgetItem *item, Qt::KeyboardModifiers mods);
     void startNodeDrag(QTreeWidgetItem *item);
-    /*  Whether a node drag of id may land on target (nullptr = the top level). */
-    bool canDropNode(qint64 id, QTreeWidgetItem *target) const;
+    /*  Where a node drag would land: under parent, just before `before` (0 = last).
+        line is the insertion marker in viewport coordinates, null for a drop INTO a
+        row (that row is highlighted instead). valid is false for a refused drop: into
+        itself or its own subtree, or where it already is. */
+    struct DropSpot {
+        bool valid = false;
+        qint64 parent = 0;
+        qint64 before = 0;
+        QTreeWidgetItem *into = nullptr;
+        QLine line;
+    };
+    DropSpot nodeDropSpot(qint64 id, const QPoint &pos) const;
+    void showDropSpot(const DropSpot &spot);
     void deleteNode(qint64 id);
     void resizeColumns();
     void styleItem(QTreeWidgetItem *item);
@@ -140,6 +155,7 @@ private:
     Qt::KeyboardModifiers pressMods;
     bool pressIsClick = false;
     bool reloading = false;             // itemChanged from a rebuild is not a rename
+    QLine dropLine;                     // the node-drag insertion marker (paintEvent)
 };
 
 #endif // COLLECTIONTREE_H

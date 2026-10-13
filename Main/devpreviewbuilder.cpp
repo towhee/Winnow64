@@ -383,6 +383,16 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
         if (edited) {
             /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */
             devPreviewUpdated(fPath, r.thumbJpg.isEmpty() ? QImage() : r.thumb);
+            /* The image ON SCREEN outside Develop is showing a decode that lacks this
+               recipe -- no current devPreview existed, which is why it was built (e.g.
+               Develop was left with the crop tool open). Re-cache it so the loupe swaps
+               to the developed preview now instead of on the next visit. */
+            if (!r.previewJpg.isEmpty() && imageCache && dm && fPath == dm->currentKey
+                && G::operationMode != G::OperationMode::Develop
+                && G::previewSource == G::PreviewSource::Developed) {
+                imageCache->removeCachedImage(fPath);
+                emit setImageCachePosition(fPath, "MW::devPreviewStore");
+            }
             devPreviewBuildStepDone();
             return;
         }

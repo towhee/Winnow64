@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
+#include "Utilities/panelbuttonbar.h"
 
 /*  *******************************************************************************************
 
@@ -127,12 +128,39 @@ void MW::filterOnColumn()
 
 void MW::updateAllFilters()
 {
+/*
+    Filter > Rebuild filters: the escape hatch for a Filters tree that has drifted from
+    the loaded images. Every edit already updates its own category (updateCategory,
+    recount), so this should never be needed; it is here for when it is.
+
+    A REAL REBUILD, NOT build(). build() returns at once when the filters are built,
+    which is always by the time a user can click, so the old "Force update" did nothing.
+    rebuild() drops every dynamic item and builds them again on the worker.
+
+    THE CHECKS SURVIVE, through the path applyModelChange uses: save them, rebuild, and
+    restoreFiltersAfterFolderChange puts them back on finishedBuildFilters and re-runs
+    filterChange. restoreKeepsMissing because the set is the same one: a checked value
+    that has no images left stays checked, showing nothing, rather than silently
+    widening the view.
+*/
     if (G::isLogger) G::log("MW::updateAllFilters");
-    qDebug() << "MW::updateAllFilters)";
-    // filters->save();
-    buildFilters->build();
-    // filters->restore();
-    // filterChange("updateAllFilters");
+    if (!filters || !buildFilters) return;
+    if (G::isModifyingDatamodel || G::isLoadRunning || G::stop) {
+        if (G::popup)
+            G::popup->showPopup(tr("Filters cannot be rebuilt while images load."));
+        return;
+    }
+    if (filters->buildingFilters) {
+        if (G::popup) G::popup->showPopup(tr("The filters are already being built."));
+        return;
+    }
+    if (!restoreFiltersPending) {
+        filters->save();
+        restoreFiltersPending = true;
+        restoreKeepsMissing = true;
+    }
+    if (G::popup) G::popup->showPopup(tr("Rebuilding filters..."));
+    buildFilters->rebuild();
 }
 
 void MW::updateFilterMenu(QString source)
@@ -245,7 +273,7 @@ void MW::filterChange(QString source)
         return;
     }
 
-    // the state this change settles on, for the title bar's Back/Forward
+    // the state this change settles on, for the panels' Previous / Next
     recordFilterHistory();
 
     /*  BOTH SCOPES FILTER THE PROXY NOW, and this gate is gone.
@@ -584,19 +612,102 @@ void MW::syncFilterHistoryButtons()
     const bool back = filterHistoryPos > 0;
     const bool forward = filterHistoryPos >= 0
                          && filterHistoryPos < filterHistory.size() - 1;
-    if (filterBackBtn) {
-        filterBackBtn->setEnabled(back);
-        filterBackBtn->setToolTip(back
-            ? tr("Previous filter state (%1 earlier)").arg(filterHistoryPos)
-            : tr("Previous filter state: none earlier since this set loaded"));
+    const QString backTip = back
+        ? tr("Previous filter state (%1 earlier)").arg(filterHistoryPos)
+        : tr("Previous filter state: none earlier since this set loaded");
+    const QString forwardTip = forward
+        ? tr("Next filter state (%1 later)")
+              .arg(filterHistory.size() - 1 - filterHistoryPos)
+        : tr("Next filter state: none later");
+    // one Previous / Next pair per Browse panel (createFilterNavBars)
+    for (QPushButton *b : std::as_const(filterNavBackBtns)) {
+        b->setEnabled(back);
+        b->setToolTip(backTip);
     }
-    if (filterForwardBtn) {
-        filterForwardBtn->setEnabled(forward);
-        filterForwardBtn->setToolTip(forward
-            ? tr("Next filter state (%1 later)")
-                  .arg(filterHistory.size() - 1 - filterHistoryPos)
-            : tr("Next filter state: none later"));
+    for (QPushButton *b : std::as_const(filterNavForwardBtns)) {
+        b->setEnabled(forward);
+        b->setToolTip(forwardTip);
     }
+}
+
+/*  The prev/next arrow the Filters title bar used to carry (images/icon16/prev.png: a
+    3-row shaft and a 10-row head on a 16 grid, grey 176) redrawn as a vector at size, so
+    the larger panel-bottom buttons show it crisp rather than as an upscaled 16px bitmap.
+    Drawn at the screen's device pixel ratio; Qt derives the disabled look. */
+static QIcon filterNavArrowIcon(bool forward, int size)
+{
+    const qreal dpr = qApp->devicePixelRatio();
+    QPixmap pm(QSize(size, size) * dpr);
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+
+    // the bitmap's outline in its 16-unit grid, pointing left
+    QPolygonF arrow({{3, 7.5}, {8, 2.5}, {8, 5.75}, {14, 5.75},
+                     {14, 9.25}, {8, 9.25}, {8, 12.5}});
+    const qreal k = size / 16.0;
+    QTransform t;
+    if (forward) t.translate(size, 0).scale(-k, k);
+    else         t.scale(k, k);
+
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setOpacity(G::iconOpacity);
+    p.setPen(Qt::NoPen);
+    p.setBrush(QColor(176, 176, 176));
+    p.drawPolygon(t.map(arrow));
+    p.end();
+    return QIcon(pm);
+}
+
+void MW::createFilterNavBars()
+{
+/*
+    A PanelButtonBar pinned to the bottom of each Browse panel in the left group
+    (Filters, Bookmarks, Collections, Queries): Previous, Clear filters, Next. The group
+    is a QDockWidget tab set, and Qt offers nowhere to put a widget under a tab set that
+    is not itself a dock -- so each panel carries its own copy, and whichever tab is
+    raised shows the row in the same place.
+
+    The row goes in the dock's FrameLineBox (DockWidget::widget()), under the content,
+    so a panel whose content is a bare view (Bookmarks) needs no wrapper.
+
+    Previous / Next are Back / Forward through the filter history -- the only control
+    for it since the Filters title bar's own arrows were removed. syncFilterHistoryButtons
+    sets their enabled state and tooltips. Clear filters follows clearAllFiltersAction.
+*/
+    if (G::isLogger) G::log("MW::createFilterNavBars");
+    const int arrowSize = 22;
+    const QIcon backIcon = filterNavArrowIcon(false, arrowSize);
+    const QIcon forwardIcon = filterNavArrowIcon(true, arrowSize);
+
+    for (DockWidget *dock : {filterDock, favDock, collectionsDock, queriesDock}) {
+        if (!dock || !dock->widget()) continue;
+
+        QPushButton *backBtn = new QPushButton;
+        backBtn->setIcon(backIcon);
+        backBtn->setIconSize(QSize(arrowSize, arrowSize));
+        connect(backBtn, &QPushButton::clicked, this, &MW::filterHistoryBack);
+
+        QPushButton *clearBtn =
+            PanelButtonBar::MakeButton(clearAllFiltersAction, tr("Clear filters"));
+
+        QPushButton *forwardBtn = new QPushButton;
+        forwardBtn->setIcon(forwardIcon);
+        forwardBtn->setIconSize(QSize(arrowSize, arrowSize));
+        connect(forwardBtn, &QPushButton::clicked, this, &MW::filterHistoryForward);
+
+        if (!PanelButtonBar::Add(dock->widget(),
+                                 QList<QAbstractButton*>{backBtn, clearBtn, forwardBtn},
+                                 PanelButtonBar::Bottom)) {
+            delete backBtn;
+            delete clearBtn;
+            delete forwardBtn;
+            continue;
+        }
+        filterNavBackBtns << backBtn;
+        filterNavForwardBtns << forwardBtn;
+    }
+    syncFilterHistoryButtons();
 }
 
 void MW::quickFilter()

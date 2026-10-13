@@ -531,6 +531,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             predictPanToFocus();
         }
 
+        // the scene reset above dropped the crop tool's pan room
+        cropRestorePanRoom();
+
         // update viewpoint box in IconViewDelegate
         bool adjustCenter = panToFocus;
         bool refresh = false;
@@ -619,6 +622,7 @@ bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
     scale(true);
     if (!isFit && isScrollable) setScrollBars(developCaptureScrollPct);   // keep the pan
     pmItem->setGraphicsEffect(nullptr);
+    cropRestorePanRoom();           // the scene reset above dropped the crop's pan room
     developCaptureLocked = false;   // resume tracking (thumb click pan, zoom, scroll)
     return true;
 }
@@ -735,14 +739,8 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
         }
         /* Both refits shrink the scene rect to the image, which removes the crop tool's
            pan room. Opening the crop on an already-cropped image does exactly this: the
-           render arrives at the full frame, after beginCropEdit. Without the pad the frame
-           can't be moved at fit zoom. */
-        if (cropActive()) {
-            cropSetPanSceneRect();
-            centerOn(pmItem);
-            cropSyncFrameFromN();
-            viewport()->update();
-        }
+           render arrives at the full frame, after beginCropEdit. */
+        cropRestorePanRoom();
     }
 }
 
@@ -1770,6 +1768,24 @@ void ImageView::cropSetPanSceneRect()
     const QRectF imgScene = pmItem->mapToScene(pmItem->boundingRect()).boundingRect();
     setSceneRect(imgScene.adjusted(-imgScene.width(), -imgScene.height(),
                                     imgScene.width(),  imgScene.height()));
+}
+
+void ImageView::cropRestorePanRoom()
+{
+/*
+    Re-pad the scene after a pixmap swap reset it to the image bounds while the crop tool
+    is open. Without the pad the scroll range is 0 at fit zoom and dragging the image
+    under the frame does nothing -- seen when a loupe reload (loadImage from an image
+    cache refresh) lands mid-crop: a landscape crop on a portrait image could not be
+    moved up or down. Keeps the scene point at the viewport centre, so a zoomed view
+    does not jump; at fit that point is the image centre.
+*/
+    if (!cropActive()) return;
+    const QPointF c = mapToScene(viewport()->rect().center());
+    cropSetPanSceneRect();
+    centerOn(c);
+    cropSyncFrameFromN();
+    viewport()->update();
 }
 
 void ImageView::endCropEdit()

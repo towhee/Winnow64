@@ -2377,8 +2377,6 @@ private:
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
     BarBtn *filterGroupsBtn = nullptr;      // title bar toggle for filterGroupsAction
-    BarBtn *filterBackBtn = nullptr;        // title bar: previous filter state
-    BarBtn *filterForwardBtn = nullptr;     // title bar: next filter state
     /*  FILTER HISTORY: each distinct Filters::persistableState a filterChange settles on,
         oldest first, with filterHistoryPos the one showing. Back/Forward re-apply an
         entry through the same Filters::restore path a folder change uses. Cleared by
@@ -2391,6 +2389,13 @@ private:
     void clearFilterHistory();
     void stepFilterHistory(int delta);
     void syncFilterHistoryButtons();
+    /*  The Previous / Clear filters / Next row pinned to the bottom of the Filters,
+        Bookmarks, Collections and Queries panels -- one row per panel, so whichever tab
+        of the group is raised shows it. syncFilterHistoryButtons keeps every copy of
+        Previous / Next current. */
+    QList<QPushButton*> filterNavBackBtns;
+    QList<QPushButton*> filterNavForwardBtns;
+    void createFilterNavBars();
     DockTitleBar *catalogTitleBar;
     DockTitleBar *keywordsTitleBar = nullptr;
     DockTitleBar *collectionsTitleBar = nullptr;

@@ -40,6 +40,7 @@ private slots:
 
     void nodesComeParentsFirstInOrder();
     void reparentRefusesCyclesAndOtherKinds();
+    void moveReordersAndRenumbersSiblings();
     void removeTakesTheSubtreeAndItsMembers();
     void membershipIsIdempotentAndCounted();
     void membershipIsDirectAndPerKind();
@@ -146,6 +147,39 @@ void tst_collections::reparentRefusesCyclesAndOtherKinds()
     QVERIFY(s.reparent(a, c));                  // now legal: C is no longer under A
     QCOMPARE(s.node(a).parent, c);
     QCOMPARE(s.subtree(c).size(), 3);           // C, A, B
+}
+
+void tst_collections::moveReordersAndRenumbersSiblings()
+{
+    CollectionStore &s = CollectionStore::instance();
+    const qint64 a = s.create(Kind::Collection, 0, "A");
+    const qint64 b = s.create(Kind::Collection, 0, "B");
+    const qint64 c = s.create(Kind::Collection, 0, "C");
+    const qint64 d = s.create(Kind::Collection, a, "D");
+    auto topOrder = [&] {
+        QVector<qint64> ids;
+        for (const CollectionStore::Node &n : s.nodes(Kind::Collection))
+            if (n.parent == 0) ids << n.id;
+        return ids;
+    };
+
+    QVERIFY(s.move(c, 0, a));                   // C before A
+    QCOMPARE(topOrder(), (QVector<qint64>{c, a, b}));
+    QVERIFY(s.move(c, 0, 0));                   // C last
+    QCOMPARE(topOrder(), (QVector<qint64>{a, b, c}));
+    QCOMPARE(s.node(a).position, 0);            // renumbered 0..n-1
+    QCOMPARE(s.node(c).position, 2);
+
+    QVERIFY(s.move(b, a, d));                   // B into A, before D
+    QCOMPARE(s.node(b).parent, a);
+    QVERIFY(s.node(b).position < s.node(d).position);
+    QVERIFY(s.move(d, 0, c));                   // D out to the top, before C
+    QCOMPARE(topOrder(), (QVector<qint64>{a, d, c}));
+
+    QVERIFY(!s.move(a, b, 0));                  // into its own child
+    QVERIFY(!s.move(a, 0, b));                  // B is not a top-level node
+    QVERIFY(!s.move(a, 0, a));                  // before itself
+    QCOMPARE(s.node(a).parent, qint64(0));
 }
 
 void tst_collections::removeTakesTheSubtreeAndItsMembers()

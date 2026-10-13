@@ -1975,31 +1975,10 @@ void MW::createFilterDock()
     connect(filterDock, &DockWidget::focus, this, &MW::focusOnDock);
 
     // add widgets to the right side of the title bar layout
-    /*  Back / Forward through the filter history (MW::recordFilterHistory). Disabled
-        until there is somewhere to go; syncFilterHistoryButtons keeps them current. */
-    filterBackBtn = new BarBtn();
-    filterBackBtn->setIcon(":/images/icon16/prev.png", G::iconOpacity);
-    connect(filterBackBtn, &BarBtn::clicked, this, &MW::filterHistoryBack);
-    filterTitleLayout->addWidget(filterBackBtn);
-
-    filterForwardBtn = new BarBtn();
-    filterForwardBtn->setIcon(":/images/icon16/next.png", G::iconOpacity);
-    connect(filterForwardBtn, &BarBtn::clicked, this, &MW::filterHistoryForward);
-    filterTitleLayout->addWidget(filterForwardBtn);
-    syncFilterHistoryButtons();
-
-    // Spacer
-    filterTitleLayout->addSpacing(5);
-
-    // toggle expansion button
-    BarBtn *updateFiltersBtn = new BarBtn();
-    updateFiltersBtn->setIcon(":/images/icon16/refresh.png", G::iconOpacity);
-    updateFiltersBtn->setToolTip("Update filters");
-    connect(updateFiltersBtn, &BarBtn::clicked, this, &MW::updateAllFilters);
-    filterTitleLayout->addWidget(updateFiltersBtn);
-
-    // Spacer
-    filterTitleLayout->addSpacing(5);
+    /*  Back / Forward through the filter history are NOT here: they are the Previous /
+        Next buttons of the row under the Browse panels (MW::createFilterNavBars).
+        Nor is a refresh: every edit updates its own category, so a rebuild is only an
+        escape hatch -- Filter > Rebuild filters (MW::updateAllFilters). */
 
     // toggle expansion button
     BarBtn *toggleExpansionBtn = new BarBtn();
@@ -2589,7 +2568,25 @@ void MW::createDevelopDock()
             const bool haveProxy = fPath == developFramePath
                                    && !developFrame.isNull() && developFrameFaithful
                                    && !recipe.isEmpty() && developFrameRecipe == recipe;
-            if (!haveFull && !haveProxy) return false;
+            /* Render one properly, off the GUI thread, through the same builder the menu
+               and the folder-load sweep use (developPixelSource decodes and composites at
+               full resolution). Queued, not called: this runs inside a flush, which
+               happens on folder change and on quit. The builder yields while Develop is
+               open, so an edit session is never interleaved. */
+            auto queueBuild = [this, fPath] {
+                QMetaObject::invokeMethod(this, [this, fPath]{
+                    buildDevPreviews(QStringList(fPath), "flush");
+                }, Qt::QueuedConnection);
+            };
+            /* No faithful frame of THIS recipe: flushImage drops the old preview, so one
+               must be built or the image shows undeveloped outside Develop for good.
+               The common case is leaving Develop with the crop tool open -- its commit
+               re-renders asynchronously, and every frame on hand was rendered with the
+               crop suppressed, so a version looked uncropped back in Browse. */
+            if (!haveFull && !haveProxy) {
+                queueBuild();
+                return false;
+            }
             const QImage &src = haveFull ? developFullFrame : developFrame;
 
             auto encode = [](const QImage &im, int quality, QByteArray &out) {
@@ -2641,14 +2638,7 @@ void MW::createDevelopDock()
                 if (!encode(loupe, G::devPreviewQuality, loupeJpg)) loupeJpg.clear();
             }
             else {
-                /* Render one properly, off the GUI thread, through the same builder the
-                   menu and the folder-load sweep use (developPixelSource decodes and
-                   composites at full resolution). Queued, not called: this runs inside a
-                   flush, which happens on folder change and on quit. The builder yields
-                   while Develop is open, so an edit session is never interleaved. */
-                QMetaObject::invokeMethod(this, [this, fPath]{
-                    buildDevPreviews(QStringList(fPath), "flush");
-                }, Qt::QueuedConnection);
+                queueBuild();       // the proxy is too small for the loupe tier
             }
 
             return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
@@ -2663,6 +2653,25 @@ void MW::createDevelopDock()
        one heavy render per row -- the click (applyHistoryEntry) does the full path. */
     connect(developProperties, &DevelopProperties::historyPreviewChanged, this,
             [this]{ renderDevelopPreview(false); });
+    /* History revert while the crop tool is open. The overlay owns its own rectangle
+       (ImageView::cropN), so without this it kept showing the reverted crop and closing
+       the panel committed it straight back -- choosing Original did nothing. Restart it
+       from the restored geometry, as Transform Reset does. A restored state with no crop
+       also clears the aspect lock/flip, else beginCropEdit re-inscribes the full frame to
+       the old ratio. In result-preview there is no overlay; the render shows the
+       revert. */
+    connect(developProperties, &DevelopProperties::historyApplied, this, [this]{
+        if (!developCropEditing || !imageView || !transformPanel) return;
+        const Geometry g = developProperties->currentGeometry();
+        transformPanel->setLevelAngle(g.straighten);
+        if (developCropShowResult) return;
+        if (g.cropIsIdentity()) transformPanel->resetCropState();
+        imageView->beginCropEdit(transformPanel->aspectRatio(),
+                                 transformPanel->isAspectLocked(),
+                                 transformPanel->isAspectFlipped(),
+                                 QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+        setDevelopTransformMode(transformPanel->mode());   // keep Level/Warp armed
+    });
     /* Before / After ("\"): the latch can come down without the user pressing the key
        (an edit, a navigation, a mask or spot tool taking the canvas), so the menu item
        follows the signal rather than only being synced as the menu opens. */

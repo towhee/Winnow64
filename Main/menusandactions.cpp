@@ -973,7 +973,9 @@ void MW::createFilterActions()
     addAction(filterLastDayAction);
     connect(filterLastDayAction,  &QAction::triggered, this, &MW::filterLastDay);
 
-    filterUpdateAction = new QAction(tr("Force update"), this);
+    filterUpdateAction = new QAction(tr("Rebuild filters"), this);
+    filterUpdateAction->setToolTip(tr("Rebuild every filter category from the loaded "
+                                      "images, keeping what is checked."));
     filterUpdateAction->setShortcutVisibleInContextMenu(true);
     addAction(filterUpdateAction);
     connect(filterUpdateAction,  &QAction::triggered, this, &MW::updateAllFilters);
@@ -999,6 +1001,11 @@ void MW::createFilterActions()
                                    && !simulateJustInstalled);
     setFilterGroups();  // arrange the categories, sync the title bar button, save
     connect(filterGroupsAction, &QAction::triggered, this, &MW::setFilterGroups);
+
+    /* Previous / Clear filters / Next under the Browse panels. Here, not in
+       createFilterDock(), because createDocks() runs before createActions() and the
+       Clear button follows clearAllFiltersAction. */
+    createFilterNavBars();
 }
 
 void MW::createSortActions()

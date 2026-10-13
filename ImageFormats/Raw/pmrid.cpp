@@ -368,18 +368,11 @@ void WarmUpAsync()
         std::vector<Tensor> outs;
         QElapsedTimer t;
         t.start();
-        const bool ok = s->Run({s->InputNames()[0]}, {in}, {s->OutputNames()[0]}, outs);
+        s->Run({s->InputNames()[0]}, {in}, {s->OutputNames()[0]}, outs);
         const double runMs = t.nsecsElapsed() / 1e6;
-        {
-            std::lock_guard<std::mutex> lock(g_timingMutex);
-            g_sessionRunYet = true;
-            g_warmUpMs = runMs;
-        }
-        qInfo().noquote() << QString("PMRID warm-up via %1: session load %2 ms, first run "
-                                     "%3 ms%4")
-                                 .arg(s->BackendName())
-                                 .arg(g_sessionLoadMs, 0, 'f', 1).arg(runMs, 0, 'f', 1)
-                                 .arg(ok ? "" : " (Run FAILED)");
+        std::lock_guard<std::mutex> lock(g_timingMutex);
+        g_sessionRunYet = true;
+        g_warmUpMs = runMs;
     });
 }
 

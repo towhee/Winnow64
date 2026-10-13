@@ -276,6 +276,59 @@ bool CollectionStore::reparent(qint64 id, qint64 newParent)
     return true;
 }
 
+bool CollectionStore::move(qint64 id, qint64 newParent, qint64 beforeId)
+{
+    if (G::isLogger) G::log("CollectionStore::move",
+                            QString::number(id) + " -> " + QString::number(newParent)
+                            + " before " + QString::number(beforeId));
+    QSqlDatabase d = db();
+    if (!d.isOpen() || id == beforeId) return false;
+    const Node n = node(id);
+    if (n.id == 0) return false;
+    if (newParent > 0) {
+        const Node p = node(newParent);
+        if (p.id == 0 || p.kind != n.kind) return false;
+        if (wouldCycle(id, newParent)) return false;
+    }
+
+    // the new siblings in their current order, without the node being moved
+    QVector<qint64> order;
+    QSqlQuery q(d);
+    q.prepare("SELECT id FROM node WHERE IFNULL(parent, 0) = ? AND kind = ?"
+              " ORDER BY position, id");
+    q.addBindValue(newParent);
+    q.addBindValue(static_cast<int>(n.kind));
+    if (!q.exec()) return false;
+    while (q.next()) {
+        const qint64 sib = q.value(0).toLongLong();
+        if (sib != id) order << sib;
+    }
+    int at = order.size();
+    if (beforeId > 0) {
+        at = order.indexOf(beforeId);
+        if (at < 0) return false;               // not a child of newParent
+    }
+    order.insert(at, id);
+
+    d.transaction();
+    const qint64 now = nowSecs();
+    QSqlQuery u(d);
+    u.prepare("UPDATE node SET position = ? WHERE id = ?");
+    for (int i = 0; i < order.size(); ++i) {
+        u.addBindValue(i);
+        u.addBindValue(order.at(i));
+        if (!u.exec()) { d.rollback(); return false; }
+    }
+    u.prepare("UPDATE node SET parent = ?, modified = ? WHERE id = ?");
+    u.addBindValue(parentBind(newParent));
+    u.addBindValue(now);
+    u.addBindValue(id);
+    if (!u.exec()) { d.rollback(); return false; }
+    if (!d.commit()) return false;
+    emit nodesChanged(n.kind);
+    return true;
+}
+
 int CollectionStore::addMembers(qint64 id, const QStringList &paths)
 {
     if (G::isLogger) G::log("CollectionStore::addMembers", QString::number(paths.size()));

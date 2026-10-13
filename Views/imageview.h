@@ -900,6 +900,7 @@ private:
     QPoint  cropLevelP1, cropLevelP2;
 
     void    cropSetPanSceneRect();                  // pad the scene so the image pans under the frame
+    void    cropRestorePanRoom();                   // re-pad after a pixmap swap
     QRectF  cropImageOnScreenRect() const;          // image bounds in viewport px, clipped to view
     QRectF  cropVpRectToN(const QRectF &vp) const;  // a viewport rect -> normalized image rect
     QRectF  cropNToVpRect(const QRectF &n) const;   // normalized image rect -> viewport rect

@@ -617,17 +617,104 @@ void CollectionTree::startNodeDrag(QTreeWidgetItem *item)
     drag->setPixmap(pm);
     drag->setHotSpot(QPoint(16, r.height() / 2));
     drag->exec(Qt::MoveAction);
-    delegate->setHoveredIndex(QModelIndex());
+    showDropSpot(DropSpot());           // a drag that ended elsewhere leaves no marker
 }
 
-bool CollectionTree::canDropNode(qint64 id, QTreeWidgetItem *target) const
+CollectionTree::DropSpot CollectionTree::nodeDropSpot(qint64 id, const QPoint &pos) const
 {
-    const qint64 tid = idOf(target);
-    if (id <= 0 || tid == id) return false;
+/*
+    THREE BANDS PER ROW. The top and bottom quarters place the node BEFORE or AFTER the
+    row, as its sibling; the middle puts it INTO the row, last among its children. After
+    an open branch is its FIRST child, which is where the line below that row visibly
+    sits. Below the rows is last at the top level.
+*/
+    DropSpot spot;
     const CollectionStore::Node n = CollectionStore::instance().node(id);
-    if (n.id == 0 || n.kind != nodeKind) return false;
-    if (n.parent == tid) return false;                  // already there
-    return !CollectionStore::instance().wouldCycle(id, tid);
+    if (id <= 0 || n.id == 0 || n.kind != nodeKind) return spot;
+
+    // the sibling after item, skipping the node being dragged; 0 = item is last
+    auto nextAfter = [this, id](QTreeWidgetItem *item) -> qint64 {
+        QTreeWidgetItem *p = item->parent();
+        const int count = p ? p->childCount() : topLevelItemCount();
+        for (int i = (p ? p->indexOfChild(item) : indexOfTopLevelItem(item)) + 1;
+             i < count; ++i) {
+            const qint64 sib = idOf(p ? p->child(i) : topLevelItem(i));
+            if (sib != id) return sib;
+        }
+        return 0;
+    };
+    const int right = viewport()->width() - 1;
+
+    QTreeWidgetItem *target = itemAt(pos);
+    if (!target) {
+        spot.parent = 0;
+        spot.before = 0;
+        const QList<QTreeWidgetItem *> vis = visibleItems();
+        if (!vis.isEmpty()) {
+            const int y = visualItemRect(vis.last()).bottom() + 1;
+            spot.line = QLine(visualItemRect(topLevelItem(0)).left(), y, right, y);
+        }
+    }
+    else {
+        const QRect r = visualItemRect(target);
+        const int band = qMax(1, r.height() / 4);
+        if (pos.y() < r.top() + band) {
+            spot.parent = idOf(target->parent());
+            spot.before = idOf(target);
+            spot.line = QLine(r.left(), r.top(), right, r.top());
+        }
+        else if (pos.y() > r.bottom() - band) {
+            const int y = r.bottom() + 1;
+            if (target->isExpanded() && target->childCount()) {
+                spot.parent = idOf(target);
+                const qint64 first = idOf(target->child(0));
+                spot.before = first != id ? first : nextAfter(target->child(0));
+                spot.line = QLine(r.left() + indentation(), y, right, y);
+            }
+            else {
+                spot.parent = idOf(target->parent());
+                spot.before = nextAfter(target);
+                spot.line = QLine(r.left(), y, right, y);
+            }
+        }
+        else {
+            spot.parent = idOf(target);
+            spot.before = 0;
+            spot.into = target;
+        }
+    }
+
+    // not into itself or its own subtree, and not where it already is
+    if (spot.before == id || spot.parent == id) return spot;
+    if (CollectionStore::instance().wouldCycle(id, spot.parent)) return spot;
+    if (QTreeWidgetItem *self = itemFor(id))
+        if (spot.parent == n.parent && spot.before == nextAfter(self)) return spot;
+    spot.valid = true;
+    return spot;
+}
+
+void CollectionTree::showDropSpot(const DropSpot &spot)
+{
+    delegate->setHoveredIndex(spot.valid && spot.into ? indexFromItem(spot.into, 0)
+                                                      : QModelIndex());
+    const QLine line = spot.valid ? spot.line : QLine();
+    if (line != dropLine) {
+        dropLine = line;
+        viewport()->update();
+    }
+}
+
+void CollectionTree::paintEvent(QPaintEvent *event)
+{
+    QTreeWidget::paintEvent(event);
+    if (dropLine.isNull()) return;
+    // the insertion marker of a node drag: a line with a ring at its start
+    QPainter p(viewport());
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setPen(QPen(palette().color(QPalette::Highlight), 2));
+    p.setBrush(Qt::NoBrush);
+    p.drawLine(dropLine.p1() + QPoint(4, 0), dropLine.p2());
+    p.drawEllipse(QPointF(dropLine.p1()) + QPointF(1.5, 0), 3, 3);
 }
 
 void CollectionTree::dragEnterEvent(QDragEnterEvent *event)
@@ -649,19 +736,20 @@ void CollectionTree::dragMoveEvent(QDragMoveEvent *event)
 /*
     REFUSED WHILE THE DRAG IS STILL MOVING, so the "no" cursor says so before the drop:
     a collection onto itself, into its own subtree or where it already is; thumbnails
-    onto the blank space, which is not a collection. The hover highlight marks the row
-    the drop would land on, and is cleared on every refusal.
+    onto the blank space, which is not a collection. A line marks where a collection
+    would be inserted, the hover highlight the row it would go into; both are cleared
+    on every refusal (nodeDropSpot).
 */
     QTreeWidgetItem *target = itemAt(event->position().toPoint());
     const QMimeData *m = event->mimeData();
     if (m->hasFormat(kNodeMime) && event->source() == this) {
-        const qint64 id = m->data(kNodeMime).toLongLong();
-        if (!canDropNode(id, target)) {
-            delegate->setHoveredIndex(QModelIndex());
+        const DropSpot spot = nodeDropSpot(m->data(kNodeMime).toLongLong(),
+                                           event->position().toPoint());
+        showDropSpot(spot);
+        if (!spot.valid) {
             event->ignore();
             return;
         }
-        delegate->setHoveredIndex(target ? indexFromItem(target, 0) : QModelIndex());
         event->setDropAction(Qt::MoveAction);
         event->accept();
         return;
@@ -678,24 +766,24 @@ void CollectionTree::dragMoveEvent(QDragMoveEvent *event)
 
 void CollectionTree::dragLeaveEvent(QDragLeaveEvent *event)
 {
-    delegate->setHoveredIndex(QModelIndex());
+    showDropSpot(DropSpot());
     QTreeWidget::dragLeaveEvent(event);
 }
 
 void CollectionTree::dropEvent(QDropEvent *event)
 {
     QTreeWidgetItem *target = itemAt(event->position().toPoint());
-    delegate->setHoveredIndex(QModelIndex());
+    showDropSpot(DropSpot());
     const QMimeData *m = event->mimeData();
 
     if (m->hasFormat(kNodeMime) && event->source() == this) {
         const qint64 id = m->data(kNodeMime).toLongLong();
-        const qint64 tid = idOf(target);
-        if (!canDropNode(id, target)) { event->ignore(); return; }
+        const DropSpot spot = nodeDropSpot(id, event->position().toPoint());
+        if (!spot.valid) { event->ignore(); return; }
         event->setDropAction(Qt::MoveAction);
         event->accept();
-        if (tid > 0) expanded.insert(tid);          // show where it went
-        CollectionStore::instance().reparent(id, tid);
+        if (spot.parent > 0) expanded.insert(spot.parent);  // show where it went
+        CollectionStore::instance().move(id, spot.parent, spot.before);
         return;
     }
 

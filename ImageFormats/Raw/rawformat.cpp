@@ -99,16 +99,11 @@ QString RawFormat::DenoiseTiming::Summary() const
         .arg(ms(pmridMs), reuse, ms(denDemosaicMs), ms(denColorMs), ms(blendMs), ms(other));
 }
 
-/* Publish a denoise-decode timing and print it with PMRID's breakdown -- one denoise run
-   is a deliberate, infrequent event, so the two lines are always logged. */
+/* Publish a denoise-decode timing for the Develop diagnostics (not printed). */
 static void PublishDenoiseTiming(const RawFormat::DenoiseTiming &t)
 {
-    {
-        std::lock_guard<std::mutex> lock(g_denoiseTimingMutex);
-        g_lastDenoiseTiming = t;
-    }
-    qInfo().noquote() << t.Summary();
-    if (t.pmrid.valid) qInfo().noquote() << "  " + t.pmrid.Summary();
+    std::lock_guard<std::mutex> lock(g_denoiseTimingMutex);
+    g_lastDenoiseTiming = t;
 }
 
 bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
