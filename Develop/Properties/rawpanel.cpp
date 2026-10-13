@@ -2,6 +2,7 @@
 #include "Develop/Properties/paneleditor.h"
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
+#include "ImageFormats/Raw/applerawdecode.h"
 
 #include <QLabel>
 #include <QRadioButton>
@@ -141,11 +142,16 @@ void RawPanel::buildUi()
     QLabel *demLbl = new QLabel(tr("Render using"), demRow);
     demLbl->setStyleSheet(capCss);
     engineCombo = new QComboBox(demRow);
-    engineCombo->addItem(tr("Apple"));      // index 0 = Apple
-    engineCombo->addItem(tr("Winnow"));     // index 1 = Winnow
     engineCombo->setToolTip("Demosaic engine (Apple Core Image or in-house Winnow).");
-    connect(engineCombo, QOverload<int>::of(&QComboBox::activated), this,
-            [this](int idx){ emit demosaicChanged(idx == 0); });
+    rebuildEngineCombo();
+    /*  The TOP Apple entry means "newest" (pin 0), not "this number": it is what the
+        image would get unpinned, and it keeps following OS updates. A lower entry pins
+        that version for every image -- see AppleRawDecode::VersionPin. */
+    connect(engineCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+        const int v = engineCombo->itemData(idx).toInt();
+        if (v < 0) emit demosaicChanged(false);
+        else       emit appleVersionChanged(idx == 0 ? 0 : v);
+    });
     dl->addWidget(demLbl);
     dl->addWidget(engineCombo, 1);
     rb->addWidget(demRow);
@@ -318,12 +324,66 @@ void RawPanel::setEditSource(bool raw)
     if (rawBlock) rawBlock->setVisible(raw);
 }
 
+void RawPanel::setAppleVersions(const QList<int> &newestFirst, int used)
+{
+    if (newestFirst == appleVersions && used == appleUsed) return;
+    appleVersions = newestFirst;
+    appleUsed = used;
+    rebuildEngineCombo();
+}
+
+void RawPanel::rebuildEngineCombo()
+{
+/*
+    One Apple entry per decoder version THIS IMAGE supports, newest first, then Winnow.
+    Item data is the version, 0 for the unnumbered entry shown before the image has been
+    decoded (the list comes from the decode: Core Image opening the file is the only
+    reliable source, 50-200 ms, and the camera model alone is not -- see
+    notes/Documentation.txt "Apple decoder version"), and -1 for Winnow.
+
+    The selection is the version the decode actually USED, which differs from the pin
+    when the image does not support the pinned version.
+*/
+    if (!engineCombo) return;
+    QSignalBlocker b(engineCombo);
+    engineCombo->clear();
+#ifdef Q_OS_MAC
+    const QString appleName = tr("Apple Raw");
+#else
+    const QString appleName = tr("Apple");
+#endif
+    if (appleVersions.isEmpty()) {
+        engineCombo->addItem(appleName, 0);
+        engineCombo->setItemData(0, tr("Apple Core Image. The decoder versions this "
+                                       "image supports are listed once it has been "
+                                       "decoded."), Qt::ToolTipRole);
+    }
+    for (int i = 0; i < appleVersions.size(); ++i) {
+        const int v = appleVersions.at(i);
+        engineCombo->addItem(QString("%1 %2").arg(appleName).arg(v), v);
+        engineCombo->setItemData(i, i == 0
+            ? tr("Apple Core Image RAW decoder version %1, the newest this image "
+                 "supports. Choosing it always uses the newest version each image "
+                 "supports.").arg(v)
+            : tr("Apple Core Image RAW decoder version %1. Choosing it uses this version "
+                 "for every image that supports it, and the newest older version for "
+                 "one that does not.").arg(v), Qt::ToolTipRole);
+    }
+    engineCombo->addItem(tr("Winnow"), -1);
+
+    int sel = engineCombo->count() - 1;                 // Winnow
+    if (engineApple) {
+        sel = 0;
+        const int at = engineCombo->findData(appleUsed);
+        if (appleUsed > 0 && at >= 0) sel = at;
+    }
+    engineCombo->setCurrentIndex(sel);
+}
+
 void RawPanel::setEngine(bool apple)
 {
-    if (engineCombo) {
-        QSignalBlocker b(engineCombo);
-        engineCombo->setCurrentIndex(apple ? 0 : 1);
-    }
+    engineApple = apple;
+    rebuildEngineCombo();
     /* PMRID denoise needs the CFA mosaic -> only meaningful on the Winnow engine. */
     if (denoiseBlock) denoiseBlock->setVisible(!apple);
 }

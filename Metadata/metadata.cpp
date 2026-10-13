@@ -12,6 +12,7 @@
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "ImageFormats/Raw/decoderrevision.h"
+#include "ImageFormats/Raw/applerawdecode.h"
 #include "Metadata/versions.h"
 #include "Develop/editstack.h"
 #include "Develop/Transform/croptransform.h"
@@ -656,6 +657,26 @@ void Metadata::developCropFactors(const QString &blob, int width, int height,
     fy = float(out.height() / h);
 }
 
+/*
+    THE APPLE DECODER VERSION, for the render keys below: versions 8 and 9 decode the same
+    file to visibly different pixels, so a preview made under one must miss under the
+    other. Folded in only for the Apple engine, so Winnow keys are unchanged; Apple keys
+    all changed once, when the version first became part of them (2026-10-13), which is
+    right -- those previews were Core Image's default, version 8, and the decode now uses
+    the newest. The "c2" changed them once more: the Apple decode had been rendering
+    linear sRGB into the Rec.2020 working space (oversaturated, greens cyan), and every
+    preview built that way must miss. "c3": the boost (Apple's tone curve) and its
+    sharpening were turned off, so the output is scene-linear like Winnow's.
+*/
+static QString appleVersionKeyPart()
+{
+#ifdef Q_OS_MAC
+    if (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine)
+        return QString("|appleRaw=c3:%1").arg(AppleRawDecode::EffectiveVersionPin());
+#endif
+    return QString();
+}
+
 QString Metadata::devPreviewKey(const QString &blob)
 {
 /*
@@ -677,7 +698,8 @@ QString Metadata::devPreviewKey(const QString &blob)
                                  .arg(int(G::decodeRawEngine))
                                  .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())
-                    + (G::autoLensProfile ? QString("|autoLens=1") : QString());
+                    + (G::autoLensProfile ? QString("|autoLens=1") : QString())
+                    + appleVersionKeyPart();
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
     return QString::fromLatin1(h.toHex().left(12));
@@ -739,7 +761,8 @@ QString Metadata::defaultRenderKey(const QString &fPath)
                           .arg(int(G::decodeRawEngine))
                           .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())    // see devPreviewKey
-                    + (G::autoLensProfile ? QString("|autoLens=1") : QString());
+                    + (G::autoLensProfile ? QString("|autoLens=1") : QString())
+                    + appleVersionKeyPart();
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);
 }

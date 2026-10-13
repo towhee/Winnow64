@@ -5224,6 +5224,11 @@ void MW::drainStaleRecommit()
     /*  Progress resets the allowance: a batch that is landing a few rows at a time is
         working, however long it takes. */
     if (!fixed.isEmpty()) staleRecommitAttempts = 0;
+    /*  NO PROGRESS: ASK FOR THE READ AGAIN, don't just wait. The one request
+        refreshStaleRows made can be lost -- an abort between it and the read, or a walk
+        that found the row still marked in flight (MetaRead::releaseOrphanedReads frees
+        it when that cycle ends) -- and waiting then only times out to a blank cell. */
+    else reloadIconChunk();
     if (staleRecommitTimer) staleRecommitTimer->start();
 }
 

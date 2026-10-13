@@ -668,6 +668,10 @@ public slots:
        shows the reason in its place when it cannot (MW::rawDenoiseAvailable). Called on
        every raw sync and whenever MW learns a denoise came back a no-op. */
     void updateDenoiseAvailability();
+    /* Push the Apple decoder versions the current image supports, and the one its decode
+       used, into the Raw panel's "Render using" list. MW calls it when a decode of the
+       current image finishes (AppleRawDecode::SetDecodedCallback). */
+    void syncAppleDecoderVersions();
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
@@ -689,6 +693,9 @@ signals:
     /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
        Winnow). MW sets G::decodeRawEngine and re-decodes the current image. */
     void demosaicEngineChanged(bool useApple);
+    /* An "Apple Raw N" entry was chosen: MW sets AppleRawDecode::SetVersionPin(pin) (0 =
+       newest), then demosaicEngineChanged(true) follows to clear and re-decode. */
+    void appleDecoderVersionChanged(int pin);
     /* Global raw-denoise (PMRID) run mode. autoRunDenoiseToggled: the "auto run denoise"
        checkbox flipped -- MW gates its automatic PMRID runs on it.
        runRawDenoiseRequested: the "Run Denoise" button was clicked -- run now regardless

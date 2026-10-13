@@ -35,16 +35,16 @@ public:
         return QSize(option.rect.width(), height);
     }
 
-    /*  A CHECKABLE ITEM STARTS checkGap TO THE RIGHT, so its box is clear of the expand
-        arrow before it. Painting, the click test on the box (editorEvent) and the Search
-        row's editor all take the SAME shifted rect, or the box drawn and the box clicked
-        would part company. */
+    /*  A CHECKABLE ITEM STARTS Filters::contentShift TO THE RIGHT, so its box is clear
+        of the expand arrow before it. Painting, the click test on the box (editorEvent)
+        and the Search row's editor all take the SAME shifted rect, or the box drawn and
+        the box clicked would part company. */
     static QStyleOptionViewItem shifted(const QStyleOptionViewItem &option,
                                         const QModelIndex &index)
     {
         QStyleOptionViewItem o(option);
-        if (index.column() == 0 && (index.flags() & Qt::ItemIsUserCheckable))
-            o.rect.setLeft(o.rect.left() + Filters::checkGap);
+        if (const Filters *f = qobject_cast<const Filters *>(option.widget))
+            o.rect.setLeft(o.rect.left() + f->contentShift(index));
         return o;
     }
     void paint(QPainter *painter, const QStyleOptionViewItem &option,
@@ -61,6 +61,20 @@ public:
                               const QModelIndex &index) const override
     {
         QStyledItemDelegate::updateEditorGeometry(editor, shifted(option, index), index);
+    }
+
+    /*  WHERE paint() PUTS THE ITEM'S ICON. The option is completed by initStyleOption,
+        as paint() completes it -- the icon's actual size, the text, the font -- so the
+        rect is the one drawn. A bare QTreeView::initViewItemOption put a header's arrow
+        icon ~6 px left of where it is painted. */
+    QRect decorationRect(const QStyleOptionViewItem &option,
+                         const QModelIndex &index) const
+    {
+        QStyleOptionViewItem o(shifted(option, index));
+        initStyleOption(&o, index);
+        const QWidget *w = o.widget;
+        QStyle *style = w ? w->style() : QApplication::style();
+        return style->subElementRect(QStyle::SE_ItemViewItemDecoration, &o, w);
     }
 };
 
@@ -1058,16 +1072,23 @@ void Filters::disableColorZeroCountItems()
 
 void Filters::disableAllItems(bool disable)
 {
-    // not used
+    // used by enable() and disable(), on every Compare/Loupe/Grid/Table switch
     if (G::isLogger) G::log("Filters::disableAllItems");
     if (debugFilters)
     qDebug() << "Filters::disableAllItems" << disable;
     // QMutexLocker locker(&mutex);
     mutex.lock();
 
+    /*  RE-ENABLING RESTYLES A FILTER ITEM FROM ITS STATE, never paints it textColor.
+        enable() runs on every switch to Loupe, Grid or Table, and a flat textColor wiped
+        the unfiled red, the exclusion colour and a branch's filtering colour -- none of
+        which came back, because applyVocabMarking and setEachCatTextColor restyle only
+        an item whose role CHANGED. The Search row keeps the plain colour: applyItemStyle
+        would also drop its placeholder italic. */
     QTreeWidgetItemIterator it(this);
     while (*it) {
         if (disable) (*it)->setForeground(0, QBrush(G::disabledColor));
+        else if (isFilterItem(*it) && (*it)->parent() != search) applyItemStyle(*it);
         else (*it)->setForeground(0, QBrush(G::textColor));
          ++it;
     }
@@ -4216,8 +4237,8 @@ void Filters::mousePressEvent(QMouseEvent *event)
     }
 
     /*  AN ITEM'S EXPAND ARROW EXPANDS, AND NOTHING ELSE. The arrow is drawn where
-        drawBranches puts it, which for a category's first-level items is shifted right
-        into the cell -- so Qt's own branch test (the unshifted slot) missed the arrow's
+        drawBranches puts it, which for a category's items is shifted right into
+        the cell -- so Qt's own branch test (the unshifted slot) missed the arrow's
         right half, the click fell through to the cell and toggled the checkbox. The
         drawn arrow's padded rect is tested here instead, and the release swallowed so
         itemClickedSignal cannot toggle the box either. No solo mode below category
@@ -4355,7 +4376,7 @@ void Filters::drawBranches(QPainter *painter, const QRect &rect,
     const QTreeWidgetItem *item = itemFromIndex(index);
     if (isGroupHeader(item) || isCategoryHeader(item)) return;
 
-    const int dx = branchShift(item, rect);
+    const int dx = branchShift(item);
     if (dx != 0) {
         painter->save();
         painter->translate(dx, 0);
@@ -4366,32 +4387,56 @@ void Filters::drawBranches(QPainter *painter, const QRect &rect,
     QTreeWidget::drawBranches(painter, rect, index);
 }
 
-int Filters::branchShift(const QTreeWidgetItem *item, const QRect &branchRect) const
+int Filters::branchShift(const QTreeWidgetItem *item) const
 {
 /*
     A CATEGORY'S FIRST-LEVEL ITEMS PUT THEIR ARROW UNDER THE HEADER'S. The header's
-    arrow is its ICON, drawn at the start of its cell; an item's arrow is the
-    stylesheet's branch glyph, centred in the last indentation slot of the branch area
-    -- a few pixels to the left, so a nested category (Folders, Keywords) showed a
-    column of arrows that did not line up with the headers above them. The glyph is
-    shifted so its centre is the header icon's centre. Deeper levels keep Qt's own
-    placement: they align with each other, not with a header.
+    arrow is its ICON, drawn inside its cell; an item's arrow is the stylesheet's branch
+    glyph, centred in the last indentation slot of the branch area -- several pixels to
+    the left, so a nested category (Folders, Collections, Queries, Keywords) showed a
+    column of arrows that did not line up with the header above them. The glyph is
+    shifted so its centre is the header icon's centre.
 
-    branchRect is the row's branch area (what drawBranches is given): it ends where the
-    item's cell begins. Shared with expanderHitRect, so the arrow clicked is the arrow
+    EVERY DEPTH TAKES THE SAME SHIFT, so each level's arrows sit exactly one indentation
+    right of their parent's. Shifting the first level alone left a child's arrow 8 px
+    from its parent's instead of 14. contentShift moves each row's checkbox right by
+    the same amount, so no arrow reaches the checkbox of its own row.
+
+    A first-level item's last slot ends where its cell begins: the header's cell left
+    plus one indentation. Shared with expanderHitRect, so the arrow clicked is the arrow
     drawn.
 */
-    QTreeWidgetItem *cat = item ? item->parent() : nullptr;
-    if (!isCategoryHeader(cat)) return 0;
+    if (item == nullptr || isGroupHeader(item) || isCategoryHeader(item)) return 0;
+    QTreeWidgetItem *cat = categoryOf(item);
+    if (cat == nullptr) return 0;
+    const QRect hdrCell = visualRect(indexFromItem(cat, 0));
+    const int slotCentre = hdrCell.left() + indentation - indentation / 2;
+    // one indentation right of the header's arrow, as a category's is of its group's
+    return headerIconRect(cat).center().x() + indentation - slotCentre;
+}
+
+int Filters::contentShift(const QModelIndex &index) const
+{
+/*
+    See the declaration. checkGap past the arrow wherever branchShift puts it -- the
+    gap the unshifted layout had -- and the same for every row of a category, arrow or
+    not, so the boxes form one column.
+*/
+    if (index.column() != 0 || !(index.flags() & Qt::ItemIsUserCheckable)) return 0;
+    return qMax(0, branchShift(itemFromIndex(index))) + checkGap;
+}
+
+QRect Filters::headerIconRect(const QTreeWidgetItem *header) const
+{
+/*
+    The header's arrow (its icon) as the delegate paints it -- see
+    FiltersDelegate::decorationRect.
+*/
+    const QModelIndex idx = indexFromItem(header, 0);
     QStyleOptionViewItem opt;
     initViewItemOption(&opt);
-    opt.rect = visualRect(indexFromItem(cat, 0));
-    opt.features |= QStyleOptionViewItem::HasDecoration;
-    opt.icon = cat->icon(0);
-    const QRect deco = style()->subElementRect(QStyle::SE_ItemViewItemDecoration,
-                                               &opt, this);
-    const int slotCentre = branchRect.right() + 1 - indentation / 2;  // the last slot
-    return deco.center().x() - slotCentre;
+    opt.rect = visualRect(idx);
+    return static_cast<FiltersDelegate *>(itemDelegate())->decorationRect(opt, idx);
 }
 
 QRect Filters::expanderHitRect(QTreeWidgetItem *item) const
@@ -4399,29 +4444,24 @@ QRect Filters::expanderHitRect(QTreeWidgetItem *item) const
 /*
     See the declaration. The target is the arrow's indentation-wide slot, padded a few
     pixels on the left and top-to-bottom of the row -- a forgiving target -- but CUT OFF
-    before the checkbox (cell start + checkGap), so the two can never overlap however
-    the arrow is shifted.
+    before the checkbox (cell start + contentShift), so the two can never overlap
+    however the arrow is shifted.
 */
     if (item == nullptr) return QRect();
     const QRect cell = visualRect(indexFromItem(item, 0));
     if (!cell.isValid()) return QRect();
 
     if (isGroupHeader(item) || isCategoryHeader(item)) {
-        QStyleOptionViewItem opt;
-        initViewItemOption(&opt);
-        opt.rect = cell;
-        opt.features |= QStyleOptionViewItem::HasDecoration;
-        opt.icon = item->icon(0);
-        const QRect deco = style()->subElementRect(QStyle::SE_ItemViewItemDecoration,
-                                                   &opt, this);
+        const QRect deco = headerIconRect(item);
         return QRect(deco.left() - 3, cell.top(), deco.width() + 6, cell.height());
     }
     if (item->childCount() == 0) return QRect();
 
     const QRect branch(cell.left() - indentation, cell.top(), indentation, cell.height());
-    const int centre = branch.right() + 1 - indentation / 2 + branchShift(item, branch);
+    const int centre = branch.right() + 1 - indentation / 2 + branchShift(item);
     const int left = centre - indentation / 2 - 3;
-    const int right = qMin(centre + indentation / 2 + 2, cell.left() + checkGap - 1);
+    const int boxLeft = cell.left() + contentShift(indexFromItem(item, 0));
+    const int right = qMin(centre + indentation / 2 + 2, boxLeft - 1);
     return QRect(QPoint(left, cell.top()), QPoint(right, cell.bottom()));
 }
 

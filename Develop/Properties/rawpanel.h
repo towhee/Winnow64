@@ -40,6 +40,9 @@ public:
 
     void setEditSource(bool raw);                 // radios + show/hide the raw block
     void setEngine(bool apple);                   // combo + show/hide the denoise block
+    /* The Apple decoder versions the current image supports (newest first) and the one
+       its decode used; empty / 0 before it has been decoded. */
+    void setAppleVersions(const QList<int> &newestFirst, int used);
     /* denoised: a PMRID base is ready (checkbox -> "Denoised", sliders enabled). */
     void setDenoiseRunState(bool denoised);
     /* available == false greys the whole denoise group (checkbox, Auto run, amounts) and
@@ -61,6 +64,7 @@ signals:
     void collapseToggled(bool collapsed);         // USER collapsed / expanded the panel
     void editSourceChanged(bool raw);             // Raw / Embedded Preview
     void demosaicChanged(bool apple);             // Apple (true) / Winnow (false)
+    void appleVersionChanged(int pin);            // an Apple entry: 0 = newest, else N
     void denoiseRunToggled(bool on);              // "Denoise" checkbox (run / clear)
     void autoRunToggled(bool on);                 // "Auto run" checkbox
     void denoiseLumaChanged(int value0to100);
@@ -75,6 +79,7 @@ private:
     void buildUi();
     void toggleCollapsed();                       // arrow / caption click
     void updateCollapseIcon();
+    void rebuildEngineCombo();                    // from the three members below
 
     QSettings    *setting      = nullptr;
     QWidget      *headerBand   = nullptr;
@@ -87,6 +92,9 @@ private:
     QRadioButton *prevRadio    = nullptr;
     QWidget      *rawBlock     = nullptr;         // Demosaic + Denoise (Embedded hides)
     QComboBox    *engineCombo  = nullptr;
+    QList<int>    appleVersions;                  // this image's, newest first
+    int           appleUsed    = 0;               // the version its decode used
+    bool          engineApple  = true;
     QWidget      *denoiseBlock = nullptr;         // Denoise row + sliders (Apple hides)
     QCheckBox    *denoiseCheck = nullptr;
     QCheckBox    *autoRunCheck = nullptr;

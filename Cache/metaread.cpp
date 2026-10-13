@@ -136,6 +136,7 @@ MetaRead::MetaRead(QObject *parent,
         readers.append(reader);
         readerThreads.append(thread);
         cycling.append(false);
+        readerDmRow.append(-1);
     }
 
     quitTimer->setSingleShot(true);
@@ -333,7 +334,16 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     // QMutexLocker locker(&mutex);  // freeze when FocusStack has just run
 
     // reset
+    /*  AN ABORT ORPHANS EVERY READ IT INTERRUPTED. A reader whose abort flag is set
+        does not emit done (Reader::read), and one that had already emitted is dropped
+        by dispatch's abort test -- either way processReturningReader never runs, so its
+        row was left in rowsReading and needToRead answered "already reading" for the
+        rest of the instance. Observed 2026-10-13: an edited NEF's icon stored, then a
+        MW::stop abort, then refreshStaleRows cleared it -- and the re-read could never
+        be dispatched. The flag is cleared here, so this is the moment to release them. */
+    const bool wasAborted = abort;
     abort = false;
+    if (wasAborted) releaseOrphanedReads("after abort", true);
     startRow = sfRow;
     this->src = src;
     sfRowCount = rowCountSf();
@@ -684,6 +694,7 @@ void MetaRead::initialize(QString src)
     lastRedoIconCount = -1;
     err.clear();
     cycling.fill(false);
+    readerDmRow.fill(-1);
     readSuccessThisCycle.clear();
     rowsReading.clear();
     videoRowsReading.clear();
@@ -1372,6 +1383,40 @@ void MetaRead::setCycling(bool isCycling)
     cycling.fill(isCycling);
 }
 
+void MetaRead::releaseOrphanedReads(const QString &why, bool afterAbort)
+{
+/*
+    See the declaration. After an abort EVERY non-video mark goes, whatever cycling
+    says: an aborted reader's cycling flag stays set (nothing returns to clear it), so
+    "held by a cycling reader" proves nothing until the cycle is reset. A queued read
+    the abort did not stop then returns normally and finds its row already released --
+    harmless; at worst the row is read twice.
+*/
+    if (rowsReading.isEmpty()) return;
+    QSet<int> held;
+    if (!afterAbort)
+        for (int id = 0; id < readers.count(); ++id)
+            if (cycling.at(id) && readerDmRow.at(id) >= 0)
+                held.insert(readerDmRow.at(id));
+
+    const QList<int> marked = rowsReading.values();
+    int released = 0;
+    for (int dmRow : marked) {
+        if (held.contains(dmRow)) continue;
+        rowsReading.remove(dmRow);
+        ++released;
+        /*  The trail is keyed by path; the proxy snapshot is this thread's view of it
+            (a row filtered out of the proxy has no path here and goes unrecorded). */
+        auto snap = dm->proxySnapshot();
+        const int sfRow = snap ? snap->sfRowFromDmRow(dmRow) : -1;
+        if (sfRow >= 0)
+            RowTrail::note(snap->path(sfRow), dmRow, "MetaRead in-flight released", why);
+    }
+    if (released && G::isPerfProbe)
+        qDebug().noquote() << "[PERF] MetaRead released" << released
+                           << "orphaned in-flight row(s):" << why;
+}
+
 bool MetaRead::allMetaIconLoaded()
 {
 /*
@@ -1977,6 +2022,7 @@ void MetaRead::dispatch(int id, bool isReturning)
         /* Read the image file metadata and icon.  When the reader is finished, it will
            signal dispatch (this function) to loop through to read another file and so
            on.  Must use invoke to prevent crash.  */
+        readerDmRow[id] = dmRow;
         if (!abort) {
             QMetaObject::invokeMethod(readers.at(id), "read", Qt::QueuedConnection,
                                       Q_ARG(int, dmRow),
@@ -2135,6 +2181,10 @@ void MetaRead::dispatchFinished(QString src)
     }
 
     setCycling(false);
+    /*  The cycle is over: no reader is out, so an in-flight mark still standing has no
+        reader to clear it (a return dropped on an abort, or quitAfterTimeout giving up
+        on one). Released, a later setStartRow can read the row; left, it never could. */
+    releaseOrphanedReads("cycle finished", false);
     emit cleanupIcons(instance);
     isDispatching = false;
 

@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
+#include "ImageFormats/Raw/applerawdecode.h"
 
 void MW::writeSetting(QString key, QVariant value)
 {
@@ -83,6 +84,9 @@ void MW::writeSettings()
     settings->setValue("colorManage", G::colorManage);
     settings->setValue("useRaw", G::useRaw);
     settings->setValue("decodeRawEngine", static_cast<int>(G::decodeRawEngine));
+#ifdef Q_OS_MAC
+    settings->setValue("appleRawDecoderVersion", AppleRawDecode::VersionPin());
+#endif
     settings->setValue("rememberLastDir", rememberLastDir);
     settings->setValue("checkIfUpdate", checkIfUpdate);
     settings->setValue("restoreLibraryState", restoreLibraryState);
@@ -615,6 +619,12 @@ bool MW::loadSettings()
 #endif
         G::decodeRawEngine = e;
     }
+#ifdef Q_OS_MAC
+    /* The Apple decoder version pin (Raw panel "Apple Raw N"); 0 = newest. A pin newer
+       than this macOS offers is harmless: each file takes its newest version <= it. */
+    if (settings->contains("appleRawDecoderVersion"))
+        AppleRawDecode::SetVersionPin(settings->value("appleRawDecoderVersion").toInt());
+#endif
     // develop
     /* Develop previews. previewSource is VALIDATED BEFORE CASTING for the same reason as
        the two enums above -- a damaged int would name a branch this build has no code

@@ -437,6 +437,10 @@ public:
         moves every check indicator (and its text) right by this, so a click aimed at the
         arrow has somewhere to land that is not the box. */
     static constexpr int checkGap = 8;
+    /*  HOW FAR FiltersDelegate MOVES A CHECKABLE ITEM'S CONTENT RIGHT: checkGap past
+        the expand arrow, which branchShift has moved one indentation right of the
+        category header's arrow. 0 for anything not checkable. */
+    int contentShift(const QModelIndex &index) const;
 
     /*  ITEM DATA ROLES on column 0. Both are state the item must CARRY rather than have
         recomputed, because styleFilterItem is the one place appearance is written and it
@@ -672,11 +676,13 @@ private:
     /*  "Save as a query...", appended after it -- enabled and labelled when the menu
         opens, from activeFiltersAsQuery. */
     QAction *saveFiltersAsQueryAction = nullptr;
-    /*  THE EXPAND ARROW, WHERE IT IS DRAWN. branchShift is how far drawBranches moves a
-        category's first-level arrow to sit under the header's. expanderHitRect is the
-        arrow's click target (padded, and stopped short of the checkbox) for an item with
-        children, or the icon of a header; null for anything else. */
-    int branchShift(const QTreeWidgetItem *item, const QRect &branchRect) const;
+    /*  THE EXPAND ARROW, WHERE IT IS DRAWN. branchShift is how far drawBranches moves an
+        item's arrow (every depth) so the first level sits under the header's;
+        headerIconRect is where the header's own arrow is painted. expanderHitRect is
+        the arrow's click target (padded, and stopped short of the checkbox) for an item
+        with children, or the icon of a header; null for anything else. */
+    int branchShift(const QTreeWidgetItem *item) const;
+    QRect headerIconRect(const QTreeWidgetItem *header) const;
     QRect expanderHitRect(QTreeWidgetItem *item) const;
     bool overExpander(const QPoint &p, QTreeWidgetItem **item = nullptr) const;
     void saveFiltersAsQuery();

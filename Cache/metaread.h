@@ -157,6 +157,9 @@ private:
     void redo();
     int pending();
     void setCycling(bool isCycling);
+    /*  Drop every rowsReading entry no cycling reader holds -- after an abort, or when
+        the cycle ends. Video rows are left alone (videoRowsReading). */
+    void releaseOrphanedReads(const QString &why, bool afterAbort);
     inline bool needToRead(int row);
     bool nextA();
     bool nextB();
@@ -192,6 +195,10 @@ private:
     QVector<Reader*> readers;
     QVector<QThread*> readerThreads;
     QVector<bool> cycling;                  // all the decoders activity
+    /*  The datamodel row each reader was last SENT, -1 when none. What makes an entry in
+        rowsReading provably live: a row is in flight only while a cycling reader holds
+        it. See releaseOrphanedReads. */
+    QVector<int> readerDmRow;
     bool allReadersCycling();
     bool noReadersCycling();
 

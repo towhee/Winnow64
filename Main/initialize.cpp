@@ -8,6 +8,7 @@
 #include "Metadata/keywordpaths.h"
 #include "Views/libtree.h"
 #include "Develop/workingimagecache.h"
+#include "ImageFormats/Raw/applerawdecode.h"
 #include "Utilities/fileops.h"
 #include "Utilities/gradientheader.h"
 #include "Cache/devpreviewcache.h"
@@ -2706,6 +2707,25 @@ void MW::createDevelopDock()
                 WorkingImageCache::instance().clear();
                 developParamsChange();
             });
+
+    /* An "Apple Raw N" entry: set the version pin. demosaicEngineChanged(true) follows
+       from the dock and does the cache clear and re-render, so the pin must already be
+       set when it runs -- both are direct connections on the GUI thread. */
+    connect(developProperties, &DevelopProperties::appleDecoderVersionChanged, this,
+            [](int pin){
+#ifdef Q_OS_MAC
+                AppleRawDecode::SetVersionPin(pin);
+#else
+                Q_UNUSED(pin)
+#endif
+            });
+#ifdef Q_OS_MAC
+    /* A decode recorded which Apple version it used: refresh the "Render using" list if
+       it was the image the dock is showing. Queued to the GUI thread by AppleRawDecode. */
+    AppleRawDecode::SetDecodedCallback([this](const QString &) {
+        if (developProperties) developProperties->syncAppleDecoderVersions();
+    });
+#endif
 
     /* The dock's "auto run denoise" checkbox + "Run Denoise" button. When auto is off the
        heavy PMRID denoise runs only on the button (see the gated ensureRawDenoise call

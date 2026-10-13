@@ -23,6 +23,8 @@
 #include "Develop/outputtransform.h"
 #include "Develop/rangemask.h"
 #include "Develop/workingimagecache.h"
+#include "ImageFormats/Raw/applerawdecode.h"
+#include "Utilities/versionkey.h"
 #include "Dialogs/savedeveloppresetdlg.h"
 #include <QDir>
 #include <QFileInfo>
@@ -559,6 +561,13 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
         emit demosaicEngineChanged(apple);
         if (rawPanel) rawPanel->setEngine(apple);
     });
+    /* A version is an Apple engine choice too: the pin first, so the re-decode the
+       engine switch triggers already uses it. */
+    connect(rawPanel, &RawPanel::appleVersionChanged, this, [this](int pin){
+        emit appleDecoderVersionChanged(pin);
+        emit demosaicEngineChanged(true);
+        if (rawPanel) rawPanel->setEngine(true);
+    });
     connect(rawPanel, &RawPanel::denoiseRunToggled, this, [this](bool on){
         setDenoiseRawFlag(on);
         if (on) emit runRawDenoiseRequested(); else emit clearRawDenoiseRequested();
@@ -682,6 +691,20 @@ void DevelopProperties::setGlobalDefringe(bool purple, int value0to100)
     emit paramsChanged();
 }
 
+void DevelopProperties::syncAppleDecoderVersions()
+{
+    if (!rawPanel) return;
+    QList<int> versions;
+    int used = 0;
+#ifdef Q_OS_MAC
+    /* Recorded under the FILE decoded; a version (virtual copy) decodes its source. */
+    const QString src = VersionKey::isVersion(currentImagePath)
+                            ? VersionKey::sourceOf(currentImagePath) : currentImagePath;
+    if (!AppleRawDecode::DecodedVersions(src, versions, used)) { versions.clear(); used = 0; }
+#endif
+    rawPanel->setAppleVersions(versions, used);
+}
+
 void DevelopProperties::syncRawPanel()
 {
     if (!rawPanel) return;
@@ -694,6 +717,7 @@ void DevelopProperties::syncRawPanel()
     rawPanel->setCaptionWidth(captionColumnWidth);   // align denoise sliders to the tree
     rawPanel->setEditSource(G::useRaw);
     rawPanel->setEngine(apple);
+    syncAppleDecoderVersions();
     rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
     rawPanel->setDenoiseRunState(mw && mw->rawDenoiseReadyForCurrent());
     updateDenoiseAvailability();      // may grey the group + explain (after the run state)
