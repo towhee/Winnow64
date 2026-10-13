@@ -175,7 +175,8 @@ void RawPanel::buildUi()
     QLabel *demLbl = new QLabel(tr("Render using"), demRow);
     demLbl->setStyleSheet(capCss);
     engineCombo = new QComboBox(demRow);
-    engineCombo->setToolTip("Demosaic engine (Apple Core Image or in-house Winnow).");
+    engineCombo->setToolTip("Which decoder turns the raw file into a picture: Apple's, or "
+                            "Winnow's own.");
     rebuildEngineCombo();
     /*  The TOP Apple entry means "newest" (pin 0), not "this number": it is what the
         image would get unpinned, and it keeps following OS updates. A lower entry pins
@@ -249,33 +250,42 @@ void RawPanel::buildUi()
     nb->addWidget(nrRow);
     nb->addSpacing(4);              // extra space between the caption and its controls
 
-    /* Run row: "Denoise"/"Denoised" + "Auto run". */
+    /* Run row: "Auto run", then "Run on this image" -- the per-image choice, shown only
+       while Auto run is off (with it on every raw is denoised, so there is nothing to
+       choose; see EditParams::wantsDenoiseRaw). */
     QWidget *runRow = new QWidget(denoiseBlock);
     runRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *nl = new QHBoxLayout(runRow);
     nl->setContentsMargins(10, 0, 10, 0);
-    nl->setSpacing(6);
-    denoiseCheck = new QCheckBox(tr("Denoise"), runRow);
-    denoiseCheck->setToolTip("Run the raw denoise; shows \"Denoised\" when complete.");
+    nl->setSpacing(20);
+    autoRunCheck = new QCheckBox(tr("Auto run"), runRow);
+    autoRunCheck->setToolTip("On: every raw image is denoised as you come to it.\n"
+                             "Off: choose per image with \"Run on this image\".");
+    connect(autoRunCheck, &QCheckBox::toggled, this, [this](bool on){
+        updateRunOnImageVisible();
+        emit autoRunToggled(on);
+    });
+    denoiseCheck = new QCheckBox(tr("Run on this image"), runRow);
+    denoiseCheck->setToolTip("Denoise this image. Lum and Color can be used once it is "
+                             "ready.");
     connect(denoiseCheck, &QCheckBox::toggled, this,
             [this](bool on){ emit denoiseRunToggled(on); });
-    autoRunCheck = new QCheckBox(tr("Auto run"), runRow);
-    autoRunCheck->setToolTip("On: denoise runs automatically. Off: use the Denoise box.");
-    connect(autoRunCheck, &QCheckBox::toggled, this,
-            [this](bool on){ emit autoRunToggled(on); });
-    for (QCheckBox *c : {denoiseCheck, autoRunCheck})
+    for (QCheckBox *c : {autoRunCheck, denoiseCheck})
         c->setStyleSheet("QCheckBox { background: transparent; }");
+    nl->addWidget(autoRunCheck);
     nl->addWidget(denoiseCheck);
     nl->addStretch(1);
-    nl->addWidget(autoRunCheck);
     nb->addWidget(runRow);
+    updateRunOnImageVisible();
 
     /* Lum / Color amount sliders (0..100), rendered by an embedded PanelEditor so they
-       look/align exactly like the property tree. Enabled only once a denoised base is
-       ready (setDenoiseRunState). */
+       look/align exactly like the property tree. In both Auto run states they SHOW only
+       once this image has been denoised (setDenoiseRunState): they scale the blend of a
+       computed base, so before it exists there is nothing for them to do. Their
+       appearing is also the "denoise finished" cue. */
     denoiseEditor = new PanelEditor(denoiseBlock);
     denoiseEditor->addSlider("denoiseLuma", "Lum",
-                             "Raw luminance noise reduction (AI, whole image).", 0, 100);
+                             "Reduce grainy noise.", 0, 100);
     denoiseEditor->addSlider("denoiseChroma", "Color",
                              "Raw colour (chroma) noise reduction.", 0, 100);
     denoiseEditor->fitHeight();
@@ -285,6 +295,7 @@ void RawPanel::buildUi()
                 else if (key == "denoiseChroma") emit denoiseChromaChanged(v.toInt());
             });
     nb->addWidget(denoiseEditor);
+    updateAmountsVisible();
 
     /* Why the group above is dead, in its place -- shown only when PMRID cannot run here
        (setDenoiseAvailable). Wraps, indented to the row text, and dimmed so it reads as an
@@ -401,20 +412,18 @@ void RawPanel::rebuildEngineCombo()
 #endif
     if (appleVersions.isEmpty()) {
         engineCombo->addItem(appleName, 0);
-        engineCombo->setItemData(0, tr("Apple Core Image. Reading which decoder "
-                                       "versions this image supports..."),
+        engineCombo->setItemData(0, tr("Apple's decoder. Checking which versions "
+                                       "support this image..."),
                                  Qt::ToolTipRole);
     }
     for (int i = 0; i < appleVersions.size(); ++i) {
         const int v = appleVersions.at(i);
         engineCombo->addItem(QString("%1 %2").arg(appleName).arg(v), v);
         engineCombo->setItemData(i, i == 0
-            ? tr("Apple Core Image RAW decoder version %1, the newest this image "
-                 "supports. Choosing it always uses the newest version each image "
-                 "supports.").arg(v)
-            : tr("Apple Core Image RAW decoder version %1. Choosing it uses this version "
-                 "for every image that supports it, and the newest older version for "
-                 "one that does not.").arg(v), Qt::ToolTipRole);
+            ? tr("Apple's newest decoder (version %1). Always uses the newest version "
+                 "each image supports.").arg(v)
+            : tr("Apple's decoder version %1, for every image that supports it (older "
+                 "images use the newest version they support).").arg(v), Qt::ToolTipRole);
     }
     engineCombo->addItem(tr("Winnow"), -1);
 
@@ -438,36 +447,33 @@ void RawPanel::setEngine(bool apple)
 
 void RawPanel::setDenoiseRunState(bool denoised)
 {
-    if (denoiseCheck) {
-        QSignalBlocker b(denoiseCheck);
-        denoiseCheck->setChecked(denoised);
-        denoiseCheck->setText(denoised ? tr("Denoised") : tr("Denoise"));
-    }
-    /* The amount sliders only scale a computed PMRID base -> inert until it exists, and
-       stay inert when the denoise cannot run at all (that base is never coming). */
-    if (denoiseEditor) {
-        const bool on = denoised && denoiseAvailable;
-        denoiseEditor->setRowEnabled("denoiseLuma", on);
-        denoiseEditor->setRowEnabled("denoiseChroma", on);
-    }
+    denoiseReady = denoised;
+    updateAmountsVisible();
+}
+
+void RawPanel::setRunOnImage(bool on)
+{
+    if (!denoiseCheck) return;
+    QSignalBlocker b(denoiseCheck);
+    denoiseCheck->setChecked(on);
+}
+
+void RawPanel::updateAmountsVisible()
+{
+    /* The amount sliders only scale a computed PMRID base, so they are hidden until it
+       exists -- and while the denoise cannot run at all (that base is never coming; the
+       reason line takes their place). */
+    if (denoiseEditor) denoiseEditor->setVisible(denoiseReady && denoiseAvailable);
 }
 
 void RawPanel::setDenoiseAvailable(bool available, const QString &reason)
 {
     denoiseAvailable = available;
-    if (denoiseCheck) {
-        QSignalBlocker b(denoiseCheck);           // unticking must not emit a "clear" run
-        if (!available) {
-            denoiseCheck->setChecked(false);
-            denoiseCheck->setText(tr("Denoise"));
-        }
-        denoiseCheck->setEnabled(available);
-    }
+    /* The box keeps showing the saved choice; greyed, with the reason below, it reads as
+       "wanted but cannot run here" rather than pretending the choice was never made. */
+    if (denoiseCheck) denoiseCheck->setEnabled(available);
     if (autoRunCheck) autoRunCheck->setEnabled(available);
-    if (!available && denoiseEditor) {
-        denoiseEditor->setRowEnabled("denoiseLuma", false);
-        denoiseEditor->setRowEnabled("denoiseChroma", false);
-    }
+    updateAmountsVisible();
     if (denoiseNote) {
         denoiseNote->setText(reason);
         denoiseNote->setVisible(!available && !reason.isEmpty());
@@ -477,8 +483,17 @@ void RawPanel::setDenoiseAvailable(bool available, const QString &reason)
 void RawPanel::setAutoRun(bool on)
 {
     if (!autoRunCheck) return;
-    QSignalBlocker b(autoRunCheck);
-    autoRunCheck->setChecked(on);
+    {
+        QSignalBlocker b(autoRunCheck);
+        autoRunCheck->setChecked(on);
+    }
+    updateRunOnImageVisible();
+}
+
+void RawPanel::updateRunOnImageVisible()
+{
+    if (denoiseCheck && autoRunCheck)
+        denoiseCheck->setVisible(!autoRunCheck->isChecked());
 }
 
 void RawPanel::setDenoiseValues(int luma, int chroma)

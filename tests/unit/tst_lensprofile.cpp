@@ -37,6 +37,7 @@ private slots:
     void identityLeavesPixels();
     void linearTca();
     void amountsScale();
+    void manualWithoutProfile();
 };
 
 void TestLensProfile::databaseLoads()
@@ -271,6 +272,53 @@ void TestLensProfile::amountsScale()
     QVERIFY(g > 1.0);
     QCOMPARE(vignettingGain(k, 0.9, 0.0), 1.0);
     QVERIFY(std::abs(vignettingGain(k, 0.9, 2.0) - g * g) < 1e-9);
+}
+
+/* The Manual corrections need no profile: an empty Coeffs plus manual amounts is active,
+   corrects by the documented formulas, auto-scales to fill, and is identity at zero. */
+void TestLensProfile::manualWithoutProfile()
+{
+    const Coeffs k;                             // no profile at all
+    const int W = 600, H = 400;
+    const Frame f(k, W, H);
+    QVERIFY(!active(k, Amounts()));
+
+    /* Distortion: + corrects barrel -- the corner samples INSIDE its own radius. */
+    Amounts a;
+    a.manualDistortion = 1.0f;
+    QVERIFY(geometryActive(k, a));
+    const double cdx = (W - 1) / 2.0, cdy = (H - 1) / 2.0;      // the corner, rn = 1
+    const Lookup L = lookup(k, a, f, cdx, cdy, 1.0);
+    QVERIFY(std::abs((L.sx[1] - f.cx) - cdx * (1.0 - kManualDistK)) < 1e-9);
+    QCOMPARE(L.sx[0], L.sx[1]);                 // no TCA: one position for all channels
+    /* Barrel correction keeps every border sample inside at s = 1, so the fill zoom
+       goes BELOW 1 (less of the photo thrown away); pincushion needs a zoom-in. */
+    QVERIFY(autoScale(k, a, W, H) < 1.0);
+    a.manualDistortion = -1.0f;
+    QVERIFY(autoScale(k, a, W, H) > 1.0);
+
+    /* Vignetting: centre untouched, corner gets the full kManualVigEV; a higher
+       midpoint confines it to the corners. */
+    Amounts v;
+    v.manualVignetting = 0.5f;
+    QVERIFY(vignettingActive(k, v) && active(k, v));
+    QVERIFY(!geometryActive(k, v));
+    QCOMPARE(totalVignettingGain(k, v, f, 0.0, 0.0), 1.0);
+    QVERIFY(std::abs(totalVignettingGain(k, v, f, cdx, cdy)
+                     - std::exp2(0.5 * kManualVigEV)) < 1e-9);
+    Amounts lo = v, hi = v;
+    lo.manualMidpoint = 0.0f;
+    hi.manualMidpoint = 1.0f;
+    QVERIFY(totalVignettingGain(k, lo, f, cdx / 2, cdy / 2)
+            > totalVignettingGain(k, hi, f, cdx / 2, cdy / 2));
+
+    /* And the pixels: a + manual vignetting brightens a corner, leaves the centre. */
+    const std::vector<float> src = testImage(W, H);
+    std::vector<float> dst(src.size());
+    applyRegion(src.data(), W, H, dst.data(), 0, 0, W, H, k, v, 1.0);
+    const size_t corner = 0, centre = (size_t(H / 2) * W + W / 2) * 3;
+    QVERIFY(dst[corner] > src[corner] || src[corner] == 0.0f);
+    QVERIFY(std::abs(dst[centre] - src[centre]) <= std::abs(src[centre]) * 1e-3f);
 }
 
 QTEST_GUILESS_MAIN(TestLensProfile)

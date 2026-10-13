@@ -556,12 +556,10 @@ void MW::updateLibraryTree()
             it opens Manage Catalog, which is where an empty catalog is filled -- so
             disabling it would close the only door to the fix. */
         openCatalogAction->setToolTip(
-            !open ? tr("The catalog is unavailable -- the local index database could not "
-                       "be opened.")
+            !open ? tr("The Library is unavailable: its database could not be opened.")
             : n == 0 ? tr("Nothing is catalogued yet. Opens Manage Catalog, where you "
                           "choose which folders Winnow indexes.")
-                     : tr("Browse the whole Library: every image Winnow has "
-                          "catalogued, including folders that are not open."));
+                     : tr("Browse every image in the Library."));
         /*  The same property enableSelectionDependentMenus' gate() writes, so the
             Disabled Shortcut Feedback path can say why. Set here rather than there
             because this depends on the catalog, not on the selection. */
@@ -773,9 +771,8 @@ void MW::updateLibraryOnlyActions()
     a reason).
 
     ONLY THE MENU ITEMS. Manage Catalog stays reachable from where it is genuinely needed
-    in Folders: the first-folder prompt (promptForCatalogScope), the empty-Library bail
-    (catalogEmptyOpenManage) and Preferences > Catalogued folders all call
-    manageCatalogRoots directly. A Collections or Queries panel already open stays on
+    in Folders: the first-folder prompt (promptForCatalogScope) and the empty-Library
+    bail (catalogEmptyOpenManage) both call manageCatalogRoots directly. A Collections or Queries panel already open stays on
     screen, greyed with its own reason (updateCollectionsAvailability). Called from
     createActions and from setScope on every scope change.
 */

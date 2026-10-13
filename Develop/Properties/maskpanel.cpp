@@ -203,8 +203,7 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     connect(levelCollapseBtn, &BarBtn::clicked, this, [this]{ toggleLevelCollapsed(); });
 
     levelTitle = new QLabel(tr("Mask"), levelBand);
-    levelTitle->setToolTip("Settings for the FOLDED mask -- every submask combined.\n"
-                           "The rows inside Submasks below act on one submask each.");
+    levelTitle->setToolTip("Settings for the whole mask (all its submasks combined).");
     levelTitle->setStyleSheet(G::labelCss(G::scopeSubheaderColor, G::strFontSize.toInt()));
 
     /* No band eye here, unlike Submasks: there is nothing to show or hide -- Edge and

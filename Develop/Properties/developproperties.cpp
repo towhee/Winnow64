@@ -450,10 +450,10 @@ bool DevelopProperties::currentIsRaw() const
 
 void DevelopProperties::updateDenoiseRunState(bool denoised)
 {
-    /* Reflect the raw-denoise completion state (a ready PMRID base) on the "Denoise"
-       checkbox without re-emitting toggled() (that would re-trigger a run/clear), and
-       enable the amount sliders only once that base exists -- they merely scale the blend
-       of it, so they are inert (and disabled) until the heavy denoise has completed. */
+    /* Reflect the raw-denoise completion state (a ready PMRID base): the RawPanel shows
+       its Lum / Color sliders only once that base exists -- they merely scale the blend
+       of it. The "Run on this image" box is NOT driven from here: it shows the image's
+       saved choice (syncRawPanel -> RawPanel::setRunOnImage). */
     /* Lab UI: the RawPanel owns the checkbox/sliders (the tree row is absent). */
     if (rawPanel) rawPanel->setDenoiseRunState(denoised);
     if (!denoiseRunCheck) return;      // denoise section absent (Apple engine / non-raw)
@@ -606,6 +606,9 @@ void DevelopProperties::syncLensPanel()
     setCheckboxValue("lensProfile", g.wantsLensProfile(G::autoLensProfile, raw));
     setSliderReal("lensDistortion", g.lensDistortion * 100.0);
     setSliderReal("lensVignetting", g.lensVignetting * 100.0);
+    setSliderReal("lensManualDistortion", g.lensManualDistortion * 100.0);
+    setSliderReal("lensManualVignetting", g.lensManualVignetting * 100.0);
+    setSliderReal("lensManualMidpoint",   g.lensManualMidpoint   * 100.0);
     setCheckboxValue("removeCA", g.wantsRemoveCA(G::autoRemoveCA, raw));
     setSliderReal("defringePurple", g.defringePurple * 100.0);
     setSliderReal("defringeGreen",  g.defringeGreen  * 100.0);
@@ -639,6 +642,28 @@ void DevelopProperties::setGlobalLensAmount(bool distortion, int value0to200)
     noteScopeEdit("Global", distortion ? "Lens distortion" : "Lens vignetting",
                   QString::number(value0to200),
                   distortion ? "global/lensDistortion" : "global/lensVignetting");
+    emit paramsChanged();
+}
+
+void DevelopProperties::setGlobalLensManual(const QString &key, int sliderValue)
+{
+    /* The Manual rows: -100..100 (Midpoint 0..100) on the panel, /100 in the recipe.
+       Global-only like the profile amounts, so always scope 0. */
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    EditParams &p = s.scopes[0].params;
+    float *field = nullptr;
+    QString label;
+    int lo = -100;
+    if (key == "lensManualDistortion")      { field = &p.lensManualDistortion; label = "Manual distortion"; }
+    else if (key == "lensManualVignetting") { field = &p.lensManualVignetting; label = "Manual vignetting"; }
+    else if (key == "lensManualMidpoint")   { field = &p.lensManualMidpoint; label = "Manual midpoint"; lo = 0; }
+    if (!field) return;
+    const float f = qBound(lo, sliderValue, 100) / 100.0f;
+    if (*field == f) return;
+    *field = f;
+    noteScopeEdit("Global", label, QString::number(sliderValue), "global/" + key);
     emit paramsChanged();
 }
 
@@ -737,15 +762,19 @@ void DevelopProperties::syncRawPanel()
     rawPanel->setEngine(apple);
     syncAppleDecoderVersions();
     rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
+    /* Two separate facts: the box is the image's SAVED choice (opted in), the sliders
+       show once a denoised base actually exists. */
+    const EditStack s = stackCache.value(currentImagePath);
+    rawPanel->setRunOnImage(!s.scopes.isEmpty() && s.scopes.at(0).params.denoiseRaw > 0);
     rawPanel->setDenoiseRunState(mw && mw->rawDenoiseReadyForCurrent());
     updateDenoiseAvailability();      // may grey the group + explain (after the run state)
 
-    /* Push the Global scope's stored denoise amounts (0..1 -> 0..100). */
-    float dl = EditParams::kDefaultDenoiseLuma, dc = EditParams::kDefaultDenoiseChroma;
-    const EditStack s = stackCache.value(currentImagePath);
+    /* Push the Global scope's EFFECTIVE denoise amounts (0..1 -> 0..100): the image's
+       own when it set them, else the remembered ones (EditParams::denoiseLuma). */
+    float dl = G::denoiseLumaDefault, dc = G::denoiseChromaDefault;
     if (!s.scopes.isEmpty()) {
-        dl = s.scopes.at(0).params.denoiseLuma;
-        dc = s.scopes.at(0).params.denoiseChroma;
+        dl = s.scopes.at(0).params.denoiseLumaOr(G::denoiseLumaDefault);
+        dc = s.scopes.at(0).params.denoiseChromaOr(G::denoiseChromaDefault);
     }
     rawPanel->setDenoiseValues(qRound(dl * 100.0f), qRound(dc * 100.0f));
 }
@@ -753,15 +782,16 @@ void DevelopProperties::syncRawPanel()
 void DevelopProperties::setDenoiseRawFlag(bool on)
 {
 /*
-    The "Denoise" checkbox records its state IN THE RECIPE (EditParams::denoiseRaw), so
-    the decision outlives the session cache the run itself fills. Without this the render,
-    the export and the devPreview builder each had to guess from G::autoRunDenoise, and a
-    manual run reached none of them: the loupe showed a denoised image while the stored
-    preview stayed clean under a recipe hash that claimed they matched.
+    The "Run on this image" checkbox records its state IN THE RECIPE
+    (EditParams::denoiseRaw), so the decision outlives the session cache the run itself
+    fills. Without this the render, the export and the devPreview builder each had to
+    guess from G::autoRunDenoise, and a manual run reached none of them: the loupe showed
+    a denoised image while the stored preview stayed clean under a recipe hash that
+    claimed they matched.
 
     Written EXPLICITLY (1 / 0), not folded back to "unset" when it happens to agree with
-    the preference: the user said something about THIS image, and a later flip of Auto run
-    must not silently undo it.
+    the preference: an image that opted in stays denoised when Auto run is later turned
+    off. (Auto run ON overrides a 0 -- the box is hidden then; see wantsDenoiseRaw.)
 
     Global scope (0) whatever scope is active, like the two amount sliders -- the denoise
     is baked into the pre-develop WorkingImage, so it cannot mean different things per
@@ -786,6 +816,16 @@ void DevelopProperties::setGlobalDenoise(bool luma, int value0to100)
     const float f = value0to100 / 100.0f;      // dock 0..100 -> stored 0..1
     if (luma) s.scopes[0].params.denoiseLuma   = f;
     else      s.scopes[0].params.denoiseChroma = f;
+    /* Also the REMEMBERED amount: images that never set their own follow the last value
+       the user chose (EditParams::denoiseLuma). This image stores it explicitly above, so
+       a later change elsewhere does not move it. */
+    if (luma) {
+        G::denoiseLumaDefault = f;
+        setting->setValue("Develop/denoiseLumaDefault", f);
+    } else {
+        G::denoiseChromaDefault = f;
+        setting->setValue("Develop/denoiseChromaDefault", f);
+    }
     /* Always scope 0, whichever scope is being edited. */
     noteScopeEdit("Global", luma ? "Denoise raw" : "Denoise raw color",
                   QString::number(value0to100),
@@ -1698,12 +1738,26 @@ void DevelopProperties::applyItemsEnabled(bool enabled)
        the widget's enabled state, so walk every row (recursively) and set the flag or the
        captions stay black over the greyed controls. buildTree() calls this too, because a
        rebuild recreates rows with the default (enabled) flag and would otherwise un-grey a
-       panel that is meant to stay disabled. */
+       panel that is meant to stay disabled.
+
+       Enabling must not un-grey a row that its OWN gate disabled (setItemEnabled: the
+       lens amounts without a usable profile, Point Color without a point, the denoise
+       amounts): that left a black caption over a dead slider. Such a row's editor
+       carries the explicit disable (WA_ForceDisabled -- set only by its own
+       setEnabled(false), never inherited from the tree), so the caption follows it. */
     std::function<void(const QModelIndex &)> setRows = [&](const QModelIndex &parent) {
         const int rows = model->rowCount(parent);
         for (int r = 0; r < rows; ++r) {
             QModelIndex capIdx = model->index(r, CapColumn, parent);
-            model->setData(capIdx, enabled, UR_isEnabled);
+            bool rowEnabled = enabled;
+            if (enabled) {
+                const QModelIndex vIdx = model->index(r, ValColumn, parent);
+                const QWidget *editor =
+                    static_cast<QWidget*>(vIdx.data(UR_Editor).value<void*>());
+                if (editor && editor->testAttribute(Qt::WA_ForceDisabled))
+                    rowEnabled = false;
+            }
+            model->setData(capIdx, rowEnabled, UR_isEnabled);
             setRows(capIdx);            // children hang off the caption (column 0) index
         }
         if (rows)
@@ -3851,9 +3905,8 @@ void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
     i.parIdx = parIdx;
     i.parentName = "DetailHeader";
     i.captionText = "";
-    i.tooltip = "A patch of the image at 100%, live while you drag.\n"
-                "Sharpening is measured in pixels, so it can only be judged at 1:1 --\n"
-                "in a fit view the screen downsamples away the detail the slider added.";
+    i.tooltip = "A live 100% view of part of the image, for judging sharpening and "
+                "noise.";
     i.isIndent = true;
     i.hasValue = false;
     i.captionIsEditable = false;
@@ -3880,9 +3933,8 @@ void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
     BarBtn *tgt = new BarBtn();
     tgt->setIcon(detailTargetIcon(false));
     tgt->setIconSize(QSize(16, 16));
-    tgt->setToolTip("Choose which part of the image the 1:1 preview shows:\n"
-                    "click here, then click the spot on the photo. Esc cancels.\n"
-                    "You can also drag inside the preview to move around.");
+    tgt->setToolTip("Choose the area to show: click here, then click the photo.\n"
+                    "You can also drag inside the preview.");
     tgt->setEnabled(!currentImagePath.isEmpty());
     connect(tgt, &BarBtn::clicked, this, &DevelopProperties::toggleDetailPick);
     detailPickBtn = tgt;
@@ -4474,12 +4526,12 @@ void DevelopProperties::addCurves()
             QSignalBlocker b(mode);
             mode->setCurrentIndex(curveModeIndex);
         }
-        mode->setToolTip("Parametric edits the Basic tone sliders through their tonal "
-                         "bands; Point edits a free-form curve.");
+        mode->setToolTip("Parametric: drag tonal regions (moves the Basic sliders).\n"
+                         "Point: draw your own curve.");
         QComboBox *chan = new QComboBox(rw);
         chan->addItems({"RGB", "Red", "Green", "Blue"});
-        chan->setToolTip("Which curve Point mode edits. RGB is the composite, applied to "
-                         "every channel; Red / Green / Blue layer on top of it.");
+        chan->setToolTip("The curve to edit: RGB for overall tone, or one colour "
+                         "channel.");
         curveChannelCombo = chan;
         connect(mode, &QComboBox::currentIndexChanged, this, [this](int idx){
             curveModeIndex = idx;
@@ -4496,11 +4548,8 @@ void DevelopProperties::addCurves()
         BarBtn *samp = new BarBtn();
         samp->setIcon(curveSamplerIcon(curveSamplerActive));
         samp->setIconSize(QSize(16, 16));
-        samp->setToolTip("Show the pixel under the mouse pointer on the curve.\n"
-                         "While this is on, hovering the image marks that pixel's tone "
-                         "on the plot.\n"
-                         "In Point mode, clicking the image adds a point at that tone "
-                         "(click-to-zoom is suspended while this is on).");
+        samp->setToolTip("Show where the tone under the pointer falls on the curve.\n"
+                         "In Point mode, click the image to add a point there.");
         samp->setActive(curveSamplerActive);    // the tree rebuilds; the armed state does not
         connect(samp, &BarBtn::clicked, this, &DevelopProperties::toggleCurveSampler);
         curveSamplerBtn = samp;
@@ -4856,9 +4905,9 @@ void DevelopProperties::addColor()
        Vibrance live at the bottom of Basic (Lightroom's Presence group). */
     /* RGB grooves ramp black -> the channel's own primary, so each slider names its
        channel at a glance (black->red, black->green, black->blue). */
-    addSlider("red",        "Red",        "Per-channel red gain.",                 parIdx, "ColorHeader", -100, 100, 0, "#000000", "#ff0000");
-    addSlider("green",      "Green",      "Per-channel green gain.",               parIdx, "ColorHeader", -100, 100, 0, "#000000", "#00ff00");
-    addSlider("blue",       "Blue",       "Per-channel blue gain.",                parIdx, "ColorHeader", -100, 100, 0, "#000000", "#0000ff");
+    addSlider("red",        "Red",        "Add or remove red.",                    parIdx, "ColorHeader", -100, 100, 0, "#000000", "#ff0000");
+    addSlider("green",      "Green",      "Add or remove green.",                  parIdx, "ColorHeader", -100, 100, 0, "#000000", "#00ff00");
+    addSlider("blue",       "Blue",       "Add or remove blue.",                   parIdx, "ColorHeader", -100, 100, 0, "#000000", "#0000ff");
     addGroupDivider(parIdx, "ColorHeader", "RGBDevider");
     addSlider("hue",        "Hue",        "Rotate all hues.",                      parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
     addSlider("luminance",  "Luminance",  "Global luminance (brightness).",        parIdx, "ColorHeader", -100, 100, 0, G::darkgray,  G::lightgray);
@@ -4884,7 +4933,7 @@ void DevelopProperties::addCalibrate()
 {
     if (G::isLogger) G::log("DevelopProperties::addCalibrate");
     addHeader("CalibrateHeader", "???", "Calibrate",
-              "Camera calibration: hue + saturation of the R/G/B primaries.",
+              "Fine-tune the camera's base colours, and the shadow tint.",
               PV_Calibrate);
     QModelIndex parIdx = capIdx;
     addCalibrateBody(parIdx, "CalibrateHeader");
@@ -4991,7 +5040,7 @@ static QString profileRootsText()
 static QString ownRootText()
 {
     if (CameraProfileStore::ownRoot().isEmpty()) return QString();
-    return " The last is Winnow's own: drop .dcp files there and they appear here.";
+    return "\nThe last is Winnow's own: drop .dcp files there and they appear here.";
 }
 
 void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
@@ -5007,25 +5056,15 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     i.parentName = "BasicHeader";
     i.captionText = "Profile";
     i.tooltip = available
-        ? "How this camera's sensor is characterised -- the starting colour the "
-          "adjustments below are made on top of.\n"
-          "Winnow Standard: the built-in matrix.\n"
-          "Camera Base: the maker's colour science with no look -- the shared starting "
-          "point every Camera profile is built on.\n"
-          "Other entries are DNG camera profiles (.dcp) installed on this computer for "
-          "this camera, applied whole.\n"
-          "Changing the profile changes what a given Temp value means, because white "
-          "balance is solved against the camera matrix.\n\n"
-          "Winnow does not ship profiles -- Adobe's are licensed for use with Adobe "
-          "products -- it reads whatever is already installed in:"
-          + profileRootsText() +
-          "\n\nAdobe's free DNG Converter fills the first of those."
-          + ownRootText()
-        : (raw ? "The Apple decoder applies its own camera profile before Winnow sees the "
-                 "image, so this control would do nothing. Switch Demosaic to Winnow to "
-                 "choose a profile."
-               : "Only raw files have a sensor to characterise. This file already carries "
-                 "the colour its camera rendered.");
+        ? "The starting colour for this raw file.\n"
+          "Winnow Standard: Winnow's own colour. Camera Base: the camera maker's colour "
+          "with no added look. Other entries are camera profiles installed on this "
+          "computer (Adobe's free DNG Converter installs them).\n\n"
+          "Profiles are read from:"
+          + profileRootsText() + ownRootText()
+        : (raw ? "Apple's decoder uses its own profile. Choose Winnow as the decoder to "
+                 "pick a profile here."
+               : "Raw files only. This file already has its camera's colour.");
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -5320,23 +5359,11 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     i.parentName = "BasicHeader";
     i.captionText = "Tone mapping";
     i.tooltip = raw
-        ? "How scene brightness is mapped for display.\n"
-          "Standard roll-off: the default -- the ordinary rendering, where every other "
-          "raw developer lands.\n"
-          "Standard roll-off (hue-preserving): the same tone, applied so bright "
-          "saturated colours keep their hue -- skies stay blue instead of turning cyan, "
-          "as Lightroom renders them.\n"
-          "Soft roll-off: longer, wider roll-off -- saturated highlights desaturate "
-          "toward white instead of shifting hue.\n"
-          "Camera contrast: the contrast of this camera maker's own JPEGs -- brighter "
-          "midtones and punchier shadows -- with the same smooth highlight roll-off.\n"
-          "Profile curve: the tone curve of the selected camera profile (the Camera "
-          "Standard / Neutral / Vivid ... profiles carry one), with the same roll-off.\n"
-          "None: no tone mapping at all. Scene-linear data, which looks dark and flat -- "
-          "a starting point for building a look from scratch, not a finished picture.\n"
-          "The profile above sets the colour; this sets the tone. Any combination works."
-        : "Only raw files need a view transform. This file already carries the tone "
-          "mapping its camera applied.";
+        ? "How the brightness range is fitted to the screen.\n"
+          "Standard is the usual choice. Hue-preserving keeps bright skies blue. Soft "
+          "rolls off highlights more gently. Camera contrast matches the camera's JPEGs. "
+          "None is flat and dark, a starting point only."
+        : "Raw files only. This file already has its camera's tone.";
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -5499,11 +5526,10 @@ void DevelopProperties::refreshViewTransformRow()
         it->setEnabled(has);
         it->setText(has ? QString("Profile curve")
                         : QString("Profile curve (none in this profile)"));
-        it->setToolTip(has ? QString("The selected camera profile's own tone curve, "
-                                     "with Winnow's highlight roll-off.")
-                           : QString("This profile carries no tone curve -- choose a "
-                                     "Camera Standard / Neutral / Vivid ... profile. "
-                                     "Renders as Standard roll-off meanwhile."));
+        it->setToolTip(has ? QString("The tone curve of the selected camera profile.")
+                           : QString("This profile has no tone curve. Choose a Camera "
+                                     "Standard, Neutral or Vivid profile. Until then it "
+                                     "looks like Standard."));
     }
 
     int stored = 0;
@@ -5646,8 +5672,7 @@ void DevelopProperties::addColorGradeBody(const QModelIndex &parIdx, const QStri
        before they existed. */
     addGroupDivider(parIdx, parent, "GradeDivider");
     addSlider("gradeBlending", "Blending",
-              "How much the shadow / midtone / highlight ranges overlap "
-              "(50 = the default split).",
+              "How much the shadow, midtone and highlight tints overlap.",
               parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
     addSlider("gradeBalance", "Balance",
               "Slide the split between the ranges: right favours highlights, "
@@ -5828,8 +5853,7 @@ void DevelopProperties::addColorPanel()
                          "or the whole image.");
         hue->setToolTip("Sample colours in the image and shift their hue, saturation "
                         "and luminance.");
-        rgb->setToolTip("Re-point the red, green and blue primaries (camera "
-                        "calibration).");
+        rgb->setToolTip("Adjust the base red, green and blue colours.");
         for (QRadioButton *r : {tone, hue, rgb})      // panel background, see gradeRanges
             r->setStyleSheet("QRadioButton { background: transparent; }");
         QButtonGroup *group = new QButtonGroup(rw);   // exclusive by default
@@ -5944,8 +5968,7 @@ void DevelopProperties::addPointColorBody(const QModelIndex &parIdx, const QStri
               "Brighten or darken the selected colour.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
     addSlider("pcVariance", "Variance",
-              "Spread the selected colours apart (right) or pull them together toward "
-              "the sample (left) -- left evens out uneven skin or foliage.",
+              "Left evens out a colour (e.g. blotchy skin); right spreads it apart.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
 
     /* Which pixels count as "the selected colour". Range widens or narrows all three
@@ -6293,9 +6316,7 @@ void DevelopProperties::addDetail()
 {
     if (G::isLogger) G::log("DevelopProperties::addDetail");
     addHeader("DetailHeader", "???", "Detail",
-              "Sharpening and noise reduction.\n"
-              "Judge both at 1:1 zoom -- a fit view hides noise AND hides the\n"
-              "smearing and halos the cures introduce.", PV_Detail);
+              "Sharpening and noise reduction. Judge both at 100% zoom.", PV_Detail);
     QModelIndex parIdx = capIdx;
 
     /* The 1:1 preview FIRST, as Lightroom has it: everything below is judged in it, and
@@ -6320,24 +6341,18 @@ void DevelopProperties::addDetail()
        Distinct from Basic's Texture, which is a resolution-PROPORTIONAL mid-frequency
        band: Texture changes detail contrast, this changes edge acutance. */
     addSlider("sharpenAmount", "Sharpening:",
-              "Sharpen edge detail (capture sharpening).\n"
-              "Judge at 1:1: while you drag, the proxy shows a scale-honest\n"
-              "approximation and the full-resolution render follows a moment later.",
+              "Sharpen fine detail. Judge it at 100% zoom.",
               parIdx, "DetailHeader", 0, 150, 0, G::darkgray, G::lightgray);
     addSlider("sharpenRadius", "   Radius",
-              "Sharpening radius in PIXELS at full resolution (0.50-3.00).\n"
-              "The only Develop radius not scaled to the image, so it is the\n"
-              "only one that must be judged at 1:1. ~1.0 suits most subjects;\n"
-              "wider is what produces visible halos.",
+              "Width of the sharpened edges. Around 1.0 suits most images;\n"
+              "larger values can cause halos.",
               parIdx, "DetailHeader", 50, 300, 100, G::darkgray, G::lightgray, 1.0);
     addSlider("sharpenDetail", "   Detail", "How much fine detail is sharpened vs. "
               "suppressed as noise.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray, 25);
     addSlider("sharpenMasking", "   Masking",
-              "Confine sharpening to edges, protecting flat areas like sky and\n"
-              "skin where sharpening only amplifies noise. 0 sharpens everything.\n"
-              "Opt-drag this slider to see the mask in black and white: white\n"
-              "is sharpened, black is protected.",
+              "Sharpen only edges, leaving smooth areas like sky and skin alone.\n"
+              "Opt-drag to see which areas are sharpened (white).",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
 
     addGroupDivider(parIdx, "DetailHeader", "DenoiseDivider");
@@ -6350,7 +6365,7 @@ void DevelopProperties::addDetail()
        different keys. Two 0..100 strength sliders (mapped to 0..1): Denoise = luminance
        NR (ratio-preserving), Denoise Color = chroma NR (opponent-chroma blur, luma kept
        exact) -- see Develop::Denoise. */
-    addSlider("localDenoise", "Denoise:", "Local luminance noise reduction on the rendered image.",
+    addSlider("localDenoise", "Denoise:", "Reduce grainy noise.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
     addSlider("localDenoiseChroma", "   Color", "Local colour (chroma) noise reduction.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
@@ -6361,7 +6376,7 @@ void DevelopProperties::addDetail()
 void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
-    addHeader("EffectsHeader", "???", "Effects", "Local (post-demosaic) effects.", PV_Effects);
+    addHeader("EffectsHeader", "???", "Effects", "Vignette and grain.", PV_Effects);
     QModelIndex parIdx = capIdx;
 
     /* Vignette: a global radial exposure falloff about the image centre (see
@@ -6409,34 +6424,55 @@ void DevelopProperties::addLens()
     if (G::isLogger) G::log("DevelopProperties::addLens");
     if (activeScopeIndex != 0) return;
     addHeader("LensHeader", "???", "Lens",
-              "Lens corrections: the lens profile (distortion, chromatic aberration,\n"
-              "vignetting), Remove CA and defringe. Applied to the whole image before\n"
-              "any mask, so they live in the Global scope only.", PV_Lens);
+              "Correct lens distortion, vignetting and colour fringes.\n"
+              "Global scope only: it applies to the whole image.", PV_Lens);
     QModelIndex parIdx = capIdx;
 
     addCheckbox("lensProfile", "Lens profile",
-                "Correct this lens's distortion, chromatic aberration and vignetting\n"
-                "from its lensfun profile, found from the lens in the EXIF.\n"
-                "Preferences can turn it on for every raw file. Off by default for\n"
-                "JPEGs, which the camera has usually corrected already.",
+                "Correct distortion and vignetting using a profile for this lens.\n"
+                "Usually not needed for JPEGs: the camera already corrected them.",
                 parIdx, "LensHeader");
     addLensProfileRow(parIdx);
     addSlider("lensDistortion", "   Distortion",
-              "How much of the profile's distortion correction: 100 = as calibrated,\n"
-              "0 = none, 200 = twice. The frame is re-scaled so no empty corners show.",
+              "Strength of the profile's distortion fix (100 = normal).",
               parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
     addSlider("lensVignetting", "   Vignetting",
-              "How much of the profile's vignetting correction: 100 = as calibrated,\n"
-              "0 = none, 200 = twice. Needs the aperture in the EXIF.",
+              "Strength of the profile's vignetting fix (100 = normal).\n"
+              "Needs the photo's aperture.",
               parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
+
+    /* Manual (Lightroom's Manual tab): corrections that need NO profile, so a lens
+       lensfun never calibrated -- or a JPEG with the profile off -- can still be fixed
+       by eye. Applied on top of the profile when it is on, in the same resample
+       (LensProfile::Amounts::manual*). A caption row heads them so they do not read as
+       a second copy of the profile's two amounts above. */
+    addGroupDivider(parIdx, "LensHeader", "LensManualDivider");
+    clearItemInfo(i);
+    i.name = "lensManualCaption";
+    i.parIdx = parIdx;
+    i.parentName = "LensHeader";
+    i.captionText = "Manual";
+    i.tooltip = "Lens corrections by eye, with or without a profile. Applied on top of\n"
+                "the profile when it is on.";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    addSlider("lensManualDistortion", "   Distortion",
+              "Straighten bulging (+) or pinched (-) lines by eye.",
+              parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
+    addSlider("lensManualVignetting", "   Vignetting",
+              "Brighten (+) or darken (-) the corners to fix lens shading.\n"
+              "Unlike Effects > Vignette, it ignores the crop.",
+              parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
+    addSlider("lensManualMidpoint", "   Midpoint",
+              "How far in from the corners the vignetting fix reaches.",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
 
     addGroupDivider(parIdx, "LensHeader", "LensCADivider");
     addCheckbox("removeCA", "Remove CA",
-                "Remove lateral chromatic aberration: re-align red and blue with\n"
-                "green. Uses the lens profile's measurement when the profile is on and\n"
-                "has one, otherwise measures it from this image. Removes the colour\n"
-                "fringe that grows toward the corners. Preferences can turn it on for\n"
-                "every raw file.",
+                "Remove the colour fringes that appear toward the corners of the\n"
+                "frame.",
                 parIdx, "LensHeader");
     addSlider("defringePurple", "Purple fringe:",
               "Defringe the cyan, blue, purple and magenta rim along\n"
@@ -6460,9 +6496,9 @@ void DevelopProperties::addLensProfileRow(const QModelIndex &parIdx)
     i.parIdx = parIdx;
     i.parentName = "LensHeader";
     i.captionText = "   Lens";
-    i.tooltip = QString("Which lens profile is used. Auto matches the lens named in the "
-                        "EXIF; choose a lens here when the match is wrong or the EXIF names "
-                        "none (an adapted or manual lens).\n\n") + kLensfunCredit;
+    i.tooltip = QString("The lens to correct for. Auto finds it from the photo; choose "
+                        "one if it is wrong or missing (e.g. a manual lens).\n\n")
+                + kLensfunCredit;
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -6512,10 +6548,14 @@ void DevelopProperties::repopulateLensCombo()
     QSignalBlocker block(lensProfileCombo);
     lensProfileCombo->clear();
     /* The automatic entry says what it found -- or why it found nothing -- so the reason
-       is where the user is already looking, not in a popup. */
-    const QString autoText = autoMatch.lens
+       is where the user is already looking, not in a popup. A lens found but unusable
+       for this shot (no calibration at this focal length, a smaller sensor) says so too:
+       otherwise the amount rows below grey with a valid-looking lens named above them. */
+    QString autoText = autoMatch.lens
         ? "Auto: " + autoMatch.lens->displayName()
         : "Auto (" + autoMatch.reason + ")";
+    if (autoMatch.lens && !autoMatch.ok() && !autoMatch.reason.isEmpty())
+        autoText += "  (" + autoMatch.reason + ")";
     lensProfileCombo->addItem(autoText, QString());
 
     const QVector<const LensDb::Lens *> fits = db.lensesFor(autoMatch.camera);
@@ -6837,6 +6877,12 @@ void DevelopProperties::itemChange(QModelIndex idx)
     if (source == "lensDistortion" || source == "lensVignetting") {
         noteNonMaskInteraction();
         setGlobalLensAmount(source == "lensDistortion", qRound(v.toDouble()));
+        return;
+    }
+    if (source == "lensManualDistortion" || source == "lensManualVignetting" ||
+        source == "lensManualMidpoint") {
+        noteNonMaskInteraction();
+        setGlobalLensManual(source, qRound(v.toDouble()));
         return;
     }
 
@@ -7796,8 +7842,11 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         preset.globals.insert("demosaicEngine", QString(apple ? "apple" : "winnow"));
     }
     if (gk.contains("rawNoise")) {
-        preset.globals.insert("denoiseLuma", base.denoiseLuma);
-        preset.globals.insert("denoiseChroma", base.denoiseChroma);
+        /* The EFFECTIVE amounts: a preset captures what the image looks like, not the
+           "follow the remembered value" marker. */
+        preset.globals.insert("denoiseLuma", base.denoiseLumaOr(G::denoiseLumaDefault));
+        preset.globals.insert("denoiseChroma",
+                              base.denoiseChromaOr(G::denoiseChromaDefault));
         /* WHETHER it runs travels with the amounts -- the panel treats the checkbox and
            its two sliders as one control, and amounts alone cannot express "off". */
         preset.globals.insert("denoiseRaw", base.denoiseRaw);
@@ -7818,6 +7867,11 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         preset.globals.insert("lensDistortion", base.lensDistortion);
         preset.globals.insert("lensVignetting", base.lensVignetting);
         preset.globals.insert("lensProfileId", base.lensProfileId);
+    }
+    if (gk.contains("lensManual")) {
+        preset.globals.insert("lensManualDistortion", base.lensManualDistortion);
+        preset.globals.insert("lensManualVignetting", base.lensManualVignetting);
+        preset.globals.insert("lensManualMidpoint", base.lensManualMidpoint);
     }
     if (gk.contains("histogram")) {
         preset.globals.insert("toneShadowCenter", base.toneShadowCenter);
@@ -7881,6 +7935,9 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
     gg.leaves.append({"lensProfile", "Lens profile",
         base.lensProfile >= 0 || base.lensDistortion != def.lensDistortion ||
         base.lensVignetting != def.lensVignetting || !base.lensProfileId.isEmpty()});
+    gg.leaves.append({"lensManual", "Lens manual corrections",
+        base.lensManualDistortion != def.lensManualDistortion ||
+        base.lensManualVignetting != def.lensManualVignetting});
     gg.leaves.append({"lensCA", "Remove chromatic aberration", base.removeCA >= 0});
     gg.leaves.append({"defringe", "Defringe (Purple + Green)",
         base.defringePurple != def.defringePurple || base.defringeGreen != def.defringeGreen});
@@ -8299,6 +8356,9 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
         else if (k == "lensDistortion" || k == "lensVignetting") {
             it.value() = 1.0;
         }
+        else if (k == "lensManualMidpoint") {
+            it.value() = 0.5;
+        }
         else if (k == "lensProfileId") {
             it.value() = QString();
         }
@@ -8651,6 +8711,9 @@ const FloatField kFloatFields[] = {
     {"defringeGreen",       &EditParams::defringeGreen},
     {"lensDistortion",      &EditParams::lensDistortion},
     {"lensVignetting",      &EditParams::lensVignetting},
+    {"lensManualDistortion", &EditParams::lensManualDistortion},
+    {"lensManualVignetting", &EditParams::lensManualVignetting},
+    {"lensManualMidpoint",   &EditParams::lensManualMidpoint},
 };
 struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
@@ -9027,8 +9090,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("gradeBlending", p.gradeBlending);
     setSliderReal("gradeBalance",  p.gradeBalance);
     setSliderReal("luminance",  p.luminance);
-    setSliderReal("denoiseLuma",   p.denoiseLuma   * 100.0);      // Global "Denoise raw" (0..1 -> 0..100)
-    setSliderReal("denoiseChroma", p.denoiseChroma * 100.0);
+    setSliderReal("denoiseLuma",   p.denoiseLumaOr(G::denoiseLumaDefault) * 100.0);   // Global "Denoise raw" (0..1 -> 0..100)
+    setSliderReal("denoiseChroma", p.denoiseChromaOr(G::denoiseChromaDefault) * 100.0);
     setSliderReal("sharpenAmount",      p.sharpenAmount      * 100.0);   // "Sharpening"
     setSliderReal("sharpenRadius",      p.sharpenRadius);                    // div 100
     setSliderReal("sharpenDetail",      p.sharpenDetail      * 100.0);

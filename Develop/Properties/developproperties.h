@@ -1533,6 +1533,7 @@ public:
     void setGlobalDefringe(bool purple, int value0to100);
     void setGlobalLensProfile(bool on);
     void setGlobalLensAmount(bool distortion, int value0to200);
+    void setGlobalLensManual(const QString &key, int sliderValue);
     void setGlobalLensProfileId(const QString &id);   // "" = automatic
     /* Load the current image's lens state into the Lens rows -- called from
        populateSlidersFromStack and when an auto preference changes. The checkboxes show

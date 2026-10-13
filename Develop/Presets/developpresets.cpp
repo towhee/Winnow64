@@ -310,6 +310,9 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "lensProfile")         p.lensProfile         = v.toInt();   // tri-state
     else if (key == "lensDistortion")      p.lensDistortion      = f;
     else if (key == "lensVignetting")      p.lensVignetting      = f;
+    else if (key == "lensManualDistortion") p.lensManualDistortion = f;
+    else if (key == "lensManualVignetting") p.lensManualVignetting = f;
+    else if (key == "lensManualMidpoint")   p.lensManualMidpoint   = f;
     /* By lens id; a lens the target's camera cannot take does not resolve, and the
        Lens row says so. */
     else if (key == "lensProfileId")       p.lensProfileId       = v.toString();

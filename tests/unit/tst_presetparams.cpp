@@ -108,6 +108,13 @@ void TstPresetParams::lensKeysAreGlobalAndRaw()
     DevelopPresets::assignParam("lensProfileId",
                                 QVariant("Nikon|Nikon AF-S Zoom-Nikkor 24-70mm f/2.8G ED|1"), p);
     QCOMPARE(p.lensProfileId, QString("Nikon|Nikon AF-S Zoom-Nikkor 24-70mm f/2.8G ED|1"));
+    /* Manual lens corrections: raw -1..1 / 0..1, not the dock's -100..100. */
+    DevelopPresets::assignParam("lensManualDistortion", QVariant("-0.3"), p);
+    DevelopPresets::assignParam("lensManualVignetting", QVariant("0.4"), p);
+    DevelopPresets::assignParam("lensManualMidpoint", QVariant("0.7"), p);
+    QCOMPARE(p.lensManualDistortion, -0.3f);
+    QCOMPARE(p.lensManualVignetting, 0.4f);
+    QCOMPARE(p.lensManualMidpoint, 0.7f);
 }
 
 void TstPresetParams::unknownKeysAreIgnored()

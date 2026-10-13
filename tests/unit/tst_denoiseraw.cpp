@@ -17,7 +17,8 @@
         whole point is that "denoise this one" and "leave this one alone" outlive the
         session that said so.
       o the unset fallback follows the preference, so nothing changes for the raws nobody
-        has touched.
+        has touched; and Auto run overrides an explicit off (the panel hides the
+        per-image box while it is on, so an off winning would have no visible cause).
       o sanitize repairs a value no UI could produce, since sidecars are hand-editable.
 */
 
@@ -34,8 +35,9 @@ class TestDenoiseRaw : public QObject
 private slots:
     void unsetIsIdentityAndUnserialised();
     void explicitValueSurvivesTheRoundTrip();
-    void wantsFollowsThePreferenceOnlyWhenUnset();
+    void wantsIsAutoRunOrOptedIn();
     void sanitizeRepairsAnOutOfRangeValue();
+    void unsetAmountsFollowTheRememberedValues();
 };
 
 void TestDenoiseRaw::unsetIsIdentityAndUnserialised()
@@ -78,18 +80,20 @@ void TestDenoiseRaw::explicitValueSurvivesTheRoundTrip()
     QCOMPARE(old.denoiseRaw, -1);
 }
 
-void TestDenoiseRaw::wantsFollowsThePreferenceOnlyWhenUnset()
+void TestDenoiseRaw::wantsIsAutoRunOrOptedIn()
 {
     EditParams p;                            // unset: the preference decides
     QCOMPARE(p.wantsDenoiseRaw(true), true);
     QCOMPARE(p.wantsDenoiseRaw(false), false);
 
-    p.denoiseRaw = 1;                        // pinned on, even with Auto run off
+    p.denoiseRaw = 1;                        // opted in, even with Auto run off
     QCOMPARE(p.wantsDenoiseRaw(false), true);
     QCOMPARE(p.wantsDenoiseRaw(true), true);
 
-    p.denoiseRaw = 0;                        // pinned off, even with Auto run on
-    QCOMPARE(p.wantsDenoiseRaw(true), false);
+    /* Off is overridden by Auto run: the Raw panel hides the per-image box while Auto
+       run is on, so an "off" winning would render clean with no visible reason. */
+    p.denoiseRaw = 0;
+    QCOMPARE(p.wantsDenoiseRaw(true), true);
     QCOMPARE(p.wantsDenoiseRaw(false), false);
 }
 
@@ -110,6 +114,44 @@ void TestDenoiseRaw::sanitizeRepairsAnOutOfRangeValue()
         EditStack::sanitize(t);
         QCOMPARE(t.scopes[0].params.denoiseRaw, want);
     }
+}
+
+/*
+    The two amounts are tri-state too (2026-10-13): -1 = unset, follow the REMEMBERED
+    amounts (G::denoiseLumaDefault / ChromaDefault -- passed in here, as autoRun is), so
+    a slider change carries to every image that never set its own. Unset must be
+    identity and absent from the JSON (the devPreview key), an explicit value must
+    survive the round trip, and sanitize must keep -1 legal while repairing other
+    negatives.
+*/
+void TestDenoiseRaw::unsetAmountsFollowTheRememberedValues()
+{
+    EditParams p;
+    QCOMPARE(p.denoiseLuma, -1.0f);
+    QCOMPARE(p.denoiseChroma, -1.0f);
+    QVERIFY(p.isIdentity());
+    QCOMPARE(p.denoiseLumaOr(0.4f), 0.4f);
+    QCOMPARE(p.denoiseChromaOr(0.9f), 0.9f);
+
+    const QJsonObject unset = EditStack::paramsToJson(p);
+    QVERIFY(!unset.contains("denoiseLuma"));
+    QVERIFY(!unset.contains("denoiseChroma"));
+    QCOMPARE(EditStack::paramsFromJson(unset).denoiseLuma, -1.0f);
+
+    p.denoiseLuma = 0.3f;                    // the image set its own: remembered ignored
+    QCOMPARE(p.denoiseLumaOr(0.4f), 0.3f);
+    QVERIFY(!p.isIdentity());
+    const EditParams back = EditStack::paramsFromJson(EditStack::paramsToJson(p));
+    QCOMPARE(back.denoiseLuma, 0.3f);
+    QCOMPARE(back.denoiseChroma, -1.0f);
+
+    EditStack s;
+    s.scopes.append(EditScope());
+    s.scopes[0].params.denoiseLuma = -5.0f;  // damaged sidecar -> unset
+    s.scopes[0].params.denoiseChroma = 3.0f; // out of range -> clamped
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.denoiseLuma, -1.0f);
+    QCOMPARE(s.scopes[0].params.denoiseChroma, 1.0f);
 }
 
 QTEST_APPLESS_MAIN(TestDenoiseRaw)

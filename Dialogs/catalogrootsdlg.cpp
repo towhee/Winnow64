@@ -103,9 +103,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     scanBtn = new QPushButton("Scan");
     closeBtn = new QPushButton("Close");
     diagBtn = new QPushButton("Diagnostics...");
-    diagBtn->setToolTip("List every image behind the difference between the folders and "
-                        "the catalog, with the reason for each, and where the last scan "
-                        "spent its time.");
+    diagBtn->setToolTip("Explain why the folder and Library counts differ.");
     removeBtn->setEnabled(false);
 
     QHBoxLayout *btns = new QHBoxLayout;
@@ -253,10 +251,8 @@ void CatalogRootsDlg::addRow(const CatalogScopeEntry &e)
     QTableWidgetItem *images = new QTableWidgetItem(QString(QChar(0x2014)));
     images->setFlags(Qt::ItemIsEnabled | Qt::ItemIsSelectable);
     images->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
-    images->setToolTip("Images this folder holds ON DISK, counted now -- not what the "
-                       "catalog has indexed.\n"
-                       "The includes less the excludes is what the catalog should hold "
-                       "once a Scan has run.");
+    images->setToolTip("Images in this folder on disk now. The Library matches it after "
+                       "a scan.");
     table->setItem(r, ColImages, images);
     fitTableHeight();
 }

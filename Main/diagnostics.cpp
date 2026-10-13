@@ -452,6 +452,8 @@ QString MW::developDiagnostics()
             << "   luminance = " << G::s(p.luminance);
         rpt << "\n" << indent << "denoiseLuma (raw) = " << G::s(p.denoiseLuma)
             << "   denoiseChroma (raw) = " << G::s(p.denoiseChroma)
+            << "   (-1 = unset: remembered " << G::s(G::denoiseLumaDefault) << " / "
+            << G::s(G::denoiseChromaDefault) << ")"
             << "   denoiseRaw = " << (p.denoiseRaw < 0 ? "unset (follows Auto run)"
                                                        : (p.denoiseRaw ? "on" : "off"));
         rpt << "\n" << indent << "localDenoiseLuma = " << G::s(p.localDenoiseLuma)

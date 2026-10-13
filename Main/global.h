@@ -725,6 +725,13 @@ Q_NAMESPACE
        Develop/autoLensProfile, default off; hashed by defaultRenderKey / devPreviewKey
        for autoRemoveCA's reason. */
     extern bool autoLensProfile;
+    /* The REMEMBERED "Denoise raw" amounts (0..1): the last Lum / Color the user set,
+       which an image with UNSET amounts (EditParams::denoiseLuma == -1) renders with.
+       Persisted to QSettings Develop/denoiseLumaDefault / denoiseChromaDefault, seeded
+       from EditParams::kDefaultDenoise*. Global for autoRunDenoise's reason: they change
+       the render of untouched images, so defaultRenderKey / devPreviewKey hash them. */
+    extern float denoiseLumaDefault;
+    extern float denoiseChromaDefault;
 
     /* Gate for the OPTIONAL debounce-while-editing write of per-image Develop settings to the XMP
        sidecar (a short time after edits settle). Navigate-away / quit / pre-op flushes always run

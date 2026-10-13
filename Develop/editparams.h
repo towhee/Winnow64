@@ -261,15 +261,32 @@ struct EditParams {
     /* Noise reduction -- GLOBAL, applied in the raw decode pipeline (RawFormat / the Apple
        engine) during demosaic, alongside start WB / black / white. Not maskable: these are
        baked into WorkingImage before Develop runs. 0 = engine default. */
-    /* Default color (chroma) NR is full: chroma noise is objectionable and chroma
-       detail is low-frequency, so baking 100 at decode is the right baseline.
-       Default luma NR is 0.75: strong enough to clean sensor grain while leaving
-       fine detail intact. A fresh raw carrying these defaults still counts as
-       identity (see isIdentity); a saved recipe overrides them per image. */
+    /* The "Denoise raw" amounts, 0..1 -- or -1 = UNSET: follow the REMEMBERED amounts
+       (G::denoiseLumaDefault / G::denoiseChromaDefault, the last values the user set,
+       persisted in QSettings). Same tri-state idea as denoiseRaw below: an image the user
+       never adjusted takes the current remembered amounts, one they did keeps its own.
+       Unset is the default and is OMITTED from the sidecar, so an untouched image keeps
+       the recipe (and the devPreview key) it has always had.
+
+       Read them through denoiseLumaOr / denoiseChromaOr, never directly.
+
+       The FACTORY values below seed the remembered amounts for a new user. Color is full:
+       chroma noise is objectionable and chroma detail is low-frequency, so baking 100 at
+       decode is the right baseline. Luma is 0.75: strong enough to clean sensor grain
+       while leaving fine detail intact. Sidecars written before 2026-10-13 always stored
+       both amounts explicitly (usually these factory values), so those images keep them
+       rather than following the remembered amounts -- reading a stored factory value as
+       unset would have re-keyed every edited image's devPreview. */
     static constexpr float kDefaultDenoiseLuma   = 0.75f;
     static constexpr float kDefaultDenoiseChroma = 1.0f;
-    float denoiseLuma   = kDefaultDenoiseLuma;
-    float denoiseChroma = kDefaultDenoiseChroma;
+    float denoiseLuma   = -1.0f;
+    float denoiseChroma = -1.0f;
+    float denoiseLumaOr(float remembered) const {
+        return denoiseLuma >= 0.0f ? denoiseLuma : remembered;
+    }
+    float denoiseChromaOr(float remembered) const {
+        return denoiseChroma >= 0.0f ? denoiseChroma : remembered;
+    }
 
     /*
         WHETHER that denoise runs at all -- TRI-STATE, because the amounts above cannot
@@ -284,12 +301,17 @@ struct EditParams {
                      sidecar (see paramsToJson), so an untouched raw keeps the recipe --
                      and therefore the devPreview key -- it has always had, and browsing a
                      folder of raws in Develop still writes no sidecars.
-           0  off    not denoised, even with Auto run on.
+           0  off    not denoised -- unless Auto run is on.
            1  on     denoised, even with Auto run off.
 
+        AUTO RUN OVERRIDES (2026-10-13). With Auto run on, every raw is denoised and the
+        Raw panel hides the per-image "Run on this image" box, so a stored 0 cannot also
+        win: it would render clean with nothing on screen saying why. Before this an
+        explicit 0 beat Auto run. The values and the key are unchanged; only what 0 means
+        under Auto run moved, so the field is effectively "opted in on its own".
+
         Read it through wantsDenoiseRaw(), never directly: every render site needs the
-        same unset -> preference fallback, and spelling that out per site is how they
-        drift apart.
+        same rule, and spelling that out per site is how they drift apart.
     */
     int denoiseRaw = -1;
 
@@ -297,7 +319,7 @@ struct EditParams {
        (G::autoRunDenoise), passed in rather than read here so EditParams stays free of
        Main/global.h -- the unit tests and the standalone decoders include this header. */
     bool wantsDenoiseRaw(bool autoRun) const {
-        return denoiseRaw >= 0 ? denoiseRaw > 0 : autoRun;
+        return autoRun || denoiseRaw > 0;
     }
 
     /*
@@ -343,11 +365,22 @@ struct EditParams {
 
         The profile's TCA follows removeCA: with Remove CA on, a profile that has TCA
         replaces the estimate measured from the image.
+
+        MANUAL (Lightroom's Manual tab; LensProfile::Amounts::manual*) -- need no profile
+        and apply whether it is on, off or missing, on top of it when it is on:
+        lensManualDistortion -- -1..1 (panel -100..100), 0 = none; + corrects barrel.
+        lensManualVignetting -- -1..1 (panel -100..100), 0 = none; + brightens corners.
+        lensManualMidpoint   -- 0..1 (panel 0..100), 0.5 default; how far in the
+                                vignetting reaches (inert until Vignetting is non-zero,
+                                so it is not in isIdentity).
     */
     int     lensProfile    = -1;
     float   lensDistortion = 1.0f;
     float   lensVignetting = 1.0f;
     QString lensProfileId;
+    float   lensManualDistortion = 0.0f;
+    float   lensManualVignetting = 0.0f;
+    float   lensManualMidpoint   = 0.5f;
 
     bool wantsLensProfile(bool autoRaw, bool isRaw) const {
         return lensProfile >= 0 ? lensProfile > 0 : (autoRaw && isRaw);
@@ -510,6 +543,9 @@ struct EditParams {
             p.lensDistortion = def.lensDistortion;
             p.lensVignetting = def.lensVignetting;
             p.lensProfileId = def.lensProfileId;
+            p.lensManualDistortion = def.lensManualDistortion;
+            p.lensManualVignetting = def.lensManualVignetting;
+            p.lensManualMidpoint = def.lensManualMidpoint;
             p.removeCA = def.removeCA;
             p.defringePurple = def.defringePurple;
             p.defringeGreen = def.defringeGreen;
@@ -553,11 +589,12 @@ struct EditParams {
                gradeMidSat == 0.0f && gradeMidLum == 0.0f &&
                gradeHighSat == 0.0f && gradeHighLum == 0.0f &&
                gradeGlobalSat == 0.0f && gradeGlobalLum == 0.0f &&
-               denoiseLuma == kDefaultDenoiseLuma && denoiseChroma == kDefaultDenoiseChroma &&
+               denoiseLuma < 0.0f && denoiseChroma < 0.0f &&   // unset = remembered
                denoiseRaw < 0 &&        // unset = "follow the preference" = untouched
                removeCA < 0 && defringePurple == 0.0f && defringeGreen == 0.0f &&
                lensProfile < 0 && lensDistortion == 1.0f && lensVignetting == 1.0f &&
                lensProfileId.isEmpty() &&
+               lensManualDistortion == 0.0f && lensManualVignetting == 0.0f &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&

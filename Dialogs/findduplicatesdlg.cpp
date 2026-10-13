@@ -60,10 +60,8 @@ DragToList::DragToList(QWidget *parent) :
     setDragDropMode(QAbstractItemView::DropOnly);
     setEditTriggers(QAbstractItemView::DoubleClicked | QAbstractItemView::EditKeyPressed);
     setItemDelegate(new PathEditDelegate(this));
-    setToolTip("Drag folders here, or double-click empty space to type a path.\n"
-               "Check a folder to include its subfolders too.\n"
-               "Double-click a path to edit it. Delete removes the selected path.\n"
-               "Right-click for more.");
+    setToolTip("Drag folders here, or double-click to type a path.\n"
+               "Check a folder to include its subfolders.");
     connect(this, &QListWidget::itemChanged, this, &DragToList::onItemChanged);
 }
 

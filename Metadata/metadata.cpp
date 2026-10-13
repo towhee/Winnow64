@@ -674,6 +674,23 @@ void Metadata::developCropFactors(const QString &blob, int width, int height,
     make that move -- the OS build, RawCamera.bundle, the downloaded camera assets -- so
     any change to Apple's support misses the Apple previews once.
 */
+/*
+    The remembered "Denoise raw" amounts (G::denoiseLumaDefault / denoiseChromaDefault)
+    as a key part. An image with UNSET amounts renders with them, so a change must miss the
+    previews built under the old values. Empty while they are the factory values, so every
+    key that existed before the amounts were remembered is unchanged -- no mass rebuild
+    until the user actually moves a slider. Hashed for every recipe (not only unset ones):
+    an explicit recipe then rebuilds once needlessly, but never shows the wrong picture.
+*/
+static QString denoiseAmountsKeyPart()
+{
+    if (G::denoiseLumaDefault == EditParams::kDefaultDenoiseLuma &&
+        G::denoiseChromaDefault == EditParams::kDefaultDenoiseChroma)
+        return QString();
+    return QString("|dnL=%1|dnC=%2").arg(qRound(G::denoiseLumaDefault * 100.0f))
+                                    .arg(qRound(G::denoiseChromaDefault * 100.0f));
+}
+
 static QString appleVersionKeyPart()
 {
 #ifdef Q_OS_MAC
@@ -706,6 +723,7 @@ QString Metadata::devPreviewKey(const QString &blob)
                                  .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
+                    + denoiseAmountsKeyPart()
                     + appleVersionKeyPart();
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
@@ -769,6 +787,7 @@ QString Metadata::defaultRenderKey(const QString &fPath)
                           .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())    // see devPreviewKey
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
+                    + (G::autoRunDenoise ? denoiseAmountsKeyPart() : QString())
                     + appleVersionKeyPart();
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);

@@ -132,9 +132,8 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
             ui->onlySelectedChk->setText("Only rename the selected file: off while "
                                          "Raw+JPG are combined");
             ui->onlySelectedChk->setToolTip(
-                "This image is a combined raw+JPG pair, shown as one thumbnail.\n"
-                "Renaming one half would leave the hidden other half under the old "
-                "name.\nTurn off Combine Raw+Jpg to rename one file alone.");
+                "This raw+JPG pair is renamed together. Turn off Combine Raw+Jpg to "
+                "rename one file alone.");
         }
         // Default: template active, simple grayed out.
         ui->simpleRenameChk->setChecked(false);

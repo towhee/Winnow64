@@ -2383,10 +2383,8 @@ void MW::createHelpActions()
     panelProbeArmAction->setCheckable(true);
     panelProbeArmAction->setChecked(G::isPanelProbe.load(std::memory_order_relaxed));
     panelProbeArmAction->setToolTip(
-        tr("Record every dock resize, sizing request and min/max pin, so a panel that "
-           "opens narrow or a thumbnail strip cut in half can be traced to the step "
-           "that did it.  Stays armed for the next launch, which is when the startup "
-           "sizing happens.  Read the result with \"Panel probe report\"."));
+        tr("Record panel sizing, to diagnose panels that open the wrong size.\n"
+           "Stays on for the next launch. Read it with \"Panel probe report\"."));
     panelProbeArmAction->setShortcutVisibleInContextMenu(true);
     addAction(panelProbeArmAction);
     connect(panelProbeArmAction, &QAction::triggered, this, &MW::togglePanelProbe);

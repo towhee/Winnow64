@@ -623,7 +623,7 @@ void Preferences::addItems()
     addGeneral();
     addModify();
     addUserInterface();
-    addProductivity();
+    addCaching();
     addDevPreviews();
     addCatalog();
     addSlideShow();
@@ -655,15 +655,9 @@ void Preferences::addGeneral()
     i.name = "restoreLibraryState";
     i.parentName = "GeneralHeader";
     i.captionText = "Reopen as it was left";
-    i.tooltip = "Winnow always starts in the source that was showing when it last\n"
-                "closed -- the Library or Folders. With this on, what was loaded\n"
-                "comes back too:\n\n"
-                "  Library: the sort, the filters and the selected images.\n"
-                "  Folders: the folders that were selected, their filters and\n"
-                "           the selected images.\n\n"
-                "Hold Shift at launch to skip reopening folders. Filters are applied\n"
-                "when the Filters panel is showing, so a filter is never applied\n"
-                "where you cannot see it.";
+    i.tooltip = "Reopen what was loaded when Winnow last closed, with its filters\n"
+                "and selection.\n"
+                "Hold Shift at launch to start fresh.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->restoreLibraryState;
@@ -676,19 +670,11 @@ void Preferences::addGeneral()
     i.name = "modifySourceFiles";
     i.parentName = "GeneralHeader";
     i.captionText = "Permit image file modification";
-    i.tooltip = "Permit modification to the image file.\n\n"
-                "When on, rating, label, title, creator, copyright, email,\n"
-                "url and keywords for JPEG, TIFF, PNG and DNG files are\n"
-                "written INTO the file, where Lightroom reads them.\n"
-                "When off (the default), image files are never changed:\n"
-                "those edits go to a Winnow sidecar (IMG_1.JPG.xmp),\n"
-                "which Lightroom does not read.  Raw and HEIC files always\n"
-                "use an .xmp sidecar, as Lightroom does.\n\n"
-                "DISCLAIMER: While I try my best, it is possible that\n"
-                "modification could corrupt the image file.  I suggest\n"
-                "you turn on 'Backup before modifying files' until you\n"
-                "are confident the modifications are safe."
-        ;
+    i.tooltip = "Write ratings, labels, keywords and other metadata into JPEG,\n"
+                "TIFF, PNG and DNG files, so Lightroom can see them.\n"
+                "Off: files are never changed and edits go to a sidecar.\n\n"
+                "There is a small risk of damaging a file. Consider \"Backup\n"
+                "before modify files\".";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::modifySourceFiles;
@@ -802,11 +788,9 @@ void Preferences::addGeneral()
     i.name = "pickLossWarning";
     i.parentName = "GeneralHeader";
     i.captionText = "Warn if picks have not been ingested";
-    i.tooltip = "Picks only exist while the images are loaded.  Selecting another\n"
-                "folder, loading a search result, or closing Winnow clears them.\n\n"
-                "Leave this on to be warned when that is about to throw away picks\n"
-                "that have not been ingested.  Turn it off if you use picks for\n"
-                "something other than ingesting.";
+    i.tooltip = "Warn before loading something else or quitting would lose picks\n"
+                "that have not been ingested.\n"
+                "Turn off if you use picks for something other than ingesting.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->pickLossWarning;
@@ -846,6 +830,20 @@ void Preferences::addGeneral()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+
+    // Color management
+    i.name = "disableColorCorrection";
+    i.parentName = "GeneralHeader";
+    i.captionText = "Disable color correction";
+    i.tooltip = "Disabled color correction is faster.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = !G::colorManage;
+    i.key = "disableColorCorrection";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
 }
 
 void Preferences::addModify()
@@ -1010,9 +1008,7 @@ void Preferences::addUserInterface()
     i.name = "wheelSensitivity";
     i.parentName = "UserInterfaceHeader";
     i.captionText = "Mouse wheel / trackpad sensitivity";
-    i.tooltip = "Percent of maximum sensitivity. In the thumbnail and grid \n"
-                "views each mouse wheel click scrolls further at higher \n"
-                "sensitivity.";
+    i.tooltip = "How far the thumbnails scroll for each wheel click or swipe.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 50;
@@ -1022,23 +1018,6 @@ void Preferences::addUserInterface()
     i.type = "int";
     i.min = 1;
     i.max = 100;
-    i.fixedWidth = 50;
-    addItem(i);
-
-    // Set the width of the cache status progress bar
-    i.name = "progressWidthSlider";
-    i.parentName = "UserInterfaceHeader";
-    i.captionText = "Cache progress bar width";
-    i.tooltip = "Change the width of the cache progress bar in the status bar.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = 120;
-    i.value = mw->cacheBarProgressWidth;
-    i.key = "progressWidthSlider";
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 100;
-    i.max = 2000;
     i.fixedWidth = 50;
     addItem(i);
 
@@ -1350,386 +1329,32 @@ qint64 Preferences::devPreviewCacheValue(const QString &label)
     return (gb > 0 ? gb : 20) * 1024LL * 1024 * 1024;
 }
 
-void Preferences::addDevPreviews()
+void Preferences::addCaching()
 {
 /*
-    Developed previews (devPreviews). An edited image has two pictures -- the camera's
-    embedded preview and the render of its develop recipe -- and these settings govern how
-    the second one is stored. See notes/Documentation.txt "Original and Developed Previews".
+    Everything Winnow keeps so it does not have to decode or read again: the image
+    cache in memory, thumbnails in memory and on disk, and developed previews on disk.
+    The status-bar cache progress opens this section.
 */
-    // Developed previews header (Root)
-    i.name = "DevPreviewHeader";
+    // Caching header (Root)
+    i.name = "CachingHeader";
     i.parentName = "";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = true;
-    i.captionText = "Developed previews";
-    i.tooltip = "How Winnow stores the developed version of images you have edited.";
+    i.captionText = "Caching";
+    i.tooltip = "Memory and disk Winnow uses to show images and thumbnails faster.";
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
     addItem(i);
-
-    // devPreview size
-    i.name = "devPreviewSize";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Developed preview size";
-    i.tooltip = "How large a developed preview is written.\n\n"
-                "Full size lets the loupe show and zoom a developed image to 100%\n"
-                "without decoding the raw file, at a cost of several MB each.\n"
-                "The smaller sizes still show the developed look, but go soft\n"
-                "when you zoom in."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = devPreviewSizeLabel(G::devPreviewMaxEdge);
-    i.key = "devPreviewSize";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList.clear();
-    i.dropList << "Full size"
-               << "Large (4096 px)"
-               << "Screen (2560 px)"
-        ;
-    addItem(i);
-
-    // devPreview quality
-    i.name = "devPreviewQuality";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Developed preview quality";
-    i.tooltip = "JPEG quality a developed preview is written at, 40 to 100.\n\n"
-                "90 is the default. Above 90 full colour detail is kept (no chroma\n"
-                "subsampling), which roughly doubles the file; below it the files\n"
-                "get smaller and softer. This affects only NEW previews -- previews\n"
-                "already cached are not rewritten."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = G::kDevPreviewQualityDefault;
-    i.value = G::devPreviewQuality;
-    i.key = "devPreviewQuality";
-    i.delegateType = DT_Spinbox;
-    i.type = "int";
-    i.min = G::kDevPreviewQualityMin;
-    i.max = G::kDevPreviewQualityMax;
-    i.fixedWidth = 50;
-    addItem(i);
-
-    // devPreview cache limit
-    i.name = "devPreviewCacheSize";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Developed preview cache size";
-    i.tooltip = "Disk space the developed preview cache may use.\n\n"
-                "When it is exceeded the least recently used previews are\n"
-                "deleted. Losing one costs a re-render, never an edit --\n"
-                "your develop settings live in each image's sidecar."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = devPreviewCacheLabel(G::devPreviewCacheMaxBytes);
-    i.key = "devPreviewCacheSize";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList.clear();
-    i.dropList << "5 GB"
-               << "10 GB"
-               << "20 GB"
-               << "50 GB"
-               << "100 GB"
-               << "200 GB"
-        ;
-    addItem(i);
-
-    /*  Thumbnail cache. Beside the develop-preview settings because both answer
-        "what does Winnow keep on disk so it does not have to decode again", and
-        a user looking for one will look for the other in the same place. */
-    i.name = "maxSearchResults";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Maximum search results";
-    i.tooltip = "How many images a catalog search returns and loads at once.\n\n"
-                "No limit by default: picking the catalog shows the whole catalog,\n"
-                "the way picking a folder shows the whole folder. Rows are cheap --\n"
-                "the cost that scales is thumbnails, which the ceiling below bounds\n"
-                "on their own.\n\n"
-                "Set a number only if you want a large library deliberately capped.\n"
-                "The count reported is always the true total, so you are told when\n"
-                "you are seeing a subset.\n\n"
-                "Takes effect on the next search."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = maxIconChunkLabel(G::maxSearchResults);
-    i.key = "maxSearchResults";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList.clear();
-    i.dropList << "2,000" << "5,000" << "10,000" << "20,000" << "50,000" << "No limit";
-    addItem(i);
-
-    i.name = "maxIconChunk";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Thumbnails held in memory";
-    i.tooltip = "How many thumbnails Winnow keeps in memory at once.\n\n"
-                "A thumbnail costs about 180 KB, so 10,000 of them is roughly\n"
-                "1.8 GB. Beyond this number Winnow keeps a moving window around\n"
-                "where you are looking and re-reads thumbnails as you scroll past\n"
-                "it -- so a very large folder browses instead of running out of\n"
-                "memory.\n\n"
-                "Raise it to spend memory for smoother scrolling in big folders;\n"
-                "\"No limit\" keeps every thumbnail, which is what Winnow did\n"
-                "before this setting existed.\n\n"
-                "Takes effect on the next folder load."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = maxIconChunkLabel(G::maxIconChunk);
-    i.key = "maxIconChunk";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList.clear();
-    i.dropList << "2,000" << "5,000" << "10,000" << "20,000" << "50,000" << "No limit";
-    addItem(i);
-
-    i.name = "cacheThumbnails";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Cache thumbnails";
-    i.tooltip = "Keep each thumbnail in the local index as it is first decoded, so\n"
-                "returning to a folder -- or scrolling a large catalog -- reads the\n"
-                "thumbnail instead of opening the image again.\n\n"
-                "Costs a little extra work the FIRST time an image is seen, and\n"
-                "nothing after that."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::cacheThumbnails;
-    i.key = "cacheThumbnails";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    i.name = "useIndexMetadata";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Read metadata from the catalog";
-    i.tooltip = "When a folder has already been catalogued and its files have not\n"
-                "changed, take each image's metadata from the catalog instead of\n"
-                "reading it from the file again.\n\n"
-                "Reading a raw file's metadata costs about 20ms; the catalog\n"
-                "answers in a fraction of that. The saving shows when you return\n"
-                "to a folder whose thumbnails are also cached -- on a first visit\n"
-                "the files have to be read anyway.\n\n"
-                "A file that has changed since it was catalogued is always re-read."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useIndexMetadata;
-    i.key = "useIndexMetadata";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    i.name = "useScrollInVerify";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Verify catalogued images against their files";
-    i.tooltip = "Check catalogued images against the files on disk, and re-read any\n"
-                "whose file or sidecar has changed since it was catalogued.\n\n"
-                "Without this, a row taken from the catalog is trusted until\n"
-                "something else happens to revisit it -- so keywords edited in\n"
-                "Lightroom, which rewrites the .xmp and never touches the raw file,\n"
-                "keep showing their old value in Catalog scope.\n\n"
-                "Two passes, both in the background. Images are checked as they\n"
-                "scroll into view, and the whole loaded set is checked once after\n"
-                "a catalog load settles.\n\n"
-                "Checking an image costs about a hundredth of what re-reading it\n"
-                "would: a 41,000 image library is checked in a few seconds."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useScrollInVerify;
-    i.key = "useScrollInVerify";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    i.name = "thumbCacheSize";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Thumbnail cache size";
-    i.tooltip = "Disk space the thumbnail cache may use.\n\n"
-                "When it is exceeded the least recently used thumbnails are\n"
-                "dropped. Losing one costs a re-decode, never an image."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = devPreviewCacheLabel(G::thumbCacheMaxBytes);
-    i.key = "thumbCacheSize";
-    i.delegateType = DT_Combo;
-    i.type = "QString";
-    i.dropList.clear();
-    i.dropList << "5 GB" << "10 GB" << "20 GB" << "50 GB" << "100 GB" << "200 GB";
-    addItem(i);
-
-    // Build devPreviews in the background
-    i.name = "buildDevPreviewsInBackground";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Build developed previews in background";
-    i.tooltip = "When a folder loads, render and cache a developed preview for\n"
-                "every edited image, and for every raw file, that does not\n"
-                "already have a current one.\n\n"
-                "Once built, a raw opens from its preview instead of being\n"
-                "demosaiced, so the folder browses as fast as JPEGs and shows\n"
-                "Winnow's rendering rather than the camera's.\n\n"
-                "ONLY IN FOLDERS UNDER CATALOG MANAGEMENT. A preview is keyed\n"
-                "on the image's file path, so building one for a camera card\n"
-                "is work thrown away: ingest copies those files to a different\n"
-                "path and the card is erased. If you have not set up catalog\n"
-                "folders yet, previews build on local drives only - never on a\n"
-                "card or a network share.\n\n"
-                "The build is slow and thorough: a 1000-image raw folder takes\n"
-                "hours of background CPU and several GB of preview cache. It\n"
-                "runs one image at a time, pauses in Develop, and is abandoned\n"
-                "when you leave the folder. With it off - or for a folder it\n"
-                "skips, a card included - use Develop > Build Developed\n"
-                "Previews, which always does what you ask."
-        ;
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::buildDevPreviewsInBackground;
-    i.key = "buildDevPreviewsInBackground";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    // Auto-remove chromatic aberration on raw files
-    i.name = "autoRemoveCA";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Remove chromatic aberration on raw files";
-    i.tooltip = "Re-align red and blue with green on every raw file you have not\n"
-                "set yourself: removes the colour fringe that grows toward the\n"
-                "corners, measured from each image.\n\n"
-                "An image where you ticked or unticked \"Remove CA\" in the\n"
-                "Develop Lens section keeps your choice.\n"
-                "JPEGs are never corrected automatically: most cameras already\n"
-                "did it.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::autoRemoveCA;
-    i.key = "autoRemoveCA";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    // Lens profile corrections on raw files
-    i.name = "autoLensProfile";
-    i.parentName = "DevPreviewHeader";
-    i.captionText = "Apply lens profile on raw files";
-    i.tooltip = "Correct distortion, chromatic aberration and vignetting from the\n"
-                "lensfun profile of the lens in the EXIF, on every raw file you\n"
-                "have not set yourself.\n\n"
-                "An image where you ticked or unticked \"Lens profile\" in the\n"
-                "Develop Lens section keeps your choice.\n"
-                "JPEGs are never corrected automatically: most cameras already\n"
-                "did it.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::autoLensProfile;
-    i.key = "autoLensProfile";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-}
-
-void Preferences::addProductivity()
-{
-    // Cache Header (Root)
-    i.name = "ProductivityHeader";
-    i.parentName = "";
-    i.isHeader = true;
-    i.isDecoration = true;
-    i.decorateGradient = true;
-    i.captionText = "Productivity";
-    i.tooltip = "";
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    i.delegateType = DT_None;
-    addItem(i);
-
-    // Show caching activity
-    i.name = "disableColorCorrection";
-    i.parentName = "ProductivityHeader";
-    i.captionText = "Disable color correction";
-    i.tooltip = "Disabled color correction is faster.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = !G::colorManage;
-    i.key = "disableColorCorrection";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    // Show caching activity
-    i.name = "hideCachingProgressBars";
-    i.parentName = "ProductivityHeader";
-    i.captionText = "Hide caching progress";
-    i.tooltip = "Show or hide the cache progress bar in the status area on the lower right."
-                "\nHiding is faster.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = !G::showCacheProgress;
-    i.key = "hideCachingProgressBars";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    // Cache thumbnails JIT
-    i.name = "cacheThumbsJIT";
-    i.parentName = "ProductivityHeader";
-    i.captionText = "Cache thumbs just in time";
-    i.tooltip = "Hold thumbnails only for the screens around the one you are\n"
-                "looking at -- the previous, current and next page -- instead of\n"
-                "filling the \"Thumbnails held in memory\" window.\n\n"
-                "In a very large folder or a catalog scope that is the difference\n"
-                "between asking for forty thumbnails and asking for thousands\n"
-                "every time you scroll, so pages appear sooner. The cost is that\n"
-                "scrolling back to somewhere you have been re-reads its\n"
-                "thumbnails (fast when \"Cache thumbnails\" is on).\n\n"
-                "Takes effect on the next folder load.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = G::useJitIconCache;
-    i.key = "cacheThumbsJIT";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
-    // // Set the width of the cache status progress bar
-    // i.name = "progressWidthSlider";
-    // i.parentName = "ProductivityHeader";
-    // i.captionText = "Cache progress bar width";
-    // i.tooltip = "Change the width of the cache progress bar in the status bar.";
-    // i.hasValue = true;
-    // i.captionIsEditable = false;
-    // i.defaultValue = 120;
-    // i.value = mw->cacheBarProgressWidth;
-    // i.key = "progressWidthSlider";
-    // i.delegateType = DT_Slider;
-    // i.type = "int";
-    // i.min = 100;
-    // i.max = 2000;
-    // i.fixedWidth = 50;
-    // addItem(i);
-    // hide/show progressWidthSlider in preferences
-    // QModelIndex idx = findCaptionIndex("hideCachingProgressBars");
-    // if (model->index(idx.row(), 1, idx.parent()).data().toBool())
-    //     setRowHidden(capIdx.row(), capIdx.parent(), false);
-    // else
-    //     setRowHidden(capIdx.row(), capIdx.parent(), true);
-
 
     // Image cache maximum size excluding metadata cache
     i.name = "imageCacheSize";
-    i.parentName = "ProductivityHeader";
-    i.captionText = "Cache size";
-    i.tooltip = "The maximum cache size in GB.  Auto allows Winnow to optimise the\n"
-                "cache size dynamically.\n\n"
+    i.parentName = "CachingHeader";
+    i.captionText = "Image cache size";
+    i.tooltip = "The maximum memory for the image cache in GB.  Auto allows\n"
+                "Winnow to optimise the cache size dynamically.\n\n"
                 "Note the cache size will be reduced if the operating system does\n"
                 "not have enough memory available.\n\n"
                 "Maximise performance:\n"
@@ -1783,32 +1408,218 @@ void Preferences::addProductivity()
                 ;
     addItem(i);
 
-    // // Available memory for caching
-    // i.name = "availableMBToCache";
-    // i.parentName = "ProductivityHeader";
-    // i.captionText = "Image cache / Available memory";
-    // i.tooltip = "The total amount of available memory in MB.  On some\n"
-    //             "systems, including Mac M chips, you can allocate more\n"
-    //             "than available, due to excellent memory swapping\n"
-    //             "performance."
-    //             ;
-    // i.hasValue = true;
-    // i.captionIsEditable = false;
-    // // get available memory
-    // #ifdef Q_OS_WIN
-    // Win::availableMemory();     // sets G::availableMemoryMB
-    // #endif
-    // #ifdef Q_OS_MAC
-    // Mac::availableMemory();     // sets G::availableMemoryMB
-    // #endif
-    // int memAvail = mw->icd->sizeMB() + G::availableMemoryMB;
-    // i.value = QString::number(mw->cacheMaxMB) + " of " +
-    //         QString::number(memAvail) + " available MB";
-    // i.key = "availableMBToCache";
-    // i.delegateType = DT_Label;
-    // i.type = "QString";
-    // i.color = G::disabledColor.name();
-    // availMBMsgWidget = addItem(i);
+    // Show caching activity
+    i.name = "hideCachingProgressBars";
+    i.parentName = "CachingHeader";
+    i.captionText = "Hide caching progress";
+    i.tooltip = "Show or hide the cache progress bar in the status area on the lower right."
+                "\nHiding is faster.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = !G::showCacheProgress;
+    i.key = "hideCachingProgressBars";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Set the width of the cache status progress bar
+    i.name = "progressWidthSlider";
+    i.parentName = "CachingHeader";
+    i.captionText = "Cache progress bar width";
+    i.tooltip = "Change the width of the cache progress bar in the status bar.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 120;
+    i.value = mw->cacheBarProgressWidth;
+    i.key = "progressWidthSlider";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 100;
+    i.max = 2000;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    i.name = "maxIconChunk";
+    i.parentName = "CachingHeader";
+    i.captionText = "Thumbnails held in memory";
+    i.tooltip = "How many thumbnails are kept in memory (about 1.8 GB per 10,000).\n"
+                "Higher scrolls large folders more smoothly but uses more memory.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = maxIconChunkLabel(G::maxIconChunk);
+    i.key = "maxIconChunk";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "2,000" << "5,000" << "10,000" << "20,000" << "50,000" << "No limit";
+    addItem(i);
+
+    // Cache thumbnails JIT
+    i.name = "cacheThumbsJIT";
+    i.parentName = "CachingHeader";
+    i.captionText = "Cache thumbs just in time";
+    i.tooltip = "Load thumbnails only for the pages around where you are looking.\n"
+                "Pages appear sooner in very large folders and the Library.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useJitIconCache;
+    i.key = "cacheThumbsJIT";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "cacheThumbnails";
+    i.parentName = "CachingHeader";
+    i.captionText = "Cache thumbnails";
+    i.tooltip = "Save thumbnails on disk so folders and the Library show them\n"
+                "faster the next time.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::cacheThumbnails;
+    i.key = "cacheThumbnails";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "thumbCacheSize";
+    i.parentName = "CachingHeader";
+    i.captionText = "Thumbnail cache size";
+    i.tooltip = "Disk space for saved thumbnails. The oldest are removed when it\n"
+                "is full.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewCacheLabel(G::thumbCacheMaxBytes);
+    i.key = "thumbCacheSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "5 GB" << "10 GB" << "20 GB" << "50 GB" << "100 GB" << "200 GB";
+    addItem(i);
+
+    // devPreview cache limit
+    i.name = "devPreviewCacheSize";
+    i.parentName = "CachingHeader";
+    i.captionText = "Developed preview cache size";
+    i.tooltip = "Disk space for developed previews. The oldest are removed when\n"
+                "it is full. Your edits are never lost.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewCacheLabel(G::devPreviewCacheMaxBytes);
+    i.key = "devPreviewCacheSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "5 GB"
+               << "10 GB"
+               << "20 GB"
+               << "50 GB"
+               << "100 GB"
+               << "200 GB"
+        ;
+    addItem(i);
+}
+
+void Preferences::addDevPreviews()
+{
+/*
+    Developed previews (devPreviews). An edited image has two pictures -- the camera's
+    embedded preview and the render of its develop recipe -- and these settings govern how
+    the second one is stored. See notes/Documentation.txt "Original and Developed Previews".
+*/
+    // Develop header (Root)
+    i.name = "DevPreviewHeader";
+    i.parentName = "";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Develop";
+    i.tooltip = "Developed previews and the default corrections applied to raw files.";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    // devPreview size
+    i.name = "devPreviewSize";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Developed preview size";
+    i.tooltip = "Size of the saved developed previews.\n"
+                "Full size stays sharp when you zoom in but uses more disk space.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = devPreviewSizeLabel(G::devPreviewMaxEdge);
+    i.key = "devPreviewSize";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "Full size"
+               << "Large (4096 px)"
+               << "Screen (2560 px)"
+        ;
+    addItem(i);
+
+    // devPreview quality
+    i.name = "devPreviewQuality";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Developed preview quality";
+    i.tooltip = "JPEG quality of the saved developed previews (default 90).\n"
+                "Higher is sharper but uses more disk space. Applies to new\n"
+                "previews only.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = G::kDevPreviewQualityDefault;
+    i.value = G::devPreviewQuality;
+    i.key = "devPreviewQuality";
+    i.delegateType = DT_Spinbox;
+    i.type = "int";
+    i.min = G::kDevPreviewQualityMin;
+    i.max = G::kDevPreviewQualityMax;
+    i.fixedWidth = 50;
+    addItem(i);
+
+    // Build devPreviews in the background
+    i.name = "buildDevPreviewsInBackground";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Build developed previews in background";
+    i.tooltip = "Make a developed preview for every raw file and edited image\n"
+                "in the background, so they open as fast as JPEGs.\n\n"
+                "In the Library this covers the whole Library and can take\n"
+                "many hours. Camera cards are never included.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::buildDevPreviewsInBackground;
+    i.key = "buildDevPreviewsInBackground";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Auto-remove chromatic aberration on raw files
+    i.name = "autoRemoveCA";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Remove chromatic aberration on raw files";
+    i.tooltip = "Turn on Remove CA for raw files by default, to remove colour\n"
+                "fringes near the corners. Your own setting on an image is kept.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoRemoveCA;
+    i.key = "autoRemoveCA";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    // Lens profile corrections on raw files
+    i.name = "autoLensProfile";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Apply lens profile on raw files";
+    i.tooltip = "Turn on Lens profile for raw files by default, to correct\n"
+                "distortion and vignetting. Your own setting on an image is kept.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoLensProfile;
+    i.key = "autoLensProfile";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
 }
 
 void Preferences::addCatalog()
@@ -1816,21 +1627,19 @@ void Preferences::addCatalog()
 /*
     The catalog -- the local index that lets a keyword or title search answer across
     folders instead of only inside the one that is loaded. See notes/Documentation.txt
-    "Keywords and Cataloguing".
+    "Keywords and Cataloguing". Captioned "Library" in the panel; it also holds the
+    search-result cap and catalog-index settings.
 
-    THE ROOT LIST IS EDITED IN ITS OWN DIALOG, opened from the button here. A variable
-    length list of folders with add/remove is not a scalar property and does not fit the
-    tree this panel is; what belongs here is the ENTRY POINT, because Preferences is where
-    a user looks for "what does Winnow index". The same dialog opens from the Catalog
-    panel's Manage button.
+    The root list is edited in its own dialog, opened from the Catalog panel's Manage
+    button and File > Manage Catalog, not from here.
 */
-    // Catalog header (Root)
+    // Library header (Root)
     i.name = "CatalogHeader";
     i.parentName = "";
     i.isHeader = true;
     i.isDecoration = true;
     i.decorateGradient = true;
-    i.captionText = "Catalog";
+    i.captionText = "Library";
     i.tooltip = "The Library: every photo in the folders you have chosen to catalogue, "
                 "searchable together, not just the folder that is loaded.";
     i.hasValue = false;
@@ -1838,40 +1647,11 @@ void Preferences::addCatalog()
     i.delegateType = DT_None;
     addItem(i);
 
-    // Catalogued folders -- opens the roots dialog
-    i.name = "manageCatalogRoots";
-    i.parentName = "CatalogHeader";
-    i.captionText = "Catalogued folders";
-    i.tooltip = "Choose which folders are indexed in the background, and scan them now.\n\n"
-                "Only these folders are catalogued. You can still browse any other\n"
-                "folder, but it is not added to the Library.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.delegateType = DT_BarBtns;
-    btns.clear();
-    {
-        BarBtn *manageBtn = new BarBtn();
-        manageBtn->setIcon(":/images/icon16/foldertree.png", G::iconOpacity);
-        manageBtn->setToolTip("Manage catalogued folders");
-        connect(manageBtn, &BarBtn::clicked, this, []{ mw->manageCatalogRoots(); });
-        btns.append(manageBtn);
-    }
-    addItem(i);
-    btns.clear();
-
     i.name = "autoScanCatalog";
     i.parentName = "CatalogHeader";
     i.captionText = "Scan for changes when the Library is selected";
-    i.tooltip = "Check the catalogued folders for changes each time you select the\n"
-                "Library, and bring the index up to date in the background.\n\n"
-                "Folders added outside Winnow are indexed, and images that are no\n"
-                "longer on disk stop appearing in searches. Nothing is deleted --\n"
-                "an image that comes back is catalogued again, with its rating,\n"
-                "label and keywords intact.\n\n"
-                "Unchanged folders cost one quick check per file, the scan gives\n"
-                "way while you are browsing, and you are only told about it when\n"
-                "something was actually found."
-        ;
+    i.tooltip = "When you open the Library, look for images added, moved or\n"
+                "removed outside Winnow and update the Library in the background.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::autoScanCatalog;
@@ -1883,13 +1663,8 @@ void Preferences::addCatalog()
     i.name = "autoScanCatalogMinutes";
     i.parentName = "CatalogHeader";
     i.captionText = "Minutes between automatic scans";
-    i.tooltip = "How long an automatic scan waits before it may run again.\n\n"
-                "Selecting the Library more often than this does nothing, so a\n"
-                "session spent switching between folders and the Library costs one\n"
-                "scan rather than one per click. The Scan button in Catalogued\n"
-                "folders ignores this and always runs at once.\n\n"
-                "Has no effect unless the setting above is ticked."
-        ;
+    i.tooltip = "The shortest time between automatic scans. Scan in Catalogued\n"
+                "folders always runs at once.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 60;
@@ -1901,6 +1676,49 @@ void Preferences::addCatalog()
     i.max = 1440;
     i.fixedWidth = 50;
     addItem(i);
+
+    // Search results and the catalog index
+    i.name = "maxSearchResults";
+    i.parentName = "CatalogHeader";
+    i.captionText = "Maximum search results";
+    i.tooltip = "The most images the Library loads at once. Leave at \"No limit\"\n"
+                "unless you want a very large Library capped.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = maxIconChunkLabel(G::maxSearchResults);
+    i.key = "maxSearchResults";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    i.dropList << "2,000" << "5,000" << "10,000" << "20,000" << "50,000" << "No limit";
+    addItem(i);
+
+    i.name = "useIndexMetadata";
+    i.parentName = "CatalogHeader";
+    i.captionText = "Read metadata from the catalog";
+    i.tooltip = "Load catalogued folders faster by reusing the metadata Winnow\n"
+                "already has. Changed files are always read again.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useIndexMetadata;
+    i.key = "useIndexMetadata";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "useScrollInVerify";
+    i.parentName = "CatalogHeader";
+    i.captionText = "Verify catalogued images against their files";
+    i.tooltip = "Pick up changes made outside Winnow, for example keywords edited\n"
+                "in Lightroom. Checks quickly in the background.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::useScrollInVerify;
+    i.key = "useScrollInVerify";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
 }
 
 void Preferences::addSlideShow()
@@ -1985,16 +1803,11 @@ void Preferences::addMap()
     i.name = "mapTileUrl";
     i.parentName = "MapHeader";
     i.captionText = "Tile URL template (optional)";
-    i.tooltip = "Leave empty to use the built-in map styles (the style menu on the map:\n"
-                "Standard, Cycle and Topographic), which need no key or account.\n\n"
-                "To use another provider: the address of one map tile, from its documentation,\n"
-                "with {z}, {x} and {y} where the zoom and tile numbers go and {key}\n"
-                "where your API key goes.  For example:\n\n"
-                "MapTiler:  https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png"
-                "?key={key}\n"
-                "Stadia:  https://tiles.stadiamaps.com/tiles/alidade_smooth/{z}/{x}/{y}.png"
-                "?api_key={key}\n\n"
-                "Entering a URL switches the map to Custom; clear it to go back.";
+    i.tooltip = "Optional: use another map provider. Leave empty for the built-in\n"
+                "maps.\n\n"
+                "Paste the tile address from the provider, with {z} {x} {y} and\n"
+                "{key}, e.g.\n"
+                "https://api.maptiler.com/maps/streets-v2/256/{z}/{x}/{y}.png?key={key}";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->mapTileUrl;
@@ -2006,8 +1819,7 @@ void Preferences::addMap()
     i.name = "mapTileKey";
     i.parentName = "MapHeader";
     i.captionText = "API key";
-    i.tooltip = "Your key from the tile provider.  It replaces {key} in the URL template.\n"
-                "It is stored in Winnow's settings file, not encrypted.";
+    i.tooltip = "Your key from the map provider. Stored unencrypted in Winnow's settings.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->mapTileKey;
@@ -2064,7 +1876,7 @@ void Preferences::addFullScreen()
     // Full screen - show folders
     i.name = "fullScreenShowFolders";
     i.parentName = "FullScreenHeader";
-    i.captionText = "Show source";
+    i.captionText = "Show folders";
     i.tooltip = "When you switch to full screen show the Folders panel.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -2104,7 +1916,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowCatalog";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show catalog";
-    i.tooltip = "When you switch to full screen show the catalog dock.";
+    i.tooltip = "When you switch to full screen show the Catalog panel.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isCatalog;
@@ -2117,7 +1929,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowKeywords";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show keywords";
-    i.tooltip = "When you switch to full screen show the keywords dock.";
+    i.tooltip = "When you switch to full screen show the Keywords panel.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isKeywords;
@@ -2130,7 +1942,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowCollections";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show collections";
-    i.tooltip = "When you switch to full screen show the Collections dock.";
+    i.tooltip = "When you switch to full screen show the Collections panel.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isCollections;
@@ -2143,7 +1955,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowQueries";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show queries";
-    i.tooltip = "When you switch to full screen show the Queries dock.";
+    i.tooltip = "When you switch to full screen show the Queries panel.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isQueries;
@@ -2156,8 +1968,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowPlaces";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show places";
-    i.tooltip = "When you switch to full screen show the Places dock (areas drawn on "
-                "the map).";
+    i.tooltip = "When you switch to full screen show the Places panel.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isPlaces;
@@ -2170,8 +1981,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowModule";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show module";
-    i.tooltip = "When you switch to full screen show the Module dock "
-                "(Browse | Develop | Keywords | Embellish) across the top.";
+    i.tooltip = "When you switch to full screen show the Module bar across the top.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isModule;
@@ -2210,8 +2020,7 @@ void Preferences::addFullScreen()
     i.name = "fullScreenShowHistory";
     i.parentName = "FullScreenHeader";
     i.captionText = "Show history panel";
-    i.tooltip = "When you switch to full screen show the History panel (develop history "
-                "and presets)."; 
+    i.tooltip = "When you switch to full screen show the History panel."; 
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isHistory;

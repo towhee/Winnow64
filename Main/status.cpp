@@ -868,10 +868,8 @@ void MW::syncPreviewSourceEnabled()
             inDevelop
                 ? QString("Develop mode always shows the developed image.\n"
                           "Leave Develop (E, G or T) to see the original.")
-                : QString("What you are looking at:\n"
-                          "  Original \u2014 the camera's picture, as shot\n"
-                          "  Developed \u2014 your develop edits applied\n"
-                          "Shortcut: \\ or Y"));
+                : QString("Show the original photo or your developed version  "
+                          "(\\ or Y)"));
     }
 
     for (QAction *a : {previewSourceOriginalAction, previewSourceDevelopedAction,

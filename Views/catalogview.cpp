@@ -47,13 +47,9 @@ CatalogView::CatalogView(QWidget *parent)
        the actual meaning. */
     keywordTree->setSelectionMode(QAbstractItemView::NoSelection);
     keywordTree->setFocusPolicy(Qt::NoFocus);
-    keywordTree->setToolTip("Click a keyword to include it, Opt+click to exclude it, or "
-                            "right-click for both.\nClick again to clear.\n\n"
-                            "Keywords are flat: a hierarchy contributes each of its "
-                            "levels as its own keyword,\nso including a parent name "
-                            "finds everything that was beneath it. A keyword used\nunder "
-                            "more than one parent is highlighted -- exclude a parent to "
-                            "tell them apart.");
+    keywordTree->setToolTip("Click to include a keyword, Opt+click to exclude it. Click "
+                            "again to clear.\n"
+                            "Including a keyword also finds the keywords filed under it.");
 
     resultLabel = new QLabel;
     resultLabel->setWordWrap(true);
@@ -100,8 +96,7 @@ CatalogView::CatalogView(QWidget *parent)
     catalogStatusLabel->setWordWrap(true);
 
     manageRootsBtn = new QPushButton("Manage...");
-    manageRootsBtn->setToolTip("Choose which folders are indexed in the background, and "
-                               "scan them now.");
+    manageRootsBtn->setToolTip("Choose the folders that make up the Library.");
     manageRootsBtn->setStyleSheet("QPushButton { min-width: 0; }");
 
     QHBoxLayout *statusRow = new QHBoxLayout;

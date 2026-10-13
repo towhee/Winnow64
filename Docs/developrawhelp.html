@@ -47,17 +47,20 @@ which is why the result here is better than anything the pipeline can do downstr
 is offered with the <b>Winnow</b> engine only.</p>
 
 <ul>
-<li><b>Denoise</b> runs it.  The box reads <b>Denoised</b> once a denoised base is ready,
-and the amounts below become live.</li>
-<li><b>Auto run</b> does it for you: on, every raw file is denoised as you come to it;
-off, nothing happens until you tick <b>Denoise</b>.  It costs time on every image, so
-leave it off if you are moving quickly through a folder.</li>
+<li><b>Auto run</b> on: every raw file is denoised as you come to it.  This applies to
+all images, including any you previously chose not to denoise.</li>
+<li><b>Auto run</b> off: the <b>Run on this image</b> box appears; tick it to denoise the
+current image.  The choice is saved with that image's edits, so it stays denoised even
+when Auto run is off.</li>
+<li>The <b>Lum</b> and <b>Color</b> amounts appear once the image has been denoised.
+Winnow remembers the last values you set and uses them for every image you have not
+adjusted yourself; an image you adjust keeps its own values.</li>
 <li><b>Lum</b> and <b>Color</b> set how much of each is removed &mdash; luminance grain
 and colour speckle are separate problems, and colour usually tolerates a much heavier
 hand than luminance, which is where detail lives.</li>
 </ul>
 
-<p>When denoise cannot run, the group is greyed and the panel says why in its place,
+<p>When denoise cannot run, the group is greyed, the amounts are hidden, and the panel says why in their place,
 rather than accepting a click and quietly doing nothing.</p>
 
 <h2>What is saved</h2>

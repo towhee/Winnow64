@@ -2981,7 +2981,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (obj->objectName() == "StatusProgressLabel" ||
                 obj->objectName() == "ImageCacheStatus")
             {
-                preferences("ProductivityHeader");
+                preferences("CachingHeader");
             }
         }
     }
@@ -8921,7 +8921,7 @@ void MW::cachePreferences()
 {
     // if (G::isLogger)
         G::log("MW::cachePreferences");
-    preferences("ProductivityHeader");
+    preferences("CachingHeader");
 }
 
 void MW::preferences(QString text)
@@ -10356,8 +10356,8 @@ void buildRefineGuide(const WorkingImage &src, std::vector<float> &guide)
 
 /*
     LENS CORRECTIONS ON THE BASE (Develop/lensprofile.h + Develop/lenscorrect.h;
-    EditParams::lensProfile / lensDistortion / lensVignetting / lensProfileId / removeCA /
-    defringePurple / defringeGreen, Global scope only).
+    EditParams::lensProfile / lensDistortion / lensVignetting / lensProfileId /
+    lensManual* / removeCA / defringePurple / defringeGreen, Global scope only).
 
     ORDER: the lens PROFILE first (devignette, then undistort + the profile's TCA in one
     resample -- lensfun's order), then the image-measured CA when the profile has no TCA
@@ -10441,23 +10441,36 @@ LensDb::Shot lensShotFromMetadata(const ImageMetadata &m)
 LensProfileState lensProfileState(const LensDb::Shot &shot, const EditParams &g, bool isRaw)
 {
     LensProfileState st;
-    if (!g.wantsLensProfile(G::autoLensProfile, isRaw)) return st;
-    const LensDb::Resolved r = LensDb::resolve(shot, g.lensProfileId);
-    if (!r.ok()) return st;
-    st.coeffs = r.coeffs;
+    /* The profile's terms when it is wanted and resolves; otherwise st.coeffs stays
+       empty and only the manual terms (which need no profile) can make it active. */
+    QString id = QStringLiteral("manual");
+    if (g.wantsLensProfile(G::autoLensProfile, isRaw)) {
+        const LensDb::Resolved r = LensDb::resolve(shot, g.lensProfileId);
+        if (r.ok()) {
+            st.coeffs = r.coeffs;
+            id = r.lens->id();
+        }
+    }
     st.amounts.distortion = g.lensDistortion;
     st.amounts.vignetting = g.lensVignetting;
     st.amounts.tca = g.wantsRemoveCA(G::autoRemoveCA, isRaw);
+    st.amounts.manualDistortion = g.lensManualDistortion;
+    st.amounts.manualVignetting = g.lensManualVignetting;
+    st.amounts.manualMidpoint = g.lensManualMidpoint;
     st.on = LensProfile::active(st.coeffs, st.amounts);
     if (!st.on) return st;
     const bool tca = st.amounts.tca && st.coeffs.hasTca();
     if (LensProfile::geometryActive(st.coeffs, st.amounts))
-        st.geomKey = QString("%1|f%2|d%3|t%4").arg(r.lens->id()).arg(double(shot.focal))
+        st.geomKey = QString("%1|f%2|d%3|t%4|md%5").arg(id).arg(double(shot.focal))
                          .arg(double(st.coeffs.hasDistortion() ? g.lensDistortion : 0.0f))
-                         .arg(tca ? 1 : 0);
-    st.key = QString("%1|a%2|v%3").arg(st.geomKey.isEmpty() ? r.lens->id() : st.geomKey)
+                         .arg(tca ? 1 : 0)
+                         .arg(double(g.lensManualDistortion));
+    const bool manualVig = g.lensManualVignetting != 0.0f;
+    st.key = QString("%1|a%2|v%3|mv%4,%5").arg(st.geomKey.isEmpty() ? id : st.geomKey)
                  .arg(double(shot.aperture))
-                 .arg(double(st.coeffs.vig ? g.lensVignetting : 0.0f));
+                 .arg(double(st.coeffs.vig ? g.lensVignetting : 0.0f))
+                 .arg(double(g.lensManualVignetting))
+                 .arg(double(manualVig ? g.lensManualMidpoint : 0.0f));
     return st;
 }
 
@@ -13231,13 +13244,14 @@ void MW::renderDevelopFullResAsync()
        and bail -- ensureRawDenoise() repaints and re-arms this render when it lands. */
     const std::shared_ptr<const WorkingImage> base = developRawDenoisedBase(fPath, mj.global, work);
     if (base == work &&
-        (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
+        (mj.global.denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
+         mj.global.denoiseChromaOr(G::denoiseChromaDefault) > 0.0f) &&
         G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
-        /* Run PMRID when the RECIPE wants it: EditParams::denoiseRaw, falling back to the
-           Auto run preference when the image says nothing. This used to be "Auto run OR a
-           PMRID base is already cached", the second half being how a manual-mode amount
-           change stayed denoised instead of reverting to clean -- the recipe answers that
-           now (the checkbox pins denoiseRaw = 1), and the old OR would render a
+        /* Run PMRID when wantsDenoiseRaw says so: Auto run, or the image opted in
+           (EditParams::denoiseRaw = 1, the "Run on this image" box). This used to be
+           "Auto run OR a PMRID base is already cached", the second half being how a
+           manual-mode amount change stayed denoised instead of reverting to clean -- the
+           recipe answers that now, and the old OR would render a
            deliberately UN-denoised image denoised whenever a base happened to be cached
            for it. An amount change is still only a cheap re-blend: ensureRawDenoise
            reuses developPmridFull, which is amount-independent. */
@@ -13568,7 +13582,8 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
 static QString rawDenoiseKey(const QString &fPath, const EditParams &base, int iso)
 {
     return QString("%1|dnL=%2|dnC=%3|iso=%4")
-        .arg(fPath).arg(base.denoiseLuma).arg(base.denoiseChroma).arg(iso);
+        .arg(fPath).arg(base.denoiseLumaOr(G::denoiseLumaDefault))
+        .arg(base.denoiseChromaOr(G::denoiseChromaDefault)).arg(iso);
 }
 
 /* Cache key for the FULL-strength PMRID base (amount-independent -- the model runs once per image;
@@ -13619,7 +13634,8 @@ std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
     is the base; otherwise the clean cached image is used (and ensureRawDenoise() computes the
     denoised one off-thread on settle). Pure lookup -- never runs the model.
 */
-    if (!clean || (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f))
+    if (!clean || (base.denoiseLumaOr(G::denoiseLumaDefault) <= 0.0f &&
+                   base.denoiseChromaOr(G::denoiseChromaDefault) <= 0.0f))
         return clean;
     /* PMRID is Winnow-engine only; on the Apple engine "Denoise raw" is inert, so serve
        the clean base even if a Winnow-denoised base is still cached (the key is engine-
@@ -13647,7 +13663,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     re-blends without re-running the model. Callable on image select (clean == null): the
     worker decodes both bases and progress shows from the start. Coalesced -- one job.
 */
-    if (base.denoiseLuma <= 0.0f && base.denoiseChroma <= 0.0f) return;
+    if (base.denoiseLumaOr(G::denoiseLumaDefault) <= 0.0f &&
+        base.denoiseChromaOr(G::denoiseChromaDefault) <= 0.0f) return;
     /* PMRID needs the CFA mosaic -> Winnow engine only. On the Apple engine "Denoise raw"
        is inert; bail so a slider drag doesn't trigger a full re-decode that denoises
        nothing. */
@@ -13778,7 +13795,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         auto blended = std::make_shared<WorkingImage>();
         QElapsedTimer blendT;
         blendT.start();
-        Develop::BlendRawDenoise(*cleanBase, *pmrid, b.denoiseLuma, b.denoiseChroma, *blended);
+        Develop::BlendRawDenoise(*cleanBase, *pmrid, b.denoiseLumaOr(G::denoiseLumaDefault),
+                                 b.denoiseChromaOr(G::denoiseChromaDefault), *blended);
         const double blendMs = blendT.nsecsElapsed() / 1e6;
         std::shared_ptr<const WorkingImage> result = blended;
         const double jobMs = jobT.nsecsElapsed() / 1e6;
@@ -13887,14 +13905,19 @@ void MW::onAutoRunDenoiseToggled(bool on)
     if (G::isLogger) G::log("MW::onAutoRunDenoiseToggled");
     G::autoRunDenoise = on;
     settings->setValue("Develop/autoRunDenoise", on);
-    /* Turning auto ON behaves "as currently done": run the denoise for the current image
-       now so it updates without waiting for the next param change. NOT for an image whose
-       recipe pins denoiseRaw OFF -- the preference is the fallback for images that said
-       nothing, and it must not override one that did. */
-    if (!on) return;
-    const bool pinnedOff = developProperties &&
-                           developProperties->stackJob().global.denoiseRaw == 0;
-    if (!pinnedOff) runRawDenoiseNow();
+    /* ON: every raw is denoised (Auto run overrides a per-image "off" -- see
+       EditParams::wantsDenoiseRaw), so run the current image now rather than waiting for
+       the next param change. OFF: the Raw panel now shows "Run on this image"; unless
+       THIS image opted in itself, drop its denoised base and re-render clean, so the
+       unchecked box matches the loupe (the bases stay in PmridCache, so re-ticking is
+       instant). */
+    if (on) {
+        runRawDenoiseNow();
+        return;
+    }
+    const bool optedIn = developProperties &&
+                         developProperties->stackJob().global.denoiseRaw > 0;
+    if (!optedIn) clearRawDenoiseNow();
 }
 
 void MW::runRawDenoiseNow()
@@ -13905,9 +13928,9 @@ void MW::runRawDenoiseNow()
     if (fPath.isEmpty()) return;
     /* PMRID is Winnow-engine only; inert on Apple. */
     if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
-    /* Known not to work here: undo the tick and grey the group rather than leave a checked
-       box over an image that will never change (ensureRawDenoise would just bail). Normally
-       unreachable -- the controls are already disabled by then. */
+    /* Known not to work here: grey the group and say why rather than leave live-looking
+       controls over an image that will never change (ensureRawDenoise would just bail).
+       Normally unreachable -- the controls are already disabled by then. */
     if (!rawDenoiseAvailable(fPath)) {
         reportRawDenoiseUnavailable(fPath);
         return;
@@ -14850,15 +14873,16 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
 
        Gated on the GUI thread: rawDenoiseAvailable reads session state (the unsupported-
        sensor set). Only the heavy PMRID decode goes to the worker.
-       GATED ON THE RECIPE, not on the amounts alone. EditParams defaults denoiseLuma to
-       0.75 and denoiseChroma to 1.0 -- NON-ZERO -- so "amounts > 0" is true for every raw
-       including an unedited one, and testing only that would run PMRID on every image the
-       exporter and the preview builder touch. EditParams::denoiseRaw carries the stored
+       GATED ON THE RECIPE, not on the amounts alone. The effective amounts (the
+       image's own, else the remembered ones, 0.75 / 1.0 by default) are NON-ZERO, so
+       "amounts > 0" is true for every raw including an unedited one, and testing only
+       that would run PMRID on every image the exporter and the preview builder touch. EditParams::denoiseRaw carries the stored
        intent (falling back to the Auto run preference when the image says nothing), so
        this reads the same answer the interactive render does. */
     const bool wantDenoise =
         mj.global.wantsDenoiseRaw(G::autoRunDenoise) &&
-        (mj.global.denoiseLuma > 0.0f || mj.global.denoiseChroma > 0.0f) &&
+        (mj.global.denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
+         mj.global.denoiseChromaOr(G::denoiseChromaDefault) > 0.0f) &&
         G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine &&
         rawDenoiseAvailable(fPath);
     /* Reuse the live session's full-strength PMRID base when it belongs to THIS image, so
@@ -14959,8 +14983,10 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             }
             if (pmrid && applied) {
                 auto blended = std::make_shared<WorkingImage>();
-                Develop::BlendRawDenoise(*work, *pmrid, mj.global.denoiseLuma,
-                                         mj.global.denoiseChroma, *blended);
+                Develop::BlendRawDenoise(*work, *pmrid,
+                                         mj.global.denoiseLumaOr(G::denoiseLumaDefault),
+                                         mj.global.denoiseChromaOr(G::denoiseChromaDefault),
+                                         *blended);
                 src = blended;
             }
         }

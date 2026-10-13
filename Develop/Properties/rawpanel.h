@@ -20,10 +20,11 @@ class PanelEditor;
         | Raw                               [?] |
         | Edit: (o) Raw  ( ) Embedded Preview   |
         | Demosaic   [ Winnow            v ]     |   <- Demosaic/Denoise hidden unless Raw
-        | Denoise [x]            Auto run [x]    |   <- Denoise block hidden on Apple
+        | Noise Reduction:                      |   <- Denoise block hidden on Apple
+        |   Auto run [ ]   Run on this image [ ] |   <- "Run on..." only while Auto off
         |   <reason>                            |   <- only when denoise cannot run
-        |   Lum   ------o------                 |
-        |   Color -----------o-                 |
+        |   Lum   ------o------                 |   <- only once this image is
+        |   Color -----------o-                 |      denoised (setDenoiseRunState)
 
     Like TransformPanel it carries NO model state: every control emits a signal and every
     display is pushed back in by DevelopProperties (setEditSource / setEngine /
@@ -43,14 +44,19 @@ public:
     /* The Apple decoder versions the current image supports (newest first) and the one
        its decode used; empty / 0 before it has been decoded. */
     void setAppleVersions(const QList<int> &newestFirst, int used);
-    /* denoised: a PMRID base is ready (checkbox -> "Denoised", sliders enabled). */
+    /* denoised: a PMRID base is ready for this image -> the Lum / Color sliders SHOW
+       (they only scale that base, so they are hidden until it exists). */
     void setDenoiseRunState(bool denoised);
-    /* available == false greys the whole denoise group (checkbox, Auto run, amounts) and
-       shows `reason` in its place, so a denoise that CANNOT work says so up front instead
-       of accepting a click and quietly changing nothing. Sticky: setDenoiseRunState will
-       not re-enable the amounts while it is false. */
+    /* "Run on this image" shows the image's SAVED choice (EditParams::denoiseRaw == 1),
+       not whether the denoise has finished -- so it does not read unticked while a
+       ticked image is still denoising. Silent: no denoiseRunToggled. */
+    void setRunOnImage(bool on);
+    /* available == false greys the denoise group (checkbox, Auto run), hides the amounts
+       and shows `reason` in its place, so a denoise that CANNOT work says so up front
+       instead of accepting a click and quietly changing nothing. Sticky:
+       setDenoiseRunState will not show the amounts while it is false. */
     void setDenoiseAvailable(bool available, const QString &reason = QString());
-    void setAutoRun(bool on);
+    void setAutoRun(bool on);                     // also shows/hides "Run on this image"
     void setDenoiseValues(int luma0to100, int chroma0to100);
     void setCaptionWidth(int w);                  // align denoise sliders to the tree
     /* Collapse state, so the panel can take part in the tree's Solo / Expand-all /
@@ -65,7 +71,7 @@ signals:
     void editSourceChanged(bool raw);             // Raw / Embedded Preview
     void demosaicChanged(bool apple);             // Apple (true) / Winnow (false)
     void appleVersionChanged(int pin);            // an Apple entry: 0 = newest, else N
-    void denoiseRunToggled(bool on);              // "Denoise" checkbox (run / clear)
+    void denoiseRunToggled(bool on);              // "Run on this image" (run / clear)
     void autoRunToggled(bool on);                 // "Auto run" checkbox
     void denoiseLumaChanged(int value0to100);
     void denoiseChromaChanged(int value0to100);
@@ -79,6 +85,8 @@ private:
     void buildUi();
     void toggleCollapsed();                       // arrow / caption click
     void updateCollapseIcon();
+    void updateRunOnImageVisible();               // hidden while Auto run is on
+    void updateAmountsVisible();                  // denoiseReady && denoiseAvailable
     void rebuildEngineCombo();                    // from the three members below
 
     QSettings    *setting      = nullptr;
@@ -97,11 +105,12 @@ private:
     bool          engineApple  = true;
     QWidget      *denoiseBlock = nullptr;         // Denoise row + sliders (Apple hides)
     QWidget      *appleBlock   = nullptr;         // "View cameras supported" (Apple only)
-    QCheckBox    *denoiseCheck = nullptr;
+    QCheckBox    *denoiseCheck = nullptr;         // "Run on this image"
     QCheckBox    *autoRunCheck = nullptr;
     PanelEditor  *denoiseEditor = nullptr;        // tree-styled Lum/Color sliders
     QLabel       *denoiseNote  = nullptr;         // why the group is greyed (hidden when ok)
     bool          denoiseAvailable = true;        // false: PMRID cannot run here
+    bool          denoiseReady = false;           // a PMRID base exists for this image
 };
 
 #endif // RAWPANEL_H

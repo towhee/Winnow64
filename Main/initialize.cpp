@@ -1624,12 +1624,8 @@ void MW::createStatusBar()
     previewSourceCombo->addItem("Developed");
     previewSourceCombo->setCurrentIndex(int(G::previewSource));
     previewSourceCombo->setFocusPolicy(Qt::NoFocus);
-    previewSourceCombo->setToolTip(
-        "What you are looking at:\n"
-        "  Original — the camera's picture, as shot\n"
-        "  Developed — your develop edits applied\n"
-        "Shortcut: Y\n\n"
-        "Develop mode (D) always shows the developed image.");
+    previewSourceCombo->setToolTip("Show the original photo or your developed version  "
+                                   "(\\ or Y)");
     /* Pin the width to the widest item via the STYLESHEET min-width/max-width. The global widget
        CSS (widgetcss.cpp) sets "QComboBox { min-width: 6em }", and in Qt a stylesheet min-width
        OVERRIDES setFixedWidth() -- so the width must be a stylesheet property here to win. Width =
@@ -2917,6 +2913,10 @@ void MW::createDevelopDock()
     G::autoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
     G::autoRemoveCA = settings->value("Develop/autoRemoveCA", false).toBool();
     G::autoLensProfile = settings->value("Develop/autoLensProfile", false).toBool();
+    G::denoiseLumaDefault = qBound(0.0f, settings->value("Develop/denoiseLumaDefault",
+                                   EditParams::kDefaultDenoiseLuma).toFloat(), 1.0f);
+    G::denoiseChromaDefault = qBound(0.0f, settings->value("Develop/denoiseChromaDefault",
+                                     EditParams::kDefaultDenoiseChroma).toFloat(), 1.0f);
     LensDb::preload();       // parse the lens database off the GUI thread, ahead of need
     QWidget *developContainer = new QWidget(developDock);
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
@@ -3209,9 +3209,8 @@ void MW::createDevelopDock()
     // show/hide the histogram + vectorscope scopes strip
     developScopesBtn = new BarBtn();
     developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
-    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.  "
-                                 "Right click the scopes (or use Develop > Scopes) to "
-                                 "choose which scopes are shown.");
+    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.\n"
+                                 "Right-click the scopes to choose which are shown.");
     developScopesBtn->setActive(developScopesVisible);
     connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
     developActionLayout->addWidget(developScopesBtn);
@@ -3246,9 +3245,8 @@ void MW::createDevelopDock()
        apps. The WB dropper's pipette glyph, ghosted while armed like that dropper. */
     developSamplerBtn = new BarBtn();
     developSamplerBtn->setIcon(DevelopProperties::dropperIcon(false));
-    developSamplerBtn->setToolTip("Screen sampler: click anywhere on any screen -- in any "
-                                  "app -- to read the 5x5 average colour.\n"
-                                  "Opens a readout that keeps recent samples to compare.");
+    developSamplerBtn->setToolTip("Read the colour of any point on screen, even in "
+                                  "another app.");
     connect(developSamplerBtn, &BarBtn::clicked, this, &MW::toggleScreenSampler);
     developActionLayout->addWidget(developSamplerBtn);
     developActionLayout->addSpacing(10);
@@ -3259,9 +3257,8 @@ void MW::createDevelopDock()
        it is on (blue active border, same as the other action buttons). Repainted by
        refreshDevelopMaskTintBtn on both the visibility and the colour signals. */
     developMaskTintBtn = new BarBtn();
-    developMaskTintBtn->setToolTip("Show or hide the mask overlay tint  (O)\n"
-                                   "Right-click: overlay colour / grayscale background\n"
-                                   "Note: the Global scope has no mask, so no overlay.");
+    developMaskTintBtn->setToolTip("Show or hide the mask overlay  (O)\n"
+                                   "Right-click for colour options.");
     connect(developMaskTintBtn, &BarBtn::clicked, this, &MW::toggleMaskOverlay);
     /* Right-click picks the colour and flips the grayscale background -- the Mask panel's
        chips, reachable without opening (or even having) a mask. */
@@ -3565,10 +3562,9 @@ void MW::createModuleDock()
     sourceLibraryBtn->setText(tr("Library"));
     sourceFoldersBtn->setText(tr("Folders"));
     sourceLibraryBtn->setToolTip(tr(
-        "Browse the whole Library: every catalogued image, across all its folders.  "
-        "(Ctrl+Shift+L)"));
+        "Browse every image in the Library.  (Ctrl+Shift+L)"));
     sourceFoldersBtn->setToolTip(tr(
-        "Browse folders on disk, chosen in the Folders panel.  (Ctrl+Shift+F)"));
+        "Browse any folder on disk.  (Ctrl+Shift+F)"));
     QButtonGroup *sourceGroup = new QButtonGroup(sourceBox);
     sourceGroup->setExclusive(true);
     for (QToolButton *b : {sourceLibraryBtn, sourceFoldersBtn}) {

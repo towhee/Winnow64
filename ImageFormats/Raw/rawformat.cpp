@@ -227,7 +227,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        edit->denoiseRaw is the stored intent. */
     const bool savedDenoise = !denoiseRaw && edit && winnowEngine &&
                               edit->wantsDenoiseRaw(G::autoRunDenoise) &&
-                              (edit->denoiseLuma > 0.0f || edit->denoiseChroma > 0.0f);
+                              (edit->denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
+                               edit->denoiseChromaOr(G::denoiseChromaDefault) > 0.0f);
     const bool wantPmrid = !decoded && ((denoiseRaw && winnowEngine) || savedDenoise);
     std::shared_ptr<const WorkingImage> pmridHit;
     std::optional<PmridCache::Claim> pmridClaim;
@@ -403,8 +404,10 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             if (den) {
                 lap();
                 denoisedBase = std::make_shared<WorkingImage>();
-                Develop::BlendRawDenoise(*work, *den, edit->denoiseLuma,
-                                         edit->denoiseChroma, *denoisedBase);
+                Develop::BlendRawDenoise(*work, *den,
+                                         edit->denoiseLumaOr(G::denoiseLumaDefault),
+                                         edit->denoiseChromaOr(G::denoiseChromaDefault),
+                                         *denoisedBase);
                 dt.blendMs = lap();
                 dt.valid = true;
             }

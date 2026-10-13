@@ -911,7 +911,7 @@ public slots:
     void resumeIncompleteCatalogScan();
     /* Open the Catalogued Folders editor -- which folders are indexed in the background.
        Created on first use and kept, so it can stay open while a scan runs. Reachable
-       from the Catalog panel and from Preferences > Catalog. */
+       from the Catalog panel and File > Manage Catalog. */
     void manageCatalogRoots();
     /* Drop the develop caches that belong to the images being replaced. Shared by
        folderSelectionChange and loadCatalogResults. */

@@ -46,6 +46,18 @@
     two happen in one pass: each channel is sampled at its own TCA position and then
     devignetted at that position.
 
+    MANUAL CORRECTIONS (Amounts::manual*, Lightroom's Manual tab) ride the same pass and
+    need no profile -- a lens lensfun has never calibrated still gets them. They are
+    defined on the FRAME, not on a calibration sensor: rn = 1 at the frame's corner
+    (half its diagonal), about the same centre as the profile.
+      distortion  the output position is first scaled by M = 1 - kManualDistK * m * rn^2,
+                  then handed to the profile (manual is a correction ON TOP of it).
+                  m > 0 corrects barrel (pulls the corners out), m < 0 pincushion.
+      vignetting  gain = 2^(v * kManualVigEV * rn^p), p = 2^(3 * midpoint): midpoint 0
+                  reaches far into the frame, 1 only the corners. Evaluated at the PHOTO
+                  position, like the profile's devignette. v > 0 brightens the corners.
+    Both are in the auto-scale, so manual distortion never shows empty corners either.
+
     Header-only, OpenCV core only, no Qt -- tests/unit/tst_lensprofile.cpp.
 */
 
@@ -87,12 +99,23 @@ struct Coeffs {
 };
 
 /* What the user asked for. distortion / vignetting are 0..2 (1 = the profile as
-   calibrated); tca is whether the profile's TCA is used (the Remove CA checkbox). */
+   calibrated); tca is whether the profile's TCA is used (the Remove CA checkbox).
+   manual* need no profile: manualDistortion / manualVignetting -1..1 (0 = none),
+   manualMidpoint 0..1 (see the header comment). */
 struct Amounts {
     float distortion = 1.0f;
     float vignetting = 1.0f;
     bool  tca = true;
+    float manualDistortion = 0.0f;
+    float manualVignetting = 0.0f;
+    float manualMidpoint = 0.5f;
 };
+
+/* Manual correction strength at full slider (+-100): the corner's radial scale and its
+   exposure. Tuning constants -- recipes store the slider, so changing these re-renders
+   every saved manual correction. */
+constexpr double kManualDistK = 0.10;
+constexpr double kManualVigEV = 2.0;
 
 /* ------------------------------------------------------------------------------------
    The radial functions
@@ -149,6 +172,20 @@ inline double vignettingGain(const Coeffs &k, double r, double amount = 1.0)
     return amount == 1.0 ? g : std::pow(g, amount);
 }
 
+/* Manual distortion's radial scale at frame radius rn (1 = the corner). */
+inline double manualDistortionFactor(const Amounts &a, double rn)
+{
+    return 1.0 - kManualDistK * double(a.manualDistortion) * rn * rn;
+}
+
+/* Manual devignetting gain at frame radius rn. */
+inline double manualVignettingGain(const Amounts &a, double rn)
+{
+    if (a.manualVignetting == 0.0f) return 1.0;
+    const double p = std::exp2(3.0 * std::clamp(double(a.manualMidpoint), 0.0, 1.0));
+    return std::exp2(double(a.manualVignetting) * kManualVigEV * std::pow(rn, p));
+}
+
 /* ------------------------------------------------------------------------------------
    Geometry of one frame
    ------------------------------------------------------------------------------------ */
@@ -158,6 +195,7 @@ struct Frame {
     double cx = 0.0, cy = 0.0;      // optical centre, pixels
     double pxToDist = 1.0;          // pixel distance -> distortion/TCA units
     double pxToVig = 1.0;           // pixel distance -> vignetting units
+    double pxToManual = 1.0;        // pixel distance -> frame radius (1 = the corner)
 
     Frame() = default;
     Frame(const Coeffs &k, int W, int H)
@@ -170,6 +208,7 @@ struct Frame {
         const double vigMm = lensDiagMm / 2.0;
         pxToDist = mmPerPx / distMm;
         pxToVig = mmPerPx / vigMm;
+        pxToManual = 2.0 / std::max(1.0, std::hypot(double(W - 1), double(H - 1)));
         const double shortHalf = (std::min(W, H) - 1) / 2.0;
         cx = (W - 1) / 2.0 + shortHalf * k.centerX;
         cy = (H - 1) / 2.0 + shortHalf * k.centerY;
@@ -186,7 +225,12 @@ inline Lookup lookup(const Coeffs &k, const Amounts &a, const Frame &f,
                      double dx, double dy, double invScale)
 {
     Lookup L;
-    const double qx = dx * invScale, qy = dy * invScale;
+    double qx = dx * invScale, qy = dy * invScale;
+    if (a.manualDistortion != 0.0f) {
+        const double M = manualDistortionFactor(a, std::hypot(qx, qy) * f.pxToManual);
+        qx *= M;
+        qy *= M;
+    }
     const double ru = std::hypot(qx, qy) * f.pxToDist;
     const double D = distortionFactor(k, ru, a.distortion);
     const double ddx = qx * D, ddy = qy * D;
@@ -204,7 +248,22 @@ inline Lookup lookup(const Coeffs &k, const Amounts &a, const Frame &f,
 
 inline bool geometryActive(const Coeffs &k, const Amounts &a)
 {
-    return (k.hasDistortion() && a.distortion != 0.0f) || (k.hasTca() && a.tca);
+    return (k.hasDistortion() && a.distortion != 0.0f) || (k.hasTca() && a.tca)
+           || a.manualDistortion != 0.0f;
+}
+
+inline bool vignettingActive(const Coeffs &k, const Amounts &a)
+{
+    return (k.vig && a.vignetting != 0.0f) || a.manualVignetting != 0.0f;
+}
+
+/* Profile and manual devignetting combined, at photo offset (dx, dy) from the centre. */
+inline double totalVignettingGain(const Coeffs &k, const Amounts &a, const Frame &f,
+                                  double dx, double dy)
+{
+    const double r = std::hypot(dx, dy);
+    return vignettingGain(k, r * f.pxToVig, a.vignetting)
+           * manualVignettingGain(a, r * f.pxToManual);
 }
 
 /*
@@ -291,7 +350,7 @@ inline void applyRegion(const float *src, int W, int H, float *dst,
     if (!src || !dst || W < 2 || H < 2 || w <= 0 || h <= 0) return;
     const Frame f(k, W, H);
     const bool geom = geometryActive(k, a);
-    const bool vig = k.vig && a.vignetting != 0.0f;
+    const bool vig = vignettingActive(k, a);
     const double inv = 1.0 / std::max(1e-6, scale);
     forRows(h, [&](int yy) {
         const int y = y0 + yy;
@@ -301,8 +360,7 @@ inline void applyRegion(const float *src, int W, int H, float *dst,
             if (!geom) {
                 const size_t si = (size_t(std::clamp(y, 0, H - 1)) * W
                                    + size_t(std::clamp(x, 0, W - 1))) * 3;
-                const double g = vig ? vignettingGain(k, std::hypot(x - f.cx, y - f.cy)
-                                                         * f.pxToVig, a.vignetting)
+                const double g = vig ? totalVignettingGain(k, a, f, x - f.cx, y - f.cy)
                                      : 1.0;
                 for (int c = 0; c < 3; ++c) o[xx * 3 + c] = float(src[si + c] * g);
                 continue;
@@ -312,9 +370,8 @@ inline void applyRegion(const float *src, int W, int H, float *dst,
             for (int c = 0; c < 3; ++c) {
                 float v = sampleChannel(src, W, H, c, L.sx[c], L.sy[c]);
                 if (vig)
-                    v = float(v * vignettingGain(k, std::hypot(L.sx[c] - f.cx,
-                                                               L.sy[c] - f.cy) * f.pxToVig,
-                                                 a.vignetting));
+                    v = float(v * totalVignettingGain(k, a, f, L.sx[c] - f.cx,
+                                                      L.sy[c] - f.cy));
                 o[xx * 3 + c] = v;
             }
         }
@@ -323,7 +380,7 @@ inline void applyRegion(const float *src, int W, int H, float *dst,
 
 inline bool active(const Coeffs &k, const Amounts &a)
 {
-    return geometryActive(k, a) || (k.vig && a.vignetting != 0.0f);
+    return geometryActive(k, a) || vignettingActive(k, a);
 }
 
 }   // namespace LensProfile

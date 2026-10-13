@@ -312,12 +312,9 @@ void Filters::createPredefinedFilters()
     searchTrue->setFont(0, searchDefaultTextFont);
     searchTrue->setForeground(0, searchDefaultTextColor);
     searchTrue->setToolTip(0,
-        "Click to type a query, then press Return to run it.\n\n"
-        "Words are AND-ed. Use OR between alternatives, (brackets) to group,\n"
-        "\"quotes\" for a phrase, and -word or NOT word to leave something out.\n\n"
-        "Text is not case sensitive; OR, AND and NOT are operators only in capitals.\n"
-        "Click ? in the Filters title bar for the full syntax.\n\n"
-        "Right-click for a larger editing window, and to save and load queries.");
+        "Click to type a search, then press Return.\n"
+        "Use OR, \"quotes\" and -word to refine it. Click ? in the title bar for more.\n"
+        "Right-click to save or load queries.");
     searchTrueIdx = indexFromItem(searchTrue, 0);
 
     searchFalse = new QTreeWidgetItem(search);
@@ -408,14 +405,11 @@ void Filters::createDynamicFilters()
     createFilter(creators, catCreator);
     createFilter(gps, catGps);
     createFilter(places, catPlace);
-    places->setToolTip(0, tr("Your places, from the Places panel: areas drawn on the "
-                             "map.\nAn image is in a place when its GPS location is "
-                             "inside it.\nClick + in the Places panel to draw one."));
+    places->setToolTip(0, tr("Areas you drew on the map. Shows the images taken inside "
+                             "them."));
     createFilter(mapPins, catMapPin);
-    mapPins->setToolTip(0, tr("Click a pin in the Map module to show only the images "
-                              "in it.\nIt replaces every other filter, as a Collection "
-                              "or Bookmark click does.\nUncheck it to show every image "
-                              "again."));
+    mapPins->setToolTip(0, tr("The images in the map pin you clicked. Uncheck to show "
+                              "all images again."));
     createFilter(availability, catAvailability);
     // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
@@ -1897,10 +1891,8 @@ void Filters::setKeywordCategoryToolTip()
     if (G::isLogger) G::log("Filters::setKeywordCategoryToolTip");
 
     keywords->setToolTip(0,
-        "A keyword is its whole path, so the same name under two parents is two\n"
-        "keywords with two counts.\n\n"
-        "Every image is also linked to each ANCESTOR of its keywords, so including\n"
-        "a parent finds everything beneath it.");
+        "Including a keyword also finds the keywords filed under it.\n"
+        "The same name under two parents counts as two keywords.");
 
     /*  The per-item tooltips are set by addKeywordItems as each node is built, because a
         nested item's tooltip carries its full PATH -- which is how two keywords sharing a
@@ -3720,11 +3712,10 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         item->setData(0, DuplicateRole, true);
         styleFilterItem(item);
         item->setToolTip(0, QString(
-            "%1\n\nA TOP-LEVEL keyword, filed under nothing. The same name also appears "
-            "in the tree as:\n    %2\n\nThose are different keywords -- a keyword is its "
-            "whole path -- so this filters only the images tagged with the bare name.\n\n"
+            "%1 (not filed under anything)\n"
+            "Also filed as: %2 -- those are separate keywords.\n"
             "Click to include. Opt+click to exclude.")
-            .arg(path, also.join("\n    ")));
+            .arg(path, also.join(", ")));
     }
 
     updateKeywordCategoryHeader();

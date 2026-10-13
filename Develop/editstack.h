@@ -303,8 +303,11 @@ struct EditStack {
         o["gradeGlobalLum"]  = p.gradeGlobalLum;
         o["gradeBlending"]   = p.gradeBlending;
         o["gradeBalance"]    = p.gradeBalance;
-        o["denoiseLuma"]     = p.denoiseLuma;
-        o["denoiseChroma"]   = p.denoiseChroma;
+        /* Written only when SET (>= 0): unset (-1) follows the remembered amounts, and
+           this object is also the devPreview key, so emitting it would re-key untouched
+           images. See EditParams::denoiseLuma. */
+        if (p.denoiseLuma >= 0.0f)   o["denoiseLuma"]   = p.denoiseLuma;
+        if (p.denoiseChroma >= 0.0f) o["denoiseChroma"] = p.denoiseChroma;
         /* Written only when SET. -1 means "follow the Auto run preference", i.e. nothing
            was decided -- and this object is also the devPreview key and the per-scope
            render cache's invalidation key, so emitting it unconditionally would change
@@ -318,6 +321,9 @@ struct EditStack {
         if (p.lensDistortion != 1.0f) o["lensDistortion"] = p.lensDistortion;
         if (p.lensVignetting != 1.0f) o["lensVignetting"] = p.lensVignetting;
         if (!p.lensProfileId.isEmpty()) o["lensProfileId"] = p.lensProfileId;
+        if (p.lensManualDistortion != 0.0f) o["lensManualDistortion"] = p.lensManualDistortion;
+        if (p.lensManualVignetting != 0.0f) o["lensManualVignetting"] = p.lensManualVignetting;
+        if (p.lensManualMidpoint != 0.5f)   o["lensManualMidpoint"]   = p.lensManualMidpoint;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
         o["localDenoiseChroma"]= p.localDenoiseChroma;
         o["sharpenAmount"]   = p.sharpenAmount;
@@ -396,6 +402,12 @@ struct EditStack {
         p.lensDistortion  = static_cast<float>(o.value("lensDistortion").toDouble(p.lensDistortion));
         p.lensVignetting  = static_cast<float>(o.value("lensVignetting").toDouble(p.lensVignetting));
         p.lensProfileId   = o.value("lensProfileId").toString(p.lensProfileId);
+        p.lensManualDistortion = static_cast<float>(
+            o.value("lensManualDistortion").toDouble(p.lensManualDistortion));
+        p.lensManualVignetting = static_cast<float>(
+            o.value("lensManualVignetting").toDouble(p.lensManualVignetting));
+        p.lensManualMidpoint   = static_cast<float>(
+            o.value("lensManualMidpoint").toDouble(p.lensManualMidpoint));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
         p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
         p.sharpenAmount   = static_cast<float>(o.value("sharpenAmount").toDouble(p.sharpenAmount));
@@ -702,8 +714,14 @@ struct EditStack {
         if (clampF(p.gradeBlending, 0.0f, 100.0f, def.gradeBlending)) ++fixed;
         if (clampF(p.gradeBalance, -100.0f, 100.0f, def.gradeBalance)) ++fixed;
 
-        if (clampF(p.denoiseLuma,   0.0f, 1.0f, def.denoiseLuma))   ++fixed;
-        if (clampF(p.denoiseChroma, 0.0f, 1.0f, def.denoiseChroma)) ++fixed;
+        /* Amounts: -1 (unset) is legal; any other negative is damage, and unset is the
+           safe way back. */
+        for (float *a : {&p.denoiseLuma, &p.denoiseChroma}) {
+            if (*a < 0.0f) {
+                if (*a != -1.0f) { *a = -1.0f; ++fixed; }
+            }
+            else if (clampF(*a, 0.0f, 1.0f, -1.0f)) ++fixed;
+        }
         /* Tri-state: anything outside -1/0/1 is a damaged sidecar, and "unset" is the
            safe way back -- it renders as the preference says, which is what the image did
            before it was ever denoised. */
@@ -714,6 +732,9 @@ struct EditStack {
         if (p.lensProfile < -1 || p.lensProfile > 1) { p.lensProfile = def.lensProfile; ++fixed; }
         if (clampF(p.lensDistortion, 0.0f, 2.0f, def.lensDistortion)) ++fixed;
         if (clampF(p.lensVignetting, 0.0f, 2.0f, def.lensVignetting)) ++fixed;
+        if (clampF(p.lensManualDistortion, -1.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.lensManualVignetting, -1.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.lensManualMidpoint, 0.0f, 1.0f, def.lensManualMidpoint)) ++fixed;
         if (clampF(p.localDenoiseLuma,   0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.localDenoiseChroma, 0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.sharpenAmount,  0.0f, 1.5f, 0.0f)) ++fixed;

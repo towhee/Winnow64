@@ -370,11 +370,8 @@ void ExportDlg::buildUi()
     spaceCombo->addItem("sRGB", int(OutputSpace::sRGB));
     spaceCombo->addItem("Display P3", int(OutputSpace::DisplayP3));
     spaceCombo->addItem("Adobe RGB", int(OutputSpace::AdobeRGB));
-    spaceCombo->setToolTip(tr("Colour space of the exported file. sRGB is safest for the "
-                              "web and print labs; Display P3 and Adobe RGB are wider, "
-                              "for onward editing or a wide-gamut display.\n\n"
-                              "8-bit Adobe RGB or Display P3 can band in smooth "
-                              "gradients -- prefer 16-bit for those."));
+    spaceCombo->setToolTip(tr("sRGB is safest for the web and print labs. Display P3 and "
+                              "Adobe RGB hold more colour; use 16-bit with them."));
     fmt->addWidget(spaceCombo, 1, 1);
     compressionCapLab = cap(tr("Compression:"), capCol2);
     fmt->addWidget(compressionCapLab, 1, 2);
@@ -542,8 +539,8 @@ void ExportDlg::buildUi()
         for (int r = 0; r < g->rowCount(); ++r)
             g->setRowMinimumHeight(r, rowH);
     copyMetadataChk = new QCheckBox(tr("Copy metadata from the original"), this);
-    copyMetadataChk->setToolTip(tr("Copy EXIF, IPTC and the ICC profile from the source "
-                                   "file. Adds roughly a fifth of a second per image."));
+    copyMetadataChk->setToolTip(tr("Copy the camera and caption information into the "
+                                   "exported file. Slows export a little."));
     embedThumbChk = new QCheckBox(tr("Embed thumbnail"), this);
     QHBoxLayout *metaRow = new QHBoxLayout;
     metaRow->addWidget(copyMetadataChk);
@@ -852,11 +849,8 @@ void ExportDlg::updateEnabledStates()
         exporter && exporter->willTouchLoadedFolder(targetPaths(), current);
     addToViewChk->setEnabled(destLoaded);
     addToViewChk->setToolTip(
-        destLoaded ? tr("The destination folder is open, so the exported files will appear "
-                        "in it either way.\n\n"
-                        "Ticked, they are inserted directly, keeping your place. Unticked, "
-                        "the folder is rescanned to find them, which also picks up any "
-                        "other changes on disk.")
+        destLoaded ? tr("Show the exported files right away, keeping your place.\n"
+                        "Unticked, the folder is reloaded instead.")
                    : tr("The destination folder is not open in Winnow, so there is nothing "
                         "to insert into"));
 

@@ -35,9 +35,8 @@ struct CatalogScanProgress;
     WHY THIS IS NOT IN THE CATALOG DOCK ANY MORE. It was, and it took up the lower third
     of a panel whose whole job is asking questions. Editing the scope is CONFIGURATION --
     done once, revisited rarely -- while the panel above it is used constantly, so the
-    two do not belong in the same column competing for the same vertical space. Everything
-    else configurable in Winnow lives in Preferences, and this now opens from there
-    (Preferences > Catalog) as well as from the dock's own Manage button.
+    two do not belong in the same column competing for the same vertical space. It opens
+    from the dock's own Manage button and File > Manage Catalog.
 
     IT IS NOT MODAL. A scan takes minutes to hours, and this window is where its state is
     shown; a modal dialog would either block the app for the duration or have to be closed

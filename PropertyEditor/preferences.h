@@ -21,7 +21,7 @@ private:
     void addGeneral();
     void addModify();
     void addUserInterface();
-    void addProductivity();
+    void addCaching();
     void addDevPreviews();
     void addCatalog();
 

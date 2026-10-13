@@ -55,11 +55,9 @@ void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effecti
         QStringList modes{"Add"};
         if (!firstSubmask) modes << "Remove";
         modes << "Fix Edge";
-        QString tip = "Add: paint where the mask missed -- only what looks like the mask "
-                      "joins it.\nRemove: paint over what it wrongly took -- only what "
-                      "does not look like it leaves.\nFix Edge: paint along a haloed edge "
-                      "to re-fit it to the picture.\nHolding Opt as a stroke starts "
-                      "paints in Remove.";
+        QString tip = "Add: paint over what the mask missed.\n"
+                      "Remove: paint over what it wrongly took (or hold Opt).\n"
+                      "Fix Edge: paint along a poor edge to snap it to the subject.";
         if (firstSubmask)
             tip += "\n\nRemove is not offered: this is the first submask, so there is "
                    "no mask above it to remove from.";
@@ -162,8 +160,7 @@ void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful)
     wheel = nullptr;
     clearRows();
     addSlider("scopeMaskEdge", "Edge",
-              "Grow (+) or shrink (-) the WHOLE mask -- every submask folded together -- "
-              "in pixels of the full-size image. Adds to each submask's own Edge.",
+              "Grow (+) or shrink (-) the whole mask.",
               -100, 100);
     setSliderReal("scopeMaskEdge",
                   int(edgeVal < 0.0f ? edgeVal - 0.5f : edgeVal + 0.5f));
@@ -172,9 +169,8 @@ void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful)
        they see a glow, not a "misregistered alpha". */
     addSlider("scopeHalo", "Halo",
               haloUseful
-                  ? "Remove the halo left when the mask edge misses the subject: fades "
-                    "the adjustment out across the real edge in the picture. Raise "
-                    "until the rim goes."
+                  ? "Remove a light or dark rim where the mask misses the subject's "
+                    "edge. Raise until the rim goes."
                   : "Needs an edge in the picture to work from. This mask is all "
                     "gradient, so there is none.",
               0, 100);
