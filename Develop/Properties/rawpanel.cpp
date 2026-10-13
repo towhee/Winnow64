@@ -3,11 +3,13 @@
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
 #include "ImageFormats/Raw/applerawdecode.h"
+#include "Dialogs/applecamerasdlg.h"
 
 #include <QLabel>
 #include <QRadioButton>
 #include <QButtonGroup>
 #include <QComboBox>
+#include <QPushButton>
 #include <QCheckBox>
 #include <QFrame>
 #include <QHBoxLayout>
@@ -186,6 +188,40 @@ void RawPanel::buildUi()
     dl->addWidget(demLbl);
     dl->addWidget(engineCombo, 1);
     rb->addWidget(demRow);
+
+    /* Apple block: shown only while an Apple decoder renders -- the counterpart of the
+       Winnow-only denoise block below. A rule, then "View cameras supported". */
+    appleBlock = new QWidget(rawBlock);
+    appleBlock->setAttribute(Qt::WA_TranslucentBackground);
+    QVBoxLayout *ab = new QVBoxLayout(appleBlock);
+    ab->setContentsMargins(0, 0, 0, 0);
+    ab->setSpacing(4);
+    ab->addWidget(makeGroupRule(appleBlock));
+    QWidget *camRow = new QWidget(appleBlock);
+    camRow->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *cl = new QHBoxLayout(camRow);
+    cl->setContentsMargins(10, 0, 10, 0);
+    cl->setSpacing(0);
+    QPushButton *camBtn = new QPushButton(tr("View cameras supported"), camRow);
+    /* Transparent on the panel's lifted background, keeping the app's border and
+       padding. A widget stylesheet outranks the app's QPushButton:hover too, so the hover
+       fill is restated; min-width: 0 defeats the global 100px minimum, which Qt applies
+       as an EXPLICIT minimum that would floor the dock's width (widgetcss.cpp). */
+    camBtn->setStyleSheet(
+        "QPushButton { background: transparent; min-width: 0; }"
+        "QPushButton:hover { background: " + G::groupSeparatorColor.name() + "; }");
+    camBtn->setToolTip(tr("List the cameras Apple supports for each Apple Raw decoder "
+                          "version."));
+    connect(camBtn, &QPushButton::clicked, this, [this]{
+        /* Open on the version this image renders with, else the newest it supports. */
+        const int v = appleUsed > 0 ? appleUsed : appleVersions.value(0);
+        AppleCamerasDlg dlg(v, window());
+        dlg.exec();
+    });
+    cl->addWidget(camBtn);
+    cl->addStretch(1);
+    ab->addWidget(camRow);
+    rb->addWidget(appleBlock);
 
     /* Denoise block (hidden on the Apple engine -- PMRID needs the CFA mosaic). */
     denoiseBlock = new QWidget(rawBlock);
@@ -397,6 +433,7 @@ void RawPanel::setEngine(bool apple)
     rebuildEngineCombo();
     /* PMRID denoise needs the CFA mosaic -> only meaningful on the Winnow engine. */
     if (denoiseBlock) denoiseBlock->setVisible(!apple);
+    if (appleBlock) appleBlock->setVisible(apple);
 }
 
 void RawPanel::setDenoiseRunState(bool denoised)

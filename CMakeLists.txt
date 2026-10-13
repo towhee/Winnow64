@@ -372,6 +372,8 @@ set(WINNOW_SOURCES
     Dialogs/keyworddropdlg.h
     Dialogs/keywordmergedlg.cpp
     Dialogs/keywordmergedlg.h
+    Dialogs/applecamerasdlg.cpp
+    Dialogs/applecamerasdlg.h
     Dialogs/keywordtidydlg.cpp
     Dialogs/keywordtidydlg.h
     Dialogs/keywordauditdlg.cpp

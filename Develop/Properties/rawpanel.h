@@ -96,6 +96,7 @@ private:
     int           appleUsed    = 0;               // the version its decode used
     bool          engineApple  = true;
     QWidget      *denoiseBlock = nullptr;         // Denoise row + sliders (Apple hides)
+    QWidget      *appleBlock   = nullptr;         // "View cameras supported" (Apple only)
     QCheckBox    *denoiseCheck = nullptr;
     QCheckBox    *autoRunCheck = nullptr;
     PanelEditor  *denoiseEditor = nullptr;        // tree-styled Lum/Color sliders

@@ -7,6 +7,9 @@
 #include <QMutex>
 #include <QSet>
 #include <QThreadPool>
+#include <QDir>
+#include <QCryptographicHash>
+#include <sys/sysctl.h>
 #include <atomic>
 #include <dlfcn.h>
 #include <vector>
@@ -39,6 +42,7 @@ struct Chosen { QList<int> newestFirst; int used = 0; };
 QMutex chosenMutex;
 QHash<QString, Chosen> chosenByPath;
 std::function<void(const QString &)> decodedCallback;
+std::atomic<bool> fingerprintStale{true};
 
 int VersionNumber(NSString *v) { return v.intValue; }    // "9" and "9.dng" -> 9
 
@@ -81,6 +85,53 @@ int EffectiveVersionPin()
 {
     const int pin = VersionPin();
     return pin > 0 ? pin : LatestDecoderVersion();
+}
+
+QString SupportFingerprint()
+{
+/*
+    See the header. Three ingredients, read once and again only when marked stale (a
+    resource download this process asked for completed):
+
+      - the macOS build: Core Image's decoders ship with the OS;
+      - RawCamera.bundle's version: Apple's RAW engine, which the Digital Camera RAW
+        Compatibility updates replace;
+      - the names of the downloaded camera assets (MobileAsset RawCamera.Camera), each a
+        content-hashed directory: on macOS 27 support arrives this way too, and a
+        decoder version whose resources are missing falls back to an older one.
+
+    Hashed to 8 hex characters. A change to any of them misses every Apple preview once,
+    which is the point: the version a file decodes with is not knowable without opening
+    it, but it cannot change unless one of these does.
+*/
+    static QMutex m;
+    static QString cached;
+    QMutexLocker lock(&m);
+    if (!fingerprintStale.exchange(false) && !cached.isEmpty()) return cached;
+
+    QByteArray d;
+    char build[64] = {0};
+    size_t len = sizeof(build);
+    if (sysctlbyname("kern.osversion", build, &len, nullptr, 0) == 0) d += build;
+    @autoreleasepool {
+        NSBundle *raw =
+            [NSBundle bundleWithPath:@"/System/Library/CoreServices/RawCamera.bundle"];
+        NSString *v = [raw objectForInfoDictionaryKey:@"CFBundleVersion"];
+        if (v) d += "|raw=" + QByteArray(v.UTF8String);
+    }
+    static const char *const kAssetRoots[] = {
+        "/System/Library/AssetsV2/com_apple_MobileAsset_RawCamera_Camera",
+        "/private/var/MobileAsset/AssetsV2/com_apple_MobileAsset_RawCamera_Camera",
+    };
+    for (const char *root : kAssetRoots) {
+        QStringList assets = QDir(QString::fromLatin1(root))
+            .entryList({"*.asset"}, QDir::Dirs | QDir::NoDotAndDotDot);
+        assets.sort();
+        if (!assets.isEmpty()) d += "|assets=" + assets.join(',').toLatin1();
+    }
+    cached = QString::fromLatin1(
+        QCryptographicHash::hash(d, QCryptographicHash::Sha1).toHex().left(8));
+    return cached;
 }
 
 bool DecodedVersions(const QString &path, QList<int> &newestFirst, int &used)
@@ -200,7 +251,10 @@ bool Decode(const QString &path, WorkingImage &out, QString &err)
                    decode gets the wanted version; a decode never waits on the network. */
 #if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000
                 if (@available(macOS 27.0, *))
-                    [f downloadResourcesWithTimeout:300 completionHandler:^(NSError *) {}];
+                    [f downloadResourcesWithTimeout:300
+                                  completionHandler:^(NSError *e) {
+                        if (!e) fingerprintStale.store(true);   // new support landed
+                    }];
 #endif
                 f.decoderVersion = defaultVersion;
                 img = f.outputImage;
@@ -302,6 +356,60 @@ bool Decode(const QString &path, WorkingImage &out, QString &err)
 
     err = QStringLiteral("Core Image RAW decode requires macOS 12 or later.");
     return false;
+}
+
+QList<int> AvailableVersions()
+{
+    /* The same symbol test as LatestDecoderVersion, for every version: what this macOS
+       can decode with at all, newest first. */
+    static const QList<int> versions = [] {
+        QList<int> v;
+        for (int n = 30; n >= 6; --n) {
+            const QByteArray sym = "CIRAWDecoderVersion" + QByteArray::number(n);
+            if (dlsym(RTLD_DEFAULT, sym.constData()) != nullptr) v << n;
+        }
+        return v;
+    }();
+    return versions;
+}
+
+QStringList SupportedCameraModels(int version, bool *perVersion)
+{
+/*
+    See the header. Cached per version for the process: each list is ~0.2 s (the
+    all-versions one ~0.4 s) and Apple's support does not change under a running
+    process except by a download, which the dialog is not worth re-querying for.
+*/
+    static QMutex m;
+    static QHash<int, QStringList> cache;
+    QMutexLocker lock(&m);
+
+    bool byVersion = false;
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000
+    if (@available(macOS 27.0, *)) byVersion = version > 0;
+#endif
+    const int key = byVersion ? version : 0;
+    if (perVersion) *perVersion = byVersion;
+    if (cache.contains(key)) return cache.value(key);
+
+    QStringList models;
+    @autoreleasepool {
+        NSArray<NSString *> *list = nil;
+#if defined(__MAC_OS_X_VERSION_MAX_ALLOWED) && __MAC_OS_X_VERSION_MAX_ALLOWED >= 270000
+        if (byVersion) {
+            if (@available(macOS 27.0, *))
+                list = [CIRAWFilter supportedCameraModelsWithVersion:
+                            [NSString stringWithFormat:@"%d", version]];
+        }
+#endif
+        if (!byVersion) {
+            if (@available(macOS 12.0, *)) list = CIRAWFilter.supportedCameraModels;
+        }
+        for (NSString *s in list) models << QString::fromNSString(s);
+    }
+    models.sort(Qt::CaseInsensitive);
+    cache.insert(key, models);
+    return models;
 }
 
 int LatestDecoderVersion()

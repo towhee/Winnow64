@@ -667,12 +667,19 @@ void Metadata::developCropFactors(const QString &blob, int width, int height,
     linear sRGB into the Rec.2020 working space (oversaturated, greens cyan), and every
     preview built that way must miss. "c3": the boost (Apple's tone curve) and its
     sharpening were turned off, so the output is scene-linear like Winnow's.
+
+    THE PIN IS NOT THE VERSION A FILE DECODES WITH: under "newest" a camera Apple adds
+    to decoder 9 moves from 8 to 9 with the key unchanged, and its version-8 previews
+    went on being served beside a version-9 loupe. SupportFingerprint folds in what can
+    make that move -- the OS build, RawCamera.bundle, the downloaded camera assets -- so
+    any change to Apple's support misses the Apple previews once.
 */
 static QString appleVersionKeyPart()
 {
 #ifdef Q_OS_MAC
     if (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine)
-        return QString("|appleRaw=c3:%1").arg(AppleRawDecode::EffectiveVersionPin());
+        return QString("|appleRaw=c3:%1:%2").arg(AppleRawDecode::EffectiveVersionPin())
+                                            .arg(AppleRawDecode::SupportFingerprint());
 #endif
     return QString();
 }
