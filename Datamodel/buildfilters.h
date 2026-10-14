@@ -209,6 +209,7 @@ private:
         thread only (makeSnapshot is const, hence mutable). See FilterValuesPtr. */
     mutable FilterValuesPtr cachedValues;
     mutable bool cachedValuesCombine = false;
+    mutable bool cachedValuesMastersOnly = false;
     mutable QVector<int> cachedExtraColumns;    // session columns cachedValues holds
     QTreeWidgetItem *sessionTarget = nullptr;   // SessionEdit's category; GUI thread
     FilterOps pendingOps;                   // guarded by mutex; drained by flushOps

@@ -324,6 +324,11 @@ struct EditStack {
            render cache's invalidation key, so emitting it unconditionally would change
            the hash of every recipe ever saved to record an absence. */
         if (p.denoiseRaw >= 0) o["denoiseRaw"] = p.denoiseRaw;
+        /* The raw renderer: written only when SET, for the same reason. The version only
+           means something under Apple, and 0 ("newest") is its default. */
+        if (p.rawEngine >= 0) o["rawEngine"] = p.rawEngine;
+        if (p.rawEngine == 1 && p.appleRawVersion > 0)
+            o["appleRawVersion"] = p.appleRawVersion;
         /* Lens corrections: also written only when SET, for the same reason. */
         if (p.removeCA >= 0)          o["removeCA"]       = p.removeCA;
         if (p.defringePurple > 0.0f)  o["defringePurple"] = p.defringePurple;
@@ -406,6 +411,8 @@ struct EditStack {
         p.denoiseLuma     = static_cast<float>(o.value("denoiseLuma").toDouble(p.denoiseLuma));
         p.denoiseChroma   = static_cast<float>(o.value("denoiseChroma").toDouble(p.denoiseChroma));
         p.denoiseRaw      = o.value("denoiseRaw").toInt(p.denoiseRaw);   // absent = unset
+        p.rawEngine       = o.value("rawEngine").toInt(p.rawEngine);     // absent = unset
+        p.appleRawVersion = o.value("appleRawVersion").toInt(p.appleRawVersion);
         p.removeCA        = o.value("removeCA").toInt(p.removeCA);       // absent = unset
         p.defringePurple  = static_cast<float>(o.value("defringePurple").toDouble(p.defringePurple));
         p.defringeGreen   = static_cast<float>(o.value("defringeGreen").toDouble(p.defringeGreen));
@@ -739,6 +746,10 @@ struct EditStack {
            safe way back -- it renders as the preference says, which is what the image did
            before it was ever denoised. */
         if (p.denoiseRaw < -1 || p.denoiseRaw > 1) { p.denoiseRaw = def.denoiseRaw; ++fixed; }
+        if (p.rawEngine < -1 || p.rawEngine > 1)   { p.rawEngine = def.rawEngine; ++fixed; }
+        if (p.appleRawVersion < 0 || p.appleRawVersion > 99) {
+            p.appleRawVersion = def.appleRawVersion; ++fixed;
+        }
         if (p.removeCA < -1 || p.removeCA > 1)     { p.removeCA = def.removeCA; ++fixed; }
         if (clampF(p.defringePurple, 0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.defringeGreen,  0.0f, 1.0f, 0.0f)) ++fixed;

@@ -557,22 +557,20 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
 
     /* Edit source reuses the existing loop-guarded slot (drives G::useRaw via MW). */
     connect(rawPanel, &RawPanel::editSourceChanged, this, &DevelopProperties::onEditSourceChanged);
-    /* Demosaic: ask MW to switch engine + re-decode, then reflect the engine (which shows
-       or hides the denoise block). */
-    /*  THE PANEL SHOWS THE ENGINE IN EFFECT, not the one asked for: MW may refuse
-        (Apple off-mac falls back to Winnow), and the denoise block -- Winnow only --
-        must follow what will actually render. demosaicEngineChanged is a direct
-        connection, so G::decodeRawEngine is already set when reflectEngine reads it. */
+    /*  "Render using" is the CURRENT IMAGE's choice (Develop/rawrender.h), recorded in
+        its recipe -- not a global switch. THE PANEL SHOWS THE RENDERER IN EFFECT
+        (RawRender::resolve: off-mac an Apple choice is Winnow), so the denoise block --
+        Winnow only -- follows what will actually render. */
     connect(rawPanel, &RawPanel::demosaicChanged, this, [this](bool apple){
-        emit demosaicEngineChanged(apple);
-        reflectEngine();
+        RawRender::Choice c;
+        c.apple = apple;
+        setRawRenderer(c);
     });
-    /* A version is an Apple engine choice too: the pin first, so the re-decode the
-       engine switch triggers already uses it. */
     connect(rawPanel, &RawPanel::appleVersionChanged, this, [this](int pin){
-        emit appleDecoderVersionChanged(pin);
-        emit demosaicEngineChanged(true);
-        reflectEngine();
+        RawRender::Choice c;
+        c.apple = true;
+        c.applePin = pin;
+        setRawRenderer(c);
     });
     connect(rawPanel, &RawPanel::denoiseRunToggled, this, [this](bool on){
         setDenoiseRawFlag(on);
@@ -725,8 +723,57 @@ void DevelopProperties::setGlobalDefringe(bool purple, int value0to100)
 void DevelopProperties::reflectEngine()
 {
     if (!rawPanel) return;
-    rawPanel->setEngine(G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
+    rawPanel->setEngine(currentRawRender().apple);
+    syncAppleDecoderVersions();         // the selected version is this image's too
     updateDenoiseAvailability();
+}
+
+RawRender::Choice DevelopProperties::rawRenderFor(const QString &fPath) const
+{
+/*
+    The image's renderer: its recipe's choice, else the default. The session's copy of
+    the recipe when there is one (it holds edits not yet flushed to the sidecar), else
+    the sidecar. GUI thread.
+*/
+    if (fPath.isEmpty()) return RawRender::defaultChoice();
+    const auto it = stackCache.constFind(fPath);
+    if (it != stackCache.constEnd()) {
+        if (it->scopes.isEmpty()) return RawRender::defaultChoice();
+        return RawRender::resolve(it->scopes.first().params);
+    }
+    return RawRender::fromBlob(Metadata::readDevelopSidecar(fPath));
+}
+
+RawRender::Choice DevelopProperties::currentRawRender() const
+{
+    return rawRenderFor(currentImagePath);
+}
+
+void DevelopProperties::setRawRenderer(const RawRender::Choice &c)
+{
+/*
+    "Render using" for the CURRENT IMAGE: recorded EXPLICITLY in its recipe (Global
+    scope, like "Denoise raw"), so it outlives the session, travels with a new version,
+    and other images -- the master of this version among them -- keep their own.
+    noteScopeEdit puts it in History and propagates it across a multi-image selection.
+
+    No cache to clear: the decoded base is filed per renderer (WorkingImageCache tags),
+    so the render paramsChanged starts asks for this renderer's base, misses, and
+    decodes it (MW::ensureDevelopWork). An undo lands the same way.
+*/
+    if (currentImagePath.isEmpty() || !currentIsRaw()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    EditParams &p = s.scopes[0].params;
+    if (p.rawEngine >= 0 && RawRender::resolve(p) == c) return;
+    RawRender::apply(p, c);
+    noteScopeEdit("Global", "Render using", c.label(), "global/rawRenderer");
+    reflectEngine();
+    /* The engine decides which rows exist (camera profiles are Winnow-only; the
+       denoise rows); rebuild AFTER this signal returns -- the combo is mid-signal. */
+    QTimer::singleShot(0, this, [this]{ buildTree(); });
+    emit rawRendererChanged();
+    emit paramsChanged();
 }
 
 void DevelopProperties::syncAppleDecoderVersions()
@@ -747,6 +794,18 @@ void DevelopProperties::syncAppleDecoderVersions()
         AppleRawDecode::RequestVersions(src);
     }
 #endif
+    /*  The selection is the version THIS IMAGE's choice picks from the file's list --
+        not the last decode of the file, which may have been another version (virtual
+        copy) of it on another renderer. Same rule as AppleRawDecode::PickVersion: the
+        newest <= the pin, else the oldest; pin 0 = the newest. */
+    const RawRender::Choice c = currentRawRender();
+    if (c.apple && !versions.isEmpty()) {
+        used = versions.first();
+        if (c.applePin > 0) {
+            used = versions.last();
+            for (int v : versions) if (v <= c.applePin) { used = v; break; }
+        }
+    }
     rawPanel->setAppleVersions(versions, used);
 }
 
@@ -758,10 +817,9 @@ void DevelopProperties::syncRawPanel()
     rawPanel->setVisible(raw);
     if (!raw) return;
 
-    const bool apple = (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine);
     rawPanel->setCaptionWidth(captionColumnWidth);   // align denoise sliders to the tree
     rawPanel->setEditSource(G::useRaw);
-    rawPanel->setEngine(apple);
+    rawPanel->setEngine(currentRawRender().apple);
     syncAppleDecoderVersions();
     rawPanel->setAutoRun(setting->value("Develop/autoRunDenoise", true).toBool());
     /* Two separate facts: the box is the image's SAVED choice (opted in), the sliders
@@ -2904,7 +2962,7 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
        the controls themselves. */
     QAction *aRawDemosaic = nullptr;
     if (section == SectionEdits && currentIsRaw() && G::useRaw) {
-        const bool winnow = G::decodeRawEngine != G::DecodeRawEngine::appleDecodeRawEngine;
+        const bool winnow = !currentRawRender().apple;
         if (!menu.isEmpty()) menu.addSeparator();
         aRawDemosaic = menu.addAction(winnow ? tr("Raw demosaic and denoise")
                                              : tr("Raw demosaic"));
@@ -3068,6 +3126,26 @@ void DevelopProperties::deleteMask(int index)
        that there is no Cancel button: retire the settle timer with it. */
     if      (pendingIdx == index) { maskCommitTimer->stop(); pendingIdx = -1; maskPanelOpen = false; }
     else if (pendingIdx >  index) pendingIdx--;
+
+    /* That was the mask's last submask: a mask with no submasks covers nothing, so the
+       mask goes with it. Done here rather than via deleteScope so History records ONE
+       step -- two would let a single undo land on an empty mask. */
+    if (scope->components.isEmpty() && activeScopeIndex > 0) {
+        EditStack &s = stackCache[currentImagePath];
+        const QString goneName = scope->name;
+        s.scopes.removeAt(activeScopeIndex);
+        if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = s.scopes.size() - 1;
+        selectedMaskIndex = -1;
+        maskLatched = false;
+        noteScopeEdit(QString(), "Delete " + goneName);
+
+        refreshScopeList();
+        buildTree();
+        emit paramsChanged();
+        noteMaskInteraction();
+        return;
+    }
+
     noteEdit("Delete " + goneTool);
 
     buildTree();
@@ -3807,7 +3885,7 @@ CameraColor DevelopProperties::currentCam() const
     attached.
 */
     if (currentImagePath.isEmpty()) return CameraColor();
-    auto work = WorkingImageCache::instance().get(currentImagePath);
+    auto work = WorkingImageCache::instance().get(currentImagePath, currentRawRender().tag());
     if (!work) return CameraColor();
     CameraColor cam = work->cam;
     if (cam.valid && work->space == ColorSpaceMath::ColorSpace::CameraNative) {
@@ -3838,10 +3916,10 @@ std::shared_ptr<const WorkingImage> DevelopProperties::ensureWorkingImage()
     as before.
 */
     if (currentImagePath.isEmpty()) return nullptr;
-    auto work = WorkingImageCache::instance().get(currentImagePath);
+    auto work = WorkingImageCache::instance().get(currentImagePath, currentRawRender().tag());
     if (work && work->isValid()) return work;
     emit workingImageNeeded(currentImagePath);      // same thread: direct call into MW
-    work = WorkingImageCache::instance().get(currentImagePath);
+    work = WorkingImageCache::instance().get(currentImagePath, currentRawRender().tag());
     return (work && work->isValid()) ? work : nullptr;
 }
 
@@ -5130,8 +5208,7 @@ static QString ownRootText()
 void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
 {
     const bool raw = currentIsRaw();
-    const bool usingApple =
-        G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+    const bool usingApple = currentRawRender().apple;
     const bool available = raw && !usingApple;
 
     clearItemInfo(i);
@@ -6917,14 +6994,9 @@ void DevelopProperties::itemChange(QModelIndex idx)
        in-house Winnow decoder). It is not an EditParams value -- it forces a re-decode -- so handle
        it here (emit to MW) and skip applyKeyToParams / the normal preview render. */
     if (source == "demosaic") {
-        emit demosaicEngineChanged(v.toString() == "Apple");   // MW sets decodeRawEngine
-        reflectEngine();
-        /* The engine drives whether the raw-denoise children (and so the expand arrow)
-           exist -- Winnow yes, Apple no. Rebuild the tree to add/remove them, but DEFER
-           it: doing it inline would delete this combo's live editor mid-signal.
-           G::decodeRawEngine is set synchronously by the MW handler above, so the
-           rebuild sees the new engine. */
-        QTimer::singleShot(0, this, [this]{ buildTree(); });
+        RawRender::Choice c;
+        c.apple = v.toString() == "Apple";
+        setRawRenderer(c);          // per image; rebuilds the tree deferred
         return;
     }
 
@@ -7996,9 +8068,11 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
     const EditParams base = s.scopes.isEmpty() ? EditParams() : s.scopes.first().params;
     const QSet<QString> gk = selected.value("Global settings");
     if (gk.contains("demosaic")) {
-        const bool apple =
-            G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
-        preset.globals.insert("demosaicEngine", QString(apple ? "apple" : "winnow"));
+        /* The image's EFFECTIVE renderer -- what it looks like -- with the Apple version
+           beside the published "demosaicEngine" token (added 2026-10-14). */
+        const RawRender::Choice rc = RawRender::resolve(base);
+        preset.globals.insert("demosaicEngine", QString(rc.apple ? "apple" : "winnow"));
+        if (rc.apple) preset.globals.insert("appleRawVersion", rc.applePin);
     }
     if (gk.contains("rawNoise")) {
         /* The EFFECTIVE amounts: a preset captures what the image looks like, not the
@@ -8076,8 +8150,7 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
        Winnow engine only. Both leaves stay listed, but pre-check them only when relevant:
        demosaic when the file is raw; raw NR when it is raw AND not decoded by Apple. */
     const bool isRaw = currentIsRaw();
-    const bool usingApple =
-        G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
+    const bool usingApple = RawRender::resolve(base).apple;
     const bool rawNoiseChanged =
         base.denoiseLuma != def.denoiseLuma || base.denoiseChroma != def.denoiseChroma ||
         base.denoiseRaw != def.denoiseRaw;
@@ -8223,7 +8296,19 @@ EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack 
                 s.geometry.hasWarp = true;
             }
         }
-        else if (k != "demosaicEngine") {   // the decode engine is not part of the stack
+        else if (k == "demosaicEngine") {
+            /* The renderer is per image (EditParams::rawEngine), so it lands in the
+               recipe like any Global setting. An unknown token is skipped here and
+               reported once by applyPreset. */
+            const QString eng = it.value().toString().toLower();
+            if (eng == "apple" || eng == "winnow") {
+                RawRender::Choice c;
+                c.apple = eng == "apple";
+                if (c.apple) c.applePin = qMax(0, preset.globals.value("appleRawVersion").toInt());
+                RawRender::apply(s.scopes[0].params, c);
+            }
+        }
+        else if (k != "appleRawVersion") {  // read with demosaicEngine above
             DevelopPresets::assignParam(k, it.value(), s.scopes[0].params);
         }
     }
@@ -8363,20 +8448,22 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
 
     const int nImages = 1 + propagatePreset(preset, label);
 
-    /* The decode engine is not part of the EditStack: MW owns it and must re-decode.
-       The stored token is matched EXPLICITLY against the two engines rather than testing
-       for "apple" and treating everything else as winnow -- otherwise a preset naming an
-       engine this build does not have (a typo, a newer Winnow, a hand-edited settings
-       file) would silently decode with the other one and the user would wonder why the
-       preset looks different. */
+    /* The renderer landed in each image's recipe (mergePreset), so the render below
+       decodes with it -- the base is filed per renderer. The stored token is matched
+       EXPLICITLY against the two engines rather than testing for "apple" and treating
+       everything else as winnow -- otherwise a preset naming an engine this build does
+       not have (a typo, a newer Winnow, a hand-edited settings file) would silently
+       decode with the other one and the user would wonder why the preset looks
+       different. */
     if (preset.globals.contains("demosaicEngine")) {
         const QString eng = preset.globals.value("demosaicEngine").toString().toLower();
         if (eng == "apple" || eng == "winnow") {
-            emit demosaicEngineChanged(eng == "apple");
             /*  A preset (or Paste Settings) switching engine used to leave the Raw panel
                 on the old one -- its "Render using" and its denoise block, which is
                 Winnow-only, both out of step with what rendered. */
             reflectEngine();
+            QTimer::singleShot(0, this, [this]{ buildTree(); });
+            emit rawRendererChanged();
         }
         else
             warnOnce("unknownEngine",
@@ -8500,9 +8587,11 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
     for (auto it = preset.globals.begin(); it != preset.globals.end(); ++it) {
         const QString &k = it.key();
         if (k == "demosaicEngine") {
-            const bool apple =
-                G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine;
-            it.value() = QString(apple ? "apple" : "winnow");
+            it.value() = QString(RawRender::resolve(s.scopes.first().params).apple
+                                     ? "apple" : "winnow");
+        }
+        else if (k == "appleRawVersion") {
+            it.value() = RawRender::resolve(s.scopes.first().params).applePin;
         }
         else if (k == "crop") {
             const Geometry &g = s.geometry;
@@ -8893,6 +8982,8 @@ const IntField kIntFields[] = {
     {"wbPreset", &EditParams::wbPreset},
     {"viewTransform", &EditParams::viewTransform},
     {"denoiseRaw", &EditParams::denoiseRaw},
+    {"rawEngine", &EditParams::rawEngine},
+    {"appleRawVersion", &EditParams::appleRawVersion},
     {"removeCA", &EditParams::removeCA},
     {"lensProfile", &EditParams::lensProfile},
 };

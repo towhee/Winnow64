@@ -58,18 +58,25 @@ public:
     /* Store the pre-develop WorkingImage for fPath (shares ownership; no pixel copy).
        A null or invalid image is ignored. Marks fPath most-recently-used and evicts LRU
        entries past the byte budget. */
-    /*  KEYED BY SOURCE. Any of these may be given a row KEY: a version (virtual copy,
-        Utilities/versionkey.h) maps to its source file, because the pre-develop pixels
-        are the file's and every version of it shares them -- switching between versions
-        of one raw is a re-render, not a re-decode. */
+    /*  KEYED BY SOURCE AND RENDERER. Any of these may be given a row KEY: a version
+        (virtual copy, Utilities/versionkey.h) maps to its source file, because the
+        pre-develop pixels are the file's -- switching between versions of one raw that
+        use the SAME renderer is a re-render, not a re-decode.
+
+        The renderer is per image (Develop/rawrender.h), so a master on Winnow and its
+        version on Apple Raw 9 need two different bases. put() files work under its own
+        WorkingImage::rawRenderTag; get() asks for a tag -- the renderer of the recipe
+        being rendered (RawRender::resolve(...).tag()) -- and falls back to the UNTAGGED
+        entry, which is what a non-raw image (or a raw built from its embedded preview)
+        is filed under. Callers that test sceneReferred keep doing so. */
     void put(const QString &fPath, const std::shared_ptr<const WorkingImage> &work);
 
-    /* Fetch the WorkingImage for fPath, or nullptr on a miss. A hit is marked
-       most-recently-used. */
-    std::shared_ptr<const WorkingImage> get(const QString &fPath);
+    /* Fetch the WorkingImage for fPath rendered with rawTag, else its untagged entry, or
+       nullptr on a miss. A hit is marked most-recently-used. */
+    std::shared_ptr<const WorkingImage> get(const QString &fPath, const QString &rawTag);
 
-    bool contains(const QString &fPath) const;
-    void remove(const QString &fPath);   // invalidate one entry (e.g. file changed on disk)
+    bool contains(const QString &fPath, const QString &rawTag) const;
+    void remove(const QString &fPath);   // every entry for the file (e.g. changed on disk)
     void clear();                        // drop everything (new folder / new instance)
 
     /* Byte budget. Default kDefaultMaxBytes; settable so the host can size it to the machine.
@@ -280,7 +287,13 @@ private:
     struct Entry {
         std::shared_ptr<const WorkingImage> work;
         qint64 bytes = 0;
+        QString source;                  // the file, for remove() and the pin
     };
+    /* entries/lru key: source + kTagSep + tag ("" for an untagged entry). */
+    static QString entryKey(const QString &source, const QString &tag) {
+        return source + QChar(0x1F) + tag;
+    }
+    QString findLocked(const QString &source, const QString &tag) const;
 
     void evictLocked();                  // call with mutex held
     void touchLocked(const QString &fPath);

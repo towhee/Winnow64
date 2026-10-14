@@ -48,6 +48,7 @@ private slots:
     void placesAreTheirOwnKind();
     void aMoveFollowsTheImage();
     void aDeleteLeavesEveryCollection();
+    void versionsAreMembersInTheirOwnRight();
     void catalogMapsKeysToRowPaths();
     void aNewerFileIsLeftUntouched();
     void anOldCollectionsDbIsRenamedNotLost();
@@ -311,6 +312,43 @@ void tst_collections::aDeleteLeavesEveryCollection()
     s.addMembers(b, {img("1.nef")});
     s.onDeleted(img("1.nef"));
     QCOMPARE(s.memberPaths({a, b}), QStringList{img("2.nef")});
+}
+
+void tst_collections::versionsAreMembersInTheirOwnRight()
+{
+    /*  A version is a member by its key (path + "/#v" + id), never by way of its file:
+        collectionsOf tells them apart, a move of the file carries the version's
+        membership with its suffix, deleting the version takes only its own, and
+        deleting the file takes both. */
+    CollectionStore &s = CollectionStore::instance();
+    const qint64 a = s.create(Kind::Collection, 0, "A");
+    const qint64 b = s.create(Kind::Collection, 0, "B");
+    const QString v2 = img("1.nef") + "/#v2";
+    s.addMembers(a, {img("1.nef"), v2});
+    s.addMembers(b, {img("1.nef")});
+    QCOMPARE(s.collectionsOf(img("1.nef")), (QVector<qint64>{a, b}));
+    QCOMPARE(s.collectionsOf(v2), QVector<qint64>{a});
+    QVERIFY(s.collectionsOf(img("1.nef") + "/#v3").isEmpty());
+
+    s.onMoved(img("1.nef"), img("10.nef"));
+    QCOMPARE(s.collectionsOf(img("10.nef") + "/#v2"), QVector<qint64>{a});
+    QVERIFY(s.collectionsOf(v2).isEmpty());
+    QStringList inA = s.memberPaths({a});
+    inA.sort();
+    QCOMPARE(inA, (QStringList{img("10.nef"), img("10.nef") + "/#v2"}));
+    // "1.nef" was not a prefix trap: "10.nef" is a different file
+    s.addMembers(b, {img("1.nef") + "/#v4"});
+    s.onDeleted(img("1.nef"));
+    QCOMPARE(s.collectionsOf(img("10.nef") + "/#v2"), QVector<qint64>{a});
+
+    s.onDeleted(img("10.nef") + "/#v2");            // the version record only
+    QCOMPARE(s.collectionsOf(img("10.nef")), (QVector<qint64>{a, b}));
+    QVERIFY(s.collectionsOf(img("10.nef") + "/#v2").isEmpty());
+
+    s.addMembers(b, {img("10.nef") + "/#v5"});
+    s.onDeleted(img("10.nef"));                     // the file, versions and all
+    QCOMPARE(s.memberCounts(Kind::Collection).value(a), 0);
+    QCOMPARE(s.memberCounts(Kind::Collection).value(b), 0);
 }
 
 void tst_collections::catalogMapsKeysToRowPaths()

@@ -1,6 +1,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include "Develop/rawrender.h"
 #include <QtWidgets>
 #include <QtConcurrent>
 #include <QJsonObject>
@@ -1165,6 +1166,12 @@ public:
        slot: this section is "private slots:", and moc would need LensDb::Shot complete
        to generate an invoker for it (only forward-declared here). */
     LensDb::Shot lensShotFor(const QString &fPath) const;
+    /* The RAW RENDERER of an image (Develop/rawrender.h): its recipe's "Render using",
+       else the default. Every WorkingImageCache lookup and every Winnow-only gate (PMRID)
+       asks this rather than G::decodeRawEngine. GUI thread (it reads the Develop
+       panel's recipes); a worker resolves on the GUI thread first and captures it. A
+       plain method, NOT a slot, for the reason lensShotFor gives. */
+    RawRender::Choice rawRenderFor(const QString &fPath) const;
 private slots:
     /* True when the current selection is a video. The Develop module operates on decoded still
        frames, so every Develop entry point (dock load + preview/full-res render) is gated on this to
@@ -1752,7 +1759,7 @@ private:
     QAction *colorManageAction;
     QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
-    QAction *showAllVersionsAction;
+    QAction *showAllVersionsAction = nullptr;
     QMenu *versionsMenu = nullptr;
     QAction *versionsGroupAct = nullptr;
     QAction *newVersionAction;
@@ -2488,6 +2495,8 @@ private:
     QToolButton *sourceFoldersBtn = nullptr;
     QToolButton *sourceLibraryBtn = nullptr;
     QLabel *sourceSeparator = nullptr;       // the " | " between Library and Folders
+    QToolButton *versionMastersBtn = nullptr;   // Masters | Versions, right of the dock
+    QToolButton *versionAllBtn = nullptr;
 
     /*  COLLECTIONS AND QUERIES (Main/mwcollections.cpp, Views/collectiontree.h,
         Datamodel/collectionstore.h, Utilities/queryexpr.h, Dialogs/querybuilder.h).
@@ -2537,6 +2546,12 @@ private:
     void addPathsToCollection(qint64 id, const QStringList &paths);
     void addSelectionToCollection(qint64 id);
     void removeSelectionFromCollection(qint64 id);
+    /*  OPEN THE VERSION GROUPS A NEWLY CHOSEN COLLECTION HOLDS, so a collection shows
+        every member -- a version is one in its own right -- rather than a master with
+        a "1 >" badge. Called by filterChange; acts only when the collections filtered
+        on CHANGE, so collapsing a group while looking at a collection sticks. */
+    void expandVersionsForCollectionFilter();
+    QStringList lastCollectionIncludes;         // what the last call saw
     /*  Grey both panels with their reason in Folders, show or hide the Filters
         categories, and refresh the empty hints. */
     void updateCollectionsAvailability();
@@ -2747,6 +2762,9 @@ private:
     QByteArray developFullFrameRecipe;      // see developFrameRecipe
     std::shared_ptr<WorkingImage> developProxy;
     QString developProxyPath;
+    /* The base developProxy was downscaled from: a renderer switch swaps the base under
+       the same path, and the proxy must follow (renderDevelopPreview). */
+    std::weak_ptr<const WorkingImage> developProxySrc;
     /* Per-scope intermediates for the PROXY tick, so a mask drag re-rasterizes only the
        scope it is dragging (see Develop/developstackcache.h). GUI thread only -- the
        off-thread settle render passes nullptr and recomputes, which is what keeps this
@@ -3413,6 +3431,13 @@ private:
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     void toggleVersionsExpanded(const QString &key);
     void setShowAllVersions(bool show);
+    /*  The Module dock's Masters | Versions pair. Masters is the outermost scope:
+        SortFilter::mastersOnly hides every version row, under any filter (persisted
+        as "versionMastersOnly"). Versions lifts it and shows every row. A badge click
+        or Show All Versions under Masters lifts it too; syncVersionModeButtons pushes
+        the state back to the buttons. */
+    void setVersionMastersOnly(bool on);
+    void syncVersionModeButtons();
     bool versionReconcilePending = false;
     /*  The version operations (Develop > Versions, the thumbnail context menu). All
         write the master's sidecar (Metadata/versions.h) and then bring the grid in line;

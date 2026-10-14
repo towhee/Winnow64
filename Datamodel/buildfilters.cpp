@@ -571,12 +571,15 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     const bool combine = G::combineRawJpg;
     const int kKeywords = FilterCat::SlotCount;
     const int kHideRaw  = FilterCat::SlotCount + 1;
+    const int kVersion  = FilterCat::SlotCount + 2;
+    const bool mastersOnly = dm->sf && dm->sf->mastersOnly();
     QVector<QPair<int, int>> cells;
-    cells.reserve(FilterCat::SlotCount + 2);
+    cells.reserve(FilterCat::SlotCount + 3);
     for (int slot = 0; slot < FilterCat::SlotCount; ++slot)
         cells.append({col[slot], Qt::DisplayRole});
     cells.append({G::KeywordsAllColumn, Qt::DisplayRole});     // kKeywords
     cells.append({G::PathColumn, G::DupHideRawRole});          // kHideRaw
+    cells.append({G::PathColumn, G::VersionIdRole});           // kVersion
 
     /*  SESSION CATEGORIES ("Filter on..."), after the fixed cells. Captured here, on the
         GUI thread, with the headers they belong to -- see FilterSnapshot::extraItems. A
@@ -649,8 +652,10 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
 
         /* When combineRawJpg is on the raw half of a pair is hidden in the
            proxy (SortFilter::filterAcceptsRow), so the unfiltered totals must
-           skip it or they will not match the proxy baseline. */
-        r.hiddenRaw = combine && val[kHideRaw].toBool();
+           skip it or they will not match the proxy baseline. A version row under
+           Masters only is hidden the same way (SortFilter::mastersOnly). */
+        r.hiddenRaw = (combine && val[kHideRaw].toBool())
+                      || (mastersOnly && val[kVersion].toInt() > 0);
 
         /*  Session values (see sessionValueText). Off-store columns are filled after
             the store pass. */
@@ -662,6 +667,7 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
     constexpr int kChunk = FilterValues::kChunk;
     const bool reusable = cachedValues && !changes.structural
                           && rows == cachedValues->rows && combine == cachedValuesCombine
+                          && mastersOnly == cachedValuesMastersOnly
                           && snap.extraColumns == cachedExtraColumns
                           && offStore.isEmpty();
     if (reusable && changes.rows.isEmpty()) {
@@ -710,6 +716,7 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
         for (const auto &c : build) values->chunks.append(c);
         cachedValues = values;
         cachedValuesCombine = combine;
+        cachedValuesMastersOnly = mastersOnly;
         cachedExtraColumns = snap.extraColumns;
         snap.values = values;
     }

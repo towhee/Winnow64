@@ -78,52 +78,67 @@ void WorkingImageCache::put(const QString &key,
 {
     const QString fPath = VersionKey::sourceOf(key);    // see KEYED BY SOURCE in the header
     if (fPath.isEmpty() || !work || !work->isValid()) return;
+    const QString ek = entryKey(fPath, work->rawRenderTag);
 
     QMutexLocker lock(&mutex);
     if (!enabled) return;
 
-    /* Replace any existing entry (e.g. re-decode of the same path). */
-    auto it = entries.find(fPath);
+    /* Replace any existing entry (e.g. re-decode of the same path and renderer). */
+    auto it = entries.find(ek);
     if (it != entries.end()) {
         totalBytes -= it->bytes;
-        lru.removeOne(fPath);
+        lru.removeOne(ek);
     }
 
     Entry e;
     e.work = work;
     e.bytes = bytesOf(*work);
-    entries.insert(fPath, e);
-    lru.append(fPath);           // most-recently-used at the back
+    e.source = fPath;
+    entries.insert(ek, e);
+    lru.append(ek);              // most-recently-used at the back
     totalBytes += e.bytes;
 
     evictLocked();
 }
 
-std::shared_ptr<const WorkingImage> WorkingImageCache::get(const QString &key)
+QString WorkingImageCache::findLocked(const QString &source, const QString &tag) const
+{
+    const QString exact = entryKey(source, tag);
+    if (entries.contains(exact)) return exact;
+    const QString untagged = entryKey(source, QString());
+    if (entries.contains(untagged)) return untagged;
+    return QString();
+}
+
+std::shared_ptr<const WorkingImage> WorkingImageCache::get(const QString &key,
+                                                           const QString &rawTag)
 {
     const QString fPath = VersionKey::sourceOf(key);
     QMutexLocker lock(&mutex);
-    auto it = entries.constFind(fPath);
-    if (it == entries.constEnd()) return nullptr;
-    touchLocked(fPath);
-    return it->work;
+    const QString ek = findLocked(fPath, rawTag);
+    if (ek.isEmpty()) return nullptr;
+    touchLocked(ek);
+    return entries.value(ek).work;
 }
 
-bool WorkingImageCache::contains(const QString &key) const
+bool WorkingImageCache::contains(const QString &key, const QString &rawTag) const
 {
     QMutexLocker lock(&mutex);
-    return entries.contains(VersionKey::sourceOf(key));
+    return !findLocked(VersionKey::sourceOf(key), rawTag).isEmpty();
 }
 
 void WorkingImageCache::remove(const QString &key)
 {
     const QString fPath = VersionKey::sourceOf(key);
     QMutexLocker lock(&mutex);
-    auto it = entries.find(fPath);
-    if (it == entries.end()) return;
-    totalBytes -= it->bytes;
-    entries.erase(it);
-    lru.removeOne(fPath);
+    for (auto it = entries.begin(); it != entries.end(); ) {
+        if (it->source == fPath) {
+            totalBytes -= it->bytes;
+            lru.removeOne(it.key());
+            it = entries.erase(it);
+        }
+        else ++it;
+    }
 }
 
 void WorkingImageCache::clear()
@@ -190,7 +205,8 @@ void WorkingImageCache::evictLocked()
        exceeds the budget. */
     int i = 0;
     while (totalBytes > budget && i < lru.size() - 1) {
-        if (lru.at(i) == pinned) { ++i; continue; }    // the Develop image stays resident
+        // the Develop image stays resident, under every renderer it was decoded with
+        if (entries.value(lru.at(i)).source == pinned) { ++i; continue; }
         const QString victim = lru.takeAt(i);
         auto it = entries.find(victim);
         if (it != entries.end()) {

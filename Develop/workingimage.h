@@ -146,6 +146,12 @@ struct WorkingImage {
        (space) and WHICH referring (this). Both needed; neither implies the other. */
     bool sceneReferred = false;
 
+    /* The RAW RENDERER that decoded these pixels (RawRender::Choice::tag(): "w", "a0",
+       "a9"), set by RawFormat::Decode; empty for anything not decoded from a raw (a
+       JPEG, an embedded preview). WorkingImageCache files the base under it, so an
+       image rendered with another decoder cannot be handed these pixels. */
+    QString rawRenderTag;
+
     /* This render's long edge as a fraction of the FULL-RESOLUTION long edge: 1.0 for a
        full-res (settle / export) render, ~0.3 for a typical screen proxy. Every Develop
        spatial op but one scales its radius to max(w,h) and so is scale-invariant by
@@ -257,6 +263,7 @@ inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)
     dst.white         = src.white;
     dst.space         = src.space;
     dst.sceneReferred = src.sceneReferred;
+    dst.rawRenderTag  = src.rawRenderTag;
     dst.look          = src.look;
     dst.renderScale   = src.renderScale;
     dst.statSlot      = src.statSlot;

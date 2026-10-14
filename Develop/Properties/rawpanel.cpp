@@ -175,12 +175,14 @@ void RawPanel::buildUi()
     QLabel *demLbl = new QLabel(tr("Render using"), demRow);
     demLbl->setStyleSheet(capCss);
     engineCombo = new QComboBox(demRow);
-    engineCombo->setToolTip("Which decoder turns the raw file into a picture: Apple's, or "
-                            "Winnow's own.");
+    engineCombo->setToolTip("Which decoder turns this raw file into a picture: Apple's, "
+                            "or Winnow's own. Saved with this image's edits, so each "
+                            "image -- and each version -- keeps its own. Images you have "
+                            "not set follow the default in Preferences.");
     rebuildEngineCombo();
-    /*  The TOP Apple entry means "newest" (pin 0), not "this number": it is what the
-        image would get unpinned, and it keeps following OS updates. A lower entry pins
-        that version for every image -- see AppleRawDecode::VersionPin. */
+    /*  The TOP Apple entry means "newest" (pin 0), not "this number": it keeps following
+        OS updates. A lower entry pins that version. Either is THIS IMAGE's choice, kept
+        in its recipe (Develop/rawrender.h). */
     connect(engineCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
         const int v = engineCombo->itemData(idx).toInt();
         if (v < 0) emit demosaicChanged(false);
@@ -399,8 +401,9 @@ void RawPanel::rebuildEngineCombo()
     reliable source, see notes/Documentation.txt "Apple decoder version"), and -1 for
     Winnow.
 
-    The selection is the version the decode actually USED, which differs from the pin
-    when the image does not support the pinned version.
+    The selection is the version this image's choice picks from its list
+    (DevelopProperties::syncAppleDecoderVersions), which differs from the pin when the
+    image does not support the pinned version.
 */
     if (!engineCombo) return;
     QSignalBlocker b(engineCombo);
@@ -422,8 +425,8 @@ void RawPanel::rebuildEngineCombo()
         engineCombo->setItemData(i, i == 0
             ? tr("Apple's newest decoder (version %1). Always uses the newest version "
                  "each image supports.").arg(v)
-            : tr("Apple's decoder version %1, for every image that supports it (older "
-                 "images use the newest version they support).").arg(v), Qt::ToolTipRole);
+            : tr("Apple's decoder version %1 for this image (if the image does not "
+                 "support it, the newest version it does support).").arg(v), Qt::ToolTipRole);
     }
     engineCombo->addItem(tr("Winnow"), -1);
 

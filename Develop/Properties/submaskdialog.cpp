@@ -58,7 +58,7 @@ int SubmaskDialog::chosenTool() const
 
 void SubmaskDialog::buildUi()
 {
-    setWindowTitle(tr("Add submask"));
+    setWindowTitle(tr("Create submask"));
 
     QVBoxLayout *v = new QVBoxLayout(this);
     v->setContentsMargins(20, 18, 20, 16);
@@ -68,7 +68,7 @@ void SubmaskDialog::buildUi()
        Radio buttons rather than a combo: there are three, they are the whole point of
        the dialog, and each needs a line of its own saying what it DOES -- the words the
        modifier shortcut never had room for. */
-    QLabel *opHeading = new QLabel(tr("What it does to the mask"), this);
+    QLabel *opHeading = new QLabel(tr("Action:"), this);
     QFont hf = opHeading->font();
     hf.setBold(true);
     opHeading->setFont(hf);
@@ -169,7 +169,7 @@ void SubmaskDialog::buildUi()
     });
 
     QDialogButtonBox *box = new QDialogButtonBox(QDialogButtonBox::Cancel, this);
-    okBtn = box->addButton(tr("Add submask"), QDialogButtonBox::AcceptRole);
+    okBtn = box->addButton(tr("Create"), QDialogButtonBox::AcceptRole);
     okBtn->setDefault(true);
     connect(box, &QDialogButtonBox::accepted, this, &QDialog::accept);
     connect(box, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -188,8 +188,10 @@ void SubmaskDialog::addToolGroup(const QString &heading, const QVector<int> &too
     h->setFont(f);
 
     for (int t : tools) {
-        QListWidgetItem *it = new QListWidgetItem(
-            "    " + DevelopProperties::maskToolName(t), toolList);
+        // "Linear Gradient Mask" -> "Linear Gradient": every entry here is a mask
+        QString name = DevelopProperties::maskToolName(t);
+        if (name.endsWith(" Mask")) name.chop(5);
+        QListWidgetItem *it = new QListWidgetItem("    " + name, toolList);
         it->setData(UR_Tool, t);
     }
 }

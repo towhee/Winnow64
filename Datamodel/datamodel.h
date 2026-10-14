@@ -112,6 +112,11 @@ public:
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     bool versionsExpanded(const QString &masterKey) const;
     void clearVersionsExpanded() { mExpandedVersions.clear(); }
+    /*  MASTERS ONLY hides every version row outright -- filter or not, group open or
+        not -- and BuildFilters leaves them out of the unfiltered counts too. The
+        Module dock's Masters | Versions (MW::setVersionMastersOnly). */
+    void setMastersOnly(bool on) { mMastersOnly = on; }
+    bool mastersOnly() const { return mMastersOnly; }
 
     /*  Would this source row be shown if the category on ignoreColumn were unchecked?
         What the Map module draws while its own pin is filtering: every pin the OTHER
@@ -161,6 +166,7 @@ private:
     Filters *filters;
     mutable bool finished;
     bool mShowAllVersions = false;
+    bool mMastersOnly = false;
     QSet<QString> mExpandedVersions;        // master keys whose versions are shown
     bool isCollapsedVersion(int sourceRow, const QModelIndex &sourceParent) const;
     bool compilePending = false;
@@ -250,13 +256,15 @@ public:
         are both retired. See "The Row Store" in Documentation.txt. */
     RowStore rowStore;
 
-    /*  COLLECTION MEMBERSHIP, for G::CollectionsColumn: source path -> the ids (as text)
-        of the collections the file is directly in. Not in the row store -- see the
+    /*  COLLECTION MEMBERSHIP, for G::CollectionsColumn: row key (a path, or a version's
+        path + "/#v" + id) -> the ids (as text) of the collections it is directly in. Not in the row store -- see the
         column's note in global.h. Replaced whole by MW::refreshCollectionMembership
         whenever a membership changes; read by data() under the lock, so a reader on
         another thread never sees it half-swapped. */
     void setCollectionMembership(const QHash<QString, QStringList> &byPath);
     bool hasCollectionMembership() const;
+    /*  The row keys DIRECTLY in any of these collections (ids as text). */
+    QStringList keysInCollections(const QStringList &ids) const;
     mutable QReadWriteLock collectionLock;
     QHash<QString, QStringList> collectionIdsByPath;
 

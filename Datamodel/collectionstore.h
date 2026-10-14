@@ -50,9 +50,12 @@
     Library. They are here because they are the user's own work, which this file exists
     to keep.
 
-    A VERSION (virtual copy) IS ITS FILE here: membership is by source path, so adding a
-    version adds the image, and opening the collection shows the image with its versions
-    as the Library does. Per-version membership is a later step.
+    A VERSION (virtual copy) IS A MEMBER IN ITS OWN RIGHT, by its row key (path +
+    "/#v" + id, Utilities/versionkey.h): cachePathKey of that key is the master's key
+    plus the same suffix, so it needs no second scheme. A master's collections are NOT
+    inherited -- a new version is offered its origin's collections when it is made
+    (MW::newVersion) and the user ticks which it joins. A move or delete of the file
+    carries or removes its versions' memberships with the master's.
 
     GUI THREAD. One connection, opened on first use. onMoved/onDeleted may be called from
     a file-operation thread and hop to this object's thread themselves.
@@ -130,6 +133,9 @@ public:
     QHash<qint64, int> memberCounts(Kind kind);
     /*  The distinct member paths of these nodes. */
     QStringList memberPaths(const QVector<qint64> &ids);
+    /*  The collections (Kind::Collection) a row key -- a path, or a version key -- is
+        DIRECTLY in, in tree order. Empty when the store is unavailable. */
+    QVector<qint64> collectionsOf(const QString &key);
 
     /*  EVERY MEMBERSHIP OF THIS KIND, as image key (Cache/pathkey.h) -> the ids, as
         text, of the nodes it is DIRECTLY in. What G::CollectionsColumn is built from

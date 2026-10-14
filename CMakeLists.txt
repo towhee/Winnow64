@@ -149,6 +149,8 @@ set(WINNOW_SOURCES
     Develop/outputtransform.cpp
     Develop/whitebalance.cpp
     Develop/workingimagecache.cpp
+    Develop/rawrender.cpp
+    Develop/rawrender.h
     Develop/Properties/developproperties.cpp
     Develop/Properties/huesatwheel.cpp
     Develop/Properties/primarywheel.cpp
@@ -375,6 +377,8 @@ set(WINNOW_SOURCES
     Dialogs/keywordmergedlg.h
     Dialogs/applecamerasdlg.cpp
     Dialogs/applecamerasdlg.h
+    Dialogs/versioncollectionsdlg.cpp
+    Dialogs/versioncollectionsdlg.h
     Dialogs/keywordtidydlg.cpp
     Dialogs/keywordtidydlg.h
     Dialogs/keywordauditdlg.cpp

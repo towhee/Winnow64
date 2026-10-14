@@ -132,6 +132,7 @@ void ImageDecoder::decode(int row, int instance)
     /*  Fresh per decode: geometry fetched for one row must never be read for
         the next one. */
     haveGeoMeta = false;
+    rawRender.reset();             // a cache decode knows no recipe: the default renderer
 
     abort.storeRelease(0);
     sfRow = row;                   // set early so fillCache has valid row
@@ -320,11 +321,12 @@ bool ImageDecoder::loadDevPreview()
         key = Metadata::renderKey(key, rowKey);
     }
 
-    /* By row KEY: a version's developed preview is its own, not its master's -- except
-       the DEFAULT render, which is the file's and so is held under the source. */
-    const bool isDefault = key.startsWith('R') && key == Metadata::defaultRenderKey(fPath);
-    const QByteArray jpg =
-        DevPreviewCache::instance().get(isDefault ? fPath : rowKey, key.toLatin1());
+    /* By row KEY, the default render included: an unedited version's default render is
+       its own entry, not the source's. The cache holds ONE entry per path, so once the
+       master is edited the source's slot holds the master's recipe and an unedited
+       version reading it there always missed -- showing the camera JPEG in Browse while
+       Develop showed the default renderer (e.g. Apple Raw 9). */
+    const QByteArray jpg = DevPreviewCache::instance().get(rowKey, key.toLatin1());
     if (jpg.isEmpty()) return false;          // no preview, or one for an older recipe
 
     if (!image.loadFromData(jpg, "JPG") || image.isNull()) return false;
@@ -578,7 +580,8 @@ bool ImageDecoder::load()
                intermittent. render() does stage 0, the recipe and the recipe's view
                transform, on a copy, leaving the cached base camera-native for the
                interactive develop path's own stage 0. */
-            if (auto cached = WorkingImageCache::instance().get(fPath);
+            const RawRender::Choice choice = renderChoice();
+            if (auto cached = WorkingImageCache::instance().get(fPath, choice.tag());
                 cached && cached->sceneReferred && !abort.loadAcquire()) {
                 if (WorkingImageCache::render(*cached, editParams, image)) {
                     decoderToUse = Raw;
@@ -608,7 +611,7 @@ bool ImageDecoder::load()
                 demProg = [this, row, fp](int d, int t){ emit demosaicProgress(row, fp, d, t); };
             }
             if (rawFormat->Decode(imFile, rawMeta, image, &editParams, &abort, &work,
-                                  false, demProg)) {
+                                  false, demProg, nullptr, nullptr, &choice)) {
                 decoderToUse = Raw;
                 developApplied = true;   // RAW develops internally; skip the generic pass
                 /* Cache the pre-develop WorkingImage so a later edit re-renders without
@@ -1047,7 +1050,7 @@ void ImageDecoder::applyDevelop()
     /* Reuse the pre-develop WorkingImage if a prior decode cached it (skips InputTransform);
        otherwise build it once from the decoded QImage and cache it for next time. The cached
        image is scene-LINEAR (post-InputTransform), matching what the RAW path stores. */
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, renderChoice().tag());
     if (!work) {
         auto built = std::make_shared<WorkingImage>();
         InputTransform input;
@@ -1109,7 +1112,8 @@ void ImageDecoder::colorManage()
 }
 
 bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m,
-                                     const std::function<void(int, int)> &progress)
+                                     const std::function<void(int, int)> &progress,
+                                     const RawRender::Choice *render)
 {
 /*
     This function is called externally, does not require the DataModel and does not
@@ -1132,6 +1136,7 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     fPath = m.fPath;
     sfRow = -1;
     decodeProgress = progress;      // forwarded to the RAW demosaic by load()
+    if (render) rawRender = *render; else rawRender.reset();
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();
@@ -1168,8 +1173,10 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     QImage throwaway;                                    // develop skipped: identity edit
     const EditParams identity;
     std::shared_ptr<const WorkingImage> work;
+    /* PMRID needs the CFA mosaic: this base is always Winnow's, whatever the default. */
+    const RawRender::Choice winnow;
     const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw,
-                                      progress, outClean, outDenoiseApplied);
+                                      progress, outClean, outDenoiseApplied, &winnow);
     file.close();
     return ok ? work : nullptr;
 }

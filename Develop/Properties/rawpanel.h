@@ -101,7 +101,7 @@ private:
     QWidget      *rawBlock     = nullptr;         // Demosaic + Denoise (Embedded hides)
     QComboBox    *engineCombo  = nullptr;
     QList<int>    appleVersions;                  // this image's, newest first
-    int           appleUsed    = 0;               // the version its decode used
+    int           appleUsed    = 0;               // the version its choice picks
     bool          engineApple  = true;
     QWidget      *denoiseBlock = nullptr;         // Denoise row + sliders (Apple hides)
     QWidget      *appleBlock   = nullptr;         // "View cameras supported" (Apple only)

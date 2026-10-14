@@ -1,6 +1,7 @@
 #ifndef DEVELOPPROPERTIES_H
 #define DEVELOPPROPERTIES_H
 
+#include "Develop/rawrender.h"
 #include <functional>
 
 #include <QtWidgets>
@@ -695,6 +696,11 @@ public slots:
     /* Put the engine IN EFFECT (G::decodeRawEngine) on the Raw panel: "Render using"
        and the denoise block, shown only for Winnow. Called after every engine change. */
     void reflectEngine();
+    /* THE RAW RENDERER of an image (Develop/rawrender.h): its recipe's choice, else the
+       default -- from the session's recipe when it has one, else the sidecar. GUI
+       thread. currentRawRender() is the image in the dock. */
+    RawRender::Choice rawRenderFor(const QString &fPath) const;
+    RawRender::Choice currentRawRender() const;
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
@@ -717,12 +723,10 @@ signals:
        (toggleUseRaw) -- a private slot, so we route through this signal rather than
        calling it directly. */
     void useRawRequested(bool useRaw);
-    /* The "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
-       Winnow). MW sets G::decodeRawEngine and re-decodes the current image. */
-    void demosaicEngineChanged(bool useApple);
-    /* An "Apple Raw N" entry was chosen: MW sets AppleRawDecode::SetVersionPin(pin) (0 =
-       newest), then demosaicEngineChanged(true) follows to clear and re-decode. */
-    void appleDecoderVersionChanged(int pin);
+    /* "Render using" changed on the current image (or a preset / paste set it). The
+       choice is already in the recipe and paramsChanged follows, whose render decodes
+       with it; MW only does the engine-specific housekeeping (PMRID warm-up). */
+    void rawRendererChanged();
     /* Global raw-denoise (PMRID) run mode. autoRunDenoiseToggled: the "auto run denoise"
        checkbox flipped -- MW gates its automatic PMRID runs on it.
        runRawDenoiseRequested: the "Run Denoise" button was clicked -- run now regardless
@@ -1609,6 +1613,8 @@ private:
        rather than of the session -- the render, the export and the devPreview builder all
        read it from there. */
     void setDenoiseRawFlag(bool on);
+    /* "Render using" on the current image, into its recipe (Global scope). */
+    void setRawRenderer(const RawRender::Choice &c);
     /* "Denoise" run/state checkbox in the Core (raw) section. MW calls
        updateDenoiseRunState to reflect completion: checked + "Denoised" when a denoised
        base is ready for the current image, else unchecked + "Denoise". QPointer --

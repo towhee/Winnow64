@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include "propertyeditor.h"
 #include "propertywidgets.h"
+#include "Develop/rawrender.h"
 
 class Preferences : public PropertyEditor
 {
@@ -35,6 +36,8 @@ private:
     static int maxIconChunkValue(const QString &label);
     static QString devPreviewCacheLabel(qint64 bytes);
     static qint64 devPreviewCacheValue(const QString &label);
+    /* "Default raw renderer"'s choices, in list order; the label is the stored text. */
+    static QVector<RawRender::Choice> rawRendererChoices();
     void addSlideShow();
     void addMap();
     void addFullScreen();

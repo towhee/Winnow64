@@ -2,6 +2,7 @@
 #include "Datamodel/collectionstore.h"
 #include "Dialogs/querybuilder.h"
 #include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
 
 #include <QInputDialog>
 
@@ -373,14 +374,16 @@ void MW::refreshQueryNodes()
 void MW::refreshCollectionMembership()
 {
 /*
-    Rebuild G::CollectionsColumn's side table: source path -> ids of the collections the
-    image is directly in.
+    Rebuild G::CollectionsColumn's side table: row key -> ids of the collections the
+    image (or version) is directly in.
 
-    KEYED BY THE PATH A LIBRARY ROW WAS LOADED WITH. The store keys members on the
+    KEYED BY THE KEY A LIBRARY ROW WAS LOADED WITH. The store keys members on the
     normalised pathkey; the catalog maps each key back to image.path, which is the
     exact string every Library row holds -- so DataModel::data answers with one hash
     lookup per row, and no row ever has its key recomputed during a filter pass. Two
-    statements in all, whatever the Library's size.
+    statements in all, whatever the Library's size. A version member (pathkey + "/#v"
+    + id) is looked up by its file's key and given the suffix back, which is how
+    VersionKey::make built the row's key.
 
     A MEMBERSHIP CHANGE CAN CHANGE WHAT A CHECKED COLLECTION -- OR A QUERY THAT NAMES
     ONE -- ADMITS, so a refilter follows when either category is filtering.
@@ -391,10 +394,15 @@ void MW::refreshCollectionMembership()
         CollectionStore::instance().membershipByKey(Kind::Collection);
     QHash<QString, QStringList> byPath;
     if (!byKey.isEmpty()) {
-        const QHash<QString, QString> paths = Catalog::instance().pathsForKeys(byKey.keys());
+        QStringList files;
+        for (auto it = byKey.constBegin(); it != byKey.constEnd(); ++it)
+            files << VersionKey::sourceOf(it.key());
+        files.removeDuplicates();
+        const QHash<QString, QString> paths = Catalog::instance().pathsForKeys(files);
         for (auto it = byKey.constBegin(); it != byKey.constEnd(); ++it) {
-            const QString p = paths.value(it.key());
-            if (!p.isEmpty()) byPath.insert(p, it.value());
+            const QString p = paths.value(VersionKey::sourceOf(it.key()));
+            if (p.isEmpty()) continue;
+            byPath.insert(VersionKey::make(p, VersionKey::idOf(it.key())), it.value());
         }
     }
     dm->setCollectionMembership(byPath);
@@ -410,6 +418,30 @@ void MW::refreshCollectionMembership()
             return;
         }
     }
+}
+
+void MW::expandVersionsForCollectionFilter()
+{
+/*
+    Only on a CHANGE of the collections filtered on: re-opening on every filterChange
+    would undo a collapse the user makes while looking at the collection (the badge
+    click itself goes through filterChange). Opens only masters with a VERSION in the
+    collections -- the groups whose collapse would hide a member. Not undone when the
+    collection is cleared: the groups stay as the user last saw them, as after New
+    Version.
+*/
+    if (!filters || !dm) return;
+    QStringList inc, exc;
+    filters->setFilterState(setCategory(Kind::Collection), inc, exc);
+    if (inc == lastCollectionIncludes) return;
+    /*  Not yet, when the membership table is not built (a saved filter restored as the
+        Library opens): refreshCollectionMembership's own refilter comes back here. */
+    if (!inc.isEmpty() && !dm->hasCollectionMembership()) return;
+    lastCollectionIncludes = inc;
+    if (inc.isEmpty()) return;
+    for (const QString &key : dm->keysInCollections(inc))
+        if (VersionKey::isVersion(key))
+            dm->sf->setVersionsExpanded(VersionKey::sourceOf(key), true);
 }
 
 void MW::updateCollectionCounts()
@@ -775,20 +807,22 @@ void MW::addPathsToCollection(qint64 id, const QStringList &paths)
     if (!msg.isEmpty() && G::popup) G::popup->showPopup(msg, 2000);
 }
 
-static QStringList selectedSourcePaths(DataModel *dm)
+/*  The selected rows' KEYS: a version is a member in its own right (CollectionStore),
+    so adding or removing a selected version touches it and not its master. */
+static QStringList selectedKeys(DataModel *dm)
 {
-    QStringList paths;
+    QStringList keys;
     for (const QModelIndex &sfIdx : dm->selectionModel->selectedRows()) {
-        const QString p = sfIdx.data(G::SourcePathRole).toString();
-        if (!p.isEmpty() && !paths.contains(p)) paths << p;
+        const QString k = sfIdx.data(G::KeyRole).toString();
+        if (!k.isEmpty() && !keys.contains(k)) keys << k;
     }
-    return paths;
+    return keys;
 }
 
 void MW::addSelectionToCollection(qint64 id)
 {
     if (G::isLogger) G::log("MW::addSelectionToCollection");
-    const QStringList paths = selectedSourcePaths(dm);
+    const QStringList paths = selectedKeys(dm);
     if (paths.isEmpty()) {
         if (G::popup) G::popup->showPopup(tr("Select some thumbnails first."), 2000);
         return;
@@ -805,7 +839,7 @@ void MW::removeSelectionFromCollection(qint64 id)
     collection still holds them -- no reload, no picks question.
 */
     if (G::isLogger) G::log("MW::removeSelectionFromCollection");
-    const QStringList paths = selectedSourcePaths(dm);
+    const QStringList paths = selectedKeys(dm);
     if (paths.isEmpty()) {
         if (G::popup) G::popup->showPopup(tr("Select the thumbnails to remove first."),
                                           2000);

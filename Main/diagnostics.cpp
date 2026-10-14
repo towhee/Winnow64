@@ -508,9 +508,8 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  G::operationMode = "
         << (G::operationMode == G::OperationMode::Develop ? "Develop" : "Preview");
     rpt << "\n" << "  G::useRaw = " << G::s(G::useRaw);
-    rpt << "\n" << "  G::decodeRawEngine = "
-        << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine ? "Winnow (in-house)"
-                                                                            : "Apple (Core Image)");
+    rpt << "\n" << "  default raw renderer = " << RawRender::defaultChoice().label()
+        << "   (G::decodeRawEngine; each image may choose its own -- Develop/rawrender.h)";
     rpt << "\n";
 
     /* PROBES: the switches defined together in global.cpp. Reported as one block so a
@@ -581,8 +580,12 @@ QString MW::developDiagnostics()
     rpt << "\n";
 
     // DEVELOP BASE (cached scene-linear WorkingImage)
-    auto work = WorkingImageCache::instance().get(fPath);
+    const RawRender::Choice render = rawRenderFor(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, render.tag());
     rpt << "\n" << "DEVELOP BASE (WorkingImageCache pre-develop image)";
+    rpt << "\n" << "  raw renderer = " << render.label()
+        << (rawRenderFor(fPath) == RawRender::defaultChoice() ? "" : "  (this image's own)")
+        << "   tag = " << render.tag();
     rpt << "\n" << "  cached = " << (work ? "yes" : "no");
     if (work) {
         const double mb = double(work->rgb.size() * sizeof(float)) / (1024.0 * 1024.0);
@@ -650,7 +653,7 @@ QString MW::developDiagnostics()
         << "   denoiseRaw = " << (mj.global.denoiseRaw < 0
                                       ? "unset" : (mj.global.denoiseRaw ? "on" : "off"))
         << "   wanted = " << G::s(mj.global.wantsDenoiseRaw(G::autoRunDenoise))
-        << (G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine
+        << (!RawRender::resolve(mj.global).apple
                 ? "" : "   (inert: PMRID needs the CFA mosaic, not available on the Apple engine)");
     rpt << "\n" << "  developDenoised = " << dims(developDenoised)
         << "   key = " << (developDenoisedKey.isEmpty() ? "(clean)" : developDenoisedKey);

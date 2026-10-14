@@ -276,6 +276,9 @@ void MW::filterChange(QString source)
     // the state this change settles on, for the panels' Previous / Next
     recordFilterHistory();
 
+    // before the invalidate below, so the opened groups are in this filter pass
+    expandVersionsForCollectionFilter();
+
     /*  BOTH SCOPES FILTER THE PROXY NOW, and this gate is gone.
 
         It existed because the Catalog tree used to hold the CATALOG's values, queried

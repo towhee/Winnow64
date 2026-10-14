@@ -112,7 +112,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                        bool denoiseRaw,
                        const std::function<void(int, int)> &denoiseProgress,
                        std::shared_ptr<const WorkingImage> *outClean,
-                       bool *outDenoiseApplied)
+                       bool *outDenoiseApplied,
+                       const RawRender::Choice *render)
 {
 /*
     Shared, camera-agnostic pipeline:
@@ -148,7 +149,13 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        denoised" rather than leaving the caller's flag untouched. */
     if (outDenoiseApplied) *outDenoiseApplied = false;
 
+    /* The renderer: the image's own (per image -- Develop/rawrender.h), else the default.
+       Every base this decode hands back is tagged with it for WorkingImageCache, even
+       when an Apple decode soft-fails over to Winnow below: the tag says what the
+       recipe asked for, which is what the next lookup will ask for too. */
+    const RawRender::Choice choice = render ? *render : RawRender::defaultChoice();
     auto work = std::make_shared<WorkingImage>();
+    work->rawRenderTag = choice.tag();
     bool decoded = false;
     /* Separate PMRID-denoised base for the DEVELOPED display/export image, built only when a saved
        "Denoise raw" edit is present (below). *work (the cached base) always stays CLEAN; the
@@ -161,9 +168,11 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
        in-house UnpackCfa/Demosaic/RawColor stages. A soft failure falls through to engine B
        below, so a format Core Image can't read still decodes. Off-mac this branch is compiled
        out and the in-house engine is always used. */
-    if (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine) {
+    if (choice.apple) {
         QString aerr;
-        if (AppleRawDecode::Decode(file.fileName(), *work, aerr) && work->isValid()) {
+        if (AppleRawDecode::Decode(file.fileName(), *work, aerr, choice.applePin)
+            && work->isValid()) {
+            work->rawRenderTag = choice.tag();      // Decode fills the whole image
             decoded = true;
 
             /*
@@ -214,7 +223,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         always the main demosaic, so the interactive and saved-edit passes differ only in
         which of the two the caller gets.
     */
-    const bool winnowEngine = G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine;
+    const bool winnowEngine = !choice.apple;
     /* WANTED, not merely non-zero: the two amounts default NON-ZERO, so they cannot say
        whether denoise was asked for -- EditParams::denoiseRaw does (falling back to the
        Auto run preference when the recipe says nothing). Note the two spellings in this
@@ -349,6 +358,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                with no path attached. RawColor cannot fill it: it is handed the RawImage,
                not the metadata. See CameraColor::cameraModel. */
             work->cam.cameraModel = m.model;
+            work->rawRenderTag = choice.tag();      // whatever ToCameraNative reset
             return true;
         };
         if (needClean && !demosaicClean()) return false;
@@ -403,6 +413,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                                          edit->denoiseLumaOr(G::denoiseLumaDefault),
                                          edit->denoiseChromaOr(G::denoiseChromaDefault),
                                          *denoisedBase);
+                denoisedBase->rawRenderTag = choice.tag();
                 dt.blendMs = lap();
                 dt.valid = true;
             }

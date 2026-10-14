@@ -1,5 +1,6 @@
 #include "Image/pixmap.h"
 #include "Main/global.h"
+#include "Utilities/versionkey.h"
 
 Pixmap::Pixmap(QObject *parent, DataModel *dm, Metadata *metadata) : QObject(parent)
 {
@@ -73,12 +74,17 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 //    qint64 tICC;
 //    readTime.start();
 
-    QFileInfo fileInfo(fPath);
+    /*  fPath is a row KEY: the model is asked by it, but the pixels are the file's, so
+        every open and decode uses the source path. A version key ("<path>/#v<id>") is
+        not a file -- opening it fails, which blanked a version's slideshow slide and
+        Develop's interim preview. */
+    QString srcPath = VersionKey::sourceOf(fPath);     // non-const: Tiff::decode takes a reference
+    QFileInfo fileInfo(srcPath);
     QString ext = fileInfo.completeSuffix().toLower();
 
     if (metadata->videoFormats.contains(ext)) return false;
 
-    QFile imFile(fPath);
+    QFile imFile(srcPath);
 //    if (imFile.isOpen()) imFile.close();
     int dmRow = dm->rowFromKey(fPath);
 
@@ -158,7 +164,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         Heic heic;
 
         // try to decode
-        if (!heic.decodePrimaryImage(fPath, image)) {
+        if (!heic.decodePrimaryImage(srcPath, image)) {
             if (imFile.isOpen()) imFile.close();
             QString msg = "Unable to decode heic file.";
             G::issue("Error", msg, "Pixmap::load", dmRow, fPath);
@@ -216,7 +222,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
 
 //        /*
-        if (!tiff.decode(m, fPath, image)) {
+        if (!tiff.decode(m, srcPath, image)) {
             imFile.close();
             qDebug() << "Pixmap::load"
                      << "Could not decode using Winnow Tiff decoder.  "
@@ -226,7 +232,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
             // use Qt tiff library to decode
             decoderUsed = "Qt";
-            if (!image.load(fPath)) {
+            if (!image.load(srcPath)) {
                 imFile.close();
                 QString msg = "Could not decode tiff using Qt.";
                 G::issue("Error", msg, "Pixmap::load", dmRow, fPath);
@@ -242,7 +248,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     else {
 //        qDebug() << "Pixmap::load all other formats" << fPath;
         // try to decode
-        if (!image.load(fPath)) {
+        if (!image.load(srcPath)) {
             imFile.close();
             QString msg = "Could not decode using default decoder.";
             G::issue("Error", msg, "Pixmap::load", dmRow, fPath);

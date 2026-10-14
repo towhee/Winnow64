@@ -38,6 +38,7 @@ private slots:
     void wantsIsAutoRunOrOptedIn();
     void sanitizeRepairsAnOutOfRangeValue();
     void unsetAmountsFollowTheRememberedValues();
+    void rawRendererIsATriStateLikeDenoiseRaw();
 };
 
 void TestDenoiseRaw::unsetIsIdentityAndUnserialised()
@@ -124,6 +125,52 @@ void TestDenoiseRaw::sanitizeRepairsAnOutOfRangeValue()
     survive the round trip, and sanitize must keep -1 legal while repairing other
     negatives.
 */
+/*
+    The RAW RENDERER (EditParams::rawEngine + appleRawVersion, 2026-10-14) is the same
+    kind of field: per image, so a version can render with Apple Raw 9 while its master
+    uses Winnow, and UNSET follows the default. The same four properties hold -- unset is
+    identity and absent from the JSON (no preview re-keyed), an explicit choice survives
+    the round trip, the version is written only under Apple, and sanitize repairs what no
+    control can produce. (RawRender::resolve, which reads the globals, is exercised in
+    the app; this pins the recipe.)
+*/
+void TestDenoiseRaw::rawRendererIsATriStateLikeDenoiseRaw()
+{
+    const EditParams def;
+    QCOMPARE(def.rawEngine, -1);
+    QVERIFY(def.isIdentity());
+    QVERIFY(!EditStack::paramsToJson(def).contains("rawEngine"));
+    QVERIFY(!EditStack::paramsToJson(def).contains("appleRawVersion"));
+
+    EditParams winnow;
+    winnow.rawEngine = 0;
+    winnow.appleRawVersion = 9;                 // meaningless under Winnow: not written
+    QVERIFY(!winnow.isIdentity());              // a renderer choice alone is an edit
+    QJsonObject o = EditStack::paramsToJson(winnow);
+    QCOMPARE(o.value("rawEngine").toInt(), 0);
+    QVERIFY(!o.contains("appleRawVersion"));
+
+    EditParams apple9;
+    apple9.rawEngine = 1;
+    apple9.appleRawVersion = 9;
+    o = EditStack::paramsToJson(apple9);
+    const EditParams back = EditStack::paramsFromJson(o);
+    QCOMPARE(back.rawEngine, 1);
+    QCOMPARE(back.appleRawVersion, 9);
+
+    EditParams appleNewest;
+    appleNewest.rawEngine = 1;                  // version 0 = newest, the default
+    QVERIFY(!EditStack::paramsToJson(appleNewest).contains("appleRawVersion"));
+
+    EditStack s;
+    s.scopes.append(EditScope());
+    s.scopes[0].params.rawEngine = 5;
+    s.scopes[0].params.appleRawVersion = -3;
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.rawEngine, -1);
+    QCOMPARE(s.scopes[0].params.appleRawVersion, 0);
+}
+
 void TestDenoiseRaw::unsetAmountsFollowTheRememberedValues()
 {
     EditParams p;

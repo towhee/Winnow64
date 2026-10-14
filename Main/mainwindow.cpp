@@ -6181,7 +6181,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                     const auto mj = developProperties->stackJobFor(fPath);
                     if (mj.global.wantsDenoiseRaw(G::autoRunDenoise))
                         ensureRawDenoise(fPath, mj.global,
-                                         WorkingImageCache::instance().get(fPath),
+                                         WorkingImageCache::instance().get(
+                                             fPath, RawRender::resolve(mj.global).tag()),
                                          currentImageIso());
                 }
             }
@@ -7734,6 +7735,12 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     if (thumb.isNull() && !blob.isEmpty() && fPath != dm->currentKey
         && G::operationMode == G::OperationMode::Develop)
         buildDevPreviews(QStringList(fPath), "sync");
+    /* Reset to no recipe: flushImage dropped the preview, and the DEFAULT render that
+       replaces it (a raw's, a version's included) is otherwise only built by the next
+       folder-load sweep -- until then Browse shows the camera JPEG, not the default
+       renderer. The builder skips non-raws and anything already cached. */
+    else if (blob.isEmpty())
+        buildDevPreviews(QStringList(fPath), "flush");
 }
 
 void MW::updateCatalogForRow(int dmRow)
@@ -12068,7 +12075,7 @@ void MW::startSegmenter()
     if (!segmenterWanted || !imageView || !developProperties) return;
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || currentIsVideo()) return;
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work) {
         /* renderDevelopPreview calls back in once the decode lands. */
         segmenterNote(tr("Waiting for the image to load..."), QString());
@@ -12283,7 +12290,7 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     else if (isObject) need << ModelStore::Model::Sam2Encoder << ModelStore::Model::Sam2Decoder;
     if (!ModelStore::ensure(need, this)) return;
 
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work) return;
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
@@ -12389,7 +12396,7 @@ void MW::updateMaskOverlayTint()
 
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work) { imageView->clearScopeMaskTint(); return; }
     const QVector<MaskComponent> components = developProperties->activeScopeComponents();
     if (components.isEmpty()) { imageView->clearScopeMaskTint(); return; }
@@ -12749,7 +12756,7 @@ void MW::updateSharpenMaskPreview()
        frame's render scale exactly as Develop::Sharpen scales it for a proxy (the one
        scale-dependent op -- see Develop/sharpen.h). */
     float scale = 1.0f;
-    if (auto work = WorkingImageCache::instance().get(developFramePath)) {
+    if (auto work = WorkingImageCache::instance().get(developFramePath, rawRenderFor(developFramePath).tag())) {
         const int degrees = work->sceneReferred
                                 ? developOrientationDegrees(*work, developFramePath) : 0;
         int fw = work->width, fh = work->height;
@@ -12882,7 +12889,7 @@ void MW::renderDevelopPreview(bool fullRes)
 
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     const bool wantRaw = isFileRaw(fPath) && G::useRaw;
     /* Develop needs the SCENE-LINEAR raw WorkingImage, not the tone-mapped 8-bit display image. It
        may be absent (evicted from the small WorkingImageCache during Preview read-ahead) OR a prior
@@ -12932,12 +12939,17 @@ void MW::renderDevelopPreview(bool fullRes)
     const WorkingImage *srcImg = base.get();
     const LensDb::Shot lensShot = lensShotFor(fPath);     // GUI thread: reads the model
     if (!fullRes) {
-        if (developProxyPath != fPath || !developProxy) {
+        /*  Also when the BASE changed under the same image: "Render using" (or an undo
+            of it) swaps the decoded base -- per renderer in WorkingImageCache -- and a
+            proxy kept by path alone went on showing the old decoder's pixels. */
+        if (developProxyPath != fPath || !developProxy
+            || developProxySrc.lock() != base) {
             const QSize vp = imageView->viewport()->size();
             const int target = qMax(800, qMax(vp.width(), vp.height()) * 3 / 2);
             developProxy = std::make_shared<WorkingImage>(
                 WorkingImageCache::downscaled(*base, target));
             developProxyPath = fPath;
+            developProxySrc = base;
             developStackCache.clear();     // new pixels: cached masks are the wrong size
             if (G::isReportDevelopTime) tProxy = probe.restart();
         }
@@ -13245,7 +13257,7 @@ void MW::invalidateDevelopAfterRotation(const QString &fPath)
        devPreviewUpdated), and without this it was served the old orientation. */
     ThumbCache::instance().onDeleted(fPath);
 
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (work && !work->sceneReferred) WorkingImageCache::instance().remove(fPath);
 
     if (fPath != dm->currentKey && fPath != developProxyPath) return;
@@ -13460,7 +13472,7 @@ void MW::renderDevelopFullResAsync()
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     if (currentIsVideo()) return;               // Develop operates on stills, not videos
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work) return;                    // proxy render builds/caches it first; nothing to do yet
 
     auto mj = developProperties->stackJob();          // full stack, captured on the GUI thread
@@ -13490,7 +13502,7 @@ void MW::renderDevelopFullResAsync()
     if (base == work &&
         (mj.global.denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
          mj.global.denoiseChromaOr(G::denoiseChromaDefault) > 0.0f) &&
-        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine) {
+        !rawRenderFor(fPath).apple) {
         /* Run PMRID when wantsDenoiseRaw says so: Auto run, or the image opted in
            (EditParams::denoiseRaw = 1, the "Run on this image" box). This used to be
            "Auto run OR a PMRID base is already cached", the second half being how a
@@ -13670,7 +13682,7 @@ void MW::onDetailPointNudged(int dx, int dy)
     if (!developProperties) return;
     const QString fPath = dm ? dm->currentKey : QString();
     if (fPath.isEmpty()) return;
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work || !work->isValid()) return;
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     int fw = work->width, fh = work->height;
@@ -13708,7 +13720,7 @@ void MW::pushDevelopGeometryToView()
     if (!imageView || !developProperties || !dm) return;
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work) { imageView->setDevelopGeometry(Geometry(), QSize()); return; }
 
     const Geometry g = developRenderGeometry();
@@ -13871,6 +13883,12 @@ bool MW::rawDenoiseCleanBaseOk(const std::shared_ptr<const WorkingImage> &w)
            w->space == ColorSpaceMath::ColorSpace::CameraNative;
 }
 
+RawRender::Choice MW::rawRenderFor(const QString &fPath) const
+{
+    return developProperties ? developProperties->rawRenderFor(fPath)
+                             : RawRender::defaultChoice();
+}
+
 std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
     const QString &fPath, const EditParams &base,
     const std::shared_ptr<const WorkingImage> &clean)
@@ -13887,7 +13905,7 @@ std::shared_ptr<const WorkingImage> MW::developRawDenoisedBase(
     /* PMRID is Winnow-engine only; on the Apple engine "Denoise raw" is inert, so serve
        the clean base even if a Winnow-denoised base is still cached (the key is engine-
        independent, so this is what makes a Winnow->Apple switch actually update). */
-    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine)
+    if (rawRenderFor(fPath).apple)
         return clean;
     const QString key = rawDenoiseKey(fPath, base, currentImageIso());
     if (developDenoisedKey == key && developDenoised) return developDenoised;
@@ -13915,7 +13933,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     /* PMRID needs the CFA mosaic -> Winnow engine only. On the Apple engine "Denoise raw"
        is inert; bail so a slider drag doesn't trigger a full re-decode that denoises
        nothing. */
-    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    if (rawRenderFor(fPath).apple) return;
     /* Can't work here (no inference backend / no pmrid.onnx, or this sensor's CFA). Bail
        BEFORE the decode: the build case is known up front, and for the sensor case an
        auto-run retry on every settle would be a full raw re-decode each time for a base
@@ -13957,7 +13975,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         /* The shared base another decode made -- e.g. the ImageCache decode of this
            image's saved recipe -- so the model does not run a second time. */
         if (!pmrid) pmrid = PmridCache::instance().get(m.fPath, m.ISONum);
-        std::shared_ptr<const WorkingImage> cached = WorkingImageCache::instance().get(fPath);
+        std::shared_ptr<const WorkingImage> cached = WorkingImageCache::instance().get(fPath, RawRender::Choice().tag());
         const bool cachedOk = rawDenoiseCleanBaseOk(cached);
         std::shared_ptr<const WorkingImage> cleanBase = src ? src
                                                             : (cachedOk ? cached : nullptr);
@@ -14024,7 +14042,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
                 progress->clearProgress(progressRawDenoiseRow);
                 if (!dm || fPath != dm->currentKey) return;
                 if (freshClean && !rawDenoiseCleanBaseOk(
-                                      WorkingImageCache::instance().get(fPath)))
+                                      WorkingImageCache::instance().get(fPath, RawRender::Choice().tag())))
                     WorkingImageCache::instance().put(fPath, freshClean);
                 reportRawDenoiseUnavailable(fPath);
             });
@@ -14044,14 +14062,14 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             if (!dm || fPath != dm->currentKey) return;  // navigated away; drop it
             /* Engine switched to Apple mid-decode: this Winnow result is stale -- drop
                it so it can't re-publish a Winnow base the Apple render would ignore. */
-            if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+            if (rawRenderFor(fPath).apple) return;
             /* Publish the freshly-decoded clean base so renderDevelopPreview /
                ensureDevelopWork reuse it, not trigger another scene-linear decode. It
                also REPLACES a display-referred entry left under this path by Preview
                mode -- that entry is what the blend had to reject to get here, and
                leaving it would send the next denoise straight back to it. */
             if (freshClean &&
-                !rawDenoiseCleanBaseOk(WorkingImageCache::instance().get(fPath)))
+                !rawDenoiseCleanBaseOk(WorkingImageCache::instance().get(fPath, RawRender::Choice().tag())))
                 WorkingImageCache::instance().put(fPath, freshClean);
             developPmridFull = pmrid;      // cache the full base for other amounts
             developPmridKey = pkey;
@@ -14155,7 +14173,7 @@ void MW::runRawDenoiseNow()
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
     /* PMRID is Winnow-engine only; inert on Apple. */
-    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    if (rawRenderFor(fPath).apple) return;
     /* Known not to work here: grey the group and say why rather than leave live-looking
        controls over an image that will never change (ensureRawDenoise would just bail).
        Normally unreachable -- the controls are already disabled by then. */
@@ -14164,7 +14182,7 @@ void MW::runRawDenoiseNow()
         return;
     }
     const auto mj = developProperties->stackJob();
-    ensureRawDenoise(fPath, mj.global, WorkingImageCache::instance().get(fPath),
+    ensureRawDenoise(fPath, mj.global, WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag()),
                      currentImageIso());
 }
 
@@ -14191,7 +14209,7 @@ bool MW::rawDenoiseReadyForCurrent()
     if (!dm) return false;
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || !developPmridFull) return false;
-    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return false;
+    if (rawRenderFor(fPath).apple) return false;
     return developPmridKey == pmridBaseKey(fPath, currentImageIso());
 }
 
@@ -14204,7 +14222,7 @@ void MW::onDemosaicProgress(const QString &fPath, int done, int total)
        finishes caching (setCached, wired in createImageCache). */
     if (G::autoRunDenoise) return;
     if (G::operationMode != G::OperationMode::Develop || !G::useRaw) return;
-    if (G::decodeRawEngine != G::DecodeRawEngine::winnowDecodeRawEngine) return;
+    if (rawRenderFor(fPath).apple) return;
     if (!dm || fPath != dm->currentKey) return;
     progress->showRow(progressDemosaicRow, true);
     progress->updateProgress(progressDemosaicRow, done, total);
@@ -14237,10 +14255,14 @@ void MW::ensureDevelopWork(const QString &fPath)
     /* Show the Winnow raw demosaic progress on this develop-open decode -- the "Denoise
        raw" path (ensureRawDenoise) shows its own row and runs only when Auto run is on,
        so this covers the manual (Auto run off) case. Raw + in-house engine only. */
+    /* This image's raw renderer (per image -- Develop/rawrender.h), read here on the GUI
+       thread: the decode below caches the base under it, which is the tag
+       renderDevelopPreview asks for. */
+    const RawRender::Choice render = rawRenderFor(fPath);
     const bool showDemosaic = !G::autoRunDenoise && G::useRaw && isFileRaw(fPath)
-        && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine;
+        && !render.apple;
 
-    developRenderPool->start([this, fPath, m, gen, showDemosaic]() mutable {
+    developRenderPool->start([this, fPath, m, gen, showDemosaic, render]() mutable {
         ImageDecoder dec(0, dm, metadata);
         std::function<void(int, int)> prog;
         if (showDemosaic) {
@@ -14254,7 +14276,7 @@ void MW::ensureDevelopWork(const QString &fPath)
             };
         }
         QImage img;
-        dec.decodeIndependent(img, metadata, m, prog);   // caches the scene-linear work
+        dec.decodeIndependent(img, metadata, m, prog, &render);  // caches the scene-linear work
         QMetaObject::invokeMethod(this, [this, fPath, gen, showDemosaic]() {
             if (showDemosaic) progress->clearProgress(progressDemosaicRow);
             developWorkInFlight.clear();
@@ -14263,7 +14285,7 @@ void MW::ensureDevelopWork(const QString &fPath)
             /* Success (scene-linear work now cached) -> clear the marker so a future eviction can
                re-decode. Otherwise (display-referred format, e.g. lossless ARW) -> mark it so the
                re-render below uses the display fallback instead of looping the async decode. */
-            auto w = WorkingImageCache::instance().get(fPath);
+            auto w = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
             if (w && w->sceneReferred) developWorkTriedPath.clear();
             else                        developWorkTriedPath = fPath;
             renderDevelopPreview(false);                       // render the proxy (scene-linear or fallback)
@@ -14295,7 +14317,7 @@ void MW::ensureWorkingImageNow(const QString &fPath)
     if (G::isLogger) G::log("MW::ensureWorkingImageNow");
     if (fPath.isEmpty() || !icd) return;
 
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     const bool wantRaw = isFileRaw(fPath) && G::useRaw;
     if (wantRaw && (!work || !work->sceneReferred) && developWorkTriedPath != fPath) {
         ensureDevelopWork(fPath);
@@ -14787,7 +14809,7 @@ void MW::toggleDevelopCameraPreview()
        smaller than the sensor, and showing it at its pixel size would refit the loupe
        and lose the user's zoom. */
     QSize shown = cam.size();
-    if (auto work = WorkingImageCache::instance().get(fPath)) {
+    if (auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag())) {
         const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
         const int fw = (degrees == 90 || degrees == 270) ? work->height : work->width;
         if (fw > 0)
@@ -15111,7 +15133,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         mj.global.wantsDenoiseRaw(G::autoRunDenoise) &&
         (mj.global.denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
          mj.global.denoiseChromaOr(G::denoiseChromaDefault) > 0.0f) &&
-        G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine &&
+        !RawRender::resolve(mj.global).apple &&
         rawDenoiseAvailable(fPath);
     /* Reuse the live session's full-strength PMRID base when it belongs to THIS image, so
        exporting the image being edited does not re-run the model. It is amount-independent
@@ -15120,13 +15142,17 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     std::shared_ptr<const WorkingImage> pmridCached;
     if (wantDenoise && developPmridFull && developPmridKey == pmridBaseKey(fPath, m.ISONum))
         pmridCached = developPmridFull;
+    /* The raw renderer THIS RECIPE chose (per image -- Develop/rawrender.h), for the
+       cache lookup and the decode: an export of a version on Apple Raw 9 must not be
+       rendered from its master's Winnow base. */
+    const RawRender::Choice render = RawRender::resolve(mj.global);
 
     /* Step 1 (worker): make sure the scene-linear WorkingImage exists. decodeIndependent
        caches it as a side effect, so an image already visited is a cache hit. */
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, degreesSnap, sensorRaw, requireSensor,
-                              lensShot, done]() mutable {
-        auto work = WorkingImageCache::instance().get(fPath);
+                              lensShot, render, done]() mutable {
+        auto work = WorkingImageCache::instance().get(fPath, render.tag());
         /* A cached base is only usable here if it IS the sensor image. The cache is keyed
            by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
            typically 1024 px), so reusing it would render this image's export -- or its
@@ -15147,8 +15173,8 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             ImageDecoder dec(0, dm, metadata);
             dec.forceSensorDecode = sensorRaw;
             QImage img;
-            dec.decodeIndependent(img, metadata, m, nullptr);
-            work = WorkingImageCache::instance().get(fPath);
+            dec.decodeIndependent(img, metadata, m, nullptr, &render);
+            work = WorkingImageCache::instance().get(fPath, render.tag());
             decodedHere = true;
             /* The sensor decode failed and decodeIndependent fell back to the embedded
                preview. requireSensor callers want a failure, not a preview-sized
@@ -15545,7 +15571,7 @@ void MW::applyDevelopLevel(double deltaDeg)
     if (deltaDeg == 0.0) return;
 
     const QString fPath = dm->currentKey;
-    auto work = WorkingImageCache::instance().get(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
     if (!work) return;
     int fw = work->width, fh = work->height;
     if (work->sceneReferred) {

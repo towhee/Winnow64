@@ -2686,48 +2686,18 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::useRawRequested, this,
             [this](bool useRaw){ toggleUseRaw(useRaw ? Tog::on : Tog::off); });
 
-    /* The dock's "Demosaic" combo selects the RAW decode engine (Apple Core Image vs in-house
-       Winnow). Set G::decodeRawEngine, drop the current image's cached scene-linear WorkingImage so
-       it re-decodes with the new engine, and re-render. NOTE (verify next session): the visible
-       re-decode relies on renderDevelopPreview's raw re-decode path (gated on isFileRaw && useRaw). */
-    connect(developProperties, &DevelopProperties::demosaicEngineChanged, this,
-            [this](bool useApple){
-#ifndef Q_OS_MAC
-                /* The Apple engine is macOS-only and its decode branch is compiled out
-                   here, so setting it off-mac would not merely be ignored: it matches
-                   NEITHER engine test, which silently disables the winnow-only PMRID raw
-                   denoise. Reachable off-mac by applying a preset made on a Mac. */
-                if (useApple) {
-                    useApple = false;
-                    if (G::popup)
-                        G::popup->showPopup("The Apple raw decoder is macOS only.<br>"
-                                            "Using the Winnow decoder.", 4000);
-                }
-#endif
-                G::decodeRawEngine = useApple ? G::DecodeRawEngine::appleDecodeRawEngine
-                                              : G::DecodeRawEngine::winnowDecodeRawEngine;
-                // PMRID runs on this engine only: warm it now (see setOperationMode)
-                if (!useApple && G::operationMode == G::OperationMode::Develop)
-                    PMRID::WarmUpAsync();
-                /* Clear the WHOLE WorkingImageCache, not just the current file: the
-                   clean bases are engine-specific and ImageDecoder::load() now reuses
-                   ANY cached scene-linear entry (the redundant-decode short-circuit), so
-                   a stale non-current entry would otherwise be served after a switch. */
-                WorkingImageCache::instance().clear();
-                developParamsChange();
-            });
+    /* "Render using" changed on an image (the Raw panel, a preset, Paste Settings). The
+       choice is in that image's recipe and the render paramsChanged starts decodes with
+       it -- WorkingImageCache files each base under its renderer, so nothing is cleared
+       here (Develop/rawrender.h). What is left is the engine's own housekeeping: PMRID
+       runs on Winnow only, so warm it (see setOperationMode). G::decodeRawEngine and the
+       Apple pin are now only the DEFAULT, set in Preferences. */
+    connect(developProperties, &DevelopProperties::rawRendererChanged, this, [this]{
+        if (G::operationMode == G::OperationMode::Develop && dm
+            && !rawRenderFor(dm->currentKey).apple)
+            PMRID::WarmUpAsync();
+    });
 
-    /* An "Apple Raw N" entry: set the version pin. demosaicEngineChanged(true) follows
-       from the dock and does the cache clear and re-render, so the pin must already be
-       set when it runs -- both are direct connections on the GUI thread. */
-    connect(developProperties, &DevelopProperties::appleDecoderVersionChanged, this,
-            [](int pin){
-#ifdef Q_OS_MAC
-                AppleRawDecode::SetVersionPin(pin);
-#else
-                Q_UNUSED(pin)
-#endif
-            });
 #ifdef Q_OS_MAC
     /* A decode recorded which Apple version it used: refresh the "Render using" list if
        it was the image the dock is showing. Queued to the GUI thread by AppleRawDecode. */
@@ -3527,13 +3497,13 @@ void MW::createModuleDock()
 {
 /*
     THE MODULE DOCK: Library | Folders at the left and Browse | Develop | Keywords |
-    Map | Embellish | Slide Show centred, across the top of the window -- the source and
-    the workflow settings of the UI model (see "THE UI MODEL" in workspaces.cpp). It
-    replaces the status-bar switcher, which is still built but hidden.
+    Map | Embellish | Slide Show centred and Masters | Versions at the right, across the
+    top of the window -- the source and the workflow settings of the UI model (see "THE
+    UI MODEL" in workspaces.cpp). It replaces the status-bar switcher, which is still
+    built but hidden.
 
-    THE MODES STAY CENTRED ON THE WINDOW, not on the space the source buttons leave: a
-    three-column grid whose outer columns stretch equally, so the empty right column is
-    as wide as the left one.
+    THE MODES STAY CENTRED ON THE WINDOW, not on the space the side buttons leave: a
+    three-column grid whose outer columns stretch equally.
 
     A DOCK RATHER THAN A TOOLBAR so it behaves like every other panel: a workspace
     records whether it is showing (isModuleDockVisible), Full Screen has a preference for
@@ -3614,6 +3584,49 @@ void MW::createModuleDock()
     moduleSeparators.clear();
     buildWorkflowButtons(modeLayout, moduleBtns, &moduleSeparators);
     grid->addWidget(modeBox, 0, 1, Qt::AlignCenter);
+
+    /*  MASTERS | VERSIONS: the outermost scope on the rows. An image with no versions
+        is its own master, so Masters shows every image once -- no version row under
+        any filter (SortFilter::mastersOnly) -- and Versions shows every row. The same
+        pair as Library | Folders: the buttons are a view of the proxy's state, pushed
+        back by MW::syncVersionModeButtons, so the menu item and a badge click (which
+        both lift Masters) flip them too. The proxy exists already (createDataModel),
+        so the persisted setting goes straight onto it. */
+    QWidget *versionBox = new QWidget(body);
+    QHBoxLayout *versionLayout = new QHBoxLayout(versionBox);
+    versionLayout->setContentsMargins(0, 0, 0, 0);
+    versionLayout->setSpacing(0);
+    versionMastersBtn = new QToolButton;
+    versionAllBtn = new QToolButton;
+    versionMastersBtn->setText(tr("Masters"));
+    versionAllBtn->setText(tr("Versions"));
+    versionMastersBtn->setToolTip(tr(
+        "Show only master images, one per file.  An image with no versions is its own "
+        "master."));
+    versionAllBtn->setToolTip(tr(
+        "Show every image, including all versions (virtual copies)."));
+    QButtonGroup *versionGroup = new QButtonGroup(versionBox);
+    versionGroup->setExclusive(true);
+    for (QToolButton *b : {versionMastersBtn, versionAllBtn}) {
+        b->setCheckable(true);
+        b->setAutoRaise(true);
+        b->setFocusPolicy(Qt::NoFocus);
+        versionGroup->addButton(b);
+    }
+    if (dm && dm->sf)
+        dm->sf->setMastersOnly(isSettings && settings->value("versionMastersOnly").toBool());
+    syncVersionModeButtons();
+    connect(versionMastersBtn, &QToolButton::clicked, this, [this] {
+        setVersionMastersOnly(true);
+    });
+    connect(versionAllBtn, &QToolButton::clicked, this, [this] {
+        setShowAllVersions(true);           // lifts Masters as well
+    });
+    versionLayout->addWidget(versionMastersBtn);
+    versionLayout->addWidget(new QLabel("|"));
+    versionLayout->addWidget(versionAllBtn);
+    grid->addWidget(versionBox, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
+
     moduleDock->setWidget(body);
     /* No frameLine: the Module dock is a strip of workflow names, not a panel to outline. */
     moduleDock->setFrameLineVisible(false);
@@ -3988,7 +4001,7 @@ void MW::setOperationMode(G::OperationMode mode)
     /* Pay PMRID's ~1.8 s first-run cost in the background now rather than in the user's
        first "Denoise raw" (see PMRID::WarmUpAsync; once per process). Before the
        no-change return so a launch that restores Develop also warms it. */
-    if (inDevelop && G::decodeRawEngine == G::DecodeRawEngine::winnowDecodeRawEngine)
+    if (inDevelop && dm && !rawRenderFor(dm->currentKey).apple)
         PMRID::WarmUpAsync();
 
     if (G::operationMode == mode) {                     // no change
@@ -4125,7 +4138,8 @@ void MW::setOperationMode(G::OperationMode mode)
                 const auto mj = developProperties->stackJob();
                 if (mj.global.wantsDenoiseRaw(G::autoRunDenoise))
                     ensureRawDenoise(dm->currentKey, mj.global,
-                                     WorkingImageCache::instance().get(dm->currentKey),
+                                     WorkingImageCache::instance().get(
+                                         dm->currentKey, rawRenderFor(dm->currentKey).tag()),
                                      currentImageIso());
             }
         }

@@ -1,6 +1,7 @@
 #include "Datamodel/collectionstore.h"
 #include "Datamodel/userdb.h"
 #include "Cache/pathkey.h"
+#include "Utilities/versionkey.h"
 #include "Main/global.h"
 
 #include <QCoreApplication>
@@ -406,6 +407,25 @@ QStringList CollectionStore::memberPaths(const QVector<qint64> &ids)
     return out;
 }
 
+QVector<qint64> CollectionStore::collectionsOf(const QString &key)
+{
+    QVector<qint64> out;
+    QSqlDatabase d = db();
+    if (!d.isOpen() || key.isEmpty()) return out;
+    QSqlQuery q(d);
+    q.prepare("SELECT m.node FROM member m JOIN node n ON n.id = m.node"
+              " WHERE n.kind = ? AND m.pathkey = ?");
+    q.addBindValue(static_cast<int>(Kind::Collection));
+    q.addBindValue(cachePathKey(key));
+    if (!q.exec()) return out;
+    QSet<qint64> in;
+    while (q.next()) in.insert(q.value(0).toLongLong());
+    // tree order, so a list built from it reads as the Collections panel does
+    for (const Node &n : nodes(Kind::Collection))
+        if (in.contains(n.id)) out << n.id;
+    return out;
+}
+
 QHash<QString, QStringList> CollectionStore::membershipByKey(Kind kind)
 {
     QHash<QString, QStringList> out;
@@ -442,10 +462,15 @@ void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)
     if (from.isEmpty() || to.isEmpty() || from == to) {
         if (from == to && !from.isEmpty()) {
             // a case-only rename: same key, new spelling
+            const QString versions = from + VersionKey::kSep;
             QSqlQuery q(d);
-            q.prepare("UPDATE member SET path = ? WHERE pathkey = ?");
+            q.prepare("UPDATE member SET path = ? || substr(pathkey, length(?) + 1)"
+                      " WHERE pathkey = ? OR substr(pathkey, 1, length(?)) = ?");
             q.addBindValue(QDir::cleanPath(QDir::fromNativeSeparators(dstPath)));
             q.addBindValue(from);
+            q.addBindValue(from);
+            q.addBindValue(versions);
+            q.addBindValue(versions);
             q.exec();
         }
         return;
@@ -453,15 +478,25 @@ void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)
     d.transaction();
     QSqlQuery q(d);
     /*  OR IGNORE, then delete what is left: a collection that already held the
-        destination keeps one membership, not a constraint failure. */
-    q.prepare("UPDATE OR IGNORE member SET pathkey = ?, path = ? WHERE pathkey = ?");
+        destination keeps one membership, not a constraint failure. The file's versions
+        (from + "/#v" + id) go with it, each keeping its suffix. */
+    const QString versions = from + VersionKey::kSep;
+    q.prepare("UPDATE OR IGNORE member SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(pathkey, length(?) + 1)"
+              " WHERE pathkey = ? OR substr(pathkey, 1, length(?)) = ?");
     q.addBindValue(to);
+    q.addBindValue(from);
     q.addBindValue(QDir::cleanPath(QDir::fromNativeSeparators(dstPath)));
     q.addBindValue(from);
+    q.addBindValue(from);
+    q.addBindValue(versions);
+    q.addBindValue(versions);
     q.exec();
     const bool changed = q.numRowsAffected() > 0;
-    q.prepare("DELETE FROM member WHERE pathkey = ?");
+    q.prepare("DELETE FROM member WHERE pathkey = ? OR substr(pathkey, 1, length(?)) = ?");
     q.addBindValue(from);
+    q.addBindValue(versions);
+    q.addBindValue(versions);
     q.exec();
     d.commit();
     if (changed) emit membersChanged();
@@ -496,8 +531,14 @@ void CollectionStore::onDeleted(const QString &path)
     if (!isOpen() && !QFileInfo::exists(this->path())) return;
     QSqlDatabase d = db();
     if (!d.isOpen()) return;
+    /*  The file's versions leave with it; a version key leaves alone (a version record
+        deleted, MW::deleteVersionRecords). */
+    const QString key = cachePathKey(path);
+    const QString versions = key + VersionKey::kSep;
     QSqlQuery q(d);
-    q.prepare("DELETE FROM member WHERE pathkey = ?");
-    q.addBindValue(cachePathKey(path));
+    q.prepare("DELETE FROM member WHERE pathkey = ? OR substr(pathkey, 1, length(?)) = ?");
+    q.addBindValue(key);
+    q.addBindValue(versions);
+    q.addBindValue(versions);
     if (q.exec() && q.numRowsAffected() > 0) emit membersChanged();
 }

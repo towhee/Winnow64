@@ -323,6 +323,28 @@ struct EditParams {
     }
 
     /*
+        RAW RENDERER ("Render using" on the Raw panel), Global scope only: which decoder
+        turns this image's raw file into pixels. PER IMAGE, and so per version (virtual
+        copy) -- a version can render with Apple Raw 9 while its master uses Winnow.
+
+        rawEngine, TRI-STATE like denoiseRaw and for the same reason (an untouched raw
+        must keep its recipe and devPreview key):
+          -1  unset  follow the app-wide default (Preferences; G::decodeRawEngine and
+                     AppleRawDecode::VersionPin). THE DEFAULT, omitted from the sidecar.
+           0  Winnow the in-house decoder.
+           1  Apple  Core Image (macOS only; Winnow elsewhere).
+        appleRawVersion -- with rawEngine 1 only: 0 = the newest version the file
+        supports, N = Apple Raw N (the newest <= N the file has; see
+        AppleRawDecode::VersionPin for the rule).
+
+        It changes the DECODE, not the develop pass: the cached pre-develop base is
+        per renderer (WorkingImageCache tags). Resolve it through RawRender::resolve
+        (Develop/rawrender.h), never by reading these directly.
+    */
+    int rawEngine       = -1;
+    int appleRawVersion = 0;
+
+    /*
         LENS CORRECTIONS (Develop/lenscorrect.h, Develop/lensprofile.h), Global scope
         only, applied to the BASE image before any scope develops -- so every mask, guide
         and scope sees corrected edges. Set from the Global scope's Lens section.
@@ -591,6 +613,7 @@ struct EditParams {
                gradeGlobalSat == 0.0f && gradeGlobalLum == 0.0f &&
                denoiseLuma < 0.0f && denoiseChroma < 0.0f &&   // unset = remembered
                denoiseRaw < 0 &&        // unset = "follow the preference" = untouched
+               rawEngine < 0 &&         // unset = the default renderer = untouched
                removeCA < 0 && defringePurple == 0.0f && defringeGreen == 0.0f &&
                lensProfile < 0 && lensDistortion == 1.0f && lensVignetting == 1.0f &&
                lensProfileId.isEmpty() &&

@@ -13,6 +13,8 @@
 #include "Datamodel/datamodel.h"
 #include "Utilities/icc.h"
 #include "Develop/editparams.h"
+#include "Develop/rawrender.h"
+#include <optional>
 #ifdef Q_OS_WIN
 #include "ImageFormats/Heic/heic.h"
 #endif
@@ -27,9 +29,12 @@ public:
     ~ImageDecoder() override;
     /* progress (when set) is forwarded to the RAW demosaic (in-house/Winnow engine) for
        per-tile status-bar feedback -- used by MW::ensureDevelopWork to show demosaic
-       progress on develop-open. Inert for non-raw formats and the Apple engine. */
+       progress on develop-open. Inert for non-raw formats and the Apple engine.
+       render: the raw renderer the image's recipe chose (Develop/rawrender.h); null =
+       the app-wide default. */
     bool decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m,
-                           const std::function<void(int, int)> &progress = {});
+                           const std::function<void(int, int)> &progress = {},
+                           const RawRender::Choice *render = nullptr);
 
     /* Decode the raw sensor file straight to a pre-develop WorkingImage, uncached (does NOT touch
        WorkingImageCache), for the "Denoise raw" base. m must carry fPath + rawInfo + ISONum.
@@ -203,6 +208,15 @@ private:
     */
     EditParams editParams;
     bool developApplied = false;
+    /*  The raw renderer for this decode. Set only by decodeIndependent, whose callers
+        know the image's recipe (the Develop image, the exporter, the devPreview
+        builder); an ImageCache decode knows no recipe and uses the default -- its
+        display image is replaced by the Develop render (or the recipe's devPreview)
+        wherever the recipe matters. Resolved per decode: the default can change. */
+    std::optional<RawRender::Choice> rawRender;
+    RawRender::Choice renderChoice() const {
+        return rawRender ? *rawRender : RawRender::defaultChoice();
+    }
     /* This decode came out of the devPreview cache rather than out of the image file:
        loadDevPreview() found a cached JPEG of the developed image matching the recipe in
        force. Those pixels are already EXIF-rotated, cropped and developed, in sRGB, so

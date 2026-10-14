@@ -94,6 +94,20 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     barLabel->setCursor(Qt::PointingHandCursor);
     barLabel->installEventFilter(this);
 
+    /* ": n" -- how many scopes this image has, Global included. Painted in the [+]
+       glyph's own grey (#b8b8b8 in new.png) at the same G::iconOpacity BarBtn::setIcon
+       draws it with, so the count reads as part of the bar's "add" affordance rather than
+       as more caption. Refilled by updateScopeBar. A click folds, like the caption. */
+    barCountLabel = new QLabel(scopeBar);
+    /* Written out rather than via G::labelCss, whose color.name() drops the alpha. */
+    barCountLabel->setStyleSheet(
+        "QLabel { color: rgba(184, 184, 184, " + QString::number(G::iconOpacity) + ");"
+        " background: transparent; font-size: " + G::strFontSize + "pt; }"
+        " QLabel:disabled { color: " + G::disabledColor.name() + "; }");
+    barCountLabel->setToolTip("Scopes on this image, Global included");
+    barCountLabel->setCursor(Qt::PointingHandCursor);
+    barCountLabel->installEventFilter(this);
+
     scopeCombo = new QComboBox(scopeBar);
     scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     scopeCombo->setToolTip("The scope the settings below belong to:\n"
@@ -154,6 +168,7 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     hb->addWidget(barCollapseBtn, 0, vc);
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(barLabel, 0, vc);
+    hb->addWidget(barCountLabel, 0, vc);
     /* Two characters of clear space between the caption and the combo, so the band's own
        title reads apart from the scope it names. Measured from barLabel's font rather
        than hard-coded, so the gap still looks like two spaces when the font size changes
@@ -213,7 +228,8 @@ bool ScopeHeader::eventFilter(QObject *obj, QEvent *event)
 {
     /* A click on the "Scope" caption folds the details, like a band click in every other
        Develop panel. */
-    if (obj == barLabel && event->type() == QEvent::MouseButtonPress) {
+    if ((obj == barLabel || obj == barCountLabel)
+        && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *me = static_cast<QMouseEvent*>(event);
         if (me->button() == Qt::LeftButton) { toggleEditsCollapsed(); return true; }
     }
@@ -229,6 +245,7 @@ void ScopeHeader::updateScopeBar()
     scopeCombo->clear();
     scopeCombo->addItems(names);
     scopeCombo->setCurrentIndex(activeIndex);
+    if (barCountLabel) barCountLabel->setText(": " + QString::number(names.size()));
     setEyeIcon(barEyeBtn, enabledStates.value(activeIndex, true));
 }
 

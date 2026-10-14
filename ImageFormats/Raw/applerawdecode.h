@@ -15,7 +15,7 @@
     in-house UnpackCfa -> Demosaic -> RawColor path (engine B). Both converge on WorkingImage,
     so everything downstream (Develop, local luminance NR, OutputTransform) is engine-agnostic.
 
-    Selected by G::decodeRawEngine == appleDecodeRawEngine. macOS-ONLY: this header is included
+    Selected per image by RawRender::Choice (Develop/rawrender.h). macOS-ONLY: this header is included
     unconditionally so the call site needs no #ifdef, but Decode() is only compiled in
     applerawdecode.mm (added to the build on APPLE). Callers therefore reference it only inside a
     Q_OS_MAC guard; off-mac the in-house engine is used unconditionally.
@@ -31,8 +31,9 @@ namespace AppleRawDecode {
 
 /* Decode path -> scene-linear WorkingImage (sceneReferred = true). Returns false (with err set)
    on any failure; the caller then falls back to the in-house engine, so a false return is a
-   soft failure, never fatal. */
-bool Decode(const QString &path, WorkingImage &out, QString &err);
+   soft failure, never fatal. pin is the image's version choice (0 = newest; see
+   VersionPin); -1 = the default (VersionPin()). */
+bool Decode(const QString &path, WorkingImage &out, QString &err, int pin = -1);
 
 /* The newest Core Image RAW decoder version the running macOS offers (9 on macOS 27),
    or 0 if none is found. */
@@ -50,17 +51,20 @@ QList<int> AvailableVersions();
    ILCE-9M2 under 8, an uncompressed A9 II file offers only 7). */
 QStringList SupportedCameraModels(int version, bool *perVersion = nullptr);
 
-/* THE USER'S VERSION CHOICE, global like the engine (Raw panel "Apple Raw N"). 0, the
-   default, is the newest version each file supports; N is the newest version <= N the
-   file supports, or the oldest it has if N is older than all of them. Persisted as
-   "appleRawDecoderVersion" beside "decodeRawEngine". Changing it must clear the
-   WorkingImageCache, as an engine switch does. */
+/* THE DEFAULT VERSION CHOICE, for images that have not chosen their own (the
+   renderer is per image since 2026-10-14 -- Develop/rawrender.h; this is
+   Preferences' default, like G::decodeRawEngine). 0 is the newest version each file
+   supports; N is the newest version <= N the file supports, or the oldest it has if N
+   is older than all of them. Persisted as "appleRawDecoderVersion" beside
+   "decodeRawEngine". */
 int VersionPin();
 void SetVersionPin(int pin);
 
 /* What a render key folds in: the pin, or LatestDecoderVersion() for "newest", so an OS
    update that adds a version misses the previews the old one rendered. */
 int EffectiveVersionPin();
+/* The same for a given pin (an image's own choice). */
+int EffectiveVersionPin(int pin);
 
 /* THE STATE OF APPLE'S RAW SUPPORT ON THIS MAC, as a short hash, for the render keys.
    The pin does not say which version a FILE decodes with -- "newest" moves from 8 to 9

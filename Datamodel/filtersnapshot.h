@@ -72,7 +72,7 @@ struct FilterSnapshotRow {
         Counted as slot FilterCat::SlotCount + i -- see BuildFilters::countSlot. */
     QVector<QString> extra;
     QStringList keywords;               // G::KeywordsAllColumn, trimmed
-    bool hiddenRaw = false;             // combineRawJpg && G::DupHideRawRole
+    bool hiddenRaw = false;             // raw+jpg raw half, or a version under Masters
 };
 
 /*  THE VALUES ARE SHARED, THE PROXY MEMBERSHIP IS NOT. A filter change alters which

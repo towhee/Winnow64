@@ -202,10 +202,11 @@ QString MW::devPreviewBuildKey(const QString &fPath) const
     const QString blob = edited ? developProperties->developBlobFor(fPath) : QString();
     if (!blob.isEmpty()) return Metadata::devPreviewKey(blob, fPath);
 
-    /* An unedited VERSION looks exactly like its source's default render, which the
-       master's own entry already holds (ImageDecoder::loadDevPreview reads it there). */
-    if (VersionKey::isVersion(fPath)) return QString();
-    if (!RawFormat::HasSensorDecoder(QFileInfo(fPath).suffix().toLower()))
+    /* An unedited VERSION gets a default render of its own, under its own key. It cannot
+       share the source's: the cache holds one entry per path, and an edited master's
+       entry is its recipe, not the default render (ImageDecoder::loadDevPreview). */
+    const QString src = VersionKey::sourceOf(fPath);
+    if (!RawFormat::HasSensorDecoder(QFileInfo(src).suffix().toLower()))
         return QString();
     return Metadata::defaultRenderKey(fPath);
 }
@@ -375,7 +376,9 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
         /* Sidecar first: writeDevelopSidecar writes the recipe, the thumbnail and the key in
            ONE pass, so the three can never disagree. The recipe is passed through
            unchanged -- this is not a recipe edit. */
-        if (!r.thumbJpg.isEmpty())
+        /* Not for an unedited version: its record keeps a thumbnail only beside a recipe,
+           so the write would rewrite the sidecar to store nothing. */
+        if (!r.thumbJpg.isEmpty() && (edited || !VersionKey::isVersion(fPath)))
             Metadata::writeDevelopSidecar(fPath, blob, r.thumbJpg.toBase64());
         if (!r.previewJpg.isEmpty())
             DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg);
@@ -610,8 +613,7 @@ void MW::queueBackgroundDevPreviewBuild()
         const bool edited = dm->index(row, G::DevelopColumn).data().toBool();
         /* Extension test only -- no file is opened here. buildDevPreviews makes the real
            (and more expensive) per-path decision, on a worker thread. */
-        if (!edited && (VersionKey::isVersion(fPath)
-                        || !RawFormat::HasSensorDecoder(info.suffix().toLower())))
+        if (!edited && !RawFormat::HasSensorDecoder(info.suffix().toLower()))
             continue;
         paths << fPath;
     }

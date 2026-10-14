@@ -83,7 +83,11 @@ void SetVersionPin(int pin) { versionPin.store(qMax(0, pin)); }
 
 int EffectiveVersionPin()
 {
-    const int pin = VersionPin();
+    return EffectiveVersionPin(VersionPin());
+}
+
+int EffectiveVersionPin(int pin)
+{
     return pin > 0 ? pin : LatestDecoderVersion();
 }
 
@@ -186,8 +190,9 @@ void RequestVersions(const QString &path)
     });
 }
 
-bool Decode(const QString &path, WorkingImage &out, QString &err)
+bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
 {
+    if (pin < 0) pin = VersionPin();
     if (@available(macOS 12.0, *)) {
         @autoreleasepool {
             NSURL *url = [NSURL fileURLWithPath:path.toNSString()];
@@ -241,7 +246,7 @@ bool Decode(const QString &path, WorkingImage &out, QString &err)
                0 = newest) picks from this file's list -- see PickVersion. */
             NSArray<NSString *> *supported = f.supportedDecoderVersions;
             NSString *defaultVersion = f.decoderVersion;
-            NSString *wanted = PickVersion(supported, VersionPin());
+            NSString *wanted = PickVersion(supported, pin);
             if (wanted != nil) f.decoderVersion = wanted;
 
             CIImage *img = f.outputImage;

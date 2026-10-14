@@ -139,6 +139,7 @@ private:
     QWidget     *scopeBar        = nullptr;
     BarBtn      *barCollapseBtn  = nullptr;   // leading arrow: fold the details away
     QLabel      *barLabel        = nullptr;   // "Scope" -- a click toggles the arrow
+    QLabel      *barCountLabel   = nullptr;   // ": n" scope count, Global included
     QComboBox   *scopeCombo      = nullptr;
     BarBtn      *barAddBtn       = nullptr;   // [+] new mask
     BarBtn      *barEyeBtn       = nullptr;

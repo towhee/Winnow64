@@ -3,6 +3,10 @@
 #include "Main/global.h"
 #include <QDebug>
 #include "Cache/devpreviewcache.h"
+#include "Develop/rawrender.h"
+#ifdef Q_OS_MAC
+#include "ImageFormats/Raw/applerawdecode.h"
+#endif
 #include "Cache/thumbcache.h"
 
 // this works because propertyeditor and preferences are friend classes of MW
@@ -290,6 +294,27 @@ void Preferences::itemChange(QModelIndex idx)
         if (mw->developProperties) {
             mw->developProperties->syncLensPanel();
             emit mw->developProperties->paramsChanged();
+        }
+    }
+
+    if (source == "defaultRawRenderer") {
+        /* The DEFAULT only: images with their own "Render using" keep it. Bases are
+           filed per renderer (WorkingImageCache tags) and the render keys hash the
+           renderer, so nothing needs clearing -- a re-render picks the new default up. */
+        for (const RawRender::Choice &c : rawRendererChoices()) {
+            if (c.label() != v.toString()) continue;
+            G::decodeRawEngine = c.apple ? G::DecodeRawEngine::appleDecodeRawEngine
+                                         : G::DecodeRawEngine::winnowDecodeRawEngine;
+#ifdef Q_OS_MAC
+            AppleRawDecode::SetVersionPin(c.applePin);
+            mw->settings->setValue("appleRawDecoderVersion", c.applePin);
+#endif
+            mw->settings->setValue("decodeRawEngine", static_cast<int>(G::decodeRawEngine));
+            if (mw->developProperties) {
+                mw->developProperties->reflectEngine();
+                emit mw->developProperties->paramsChanged();
+            }
+            break;
         }
     }
 
@@ -1620,6 +1645,43 @@ void Preferences::addDevPreviews()
     i.delegateType = DT_Checkbox;
     i.type = "bool";
     addItem(i);
+
+    /* The default raw renderer: what a raw renders with until "Render using" is set on
+       it (the choice is per image -- Develop/rawrender.h). Labels as the Raw panel's. */
+    i.name = "defaultRawRenderer";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Default raw renderer";
+    i.tooltip = "The decoder a raw file renders with until you choose one for it\n"
+                "with \"Render using\" in Develop's Raw panel. Images you have set\n"
+                "keep their own choice.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = RawRender::defaultChoice().label();
+    i.key = "defaultRawRenderer";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList.clear();
+    for (const RawRender::Choice &c : rawRendererChoices()) i.dropList << c.label();
+    addItem(i);
+}
+
+QVector<RawRender::Choice> Preferences::rawRendererChoices()
+{
+    /* Winnow, then Apple's newest and each version this Mac offers. */
+    QVector<RawRender::Choice> out;
+    out << RawRender::Choice();
+#ifdef Q_OS_MAC
+    RawRender::Choice newest;
+    newest.apple = true;
+    out << newest;
+    for (int v : AppleRawDecode::AvailableVersions()) {
+        RawRender::Choice c;
+        c.apple = true;
+        c.applePin = v;
+        out << c;
+    }
+#endif
+    return out;
 }
 
 void Preferences::addCatalog()

@@ -3,6 +3,8 @@
 #include "Utilities/fileops.h"
 #include "Metadata/versions.h"
 #include "Cache/devpreviewcache.h"
+#include "Datamodel/collectionstore.h"
+#include "Dialogs/versioncollectionsdlg.h"
 
 /*
     VERSIONS (VIRTUAL COPIES) IN THE GRID.
@@ -84,6 +86,17 @@ void MW::toggleVersionsExpanded(const QString &key)
 {
     const QString master = VersionKey::sourceOf(key);
     if (!dm) return;
+    /*  Under Masters the badge is the one way to see a group without leaving the
+        scope wholesale: lift Masters and open just this group. */
+    if (dm->sf->mastersOnly()) {
+        dm->sf->clearVersionsExpanded();
+        dm->sf->setShowAllVersions(false);
+        if (showAllVersionsAction) showAllVersionsAction->setChecked(false);
+        if (isSettings) settings->setValue("showAllVersions", false);
+        dm->sf->setVersionsExpanded(master, true);
+        setVersionMastersOnly(false);       // re-filters and recounts
+        return;
+    }
     /*  With Show All Versions on every group is open; a click on one badge turns the
         global switch off and leaves only that group open, which is what the click
         visibly asks for. */
@@ -106,6 +119,17 @@ void MW::setShowAllVersions(bool show)
     if (showAllVersionsAction && showAllVersionsAction->isChecked() != show)
         showAllVersionsAction->setChecked(show);
     if (!dm) return;
+    /*  Show All Versions is a view of the versions, so it cannot live under Masters:
+        turning it on lifts Masters (one re-filter, below, covers both). */
+    if (show && dm->sf->mastersOnly()) {
+        dm->sf->setMastersOnly(false);
+        if (isSettings) settings->setValue("versionMastersOnly", false);
+        syncVersionModeButtons();
+        dm->sf->setShowAllVersions(true);
+        filterChange("MW::setShowAllVersions");
+        if (buildFilters && filters && !filters->buildingFilters) buildFilters->recount();
+        return;
+    }
     /*  Turning it off hides every version whose own group is closed. If the current
         image is one, move to its master first (as setVersionsExpanded does). */
     if (!show && VersionKey::isVersion(dm->currentKey)) {
@@ -120,6 +144,46 @@ void MW::setShowAllVersions(bool show)
     }
     dm->sf->setShowAllVersions(show);
     filterChange("MW::setShowAllVersions");
+}
+
+void MW::setVersionMastersOnly(bool on)
+{
+/*
+    The Module dock's Masters (on) -- the outermost scope: SortFilter::mastersOnly
+    hides every version row, whatever the filters or the groups' expand state say, and
+    BuildFilters leaves them out of the unfiltered counts. Off is never a scope of its
+    own: what shows then is Show All Versions plus the groups a badge opened.
+*/
+    if (G::isLogger) G::log("MW::setVersionMastersOnly", on ? "on" : "off");
+    if (isSettings) settings->setValue("versionMastersOnly", on);
+    if (!dm || !dm->sf) { syncVersionModeButtons(); return; }
+    if (dm->sf->mastersOnly() == on) { syncVersionModeButtons(); return; }
+
+    /*  Turning it on: a current version is about to vanish, so land on its master
+        first, as a collapse does. */
+    if (on && VersionKey::isVersion(dm->currentKey)) {
+        const QModelIndex m = dm->proxyIndexFromKey(VersionKey::sourceOf(dm->currentKey));
+        if (m.isValid()) sel->select(m, Qt::NoModifier, "MW::setVersionMastersOnly");
+    }
+    dm->sf->setMastersOnly(on);
+    syncVersionModeButtons();
+    filterChange("MW::setVersionMastersOnly");
+    /*  The unfiltered totals change too (versions leave or rejoin them); filterChange
+        refreshes only the filtered side. */
+    if (buildFilters && filters && !filters->buildingFilters) buildFilters->recount();
+}
+
+void MW::syncVersionModeButtons()
+{
+/*
+    Masters | Versions say what SortFilter::mastersOnly holds. Signals blocked: the
+    buttons act on clicked, and this is not one.
+*/
+    if (!versionMastersBtn || !versionAllBtn) return;
+    const bool masters = dm && dm->sf && dm->sf->mastersOnly();
+    QSignalBlocker a(versionMastersBtn), b(versionAllBtn);
+    versionMastersBtn->setChecked(masters);
+    versionAllBtn->setChecked(!masters);
 }
 
 /* ---------------------------------------------------------------------------------
@@ -199,10 +263,42 @@ void MW::newVersion()
         keys << idx.data(G::KeyRole).toString();
     if (keys.isEmpty() && !dm->currentKey.isEmpty()) keys << dm->currentKey;
 
+    /*  COLLECTIONS. A version is a collection member in its own right, so it is in none
+        until added. When an image getting a version is in any, ask which the version
+        should join too (all ticked); Cancel makes no versions. */
+    QHash<QString, QVector<qint64>> inCollections;     // origin key -> collection ids
+    QVector<qint64> joinIds;
+    CollectionStore &store = CollectionStore::instance();
+    if (store.isAvailable()) {
+        QHash<qint64, int> imagesIn;
+        int images = 0;
+        for (const QString &key : std::as_const(keys)) {
+            const int dmRow = dm->rowFromKey(key);
+            if (dmRow < 0 || dm->index(dmRow, G::VideoColumn).data().toBool()) continue;
+            ++images;
+            const QVector<qint64> ids = store.collectionsOf(key);
+            if (ids.isEmpty()) continue;
+            inCollections.insert(key, ids);
+            for (qint64 id : ids) ++imagesIn[id];
+        }
+        if (!imagesIn.isEmpty()) {
+            QVector<qint64> offered;                   // tree order, as the panel shows
+            const auto nodes = store.nodes(CollectionStore::Kind::Collection);
+            for (const CollectionStore::Node &n : nodes)
+                if (imagesIn.contains(n.id)) offered << n.id;
+            VersionCollectionsDlg dlg(offered, imagesIn, images, this);
+            const bool ok = dlg.exec() == QDialog::Accepted;
+            resetFocus();
+            if (!ok) return;
+            joinIds = dlg.checkedIds();
+        }
+    }
+
     FileOps::flushPendingEdits();
 
     QStringList masters;
     QString selectKey;
+    QHash<qint64, QStringList> joining;                 // collection id -> new keys
     for (const QString &key : std::as_const(keys)) {
         const int dmRow = dm->rowFromKey(key);
         if (dmRow < 0 || dm->index(dmRow, G::VideoColumn).data().toBool()) continue;
@@ -231,6 +327,9 @@ void MW::newVersion()
             if (!jpg.isEmpty()) DevPreviewCache::instance().put(newKey, hash, jpg);
         }
 
+        for (qint64 cid : inCollections.value(key))
+            if (joinIds.contains(cid)) joining[cid] << newKey;
+
         if (!masters.contains(master)) masters << master;
         dm->sf->setVersionsExpanded(master, true);
         if (key == dm->currentKey || selectKey.isEmpty()) selectKey = newKey;
@@ -239,6 +338,23 @@ void MW::newVersion()
         G::popup->showPopup("No version was created.", 1500);
         return;
     }
+
+    /*  UNDER MASTERS the new rows could never show, so lift it, leaving open only the
+        groups that just got a version, as a badge click would. No re-filter here:
+        rereadVersionMasters' applyModelChange re-filters and rebuilds the counts. */
+    if (dm->sf->mastersOnly()) {
+        dm->sf->clearVersionsExpanded();
+        for (const QString &m : std::as_const(masters)) dm->sf->setVersionsExpanded(m, true);
+        dm->sf->setMastersOnly(false);
+        if (isSettings) settings->setValue("versionMastersOnly", false);
+        syncVersionModeButtons();
+    }
+
+    /*  Memberships BEFORE the rows go in: with the grid filtered to a collection, the
+        new rows must already be members when applyModelChange's re-filter sees them.
+        (membersChanged -> refreshCollectionMembership: the column, counts, refilter.) */
+    for (auto it = joining.cbegin(); it != joining.cend(); ++it)
+        store.addMembers(it.key(), it.value());
 
     /*  The expand state was set above, so the re-filter inside applyModelChange shows
         the new rows. Select the new version AFTER it: filterChange recovers the
@@ -356,6 +472,7 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
             if (developProperties) developProperties->forgetImage(k);
             DevPreviewCache::instance().removeEntry(k);
             if (icd) icd->remove(k);
+            CollectionStore::instance().onDeleted(k);  // its own memberships only
         }
     }
     rereadVersionMasters(masters, "MW::deleteVersionRecords");

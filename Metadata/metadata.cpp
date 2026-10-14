@@ -1,3 +1,4 @@
+#include "Develop/rawrender.h"
 #include "Metadata/metadata.h"
 #include "Utilities/geo.h"
 #include <QDebug>
@@ -691,15 +692,10 @@ static QString denoiseAmountsKeyPart()
                                     .arg(qRound(G::denoiseChromaDefault * 100.0f));
 }
 
-static QString appleVersionKeyPart()
-{
-#ifdef Q_OS_MAC
-    if (G::decodeRawEngine == G::DecodeRawEngine::appleDecodeRawEngine)
-        return QString("|appleRaw=c3:%1:%2").arg(AppleRawDecode::EffectiveVersionPin())
-                                            .arg(AppleRawDecode::SupportFingerprint());
-#endif
-    return QString();
-}
+/*  The engine and Apple parts come from the RENDERER, per image since 2026-10-14
+    (Develop/rawrender.h): the recipe's own choice, else the default. For a recipe that
+    never chose, RawRender::engineKey / appleKeyPart produce exactly what the global
+    setting did, so no existing key moved. */
 
 QString Metadata::devPreviewKey(const QString &blob)
 {
@@ -716,15 +712,16 @@ QString Metadata::devPreviewKey(const QString &blob)
     rebuild for images that pinned it, and never shows the wrong picture.
 */
     if (blob.isEmpty()) return QString();
+    const RawRender::Choice render = RawRender::fromBlob(blob);
     /* autoCA is appended only when ON, so the default (off) leaves every key that
        existed before the preference did unchanged -- no mass rebuild. */
     const QString d = blob + QString("|engine=%1|autoDenoise=%2")
-                                 .arg(int(G::decodeRawEngine))
+                                 .arg(RawRender::engineKey(render))
                                  .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
                     + denoiseAmountsKeyPart()
-                    + appleVersionKeyPart();
+                    + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
     return QString::fromLatin1(h.toHex().left(12));
@@ -782,13 +779,14 @@ QString Metadata::defaultRenderKey(const QString &fPath)
     Prefixed 'R' -- not a hex digit -- so the default-render and recipe key spaces are
     provably disjoint and a recipe hash can never be mistaken for a render hash.
 */
+    const RawRender::Choice render = RawRender::defaultChoice();   // no recipe: the default
     const QString d = QString("defaultRender|v1|engine=%1|autoDenoise=%2")
-                          .arg(int(G::decodeRawEngine))
+                          .arg(RawRender::engineKey(render))
                           .arg(G::autoRunDenoise ? 1 : 0)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())    // see devPreviewKey
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
                     + (G::autoRunDenoise ? denoiseAmountsKeyPart() : QString())
-                    + appleVersionKeyPart();
+                    + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);
 }

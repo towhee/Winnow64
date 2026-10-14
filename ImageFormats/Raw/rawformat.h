@@ -1,6 +1,7 @@
 #ifndef RAWFORMAT_H
 #define RAWFORMAT_H
 
+#include "Develop/rawrender.h"
 #include <memory>
 #include <functional>
 #include <QImage>
@@ -70,7 +71,12 @@ public:
        model did nothing (built without ONNX Runtime, pmrid.onnx missing, non-Bayer CFA), in
        which case the returned base is pixel-identical to the clean one. Without it a no-op
        denoise is indistinguishable from a successful one, and the caller reports a "Denoised"
-       state it did not earn (MW::ensureRawDenoise). */
+       state it did not earn (MW::ensureRawDenoise).
+
+       render is the RAW RENDERER for this image (Develop/rawrender.h) -- per image, so
+       the caller passes the one its recipe resolves to; null = the app-wide default. It
+       picks the engine and Apple version, gates PMRID (Winnow only), and tags the bases
+       handed back (WorkingImage::rawRenderTag) for WorkingImageCache. */
     bool Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 const EditParams *edit = nullptr,
                 const QAtomicInt *abort = nullptr,
@@ -78,7 +84,8 @@ public:
                 bool denoiseRaw = false,
                 const std::function<void(int, int)> &denoiseProgress = {},
                 std::shared_ptr<const WorkingImage> *outClean = nullptr,
-                bool *outDenoiseApplied = nullptr);
+                bool *outDenoiseApplied = nullptr,
+                const RawRender::Choice *render = nullptr);
 
     QString lastError() const { return errMsg; }
 

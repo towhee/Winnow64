@@ -1115,6 +1115,16 @@ bool DataModel::hasCollectionMembership() const
     return !collectionIdsByPath.isEmpty();
 }
 
+QStringList DataModel::keysInCollections(const QStringList &ids) const
+{
+    QStringList out;
+    QReadLocker lock(&collectionLock);
+    for (auto it = collectionIdsByPath.cbegin(); it != collectionIdsByPath.cend(); ++it)
+        for (const QString &id : it.value())
+            if (ids.contains(id)) { out << it.key(); break; }
+    return out;
+}
+
 void DataModel::setMapPinKeys(const QSet<QString> &keys)
 {
     QWriteLocker lock(&mapPinLock);
@@ -1166,17 +1176,17 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
     }
 
     /*  G::CollectionsColumn is answered from the membership side table, by the row's
-        SOURCE path -- a version is its file, so it is in its master's collections. An
-        empty list, never an invalid variant, for a row in none: the filter compares
-        with QStringList::contains. */
+        KEY -- a version is a member in its own right, not by way of its master (see
+        CollectionStore). An empty list, never an invalid variant, for a row in none:
+        the filter compares with QStringList::contains. */
     if (idx.isValid() && idx.column() == G::CollectionsColumn
         && (role == Qt::EditRole || role == Qt::DisplayRole))
     {
         QReadLocker lock(&collectionLock);
         if (collectionIdsByPath.isEmpty()) return QStringList();
-        const QString src =
-            rowStore.value(idx.row(), G::PathColumn, G::SourcePathRole).toString();
-        return collectionIdsByPath.value(src);
+        const QString key =
+            rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString();
+        return collectionIdsByPath.value(key);
     }
 
     /*  G::PlacesColumn: the places the row was taken inside, by SOURCE path as for
@@ -7850,6 +7860,7 @@ void SortFilter::setVersionsExpanded(const QString &masterKey, bool expanded)
 
 bool SortFilter::versionsExpanded(const QString &masterKey) const
 {
+    if (mMastersOnly) return false;     // Masters: no group is open, whatever was set
     return mShowAllVersions || mExpandedVersions.contains(masterKey);
 }
 
@@ -7906,6 +7917,13 @@ bool SortFilter::acceptsRow(int sourceRow, const QModelIndex &sourceParent,
         QModelIndex rawIdx = sourceModel()->index(sourceRow, 0, sourceParent);
         if (rawIdx.data(G::DupHideRawRole).toBool()) return false;
     }
+
+    /*  MASTERS ONLY (the Module dock's Masters) is the outermost scope: no version row,
+        under any filter, collapsed or not. Above the load test, like raw+jpg, because
+        it is the model's shape and not a question about metadata. */
+    if (mMastersOnly
+        && sourceModel()->index(sourceRow, 0, sourceParent).data(G::VersionIdRole).toInt() > 0)
+        return false;
 
     /*  IS A LOAD RUNNING -- not "has every row been read".
 
