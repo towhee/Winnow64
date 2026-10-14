@@ -48,6 +48,7 @@
 #include "Utilities/skypredictor.h"
 #include "Utilities/depthpredictor.h"
 #include "Utilities/objectmaskpredictor.h"
+#include "Utilities/segmenter.h"
 #include "Develop/Transform/croptransform.h"
 #include <atomic>
 #include <QMutex>
@@ -1577,6 +1578,9 @@ void MW::closeEvent(QCloseEvent *event)
     if (catalogScanner) catalogScanner->shutdown();
     /* The same for an audit that is still embedding or scoring: stop it and wait. */
     if (keywordAuditJob) keywordAuditJob->shutdown();
+    /* And a Segmenter object search: its decoder threads run OpenCV, which exit() tears
+       down under them. */
+    if (segmenterJob) segmenterJob->shutdown();
 
     if (filterDock->isVisible()) {
         folderDock->raise();
@@ -10863,8 +10867,14 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.rhi       = o.value("hi").toDouble(0.5);
             comps.append(d);
         }
-        else if (m.tool == int(MaskTool::Object)) {
-            /* Per-brush ref (keyed path+brush), built by MW::ensureObjectMask. Absent (not yet
+        else if (m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter)) {
+            /* A Segmenter with nothing selected has no coverage, and will have none
+               until a click: not "a ref still being built", so it must not mark the
+               refs unready (that keeps the result out of the fold cache). Skip it. */
+            if (m.tool == int(MaskTool::Segmenter) && !Segmenter::hasSelection(m.paramsJson))
+                continue;
+            /* Per-brush ref (keyed path+brush), built by MW::ensureObjectMask -- or for
+               a Segmenter, per selection, by ensureSegmenterMask. Absent (not yet
                decoded, or this brush empty) => no effect, like an unbuilt SubjectRef. */
             auto objRef = ObjectMask::getRef(objectRefKey(fPath, m.paramsJson));
             if (!objRef || !objRef->valid()) {            // object not ready -> no effect
@@ -11538,13 +11548,14 @@ bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
     return false;
 }
 
-/* True if any enabled scope carries an AI Object mask -- each needs its brush decoded into an
-   ObjectRef (MW::ensureObjectMask) before the composite. */
+/* True if any enabled scope carries an AI Object mask or a Segmenter -- each needs its
+   own ObjectRef (MW::ensureObjectMask / ensureSegmenterMask) before the composite. */
 bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
 {
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
         for (const MaskComponent &m : L.components)
-            if (m.tool == int(MaskTool::Object)) return true;
+            if (m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter))
+                return true;
     return false;
 }
 
@@ -12018,6 +12029,191 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     return true;
 }
 
+/* ---- Segmenter ------------------------------------------------------------------- */
+
+QString MW::segmenterKey(const QString &fPath, int degrees) const
+{
+    /* The objects are found in the ORIENTED frame, so a quarter turn is another frame. */
+    return fPath + "|seg|" + QString::number(degrees);
+}
+
+QImage MW::segmenterGuideImage(const QString &fPath, const WorkingImage &work,
+                               const EditParams &base, int degrees, int longEdge)
+{
+    WorkingImage small = WorkingImageCache::downscaled(work, longEdge);
+    correctGuideForLens(small, fPath, base);
+    int gw = small.width, gh = small.height;
+    if (degrees == 90 || degrees == 270) std::swap(gw, gh);
+    if (gw <= 0 || gh <= 0) return QImage();
+    return developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
+}
+
+void MW::segmenterNote(const QString &panel, const QString &canvas)
+{
+    developProperties->setSegmenterNote(panel);
+    imageView->setSegmenterMessage(canvas);
+}
+
+void MW::startSegmenter()
+{
+/*
+    Find the objects in the current image for an open Segmenter submask, or hand over the
+    ones already found. See segmenterJob in mainwindow.h for why this is called so often:
+    every path below is cheap until a search actually has to start.
+
+    The search sees the same developed base as the other AI masks, at 1024 px on the long
+    edge (SAM 2's encoder input is 1024^2 whatever it is given). It runs on a worker with
+    progress on the canvas and in the panel, so the user can watch -- and leave.
+*/
+    if (!segmenterWanted || !imageView || !developProperties) return;
+    const QString fPath = dm->currentKey;
+    if (fPath.isEmpty() || currentIsVideo()) return;
+    auto work = WorkingImageCache::instance().get(fPath);
+    if (!work) {
+        /* renderDevelopPreview calls back in once the decode lands. */
+        segmenterNote(tr("Waiting for the image to load..."), QString());
+        return;
+    }
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    const QString key = segmenterKey(fPath, degrees);
+    segmenterWantKey = key;
+
+    const auto it = segmenterCache.constFind(key);
+    if (it != segmenterCache.constEnd()) {
+        imageView->setSegmenterProgress(-1);
+        imageView->setSegmentation(it.value());
+        segmenterNote(tr("%1 objects found. Click one to add it to the mask, or a "
+                         "selected one to remove it. [ and ] give smaller or bigger "
+                         "pieces.").arg(it.value()->segs.size()),
+                      QString());
+        return;
+    }
+    if (segmenterJob && segmenterJob->isRunning()) {
+        if (segmenterJob->key() == key) return;         // already finding these
+        /* Another image's objects: nobody is waiting for them now. onSegmenterDone
+           starts this image's search when that run has stopped -- within a decode or
+           two -- so this image's progress starts from nothing rather than showing the
+           other run's. */
+        segmenterJob->cancel();
+        imageView->setSegmentation(nullptr);
+        imageView->setSegmenterProgress(0);
+        segmenterNote(tr("Finding objects... 0%"), QString());
+        return;
+    }
+
+    imageView->setSegmentation(nullptr);
+    const QString enc = ModelStore::path(ModelStore::Model::Sam2Encoder);
+    const QString dec = ModelStore::path(ModelStore::Model::Sam2Decoder);
+    if (enc.isEmpty() || dec.isEmpty()) {
+        /* Greyed with the reason rather than a popup after the fact: the tool stays
+           open, and says what it is missing and how to get it. */
+        segmenterNote(tr("The Segmenter needs the SAM 2 object model, which is not "
+                         "downloaded. Close this submask and open it again to download "
+                         "it."),
+                      tr("Segmenter: the object model is not downloaded"));
+        return;
+    }
+
+    const QImage guide = segmenterGuideImage(fPath, *work, developProperties->stackJob().global,
+                                             degrees, 1024);
+    if (guide.isNull()) return;
+    if (!segmenterJob) segmenterJob = new Segmenter::Job;
+    if (!segmenterProgressTimer) {
+        segmenterProgressTimer = new QTimer(this);
+        segmenterProgressTimer->setInterval(150);
+        connect(segmenterProgressTimer, &QTimer::timeout, this, &MW::onSegmenterProgressTick);
+    }
+    /* All the cores but two -- the GUI and the render keep theirs -- capped where the
+       decoder nets' memory (~120 MB each, freed when the search ends) stops paying. */
+    const int threads = std::clamp(QThread::idealThreadCount() - 2, 2, 16);
+    const bool started = segmenterJob->start(
+        key, guide, enc, dec, threads,
+        [this](const QString &k, std::shared_ptr<const Segmenter::Segmentation> r,
+               const QString &err) { onSegmenterDone(k, std::move(r), err); });
+    if (!started) return;
+    imageView->setSegmenterProgress(0);
+    segmenterNote(tr("Finding objects... 0%"), QString());
+    segmenterProgressTimer->start();
+}
+
+void MW::onSegmenterProgressTick()
+{
+    if (!segmenterJob || !segmenterJob->isRunning()) {
+        segmenterProgressTimer->stop();
+        return;
+    }
+    if (!segmenterWanted || segmenterJob->key() != segmenterWantKey) return;
+    const int pct = segmenterJob->progress();
+    imageView->setSegmenterProgress(pct);
+    developProperties->setSegmenterNote(tr("Finding objects... %1%").arg(pct));
+}
+
+void MW::onSegmenterDone(const QString &key, std::shared_ptr<const Segmenter::Segmentation> r,
+                         const QString &error)
+{
+    if (G::isLogger) G::log("MW::onSegmenterDone", key);
+    if (segmenterProgressTimer) segmenterProgressTimer->stop();
+    /* Kept even if the user has moved on: going back is common, and the search is the
+       expensive part. Three images' worth -- the label maps are a few MB each. */
+    if (r) {
+        segmenterCache.insert(key, r);
+        segmenterCacheOrder.removeAll(key);
+        segmenterCacheOrder.append(key);
+        while (segmenterCacheOrder.size() > 3)
+            segmenterCache.remove(segmenterCacheOrder.takeFirst());
+    }
+    if (!segmenterWanted) return;
+    /* A real failure for the image on screen is reported, not retried -- re-opening the
+       submask tries again. */
+    if (key == segmenterWantKey && !r && !error.isEmpty()) {
+        imageView->setSegmenterProgress(-1);
+        segmenterNote(tr("The object search failed: %1").arg(error),
+                      tr("Segmenter: the object search failed"));
+        return;
+    }
+    /* Everything else goes back through startSegmenter: this image's result is in the
+       cache now and is handed over; or the run was another image's, or was cancelled
+       for one and the user came back before it stopped -- either way the image on screen
+       still needs its search, and gets it now. */
+    startSegmenter();
+}
+
+void MW::ensureSegmenterMask(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, const QString &paramsJson)
+{
+/*
+    The coverage of one Segmenter submask: its selected outlines rasterized and snapped to
+    the photo (Segmenter::matte), registered in the Object Mask's store under the same
+    path + params key, so buildMaskBuffer samples it exactly like an object cutout. NO
+    MODEL: the outlines are the whole recipe, so a cold open, an export or a machine
+    without the SAM download renders the same mask.
+
+    The snap guide is the developed base at up to 2048 px, built once per image +
+    orientation and kept (like the other AI references, it does not follow the sliders --
+    a guide that moved with them would make the mask chase the adjustment).
+*/
+    if (G::isLogger) G::log("MW::ensureSegmenterMask");
+    noteLensGeometry(fPath, work, base);
+    if (!Segmenter::hasSelection(paramsJson)) return;
+    const QString refKey = objectRefKey(fPath, paramsJson);
+    if (ObjectMask::getRef(refKey)) return;                 // this selection is built
+
+    constexpr int kMatteLongEdge = 2048;
+    const QString guideKey = segmenterKey(fPath, degrees);
+    if (developSegmenterGuideKey != guideKey || developSegmenterGuide.isNull()) {
+        developSegmenterGuide = segmenterGuideImage(fPath, work, base, degrees,
+                                                    kMatteLongEdge);
+        developSegmenterGuideKey = developSegmenterGuide.isNull() ? QString() : guideKey;
+    }
+    if (developSegmenterGuide.isNull()) return;
+
+    auto r = std::make_shared<ObjectMask::ObjectRef>();
+    if (!Segmenter::matte(paramsJson, developSegmenterGuide, r->cov, r->w, r->h)) return;
+    r->x0 = 0.0; r->y0 = 0.0; r->x1 = 1.0; r->y1 = 1.0;     // the whole frame
+    if (!r->valid()) return;
+    ObjectMask::putRef(refKey, r);
+}
+
 void MW::onSpotEditBegin()
 {
 /*
@@ -12047,6 +12243,23 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     only builds the ref when a non-identity scope carries the mask, so a just-added mask on an
     unadjusted scope would otherwise show nothing. Cached by path, so re-selecting is a no-op.
 */
+    /* Any other tool opening closes the Segmenter's claim on the image. */
+    if (tool != int(MaskTool::Segmenter)) segmenterWanted = false;
+    /* The Segmenter finds every object up front, on a worker -- not a reference built
+       here and now like the others. */
+    if (tool == int(MaskTool::Segmenter)) {
+        /* THE DOWNLOAD GATE (see below), asked ONCE per tool session: buildTree re-emits
+           maskEditBegin on every rebuild, and a declined prompt must not come back on
+           each one. Closing the submask (maskEditEnd) re-arms it. */
+        const QVector<ModelStore::Model> need{ModelStore::Model::Sam2Encoder,
+                                              ModelStore::Model::Sam2Decoder};
+        if (!segmenterModelDeclined && !ModelStore::isAvailable(need)
+            && !ModelStore::ensure(need, this))
+            segmenterModelDeclined = true;
+        segmenterWanted = true;
+        startSegmenter();
+        return;
+    }
     const bool needsSubject = (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background));
     const bool isSky        = (tool == int(MaskTool::Sky));
     const bool isDepth      = (tool == int(MaskTool::Depth));
@@ -12244,10 +12457,14 @@ void MW::updateMaskOverlayTint()
     if (needSubject) ensureSubjectMask(fPath, *work, base, degrees);
     if (needSky)     ensureSkyMask(fPath, *work, base, degrees);
     if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
-    /* Object components are per-brush, so build each one from its own component params. */
-    for (const MaskComponent &m : masks)
+    /* Object and Segmenter components are per-brush / per-selection, so build each one
+       from its own component params. */
+    for (const MaskComponent &m : masks) {
         if (m.tool == int(MaskTool::Object))
             ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
+        else if (m.tool == int(MaskTool::Segmenter))
+            ensureSegmenterMask(fPath, *work, base, degrees, m.paramsJson);
+    }
 
     /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
        is smooth-scaled onto the image, so a couple of MP is ample and keeps live drags cheap. */
@@ -12598,7 +12815,13 @@ void MW::syncPendingMaskOp()
        (the button and chip say "Update", not "Subtract", while erasing). A plain paint
        stroke does not -- including an Opt stroke on an empty submask, which paints the
        area the user wants SUBTRACTED and must keep previewing that. */
-    if (imageView && imageView->maskStrokeIsErase()) {
+    /* The same holds BETWEEN erase strokes: with Opt still down and the next press
+       going to erase, Opt is not the Subtract op either (setPendingMaskOp's Add falls
+       back to the latched op, so whatever the submask does is left alone). */
+    const bool optHeld =
+        QGuiApplication::queryKeyboardModifiers().testFlag(Qt::AltModifier);
+    if (imageView && (imageView->maskStrokeIsErase()
+                      || (optHeld && imageView->maskOptWouldErase()))) {
         developProperties->setPendingMaskOp(int(MaskOp::Add));
         return;
     }
@@ -12726,6 +12949,10 @@ void MW::renderDevelopPreview(bool fullRes)
     int fw = work->width, fh = work->height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
+    /* An open Segmenter whose image was not decoded yet when it opened has been waiting
+       for exactly this: the working image exists now, so the object search can start.
+       A no-op once the objects are known or being found. */
+    if (segmenterWanted) startSegmenter();
     /* Content-range masks need the display-referred base reference in place before the composite
        (built from the FULL-res work so it is proxy-independent; cached, so this is a no-op unless
        the base params or image changed). */
@@ -12735,9 +12962,12 @@ void MW::renderDevelopPreview(bool fullRes)
     if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.global, degrees);
     if (stackHasObjectMask(mj))
         for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
-            for (const MaskComponent &m : L.components)
+            for (const MaskComponent &m : L.components) {
                 if (m.tool == int(MaskTool::Object))
                     ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
+                else if (m.tool == int(MaskTool::Segmenter))
+                    ensureSegmenterMask(fPath, *work, mj.global, degrees, m.paramsJson);
+            }
     /* Brush luminance auto-mask: guarantee the guide is registered (built from the loupe,
        the same one the overlay samples) so proxy and settle confine identically -- else a
        guideless proxy paints the full brush and the settle snaps it to the band. */
@@ -13160,6 +13390,9 @@ void MW::noteLensGeometry(const QString &fPath, const WorkingImage &work,
         developSkyRefPath.clear();
         developDepthRefPath.clear();
         developObjectImagePath.clear();
+        segmenterCache.clear();
+        segmenterCacheOrder.clear();
+        developSegmenterGuideKey.clear();
     }
     developLensGeomKeys.insert(fPath, key);
     if (!changed) return;
@@ -13175,6 +13408,13 @@ void MW::noteLensGeometry(const QString &fPath, const WorkingImage &work,
     if (developDepthRefPath == fPath) developDepthRefPath.clear();
     if (developObjectImagePath == fPath) developObjectImagePath.clear();
     if (developRangeRefPath == fPath) developRangeRefPath.clear();
+    /* The objects were found, and the snap guide built, on the old geometry. */
+    for (int d : {0, 90, 180, 270}) {
+        const QString k = segmenterKey(fPath, d);
+        segmenterCache.remove(k);
+        segmenterCacheOrder.removeAll(k);
+        if (developSegmenterGuideKey == k) developSegmenterGuideKey.clear();
+    }
     maskFoldCacheClear();
 }
 
@@ -13275,9 +13515,12 @@ void MW::renderDevelopFullResAsync()
     if (stackHasDepthMask(mj)) ensureDepthMask(fPath, *work, mj.global, degrees);
     if (stackHasObjectMask(mj))
         for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
-            for (const MaskComponent &m : L.components)
+            for (const MaskComponent &m : L.components) {
                 if (m.tool == int(MaskTool::Object))
                     ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
+                else if (m.tool == int(MaskTool::Segmenter))
+                    ensureSegmenterMask(fPath, *work, mj.global, degrees, m.paramsJson);
+            }
     /* Register the brush luminance auto-mask guide (GUI thread) before dispatching the
        worker, so the off-thread render confines the stroke the same as the proxy did. */
     if (stackHasAutoMaskBrush(mj)) imageView->ensureAutoGuide();
@@ -14990,9 +15233,13 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             if (stackHasDepthMask(mj))   ensureDepthMask(fPath, *work, mj.global, degrees);
             if (stackHasObjectMask(mj))
                 for (const DevelopProperties::StackRenderJob::Scope &L : mj.scopes)
-                    for (const MaskComponent &c : L.components)
+                    for (const MaskComponent &c : L.components) {
                         if (c.tool == int(MaskTool::Object))
                             ensureObjectMask(fPath, *work, mj.global, degrees, c.paramsJson);
+                        else if (c.tool == int(MaskTool::Segmenter))
+                            ensureSegmenterMask(fPath, *work, mj.global, degrees,
+                                                c.paramsJson);
+                    }
 
             /* Step 3 (worker): the composite itself. src is the raw-denoised base when
                "Denoise raw" is set, else the clean one. work is kept alive alongside it

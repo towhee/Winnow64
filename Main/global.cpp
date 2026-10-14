@@ -98,8 +98,13 @@ bool useFilterPanel = true;
    discoverable meaning: this submask SUBTRACTS from the mask. With this false Opt means
    Subtract everywhere -- one key, one meaning. Set true to restore the erase stroke
    (the whole path is intact: maskBrushErase, the "erase" stroke flag, BrushStamp's erase
-   composite, the pink cursor); delete it and the erase path once this proves out. */
-bool useBrushEraseStroke = false;
+   composite, the pink cursor); delete it and the erase path once this proves out.
+   RESTORED 2026-10-14 at the user's request: Opt+stroke erasing from the brush is the
+   Lightroom gesture people reach for, and with it off the cursor showed a minus while
+   the stroke added (first or re-opened submask) or flipped the WHOLE submask to
+   Subtract. Opt on an EMPTY submask still paints and means Subtract; once the submask
+   has strokes Opt erases, and the submask's op comes from the dialog / submask row. */
+bool useBrushEraseStroke = true;
 /* Model-path heal correction (Object fills + clone fallbacks; clone heals need none).
    Poisson default: keeps the model's content with the level solved from the boundary. */
 int  spotFillCorrectMode = 1;       // A/B: 0 none 1 Poisson 2 low-freq 3 harmonic

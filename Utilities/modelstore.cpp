@@ -53,9 +53,9 @@ const QVector<ModelInfo> &table()
           26639422LL,  "3aa5c7ac2e980c0a542703ce6fbd9497fadc176720c96af7bac55a56d1038d53", false },
         { Model::Lama,        "lama.onnx",              "Spot Heal",          1,
           208039155LL, "b6aecb7650fe83f11655964b9d7cb0df944990c8ef016c4a92e0ac8c709634dd", false },
-        { Model::Sam2Encoder, "sam2_encoder.onnx",      "Object Mask",        1,
+        { Model::Sam2Encoder, "sam2_encoder.onnx",      "Object Mask / Segmenter", 1,
           134261315LL, "4cc015ee18520e93f8c7ddfeaca7436039daaaaf19721b4b96a8810a805e82f7", false },
-        { Model::Sam2Decoder, "sam2_decoder.onnx",      "Object Mask",        1,
+        { Model::Sam2Decoder, "sam2_decoder.onnx",      "Object Mask / Segmenter", 1,
           20551111LL,  "f0e30257c95ffb64787018804fe2a96cf35e0ca873a05c4e7545ecb57a584395", false },
         { Model::SigLipImage, "siglip2_image.onnx",     "Audit Keywords",     1,
           184834856LL, "092d5ea082a7d9d1a00f47b9c5fdee6a559793c1af673d3e2acf6a596970b56b", false }

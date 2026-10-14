@@ -28,6 +28,7 @@
 #include "Dialogs/savedeveloppresetdlg.h"
 #include <QDir>
 #include <QUuid>
+#include "Utilities/segmenter.h"
 #include <QFileInfo>
 #include <QPainterPath>
 #include <QStandardItemModel>
@@ -950,6 +951,7 @@ void DevelopProperties::syncMaskPanel()
     maskPanel->setEditingExisting(open && pendingIdx < 0);
     maskPanel->showAttributes(open);
     syncAttributeScopeLabel();      // names what the settings below will affect
+    syncSegmenterNote();
     maskPanel->setVisible(true);
 }
 
@@ -1170,6 +1172,30 @@ void DevelopProperties::syncAttributeScopeLabel()
     if (maskPanel) maskPanel->setAttributeScope(maskAttributeScopeText());
 }
 
+void DevelopProperties::syncSegmenterNote()
+{
+    if (!maskPanel) return;
+    const MaskComponent *mm = editingMaskComp();
+    const bool seg = mm && mm->tool == int(MaskTool::Segmenter);
+    maskPanel->setToolNote(seg ? segmenterNote : QString());
+}
+
+void DevelopProperties::setSegmenterNote(const QString &text)
+{
+    if (segmenterNote == text) return;          // progress ticks repeat themselves
+    segmenterNote = text;
+    syncSegmenterNote();
+}
+
+void DevelopProperties::setSegmenterDetail(int level)
+{
+    level = std::clamp(level, 0, Segmenter::kLevels - 1);
+    setting->setValue("Develop/segmenterDetail", level);
+    const MaskComponent *mm = editingMaskComp();
+    if (maskPanel && maskPanel->editor() && mm && mm->tool == int(MaskTool::Segmenter))
+        maskPanel->editor()->setComboValue("maskSegDetail", Segmenter::levelName(level));
+}
+
 void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &v)
 {
     MaskComponent *mm = editingMaskComp();
@@ -1256,6 +1282,18 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
             setSubmaskOp(selectedMaskIndex, mode == "Remove" ? int(MaskOp::Subtract)
                                                              : int(MaskOp::Add));
         armMaskAutoCommit();
+        noteMaskInteraction();
+        return;
+    }
+    /* Segmenter Detail: a TOOL preference (which level of the object hierarchy the
+       canvas offers), not an edit -- the selection made so far is untouched, so there is
+       no history entry, no render and no settle. */
+    else if (key == "maskSegDetail") {
+        int level = 0;
+        for (int l = 0; l < Segmenter::kLevels; ++l)
+            if (Segmenter::levelName(l) == v.toString()) level = l;
+        setting->setValue("Develop/segmenterDetail", level);
+        emit segmenterDetailChanged(level);
         noteMaskInteraction();
         return;
     }
@@ -1356,8 +1394,9 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     /* Sky is a real matte -- its fractional edge IS the result (Utilities/skyrefine.h) --
        and Feather > 0 re-sharpens it around 0.5, undoing the halo work. Start at the matte
        as-is. (Refine Brush keeps the default: a soft stroke edge fades the refinement in
-       rather than leaving a seam where the region ends.) */
-    if (tool == int(MaskTool::Sky)) m.feather = 0.0f;
+       rather than leaving a seam where the region ends.) The Segmenter's coverage is a
+       matte too -- its outlines snapped to the photo by SegRefine -- so the same holds. */
+    if (tool == int(MaskTool::Sky) || tool == int(MaskTool::Segmenter)) m.feather = 0.0f;
 
     /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
        submask is pending until its edits settle (or Return lands it early) -- the first
@@ -1400,13 +1439,18 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     noteMaskInteraction();
     emit paramsChanged();        // overlay/tint (red committed, blue pending)
 
-    /* Object Mask starts empty and waits for a traced boundary, which is not obvious. The
-       first 3 uses get a popup; after that the hint stays in the status bar only. */
-    if (tool == int(MaskTool::Object)) {
-        const QString hint = "Use the brush to outline the object(s)";
-        const int n = setting->value("Develop/objectMaskHintCount", 0).toInt();
+    /* Object Mask starts empty and waits for a traced boundary, and the Segmenter waits
+       for clicks; neither is obvious. The first 3 uses get a popup; after that the hint
+       stays in the status bar only. */
+    if (tool == int(MaskTool::Object) || tool == int(MaskTool::Segmenter)) {
+        const bool seg = (tool == int(MaskTool::Segmenter));
+        const QString hint = seg ? "Click the objects you want in the mask"
+                                 : "Use the brush to outline the object(s)";
+        const QString countKey = seg ? "Develop/segmenterHintCount"
+                                     : "Develop/objectMaskHintCount";
+        const int n = setting->value(countKey, 0).toInt();
         if (n < 3) {
-            setting->setValue("Develop/objectMaskHintCount", n + 1);
+            setting->setValue(countKey, n + 1);
             if (G::popup) G::popup->showPopupNow(hint, 3000);
         }
         else if (G::relay) {
@@ -2306,6 +2350,7 @@ QString DevelopProperties::maskToolName(int tool)
     case MaskTool::Depth:           return "Depth Range Mask";
     case MaskTool::Object:          return "Object Mask";
     case MaskTool::RefineBrush:     return "Refine Brush";
+    case MaskTool::Segmenter:       return "Segmenter";
     }
     return "Mask";
 }
@@ -3134,6 +3179,11 @@ QString DevelopProperties::defaultMaskParams(int tool)
         o["strokes"] = QJsonArray();
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
+    if (tool == int(MaskTool::Segmenter)) {
+        /* Nothing selected yet: the objects are found when the tool opens, and each
+           click adds or removes one outline (Utilities/segmenter.h). */
+        return Segmenter::paramsWith(QJsonArray());
+    }
     return QString();
 }
 
@@ -3345,7 +3395,7 @@ void DevelopProperties::updateMaskEdit()
             m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
             m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
             m.tool == int(MaskTool::Background) || m.tool == int(MaskTool::Depth) ||
-            m.tool == int(MaskTool::Object)) {
+            m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }

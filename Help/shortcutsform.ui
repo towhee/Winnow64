@@ -1387,6 +1387,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Segmenter Detail</string>
+        </property>
+        <property name="text">
+         <string>[  /  ]</string>
+        </property>
+        <property name="text">
+         <string>Smaller / bigger pieces (Objects, Parts, Details); pointer over the photo while a Segmenter submask is open</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Crop / Transform Panel</string>
         </property>
         <property name="text">

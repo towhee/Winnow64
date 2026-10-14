@@ -153,6 +153,7 @@ class PlaceList;
 class PlaceDlg;
 class QNetworkAccessManager;
 namespace LensDb { struct Shot; }
+namespace Segmenter { class Job; struct Segmentation; }
 class QNetworkReply;
 
 class MW : public QMainWindow
@@ -2956,6 +2957,38 @@ private:
     int    developObjectGuideW = 0, developObjectGuideH = 0;
     QRect  developObjectCrop;
     class ObjectMaskPredictor *objectMaskPredictor = nullptr;
+    /* SEGMENTER (Utilities/segmenter.h): SAM 2 finds the objects in the image -- a few
+       seconds, on segmenterJob's thread, once per image + orientation (segmenterKey) --
+       and the result is cached here and handed to ImageView, whose clicks build the
+       submask's outlines. Those outlines are all a render needs: ensureSegmenterMask
+       rasterizes them and snaps them to the photo, no model involved.
+
+       startSegmenter is idempotent and cheap once the objects are known or being found,
+       which is what lets it be called from every maskEditBegin and render tick while the
+       tool is open (segmenterWanted) -- the only way to catch the working image landing
+       after the tool was opened. One search at a time: a different image's request
+       cancels the run and onSegmenterDone starts the wanted one. */
+    void startSegmenter();
+    void onSegmenterDone(const QString &key, std::shared_ptr<const Segmenter::Segmentation> r,
+                         const QString &error);
+    void onSegmenterProgressTick();
+    void segmenterNote(const QString &panel, const QString &canvas);
+    QString segmenterKey(const QString &fPath, int degrees) const;
+    /* The developed, output-oriented, UNCROPPED frame at longEdge -- what SAM 2 is shown,
+       and (larger) what the outlines are snapped to. */
+    QImage segmenterGuideImage(const QString &fPath, const WorkingImage &work,
+                               const EditParams &base, int degrees, int longEdge);
+    void ensureSegmenterMask(const QString &fPath, const WorkingImage &work,
+                             const EditParams &base, int degrees, const QString &paramsJson);
+    Segmenter::Job *segmenterJob = nullptr;
+    QTimer *segmenterProgressTimer = nullptr;
+    QHash<QString, std::shared_ptr<const Segmenter::Segmentation>> segmenterCache;
+    QStringList segmenterCacheOrder;            // oldest first; capped at 3 images
+    bool    segmenterWanted = false;            // a Segmenter submask is open
+    QString segmenterWantKey;                   // ... on this image + orientation
+    bool    segmenterModelDeclined = false;     // download refused this tool session
+    QImage  developSegmenterGuide;              // ensureSegmenterMask's snap guide
+    QString developSegmenterGuideKey;
     Preferences *pref = nullptr;
     StressTest *stressTest;
     QFrame *embelFrame;

@@ -1,9 +1,12 @@
 #include "Develop/Properties/maskeditor.h"
 #include "Develop/Properties/colorrangewheel.h"
 #include "Main/global.h"
+#include "Utilities/segmenter.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QSettings>
+#include <algorithm>
 
 /* Read a numeric field from a mask tool's paramsJson (def if absent). */
 static double pnum(const QJsonObject &o, const QString &key, double def)
@@ -134,6 +137,30 @@ void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effecti
         setSliderReal("maskEdge", edge);
         setCheckboxValue("maskInvert", m.inverted);
         break;
+
+    case int(MaskTool::Segmenter): {
+        /* Detail is a property of the TOOL, not of this submask: it picks which level of
+           the object hierarchy the canvas offers (whole objects, their parts, finer
+           parts), so it is a preference -- changing it re-renders nothing, and the
+           selection already made stays as it is. */
+        QStringList levels;
+        for (int l = 0; l < Segmenter::kLevels; ++l) levels << Segmenter::levelName(l);
+        addCombo("maskSegDetail", "Detail",
+                 "What a click picks: whole OBJECTS, their PARTS, or finer DETAILS.\n"
+                 "[ and ] step through them while the pointer is over the photo.",
+                 levels);
+        addSlider("maskFeather", "Feather", "Soften the selected objects' edges.", 0, 100);
+        addSlider("maskEdge", "Edge", kEdgeTip, -100, 100);
+        addCheckbox("maskInvert", "Invert", "Everything except the selected objects.");
+        const int level = std::clamp(G::settings ? G::settings->value(
+                              "Develop/segmenterDetail", 0).toInt() : 0,
+                              0, Segmenter::kLevels - 1);
+        setComboValue("maskSegDetail", Segmenter::levelName(level));
+        setSliderReal("maskFeather", feather);
+        setSliderReal("maskEdge", edge);
+        setCheckboxValue("maskInvert", m.inverted);
+        break;
+    }
 
     default:    // Gradients, Subject, Sky, Background: Feather + Invert
         addSlider("maskFeather", "Feather", "Soften the mask edge.", 0, 100);

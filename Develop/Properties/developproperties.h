@@ -497,6 +497,12 @@ public slots:
     void onWorkingImageReady(const QString &fPath);
     /* ImageView reports new mask geometry (dragged overlay) as the active tool's paramsJson. */
     void setActiveMaskParams(const QString &paramsJson);
+    /* Segmenter. setSegmenterDetail: the canvas stepped the Detail level ([ / ]) --
+       store the preference and show it in the panel row. setSegmenterNote: MW's word on
+       the object search (progress, then how to use it, or why it cannot run); shown in
+       the panel while a Segmenter submask is open (syncSegmenterNote). */
+    void setSegmenterDetail(int level);
+    void setSegmenterNote(const QString &text);
     /* Re-assert the overlay for the active tool (e.g. when the Develop dock becomes visible). */
     void refreshMaskEdit() { updateMaskEdit(); }
     /* ImageView changed the brush size via keyboard ([ ]) or a two-finger drag; sync the
@@ -729,6 +735,9 @@ signals:
        sends geometry back via setActiveMaskParams. */
     void maskEditBegin(int tool, int op, bool inverted, const QString &paramsJson, double feather);
     void maskEditEnd();
+    /* The Segmenter's Detail row changed (0 Objects, 1 Parts, 2 Details): which level of
+       the object hierarchy the canvas offers. A preference -- nothing re-renders. */
+    void segmenterDetailChanged(int level);
     /* Regenerative spot fill: arm/disarm ImageView spot-brush capture. Emitted when the
        Develop action-row spot tool is toggled. */
     void spotEditBegin();
@@ -1257,6 +1266,10 @@ private:
        will actually affect, given the tool, whether the submask is still pending, and
        whether Shift is held right now. */
     QString maskAttributeScopeText();
+    /* Push segmenterNote into the panel when the open submask is a Segmenter, else
+       clear the line. Called from syncMaskPanel, and when MW changes the text. */
+    void syncSegmenterNote();
+    QString segmenterNote;
     /* maskBrushSettingsChanged from the current settings. */
     void emitBrushSettings(const MaskComponent &m);
     /* A canvas gesture changed a mask setting: seed the row wherever it is showing --

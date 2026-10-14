@@ -75,6 +75,18 @@ void MaskPanel::buildUi()
     scopeLabel->setVisible(false);
     bl->addWidget(scopeLabel);
 
+    /* A tool's own state, in words, where its settings are: the Segmenter's "Finding
+       objects... 45%", how to use it once the objects are found, or why it cannot run
+       (model not downloaded). Same dim style and indent as the scope line above. */
+    toolNote = new QLabel(attrWrap);
+    toolNote->setWordWrap(true);
+    toolNote->setContentsMargins(G::headerLeftInset + 2 * G::subHeaderIndent
+                                     + G::subHeaderIndent / 2, 2, 0, 2);
+    toolNote->setStyleSheet(G::labelCss(G::disabledColor,
+                                        qMax(7, G::strFontSize.toInt() - 1)));
+    toolNote->setVisible(false);
+    bl->addWidget(toolNote);
+
     /* The tool's settings render here (Size/Feather/etc.), identical to the main tree.
        DevelopProperties populates + wires it. Full left margin (0) so its own caption
        column lines up with the tree below. */
@@ -453,6 +465,14 @@ void MaskPanel::setAttributeScope(const QString &text)
     if (scopeLabel->text() == text) return;      // called on every Shift press/release
     scopeLabel->setText(text);
     scopeLabel->setVisible(!text.isEmpty());
+}
+
+void MaskPanel::setToolNote(const QString &text)
+{
+    if (!toolNote) return;
+    if (toolNote->text() == text) return;       // the Segmenter's progress ticks it
+    toolNote->setText(text);
+    toolNote->setVisible(!text.isEmpty());
 }
 
 void MaskPanel::beginPending(bool first)

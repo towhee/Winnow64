@@ -23,7 +23,8 @@
     clockwise, 180. Anything else is a no-op.
 
     WHAT CHANGES, per stored form
-      points (gradients, strokes, spots, quad)   rotated
+      points (gradients, strokes, spots, quad,   rotated
+              Segmenter outlines)
       quad corner ORDER (TL,TR,BR,BL)             relabelled, so TL is the new top-left
       crop rect                                   rotated as a rectangle
       radial rx / ry                              SWAPPED on a quarter turn: rx is a
@@ -120,6 +121,21 @@ inline QString maskParams(int tool, const QString &json, int degrees)
         if (!o.contains("strokes")) return json;
         o["strokes"] = strokes(o.value("strokes").toArray(), degrees);
         return toJson(o);
+    case MaskTool::Segmenter: {
+        /* Each selected segment is a list of outline rings, each a flat point array. */
+        if (!o.contains("segments")) return json;
+        QJsonArray segs;
+        for (const QJsonValue &sv : o.value("segments").toArray()) {
+            QJsonObject seg = sv.toObject();
+            QJsonArray rings;
+            for (const QJsonValue &rv : seg.value("rings").toArray())
+                rings.append(points(rv.toArray(), degrees));
+            seg["rings"] = rings;
+            segs.append(seg);
+        }
+        o["segments"] = segs;
+        return toJson(o);
+    }
     default:
         return json;
     }

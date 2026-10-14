@@ -170,6 +170,7 @@ QCursor buildDropperCursor()
 #include <QJsonArray>
 #include "Develop/brushstamp.h"
 #include "Develop/objectmask.h"
+#include "Utilities/segmenter.h"
 #include "Develop/fillspot.h"
 #include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
@@ -821,6 +822,20 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
         maskRangeParams = paramsJson;
         rebuildContentPreview();
     }
+    /* Segmenter: the selection so far, as JSON and as paths. The objects themselves
+       (segData) are MW's to push -- it finds them, or hands over the ones it has. */
+    segClear();
+    if (maskIsSegmenter()) {
+        segSelJson = Segmenter::selection(paramsJson);
+        for (const QJsonValue &v : segSelJson) segSelPaths << Segmenter::pathFromJson(v.toObject());
+        const int level = G::settings ? G::settings->value("Develop/segmenterDetail", 0).toInt() : 0;
+        segLevel = std::clamp(level, 0, Segmenter::kLevels - 1);
+    }
+    else {
+        segData.reset();
+        segProgress = -1;
+        segMessage.clear();
+    }
     maskEditMode = true;
     emit maskTintAvailabilityChanged(true);
     maskHover = underMouse();        // show at once if the cursor is already over view
@@ -858,6 +873,10 @@ void ImageView::endMaskEdit()
     maskRangeParams.clear();
     scopeMaskTint = QImage();
     rangeLoupeOn = false;
+    segClear();
+    segData.reset();
+    segProgress = -1;
+    segMessage.clear();
     /* Restore the normal loupe cursor. A tool set its own (dropper for Color Range, a
        blank cursor for Brush/Object) that mouseMoveEvent only refreshes on the next move,
        so an Esc collapse while hovering the image would otherwise leave it showing. */
@@ -2552,6 +2571,7 @@ int ImageView::maskHitTest(QPoint vp) const
 {
     if (!maskHandlesEditable()) return -1;
     if (maskTool == 2 || maskIsObject()) return -1;   // Brush/Object paint, no drag handles
+    if (maskIsSegmenter()) return -1;                 // clicks, no handles
     const double rHandle = 11;          // px pick radius
     const QPointF p(vp);
 
@@ -2657,8 +2677,11 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     if (maskEditMode && showTint) drawMaskLegend(painter);
 
     const bool content = maskIsContent();
-    const bool show = content ? (maskEditMode && pmItem && pmItem->isVisible())
-                              : maskHandlesEditable();
+    /* The Segmenter's selection is shown whether or not the pointer is over the view
+       (it is the submask's contents, like a content tint); only its hover needs it. */
+    const bool show = (content || maskIsSegmenter())
+                      ? (maskEditMode && pmItem && pmItem->isVisible())
+                      : maskHandlesEditable();
     if (!show) return;
     const QRectF br = pmItem->boundingRect();
     if (br.width() <= 0 || br.height() <= 0) return;
@@ -2666,6 +2689,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     if      (maskTool == 1) drawRadialMask(painter, br, tint);
     else if (maskTool == 2) drawBrushMask(painter, br, tint);
     else if (maskIsObject()) drawObjectMask(painter, br, tint);
+    else if (maskIsSegmenter()) { drawSegmenter(painter, tint); drawSegmenterChip(painter); }
     else if (content)       drawRangeMask(painter, br, tint);
     else                    drawLinearMask(painter, br, tint);
 }
@@ -2702,6 +2726,211 @@ void ImageView::drawObjectMask(QPainter *painter, const QRectF &br, bool drawTin
         painter->setPen(ring); painter->drawEllipse(cVp, rVp, rVp);
         painter->restore();
     }
+}
+
+/* ------- Segmenter -------
+   MW finds the objects (Utilities/segmenter.h) and pushes them here; the canvas shows
+   the one under the pointer and a click adds it to the submask or takes a selected one
+   back out. The submask's paramsJson is the selected outlines, emitted on every click
+   like any other shape edit (maskGeometryChanged). */
+
+void ImageView::setSegmentation(std::shared_ptr<const Segmenter::Segmentation> s)
+{
+    if (segData == s) return;
+    segData = std::move(s);
+    segHover = -1;
+    /* The pointer may already be resting on an object: show it without waiting for a
+       move. */
+    if (maskEditMode && maskIsSegmenter() && underMouse())
+        segUpdateHover(viewport()->mapFromGlobal(QCursor::pos()));
+    if (maskEditMode) viewport()->update();
+}
+
+void ImageView::setSegmenterProgress(int pct)
+{
+    if (segProgress == pct) return;
+    segProgress = pct;
+    if (maskEditMode && maskIsSegmenter()) viewport()->update();
+}
+
+void ImageView::setSegmenterMessage(const QString &msg)
+{
+    if (segMessage == msg) return;
+    segMessage = msg;
+    if (maskEditMode && maskIsSegmenter()) viewport()->update();
+}
+
+void ImageView::setSegmenterDetail(int level)
+{
+    level = std::clamp(level, 0, Segmenter::kLevels - 1);
+    if (level == segLevel) return;
+    segLevel = level;
+    if (maskEditMode && maskIsSegmenter() && underMouse())
+        segUpdateHover(viewport()->mapFromGlobal(QCursor::pos()));
+}
+
+void ImageView::segClear()
+{
+    segSelJson = QJsonArray();
+    segSelPaths.clear();
+    segHover = segHoverSel = -1;
+    segPressed = false;
+}
+
+void ImageView::segUpdateHover(QPoint vp)
+{
+    int hs = -1, h = -1;
+    if (pmItem && pmItem->isVisible()) {
+        const QPointF n = maskViewportToNorm(vp);
+        if (n.x() >= 0.0 && n.y() >= 0.0 && n.x() < 1.0 && n.y() < 1.0) {
+            /* A SELECTED outline first, and the smallest one holding the pointer: a
+               selection made at another Detail level must always be reachable, or a
+               part chosen under Parts could not be taken back from Objects. */
+            double best = 0.0;
+            for (int i = 0; i < segSelPaths.size(); ++i) {
+                if (!segSelPaths.at(i).contains(n)) continue;
+                const QRectF b = segSelPaths.at(i).boundingRect();
+                const double a = b.width() * b.height();
+                if (hs < 0 || a < best) { hs = i; best = a; }
+            }
+            if (hs < 0 && segData) h = segData->at(n, segLevel);
+        }
+    }
+    if (hs != segHoverSel || h != segHover) {
+        segHoverSel = hs;
+        segHover = h;
+        viewport()->update();
+    }
+    /* Re-asserted on every move -- the base view resets the cursor over the canvas. */
+    if (segHoverSel >= 0 || segHover >= 0) setCursor(Qt::PointingHandCursor);
+    else setCursor(segProgress >= 0 ? Qt::BusyCursor : Qt::ArrowCursor);
+}
+
+void ImageView::segToggleAt(QPoint vp)
+{
+    segUpdateHover(vp);
+    if (segHoverSel >= 0) {
+        segSelJson.removeAt(segHoverSel);
+        segSelPaths.removeAt(segHoverSel);
+    }
+    else if (segHover >= 0 && segData && segHover < segData->segs.size()) {
+        const QJsonObject o = Segmenter::segmentJson(segData->segs.at(segHover));
+        segSelJson.append(o);
+        /* From the JSON, not the segment's own path: the overlay must show exactly the
+           (rounded) outline the render will rasterize. */
+        segSelPaths.append(Segmenter::pathFromJson(o));
+    }
+    else return;
+    /* A click shapes the submask like a stroke or a handle drag does, so the combine op
+       held right now latches the same way. */
+    emit maskOpActionStarted();
+    emit maskGeometryChanged(Segmenter::paramsWith(segSelJson));
+    segHover = segHoverSel = -1;
+    segUpdateHover(vp);           // the pointer is now over what the click changed
+    viewport()->update();
+}
+
+void ImageView::drawSegmenter(QPainter *painter, bool drawTint)
+{
+/*
+    The submask's selected objects and the one under the pointer, drawn as vector
+    outlines in mask space and taken through the geometry map (maskNormToItem), clipped
+    to the photo like every mask raster. Pens are cosmetic, so line widths hold at any
+    zoom.
+
+      selected   overlay-colour outline; filled too unless the whole-mask veil is
+                 already painted (drawTint false), which would double the tint
+      hover      white outline on a dark halo and a light wash: a click ADDS it
+      hover over a selected one: dashed outline on a dark wash: a click REMOVES it
+*/
+    if (!pmItem) return;
+    painter->save();
+    QPainterPath clip;
+    clip.addPolygon(pmItem->mapToScene(pmItem->boundingRect()));
+    painter->setClipPath(clip);
+    painter->setWorldTransform(maskNormToItem() * pmItem->sceneTransform(), true);
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    const QColor oc = G::maskOverlayColor;
+    QPen selPen(oc.lighter(130));
+    selPen.setCosmetic(true);
+    selPen.setWidthF(1.5);
+    for (int i = 0; i < segSelPaths.size(); ++i) {
+        if (i == segHoverSel) continue;              // drawn below, as "click removes"
+        if (drawTint) painter->fillPath(segSelPaths.at(i),
+                                        QColor(oc.red(), oc.green(), oc.blue(), 110));
+        painter->strokePath(segSelPaths.at(i), selPen);
+    }
+
+    QPen halo(QColor(0, 0, 0, 170));
+    halo.setCosmetic(true);
+    halo.setWidthF(3.5);
+    if (segHoverSel >= 0 && segHoverSel < segSelPaths.size()) {
+        const QPainterPath &p = segSelPaths.at(segHoverSel);
+        painter->fillPath(p, QColor(0, 0, 0, 90));
+        painter->strokePath(p, halo);
+        QPen dash(QColor(255, 255, 255, 235));
+        dash.setCosmetic(true);
+        dash.setWidthF(1.6);
+        dash.setStyle(Qt::DashLine);
+        painter->strokePath(p, dash);
+    }
+    else if (segHover >= 0 && segData && segHover < segData->segs.size()) {
+        const QPainterPath &p = segData->segs.at(segHover).path;
+        painter->fillPath(p, QColor(255, 255, 255, 70));
+        painter->strokePath(p, halo);
+        QPen line(QColor(255, 255, 255, 240));
+        line.setCosmetic(true);
+        line.setWidthF(1.6);
+        painter->strokePath(p, line);
+    }
+    painter->restore();
+}
+
+void ImageView::drawSegmenterChip(QPainter *painter)
+{
+/*
+    "Finding objects... 45%" with a bar while MW's search runs, or a one-line reason when
+    it cannot (model not downloaded, failed). Bottom centre of the view: the mask legend
+    owns the top-left and the rendering hint the top-right. The search takes a few
+    seconds, and the photo is where the user is looking while it does.
+*/
+    const bool running = segProgress >= 0;
+    if (!running && segMessage.isEmpty()) return;
+    const QString text = running
+        ? tr("Finding objects... %1%").arg(segProgress)
+        : segMessage;
+
+    painter->save();
+    painter->resetTransform();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    QFont f = painter->font();
+    f.setPointSizeF(f.pointSizeF() > 0 ? f.pointSizeF() : 10.0);
+    painter->setFont(f);
+    const QFontMetrics fm(f);
+    const int pad = 8, barH = running ? 4 : 0, gap = running ? 5 : 0;
+    const int w = qMin(viewport()->width() - 24,
+                       qMax(fm.horizontalAdvance(text), running ? 180 : 0) + 2 * pad);
+    const int h = fm.height() + gap + barH + 2 * pad - 2;
+    const QRect panel((viewport()->width() - w) / 2, viewport()->height() - h - 16, w, h);
+
+    painter->setPen(Qt::NoPen);
+    painter->setBrush(QColor(0, 0, 0, 160));
+    painter->drawRoundedRect(panel, 5, 5);
+    painter->setPen(QColor(235, 235, 235));
+    painter->drawText(QRect(panel.left() + pad, panel.top() + pad - 1, w - 2 * pad, fm.height()),
+                      Qt::AlignCenter, fm.elidedText(text, Qt::ElideRight, w - 2 * pad));
+    if (running) {
+        const QRect bar(panel.left() + pad, panel.bottom() - pad - barH + 1, w - 2 * pad, barH);
+        painter->setPen(Qt::NoPen);
+        painter->setBrush(QColor(255, 255, 255, 50));
+        painter->drawRoundedRect(bar, 2, 2);
+        QRect done = bar;
+        done.setWidth(bar.width() * qBound(0, segProgress, 100) / 100);
+        painter->setBrush(QColor(235, 190, 90));
+        painter->drawRoundedRect(done, 2, 2);
+    }
+    painter->restore();
 }
 
 void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTint)
@@ -3357,9 +3586,8 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
              MW::syncPendingMaskOp), Shift+Opt INTERSECTS. Both take area away. */
         const bool eraseNow = maskStrokeInFlight()
                 ? maskBrushErase
-                : (G::useBrushEraseStroke
-                   && (QGuiApplication::keyboardModifiers() & Qt::AltModifier)
-                   && !maskBrushStrokesJson.isEmpty());
+                : (maskOptWouldErase()
+                   && (QGuiApplication::queryKeyboardModifiers() & Qt::AltModifier));
         /* Read the KEYS, not just maskLegendOp. The legend op is pinned to Add on the
            first submask (nothing to combine with) and only lands here when the veil
            rebuilds, so it cannot answer "is Opt down right now?" -- which is exactly what
@@ -4637,6 +4865,7 @@ void ImageView::enterEvent(QEnterEvent *event)
         if (maskTool == 2 || maskIsObject()) {   // for [ ] / Cmd+Z
             maskBrushCursorOn = true; setFocus(Qt::MouseFocusReason);
         }
+        if (maskIsSegmenter()) setFocus(Qt::MouseFocusReason);   // for [ ] (Detail)
         viewport()->update();
     }
 
@@ -4660,6 +4889,8 @@ void ImageView::leaveEvent(QEvent *event)
         maskHover = false;
         maskDrag = -1;
         maskBrushCursorOn = false;
+        segHover = segHoverSel = -1;     // no object is under a pointer that left
+        segPressed = false;
         viewport()->update();
     }
     // emit showLoupeRect(false);
@@ -4860,6 +5091,17 @@ bool ImageView::event(QEvent *event) {
         }
     }
 
+    /* Segmenter: [ ] step the Detail level (smaller / bigger pieces) rather than the
+       thumbnail size they are bound to globally. */
+    if (event->type() == QEvent::ShortcutOverride && maskEditMode && maskIsSegmenter()) {
+        QKeyEvent *ke = static_cast<QKeyEvent *>(event);
+        const bool k = ke->key() == Qt::Key_BracketLeft || ke->key() == Qt::Key_BracketRight;
+        if (G::bareModifiers(ke) == Qt::NoModifier && k) {
+            event->accept();
+            return true;
+        }
+    }
+
     /* While the replace (spot) tool is armed, claim [ ] (brush size) and Enter (commit a
        painted fill) from their global action shortcuts (thumb size / loupe) so the keys
        reach the tool. The tool's key set is deliberately narrow: S toggles the tool via
@@ -4968,6 +5210,18 @@ void ImageView::keyPressEvent(QKeyEvent *event){
             emit spotToolExited();
             return;
         }
+    }
+    /* Segmenter: [ = smaller pieces (finer Detail), ] = bigger pieces -- the same sense
+       [ and ] have for a brush's size. */
+    if (maskEditMode && maskIsSegmenter()
+        && (event->key() == Qt::Key_BracketLeft || event->key() == Qt::Key_BracketRight)) {
+        const int step = (event->key() == Qt::Key_BracketLeft) ? 1 : -1;
+        const int level = std::clamp(segLevel + step, 0, Segmenter::kLevels - 1);
+        if (level != segLevel) {
+            setSegmenterDetail(level);
+            emit segmenterDetailRequested(level);
+        }
+        return;
     }
     /* Object shortcuts: [ / ] resize, Cmd/Ctrl+Z undo the last perimeter stroke. */
     if (maskEditMode && maskIsObject()) {
@@ -5178,7 +5432,10 @@ void ImageView::mousePressEvent(QMouseEvent *event)
                              && (event->modifiers() & Qt::AltModifier)
                              && !maskBrushStrokesJson.isEmpty();
             emit maskStrokeStateChanged(true);   // after maskBrushErase: MW reads it
-            emit maskOpActionStarted();          // latch the combine op held right now
+            /* Latch the combine op held right now -- unless Opt is erasing: then the key
+               belongs to the stroke, and latching it would ALSO turn the submask into a
+               Subtract. */
+            if (!maskBrushErase) emit maskOpActionStarted();
             maskStrokePts.clear();
             const QPointF n = maskViewportToNorm(event->pos());
             maskStrokePts << n.x() << n.y();
@@ -5193,6 +5450,15 @@ void ImageView::mousePressEvent(QMouseEvent *event)
             objRebuildPreview();
             viewport()->update();
         }
+        return;
+    }
+
+    /* Segmenter: a press may be the start of a CLICK; the release decides (one that has
+       wandered more than a few pixels is not a click). Consumed either way, so the loupe
+       neither pans nor zooms -- Space still borrows the pan. */
+    if (!spacePanOverride && maskEditMode && maskIsSegmenter() && event->button() == Qt::LeftButton) {
+        segPressed = true;
+        segPressVp = event->pos();
         return;
     }
 
@@ -5214,7 +5480,10 @@ void ImageView::mousePressEvent(QMouseEvent *event)
                              && (event->modifiers() & Qt::AltModifier)
                              && !maskBrushStrokesJson.isEmpty();
             emit maskStrokeStateChanged(true);   // after maskBrushErase: MW reads it
-            emit maskOpActionStarted();          // latch the combine op held right now
+            /* Latch the combine op held right now -- unless Opt is erasing: then the key
+               belongs to the stroke, and latching it would ALSO turn the submask into a
+               Subtract. */
+            if (!maskBrushErase) emit maskOpActionStarted();
             maskStrokePts.clear();
             maskStrokeLiveClock.start();         // throttle the live re-render from here
             const QPointF n = maskViewportToNorm(event->pos());
@@ -5590,6 +5859,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                                          n.y() >= 0.0 && n.y() <= 1.0);
             viewport()->update();
         }
+        else if (maskIsSegmenter()) segUpdateHover(event->pos());
         else setCursor(maskHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::ArrowCursor);
     }
 
@@ -5758,6 +6028,16 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         setCursor(Qt::ArrowCursor);
         viewport()->update();
         cropEmitChanged();
+        return;
+    }
+
+    /* Segmenter click: a press and release within a few pixels adds the object under
+       the pointer to the submask, or removes the selected one it is over. */
+    if (!spacePanOverride && maskEditMode && maskIsSegmenter() && segPressed) {
+        segPressed = false;
+        if (event->button() == Qt::LeftButton
+            && (event->pos() - segPressVp).manhattanLength() <= 4)
+            segToggleAt(event->pos());
         return;
     }
 

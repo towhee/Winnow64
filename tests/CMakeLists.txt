@@ -166,6 +166,10 @@ winnow_add_unit_test(tst_presetparams unit/tst_presetparams.cpp
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)
+# tst_brushstamp tests the brush Auto mask's per-dab field (Develop/brushstamp.h,
+# header-only): soft edges stop a dab, one textured surface fills without holes, the
+# feather band never crosses an edge the core did not see.
+winnow_add_unit_test(tst_brushstamp unit/tst_brushstamp.cpp)
 # tst_maskedge tests Develop/maskedge.h, the grow/shrink morphology behind the Edge
 # slider (header-only, and deliberately free of Qt apart from the test harness).
 winnow_add_unit_test(tst_maskedge unit/tst_maskedge.cpp)
@@ -217,6 +221,23 @@ elseif(WIN32)
     target_include_directories(tst_visualaudit PRIVATE
         ${LIB_DIR}/opencv/windows/build/include)
     target_link_libraries(tst_visualaudit PRIVATE
+        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+endif()
+# tst_segmenter tests Utilities/segmenter.cpp, the Segmenter mask tool's post-processing:
+# a synthetic decoder answers SAM 2's point prompts for a scene of known shapes, and the
+# objects, their hierarchy, the gap rounds, the remainder and the saved outlines are
+# checked against it. No model runs, but segmenter.cpp links OpenCV DNN for the real one.
+winnow_add_unit_test(tst_segmenter unit/tst_segmenter.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/segmenter.cpp)
+if(APPLE)
+    target_include_directories(tst_segmenter PRIVATE
+        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+    target_link_directories(tst_segmenter PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
+    target_link_libraries(tst_segmenter PRIVATE opencv_core opencv_imgproc opencv_dnn)
+elseif(WIN32)
+    target_include_directories(tst_segmenter PRIVATE
+        ${LIB_DIR}/opencv/windows/build/include)
+    target_link_libraries(tst_segmenter PRIVATE
         ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
 endif()
 # tst_maskrefine tests Develop/maskrefine.h, the Refine Brush: a painted region in which

@@ -22,6 +22,7 @@
 #include <vector>
 #include <cmath>
 #include <algorithm>
+#include <limits>
 #include <memory>
 #include "Develop/maskfalloff.h"
 #include <QPointF>
@@ -71,68 +72,93 @@ inline std::shared_ptr<const Guide> getGuide(const QString &path)
     return it != guideStore().end() ? it.value() : nullptr;
 }
 
-/* ---- Auto-mask: how a dab is confined ---------------------------------------------------
-   Lightroom's model. The first implementation compared each pixel's LUMINANCE against a
-   single reference sampled at the STROKE START, within a fixed +-0.15 band, INDEPENDENTLY
-   per pixel: on a brown cone against a grey background of the same lightness that painted
-   the background (equal luminance), speckled the object (a fixed band cannot cover a
-   textured surface), and painted matching pixels on the FAR side of the edge (a lone pixel
-   needs no route back to the brush). Chroma, an adaptive tolerance and a flood fill fixed
-   those three.
+/* ---- Auto-mask: how a dab is confined ------------------------------------------
+   HISTORY. The first cut compared each pixel's LUMINANCE with one reference from the
+   stroke start, inside a fixed band, pixel by pixel: it painted a grey background of the
+   same lightness as a brown cone, speckled any texture and painted matching pixels on the
+   far side of an edge. The second cut (chroma, a tolerance adapted to the spread of a
+   window at the dab centre, edge energy relative to the local texture, a cost fill)
+   fixed those but failed on a DEFOCUSED edge -- textured gravel against smooth tan bokeh
+   (2026-10-14), measured offline on the user's screenshot:
+     - the tolerance followed whatever sat under the crosshair: a dab centred on dark
+       pebbles read a wide spread and opened tol to ~41, and the background (~38 away)
+       was inside it;
+     - the edge term never fired: a defocused boundary rises ~1.5 per pixel, under the
+       floor (4) its relative yardstick could not go below.
+   Both are ABSOLUTE tests (a distance against one reference and a tolerance), and an
+   absolute test cannot know how far the OTHER side is. Lightroom's own brush (a capture
+   of the same stroke) does find this edge but holes the gravel on every pebble -- a
+   per-pixel test with a tight band.
 
-   The flood fill was still only a BINARY reachability test, and that is what failed on fur:
-   a squirrel's head against a soft brown background is the hardest case for it. The fur is
-   so textured that the adaptive tolerance pinned itself to the ceiling, the blurred
-   background then fell INSIDE that tolerance, and the fill -- which crosses any accepted
-   pixel for free -- walked out through the hairy edge and kept going. Nothing in the model
-   knew an edge had been crossed at all.
-
-   The current model, per DAB (all of it in guide space):
-     1. SMOOTHED SOURCE. Every decision reads a 3x3-smoothed copy of the guide box, so a
-        single noisy hair neither sets the reference nor punches a hole through an edge.
-     2. REFERENCE = the median colour of a small window at the dab centre, re-sampled for
-        every dab as the brush travels (Lightroom re-seeds under the crosshair; a
-        stroke-start reference goes stale the moment the brush moves onto a different part
-        of the subject).
-     3. TOLERANCE adapts to that window's own spread (75th percentile of the distance to the
-        reference, x kTolK, clamped): a busy texture widens it, a smooth area keeps it tight.
-        Deliberately TIGHTER than the first cut (2.5 / ceiling 70 let fur swallow a
-        same-family background); the cost fill below, not a wide band, is what keeps a
-        textured subject whole.
-     4. DISTANCE is Y + double-weighted chroma, so equal-lightness / different-hue reads as
-        far apart.
-     5. EDGE ENERGY, measured RELATIVE TO THE LOCAL TEXTURE LEVEL (E / the window's own 60th
-        percentile). This is the part that tells fur from a boundary: fur is uniformly busy,
-        so its texture raises the yardstick with it, while the head's outline stands well
-        above the yardstick everywhere along it.
-     6. COST FILL instead of a binary flood. A monotone dial-queue (Dijkstra with integer
-        buckets, O(box)) grows from a small disc at the dab centre, and each step PAYS:
-            edge      kEdgeK      * (E/Eref - 1)^2    -- crossing a boundary
-            colour    kColorHard  * (d/tol - 1)^2     -- stepping outside the tolerance
-            drift     kDrift/r    * (d/tol)^2         -- creeping away within it
-        A pixel is reached only while the cheapest route to it stays inside a budget of 1.0,
-        and acceptance falls off smoothly as that budget runs out. A hard edge stops the
-        fill in one or two pixels; a BLURRED edge -- the case the binary fill could not see
-        at all -- is paid for over every pixel of the transition and stops it just as surely;
-        and drift keeps a long free run across an in-tolerance gradient from paying nothing.
-        4-connectivity, so the fill cannot squeeze diagonally through a one-pixel gap.
-   The result is a 0..1 acceptance field over the dab's box, bilinearly sampled by the dab's
-   pixel loop, so the preview and the full-res render confine identically. */
-constexpr double kAutoChromaWeight = 2.0;    // chroma counts double against Y in the distance
-constexpr double kTolK             = 2.4;    // tolerance = kTolK * local spread
-constexpr double kTolFloor         = 8.0;    // ... never tighter than this (sensor noise)
-constexpr double kTolCeil          = 45.0;   // ... never looser than this (or it masks nothing)
-constexpr double kEdgeK            = 0.14;   // cost of crossing one pixel of a strong edge
-constexpr double kEdgeFloor        = 4.0;    // floor on the local texture level E is judged against
-constexpr double kColorHard        = 0.75;   // cost of stepping onto an out-of-tolerance pixel
-constexpr double kDrift            = 0.35;   // cost of creeping one full radius at d == tol
-constexpr double kTexWeight        = 2.0;    // texture-energy difference counts like chroma
-constexpr double kSmoothFrac       = 0.08;   // analysis blur radius, as a fraction of the dab radius
-constexpr int    kSmoothMax        = 6;      // ... capped (a big brush must not go soft)
-constexpr double kAnalysisDiameter = 160.0;  // analysis pixels across a dab (see buildDabField)
-constexpr int    kDecMax           = 4;      // ... and the most the guide may be decimated for it
-constexpr float  kAcceptCut        = 0.5f;   // colour acceptance a seed pixel must clear
-constexpr int    kCostLevels       = 64;     // dial-queue quantization of the 0..1 cost budget
+   THE MODEL NOW (per DAB, all of it in guide space) is RELATIVE: which class does a
+   pixel look more like -- the one under the crosshair, or the other one in the brush?
+     1. SEARCH ZONE = THE CORE. The fill and its decisions run inside the core radius rc
+        (the cursor's inner ring = the falloff's half-coverage radius; the whole dab at
+        feather 0). The feather band beyond it never adds area: a band pixel takes the
+        acceptance of the core rim on its own radius, gated by its own class test, and
+        the dab's falloff fades it. Without the gate, a rim crossing the edge at a slant
+        projected out past it and sawtoothed the stroke by one spike per dab.
+     2. ANALYSIS SCALE. Every decision reads the box blurred at a radius proportional to
+        the core (kSmoothFrac), with the leftover per-pixel deviation kept as a TEXTURE
+        plane -- averaged, a texture's noise collapses to a steady local mean, and sharp
+        detail against an out-of-focus background differs in texture even where it does
+        not in colour. Features: Y, sqrt(2) x Cb/Cr, and texture on a LOG scale
+        (kTexLogK x log2(1 + tex/kTexLogT)). Texture contrast is a ratio: smooth-vs-
+        textured (1 vs 7) must read far apart while rough-vs-rougher (12 vs 18) is one
+        surface. A linear texture weight could not do both -- measured over noise seeds,
+        any weight that separated a fine texture from a smooth field also holed a uniform
+        rough surface (down to 0.55 accepted on some seeds).
+     3. CLASSES. A small deterministic k-means (kClusters, farthest-point seeding from
+        the median under the crosshair -- no RNG, so the field is a pure function for the
+        render caches) over (a subsample of) the whole dab disc. Five classes, not four:
+        gravel alone has three lightness modes, and with four the background had to share
+        a cluster with the transition pixels on the ridge, whose centre then merged into
+        the subject and painted one dab's worth of sky. Only FLAT pixels vote (feature
+        gradient <= kGradK x the disc median): the blur turns a hard edge into a band of
+        in-between colours whose own clusters chained the merge across a plain lightness
+        edge (light wall / dark wall, 2026-10-14). The SUBJECT is every cluster
+        holding kShareMin of the seed disc at the centre, plus the one nearest it, closed
+        under a
+        MERGE: two clusters closer than max(kMergeMin, kMergeSig x their spread) are one
+        class. The merge distance weights Y by kMergeYW, because a surface's own light
+        and shadow (pebbles in gravel, a sky gradient) is a lightness spread while what
+        separates a subject from what lies beyond is mostly chroma and texture. A
+        silhouette still splits: its lightness step is far above the merge distance.
+     4. RELATIVE LIKENESS p = dO / (dS + dO), dS/dO the distance to the nearest
+        subject/other centre. Acceptance ramps over p = kPLo..kPHi. With no OTHER class
+        the dab is one surface and paints its whole core -- no holes in texture.
+     5. COST FILL from the seed disc (a monotone dial queue = Dijkstra in integer
+        buckets over a budget of 1.0, 4-connected so it cannot squeeze diagonally),
+        each step onto a pixel with p < 0.5 paying kStepK*(1-2p)^2: connectivity, so a
+        look-alike patch on the far side of the edge is not painted, and a soft edge is
+        paid for across its whole transition. Acceptance smoothsteps off as the budget
+        runs out.
+   The result is a 0..1 field over the dab's box, bilinearly sampled by the dab's pixel
+   loop, so the preview and the full-res render confine identically. Prototyped in Python
+   on the gravel screenshot and synthetic cases (equal-lightness brown/grey, silhouette,
+   texture vs smooth of one colour, blurred edge, sky gradient, uniform texture) before
+   this port. */
+constexpr double kChromaW2   = 2.0;     // chroma weight in the squared feature distance
+constexpr double kTexLogK    = 10.0;    // texture = kTexLogK * log2(1 + tex/kTexLogT)
+constexpr double kTexLogT    = 2.0;
+constexpr double kSmoothFrac = 0.08;    // analysis blur radius, as a fraction of the core
+constexpr int    kSmoothMax  = 6;       // ... capped (a big brush must not go soft)
+constexpr double kAnalysisDiameter = 160.0;  // analysis px across a dab
+constexpr int    kDecMax     = 4;       // ... and the most the guide may be decimated
+constexpr int    kClusters   = 5;       // k-means classes over the dab disc
+constexpr int    kKmIters    = 8;       // Lloyd iterations
+constexpr int    kKmSamples  = 2048;    // disc pixels k-means is run on, at most
+constexpr double kGradK      = 3.0;     // a pixel above this x the median gradient ...
+constexpr double kGradFloor  = 1.0;     // ... (and this) is a boundary: it does not vote
+constexpr double kSeedFrac   = 0.3;     // seed disc radius, as a fraction of the core
+constexpr double kShareMin   = 0.2;     // seed-disc share that makes a cluster subject
+constexpr double kMergeYW    = 0.4;     // Y weight in the merge distance
+constexpr double kMergeSig   = 2.5;     // merge when closer than this x the spread ...
+constexpr double kMergeMin   = 6.0;     // ... or than this, whichever is larger
+constexpr float  kPLo        = 0.4f;    // likeness where acceptance starts ...
+constexpr float  kPHi        = 0.6f;    // ... and where it is full
+constexpr double kStepK      = 3.0;     // fill step cost at likeness p: kStepK*(1-2p)^2
+constexpr int    kCostLevels = 64;      // dial-queue quantization of the 0..1 cost budget
 
 struct AutoMaskCtx {
     const Guide *g = nullptr;
@@ -168,35 +194,6 @@ struct DabField {
         return float(top * (1 - ty) + bot * ty);
     }
 };
-
-inline double yccDist(const uchar *p, const double ref[3])
-{
-    const double dy = double(p[0]) - ref[0];
-    const double db = double(p[1]) - ref[1];
-    const double dr = double(p[2]) - ref[2];
-    return std::sqrt(dy * dy + kAutoChromaWeight * (db * db + dr * dr));
-}
-
-/* The same metric between two pixels, SQUARED -- the edge pass wants a horizontal and a
-   vertical difference combined, and sqrt(a)^2 + sqrt(b)^2 under one sqrt is one root per
-   pixel instead of three. */
-inline double yccDiffSq(const uchar *a, const uchar *b)
-{
-    const double dy = double(a[0]) - b[0];
-    const double db = double(a[1]) - b[1];
-    const double dr = double(a[2]) - b[2];
-    return dy * dy + kAutoChromaWeight * (db * db + dr * dr);
-}
-
-/* Percentile of an UNSORTED scratch vector (partially sorts it in place). */
-inline double percentileOf(std::vector<double> &v, double p)
-{
-    if (v.empty()) return 0.0;
-    size_t k = size_t(double(v.size() - 1) * p);
-    auto it = v.begin() + k;
-    std::nth_element(v.begin(), it, v.end());
-    return *it;
-}
 
 /* Separable box blur of a `ch`-channel planar-interleaved float buffer, radius k, edges
    clamped. Two passes of this approximate a Gaussian for a fraction of the cost, and the
@@ -239,11 +236,13 @@ inline void boxBlur(float *buf, std::vector<float> &tmp, int w, int h, int ch, i
     }
 }
 
-/* Build the acceptance field for one dab centred at (gcx,gcy) with radius rg, all in guide px. */
-inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, DabField &f)
+/* Build the acceptance field for one dab centred at (gcx,gcy), outer radius rg and core
+   radius rcg, all in guide px. See the Auto-mask section above for the model. */
+inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, double rcg,
+                          DabField &f)
 {
     f.bypass = true;
-    const double r = std::max(rg, 2.0);          // a sub-pixel dab still needs a box to grow in
+    const double r = std::max(rg, 2.0);      // a sub-pixel dab still needs a box
     const int x0 = std::max(0,      int(std::floor(gcx - r)) - 1);
     const int x1 = std::min(g.w - 1, int(std::ceil (gcx + r)) + 1);
     const int y0 = std::max(0,      int(std::floor(gcy - r)) - 1);
@@ -253,34 +252,25 @@ inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, Dab
 
     /* ANALYSIS RESOLUTION. The guide is built so a brush DIAMETER spans at least
        kGuidePxPerDab guide pixels (ImageView::ensureAutoGuide), but its long edge has a
-       1024px FLOOR -- so a big brush arrives with several times the resolution this model
-       was tuned at, and pays for all of it in every pass below and in the fill, which is the
-       one part of a dab that cannot be parallelised. Decimating a large dab back to
-       ~kAnalysisDiameter pixels across costs nothing in mask quality (the field is blurred
-       and bilinearly resampled on the way out, and the brush in question is enormous) and
-       takes the worst case from quadratic-in-the-clamp to flat. */
+       1024px FLOOR -- so a big brush arrives with several times the resolution this
+       model was tuned at, and pays for all of it in every pass below and in the fill,
+       which is the one part of a dab that cannot be parallelised. Decimating a large dab
+       back to ~kAnalysisDiameter pixels across costs nothing in mask quality (the field
+       is blurred and bilinearly resampled on the way out, and the brush in question is
+       enormous) and takes the worst case from quadratic-in-the-clamp to flat. */
     const int dec = std::clamp(int(std::lround(2.0 * r / kAnalysisDiameter)), 1, kDecMax);
     const int bw = (gbw + dec - 1) / dec, bh = (gbh + dec - 1) / dec;
     if (bw < 3 || bh < 3) return;
     const size_t n = size_t(bw) * bh;
-    const double rf = r / dec;                              // dab radius in ANALYSIS pixels
-    const int cxb = std::clamp(int(std::lround((gcx - x0) / dec - 0.5)), 0, bw - 1);
-    const int cyb = std::clamp(int(std::lround((gcy - y0) / dec - 0.5)), 0, bh - 1);
+    const double rf  = r / dec;                             // dab radius, analysis px
+    const double rcf = std::clamp(rcg, 1.0, r) / dec;       // core radius, likewise
+    const double cxa = (gcx - x0) / dec - 0.5;              // dab centre, analysis pixels
+    const double cya = (gcy - y0) / dec - 0.5;
 
-    /* 1: ANALYSIS SCALE. Everything below reads a copy of the box blurred at a radius
-       proportional to the DAB, not a fixed 3x3 -- the single change that makes fur work.
-       Fur's per-pixel spread is far wider than the colour STEP from fur to a soft
-       background of the same family (the screenshot's case), so no per-pixel test can
-       separate them: the tolerance has to open wide enough to hold the fur together, and
-       the background is then inside it. Averaged over a few pixels the fur's noise collapses
-       and its local MEAN is steady, so the step across the boundary becomes the largest
-       thing in the box -- which is what the tolerance and the edge term below can act on.
-       TEXTURE ENERGY (how far the raw pixels sit from that local mean) is kept as a
-       feature in its own right: sharp fur against an out-of-focus background differs in
-       texture even where it does not differ in colour, and nothing else in the model sees
-       that. */
-    const int ks  = std::clamp(int(std::lround(rf * kSmoothFrac)), 1, kSmoothMax);
-    const int pad = ks + 1;      // the box rim is already outside the dab; exactness there buys nothing
+    /* Model step 2: the analysis planes -- the box blurred at the core's scale, and the
+       texture energy left over. */
+    const int ks  = std::clamp(int(std::lround(rcf * kSmoothFrac)), 1, kSmoothMax);
+    const int pad = ks + 1;      // the box rim is outside the dab: exactness buys nothing
     const int ew = bw + 2 * pad, eh = bh + 2 * pad;
     const size_t en = size_t(ew) * eh;
     static thread_local std::vector<float> ext, blr, tex, tmpbuf;
@@ -288,7 +278,7 @@ inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, Dab
     const float invCell = 1.0f / float(dec * dec);
     for (int y = 0; y < eh; ++y) {
         float *o = ext.data() + size_t(y) * ew * 3;
-        if (dec == 1) {                                     // the common case: a straight copy
+        if (dec == 1) {                             // the common case: a straight copy
             const uchar *src = g.ycc.data()
                              + size_t(std::clamp(y0 + y - pad, 0, g.h - 1)) * g.w * 3;
             for (int x = 0; x < ew; ++x, o += 3) {
@@ -298,7 +288,7 @@ inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, Dab
             continue;
         }
         for (int x = 0; x < ew; ++x, o += 3) {
-            float a0 = 0, a1 = 0, a2 = 0;                   // dec x dec guide block, clamped
+            float a0 = 0, a1 = 0, a2 = 0;           // dec x dec guide block, clamped
             for (int sy = 0; sy < dec; ++sy) {
                 const int gy2 = std::clamp(y0 + (y - pad) * dec + sy, 0, g.h - 1);
                 for (int sx = 0; sx < dec; ++sx) {
@@ -313,172 +303,336 @@ inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, Dab
     blr = ext;
     boxBlur(blr.data(), tmpbuf, ew, eh, 3, ks);
     boxBlur(blr.data(), tmpbuf, ew, eh, 3, ks);     // twice ~= Gaussian, cheaper
+    /* TEXTURE at the FINE scale: each pixel's distance from its own 3x3 mean, then
+       averaged over the analysis window. The first cut took the distance from the
+       analysis BLUR instead, and a plain step edge reads as texture under that -- the
+       blur smears the step, so a band ks wide either side of every hard edge came out
+       "textured", formed a class of its own, and stopped the fill short of a clean
+       wall-to-wall edge by 10-30 px (2026-10-14). Against its 3x3 mean a step deviates
+       only on its own two pixel columns, which the averaging then dilutes, while grain,
+       gravel and fur deviate at every pixel. */
+    static thread_local std::vector<float> fine;
+    fine.resize(en);
+    for (size_t k = 0; k < en; ++k) fine[k] = ext[k * 3];
+    boxBlur(fine.data(), tmpbuf, ew, eh, 1, 1);
     tex.assign(en, 0.0f);
-    for (size_t k = 0; k < en; ++k) tex[k] = std::abs(ext[k * 3] - blr[k * 3]);
+    for (size_t k = 0; k < en; ++k) tex[k] = std::abs(ext[k * 3] - fine[k]);
     boxBlur(tex.data(), tmpbuf, ew, eh, 1, ks);
 
-    /* Crop the two analysis planes to the box. */
-    static thread_local std::vector<uchar> sm;
-    static thread_local std::vector<float> texture;
-    sm.assign(n * 3, 0);
-    texture.assign(n, 0.0f);
+    /* The FEATURE vector of every box pixel, cropped out of the padded planes: the
+       weights are folded in here so every distance below is a plain Euclidean one. */
+    constexpr int kF = 4;
+    const float sc = float(std::sqrt(kChromaW2));
+    const float tk = float(kTexLogK), invT = float(1.0 / kTexLogT);
+    static thread_local std::vector<float> feat;
+    feat.assign(n * kF, 0.0f);
     for (int y = 0; y < bh; ++y) {
         const float *si = blr.data() + (size_t(y + pad) * ew + pad) * 3;
         const float *ti = tex.data() +  size_t(y + pad) * ew + pad;
-        uchar *o = sm.data() + size_t(y) * bw * 3;
-        float *to = texture.data() + size_t(y) * bw;
-        for (int x = 0; x < bw; ++x, si += 3, o += 3) {
-            o[0] = uchar(std::clamp(si[0], 0.0f, 255.0f));
-            o[1] = uchar(std::clamp(si[1], 0.0f, 255.0f));
-            o[2] = uchar(std::clamp(si[2], 0.0f, 255.0f));
-            to[x] = ti[x];
+        float *o = feat.data() + size_t(y) * bw * kF;
+        for (int x = 0; x < bw; ++x, si += 3, o += kF) {
+            o[0] = si[0]; o[1] = sc * si[1]; o[2] = sc * si[2];
+            o[3] = tk * std::log2(1.0f + ti[x] * invT);
         }
     }
-    auto px = [&](int x, int y) -> const uchar * { return sm.data() + (size_t(y) * bw + x) * 3; };
+    auto fv = [&](size_t k) { return feat.data() + k * kF; };
+    auto d2 = [](const float *a, const float *b) {
+        float s = 0.0f;
+        for (int c = 0; c < kF; ++c) { const float q = a[c] - b[c]; s += q * q; }
+        return s;
+    };
 
-    /* 2: reference -- per-channel median colour, and median texture, of a small window at
-       the dab centre. */
-    const int wr  = std::max(1, int(rf * 0.15));
-    const int wx0 = std::clamp(cxb - wr, 0, bw - 1), wx1 = std::clamp(cxb + wr, 0, bw - 1);
-    const int wy0 = std::clamp(cyb - wr, 0, bh - 1), wy1 = std::clamp(cyb + wr, 0, bh - 1);
-    static thread_local std::vector<uchar> chan;
-    static thread_local std::vector<double> scratch;
-    const int wn = (wx1 - wx0 + 1) * (wy1 - wy0 + 1);
-    double ref[3];
-    for (int c = 0; c < 3; ++c) {
-        chan.clear(); chan.reserve(wn);
-        for (int y = wy0; y <= wy1; ++y)
-            for (int x = wx0; x <= wx1; ++x) chan.push_back(px(x, y)[c]);
-        auto mid = chan.begin() + chan.size() / 2;
+    /* Zones: radius of every box pixel from the centre. disc = the whole dab (the
+       classes are learned over it), core = the search zone (model step 1), seed = the
+       small disc under the crosshair that names the subject. */
+    static thread_local std::vector<float> rad;
+    rad.assign(n, 0.0f);
+    for (int y = 0; y < bh; ++y)
+        for (int x = 0; x < bw; ++x)
+            rad[size_t(y) * bw + x] = float(std::hypot(x - cxa, y - cya));
+    const float rDisc = float(rf), rCore = float(rcf);
+    const float rSeed = float(std::max(1.5, kSeedFrac * rcf));
+
+    /* Reference = per-feature median over the seed disc. */
+    static thread_local std::vector<size_t> seedIdx, discIdx;
+    seedIdx.clear(); discIdx.clear();
+    for (size_t k = 0; k < n; ++k) {
+        if (rad[k] <= rSeed) seedIdx.push_back(k);
+        if (rad[k] <= rDisc) discIdx.push_back(k);
+    }
+    if (seedIdx.empty() || discIdx.size() < size_t(kClusters)) return;
+    float ref[kF];
+    static thread_local std::vector<float> chan;
+    for (int c = 0; c < kF; ++c) {
+        chan.clear();
+        for (size_t k : seedIdx) chan.push_back(fv(k)[c]);
+        auto mid = chan.begin() + long(chan.size() / 2);
         std::nth_element(chan.begin(), mid, chan.end());
-        ref[c] = double(*mid);
+        ref[c] = *mid;
     }
-    scratch.clear(); scratch.reserve(wn);
-    for (int y = wy0; y <= wy1; ++y)
-        for (int x = wx0; x <= wx1; ++x) scratch.push_back(texture[size_t(y) * bw + x]);
-    const double refTex = percentileOf(scratch, 0.50);
 
-    /* 3 + 4: distance to the reference over the whole box -- colour PLUS texture -- and the
-       tolerance from the window's own spread. */
-    static thread_local std::vector<float> dist;
-    dist.assign(n, 0.0f);
-    for (int y = 0; y < bh; ++y) {
-        const uchar *row = px(0, y);
-        const float *trow = texture.data() + size_t(y) * bw;
-        float *out = dist.data() + size_t(y) * bw;
-        for (int x = 0; x < bw; ++x, row += 3) {
-            const double dc = yccDist(row, ref);
-            const double dt = trow[x] - refTex;
-            out[x] = float(std::sqrt(dc * dc + kTexWeight * dt * dt));
-        }
-    }
-    scratch.clear();
-    for (int y = wy0; y <= wy1; ++y)
-        for (int x = wx0; x <= wx1; ++x) scratch.push_back(dist[size_t(y) * bw + x]);
-    const double tol  = std::clamp(kTolK * percentileOf(scratch, 0.75), kTolFloor, kTolCeil);
-    const double ramp = std::max(tol * 0.5, 1.0);
-
-    /* 5: edge energy, and the local level it is judged against. At the analysis scale a
-       boundary -- even a blurred one -- stands above the subject's own variation. */
-    static thread_local std::vector<float> edge;
-    edge.assign(n, 0.0f);
+    /* The classes are learned from FLAT pixels only: a pixel whose feature gradient is
+       above kGradK x the disc's median sits on a boundary, not in a class. The analysis
+       blur turns a hard edge into a band of in-between colours, and k-means gave that
+       band clusters of its own, close enough to each side to CHAIN the merge across a
+       plain lightness edge (a light wall against a dark one painted both). The
+       transition pixels are still classified below; they just do not vote. A sky
+       gradient is uniform, so nothing is dropped there; if over half the disc would be
+       dropped the test is skipped. */
+    static thread_local std::vector<float> grad;
+    grad.assign(n, 0.0f);
     for (int y = 0; y < bh; ++y) {
         for (int x = 0; x < bw; ++x) {
-            const double gx = yccDiffSq(px(std::min(bw - 1, x + 1), y), px(std::max(0, x - 1), y));
-            const double gy = yccDiffSq(px(x, std::min(bh - 1, y + 1)), px(x, std::max(0, y - 1)));
-            edge[size_t(y) * bw + x] = float(0.5 * std::sqrt(gx + gy));
+            const float *l = fv(size_t(y) * bw + std::max(0, x - 1));
+            const float *r = fv(size_t(y) * bw + std::min(bw - 1, x + 1));
+            const float *u = fv(size_t(std::max(0, y - 1)) * bw + x);
+            const float *d = fv(size_t(std::min(bh - 1, y + 1)) * bw + x);
+            grad[size_t(y) * bw + x] = 0.5f * std::sqrt(d2(r, l) + d2(d, u));
         }
     }
-    scratch.clear();
-    for (int y = wy0; y <= wy1; ++y)
-        for (int x = wx0; x <= wx1; ++x) scratch.push_back(edge[size_t(y) * bw + x]);
-    const double eRef = std::max(percentileOf(scratch, 0.60), kEdgeFloor);
+    chan.clear();
+    for (size_t k : discIdx) chan.push_back(grad[k]);
+    auto gmid = chan.begin() + long((chan.size() - 1) / 2);
+    std::nth_element(chan.begin(), gmid, chan.end());
+    const float flatMax = std::max(float(kGradK) * *gmid, float(kGradFloor));
+    static thread_local std::vector<size_t> flatIdx;
+    flatIdx.clear();
+    for (size_t k : discIdx) if (grad[k] <= flatMax) flatIdx.push_back(k);
+    const std::vector<size_t> &learn =
+        flatIdx.size() * 2 >= discIdx.size() ? flatIdx : discIdx;
 
-    /* Per-pixel COLOUR ACCEPTANCE (1 inside the tolerance, ramping off outside it) and the
-       cost of STEPPING ONTO each pixel, both resolved once into arrays. The fill below visits
-       a pixel from up to four neighbours and is the one part of the dab that is not
-       parallel, so nothing inside it recomputes what a flat pass can hand it. The step cost
-       is quantized into kCostLevels buckets over a budget of 1.0. */
-    const double invTol  = 1.0 / tol;
-    const double invERef = 1.0 / eRef;
-    const double drift   = kDrift / std::max(rf, 1.0);      // per pixel, so it scales with the brush
-    static thread_local std::vector<float> acc;
-    static thread_local std::vector<int> step;
-    acc.assign(n, 0.0f);
-    step.assign(n, 0);
-    const double rf2 = rf * rf;
-    for (size_t k = 0; k < n; ++k) {
-        const int ky = int(k / bw), kx = int(k) - ky * bw;
-        const double ox = kx - cxb, oy = ky - cyb;
-        if (ox * ox + oy * oy > rf2) continue;   // outside the dab: never sampled, never filled
-        const double d = dist[k];
-        acc[k] = d <= tol ? 1.0f : float(std::max(0.0, 1.0 - (d - tol) / ramp));
-        const double dn = d * invTol;
-        const double en = edge[k] * invERef;
-        const double dc = std::min(dn, 1.0);
-        double c = drift * dc * dc;
-        if (dn > 1.0) { const double e = dn - 1.0; c += kColorHard * e * e; }
-        if (en > 1.0) { const double e = en - 1.0; c += kEdgeK     * e * e; }
-        step[k] = int(std::lround(c * kCostLevels));
+    /* Model step 3: deterministic k-means over (a subsample of) the flat disc pixels.
+       Farthest-point seeding from the reference: no RNG, so the same dab always gives
+       the same field. */
+    const size_t stride = (learn.size() + kKmSamples - 1) / kKmSamples;
+    static thread_local std::vector<size_t> sIdx;
+    sIdx.clear();
+    for (size_t i = 0; i < learn.size(); i += stride) sIdx.push_back(learn[i]);
+    const size_t ns = sIdx.size();
+    float C[kClusters][kF];
+    std::copy(ref, ref + kF, C[0]);
+    static thread_local std::vector<float> nearest;
+    nearest.assign(ns, std::numeric_limits<float>::max());
+    for (int j = 1; j < kClusters; ++j) {
+        size_t far = 0;
+        float farD = -1.0f;
+        for (size_t i = 0; i < ns; ++i) {
+            nearest[i] = std::min(nearest[i], d2(fv(sIdx[i]), C[j - 1]));
+            if (nearest[i] > farD) { farD = nearest[i]; far = i; }
+        }
+        std::copy(fv(sIdx[far]), fv(sIdx[far]) + kF, C[j]);
     }
+    static thread_local std::vector<int> lab;
+    lab.assign(ns, 0);
+    auto assign = [&]() {
+        for (size_t i = 0; i < ns; ++i) {
+            const float *p = fv(sIdx[i]);
+            int best = 0;
+            float bd = d2(p, C[0]);
+            for (int j = 1; j < kClusters; ++j) {
+                const float dj = d2(p, C[j]);
+                if (dj < bd) { bd = dj; best = j; }
+            }
+            lab[i] = best;
+        }
+    };
+    for (int it = 0; it < kKmIters; ++it) {
+        assign();
+        double sum[kClusters][kF] = {};
+        int cnt[kClusters] = {};
+        for (size_t i = 0; i < ns; ++i) {
+            const float *p = fv(sIdx[i]);
+            for (int c = 0; c < kF; ++c) sum[lab[i]][c] += p[c];
+            ++cnt[lab[i]];
+        }
+        for (int j = 0; j < kClusters; ++j)           // an empty cluster keeps its centre
+            if (cnt[j]) for (int c = 0; c < kF; ++c) C[j][c] = float(sum[j][c] / cnt[j]);
+    }
+    assign();
 
-    /* 6: cost fill -- a monotone dial queue (all costs >= 0, so buckets are visited in order
-       and a pixel is final when its bucket comes up): O(box), no heap. */
+    /* Spread of each cluster in the MERGE metric (Y down-weighted), and the merge
+       distance between two centres in that metric. */
+    const float wm[kF] = { float(kMergeYW), 1.0f, 1.0f, 1.0f };
+    double spread[kClusters] = {};
+    {
+        double ss[kClusters] = {};
+        int cnt[kClusters] = {};
+        for (size_t i = 0; i < ns; ++i) {
+            const float *p = fv(sIdx[i]);
+            double s = 0.0;
+            for (int c = 0; c < kF; ++c) {
+                const double q = (p[c] - C[lab[i]][c]) * wm[c];
+                s += q * q;
+            }
+            ss[lab[i]] += s;
+            ++cnt[lab[i]];
+        }
+        for (int j = 0; j < kClusters; ++j)
+            spread[j] = cnt[j] ? std::sqrt(ss[j] / cnt[j]) : 0.0;
+    }
+    auto mergeDist = [&](int a, int b) {
+        double s = 0.0;
+        for (int c = 0; c < kF; ++c) {
+            const double q = (C[a][c] - C[b][c]) * wm[c];
+            s += q * q;
+        }
+        return std::sqrt(s);
+    };
 
-    static thread_local std::vector<int> cost;
-    static thread_local std::vector<std::vector<int>> bucket;
-    const int kUnreached = kCostLevels + 1;
-    cost.assign(n, kUnreached);
-    if (int(bucket.size()) != kCostLevels + 1) bucket.resize(kCostLevels + 1);
-    for (auto &b : bucket) b.clear();
+    /* The SUBJECT: clusters holding kShareMin of the seed disc, plus the one nearest it
+       on average, closed under the merge. */
+    int share[kClusters] = {};
+    double seedMean[kClusters] = {};
+    for (size_t k : seedIdx) {
+        const float *p = fv(k);
+        int best = 0;
+        float bd = std::numeric_limits<float>::max();
+        for (int j = 0; j < kClusters; ++j) {
+            const float dj = d2(p, C[j]);
+            seedMean[j] += std::sqrt(dj);
+            if (dj < bd) { bd = dj; best = j; }
+        }
+        ++share[best];
+    }
+    bool subj[kClusters] = {};
+    int nearestJ = 0;
+    for (int j = 0; j < kClusters; ++j) {
+        if (share[j] >= kShareMin * double(seedIdx.size())) subj[j] = true;
+        if (seedMean[j] < seedMean[nearestJ]) nearestJ = j;
+    }
+    subj[nearestJ] = true;
+    for (bool grew = true; grew; ) {
+        grew = false;
+        for (int j = 0; j < kClusters; ++j) {
+            if (subj[j]) continue;
+            for (int s = 0; s < kClusters; ++s) {
+                if (!subj[s]) continue;
+                const double lim =
+                    std::max(kMergeMin, kMergeSig * 0.5 * (spread[s] + spread[j]));
+                if (mergeDist(j, s) < lim) { subj[j] = true; grew = true; break; }
+            }
+        }
+    }
+    const bool anyOther = std::find(subj, subj + kClusters, false) != subj + kClusters;
 
-    /* Seed from a small disc at the dab centre, not a single pixel: one outlier under the
-       crosshair should not decide the whole dab. */
-    const double sr = std::max(1.0, rf * 0.12);
-    const int si0 = std::max(0, cxb - int(sr)), si1 = std::min(bw - 1, cxb + int(sr));
-    const int sj0 = std::max(0, cyb - int(sr)), sj1 = std::min(bh - 1, cyb + int(sr));
-    for (int y = sj0; y <= sj1; ++y) {
-        for (int x = si0; x <= si1; ++x) {
-            const double dx = x - cxb, dy = y - cyb;
-            if (dx * dx + dy * dy > sr * sr) continue;
-            const size_t k = size_t(y) * bw + x;
-            if (acc[k] <= kAcceptCut) continue;
+    f.x0 = x0; f.y0 = y0; f.w = bw; f.h = bh; f.dec = dec;
+    f.a.assign(n, 0.0f);
+    /* accOwn = each pixel's own class acceptance (model step 4), kept for the feather
+       band; 1 everywhere when the dab holds one surface only. */
+    static thread_local std::vector<float> accOwn;
+    accOwn.assign(n, 1.0f);
+
+    if (!anyOther) {
+        for (size_t k = 0; k < n; ++k) if (rad[k] <= rCore) f.a[k] = 1.0f;
+        /* No other class was LEARNED -- but one can still sit in the feather band as a
+           sliver too thin to have a flat pixel (every pixel of it is on the boundary
+           and did not vote). So the band's gate is absolute here: a band pixel must lie
+           within the merge distance of a subject centre, fading out to twice it. */
+        double lim = kMergeMin;
+        for (int j = 0; j < kClusters; ++j)
+            lim = std::max(lim, kMergeSig * spread[j]);
+        const float invLim = float(1.0 / lim);
+        for (size_t k = 0; k < n; ++k) {
+            if (rad[k] <= rCore) continue;               // only the band reads accOwn
+            const float *p = fv(k);
+            double best = std::numeric_limits<double>::max();
+            for (int j = 0; j < kClusters; ++j) {
+                double s2 = 0.0;
+                for (int c = 0; c < kF; ++c) {
+                    const double q = (p[c] - C[j][c]) * wm[c];
+                    s2 += q * q;
+                }
+                best = std::min(best, s2);
+            }
+            accOwn[k] = std::clamp(2.0f - float(std::sqrt(best)) * invLim, 0.0f, 1.0f);
+        }
+    }
+    else {
+        /* Model step 4: relative likeness, its acceptance, and the fill's step cost. */
+        static thread_local std::vector<int> step;
+        step.assign(n, 0);
+        const float invRamp = 1.0f / (kPHi - kPLo);
+        for (size_t k = 0; k < n; ++k) {
+            const float *p = fv(k);
+            float dS = std::numeric_limits<float>::max(), dO = dS;
+            for (int j = 0; j < kClusters; ++j) {
+                const float dj = d2(p, C[j]);
+                if (subj[j]) dS = std::min(dS, dj); else dO = std::min(dO, dj);
+            }
+            dS = std::sqrt(dS); dO = std::sqrt(dO);
+            const float pl = dO / (dS + dO + 1e-6f);
+            accOwn[k] = std::clamp((pl - kPLo) * invRamp, 0.0f, 1.0f);
+            const double e = std::max(0.0, 1.0 - 2.0 * pl);
+            step[k] = int(std::lround(kStepK * e * e * kCostLevels));
+        }
+
+        /* Model step 5: cost fill inside the core -- a monotone dial queue (all costs
+           >= 0, so buckets are visited in order and a pixel is final when its bucket
+           comes up): O(box), no heap. */
+        static thread_local std::vector<int> cost;
+        static thread_local std::vector<std::vector<int>> bucket;
+        const int kUnreached = kCostLevels + 1;
+        cost.assign(n, kUnreached);
+        if (int(bucket.size()) != kCostLevels + 1) bucket.resize(kCostLevels + 1);
+        for (auto &b : bucket) b.clear();
+        auto open = [&](size_t k) { return rad[k] <= rCore && accOwn[k] > 0.0f; };
+        for (size_t k : seedIdx) {
+            if (!open(k) || accOwn[k] <= 0.5f) continue;
             cost[k] = 0;
             bucket[0].push_back(int(k));
         }
-    }
-    if (bucket[0].empty()) return;               // nothing under the brush matches: unconfined
+        if (bucket[0].empty()) return;       // the crosshair is on no class: unconfined
 
-    static const int dxs[4] = { 1, -1, 0, 0 }, dys[4] = { 0, 0, 1, -1 };
-    for (int b = 0; b <= kCostLevels; ++b) {
-        /* Index, not iterator: a zero-cost step appends to this same bucket as we walk it. */
-        for (size_t qi = 0; qi < bucket[b].size(); ++qi) {
-            const int k = bucket[b][qi];
-            if (cost[k] != b) continue;                       // superseded by a cheaper route
-            const int cy = k / bw, cx = k - cy * bw;
-            for (int t = 0; t < 4; ++t) {
-                const int nx = cx + dxs[t], ny = cy + dys[t];
-                if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
-                const size_t nk = size_t(ny) * bw + nx;
-                if (acc[nk] <= 0.0f) continue;                // hard colour gate
-                const int nc = b + step[nk];
-                if (nc > kCostLevels || nc >= cost[nk]) continue;
-                cost[nk] = nc;
-                bucket[nc].push_back(int(nk));
+        static const int dxs[4] = { 1, -1, 0, 0 }, dys[4] = { 0, 0, 1, -1 };
+        for (int b = 0; b <= kCostLevels; ++b) {
+            /* Index, not iterator: a zero-cost step appends to this bucket. */
+            for (size_t qi = 0; qi < bucket[b].size(); ++qi) {
+                const int k = bucket[b][qi];
+                if (cost[k] != b) continue;           // superseded by a cheaper route
+                const int cy = k / bw, cx = k - cy * bw;
+                for (int t = 0; t < 4; ++t) {
+                    const int nx = cx + dxs[t], ny = cy + dys[t];
+                    if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
+                    const size_t nk = size_t(ny) * bw + nx;
+                    if (!open(nk)) continue;
+                    const int nc = b + step[nk];
+                    if (nc > kCostLevels || nc >= cost[nk]) continue;
+                    cost[nk] = nc;
+                    bucket[nc].push_back(int(nk));
+                }
+            }
+            bucket[b].clear();                        // never pushed to again (nc >= b)
+        }
+
+        /* Acceptance: how much of the budget the cheapest route had left, capped by the
+           class ramp, smoothstepped so the mask fades as the budget runs out rather than
+           ending on a contour of its own. */
+        for (size_t k = 0; k < n; ++k) {
+            if (cost[k] > kCostLevels) continue;
+            const float left = 1.0f - float(cost[k]) / float(kCostLevels);
+            f.a[k] = std::min(accOwn[k], left * left * (3.0f - 2.0f * left));
+        }
+    }
+
+    /* Model step 1, the FEATHER BAND: each pixel beyond the core takes the core value on
+       its own radius just inside the rim, gated by its own class acceptance. Written into
+       a copy so the band only ever reads core values. */
+    if (rcf < rf - 0.5) {
+        static thread_local std::vector<float> core;
+        core = f.a;
+        const double rin = std::max(rcf - 1.5, 0.0);
+        for (int y = 0; y < bh; ++y) {
+            for (int x = 0; x < bw; ++x) {
+                const size_t k = size_t(y) * bw + x;
+                if (rad[k] <= rCore) continue;
+                const double s = rin / std::max(double(rad[k]), 1e-6);
+                const int px =
+                    std::clamp(int(std::lround(cxa + (x - cxa) * s)), 0, bw - 1);
+                const int py =
+                    std::clamp(int(std::lround(cya + (y - cya) * s)), 0, bh - 1);
+                f.a[k] = std::min(core[size_t(py) * bw + px], accOwn[k]);
             }
         }
-        bucket[b].clear();                                    // never pushed to again (nc >= b)
-    }
-
-    /* Acceptance: how much of the budget the cheapest route to this pixel had left, capped
-       by the colour ramp. Smoothstepped, so the mask fades out as the fill runs out of
-       budget rather than ending on a hard contour of its own. */
-    f.x0 = x0; f.y0 = y0; f.w = bw; f.h = bh; f.dec = dec;
-    f.a.assign(n, 0.0f);
-    for (size_t k = 0; k < n; ++k) {
-        if (cost[k] > kCostLevels) continue;
-        const float left = 1.0f - float(cost[k]) / float(kCostLevels);
-        f.a[k] = std::min(acc[k], left * left * (3.0f - 2.0f * left));
     }
 
     /* 3x3 blur: the fill's boundary is a staircase at analysis resolution, and the dab
@@ -572,21 +726,25 @@ inline void dabMax(float *cov, int w, int h, double cx, double cy, double radius
        radius apart and often land on the same guide pixel, so the field is cached and
        reused when the centre has not moved a guide pixel -- the fill is the only part of
        the brush that is not embarrassingly parallel. thread_local: the render worker and
-       the GUI both stamp dabs. */
+       the GUI both stamp dabs. The CORE radius is the falloff's half-coverage radius --
+       the cursor's inner ring -- and is the auto-mask's search zone (see the model). */
     const bool auto_ = am && am->on && am->g && am->g->valid();
     static thread_local DabField field;
     static thread_local const Guide *fieldGuide = nullptr;
-    static thread_local double fieldCx = 0, fieldCy = 0, fieldR = -1;
+    static thread_local double fieldCx = 0, fieldCy = 0, fieldR = -1, fieldRc = -1;
     double gcx = 0, gcy = 0, grad = 0;
     GuideMap gmap{};
     if (auto_) {
         gmap = guideMapFor(*am, w, h);
         targetToGuide(gmap, cx, cy, gcx, gcy);
         grad = radius * double(std::max(am->g->w, am->g->h)) / std::max(w, h);
+        const double grc = f > 0.0 ? grad * MaskFalloff::shapeFor(f * 100.0).h : grad;
         if (fieldGuide != am->g || std::abs(grad - fieldR) > 0.01 ||
+            std::abs(grc - fieldRc) > 0.01 ||
             std::abs(gcx - fieldCx) > 0.5 || std::abs(gcy - fieldCy) > 0.5) {
-            buildDabField(*am->g, gcx, gcy, grad, field);
-            fieldGuide = am->g; fieldCx = gcx; fieldCy = gcy; fieldR = grad;
+            buildDabField(*am->g, gcx, gcy, grad, grc, field);
+            fieldGuide = am->g; fieldCx = gcx; fieldCy = gcy;
+            fieldR = grad; fieldRc = grc;
         }
     }
     const DabField *fld = auto_ ? &field : nullptr;

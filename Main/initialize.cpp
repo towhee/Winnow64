@@ -2751,6 +2751,18 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskEditBegin, imageView, &ImageView::beginMaskEdit);
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::onAiMaskEditBegin);
     connect(developProperties, &DevelopProperties::maskEditEnd,   imageView, &ImageView::endMaskEdit);
+    /* Segmenter: the Detail level both ways -- the panel row and [ ] on the canvas -- and
+       the tool closing. A search still running carries on (its result is cached for when
+       the submask is opened again), but nothing is waiting for it, and the next opening
+       may offer the model download again. */
+    connect(developProperties, &DevelopProperties::segmenterDetailChanged,
+            imageView, &ImageView::setSegmenterDetail);
+    connect(imageView, &ImageView::segmenterDetailRequested,
+            developProperties, &DevelopProperties::setSegmenterDetail);
+    connect(developProperties, &DevelopProperties::maskEditEnd, this, [this] {
+        segmenterWanted = false;
+        segmenterModelDeclined = false;
+    });
     /* Regenerative spot fill: arm/disarm the ImageView brush; stroke -> FillSpot. */
     /* Routed through MW so the heal model can be offered before the tool is armed
        (MW::onSpotEditBegin), then forwarded to ImageView::beginSpotEdit as before. */

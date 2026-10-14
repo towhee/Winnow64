@@ -121,16 +121,24 @@ void SubmaskDialog::buildUi()
     toolList->setUniformItemSizes(false);
     v->addWidget(toolList, 1);
 
-    addToolGroup(tr("Drawn"),     int(MaskTool::LinearGradient), int(MaskTool::Brush));
-    addToolGroup(tr("Content"),   int(MaskTool::ColorRange),     int(MaskTool::LuminanceRange));
-    addToolGroup(tr("Automatic"), int(MaskTool::Subject),        int(MaskTool::Object));
-    addToolGroup(tr("Refine"),    int(MaskTool::RefineBrush),    int(MaskTool::RefineBrush));
+    addToolGroup(tr("Drawn"),     {int(MaskTool::LinearGradient), int(MaskTool::RadialGradient),
+                                   int(MaskTool::Brush)});
+    addToolGroup(tr("Content"),   {int(MaskTool::ColorRange), int(MaskTool::LuminanceRange)});
+    addToolGroup(tr("Automatic"), {int(MaskTool::Subject), int(MaskTool::Sky),
+                                   int(MaskTool::Background), int(MaskTool::Depth),
+                                   int(MaskTool::Object), int(MaskTool::Segmenter)});
+    addToolGroup(tr("Refine"),    {int(MaskTool::RefineBrush)});
 
     /* The Refine Brush re-mattes the mask ABOVE it, so as the first submask it has
        nothing to work on. Greyed with the reason, not hidden: the user should learn the
        tool exists and what it needs. */
     for (int r = 0; r < toolList->count(); ++r) {
         QListWidgetItem *it = toolList->item(r);
+        /* The Segmenter's way of working -- point and click, nothing to draw -- is not
+           guessable from its name, so its row says it. */
+        if (it->data(UR_Tool).isValid() && it->data(UR_Tool).toInt() == int(MaskTool::Segmenter))
+            it->setToolTip(tr("Finds the objects in the photo. Move the pointer over the "
+                              "image to see each one, and click to add or remove it."));
         if (it->data(UR_Tool).toInt() != int(MaskTool::RefineBrush)
             || !it->data(UR_Tool).isValid()) continue;
         it->setToolTip(tr("Paint a region to re-fit the mask above it to the picture: "
@@ -171,7 +179,7 @@ void SubmaskDialog::buildUi()
     resize(sizeHint());
 }
 
-void SubmaskDialog::addToolGroup(const QString &heading, int firstTool, int lastTool)
+void SubmaskDialog::addToolGroup(const QString &heading, const QVector<int> &tools)
 {
     QListWidgetItem *h = new QListWidgetItem(heading, toolList);
     h->setFlags(Qt::NoItemFlags);                // a caption, not a choice
@@ -179,7 +187,7 @@ void SubmaskDialog::addToolGroup(const QString &heading, int firstTool, int last
     f.setBold(true);
     h->setFont(f);
 
-    for (int t = firstTool; t <= lastTool; ++t) {
+    for (int t : tools) {
         QListWidgetItem *it = new QListWidgetItem(
             "    " + DevelopProperties::maskToolName(t), toolList);
         it->setData(UR_Tool, t);

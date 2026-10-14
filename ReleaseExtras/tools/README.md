@@ -1,7 +1,7 @@
 # SAM 2 Object Mask models
 
-The Develop **Object Mask** tool needs two ONNX files next to the other AI models in
-`ReleaseExtras/` (they are not in git — large, like `u2net.onnx`):
+The Develop **Object Mask** and **Segmenter** tools share two ONNX files, next to the other
+AI models in `ReleaseExtras/` (they are not in git — large, like `u2net.onnx`):
 
 - `sam2_encoder.onnx` — SAM 2 image encoder (shipped as-is)
 - `sam2_decoder.onnx` — SAM 2 mask decoder, **fixed-shape** (pinned prompt dims + constant-folded)

@@ -47,7 +47,11 @@ enum class MaskTool {
        the photo's own colours (Develop/maskrefine.h). Brush strokes on the canvas; its
        mode is the op (Add = add, Subtract/Intersect = remove) unless paramsJson says
        "mode":"edge" (Fix Edge). */
-    RefineBrush
+    RefineBrush,
+    /* Segmenter: SAM 2 cuts the photo into its objects; the user clicks the ones wanted
+       and the submask is their union (Utilities/segmenter.h). paramsJson holds the
+       selected outlines, so the render needs no model. */
+    Segmenter
 };
 enum class MaskOp      { Add, Subtract, Intersect };   // APPEND ONLY (serialized as int)
 enum class MaskCombine { Union, Intersect };

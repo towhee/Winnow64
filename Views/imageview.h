@@ -19,6 +19,9 @@
 #include "Image/pixmap.h"
 #include "Embellish/embel.h"
 #include "Utilities/focuspredictor.h"
+#include <memory>
+
+namespace Segmenter { struct Segmentation; }
 
 class ImageView : public QGraphicsView
 {
@@ -307,6 +310,15 @@ public slots:
        stop reading it as the Subtract op modifier -- an Opt stroke on an empty submask
        is a normal paint that still means "this submask subtracts". */
     bool maskStrokeIsErase() const { return maskStrokeInFlight() && maskBrushErase; }
+    /* Would Opt make the NEXT brush/object press an erase? (The press tests exactly
+       this.) Between erase strokes, with Opt still held, MW must not read Opt as the
+       Subtract op either, or the veil would flip the whole submask to Subtract every
+       time the button comes up. */
+    bool maskOptWouldErase() const
+    {
+        return G::useBrushEraseStroke && maskEditMode
+            && (maskIsBrush() || maskIsObject()) && !maskBrushStrokesJson.isEmpty();
+    }
     /* "M": hide/show the mask overlay tint (both the whole-mask composite and the per-tool preview)
        while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
     void toggleMaskTint();
@@ -323,6 +335,16 @@ public slots:
     /* Content-range tools (Luminance/Color Range): the dock changed lo/hi/refine (or samples) ->
        rebuild the coverage tint from the shared RangeRef. */
     void setMaskRangeParams(const QString &paramsJson);
+    /* ------- Segmenter -------
+       The objects MW found in the current image (null until the search finishes, or
+       when it is cleared), the search's progress (0..100, -1 idle) and a one-line
+       message when it cannot run. The canvas highlights the object under the pointer
+       and a click adds it to the submask or removes it. setSegmenterDetail picks the
+       level of the object hierarchy offered: 0 whole objects, 1 parts, 2 details. */
+    void setSegmentation(std::shared_ptr<const Segmenter::Segmentation> s);
+    void setSegmenterProgress(int pct);
+    void setSegmenterMessage(const QString &msg);
+    void setSegmenterDetail(int level);
     /* Build (once per image) + register the brush auto-mask luminance guide. Public so
        the develop render can guarantee it exists before rasterizing a lum auto-mask
        brush (GUI thread). */
@@ -404,6 +426,8 @@ signals:
     void maskFeatherRequested(double feather);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
     void maskBrushAutoMaskRequested(bool on);
+    /* [ / ] over the photo stepped the Segmenter's Detail level; the dock shows it. */
+    void segmenterDetailRequested(int level);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
     /* A level line was drawn: the leveling angle to ADD to the straighten (degrees, nearest H/V). */
@@ -698,6 +722,28 @@ private:
     std::vector<float> maskObjPerim, maskObjFill;   // wall + filled silhouette
     bool               maskObjClosed  = false;      // an enclosed region was found
     bool               maskObjDrawing = false;
+    /* Segmenter. segData is the image's segmentation (MW's, shared); segSel* the
+       submask's selected outlines -- the JSON it persists and the same as paths, in
+       mask-normalized coords. The pointer is over at most one of two things: a SELECTED
+       outline (segHoverSel, a click removes it -- checked first, so a selection made at
+       another Detail level can always be taken back) or an object the current level
+       offers (segHover, a click adds it). A click is a press and release within a few
+       pixels; anything longer is not a click. */
+    std::shared_ptr<const Segmenter::Segmentation> segData;
+    int                  segLevel    = 0;
+    int                  segProgress = -1;          // -1 = no search running
+    QString              segMessage;
+    QJsonArray           segSelJson;
+    QVector<QPainterPath> segSelPaths;
+    int                  segHover    = -1;
+    int                  segHoverSel = -1;
+    bool                 segPressed  = false;
+    QPoint               segPressVp;
+    void    segClear();                         // drop the hover + selection state
+    void    segUpdateHover(QPoint vp);          // what is under the pointer; cursor
+    void    segToggleAt(QPoint vp);             // a click: add or remove that object
+    void    drawSegmenter(QPainter *p, bool drawTint);   // outlines + hover, scene coords
+    void    drawSegmenterChip(QPainter *p);     // progress / message (viewport coords)
     int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
@@ -790,6 +836,7 @@ private:
     bool    maskIsBackground() const { return maskTool == 7; }   // = inverted Subject saliency
     bool    maskIsDepth()      const { return maskTool == 8; }   // depth-band over the MiDaS field
     bool    maskIsObject()     const { return maskTool == 9; }   // SAM 2 freehand-lasso object mask
+    bool    maskIsSegmenter()  const { return maskTool == 11; }  // SAM 2: click objects
     bool    maskIsContent() const {
         return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground() || maskIsDepth();
     }
@@ -805,6 +852,7 @@ private:
         case 2:           // Brush paint
         case 3:           // Color Range eyedropper
         case 9:           // Object perimeter-paint
+        case 11:          // Segmenter: hover + click the objects
             return true;
         default:          // 4 Luminance Range, 5-8 AI masks: no canvas interaction
             return false;

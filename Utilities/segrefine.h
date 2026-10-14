@@ -59,7 +59,10 @@ inline void guidedFilterGray(const cv::Mat &I, const cv::Mat &p, cv::Mat &q, int
 */
 enum class Mode {
     Saliency,       // min-max stretch + halo-killing contrast (Subject)
-    AlphaLogits     // sigmoid of logits, partial alpha preserved (Object Mask)
+    AlphaLogits,    // sigmoid of logits, partial alpha preserved (Object Mask)
+    /* Already a 0..1 coverage (the Segmenter's rasterized outlines): taken as it is, then
+       only snapped to the photo -- no stretch, no sigmoid, no contrast. */
+    Alpha
 };
 
 /* rawSal: the model's single-channel target as a 2D CV_32F (any resolution / range). image: the
@@ -70,7 +73,10 @@ inline bool refine(const cv::Mat &rawSal, const QImage &image,
     if (rawSal.empty()) return false;
 
     cv::Mat sal;
-    if (mode == Mode::AlphaLogits) {
+    if (mode == Mode::Alpha) {
+        rawSal.convertTo(sal, CV_32F);
+    }
+    else if (mode == Mode::AlphaLogits) {
         /* alpha = sigmoid(logit): 0 logits -> 0.5 exactly, so the threshold downstream lands on the
            model's own boundary, and the few-logit-wide transition becomes a real soft edge. */
         cv::exp(-rawSal, sal);                     // sal = exp(-x)
@@ -105,7 +111,7 @@ inline bool refine(const cv::Mat &rawSal, const QImage &image,
     /* Saliency only: narrow the transition band (contrast around 0.5), pushing the faint low-alpha
        fringe to 0 and the solid interior to 1 -- removes the residual halo but destroys any real
        partial alpha, which is why AlphaLogits leaves the matte alone. */
-    const float k = (mode == Mode::AlphaLogits) ? 1.0f : 1.6f;
+    const float k = (mode == Mode::Saliency) ? 1.6f : 1.0f;
     cov.resize(size_t(ow) * oh);
     for (int y = 0; y < oh; ++y) {
         const float *rp = refined.ptr<float>(y);

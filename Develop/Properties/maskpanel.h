@@ -84,6 +84,10 @@ public:
        things depending on whether a stroke is being added and whether Shift is held, and
        nothing on screen used to say which. Empty text hides the row. */
     void setAttributeScope(const QString &text);
+    /* A line under that header in the selected tool's own words: the Segmenter's
+       progress while it finds the objects, then how to use them, or why it cannot run.
+       Empty text hides the row. */
+    void setToolNote(const QString &text);
     /* The embedded tree that renders the submask's settings (Size/Feather/etc.) --
        populated and wired by DevelopProperties so it edits the mask model. */
     MaskEditor *editor() const { return maskEditor; }
@@ -162,6 +166,7 @@ private:
     QWidget     *levelBody   = nullptr;    // maskLevelEditor's wrapper (collapses)
     SubmaskList *submaskList = nullptr;    // the mask's contents, above the settings
     QLabel      *scopeLabel  = nullptr;    // "changes apply to ..." above the settings
+    QLabel      *toolNote    = nullptr;    // the tool's state (Segmenter progress / help)
     MaskEditor  *maskEditor  = nullptr;    // tree-rendered settings of the selected one
     QWidget     *attrWrap    = nullptr;    // the maskEditor's wrapper (hidden when none)
     int          pendingOp  = 0;           // MaskOp the veil is currently previewing

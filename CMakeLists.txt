@@ -431,6 +431,7 @@ set(WINNOW_SOURCES
     Utilities/inference/imageembedder.cpp
     Utilities/subjectpredictor.cpp
     Utilities/objectmaskpredictor.cpp
+    Utilities/segmenter.cpp
     Utilities/skypredictor.cpp
     Utilities/depthpredictor.cpp
     Utilities/foldercompressor.cpp
@@ -741,6 +742,7 @@ set(WINNOW_HEADERS
     Utilities/inference/imageembedder.h
     Utilities/subjectpredictor.h
     Utilities/objectmaskpredictor.h
+    Utilities/segmenter.h
     Utilities/skypredictor.h
     Utilities/depthpredictor.h
     Utilities/foldercompressor.h

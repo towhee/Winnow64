@@ -2,6 +2,7 @@
 #define SUBMASKDIALOG_H
 
 #include <QDialog>
+#include <QVector>
 
 class QListWidget;
 class QRadioButton;
@@ -62,7 +63,10 @@ public:
 
 private:
     void buildUi();
-    void addToolGroup(const QString &heading, int firstTool, int lastTool);
+    /* A caption row, then one row per tool, in the order given. A list rather than an
+       enum range: tools are APPENDED to MaskTool (it is serialized), so a group's
+       members need not be contiguous -- the Segmenter sits with the Automatic ones. */
+    void addToolGroup(const QString &heading, const QVector<int> &tools);
     void syncOkEnabled();
 
     bool          firstMask = true;         // empty mask: only Add is possible

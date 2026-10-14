@@ -89,6 +89,7 @@ private slots:
     void linearGradientPointsTurn();
     void radialSwapsRadiiOnQuarterTurnsOnly();
     void strokesTurnAndKeepTheirSettings();
+    void segmenterOutlinesTurn();
     void spotTurns();
     void cropCoversTheSameContent();
     void quadIsRelabelled();
@@ -159,6 +160,38 @@ void tst_editrotate::strokesTurnAndKeepTheirSettings()
         QVERIFY(near(p.at(2).toDouble(), 0.4));         // (0.3,0.4) -> (0.4, 0.7)
         QVERIFY(near(p.at(3).toDouble(), 0.7));
     }
+}
+
+void tst_editrotate::segmenterOutlinesTurn()
+{
+    /* Two selected segments, the second with a hole: every ring of every segment turns,
+       and nothing is added, dropped or reordered. */
+    const QString src =
+        R"({"segments":[{"rings":[[0.1,0.2,0.3,0.2,0.3,0.4]]},)"
+        R"({"rings":[[0.5,0.5,0.9,0.5,0.9,0.9],[0.6,0.6,0.7,0.6,0.7,0.7]]}]})";
+    const QJsonArray segs =
+        obj(EditRotate::maskParams(int(MaskTool::Segmenter), src, 90)).value("segments").toArray();
+    QCOMPARE(segs.size(), 2);
+    const QJsonArray r0 = segs.at(0).toObject().value("rings").toArray();
+    QCOMPARE(r0.size(), 1);
+    const QJsonArray p = r0.at(0).toArray();
+    QCOMPARE(p.size(), 6);
+    QVERIFY(near(p.at(0).toDouble(), 0.8));             // (0.1,0.2) -> (0.8, 0.1)
+    QVERIFY(near(p.at(1).toDouble(), 0.1));
+    QVERIFY(near(p.at(4).toDouble(), 0.6));             // (0.3,0.4) -> (0.6, 0.3)
+    QVERIFY(near(p.at(5).toDouble(), 0.3));
+    const QJsonArray r1 = segs.at(1).toObject().value("rings").toArray();
+    QCOMPARE(r1.size(), 2);
+    const QJsonArray hole = r1.at(1).toArray();
+    QVERIFY(near(hole.at(0).toDouble(), 0.4));          // (0.6,0.6) -> (0.4, 0.6)
+    QVERIFY(near(hole.at(1).toDouble(), 0.6));
+    /* A quarter turn there and back is the identity. */
+    const QString back = EditRotate::maskParams(int(MaskTool::Segmenter),
+        EditRotate::maskParams(int(MaskTool::Segmenter), src, 90), 270);
+    const QJsonArray b = obj(back).value("segments").toArray().at(1).toObject()
+                             .value("rings").toArray().at(1).toArray();
+    QVERIFY(near(b.at(0).toDouble(), 0.6));
+    QVERIFY(near(b.at(1).toDouble(), 0.6));
 }
 
 void tst_editrotate::spotTurns()
