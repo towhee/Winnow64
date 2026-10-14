@@ -8,8 +8,8 @@
 #include <QMenu>
 #include <QMouseEvent>
 #include <QPainter>
+#include <QPainterPath>
 #include <QPixmap>
-#include <QPushButton>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -74,6 +74,40 @@ void SubmaskList::setTopRule(bool on)
 QString SubmaskList::opName(int op)
 {
     return op == 1 ? tr("Subtract") : op == 2 ? tr("Intersect") : tr("Add");
+}
+
+QIcon SubmaskList::opIcon(int op)
+{
+    /* Painted rather than shipped, drawn to match images/icon16/new.png (the [+] on the
+       Mask band): 16x16 logical, 2px strokes in the same grey spanning x/y 3..12, and
+       G::iconOpacity like every BarBtn icon. Painted at 2x so it stays crisp on Retina. */
+    const qreal dpr = 2.0;
+    QPixmap pm(int(16 * dpr), int(16 * dpr));
+    pm.setDevicePixelRatio(dpr);
+    pm.fill(Qt::transparent);
+    QPainter p(&pm);
+    p.setRenderHint(QPainter::Antialiasing);
+    p.setOpacity(G::iconOpacity);
+    QPen pen(QColor(184, 184, 184), 2.0, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin);
+    p.setPen(pen);
+    p.setBrush(Qt::NoBrush);
+    if (op == 1) {                              // Subtract: -
+        p.drawLine(QPointF(3, 8), QPointF(13, 8));
+    }
+    else if (op == 2) {                         // Intersect: an arch (n)
+        QPainterPath path;
+        path.moveTo(4, 13);
+        path.lineTo(4, 8);
+        path.arcTo(QRectF(4, 4, 8, 8), 180, -180);
+        path.lineTo(12, 13);
+        p.drawPath(path);
+    }
+    else {                                      // Add: +
+        p.drawLine(QPointF(3, 8), QPointF(13, 8));
+        p.drawLine(QPointF(8, 3), QPointF(8, 13));
+    }
+    p.end();
+    return QIcon(pm);
 }
 
 QString SubmaskList::opGlyph(int op)
@@ -156,7 +190,6 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     hb->addWidget(openBtn);
     hb->addSpacing(G::decorationTitleGap);
 
-    /* Caption ink, shared by the name and the op chip after it. */
     const QColor ink = selected ? QColor(Qt::white)
                      : r.enabled ? G::textColor : G::disabledColor;
     QString caption = r.toolName;
@@ -167,54 +200,32 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
                                       "settle (Return lands it now, Esc discards it)")
                       : selected ? tr("Open -- click to close its settings")
                                  : tr("Click to edit this submask again");
-    /* The first submask's op chip is inert (see below) and carries no tooltip of its
-       own, so say why here rather than nowhere. */
+    /* The first submask has no op button (see below), so say why here rather than
+       nowhere. */
     if (index == 0)
         nameTip += tr("\n\nThe first submask starts the mask, so it always adds.");
     name->setToolTip(nameTip);
     hb->addWidget(name);
 
-    /* Op chip, AFTER the name -- "Brush Submask (-)" -- so the captions start in one
-       column and read as names first (2026-10-14; it used to lead the row). The FIRST
-       submask has nothing to combine with, so its op is inert -- but the chip is still
-       shown, so the "(+)" still says what that submask does. */
-    QPushButton *opBtn = new QPushButton("(" + opGlyph(r.op) + ")", row);
-    opBtn->setFixedHeight(18);
-    opBtn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    /* Flat on the row: the app stylesheet gives a QPushButton its own raised background,
-       which read as a slab on the row's lifted surface. The glyph alone carries the op;
-       a hover fill keeps it discoverable as something clickable. min-width: 0 defeats the
-       global "QPushButton { min-width: 100px }" (widgetcss.cpp), which Qt applies as an
-       EXPLICIT minimum and which would floor the dock's width. Same ink and size as the
-       name beside it (greying with it too), so "(-)" reads as part of the caption. */
-    opBtn->setStyleSheet(
-        "QPushButton { min-width: 0; padding: 0 2px; border: none; border-radius: 9px;"
-                     " background: transparent; color: " + ink.name() + ";"
-                     " font-size: " + G::strFontSize + "pt; }"
-        "QPushButton:disabled { color: " + G::disabledColor.name() + "; }"
-        "QPushButton:hover:enabled { background: " + G::groupSeparatorColor.name() + "; }");
-    if (index == 0) {
-        /* Inert, but NOT setEnabled(false): that greys the glyph, and a dim "+" beside
-           the crisp ones below it reads as "this submask is disabled" or as a fault,
-           when all it means is that the first submask cannot combine with anything. The
-           chip is made transparent to the mouse instead -- it cannot be clicked or
-           hovered, it keeps the same ink as every other row, and the click falls through
-           to the row, which opens the submask like a click anywhere else on it. */
-        opBtn->setAttribute(Qt::WA_TransparentForMouseEvents, true);
-        opBtn->setFocusPolicy(Qt::NoFocus);
-        /* Its own tooltip would never show -- the chip sees no mouse events now -- so the
-           explanation moves onto the row's name. */
-    }
-    else {
-        opBtn->setToolTip(QString("%1 -- click to cycle Add / Subtract / Intersect")
-                              .arg(opName(r.op)));
+    hb->addStretch(1);
+
+    /* Op button, left of the eye: what this submask does to the mask so far (Add /
+       Subtract / Intersect), as a +, - or n glyph. Each click cycles to the next op
+       (2026-10-14; it used to be a "(-)" text chip beside the name, and before that led
+       the row). NOT shown on the FIRST submask: it has nothing to combine with, so its
+       op is meaningless -- the first submask always adds. */
+    if (index > 0) {
         const int next = (r.op + 1) % 3;
-        connect(opBtn, &QPushButton::clicked, this, [this, index, next]{
+        BarBtn *opBtn = new BarBtn();
+        opBtn->setIcon(opIcon(r.op));
+        opBtn->setIconSize(QSize(16, 16));
+        opBtn->setToolTip(tr("%1 -- click to change to %2")
+                              .arg(opName(r.op), opName(next)));
+        connect(opBtn, &BarBtn::clicked, this, [this, index, next]{
             emitDeferred([this, index, next]{ emit opChanged(index, next); });
         });
+        hb->addWidget(opBtn);
     }
-    hb->addWidget(opBtn);
-    hb->addStretch(1);
 
     /* Show/hide this submask's contribution (MaskComponent::enabled). The renderer skips
        a disabled component, so this is a one-click A/B of what it is doing. */

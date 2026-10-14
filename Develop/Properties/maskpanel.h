@@ -23,8 +23,8 @@ class MaskEditor;
         | |    Edge      -----o-----              |
         | |    Halo      -----o-----              |
         | |  -------------------------------      |
-        | |  > Linear Gradient Submask (+) [eye][:] |   <- SubmaskList: the mask's contents
-        | |  v Brush Submask (-)           [eye][:] |   <- selected -> settings below
+        | |  > Linear Gradient Submask   [eye][:] |   <- SubmaskList: the mask's contents
+        | |  v Brush Submask          [-][eye][:] |   <- selected -> settings below
         | |    Feather   -----o-----              |   <- embedded MaskEditor (submask)
         | |    Invert    [ ]                      |
         | |    Edge      -----o-----              |

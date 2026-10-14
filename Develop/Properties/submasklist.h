@@ -1,6 +1,7 @@
 #ifndef SUBMASKLIST_H
 #define SUBMASKLIST_H
 
+#include <QIcon>
 #include <QString>
 #include <QVector>
 #include <QWidget>
@@ -30,17 +31,18 @@ struct SubmaskRowInfo
 
         | v Mask                     [+] [■] [:] |   <- MaskPanel's band: [+] appends (M)
         |     Edge / Halo                         |
-        |   > Linear Gradient Submask (+)  [eye][:] |
-        |   > Brush Submask (-)            [eye][:] |
-        |   v Luminance Range Submask (n)  [eye][:] |   <- selected: editing it
+        |   > Linear Gradient Submask      [eye][:] |   <- first: no op button
+        |   > Brush Submask             [-][eye][:] |
+        |   v Luminance Range Submask   [n][eye][:] |   <- selected: editing it
 
     It has NO header of its own (2026-10-14): the "Submasks" band was folded into the
     Mask band, which carries its [+] and whose [:] carries Show / Hide all submasks. The
     rows' arrows sit where that band's arrow sat, in the Mask band's arrow column.
 
-    The op glyph, after the name, is a BUTTON: clicking it cycles Add -> Subtract -> Intersect, because
-    the op used to be settable only by holding a modifier at commit time and was then
-    frozen forever. The eye shows/hides that submask's contribution, and the [:] menu
+    The op button left of the eye cycles Add -> Subtract -> Intersect on each click,
+    because the op used to be settable only by holding a modifier at commit time and was
+    then frozen forever. The first submask has none: it has nothing to combine with. The
+    eye shows/hides that submask's contribution, and the [:] menu
     carries the rest (edit, op, invert, move, duplicate, delete).
 
     Carries NO model state beyond what setSubmasks() was handed: every control emits an
@@ -75,6 +77,8 @@ public:
        labels its op choices with it: the glyph picked there is the glyph the submask's
        row wears afterwards, so the two cannot drift. */
     static QString opGlyph(int op);
+    /* The row's op button icon: +, - or an arch for Intersect, drawn like new.png. */
+    static QIcon opIcon(int op);
 
     /* Control-group separator above the rows (G::groupSeparator*), set by MaskPanel
        while the Edge/Halo rows sit above them. Without them the rows follow the Mask
@@ -84,7 +88,7 @@ public:
 signals:
     void submaskSelected(int index);              // row click: re-open it for editing
     void enabledToggled(int index, bool on);      // row eye (or setAllEnabled, per row)
-    void opChanged(int index, int op);            // op glyph / menu
+    void opChanged(int index, int op);            // op button / menu
     void invertRequested(int index);
     void deleteRequested(int index);
     void moveRequested(int from, int to);
