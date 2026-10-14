@@ -230,7 +230,10 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     levelBody = new QWidget(levelWrap);
     levelBody->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *bl = new QVBoxLayout(levelBody);
-    bl->setContentsMargins(0, 2, 10, 2);
+    /* G::groupSeparatorHeight above Edge, nothing below Halo: the space under Halo is
+       the Submasks section's top-rule gap (SubmaskList::setTopRule), also
+       G::groupSeparatorHeight, so the rows sit in equal space above and below. */
+    bl->setContentsMargins(0, G::groupSeparatorHeight, 10, 0);
     bl->setSpacing(0);
     maskLevelEditor = new MaskEditor(levelBody);
     /* Caption indent: the rows belong to the "Mask" band above them, so they start half
@@ -407,7 +410,15 @@ void MaskPanel::syncAttrVisible()
        submask's settings (and the commit row) floating under a closed header. */
     if (!attrWrap) return;
     const bool collapsed = submaskList && submaskList->isCollapsed();
-    attrWrap->setVisible(attrShown && !collapsed && !maskFolded());
+    const bool attrVisible = attrShown && !collapsed && !maskFolded();
+    attrWrap->setVisible(attrVisible);
+    /* With no submask open, the last submask row would otherwise sit flush on the next
+       band (Basic): leave G::groupSeparatorHeight, the panel's group spacing. A
+       collapsed Submasks header or a folded mask ends in a band, which stacks flush like
+       every other band, so no gap then. */
+    const bool rowsLast = !attrVisible && !collapsed && !maskFolded();
+    if (layout())
+        layout()->setContentsMargins(0, 0, 0, rowsLast ? G::groupSeparatorHeight : 0);
 }
 
 void MaskPanel::setAttributeScope(const QString &text)
