@@ -2487,6 +2487,14 @@ void DevelopProperties::setMaskVeilOverride(bool shown)
     maskVeilEngagedNow = shown;
 }
 
+int DevelopProperties::focusSubmaskOp() const
+{
+    if (pendingIdx >= 0) return pendingIdx == 0 ? int(MaskOp::Add) : pendingOp;
+    const QVector<MaskComponent> comps = activeScopeComponents();
+    if (selectedMaskIndex <= 0 || selectedMaskIndex >= comps.size()) return int(MaskOp::Add);
+    return comps.at(selectedMaskIndex).op;
+}
+
 QVector<MaskComponent> DevelopProperties::activeScopeComponents() const
 {
     if (currentImagePath.isEmpty()) return {};
@@ -3217,14 +3225,16 @@ void DevelopProperties::setActiveBrushSize(double size)
     /* Quantised to ImageView's 0.1% step (the canvas gesture already is) -- the old
        whole-percent round made the smallest brush ~1% of the long edge. */
     const double s = qBound(0.1, qRound(size * 10.0) / 10.0, 100.0);
-    /* Same split as the panel slider (onMaskEditorSetting): while the submask is being
-       built this arms the next stroke, on a re-opened one it resizes what is there. */
-    const bool retro = (pendingIdx < 0);
-    m.paramsJson = retro ? brushStrokesWith(m.paramsJson, "size", s)
-                         : brushWith(m.paramsJson, "size", s);
+    /* The canvas gesture (wheel / two-finger drag / [ ]) ALWAYS sizes the BRUSH -- the
+       next stroke -- never the strokes already painted. It used to follow the panel
+       slider's split and resize every stroke once the submask had landed, but a submask
+       lands on its own (auto-commit) while the user is still painting, so the same
+       wheel that sized the cursor a moment ago suddenly grew or shrank the whole mask
+       (2026-10-14). Resizing what is there is the panel slider's job (its header says
+       "applies to N strokes"). No re-render: nothing painted changed. */
+    m.paramsJson = brushWith(m.paramsJson, "size", s);
     noteEdit("Brush size", QString::number(s, 'f', 1), "mask/brushSize");
     syncMaskSlider("maskSize", s);
-    if (retro) emit paramsChanged();
 }
 
 void DevelopProperties::setActiveMaskFeather(double feather)
@@ -3243,18 +3253,12 @@ void DevelopProperties::setActiveMaskFeather(double feather)
     m.feather = f;
     noteEdit("Feather", QString::number(f), "mask/maskFeather");
     syncMaskSlider("maskFeather", f);
-    /* Brush feather belongs to the NEXT stroke while the submask is being built (each
-       stroke keeps its own snapshot), so it only refreshes the cursor; on a RE-OPENED
-       submask there is no next stroke, so it re-feathers every stroke instead. A
-       gradient's coverage always changed -> re-composite. Either way ImageView already
-       holds the new value, so no maskFeatherChanged echo. */
-    if (isBrushCanvasTool(m.tool)) {
-        emitBrushSettings(m);
-        if (pendingIdx < 0) {
-            m.paramsJson = brushStrokesWith(m.paramsJson, "feather", f);
-            emit paramsChanged();
-        }
-    }
+    /* Brush feather from the canvas belongs to the NEXT stroke (each stroke keeps its
+       own snapshot), pending or landed -- see setActiveBrushSize for why the canvas
+       gesture never re-feathers strokes already painted; the panel slider does that. So
+       it only refreshes the cursor. A gradient's coverage always changed -> re-composite.
+       Either way ImageView already holds the new value, so no maskFeatherChanged echo. */
+    if (isBrushCanvasTool(m.tool)) emitBrushSettings(m);
     else emit paramsChanged();
 }
 
@@ -3279,6 +3283,11 @@ void DevelopProperties::setActiveBrushAutoMask(bool on)
     m.paramsJson = retro ? brushStrokesWith(m.paramsJson, "autoMask", on)
                          : brushWith(m.paramsJson, "autoMask", on);
     noteEdit("Auto mask", on ? "On" : "Off");
+    /* The checkbox the user sees is the MASK PANEL's (its embedded MaskEditor), so sync
+       that one -- updating only the tree row, as this did, left the panel's box stale
+       when A toggled auto mask on the canvas. Same pair syncMaskSlider updates. */
+    if (maskPanel && maskPanel->editor())
+        maskPanel->editor()->setCheckboxValue("maskAutoMask", on);   // guards itself
     isPopulating = true;            // sync the checkbox without re-entering itemChange
     setCheckboxValue("maskAutoMask", on);
     isPopulating = false;
@@ -3368,7 +3377,17 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
             .object().value("mode").toString();
         if (!mode.isEmpty()) incoming = brushWith(incoming, "mode", mode);
     }
-    if (scope->components[selectedMaskIndex].paramsJson == incoming) return;
+    if (scope->components[selectedMaskIndex].paramsJson == incoming) {
+        /* Nothing new to store -- but the VEIL may still be behind. A gesture that
+           pauses before the mouse comes up (paint, stop, let go) has its whole geometry
+           carried by the throttled live emit, so the release emit arrives identical and
+           would land here. That live tick's veil rebuild was skipped mid-stroke
+           (MW::updateMaskOverlayTint's in-flight early-out), so without this nothing
+           ever rebuilt it with the finished stroke: the render showed the stroke, the
+           overlay did not. */
+        emit maskOverlayRefreshRequested();
+        return;
+    }
     scope->components[selectedMaskIndex].paramsJson = incoming;
     /* One entry per tool being shaped, not per drag tick / per brush stroke. */
     noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex].tool),
@@ -3382,6 +3401,9 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
         if (maskPanel && maskPanel->editor()) maskPanel->editor()->setWheelSamples(hs);
     }
     emit paramsChanged();       // new mask geometry -> re-composite the masked scope
+    /* A stroke changes the count the settings header names ("applies to 3 strokes");
+       nothing else refreshes it between panel rebuilds. */
+    syncAttributeScopeLabel();
     /* Every shape edit -- handle drag, brush stroke, pipette pick -- arrives here, so
        this is the one place the settle timer needs arming for geometry -- and the one
        place canvas mask editing registers as engagement, which is what lets the user

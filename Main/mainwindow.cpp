@@ -12166,8 +12166,12 @@ void MW::updateMaskOverlayTint()
        local preview paints coverage in the overlay colour exactly where the mask is being
        REMOVED, which reads as adding. Keeping the real veil live there shows the outcome
        -- the veil retreating under the brush -- matching the develop render. */
+    /* focusSubmaskOp, NOT pendingMaskOp: once a submask has landed pendingMaskOp reads
+       Add, so a stroke on a landed SUBTRACT submask skipped the rebuild here while
+       ImageView (keyed off the legend op, Subtract) kept drawing the stale veil -- the
+       render showed the stroke and the overlay did not (2026-10-14). */
     if (imageView->maskStrokeInFlight()
-        && developProperties->pendingMaskOp() == int(MaskOp::Add)) return;
+        && developProperties->focusSubmaskOp() == int(MaskOp::Add)) return;
     if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
 
     const QString fPath = dm->currentKey;

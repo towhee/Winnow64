@@ -370,6 +370,13 @@ public:
        (MaskOp: 0 Add, 1 Subtract, 2 Intersect). Not written into the component until
        commit. */
     int pendingMaskOp() const { return pendingOp; }
+    /* The op the overlay composites for the FOCUS submask (focusSubmaskIndex): the
+       previewed pendingMaskOp while it is pending, its own committed op once it has
+       landed, Add for the first submask and when nothing is open. Use this, not
+       pendingMaskOp, to ask "does a stroke on the open submask add coverage?" --
+       pendingMaskOp falls back to Add the moment a submask lands, which made a landed
+       Subtract submask's strokes look like Add strokes. */
+    int focusSubmaskOp() const;
     /* Set by MW's modifier arbiter (Opt = Subtract, Shift+Opt = Intersect) while a
        submask is being defined: re-previews the veil, the render and the on-canvas op
        chip. Releasing it falls back to the LATCHED op, not to Add (see latchMaskOp). */
