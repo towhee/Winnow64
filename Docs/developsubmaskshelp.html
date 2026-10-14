@@ -10,8 +10,8 @@
 <h2>What it does</h2>
 <p>A mask scope selects part of the image, and it is built out of <b>submasks</b>: a
 gradient, a brush stroke, a colour range, an AI selection.  Each one is a shape or a
-selection in its own right, and the Submasks list is where they are combined into the one
-mask the scope applies.</p>
+selection in its own right, and the submask list under the <b>Mask</b> band is where they
+are combined into the one mask the scope applies.</p>
 
 <p>The terms are worth keeping straight: the <b>mask</b> is what the scope applies; each
 <b>submask</b> is a building block folded into it, in list order.</p>
@@ -30,7 +30,7 @@ want and refines the result to its edge.</li>
 </ul>
 
 <h2>Adding one</h2>
-<p><b>[+]</b> on the band (or <b>M</b>, or <b>Add submask</b> in the band's
+<p><b>[+]</b> on the <b>Mask</b> band (or <b>M</b>, or <b>Add submask</b> in the band's
 <b>[&#8942;]</b> menu) opens the <b>Add submask</b> dialog, which asks the two questions
 together &mdash; what the submask does to the mask, and what kind of submask it is.</p>
 
@@ -67,7 +67,8 @@ is you saying you are done with it.  Then:</p>
 
 <ul>
 <li>The <b>eye</b> shows or hides that submask's contribution &mdash; a one-click A / B of
-what it is actually doing to the mask.  The band eye does the same for all of them.</li>
+what it is actually doing to the mask.  <b>Show all submasks</b> / <b>Hide all
+submasks</b> in the Mask band's <b>[&#8942;]</b> menu do the same for all of them.</li>
 <li>The <b>[&#8942;]</b> menu holds <b>Edit</b>, the op (<b>Add</b> / <b>Subtract</b> /
 <b>Intersect</b>, offered from the second row down), <b>Invert</b>, <b>Move up</b> /
 <b>Move down</b>, <b>Duplicate</b> and <b>Delete</b>.</li>
@@ -93,13 +94,12 @@ your subject and leaves a pale halo of background, an Edge of +2 pushes the cuto
 it. On a Color or Luminance Range, a small negative Edge is a quick way to drop the speckle
 that any content-based selection picks up, and a small positive one closes pinholes.</p>
 
-<p>At the top of the panel, in the <b>Mask</b> section above the Submasks row, there is a
+<p>At the top of the panel, in the <b>Mask</b> section above the submask list, there is a
 second <b>Edge</b> belonging to the mask as a whole. It grows or shrinks the finished mask
 &mdash; every submask folded together &mdash; so you can choke or spread the assembled
 result without visiting each submask in turn. The two add up: a submask at +5 inside a
 mask at &minus;3 ends up 2 pixels out. The section appears as soon as the mask has a
-submask to work on, and stays put when you collapse the Submasks list; its <b>[:]</b> menu
-puts both of its sliders back to zero, leaving each submask's own Edge alone.</p>
+submask to work on; its <b>[:]</b> menu puts both of its sliders back to zero, leaving each submask's own Edge alone.</p>
 
 <p><b>Halo</b>, the other row in that Mask section, is for the case Edge cannot fix. When a mask
 boundary does not quite follow your subject, whatever you do to that mask spills onto a

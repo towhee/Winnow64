@@ -37,20 +37,15 @@ void MaskPanel::buildUi()
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
-    /* MASK-level settings (Edge, Halo) come FIRST, above the Submasks row: they act on
+    /* MASK-level settings (Edge, Halo) come FIRST, above the submask rows: they act on
        the whole mask, so they read as a property of the mask itself rather than of
-       anything in the list. Being outside the Submasks section also means collapsing that
-       section leaves them up -- they are not part of what it collapses -- and it keeps
-       the rows anchored directly under the scope row instead of shuffling as the list
-       grows and submask settings appear below it. */
+       anything in the list, and they stay anchored directly under the scope row instead
+       of shuffling as the list grows and submask settings appear below it. */
     buildMaskLevel(outer);
 
     /* The mask's contents: what the mask is made of, and every submask in it re-opens
        from here. */
     submaskList = new SubmaskList(this);
-    connect(submaskList, &SubmaskList::collapsedChanged, this, [this]{
-        syncAttrVisible();
-    });
     outer->addWidget(submaskList);
 
     /* Settings + commit for the SELECTED submask. Wrapped so the whole block hides when
@@ -125,9 +120,10 @@ void MaskPanel::setTintButton(QWidget *btn)
     action row at the top of the dock, among the Scope / Transform / Spot buttons, with
     nothing around it to say what it acted on.
 
-    Consequence worth knowing: the band hides when the mask has no submasks
-    (showMaskLevel), so on the Global scope -- where there is no mask and the swatch's
-    own answer was a popup saying so -- the swatch is simply not there.
+    Consequence worth knowing: the panel hides on the Global scope (syncMaskPanel), so
+    there -- where there is no mask and the swatch's own answer was a popup saying so --
+    the swatch is simply not there. On an EMPTY mask the band shows (its [+] makes the
+    first submask), so the swatch does too.
 */
     if (!btn || !levelBandLayout || levelTintSlot < 0) return;
     levelBandLayout->insertWidget(levelTintSlot, btn);
@@ -157,12 +153,13 @@ void MaskPanel::hideEvent(QHideEvent *e)
 /*
     The "Mask" band and its two rows.
 
-    The sliders used to sit bare between the scope row and the Submasks header, where they
-    read as belonging to whichever of the two the eye landed on first -- and Edge appears
-    twice in this panel, once here for the folded mask and once inside a submask's
-    settings, with nothing on screen to tell them apart. A titled band says which level
-    the rows below it act on, and gives them the same collapse + [:] affordances every
-    other section in the dock has.
+    The sliders used to sit bare between the scope row and the (since removed) Submasks
+    header, where they read as belonging to whichever of the two the eye landed on first
+    -- and Edge appears twice in this panel, once here for the folded mask and once
+    inside a submask's settings, with nothing on screen to tell them apart. A titled band
+    says which level the rows below it act on, and gives them the same collapse + [:]
+    affordances every other section in the dock has. Since 2026-10-14 it is also the
+    submasks' band: its [+] adds one and its arrow folds the submask rows too.
 */
 void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
 {
@@ -174,11 +171,10 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     lw->setContentsMargins(0, 4, 0, 0);        // 4 px clear of the scope row above
     lw->setSpacing(0);
 
-    /* Header band: collapse arrow + "Mask" + [:], the same idiom as the Submasks band
-       below it (SubmaskList::buildUi), so the two read as sibling sections. Both are
-       folded away by the Edits bar's own arrow, so both start G::subHeaderIndent in from
-       that bar's own arrow -- arrow and title -- reading as its children. The bar itself
-       clears the panel edge by G::headerLeftInset, which every header here adds. */
+    /* Header band: collapse arrow + "Mask" + [+] + tint swatch + [:]. It is folded away
+       by the Edits bar's own arrow, so it starts G::subHeaderIndent in from that bar's
+       own arrow -- arrow and title -- reading as its child. The bar itself clears the
+       panel edge by G::headerLeftInset, which every header here adds. */
     levelBand = new QWidget(levelWrap);
     levelBand->setAttribute(Qt::WA_TranslucentBackground);
     levelBand->setCursor(Qt::PointingHandCursor);
@@ -195,7 +191,7 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
 
     levelCollapseBtn = new BarBtn();
     levelCollapseBtn->setToolTip("Hide or show this mask: its Edge and Halo, its "
-                                "submasks and their settings");
+                                 "submasks and their settings");
     levelCollapseBtn->setIconSize(QSize(9, 9));
     levelCollapseBtn->setFixedSize(9, 16);
     levelCollapseBtn->setStyleSheet("QToolButton { border: none; padding: 0;"
@@ -206,11 +202,23 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     levelTitle->setToolTip("Settings for the whole mask (all its submasks combined).");
     levelTitle->setStyleSheet(G::labelCss(G::scopeSubheaderColor, G::strFontSize.toInt()));
 
-    /* No band eye here, unlike Submasks: there is nothing to show or hide -- Edge and
-       Halo reshape the mask rather than contributing to it, and both already have a
-       neutral value (0) reachable from this menu. */
+    /* No band eye here: the Edits bar's eye already shows/hides the whole mask, Edge and
+       Halo reshape the mask rather than contributing to it, and hiding every submask at
+       once is in this band's menu (Show / Hide all submasks). */
+    /* [+] adds a submask -- the primary action, so it is on the band rather than only in
+       the menu. It sat on the old Submasks band; it lives here since that band went,
+       left of the overlay swatch, directly below the scope bar's own [+]. */
+    levelAddBtn = new BarBtn();
+    levelAddBtn->setToolTip("Add a submask to this mask (M)");
+    levelAddBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
+    levelAddBtn->setIconSize(QSize(16, 16));
+    connect(levelAddBtn, &BarBtn::clicked, this, [this]{
+        QTimer::singleShot(0, this, [this]{ emit addSubmaskRequested(); });
+    });
+
     levelMenuBtn = new BarBtn();
-    levelMenuBtn->setToolTip("Mask actions (reset Edge and Halo)");
+    levelMenuBtn->setToolTip("Mask actions (add, show or hide all submasks, reset Edge "
+                             "and Halo)");
     levelMenuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
     levelMenuBtn->setIconSize(QSize(16, 16));
     connect(levelMenuBtn, &BarBtn::clicked, this, [this]{ showLevelMenu(); });
@@ -219,6 +227,8 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     hb->addSpacing(G::decorationTitleGap);
     hb->addWidget(levelTitle);
     hb->addStretch(1);
+    hb->addWidget(levelAddBtn);
+    hb->addSpacing(G::headerBtnGap);
     /* The overlay tint swatch is inserted HERE by setTintButton, ahead of the band's
        [:]. See setTintButton for why it lives on this band. */
     levelTintSlot = hb->count();
@@ -230,10 +240,11 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     levelBody = new QWidget(levelWrap);
     levelBody->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *bl = new QVBoxLayout(levelBody);
-    /* G::groupSeparatorHeight above Edge, nothing below Halo: the space under Halo is
-       the Submasks section's top-rule gap (SubmaskList::setTopRule), also
-       G::groupSeparatorHeight, so the rows sit in equal space above and below. */
-    bl->setContentsMargins(0, G::groupSeparatorHeight, 10, 0);
+    /* Spaced like a tree section (DevelopProperties::addHeader): half a group divider
+       under the band, so Edge sits below it as Profile sits below Basic's band. Nothing
+       below Halo: the space there is the submask rows' top-rule gap
+       (SubmaskList::setTopRule), a full group divider with the rule centred in it. */
+    bl->setContentsMargins(0, G::groupSeparatorHeight / 2, 10, 0);
     bl->setSpacing(0);
     maskLevelEditor = new MaskEditor(levelBody);
     /* Caption indent: the rows belong to the "Mask" band above them, so they start half
@@ -245,10 +256,9 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     maskLevelEditor->setIndentation(G::headerLeftInset + G::subHeaderIndent
                                     + G::subHeaderIndent / 2);
     bl->addWidget(maskLevelEditor);
-    levelBody->setVisible(!levelCollapsed);
+    levelBody->setVisible(false);              // no submasks yet: nothing to reshape
     lw->addWidget(levelBody);
 
-    levelWrap->setVisible(false);              // no submasks yet: nothing to reshape
     outer->addWidget(levelWrap);
     updateLevelCollapseIcon();
 }
@@ -259,8 +269,7 @@ void MaskPanel::paintEvent(QPaintEvent *)
        translucent). mapTo, not geometry(): the band is a grandchild here. */
     QPainter p(this);
     /* Subpanel content background (G::panelContentBg) for the WHOLE panel -- the Mask
-       block, the Submasks band and the submask details alike. Painted before the early
-       return below: the panel has content even when the Mask band is hidden. */
+       block, the submask rows and the submask details alike. */
     p.fillRect(rect(), G::panelContentBg);
     if (!levelBand || !levelWrap || !levelWrap->isVisible()) return;
     const QRect r(levelBand->mapTo(this, QPoint(0, 0)), levelBand->size());
@@ -297,6 +306,7 @@ void MaskPanel::toggleLevelCollapsed()
     levelCollapsed = !levelCollapsed;
     syncLevelVisible();
     updateLevelCollapseIcon();
+    emit maskFoldedChanged(levelCollapsed);
 }
 
 void MaskPanel::updateLevelCollapseIcon()
@@ -311,7 +321,18 @@ void MaskPanel::showLevelMenu()
 {
     if (G::isLogger) G::log("MaskPanel::showLevelMenu");
     QMenu menu(this);
+    QAction *aAdd = menu.addAction(tr("Add submask\tM"));
+    menu.addSeparator();
+    /* The old Submasks band's eye, as menu items: show or hide every submask's
+       contribution at once -- an A/B of the whole mask. */
+    const bool hasSubmasks = submaskList && submaskList->count() > 0;
+    QAction *aShowAll = menu.addAction(tr("Show all submasks"));
+    QAction *aHideAll = menu.addAction(tr("Hide all submasks"));
+    aShowAll->setEnabled(hasSubmasks);
+    aHideAll->setEnabled(hasSubmasks);
+    menu.addSeparator();
     QAction *aReset = menu.addAction(tr("Reset mask Edge and Halo"));
+    aReset->setEnabled(hasSubmasks);
     /* Last item, as on every band in the Develop dock. Edge and Halo are documented on
        the submask page, which is the mask's page. */
     menu.addSeparator();
@@ -321,7 +342,11 @@ void MaskPanel::showLevelMenu()
     if (!chosen) return;
     /* Deferred: the handler rebuilds this panel's rows from under the click, exactly as
        SubmaskList's menu does. */
-    if (chosen == aReset)
+    if (chosen == aAdd)
+        QTimer::singleShot(0, this, [this]{ emit addSubmaskRequested(); });
+    else if (chosen == aShowAll || chosen == aHideAll)
+        submaskList->setAllEnabled(chosen == aShowAll);      // defers itself
+    else if (chosen == aReset)
         QTimer::singleShot(0, this, [this]{ emit resetMaskLevelRequested(); });
     else if (chosen == aHelp)
         QTimer::singleShot(0, this, [this]{ emit helpRequested(); });
@@ -377,48 +402,49 @@ void MaskPanel::showMaskLevel(bool show)
 void MaskPanel::syncLevelVisible()
 {
     /* The "Mask" band is the panel's TOP band, so its arrow folds the WHOLE mask away:
-       its own Edge/Halo rows, the Submasks section below them and the selected submask's
+       its own Edge/Halo rows, the submask rows below them and the selected submask's
        settings. Anything left behind would read as belonging to the Edits bar rather than
        to the closed mask.
 
-       Whether the band shows at all is a separate question: a mask with nothing to grow
-       or shrink has no band (levelShown). With no band there is no arrow on screen, so
-       nothing may stay folded either -- the Submasks section is then the only way to
-       build the first submask. */
+       The band itself always shows -- its [+] is how the first submask gets made. Only
+       Edge/Halo depend on the mask having submasks (levelShown): with none there is
+       nothing to grow or shrink. The rule above the submask rows separates them from
+       Edge/Halo, so it goes with them. */
     if (!levelWrap) return;
-    levelWrap->setVisible(levelShown);
-    if (levelBody) levelBody->setVisible(!levelCollapsed);
+    if (levelBody) levelBody->setVisible(levelShown && !levelCollapsed);
     if (submaskList) {
-        submaskList->setVisible(!maskFolded());
+        submaskList->setVisible(!levelCollapsed);
         submaskList->setTopRule(levelShown);
     }
     syncAttrVisible();              // the settings block folds with everything else
     update();                       // the band moved: repaint its gradient
 }
 
-/* True while the "Mask" band's arrow is closed AND that band is on screen to show it:
-   everything below the band is folded away. */
+/* True while the "Mask" band's arrow is closed: everything below the band is folded
+   away. */
 bool MaskPanel::maskFolded() const
 {
-    return levelShown && levelCollapsed;
+    return levelCollapsed;
 }
 
 void MaskPanel::syncAttrVisible()
 {
-    /* The settings block belongs to a submask in the list above it, so a collapsed
-       Submasks section takes it down too -- otherwise collapsing left the selected
-       submask's settings (and the commit row) floating under a closed header. */
+    /* The settings block belongs to a submask in the list above it, so a folded mask
+       takes it down too -- otherwise folding left the selected submask's settings
+       floating under a closed band. */
     if (!attrWrap) return;
-    const bool collapsed = submaskList && submaskList->isCollapsed();
-    const bool attrVisible = attrShown && !collapsed && !maskFolded();
+    const bool attrVisible = attrShown && !maskFolded();
     attrWrap->setVisible(attrVisible);
     /* With no submask open, the last submask row would otherwise sit flush on the next
-       band (Basic): leave G::groupSeparatorHeight, the panel's group spacing. A
-       collapsed Submasks header or a folded mask ends in a band, which stacks flush like
-       every other band, so no gap then. */
-    const bool rowsLast = !attrVisible && !collapsed && !maskFolded();
-    if (layout())
-        layout()->setContentsMargins(0, 0, 0, rowsLast ? G::groupSeparatorHeight : 0);
+       band (Basic). Leave half a group divider -- the gap a tree section leaves under
+       its band, mirrored -- plus the padding a submask row lacks against a tree row
+       (SubmaskList::rowPad), so the last caption sits as far above the Basic band as
+       Profile sits below it. A folded or empty mask ends in the Mask band, which stacks
+       flush like every other band, so no gap then. */
+    const bool rowsLast = !attrVisible && !maskFolded()
+                          && submaskList && submaskList->count() > 0;
+    const int gap = rowsLast ? G::groupSeparatorHeight / 2 + submaskList->rowPad() : 0;
+    if (layout()) layout()->setContentsMargins(0, 0, 0, gap);
 }
 
 void MaskPanel::setAttributeScope(const QString &text)
@@ -434,9 +460,14 @@ void MaskPanel::beginPending(bool first)
     firstMask = first;
     editingExisting = false;
     pendingOp = 0;                  // every submask opens as Add
-    /* A new submask is being built: re-open the section, or its settings would be
-       invisible (the [+] that starts one is on the header). */
-    if (submaskList) submaskList->setCollapsed(false);
+    /* A new submask is being built: unfold the mask, or its row and settings would be
+       invisible (M adds one without touching the band). No maskFoldedChanged: that
+       signal closes the open submask, which is the one being built. */
+    if (levelCollapsed) {
+        levelCollapsed = false;
+        updateLevelCollapseIcon();
+        syncLevelVisible();
+    }
     showAttributes(true);
     setVisible(true);
 }

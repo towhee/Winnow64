@@ -177,7 +177,9 @@ void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful)
     setSliderReal("scopeHalo", int(haloVal + 0.5f));
     setRowEnabled("scopeHalo", haloUseful);
     isPopulating = false;
-    fitHeight();
+    /* No slack under Halo: the rule below it (SubmaskList::setTopRule) is spaced like
+       the tree's group dividers, and the default 6px would push it further away. */
+    fitHeight(0);
 }
 
 void MaskEditor::addColorRangeWheel(const MaskComponent &m)

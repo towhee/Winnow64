@@ -860,7 +860,6 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
        has already been committed. Every emission arrives DEFERRED (SubmaskList rebuilds
        its rows from inside these handlers), so they are safe to act on directly. */
     if (SubmaskList *sl = maskPanel->list()) {
-        connect(sl, &SubmaskList::addRequested,      this, &DevelopProperties::showMaskMenu);
         connect(sl, &SubmaskList::submaskSelected,   this, &DevelopProperties::reopenSubmask);
         connect(sl, &SubmaskList::enabledToggled,    this, &DevelopProperties::setSubmaskEnabled);
         connect(sl, &SubmaskList::opChanged,         this, &DevelopProperties::setSubmaskOp);
@@ -868,12 +867,13 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(sl, &SubmaskList::moveRequested,     this, &DevelopProperties::moveSubmask);
         connect(sl, &SubmaskList::duplicateRequested, this, &DevelopProperties::duplicateSubmask);
         connect(sl, &SubmaskList::deleteRequested,   this, &DevelopProperties::deleteMask);
-        connect(sl, &SubmaskList::helpRequested,     this, &DevelopProperties::submasksHelp);
-        connect(sl, &SubmaskList::collapsedChanged,  this, &DevelopProperties::onSubmasksCollapsed);
     }
 
-    /* The Mask band's [:] menu. Its help opens the same page as the Submasks band: Edge
-       and Halo are documented there, and one mask page beats two half ones. */
+    /* The Mask band: its [+] (and [:] "Add submask") appends a submask, and its arrow
+       folds the submask rows. Its help opens the submasks page: Edge and Halo are
+       documented there, and one mask page beats two half ones. */
+    connect(maskPanel, &MaskPanel::addSubmaskRequested, this, &DevelopProperties::showMaskMenu);
+    connect(maskPanel, &MaskPanel::maskFoldedChanged, this, &DevelopProperties::onMaskFolded);
     connect(maskPanel, &MaskPanel::resetMaskLevelRequested,
             this, &DevelopProperties::resetMaskLevel);
     connect(maskPanel, &MaskPanel::helpRequested, this, &DevelopProperties::submasksHelp);
@@ -919,7 +919,12 @@ void DevelopProperties::syncMaskPanel()
     for (int i = 0; i < scope->components.size(); ++i) {
         const MaskComponent &m = scope->components.at(i);
         SubmaskRowInfo r;
+        /* "Brush Submask", not "Brush Mask": each row is a submask of the mask the
+           Mask band above names. maskToolName stays "... Mask" for the history, the
+           canvas legend and the add dialog. */
         r.toolName = maskToolName(m.tool);
+        if (r.toolName.endsWith(" Mask"))
+            r.toolName = r.toolName.chopped(5) + " Submask";
         /* The PENDING submask shows the op the veil and the button are previewing, not
            the (not yet written) one on the component -- the row and the button must not
            disagree about what is about to happen. */
@@ -948,10 +953,12 @@ void DevelopProperties::syncMaskPanel()
     maskPanel->setVisible(true);
 }
 
-void DevelopProperties::onSubmasksCollapsed(bool collapsed)
+void DevelopProperties::onMaskFolded(bool folded)
 {
 /*
-    The Submasks section closed, so anything open inside it closes with it.
+    The Mask band folded the submask rows away, so anything open inside them closes with
+    them. (This was the Submasks section's collapse until that band was folded into the
+    Mask band, 2026-10-14.)
 
     Collapsing used to hide the ROWS and nothing else: selectedMaskIndex survived, so the
     open submask's handles stayed live on the canvas (a submask being edited with no row
@@ -963,8 +970,8 @@ void DevelopProperties::onSubmasksCollapsed(bool collapsed)
     A submask still inside its settle window lands rather than being stranded -- closing
     the section is the user finishing with it, the same as clicking its row.
 */
-    if (G::isLogger) G::log("DevelopProperties::onSubmasksCollapsed");
-    if (!collapsed) return;                 // expanding selects nothing: nothing to do
+    if (G::isLogger) G::log("DevelopProperties::onMaskFolded");
+    if (!folded) return;                    // unfolding selects nothing: nothing to do
     if (selectedMaskIndex < 0) return;
     flushMaskAutoCommit();
     closeSubmaskEditing();
@@ -3642,11 +3649,15 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
     model->setData(capIdx, QVariant(G::headerLeftInset + G::subHeaderIndent), UR_ExtraIndent);
 
     /* A plain spacer (no rule) as the section's FIRST child, so the first row does not
-       butt up against the header band -- the same height as the group dividers inside the
-       sections, with lineHeight 0 so nothing is drawn. addDivider leaves capIdx on the
-       divider, so restore the header index: every caller takes parIdx = capIdx on return. */
+       butt up against the header band. HALF a group divider (lineHeight 0, nothing
+       drawn): the band plays the part of the divider's rule, so the first caption sits
+       the same distance below the band as a caption sits below a divider's rule
+       (2026-10-14; a full divider height left a visibly bigger gap). addDivider leaves
+       capIdx on the divider, so restore the header index: every caller takes
+       parIdx = capIdx on return. */
     const QModelIndex hdrIdx = capIdx;
-    addDivider(G::groupSeparatorHeight, 0, Qt::transparent, hdrIdx, name, name + "TopSpacer");
+    addDivider(G::groupSeparatorHeight / 2, 0, Qt::transparent, hdrIdx, name,
+               name + "TopSpacer");
     capIdx = hdrIdx;
 }
 

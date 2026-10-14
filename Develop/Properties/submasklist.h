@@ -25,22 +25,23 @@ struct SubmaskRowInfo
 };
 
 /*
-    SubmaskList -- the collapsible "Submasks" section inside the MaskPanel. It lists the
-    active mask's submasks IN FOLD ORDER and is the one place a committed submask can be
-    reached again:
+    SubmaskList -- the submask rows inside the MaskPanel. It lists the active mask's
+    submasks IN FOLD ORDER and is the one place a committed submask can be reached again:
 
-        | v Submasks                          [+] |   <- [+] appends (same as M)
-        |   [x] (+) Linear Gradient           [:] |
-        |   [x] (-) Brush                     [:] |
-        |   [x] (n) Luminance Range      *    [:] |   <- selected: editing it
-        |   [ ] (+) Sky            (off)      [:] |
+        | v Mask                     [+] [■] [:] |   <- MaskPanel's band: [+] appends (M)
+        |     Edge / Halo                         |
+        |   > Linear Gradient Submask (+)  [eye][:] |
+        |   > Brush Submask (-)            [eye][:] |
+        |   v Luminance Range Submask (n)  [eye][:] |   <- selected: editing it
 
-    The op glyph is a BUTTON: clicking it cycles Add -> Subtract -> Intersect, because
+    It has NO header of its own (2026-10-14): the "Submasks" band was folded into the
+    Mask band, which carries its [+] and whose [:] carries Show / Hide all submasks. The
+    rows' arrows sit where that band's arrow sat, in the Mask band's arrow column.
+
+    The op glyph, after the name, is a BUTTON: clicking it cycles Add -> Subtract -> Intersect, because
     the op used to be settable only by holding a modifier at commit time and was then
     frozen forever. The eye shows/hides that submask's contribution, and the [:] menu
-    carries the rest (edit, op, invert, move, duplicate, delete). The band repeats the
-    same trailing pair -- eye (all submasks) then menu -- with the menu last, matching the
-    scope rows and the section headers.
+    carries the rest (edit, op, invert, move, duplicate, delete).
 
     Carries NO model state beyond what setSubmasks() was handed: every control emits an
     index-based signal and DevelopProperties pushes the new list straight back. Like
@@ -56,12 +57,17 @@ public:
     /* Rebuild the rows. selected == -1 means no submask is open for editing. */
     void setSubmasks(const QVector<SubmaskRowInfo> &rows, int selected);
     int  count() const { return infos.size(); }
+    /* Half the height a submask row lacks against a tree row (G::propertyRowHeight): the
+       rows are compact, so a caption sits closer to its row's edges than a tree caption
+       does. Added above the first row, and by MaskPanel below the last, so the gaps
+       around the list read at the tree's divider spacing. */
+    int  rowPad() const { return pad; }
 
-    /* Collapsed hides the rows AND (via collapsedChanged, in MaskPanel) the selected
-       submask's settings below them: the section is one thing to the user. The list
-       starts collapsed; MaskPanel::beginPending re-opens it when a submask is added. */
-    bool isCollapsed() const { return collapsed; }
-    void setCollapsed(bool collapse);
+    /* True while ANY submask still contributes (MaskComponent::enabled). */
+    bool anyEnabled() const;
+    /* Show or hide every submask's contribution: the Mask band menu's Show / Hide all
+       submasks. Emitted per row as enabledToggled, deferred like every emission here. */
+    void setAllEnabled(bool on);
 
     /* Display name of a MaskOp, shared with the on-canvas op chip's wording. */
     static QString opName(int op);
@@ -70,57 +76,40 @@ public:
        row wears afterwards, so the two cannot drift. */
     static QString opGlyph(int op);
 
-    /* Control-group separator above the band (G::groupSeparator*), set by MaskPanel
-       while the "Mask" block sits above it. With no Mask block the band is the panel's
-       top row: no separator. */
+    /* Control-group separator above the rows (G::groupSeparator*), set by MaskPanel
+       while the Edge/Halo rows sit above them. Without them the rows follow the Mask
+       band directly: no separator. */
     void setTopRule(bool on);
 
 signals:
-    void addRequested();                          // [+] / "Add submask"
     void submaskSelected(int index);              // row click: re-open it for editing
-    void enabledToggled(int index, bool on);      // row eye (or the band eye, per row)
+    void enabledToggled(int index, bool on);      // row eye (or setAllEnabled, per row)
     void opChanged(int index, int op);            // op glyph / menu
     void invertRequested(int index);
     void deleteRequested(int index);
     void moveRequested(int from, int to);
     void duplicateRequested(int index);
-    void collapsedChanged(bool collapsed);        // hide/show the settings below too
-    void helpRequested();                         // menu: "Submasks help"
 
 protected:
-    void paintEvent(QPaintEvent *) override;      // gradient behind the header band
-    bool eventFilter(QObject *watched, QEvent *event) override;   // header + row clicks
+    void paintEvent(QPaintEvent *) override;      // surface + the top rule
+    bool eventFilter(QObject *watched, QEvent *event) override;   // row clicks
 
 private:
     void buildUi();
     void rebuild();
     QWidget *makeRow(int index, const SubmaskRowInfo &r, bool selected);
     void showRowMenu(int index);
-    void showListMenu();                  // band [:]: add / show all / hide all
-    void toggleAllEnabled();              // band eye: hide everything, or bring it back
-    void updateBandEyeIcon();             // band eye follows "any submask still shown"
     static void setEyeIcon(BarBtn *b, bool shown);      // eye.png / eye_off.png
-    void toggleCollapsed();
-    void updateCollapseIcon();
     /* Fire on the next tick: the handler rebuilds these rows (see the class comment). */
     void emitDeferred(std::function<void()> fn);
 
-    QWidget     *headerBand    = nullptr;
     bool         topRule       = false;
-    BarBtn      *collapseBtn   = nullptr;
-    QLabel      *titleLabel    = nullptr;
-    BarBtn      *addBtn        = nullptr;
-    BarBtn      *eyeBtn        = nullptr;   // band eye: show/hide every submask
-    BarBtn      *menuBtn       = nullptr;   // band [:]: list actions
     QWidget     *rowsContainer = nullptr;
     QVBoxLayout *rowsLayout    = nullptr;
 
     QVector<SubmaskRowInfo> infos;
     int  selectedIndex = -1;
-    /* Collapsed by default: a mask usually has one or two submasks, so the list is
-       noise until the user goes looking for it. beginPending() re-opens the section
-       whenever a submask is actually being built. */
-    bool collapsed     = true;
+    int  pad           = 0;               // rowPad()
 };
 
 #endif // SUBMASKLIST_H

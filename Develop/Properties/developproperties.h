@@ -544,7 +544,7 @@ public slots:
        group; editsHelp / submasksHelp serve the two bands that are not tree sections. */
     void sectionHelp(int group);                  // Basic / Curves / ... section help
     void editsHelp();                             // Edits (scope list) band help
-    void submasksHelp();                          // Submasks band help
+    void submasksHelp();                          // Mask band help (the submasks page)
     void rawHelp();                               // Raw panel help ([?] and its context menu)
     void transformHelp();                         // Transform panel help ([?] and its context menu)
 
@@ -1497,9 +1497,10 @@ private:
        way every other disclosure in the dock does. One that has not settled yet lands
        first rather than refusing: closing it IS the user saying they are done. */
     void reopenSubmask(int index);
-    /* The Submasks section collapsed: close the open submask with it (handles off the
-       canvas, settings gone), so expanding is pure disclosure with nothing selected. */
-    void onSubmasksCollapsed(bool collapsed);
+    /* The Mask band folded the submask rows: close the open submask with them (handles
+       off the canvas, settings gone), so unfolding is pure disclosure with nothing
+       selected. */
+    void onMaskFolded(bool folded);
     /* End the editing session on a COMMITTED submask: deselect it, take its handles off
        the canvas and hide its settings, leaving the submask and the mask untouched. What
        the panel's "Done" button does, and what a click on the open row does. */

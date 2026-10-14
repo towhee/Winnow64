@@ -19,15 +19,19 @@ class MaskEditor;
     whenever a mask is the active scope, not only while a submask is being built:
 
         | Edits  [Mask 2 v] [+] [eye] [:]         |   <- the scope bar (ScopeHeader)
-        | |  v Mask                          [:]  |   <- MASK level: the folded result
+        | |  v Mask                  [+] [■] [:]  |   <- MASK level: [+] adds a submask
         | |    Edge      -----o-----              |
         | |    Halo      -----o-----              |
-        | |  v Submasks                      [+]  |   <- SubmaskList: the mask's contents
-        | |    [x] (+) Linear Gradient       [:]  |
-        | |    [x] (-) Brush            *    [:]  |   <- selected -> settings below
+        | |  -------------------------------      |
+        | |  > Linear Gradient Submask (+) [eye][:] |   <- SubmaskList: the mask's contents
+        | |  v Brush Submask (-)           [eye][:] |   <- selected -> settings below
         | |    Feather   -----o-----              |   <- embedded MaskEditor (submask)
         | |    Invert    [ ]                      |
         | |    Edge      -----o-----              |
+
+    There is no "Submasks" band (removed 2026-10-14): its [+] moved onto the Mask band,
+    left of the overlay swatch, and its Show / Hide all moved into the Mask band's [:].
+    The Mask band's arrow therefore folds the submask rows as well as Edge/Halo.
 
     The overlay's APPEARANCE (colour, grayscale background) is NOT here: it describes the
     veil rather than any submask, and is edited from the tint swatch on the Mask band
@@ -72,8 +76,7 @@ public:
     void setEditingExisting(bool existing);
     /* Show or hide the settings block. Hidden when no submask is selected, so
        the panel shows just the list (and the mask's overlay controls). Also hidden while
-       the Submasks section is COLLAPSED: the settings belong to a submask in that list,
-       so leaving them on screen made a collapsed section look half-open. */
+       the Mask band is FOLDED: the settings belong to a submask in the list it folds. */
     void showAttributes(bool show);
     /* The header row above the settings, naming WHAT a change to them will affect --
        "Attribute adjustment applies to 7 strokes" / "to next stroke" / "to last stroke" /
@@ -85,16 +88,17 @@ public:
        populated and wired by DevelopProperties so it edits the mask model. */
     MaskEditor *editor() const { return maskEditor; }
     /* The MASK-level settings (Edge, Halo), rendered under the "Mask" band ABOVE the
-       Submasks row -- they act on the whole mask, not on anything in the list. A second
+       submask rows -- they act on the whole mask, not on anything in the list. A second
        editor rather than rows inside `editor()`, because that one is rebuilt per selected
        submask and hides when none is. */
     MaskEditor *levelEditor() const { return maskLevelEditor; }
     /* Place the mask-overlay tint swatch on the "Mask" band, beside its [:]. MW keeps
        ownership and all the behaviour; the panel only decides where it sits. */
     void setTintButton(QWidget *btn);
-    /* Show the mask-level block (its header row and, unless collapsed, its sliders).
-       Hidden when the mask has no submasks: there is no mask to grow or shrink, so the
-       controls would be no-ops with nothing to explain them. */
+    /* Show the Edge/Halo rows (unless the band is folded). Hidden when the mask has no
+       submasks: there is no mask to grow or shrink, so the controls would be no-ops with
+       nothing to explain them. The Mask BAND itself always shows -- its [+] is how the
+       first submask gets made. */
     void showMaskLevel(bool show);
     /* The mask's submasks. DevelopProperties pushes rows in and binds its signals. */
     SubmaskList *list() const { return submaskList; }
@@ -109,9 +113,14 @@ signals:
     /* Mask band [:]: put the folded mask back to Edge 0 / Halo 0. The panel holds no
        model state, so DevelopProperties does the zeroing and pushes the rows back. */
     void resetMaskLevelRequested();
-    /* Mask band [:] last item, as on every band in the dock: the mask help page (the
-       same one the Submasks band opens -- Edge and Halo are documented there). */
+    /* Mask band [:] last item, as on every band in the dock: the submasks help page
+       (Edge and Halo are documented there). */
     void helpRequested();
+    /* Mask band [+] (and its [:] "Add submask"): append a submask. */
+    void addSubmaskRequested();
+    /* The Mask band's arrow folded (true) or unfolded the mask. A fold hides the
+       submask rows, so DevelopProperties closes the open submask with them. */
+    void maskFoldedChanged(bool folded);
     /* The cursor entered or left the panel, CHILDREN INCLUDED. DevelopProperties reads
        it as "the mask has the user's attention" and brings the coverage veil up (see
        DevelopProperties::maskVeilEngaged). */
@@ -134,19 +143,20 @@ private:
 
     void buildUi();
     void buildMaskLevel(QVBoxLayout *outer);   // the "Mask" band + its Edge/Halo rows
-    void syncAttrVisible();                // attrShown, list not collapsed, mask not folded
+    void syncAttrVisible();                // attrShown, mask not folded
     void syncLevelVisible();               // levelShown, and the band's own collapse
-    bool maskFolded() const;               // the "Mask" band is on screen and closed
+    bool maskFolded() const;               // the "Mask" band's arrow is closed
     void toggleLevelCollapsed();
     void updateLevelCollapseIcon();
-    void showLevelMenu();                  // Mask band [:]: reset, help
+    void showLevelMenu();                  // Mask band [:]: add, show/hide all, reset, help
 
     MaskEditor  *maskLevelEditor = nullptr;// mask-level settings (Edge/Halo), above list
-    QWidget     *levelWrap   = nullptr;    // band + sliders (hidden when no submasks)
+    QWidget     *levelWrap   = nullptr;    // band + sliders
     QWidget     *levelBand   = nullptr;    // "Mask" header row (gradient, click=collapse)
     BarBtn      *levelCollapseBtn = nullptr;
     QLabel      *levelTitle  = nullptr;
-    BarBtn      *levelMenuBtn = nullptr;   // band [:]: reset / help
+    BarBtn      *levelAddBtn  = nullptr;   // band [+]: add a submask
+    BarBtn      *levelMenuBtn = nullptr;   // band [:]: add / show-hide all / reset / help
     QHBoxLayout *levelBandLayout = nullptr;   // so setTintButton can insert into it
     int          levelTintSlot   = -1;        // where the tint swatch goes
     QWidget     *levelBody   = nullptr;    // maskLevelEditor's wrapper (collapses)
@@ -159,8 +169,8 @@ private:
     bool         editingExisting = false;  // the open submask has already landed
     bool         attrShown  = false;       // a submask is selected (collapse aside)
     bool         levelShown = false;       // the mask has at least one submask
-    /* Open by default, unlike the Submasks list: these two sliders ARE the section, so a
-       collapsed band would hide the whole point of adding it. */
+    /* Open by default: the band folds the whole mask -- Edge/Halo and the submask rows
+       -- so a collapsed band would hide the whole point of the panel. */
     bool         levelCollapsed = false;
 };
 

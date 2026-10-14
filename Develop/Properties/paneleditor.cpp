@@ -170,9 +170,9 @@ int PanelEditor::sliderInt(const QString &key) const
     return vIdx.isValid() ? vIdx.data(Qt::EditRole).toInt() : 0;
 }
 
-void PanelEditor::fitHeight()
+void PanelEditor::fitHeight(int slack)
 {
-    int h = 6;
+    int h = slack;
     for (int r = 0; r < model->rowCount(); ++r)
         h += sizeHintForRow(r);
     setFixedHeight(h);

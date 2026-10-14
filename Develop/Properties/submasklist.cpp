@@ -30,70 +30,6 @@ void SubmaskList::buildUi()
     outer->setContentsMargins(0, 0, 0, 0);
     outer->setSpacing(0);
 
-    /* Header band: collapse arrow + "Submasks" + [+]. Translucent so paintEvent draws the
-       property-header gradient behind it (same idiom as RawPanel / ScopeHeader). Its
-       arrow and title are offset G::subHeaderIndent from the Edits bar's arrow, like the
-       Mask band and the tree's sections: the bar above folds all of them away, so they
-       read as its children. G::headerLeftInset is the bar's own inset from the panel
-       edge, shared by every header in the dock. */
-    headerBand = new QWidget(this);
-    headerBand->setAttribute(Qt::WA_TranslucentBackground);
-    headerBand->setCursor(Qt::PointingHandCursor);
-    headerBand->installEventFilter(this);        // a header click toggles collapse
-    /* Height and caption placement of a property-tree section header (see RawPanel), the
-       same the Mask band uses, so the two sibling bands cannot drift apart. */
-    headerBand->setFixedHeight(G::propertyRowHeight());
-    QHBoxLayout *hb = new QHBoxLayout(headerBand);
-    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 0,
-                           G::headerBtnRightInset, G::headerCaptionTrim);
-    hb->setSpacing(0);
-
-    collapseBtn = new BarBtn();
-    collapseBtn->setToolTip("Hide or show the submask list");
-    collapseBtn->setIconSize(QSize(9, 9));
-    collapseBtn->setFixedSize(9, 16);
-    collapseBtn->setStyleSheet("QToolButton { border: none; padding: 0;"
-                               " background: transparent; }");
-    connect(collapseBtn, &BarBtn::clicked, this, [this]{ toggleCollapsed(); });
-
-    titleLabel = new QLabel(tr("Submasks"), headerBand);
-    titleLabel->setStyleSheet(G::labelCss(G::scopeSubheaderColor, G::strFontSize.toInt()));
-
-    addBtn = new BarBtn();
-    addBtn->setToolTip("Add a submask to this mask (M)");
-    /* new.png (the [+] plus), the same "add one of these" glyph the Embellish dock
-       uses for its New Template / Border / Text buttons. */
-    addBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
-    addBtn->setIconSize(QSize(16, 16));
-    connect(addBtn, &BarBtn::clicked, this, [this]{ emit addRequested(); });
-
-    /* Band eye: show/hide EVERY submask's contribution in one click -- an A/B of the
-       whole mask. It reads as shown while any submask is enabled. Like every other band
-       and row in this panel, the trailing pair is eye then menu, menu last. */
-    eyeBtn = new BarBtn();
-    eyeBtn->setToolTip("Show or hide every submask's contribution");
-    setEyeIcon(eyeBtn, true);
-    eyeBtn->setIconSize(QSize(16, 16));
-    connect(eyeBtn, &BarBtn::clicked, this, [this]{ toggleAllEnabled(); });
-
-    menuBtn = new BarBtn();
-    menuBtn->setToolTip("Submask list actions (add, show or hide all)");
-    menuBtn->setIcon(":/images/icon16/ellipsis_vertical.png", G::iconOpacity);
-    menuBtn->setIconSize(QSize(16, 16));
-    connect(menuBtn, &BarBtn::clicked, this, [this]{ showListMenu(); });
-
-    hb->addWidget(collapseBtn);
-    hb->addSpacing(G::decorationTitleGap);
-    hb->addWidget(titleLabel);
-    hb->addStretch(1);
-    hb->addWidget(addBtn);
-    hb->addSpacing(G::headerBtnGap);
-    hb->addWidget(eyeBtn);
-    hb->addSpacing(G::headerBtnGap);
-    hb->addWidget(menuBtn);
-    outer->addWidget(headerBand);
-    updateCollapseIcon();
-
     /* Rows container: one row widget per submask, rebuilt by setSubmasks. Translucent for
        the same reason ScopeHeader's is -- under the app stylesheet a plain QWidget
        fills its background opaquely and would paint over the containment rail the scope
@@ -103,7 +39,6 @@ void SubmaskList::buildUi()
     rowsLayout = new QVBoxLayout(rowsContainer);
     rowsLayout->setContentsMargins(0, 0, 0, 0);
     rowsLayout->setSpacing(0);
-    rowsContainer->setVisible(!collapsed);      // starts collapsed (see the header)
     outer->addWidget(rowsContainer);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
@@ -112,18 +47,14 @@ void SubmaskList::buildUi()
 void SubmaskList::paintEvent(QPaintEvent *)
 {
     QPainter p(this);
-    /* ONE flat surface (G::panelContentBg), band included -- no header gradient here,
-       unlike every other band in the dock. The Submasks band and its rows are the inside
-       of the Mask panel, not a section of their own: the Mask panel's own "Mask" band
-       already says where this block starts, and a second gradient inside it read as a
-       second panel. The band still carries its arrow, caption and buttons; only the fill
-       behind it changed. */
+    /* ONE flat surface (G::panelContentBg): the rows are the inside of the Mask panel,
+       whose own "Mask" band already says where this block starts. */
     p.fillRect(rect(), G::panelContentBg);
-    /* Separator between the Mask block above and this section, in the gap setTopRule
-       opens above the band, drawn as PropertyDelegate draws the tree's group dividers:
-       centred in the gap, inset from both sides. */
-    if (topRule && headerBand) {
-        const int gap = headerBand->mapTo(this, QPoint(0, 0)).y();
+    /* Separator between the Edge/Halo rows above and the submask rows, in the gap
+       setTopRule opens above them, drawn as PropertyDelegate draws the tree's group
+       dividers: centred in the gap, inset from both sides. */
+    if (topRule && rowsContainer) {
+        const int gap = rowsContainer->mapTo(this, QPoint(0, 0)).y();
         const int w = G::groupSeparatorWidth;
         const int inset = G::groupSeparatorInset;
         if (gap > 0)
@@ -162,7 +93,6 @@ void SubmaskList::setSubmasks(const QVector<SubmaskRowInfo> &rows, int selected)
     infos = rows;
     selectedIndex = (selected >= 0 && selected < rows.size()) ? selected : -1;
     rebuild();
-    updateBandEyeIcon();
 }
 
 void SubmaskList::rebuild()
@@ -173,8 +103,11 @@ void SubmaskList::rebuild()
     }
     for (int i = 0; i < infos.size(); ++i)
         rowsLayout->addWidget(makeRow(i, infos.at(i), i == selectedIndex));
-    /* An empty mask still shows the header: its [+] is how the first submask gets made,
-       so hiding the section on an empty mask would hide the only way out of it. */
+    /* See rowPad(). Measured from a built row, so it follows the font size. */
+    pad = 0;
+    if (QLayoutItem *first = rowsLayout->itemAt(0))
+        pad = qMax(0, (G::propertyRowHeight() - first->sizeHint().height()) / 2);
+    rowsLayout->setContentsMargins(0, pad, 0, 0);
 }
 
 QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
@@ -196,11 +129,10 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     }
 
     QHBoxLayout *hb = new QHBoxLayout(row);
-    /* Indented ONE level under the Submasks band: that band's arrow sits at
-       G::headerLeftInset + G::subHeaderIndent, and its rows step the same
-       G::subHeaderIndent further right, the way the tree's rows sit under their section
-       header. */
-    hb->setContentsMargins(G::headerLeftInset + 2 * G::subHeaderIndent, 1,
+    /* Arrow at G::headerLeftInset + G::subHeaderIndent: where the old "Submasks" band's
+       arrow sat, which is also the Mask band's arrow column, so each submask reads as a
+       section of the mask. */
+    hb->setContentsMargins(G::headerLeftInset + G::subHeaderIndent, 1,
                            G::headerBtnRightInset, 1);
     hb->setSpacing(G::headerBtnGap);
 
@@ -224,20 +156,42 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
     hb->addWidget(openBtn);
     hb->addSpacing(G::decorationTitleGap);
 
-    /* Op chip. The FIRST submask has nothing to combine with, so its op is inert -- but
-       the chip is still shown, so the column stays aligned and the "+" still says what
-       that submask does. */
-    QPushButton *opBtn = new QPushButton(opGlyph(r.op), row);
-    opBtn->setFixedSize(18, 18);
+    /* Caption ink, shared by the name and the op chip after it. */
+    const QColor ink = selected ? QColor(Qt::white)
+                     : r.enabled ? G::textColor : G::disabledColor;
+    QString caption = r.toolName;
+    if (r.inverted) caption += tr(" (inverted)");
+    QLabel *name = new QLabel(caption, row);
+    name->setStyleSheet(G::labelCss(ink, G::strFontSize.toInt()));
+    QString nameTip = r.pending  ? tr("Being built -- it joins the mask once your edits "
+                                      "settle (Return lands it now, Esc discards it)")
+                      : selected ? tr("Open -- click to close its settings")
+                                 : tr("Click to edit this submask again");
+    /* The first submask's op chip is inert (see below) and carries no tooltip of its
+       own, so say why here rather than nowhere. */
+    if (index == 0)
+        nameTip += tr("\n\nThe first submask starts the mask, so it always adds.");
+    name->setToolTip(nameTip);
+    hb->addWidget(name);
+
+    /* Op chip, AFTER the name -- "Brush Submask (-)" -- so the captions start in one
+       column and read as names first (2026-10-14; it used to lead the row). The FIRST
+       submask has nothing to combine with, so its op is inert -- but the chip is still
+       shown, so the "(+)" still says what that submask does. */
+    QPushButton *opBtn = new QPushButton("(" + opGlyph(r.op) + ")", row);
+    opBtn->setFixedHeight(18);
     opBtn->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     /* Flat on the row: the app stylesheet gives a QPushButton its own raised background,
        which read as a slab on the row's lifted surface. The glyph alone carries the op;
        a hover fill keeps it discoverable as something clickable. min-width: 0 defeats the
        global "QPushButton { min-width: 100px }" (widgetcss.cpp), which Qt applies as an
-       EXPLICIT minimum and which would floor the dock's width. */
+       EXPLICIT minimum and which would floor the dock's width. Same ink and size as the
+       name beside it (greying with it too), so "(-)" reads as part of the caption. */
     opBtn->setStyleSheet(
-        "QPushButton { min-width: 0; padding: 0; border: none; border-radius: 9px;"
-                     " background: transparent; }"
+        "QPushButton { min-width: 0; padding: 0 2px; border: none; border-radius: 9px;"
+                     " background: transparent; color: " + ink.name() + ";"
+                     " font-size: " + G::strFontSize + "pt; }"
+        "QPushButton:disabled { color: " + G::disabledColor.name() + "; }"
         "QPushButton:hover:enabled { background: " + G::groupSeparatorColor.name() + "; }");
     if (index == 0) {
         /* Inert, but NOT setEnabled(false): that greys the glyph, and a dim "+" beside
@@ -249,7 +203,7 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
         opBtn->setAttribute(Qt::WA_TransparentForMouseEvents, true);
         opBtn->setFocusPolicy(Qt::NoFocus);
         /* Its own tooltip would never show -- the chip sees no mouse events now -- so the
-           explanation moves onto the row's name below. */
+           explanation moves onto the row's name. */
     }
     else {
         opBtn->setToolTip(QString("%1 -- click to cycle Add / Subtract / Intersect")
@@ -260,24 +214,6 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
         });
     }
     hb->addWidget(opBtn);
-
-    QString caption = r.toolName;
-    if (r.inverted) caption += tr(" (inverted)");
-    QLabel *name = new QLabel(caption, row);
-    name->setStyleSheet(G::labelCss(selected ? QColor(Qt::white)
-                                    : r.enabled ? G::textColor
-                                                : G::disabledColor,
-                                    G::strFontSize.toInt()));
-    QString nameTip = r.pending  ? tr("Being built -- it joins the mask once your edits "
-                                      "settle (Return lands it now, Esc discards it)")
-                      : selected ? tr("Open -- click to close its settings")
-                                 : tr("Click to edit this submask again");
-    /* The first submask's op chip is inert (see above) and carries no tooltip of its
-       own, so say why here rather than nowhere. */
-    if (index == 0)
-        nameTip += tr("\n\nThe first submask starts the mask, so it always adds.");
-    name->setToolTip(nameTip);
-    hb->addWidget(name);
     hb->addStretch(1);
 
     /* Show/hide this submask's contribution (MaskComponent::enabled). The renderer skips
@@ -304,16 +240,9 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
 
 bool SubmaskList::eventFilter(QObject *watched, QEvent *event)
 {
-    /* A click on the header band (arrow or caption) toggles collapse; MouseButtonDblClick
-       is included because Qt sends it INSTEAD of the second press, which would otherwise
-       leave the list in the opposite state. A click on a row body selects that submask;
-       the op chip / eye / menu button consume their own clicks. */
-    if ((event->type() == QEvent::MouseButtonPress ||
-         event->type() == QEvent::MouseButtonDblClick) && watched == headerBand) {
-        QMouseEvent *me = static_cast<QMouseEvent *>(event);
-        if (me->button() == Qt::LeftButton) { toggleCollapsed(); return true; }
-    }
-    else if (event->type() == QEvent::MouseButtonRelease) {
+    /* A click on a row body selects that submask; the op chip / eye / menu button
+       consume their own clicks. */
+    if (event->type() == QEvent::MouseButtonRelease) {
         QWidget *w = qobject_cast<QWidget *>(watched);
         QMouseEvent *me = static_cast<QMouseEvent *>(event);
         if (w && me->button() == Qt::LeftButton) {
@@ -335,54 +264,18 @@ void SubmaskList::setEyeIcon(BarBtn *b, bool shown)
                G::iconOpacity);
 }
 
-void SubmaskList::updateBandEyeIcon()
+bool SubmaskList::anyEnabled() const
 {
-    /* Shown while ANY submask still contributes, so the band eye is "off" only when the
-       whole mask is hidden -- which is exactly the state its click undoes. */
-    bool any = false;
-    for (const SubmaskRowInfo &r : infos) if (r.enabled) { any = true; break; }
-    setEyeIcon(eyeBtn, infos.isEmpty() ? true : any);
+    for (const SubmaskRowInfo &r : infos) if (r.enabled) return true;
+    return false;
 }
 
-void SubmaskList::toggleAllEnabled()
+void SubmaskList::setAllEnabled(bool on)
 {
-    /* One flag for the whole list: if anything is showing, hide everything; otherwise
-       bring it all back. Emitted per row (the owner has no bulk slot) and deferred a tick
-       like every other emission here, since each one rebuilds these rows. */
-    bool any = false;
-    for (const SubmaskRowInfo &r : infos) if (r.enabled) { any = true; break; }
-    const bool on = !any;
+    /* Emitted per row (the owner has no bulk slot) and deferred a tick like every other
+       emission here, since each one rebuilds these rows. */
     const int n = infos.size();
     emitDeferred([this, n, on]{
-        for (int i = 0; i < n; ++i) emit enabledToggled(i, on);
-    });
-}
-
-void SubmaskList::showListMenu()
-{
-    if (G::isLogger) G::log("SubmaskList::showListMenu");
-    enum { Add = 1, ShowAll, HideAll };
-    QMenu menu(this);
-    menu.addAction(tr("Add submask\tM"))->setData(Add);
-    menu.addSeparator();
-    QAction *aShow = menu.addAction(tr("Show all submasks"));
-    aShow->setData(ShowAll);
-    QAction *aHide = menu.addAction(tr("Hide all submasks"));
-    aHide->setData(HideAll);
-    aShow->setEnabled(!infos.isEmpty());
-    aHide->setEnabled(!infos.isEmpty());
-    /* Last item, as on every band in the Develop dock: this list's own help page. */
-    menu.addSeparator();
-    QAction *aHelp = menu.addAction(tr("Submasks help"));
-
-    QAction *chosen = menu.exec(QCursor::pos());
-    if (chosen == aHelp) { emitDeferred([this]{ emit helpRequested(); }); return; }
-    const int code = chosen ? chosen->data().toInt() : 0;
-    if (code == 0) return;
-    const int n = infos.size();
-    emitDeferred([this, code, n]{
-        if (code == Add) { emit addRequested(); return; }
-        const bool on = (code == ShowAll);
         for (int i = 0; i < n; ++i) emit enabledToggled(i, on);
     });
 }
@@ -448,30 +341,4 @@ void SubmaskList::showRowMenu(int index)
             case Del:         emit deleteRequested(index);        break;
         }
     });
-}
-
-void SubmaskList::toggleCollapsed()
-{
-    setCollapsed(!collapsed);
-}
-
-void SubmaskList::setCollapsed(bool collapse)
-{
-    if (collapse == collapsed) return;
-    collapsed = collapse;
-    if (rowsContainer) rowsContainer->setVisible(!collapsed);
-    updateCollapseIcon();
-    /* The selected submask's settings live BELOW this widget (MaskPanel), so the section
-       only reads as collapsed if they go away with the rows. */
-    emit collapsedChanged(collapsed);
-}
-
-void SubmaskList::updateCollapseIcon()
-{
-    if (!collapseBtn) return;
-    /* Open branch (down) when the rows show, closed (right) when hidden -- 9x9, matching
-       the tree's branch arrows and the Raw panel's. */
-    const QString path = collapsed ? ":/images/branch-closed-winnow.png"
-                                   : ":/images/branch-open-winnow.png";
-    collapseBtn->setIcon(QIcon(QPixmap(path)));
 }

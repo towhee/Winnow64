@@ -41,7 +41,10 @@ public:
     void setRowEnabled(const QString &key, bool on);   // grey / enable a row
     int  sliderInt(const QString &key) const;          // current int value of a row
     void setCaptionWidth(int w);   // align the value column to the main tree
-    void fitHeight();              // size the view to its rows (call after building)
+    /* Size the view to its rows (call after building), plus `slack` px below the last
+       row. 0 when the panel's own spacing sets the gap under it (the Mask band's
+       Edge/Halo, whose rule below must sit at the tree's divider spacing). */
+    void fitHeight(int slack = 6);
 
 signals:
     /* A slider/checkbox changed: key is its param key, value the new int/bool. */
