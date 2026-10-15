@@ -441,6 +441,10 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
                 (every 5-star image deleted) stays checked on an empty item. */
             restoreKeepsMissing = true;
         }
+        /*  The rebuild unchecks the tree until the restore lands; a re-filter in between
+            (a second applyModelChange, as New Version makes) must keep the user's checks.
+            Released by restoreFiltersAfterFolderChange. See SortFilter::holdPredicate. */
+        dm->sf->holdPredicate(true, "MW::applyModelChange");
         buildFilters->rebuild();
     }
 

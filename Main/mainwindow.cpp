@@ -6681,6 +6681,7 @@ bool MW::reset(QString src)
     G::iconChunkLoaded = false;
 
     // filters
+    if (dm->sf) dm->sf->holdPredicate(false, "MW::reset");   // a new set: no restore to wait for
     buildFilters->reset();
     clearFilterHistory();       // another set's checks mostly name values not in this one
     /*  A whole new set: checks saved by an earlier folder add/remove belong to the set

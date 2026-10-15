@@ -139,7 +139,10 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     numberTextColor = QColor(l60,l60,l60);
     vp1Color = QColor(Qt::white);
     vp2Color = QColor(Qt::black);
-
+    // masterColor = QColor(30, 115, 215);          // amber
+    masterColor = G::header1Color;                  // blue
+    // versionColor = QColor(225, 140, 20);         // blue
+    versionColor = G::disabledColor;                // gray
     // define pens
     currentPen.setColor(currentItemColor);
     currentPen.setWidth(currentWidth);
@@ -869,9 +872,10 @@ textRect         = a rectangle below itemRect
         }
     }
 
-    /*  Versions (virtual copies): a master's count + arrow (amber), a version's name
-        tag (blue), in the frame's top-right corner, solid fill with a light outline.
-        Drawn before the frame border so that border strokes over the shared edges. */
+    /*  Versions (virtual copies): a master's count + arrow (amber text), a version's
+        name tag (blue text), in the frame's top-right corner, on the app background
+        with a 1px border. Drawn before the frame border so that border strokes over the
+        shared edges. */
     if (!G::isSlideShow) {
         const QString vText = versionBadgeText(index);
         if (!vText.isEmpty()) {
@@ -883,11 +887,11 @@ textRect         = a rectangle below itemRect
             painter->save();
             painter->setRenderHint(QPainter::Antialiasing, true);
             painter->setFont(vf);
-            painter->setPen(QPen(QColor(255, 255, 255, 230), 1.5));
-            painter->setBrush(isVersionRow ? QColor(30, 115, 215) : QColor(225, 140, 20));
+            painter->setPen(QPen(G::borderColor, 1));
+            painter->setBrush(G::backgroundColor);
             // radius 8 = the frame's, so the shared corner follows the frame's curve
-            painter->drawRoundedRect(QRectF(vr).adjusted(0.75, 0.75, -0.75, -0.75), 8, 8);
-            painter->setPen(isVersionRow ? QColor(255, 255, 255) : QColor(20, 20, 20));
+            // painter->drawRoundedRect(QRectF(vr).adjusted(0.5, 0.5, -0.5, -0.5), 8, 8);
+            painter->setPen(isVersionRow ? versionColor : masterColor);
             const QString shown = QFontMetrics(vf).elidedText(vText, Qt::ElideRight,
                                                              vr.width() - 8);
             painter->drawText(vr, Qt::AlignCenter, shown);

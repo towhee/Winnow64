@@ -147,6 +147,12 @@ public slots:
         FILTER, so a deferred compile can never leave the predicate a turn behind the
         tree the user just clicked. */
     void flushPendingCompile();
+    /*  Keep the predicate compiled now until released. For the window in which the tree
+        has been cleared for a rebuild and the user's checks are saved, waiting for the
+        restore (MW::applyModelChange): a re-filter there must test rows against the
+        checks the user has, not against an empty tree. Release recompiles. */
+    void holdPredicate(bool hold, const QString &src = "");
+    bool isPredicateHeld() const { return mHoldPredicate; }
 
 private slots:
 
@@ -170,6 +176,7 @@ private:
     QSet<QString> mExpandedVersions;        // master keys whose versions are shown
     bool isCollapsedVersion(int sourceRow, const QModelIndex &sourceParent) const;
     bool compilePending = false;
+    bool mHoldPredicate = false;
     std::atomic<bool> suspendFiltering;
 
     /*  The compiled filters, published as a shared_ptr<const> exactly as

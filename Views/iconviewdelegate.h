@@ -130,6 +130,8 @@ private:
     QColor numberTextColor;
     QColor vp1Color;
     QColor vp2Color;
+    QColor masterColor;
+    QColor versionColor;
 
     QPen pickedPen;
     QPen rejectedPen;

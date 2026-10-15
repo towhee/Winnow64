@@ -1318,6 +1318,8 @@ void MW::restoreFiltersAfterFolderChange()
     proxy's compiled predicate holds the pre-rebuild checks until a filterChange
     recompiles it, so a check that did not come back would otherwise keep filtering.
 */
+    // the build is done: the tree compiles again (held by MW::applyModelChange)
+    if (dm && dm->sf) dm->sf->holdPredicate(false, "MW::restoreFiltersAfterFolderChange");
     if (!restoreFiltersPending || !filters) return;
     const bool keepMissing = restoreKeepsMissing && !libraryFilterRestorePending
                              && !foldersFilterRestorePending;

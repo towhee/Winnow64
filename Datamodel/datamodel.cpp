@@ -7747,6 +7747,23 @@ void SortFilter::flushPendingCompile()
     compileFilters();
 }
 
+void SortFilter::holdPredicate(bool hold, const QString &src)
+{
+/*
+    MW::applyModelChange saves the checks and rebuilds the Filters tree, which UNCHECKS
+    every item (Filters::reset -> clearAll) until the build finishes and the checks are
+    restored. Any filterChange in that window compiled the empty tree: New Version runs
+    applyModelChange twice (re-read the master, then reconcileVersionRows inserts the
+    row), so the second one's refreshViews showed the whole Library over a filtered
+    collection until the restore put it back. Held, the re-filter still re-tests every
+    row -- the new ones appear -- against the checks the user actually has.
+*/
+    if (G::isLogger) G::log("SortFilter::holdPredicate", (hold ? "hold " : "release ") + src);
+    if (mHoldPredicate == hold) return;
+    mHoldPredicate = hold;
+    if (!hold) compileFilters();              // back in step with the tree
+}
+
 void SortFilter::compileFilters()
 {
 /*
@@ -7764,6 +7781,7 @@ void SortFilter::compileFilters()
         behind the tree. */
     compilePending = false;
     if (!filters) return;
+    if (mHoldPredicate) return;               // see holdPredicate
 
     auto fresh = std::make_shared<FilterPredicate>();
 
