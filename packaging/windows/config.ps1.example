@@ -37,6 +37,9 @@ $SignToolPath = "C:\Program Files (x86)\Windows Kits\10\bin\10.0.22621.0\x64\sig
 $SignCertSubject = "Robert Hill"
 $SignTimestampUrl = "http://timestamp.digicert.com"
 
+# GitHub repo whose Releases get the installer (menu G). Needs `gh auth login` once.
+$GitHubRepo = "towhee/Winnow64"
+
 # --- Distribution server (DigitalOcean) --------------------------------------
 # Used by Upload (push installer to a test dir) and Promote (archive the current
 # release, publish the new installer to current/, update the landing page +

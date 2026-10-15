@@ -92,15 +92,22 @@ namespace PanelButtonBar
 
         QPushButton *btn = new QPushButton(text, parent);
 
-        QString tip = action->toolTip();
-        if (tip.isEmpty() || tip == action->text()) tip = text;
-        if (!action->shortcut().isEmpty())
-            tip += "  (" + action->shortcut().toString(QKeySequence::NativeText) + ")";
-        btn->setToolTip(tip);
+        /*  The tooltip carries the shortcut, so it is rebuilt on QAction::changed too:
+            buttons are usually made before the shortcuts are assigned (and the user can
+            rebind them), and a tip built once here never showed the key. */
+        auto syncTip = [btn, action, text]() {
+            QString tip = action->toolTip();
+            if (tip.isEmpty() || tip == action->text()) tip = text;
+            if (!action->shortcut().isEmpty())
+                tip += "  (" + action->shortcut().toString(QKeySequence::NativeText) + ")";
+            btn->setToolTip(tip);
+        };
+        syncTip();
 
         btn->setEnabled(action->isEnabled());
-        QObject::connect(action, &QAction::changed, btn, [btn, action]() {
+        QObject::connect(action, &QAction::changed, btn, [btn, action, syncTip]() {
             btn->setEnabled(action->isEnabled());
+            syncTip();
         });
         QObject::connect(btn, &QPushButton::clicked, action, [action]() {
             action->trigger();

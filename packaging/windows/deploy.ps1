@@ -1,6 +1,6 @@
 <#
   Winnow Windows Deployment
-    build -> (sign) -> Inno Setup installer -> archive -> (upload) -> promote
+    build -> (sign) -> Inno Setup installer -> archive -> GitHub Release -> promote
 
   Windows equivalent of packaging\macos\deploy.command. Self-locating: derives
   every path from its own location in the repo, so it works unchanged on any
@@ -21,6 +21,7 @@
     * Visual Studio 2022 (Desktop C++), Qt 6 (MSVC), CMake + Ninja/VS generator
     * Inno Setup 6 (iscc.exe) for the installer
     * OpenSSH client (ssh.exe / scp.exe — built into Windows 10/11) for upload/promote
+    * GitHub CLI (gh.exe, `gh auth login` once) for Publish to GitHub Release
     * (optional) a code-signing certificate + Windows SDK signtool.exe
 #>
 
@@ -49,6 +50,7 @@ if (-not $WebBaseUrl)    { $WebBaseUrl    = "https://winnow.ca" }
 if (-not $UploadSubdir)  { $UploadSubdir  = "winnow_win/test" }
 if ($null -eq $UploadEnabled) { $UploadEnabled = $false }
 if ($null -eq $SignEnabled)   { $SignEnabled   = $false }
+if (-not $GitHubRepo)    { $GitHubRepo    = "towhee/Winnow64" }
 
 # --- Derived paths ----------------------------------------------------
 $BuildDir      = Join-Path $RepoRoot "build\win-release"
@@ -478,6 +480,56 @@ function Promote {
     else { Write-Host "Promote complete (old=$Old new=$New)." -ForegroundColor Green }
 }
 
+# --- Publish the installer to a GitHub Release -----------------------
+# GitHub Releases is the primary download location. The Mac and Windows deploys
+# run on different machines and share ONE release per version (tag v<version>):
+# whichever runs first creates it, the other attaches its asset. Re-running
+# replaces this platform's asset (--clobber). The release is a full release, not
+# a pre-release, because /releases/latest (the README download link) skips
+# pre-releases. The tag is made on the pushed HEAD commit, so push first.
+function Publish-GitHub {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh (GitHub CLI) not installed: winget install GitHub.cli" }
+    & gh auth status *> $null
+    if ($LASTEXITCODE -ne 0) { throw "gh not logged in - run: gh auth login" }
+    Ensure-Version
+    if (-not $script:Version) { throw "No version - run Build first." }
+    $Setup = Setup-Path $script:Version
+    if (-not (Test-Path $Setup)) { throw "Installer not found: $Setup - run Build installer first." }
+
+    Write-Host "Verify gate..." -ForegroundColor Cyan
+    Verify   # throws -> aborts publish
+
+    $tag  = "v$script:Version"
+    $head = (& git -C $RepoRoot rev-parse HEAD)
+    if ($LASTEXITCODE -ne 0) { throw "git rev-parse HEAD failed" }
+    & gh release view $tag --repo $GitHubRepo *> $null
+    $exists = ($LASTEXITCODE -eq 0)
+
+    if (-not $exists -and -not (& git -C $RepoRoot branch -r --contains $head 2>$null)) {
+        throw "HEAD $($head.Substring(0,8)) is not pushed - push first so the tag $tag points at it."
+    }
+
+    Write-Host ""
+    Write-Host "================ GITHUB RELEASE  ($GitHubRepo) ================"
+    if ($exists) { Write-Host "  release : $tag  (exists - attach/replace installer)" }
+    else         { Write-Host "  release : $tag  (NEW - tag at $($head.Substring(0,8)))" }
+    Write-Host "  upload  : $Setup"
+    Write-Host "==================================================================="
+    $confirm = Read-Host "Type 'yes' to publish to GitHub"
+    if ($confirm -ne 'yes') { throw "Aborted." }
+
+    if (-not $exists) {
+        $title = "Winnow " + ($script:Version -replace '_', ' ')
+        & gh release create $tag --repo $GitHubRepo --target $head --title $title `
+            --notes "$title for macOS (Apple Silicon) and Windows."
+        if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
+    }
+    & gh release upload $tag $Setup --repo $GitHubRepo --clobber
+    if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
+    Write-Host "   OK  Published: https://github.com/$GitHubRepo/releases/tag/$tag" -ForegroundColor Green
+    Write-Host "       Edit the release notes on GitHub if needed."
+}
+
 # --- Full pipeline (build -> sign -> installer -> archive -> verify) --
 function Full-Pipeline {
     Build
@@ -504,6 +556,7 @@ function Print-Config {
     Write-Host "SERVER             = ${ServerUser}@${ServerHost}:$ServerWebRoot"
     Write-Host "SERVER_SSH_KEY     = $ServerSshKey"
     Write-Host "WEB_BASE_URL       = $WebBaseUrl"
+    Write-Host "GITHUB_REPO        = $GitHubRepo"
     Write-Host "VERSION (built)    = $(if ($script:Version) {$script:Version} else {'<not built>'})"
 }
 
@@ -518,6 +571,7 @@ while ($true) {
     Write-Host "4) Upload installer to test dir"
     Write-Host "5) Promote + publish to server (archive old -> upload new -> update index)"
     Write-Host "   (if server version == this build, offers REDEPLOY: replace installer only)"
+    Write-Host "G) Publish installer to GitHub Release (main download location)"
     Write-Host "V) Verify Windows readiness"
     Write-Host "D) Promote DRY-RUN (print server commands, write nothing)"
     Write-Host "A) FULL PIPELINE (0-3 + verify; does NOT publish)"
@@ -534,6 +588,7 @@ while ($true) {
             "3" { Archive }
             "4" { Upload }
             "5" { Promote }
+            "G" { Publish-GitHub }
             "V" { Verify }
             "D" { Promote -DryRun }
             "A" { Full-Pipeline }

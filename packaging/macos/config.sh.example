@@ -32,6 +32,9 @@ NOTARY_KEYCHAIN_PROFILE="AC_APIKEY"
 # Where notarized, version-named archive copies are kept (optional).
 ARCHIVE_DIR="$HOME/Applications/Winnow"
 
+# GitHub repo whose Releases get the DMG (menu G). Needs `gh auth login` once.
+GITHUB_REPO="towhee/Winnow64"
+
 # --- Distribution server (DigitalOcean) ---------------------------------------
 # Used by `upload` (push DMG to a test dir) and `promote` (archive the current
 # release, publish the new DMG to current/, update the landing page).

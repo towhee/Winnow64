@@ -1,7 +1,7 @@
 #!/bin/zsh
 # --------------------------------------------------------------------
 # Winnow macOS Deployment
-#   build -> stage -> sign -> notarize -> DMG -> archive -> (upload)
+#   build -> stage -> sign -> notarize -> DMG -> archive -> GitHub Release
 #
 # This script is self-locating: it derives every path from its own
 # location in the repo, so it works unchanged on any Mac after a
@@ -58,6 +58,7 @@ source "$CONFIG_FILE"
 : ${SERVER_WEB_ROOT:=/var/www/html}
 : ${WEB_BASE_URL:=https://winnow.ca}
 : ${UPLOAD_SUBDIR:=winnow_mac/test}
+: ${GITHUB_REPO:=towhee/Winnow64}
 
 # Server-derived paths (used by upload + promote)
 MAC_DIR="${SERVER_WEB_ROOT}/winnow_mac"
@@ -619,6 +620,54 @@ EOF
     echo "✅ Promote complete (old=$OLD new=$NEW)."
 }
 
+# --- Publish the DMG to a GitHub Release -----------------------------
+# GitHub Releases is the primary download location. The Mac and Windows deploys
+# run on different machines and share ONE release per version (tag v<version>):
+# whichever runs first creates it, the other attaches its asset. Re-running
+# replaces this platform's asset (--clobber). The release is a full release, not
+# a pre-release, because /releases/latest (the README download link) skips
+# pre-releases. The tag is made on the pushed HEAD commit, so push first.
+function publish_github() {
+    command -v gh >/dev/null 2>&1 || { echo "❌ gh (GitHub CLI) not installed: brew install gh"; return 1; }
+    gh auth status >/dev/null 2>&1 || { echo "❌ gh not logged in — run: gh auth login"; return 1; }
+    ensure_version
+    [[ -n "$WINNOW_VERSION" ]] || { echo "❌ No version — run Build first."; return 1; }
+    [[ -f "$DMG_PATH" ]] || { echo "❌ DMG not found: $DMG_PATH — run Create DMG first."; return 1; }
+
+    echo "🔒 Verify gate: $NOTARIZED_APP_PATH"
+    "$VERIFY_SCRIPT" "$NOTARIZED_APP_PATH" || { echo "❌ Verify failed — refusing to publish."; return 1; }
+
+    local tag="v${WINNOW_VERSION}"
+    local head; head=$(git -C "$REPO_ROOT" rev-parse HEAD) || return 1
+    local exists=false
+    gh release view "$tag" --repo "$GITHUB_REPO" >/dev/null 2>&1 && exists=true
+
+    if ! $exists && [[ -z "$(git -C "$REPO_ROOT" branch -r --contains "$head" 2>/dev/null)" ]]; then
+        echo "❌ HEAD ${head:0:8} is not pushed — push first so the tag $tag points at it."
+        return 1
+    fi
+
+    cat <<EOF
+
+================ GITHUB RELEASE  ($GITHUB_REPO) ================
+  release : $tag  $($exists && echo "(exists — attach/replace DMG)" || echo "(NEW — tag at ${head:0:8})")
+  upload  : $DMG_PATH
+===================================================================
+EOF
+    printf "Type 'yes' to publish to GitHub: "
+    read confirm; [[ "$confirm" == "yes" ]] || { echo "Aborted."; return 1; }
+
+    if ! $exists; then
+        gh release create "$tag" --repo "$GITHUB_REPO" --target "$head" \
+            --title "Winnow ${WINNOW_VERSION//_/ }" \
+            --notes "Winnow ${WINNOW_VERSION//_/ } for macOS (Apple Silicon) and Windows." \
+            || return 1
+    fi
+    gh release upload "$tag" "$DMG_PATH" --repo "$GITHUB_REPO" --clobber || return 1
+    echo "✅ Published: https://github.com/${GITHUB_REPO}/releases/tag/$tag"
+    echo "   Edit the release notes on GitHub if needed."
+}
+
 # --- Verify vanilla-Mac readiness ------------------------------------
 # Runs the full check set (structural + Gatekeeper) against the notarized app
 # if it exists, otherwise the staged app (structural only, since it is not yet
@@ -651,6 +700,7 @@ function print_config() {
     echo "ENTITLEMENTS       = $ENTITLEMENTS"
     echo "ARCHIVE_DIR        = $ARCHIVE_DIR"
     echo "UPLOAD_ENABLED     = $UPLOAD_ENABLED"
+    echo "GITHUB_REPO        = $GITHUB_REPO"
     [[ -d "$RELEASE_APP_PATH" ]] && { resolve_version "$RELEASE_APP_PATH"; echo "VERSION (built)    = $WINNOW_VERSION"; }
 }
 
@@ -666,6 +716,7 @@ while true; do
     echo "5) Archive"
     echo "6) Upload DMG to test dir"
     echo "7) Promote + publish to server (archive old → upload new → update index)"
+    echo "G) Publish DMG to GitHub Release (main download location)"
     echo "V) Verify vanilla-Mac readiness"
     echo "D) Promote DRY-RUN (print server commands, write nothing)"
     echo "A) FULL PIPELINE (0-6 + verify; does NOT publish)"
@@ -684,6 +735,7 @@ while true; do
         5) archive ;;
         6) upload ;;
         7) promote ;;
+        g|G) publish_github ;;
         v|V) verify ;;
         d|D) promote --dry-run ;;
         a|A) build && stage && sign && notarize && disk_image && archive && verify && upload ;;
