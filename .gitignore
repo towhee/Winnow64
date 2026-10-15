@@ -335,3 +335,19 @@ ReleaseExtras 2/ExifTool/lib/Image/ExifTool.pm
 ReleaseExtras 2/ExifTool/lib/File/RandomAccess.pod
 ReleaseExtras 2/ExifTool/lib/File/RandomAccess.pm
 ReleaseExtras 2/ExifTool/exiftool
+
+# Private developer notes (kept local, purged from history 2026-10-15)
+notes/
+
+# Local scratch / tooling, not part of the project
+console.txt
+winnow_delta.diff
+launch_claude.sh
+start_engine.sh
+headers.txt
+/-createdate
+iconChunkSize
+Gemini.md
+.VSCodeCounter/
+*.user
+.env*
