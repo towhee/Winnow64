@@ -3208,7 +3208,10 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
     if (reply->error() != QNetworkReply::NoError) {
         if (silent) return;
         QString msg = "Could not check for updates:<br>" + reply->errorString();
-        if (status == 404)
+        const QString testTag = qEnvironmentVariable("WINNOW_UPDATE_TAG");
+        if (status == 404 && !testTag.isEmpty())
+            msg = "Release " + testTag + " was not found (WINNOW_UPDATE_TAG).";
+        else if (status == 404)
             msg = "No Winnow release has been published yet.";
         else if (status == 403 || status == 429)
             msg = "GitHub is limiting update checks right now.<br>Please try again later.";

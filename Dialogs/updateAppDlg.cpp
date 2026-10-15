@@ -56,8 +56,9 @@ void UpdateAppDlg::setInstallMode(bool inPlace, const QString &reason)
     if (inPlace) {
         ui->yesBtn->setText("Install");
         ui->descriptionLabel->setText(
-            "Install downloads the update, quits Winnow, installs the new version and "
-            "reopens Winnow.");
+            "Install downloads and checks the update, then quits Winnow and installs "
+            "the new version.  There is a short delay after Winnow quits before the "
+            "new version opens.");
     }
     else {
         ui->yesBtn->setText("Download");

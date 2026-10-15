@@ -15,6 +15,16 @@
 
 namespace AppInstaller {
 
+/* The relaunched Winnow inherits this process's environment (macOS `open` passes it
+   on, and so does the Windows installer).  Drop the update-test variables
+   (MW::checkForUpdate) first, or the new copy would offer the same test release again
+   at startup. */
+static void clearTestEnvironment()
+{
+    qunsetenv("WINNOW_UPDATE_TAG");
+    qunsetenv("WINNOW_UPDATE_AS_VERSION");
+}
+
 QString updateDir()
 {
     QString dir = QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
@@ -198,6 +208,7 @@ bool launchFinisher(const QString &installerPath, QString &error)
     f.write(kFinisherScript);
     f.close();
 
+    clearTestEnvironment();
     const QString log = QDir(updateDir()).filePath("install.log");
     const QString cmd = QString("/bin/sh \"$0\" \"$@\" >>\"%1\" 2>&1").arg(log);
     const QStringList args = {"-c", cmd, scriptPath,
@@ -228,6 +239,8 @@ bool prepare(const QString &, QString &)
 
 bool launchFinisher(const QString &installerPath, QString &error)
 {
+    clearTestEnvironment();
+
     /* ShellExecute rather than QProcess::startDetached (CreateProcess): the installer
        must elevate to write Program Files, and only ShellExecute raises the UAC prompt
        for an executable that asks for it. */
