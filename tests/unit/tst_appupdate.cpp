@@ -12,6 +12,7 @@ private slots:
     void compare();
     void parsesRelease();
     void missingPlatformAssetIsNotAnError();
+    void prereleaseOnlyWhenAllowed();
     void rejectsBadReleases_data();
     void rejectsBadReleases();
 };
@@ -95,6 +96,14 @@ void TstAppUpdate::missingPlatformAssetIsNotAnError()
     QVERIFY(AppUpdate::parseLatestRelease(json, r));
     QCOMPARE(r.version, QString("3.2"));
     QVERIFY(r.assetUrl.isEmpty());
+}
+
+void TstAppUpdate::prereleaseOnlyWhenAllowed()
+{
+    AppUpdate::Release r;
+    QVERIFY(!AppUpdate::parseLatestRelease(releaseJson("v3.1", true), r));
+    QVERIFY(AppUpdate::parseLatestRelease(releaseJson("v3.1", true), r, nullptr, true));
+    QCOMPARE(r.version, QString("3.1"));
 }
 
 void TstAppUpdate::rejectsBadReleases_data()

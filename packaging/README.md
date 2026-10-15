@@ -259,8 +259,20 @@ What this requires of a release:
 - Do not mark a release you want installed as a pre-release or leave it a draft;
   `/releases/latest` skips both. That is also the way to stage a release for
   testing without offering it.
-- To try the full update path against the current release, run Winnow with
-  `WINNOW_UPDATE_AS_VERSION=2.0` in the environment (it then treats itself as 2.0).
+- **Testing before a real release:** publish the build as a *pre-release* under a
+  throwaway tag (nobody's update check or the README link sees pre-releases), then
+  point a copy of Winnow at it:
+  ```sh
+  gh release create v3_beta-test --repo towhee/Winnow64 --prerelease \
+      --target "$(git rev-parse HEAD)" --title "Update test" --notes "Test only" \
+      out/DMG/Winnow3_beta.dmg
+  WINNOW_UPDATE_TAG=v3_beta-test WINNOW_UPDATE_AS_VERSION=2.0 \
+      /Applications/Winnow3_beta.app/Contents/MacOS/Winnow
+  ```
+  `WINNOW_UPDATE_TAG` checks that one tag (pre-releases allowed);
+  `WINNOW_UPDATE_AS_VERSION` makes the running copy pretend to be older. Delete the
+  test release and its tag afterwards:
+  `gh release delete v3_beta-test --repo towhee/Winnow64 --cleanup-tag`.
 - macOS in-place install needs Winnow in an `Applications` folder the user can
   write to; otherwise the DMG is downloaded and opened for a manual install.
 

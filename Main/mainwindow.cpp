@@ -3178,7 +3178,13 @@ void MW::checkForUpdate(bool silent)
                 this, &MW::onUpdateCheckReply);
     }
 
-    QNetworkRequest request{QUrl(AppUpdate::latestReleaseApiUrl())};
+    /* WINNOW_UPDATE_TAG=<tag> checks that one release instead of the latest -- including
+       a pre-release, which /releases/latest never returns -- so a test build can be
+       published as a pre-release and installed without offering it to anyone else.
+       Combine with WINNOW_UPDATE_AS_VERSION (onUpdateCheckReply) to force the offer. */
+    const QString testTag = qEnvironmentVariable("WINNOW_UPDATE_TAG");
+    QNetworkRequest request{QUrl(testTag.isEmpty() ? AppUpdate::latestReleaseApiUrl()
+                                                   : AppUpdate::releaseByTagApiUrl(testTag))};
     request.setRawHeader("Accept", "application/vnd.github+json");
     request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
     // GitHub rejects API requests without a User-Agent
@@ -3212,7 +3218,9 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
 
     AppUpdate::Release release;
     QString parseError;
-    if (!AppUpdate::parseLatestRelease(reply->readAll(), release, &parseError)) {
+    const bool allowPrerelease = !qEnvironmentVariable("WINNOW_UPDATE_TAG").isEmpty();
+    if (!AppUpdate::parseLatestRelease(reply->readAll(), release, &parseError,
+                                       allowPrerelease)) {
         if (!silent) G::popup->showPopup("Could not check for updates:<br>" + parseError, 3000);
         return;
     }

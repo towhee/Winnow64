@@ -28,6 +28,14 @@ inline QString latestReleaseApiUrl()
     return QString("https://api.github.com/repos/%1/releases/latest").arg(GITHUB_REPO);
 }
 
+/* One release by tag -- unlike /releases/latest this also returns a pre-release, which
+   is how a test build is checked (WINNOW_UPDATE_TAG, see MW::checkForUpdate) without
+   offering it to anyone else.  Drafts are not reachable without authentication. */
+inline QString releaseByTagApiUrl(const QString &tag)
+{
+    return QString("https://api.github.com/repos/%1/releases/tags/%2").arg(GITHUB_REPO, tag);
+}
+
 /*
     Version labels are WINNOW_VERSION_LABEL strings: a numeric part, optionally followed
     by a pre-release suffix ("3_beta", "3.1-rc2").  A leading "v" (the git tag) is
@@ -101,12 +109,14 @@ struct Release {
 };
 
 /*
-    Parses a /releases/latest response.  On failure returns false and sets *error to a
+    Parses a /releases/latest (or /releases/tags/<tag>) response.  A pre-release is
+    rejected unless allowPrerelease (the WINNOW_UPDATE_TAG test path).  On failure returns false and sets *error to a
     user-facing reason.  A release without an asset for this platform (the other
     platform's machine has not run menu G yet) is NOT an error: assetUrl is left empty
     and the caller treats the release as not yet available here.
 */
-inline bool parseLatestRelease(const QByteArray &json, Release &r, QString *error = nullptr)
+inline bool parseLatestRelease(const QByteArray &json, Release &r, QString *error = nullptr,
+                               bool allowPrerelease = false)
 {
     auto fail = [error](const QString &msg) { if (error) *error = msg; return false; };
 
@@ -115,7 +125,7 @@ inline bool parseLatestRelease(const QByteArray &json, Release &r, QString *erro
     if (pe.error != QJsonParseError::NoError || !doc.isObject())
         return fail("The release information could not be read.");
     const QJsonObject obj = doc.object();
-    if (obj.value("draft").toBool() || obj.value("prerelease").toBool())
+    if (obj.value("draft").toBool() || (obj.value("prerelease").toBool() && !allowPrerelease))
         return fail("The latest release is not a final release.");
 
     QString tag = obj.value("tag_name").toString().trimmed();
