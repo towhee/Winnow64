@@ -14,7 +14,7 @@ namespace G
 {
 
 // Rory version (expanded cache pref, focus stack pref, update default workspace)
-bool isRory = true;
+bool isRory = false;
 
 QSettings *settings;
 
