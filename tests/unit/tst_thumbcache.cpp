@@ -231,10 +231,11 @@ void tst_thumbcache::putReplacesRatherThanDuplicating()
     ThumbCache &t = ThumbCache::instance();
     const QString p = makeFile("e.jpg");
     const auto st = stampOf(p);
-    const QByteArray small = jpegOf(32, 32, Qt::red);
+    // not `small`: <windows.h> (via rpcndr.h) #defines small as char
+    const QByteArray little = jpegOf(32, 32, Qt::red);
     const QByteArray big = jpegOf(256, 256, Qt::blue);
 
-    t.put(p, small, 32, 32, st.first, st.second);
+    t.put(p, little, 32, 32, st.first, st.second);
     t.put(p, big, 256, 256, st.first, st.second);
     QCOMPARE(t.count(), 1);
     QCOMPARE(t.get(p, st.first, st.second), big);

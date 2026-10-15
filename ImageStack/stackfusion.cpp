@@ -198,7 +198,7 @@ bool StackFusion::fusePMax1(const QString &alignedFolderPath,
     // --- Compute multi-scale, contrast-normalized energy ---------------------
     for (int i = 0; i < n; ++i) {
         const QImage &img = stack[i];
-        QImage small = img.scaled(w / 2, h / 2, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+        QImage lowRes = img.scaled(w / 2, h / 2, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 
         for (int y = 1; y < h - 1; ++y) {
             const QRgb *prev = reinterpret_cast<const QRgb *>(img.scanLine(y - 1));
@@ -225,9 +225,9 @@ bool StackFusion::fusePMax1(const QString &alignedFolderPath,
                 sx = qBound(1, sx, w / 2 - 2);
                 sy = qBound(1, sy, h / 2 - 2);
 
-                const QRgb *sprev = reinterpret_cast<const QRgb *>(small.scanLine(sy - 1));
-                const QRgb *scurr = reinterpret_cast<const QRgb *>(small.scanLine(sy));
-                const QRgb *snext = reinterpret_cast<const QRgb *>(small.scanLine(sy + 1));
+                const QRgb *sprev = reinterpret_cast<const QRgb *>(lowRes.scanLine(sy - 1));
+                const QRgb *scurr = reinterpret_cast<const QRgb *>(lowRes.scanLine(sy));
+                const QRgb *snext = reinterpret_cast<const QRgb *>(lowRes.scanLine(sy + 1));
                 float gx2 = float(qGray(scurr[sx + 1]) - qGray(scurr[sx - 1]));
                 float gy2 = float(qGray(snext[sx]) - qGray(sprev[sx]));
                 float eCoarse = std::sqrt(gx2 * gx2 + gy2 * gy2);

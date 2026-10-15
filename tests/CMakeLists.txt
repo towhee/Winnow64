@@ -66,11 +66,27 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS
     ${CMAKE_SOURCE_DIR}/Dialogs
 )
 
-# Register a Qt Test executable that links the shared production closure.
-function(winnow_add_unit_test name)
-    add_executable(${name} ${ARGN} ${WINNOW_CORE_TEST_SOURCES})
-    target_include_directories(${name} PRIVATE ${WINNOW_TEST_INCLUDE_DIRS})
-    target_link_libraries(${name} PRIVATE
+# Link OpenCV into target, the same build the app links (see the OpenCV block in the
+# top-level CMakeLists). ARGN names the macOS libs; Windows has one combined "world" lib.
+function(winnow_test_link_opencv target scope)
+    if(APPLE)
+        target_include_directories(${target} ${scope}
+            ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+        target_link_directories(${target} ${scope} ${WINNOW_OPENCV_PREFIX}/lib)
+        target_link_libraries(${target} ${scope} ${ARGN})
+    elseif(WIN32)
+        target_include_directories(${target} ${scope}
+            ${LIB_DIR}/opencv/windows/build/include)
+        target_link_libraries(${target} ${scope}
+            ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+    endif()
+endfunction()
+
+# Settings every test-side target shares: includes, Qt, and on macOS the app's
+# `-include arm_acle.h` (some sources assume it).
+function(winnow_test_common target)
+    target_include_directories(${target} PUBLIC ${WINNOW_TEST_INCLUDE_DIRS})
+    target_link_libraries(${target} PUBLIC
         Qt6::Core
         Qt6::Widgets
         Qt6::Concurrent
@@ -78,9 +94,41 @@ function(winnow_add_unit_test name)
         Qt6::Sql
     )
     if(APPLE)
-        # Mirror the app's `-include arm_acle.h` (some sources assume it).
-        target_compile_options(${name} PRIVATE -include arm_acle.h)
+        target_compile_options(${target} PUBLIC -include arm_acle.h)
     endif()
+endfunction()
+
+# The shared closures are compiled ONCE into static libraries and linked by every test,
+# instead of being recompiled into each of ~70 executables. A static library contributes
+# only the objects a test actually references, so linking one a test does not need costs
+# nothing.
+#   winnow_test_core     -- WINNOW_CORE_TEST_SOURCES, linked by every test.
+#   winnow_test_color    -- the camera-profile / white-balance / output-transform closure
+#                           (Qt only, no OpenCV).
+#   winnow_test_develop  -- develop.cpp, which needs OpenCV; carries color + OpenCV.
+add_library(winnow_test_core STATIC ${WINNOW_CORE_TEST_SOURCES})
+winnow_test_common(winnow_test_core)
+
+add_library(winnow_test_color STATIC
+    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+winnow_test_common(winnow_test_color)
+target_link_libraries(winnow_test_color PUBLIC winnow_test_core)
+
+add_library(winnow_test_develop STATIC ${CMAKE_SOURCE_DIR}/Develop/develop.cpp)
+winnow_test_common(winnow_test_develop)
+target_link_libraries(winnow_test_develop PUBLIC winnow_test_color)
+winnow_test_link_opencv(winnow_test_develop PUBLIC opencv_core opencv_imgproc)
+
+# Register a Qt Test executable that links the shared production closure.
+function(winnow_add_unit_test name)
+    add_executable(${name} ${ARGN})
+    target_link_libraries(${name} PRIVATE winnow_test_core)
     add_test(NAME ${name} COMMAND ${name})
     # Headless: no display server required.
     set_tests_properties(${name} PROPERTIES
@@ -135,26 +183,10 @@ winnow_add_unit_test(tst_detailroi unit/tst_detailroi.cpp)
 # unit-tests the header-only Develop/localcontrast.h kernel.
 # develop.cpp now reaches CameraProfile (stage 0 is replaced by a camera profile when one
 # is selected), so every test that compiles it carries the profile + DCP closure.
-winnow_add_unit_test(tst_localcontrast unit/tst_localcontrast.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    # develop.cpp reaches OutputTransform::DisplayPosition: the tone regions are placed
-    # by handles drawn on the histogram, so their weights are evaluated on the display axis.
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
-if(APPLE)
-    target_include_directories(tst_localcontrast PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_localcontrast PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_localcontrast PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_localcontrast PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_localcontrast PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+# develop.cpp reaches OutputTransform::DisplayPosition: the tone regions are placed by
+# handles drawn on the histogram, so their weights are evaluated on the display axis.
+winnow_add_unit_test(tst_localcontrast unit/tst_localcontrast.cpp)
+target_link_libraries(tst_localcontrast PRIVATE winnow_test_develop)
 # tst_presetparams is the FIRST test of DevelopPresets::assignParam, which the docs call
 # "the easiest thing in Develop to get wrong" and which had no coverage at all. The hazard
 # it pins is specific to string fields: assignParam computes v.toFloat() up front and runs
@@ -178,33 +210,13 @@ winnow_add_unit_test(tst_maskedge unit/tst_maskedge.cpp)
 # the same extra link/include as tst_localcontrast rather than widening the shared
 # closure.
 winnow_add_unit_test(tst_maskhalo unit/tst_maskhalo.cpp)
-if(APPLE)
-    target_include_directories(tst_maskhalo PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_maskhalo PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_maskhalo PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_maskhalo PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_maskhalo PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_maskhalo PRIVATE opencv_core opencv_imgproc)
 # tst_skyrefine tests Utilities/skyrefine.h, the two-model sky matte behind Select Sky:
 # the calibration / region-gate / agreement rules on synthetic input, and the canopy matte
 # on a real photograph with the two models' real outputs (fixtures/sky/). Header-only,
 # OpenCV core + imgproc like tst_maskhalo; no model runs.
 winnow_add_unit_test(tst_skyrefine unit/tst_skyrefine.cpp)
-if(APPLE)
-    target_include_directories(tst_skyrefine PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_skyrefine PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_skyrefine PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_skyrefine PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_skyrefine PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_skyrefine PRIVATE opencv_core opencv_imgproc)
 # tst_visualaudit tests Utilities/visualaudit.cpp, the scoring behind Audit Keywords,
 # on synthetic embeddings with planted mistakes: a mislabel is caught with the right
 # alternative, a mislabelled burst is ONE finding, ancestors are never reported missing,
@@ -212,66 +224,26 @@ endif()
 # hidden. OpenCV core for the gemm/solve.
 winnow_add_unit_test(tst_visualaudit unit/tst_visualaudit.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/visualaudit.cpp)
-if(APPLE)
-    target_include_directories(tst_visualaudit PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_visualaudit PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_visualaudit PRIVATE opencv_core)
-elseif(WIN32)
-    target_include_directories(tst_visualaudit PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_visualaudit PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_visualaudit PRIVATE opencv_core)
 # tst_segmenter tests Utilities/segmenter.cpp, the Segmenter mask tool's post-processing:
 # a synthetic decoder answers SAM 2's point prompts for a scene of known shapes, and the
 # objects, their hierarchy, the gap rounds, the remainder and the saved outlines are
 # checked against it. No model runs, but segmenter.cpp links OpenCV DNN for the real one.
 winnow_add_unit_test(tst_segmenter unit/tst_segmenter.cpp
     ${CMAKE_SOURCE_DIR}/Utilities/segmenter.cpp)
-if(APPLE)
-    target_include_directories(tst_segmenter PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_segmenter PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_segmenter PRIVATE opencv_core opencv_imgproc opencv_dnn)
-elseif(WIN32)
-    target_include_directories(tst_segmenter PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_segmenter PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_segmenter PRIVATE opencv_core opencv_imgproc opencv_dnn)
 # tst_maskrefine tests Develop/maskrefine.h, the Refine Brush: a painted region in which
 # the folded mask is re-matted against the photo (Add / Remove / Fix Edge), on synthetic
 # scenes built to provoke the failures each rule was added for. Header-only, OpenCV core +
 # imgproc like tst_skyrefine (it builds on Utilities/skyrefine.h).
 winnow_add_unit_test(tst_maskrefine unit/tst_maskrefine.cpp)
-if(APPLE)
-    target_include_directories(tst_maskrefine PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_maskrefine PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_maskrefine PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_maskrefine PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_maskrefine PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_maskrefine PRIVATE opencv_core opencv_imgproc)
 # tst_lenscorrect tests Develop/lenscorrect.h -- lateral CA correction (radial R/B scale
 # estimated from the image) and defringe (edge colour pulled to the two-sided linear mix)
 # -- on synthetic scenes with known truth: a known shift recovered, clean colour edges left
 # alone, an axial fringe removed, clipped highlights untouched. OpenCV core + imgproc.
 winnow_add_unit_test(tst_lenscorrect unit/tst_lenscorrect.cpp)
-if(APPLE)
-    target_include_directories(tst_lenscorrect PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_lenscorrect PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_lenscorrect PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_lenscorrect PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_lenscorrect PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_lenscorrect PRIVATE opencv_core opencv_imgproc)
 # tst_lensprofile tests Develop/lensdb.cpp + Develop/lensprofile.h -- lensfun lens profile
 # correction (distortion, TCA, vignetting) -- against liblensfun's own answers
 # (unit/lensprofile_oracle.h, from fixtures/lensfun_oracle.py): the database loads the
@@ -280,17 +252,7 @@ endif()
 winnow_add_unit_test(tst_lensprofile unit/tst_lensprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/lensdb.cpp
     ${CMAKE_SOURCE_DIR}/Develop/LensDb/lensfun.qrc)
-if(APPLE)
-    target_include_directories(tst_lensprofile PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_lensprofile PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_lensprofile PRIVATE opencv_core)
-elseif(WIN32)
-    target_include_directories(tst_lensprofile PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_lensprofile PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_test_link_opencv(tst_lensprofile PRIVATE opencv_core)
 # tst_devpreview tests Cache/devpreviewcache.cpp, the on-disk cache of develop
 # previews (already in the shared closure above).
 winnow_add_unit_test(tst_devpreview unit/tst_devpreview.cpp)
@@ -307,8 +269,8 @@ winnow_add_unit_test(tst_fileops unit/tst_fileops.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/versions.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/xmp.cpp)
 # tst_whitebalance compiles Develop/whitebalance.cpp (depends only on workingimage.h).
-winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp)
+winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp)
+target_link_libraries(tst_whitebalance PRIVATE winnow_test_color)
 # tst_renderstack exercises the Develop scope compositor's interactive RESUME path, so it
 # compiles the real render closure (workingimagecache + develop + whitebalance +
 # outputtransform). That closure needs OpenCV (develop.cpp's blurs) -- the only unit test
@@ -316,103 +278,37 @@ winnow_add_unit_test(tst_whitebalance unit/tst_whitebalance.cpp
 # The camera-profile closure (store + matrix + DCP reader + TIFF walk) rides along because
 # the render path resolves a profile per render -- see attachProfile in workingimagecache.cpp.
 winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
-if(APPLE)
-    # Same prefix the app resolved (keg-only opencv@4 when present) -- see the OpenCV
-    # block in the top-level CMakeLists; a test linking a DIFFERENT OpenCV than the code
-    # under test is exactly the mismatch that strands protobuf/abseil at launch.
-    target_include_directories(tst_renderstack PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_renderstack PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_renderstack PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_renderstack PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_renderstack PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+    ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp)
+target_link_libraries(tst_renderstack PRIVATE winnow_test_develop)
 
 # tst_inputprofile guards Develop's stage 0 -- the camera-native -> working-space
 # conversion that RawColor stopped doing. Its central assertion is that the transform
 # folded into PointCoeffs::preMat equals applying the stages one at a time, since the
 # pipeline picks between those two routes depending on whether Denoise is active.
 # Same OpenCV wiring as tst_renderstack: it links develop.cpp, which uses cv::.
-winnow_add_unit_test(tst_inputprofile unit/tst_inputprofile.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
-if(APPLE)
-    target_include_directories(tst_inputprofile PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_inputprofile PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_inputprofile PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_inputprofile PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_inputprofile PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_add_unit_test(tst_inputprofile unit/tst_inputprofile.cpp)
+target_link_libraries(tst_inputprofile PRIVATE winnow_test_develop)
 
 # tst_outputtransform guards the 8-bit pack's transfer LUT -- an APPROXIMATION of the
 # per-pixel pow it replaced (see the TRANSFER LUT note in outputtransform.cpp), so the
 # accuracy bound it was accepted under has to be asserted somewhere. outputtransform.cpp
 # depends only on Qt, so no OpenCV closure is needed.
-winnow_add_unit_test(tst_outputtransform unit/tst_outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp)
+winnow_add_unit_test(tst_outputtransform unit/tst_outputtransform.cpp)
+target_link_libraries(tst_outputtransform PRIVATE winnow_test_color)
 
 # tonecurvedump is a CALIBRATION TOOL, not a test -- it asserts nothing and is deliberately
 # NOT registered with ctest (winnow_add_unit_test only builds the target; add_test is
 # separate). It dumps Winnow's tone operators as display-level curves so they can be fitted
 # against Lightroom's without a manual export per iteration. tst_toneregions is what
 # actually guards this behaviour.
-winnow_add_unit_test(tonecurvedump unit/tonecurvedump.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
-if(APPLE)
-    target_include_directories(tonecurvedump PRIVATE ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tonecurvedump PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tonecurvedump PRIVATE opencv_core opencv_imgproc)
-endif()
+winnow_add_unit_test(tonecurvedump unit/tonecurvedump.cpp)
+target_link_libraries(tonecurvedump PRIVATE winnow_test_develop)
 
 # developrender is a CALIBRATION TOOL like tonecurvedump: it renders a calibration dump
 # (a .wkg a Develop export writes when WINNOW_DUMP_WORKING is set) through Develop::Apply
-# with any params, for fitting tone operators against Lightroom. Built, never run by ctest.
-add_executable(developrender unit/developrender.cpp ${WINNOW_CORE_TEST_SOURCES}
-    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
-target_include_directories(developrender PRIVATE ${WINNOW_TEST_INCLUDE_DIRS})
-target_link_libraries(developrender PRIVATE
-    Qt6::Core Qt6::Widgets Qt6::Concurrent Qt6::Test Qt6::Sql)
-if(APPLE)
-    target_compile_options(developrender PRIVATE -include arm_acle.h)
-    target_include_directories(developrender PRIVATE ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(developrender PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(developrender PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(developrender PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(developrender PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+# with any params, for fitting tone operators against Lightroom. Built, not run by ctest.
+add_executable(developrender unit/developrender.cpp)
+target_link_libraries(developrender PRIVATE winnow_test_develop)
 
 # tst_toneregions is the characterization gate for the Basic panel's four tone controls
 # (blacks | shadows | highlights | whites). It pins the KIND of operator each one is --
@@ -421,39 +317,22 @@ endif()
 # constants those are tuned to, which are measured against Lightroom separately.
 # It renders through Develop::Apply + OutputTransform::ToImage, so it carries the same
 # develop.cpp + OpenCV closure as tst_inputprofile.
-winnow_add_unit_test(tst_toneregions unit/tst_toneregions.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/develop.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
-if(APPLE)
-    target_include_directories(tst_toneregions PRIVATE
-        ${WINNOW_OPENCV_PREFIX}/include/opencv4)
-    target_link_directories(tst_toneregions PRIVATE ${WINNOW_OPENCV_PREFIX}/lib)
-    target_link_libraries(tst_toneregions PRIVATE opencv_core opencv_imgproc)
-elseif(WIN32)
-    target_include_directories(tst_toneregions PRIVATE
-        ${LIB_DIR}/opencv/windows/build/include)
-    target_link_libraries(tst_toneregions PRIVATE
-        ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
-endif()
+winnow_add_unit_test(tst_toneregions unit/tst_toneregions.cpp)
+target_link_libraries(tst_toneregions PRIVATE winnow_test_develop)
 
 # tst_exiftags also compiles Metadata/exif.cpp (its only dependency is exif.h).
 winnow_add_unit_test(tst_exiftags  unit/tst_exiftags.cpp ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp)
 # tst_tiffwalk compiles ImageFormats/Raw/tiffwalk.cpp (Qt Core only -- it reads a QFile).
 # It pins TIFF type decoding in Reader::reals(), where an unnamed type falls to a silent
 # integer default: that is how DNG NoiseProfile (DOUBLE) reached PMRID as ~1e9.
-winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+winnow_add_unit_test(tst_tiffwalk  unit/tst_tiffwalk.cpp)
+target_link_libraries(tst_tiffwalk PRIVATE winnow_test_color)
 # tst_dcp compiles the DNG camera profile reader plus the TIFF walk it is built on (Qt
 # Core only). A DCP is a bag of optional tags and every way of misreading one is silent --
 # a table read with the wrong dims shears the hue axis, a swapped matrix family renders a
 # plausible cast -- so the parse is pinned against a synthetic profile built byte by byte.
-winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp)
+target_link_libraries(tst_dcp PRIVATE winnow_test_color)
 # tst_cameraprofile compiles the profile -> matrix step plus the DCP reader it consumes
 # and the white balance it shares an illuminant definition with. It pins the mired (not
 # kelvin) interpolation, the warm-first ordering, and the exposure anchor -- a camera
@@ -469,11 +348,8 @@ winnow_add_unit_test(tst_dcp  unit/tst_dcp.cpp
 # whole entry rests on), that a base carries none of the three creative pieces, and that
 # two generations get two distinctly-named rows. Opportunistic -- it asserts against the
 # profiles actually installed and skips when there are none.
-winnow_add_unit_test(tst_cameraprofilestore  unit/tst_cameraprofilestore.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+winnow_add_unit_test(tst_cameraprofilestore  unit/tst_cameraprofilestore.cpp)
+target_link_libraries(tst_cameraprofilestore PRIVATE winnow_test_color)
 
 # tst_cameramodel pins canonicalCameraModel -- the ONE model string both the generated
 # matrix table and a DCP's UniqueCameraModel are keyed on. Olympus, Fujifilm and
@@ -484,23 +360,14 @@ winnow_add_unit_test(tst_cameraprofilestore  unit/tst_cameraprofilestore.cpp
 # installed profiles when there are any -- which is the only form the original defect
 # would have shown up in. Hence the profile-store + DCP closure.
 winnow_add_unit_test(tst_cameramodel  unit/tst_cameramodel.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramatrix.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramatrix.cpp)
+target_link_libraries(tst_cameramodel PRIVATE winnow_test_color)
 
-winnow_add_unit_test(tst_huesatmap  unit/tst_huesatmap.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+winnow_add_unit_test(tst_huesatmap  unit/tst_huesatmap.cpp)
+target_link_libraries(tst_huesatmap PRIVATE winnow_test_color)
 
-winnow_add_unit_test(tst_cameraprofile  unit/tst_cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/whitebalance.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
+winnow_add_unit_test(tst_cameraprofile  unit/tst_cameraprofile.cpp)
+target_link_libraries(tst_cameraprofile PRIVATE winnow_test_color)
 # tst_heicboxes compiles the HEIC container walk plus the closure it reads Exif with
 # (ifd + exif + gps + metareport). It pins the two box-header defects that made every
 # iPhone HEIC look unreadable: a largesize (size == 1) mdat treated as "rest of file",
@@ -513,6 +380,14 @@ winnow_add_unit_test(tst_heicboxes unit/tst_heicboxes.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/gps.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/metareport.cpp)
+# On Windows Heic.cpp also carries the libheif decode path (Q_OS_WIN), so it links libheif
+# as the app does; the DLL beside the test is the one the app's post-build step copies.
+if(WIN32)
+    target_link_libraries(tst_heicboxes PRIVATE
+        $<IF:$<CONFIG:Debug>,
+            ${LIB_DIR}/libheif/debug/libheif.lib,
+            ${LIB_DIR}/libheif/release/libheif.lib>)
+endif()
 # tst_ifd compiles Metadata/ifd.cpp + metareport.cpp (ifd's link closure).
 winnow_add_unit_test(tst_ifd       unit/tst_ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp
@@ -907,4 +782,22 @@ if(TARGET Winnow)
             LABELS "soak"
         )
     endif()
+endif()
+
+# -----------------------------------------------------------------------------
+# Windows: let every test find its DLLs and Qt plugins. Windows has no rpath, and the
+# app's deploy step (windeployqt + third-party DLLs) fills only build/<preset>/app/<cfg>,
+# with the plugins the APP needs -- not Qt6Test, and not the offscreen platform the
+# headless tests ask for. So rather than copying runtimes beside each test, point the
+# tests at Qt's own bin/ and plugins/, and at the app dir for OpenCV, libheif, etc.
+# -----------------------------------------------------------------------------
+if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
+    get_target_property(_qtCoreDll Qt6::Core IMPORTED_LOCATION_RELEASE)
+    get_filename_component(_qtBin "${_qtCoreDll}" DIRECTORY)
+    get_filename_component(_qtPlugins "${_qtBin}/../plugins" ABSOLUTE)
+    get_directory_property(_winnowTests TESTS)
+    set_property(TEST ${_winnowTests} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+        "PATH=path_list_prepend:${CMAKE_BINARY_DIR}/app/$<CONFIG>"
+        "PATH=path_list_prepend:${_qtBin}"
+        "QT_PLUGIN_PATH=set:${_qtPlugins}")
 endif()

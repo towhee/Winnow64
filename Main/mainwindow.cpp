@@ -11631,15 +11631,15 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
        any component's signature -- the one thing the fold-prefix cache cannot see. */
     maskFoldCacheClear();
 
-    WorkingImage small = WorkingImageCache::downscaled(work, 1024);
-    correctGuideForLens(small, fPath, base);
-    int fw = small.width, fh = small.height;
+    WorkingImage lowRes = WorkingImageCache::downscaled(work, 1024);
+    correctGuideForLens(lowRes, fPath, base);
+    int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     /* Point Color's Visualize Range is a VIEW of the loupe; a range mask must threshold
        the real colours, not the greyed-out preview of them. */
     EditParams refBase = base;
     refBase.pointColorVisualize = -1;
-    const QImage img = developComposite(small, refBase, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, refBase, degrees, /*fullRes*/true, fw, fh);
     if (img.isNull()) return;
     const QImage rgb = img.convertToFormat(QImage::Format_ARGB32);
 
@@ -11693,11 +11693,11 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     }
     if (!subjectPredictor->isLoaded()) return;
 
-    WorkingImage small = WorkingImageCache::downscaled(work, 1024);
-    correctGuideForLens(small, fPath, base);
-    int fw = small.width, fh = small.height;
+    WorkingImage lowRes = WorkingImageCache::downscaled(work, 1024);
+    correctGuideForLens(lowRes, fPath, base);
+    int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, fw, fh);
     if (img.isNull()) return;
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
@@ -11741,14 +11741,14 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     if (!skyPredictor->isLoaded()) return;
 
     constexpr int kSkyMatteLongEdge = 4096;
-    WorkingImage small = WorkingImageCache::downscaled(work, kSkyMatteLongEdge);
-    correctGuideForLens(small, fPath, base);
-    int fw = small.width, fh = small.height;
+    WorkingImage lowRes = WorkingImageCache::downscaled(work, kSkyMatteLongEdge);
+    correctGuideForLens(lowRes, fPath, base);
+    int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
     if (G::popup) G::popup->showPopupNow("Finding the sky...", 0, true, 0.75);
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
-    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, fw, fh);
     auto r = std::make_shared<SkyMask::SkyRef>();
     const bool ok = !img.isNull() && skyPredictor->predict(img, r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
@@ -11781,11 +11781,11 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     }
     if (!depthPredictor->isLoaded()) return;
 
-    WorkingImage small = WorkingImageCache::downscaled(work, 1024);
-    correctGuideForLens(small, fPath, base);
-    int fw = small.width, fh = small.height;
+    WorkingImage lowRes = WorkingImageCache::downscaled(work, 1024);
+    correctGuideForLens(lowRes, fPath, base);
+    int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, fw, fh);
     if (img.isNull()) return;
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
@@ -12009,9 +12009,9 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     const int longEdge = std::clamp(q > 1e-6 ? int(std::lround(kEncode / q)) : kEncode,
                                     kEncode, std::min(kMaxGuideLong, std::max(nativeLong, kEncode)));
 
-    WorkingImage small = WorkingImageCache::downscaled(work, longEdge);
-    correctGuideForLens(small, fPath, base);
-    gw = small.width; gh = small.height;
+    WorkingImage lowRes = WorkingImageCache::downscaled(work, longEdge);
+    correctGuideForLens(lowRes, fPath, base);
+    gw = lowRes.width; gh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(gw, gh);
     if (gw <= 0 || gh <= 0) return false;
 
@@ -12022,7 +12022,7 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     crop = r.intersected(QRect(0, 0, gw, gh));
     if (crop.width() < 8 || crop.height() < 8) return false;
 
-    const QImage img = developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
+    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, gw, gh);
     if (img.isNull()) return false;
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
     const bool okEnc = objectMaskPredictor->setImage(crop == QRect(0, 0, gw, gh) ? img
@@ -12048,12 +12048,12 @@ QString MW::segmenterKey(const QString &fPath, int degrees) const
 QImage MW::segmenterGuideImage(const QString &fPath, const WorkingImage &work,
                                const EditParams &base, int degrees, int longEdge)
 {
-    WorkingImage small = WorkingImageCache::downscaled(work, longEdge);
-    correctGuideForLens(small, fPath, base);
-    int gw = small.width, gh = small.height;
+    WorkingImage lowRes = WorkingImageCache::downscaled(work, longEdge);
+    correctGuideForLens(lowRes, fPath, base);
+    int gw = lowRes.width, gh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(gw, gh);
     if (gw <= 0 || gh <= 0) return QImage();
-    return developComposite(small, base, degrees, /*fullRes*/true, gw, gh);
+    return developComposite(lowRes, base, degrees, /*fullRes*/true, gw, gh);
 }
 
 void MW::segmenterNote(const QString &panel, const QString &canvas)
@@ -12676,14 +12676,14 @@ void MW::updateMaskOverlayTint()
                             row[x] = qRgba(lineA, lineA, lineA, lineA);   // premultiplied white
                             continue;
                         }
-                        bool near = false;
-                        for (int dy = -1; dy <= 1 && !near; ++dy)
+                        bool nearEdge = false;
+                        for (int dy = -1; dy <= 1 && !nearEdge; ++dy)
                             for (int dx = -1; dx <= 1; ++dx) {
                                 const int nx = x + dx, ny = y + dy;
                                 if (nx < 0 || ny < 0 || nx >= bw || ny >= bh) continue;
-                                if (edge[size_t(ny) * bw + nx]) { near = true; break; }
+                                if (edge[size_t(ny) * bw + nx]) { nearEdge = true; break; }
                             }
-                        if (near) row[x] = qRgba(0, 0, 0, haloA);
+                        if (nearEdge) row[x] = qRgba(0, 0, 0, haloA);
                     }
                 }
             });

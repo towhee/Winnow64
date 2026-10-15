@@ -3344,22 +3344,22 @@ void ImageView::ensureAutoGuide()
     const double s = (longE > wantLong) ? wantLong / longE : 1.0;
     const int gw = std::max(1, int(fr.width()  * s));
     const int gh = std::max(1, int(fr.height() * s));
-    QImage small(gw, gh, QImage::Format_ARGB32);
+    QImage lowRes(gw, gh, QImage::Format_ARGB32);
     if (developGeom.isIdentity()) {
-        small = img.scaled(gw, gh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
+        lowRes = img.scaled(gw, gh, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
                    .convertToFormat(QImage::Format_ARGB32);
     }
     else {
         /* Displayed px -> mask norm -> guide px: the inverse of what the render's
            geometry stage did, so the guide lines up with the strokes' coords. */
-        small.fill(qRgb(128, 128, 128));
+        lowRes.fill(qRgb(128, 128, 128));
         QTransform toGuide;
         toGuide.scale(gw, gh);
         QTransform disp;                                    // pmItem px -> displayed px
         const QRectF br = pmItem->boundingRect();
         if (br.width() > 0 && img.width() > 0)
             disp.scale(br.width() / img.width(), br.height() / img.height());
-        QPainter p(&small);
+        QPainter p(&lowRes);
         p.setRenderHint(QPainter::SmoothPixmapTransform, true);
         p.setTransform(disp * maskItemToNorm() * toGuide);
         p.drawImage(0, 0, img);
@@ -3367,7 +3367,7 @@ void ImageView::ensureAutoGuide()
     auto g = std::make_shared<BrushStamp::Guide>();
     g->w = gw; g->h = gh; g->ycc.resize(size_t(gw) * gh * 3);
     for (int y = 0; y < gh; ++y) {
-        const QRgb *line = reinterpret_cast<const QRgb*>(small.constScanLine(y));
+        const QRgb *line = reinterpret_cast<const QRgb*>(lowRes.constScanLine(y));
         uchar *out = g->ycc.data() + size_t(y) * gw * 3;
         for (int x = 0; x < gw; ++x, out += 3) {
             const QRgb p = line[x];

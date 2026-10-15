@@ -331,8 +331,8 @@ inline void defringe(cv::Mat &rgb, float purple, float green, float scale = 1.0f
         float *ep = edge.ptr<float>(y);
         for (int x = 0; x < w; ++x) ep[x] = smoothstep(3.0f * scale, 8.0f * scale, gp[x]);
     });
-    cv::Mat near;
-    cv::dilate(edge, near, cv::getStructuringElement(cv::MORPH_ELLIPSE,
+    cv::Mat nearby;
+    cv::dilate(edge, nearby, cv::getStructuringElement(cv::MORPH_ELLIPSE,
                                                      cv::Size(2 * r + 1, 2 * r + 1)));
     /* The gradient direction, carried into the band from the nearest strong edge. */
     const cv::Mat wdir = edge.mul(g);
@@ -347,7 +347,7 @@ inline void defringe(cv::Mat &rgb, float purple, float green, float scale = 1.0f
     /* Pass 1: every pixel near an edge -- its two sides and its predicted LINEAR mix. */
     std::vector<cv::Point> pts;
     for (int y = 0; y < h; ++y) {
-        const float *np_ = near.ptr<float>(y);
+        const float *np_ = nearby.ptr<float>(y);
         for (int x = 0; x < w; ++x) if (np_[x] > 0.05f) pts.emplace_back(x, y);
     }
     const int n = int(pts.size());
@@ -390,7 +390,7 @@ inline void defringe(cv::Mat &rgb, float purple, float green, float scale = 1.0f
             const float dev = std::hypot(devA, devB);
             const float hdev = std::fmod(float(std::atan2(devB, devA) * 180.0 / CV_PI)
                                          + 360.0f, 360.0f);
-            const float gate = near.at<float>(y, x)
+            const float gate = nearby.at<float>(y, x)
                                * smoothstep(6.0f, 15.0f, std::abs(dLs[size_t(i)]))
                                * smoothstep(1.5f, 5.0f, dev);
             const float k = std::clamp(gate * (purple * hueWeight(hdev, kPurpleBands)

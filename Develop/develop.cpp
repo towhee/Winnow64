@@ -743,10 +743,10 @@ inline cv::Mat gaussianBase(const cv::Mat &Yp, float sigmaFrac, int w, int h)
     const int kDown = qBound(1, static_cast<int>(sigma / 3.0), 4);
     cv::Mat base;
     if (kDown > 1 && w >= kDown * 2 && h >= kDown * 2) {
-        cv::Mat small;
-        cv::resize(Yp, small, cv::Size(w / kDown, h / kDown), 0, 0, cv::INTER_AREA);
-        cv::GaussianBlur(small, small, cv::Size(0, 0), sigma / kDown);
-        cv::resize(small, base, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
+        cv::Mat lowRes;
+        cv::resize(Yp, lowRes, cv::Size(w / kDown, h / kDown), 0, 0, cv::INTER_AREA);
+        cv::GaussianBlur(lowRes, lowRes, cv::Size(0, 0), sigma / kDown);
+        cv::resize(lowRes, base, cv::Size(w, h), 0, 0, cv::INTER_LINEAR);
     } else {
         cv::GaussianBlur(Yp, base, cv::Size(0, 0), sigma);
     }

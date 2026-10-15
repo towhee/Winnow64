@@ -414,13 +414,13 @@ inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, dou
     static thread_local std::vector<float> nearest;
     nearest.assign(ns, std::numeric_limits<float>::max());
     for (int j = 1; j < kClusters; ++j) {
-        size_t far = 0;
+        size_t farI = 0;   // not `far`: <windows.h> #defines far (and near) to nothing
         float farD = -1.0f;
         for (size_t i = 0; i < ns; ++i) {
             nearest[i] = std::min(nearest[i], d2(fv(sIdx[i]), C[j - 1]));
-            if (nearest[i] > farD) { farD = nearest[i]; far = i; }
+            if (nearest[i] > farD) { farD = nearest[i]; farI = i; }
         }
-        std::copy(fv(sIdx[far]), fv(sIdx[far]) + kF, C[j]);
+        std::copy(fv(sIdx[farI]), fv(sIdx[farI]) + kF, C[j]);
     }
     static thread_local std::vector<int> lab;
     lab.assign(ns, 0);

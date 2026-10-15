@@ -198,13 +198,14 @@ inline bool nearestMaskColour(const std::vector<float> &m, const cv::Mat &rgb, i
     stroke over snow only, while a saturated test sky put real haze at 0.41-0.51. It
     cannot tell shaded snow from hazy sky; the user's stroke is the semantic cue.)
 
-    far   = foreground (CV_8U, the box), clear = clearly mask-like (seeds the local S).
+    distant = foreground (CV_8U, the box), clear = clearly mask-like (seeds the local S).
+    (Not `far`/`near`: <windows.h> #defines both to nothing.)
     k-means is seeded from a fixed RNG state: the render caches need a pure function.
 */
 constexpr int   kClusters = 4;
 constexpr float kMerge = 0.15f, kGuard = 0.6f;
 inline bool splitUnderStroke(const cv::Mat &ic, const cv::Mat &under, const cv::Vec3f &s0,
-                             cv::Mat &far, cv::Mat &clear)
+                             cv::Mat &distant, cv::Mat &clear)
 {
     const int n = cv::countNonZero(under);
     if (n < 50) return false;
@@ -238,10 +239,10 @@ inline bool splitUnderStroke(const cv::Mat &ic, const cv::Mat &under, const cv::
         (j == best || cv::norm(centre(j) - centre(best)) < kMerge ? mask : other)
             .push_back(centre(j));
 
-    far.create(ic.size(), CV_8U); clear.create(ic.size(), CV_8U);
+    distant.create(ic.size(), CV_8U); clear.create(ic.size(), CV_8U);
     forRows(ic.rows, [&](int y) {
         const cv::Vec3f *ip = ic.ptr<cv::Vec3f>(y);
-        uchar *fp = far.ptr<uchar>(y), *cp = clear.ptr<uchar>(y);
+        uchar *fp = distant.ptr<uchar>(y), *cp = clear.ptr<uchar>(y);
         for (int x = 0; x < ic.cols; ++x) {
             const cv::Vec3f c = chroma(ip[x]);
             float dm = 1e9f, dn = 1e9f;
@@ -334,14 +335,14 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
                    one bin) just past the cut and removed it -- tst_maskrefine caught it. */
                 tauA = std::max(tauA, float((th + 1.0) / 255.0) * mx);
             }
-            const cv::Mat far = dist > tauA;
+            const cv::Mat distant = dist > tauA;
             int nF = 0;
-            const cv::Mat F = fill(ic, toF(inside & (rc > 0.5f) & far), nF);
+            const cv::Mat F = fill(ic, toF(inside & (rc > 0.5f) & distant), nF);
             if (nF < 20) {
                 result = mc.clone();                    // all of it IS mask colour
             }
             else {
-                const cv::Mat a = matte(ic, Sref, F, ~far, L, /*decon*/false);
+                const cv::Mat a = matte(ic, Sref, F, ~distant, L, /*decon*/false);
                 cv::min(mc, a, result);
             }
         }
@@ -371,8 +372,8 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
         }
         if (!haveS) cv::max(mc, rc, result);             // empty mask: plain add
         else {
-            cv::Mat far, clear;
-            if (!splitUnderStroke(ic, outside & (rc > 0.5f), s0, far, clear)) {
+            cv::Mat distant, clear;
+            if (!splitUnderStroke(ic, outside & (rc > 0.5f), s0, distant, clear)) {
                 result = mc.clone();                     // nothing mask-like under it
             }
             else {
@@ -380,10 +381,10 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
                    pixels under the stroke -- the hole's own sky, not the reference. */
                 int nS2 = 0, nF = 0;
                 const cv::Mat S2 = fill(ic, toF(inside | (outside & (rc > 0.5f) & clear)), nS2);
-                const cv::Mat F = fill(ic, toF(outside & far), nF);
+                const cv::Mat F = fill(ic, toF(outside & distant), nF);
                 cv::Mat a;
-                if (nF < 20) toF(~far).copyTo(a);        // nothing unlike S: lookalikes
-                else         a = matte(ic, S2, F, ~far, L, /*decon*/true);
+                if (nF < 20) toF(~distant).copyTo(a);        // nothing unlike S: lookalikes
+                else         a = matte(ic, S2, F, ~distant, L, /*decon*/true);
                 cv::max(mc, a, result);
             }
         }

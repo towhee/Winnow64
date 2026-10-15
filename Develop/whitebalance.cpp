@@ -1,6 +1,7 @@
 #include "Develop/whitebalance.h"
 #include "Develop/colorspace.h"
 #include <cmath>
+#include <numbers>
 #include <algorithm>
 #include <vector>
 
@@ -406,8 +407,9 @@ SkinPick solveSkin(const CameraColor &cam, float r, float g, float b,
 
     /* Signed angle from the skin direction, wrapped to [-180, 180]. */
     double err = std::atan2(gr, w) - th;
-    while (err >  M_PI) err -= 2.0 * M_PI;
-    while (err < -M_PI) err += 2.0 * M_PI;
+    // std::numbers::pi, not M_PI: MSVC needs _USE_MATH_DEFINES for that
+    while (err >  std::numbers::pi) err -= 2.0 * std::numbers::pi;
+    while (err < -std::numbers::pi) err += 2.0 * std::numbers::pi;
     const double errDeg = std::fabs(err) * 57.29577951308232;
     if (hueErrorDeg) *hueErrorDeg = static_cast<float>(errDeg);
 

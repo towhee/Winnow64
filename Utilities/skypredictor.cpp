@@ -33,14 +33,14 @@ cv::Mat blob(const cv::Mat &rgb, int sz)
 {
     static const float mean[3] = {0.485f, 0.456f, 0.406f};
     static const float istd[3] = {1.0f / 0.229f, 1.0f / 0.224f, 1.0f / 0.225f};
-    cv::Mat small;
-    cv::resize(rgb, small, cv::Size(sz, sz), 0, 0, cv::INTER_AREA);
+    cv::Mat lowRes;
+    cv::resize(rgb, lowRes, cv::Size(sz, sz), 0, 0, cv::INTER_AREA);
     const int dims[4] = {1, 3, sz, sz};
     cv::Mat b(4, dims, CV_32F);
     float *o = b.ptr<float>();
     const size_t plane = size_t(sz) * sz;
     for (int y = 0; y < sz; ++y) {
-        const cv::Vec3f *p = small.ptr<cv::Vec3f>(y);
+        const cv::Vec3f *p = lowRes.ptr<cv::Vec3f>(y);
         for (int x = 0; x < sz; ++x)
             for (int c = 0; c < 3; ++c)
                 o[c * plane + size_t(y) * sz + x] = (p[x][c] - mean[c]) * istd[c];

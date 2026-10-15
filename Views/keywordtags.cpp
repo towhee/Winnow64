@@ -356,7 +356,7 @@ void KeywordTags::fillCompletions(const QList<const VocabNode *> &nodes)
 
 QList<const VocabNode *> KeywordTags::similarNodes(const QString &text) const
 {
-    QList<const VocabNode *> equal, near;
+    QList<const VocabNode *> equal, nearMatch;
     const QString t = keywordFold(text);
     if (t.isEmpty()) return {};
     /*  The whole list, not KeywordVocab::completions: that matches PREFIXES, and a stray
@@ -379,7 +379,7 @@ QList<const VocabNode *> KeywordTags::similarNodes(const QString &text) const
                 for (const QString &syn : n->synonyms)
                     score = qMax(score, resembles(syn));
                 if (score == 2) equal << n;
-                else if (score == 1) near << n;
+                else if (score == 1) nearMatch << n;
             }
             walk(idx);
         }
@@ -391,8 +391,8 @@ QList<const VocabNode *> KeywordTags::similarNodes(const QString &text) const
         return a->path.compare(b->path, Qt::CaseInsensitive) < 0;
     };
     std::stable_sort(equal.begin(), equal.end(), byDepth);
-    std::stable_sort(near.begin(), near.end(), byDepth);
-    return (equal + near).mid(0, 40);
+    std::stable_sort(nearMatch.begin(), nearMatch.end(), byDepth);
+    return (equal + nearMatch).mid(0, 40);
 }
 
 void KeywordTags::startReplace(const QString &unfiledPath)

@@ -403,37 +403,37 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
             for (int x = 0; x < qs.width; ++x) { sums[lp[x]] += fp[x]; ++cnts[lp[x]]; }
         }
         std::vector<float> keep(n);
-        std::vector<char> small(n);
+        std::vector<char> minor(n);
         const double total = double(qs.area());
         for (int k = 0; k < n; ++k) {
             keep[k] = smoothstep(0.2f, 0.3f, float(sums[k] / std::max<long long>(cnts[k], 1)));
-            small[k] = cnts[k] < 0.01 * total;
+            minor[k] = cnts[k] < 0.01 * total;
         }
         keep[0] = 0.0f;
-        small[0] = 0;
+        minor[0] = 0;
         cv::Mat bigKept(qs, CV_8U);
         for (int y = 0; y < qs.height; ++y) {
             const int *lp = lab.ptr<int>(y);
             uchar *bp = bigKept.ptr<uchar>(y);
             for (int x = 0; x < qs.width; ++x)
-                bp[x] = (!small[lp[x]] && keep[lp[x]] > 0.5f) ? 1 : 0;
+                bp[x] = (!minor[lp[x]] && keep[lp[x]] > 0.5f) ? 1 : 0;
         }
-        cv::Mat near;
-        cv::dilate(bigKept, near, ellipse(qs.width / 10));
+        cv::Mat nearby;
+        cv::dilate(bigKept, nearby, ellipse(qs.width / 10));
         std::vector<char> nearHit(n, 0);
         for (int y = 0; y < qs.height; ++y) {
             const int *lp = lab.ptr<int>(y);
-            const uchar *np = near.ptr<uchar>(y);
+            const uchar *np = nearby.ptr<uchar>(y);
             for (int x = 0; x < qs.width; ++x) if (np[x]) nearHit[lp[x]] = 1;
         }
-        for (int k = 1; k < n; ++k) if (small[k] && nearHit[k]) keep[k] = 1.0f;
+        for (int k = 1; k < n; ++k) if (minor[k] && nearHit[k]) keep[k] = 1.0f;
         for (int y = 0; y < qs.height; ++y) {
             const int *lp = lab.ptr<int>(y);
             float *gp = gsmall.ptr<float>(y);
             uchar *sp = smallKept.ptr<uchar>(y);
             for (int x = 0; x < qs.width; ++x) {
                 gp[x] = keep[lp[x]];
-                sp[x] = (small[lp[x]] && keep[lp[x]] > 0.5f) ? 1 : 0;
+                sp[x] = (minor[lp[x]] && keep[lp[x]] > 0.5f) ? 1 : 0;
             }
         }
     }
@@ -495,8 +495,8 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
 
     /* Step 5: local colour models at quarter resolution, from eroded confident sets so
        mixed edge pixels cannot pollute them. */
-    cv::Mat small, ws, wf;
-    cv::resize(rgb, small, qs, 0, 0, cv::INTER_AREA);
+    cv::Mat lowRes, ws, wf;
+    cv::resize(rgb, lowRes, qs, 0, 0, cv::INTER_AREA);
     cv::resize(skyC, ws, qs, 0, 0, cv::INTER_AREA);
     cv::resize(fgC, wf, qs, 0, 0, cv::INTER_AREA);
     cv::erode(ws, ws, ellipse(2));
@@ -505,8 +505,8 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
     cv::threshold(ws, wsB, 0.99, 1.0, cv::THRESH_BINARY);
     cv::threshold(wf, wfB, 0.99, 1.0, cv::THRESH_BINARY);
     cv::Mat Sc, Fc;
-    cv::resize(pushPull(small, wsB), Sc, full, 0, 0, cv::INTER_LINEAR);
-    cv::resize(pushPull(small, wfB), Fc, full, 0, 0, cv::INTER_LINEAR);
+    cv::resize(pushPull(lowRes, wsB), Sc, full, 0, 0, cv::INTER_LINEAR);
+    cv::resize(pushPull(lowRes, wfB), Fc, full, 0, 0, cv::INTER_LINEAR);
 
     /* Step 4: a disputed pixel falls to the lower model only where it looks unlike the
        nearby sky. */
@@ -562,7 +562,7 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
         cv::resize(Fc, Fq, qs, 0, 0, cv::INTER_AREA);
         cv::Mat tq(qs, CV_32F), rq(qs, CV_32F);
         for (int y = 0; y < qs.height; ++y) {
-            const cv::Vec3f *ip = small.ptr<cv::Vec3f>(y), *dp = dq.ptr<cv::Vec3f>(y),
+            const cv::Vec3f *ip = lowRes.ptr<cv::Vec3f>(y), *dp = dq.ptr<cv::Vec3f>(y),
                             *fp = Fq.ptr<cv::Vec3f>(y);
             float *tp = tq.ptr<float>(y), *rp = rq.ptr<float>(y);
             for (int x = 0; x < qs.width; ++x) {

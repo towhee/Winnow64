@@ -153,9 +153,9 @@ QImage CropTransform::rectifyPerspective(const QImage &src, const QPointF quad[4
     const double s = std::min(1.0, double(kMaxSearch) / std::max(outW, outH));
     cv::Rect best;
     if (s < 1.0) {
-        cv::Mat small;
-        cv::resize(mask, small, cv::Size(), s, s, cv::INTER_NEAREST);
-        const cv::Rect r = largestValidRect(small);
+        cv::Mat lowRes;
+        cv::resize(mask, lowRes, cv::Size(), s, s, cv::INTER_NEAREST);
+        const cv::Rect r = largestValidRect(lowRes);
         best = cv::Rect(int(r.x / s), int(r.y / s),
                         int(r.width / s), int(r.height / s));
     } else {
