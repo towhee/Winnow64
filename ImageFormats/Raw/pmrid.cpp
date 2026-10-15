@@ -342,7 +342,13 @@ static InferenceSession *SharedSession()
         session = std::make_unique<InferenceSession>(
             path, InferenceDevice::GPU, compileCacheDir(),
             FixedDims{{"H", kTile}, {"W", kTile}});
-        if (!session->IsLoaded())
+        /*  Say WHICH: a build without ONNX Runtime (WINNOW_ENABLE_ORT=OFF, or the
+            runtime not vendored) loads nothing, and blaming the model file sent the
+            reader looking for a file that was there all along. */
+        if (!InferenceSession::BackendCompiledIn())
+            qWarning("PMRID: built without ONNX Runtime (WINNOW_ENABLE_ORT) -- "
+                     "raw denoise disabled");
+        else if (!session->IsLoaded())
             qWarning("PMRID: %s not found or failed to load at %s (raw denoise disabled)",
                      kModelFile, path.toUtf8().constData());
         else if (G::isLogger)

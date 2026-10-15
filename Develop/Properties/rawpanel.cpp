@@ -162,12 +162,21 @@ void RawPanel::buildUi()
     rb->setSpacing(4);
     bl->addWidget(rawBlock);
 
+    /* "Render using": its rule and row, hidden together when there is only one choice
+       (off macOS: Winnow alone) -- see rebuildEngineCombo. */
+    engineBlock = new QWidget(rawBlock);
+    engineBlock->setAttribute(Qt::WA_TranslucentBackground);
+    QVBoxLayout *eb = new QVBoxLayout(engineBlock);
+    eb->setContentsMargins(0, 0, 0, 0);
+    eb->setSpacing(4);
+    rb->addWidget(engineBlock);
+
     /* Rule between the Edit row and "Render using". Inside rawBlock so it hides with
        the block on Embedded Preview rather than dangling under the Edit row. */
-    rb->addWidget(makeGroupRule(rawBlock));
+    eb->addWidget(makeGroupRule(engineBlock));
 
     /* Demosaic engine. */
-    QWidget *demRow = new QWidget(rawBlock);
+    QWidget *demRow = new QWidget(engineBlock);
     demRow->setAttribute(Qt::WA_TranslucentBackground);
     QHBoxLayout *dl = new QHBoxLayout(demRow);
     dl->setContentsMargins(10, 0, 10, 0);
@@ -175,10 +184,15 @@ void RawPanel::buildUi()
     QLabel *demLbl = new QLabel(tr("Render using"), demRow);
     demLbl->setStyleSheet(capCss);
     engineCombo = new QComboBox(demRow);
+#ifdef Q_OS_MAC
     engineCombo->setToolTip("Which decoder turns this raw file into a picture: Apple's, "
                             "or Winnow's own. Saved with this image's edits, so each "
                             "image -- and each version -- keeps its own. Images you have "
                             "not set follow the default in Preferences.");
+#else
+    engineCombo->setToolTip("The decoder that turns this raw file into a picture. "
+                            "Apple's decoder is only available on macOS.");
+#endif
     rebuildEngineCombo();
     /*  The TOP Apple entry means "newest" (pin 0), not "this number": it keeps following
         OS updates. A lower entry pins that version. Either is THIS IMAGE's choice, kept
@@ -190,7 +204,7 @@ void RawPanel::buildUi()
     });
     dl->addWidget(demLbl);
     dl->addWidget(engineCombo, 1);
-    rb->addWidget(demRow);
+    eb->addWidget(demRow);
 
     /* Apple block: shown only while an Apple decoder renders -- the counterpart of the
        Winnow-only denoise block below. A rule, then "View cameras supported". */
@@ -404,15 +418,15 @@ void RawPanel::rebuildEngineCombo()
     The selection is the version this image's choice picks from its list
     (DevelopProperties::syncAppleDecoderVersions), which differs from the pin when the
     image does not support the pinned version.
+
+    Off macOS there is no Apple decoder, so the list is Winnow alone (RawRender::resolve
+    already renders a recipe that names Apple with Winnow there).
 */
     if (!engineCombo) return;
     QSignalBlocker b(engineCombo);
     engineCombo->clear();
 #ifdef Q_OS_MAC
     const QString appleName = tr("Apple Raw");
-#else
-    const QString appleName = tr("Apple");
-#endif
     if (appleVersions.isEmpty()) {
         engineCombo->addItem(appleName, 0);
         engineCombo->setItemData(0, tr("Apple's decoder. Checking which versions "
@@ -428,15 +442,20 @@ void RawPanel::rebuildEngineCombo()
             : tr("Apple's decoder version %1 for this image (if the image does not "
                  "support it, the newest version it does support).").arg(v), Qt::ToolTipRole);
     }
+#endif
     engineCombo->addItem(tr("Winnow"), -1);
 
     int sel = engineCombo->count() - 1;                 // Winnow
+#ifdef Q_OS_MAC
     if (engineApple) {
         sel = 0;
         const int at = engineCombo->findData(appleUsed);
         if (appleUsed > 0 && at >= 0) sel = at;
     }
+#endif
     engineCombo->setCurrentIndex(sel);
+    // nothing to choose (off macOS: Winnow alone): no "Render using" row
+    if (engineBlock) engineBlock->setVisible(engineCombo->count() > 1);
 }
 
 void RawPanel::setEngine(bool apple)

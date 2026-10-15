@@ -100,7 +100,8 @@
         "rhs": "Windows"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Debug"
+        "CMAKE_BUILD_TYPE": "Debug",
+        "WINNOW_ENABLE_ORT": "ON"
       }
     },
     {
@@ -114,7 +115,8 @@
         "rhs": "Windows"
       },
       "cacheVariables": {
-        "CMAKE_BUILD_TYPE": "Release"
+        "CMAKE_BUILD_TYPE": "Release",
+        "WINNOW_ENABLE_ORT": "ON"
       }
     }
   ],

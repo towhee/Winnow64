@@ -99,6 +99,7 @@ private:
     QRadioButton *rawRadio     = nullptr;
     QRadioButton *prevRadio    = nullptr;
     QWidget      *rawBlock     = nullptr;         // Demosaic + Denoise (Embedded hides)
+    QWidget      *engineBlock  = nullptr;         // rule + "Render using" row
     QComboBox    *engineCombo  = nullptr;
     QList<int>    appleVersions;                  // this image's, newest first
     int           appleUsed    = 0;               // the version its choice picks
