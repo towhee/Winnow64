@@ -68,8 +68,9 @@ public:
     std::atomic<quint64> readsFailedCount{0};      // terminal failure (Meta/Icon/MetaIconFailed)
     std::atomic<quint64> redosTriggeredCount{0};
     std::atomic<quint64> dispatchCycleCount{0};
-    /* PROBE: dispatch calls that returned on abort or a suspended proxy. That return
-       leaves the reader's cycling flag set, and dispatchReaders skips cycling readers. */
+    /* PROBE: dispatch calls dropped on abort. That return leaves the reader's cycling
+       flag set until dispatchFinished or initialize resets it. A suspended proxy no longer
+       counts here: dispatch waits it out and retries. */
     std::atomic<quint64> suspendedReturnCount{0};
 
     /* Phase-2 perf probe (gated by G::isPerfProbe). Single-threaded on metaReadThread, so

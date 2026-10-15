@@ -1828,17 +1828,32 @@ void MetaRead::dispatch(int id, bool isReturning)
     // terse pointer to readers[id]
     r = readers[id];
 
-    if (abort || dm->sf->isSuspended()) {
-        /*  PROBE: a RETURNING reader dropped here is never processed -- its row stays in
-            rowsReading (needToRead then answers "already reading" until the instance
-            changes) and cycling[id] stays true. Prime suspect for the blank-thumbnail
-            row; see MW::checkBlankRows. */
+    if (abort) {
+        /*  The rows this return leaves in rowsReading are released by the next
+            setStartRow (releaseOrphanedReads "after abort"); the cycling flags by
+            dispatchFinished or the next initialize. */
         if (isReturning)
             RowTrail::note(r->fPathSnapshot(), r->dmRow, "MetaRead return IGNORED",
-                           QString("abort %1 sfSuspended %2 reader %3")
-                               .arg(bool(abort)).arg(dm->sf->isSuspended()).arg(id));
+                           QString("abort reader %1").arg(id));
         r->status = Reader::Status::Ready;
         suspendedReturnCount.fetch_add(1, std::memory_order_relaxed);
+        return;
+    }
+
+    /*  A SUSPENDED PROXY IS A WAIT, NOT A DROP. Picking, rating and labelling suspend
+        the filter proxy for a moment (MW::togglePick, setRating, setColorClass). This
+        used to return like the abort above: the returning reader was never processed,
+        so its row stayed in rowsReading and cycling[id] stayed true -- and
+        dispatchReaders never dispatches a cycling reader again. Every pick that landed
+        on a returning reader retired one reader for the rest of the instance. Confirmed
+        2026-10-15 culling a 1,670-image card with a filter on: suspendedReturns = 18 =
+        readerCount, cycling all set, nothing pending, and no icon past the current row.
+        Retry like the gates below: nothing has been processed or marked yet, so the
+        wait loses no work, and isReturning is kept so the result is still processed. */
+    if (dm->sf->isSuspended()) {
+        QTimer::singleShot(20, this, [this, id, isReturning]() {
+            if (!abort) dispatch(id, isReturning);
+        });
         return;
     }
 
