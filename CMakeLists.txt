@@ -842,7 +842,9 @@ set(WINNOW_FORMS
 source_group("UI" FILES ${WINNOW_FORMS})
 
 # lensfun's lens database (Develop/LensDb, CC BY-SA), compiled in as :/lensfun/*.xml.
-set(WINNOW_RESOURCES winnow.qrc Develop/LensDb/lensfun.qrc)
+# LICENSE, THIRD_PARTY_NOTICES.md and licenses/*, compiled in as :/licenses/* so the
+# About dialog can show them and every build carries its license texts.
+set(WINNOW_RESOURCES winnow.qrc Develop/LensDb/lensfun.qrc licenses/licenses.qrc)
 
 # -----------------------------------------------------------------------------
 # Notes folder — listed so it shows up in the IDE project tree.

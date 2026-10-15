@@ -27,6 +27,7 @@ private slots:
     void on_okButton_clicked();
     void on_email_linkActivated(const QString &link);
     void on_webSite_linkActivated(const QString &link);
+    void on_license_linkActivated(const QString &link);
 
 private:
     Ui::About *ui;

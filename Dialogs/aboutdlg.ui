@@ -367,7 +367,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Winnow is licensed under the GNU General Public License version 3</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Winnow is licensed under the GNU General Public License version 3 only.&amp;nbsp;&amp;nbsp;&lt;a href=&quot;licenses&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#e5e5e5;&quot;&gt;Third-party licenses&lt;/span&gt;&lt;/a&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="alignment">
           <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

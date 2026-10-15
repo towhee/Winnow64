@@ -1,0 +1,15 @@
+=head1 AUTHOR
+
+Copyright 2003-2022, Phil Harvey
+
+This library is free software; you can redistribute it and/or modify it
+under the same terms as Perl itself.
+
+=head1 ACKNOWLEDGEMENTS
+
+Many people have helped in the development of ExifTool through their bug
+reports, comments and suggestions, and/or additions to the code.  See the
+ACKNOWLEDGEMENTS in the individual Image::ExifTool modules and in
+html/index.html of the Image::ExifTool distribution package for a list of
+people who have contributed to this project.
+

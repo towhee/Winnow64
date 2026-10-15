@@ -123,3 +123,13 @@ Report bugs and request features on
 [GitHub Issues](https://github.com/towhee/Winnow64/issues).
 
 More information: [winnow.ca](http://winnow.ca)
+
+## License
+
+Winnow is free software, licensed under the
+[GNU General Public License, version 3 only](LICENSE) (GPL-3.0-only).
+
+Winnow builds on Qt, OpenCV, ONNX Runtime, libjpeg-turbo, LibTIFF, Little CMS, LibRaw,
+ExifTool, the lensfun lens database and other open-source projects. The downloadable AI
+models keep their upstream licenses. See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+for the full list and the [licenses](licenses) folder for the license texts.

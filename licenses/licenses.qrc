@@ -1,0 +1,37 @@
+<RCC>
+    <qresource prefix="/licenses">
+        <file alias="THIRD_PARTY_NOTICES.md">../THIRD_PARTY_NOTICES.md</file>
+        <file alias="LICENSE">../LICENSE</file>
+        <file>Apache-2.0.txt</file>
+        <file>Artistic-1.0-Perl.txt</file>
+        <file>CC-BY-SA-3.0.txt</file>
+        <file>exiftool.txt</file>
+        <file>GCC-Runtime-Exception-3.1.txt</file>
+        <file>imath.md</file>
+        <file>lcms2.txt</file>
+        <file>LGPL-2.1.txt</file>
+        <file>LGPL-3.0.txt</file>
+        <file>libdeflate.txt</file>
+        <file>libjpeg-turbo.md</file>
+        <file>libomp.txt</file>
+        <file>libpng.txt</file>
+        <file>libraw.txt</file>
+        <file>libtiff.md</file>
+        <file>midas.txt</file>
+        <file>migan.txt</file>
+        <file>onnxruntime.txt</file>
+        <file>openblas.txt</file>
+        <file>opencv.txt</file>
+        <file>openexr.md</file>
+        <file>openjpeg.txt</file>
+        <file>openjph.txt</file>
+        <file>protobuf.txt</file>
+        <file>pugixml.md</file>
+        <file>segformer.txt</file>
+        <file>skyseg.txt</file>
+        <file>webp.txt</file>
+        <file>xz.txt</file>
+        <file>zlib.txt</file>
+        <file>zstd.txt</file>
+    </qresource>
+</RCC>
