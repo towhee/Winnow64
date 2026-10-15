@@ -455,6 +455,7 @@ set(WINNOW_SOURCES
     Utilities/stresstest.cpp
     Utilities/tokenfilename.cpp
     Utilities/usbutil.cpp
+    Utilities/appinstaller.cpp
     Utilities/volumeinfo.cpp
     Utilities/fileops.cpp
     Utilities/utilities.cpp
@@ -766,6 +767,8 @@ set(WINNOW_HEADERS
     Utilities/stresstest.h
     Utilities/tokenfilename.h
     Utilities/usbutil.h
+    Utilities/appinstaller.h
+    Utilities/appupdate.h
     Utilities/volumeinfo.h
     Utilities/fileops.h
     Utilities/foldertree.h

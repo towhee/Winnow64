@@ -23,7 +23,7 @@ class QCryptographicHash;
     accept() only on every model verified onto disk, so ModelStore::ensure can treat
     Accepted as "the bytes are really there".
 
-    The transfer follows MW::downloadAndOpenUpdate (Main/mainwindow.cpp): its own
+    The transfer follows MW::downloadUpdate (Main/mainwindow.cpp): its own
     QNetworkAccessManager, QSaveFile for an atomic commit, readyRead streamed straight to
     disk rather than buffered. Added here: the SHA-256 is fed incrementally from the same
     chunks, so verifying a 198 MB model costs no extra pass and no extra memory.

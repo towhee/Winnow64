@@ -24,6 +24,10 @@ public:
        records the offered version so the silent startup check no longer prompts for it. */
     bool skipRequested() const;
 
+    /* inPlace: the update is installed over this copy and Winnow relaunches.  Otherwise
+       the installer is downloaded and opened, and `reason` says why. */
+    void setInstallMode(bool inPlace, const QString &reason = QString());
+
 protected:
     void showEvent(QShowEvent *event) override;
 

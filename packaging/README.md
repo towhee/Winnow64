@@ -13,7 +13,7 @@ packaging/
     entitlements.plist   static hardened-runtime entitlements (committed)
     config.sh.example    macOS config template  ->  copy to config.sh  (git-ignored)
   windows/
-    deploy.ps1           menu: build -> sign -> Inno Setup installer -> archive -> upload -> promote
+    deploy.ps1           menu: build -> sign -> Inno Setup installer -> archive -> GitHub Release -> promote
     deploy.cmd           double-click launcher for deploy.ps1 (ExecutionPolicy Bypass)
     winnow.iss           Inno Setup installer definition
     config.ps1.example   Windows config template -> copy to config.ps1 (git-ignored)
@@ -191,6 +191,7 @@ Interactive numbered menu mirroring the macOS one:
 | `3` | Archive installer (local versioned copy) |
 | `4` | Upload installer to test dir |
 | `5` | **Promote** + publish to server (archive old → upload new → update `index.html` → publish `version.json`) |
+| `G` | Publish installer to the **GitHub Release** for this version |
 | `V` | Verify Windows readiness (exe + Qt runtime present; Authenticode if signing on) |
 | `D` | Promote **dry-run** (print every server command, write nothing) |
 | `A` | Full pipeline (`0–3` + verify; does **not** publish) |
@@ -206,6 +207,24 @@ preview.
 
 ## Distribution
 
+### GitHub Releases (primary download location)
+
+The README's download link is `https://github.com/towhee/Winnow64/releases/latest`.
+Menu **`G`** in both scripts (mac `deploy.command`, Windows `deploy.ps1`) publishes
+the platform's artifact to the GitHub Release tagged `v<version>` (e.g. `v3_beta`):
+
+- It runs the verify gate, shows a plan, and requires an explicit `yes`.
+- One release per version is shared by both platforms: whichever machine runs `G`
+  first creates the release (tag on the current HEAD — **push first**), and the
+  other attaches its file. Re-running replaces that platform's file (`--clobber`).
+- Releases are created as full releases, not pre-releases, because
+  `/releases/latest` ignores pre-releases. Edit the release notes on GitHub afterwards.
+- Requires the GitHub CLI logged in once per machine (`brew install gh` /
+  `winget install GitHub.cli`, then `gh auth login`). The repo is `GITHUB_REPO` /
+  `$GitHubRepo` in the config (default `towhee/Winnow64`).
+
+### Server (winnow.ca)
+
 Distribution is plain downloads: the DMG and the `Setup.exe` are uploaded to the
 DigitalOcean server (`winnow_mac` / `winnow_win`). The **promote** step (mac step
 `7`, Windows menu `5`) publishes a release to `current/`, archives the previous
@@ -215,27 +234,47 @@ the dry-run first (mac `D`, Windows `D`). The separate **upload** step
 `test/` dir for pre-release checking. The ssh key path is per-machine and never
 committed.
 
-### In-app "Check for updates"
+### In-app "Check for updates" (auto-update)
 
-Winnow checks for a newer release (Help → *Check for updates*, and silently at startup
-when the *Check for program updates at startup* preference is on). It does **not**
-auto-install — it fetches a small per-platform descriptor, compares it to the running
-`WINNOW_VERSION`, and on a newer version opens the download URL in the browser. The
-deploy scripts publish that descriptor:
+Winnow 3.0+ checks **GitHub** for updates (Help → *Check for updates*, and silently
+at startup when *Check for program updates at startup* is on). It reads
+`https://api.github.com/repos/towhee/Winnow64/releases/latest`, so **publishing a full
+release with menu `G` IS the update announcement** — there is no other descriptor to
+keep in sync. When the user accepts, Winnow downloads the platform asset, checks it
+against GitHub's SHA-256 digest, installs it over the running copy and relaunches
+(macOS: signature-checked bundle swap; Windows: the Inno installer run silently). See
+*Check for Updates* in `notes/Documentation.txt`.
 
-- macOS: `https://winnow.ca/winnow_mac/version.json` (written by `deploy.command`'s
-  promote step, step 7b)
-- Windows: `https://winnow.ca/winnow_win/version.json` (written by `deploy.ps1`'s
-  promote step, menu `5`)
+What this requires of a release:
 
-Shape:
+- The tag is `v<WINNOW_VERSION>` (menu `G` does this). Versions are ordered
+  numerically with pre-release suffixes below the release: `3_beta` < `3.0` < `3.1`.
+  **Never re-publish a lower version as "latest"** — nobody would be offered it, and
+  anyone already on the higher one stays there.
+- The assets keep their names: `Winnow<ver>.dmg` (with the signed, notarized
+  `Winnow<ver>.app` inside) and `WinnowSetup-<ver>.exe`.
+- Publish both platforms promptly. Until a platform's asset is attached, users on
+  that platform are told nothing (silent check), or that the release is "not yet
+  available for this computer" (manual check).
+- Do not mark a release you want installed as a pre-release or leave it a draft;
+  `/releases/latest` skips both. That is also the way to stage a release for
+  testing without offering it.
+- To try the full update path against the current release, run Winnow with
+  `WINNOW_UPDATE_AS_VERSION=2.0` in the environment (it then treats itself as 2.0).
+- macOS in-place install needs Winnow in an `Applications` folder the user can
+  write to; otherwise the DMG is downloaded and opened for a manual install.
+
+**Legacy server check.** Copies of Winnow older than 3.0 read a per-platform
+`version.json` on winnow.ca instead (written by the promote steps: mac step 7b,
+Windows menu `5`):
+
 ```json
 { "version": "2.05",
   "url":     "https://winnow.ca/winnow_mac/current/Winnow2.05.dmg",
   "notes":   "https://winnow.ca/winnow/versions.html" }
 ```
-Both promote steps publish the installer to `current/` and keep `version.json` in
-sync automatically, so the `url` always resolves.
+Keep promoting to the server for as long as those copies need to find their way to
+3.0; they only open the downloaded installer, they do not auto-install.
 
 ## ⚠️ Security note
 

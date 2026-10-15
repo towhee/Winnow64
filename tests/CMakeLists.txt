@@ -142,6 +142,9 @@ winnow_add_unit_test(tst_pathutils unit/tst_pathutils.cpp)
 # tst_versionkey tests Utilities/versionkey.h (header-only): the row key of a version
 # (virtual copy), its source path, and its sort position after the master.
 winnow_add_unit_test(tst_versionkey unit/tst_versionkey.cpp)
+# tst_appupdate tests Utilities/appupdate.h (header-only): update-check version ordering
+# ("3_beta" < "3.0") and parsing of GitHub's /releases/latest response.
+winnow_add_unit_test(tst_appupdate unit/tst_appupdate.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
 # tst_geo tests Utilities/geo.* (the Map module's pure math: no network, no widgets).
 winnow_add_unit_test(tst_geo unit/tst_geo.cpp ${CMAKE_SOURCE_DIR}/Utilities/geo.cpp)

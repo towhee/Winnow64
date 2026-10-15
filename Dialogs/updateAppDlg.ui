@@ -90,7 +90,7 @@
       </font>
      </property>
      <property name="text">
-      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view the version update notes &lt;a href=&quot;https://winnow.ca/winnow/versions.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+      <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;You can view the release notes &lt;a href=&quot;https://winnow.ca/winnow/versions.html&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#ffffff;&quot;&gt;here&lt;/span&gt;&lt;/a&gt;.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
      </property>
     </widget>
    </item>
@@ -118,7 +118,7 @@
       </font>
      </property>
      <property name="text">
-      <string>Selecting Download opens the Winnow download page in your browser. Quit Winnow, then install the downloaded version.</string>
+      <string>Install downloads the update, quits Winnow, installs the new version and reopens Winnow.</string>
      </property>
      <property name="alignment">
       <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
@@ -196,7 +196,7 @@
         </size>
        </property>
        <property name="text">
-        <string>Download</string>
+        <string>Install</string>
        </property>
        <property name="default">
         <bool>true</bool>

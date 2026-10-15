@@ -61,3 +61,44 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; Flags: nowait postinstall skipifsilent
+; In-app update (Utilities/appinstaller.cpp) runs this installer with
+;   /SILENT /SUPPRESSMSGBOXES /NORESTART /WAITPID=<Winnow pid> /RELAUNCH=1
+; Relaunch Winnow after that silent install. postinstall runs it as the original,
+; non-elevated user.
+Filename: "{app}\{#MyAppExeName}"; Flags: nowait postinstall skipifnotsilent; Check: ShouldRelaunch
+
+[Code]
+const
+  SYNCHRONIZE = $00100000;
+  INFINITE = $FFFFFFFF;
+
+function OpenProcess(dwDesiredAccess: DWORD; bInheritHandle: BOOL; dwProcessId: DWORD): THandle;
+  external 'OpenProcess@kernel32.dll stdcall';
+function WaitForSingleObject(hHandle: THandle; dwMilliseconds: DWORD): DWORD;
+  external 'WaitForSingleObject@kernel32.dll stdcall';
+function CloseHandle(hObject: THandle): BOOL;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+{ /WAITPID=<pid>: the in-app updater starts this installer and then quits Winnow.
+  Wait for that Winnow process to exit before touching its files. If the user
+  declines the quit, the install simply happens whenever Winnow does quit. }
+function InitializeSetup(): Boolean;
+var
+  Pid: Integer;
+  H: THandle;
+begin
+  Pid := StrToIntDef(ExpandConstant('{param:waitpid|0}'), 0);
+  if Pid > 0 then begin
+    H := OpenProcess(SYNCHRONIZE, False, Pid);
+    if H <> 0 then begin
+      WaitForSingleObject(H, INFINITE);
+      CloseHandle(H);
+    end;
+  end;
+  Result := True;
+end;
+
+function ShouldRelaunch(): Boolean;
+begin
+  Result := ExpandConstant('{param:relaunch|0}') = '1';
+end;

@@ -67,6 +67,9 @@
 #include <QDesktopServices>
 #include <QStandardPaths>
 #include <QSaveFile>
+#include <QCryptographicHash>
+#include "Utilities/appupdate.h"
+#include "Utilities/appinstaller.h"
 #include <QProcess>
 
 /*
@@ -3145,17 +3148,14 @@ void MW::manageModels()
 void MW::checkForUpdate(bool silent)
 {
 /*
-    Checks whether a newer Winnow is available.  Distribution is plain downloads (a
-    notarized DMG on macOS, an Inno Setup installer on Windows) from the DigitalOcean
-    server at https://winnow.ca, so this only *notifies* the user and, on request, opens
-    the platform download URL in the default browser - it does not auto-install.
+    Checks GitHub for a newer Winnow and, on request, downloads and installs it.
 
-    A small per-platform descriptor is fetched:
-        macOS:   https://winnow.ca/winnow_mac/version.json
-        Windows: https://winnow.ca/winnow_win/version.json
-    Shape: { "version": "2.05",
-             "url":     "https://winnow.ca/winnow_mac/current/Winnow2.05.dmg",
-             "notes":   "https://winnow.ca/winnow/versions.html" }
+    The latest FULL release (drafts and pre-releases are skipped by GitHub) is read from
+        https://api.github.com/repos/towhee/Winnow64/releases/latest
+    Its tag ("v3.1") is the version and its asset for this platform (Winnow<ver>.dmg /
+    WinnowSetup-<ver>.exe) the installer -- both published by the deploy scripts' menu
+    G.  Parsing and version ordering are in Utilities/appupdate.h; installing over the
+    running copy is Utilities/appinstaller.*.
 
     The fetch is asynchronous (no blocking wait); onUpdateCheckReply() handles the
     result.  Called loudly from the Help menu (silent == false) and silently at startup
@@ -3167,16 +3167,10 @@ void MW::checkForUpdate(bool silent)
     // never reach out to the network during automated / headless test runs
     if (G::isTest || G::isStressTest) return;
 
-    QString platform;
-#ifdef Q_OS_MAC
-    platform = "winnow_mac";
-#endif
-#ifdef Q_OS_WIN
-    platform = "winnow_win";
-#endif
-    if (platform.isEmpty()) return;     // unsupported platform
-
-    QUrl url("https://winnow.ca/" + platform + "/version.json");
+    if (isUpdatingApp) {
+        if (!silent) G::popup->showPopup("An update is already being installed.", 2000);
+        return;
+    }
 
     if (updateNetManager == nullptr) {
         updateNetManager = new QNetworkAccessManager(this);
@@ -3184,7 +3178,12 @@ void MW::checkForUpdate(bool silent)
                 this, &MW::onUpdateCheckReply);
     }
 
-    QNetworkRequest request(url);
+    QNetworkRequest request{QUrl(AppUpdate::latestReleaseApiUrl())};
+    request.setRawHeader("Accept", "application/vnd.github+json");
+    request.setRawHeader("X-GitHub-Api-Version", "2022-11-28");
+    // GitHub rejects API requests without a User-Agent
+    request.setHeader(QNetworkRequest::UserAgentHeader, "Winnow/" + versionNumber);
+    request.setTransferTimeout(20000);
     /* carry the silent flag through to the reply handler */
     request.setAttribute(QNetworkRequest::User, silent);
     updateNetManager->get(request);
@@ -3198,92 +3197,98 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
     reply->deleteLater();
 
     const bool silent = reply->request().attribute(QNetworkRequest::User, false).toBool();
+    const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (reply->error() != QNetworkReply::NoError) {
-        if (!silent)
-            G::popup->showPopup("Could not check for updates:<br>" + reply->errorString(), 2500);
+        if (silent) return;
+        QString msg = "Could not check for updates:<br>" + reply->errorString();
+        if (status == 404)
+            msg = "No Winnow release has been published yet.";
+        else if (status == 403 || status == 429)
+            msg = "GitHub is limiting update checks right now.<br>Please try again later.";
+        G::popup->showPopup(msg, 3000);
         return;
     }
 
-    // Get current version.json from server (from checkForUpdate())
-    QJsonParseError parseError;
-    QJsonDocument doc = QJsonDocument::fromJson(reply->readAll(), &parseError);
-
-    if (parseError.error != QJsonParseError::NoError || !doc.isObject()) {
-        if (!silent) G::popup->showPopup("Could not read update information.", 2000);
+    AppUpdate::Release release;
+    QString parseError;
+    if (!AppUpdate::parseLatestRelease(reply->readAll(), release, &parseError)) {
+        if (!silent) G::popup->showPopup("Could not check for updates:<br>" + parseError, 3000);
         return;
     }
 
-    QJsonObject obj = doc.object();
-    QString latest   = obj.value("version").toString();
-    QString dmgUrl   = obj.value("url").toString();
-    QString notesUrl = obj.value("notes").toString();
-
-    QVersionNumber latestVer  = QVersionNumber::fromString(latest);
-    QVersionNumber currentVer = QVersionNumber::fromString(versionNumber);
-
-    /* Test alternative: confirm the update + download flow end-to-end against the
-       server staging folder (sftp://root@165.227.46.158/var/www/html/winnow_mac/test
-       -> https://winnow.ca/winnow_mac/test) instead of the live release folder.
-       The deploy script uploads each new build to winnow_mac/test/ before promoting
-       it to winnow_mac/current/, so flip isTest to true to have Download fetch the
-       staged DMG from test/ rather than the released one from current/. */
-    bool isTest = false;
-    if (isTest) {
-        dmgUrl.replace("/winnow_mac/current/", "/winnow_mac/test/");
-        currentVer = QVersionNumber::fromString("2.04");
-        qDebug() << srcFun << "TEST mode — dmgUrl redirected to test folder:" << dmgUrl;
-        qDebug() << srcFun << "latest =" << latest;
+    /* To exercise the whole update -> install -> relaunch path against the CURRENT
+       release, run Winnow with WINNOW_UPDATE_AS_VERSION set to an older label
+       (e.g. WINNOW_UPDATE_AS_VERSION=2.0): the check then treats this copy as that
+       version. */
+    QString current = versionNumber;
+    const QString asVersion = qEnvironmentVariable("WINNOW_UPDATE_AS_VERSION");
+    if (!asVersion.isEmpty()) {
+        current = asVersion;
+        qDebug() << srcFun << "TEST: treating this copy as version" << current
+                 << "latest =" << release.version << release.assetUrl;
     }
 
-
-    if (latest.isEmpty()) {
-        if (!silent) G::popup->showPopup("Could not read update information.", 2000);
-        return;
-    }
-
-    if (latestVer <= currentVer) {
+    if (AppUpdate::compareVersions(release.version, current) <= 0) {
         if (!silent)
             G::popup->showPopup("Winnow is up to date (version " + versionNumber + ").", 2000);
         return;
     }
 
-    // a newer version is available
-    if (silent && latest == updateSkipVersion) return;      // user chose to skip this version
+    // a newer version exists, but the other platform may have published it first
+    if (release.assetUrl.isEmpty()) {
+        if (!silent)
+            G::popup->showPopup("Winnow " + release.version + " has been released, but not "
+                                "yet for this computer.<br>Please check again later.", 3500);
+        return;
+    }
 
-    updateAppDlg = new UpdateAppDlg(latest, versionNumber, notesUrl, G::css, this);
+    if (silent && release.version == updateSkipVersion) return;   // user chose to skip it
+
+    QString notInPlaceReason;
+    const bool inPlace = AppInstaller::canInstallInPlace(&notInPlaceReason);
+
+    updateAppDlg = new UpdateAppDlg(release.version, versionNumber, release.notesUrl,
+                                    G::css, this);
+    updateAppDlg->setInstallMode(inPlace, notInPlaceReason);
     int ret = updateAppDlg->exec();
 
     /* "Don't ask again for this version" is independent of the button pressed: record the
-       skip if ticked, and still open the download if Download was clicked. */
+       skip if ticked, and still install if Install was clicked. */
     if (updateAppDlg->skipRequested()) {
-        updateSkipVersion = latest;
+        updateSkipVersion = release.version;
         if (settings != nullptr) settings->setValue("updateSkipVersion", updateSkipVersion);
     }
-    if (ret == QDialog::Accepted && !dmgUrl.isEmpty()) {
-        downloadAndOpenUpdate(dmgUrl);
-    }
-
     updateAppDlg->deleteLater();
+
+    if (ret == QDialog::Accepted)
+        downloadUpdate(release.assetUrl, release.assetSize, release.sha256, inPlace);
 }
 
-void MW::downloadAndOpenUpdate(const QString &dmgUrl)
+void MW::downloadUpdate(const QString &assetUrl, qint64 size, const QByteArray &sha256,
+                        bool inPlace)
 {
 /*
-    Downloads the update installer directly (no browser) and opens it, so the user
-    never sees their default browser.  On macOS `open` mounts the DMG and brings its
-    Finder volume window to the foreground, landing on top of the Winnow window; on
-    Windows the downloaded Inno Setup installer is launched.  Progress is reported in
-    G::popup.  Called from onUpdateCheckReply() when the user clicks Download.
+    Downloads the update installer directly (no browser), checks it against the size and
+    SHA-256 digest GitHub publishes for the asset, then:
+
+      inPlace   installUpdate(): verify + stage on a worker thread, start the detached
+                finisher, quit.  The finisher installs and relaunches Winnow.
+      otherwise save to the Downloads folder and open it (macOS mounts the DMG, Windows
+                runs the installer) -- the user installs by hand.
+
+    Progress is reported in G::popup.  Called from onUpdateCheckReply() when the user
+    clicks Install / Download.
 */
-    QString srcFun = "MW::downloadAndOpenUpdate";
+    QString srcFun = "MW::downloadUpdate";
     if (G::isLogger || G::isFlowLogger) G::log(srcFun);
 
-    QUrl url(dmgUrl);
+    QUrl url(assetUrl);
     QString fileName = url.fileName();
     if (fileName.isEmpty()) fileName = "WinnowUpdate";
 
-    QString dir = QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
+    QString dir = inPlace ? AppInstaller::updateDir()
+                          : QStandardPaths::writableLocation(QStandardPaths::DownloadLocation);
     if (dir.isEmpty()) dir = QDir::tempPath();
     QString destPath = QDir(dir).filePath(fileName);
 
@@ -3295,20 +3300,28 @@ void MW::downloadAndOpenUpdate(const QString &dmgUrl)
         delete file;
         return;
     }
+    auto *hash = new QCryptographicHash(QCryptographicHash::Sha256);
+
+    isUpdatingApp = true;
 
     /* Dedicated manager: updateNetManager's finished signal is wired to
-       onUpdateCheckReply(), which would try to JSON-parse the DMG bytes. */
+       onUpdateCheckReply(), which would try to JSON-parse the installer bytes.  GitHub's
+       download URL redirects to its CDN; Qt 6 follows redirects by default. */
     auto *netManager = new QNetworkAccessManager(this);
-    QNetworkReply *reply = netManager->get(QNetworkRequest(url));
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, "Winnow/" + versionNumber);
+    QNetworkReply *reply = netManager->get(request);
 
     G::popup->setProgressVisible(true);
     G::popup->setProgressMax(100);
     G::popup->setProgress(0);
     G::popup->showPopup("Downloading " + fileName + "…", 0, true, 1);
 
-    // stream incoming bytes straight to disk rather than buffering the whole DMG
-    connect(reply, &QNetworkReply::readyRead, this, [reply, file]() {
-        file->write(reply->readAll());
+    // stream incoming bytes straight to disk rather than buffering the whole installer
+    connect(reply, &QNetworkReply::readyRead, this, [reply, file, hash]() {
+        const QByteArray bytes = reply->readAll();
+        hash->addData(bytes);
+        file->write(bytes);
     });
 
     connect(reply, &QNetworkReply::downloadProgress, this,
@@ -3318,39 +3331,112 @@ void MW::downloadAndOpenUpdate(const QString &dmgUrl)
     });
 
     connect(reply, &QNetworkReply::finished, this,
-            [this, reply, netManager, file, destPath, fileName]() {
+            [=, this]() {
         reply->deleteLater();
         netManager->deleteLater();
 
         G::popup->setProgressVisible(false);
         G::popup->reset();
 
-        if (reply->error() != QNetworkReply::NoError) {
+        auto abandon = [&](const QString &msg) {
             file->cancelWriting();
             delete file;
-            G::popup->showPopup("Update download failed:<br>" + reply->errorString(), 3500);
+            delete hash;
+            isUpdatingApp = false;
+            G::popup->showPopup(msg, 4000);
+        };
+
+        if (reply->error() != QNetworkReply::NoError) {
+            abandon("Update download failed:<br>" + reply->errorString());
             return;
         }
 
-        file->write(reply->readAll());      // flush any bytes not yet consumed
+        const QByteArray rest = reply->readAll();   // any bytes not yet consumed
+        hash->addData(rest);
+        file->write(rest);
+
+        if (size > 0 && file->size() != size) {
+            abandon("The update download was incomplete.<br>Please try again.");
+            return;
+        }
+        if (!sha256.isEmpty() && hash->result().toHex() != sha256) {
+            abandon("The update download is damaged (checksum mismatch),<br>"
+                    "so it was not installed.  Please try again.");
+            return;
+        }
+        delete hash;
+
         bool committed = file->commit();    // atomically publish destPath
         delete file;
         if (!committed) {
+            isUpdatingApp = false;
             G::popup->showPopup("Could not finish saving the update.", 3500);
             return;
         }
 
+        if (inPlace) {
+            installUpdate(destPath);
+            return;
+        }
+
+        isUpdatingApp = false;
         #ifdef Q_OS_MAC
             /* `open` mounts the DMG and opens its Finder window in the foreground,
                so it appears on top of the Winnow window. */
             QProcess::startDetached("/usr/bin/open", QStringList() << destPath);
-        #elif defined(Q_OS_WIN)
-            /* Launch the downloaded Inno Setup installer. */
-            QDesktopServices::openUrl(QUrl::fromLocalFile(destPath));
         #else
+            /* Launch the downloaded Inno Setup installer. */
             QDesktopServices::openUrl(QUrl::fromLocalFile(destPath));
         #endif
     });
+}
+
+void MW::installUpdate(const QString &installerPath)
+{
+/*
+    Installs a downloaded, checksum-verified update over this copy of Winnow.  The slow
+    part (macOS: mount the DMG, verify the signature, copy the new bundle beside the
+    running one) runs on a pool thread; then the detached finisher is started and Winnow
+    quits so the finisher can swap the versions and relaunch.  See
+    Utilities/appinstaller.h.
+
+    If the quit is declined (unsaved picks, a background ingest) the finisher simply
+    waits: the update is installed whenever Winnow does quit.
+*/
+    QString srcFun = "MW::installUpdate";
+    if (G::isLogger || G::isFlowLogger) G::log(srcFun);
+
+    G::popup->showPopup("Preparing the Winnow update…", 0);
+
+    auto *watcher = new QFutureWatcher<QString>(this);
+    connect(watcher, &QFutureWatcher<QString>::finished, this,
+            [this, watcher, installerPath]() {
+        const QString prepareError = watcher->result();
+        watcher->deleteLater();
+        G::popup->reset();
+
+        QString error = prepareError;
+        if (error.isEmpty()) AppInstaller::launchFinisher(installerPath, error);
+        if (!error.isEmpty()) {
+            isUpdatingApp = false;
+            QMessageBox::warning(this, "Winnow Update",
+                                 "The update could not be installed.\n\n" + error);
+            return;
+        }
+
+        /* The finisher is waiting for this process to exit.  isUpdatingApp stays set:
+           a second check would only start a second finisher. */
+        if (!close()) {
+            G::popup->showPopup("The Winnow update will be installed when you quit Winnow.",
+                                4000);
+        }
+    });
+    watcher->setFuture(QtConcurrent::run([installerPath]() {
+        QString error;
+        if (!AppInstaller::prepare(installerPath, error) && error.isEmpty())
+            error = "The update could not be prepared.";
+        return error;
+    }));
 }
 
 void MW::handleStartupArgs(const QString &args)

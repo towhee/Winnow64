@@ -17,7 +17,7 @@ UpdateAppDlg::UpdateAppDlg(const QString &newVersion, const QString &currentVers
     ui->viewVersionLabel->setOpenExternalLinks(true);
     if (!notesUrl.isEmpty()) {
         ui->viewVersionLabel->setText(
-            "<html><head/><body><p>You can view the version update notes "
+            "<html><head/><body><p>You can view the release notes "
             "<a href=\"" + notesUrl + "\"><span style=\" text-decoration: underline; "
             "color:#ffffff;\">here</span></a>.</p></body></html>");
     }
@@ -49,6 +49,24 @@ void UpdateAppDlg::on_yesBtn_clicked()
 void UpdateAppDlg::on_cancelBtn_clicked()
 {
     reject();
+}
+
+void UpdateAppDlg::setInstallMode(bool inPlace, const QString &reason)
+{
+    if (inPlace) {
+        ui->yesBtn->setText("Install");
+        ui->descriptionLabel->setText(
+            "Install downloads the update, quits Winnow, installs the new version and "
+            "reopens Winnow.");
+    }
+    else {
+        ui->yesBtn->setText("Download");
+        QString text = "Download saves the installer to your Downloads folder and opens "
+                       "it.  Quit Winnow, then install the new version.";
+        if (!reason.isEmpty())
+            text = reason + "  " + text;
+        ui->descriptionLabel->setText(text);
+    }
 }
 
 bool UpdateAppDlg::skipRequested() const

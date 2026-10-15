@@ -1055,7 +1055,9 @@ private slots:
     void manageModels();
     void checkForUpdate(bool silent = false);
     void onUpdateCheckReply(QNetworkReply *reply);
-    void downloadAndOpenUpdate(const QString &dmgUrl);
+    void downloadUpdate(const QString &assetUrl, qint64 size, const QByteArray &sha256,
+                        bool inPlace);
+    void installUpdate(const QString &installerPath);
     void setShowImageCount();
     void about();
     void helpThumbViewStatusBarSymbols();
@@ -3048,6 +3050,7 @@ private:
     PreferencesDlg *preferencesDlg = nullptr;
     UpdateAppDlg *updateAppDlg;
     QNetworkAccessManager *updateNetManager = nullptr;
+    bool isUpdatingApp = false;         // an update is downloading / installing
     ZoomDlg *zoomDlg = nullptr;
     QTimer *slideShowTimer;
     QTimer *resetTimer;
