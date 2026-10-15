@@ -1532,6 +1532,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     /*  Cleared for THIS press before any of the early returns below, so a stale refusal
         can never swallow a later release.  See mouseReleaseEvent. */
     pressWasRefused = false;
+    pressWasExpander = false;
 
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.restart();
@@ -1539,8 +1540,23 @@ void FSTree::mousePressEvent(QMouseEvent *event)
     QModelIndex index = indexAt(event->pos());
     if (!index.isValid()) return;
 
-    // Ignore if click in decoration/indentation area (left of the item's visual rect)
-    if (event->pos().x() < visualRect(index).left()) return;
+    /*  Click in the decoration/indentation area (left of the item's visual rect): never a
+        folder selection. A left click on the expand arrow (the slot just left of the
+        item) toggles the branch HERE, on press, on every platform. Leaving it to QTreeView does
+        not work both ways: it toggles on press or on release as the style decides
+        (SH_ListViewExpand_SelectMouseType) -- release on macOS, PRESS on Windows, which
+        this early return used to swallow, so the arrow was dead on Windows. The release
+        is swallowed (pressWasExpander) so the macOS style cannot toggle it back. */
+    const QModelIndex index0 = index.sibling(index.row(), 0);
+    const int itemLeft = visualRect(index0).left();
+    if (event->pos().x() < itemLeft) {
+        if (event->button() == Qt::LeftButton && event->pos().x() >= itemLeft - indentation()
+            && model()->hasChildren(index0)) {
+            setExpanded(index0, !isExpanded(index0));
+            pressWasExpander = true;
+        }
+        return;
+    }
 
     if (ms < 500) {
         // Queue this click so the last-clicked folder always loads
@@ -1766,6 +1782,11 @@ void FSTree::mouseReleaseEvent(QMouseEvent *event)
         just made. */
     if (pressWasRefused) {
         pressWasRefused = false;
+        return;
+    }
+    // the press toggled an expand arrow itself (see mousePressEvent)
+    if (pressWasExpander) {
+        pressWasExpander = false;
         return;
     }
 

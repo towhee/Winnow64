@@ -209,6 +209,9 @@ private:
     bool folderChangeRefused = false;
     /*  A refused mouse press must not have its selection completed on release. */
     bool pressWasRefused = false;
+    /*  The press toggled an expand arrow itself; its release must not reach QTreeView,
+        which would toggle the branch back on a style that expands on release (macOS). */
+    bool pressWasExpander = false;
     int maxExpandLimit = 100;
     QColor overLimitColor = QColor(255,165,0);   // orange
 
