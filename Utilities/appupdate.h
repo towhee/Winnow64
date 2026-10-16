@@ -85,11 +85,22 @@ inline int compareVersions(const QString &a, const QString &b)
     return va.stageNumber - vb.stageNumber;
 }
 
-/* The asset this platform installs, chosen by file name. */
+/* The asset this platform installs, chosen by file name.  macOS ships two DMGs per
+   release: Winnow<ver>.dmg (Apple Silicon) and Winnow<ver>_Intel.dmg (x86_64, built by
+   `WINNOW_ARCH=x86_64 deploy.command`).  Each build takes only its own architecture's,
+   so an Intel Mac never installs the arm64 app (which cannot run there). */
+inline bool isPlatformAsset(const QString &name, bool intelMac)
+{
+    if (!name.endsWith(".dmg", Qt::CaseInsensitive)) return false;
+    return name.contains("_Intel", Qt::CaseInsensitive) == intelMac;
+}
+
 inline bool isPlatformAsset(const QString &name)
 {
-#if defined(Q_OS_MAC)
-    return name.endsWith(".dmg", Qt::CaseInsensitive);
+#if defined(Q_OS_MAC) && defined(Q_PROCESSOR_X86_64)
+    return isPlatformAsset(name, true);
+#elif defined(Q_OS_MAC)
+    return isPlatformAsset(name, false);
 #elif defined(Q_OS_WIN)
     return name.startsWith("WinnowSetup", Qt::CaseInsensitive)
         && name.endsWith(".exe", Qt::CaseInsensitive);

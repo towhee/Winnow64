@@ -12,6 +12,7 @@ private slots:
     void compare();
     void parsesRelease();
     void missingPlatformAssetIsNotAnError();
+    void macAssetMatchesArchitecture();
     void prereleaseOnlyWhenAllowed();
     void rejectsBadReleases_data();
     void rejectsBadReleases();
@@ -96,6 +97,31 @@ void TstAppUpdate::missingPlatformAssetIsNotAnError()
     QVERIFY(AppUpdate::parseLatestRelease(json, r));
     QCOMPARE(r.version, QString("3.2"));
     QVERIFY(r.assetUrl.isEmpty());
+}
+
+/* Apple Silicon and Intel DMGs share a release; each build must take only its own,
+   whatever order GitHub lists them in. */
+void TstAppUpdate::macAssetMatchesArchitecture()
+{
+    QVERIFY( AppUpdate::isPlatformAsset("Winnow3.1.dmg", false));
+    QVERIFY(!AppUpdate::isPlatformAsset("Winnow3.1_Intel.dmg", false));
+    QVERIFY( AppUpdate::isPlatformAsset("Winnow3.1_Intel.dmg", true));
+    QVERIFY(!AppUpdate::isPlatformAsset("Winnow3.1.dmg", true));
+    QVERIFY(!AppUpdate::isPlatformAsset("WinnowSetup-3.1.exe", true));
+
+#if defined(Q_OS_MAC)
+    const QByteArray json = R"({ "tag_name": "v3.1", "draft": false, "prerelease": false,
+        "assets": [
+          { "name": "Winnow3.1_Intel.dmg", "state": "uploaded", "browser_download_url": "i" },
+          { "name": "Winnow3.1.dmg", "state": "uploaded", "browser_download_url": "a" } ] })";
+    AppUpdate::Release r;
+    QVERIFY(AppUpdate::parseLatestRelease(json, r));
+#if defined(Q_PROCESSOR_X86_64)
+    QCOMPARE(r.assetName, QString("Winnow3.1_Intel.dmg"));
+#else
+    QCOMPARE(r.assetName, QString("Winnow3.1.dmg"));
+#endif
+#endif
 }
 
 void TstAppUpdate::prereleaseOnlyWhenAllowed()

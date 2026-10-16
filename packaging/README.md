@@ -171,6 +171,25 @@ packaging/macos/deploy.command            # interactive menu; "A" runs the full 
 Produces `out/DMG/Winnow<version>.dmg` (notarized, stapled, with an
 `/Applications` drag-install symlink).
 
+### macOS Intel (x86_64)
+
+The Intel build is cross-compiled on an Apple Silicon Mac. Homebrew there is
+arm64-only, so OpenCV, libtiff and libjpeg-turbo are built from source as static
+x86_64 libraries (deployment target 12.0). Qt is the official universal install, and
+its x86_64 slice is used.
+
+```sh
+packaging/macos/build_x86_64_deps.sh               # once: ~/Projects/winnow-deps/macos-x86_64
+WINNOW_ARCH=x86_64 packaging/macos/deploy.command  # same menu; preset mac-release-x86_64
+```
+
+`WINNOW_ARCH=x86_64` selects the `mac-release-x86_64` preset (`build/mac-release-x86_64`),
+puts everything under `out/x86_64/`, thins to x86_64, skips the Homebrew dylib/WebP
+steps and names the result `Winnow<version>_Intel.dmg`. Verify checks for the x86_64
+slice. Promote (menu 7) refuses to run, because it rewrites the Apple Silicon link on
+winnow.ca. Publish the Intel DMG with **G** instead. Test it on Apple Silicon under
+Rosetta: `arch -x86_64 <app>/Contents/MacOS/Winnow --selftest tests/fixtures/images`.
+
 ### Windows
 ```powershell
 # from a Developer PowerShell for VS 2022 (x64)
@@ -218,7 +237,15 @@ the platform's artifact to the GitHub Release tagged `v<version>` (e.g. `v3_beta
   first creates the release (tag on the current HEAD — **push first**), and the
   other attaches its file. Re-running replaces that platform's file (`--clobber`).
 - Releases are created as full releases, not pre-releases, because
-  `/releases/latest` ignores pre-releases. Edit the release notes on GitHub afterwards.
+  `/releases/latest` ignores pre-releases.
+- The release notes (the "What to Download" table with direct links to both files)
+  come from `packaging/release-notes.md`. `{{TITLE}}`, `{{REPO}}`, `{{TAG}}` and
+  `{{VERSION}}` are filled in for the new tag; asset names must match
+  `Winnow<version>.dmg`, `Winnow<version>_Intel.dmg` and `WinnowSetup-<version>.exe`.
+- Each Mac build's updater takes only its own architecture's DMG (`_Intel` or not;
+  see `AppUpdate::isPlatformAsset`). Builds from before that change take the FIRST
+  `.dmg` on the release, so attach the Apple Silicon DMG before the Intel one. Edit the template before a
+  release when the text changes (e.g. drop the beta warning for a final release).
 - Requires the GitHub CLI logged in once per machine (`brew install gh` /
   `winget install GitHub.cli`, then `gh auth login`). The repo is `GITHUB_REPO` /
   `$GitHubRepo` in the config (default `towhee/Winnow64`).

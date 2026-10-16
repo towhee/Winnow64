@@ -519,9 +519,17 @@ function Publish-GitHub {
     if ($confirm -ne 'yes') { throw "Aborted." }
 
     if (-not $exists) {
-        $title = "Winnow " + ($script:Version -replace '_', ' ')
+        # Notes = packaging\release-notes.md with its {{...}} tokens filled in
+        $title    = "Winnow " + ($script:Version -replace '_', ' ')
+        $template = Join-Path $PackagingDir "release-notes.md"
+        if (-not (Test-Path $template)) { throw "Release notes template not found: $template" }
+        $notes = Get-Content -Raw -Encoding UTF8 $template
+        $notes = $notes.Replace('{{TITLE}}', $title).Replace('{{REPO}}', $GitHubRepo)
+        $notes = $notes.Replace('{{TAG}}', $tag).Replace('{{VERSION}}', $script:Version)
+        $notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "winnow-release-notes.md"
+        [System.IO.File]::WriteAllText($notesFile, $notes, (New-Object System.Text.UTF8Encoding $false))
         & gh release create $tag --repo $GitHubRepo --target $head --title $title `
-            --notes "$title for macOS (Apple Silicon) and Windows."
+            --notes-file $notesFile
         if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
     }
     & gh release upload $tag $Setup --repo $GitHubRepo --clobber

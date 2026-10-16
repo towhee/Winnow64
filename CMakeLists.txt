@@ -945,8 +945,9 @@ target_link_libraries(Winnow PRIVATE
     Qt6::Sql
 )
 
-# Mirrors `macx-clang: QMAKE_CXXFLAGS += -include arm_acle.h`
-if(APPLE)
+# Mirrors `macx-clang: QMAKE_CXXFLAGS += -include arm_acle.h`. ARM-only header: it
+# #errors on an x86_64 (Intel) build.
+if(APPLE AND NOT CMAKE_OSX_ARCHITECTURES STREQUAL "x86_64")
     target_compile_options(Winnow PRIVATE -include arm_acle.h)
 endif()
 
@@ -992,6 +993,35 @@ if(APPLE)
         "-framework CoreMedia"
     )
 
+    # Self-built STATIC deps (OpenCV, libtiff, libjpeg-turbo) instead of Homebrew.
+    # This is how the Intel (x86_64) release is built on an Apple Silicon Mac: Homebrew
+    # there is arm64-only, and an x86_64 Homebrew on a new macOS would ship dylibs whose
+    # minos is the HOST OS (Intel Macs top out at macOS 26). The prefix is produced by
+    # packaging/macos/build_x86_64_deps.sh (x86_64, deployment target 12.0). Static, so
+    # the bundle carries no OpenCV/tiff/jpeg dylibs at all -- only Qt's frameworks.
+    set(WINNOW_MAC_DEPS_PREFIX "" CACHE PATH
+        "Prefix of self-built static OpenCV/libtiff/libjpeg-turbo (empty = Homebrew)")
+    if(WINNOW_MAC_DEPS_PREFIX)
+    set(OPENCV_PREFIX "${WINNOW_MAC_DEPS_PREFIX}")
+    if(NOT EXISTS "${OPENCV_PREFIX}/include/opencv4/opencv2/core.hpp")
+        message(FATAL_ERROR "OpenCV not found at ${OPENCV_PREFIX} "
+            "(run packaging/macos/build_x86_64_deps.sh)")
+    endif()
+    set(WINNOW_OPENCV_PREFIX "${OPENCV_PREFIX}" CACHE INTERNAL "OpenCV prefix for tests")
+    message(STATUS "OpenCV prefix (static deps): ${OPENCV_PREFIX}")
+    # ld64 resolves across all archives regardless of order, so a glob is safe.
+    file(GLOB _winnow_static_deps
+        "${WINNOW_MAC_DEPS_PREFIX}/lib/libopencv_*.a"
+        "${WINNOW_MAC_DEPS_PREFIX}/lib/opencv4/3rdparty/*.a")
+    target_link_libraries(Winnow PRIVATE
+        ${_winnow_static_deps}
+        ${WINNOW_MAC_DEPS_PREFIX}/lib/libtiff.a
+        ${WINNOW_MAC_DEPS_PREFIX}/lib/libturbojpeg.a
+        ${WINNOW_MAC_DEPS_PREFIX}/lib/libjpeg.a)
+    target_include_directories(Winnow PRIVATE
+        ${OPENCV_PREFIX}/include/opencv4
+        ${WINNOW_MAC_DEPS_PREFIX}/include)
+    else()
     # OpenCV (Homebrew). Linked directly to avoid OpenCV's CMake config pulling
     # in transitive deps like -framework AGL (Apple's removed OpenGL framework).
     # Mirrors the explicit LIBS approach in winnow64.pro.
@@ -1051,6 +1081,7 @@ if(APPLE)
     target_link_libraries(Winnow PRIVATE ${TURBOJPEG_LIB})
     target_include_directories(Winnow PRIVATE
         ${HOMEBREW_PREFIX}/opt/jpeg-turbo/include)
+    endif()
 
     # zlib (system)
     find_package(ZLIB REQUIRED)

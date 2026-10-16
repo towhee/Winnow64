@@ -46,6 +46,18 @@
         "HOMEBREW_PREFIX": "/opt/homebrew"
       }
     },
+    {
+      "name": "mac-release-x86_64",
+      "displayName": "macOS Release (Intel x86_64)",
+      "description": "Intel build, cross-compiled on Apple Silicon: the x86_64 slice of the universal official Qt + STATIC OpenCV/libtiff/libjpeg-turbo built by packaging/macos/build_x86_64_deps.sh. Homebrew (arm64-only) is ignored.",
+      "inherits": "mac-release",
+      "cacheVariables": {
+        "CMAKE_OSX_ARCHITECTURES": "x86_64",
+        "WINNOW_MAC_DEPS_PREFIX": "$env{HOME}/Projects/winnow-deps/macos-x86_64",
+        "CMAKE_IGNORE_PREFIX_PATH": "/opt/homebrew;/usr/local",
+        "WINNOW_BUILD_TESTS": "OFF"
+      }
+    },
 
     {
       "name": "mac-tsan",
@@ -124,6 +136,7 @@
   "buildPresets": [
     { "name": "mac-debug",   "configurePreset": "mac-debug"   },
     { "name": "mac-release", "configurePreset": "mac-release" },
+    { "name": "mac-release-x86_64", "configurePreset": "mac-release-x86_64" },
     { "name": "mac-tsan",    "configurePreset": "mac-tsan"    },
     { "name": "mac-asan",    "configurePreset": "mac-asan"    },
     { "name": "win-debug",   "configurePreset": "win-debug"   },

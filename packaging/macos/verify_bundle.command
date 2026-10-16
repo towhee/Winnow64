@@ -15,7 +15,7 @@
 #   1. no load dependency points outside the bundle (/opt, /usr/local, /Users)
 #   2. no LC_RPATH points outside the bundle
 #   3. every internal (@rpath/@executable_path/@loader_path) dep resolves
-#   4. architecture is arm64
+#   4. architecture is $WINNOW_ARCH (default arm64)
 #   5. minimum-OS (minos) is not newer than the supported floor
 #   6. code signature is valid (deep, strict)
 #   7. Gatekeeper accepts it (notarized Developer ID)
@@ -144,12 +144,20 @@ done
 echo "[4] Architecture"
 archs=$(lipo -archs "$EXE_PATH" 2>/dev/null)
 echo "       executable: $archs"
-if [[ "$archs" == *arm64* ]]; then
-    pass "arm64 present (runs on Apple Silicon)"
-    [[ "$archs" == *x86_64* ]] && echo "       (universal — also runs on Intel)" \
-                               || echo "       (arm64-only — will NOT run on Intel Macs)"
+# WINNOW_ARCH (exported by deploy.command) names the slice this bundle must have:
+# arm64 (default) for the Apple Silicon release, x86_64 for the Intel one.
+want_arch="${WINNOW_ARCH:-arm64}"
+if [[ " $archs " == *" $want_arch "* ]]; then
+    pass "$want_arch present"
+    if [[ "$archs" == *arm64* && "$archs" == *x86_64* ]]; then
+        echo "       (universal — runs on Apple Silicon and Intel)"
+    elif [[ "$archs" == arm64 ]]; then
+        echo "       (arm64-only — will NOT run on Intel Macs)"
+    else
+        echo "       (x86_64-only — Intel Macs; Apple Silicon only via Rosetta)"
+    fi
 else
-    fail "no arm64 slice"
+    fail "no $want_arch slice"
 fi
 
 # ---- 5. minimum OS ----

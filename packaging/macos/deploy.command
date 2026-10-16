@@ -12,6 +12,7 @@
 # Usage:
 #   chmod +x deploy.command
 #   ./deploy.command           # interactive menu
+#   WINNOW_ARCH=x86_64 ./deploy.command   # Intel build (see "Architecture" below)
 # Or double-click in Finder.
 #
 # Requirements (see ../README.md for one-time setup):
@@ -64,16 +65,31 @@ source "$CONFIG_FILE"
 MAC_DIR="${SERVER_WEB_ROOT}/winnow_mac"
 INDEX_PATH="${SERVER_WEB_ROOT}/index.html"
 
+# --- Architecture -----------------------------------------------------
+# arm64 (default) = Apple Silicon, Homebrew deps, preset mac-release.
+# x86_64 = Intel, cross-compiled here against the static deps from
+# build_x86_64_deps.sh (preset mac-release-x86_64). It gets its own build dir,
+# its own out/x86_64/ and an "_Intel" DMG name, so the two never overwrite each
+# other, and the app's updater picks the DMG matching its own architecture.
+: ${WINNOW_ARCH:=arm64}
+export WINNOW_ARCH     # verify_bundle.command checks for this slice
+case "$WINNOW_ARCH" in
+    arm64)  PRESET="mac-release";        NAME_SUFFIX="" ;;
+    x86_64) PRESET="mac-release-x86_64"; NAME_SUFFIX="_Intel" ;;
+    *) echo "❌ WINNOW_ARCH must be arm64 or x86_64 (got $WINNOW_ARCH)"; exit 1 ;;
+esac
+
 # --- Derived paths ----------------------------------------------------
 APP_BUNDLE="Winnow.app"
 QTBIN_DIR="${QT_DIR}/bin"
 
 # Canonical CMakePresets release output
-BUILD_DIR="${REPO_ROOT}/build/mac-release"
+BUILD_DIR="${REPO_ROOT}/build/${PRESET}"
 RELEASE_APP_PATH="${BUILD_DIR}/${APP_BUNDLE}"
 
 # All deploy artifacts live under the git-ignored out/ dir
 OUT_DIR="${REPO_ROOT}/out"
+[[ "$WINNOW_ARCH" == x86_64 ]] && OUT_DIR="${REPO_ROOT}/out/x86_64"
 STAGING_DIR="${OUT_DIR}/Staging"
 STAGING_APP_PATH="${STAGING_DIR}/${APP_BUNDLE}"
 STAGE_FRAMEWORKS_DIR="${STAGING_APP_PATH}/Contents/Frameworks"
@@ -106,7 +122,7 @@ function resolve_version() {
         echo "⚠️  Bundle version is '$WINNOW_VERSION' — expected the project version."
         echo "    Ensure CMakeLists project(VERSION ...) is set and the app was rebuilt."
     fi
-    WINNOW_VERSION_NAME="Winnow${WINNOW_VERSION}"
+    WINNOW_VERSION_NAME="Winnow${WINNOW_VERSION}${NAME_SUFFIX}"
     NOTARIZED_APP_PATH="${NOTARIZED_DIR}/${WINNOW_VERSION_NAME}.app"
     NOTARIZED_ZIP_PATH="${NOTARIZED_DIR}/${WINNOW_VERSION_NAME}.zip"
     DMG_PATH="${DMG_DIR}/${WINNOW_VERSION_NAME}.dmg"
@@ -127,7 +143,7 @@ function ensure_version() {
 # --- Build (CMake preset) --------------------------------------------
 function build() {
     [[ -d "$QT_DIR" ]] || { echo "❌ QT_DIR not found: $QT_DIR (set it in config.sh)"; return 1; }
-    echo "🏗  Building (preset mac-release) against Qt: $QT_DIR"
+    echo "🏗  Building (preset $PRESET, $WINNOW_ARCH) against Qt: $QT_DIR"
 
     # The mac-release preset uses the Ninja generator. Qt Creator bundles a ninja
     # that is usually NOT on the shell PATH; make it findable so a CLI (re)configure
@@ -163,8 +179,8 @@ function build() {
     # subshell. Otherwise launching the script from elsewhere (e.g. $HOME) makes
     # `cmake --build --preset` look for CMakePresets.json in the wrong place.
     ( cd "$REPO_ROOT" || exit 1
-      $need_configure && { cmake --preset mac-release || exit 1; }
-      cmake --build --preset mac-release ) || return 1
+      $need_configure && { cmake --preset "$PRESET" || exit 1; }
+      cmake --build --preset "$PRESET" ) || return 1
     if [[ ! -d "$RELEASE_APP_PATH" ]]; then
         echo "❌ Build did not produce $RELEASE_APP_PATH"
         return 1
@@ -202,9 +218,9 @@ function dependencies() {
         while IFS= read -r -d '' dylib; do
             base=$(basename "$dylib")
 
-            # Thin universal binaries to arm64
-            if lipo -info "$dylib" 2>/dev/null | grep -q "x86_64"; then
-                lipo "$dylib" -thin arm64 -output "${dylib}.arm64" && mv "${dylib}.arm64" "$dylib"
+            # Thin universal binaries to the target arch
+            if [[ "$(lipo -archs "$dylib" 2>/dev/null)" == *" "* ]]; then
+                lipo "$dylib" -thin "$WINNOW_ARCH" -output "${dylib}.thin" && mv "${dylib}.thin" "$dylib"
             fi
 
             install_name_tool -id "@executable_path/../Frameworks/$base" "$dylib"
@@ -237,17 +253,20 @@ function dependencies() {
     local winnets_dir="${STAGING_APP_PATH}/Contents/MacOS/Winnets"
     if [[ -d "$winnets_dir" ]]; then
         find "$winnets_dir" -type f | while IFS= read -r macho; do
-            if lipo -archs "$macho" 2>/dev/null | grep -q "x86_64"; then
-                echo "      thinning Winnets/${macho#$winnets_dir/} → arm64"
-                lipo "$macho" -thin arm64 -output "${macho}.arm64" && mv "${macho}.arm64" "$macho"
+            if [[ "$(lipo -archs "$macho" 2>/dev/null)" == *" "* ]]; then
+                echo "      thinning Winnets/${macho#$winnets_dir/} → $WINNOW_ARCH"
+                lipo "$macho" -thin "$WINNOW_ARCH" -output "${macho}.thin" && mv "${macho}.thin" "$macho"
             fi
         done
     fi
 
-    # Reinstate Homebrew WebP libs (Qt ships incompatible copies)
+    # Reinstate Homebrew WebP libs (Qt ships incompatible copies). Not for Intel:
+    # Homebrew here is arm64-only.
+    if [[ "$WINNOW_ARCH" == arm64 ]]; then
     rm -f "$STAGE_FRAMEWORKS_DIR"/libwebp*.dylib
     cp "$HOMEBREW_PREFIX"/lib/libwebp*.dylib "$STAGE_FRAMEWORKS_DIR/" 2>/dev/null || true
     cp "$HOMEBREW_PREFIX"/lib/libsharpyuv.0.dylib "$STAGE_FRAMEWORKS_DIR/" 2>/dev/null || true
+    fi
 
     # Strip absolute Homebrew LC_RPATHs from every bundled Mach-O. The link step
     # bakes $HOMEBREW_PREFIX/lib into the executable (OpenCV/FFmpeg/etc. live
@@ -439,6 +458,11 @@ function upload() {
 #   promote            interactive (detect old version, confirm, then publish)
 #   promote --dry-run  print every ssh/scp/sed it WOULD run; touches nothing
 function promote() {
+    if [[ "$WINNOW_ARCH" != arm64 ]]; then
+        echo "❌ promote publishes the Apple Silicon DMG to winnow.ca; it has no Intel"
+        echo "   path. Publish the Intel DMG with G (GitHub Release) instead."
+        return 1
+    fi
     local dry=false
     [[ "$1" == "--dry-run" ]] && dry=true
 
@@ -658,10 +682,17 @@ EOF
     read confirm; [[ "$confirm" == "yes" ]] || { echo "Aborted."; return 1; }
 
     if ! $exists; then
+        # Notes = packaging/release-notes.md with its {{...}} tokens filled in
+        local title="Winnow ${WINNOW_VERSION//_/ }"
+        local template="${PACKAGING_DIR}/release-notes.md"
+        [[ -f "$template" ]] || { echo "❌ Release notes template not found: $template"; return 1; }
+        local notes; notes=$(<"$template")
+        notes=${notes//\{\{TITLE\}\}/$title}
+        notes=${notes//\{\{REPO\}\}/$GITHUB_REPO}
+        notes=${notes//\{\{TAG\}\}/$tag}
+        notes=${notes//\{\{VERSION\}\}/$WINNOW_VERSION}
         gh release create "$tag" --repo "$GITHUB_REPO" --target "$head" \
-            --title "Winnow ${WINNOW_VERSION//_/ }" \
-            --notes "Winnow ${WINNOW_VERSION//_/ } for macOS (Apple Silicon) and Windows." \
-            || return 1
+            --title "$title" --notes "$notes" || return 1
     fi
     gh release upload "$tag" "$DMG_PATH" --repo "$GITHUB_REPO" --clobber || return 1
     echo "✅ Published: https://github.com/${GITHUB_REPO}/releases/tag/$tag"
@@ -690,6 +721,7 @@ function verify() {
 }
 
 function print_config() {
+    echo "WINNOW_ARCH        = $WINNOW_ARCH (preset $PRESET)"
     echo "REPO_ROOT          = $REPO_ROOT"
     echo "QT_DIR             = $QT_DIR"
     echo "HOMEBREW_PREFIX    = $HOMEBREW_PREFIX"
@@ -707,8 +739,8 @@ function print_config() {
 # --- Menu -------------------------------------------------------------
 while true; do
     clear
-    echo "=================== Winnow Deployment ==================="
-    echo "0) Build (cmake --build --preset mac-release)"
+    echo "=================== Winnow Deployment ($WINNOW_ARCH) ==================="
+    echo "0) Build (cmake --build --preset $PRESET)"
     echo "1) Stage fresh app"
     echo "2) Sign staged app"
     echo "3) Notarize + staple"
