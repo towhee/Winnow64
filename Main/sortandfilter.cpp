@@ -33,11 +33,18 @@ void MW::filterDockTabMousePress()
              << "filters->filtersBuilt =" << filters->filtersBuilt
         ; //*/
 
-    /* Clicking on the filter dock tab toggles visibility before this
-    function is called, so test for the opposite. */
-    if (!filters->filtersBuilt) {
-        buildFiltersWhenModelReady(dm->instance);
-    }
+    /*  QUEUED, BECAUSE THE PRESS ARRIVES BEFORE THE TAB SWITCH. MW::eventFilter sees
+        the MouseButtonPress before QTabBar handles it, so filterDock is still hidden
+        here, and buildFiltersWhenModelReady's lazy-build gate (!filterDock->isVisible())
+        returned without building. A folder loaded with another tab showing (Folders)
+        then left every dynamic category empty and greyed for good: only Places, which is
+        not built from the model, had items. Run after the switch instead. A load still running
+        builds them itself at MW::folderChangeCompleted, now that the panel is visible. */
+    if (filters->filtersBuilt || filters->buildingFilters) return;
+    QTimer::singleShot(0, this, [this, inst = dm->instance.load()]{
+        if (G::isLoadRunning || filters->filtersBuilt || filters->buildingFilters) return;
+        buildFiltersWhenModelReady(inst);
+    });
 //    if (filterDock->isVisible() && !filters->filtersBuilt) {
 //        buildFilters->build();
 //    }
