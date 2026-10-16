@@ -764,17 +764,17 @@ void MW::setScope(G::Scope s, QString src)
 void MW::updateLibraryOnlyActions()
 {
 /*
-    THREE MENU ITEMS BELONG TO THE LIBRARY: the Collections and Queries panels, and Manage
-    Catalog (which chooses the folders the Library is made of). In Folders they are
-    disabled, and the tooltip -- shown by the File and Window menus -- says why and how to
+    TWO MENU ITEMS BELONG TO THE LIBRARY: the Collections and Queries panels. In Folders
+    they are disabled, and the tooltip -- shown by the Window menu -- says why and how to
     get there, rather than leaving a greyed item to explain itself (feedback: disable with
-    a reason).
+    a reason). A panel already open stays on screen, greyed with its own reason
+    (updateCollectionsAvailability). Called from createActions and from setScope on every
+    scope change.
 
-    ONLY THE MENU ITEMS. Manage Catalog stays reachable from where it is genuinely needed
-    in Folders: the first-folder prompt (promptForCatalogScope) and the empty-Library
-    bail (catalogEmptyOpenManage) both call manageCatalogRoots directly. A Collections or Queries panel already open stays on
-    screen, greyed with its own reason (updateCollectionsAvailability). Called from
-    createActions and from setScope on every scope change.
+    MANAGE CATALOG IS NOT ONE OF THEM (2026-10-16). It configures the index, which is
+    set up from Folders as often as from the Library -- the first-folder prompt
+    (promptForCatalogScope) sends a Folders user to File > Manage Catalog by name -- so
+    it is enabled in both sources.
 */
     if (!collectionsDockVisibleAction || !queriesDockVisibleAction || !manageCatalogAction)
         return;
@@ -788,9 +788,8 @@ void MW::updateLibraryOnlyActions()
     queriesDockVisibleAction->setToolTip(library
         ? tr("Queries: saved searches over the Library, built with the Query Builder.")
         : why);
-    manageCatalogAction->setEnabled(library);
-    manageCatalogAction->setToolTip(library
-        ? tr("Choose the folders that make up the Library.") : why);
+    manageCatalogAction->setEnabled(true);
+    manageCatalogAction->setToolTip(tr("Choose the folders that make up the Library."));
 }
 
 void MW::setCatalogScopeWhole(QString src)

@@ -2476,9 +2476,11 @@ private:
     bool catalogScanIsAuto = false;
     /* Rows the pre-scan reconcile forgot, carried to the report at the end of the run. */
     int catalogScanForgotten = 0;
-    /* Set once the first-run "define a catalog scope" prompt has been offered, so it is
-       offered once and not on every folder. Persisted. */
+    /* Set once the "define a catalog scope" prompt has been offered this session, so it
+       is offered once per session and not on every folder. Not persisted. */
     bool catalogScopePrompted = false;
+    /* The prompt's "Don't show this message again" box. Persisted. */
+    bool skipCatalogScopePrompt = false;
     /* The scope editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */
     CatalogRootsDlg *catalogRootsDlg = nullptr;

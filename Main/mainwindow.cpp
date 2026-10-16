@@ -4079,16 +4079,21 @@ void MW::refreshLibraryAfterCatalogChange()
 void MW::promptForCatalogScope()
 {
 /*
-    ONCE, AND ONLY WHERE IT MEANS SOMETHING. A new user has an empty scope table, so
-    nothing they browse is catalogued and search finds nothing -- with no indication that
-    a choice was ever theirs to make. This is the one moment the question is worth asking:
-    they have just opened a folder of images, so the answer is concrete.
+    ONLY WHERE IT MEANS SOMETHING. A new user has an empty scope table, so nothing they
+    browse is catalogued and the Library is empty -- with no indication that a choice was
+    ever theirs to make. This is the moment the question is worth asking: they have just
+    opened a folder of images, so the answer is concrete.
 
-    IT IS ASKED ONCE PER INSTALL, remembered whichever way it is answered. A prompt that
-    returns on every folder is a prompt the user learns to dismiss without reading, and
-    Manage Catalog stays on the File menu and in Preferences for whoever says Not now.
+    IT EXPLAINS THE TWO SOURCES before it asks. Folders needs nothing set up; the Library
+    is only as big as the catalog, and the catalog only holds the folders the user lists
+    in Manage Catalog. Without that the question reads as housekeeping to be dismissed.
+
+    ONCE PER SESSION, UNTIL THE USER SAYS STOP. A prompt that returns on every folder is
+    one the user learns to dismiss without reading; "Don't show this message again" is
+    persisted (skipCatalogScopePrompt). Whoever declines can still get there: File >
+    Manage Catalog is enabled in both sources, and the text names it.
 */
-    if (catalogScopePrompted) return;
+    if (skipCatalogScopePrompt || catalogScopePrompted) return;
     if (!catalogScope.isEmpty()) return;
     if (!Catalog::instance().isAvailable()) return;
     catalogScopePrompted = true;
@@ -4096,15 +4101,26 @@ void MW::promptForCatalogScope()
     QMessageBox box(this);
     box.setWindowTitle("Catalog");
     box.setIcon(QMessageBox::Question);
-    box.setText("Which folders should Winnow index?");
+    box.setText("Nothing is catalogued yet.");
     box.setInformativeText(
-        "Nothing is catalogued yet. The catalog is what lets you search across folders "
-        "you have not opened -- by keyword, camera, rating or date.\n\n"
-        "Choose the folders to index in Manage Catalog. Folders outside that list are "
-        "not catalogued, even when you browse them.");
+        "Winnow has two ways to browse, chosen at the top left of the window:\n\n"
+        "Folders  --  open any folder on disk and browse the images in it. Nothing needs "
+        "to be set up, and this is what you are using now.\n\n"
+        "Library  --  browse every catalogued image at once, whatever folder it is in, "
+        "and search and filter across all of them by numerous metadata categories "
+        "including folders, date and keywords. Collections and Queries work in the "
+        "Library.\n\n"
+        "The Library holds only what the catalog holds, so to use it you will need to "
+        "manage the catalog: choose the folders to index in the main menu: File > Manage "
+        "Catalog, and Winnow keeps them up to date. Folders outside that list are not "
+        "catalogued, even when you browse them.\n\n"
+        "If you only use Folders, there is nothing to do.");
     QPushButton *manage = box.addButton("Manage Catalog...", QMessageBox::AcceptRole);
     box.addButton("Not Now", QMessageBox::RejectRole);
+    QCheckBox *skip = new QCheckBox("Don't show this message again", &box);
+    box.setCheckBox(skip);
     box.exec();
+    if (skip->isChecked()) skipCatalogScopePrompt = true;
     if (box.clickedButton() == manage) manageCatalogRoots();
 }
 
@@ -4261,9 +4277,9 @@ bool MW::catalogEmptyOpenManage(const QString &src)
     NOT WHEN THE INDEX WILL NOT OPEN. That is a different failure with its own greyed-out
     Open Catalog and its own reason, and no amount of editing the folder table fixes it.
 
-    THE FIRST-RUN PROMPT IS UNAFFECTED (promptForCatalogScope): that one is asked when
-    the user has NOT asked for the catalog, so it has to be a question and has to be
-    asked once. This is a direct answer to a direct request.
+    THE FIRST-FOLDER PROMPT IS UNAFFECTED (promptForCatalogScope): that one is asked
+    when the user has NOT asked for the catalog, so it has to be a question, asked once
+    per session and skippable for good. This is a direct answer to a direct request.
 */
     if (!Catalog::instance().isAvailable()) return false;
     if (Catalog::instance().count() > 0) return false;

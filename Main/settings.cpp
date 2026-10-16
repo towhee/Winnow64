@@ -201,7 +201,8 @@ void MW::writeSettings()
        is cleared first, or a table that shrank would keep the tail of the longer one. */
     /* Survives a restart, or the editor would ask for a scan that can never close the
        gap every time Winnow is launched. */
-    settings->setValue("catalogScopePrompted", catalogScopePrompted);
+    settings->setValue("skipCatalogScopePrompt", skipCatalogScopePrompt);
+    settings->remove("catalogScopePrompted");    // superseded by skipCatalogScopePrompt
     settings->setValue("catalogUncatalogable", catalogUncatalogable);
     settings->setValue("catalogScanIncomplete", catalogScanIncomplete);
     settings->remove("CatalogScope");
@@ -826,7 +827,7 @@ bool MW::loadSettings()
     settings->endGroup();
 
     /* read the catalog scope (see the write side for why it is not in the db) */
-    catalogScopePrompted = settings->value("catalogScopePrompted", false).toBool();
+    skipCatalogScopePrompt = settings->value("skipCatalogScopePrompt", false).toBool();
     catalogUncatalogable = settings->value("catalogUncatalogable", 0).toInt();
     catalogScanIncomplete = settings->value("catalogScanIncomplete", false).toBool();
     catalogScope.clear();
