@@ -337,7 +337,7 @@ ReleaseExtras 2/ExifTool/lib/File/RandomAccess.pm
 ReleaseExtras 2/ExifTool/exiftool
 
 # Private developer notes (kept local, purged from history 2026-10-15)
-notes/
+/notes
 
 # Local scratch / tooling, not part of the project
 console.txt
