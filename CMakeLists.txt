@@ -907,7 +907,7 @@ qt_add_executable(Winnow
     ${WINNOW_RESOURCES}
     ${WINNOW_NOTES}
     Main/help.cpp
-    notes/RawDecode_ToDo.txt
+
 )
 
 target_compile_definitions(Winnow PRIVATE

@@ -235,7 +235,16 @@ the platform's artifact to the GitHub Release tagged `v<version>` (e.g. `v3_beta
 - It runs the verify gate, shows a plan, and requires an explicit `yes`.
 - One release per version is shared by both platforms: whichever machine runs `G`
   first creates the release (tag on the current HEAD — **push first**), and the
-  other attaches its file. Re-running replaces that platform's file (`--clobber`).
+  other attaches its file.
+- The release is created as a **draft** and goes public automatically when the `G`
+  run that attaches the last of the three assets finishes (`release_assets` /
+  `Release-Assets`). Until then users, the README link and the updater see nothing,
+  so the notes' direct links can never 404. To go public with an asset missing, type
+  `publish` at the prompt the script shows.
+- Re-running `G` replaces that platform's file. On a public release this is a swap,
+  not `--clobber`: the new file uploads as `<name>.part` (the updater ignores it),
+  then the old asset is deleted and the new one renamed, so the link is down for
+  about a second instead of the whole upload.
 - Releases are created as full releases, not pre-releases, because
   `/releases/latest` ignores pre-releases.
 - The release notes (the "What to Download" table with direct links to both files)
@@ -280,11 +289,12 @@ What this requires of a release:
   anyone already on the higher one stays there.
 - The assets keep their names: `Winnow<ver>.dmg` (with the signed, notarized
   `Winnow<ver>.app` inside) and `WinnowSetup-<ver>.exe`.
-- Publish both platforms promptly. Until a platform's asset is attached, users on
-  that platform are told nothing (silent check), or that the release is "not yet
-  available for this computer" (manual check).
-- Do not mark a release you want installed as a pre-release or leave it a draft;
-  `/releases/latest` skips both. That is also the way to stage a release for
+- The release stays a draft until all three assets are attached (see above). If you
+  force it public with an asset missing, users on that platform are told nothing
+  (silent check), or that the release is "not yet available for this computer"
+  (manual check), and that asset's link in the notes 404s.
+- Do not mark a release you want installed as a pre-release, or leave it a draft
+  (one is left a draft only while assets are missing); `/releases/latest` skips both. That is also the way to stage a release for
   testing without offering it.
 - **Testing before a real release:** publish the build as a *pre-release* under a
   throwaway tag (nobody's update check or the README link sees pre-releases), then

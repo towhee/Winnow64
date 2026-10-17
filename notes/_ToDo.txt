@@ -1,0 +1,1478 @@
+WHAT'S NEW
+- Develop Module
+- Develop History panel
+- Develop Presets panel
+- Go to folder
+- Original/Developed previews
+- Catalog
+- Keywords
+- Map
+
+BUGS / TO DO
+
+- RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights
+  slider): rebuild colour where the SENSOR clipped one or more channels, before white
+  balance / demosaic (today a clipped sky or specular can go magenta/cyan or flat, and
+  Sony clipped highlights can show a tint). Study first: RawTherapee "Color Propagation"
+  (and its Inpaint Opposed), darktable "highlight reconstruction" (inpaint opposed,
+  segmentation, guided laplacians) and "color reconstruction". Validate against libraw /
+  Lightroom on a frame with real sensor clipping (Horne Lake is NOT one: its +2.5 push is
+  digital, the raw data is intact).
+- Move Embellish export off the GUI thread. Requires reworking the Embellish render path
+  from QPixmap/QGraphicsScene to QImage-only, since QPixmap is GUI-thread-only.
+- One possible colour problem in Embellish export, not checked: after writing the file it
+  still copies the source file's colour profile into it. The new render is sRGB, so a
+  source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
+- Convert Embellish to a version
+- Can we cache raw denoise? What does LR do?
+- If a file has both flat keywords and nested, only use the nested ones unless there is a
+  flat keyword without a matching nested one.
+- Fine tune overlay tint - when active
+- Fine-tune keywords managing
+- Remove the catalog panel code not being used?
+- Do we need backups when edit, and if so, should they be in the catalog?
+- Subject mask not working on 2021-05-16_0358-2.tif
+- Object mask needs some TLC
+- AI keywording
+- Redo Develop help
+- Edit Winnow shortcuts
+- Customize Info (I) location/size.
+- Review Apple render (new raw engine)
+- Develop behavior when no image is selected
+- Test search in filter (Add entire keyword heirarchy ie Gloria + Family + People)
+- Tweak welcome screen re to get started incl Catalog ??
+- Tweak develop basic tone sliders
+- Tweak main menu (Library, Develop...)
+- Tweak preferences
+- Tweak workspaces - more sophicated default
+- Review activity log
+- Review issues log
+- Review window/panel shortcuts
+- For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
+  '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
+- Auto keyword generator (k shortcut?)
+- Review RapidRaw masks / inpainting / model usage
+- Does detail need Denoise / color?
+- Object mask post feather not working
+- Test DnD to Folders
+- Review menu disabled ie Go
+- Add Develop to Preferences dialog (cache cap and clear preview cache)
+- Eliminate Edits layouts except Minimal
+- Check if libheif library is in Winnow (use for windows platform)
+- Develop copy / paste fine tuning
+- Add profiles (including AgX) to Calibrate
+- List stuff to disable in Develop Mode (menu items and shortcuts)
+- WB undo
+- Change submask feather, rebuild submask?
+- Spot fill quality issue (reassess)
+- Redo help preformance tips
+- Cannot use Embellish panel when in Develop mode
+- Review what is needed in ReleaseExtras
+- Drag dock tabify to the right (last) - WIP
+- Reformat the documentation.txt (when have lots of tokens)
+- The responsiveness fixes are gated behind G::useVisibleOnlyIconEmit and
+G::useBatchedFolderInsert (both default on). Once you've lived with them a while, you may
+want to drop the flags and bake the behavior in, but no rush; keeping them is cheap
+insurance.
+- Download a HDR PQ CR3 file for testing.
+- Windows ingest "how this works" has a white titlebar.
+- Windows tooltips have a white background
+- Review all rgh comments
+- Read svg files ie downloads/glyphs.svg
+- Maybe integrate apple sf symbols as svg
+- Confirm do not need MW::focusChange and MW::enableGoKeyActions
+- Select Photos/2020-2029 stalls while loading metadata and icons
+- Check for updates for macos
+- Help > Check for updates not working (windows)
+- MeanStack not updating embedded image thumbnail
+- Make sure HEIC also works on PC including thumbs
+- Remove settings deprecated items MW::removeDeprecatedSettings()
+- Cmd Del = delete all rejected
+- Cmd+Opt+R = reject all unpicked and unpick all picked
+- bool Usb::isUsb(QString path) not done for MacOS
+- CR3 missing XMP, offset is wrong
+- Read HEIC metadata (MAC issue only?)
+- Convert path to windows \ for copy path to clipboard
+- Make ImageDecoder warnings context specific is hasMetadata
+- Save preview as PNG include color manage corrections
+- MW::enableSelectionDependentMenus needs updating for all situations
+
+- Embellish not resetting properly
+- On Mac: qt.qpa.fonts: Populating font family aliases took 125 ms. Replace uses of missing font family ".AppleSystemFallback" with one that exists to avoid this cost.
+- Image metadata report does not show sidecar for PNG file
+- E:/2020 √/202001 √/2020-01-05_Brookwood Marsh √/2020-01-05_0005-denoise.dng full size not working
+- Unicode path heics not rendering
+- E:/2020 √/202001 √/2020-01-25_Linley Valley √/2020-01-25_0024_Focus Stack.tif has bad thumb
+  caused by Winnow adding thumbnail
+- When parsing file formats test if IFD exists and ifd->ifdDataHash contains tagid
+- DNG without JPG preview: show TIFF?
+- Cannot delete heic files on PC
+- Add hif file format
+- Rotate heic files
+- Slideshow only load metadata for current image
+
+CAMERAS NOT SUPPORTED
+- Canon: 1D, 1DS, D2000, DCS1, A3200, G5X, S120, SD450, SX100, SCX130, SX1, SX260, SX50, SX510, SX60, S90
+- Fuji: S2PRO
+
+EMBELLISH
+- Highlighter opacity not always used
+- Sometimes effect controls do not trigger effect changes
+- Eliminate shadow blur in sunward direction
+- Sharpen needs TLC
+MAC
+- DNG files showing on top of prev image in loupe on mac 2017-09-17_Esquimalt LaGOON
+- Mac check for updates not done yet
+- Share https://developer.apple.com/documentation/appkit/nssharingservice?language=objc
+PERFORMANCE
+ENHANCEMENTS
+- When add new workspace the menu shortcut is not updated until reopen app
+- Heic thumb rotation wrong
+- Portrait aspect ratios wrong
+- Add "How this works" throughout app?
+- https://github.com/wang-bin/qdevicewatcher
+- Add fade and alias to stroke
+- Add glow (inner/outer)
+- Add gaussian blur (inner/outer)
+- Reset to defaults
+- Remove Windows Registry settings during uninstall
+
+DONE/FIXED
+- Quick load library
+- Map module
+- Develop module
+- Keywording
+- Library module
+- Release 2.05
+- Collapse DockWidgets and Solo mode
+- Show images that have sidecars (indicator in thumbnail and col in datamodel)
+- Stopped FSTree scrolling when expand/collapse tree
+- Convert rawJpgStatusLabel to a button like colorManageToggleBtn
+- Focus stack all file types
+- IconView smooth scroll on swipe
+- Video plays when try to retreat/advance at first/last item.
+- Beef up instance checking in DataModel
+- Added QQ tip in ingest dialog
+- Info display: if EC is null then do not display EV
+- Delete images not working when in Grid Mode
+- Video aspect was broken by MacOS update
+- Cmd + C works in diagnostic reports
+- Redo IconViewDelegate
+- Refresh Bookmarks and Folders after focus stack
+- Focus stack module
+- Release 2.04
+- Update Nikon Lense model info
+- Delete all files in filter not always working properly
+- Fix sort for case sensitivity
+- Fix refresh when filtered and delete all
+- Version 2.03
+- Selection count not updated correctly (should be 1) after a filter change.
+- Select anchor wrong when change filter.  Clear selection to keep it simple.
+- Not reading sidecars in images in readMetadata if no metadata in file
+- Disable menu filters when item on it filtered datamodel
+- Updated _deploy.command
+- FSTree process large number of recursed folders
+- TableView showing all columns at start when some columns are being hidden in pref
+- On Windows Filters not refreshing if hidden and then reveal
+- Ingest Dlg not showing manual paths correctly
+- Resort when filter change
+- When filter, pick and advance icon selection glitches (iconviewdelegate issue)
+- Fix icon chunk not working
+- Auto ImageCache buffer size option
+- Record decoder times in ImageCache
+- When clear rating/label that is filtered redo filters to show all if nothing left
+- Replace DataModel setValue functions with row/col setVal versions
+- MW::stop redo using event loop and signals to MetaRead, ImageCache and BuildFilters
+- MetaRead and ImageView status lights are truncated (made container wider)
+- Sync ImageView with CompareView selection
+- Return key behavior
+- TableView freeze columns
+- VERSION 2.02
+- When zoomed in focus point mode, icon focus box wrong if portrait
+- VERSION 2.01
+- Signed, notarized and stapled for Apple
+- VERSION 2.00
+- MacOS Winnow appears in all desktops
+- Tweak USB code
+- Windows tooltips (esp for thumbnails)
+- Windows do not show menu when full screen
+- In FSTree and BookMarks do not count fields if size() == zero
+- Add MW::refresh and DataModel::refresh to update when source folders file list changes
+- Save preview to same folder not refreshing folder in FSTree or DataModel
+- Combine raw/jpg crashing after toggling on/off
+- Add tooltips for IconView symbols
+- Do not pan to predictive focus when mouse click on ImageView
+- Copy Drag to FSTree from IconView crashes
+- Preferences dialog always on top
+- Delete all reports when exit Winnow
+- Fix glitches in embellish from lightroom and deletion sort change
+- Diagnostics line widths
+- Row not always correct in ImageMetadata struct
+- Remote embellish from Lightroom when no Winnow instance was not working
+- In gridview, when change icon size scrolls to different location (added dm->scrollToIcon)
+- Add scroll to current shortcut
+- When change from grid to thumb view not scrolled to same position
+- Grid click on icon scrolls to end
+- Full Screen toggle not returning to previous size window
+- Filter on picks, unpick: should select next picked
+- ImageCache progress bar not working for videos
+- Process video and tif with missing thumbnails in another thread
+- Implemented pan to camera focus point
+- Eject mem card while selected, then clear datamodel
+- Refine pref cache progress size
+- Fix setTargetRange logic error
+- Fix setTargetRange sumMB error
+- When set color/rating icons not refreshing
+- Fix icon chunking
+- Update "row of rows" in status bar when add multiple folders to existing datamodel
+- When remove folder from FSTree selection the Selection::setCurrentIndex can be invalid index and crashes
+- Zero size files resulting in slow crash
+- Orientation should be 8 for /Users/roryhill/Pictures/_test/2023-05-28_0002-Enhanced-NR.dng
+- Setting color or rating should not filter unless a color filter has been set
+- Endless loop if ImageDecoder not return success
+- Eliminated MW::isCurrentFolderOkay flag
+- MacOS Minimise yellow button not working
+- Compare at 100% cannot mouse to a compare item without zoom to fit happening
+- Click disabled bookmark does not clear datamodel ie "2024-12-25_Christmas" prob MW::bookmarkClicked
+- When infoView is disabled text is still white
+- Retain datamodel selection when removing folders from datamodel
+- FSTree sometimes disabled
+- If filtering and change filter item for all iconview does not update
+- Folder "_Tiff Problems" thumbnails not right
+- Disable Metadata dock when no file selection
+- Thread tried to wait on itself (reader)
+- Crash when close Winnow while MetaRead still working
+- Remove remember last folder option
+- Drag copy not updating FSTree count column
+- Select with subfolders only shows videos for /Users/roryhill/Photos/2020-2029/2024/202401 √
+- When opt select folder (recurse) status Pos: 1 of x is not updated and not fileSelectionChange
+- Update cache progress when unfilter
+- Rapidly selecting folders can corrupt ImageCache toCache list
+- Eliminate MW::createFrameDecoder
+- In "/Users/roryhill/Pictures/_test1" heic files not shown in cache progress bar when advance thru them
+- Fixed latency issue in FSTree image count
+- Review isCurrentFolderOkay in MW::loadChanged
+- Filters progress bar not running
+- Eliminate use of G::currRootFolder
+- Fix ImageCache::resetOutsideTargetRangeCacheState crash
+- Auto open last folder Folders not scroll to current
+- FSTree include datamodel, use dm->folderList instead of G::currRootFolder
+- Change color management spinning beachball
+- Review fillCache logic, make toCache struct with isCaching flag)
+- Include cache progress in status bar again
+- Refresh tiff full image when toggle color management
+- Fix IssueLog initialization
+- Zerene 16bit AdobeRGB tiffs color management not working
+- Slideshow spacebar popup being reset
+- Eject USB disabled in menu
+- Change encodeThumbnail to use Tiff::read and call from thumb.cpp
+- Delete image in folder crashing
+- Redid ImageCache to directly use DataModel
+- Multi-select folders
+- Try improve FSTree expand performance by turning showImageCount off/on
+- Replace dm->updateRowNumbers() with a delegate in tableView
+- Changes from Table to Loupe when change dock
+- Add folders to filters
+- Paste images to root folder selected
+- Bookmarks folder count not refreshing after delete all files in folder
+- When change filter, scroll to current index
+- DataModel::imMetadata using proxy
+- ImCache QHash instead of CTSL::HashMap<QString, QImage>
+- Loupe view, mouse click on thumbView scrolling to center when it shouldn't
+- Do not permit thumbView when gridView window is visible
+- Recover selection when invokeWorkspace
+- Do not rebuild ImageCache when change workspace
+- After delete a folder do not highlight or select a folder
+- Add folder name to context actions for folders: delete, copy and reveal
+- Change cache size is hanging (from 16 to 4 GB)
+- Ingest rename template is awkward
+- Fixed mouseDoubleClick on ThumbView while in Table mode behavior
+- ImageCache running indicator not turning off if filter and everything already cached
+- ImageView not updating if in Grid or Table view, change row and to Loupe view
+- Add help for film strip and status bar symbols
+- Move Image modification to separate Preferences category from General
+- Redo embedded thumbnails
+- Add default workspace to status bar
+- ImageView zoom when click not always work (double click issue)
+- Decode tiff files with jpeg compression (libtiff)
+- TIFF jpg encoding and samples per pixel > 3 (libtiff)
+- Add final check for orphans in ImageCache
+- IconView zoom rect not showing for heic thumbnails
+- ThumbDock height shrinking when app reopened
+- DockWidgets not remembering prior state
+- Win thumbs float needs dark title bar
+- Win thumbs float missing vertical scrollbar
+- Scrolling when a filter change does not change the IconViews
+- No image showing when refilter after null filter.
+- Sort option not sticky when change folders but also not reset to filename in menu
+- Esc to abort metaRead
+- Not showing Building filters message when filters panel is visible.
+- If view mode TableView and 1st file is video get "Gathering metadata and thumbnails for ..."
+- Added preview dimensions to InfoView
+- Fixed image verses preview image dimensions in dng where largest preview is smaller than raw
+- Kill mouse scroll between imageview, iconview and fstree
+- Ratings covers video label on thumbs
+- Immediately start viewing images while MetaRead2 still reading metadata and icons
+- eventFilter updated metaObject className QTabBar QMainWindowTabBar version 6.7.0
+- Prefs column 0 not getting width set correctly
+- Embed thumbnails dialog opens all the time
+- Duplicates found filter category shout be highlighted if any true items
+- When copy or move images, also include any xmp/txt files
+- When unfilter, status total not always correct
+- Moved file operation functions from mainwindow.cpp to fileoperations.cpp
+- Selection lost when filter
+- If delete an image, then remote embellish to same folder, then blank icon
+- Crash MW::4265 waking from sleep mode EXC_BAD_ACCESS (SIGSEGV)
+- Can eventually crash at mac.mm:116 (Mac::getDisplayProfileURL)
+- Filter delay fixed
+- Correct createdate for all image files using Exiftool
+- Stuttering in TheFrame folder rapid progression
+- Crash when delete all filtered images
+- Crash when reject files and then filter on rejected
+- IconView box cursor no longer working
+- Raw/Jpg not working in metaread2
+- Right side locked tabs showing at bottom instead of top
+- ImageCache running amok
+- Central widget going blank when rapidly scroll up/down in gridView
+- Multi pick and set color class clears selection
+- When insert missing thumbnails update missing thumb status in thumbs
+- Progress bar not being reset
+- Utilities::get16 error if char = A9 (exc char?) fixed
+- Icon cache status not updating for rows less than targetRange
+- Remote embellish title not being added if Winnow not already open (instance clash)
+- Stop video player when change folders
+- Hide mouse cursor in video mode
+- Zoom radio button uncheck when zoom changes
+
+- Release 1.37
+- Not showing loupe image when jump to end before all metadata has been read
+- Background ingest errors crashing (non-gui attempt use QDialog)
+- Insert images into active folder and datamodel without reloading entire folder
+- Update filter unfiltered counts after image deletion
+- Auto detect USB removal and insertion on Windows
+- Compile-time Win10/11 not correct in win.cpp
+- FSTree root wrong on some Win10 computers
+- Change color not aligned center in table view
+- Delete files not updating filters
+- Filter color, edit color, loupe not updated
+- Update IconViewDelegate color class and ratings
+- Images with JPG extension could be HEIC
+- Created date should be DateTimeOriginal
+- Set Winnow on top when remotely activated
+- G::renderVideoThumb = false was not working
+- Cancel menu bar shortcut still active
+- Quick sorts MW::sortChangeFromAction missing lens, creator
+- Quick filter picks was not toggling
+- Fix next pick
+- Opt+Left/Right
+- Go, scroll left/right not scrolling one image left/right
+- Mean stack insert into datamodel not always working
+- Search filter not showing first item selected
+- Initial thumbView icon size (remove if (G::isInitializing) return;)
+- Invert selection
+- Window on bottom when drag to another screen in MacOS
+- Video thumbnail wrong
+- Unfilter can crash
+- Reset image count in bookmarks when eject bookmarked drive
+- Delete folder fixed
+- Stabilized folder loading for all folder sizes
+- FSTree selection / up/down key issue
+- Found performance issue with max thumbnails less than total thumbnails
+- Reorganized menus and actions
+- Added Mac::joinAllSpaces to resolve multiple monitor issues
+- Not restoring to same monitor / mac space
+- Spacebar do not set zoom 100% if current is a video
+- Redo icon chunk size
+- Rapid ImageView scrolling results in crash
+- Redo selection and navigation
+
+- Release 1.36 (not distributed to users)
+- Check fix missing thumbs for jpg previews in raw images
+- IconView not always updating after remote embellish
+- Ingest make sure file name template selected
+- Rename dlg from token editor ui fix req'd
+- Dock tab tooltips not always in correct location
+- Show warning if select an embellish template without an image
+- ThumbView not resizing correctly when change show filename/title
+- Link to winnow.ca in welcome screen
+- Windows set title bar to app background color
+- Windows with no pref (new user) crashing
+- Remove image files after remote embellish
+- Fixed skipping loupe showing images when hold direction key down
+- Smooth resize icons when drag thumbView separator
+- After resize winnow scroll to current
+- Add alert if rotate with file modification disabled
+- Rename images using a template
+- Added Utilities::pixmapToString
+- After delete image cannot view last image in folder
+- Created date not including ms in token builder
+- Click below last row in TableView crashes
+
+- Release 1.35
+- Add pick status ingested to filters
+- FolderAndFileSelection not always scrolling IconView to current
+- Cmd and Shift select in table view
+- Share including airdrop for Macs
+
+- Release 1.34
+- IconView right click selecting image on PC
+- New folder scroll to start after scrolled ahead
+- PopUp does not return keyboard focus to Winnow, replaced with dialog
+- Crash when report row diagnostics and no folder selected
+- USB crash when filter on day (caused by qDebug statements)
+- Add modify on icon to statusbar
+- Ignore filtering while editing the datamodel
+- Redo concurrent load flow
+- When load folder and jump to end last image not added to image cache
+- Suggest embed thumbnails when missing
+- Bulk changes not working when filter panel is open
+- Thumbnail symbol help in IconView tooltip
+- Delete does not move to trash or recycle bin
+- Occasional torquoise header text in preferences
+- Thumb not loading Tiff with embedded JPG, getting from full size
+- Update image cache target range in MW::loadConcurrentMetaDon
+- Ignore IconViewDelegate paint before icon has been loaded into DataModel
+- IconViewDelegate icon scaling glitches
+- HEIC metadata on mac
+- If try to open Winnow when already open then next time does not remember location/size
+- TableView default column widths not working
+- ∆ label unfilters DataModel
+- Embellish right click rename template opens rename style dialog
+- Crash when rapidly toggle rating or label
+- Cannot unselect current in multiselect
+- Edit multiple filtered Creator or Title not working (requires suspend filtering)
+- Icon scrolling delayed when MetaRead::iconChunkSize < dm->sf->rowCount
+- Tweaked tooltip style (larger font, margin, border, color)
+- If change picks, ratings, label before showing filters then filters fail
+- Pick unless rejected was broken
+- Removed refine functionality
+- Cannot change tableView column widths by dragging
+- Shift+Ctrl click to include subfolders
+- Rating set to zero instead of null somewhere
+- Turn off include subfolders after folder loaded
+- ImageCache priorities not updating when filter
+- Rotate images not rotating thumbs (broken in v1.33)
+- Toggle rating to none, not saved in xmp
+- Dragging thumb splitter not scrolling icons to maintain the mid icon centered
+- Classification badge / number size can be too big for cell size
+- Filters not updated after deleting an image file
+- Quick filter not working until Filter panel selected
+- Jump to end while still loading metadata sometimes fails to cache last image
+- Folder and file selection resulting in blank central view
+- Compare not updating thumbView correctly
+- After home or end further selection can be wrong
+- TableView selection not synced with thumbView and gridView
+- Add a selection class for all SelectionModel operations
+- Fix embellish ghost issue (temp QImage not filled transparent)
+- Rebuild filters except for current category
+- InfoView add * for editable tag items
+- Filter disable cat with 0 or 1 items
+- Fix 0 terminating strings in Utilities::getString
+- Added items to thumbView contect menu
+- ImageView zoom and zoom cursor behavior improved
+- Update selection and pick count fixed
+- Navigate to nearest pick fixed
+- Concurrent metadata crash reading rapid folder changing fixed
+- Refine not working
+- Filters not including picked images
+
+- Release 1.33.1
+- Embellish not working on windows (setmonitorProfile return issue)
+
+- Release 1.33
+- Use Qt image load if TIF LZW and predictor = 2 (crashes)
+- Not counting in filters for keywords
+- Crash on open if just hid an info field
+- Remember folder crashing
+- Fix drag selection
+- Render video thumbnails option for performance
+- ImageView not toggling zoom with every mouse click (ignore mouse double click)
+- Show missing bookmarks in red
+- Zoom cursor not always working
+- IconView::resize not always calling setThumbParameters()
+- Differentiate pick status (picked vs ingested) when crash
+- Improve TokenDlg
+- Empty ingest template puts // in destination folder path
+- New ingest template crashing
+- Delete last images in folder, not scrolling to next selected
+- Press key End not always scrolling
+- F2 search requires two presses
+- Remember last folder not working
+- Mean stack not adding thumbnail for generated images
+- Winnet not creating embellish export image on mac
+- Winnets crashing on mac
+- Iphone heic infoview not showing GPS info
+- Drag copy file to another folder - folder count not incrementing in bookmarks
+- Open with external app not counting number of selected files correctly
+- InfoView context remove "set fixed size" and add "copy field"
+- Status selected count wrong when deselect current and nothing else selected
+- Disable filter category if no items
+- Filtering changes current image but loupe not updating
+- Filter header text red if part of filters
+- Fixed issue with solo mode not working when decoration mouse pressed
+- App not closing while reading large foldeer
+- Cursor tall rectangle over thumbnails
+- Cancel background ingest
+- Work around for restoreGeometry not working on multi displays
+- Show drag copy progress for big copy ops with ESC
+- Copy file path to clipboard
+- Fix file permissions issue
+- Crash when change thumbView visibility while MetaRead loading metadata
+- Sorting popup stuck
+- Menu stop slideshow S is wrong
+- Not reading blank title in xmp file correctly
+- Folders with many videos stalling out ie /Users/roryhill/Downloads/Videos of Eva
+- Fix orientation/aspect ratio for files where image metadata unavailable
+- IconView zoom cursor sometimes wrong loc after multiselect and ImageView zoomed
+- Filters not showing all years when filter on one dynamic category and not all icons loaded
+- Not reading xmp when loading heic
+- Filter panel not showing tot column
+- Added icon numbering
+- After switch Concurrent/Nonconcurrent not loading ImageCache
+- thumbView no scrollbar if all thumbs fit and then resize smaller
+- Thumb::loadFromEntireFile image dimensions not being set in DataModel
+- Update video scrub pos more frequently
+- Whie ImageView zoomed, using zoom cursor, sel thumbnail, when scrolls to center, scroll cursor loses size
+- Cursor not changing in thumbnail when zoom > 1
+- Drag to central view folder opening but not going to image in folder
+- Export to Winnow from LR does not work if Winnow is open
+- ImageView zoom in and out fixed
+- Pressing or dragging video scrub control should not change playback state
+- Fix selection issue when deselect current image
+- Update target list and cache size for estSizeMB in ImageCache
+- PNG previews not showing in ImageView
+- IconView selection changed if abort drag
+- ImageCache not using preview size to calc image size MB
+- ImageCache not updating sometimes on SD card
+- Added arguments to running external apps
+- Olympus serial number
+- Copy files between folders using drag'n'drop
+- Delete first image causes crash
+- Filter by keywords
+- Read keywords
+- Read GPS coordinates
+- Drag and drop not selecting first image
+- Drag and drop onto VideoView and CompareView fixed
+- Change MetaRead buildMetadataPriorityQueue to algorithm
+- Tweaked VideoView
+- Folder image counts missing
+- Account for Mac Accessibility cursor scaling in IconView::zoomCursor
+- Esc does not stop folderSelectionChange with includeSubfolders
+- Right mouse click starts video
+- "CLASSFUNCTION" in GUI thread
+- Apple style sliders in preferences
+- Logitech forward/Back mouse buttons
+- Added mouse wheel sensitivity preference
+- Play video
+
+- Release 1.32
+- Made export embellished images independent of embellish editor
+- Added concurrent loading folder option
+- Delete image in concurrent mode causes crash
+- Fixed MetadataCache::readIconChunk detect null icons
+- Filters not updating
+- Added "test" to installation process
+- Handle winnets on Mac
+- Use png for disabled checkbox
+- DataModel::clearDataModel had big delay removing all the rows
+- Delete files was not including xmp sidecars
+- ImageCache getCacheKey occasionally crash, replace with cacheKeyHash
+- Ingest on PC Destination folder with no description has extra /
+- CreateDate QDateTime::fromString was not working in Qt 6
+- ExifTool running on Mac
+- Mac binary is now native for RISC chips ie M1
+- Esc to stop loading a folder
+- Right click pick thumbnail
+- Rotate image in source using ExifTool
+- Works with Qt 6.2 except dm->clear() causes long delay or crash
+- Status count of picks after ingest not updated
+- When sort using TableView header not scrolling to current row
+- Added "Modify the source image files" setting
+- Ingest Q Q.
+- Background ingesting
+- Ingest destination drive space fixed
+- Rotate images updates source file EXIF
+- Replaced Qt XML with Rapidxml
+- Color management was crashing if QImage pixels != 32bits
+- Release 1.31 with QSettings fix (check for slideShowDelay as cacheSizeMB is deprecated)
+- Release 1.31
+- Remove unwanted entries from ingest description completer history.
+- Filter counts not updating when filtered and change label
+- Update folder image count every time select folder
+- Ingest: if no xmp file do not report failure to copy
+- When filter sometimes loupe image is not selected
+- Undocked panel sizing wrong when different device pixel ratios
+- Solo mode for filters
+- Sync filter panel and filter menu check states
+- Single click expand/collapse for InfoView
+- processEvents can cause crash when loading a new folder
+- Zoom dialog was showing on top of other application windows
+- Ingest was resetting last image number incorrectly if destination folder changes to manual from auto
+- Glitch in workspaces fixed (may result in users losing workspaces) when they upgrade
+- Fixed delete bug where rowFromPath out of sync
+- Read/write xmp sidecars
+- Release 1.30.1
+- MW::openLog causng crash at open Winnow if no settings (first time use)
+- Winnow size and location when open and display at 150% is wrong
+- Release 1.30
+- Cache was not updating in priority order
+- Menu color manage not updating when change workspace
+- Delete all images in folder crashes
+- Delete a folder
+- Release 1.29
+- Tweak to image caching performance.
+- Release 1.28
+- Esc from full screen causes crash
+- Crashing if change folders too quickly (Dave Kelly)
+- If click on current thumb while welcome screen change to loupe view
+- When current image no longer in filtered set refresh imageView
+- Filter no rating and no color class filtered amount wrong in combo with other filters
+- Release 1.27
+- Shooting Info not located correctly after embellish mode
+- When embellish turn info and ratings off
+- Remove color manage from preferences, add menu item
+- remove isCached column from datamodel
+- Always scroll FSTree to current
+- Remove Icon Loaded column in datamodel
+- Sony files not getting make/artist/copyright
+- InfoView not showing monitor until move window
+- Sometimes last image in folder not rendering
+- Fixed memory leak when new file selection (in updateStatusBar)
+- Version 1.27 beta for mac
+- Redid image cache to improve performance and stability
+- Improve err recording and showing to user
+- Version 1.26
+- TIFF with planarConfiguration = 2
+- Version 1.25
+- If eject, cache status not updated in status bar
+- Crash if eject USB drive that has a folder selected in Winnow
+- If folder empty toggle color manage causes crash on mac
+- PlusMinusEditor not sizing to contents in preferences thumbnail button size
+- Version 1.24
+- Fixed several bookmarks bugs
+- Prevent duplicate bookmarks from drag event
+- Prevent drag and drop on film strip while ingesting
+- Added color manage for mac
+- Release 1.23
+- Possibly fixed "Device not open" issue
+- Release 1.22
+- Fixed ingest dialog available space on drives bug on mac
+- Separated file read and decode for performance improvement
+- Added multiple decoder threads to improved image caching performance
+- Release 1.21
+- Fixed issue with tken editor for Winnow edited metadata
+- Release 1.20
+- End key crash (conflict with calling MetadataCache::scrollChange during fileSelectionChange)
+- added stay_open option for ExifTool
+- Embellish export adds thumbnail to image
+- Filter unstable
+- Increased image compare from 9 to 16
+- Turn caching off while in compare mode or when modifier key pressed
+- Docked dock widget tab text unicode symbols + tooltips
+- Down arrow not working correctly for thumbs in side dock
+- Full path being sent to external programs (Photoshop does not like this)
+- Open new folder cancel not working correctly
+- Mouse Shift + Alt + Left btn toggles pick status
+- Alt prevents image cache updating
+- Slideshow not responding to keystrokes
+- Delete App not working correctly in Manage External Applications
+- Added crash recovery
+- Memory leak in ICC profiles
+- Recover all memory when select empty folder
+- Version 1.19
+- When reverse sort the cache progress bar does not reverse to match
+- When change cache amount does not immediately update ImageCache
+- When ingesting confirm all files copied correctly (option)
+- Ingest manual select destination not showing in Images will be copied and renamed to
+- Video files showing wrong shooting info
+- Logger
+- Copy image (iconview context menu) fixed
+- Change access to token editor in view menu
+- Not showing image count in folders at startup
+- Delay when caching large files fixed
+- When resize thumbView icons do not refill new space
+- Thumbnail for video files
+- Version 1.18
+- Save tokens used in template
+- GraphicsView/GraphicsScene scale/location issue when change embellish templates sometimes
+- When delete embel template also delete from Winnow embellish menu
+- Info token editor rename not working properly
+- Info token editor can crash
+- Import/export Embellish templates
+- Check if tile or graphic is being used prior to deletion
+- Replaced Thumbnails with Appearance in Preferences
+- Initial font size not being assigned, resulting in squashed rows in QTreeviews
+- EmbelExport not assigning color profile
+- Turn off embellish when change folder option
+- Get rid of G::colorManage - always color manage
+- Version 1.17
+- Focus shifts away from Embellish when mouseover central widget or thumbdock
+- Token editor sometimes crashes
+- Embellish scale / rotation issue
+- Version 1.16
+- TIF file cause crash
+- Read full size jpg in Sony A1 raw files
+- Settings Show Label in grid not syncing with preferences
+- Fix device pixel ratio rendering issues
+- Spacebar not toggling zoom
+- Loupe view uses device pixel ratio of 1.0
+- Update infoview monitor tooltip when drag winnow to different monitor
+- Make Winnow fit when dragged to smaller screen dimensions
+- Visual C++ Studio installation req'd
+- Version 1.15
+- Make delete warning optional.
+- Add EXIF data back to embellished image
+- Prevent double getVisibleImageCount when first open Winnow
+- Save log in data area instead of desktop
+- Release 1.14
+- Fix embellish flash object crash
+- Render 16bit TIF
+- Rotate if EXIF orientation = 3 (180 degrees)
+- Auto advance
+- Release 1.13
+- Added shutter count for Sony cameras
+- Jumping to end when new folder can crash
+- Sometimes one thumb is not rendered after embellish export
+- Added second try load thumbnail in case of lockout
+- Added extension JPEG (vs JPG)
+- Embellish graphic scaling wrong depending on aspect
+- File/Bookmark count not refresh when filecount changes
+- Delete all images in folder crashing
+- Export from Lightroom failing
+- When delete last image in a folder refresh loupe
+- When rename a template the menu is not updated
+- Add graphic when at bottom of dock - may not scroll to see new graphic.
+- Flash object sometimes flashes wrong object
+- If delete all effects for a style the image or object can disappear
+- Add highlighter and sharpness not working
+- changing template does not force redraw to new template until select new image
+- Check text if in image then switch to border1 top.  May go to bottom.
+- Token editor text input box not darker than background
+- Embellish will crash when edit if not in Loupe mode
+- Crash after using token editor from text in embelProperties
+- FlashObject rectangle wrong depending on text justification
+- Trim metadata strings before concatenate
+- Rename metadata template not working
+- N for Do not Embellish
+- Border area list not populated
+- ComboBoxEditor edit mode borders bigger that row
+- Not all images are processed in remote export ie 26 out of 100
+- Overwrite export files
+- Stop an export
+- Switching between templates sometimes screws up the scale and position of the scene (not lately)
+- Brightness has boundary weirdness
+- Changing template does not force redraw to new template until select new image
+- If add a new style and then cancel a blank style is created
+- Sometimes style effect up/down arrows not working
+- Sometimes all docks except embellish are locked (not lately)
+- Export appearing in templates (not lately)
+- Rename template not working
+- Weird bleeding if stroke on right and bottom edges of image
+- Stroke causing Painter error
+- Metadata template Zen shooting info not working
+- Texts "Put text in" is blank if no borders
+- Texts "Border area" should be hidden if no borders
+- Change template not refreshing
+- Remote embellish export sorts current folder before going to export folder
+- Click on template header causes crash
+- If sort order different than datamodel, wrong loupe image shown initially
+- Add opacity to effects.  Shadow, stroke done.
+- ColorEditor crashed is clicked twice
+- ColorEditor does not default to current color
+- Prevent blank template creation
+- ManageTiles crashes when create new tile
+- Hidden items are not hidden when first open template
+- Help > All diagnostics crashes
+- Filters will be updated msg on opening
+- QGraphicsScene::removeItem: item 0x2bbb5684910's scene (0x0) is different from this scene (0x2bbb3dcee20)
+- Fix weird edit mode in InfoView
+- Edit title show in embellish render
+- Attribute Qt::AA_EnableHighDpiScaling must be set before QCoreApplication is created.
+- Hor line in Zen2048 wrong if portait aspect
+- Default values for effects
+- Export multiple files from lightroom, only first processed in Winnow
+- Crash setting template to "Do not Embellish"
+- Cache status bar width not showing correctly in preferences
+- update when change global font size and background shade
+- After delete selection not right
+- Resize infoView column 0 when font size change
+- Resize text in propertywidgets and dock headers
+- LineEdit helper text faint
+- Change sort direction can crash
+- Global font size applied to all propertywidgets
+- Disabled style in Filters
+- Docks not always remembered between sessions
+- Shift start in do not embellish
+- update and refresh text metadata templates
+- When extract a new tile add it to the tile lookup in borders
+- Remember Embel dock on opening
+- Copy template
+- Single instance of Winnow
+- Inflection point = 0
+- when grabbing tile make sure imageview at 100%
+- Show count for header items or show/hide decoration
+- Remove bookmark removes selected vs clicked
+- SliderEditor update and double vs int fixed
+- Thumbs sometimes have vertical scrollbar when docked at bottom
+- ICC crash if null bytearray
+- relocate light direction
+- values outside slider range
+- make header caption entire width and value zero width
+- move embellish to separate menu
+- fix indent symbol alignment in properties tree
+- Shift Ctrl 0 not working on PC
+- Tile extractor
+- Release 1.11
+- Parser for CR3 files
+- Winnow preferences update formatting
+- add color editor to PropertyEditor
+- Statusbar reverseSortBtn
+- Custom buttons in docking panel header
+- Added LoadMsecPerMpColumn to the datamodel
+- Fixed Heic breakdown
+- Abstracted preferences in PropertyEditor
+- Removed gap in Filters when progress area was hidden
+- In loupe if zoom with plus/minus then zoom cursor should adjust
+- Read HEIC files
+- Move builtFilters to separate thread
+- Bookmark count wrong at creation if combineRawJpg = true
+- Filter panel crashes if visible when change folders
+- Cleanup Metadata class
+- Added Selection to InfoView ie Selection  8 (490.8 MB)
+- If fit at 100% then do not show zoom frame.
+- Release 1.10
+- cannot make thumbs bigger than 256px
+- When fit to loupe clicking on the infoLabel does not toggle zoom
+- Zoom tool not working when isFit = true
+- Zoom rect in thumbnail to show zoom and pan in imageView
+- Pick/unpick mouseover thumbnail with mouse forward/back
+- Copy image/pixmap to clipboard
+- Copy path in Folders and Bookmarks context menu
+- Ingest not including ratings or color labels when combineRawJpg
+- Crash when tif has 5 samplesPerPixel (libTiff)
+- Tif load slowly
+- DataModel memory + better mem management
+- cache progress bar width not being recalled
+- Include subfolders not working if root folder has no files
+- Lose currentIndex and selection if click in IconView or TableView in empty area
+- Add exposure compensation to metadata
+- Very large folders loading slowly - add files in chunks
+- Release 1.09
+- Update datamodel and image cache after delete file
+- Default workspace not showing dock tabs
+- Finish statusProgress width correction when new indicators
+- Changed panel, refresh folders shortcut keys
+- Search
+- Crashing when apply color management to PNG
+- Limit fit 100% option added
+- Progress bar not resizing to smaller space
+- When go to loupe view not default to fill magnification
+- Not getting all metadata from iphone jpg files
+- Add delete files
+- In folders/bookmarks right click on folder reopens the folder
+- Current row not being updated properly when sort via table header click
+- iconView delegate currentIndex not updating after fresh folder
+- Add tooltips for tableview contents
+- Cannot resize column widths manually
+- Refresh current folder loses focus on current image
+- Open preferences with a branch expanded
+- Preferences for what remains visible in full screen mode were not being saved
+- Added sort direction icon to status panel
+- XMP files not being written during ingest if combineRawJpg == true
+- Release 1.08
+- Image count when combine raw + jpg
+- Type filter not summing correctly when toggle raw+jpg on and off
+- Fix raw+jpg when same basename but no raw file
+- Sort is now remembered between sessions
+- Fixed XMP metadata edits for title, creator, copyright, email and url
+- Add option to include XMP sidecar file with Winnow metadata in ingest dialog
+- Set focus on folders dock when refresh folders
+- Do not open previous folder if modifier key pressed while app opening
+- Color management slowing image loading now - try rebuilding runtime library
+- New settings cause problems for users with existing settings
+- Recover sort after clear all filters
+- Pick unless rejected
+- Add rejects option
+- Update from inside Winnow does not create a new folder in c:\program Files\Winnow.
+- Test with corrupted image files
+- Save as implemented
+- Confirm check for updates still working on Win
+- GridView does not always justify and size properly.
+- Global font size change not working
+- Error when remember last folder but lastDir is not valid
+- Best fit in grid view when open
+- Mac available memory
+- Ingest "how this works" text is black
+- Mac single tap to click not working.  Change the trackpad options setting in accessibility
+  to 'enable dragging' with "three finger drag"
+- Open in Grid, no folder selected, switch Loupe, Class icon showng
+- Count not showing in bookmarks
+- Filters column 0 width needs tweaking
+- Statusbar font size not matching global font
+- ImageView not showing first image after new user start
+- InfoOverlay not working
+- Check available memory vs cache size
+- ImageView::scale comparing floats potentially bad
+- Color management issue (appears over saturated in Qt) https://bugreports.qt.io/browse/QTBUG-47660
+- Trying to read metadata from an ICO file
+- Make all message boxes consistent (see runExternalApp)
+- TableView adjust to changing font size
+- Hide cache status bar in preferences
+- Reinstate check for updates
+- Scale text size
+- Filters not always updating correctly
+- Ingest only filtered items
+- Require 2 images before change caching direction
+- Escape slideshow when in full screen
+- FSTree::getCurrentIndex index from wrong model passed to mapFromSource
+- Fix 300ms delay before scroll to currentRow on filterChange
+- TableView not scroll syncing with IconView and vice versa
+- Combobox popup background and selection colors in propertywidgets.cpp
+- Combine raw+jpg error showing date instead
+- Add / update tool tips in preferences and throughout program
+- Tableview sizeHintForColumn "width" is deprecated
+- Hide/show cursor in slideshow, always show if ESC
+- Convert status text to icons for FOLDERS, RAW/JPG etc
+- When new folder only showing metadataChunk icons ie 250 even if many more cells visible
+- gridView > Full screen > gridview > loupe filmstrip has blank icons
+- Image cache not always running at start
+- Ingested images not shown in blue
+- If classification badge not visible and set call then make badges visible
+- Home not working in gridView
+- When size thumbdock it scrolls to zero
+- When go to end sometimes scrolls just short of the end
+- PropertyEditor main categories covered decoration for alternate rows
+- MDCache::readIconChunk - If no read thumb set pixmap to bad file png
+- MDCache icon cleanup not working when scroll (update startRow/endRow)
+- MDCache read meta and icons separately
+- Save cache strategies to settings
+- Cleanup slideshow after fixing read violation issue incl iconChunKSize vs readAllMetadata
+- Add slideshow parameters to preferences
+- Read violation when go to images at random and MdCache not built for next image)
+- Added solo mode to property editor
+- MdCache option incremental vs all
+- Finish cache preferences
+- Preferences context menu expand/collapse all
+- Property editor added (first use is new preferences)
+- Film strip dock does not resize when thumb labels turned on/off in preferences
+- Drag and drop thumb in same folder removes all picks and classification
+- Scroll next page when zoomed not going to next page when not zoomed
+- Slideshow: separate menu, slide stack, slidehow history, slidehow help
+- Gridview icons sometimes too big
+- MetadataCache range does not always include all visible icons
+- If is color class but not standard color then count as no color class
+- Build filters stack overflow
+- Slideshow preferences not updating during slideshow
+- If open previous folder and folder does not exist...
+- Image cache status visible during slideshow
+- Previous session geometry not being applied
+- Changed PopUp to rich text and added alignment parameter
+- Add Slideshow active to statusbar
+- Enable filter change when click of filter text as well as filter checkbox
+- Progress slow when filtered
+- Stop and restart image caching when running slideshow
+- Use metadataLoaded instead of createdDate.isNull()
+- Redo scrolling, wait for views and syncing views
+- Update metadata when scroll tableView
+- Page up/down do not always work
+- Removed - Check usage of MW::loadFilteredImageCache
+- remove iconSpacing and iconPadding and thumbsFit (no longer used)
+- Menu Go > Scroll actions not working
+- Added diagnostic reporting
+- F3-F7 (or menu alternatives) stopped working for a while
+- Image cache performance when filtered is wonky
+- Clear fav panel selected when new selection in Folders
+- When zoomed clicking on another icon does not pan correctly on first click
+- Zoom % in infoView showing zero when in Grid/Table view - change to N/A
+- Image cache GB used (infoview) keeps growing in size
+- Refresh current folder
+- Icon not loaded for dm row = 0 after sort and reload folder
+- Reset menu sort when new folder selected or sort as per menu
+- Unfiltered total not right justified
+- Update best aspect after filtering
+- Filter counts when raw+jpg include raw and jpg files
+- Help shortcutsform not updating
+- Filter when select new folder
+- When slideshow random sometimes not read image
+- If slideshow random do not cache
+- Slideshow intercept keystrokes not overriding shortcuts
+- Repeat page up/down causes crash in grid mode
+- Shooting info string not working
+- One click titlebar expand filter in panel
+- Icon cleanup in MdCache
+- Make sure filters updated when filters dock has focus
+- ThumbView flashes when loading folder with thousands of images
+- Clear filters when new folder
+- Cache after change filters not working
+- Image caching not reporting correctly on thumbs (red dot)
+- Tableview showing tech columns
+- replace find in datamodel using fPathRow hash lookup
+- Recent folders not trimmed to maxRecentFolders
+- Wait for threads to finish when close main window
+- When so settings file count not showing when start
+- For very large folders only load one or two grids of images at a time
+- Eliminate metaCache (replace in datamodel)
+- Reset sorting and filtering when new folder selected
+- Dragging between monitors sometimes loses thumb best fit
+- Zoom % not updating on status bar
+- Not remembering mode correctly when opening
+- if current visible in grid should also be visible in loupe when switch
+- Preferences show infoView items missing scrollbar
+- number selected in status not updating correctly
+- if scroll in thumbView then switch to gridView, it reverts to last selected
+- Not invoking best fit when maximize window
+- Not reporting Make for NEF files
+- ImageView not resizing when thumbdock gets taller
+- Add more raw file formats - DNG, Pentax ...
+- try multiple caching threads (no improvement)
+- Set thumb maximum size in preferences
+- Thumb justification
+- Auto change thumb aspect ratio to match images
+- Thumbs resize to fit central view
+- undo / redo history
+- Added All count to filters
+- Invert filter
+- Filter count not updated until pick something
+- Add menu option to filter on the most recent day
+- First thumb smaller than the rest
+- Thumb labels not working
+- Lock width = height not working in grid preferences
+- GridView justification
+- Recover memory when select empty folder
+- If go from blank folder to one with only 1 image the image cache does not update indicator
+- Ingest dialog not remembering auto bool setting
+- Hide cursor during slideshow
+- Report metadata sending to console
+- Auto expand dialog shooting info template
+- Made the token editor sizable so drag and example areas can expand
+- Tweaked about dialog and added links to website and email to winnowimageviewer@outlook.com
+- Fullscreen does not always remember thumbnail status when return to normal view
+- Create installer for mac
+- Change size of shooting info
+- AppDlg table not stretching and word wrap was on
+- Add check for go to ingest folder after ingesting
+- Track downloads by ip address
+- Show cursor as separate label on top of cacheLabel to improve performance.
+- Speeded up image count in folders panel
+- Image count not updating in bookmarks`
+- Fix editbox in some tableviews (infoview, external programs)
+- Added milliseconds to shooting info
+- Edit shooting info {HOUR} {MINUTE} {SECOND} not working
+- If click on number in Fav does not select folder
+- Bookmarks accepts drag events from explorer and finder
+- In grid mode pick a thumb and grid scrolls and picks another thumb instead
+- Eliminated signals/slots from PrefDlg
+- Test for root folder in Ingest
+- Added copy to backup in ingest
+- Create sidecar file before open with in case other app can use metadata in sidecar
+- Compare can crash
+- Ingest history and recent folders does not select folder
+- Check updates not working at startup
+- Fixed resorting issue with external apps
+- Added ability to reorder external apps
+- Open with new app shortcuts only show when restart
+- Horizontal scroll thumbs 1/2 window shortcut
+- Wider separator bars
+- Wider scrollbars
+- Added another pick shortcut ("P")
+- When repeat compare, old compare view is still visible below new one
+- Monitor resoltion function fails when window centroid moves off screen - app crashes
+- Show subfolders menu item disabled when it should not be
+- Compareview grid problems when pick less than before
+- Compareview grid not equal when mouse in grid area before changing to compare mode
+- Check for updates on Windows
+- From main menu cannot eject drive the should be able to but works from folders context menu
+- Maintain log on ingests
+- Classification label still visible when eject drive
+- Rotate CCW menu missing shortcut in context menu
+- add cache size to the metadata panel
+- Collapse folders shortcut
+- Sometimes slow loading metadata
+- Moved cache progress to its own class and added adding metadata progress
+- Improved ui responsiveness while caching
+- Panasonic support added
+- Adjust compare mode cell size to fit when resize app
+- Update status for selection
+- Pick turns image badge backgound green
+- Compare mode not working after loupe view and then switch to thumb or table views and back into Compare view
+- After compare another compare does not include selection
+- Retain selection when change mode ie grid to loupe
+- Compare mode fit size not quite right
+- Add preferences for badge and shooting info size
+- Context right click changing selection in table view
+- Max area for compare images
+- Change badge size in preferences
+- Reveal in file path instead of folder path
+- Manage external programs not remembering changes
+- CompareImages not calc layout optimally
+- Change font size
+- Right click on thumbs overriding selection
+- Tweak context menus
+- Context menu should apply to right click folder, not current folder
+- Update image count in Fav (refresh) when changes
+- Reset dynamic filters when invalid folder selected
+- Enable/disable selection dependent menu items
+- Fixed behavior when invalid folder selected
+- Disable menu "add bookmark" when folders not selected??
+- Enable/disable eject menu
+- Jpg orientationOffset = 0 when metadata orientation changed
+- Confirm tif metadata for focus stacks (app out msg)
+- ThumbDock visibility not remembered if close app in grid mode
+- Clear all filters shortcut not working (cannot use Shift+Ctrl+0)
+- If switch from raw+jpg cache needs to be refreshed
+- Full screen panel flags not working
+- Sometimes metadata caching is slow (trying to read xmp when none)
+- Eject card on Mac
+- Eject card on Windows
+- Does not remember Folders panel sometimes when reopen
+- Folder panel was not always visible ater changing mode (wasThumbDockVisible)
+- No embedded preview error but still working: D:/Pictures/Test/2015-10-20_0182-Edit.tif
+- Drag window to different monitor closing app (related to monitor size reporting function?)
+- Show in status if JPG+RAW combined
+- Folders dock disappearing (after prior selection of folder with no images)
+- Label/Rating not added to RAW when JPG+RAW enabled
+- Tweak ingest ui for clarity
+- Ingest start number edit not working
+- Undo pick history
+- Cache status btns gray if not cached, red if caching, green if cached
+- Focus outline in CompareView stays on 1st item if mouse to 2nd without mousing 1st
+- Forward and Back btns in compare mode not changing pick status
+- version 0.9.5.3
+- Streamlined 3-way dock visibility/focus toggle
+- Changing the image cache amount when no folder selected crashes
+- forward and back mouse buttons toggle pick status
+- version 0.9.5.2
+- Not showing Tif in ImageView
+- Performance improvements without cache status
+- Made pick logic same as lightroom
+- Bookmarks names and count not aligned vertically
+- XMP email and url not being written correctly
+- Title not included in ingest
+- Metadata repeated in xmp
+- xmp not renamed when file exists
+- Completely redid classification badges
+- Days are repeated in Filters (Lillian images for example)
+- Shortcuts not showing in context menus
+- Add esc interrupt when loading datamodel
+- Filtered to nothing but ImageView still shows last image
+- Pick badge stays visible when image not picked
+- G Drive and include subfolders not working
+- Close popup if warning in datamodel->load
+- RememberLastDir not being saved in preferences
+- Use subfolders not working
+- First ImageView not showing rating badge
+- Collapse all folders
+- Drag and drop not working for whole selections
+- Can edit metadata headers in metadata panel
+- Set zoom % blank if not loupe mode in matadata panel
+- If raw+jpg ratings and labels not included when ingest
+- Can be slow when usb card images cached
+- Show image count in filters by filter
+- Jpg corrupted during ingest if metadata orientation changedg
+- Combine raw+jpg option
+- Fix pick and rating badge for compareImages::load lines 82+
+- Cleanup Roles
+- Show cache status in thumbnails
+- Add filters activated status (red text on image?)
+- Change hard coded min/max thumbnail size
+- Get actual monitor resolution for actDevicePixelRatio calculation
+- Add complete for ingest description
+- Refresh folder panel
+- Not showing all folders in folders panel on Linix
+- Check start/end of jpg offsets to confirm D8 and D9
+- D2H NEFs crash Winnow
+- Caching thumbs is sometimes slow
+- info label token builder
+- On Mac slow to read metadata first time, after that it is fast
+- Drag drop onto graphicsview (main image) not working
+- Add Fuji support
+- Add wrap to thumb context menu
+- Drag drop to photoshop not working (works in MacOs)
+- if no created try using xmp
+- Drag and drop a selection of thumbs
+- Replace created with createdDate using QDateTime
+- Add filter for date (Year, Month, Day)
+- add MetadateDate to Xmp
+- Add rotate to thumb context menu
+- Rotate selected images
+- Allow update creator, copyright, email and url
+- Edit and write creator, copyright, email, url
+- Possible to overwrite tiles during ingest
+- scroll thumbwheel advance in loupe view
+- Fixed start first time not working
+- Menu visibility and window title bar not updating when change workspace
+- Thumb wrapping and thumbdock size wrong for floating thumbdock workspaces
+- Olympus creator and copyright
+- Get Olympus lens
+- Edit title in metadata
+- Read/write XMP sidecars
+- Add Ingest token builder
+- Redirect report metadata to a text window so Qt Creator not req'd
+- Cmd click does not add to selection on first click
+- implement metadata caching delay preference (currently 300ms hard coded)
+- In Grid double click on thumb selects wrong image as scrollToCenter occurs
+- Invert selection does not work
+- Add Tif support
+- ThumbView at bottom not always sizing to incl scrollbar
+- Creator wrong
+- Add refine feature
+- Not remembering max recent folders
+- On opening app changes size
+- Show image count in bookmarks
+- Use ImageCache status bar to show metadata loading progress
+- Done!!: Improve producer/consumer image cache performance for large files
+- Thumb creation bogs down in some folders under stress testing (might be fixed but not finished)
+- When drag drop onto winnow folder panel does not update
+- Open folder not working
+- Recent folder not working
+- Only show zoom % in statusbar in loupe and compare modes
+- MetadataCache not always reading metadata - why?
+- Drag and drop image onto Winnow - show image and load folder
+- Reveal in explorer / finder
+- Merged metadata and thumb caching: more stable and faster
+- Added version to Help > About
+- Add more raw file formats - Sony
+- Improve ingest layout, add manual option
+- Decrypted nikon lens info
+- No title metadata from TIF
+- Not reading lens model in JPG files
+- ToggleZoom not being saved correctly
+- Not reading TIF thumbs after first file
+- dies when quickly change folders
+- not reading tifs
+- slow reading nef thumbs (what has changed)
+- zoom radio buttons not correct zoom values
+- show failed folder selection in central widget as a message
+- select bookmark when folder changes
+- not updating preferences not showing ie thumb parameters
+- update zoom factor when change monitor resolution
+- not showing thumbs for D:\pictures\automask
+- zooming to 0% (set default at 100%)
+- Make data/time formatting consistent ie InfoView created vs modified
+- Only show Users and Volumes on Mac
+- Sort folders in ascending order
+- windows right click on main image zooms
+- No wrap thumbs anywhere
+- Confirm monitor size in welcome
+- Preferences has monitor size entry twice
+- No vertical scrolling in FSTree
+- Not reading metadata from iphone jpgs
+- Calc actual 100% pixels and set zoom to match
+- InfoView elide text
+- Tweak default workspace to match current layout
+- Change InfoView to a TreeView
+- # images in folder not show on first shortcut click
+- # images in folder weird column widths sometimes
+- QFSFileEngine::open: No file name specified
+- Beef up deleted or renamed or corrupted folder
+- Change shortcut T in zoom dialog
+- Fix shortcut Z in zoom Dialog
+- Focal length and shutter speed showing incorrectly for some files ie 2017-05-30_0081_1000px.jpg
+- Change infoView to combine ok and infoView datamodels
+- Add Folder to InfoView (also Position, Zoom and Picked)
+- Thumbs resizing to fit height in side docks
+- Mode switching cursor/currentIndex scroll issues
+- Fixed logic for deleted or renamed or corrupted folder - still needs more love
+- Added filter to full screen options in prefdlg
+- If open in grid mode and switch to loupe right away thumbView not on current index
+- Check cache logic - seems broken when get to end of folder and start back
+- ThumbDock thumb size forgotten after grid view sometimes
+- Add pref for fields to show in infoView and tableView
+- Still problem with toggle zoom
+- Get comment and copywrite metadata (for JPG)
+- Get lens metadata (for JPG
+- Main context menu only in loupe mode
+- Highlight and set focus on zoom dialog when mouse over
+- UI for changing compare click zoom amount
+- Zooming is not propagating consistently in compareView
+- UpdateStatus signal in compareImages not working
+- Set mouse click zoom amount (default = 100%)
+- Show how much mem req'd for selected images
+- Poor performance - Show how many images in each folder in treeView
+- Show file size in KB/MB/GB
+- Sometimes two mouse clicks reqd in loupe view to toggle zoom
+- Add filter shortcuts and menu
+- Help > Shortcuts
+- Reset currentIndex when invert selection
+- Should not zoom when right click imageView
+- Weird scrolling when pick
+- When thumbDock is floating always wrap thumbs
+- Rename testStyle.css to winnow.css
+- If empty folder then loupe view should be blank
+- Mouse click row in tableView does not scrollTo in thumbView
+- Left key not always moving back
+- Thread activity lights not hiding
+- Done:Full screen mode needs some love
+- Up arrow doing weird stuff when thumbDock wrapping = true
+- thumbDock visibility not remembered between sessions if close from Grid mode
+- Arrow keys in compare mode
+- Add preferences to show/hide cache status and thread activity
+- ThumbDock horizontal scrollbar when wrapping is on - should only be vertical scrollbar
+- Add preference for trackpad pan/advance
+- ThumbView does not scroll to current if was hidden
+- Shortcut to focus on a dock
+- Edit labels not showing in compare view
+- make wasThumbDockVisible persistent between sessions
+- Color class not showing on thumbs
+- Settings not remembering to show thumb labels
+- Thumb label not positioning properly
+- Thumb label is showing entire file path instead of just the filename
+- Workspace not remembering thumbs hidden
+- Cmd click on item requires two clicks to select
+- Double click on thumb in Loupe view should be ignored
+- Check full screen logic
+- check all mouse behavior including wheel event and scrolling on track pad
+- Aperture, ss, iso and focal length numbers for raw formats for tableView
+- Compare images not working after images sorted other then filename
+- currentIndex not updating properly after compareView.
+- resize thumbs in top/bottpm thumbDock with scrollbar always on
+- selection when filtered not correct indexes when apply ratings, labels or picks
+- improve performance when opening large folders
+- cmd click to select multiple items crashing
+- multi-select not working in tableView
+- sync selection in thumbView and table
+- fixed thumbView horizontal scrollbar ghosting issue
+- added circleLabel showing rating / color class in imageView
+- thumbDock height adjusts to thumb size chenges in prefDlg
+- increased height of combo dropdown items in workspaceDlg
+- invert ratings and labels by re-entering same value
+- Show check mark in Picked in tableview
+- Reset image cache order and display status when change sort
+- Drives not showing in Files in Windows
+- Sort/filter thumbs
+- Add ratings and labels
+- Set each column for sorting on editrole
+- Resize thumb dock on bottom and top to fit thumbs if no wrap
+- Cleaner font for info on screen
+- Pick label not toggling
+- tweak infoLabel / titleLabel font and size
+- remove iconDisplay from thumbView since added tableView
+- Table view
+- Thumb wrapping gets turned on when thumbDocked on bottom
+- Smooth grid view scrolling
+- Fix hand cursor when loupe view not zoomed
+- ShootingInfo not showing for first image
+- Fix Grid to Compare mode ui glitch
+- Right click should not zoom in imageView or compareView
+- In compare mode shift drag one image with mouse (touch scroll already works)
+- Bookmarks not saved between sessions anymore
+- Reimplement mouse drag scrolling in ImageView and CompareView
+- Get rid of white border around docks
+- Tracked down bug not showing thumbs when open with no QSettings
+- Not remembering to show menu
+- Separate class to load pixmap from image file
+- Get title from meatdata
+- Fixed warning QObject::connect: Cannot queue arguments of type 'QVector<int>'
+- Fix compare clear before next compare
+- ImageView thumbclick broken
+- Compare 2-9 images
+- Convert imageView to use QGraphicsView
+- Set bookmark not working
+- Thumbs fit
+- Fix thumbSize in thumbView (maybe change to thumbWidth??
+- Copy to clipboard
+- drag'n'drop images to another app
+- Fixed thumb update issue when caching a new folder
+- Recent files
+- Goto next pick, previous pick not working
+- Add a help window
+- Open folder
+- Change thumb dock header to vertical when dock to bottom or top
+- Slideshow
+- Clean up startupDir and currentViewDir
+- Include subfolders
+- Add image/gridview to workspace
+- Enlarge/shrink thumbs not working
+- Swap thumbs/viewer (see hideVieweer and showViewer)
+- eliminate global variables
+- eliminated thumb global variables
+- Progress bar not updating when copying
+- Reveal file in explorer/finder
+- Save working spaces and default workspace
+- Save dock lock status (TitleBar) for each dock separately
+- Clean up GData variables
+- redo the options dialog
+- Is updateActions function req'd
+- Show hand when panning
+- Image cache/decache does not follow many file selection jumps
+- The first thumb in folder does not show all metadata until reselect
+- Zoom and pan on mouse click event in thumbnail
+- Add items to main Go menu
+- Up and down arrows not working in thumb grid
+- Modify ImageView to zoom any amount and work with view coordinates
+- Hesitation when zoom, hand icon flickers
+- Cache not tracking ahead and behind direction properly
+- Clean up unused functions esp in thumbview
+- Sort bookmarks so they list in the same order all the time
+- Zoom to thumb mouse click pos not working
+- ImageCache not reinitializing after multiple folder selections
+- Fix thumbs from iphone jpgs not showing
+- Set Esc to leave full screen mode as well as toggle F
+- Lock docks not sticky
+- Comment out pasteThumbs, copyMoveImages, moveImagesTo, cutThumbs, copyThumbs,
+        copyOrCutThumbs, setCopyCutActions, setDeleteAction
+- Improved thumbnail performance by using jpg file embedded thumbnails
+- Added Sony file support
+- Eliminated thumbReader.size().isValid for raw files in ThumbCache?
+- Added Olympus file support
+- Fix loupe view for first image conflict with thumb cache
+- Honour metadata rotation
+- Crash when click on image/view with no image
+- Shrink/Enlarge thumbs not working
+- Thumbs size to fit
+- Show labels causes all thumbs to go blank plus thumbs should resize
+- Read metadata with thumbs or separate thread
+- Toggle filter picks - return to previous thumb position
+- ESC when in fullscreen mode
+- Make context menus consistent with main menu (parent issue?)
+- Show x of y in statusbar
+- Not zoom if click on label outside image
+- Basic copy to folder
+- Prevent zoom100% when image smaller than canvas
+- When zoomed sync with mouse click location on thumb
+- Stay zoomed when move to next
+- Filtered thumbs out of synch with imageview
+- Thumbs not drawing properly until invoke setwrapping at end
+- Zoom in/out from current pan position, not center of image
+- move thumbnail generation to a separate thread
+- Error end of row in thumbnails
+- Draw pretty thumbnails
+- Picks and thumb highlighting
+- Understand thumbViewModel
+- Not sure how... Crash when right click on scroll bar
+- Figure out how to process events before update cache first time
+- Cache full size images in QCache
+- Show first image in folder when selected
+- Remove extraneous menus and functions
+- Add thumbview and image cache status to status bar
+- move image caching to a separate thread
+- Update menu enabled status when close dock
+- Full size previews for raw files
+- zoom to mouse click
+- Thumbs to dock
+- Change default docking locations including tabify
+- Move styles.css to resources
+
+KEYWORD MANAGEMENT REVIEW (2026-09-09)
+
+A keyword move is slow -- seconds to minutes before the Keyword list count updates, and it
+got worse over a session of changes, so the recent additions are suspects rather than
+bystanders: MW::refreshFilterVocabMarking runs several times per move (it is connected to
+four KeywordVocab signals as well as finishedBuildFilters) and walks the vocabulary and
+every keyword filter item each time; MW::scheduleKeywordsDockRefresh runs on every
+selection change; MW::rebuildAbortedFilters schedules full rebuilds over 41,000 rows.
+Diagnostic scaffolding has been stripped so the next pass profiles a clean build. MEASURE
+FIRST -- put a QElapsedTimer on each phase of MW::applyKeywordMoves and give the delay a
+name before changing anything.
+
+Also open:
+- Schema 13 to re-run rebuildPathKeyedKeywords(seedVocab = false). writeKeywordsLocked now
+  derives the links from the text so new commits agree, but rows that drifted earlier stay
+  wrong until they are re-committed -- the Filters panel and the Keywords dock still
+  disagree about those.
+- Feedback for the phases after the drop. The move runs inside KeywordTree::dropEvent,
+  inside the drag's nested event loop; when that unwinds Qt delivers a drag-leave and
+  MW::dragLeaveEvent resets the popup, so anything still running is silent wherever the
+  reset is put. Wants a status-bar progress channel instead.
+- Branch merge is vocabulary-node to vocabulary-node only. An unfiled OBSERVED branch has
+  no node to drag onto, so it still needs the check-the-tails route.

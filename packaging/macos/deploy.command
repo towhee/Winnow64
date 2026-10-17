@@ -647,10 +647,43 @@ EOF
 # --- Publish the DMG to a GitHub Release -----------------------------
 # GitHub Releases is the primary download location. The Mac and Windows deploys
 # run on different machines and share ONE release per version (tag v<version>):
-# whichever runs first creates it, the other attaches its asset. Re-running
-# replaces this platform's asset (--clobber). The release is a full release, not
-# a pre-release, because /releases/latest (the README download link) skips
-# pre-releases. The tag is made on the pushed HEAD commit, so push first.
+# whichever runs first creates it, the other attaches its asset. The release is
+# created as a DRAFT and made public only when every asset in release_assets is
+# attached, so the notes' direct links (and the README's /releases/latest) never
+# point at a file that is not there yet. It goes public as a full release, not a
+# pre-release, because /releases/latest skips pre-releases. The tag is made (on
+# publish) at the pushed HEAD commit, so push first.
+
+# Assets a release must carry before it goes public.
+function release_assets() {
+    echo "Winnow${WINNOW_VERSION}.dmg Winnow${WINNOW_VERSION}_Intel.dmg WinnowSetup-${WINNOW_VERSION}.exe"
+}
+
+# Attach $2 to release $1. On a draft a plain --clobber is fine. On a public
+# release --clobber DELETES the old asset before uploading the new one, so its
+# link 404s for the whole upload; instead upload under a .part name (which the
+# updater ignores), then delete the old asset and rename the new one into place.
+function upload_release_asset() {
+    local tag="$1" file="$2" name; name=$(basename "$file")
+    local draft old
+    draft=$(gh release view "$tag" --repo "$GITHUB_REPO" --json isDraft --jq .isDraft) || return 1
+    old=$(gh release view "$tag" --repo "$GITHUB_REPO" --json assets \
+          --jq ".assets[] | select(.name==\"$name\") | .apiUrl")
+    if [[ "$draft" == "true" || -z "$old" ]]; then
+        gh release upload "$tag" "$file" --repo "$GITHUB_REPO" --clobber
+        return
+    fi
+    local tmpdir; tmpdir=$(mktemp -d) || return 1
+    ln -s "$file" "$tmpdir/$name.part" || { rm -rf "$tmpdir"; return 1; }
+    gh release upload "$tag" "$tmpdir/$name.part" --repo "$GITHUB_REPO" --clobber
+    local rc=$?; rm -rf "$tmpdir"; (( rc == 0 )) || return 1
+    local new; new=$(gh release view "$tag" --repo "$GITHUB_REPO" --json assets \
+          --jq ".assets[] | select(.name==\"$name.part\") | .apiUrl")
+    [[ -n "$new" ]] || { echo "❌ Uploaded $name.part not found on $tag"; return 1; }
+    gh api -X DELETE "$old" >/dev/null || return 1
+    gh api -X PATCH "$new" -f name="$name" >/dev/null || return 1
+}
+
 function publish_github() {
     command -v gh >/dev/null 2>&1 || { echo "❌ gh (GitHub CLI) not installed: brew install gh"; return 1; }
     gh auth status >/dev/null 2>&1 || { echo "❌ gh not logged in — run: gh auth login"; return 1; }
@@ -692,9 +725,28 @@ EOF
         notes=${notes//\{\{TAG\}\}/$tag}
         notes=${notes//\{\{VERSION\}\}/$WINNOW_VERSION}
         gh release create "$tag" --repo "$GITHUB_REPO" --target "$head" \
-            --title "$title" --notes "$notes" || return 1
+            --title "$title" --notes "$notes" --draft || return 1
     fi
-    gh release upload "$tag" "$DMG_PATH" --repo "$GITHUB_REPO" --clobber || return 1
+    upload_release_asset "$tag" "$DMG_PATH" || return 1
+
+    # Go public only when every platform's asset is attached
+    [[ "$(gh release view "$tag" --repo "$GITHUB_REPO" --json isDraft --jq .isDraft)" == "true" ]] || {
+        echo "✅ Updated public release: https://github.com/${GITHUB_REPO}/releases/tag/$tag"
+        return 0
+    }
+    local have missing=() a
+    have=$(gh release view "$tag" --repo "$GITHUB_REPO" --json assets --jq '.assets[].name') || return 1
+    for a in $(release_assets); do
+        grep -qxF "$a" <<<"$have" || missing+=("$a")
+    done
+    if (( ${#missing[@]} )); then
+        echo "📝 $tag stays a DRAFT (invisible to users) until these are attached:"
+        printf "     %s\n" "${missing[@]}"
+        echo "   It goes public automatically when the last one is published with G."
+        printf "Type 'publish' to make it public now WITHOUT them (anything else = keep draft): "
+        read confirm; [[ "$confirm" == "publish" ]] || return 0
+    fi
+    gh release edit "$tag" --repo "$GITHUB_REPO" --draft=false --latest || return 1
     echo "✅ Published: https://github.com/${GITHUB_REPO}/releases/tag/$tag"
     echo "   Edit the release notes on GitHub if needed."
 }

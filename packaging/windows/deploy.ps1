@@ -483,10 +483,55 @@ function Promote {
 # --- Publish the installer to a GitHub Release -----------------------
 # GitHub Releases is the primary download location. The Mac and Windows deploys
 # run on different machines and share ONE release per version (tag v<version>):
-# whichever runs first creates it, the other attaches its asset. Re-running
-# replaces this platform's asset (--clobber). The release is a full release, not
-# a pre-release, because /releases/latest (the README download link) skips
-# pre-releases. The tag is made on the pushed HEAD commit, so push first.
+# whichever runs first creates it, the other attaches its asset. The release is
+# created as a DRAFT and made public only when every asset in Release-Assets is
+# attached, so the notes' direct links (and the README's /releases/latest) never
+# point at a file that is not there yet. It goes public as a full release, not a
+# pre-release, because /releases/latest skips pre-releases. The tag is made (on
+# publish) at the pushed HEAD commit, so push first.
+
+# Assets a release must carry before it goes public.
+function Release-Assets([string]$Ver) {
+    @("Winnow$Ver.dmg", "Winnow${Ver}_Intel.dmg", "WinnowSetup-$Ver.exe")
+}
+
+# isDraft + assets of release $Tag (parsed here: --jq filters with embedded
+# quotes do not survive PowerShell's native-argument passing).
+function Get-ReleaseInfo([string]$Tag) {
+    $json = & gh release view $Tag --repo $GitHubRepo --json isDraft,assets
+    if ($LASTEXITCODE -ne 0) { throw "gh release view $Tag failed" }
+    ($json -join "`n") | ConvertFrom-Json
+}
+
+# Attach $File to release $Tag. On a draft a plain --clobber is fine. On a public
+# release --clobber DELETES the old asset before uploading the new one, so its
+# link 404s for the whole upload; instead upload under a .part name (which the
+# updater ignores), then delete the old asset and rename the new one into place.
+function Upload-ReleaseAsset([string]$Tag, [string]$File) {
+    $name = Split-Path $File -Leaf
+    $info = Get-ReleaseInfo $Tag
+    $old  = $info.assets | Where-Object { $_.name -eq $name }
+    if ($info.isDraft -or -not $old) {
+        & gh release upload $Tag $File --repo $GitHubRepo --clobber
+        if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
+        return
+    }
+    $tmpDir = Join-Path ([System.IO.Path]::GetTempPath()) ("winnow-upload-" + [guid]::NewGuid())
+    New-Item -ItemType Directory -Path $tmpDir | Out-Null
+    try {
+        $part = Join-Path $tmpDir "$name.part"
+        Copy-Item $File $part
+        & gh release upload $Tag $part --repo $GitHubRepo --clobber
+        if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
+    } finally { Remove-Item -Recurse -Force $tmpDir -ErrorAction SilentlyContinue }
+    $new = (Get-ReleaseInfo $Tag).assets | Where-Object { $_.name -eq "$name.part" }
+    if (-not $new) { throw "Uploaded $name.part not found on $Tag" }
+    & gh api -X DELETE $old.apiUrl | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Deleting the old $name failed" }
+    & gh api -X PATCH $new.apiUrl -f "name=$name" | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "Renaming $name.part to $name failed" }
+}
+
 function Publish-GitHub {
     if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh (GitHub CLI) not installed: winget install GitHub.cli" }
     & gh auth status *> $null
@@ -529,11 +574,28 @@ function Publish-GitHub {
         $notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "winnow-release-notes.md"
         [System.IO.File]::WriteAllText($notesFile, $notes, (New-Object System.Text.UTF8Encoding $false))
         & gh release create $tag --repo $GitHubRepo --target $head --title $title `
-            --notes-file $notesFile
+            --notes-file $notesFile --draft
         if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
     }
-    & gh release upload $tag $Setup --repo $GitHubRepo --clobber
-    if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
+    Upload-ReleaseAsset $tag $Setup
+
+    # Go public only when every platform's asset is attached
+    $info = Get-ReleaseInfo $tag
+    if (-not $info.isDraft) {
+        Write-Host "   OK  Updated public release: https://github.com/$GitHubRepo/releases/tag/$tag" -ForegroundColor Green
+        return
+    }
+    $have    = @($info.assets | ForEach-Object { $_.name })
+    $missing = @(Release-Assets $script:Version | Where-Object { $have -notcontains $_ })
+    if ($missing.Count -gt 0) {
+        Write-Host "   $tag stays a DRAFT (invisible to users) until these are attached:" -ForegroundColor Yellow
+        $missing | ForEach-Object { Write-Host "     $_" }
+        Write-Host "   It goes public automatically when the last one is published with G."
+        $confirm = Read-Host "Type 'publish' to make it public now WITHOUT them (anything else = keep draft)"
+        if ($confirm -ne 'publish') { return }
+    }
+    & gh release edit $tag --repo $GitHubRepo --draft=false --latest
+    if ($LASTEXITCODE -ne 0) { throw "gh release edit (publish) failed" }
     Write-Host "   OK  Published: https://github.com/$GitHubRepo/releases/tag/$tag" -ForegroundColor Green
     Write-Host "       Edit the release notes on GitHub if needed."
 }
