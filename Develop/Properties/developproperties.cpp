@@ -8773,7 +8773,10 @@ void DevelopProperties::topUpDevPreviews(const QString &fPath)
 
     if (!loupeJpg.isEmpty()) DevPreviewCache::instance().put(fPath, key, loupeJpg);
 
-    if (!thumbJpg.isEmpty()) {
+    /* A repaired stack keeps its on-disk recipe: this blob is the repaired one, and
+       writing it would make the repair permanent on a view. The loupe tier above is
+       keyed to the repaired recipe and lives only in the cache, so it is safe. */
+    if (!thumbJpg.isEmpty() && sidecarRecipeRewritable(fPath)) {
         /* Rewrites the sidecar for an image the user only VIEWED. Deliberate: the two
            tiers must stay in step, and the recipe itself is passed through unchanged --
            only the preview attributes and modifydate move. */
@@ -8849,6 +8852,7 @@ void DevelopProperties::flushImage(const QString &fPath)
 */
     if (fPath.isEmpty() || !dirty.contains(fPath)) return;
     dirty.remove(fPath);
+    repairedStacks.remove(fPath);   // an edit: the user's stack now replaces the sidecar's
     const EditStack &s = stackCache[fPath];
     /* Identity => write "" so writeDevelopSidecar clears the attribute (or skips if
        there is no sidecar), rather than persisting an empty edit. */
@@ -9130,6 +9134,8 @@ EditStack &DevelopProperties::stackFor(const QString &fPath)
         stackCache.insert(fPath, EditStack::fromBase64(
                               Metadata::readDevelopSidecar(fPath), &st, &issues));
         reportStackIssues(fPath, int(st), issues);
+        if (!issues.isEmpty()) repairedStacks.insert(fPath);
+        else repairedStacks.remove(fPath);
     }
     EditStack &s = stackCache[fPath];
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());

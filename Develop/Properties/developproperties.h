@@ -250,6 +250,13 @@ public:
        so a preview keyed on this is matched against what the user actually sees. */
     QString developBlobFor(const QString &fPath);
 
+    /* May a preview write (topUpDevPreviews, MW's devPreview builder) rewrite fPath's
+       sidecar recipe? Not when loading it REPAIRED the stack (masks dropped, values
+       clamped): those writes re-serialise the in-memory stack, so merely viewing the
+       image would make the repair permanent. Only an edit (flushImage) may. */
+    bool sidecarRecipeRewritable(const QString &fPath) const
+        { return !repairedStacks.contains(fPath); }
+
     using DevPreviewProvider =
         std::function<bool(const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg)>;
     void setDevPreviewProvider(DevPreviewProvider provider);
@@ -1400,6 +1407,9 @@ private:
     void warnOnce(const QString &kind, const QString &msg);
     void reportStackIssues(const QString &fPath, int status, const QStringList &issues);
     QSet<QString> warnedIssues;
+    /* Paths whose sidecar recipe was repaired on load (see sidecarRecipeRewritable).
+       Cleared by flushImage, the one write the user asked for. */
+    QSet<QString> repairedStacks;
 
     /* ---- Edit history (the History dock) ------------------------------------------
        noteEdit() is the SINGLE commit point for every develop action: it marks the

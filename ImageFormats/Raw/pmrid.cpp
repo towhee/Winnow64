@@ -128,11 +128,20 @@ std::vector<int> tileStarts(int total)
 /* Blind Poisson-Gaussian noise estimation from the green CFA plane (tier 3 of resolveKB):
    fit var = k*x + b in the white-normalised [0,1] domain from flat image regions, so an
    uncalibrated body still denoises with its own noise model. Method: per block, measure
-   (mean, variance) of the green sites; bin by intensity and keep the low variance
-   percentile in each bin (texture only raises variance, so that floor is ~pure noise);
-   least-squares fit the per-bin floors. Returns false if the frame is too flat/textured
-   to fit reliably. One-shot pre-inference sweep of ~half the pixels -- negligible beside
-   the net. */
+   the mean of the green sites and the noise variance from G1 - G2; bin by intensity and
+   keep the low variance percentile in each bin (texture only raises variance, so that
+   floor is ~pure noise); least-squares fit the per-bin floors. Returns false if the frame
+   is too flat/textured to fit reliably. One-shot pre-inference sweep of ~half the pixels
+   -- negligible beside the net.
+
+   WHY G1 - G2 and not the block variance. The two greens of a 2x2 cell are adjacent and
+   see almost the same signal, so their difference is nearly pure noise: var(G1-G2)/2 is
+   the per-site noise variance. The variance of the green sites themselves also carries
+   every gradient and texture in the 32x32 block, and on real frames that swamped the
+   noise -- one LX3 folder at ISO 80 fitted k anywhere from 5e-4 to 0.37 (a calibrated
+   body of that class is ~1e-4). Blocks touching the clip point are skipped too: a block
+   straddling blown sky and a dark trunk has a variance near 0.1, and a bin of those is
+   what produced the 0.37 that turned the render magenta (see kbPlausibleForIso). */
 bool estimateKB(const RawImage &raw, double &k, double &b)
 {
     int dy, dx;
@@ -144,6 +153,8 @@ bool estimateKB(const RawImage &raw, double &k, double &b)
 
     constexpr int kBlk  = 16;    // packed-grid block (16 -> 32x32 mosaic)
     constexpr int kBins = 32;
+    constexpr int kMinBlocks = 32;     // per bin; 8 let a few edge blocks set a floor
+    constexpr float kClip = 0.95f;     // white-normalised; blocks reaching it are skipped
     const int Wpk = (W - dx) / 2, Hpk = (raw.height - dy) / 2;
     if (Wpk < kBlk || Hpk < kBlk) return false;
 
@@ -152,28 +163,31 @@ bool estimateKB(const RawImage &raw, double &k, double &b)
     std::vector<std::vector<float>> bins(kBins);   // block variances per intensity bin
     for (int by = 0; by + kBlk <= Hpk; by += kBlk) {
         for (int bx = 0; bx + kBlk <= Wpk; bx += kBlk) {
-            /* Mean/variance of G1 and G2 separately, then average, so the fixed G1/G2
+            /* Variance of d = G1 - G2 about its own block mean, so the fixed G1/G2
                pedestal difference does not masquerade as noise. */
-            double s1 = 0, s2 = 0, ss1 = 0, ss2 = 0;
+            double s = 0, sd = 0, ssd = 0;
+            float gMax = 0.0f;
             for (int y = 0; y < kBlk; ++y) {
                 const int sy = dy + 2 * (by + y);
                 for (int x = 0; x < kBlk; ++x) {
                     const int sx = dx + 2 * (bx + x);
                     const float g1 = at(sy,     sx + 1) * invWhite;   // G1
                     const float g2 = at(sy + 1, sx)     * invWhite;   // G2
-                    s1 += g1; ss1 += double(g1) * g1;
-                    s2 += g2; ss2 += double(g2) * g2;
+                    const double d = double(g1) - g2;
+                    s += double(g1) + g2;
+                    sd += d; ssd += d * d;
+                    gMax = std::max(gMax, std::max(g1, g2));
                 }
             }
+            if (gMax >= kClip) continue;                 // touches the clip point
             const int n = kBlk * kBlk;
-            const double m1 = s1 / n, m2 = s2 / n;
-            const double v1 = std::max(0.0, ss1 / n - m1 * m1);
-            const double v2 = std::max(0.0, ss2 / n - m2 * m2);
-            const double mean = 0.5 * (m1 + m2);
-            if (mean <= 0.0 || mean >= 1.0) continue;   // skip black / clipped blocks
+            const double mean = s / (2 * n);
+            const double md = sd / n;
+            const double var = 0.5 * std::max(0.0, ssd / n - md * md);   // var(d) / 2
+            if (mean <= 0.0) continue;                   // skip black blocks
             int bi = int(mean * kBins);
             if (bi >= kBins) bi = kBins - 1;
-            bins[bi].push_back(float(0.5 * (v1 + v2)));
+            bins[bi].push_back(float(var));
         }
     }
 
@@ -181,7 +195,7 @@ bool estimateKB(const RawImage &raw, double &k, double &b)
     std::vector<double> xs, ys;
     for (int i = 0; i < kBins; ++i) {
         std::vector<float> &vv = bins[i];
-        if (vv.size() < 8) continue;                // too few flat samples to trust
+        if (int(vv.size()) < kMinBlocks) continue;  // too few flat samples to trust
         std::sort(vv.begin(), vv.end());
         xs.push_back((i + 0.5) / kBins);
         ys.push_back(vv[size_t(vv.size() * 0.10)]); // 10th percentile
@@ -237,6 +251,24 @@ bool kbPlausible(double k, double b)
     return k > 0.0 && k <= 0.5 && b >= 0.0 && b <= 0.1 && std::isfinite(k) && std::isfinite(b);
 }
 
+/* kbPlausible, plus: is k within the range real sensors span AT THIS ISO? The blind
+   estimate needs this; a misparsed tag is off by orders of magnitude, but a bad fit can
+   land anywhere inside kbPlausible's loose box. Across the 410 calibrated bodies in
+   pmrid_calib_tables.h, k at a given ISO lies within 0.05x..32x of the A7R5's (the
+   iPhones are the top end), so [1/32, 32]x of the generic table admits every one of them.
+
+   Not hypothetical: a Panasonic LX3 frame at ISO 80 (blown sky through trees) fitted
+   k = 0.37, ~17000x the A7R5 at that ISO and ~3000x a calibrated body of its class. It
+   passed kbPlausible, cvt_k came out ~0.003, and the denoised render was magenta -- the
+   same failure as the DOUBLE-tag bug above, reached through tier 3 instead of tier 1. */
+bool kbPlausibleForIso(double k, double b, int iso)
+{
+    if (!kbPlausible(k, b)) return false;
+    double kGen, bGen;
+    lookupKB(kA7R5, int(sizeof(kA7R5) / sizeof(kA7R5[0])), iso, kGen, bGen);
+    return k >= kGen / 32.0 && k <= kGen * 32.0;
+}
+
 KBSource resolveKB(const RawImage &raw, const QString &model, int iso, double &k, double &b)
 {
     if (raw.hasNoiseProfile && raw.npScale > 0.0 &&
@@ -245,7 +277,8 @@ KBSource resolveKB(const RawImage &raw, const QString &model, int iso, double &k
         return KBSource::DngNoiseProfile;
     }
     if (modelKB(model, iso, k, b))   return KBSource::ModelTable;
-    if (estimateKB(raw, k, b) && kbPlausible(k, b)) return KBSource::BlindEstimate;
+    if (estimateKB(raw, k, b) && kbPlausibleForIso(k, b, iso))
+        return KBSource::BlindEstimate;
     lookupKB(kA7R5, int(sizeof(kA7R5) / sizeof(kA7R5[0])), iso, k, b);
     return KBSource::GenericFallback;
 }

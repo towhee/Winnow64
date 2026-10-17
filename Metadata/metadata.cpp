@@ -692,6 +692,26 @@ static QString denoiseAmountsKeyPart()
                                     .arg(qRound(G::denoiseChromaDefault * 100.0f));
 }
 
+/*
+    The raw denoiser's revision (RawDecoder::kDenoiserRevision) as a key part, present
+    only when the render actually runs PMRID: the Winnow engine (the Apple engine has no
+    CFA) with the denoise wanted (EditParams::wantsDenoiseRaw -- Auto run, or the recipe
+    opted in). So a denoiser fix misses exactly the previews it changed. A recipe's
+    denoiseRaw is probed by substring first, as RawRender::fromBlob does, so most
+    recipes are not parsed.
+*/
+static QString denoiserKeyPart(const RawRender::Choice &render, const QString &blob)
+{
+    if (RawDecoder::kDenoiserRevision == 0 || render.apple) return QString();
+    bool wants = G::autoRunDenoise;
+    if (!wants && !blob.isEmpty() &&
+        QByteArray::fromBase64(blob.toLatin1()).contains("\"denoiseRaw\"")) {
+        const EditStack s = EditStack::fromBase64(blob);
+        wants = !s.scopes.isEmpty() && s.scopes.first().params.wantsDenoiseRaw(false);
+    }
+    return wants ? QString("|denoiser=%1").arg(RawDecoder::kDenoiserRevision) : QString();
+}
+
 /*  The engine and Apple parts come from the RENDERER, per image since 2026-10-14
     (Develop/rawrender.h): the recipe's own choice, else the default. For a recipe that
     never chose, RawRender::engineKey / appleKeyPart produce exactly what the global
@@ -721,6 +741,7 @@ QString Metadata::devPreviewKey(const QString &blob)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
                     + denoiseAmountsKeyPart()
+                    + denoiserKeyPart(render, blob)
                     + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
@@ -786,6 +807,7 @@ QString Metadata::defaultRenderKey(const QString &fPath)
                     + (G::autoRemoveCA ? QString("|autoCA=1") : QString())    // see devPreviewKey
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
                     + (G::autoRunDenoise ? denoiseAmountsKeyPart() : QString())
+                    + denoiserKeyPart(render, QString())
                     + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);

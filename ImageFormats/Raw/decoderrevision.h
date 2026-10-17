@@ -28,6 +28,19 @@ inline int revision(const QString &ext)
     return 0;
 }
 
+/*
+    Revision of the raw DENOISER (PMRID: its noise model, tiling, blend), folded into the
+    devPreview / developed-thumbnail key only for renders that run it -- the Winnow
+    engine with the denoise wanted (Metadata::denoiserKeyPart). BUMP when a PMRID change
+    alters its output, so previews built by the old denoiser miss and are rebuilt while
+    Apple-engine and un-denoised previews keep their keys. 0 = never bumped (no key part).
+
+    History:
+      1  2026-10-16  blind noise estimate fitted k ~3000x too high on some uncalibrated
+                     bodies (LX3 at ISO 80): magenta render. See pmrid.cpp estimateKB.
+*/
+inline constexpr int kDenoiserRevision = 1;
+
 } // namespace RawDecoder
 
 #endif // DECODERREVISION_H

@@ -378,7 +378,10 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
            unchanged -- this is not a recipe edit. */
         /* Not for an unedited version: its record keeps a thumbnail only beside a recipe,
            so the write would rewrite the sidecar to store nothing. */
-        if (!r.thumbJpg.isEmpty() && (edited || !VersionKey::isVersion(fPath)))
+        /* Nor for a stack that was REPAIRED on load: blob is the repaired recipe, and
+           writing it would drop the user's masks from disk on a background pass. */
+        if (!r.thumbJpg.isEmpty() && (edited || !VersionKey::isVersion(fPath))
+            && developProperties->sidecarRecipeRewritable(fPath))
             Metadata::writeDevelopSidecar(fPath, blob, r.thumbJpg.toBase64());
         if (!r.previewJpg.isEmpty())
             DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg);

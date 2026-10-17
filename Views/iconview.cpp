@@ -816,10 +816,10 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
     // Calculate available row width, accounting for scrollbars and a small margin
     int wRow = width() - G::scrollBarThickness - 8;
 
-    // Ensure assignedIconWidth is within safe bounds to prevent division by zero or huge cells
-    if (assignedIconWidth < ICON_MIN || assignedIconWidth > G::maxIconSize) {
-        assignedIconWidth = iconWidth;
-    }
+    /* Keep assignedIconWidth within bounds. CLAMP, not "fall back to iconWidth": a
+       workspace restore sets both to the stored width, so an over-size value (old
+       settings hold 263 / 290) fell back to itself and survived. */
+    assignedIconWidth = qBound(ICON_MIN, assignedIconWidth, G::maxIconSize);
 
     // Determine cell width based on the assigned reference width
     int wCell = iconViewDelegate->getCellWidthFromThumbWidth(assignedIconWidth);
@@ -831,6 +831,12 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
 
     // Recalculate cell width to perfectly fill the available row width (justification)
     wCell = wRow / tpr;
+
+    /* The same ceiling justify() applies, so the largest size [ ] can reach is also the
+       largest a resize or a workflow switch can produce. Without it, justification
+       widened a near-max cell by up to 2x: a 1080 px Browse grid restored at the max
+       width came back 3 per row (~345 px thumbs) where Enlarge stops at 5 per row. */
+    while (wCell > G::maxIconSize && tpr < wRow) wCell = wRow / ++tpr;
 
     // Update icon dimensions to match the new justified cell width
     iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);

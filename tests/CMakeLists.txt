@@ -161,6 +161,9 @@ winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)
 # tst_denoiseraw pins the tri-state EditParams::denoiseRaw ("is the raw denoise wanted?")
 # through editparams.h + editstack.h -- both header-only, so Qt Core (JSON) is enough.
 winnow_add_unit_test(tst_denoiseraw unit/tst_denoiseraw.cpp)
+# tst_masktools pins that EditStack's load-time sanitize keeps every MaskTool (its bound
+# once stopped short of Segmenter). editstack.h is header-only; Qt Core is enough.
+winnow_add_unit_test(tst_masktools unit/tst_masktools.cpp)
 # tst_crx decodes real Canon CR3 files -- BOTH bitstreams: level-0 "RAW" and wavelet
 # "C-RAW" (the default on current bodies), which CrxCodec handles alike. Pinned by a CRC32
 # over the sensor mosaic taken from the rawpy/libraw oracle, so it cross-checks the decoder

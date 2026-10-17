@@ -53,6 +53,11 @@ enum class MaskTool {
        selected outlines, so the render needs no model. */
     Segmenter
 };
+/* The last MaskTool. A loaded mask whose tool is past it is dropped as "unknown tool"
+   (sanitize). MOVE THIS when appending a tool: it was left at RefineBrush when Segmenter
+   was added, so every Segmenter mask was dropped on load -- and a preview top-up then
+   wrote the stripped stack back to the sidecar. */
+constexpr MaskTool kLastMaskTool = MaskTool::Segmenter;
 enum class MaskOp      { Add, Subtract, Intersect };   // APPEND ONLY (serialized as int)
 enum class MaskCombine { Union, Intersect };
 
@@ -814,7 +819,7 @@ struct EditStack {
                 /* tool / op are serialized as int and both enums are APPEND ONLY, so a
                    value past the end is either corruption or a tool from a newer build.
                    Either way this build cannot render it -- drop it. */
-                if (m.tool < 0 || m.tool > int(MaskTool::RefineBrush) ||
+                if (m.tool < 0 || m.tool > int(kLastMaskTool) ||
                     m.op   < 0 || m.op   > int(MaskOp::Intersect)) {
                     l.components.removeAt(i);
                     ++droppedMasks;
