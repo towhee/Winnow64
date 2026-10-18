@@ -8114,14 +8114,20 @@ bool SortFilter::lessThan(const QModelIndex &left, const QModelIndex &right) con
     a re-placed row goes back to its own slot.  The same rule covers VERSIONS: a version
     shares its master's key and the source order puts the master first (a renamed master
     whose version still carried the old name for a moment used to land after it).
+
+    DESCENDING calls lessThan(right, left), so a plain l < r tie-break would REVERSE
+    equal keys -- every version ahead of its master under a Z-A / newest-first sort.
+    The tie-break flips with the order, so ties keep source order in both directions.
 */
+    const bool desc = sortOrder() == Qt::DescendingOrder;
+    auto tieBreak = [desc](int l, int r) { return desc ? l > r : l < r; };
     if ((mRanksActive || mSortKeysValid) && left.column() == mSortKeyColumn
         && right.column() == mSortKeyColumn && QThread::currentThread() == thread()) {
         const int l = left.row(), r = right.row();
         if (mRanksActive) {
             if (l >= 0 && r >= 0 && l < mRanks.size() && r < mRanks.size()) {
                 const int rl = mRanks.at(l), rr = mRanks.at(r);
-                return rl != rr ? rl < rr : l < r;
+                return rl != rr ? rl < rr : tieBreak(l, r);
             }
         }
         else if (l >= 0 && r >= 0 && l < mSortKeys.size() && r < mSortKeys.size()) {
@@ -8131,12 +8137,12 @@ bool SortFilter::lessThan(const QModelIndex &left, const QModelIndex &right) con
                 return true;
             if (winnowVariantLessThan(mSortKeys.at(r), mSortKeys.at(l), cs, locale))
                 return false;
-            return l < r;
+            return tieBreak(l, r);
         }
     }
     if (QSortFilterProxyModel::lessThan(left, right)) return true;
     if (QSortFilterProxyModel::lessThan(right, left)) return false;
-    return left.row() < right.row();
+    return tieBreak(left.row(), right.row());
 }
 
 void SortFilter::filterChange(QString src)
