@@ -960,6 +960,23 @@ QString WidgetCSS::pushButton()
       "color:" + disabledColor.name() + ";"
     "}"
 
+    /* Status-bar "Edits hidden" pill (MW::editsHiddenBtn): the amber of the thumbnails'
+       has-edits badge, compact, and clear of the global min-width above, which would
+       otherwise widen the status bar. */
+    "QPushButton#editsHiddenBtn {"
+        "background-color: " + QColor(150,110,20).name() + ";"
+        "color: white;"
+        "border: none;"
+        "border-radius: 3px;"
+        "padding: 0px 6px;"
+        "margin: 0px 4px;"
+        "min-width: 0px;"
+    "}"
+
+    "QPushButton#editsHiddenBtn:hover {"
+        "background-color: " + QColor(180,135,30).name() + ";"
+    "}"
+
     "QDialogButtonBox QPushButton {"
     "min-height: 24px;"
     "min-width: 75px;"

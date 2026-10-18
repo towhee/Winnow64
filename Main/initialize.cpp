@@ -1625,7 +1625,7 @@ void MW::createStatusBar()
     previewSourceCombo->setCurrentIndex(int(G::previewSource));
     previewSourceCombo->setFocusPolicy(Qt::NoFocus);
     previewSourceCombo->setToolTip("Show the original photo or your developed version  "
-                                   "(\\ or Y)");
+                                   "(Y)");
     /* Pin the width to the widest item via the STYLESHEET min-width/max-width. The global widget
        CSS (widgetcss.cpp) sets "QComboBox { min-width: 6em }", and in Qt a stylesheet min-width
        OVERRIDES setFixedWidth() -- so the width must be a stylesheet property here to win. Width =
@@ -1647,6 +1647,22 @@ void MW::createStatusBar()
     });
     statusBar()->addWidget(previewSourceCombo);
     previewSourceCombo->setVisible(showStatusBarPreviewSource);   // see switcher above
+
+    /* "Edits hidden" pill: the exception-only indicator for Show Edits (Y). Shown only
+       while edits are hidden for all images (MW::syncPreviewSourceEnabled), so the normal
+       status bar gains nothing, and an all-images switch can never be silently left on.
+       Clicking it shows edits again. Styled in WidgetCSS (QPushButton#editsHiddenBtn). */
+    editsHiddenBtn = new QPushButton(tr("Edits hidden"));
+    editsHiddenBtn->setObjectName("editsHiddenBtn");
+    editsHiddenBtn->setFocusPolicy(Qt::NoFocus);
+    editsHiddenBtn->setCursor(Qt::PointingHandCursor);
+    editsHiddenBtn->setToolTip(tr("Every image is showing its unedited picture.\n"
+                                  "Click (or press Y) to show edits again."));
+    connect(editsHiddenBtn, &QPushButton::clicked, this,
+            [this]() { setPreviewSource(G::PreviewSource::Developed); });
+    statusBar()->addWidget(editsHiddenBtn);
+    editsHiddenBtn->setVisible(G::operationMode != G::OperationMode::Develop
+                               && G::previewSource == G::PreviewSource::Original);
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;
@@ -3958,6 +3974,10 @@ void MW::setOperationMode(G::OperationMode mode)
                                 + DevPreviewCache::readOnlyReason() + ".", 3000);
         return;
     }
+
+    /* A Browse loupe compare ("\") is put back before either mode change: Develop
+       paints its own render, and leaving Develop reloads the cached picture. */
+    endBrowseCompare();
 
     /* LEAVING DEVELOP CANCELS THE ACTIVE TOOL. A tool armed in Develop (spot brush, WB
        dropper, Detail picker, mask tool, Curves sampler, Transform) changes the loupe

@@ -56,6 +56,12 @@ public:
        See the implementation for when this is allowed. Returns false on any miss, which
        simply falls through to the normal decode. */
     bool loadDevPreview();
+    /* The DevPreviewCache key for a row: its recipe's base key (G::DevPreviewKeyColumn)
+       with the decoder revision folded in, or, with no recipe, the DEFAULT RENDER key of
+       a raw Winnow can demosaic. Empty when the row can have no devPreview. Shared by
+       loadDevPreview and the Browse loupe compare (MW::toggleBrowseCompare). */
+    static QString devPreviewKeyFor(const QString &baseKey, const QString &rowKey,
+                                    const QString &fPath, const QString &ext);
 
     bool isRunning() const;
     void setIdle();

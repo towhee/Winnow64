@@ -193,6 +193,7 @@ void MW::gridDisplay()
     /* Capture the shared scroll anchor before any view is shown/hidden (see note in
        MW::loupeDisplay). */
     int scrollAnchor = dm->scrollToIcon;
+    endBrowseCompare();     // a loupe-only compare does not outlive the loupe
     G::mode = "Grid";
     filterDock->setEnabled(true);
     filters->enable();
@@ -312,6 +313,7 @@ void MW::tableDisplay()
     /* Capture the shared scroll anchor before any view is shown/hidden (see note in
        MW::loupeDisplay). */
     int scrollAnchor = dm->scrollToIcon;
+    endBrowseCompare();     // a loupe-only compare does not outlive the loupe
     G::mode = "Table";
     filterDock->setEnabled(true);
     filters->enable();
@@ -463,6 +465,7 @@ void MW::compareDisplay()
     }
 //    thumbView->selectThumb(currentRow);
 
+    endBrowseCompare();     // a loupe-only compare does not outlive the loupe
     G::mode = "Compare";
     // centralLayout->setCurrentIndex clears selectionModel
     sel->save("MW::compareDisplay");

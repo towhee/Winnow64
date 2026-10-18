@@ -398,28 +398,32 @@ QString MW::getPictureShown()
 /*
     The status-bar word after "Picked:" naming the picture of the current image on screen.
 
-      Preview    the camera's embedded preview: a raw browsed with Original chosen (Preview
-                 mode never decodes a raw), or Develop's Opt+"\" camera latch.
-      Original   the file itself (a JPG/TIFF/... browsed with Original chosen), or
-                 Develop's Before ("\").
+      Camera     the camera's embedded preview: a raw browsed with Show Edits off
+                 (Preview mode never decodes a raw), or a "\" / Opt+"\" compare of one.
+      Original   the file itself (a JPG/TIFF/... browsed with Show Edits off, or
+                 compared), or Develop's Before ("\").
       Developed  Develop's live render, or a browsed image that HAS a devPreview while
-                 Developed is chosen. One without a devPreview has only its own picture,
-                 so it reads Preview / Original like the rows above.
+                 Show Edits is on. One without a devPreview has only its own picture,
+                 so it reads Camera / Original like the rows above.
 
-    Callers that change any of these inputs (setPreviewSource, the two Develop latches,
+    A Browse compare reports its own label (ImageView::compareLabel). Callers that change
+    any of these inputs (setPreviewSource, the compare and the two Develop latches,
     setOperationMode) call updateStatus so the word follows.
 */
     if (G::isLogger) G::log("MW::getPictureShown");
     if (!dm || !dm->sf) return "";
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || currentIsVideo()) return "";
-    const QString camera = isFileRaw(fPath) ? "Preview" : "Original";
+    const QString camera = isFileRaw(fPath) ? "Camera" : "Original";
 
     if (G::operationMode == G::OperationMode::Develop) {
         if (developCameraShown && developCameraPath == fPath) return camera;
         if (developProperties && developProperties->isShowingBefore()) return "Original";
         return "Developed";
     }
+
+    if (imageView && !imageView->compareLabel().isEmpty())
+        return imageView->compareLabel();
 
     if (G::previewSource == G::PreviewSource::Developed &&
         !dm->sf->index(dm->currentSfRow, G::DevPreviewKeyColumn).data().toString().isEmpty())
@@ -840,13 +844,13 @@ void MW::refreshDevelopThumbs()
 void MW::syncPreviewSourceEnabled()
 {
 /*
-    Original / Developed is a Preview-mode choice only. DEVELOP MODE ALWAYS SHOWS THE
+    Show Edits (Y) is a Preview-mode choice only. DEVELOP MODE ALWAYS SHOWS THE
     DEVELOPED IMAGE -- in the loupe, which is a live render of the recipe being edited, and
     in the thumbnails, which must agree with it. Offering the choice there would let the
     user ask for a picture Develop is not able to show.
 
-    So in Develop the combo is DISABLED and reads Developed, and the two menu items and Y
-    are disabled with a reason (a disabled QAction greys its menu item AND stops its
+    So in Develop the combo is DISABLED and reads Developed, and Show Edits (menu item and
+    Y) is disabled with a reason (a disabled QAction greys its menu item AND stops its
     shortcut firing, so one gate covers both -- the reason surfaces through the Disabled
     Shortcut Feedback path).
 
@@ -869,27 +873,32 @@ void MW::syncPreviewSourceEnabled()
                 ? QString("Develop mode always shows the developed image.\n"
                           "Leave Develop (E, G or T) to see the original.")
                 : QString("Show the original photo or your developed version  "
-                          "(\\ or Y)"));
+                          "(Y)"));
     }
 
-    for (QAction *a : {previewSourceOriginalAction, previewSourceDevelopedAction,
-                       togglePreviewSourceAction}) {
-        if (!a) continue;
-        a->setEnabled(!inDevelop);
-        a->setProperty("disabledReason", reason);
+    if (togglePreviewSourceAction) {
+        togglePreviewSourceAction->setEnabled(!inDevelop);
+        togglePreviewSourceAction->setProperty("disabledReason", reason);
+        /* Still reports the stored choice, so returning to Preview shows the picture
+           the user last asked for rather than whatever Develop implied. */
+        togglePreviewSourceAction->setChecked(G::previewSource == G::PreviewSource::Developed);
     }
-    /* The radio pair still reports the stored choice, so returning to Preview shows the
-       picture the user last asked for rather than whatever Develop implied. */
-    if (previewSourceOriginalAction)
-        previewSourceOriginalAction->setChecked(G::previewSource == G::PreviewSource::Original);
-    if (previewSourceDevelopedAction)
-        previewSourceDevelopedAction->setChecked(G::previewSource == G::PreviewSource::Developed);
+
+    /* The pill is the exception-only indicator for an all-images switch: absent in the
+       normal state, so it never crowds the status bar, and present whenever edits are
+       hidden, so nobody is left wondering why every image looks unedited. Not in Develop,
+       where edits are always shown. */
+    if (editsHiddenBtn)
+        editsHiddenBtn->setVisible(!inDevelop
+                                   && G::previewSource == G::PreviewSource::Original);
 }
 
 void MW::togglePreviewSource()
 {
 /*
-    Flip between the camera's picture and the developed one.
+    Y / View > Show Edits: flip EVERY image between its developed picture and its unedited
+    one (Camera for a raw, the file otherwise). The per-image comparison is "\"
+    (toggleBrowseCompare).
 
     Unreachable in Develop mode: syncPreviewSourceEnabled disables the action there, and a
     disabled QAction's shortcut does not fire. The guard below is belt and braces for a
@@ -900,12 +909,13 @@ void MW::togglePreviewSource()
     setPreviewSource(G::previewSource == G::PreviewSource::Developed
                          ? G::PreviewSource::Original
                          : G::PreviewSource::Developed);
-    /* The status-bar combo is hidden, so a key press needs to say which picture is up --
-       placed and timed like Develop's Before / After message on the same key. */
+    /* Name the SCOPE as well as the state: this changed every image, not just the one
+       on screen (the pill in the status bar keeps saying so while edits are hidden). */
     if (G::popup)
-        G::popup->showPopup(G::previewSource == G::PreviewSource::Developed ? "Developed"
-                                                                            : "Original",
-                            500, true, 0.75, Qt::AlignHCenter,
+        G::popup->showPopup(G::previewSource == G::PreviewSource::Developed
+                                ? "Edits shown for all images"
+                                : "Edits hidden for all images",
+                            1500, true, 0.75, Qt::AlignHCenter,
                             Qt::AlignBottom | Qt::AlignRight);
 }
 
@@ -931,6 +941,7 @@ void MW::setPreviewSource(G::PreviewSource source)
 */
     if (G::isLogger) G::log("MW::setPreviewSource");
     if (G::previewSource == source) return;
+    endBrowseCompare();     // its "other picture" is about to become the cached one
     G::previewSource = source;
 
     syncPreviewSourceEnabled();     // combo row + the radio pair

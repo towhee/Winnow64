@@ -1189,58 +1189,48 @@ void MW::createUtilActions()
         setOperationMode(G::OperationMode::Develop);
     });
 
-    /* Which of an image's two pictures the grid and the loupe show. An exclusive pair
-       mirroring the status-bar dropdown -- the menu is where the feature is discoverable,
-       the dropdown is where it is quick -- plus Y for the toggle.
+    /* Which picture is shown outside Develop: TWO CONTROLS, TWO SCOPES, never mixed.
 
-       ALL THREE ARE DISABLED IN DEVELOP MODE by syncPreviewSourceEnabled, because Develop
+         Y    Show Edits (all images). A persistent lens over the whole collection:
+              every thumbnail and the loupe show Developed, or the unedited picture.
+              Rebuilds the icons and the image cache (setPreviewSource), so it is a
+              deliberate switch, and the status bar carries a pill while it is off.
+         "\"  Compare the CURRENT image, on the loupe only, never persisted: its other
+              picture swaps in and navigation takes it down (toggleBrowseCompare).
+              Instant, no cache rebuild. In Develop the arbiter takes "\" for Before /
+              After, the same comparison on the image being edited.
+
+       Show Edits is DISABLED IN DEVELOP by syncPreviewSourceEnabled, because Develop
        always shows the developed image. A disabled QAction greys its menu item AND stops
-       its shortcut firing, so that one gate covers the items and Y together, and the
-       reason reaches the user through the Disabled Shortcut Feedback path.
-
-       Y is deliberately NOT in developShortcuts: it has no Develop-local meaning, so it
-       falls through to this action, which is disabled there. */
-    previewSourceGroup = new QActionGroup(this);
-    previewSourceGroup->setExclusive(true);
-
-    previewSourceOriginalAction = new QAction(tr("Show Original"), this);
-    previewSourceOriginalAction->setObjectName("previewSourceOriginal");
-    previewSourceOriginalAction->setShortcutVisibleInContextMenu(true);
-    previewSourceOriginalAction->setCheckable(true);
-    previewSourceOriginalAction->setChecked(G::previewSource == G::PreviewSource::Original);
-    previewSourceGroup->addAction(previewSourceOriginalAction);
-    addAction(previewSourceOriginalAction);
-    connect(previewSourceOriginalAction, &QAction::triggered, this,
-            [this]() { setPreviewSource(G::PreviewSource::Original); });
-
-    previewSourceDevelopedAction = new QAction(tr("Show Developed"), this);
-    previewSourceDevelopedAction->setObjectName("previewSourceDeveloped");
-    previewSourceDevelopedAction->setShortcutVisibleInContextMenu(true);
-    previewSourceDevelopedAction->setCheckable(true);
-    previewSourceDevelopedAction->setChecked(G::previewSource == G::PreviewSource::Developed);
-    previewSourceGroup->addAction(previewSourceDevelopedAction);
-    addAction(previewSourceDevelopedAction);
-    connect(previewSourceDevelopedAction, &QAction::triggered, this,
-            [this]() { setPreviewSource(G::PreviewSource::Developed); });
-
-    /* "\" is the primary key, matching Develop's Before / After on the same key (the
-       arbiter takes "\" in Develop, so this action never sees it there). Y is the older
-       binding and stays. Set here rather than in loadShortcuts so an existing profile
-       gets "\" too; the text names both keys the way deleteImagesAction does. */
-    togglePreviewSourceAction = new QAction(tr("Original / Developed\t\\, Y"), this);
+       its shortcut firing, so that one gate covers both, and the reason reaches the user
+       through the Disabled Shortcut Feedback path. Y is deliberately NOT in
+       developShortcuts: it has no Develop-local meaning. */
+    togglePreviewSourceAction = new QAction(tr("Show Edits (All Images)"), this);
     togglePreviewSourceAction->setObjectName("togglePreviewSource");
-    togglePreviewSourceAction->setShortcuts({QKeySequence("\\"), QKeySequence("Y")});
+    togglePreviewSourceAction->setShortcut(QKeySequence("Y"));
     togglePreviewSourceAction->setShortcutVisibleInContextMenu(true);
+    togglePreviewSourceAction->setCheckable(true);
+    togglePreviewSourceAction->setChecked(G::previewSource == G::PreviewSource::Developed);
     addAction(togglePreviewSourceAction);
     connect(togglePreviewSourceAction, &QAction::triggered,
             this, &MW::togglePreviewSource);
 
-    /* Opt+"\": the camera's picture vs the developed one, in EVERY mode -- so unlike the
-       three above it is never disabled. Outside Develop the Original IS the camera's
+    /* Set here rather than in loadShortcuts so an existing profile gets it too. Never
+       disabled: in Develop the arbiter claims "\" before this action sees it, and a
+       menu click there is routed to Before / After by toggleBrowseCompare. */
+    browseCompareAction = new QAction(tr("Compare Original / Developed"), this);
+    browseCompareAction->setObjectName("browseCompare");
+    browseCompareAction->setShortcut(QKeySequence("\\"));
+    browseCompareAction->setShortcutVisibleInContextMenu(true);
+    addAction(browseCompareAction);
+    connect(browseCompareAction, &QAction::triggered, this, &MW::toggleBrowseCompare);
+
+    /* Opt+"\": the camera's picture vs the developed one, in EVERY mode -- so unlike
+       Show Edits it is never disabled. Outside Develop the Original IS the camera's
        picture (Preview mode does not decode raws), so it does what "\" does; in Develop
        it puts the embedded preview over the live render. Alt+key is outside the Develop
        arbiter's table, so the QAction shortcut fires in both modes. */
-    toggleCameraPreviewAction = new QAction(tr("Camera Preview / Developed"), this);
+    toggleCameraPreviewAction = new QAction(tr("Compare Camera / Developed"), this);
     toggleCameraPreviewAction->setObjectName("toggleCameraPreview");
     toggleCameraPreviewAction->setShortcut(QKeySequence("Alt+\\"));
     toggleCameraPreviewAction->setShortcutVisibleInContextMenu(true);
@@ -2957,9 +2947,8 @@ void MW::createViewMenu()
     viewMenu->addAction(fullScreenAction);
     viewMenu->addAction(escapeFullScreenAction);
     viewMenu->addSeparator();
-    viewMenu->addAction(previewSourceOriginalAction);
-    viewMenu->addAction(previewSourceDevelopedAction);
     viewMenu->addAction(togglePreviewSourceAction);
+    viewMenu->addAction(browseCompareAction);
     viewMenu->addAction(toggleCameraPreviewAction);
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
@@ -4126,7 +4115,7 @@ void MW::loadDevelopShortcuts()
        arbiter's value-editor guard tests the table rather than the A-Z range -- focus
        sits on a Develop dock slider for most of a session and a slider has no more use
        for "\" than it has for a letter. */
-    developShortcuts[Qt::Key_Backslash] = developBeforeAfterAction; // global: Orig/Developed
+    developShortcuts[Qt::Key_Backslash] = developBeforeAfterAction; // global: Compare
     /* No Develop-local G: the scopes strip is chosen from its right-click menu and the
        Develop menu's Scopes submenu, so G keeps its global meaning -- and in Develop that
        meaning is the way out: Preview mode, Grid view (see asGridAction). */

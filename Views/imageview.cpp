@@ -372,6 +372,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         return true;
     }
 
+    // a real load supersedes a Browse compare (showCompare)
+    dropCompare();
+
     // do not load image if triggered by embellish remote export
     if (G::isProcessingExportedImages) {
         // qDebug() << "WARNING" << "ImageView::loadImage" << "Processing exported images";
@@ -591,6 +594,7 @@ bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
        the developed image can restore it -- see setDevelopPreview. MW normally captures
        before calling here; only capture if it did not (the live scroll state is still
        that of the outgoing image at this point). */
+    dropCompare();      // a real load supersedes a Browse compare
     if (developCaptureForPath != fPath) captureDevelopView(fPath);
 
     /* Reframing the interim preview must not overwrite the capture. */
@@ -743,6 +747,77 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
            render arrives at the full frame, after beginCropEdit. */
         cropRestorePanRoom();
     }
+}
+
+void ImageView::showCompare(const QImage &image, const QString &label)
+{
+/*
+    Put the current image's OTHER picture on the loupe (see the header). The first call
+    keeps what is displayed, so a second showCompare (Camera after Developed, say) still
+    restores the cached picture, not the previous compare.
+
+    Presented at the WIDTH of the picture it stands in for, in its own aspect: an embedded
+    preview is usually a fraction of the cached image's size, and showing it at its pixel
+    size would refit the loupe and lose the zoom. Same aspect (most images) = same
+    displayed size, so setDevelopPreview swaps pixels and the view does not move; a
+    cropped Developed against an uncropped Camera changes the aspect and refits.
+*/
+    if (G::isLogger) G::log("ImageView::showCompare", label);
+    if (image.isNull() || currentImagePath.isEmpty() || !pmItem) return;
+    if (compareShownLabel.isEmpty()) {
+        compareSavedPixmap = pmItem->pixmap();
+        compareSavedSize = pmItem->displaySize();
+        comparePath = currentImagePath;
+        compareSavedShownPath = developShownPath;
+        compareSavedShownKey = developShownKey;
+    }
+    QSize shown = image.size();
+    if (compareSavedSize.width() > 0 && image.width() > 0) {
+        shown = QSize(compareSavedSize.width(),
+                      qRound(double(compareSavedSize.width()) * image.height()
+                             / image.width()));
+        if (qAbs(shown.height() - compareSavedSize.height()) <= 1) shown = compareSavedSize;
+    }
+    setDevelopPreview(image, shown);
+    // a whole picture, not a drag proxy: always smooth
+    pmItem->setTransformationMode(Qt::SmoothTransformation);
+    compareShownLabel = label;
+}
+
+void ImageView::endCompare()
+{
+    if (G::isLogger) G::log("ImageView::endCompare");
+    if (compareShownLabel.isEmpty()) return;
+    const QString path = comparePath;
+    const QPixmap pm = compareSavedPixmap;
+    const QSize size = compareSavedSize;
+    const QString shownPath = compareSavedShownPath;
+    const qint64 shownKey = compareSavedShownKey;
+    dropCompare();
+    if (path != currentImagePath || pm.isNull() || !pmItem) return;
+
+    if (pmItem->displaySize() == size) {
+        // same framing: swap the pixmap back, the view stays exactly where it is
+        pmItem->setTransformationMode(pm.size() == size ? Qt::SmoothTransformation
+                                                        : Qt::FastTransformation);
+        pmItem->setPixmapScaled(pm, size);
+    }
+    else {
+        // the compare changed the aspect; let setDevelopPreview reframe
+        setDevelopPreview(pm.toImage(), size);
+    }
+    developShownPath = shownPath;
+    developShownKey = shownKey;
+}
+
+void ImageView::dropCompare()
+{
+    compareShownLabel.clear();
+    comparePath.clear();
+    compareSavedPixmap = QPixmap();
+    compareSavedSize = QSize();
+    compareSavedShownPath.clear();
+    compareSavedShownKey = 0;
 }
 
 QPointF ImageView::imageToPixmap(const QPointF &imagePt) const

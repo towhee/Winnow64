@@ -1296,9 +1296,15 @@ private slots:
     void toggleDevelopBeforeAfter();
     /* Opt+"\" in every mode: flip between the camera's picture (the embedded preview of a
        raw, the file itself otherwise) and the developed one. Outside Develop that is
-       togglePreviewSource; in Develop it latches the camera preview over the live render
+       toggleBrowseCompare; in Develop it latches the camera preview over the live render
        (toggleDevelopCameraPreview). */
     void toggleCameraPreview();
+    /* "\" outside Develop: the CURRENT image's other picture on the loupe (Developed <->
+       Camera / Original), momentary and never persisted -- unlike Y (Show Edits), which
+       switches every image. See ImageView::showCompare. */
+    void toggleBrowseCompare();
+    // Take a Browse compare down, if one is up (navigation, mode or view change).
+    void endBrowseCompare();
     void toggleDevelopCameraPreview();
     /* Drop the Develop camera-preview latch WITHOUT re-rendering (the caller is about to
        show something else). Safe to call when it is not up. */
@@ -1906,11 +1912,11 @@ private:
     // Develop
     QAction *developAction;
     QAction *operationModeAction;   // D shortcut: enter Develop mode
-    /* Original / Developed: which of an image's two pictures is shown outside Develop. */
-    QActionGroup *previewSourceGroup = nullptr;
-    QAction *previewSourceOriginalAction = nullptr;
-    QAction *previewSourceDevelopedAction = nullptr;
-    QAction *togglePreviewSourceAction = nullptr;   // "\" and Y shortcuts
+    /* Which picture is shown outside Develop. Two controls, two scopes: Y (Show Edits)
+       switches EVERY image between Developed and Original; "\" compares the CURRENT
+       image only, on the loupe, and is never persisted. */
+    QAction *togglePreviewSourceAction = nullptr;   // Y: Show Edits (all images)
+    QAction *browseCompareAction = nullptr;         // "\": compare the current image
     QAction *toggleCameraPreviewAction = nullptr;   // Opt+"\": camera preview / developed
     QAction *buildDevPreviewsAction = nullptr;
     QAction *clearDevPreviewCacheAction = nullptr;
@@ -2170,6 +2176,9 @@ private:
     BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
     QComboBox *previewSourceCombo = nullptr;   // status-bar Original / Developed dropdown
+    /* Status-bar pill shown ONLY while Show Edits is off, so an all-images switch flipped
+       yesterday cannot silently persist. Click = show edits again. */
+    QPushButton *editsHiddenBtn = nullptr;
     /*  The status-bar workflow switcher, indexed by Workflow (Slide Show has none, so its
         slot is null).  See MW::createStatusBar and MW::syncWorkflowSwitcher. */
     QList<QToolButton *> workflowBtns;

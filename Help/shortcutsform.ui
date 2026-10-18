@@ -1211,24 +1211,35 @@
        </item>
        <item>
         <property name="text">
-         <string>Original / Developed</string>
+         <string>Show Edits (all images)</string>
         </property>
         <property name="text">
-         <string>\   or   Y</string>
+         <string>Y</string>
         </property>
         <property name="text">
-         <string>Toggle the thumbnails and the loupe between image preview and developed. In Develop mode \ is Before / After.</string>
+         <string>Show or hide edits for every image, thumbnails and loupe. While edits are hidden the status bar shows an "Edits hidden" pill.</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Camera Preview / Developed</string>
+         <string>Compare Original / Developed</string>
+        </property>
+        <property name="text">
+         <string>\</string>
+        </property>
+        <property name="text">
+         <string>Compare the current image with its other picture in the loupe (Developed vs Camera / Original). Moving to another image ends it. In Develop mode \ is Before / After.</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Compare Camera / Developed</string>
         </property>
         <property name="text">
          <string>Opt/Alt + \</string>
         </property>
         <property name="text">
-         <string>Toggle between the camera's embedded preview and the developed image, in every mode (in Develop, over the live render)</string>
+         <string>Compare the current image with the camera's embedded preview, in every mode (in Develop, over the live render)</string>
         </property>
        </item>
        <item>

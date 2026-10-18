@@ -14821,7 +14821,7 @@ void MW::toggleDevelopBeforeAfter()
     in now. DevelopProperties owns the latch and the render (toggleBeforeAfter); this is
     the mode gate, matching the other Develop-local keys.
 
-    Outside Develop "\" is Original / Developed (togglePreviewSource) -- the same
+    Outside Develop "\" is the Browse compare (toggleBrowseCompare) -- the same
     comparison for a browsed image -- so this is only reached from the menu there, hence
     the message rather than a silent no-op.
 */
@@ -14841,15 +14841,124 @@ void MW::toggleCameraPreview()
 /*
     Opt+"\" (and the View / Develop menus): the camera's picture vs the developed one.
 
-    Outside Develop the Original that togglePreviewSource shows IS the camera's picture --
-    Preview mode never decodes a raw, it shows the embedded JPEG -- so the two keys agree
-    there and this simply delegates. In Develop "\" is Before / After (an unedited RENDER
-    of the raw), and this is the other question: how does my edit compare with what the
-    camera made of the same frame?
+    Outside Develop the unedited picture IS the camera's -- Preview mode never decodes a
+    raw, it shows the embedded JPEG -- so the two keys agree there and this delegates to
+    the Browse compare. In Develop "\" is Before / After (an unedited RENDER of the raw),
+    and this is the other question: how does my edit compare with what the camera made
+    of the same frame?
 */
     if (G::isLogger) G::log("MW::toggleCameraPreview");
     if (G::operationMode == G::OperationMode::Develop) toggleDevelopCameraPreview();
-    else togglePreviewSource();
+    else toggleBrowseCompare();
+}
+
+void MW::toggleBrowseCompare()
+{
+/*
+    "\" outside Develop: put the CURRENT image's other picture on the loupe, or take it
+    down. Scope is deliberately one image, one view, no persistence -- the all-images
+    switch is Y (togglePreviewSource), which rebuilds both caches. This rebuilds nothing:
+
+      Loupe shows Developed  ->  Camera (raw, Pixmap::load = the embedded JPEG) or
+                                 Original (any other file), as Preview mode shows them.
+      Loupe shows unedited   ->  the devPreview, straight from DevPreviewCache.
+
+    "Developed" means a devPreview EXISTS for the row under its current recipe key (an
+    unedited raw's default render counts: it is Winnow's rendering, not the camera's), so
+    the test is the cache itself, the same lookup ImageDecoder::loadDevPreview makes.
+
+    Navigation drops it (ImageView::loadImage), as do view, mode and Show Edits changes
+    (endBrowseCompare). Reached from the menu in Develop, it is Before / After there.
+*/
+    if (G::isLogger) G::log("MW::toggleBrowseCompare");
+    if (G::operationMode == G::OperationMode::Develop) {
+        toggleDevelopBeforeAfter();
+        return;
+    }
+    if (!imageView || !dm || !dm->sf) return;
+    auto say = [](const QString &msg, int ms) {
+        if (G::popup)
+            G::popup->showPopup(msg, ms, true, 0.75, Qt::AlignHCenter,
+                                Qt::AlignBottom | Qt::AlignRight);
+    };
+
+    if (!imageView->compareLabel().isEmpty()) {
+        endBrowseCompare();
+        say(getPictureShown(), 500);
+        return;
+    }
+
+    if (G::mode != "Loupe") {
+        if (G::popup)
+            G::popup->showPopup("Compare works on one image in the loupe (E).<br>"
+                                "Y shows or hides edits for all images.", 2500);
+        return;
+    }
+
+    const QString fPath = dm->currentKey;
+    if (fPath.isEmpty() || currentIsVideo() || dm->currentSfRow < 0) return;
+
+    const int row = dm->currentSfRow;
+    const QString baseKey = dm->sf->index(row, G::DevPreviewKeyColumn).data().toString();
+    const QString ext = dm->sf->index(row, G::TypeColumn).data().toString().toLower();
+    const QString key = ImageDecoder::devPreviewKeyFor(baseKey, fPath,
+                                                       VersionKey::sourceOf(fPath), ext);
+    const bool hasDev = !key.isEmpty()
+                        && DevPreviewCache::instance().contains(fPath, key.toLatin1());
+    const bool showingDev = hasDev && G::previewSource == G::PreviewSource::Developed;
+
+    QImage other;
+    QString label;
+    if (showingDev) {
+        Pixmap pix(this, dm, metadata);
+        QString path = fPath;       // Pixmap::load takes a non-const reference
+        if (!pix.load(path, other) || other.isNull()) {
+            if (G::popup)
+                G::popup->showPopup("This image has no original picture to compare with.",
+                                    2500);
+            return;
+        }
+        label = isFileRaw(fPath) ? "Camera" : "Original";
+    }
+    else {
+        if (!hasDev) {
+            if (G::popup)
+                G::popup->showPopup(
+                    baseKey.isEmpty()
+                        ? QString("This image has no edits to compare with.")
+                        : QString("This image has no developed preview yet.<br>"
+                                  "Open it in Develop (D), or use "
+                                  "Develop > Build Developed Previews."), 3000);
+            return;
+        }
+        const QByteArray jpg = DevPreviewCache::instance().get(fPath, key.toLatin1());
+        if (jpg.isEmpty() || !other.loadFromData(jpg, "JPG") || other.isNull()) {
+            if (G::popup)
+                G::popup->showPopup("The developed preview could not be read.", 2500);
+            return;
+        }
+        /* A devPreview is sRGB (OutputTransform); bring it to the display the way
+           ImageDecoder::colorManage does for a served devPreview: empty profile = sRGB. */
+        if (G::colorManage && metadata->iccFormats.contains(ext)) {
+            if (other.format() != QImage::Format_ARGB32
+                && other.format() != QImage::Format_RGB32)
+                other = other.convertToFormat(QImage::Format_ARGB32);
+            if (!other.isNull()) ICC::transform(QByteArray(), other);
+        }
+        label = "Developed";
+    }
+
+    imageView->showCompare(other, label);
+    updateStatus(true, "", "MW::toggleBrowseCompare");
+    say(label, 500);
+}
+
+void MW::endBrowseCompare()
+{
+    if (!imageView || imageView->compareLabel().isEmpty()) return;
+    if (G::isLogger) G::log("MW::endBrowseCompare");
+    imageView->endCompare();
+    updateStatus(true, "", "MW::endBrowseCompare");
 }
 
 void MW::clearDevelopCameraPreview()

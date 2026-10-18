@@ -76,6 +76,15 @@ public:
        image must be scaled up to frame the same content. Tracking divides it back out so
        the capture always stays in full size terms. 1.0 whenever a full image is shown. */
     qreal   interimZoomScale = 1.0;
+    /* Browse loupe compare ("\" outside Develop, MW::toggleBrowseCompare): the OTHER
+       picture of the current image (Camera / Original / Developed) shown in place of
+       the cached one, for this image only, never persisted. showCompare keeps the
+       displayed pixmap so endCompare can put it back without a cache round trip. Any
+       real load (loadImage, loadImageInterim) drops it: those pixels supersede it.
+       compareLabel() is the picture's word while it is up, empty otherwise. */
+    void showCompare(const QImage &image, const QString &label);
+    void endCompare();
+    QString compareLabel() const { return compareShownLabel; }
     qreal refZoom;                      // adjusted to real screen pixels
     qreal toggleZoom;
     bool isRubberBand;
@@ -485,6 +494,14 @@ protected:
 
 private:
     void noJpgAvailable();
+    // forget a Browse compare WITHOUT restoring (a real load is replacing the pixels)
+    void dropCompare();
+    QPixmap compareSavedPixmap;
+    QSize   compareSavedSize;
+    QString compareShownLabel;
+    QString comparePath;
+    QString compareSavedShownPath;      // developShownPath / Key before the compare
+    qint64  compareSavedShownKey = 0;
     void scale(bool isNewImage = false);
     qreal getZoom();
 
