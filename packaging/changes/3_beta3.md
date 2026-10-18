@@ -1,0 +1,3 @@
+- Fix version edit sync with browsing.
+- Show master and versions in correct order.
+- Clarify Camera, Original and Developed views for an image, added a chip to the status bar for status and toggling.
