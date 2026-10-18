@@ -448,6 +448,13 @@ void ImageCache::clearAllState()
 {
     QMutexLocker lock(&cacheStateMutex);
     cacheState.clear();
+    supersededDecodes.clear();
+}
+
+bool ImageCache::takeSupersededDecode(const QString &fPath)
+{
+    QMutexLocker lock(&cacheStateMutex);
+    return supersededDecodes.remove(fPath);
 }
 
 bool ImageCache::waitForMetaRead(int sfRow, int ms)
@@ -1046,6 +1053,16 @@ void ImageCache::removeCachedImage(QString fPath)
     Called by MW::insertFiles.  If the inserted file is a replacement of an existing
     image with the same name, then remove the existing image from imCache.  Refresh the
     thumbView and gridView.
+
+    Also by MW::devPreviewStore, when a devPreview has just been built for the image on
+    screen.
+
+    A DECODE IN FLIGHT IS SUPERSEDED, not left to land. Dropping the cached image is not
+    enough when the row is still decoding: okToDecode refuses a second decode while it is
+    caching, and the one running reads the image as it was -- so it lands afterwards and
+    the loupe shows exactly what this call was meant to replace. A 146 MB TIFF takes
+    seconds, and the devPreview build finished inside that window (a re-crop showed the
+    previous crop). okToCache discards the result and re-queues the row.
 */
     QString src = "ImageCache::removeCachedImage";
     if (debugLog || G::isLogger) log("removeCachedImage", fPath);
@@ -1062,7 +1079,13 @@ void ImageCache::removeCachedImage(QString fPath)
 
     QMutexLocker locker(&gMutex);
 
+    const bool inFlight = stateOf(fPath).isCaching ||
+                          (toCacheStatus.contains(sfRow) && toCacheStatus[sfRow].isCaching);
     clearStateFor(fPath);
+    if (inFlight) {
+        QMutexLocker lock(&cacheStateMutex);
+        supersededDecodes.insert(fPath);
+    }
     icd->remove(fPath);
     // icd->imCache.remove(fPath);
     emit refreshViews(fPath, false, "ImageCache::setTargetRange");
@@ -3053,6 +3076,16 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
     emit setValSf(sfRow, G::IsCachingColumn, false, instance, src);
     if (toCacheStatus.contains(sfRow)) {
         toCacheStatus[sfRow].isCaching = false;
+    }
+
+    /* Superseded mid-decode (removeCachedImage): these pixels are of the image as it was.
+       Not an attempt at the image, and the row stays queued so nextToCache decodes it
+       again -- this time reading what replaced it. */
+    if (takeSupersededDecode(fillPath)) {
+        unbumpStateAttempts(fillPath);
+        setStateStatus(fillPath, int(ImageDecoder::Status::Undefined));
+        if (!toCache.contains(sfRow)) toCacheAppend(sfRow);
+        return false;
     }
 
     // save decoder status (from snapshot)

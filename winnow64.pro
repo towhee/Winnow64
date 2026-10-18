@@ -540,7 +540,7 @@ RC_ICONS = images/winnow.ico
 DISTFILES += $$files(Lib/*, true) \
     FocusStack/Petteri/wavelet_opencl_kernels.cl \
     notes/GeminiCLI.md
-DISTFILES += notes/Documentation.txt
+DISTFILES += notes/Documentation.md
 DISTFILES += Docs/ingestautopath
 DISTFILES += notes/InstallMediaPipe.txt
 DISTFILES += CMakeLists.txt

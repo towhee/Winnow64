@@ -6651,6 +6651,7 @@ void MW::stop(QString src)
        the render in flight is about to be irrelevant. The queue is rebuilt from what is
        actually missing next time the command runs, so nothing is lost by dropping it. */
     cancelDevPreviewBuild();
+    devPreviewBuildDeferred.clear();
 
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
     stopped.clear();

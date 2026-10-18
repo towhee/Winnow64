@@ -222,6 +222,11 @@ private:
     };
     mutable QMutex cacheStateMutex;
     QHash<QString, RowCache> cacheState;
+    /* Keys whose decode was IN FLIGHT when removeCachedImage dropped them: the result
+       depicts what the image used to be, so okToCache discards it and re-queues the row.
+       Guarded by cacheStateMutex. */
+    QSet<QString> supersededDecodes;
+    bool takeSupersededDecode(const QString &fPath);
 
     /*  THE MODEL IS READ ONLY THROUGH THESE on the ImageCache thread. Each
         takes its own reference to the published view (Datamodel/modelsync.h)

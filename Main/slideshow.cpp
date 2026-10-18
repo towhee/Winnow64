@@ -60,6 +60,7 @@ void MW::slideShow()
         if (G::isStressTest) getSubfolders("/users/roryhill/pictures");
 
         slideShowAction->setText(tr("Stop Slide Show"));
+        slideShowFolderStampsValid = false;     // first slide takes a full look
         slideShowTimer = new QTimer(this);
         connect(slideShowTimer, SIGNAL(timeout()), this, SLOT(nextSlide()));
         nextSlide();
@@ -70,6 +71,15 @@ void MW::slideShow()
 void MW::nextSlide()
 {
     if (G::isLogger) G::log("MW::nextSlide");
+
+    // pick up files added to or removed from the folders since the last slide
+    slideShowSyncFolders();
+    if (!G::isSlideShow) return;
+    if (dm->sf->rowCount() == 0) {
+        slideShow();    // every slide is gone: stop
+        return;
+    }
+
     slideCount++;
     if (isSlideShowRandom) {
         // push previous image path onto the slideshow history stack
@@ -90,6 +100,67 @@ void MW::nextSlide()
             "  (<font color=\"red\">press H for slideshow shortcuts</font>)";
     updateStatus(true, msg, "MW::nextSlide");
 
+}
+
+void MW::slideShowSyncFolders()
+{
+/*
+    Called by MW::nextSlide before every slide change, so a slideshow keeps up with
+    folders that are changing under it (a camera tethered into one, files deleted in
+    Finder / Explorer). The reconcile itself is MW::refresh -- the same added / removed
+    / modified diff and on-the-fly model change as File > Refresh, keeping the filters.
+
+    CHEAP UNTIL SOMETHING CHANGES. MW::refresh lists every folder, stats every row and
+    bumps the model instance (which drops in-flight ImageCache decodes) even when it
+    finds nothing, which is too much to pay every few seconds on a large load. Adding,
+    removing or renaming a file updates its DIRECTORY's modified time on both APFS and
+    NTFS, so each slide stats only the loaded folders and refreshes only when one moved.
+
+    - The first slide (and a different folder set, per dm->folderListGen) does the full
+      check, catching anything that changed between the load and the show.
+    - A folder modified in the last few seconds keeps getting the full check: exFAT /
+      FAT stamps have 2 s resolution, so a second add inside the same tick would leave
+      the stamp unchanged.
+    - Catalog scope is skipped: its rows are a query result, not a folder listing.
+    - Not while a load is filling the model (isModifyingDatamodel / isLoadRunning).
+    - Only folders already in the load are watched; a NEW subfolder of a recursive load
+      is not picked up (its parent's stamp moves, but the listing is per folder).
+*/
+    if (G::isLogger) G::log("MW::slideShowSyncFolders");
+    if (G::scope == G::Scope::Catalog) return;
+    if (G::isModifyingDatamodel || G::isLoadRunning) return;
+    if (dm->folderList.isEmpty()) return;
+
+    const quint64 gen = dm->folderListGen.load();
+    bool changed = false;
+    if (!slideShowFolderStampsValid || gen != slideShowFolderGen) {
+        slideShowFolderStamps.clear();
+        slideShowFolderGen = gen;
+        slideShowFolderStampsValid = true;
+        changed = true;
+    }
+
+    const QDateTime now = QDateTime::currentDateTime();
+    for (const QString &folder : std::as_const(dm->folderList)) {
+        // a fresh QFileInfo each time: it caches, and a stale stamp would hide a change
+        const QDateTime t = QFileInfo(folder).lastModified();
+        auto it = slideShowFolderStamps.find(folder);
+        if (it == slideShowFolderStamps.end()) {
+            slideShowFolderStamps.insert(folder, t);
+            changed = true;
+            continue;
+        }
+        if (*it != t) {
+            *it = t;
+            changed = true;
+        }
+        else if (t.isValid() && t.msecsTo(now) < 3000) changed = true;
+    }
+    if (!changed) return;
+
+    QStringList added, removed, modified;
+    if (!dm->sourceModified(added, removed, modified)) return;
+    refresh();
 }
 
 void MW::prevRandomSlide()

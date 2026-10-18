@@ -4146,6 +4146,15 @@ void MW::setOperationMode(G::OperationMode mode)
         else {
             developProperties->flushAll();
             WorkingImageCache::instance().setPinned(QString());   // no edit session now
+            /* The devPreviews the session's flushes asked for (startDevPreviewBuild holds
+               them while Develop is open). Re-keyed here, so a path edited again after
+               its flush builds its latest recipe; one already current is filtered out. */
+            if (!devPreviewBuildDeferred.isEmpty()) {
+                const QStringList deferred(devPreviewBuildDeferred.cbegin(),
+                                           devPreviewBuildDeferred.cend());
+                devPreviewBuildDeferred.clear();
+                buildDevPreviews(deferred, "flush");
+            }
         }
         /* Show/hide the multi-image warning for the mode we just entered (the banner is
            only reachable in Develop, but its text is stale until refreshed). */

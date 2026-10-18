@@ -1523,6 +1523,7 @@ private slots:
     void updateDisplayResolution();
     void setCombineRawJpg();
     void nextSlide();
+    void slideShowSyncFolders();
     void prevRandomSlide();
     void refreshAfterImageCacheSizeChange();
     void selectAllThumbs();
@@ -2366,6 +2367,10 @@ private:
     /* Queued by a multi-image edit (src "sync"): the only paths the builder renders while
        Develop is open. See devPreviewBuildNext. */
     QSet<QString> devPreviewBuildSyncPaths;
+    /* Queued by a flush (src "flush") while Develop is open: held here instead of being
+       dropped by the Develop gate, and built when Develop is left (setOperationMode).
+       Cleared by MW::stop -- its paths belong to the folder being left. */
+    QSet<QString> devPreviewBuildDeferred;
     int devPreviewBuildTotal = 0;        // 0 = no build running
     int devPreviewBuildDone = 0;
     bool devPreviewBuildCancelled = false;
@@ -3091,6 +3096,11 @@ private:
     // slideShow counter
     int slideCount = 0;
     bool prevUseImageCache = true;
+    /*  MW::slideShowSyncFolders: each loaded folder's last-seen modified time, and the
+        dm->folderListGen they were taken under (a different folder set re-baselines). */
+    QHash<QString, QDateTime> slideShowFolderStamps;
+    quint64 slideShowFolderGen = 0;
+    bool slideShowFolderStampsValid = false;
 
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible} dockOption;

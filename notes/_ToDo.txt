@@ -9,7 +9,11 @@ WHAT'S NEW
 - Map
 
 BUGS / TO DO
-
+- Add metadata to multiple images (ie title)
+- Render devPreviews in background (entire catalog??)
+- Show / toggle Developed | Original | Preview
+- Winnow defaults to masters only at startup, so if a version was selected when close then
+  the selection restore at startup fails.
 - RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights
   slider): rebuild colour where the SENSOR clipped one or more channels, before white
   balance / demosaic (today a clipped sky or specular can go magenta/cyan or flat, and

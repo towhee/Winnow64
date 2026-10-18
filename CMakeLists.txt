@@ -970,7 +970,7 @@ endif()
 # (IsLoaded() == false) so neural features silently disable. Turning it ON and
 # pointing it at an ORT install with the platform EP (CoreML on macOS -> ANE,
 # DirectML on Windows) defines WINNOW_HAVE_ORT and links/bundles the runtime.
-# See notes/Documentation.txt "INFERENCE".
+# See notes/Documentation.md "Model Inference".
 # =============================================================================
 option(WINNOW_ENABLE_ORT "Link ONNX Runtime for neural inference (raw denoise, ...)" OFF)
 

@@ -144,6 +144,19 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
                                 2000);
         return;
     }
+    /* A FLUSH INSIDE DEVELOP IS DEFERRED, NOT QUEUED. The flush provider asks for a build
+       whenever it cannot write the loupe tier itself -- with the preview cap at Full,
+       every time the settle render has not landed, so most edits. The Develop gate in
+       devPreviewBuildNext would discard these (they are not "sync" targets), and nothing
+       asks again: flushAll's topUpDevPreviews has already marked the image handled. The
+       image then had a thumbnail but no devPreview, and Browse showed its file
+       undeveloped -- uncropped after a crop. setOperationMode builds these on the way
+       out. */
+    if (src == "flush" && G::operationMode == G::OperationMode::Develop) {
+        for (const QString &fPath : paths) devPreviewBuildDeferred.insert(fPath);
+        return;
+    }
+
     const bool sync = (src == "sync");
     for (const QString &fPath : paths) {
         if (sync) devPreviewBuildSyncPaths.insert(fPath);

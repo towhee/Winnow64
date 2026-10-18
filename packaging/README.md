@@ -279,7 +279,7 @@ release with menu `G` IS the update announcement** — there is no other descrip
 keep in sync. When the user accepts, Winnow downloads the platform asset, checks it
 against GitHub's SHA-256 digest, installs it over the running copy and relaunches
 (macOS: signature-checked bundle swap; Windows: the Inno installer run silently). See
-*Check for Updates* in `notes/Documentation.txt`.
+*Check for Updates* in `notes/Documentation.md`.
 
 What this requires of a release:
 
