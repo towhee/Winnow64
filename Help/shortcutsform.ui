@@ -1217,7 +1217,7 @@
          <string>Y</string>
         </property>
         <property name="text">
-         <string>Show or hide edits for every image, thumbnails and loupe. While edits are hidden the status bar shows an "Edits hidden" pill.</string>
+         <string>Show or hide edits for every image, thumbnails and loupe. While edits are hidden the picture name in the status bar turns amber. Click it for the options and help.</string>
         </property>
        </item>
        <item>

@@ -458,6 +458,41 @@ QString WidgetCSS::toolButton()
         "background:transparent;"
         "border:none;"
     "}"
+
+    /* Status-bar picture chip (MW::pictureChip, MW::syncPictureChip sets chipState).
+       normal = a quiet outline, so it reads as clickable without shouting; compare =
+       Apple blue outline, momentary; hidden = the amber of the thumbnails' has-edits
+       badge, the exception that must not be missed. The menu cue is a glyph in the
+       text, so the native indicator is suppressed. */
+    "QToolButton#pictureChip {"
+        "border: 1px solid " + QColor(l20,l20,l20).name() + ";"
+        "border-radius: 3px;"
+        "padding: 0px 6px;"
+        "margin: 0px 4px;"
+    "}"
+
+    "QToolButton#pictureChip:hover {"
+        "border-color: white;"
+    "}"
+
+    "QToolButton#pictureChip::menu-indicator {"
+        "image: none;"
+        "width: 0px;"
+    "}"
+
+    "QToolButton#pictureChip[chipState=\"compare\"] {"
+        "border-color: " + QColor(21,113,211).name() + ";"
+    "}"
+
+    "QToolButton#pictureChip[chipState=\"hidden\"] {"
+        "background-color: " + QColor(150,110,20).name() + ";"
+        "border-color: " + QColor(150,110,20).name() + ";"
+        "color: white;"
+    "}"
+
+    "QToolButton#pictureChip[chipState=\"hidden\"]:hover {"
+        "background-color: " + QColor(180,135,30).name() + ";"
+    "}"
     "QToolButton:hover {"
 //    "background:green;"
     "background:" + QColor(l30,l30,l30).name() + ";"
@@ -958,23 +993,6 @@ QString WidgetCSS::pushButton()
     "QPushButton:disabled {"
     "background-color: " + QColor(d5,d5,d5).name() + ";"
       "color:" + disabledColor.name() + ";"
-    "}"
-
-    /* Status-bar "Edits hidden" pill (MW::editsHiddenBtn): the amber of the thumbnails'
-       has-edits badge, compact, and clear of the global min-width above, which would
-       otherwise widen the status bar. */
-    "QPushButton#editsHiddenBtn {"
-        "background-color: " + QColor(150,110,20).name() + ";"
-        "color: white;"
-        "border: none;"
-        "border-radius: 3px;"
-        "padding: 0px 6px;"
-        "margin: 0px 4px;"
-        "min-width: 0px;"
-    "}"
-
-    "QPushButton#editsHiddenBtn:hover {"
-        "background-color: " + QColor(180,135,30).name() + ";"
     "}"
 
     "QDialogButtonBox QPushButton {"

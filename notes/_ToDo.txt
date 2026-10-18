@@ -9,9 +9,9 @@ WHAT'S NEW
 - Map
 
 BUGS / TO DO
+- Set catalog location
 - Add metadata to multiple images (ie title)
 - Render devPreviews in background (entire catalog??)
-- Show / toggle Developed | Original | Preview
 - Winnow defaults to masters only at startup, so if a version was selected when close then
   the selection restore at startup fails.
 - When create a version, it appears before the master in the datamodel.  Is this just a

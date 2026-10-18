@@ -62,6 +62,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             k->setData(k->index(infoView->SelectedRow, 1, infoView->statusInfoIdx), "");
             k->setData(k->index(infoView->PickedRow, 1, infoView->statusInfoIdx), "");
         }
+        syncPictureChip();      // no image: hides it
         updateStatusBar();
         return;
     }
@@ -101,9 +102,8 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             base += spacer +" Selected: " + s;
             // Picked count
             base += spacer + "Picked: " + getPicked();
-            // Which picture is shown: Preview / Original / Developed
-            const QString shown = getPictureShown();
-            if (!shown.isEmpty()) base += spacer + shown;
+            /* Which picture is shown: the picture chip right after this text
+               (syncPictureChip, below), which is also its control. */
             // Raw rendering
             base += spacer + getRawRendered();
         }
@@ -119,6 +119,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
     if (!keepBase) status = s;
 
     statusLabel->setText(status);
+    syncPictureChip();
 
     // status label tooltip
     QString tip;
@@ -849,32 +850,19 @@ void MW::syncPreviewSourceEnabled()
     in the thumbnails, which must agree with it. Offering the choice there would let the
     user ask for a picture Develop is not able to show.
 
-    So in Develop the combo is DISABLED and reads Developed, and Show Edits (menu item and
-    Y) is disabled with a reason (a disabled QAction greys its menu item AND stops its
+    So in Develop the picture chip reads Developed, and Show Edits (menu item and Y) is
+    disabled with a reason (a disabled QAction greys its menu item AND stops its
     shortcut firing, so one gate covers both -- the reason surfaces through the Disabled
     Shortcut Feedback path).
 
     THE PREFERENCE ITSELF IS NOT CHANGED. G::previewSource keeps whatever the user chose
-    for Preview mode, and the combo shows Developed as a statement about the mode rather
-    than as a new setting. Entering Develop must not silently rewrite a Preview-mode
+    for Preview mode, and the picture chip shows Developed as a statement about the mode
+    rather than as a new setting. Entering Develop must not silently rewrite a Preview-mode
     preference the user will get back the moment they leave.
 */
     if (G::isLogger) G::log("MW::syncPreviewSourceEnabled");
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
     const QString reason = "Develop mode always shows the developed image";
-
-    if (previewSourceCombo) {
-        QSignalBlocker block(previewSourceCombo);
-        previewSourceCombo->setEnabled(!inDevelop);
-        previewSourceCombo->setCurrentIndex(inDevelop ? int(G::PreviewSource::Developed)
-                                                      : int(G::previewSource));
-        previewSourceCombo->setToolTip(
-            inDevelop
-                ? QString("Develop mode always shows the developed image.\n"
-                          "Leave Develop (E, G or T) to see the original.")
-                : QString("Show the original photo or your developed version  "
-                          "(Y)"));
-    }
 
     if (togglePreviewSourceAction) {
         togglePreviewSourceAction->setEnabled(!inDevelop);
@@ -884,13 +872,71 @@ void MW::syncPreviewSourceEnabled()
         togglePreviewSourceAction->setChecked(G::previewSource == G::PreviewSource::Developed);
     }
 
-    /* The pill is the exception-only indicator for an all-images switch: absent in the
-       normal state, so it never crowds the status bar, and present whenever edits are
-       hidden, so nobody is left wondering why every image looks unedited. Not in Develop,
-       where edits are always shown. */
-    if (editsHiddenBtn)
-        editsHiddenBtn->setVisible(!inDevelop
-                                   && G::previewSource == G::PreviewSource::Original);
+    /* The reason is in the item TEXT as well, since the picture chip's menu shows these
+       items greyed and a disabled item gives no other hint why. In Develop "\" is
+       Before / After (toggleBrowseCompare routes a menu click there). */
+    if (togglePreviewSourceAction)
+        togglePreviewSourceAction->setText(inDevelop ? tr("Show Edits (not in Develop)")
+                                                     : tr("Show Edits (All Images)"));
+    if (browseCompareAction)
+        browseCompareAction->setText(inDevelop ? tr("Before / After")
+                                               : tr("Compare Original / Developed"));
+
+    syncPictureChip();
+}
+
+void MW::syncPictureChip()
+{
+/*
+    The status-bar picture chip (built in createStatusBar, menu filled in createMenus).
+
+      normal    "Developed" / "Original" / "Camera": the picture on the loupe
+      compare   the picture a "\" compare put up -- outlined, since it is momentary
+      hidden    amber, "<picture> · edits hidden": Show Edits is off for ALL images.
+                The exception-only indicator, so the switch cannot be silently left on.
+
+    Hidden when there is no picture to name (no image, a video). Called from
+    updateStatus (every selection / zoom / compare change) and syncPreviewSourceEnabled.
+*/
+    if (!pictureChip) return;
+    const QString shown = getPictureShown();
+    if (shown.isEmpty()) {
+        pictureChip->setVisible(false);
+        return;
+    }
+    const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    const bool editsHidden = !inDevelop && G::previewSource == G::PreviewSource::Original;
+    const bool comparing = imageView && !imageView->compareLabel().isEmpty();
+
+    QString state = "normal";
+    QString text = shown;
+    QString tip;
+    if (editsHidden) {
+        state = "hidden";
+        text += QString(" ") + QChar(0x00B7) + " edits hidden";
+        tip = tr("Edits are hidden for ALL images. Click for options, or press Y to "
+                 "show them.");
+    }
+    else if (comparing) {
+        state = "compare";
+        tip = tr("Comparing this image only. Press \\ or move to another image to go "
+                 "back.");
+    }
+    else {
+        tip = tr("The picture you are looking at. Click to show or hide edits, compare, "
+                 "or learn about Developed, Original and Camera.");
+    }
+    if (comparing && editsHidden) tip += tr("\nComparing this image only (\\).");
+
+    pictureChip->setText(text + " " + QChar(0x25BE));     // the menu cue
+    pictureChip->setToolTip(tip);
+    if (pictureChip->property("chipState").toString() != state) {
+        pictureChip->setProperty("chipState", state);
+        // a dynamic-property selector only re-evaluates on a repolish
+        pictureChip->style()->unpolish(pictureChip);
+        pictureChip->style()->polish(pictureChip);
+    }
+    pictureChip->setVisible(true);
 }
 
 void MW::togglePreviewSource()

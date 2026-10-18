@@ -1583,29 +1583,12 @@ void MW::createStatusBar()
 
     setCacheRunningLightsWidth();
 
-    /* Which PICTURE the grid and the loupe show, at the EXTREME LEFT of the status bar:
-
-         0 Original   the camera's picture, as shot     G::PreviewSource::Original
-         1 Developed  the develop recipe rendered       G::PreviewSource::Developed
-
-       The rows ARE the G::PreviewSource values, so no mapping table is needed.
-
-       DELIBERATELY NOT A MODE CONTROL. Develop mode is entered with D (operationModeAction)
-       and left with E / G / T, and it is a different kind of thing from these two -- an
-       editing mode, not a choice of picture. Putting it in here made the third item read
-       as a peer of the other two when it is not.
-
-       DISABLED IN DEVELOP MODE, where it reads Developed: Develop always shows the
-       developed image, so the choice does not exist there. MW::syncPreviewSourceEnabled
-       owns that, and setPreviewSource / setOperationMode call it. */
     /* THE STATUS-BAR WORKFLOW SWITCHER -- HIDDEN. The Module dock across the top of the
-       window (MW::createModuleDock) is now where the workflow is chosen, and the
-       Original / Developed dropdown below is hidden with it. Both are still BUILT, added
-       and kept in sync, only not shown, so reinstating either is flipping its flag.
-       Built by the same MW::buildWorkflowButtons as the Module dock, so the two rows
+       window (MW::createModuleDock) is now where the workflow is chosen. It is still
+       BUILT, added and kept in sync, only not shown, so reinstating it is flipping the
+       flag. Built by the same MW::buildWorkflowButtons as the Module dock, so the two rows
        trigger the same actions and MW::syncWorkflowSwitcher lights both. */
     const bool showStatusBarWorkflowSwitcher = false;
-    const bool showStatusBarPreviewSource = false;
     {
         QWidget *switcher = new QWidget;
         switcher->setObjectName("workflowSwitcher");
@@ -1618,51 +1601,22 @@ void MW::createStatusBar()
         switcher->setVisible(showStatusBarWorkflowSwitcher);
     }
 
-    previewSourceCombo = new QComboBox;
-    previewSourceCombo->setObjectName("previewSourceCombo");
-    previewSourceCombo->addItem("Original");
-    previewSourceCombo->addItem("Developed");
-    previewSourceCombo->setCurrentIndex(int(G::previewSource));
-    previewSourceCombo->setFocusPolicy(Qt::NoFocus);
-    previewSourceCombo->setToolTip("Show the original photo or your developed version  "
-                                   "(Y)");
-    /* Pin the width to the widest item via the STYLESHEET min-width/max-width. The global widget
-       CSS (widgetcss.cpp) sets "QComboBox { min-width: 6em }", and in Qt a stylesheet min-width
-       OVERRIDES setFixedWidth() -- so the width must be a stylesheet property here to win. Width =
-       widest bold label + padding(12) + arrow(14) + slack. */
-    QFont opModeBold = previewSourceCombo->font(); opModeBold.setBold(true);
-    const int opModeW = qMax(QFontMetrics(opModeBold).horizontalAdvance("Original"),
-                             QFontMetrics(opModeBold).horizontalAdvance("Developed")) + 12 + 4;
-    previewSourceCombo->setStyleSheet(QString(
-        "QComboBox {background-color:#445f76; color:white;"
-        " padding:1px 6px; border:none; border-radius:3px; margin:0 4px;"
-        " min-width:%1px; max-width:%1px;}"
-        "QComboBox::drop-down {border:none; width:14px;} "
-        "QComboBox QAbstractItemView {background-color:#445f76; color:white;"
-        " selection-background-color:#445f76;}").arg(opModeW));
-    connect(previewSourceCombo, &QComboBox::activated, this, [this](int i) {
-        setPreviewSource(i == int(G::PreviewSource::Developed)
-                             ? G::PreviewSource::Developed
-                             : G::PreviewSource::Original);
-    });
-    statusBar()->addWidget(previewSourceCombo);
-    previewSourceCombo->setVisible(showStatusBarPreviewSource);   // see switcher above
-
-    /* "Edits hidden" pill: the exception-only indicator for Show Edits (Y). Shown only
-       while edits are hidden for all images (MW::syncPreviewSourceEnabled), so the normal
-       status bar gains nothing, and an all-images switch can never be silently left on.
-       Clicking it shows edits again. Styled in WidgetCSS (QPushButton#editsHiddenBtn). */
-    editsHiddenBtn = new QPushButton(tr("Edits hidden"));
-    editsHiddenBtn->setObjectName("editsHiddenBtn");
-    editsHiddenBtn->setFocusPolicy(Qt::NoFocus);
-    editsHiddenBtn->setCursor(Qt::PointingHandCursor);
-    editsHiddenBtn->setToolTip(tr("Every image is showing its unedited picture.\n"
-                                  "Click (or press Y) to show edits again."));
-    connect(editsHiddenBtn, &QPushButton::clicked, this,
-            [this]() { setPreviewSource(G::PreviewSource::Developed); });
-    statusBar()->addWidget(editsHiddenBtn);
-    editsHiddenBtn->setVisible(G::operationMode != G::OperationMode::Develop
-                               && G::previewSource == G::PreviewSource::Original);
+    /* THE PICTURE CHIP, at the LEFT of the status bar: names the picture of the current
+       image on the loupe (MW::getPictureShown: Developed / Original / Camera, or the
+       picture a compare put up) AND is the control for it -- the state and its options
+       in one place. Click: Show Edits (all images), the two compares, and the help page
+       (populated in createMenus, after the actions exist). While edits are hidden it
+       turns amber and says so, so an all-images switch can never be silently left on.
+       Text and state: MW::syncPictureChip. Styled in WidgetCSS (QToolButton#pictureChip). */
+    pictureChip = new QToolButton;
+    pictureChip->setObjectName("pictureChip");
+    pictureChip->setFocusPolicy(Qt::NoFocus);
+    pictureChip->setCursor(Qt::PointingHandCursor);
+    pictureChip->setPopupMode(QToolButton::InstantPopup);
+    pictureChip->setToolButtonStyle(Qt::ToolButtonTextOnly);
+    pictureChip->setMenu(new QMenu(pictureChip));
+    pictureChip->setVisible(false);     // until there is an image to name
+    statusBar()->addWidget(pictureChip);
 
     // add process progress bar to left side of statusBar
     progressBar = new QProgressBar;

@@ -1303,6 +1303,9 @@ private slots:
        Camera / Original), momentary and never persisted -- unlike Y (Show Edits), which
        switches every image. See ImageView::showCompare. */
     void toggleBrowseCompare();
+    /* Refresh the status-bar picture chip: its word (getPictureShown), the amber
+       "edits hidden" state, the compare state and its tooltip. */
+    void syncPictureChip();
     // Take a Browse compare down, if one is up (navigation, mode or view change).
     void endBrowseCompare();
     void toggleDevelopCameraPreview();
@@ -2061,6 +2064,7 @@ private:
     QAction *helpWelcomeAction;
     QAction *helpPerformanceTipsAction;
     QAction *helpFocusStackingTipsAction;
+    QAction *helpPicturesAction = nullptr;  // Developed / Original / Camera explained
     QAction *helpFilmStripAction;  // to be removed, not used
     QAction *helpRevealLogFileAction;
 
@@ -2175,10 +2179,9 @@ private:
     BarBtn *includeSidecarsToggleBtn;
     BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
-    QComboBox *previewSourceCombo = nullptr;   // status-bar Original / Developed dropdown
-    /* Status-bar pill shown ONLY while Show Edits is off, so an all-images switch flipped
-       yesterday cannot silently persist. Click = show edits again. */
-    QPushButton *editsHiddenBtn = nullptr;
+    /* Status-bar chip naming the picture on the loupe, and its menu (Show Edits, the
+       compares, help). Amber while edits are hidden. See MW::syncPictureChip. */
+    QToolButton *pictureChip = nullptr;
     /*  The status-bar workflow switcher, indexed by Workflow (Slide Show has none, so its
         slot is null).  See MW::createStatusBar and MW::syncWorkflowSwitcher. */
     QList<QToolButton *> workflowBtns;
@@ -3588,6 +3591,7 @@ private:
     // HTML Help
     void helpPerformanceTips();
     void helpFocusStackingTips();
+    void helpPictures();          // Developed / Original / Camera, Show Edits, Compare
 
     void mediaReadSpeed();
     void findDuplicates();

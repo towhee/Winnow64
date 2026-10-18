@@ -2173,6 +2173,11 @@ void MW::createHelpActions()
     addAction(helpFocusStackingTipsAction);
     connect(helpFocusStackingTipsAction, &QAction::triggered, this, &MW::helpFocusStackingTips);
 
+    helpPicturesAction = new QAction(tr("About Developed, Original and Camera..."), this);
+    helpPicturesAction->setObjectName("helpPictures");
+    addAction(helpPicturesAction);
+    connect(helpPicturesAction, &QAction::triggered, this, &MW::helpPictures);
+
     helpRevealLogFileAction = new QAction("Send log files to Winnow", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
@@ -2950,6 +2955,21 @@ void MW::createViewMenu()
     viewMenu->addAction(togglePreviewSourceAction);
     viewMenu->addAction(browseCompareAction);
     viewMenu->addAction(toggleCameraPreviewAction);
+    viewMenu->addAction(helpPicturesAction);
+
+    /* The status-bar picture chip's menu: the same actions as View, so the chip, the menu
+       and the keys can never disagree (one QAction each, enabled/texted in one place by
+       syncPreviewSourceEnabled). The chip is built in createStatusBar, before these
+       actions exist, which is why it is filled here. */
+    if (pictureChip && pictureChip->menu()) {
+        QMenu *m = pictureChip->menu();
+        m->addAction(togglePreviewSourceAction);
+        m->addAction(browseCompareAction);
+        m->addAction(toggleCameraPreviewAction);
+        m->addSeparator();
+        m->addAction(helpPicturesAction);
+    }
+
     viewMenu->addSeparator();
     viewMenu->addAction(ratingBadgeVisibleAction);
     viewMenu->addAction(iconNumberVisibleAction);
@@ -3067,6 +3087,7 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpShortcutsAction);
     helpMenu->addAction(helpPerformanceTipsAction);
     helpMenu->addAction(helpFocusStackingTipsAction);
+    helpMenu->addAction(helpPicturesAction);
     helpMenu->addSeparator();
     logMenu = helpMenu->addMenu(tr("&Logs"));
     logMenu->addAction(viewLogAction);

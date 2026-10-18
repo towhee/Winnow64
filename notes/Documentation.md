@@ -954,7 +954,7 @@ The workflow is the only setting that owns a workspace (a panel layout). It is c
 - Each button triggers its workflow's QAction (browseWorkflowAction, operationModeAction, keywordsWorkspaceAction, embellishWorkspaceAction, slideShowWorkspaceAction, mapWorkspaceAction), so clicking a button and pressing the key run the same code.
 - MW::buildWorkflowButtons builds the buttons and MW::syncWorkflowSwitcher lights the one for MW::currentWorkflow. A refused switch (Develop in the cache folder) therefore leaves the lit button where it was. No button is lit while a named workspace is applied, because a named workspace is not a workflow.
 - The buttons are built BEFORE createActions, so they look up their action at click time. createActions mirrors each action's enabled state onto its button through QAction::changed (MW::syncWorkflowButtonEnabled; MW::workflowAction maps a workflow to its action). A greyed button shows the action's "disabledReason" in its tooltip.
-- The same buttons also exist as a status-bar switcher. It is built and kept in sync but hidden (showStatusBarWorkflowSwitcher in MW::createStatusBar), so it can be reinstated by flipping one flag. The Original / Developed dropdown is hidden the same way (showStatusBarPreviewSource); View > Show Edits (All Images) and Y still work, and the "Edits hidden" pill appears whenever edits are hidden.
+- The same buttons also exist as a status-bar switcher. It is built and kept in sync but hidden (showStatusBarWorkflowSwitcher in MW::createStatusBar), so it can be reinstated by flipping one flag. The old Original / Developed dropdown is gone; the picture chip ([12.2.1 Three Pictures, Two Controls](#1221-three-pictures-two-controls)) replaced it.
 
 Every workflow button is greyed until the DataModel has rows:
 
@@ -7094,7 +7094,7 @@ Every image has up to three pictures, and the UI uses one word for each:
 
 - Developed: the render of its develop recipe (a devPreview, or Develop's live render). An unedited raw Winnow can demosaic may also have one, its DEFAULT RENDER (identity recipe), which is still Winnow's rendering and so reads Developed.
 - Original: the file with no edits: Winnow's neutral raw render (Develop's Before), or the JPG / TIFF / PNG itself.
-- Camera: the camera's embedded JPEG. Raws only; for any other file it IS the Original. The user-facing word was "Preview" until 2026-10-18; it collided with Preview mode and with devPreview, so the status bar now says Camera. Code names (G::PreviewSource, previewSourceCombo) are unchanged.
+- Camera: the camera's embedded JPEG. Raws only; for any other file it IS the Original. The user-facing word was "Preview" until 2026-10-18; it collided with Preview mode and with devPreview, so the status bar now says Camera. Code names (G::PreviewSource, togglePreviewSourceAction) are unchanged.
 
 Browse never decodes a raw (that is the point of Preview mode), so the unedited picture of a raw in Browse is the Camera picture, and the label says so rather than calling it Original.
 
@@ -7107,9 +7107,17 @@ Why the scope of Show Edits is ALL images and not the current image, the selecti
 
 "\\" was Show image count until 2026-10-12, then the Original / Developed toggle (sharing it with Y). Since 2026-10-18 it is the per-image compare in every mode: the Browse compare outside Develop, Before / After in Develop (the arbiter's table claims it there). Y alone is the all-images switch, so the cheap action and the expensive one are on different keys. The radio pair View > Show Original / Show Developed was removed with that change.
 
-The "Edits hidden" pill (MW::editsHiddenBtn, created in MW::createStatusBar, styled as QPushButton#editsHiddenBtn in WidgetCSS) is the exception-only indicator: absent in the normal state, so the status bar gains nothing, and visible whenever edits are hidden outside Develop, so a switch flipped yesterday cannot silently persist. Clicking it shows edits again. Its visibility is set by MW::syncPreviewSourceEnabled.
+THE PICTURE CHIP (MW::pictureChip, a QToolButton at the left end of the status bar, built in MW::createStatusBar) names the picture of the current image on the loupe AND is its control, so the state and its options are in one place. Its menu (filled in MW::createMenus, after the actions exist) holds the SAME QActions as View: Show Edits (All Images), Compare Original / Developed, Compare Camera / Developed, then "About Developed, Original and Camera...". One QAction each means the chip, the menu and the keys can never disagree. MW::syncPictureChip sets its text (MW::getPictureShown plus a menu glyph), tooltip and a chipState property that WidgetCSS styles (QToolButton#pictureChip):
 
-The status-bar dropdown (previewSourceCombo) still exists, hidden (showStatusBarPreviewSource); its rows ARE the G::PreviewSource values.
+- normal: a quiet outline, the picture's word.
+- compare: an Apple-blue outline, the compared picture's word; momentary.
+- hidden: amber (the has-edits badge colour), "<picture> · edits hidden". The exception-only indicator: a switch flipped yesterday cannot silently persist.
+
+It is hidden when there is no picture to name (no image, a video). updateStatus calls syncPictureChip on every status refresh, and syncPreviewSourceEnabled calls it on mode and Show Edits changes. In Develop the items stay in the menu with the reason in their TEXT ("Show Edits (not in Develop)"; "\\" reads "Before / After"), since a greyed menu item gives no other hint why.
+
+It replaced two earlier controls: the "Picked: ## Developed" word at the end of the status text, and the status-bar Original / Developed dropdown (previewSourceCombo, built hidden since the Module dock arrived), which only offered a choice, not the state, the second scope or the help. A separate "Edits hidden" pill existed briefly; it was folded into the chip's amber state.
+
+The help page is Docs/pictureshelp.html (qrc), opened by MW::helpPictures in an HtmlWindow like the other tips pages. It is reachable from the chip menu, View and Help.
 
 Develop mode is deliberately NOT an item in it. It was, briefly, on the reasoning that Original and Developed are both Preview mode. That is true of the plumbing and false of the control: Develop is an editing MODE, a different kind of thing from a choice of picture, and as a third peer item it read as one of three pictures. It is also redundant (D enters Develop, and E / G / T leave it).
 
@@ -7145,7 +7153,7 @@ Opt/Alt + "\\" (toggleCameraPreviewAction, View and Develop menus): the camera's
 - In Develop it is MW::toggleDevelopCameraPreview, a LATCH. Pixmap::load reads the embedded JPEG of a raw (the file itself otherwise, oriented and colour managed as Preview shows it), and it goes on the loupe with an identity geometry, sized to the frame's oriented width at the camera's aspect so the zoom survives. While developCameraShown is set for developCameraPath, both render completions (the proxy hand-off in renderDevelopPreview and onDevelopFullResReady) still retain their frame but leave the loupe alone, so a settle render in flight cannot paint over it.
 - ANY NEW RENDER REQUEST takes it down: clearDevelopCameraPreview runs at the top of renderDevelopPreview, so an edit, a History step, navigation or a tool all return to the develop, and setOperationMode clears it too. Pressing it again re-renders via developParamsChange. It is declined (popup) while a mask, spot or Transform tool owns the canvas, as Before / After is. If Before is latched it is taken down first and the queued After proxy render is stopped (it would clear the camera latch the moment it ran).
 
-The status bar names the picture: after "Picked: ##", MW::updateStatus appends MW::getPictureShown: "Camera" (the camera's embedded preview: a raw browsed with edits hidden or compared, or the Develop camera latch), "Original" (a non-raw browsed with edits hidden or compared, or Develop's Before) or "Developed" (Develop's render, or a browsed image that has a devPreview while edits are shown; one without reads Camera / Original). A Browse compare reports its own label (ImageView::compareLabel). setPreviewSource, setOperationMode, the compare, the camera latch (set and clear) and DevelopProperties::beforeAfterChanged each call updateStatus, so the word follows.
+The picture chip names the picture with MW::getPictureShown: "Camera" (the camera's embedded preview: a raw browsed with edits hidden or compared, or the Develop camera latch), "Original" (a non-raw browsed with edits hidden or compared, or Develop's Before) or "Developed" (Develop's render, or a browsed image that has a devPreview while edits are shown; one without reads Camera / Original). A Browse compare reports its own label (ImageView::compareLabel). setPreviewSource, setOperationMode, the compare, the camera latch (set and clear) and DevelopProperties::beforeAfterChanged each call updateStatus, which calls syncPictureChip, so the word follows.
 
 #### 12.2.4 Changing It Rebuilds Both Caches
 
