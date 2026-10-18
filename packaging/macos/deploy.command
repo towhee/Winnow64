@@ -684,6 +684,62 @@ function upload_release_asset() {
     gh api -X PATCH "$new" -f name="$name" >/dev/null || return 1
 }
 
+function release_title() {
+    echo "Winnow ${WINNOW_VERSION//_/ }"
+}
+
+# The notes for release $1: packaging/release-notes.md with its {{...}} tokens
+# filled in. {{CHANGES}} becomes a "Release Notes" section holding
+# packaging/changes/<version>.md, or nothing when that file is absent or empty.
+function release_notes() {
+    local tag="$1"
+    local template="${PACKAGING_DIR}/release-notes.md"
+    [[ -f "$template" ]] || { echo "❌ Release notes template not found: $template" >&2; return 1; }
+    local changes="" file; file=$(changes_file)
+    [[ -s "$file" ]] && changes="## Release Notes"$'\n\n'"$(<"$file")"$'\n'
+    local notes; notes=$(<"$template")
+    notes=${notes//\{\{TITLE\}\}/$(release_title)}
+    notes=${notes//\{\{REPO\}\}/$GITHUB_REPO}
+    notes=${notes//\{\{TAG\}\}/$tag}
+    notes=${notes//\{\{VERSION\}\}/$WINNOW_VERSION}
+    notes=${notes//\{\{CHANGES\}\}/$changes}
+    print -r -- "$notes"
+}
+
+function changes_file() {
+    echo "${PACKAGING_DIR}/changes/${WINNOW_VERSION}.md"
+}
+
+# Re-render the notes (template + changes/<version>.md) onto the EXISTING release
+# for this version, draft or public. Assets are untouched. Replaces the whole
+# body, so edits made on the GitHub web page are lost; make them in the files.
+function update_github_notes() {
+    command -v gh >/dev/null 2>&1 || { echo "❌ gh (GitHub CLI) not installed: brew install gh"; return 1; }
+    gh auth status >/dev/null 2>&1 || { echo "❌ gh not logged in — run: gh auth login"; return 1; }
+    ensure_version
+    [[ -n "$WINNOW_VERSION" ]] || { echo "❌ No version — run Build first."; return 1; }
+    local tag="v${WINNOW_VERSION}"
+    gh release view "$tag" --repo "$GITHUB_REPO" >/dev/null 2>&1 || {
+        echo "❌ No release $tag yet — G creates it (with these notes)."; return 1; }
+    local file; file=$(changes_file)
+    [[ -s "$file" ]] || echo "⚠️  $file is missing or empty — the notes get no Release Notes section."
+    local notes; notes=$(release_notes "$tag") || return 1
+
+    echo ""
+    echo "================ RELEASE NOTES  ($GITHUB_REPO $tag) ================"
+    print -r -- "$notes"
+    echo "====================================================================="
+    echo "This REPLACES the release's notes (edits made on GitHub are lost)."
+    printf "Type 'yes' to update the notes on GitHub: "
+    read confirm; [[ "$confirm" == "yes" ]] || { echo "Aborted."; return 1; }
+    local tmp; tmp=$(mktemp -t winnow-notes) || return 1
+    print -r -- "$notes" > "$tmp"
+    gh release edit "$tag" --repo "$GITHUB_REPO" --notes-file "$tmp"
+    local rc=$?; rm -f "$tmp"
+    (( rc == 0 )) || { echo "❌ gh release edit failed"; return 1; }
+    echo "✅ Notes updated: https://github.com/${GITHUB_REPO}/releases/tag/$tag"
+}
+
 function publish_github() {
     command -v gh >/dev/null 2>&1 || { echo "❌ gh (GitHub CLI) not installed: brew install gh"; return 1; }
     gh auth status >/dev/null 2>&1 || { echo "❌ gh not logged in — run: gh auth login"; return 1; }
@@ -715,17 +771,9 @@ EOF
     read confirm; [[ "$confirm" == "yes" ]] || { echo "Aborted."; return 1; }
 
     if ! $exists; then
-        # Notes = packaging/release-notes.md with its {{...}} tokens filled in
-        local title="Winnow ${WINNOW_VERSION//_/ }"
-        local template="${PACKAGING_DIR}/release-notes.md"
-        [[ -f "$template" ]] || { echo "❌ Release notes template not found: $template"; return 1; }
-        local notes; notes=$(<"$template")
-        notes=${notes//\{\{TITLE\}\}/$title}
-        notes=${notes//\{\{REPO\}\}/$GITHUB_REPO}
-        notes=${notes//\{\{TAG\}\}/$tag}
-        notes=${notes//\{\{VERSION\}\}/$WINNOW_VERSION}
+        local notes; notes=$(release_notes "$tag") || return 1
         gh release create "$tag" --repo "$GITHUB_REPO" --target "$head" \
-            --title "$title" --notes "$notes" --draft || return 1
+            --title "$(release_title)" --notes "$notes" --draft || return 1
     fi
     upload_release_asset "$tag" "$DMG_PATH" || return 1
 
@@ -748,7 +796,7 @@ EOF
     fi
     gh release edit "$tag" --repo "$GITHUB_REPO" --draft=false --latest || return 1
     echo "✅ Published: https://github.com/${GITHUB_REPO}/releases/tag/$tag"
-    echo "   Edit the release notes on GitHub if needed."
+    echo "   To change the notes later: edit $(changes_file), then N."
 }
 
 # --- Verify vanilla-Mac readiness ------------------------------------
@@ -801,6 +849,7 @@ while true; do
     echo "6) Upload DMG to test dir"
     echo "7) Promote + publish to server (archive old → upload new → update index)"
     echo "G) Publish DMG to GitHub Release (main download location)"
+    echo "N) Update GitHub release notes (template + changes/<version>.md)"
     echo "V) Verify vanilla-Mac readiness"
     echo "D) Promote DRY-RUN (print server commands, write nothing)"
     echo "A) FULL PIPELINE (0-6 + verify; does NOT publish)"
@@ -820,6 +869,7 @@ while true; do
         6) upload ;;
         7) promote ;;
         g|G) publish_github ;;
+        n|N) update_github_notes ;;
         v|V) verify ;;
         d|D) promote --dry-run ;;
         a|A) build && stage && sign && notarize && disk_image && archive && verify && upload ;;

@@ -115,11 +115,16 @@ machine*.
    (`3_beta` < `3.0` < `3.1`).
 2. **Check release flags** in `Main/global.cpp`: `isLogger = false` and `isFlowLogger =
    false`.
-3. **Edit the release notes** template `packaging/release-notes.md` if the text needs to
-   change (e.g. remove the beta warning for a final release).
-4. **Commit and push** to GitHub. The release tag is created on the current HEAD, so the
+3. **Write the Release Notes list** in `packaging/changes/<label>.md`, named after
+   `WINNOW_VERSION_LABEL` (e.g. `packaging/changes/3_beta3.md`). Write plain Markdown,
+   usually a bullet list, without a heading; the scripts add the "Release Notes" heading.
+   With no file the release has no Release Notes section. See
+   [7.1](#71-github-release-main-download) to change it after publishing.
+4. **Edit the release notes** template `packaging/release-notes.md` if the rest of the
+   text needs to change (e.g. remove the beta warning for a final release).
+5. **Commit and push** to GitHub. The release tag is created on the current HEAD, so the
    pushed commit is what gets tagged.
-5. Pull the same commit on every machine that will build (the other Mac, the Windows PC).
+6. Pull the same commit on every machine that will build (the other Mac, the Windows PC).
 
 ## 4 Package on macOS (Apple Silicon)
 
@@ -190,6 +195,13 @@ Silicon must be first.
   link in the notes will 404 until its file is attached.
 - Running **G** again for a platform replaces its file.
 
+**Editing the notes after the release exists.** Edit `packaging/changes/<label>.md` (or
+`packaging/release-notes.md`), then choose **N** on any machine. It shows the full notes it
+will set; type `yes`. **N** works on a draft or a public release and leaves the files
+alone. It replaces the whole notes text, so make changes in these files rather than on the
+GitHub page, or the next **N** overwrites them. Commit the edited file so the other
+machines have it.
+
 ### 7.2 winnow.ca Server (Legacy)
 
 Copies of Winnow older than 3.0 check `version.json` on winnow.ca rather than GitHub. Keep
@@ -239,6 +251,7 @@ and `WINNOW_UPDATE_AS_VERSION`. The commands are in `packaging/README.md` → *I
 | `6` | Upload DMG to the test/beta folder |
 | `7` | Promote to winnow.ca (live) |
 | `G` | Publish DMG to the GitHub Release |
+| `N` | Update the GitHub release notes (template + Release Notes) |
 | `V` | Verify vanilla-Mac readiness |
 | `D` | Promote dry run |
 | `A` | Full pipeline (`0`–`6` + verify, no publish) |
@@ -256,6 +269,7 @@ and `WINNOW_UPDATE_AS_VERSION`. The commands are in `packaging/README.md` → *I
 | `4` | Upload installer to the test folder |
 | `5` | Promote to winnow.ca (live) |
 | `G` | Publish installer to the GitHub Release |
+| `N` | Update the GitHub release notes (template + Release Notes) |
 | `V` | Verify Windows readiness |
 | `D` | Promote dry run |
 | `A` | Full pipeline (`0`–`3` + verify, no publish) |

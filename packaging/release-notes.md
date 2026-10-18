@@ -1,5 +1,6 @@
 {{TITLE}} for macOS (Apple Silicon and Intel) and Windows.
 
+{{CHANGES}}
 ## What to Download
 
 | OS | Architecture | Format | Requirements | Download Link |

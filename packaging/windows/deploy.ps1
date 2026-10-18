@@ -532,6 +532,65 @@ function Upload-ReleaseAsset([string]$Tag, [string]$File) {
     if ($LASTEXITCODE -ne 0) { throw "Renaming $name.part to $name failed" }
 }
 
+function Release-Title { "Winnow " + ($script:Version -replace '_', ' ') }
+
+function Changes-File { Join-Path $PackagingDir "changes\$script:Version.md" }
+
+# The notes for release $Tag: packaging\release-notes.md with its {{...}} tokens
+# filled in. {{CHANGES}} becomes a "Release Notes" section holding
+# packaging\changes\<version>.md, or nothing when that file is absent or empty.
+function Release-Notes([string]$Tag) {
+    $template = Join-Path $PackagingDir "release-notes.md"
+    if (-not (Test-Path $template)) { throw "Release notes template not found: $template" }
+    $changes = ""
+    $file = Changes-File
+    if ((Test-Path $file) -and (Get-Item $file).Length -gt 0) {
+        $changes = "## Release Notes`n`n" + (Get-Content -Raw -Encoding UTF8 $file).TrimEnd() + "`n"
+    }
+    $notes = Get-Content -Raw -Encoding UTF8 $template
+    $notes = $notes.Replace('{{TITLE}}', (Release-Title)).Replace('{{REPO}}', $GitHubRepo)
+    $notes = $notes.Replace('{{TAG}}', $Tag).Replace('{{VERSION}}', $script:Version)
+    return $notes.Replace('{{CHANGES}}', $changes)
+}
+
+# Write $Notes to a temp file (UTF-8, no BOM) for gh --notes-file; returns its path.
+function Write-ReleaseNotesFile([string]$Notes) {
+    $notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "winnow-release-notes.md"
+    [System.IO.File]::WriteAllText($notesFile, $Notes, (New-Object System.Text.UTF8Encoding $false))
+    return $notesFile
+}
+
+# Re-render the notes (template + changes\<version>.md) onto the EXISTING release
+# for this version, draft or public. Assets are untouched. Replaces the whole
+# body, so edits made on the GitHub web page are lost; make them in the files.
+function Update-GitHubNotes {
+    if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh (GitHub CLI) not installed: winget install GitHub.cli" }
+    & gh auth status *> $null
+    if ($LASTEXITCODE -ne 0) { throw "gh not logged in - run: gh auth login" }
+    Ensure-Version
+    if (-not $script:Version) { throw "No version - run Build first." }
+    $tag = "v$script:Version"
+    & gh release view $tag --repo $GitHubRepo *> $null
+    if ($LASTEXITCODE -ne 0) { throw "No release $tag yet - G creates it (with these notes)." }
+    $file = Changes-File
+    if (-not ((Test-Path $file) -and (Get-Item $file).Length -gt 0)) {
+        Write-Host "$file is missing or empty - the notes get no Release Notes section." -ForegroundColor Yellow
+    }
+    $notes = Release-Notes $tag
+
+    Write-Host ""
+    Write-Host "================ RELEASE NOTES  ($GitHubRepo $tag) ================"
+    Write-Host $notes
+    Write-Host "====================================================================="
+    Write-Host "This REPLACES the release's notes (edits made on GitHub are lost)."
+    $confirm = Read-Host "Type 'yes' to update the notes on GitHub"
+    if ($confirm -ne 'yes') { throw "Aborted." }
+    $notesFile = Write-ReleaseNotesFile $notes
+    & gh release edit $tag --repo $GitHubRepo --notes-file $notesFile
+    if ($LASTEXITCODE -ne 0) { throw "gh release edit failed" }
+    Write-Host "   OK  Notes updated: https://github.com/$GitHubRepo/releases/tag/$tag" -ForegroundColor Green
+}
+
 function Publish-GitHub {
     if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "gh (GitHub CLI) not installed: winget install GitHub.cli" }
     & gh auth status *> $null
@@ -564,16 +623,8 @@ function Publish-GitHub {
     if ($confirm -ne 'yes') { throw "Aborted." }
 
     if (-not $exists) {
-        # Notes = packaging\release-notes.md with its {{...}} tokens filled in
-        $title    = "Winnow " + ($script:Version -replace '_', ' ')
-        $template = Join-Path $PackagingDir "release-notes.md"
-        if (-not (Test-Path $template)) { throw "Release notes template not found: $template" }
-        $notes = Get-Content -Raw -Encoding UTF8 $template
-        $notes = $notes.Replace('{{TITLE}}', $title).Replace('{{REPO}}', $GitHubRepo)
-        $notes = $notes.Replace('{{TAG}}', $tag).Replace('{{VERSION}}', $script:Version)
-        $notesFile = Join-Path ([System.IO.Path]::GetTempPath()) "winnow-release-notes.md"
-        [System.IO.File]::WriteAllText($notesFile, $notes, (New-Object System.Text.UTF8Encoding $false))
-        & gh release create $tag --repo $GitHubRepo --target $head --title $title `
+        $notesFile = Write-ReleaseNotesFile (Release-Notes $tag)
+        & gh release create $tag --repo $GitHubRepo --target $head --title (Release-Title) `
             --notes-file $notesFile --draft
         if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
     }
@@ -597,7 +648,7 @@ function Publish-GitHub {
     & gh release edit $tag --repo $GitHubRepo --draft=false --latest
     if ($LASTEXITCODE -ne 0) { throw "gh release edit (publish) failed" }
     Write-Host "   OK  Published: https://github.com/$GitHubRepo/releases/tag/$tag" -ForegroundColor Green
-    Write-Host "       Edit the release notes on GitHub if needed."
+    Write-Host "       To change the notes later: edit $(Changes-File), then N."
 }
 
 # --- Full pipeline (build -> sign -> installer -> archive -> verify) --
@@ -642,6 +693,7 @@ while ($true) {
     Write-Host "5) Promote + publish to server (archive old -> upload new -> update index)"
     Write-Host "   (if server version == this build, offers REDEPLOY: replace installer only)"
     Write-Host "G) Publish installer to GitHub Release (main download location)"
+    Write-Host "N) Update GitHub release notes (template + changes\<version>.md)"
     Write-Host "V) Verify Windows readiness"
     Write-Host "D) Promote DRY-RUN (print server commands, write nothing)"
     Write-Host "A) FULL PIPELINE (0-3 + verify; does NOT publish)"
@@ -659,6 +711,7 @@ while ($true) {
             "4" { Upload }
             "5" { Promote }
             "G" { Publish-GitHub }
+            "N" { Update-GitHubNotes }
             "V" { Verify }
             "D" { Promote -DryRun }
             "A" { Full-Pipeline }

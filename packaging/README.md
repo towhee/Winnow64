@@ -263,7 +263,12 @@ the platform's artifact to the GitHub Release tagged `v<version>` (e.g. `v3_beta
   `/releases/latest` ignores pre-releases.
 - The release notes (the "What to Download" table with direct links to both files)
   come from `packaging/release-notes.md`. `{{TITLE}}`, `{{REPO}}`, `{{TAG}}` and
-  `{{VERSION}}` are filled in for the new tag; asset names must match
+  `{{VERSION}}` are filled in for the new tag. `{{CHANGES}}` becomes a "Release
+  Notes" section holding `packaging/changes/<version>.md` (e.g. `changes/3_beta3.md`;
+  Markdown, no heading), or nothing when that file is absent or empty. Menu **`N`**
+  (`update_github_notes` / `Update-GitHubNotes`) re-renders the notes from both files
+  onto the existing release, draft or public, after a `yes`; it leaves the assets alone
+  and replaces the whole body, so edits made on the GitHub page are lost; asset names must match
   `Winnow<version>.dmg`, `Winnow<version>_Intel.dmg` and `WinnowSetup-<version>.exe`.
 - Each Mac build's updater takes only its own architecture's DMG (`_Intel` or not;
   see `AppUpdate::isPlatformAsset`). Builds from before that change take the FIRST
