@@ -472,12 +472,30 @@ void TransformPanel::resetCropState()
     }
 }
 
+void TransformPanel::setCustomAspect()
+{
+    if (!aspectCombo) return;
+    if (aspectKey() != "free") selectAspectKey("free");
+    if (setting) setting->setValue("Develop/Transform/aspectKey", "free");
+    if (aspectFlipped) {
+        aspectFlipped = false;
+        updateFlipButton();
+        if (setting) setting->setValue("Develop/Transform/aspectFlipped", false);
+    }
+}
+
 void TransformPanel::populateAspectCombo()
 {
     QSignalBlocker block(aspectCombo);
     aspectCombo->clear();
 
     addAspectItem(tr("As shot"),  "asShot", 0.0);
+    /* The ratio the user made by dragging the frame freely (see setCustomAspect). Keyed
+       "free", not "custom", so it can never collide with a "custom:" user aspect. */
+    addAspectItem(tr("Custom"),   "free",   kCustomRatio);
+    aspectCombo->setItemData(aspectCombo->count() - 1,
+                             tr("The crop's own ratio, as dragged with the aspect unlocked"),
+                             Qt::ToolTipRole);
     addAspectItem("1 x 1",        "1:1",    1.0);
     addAspectItem("3 x 2",        "3:2",    3.0 / 2.0);
     addAspectItem("4 x 3",        "4:3",    4.0 / 3.0);

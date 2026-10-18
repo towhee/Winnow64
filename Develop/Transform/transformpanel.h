@@ -49,8 +49,11 @@ public:
 
     bool    isAspectLocked() const { return aspectLocked; }
     bool    isAspectFlipped() const { return aspectFlipped; }  // portrait orientation
-    QString aspectKey() const;      // the selected entry's key, e.g. "asShot", "3:2", "21:9"
-    double  aspectRatio() const;    // w/h of the selected entry; 0.0 for "As shot" (free)
+    QString aspectKey() const;      // the selected entry's key, e.g. "asShot", "free", "3:2"
+    /* w/h of the selected entry; 0.0 for "As shot" (the native ratio), kCustomRatio for
+       "Custom" (whatever ratio the crop frame has now -- ImageView resolves it). */
+    double  aspectRatio() const;
+    static constexpr double kCustomRatio = -1.0;
     int     mode() const { return currentMode; }
 
     /* Sync the Preview eye to the current image's stored Geometry::show (no signal emitted). */
@@ -65,6 +68,10 @@ public:
        full frame to that ratio and the reset would appear to do nothing (or, with the flip
        on, hand back a portrait box). */
     void resetCropState();
+    /* The crop frame was resized freely (unlocked) off the selected ratio: show "Custom",
+       with no aspectChanged emitted -- ImageView has already adopted the frame's ratio.
+       The flip goes too: the frame's own ratio already carries its orientation. */
+    void setCustomAspect();
 
 signals:
     /* ratio = w/h, 0.0 = As shot / free. refit == false means the ratio was RELEASED

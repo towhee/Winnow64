@@ -2990,6 +2990,8 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::modeChanged, this, &MW::setDevelopTransformMode);
     /* A level line drawn on the image adds to the straighten. */
     connect(imageView, &ImageView::levelAngleChanged, this, &MW::applyDevelopLevel);
+    /* A free crop drag off the chosen ratio shows "Custom" in the aspect combo. */
+    connect(imageView, &ImageView::cropAspectFreed, transformPanel, &TransformPanel::setCustomAspect);
     /* An angle typed into the Level field sets the straighten directly (absolute). */
     connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
     /* Per-row reset: clear just the crop / straighten / warp contribution. */

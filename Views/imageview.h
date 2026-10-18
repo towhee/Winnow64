@@ -430,6 +430,9 @@ signals:
     void segmenterDetailRequested(int level);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
+    /* A free (unlocked) handle drag left the crop off its chosen ratio; the view has
+       adopted the frame's own ratio and the Transform panel should show "Custom". */
+    void cropAspectFreed();
     /* A level line was drawn: the leveling angle to ADD to the straighten (degrees, nearest H/V). */
     void levelAngleChanged(double deltaDeg);
     /* Warp mode: user asked to commit the traced quad (Enter/Return or double-click). */
@@ -914,7 +917,7 @@ private:
        frame tracks the same content (frame := f^-1(cropN)). */
     bool    cropEditMode   = false;
     QRectF  cropN          = QRectF(0.0, 0.0, 1.0, 1.0);   // crop in normalized image coords
-    double  cropAspect     = 0.0;        // w/h; 0 = free
+    double  cropAspect     = 0.0;        // w/h; 0 = as shot; < 0 = Custom (resolved on use)
     bool    cropAspectLocked = false;
     bool    cropAspectFlipped = false;   // portrait: honour 1/aspect instead of aspect
     /* Flip memory: cropFlipPrevN is the crop as it was before the last flip; restoring it
@@ -970,6 +973,10 @@ private:
        (picking "16 x 9" must reshape the crop; the lock only governs dragging), flip-aware.
        0 for "As shot" unless locked, where it resolves to the image's native w/h. */
     qreal   cropTargetAspect() const;
+    qreal   cropFrameAspect() const;                // cropN's own w/h in image pixels
+    /* "Custom" (cropAspect < 0) means the frame's current ratio: pin cropAspect to it,
+       flip-aware, so the lock and the flip honour what is on screen. */
+    void    cropResolveCustomAspect();
     void    cropClampN();                           // clamp cropN's edges into [0,1]
     void    cropRefitToAspect();                    // reshape cropN to cropTargetAspect()
     void    cropFitLargestToAspect();               // grow cropN to the largest fit at that aspect

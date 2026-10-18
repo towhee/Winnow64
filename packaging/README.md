@@ -141,23 +141,37 @@ toolchain/Qt; the build directory comes from the preset.)
 
 ---
 
-## The Magic Phrase
+## The Magic Phrases
 
-Say **"Package and deploy to server"** to Claude and it runs the whole macOS
-release end to end, so you don't have to drive the menu yourself. Claude will:
+There is one phrase per platform. Say it to Claude on the machine that builds that
+platform, and Claude packages the release and publishes it to the **GitHub Release**
+(menu `G`). The phrases do not touch the winnow.ca server.
 
-1. Confirm the version (`project(Winnow VERSION ...)` in `CMakeLists.txt`) and the
-   release pre-checks it can verify (e.g. `isLogger`/`isFlowLogger = false` in
-   `Main/global.cpp`), flagging anything that needs your decision.
-2. Build, stage, sign, **notarize**, DMG, and run the vanilla-Mac verify
-   (`deploy.command` steps 0–4 + V) against Qt 6.9.2.
-3. **Promote** (`deploy.command` step 7): a dry-run first, then — after showing the
-   plan and getting your explicit `yes` — archive the current DMG, upload the new
-   one to `current/`, and update the landing-page link.
+| Say | Where | Claude runs | Publishes |
+|---|---|---|---|
+| **"Package and deploy Mac"** | a Mac | `deploy.command` `0`–`4` + `V`, then `G` | `Winnow<version>.dmg` |
+| **"Package and deploy Intel"** | a Mac | `WINNOW_ARCH=x86_64 deploy.command` `0`–`4` + `V`, then `G` | `Winnow<version>_Intel.dmg` |
+| **"Package and deploy Windows"** | the Windows PC | `deploy.ps1` `A`, then `G` | `WinnowSetup-<version>.exe` |
 
-Prerequisites: `packaging/macos/config.sh` exists, the keychain is unlocked
-(Developer ID cert + `AC_APIKEY` notary profile). Because the promote step
-writes to the live server, Claude always confirms before that step — every time.
+For each one, Claude:
+
+1. Confirms the version (`project(Winnow VERSION ...)` and `WINNOW_VERSION_LABEL` in
+   `CMakeLists.txt`) and the release pre-checks it can verify (e.g.
+   `isLogger`/`isFlowLogger = false` in `Main/global.cpp`), and asks about anything
+   that needs your decision.
+2. Builds, signs, notarizes (macOS) and verifies. It stops if verify fails.
+3. Runs `G`: shows the plan and publishes only after your explicit `yes`, every time.
+
+Run them in order: **Mac first, then Intel, then Windows**. Older copies of Winnow take
+the first `.dmg` on the release. The first phrase creates the release as a draft; it
+goes public when the third file is attached.
+
+Prerequisites: the release commit is pushed (the tag goes on HEAD), the platform's
+config file exists, and on macOS the keychain is unlocked (Developer ID cert +
+`AC_APIKEY` notary profile).
+
+Publishing to winnow.ca (promote, mac `7` / Windows `5`) is a separate, manual step. It
+is still needed for copies of Winnow older than 3.0.
 
 ---
 

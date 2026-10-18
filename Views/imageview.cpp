@@ -1762,6 +1762,7 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
     cropN = (initialCrop.isValid() && !initialCrop.isNull()) ? initialCrop
                                                              : QRectF(0.0, 0.0, 1.0, 1.0);
     if (cropN == QRectF(0.0, 0.0, 1.0, 1.0)) cropFitLargestToAspect();
+    if (cropAspect < 0.0) cropResolveCustomAspect();
 
     cropEditMode = true;
     cropWarp = false;                 // always start as a plain rectangle crop
@@ -1854,6 +1855,21 @@ void ImageView::cropClampN()
     if (cropN.bottom() > 1.0) cropN.moveBottom(1.0);
 }
 
+qreal ImageView::cropFrameAspect() const
+{
+    if (!pmItem) return 0.0;
+    const QRectF br = pmItem->boundingRect();
+    const qreal h = cropN.height() * br.height();
+    return (h > 0.0) ? cropN.width() * br.width() / h : 0.0;
+}
+
+void ImageView::cropResolveCustomAspect()
+{
+    const qreal r = cropFrameAspect();
+    if (r <= 0.0) { cropAspect = 0.0; return; }   // no image yet: behave as "As shot"
+    cropAspect = cropAspectFlipped ? 1.0 / r : r;
+}
+
 void ImageView::cropFitLargestToAspect()
 {
     /* Grow the crop to the LARGEST rect of the (flip-aware) target aspect that fits the
@@ -1895,6 +1911,7 @@ void ImageView::setCropAspect(double aspect, bool locked, bool flipped, bool ref
     cropAspectLocked = locked;
     cropAspectFlipped = flipped;
     if (!cropEditMode) return;
+    if (cropAspect < 0.0) cropResolveCustomAspect();   // Custom: keep the frame's ratio
     cropFlipPrevN = cropFlipResultN = QRectF();   // aspect/lock change breaks the pairing
     /* Releasing a ratio (refit == false) is not the same as choosing one: the constraint
        is gone, so dragging is free from here on, but the frame itself is left untouched --
@@ -6022,6 +6039,20 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
        the drag, release any grab the pan path took, and leave the image where the user left it
        (no zoom-toggle-on-release). */
     if (!spacePanOverride && cropActive() && isLeftMouseBtnPressed) {
+        /* A free resize (handle or a newly drawn frame) that left the chosen ratio makes
+           the crop "Custom": adopt the frame's own ratio here, so a later lock or flip
+           honours what is on screen, and tell the Transform panel to show it. */
+        const bool resized = (cropDrag >= 0 && cropDrag <= 7) || cropDrag == kCropDrawNew;
+        if (resized && !cropWarp && !cropAspectLocked) {
+            const qreal r = cropFrameAspect();
+            const qreal t = cropTargetAspect();
+            if (r > 0.0 && (t <= 0.0 || qAbs(r / t - 1.0) > 0.005)) {
+                cropAspect = r;
+                cropAspectFlipped = false;
+                cropFlipPrevN = cropFlipResultN = QRectF();
+                emit cropAspectFreed();
+            }
+        }
         cropDrag = -1;
         isLeftMouseBtnPressed = false;
         QGraphicsView::mouseReleaseEvent(event);     // release the pan grab, if any
