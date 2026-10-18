@@ -29,6 +29,18 @@ void MW::writeSettings()
        so a Develop layout must not be the one it comes up in (see MW::showEvent). */
     settings->setValue("currentWorkflow", currentWorkflow);
 
+    /*  The open version groups, so a version that was current or selected is still
+        showing when the next session restores the selection. A group whose master is
+        loaded but no longer has a version is dropped; one outside the loaded model
+        cannot be judged and is kept. */
+    if (dm && dm->sf) {
+        QStringList expanded;
+        for (const QString &m : dm->sf->expandedVersions())
+            if (dm->rowFromKey(m) < 0 || !dm->versionKeysOf(m).isEmpty()) expanded << m;
+        expanded.sort();
+        settings->setValue("expandedVersions", expanded);
+    }
+
     // full screen
     settings->setValue("isFullScreenFolders", fullScreenDocks.isFolders);
     settings->setValue("isFullScreenFavs", fullScreenDocks.isFavs);

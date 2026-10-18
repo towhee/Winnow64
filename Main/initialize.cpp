@@ -3585,8 +3585,13 @@ void MW::createModuleDock()
         b->setFocusPolicy(Qt::NoFocus);
         versionGroup->addButton(b);
     }
-    if (dm && dm->sf)
+    if (dm && dm->sf) {
         dm->sf->setMastersOnly(isSettings && settings->value("versionMastersOnly").toBool());
+        // the version groups left open last session (MW::writeSettings)
+        if (isSettings)
+            for (const QString &m : settings->value("expandedVersions").toStringList())
+                dm->sf->setVersionsExpanded(m, true);
+    }
     syncVersionModeButtons();
     connect(versionMastersBtn, &QToolButton::clicked, this, [this] {
         setVersionMastersOnly(true);

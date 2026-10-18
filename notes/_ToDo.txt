@@ -14,8 +14,6 @@ BUGS / TO DO
 - Render devPreviews in background (entire catalog??)
 - Winnow defaults to masters only at startup, so if a version was selected when close then
   the selection restore at startup fails.
-- When create a version, it appears before the master in the datamodel.  I would prefer to see the master first.  Is this just a
-  sorting issue?
 - RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights
   slider): rebuild colour where the SENSOR clipped one or more channels, before white
   balance / demosaic (today a clipped sky or specular can go magenta/cyan or flat, and

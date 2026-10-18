@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Cache/cachedb.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/versionkey.h"
 
 void MW::setCentralMessage(QString message)
 {
@@ -1665,20 +1666,38 @@ void MW::applySelectionRestore()
         return;
     }
 
+    /*  A VERSION IN A CLOSED GROUP is in the model but not in the proxy, so its select
+        would fail. Open its group first -- the group was open when the selection was
+        saved (MW::writeSettings keeps the open groups, but a crash does not). Under
+        Masters no group opens: the version's master stands in for it. */
+    QStringList restore = keys;
+    bool reFilter = false;
+    for (QString &k : restore) {
+        if (!VersionKey::isVersion(k) || dm->rowFromKey(k) < 0
+            || dm->proxyRowFromKey(k) >= 0) continue;
+        const QString master = VersionKey::sourceOf(k);
+        if (dm->sf->mastersOnly()) { k = master; continue; }
+        if (!dm->sf->versionsExpanded(master)) {
+            dm->sf->setVersionsExpanded(master, true);
+            reFilter = true;
+        }
+    }
+    if (reFilter) filterChange("MW::applySelectionRestore");
+
     QList<int> rows;
-    for (int i = 1; i < keys.size(); ++i) {
-        const int r = dm->proxyRowFromKey(keys.at(i));
+    for (int i = 1; i < restore.size(); ++i) {
+        const int r = dm->proxyRowFromKey(restore.at(i));
         if (r >= 0) rows << r;
     }
-    const bool haveCurrent = dm->rowFromKey(keys.first()) >= 0;
+    const bool haveCurrent = dm->rowFromKey(restore.first()) >= 0;
     if (G::isPerfProbe)
-        qDebug().noquote() << "[PERF] restore selection: current" << keys.first()
+        qDebug().noquote() << "[PERF] restore selection: current" << restore.first()
                            << (haveCurrent ? "found" : "GONE") << " others"
-                           << rows.size() << "of" << keys.size() - 1;
+                           << rows.size() << "of" << restore.size() - 1;
     /*  The current image may be gone (deleted, filtered out of a smaller Library); the
         first surviving one then becomes current, as a click on it would. */
     if (haveCurrent) {
-        if (dm->currentKey != keys.first()) sel->select(keys.first());
+        if (dm->currentKey != restore.first()) sel->select(restore.first());
         if (!rows.isEmpty()) sel->selectRows(rows, true);
     }
     else if (!rows.isEmpty()) {
@@ -1686,7 +1705,7 @@ void MW::applySelectionRestore()
     }
 
     /*  Done when everything is found or no load is left to bring the rest in. */
-    const bool allFound = haveCurrent && rows.size() == keys.size() - 1;
+    const bool allFound = haveCurrent && rows.size() == restore.size() - 1;
     if (allFound || --pendingSelectionLoads <= 0) cancelSelectionRestore();
 }
 

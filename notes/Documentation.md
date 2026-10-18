@@ -7517,6 +7517,8 @@ Groups start collapsed. SortFilter::filterAcceptsRow hides a version whose group
 
 The state lives on the proxy (setVersionsExpanded per master key, setShowAllVersions global) and changes only through MW::setVersionsExpanded / toggleVersionsExpanded / setShowAllVersions, which re-filter through MW::filterChange; collapsing a group whose version is current selects the master first. Filter counts include version rows: they are what a filter would show.
 
+The open groups persist (2026-10-18). MW::writeSettings saves SortFilter::expandedVersions as "expandedVersions" (dropping a master that is loaded but has no version left; one outside the loaded model is kept), and createModuleDock puts them back next to versionMastersOnly. Groups no longer always start collapsed: a new session opens the ones that were open. The selection restore backs this up: MW::applySelectionRestore opens the group of any saved key that is a version in the model but not in the proxy (a crash skips writeSettings), then re-filters before selecting. Under Masters it selects the version's master instead.
+
 #### 13.4.2 Sorting
 
 Column sorts keep a group together: SortFilter::prepareSortKeys gives each version its master's value (only when the model holds version rows, DataModel::versionRowCount), and the proxy's ordering keeps the source order (master, then its versions) among equals. That holds in BOTH directions: SortFilter::lessThan breaks ties on source row, and because a descending sort calls lessThan(right, left) the tie-break flips with the order (fixed 2026-10-18 -- a plain l < r put every version ahead of its master under any descending sort).

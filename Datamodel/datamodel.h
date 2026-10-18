@@ -112,6 +112,7 @@ public:
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     bool versionsExpanded(const QString &masterKey) const;
     void clearVersionsExpanded() { mExpandedVersions.clear(); }
+    QStringList expandedVersions() const { return mExpandedVersions.values(); }
     /*  MASTERS ONLY hides every version row outright -- filter or not, group open or
         not -- and BuildFilters leaves them out of the unfiltered counts too. The
         Module dock's Masters | Versions (MW::setVersionMastersOnly). */
