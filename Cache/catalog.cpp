@@ -144,18 +144,25 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
 }
 
 /*
-    The two flat-keyword scans share this: the depth-1 paths ONE image carries.
+    What the TIDY sees on one image, shared by both scans (tidyKeywords and
+    tidyKeywordRows) so the counts and the rows cannot disagree.
 
-    A path is flat when it has no separator after keywordEffectivePaths has run -- that
-    is, a dc:subject entry that names no node of any of the same image's hierarchical
-    paths. Everything else about a flat keyword follows from that one test, so both
-    scans ask it here rather than each spelling out the rule.
+    ITS FLAT KEYWORDS: the depth-1 paths it carries. A path is flat when it has no
+    separator after keywordEffectivePaths has run -- that is, a dc:subject entry that names
+    no node of any of the same image's hierarchical paths.
+
+    AND, when the vocabulary is given, every HIERARCHICAL path it carries that the
+    vocabulary does not hold ("Birds|Robin" beside an authored "Fauna|Bird|Robin"). Whole
+    paths, exactly as carried; the tidy replaces a path, never a prefix of one. vocabFold
+    empty = flat only, which is what flatKeywords() reports.
 */
-QStringList flatOf(const CatalogRow &r)
+QStringList tidyOf(const CatalogRow &r, const QSet<QString> &vocabFold)
 {
     QStringList out;
-    for (const QString &p : keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths))
+    for (const QString &p : keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths)) {
         if (!p.contains('|')) out << p;
+        else if (!vocabFold.isEmpty() && !vocabFold.contains(keywordFold(p))) out << p;
+    }
     return out;
 }
 
@@ -1671,6 +1678,17 @@ int Catalog::imagesUnderKeyword(const QString &path, const QString &folder)
 
 QList<CatalogKeyword> Catalog::flatKeywords(const QString &folder)
 {
+    return tidyKeywords(QSet<QString>(), folder);
+}
+
+QVector<CatalogRow> Catalog::flatKeywordRows(const QString &folder)
+{
+    return tidyKeywordRows(QSet<QString>(), folder);
+}
+
+QList<CatalogKeyword> Catalog::tidyKeywords(const QSet<QString> &vocabFold,
+                                            const QString &folder)
+{
 /*
     See the header: a flat keyword is one an image carries as a ROOT, not a keyword row
     without a separator. The distinction is the whole reason this is a scan.
@@ -1685,8 +1703,13 @@ QList<CatalogKeyword> Catalog::flatKeywords(const QString &folder)
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return out;
 
-    QString sql = "SELECT keywords_literal, keywordpaths FROM image"
-                  " WHERE live = 1 AND keywords_literal <> ''";
+    /*  keywords_literal OR keywordpaths: an image whose only keyword is an unfiled
+        hierarchical path need not have a dc:subject at all. */
+    QString sql = vocabFold.isEmpty()
+        ? "SELECT keywords_literal, keywordpaths FROM image"
+          " WHERE live = 1 AND keywords_literal <> ''"
+        : "SELECT keywords_literal, keywordpaths FROM image"
+          " WHERE live = 1 AND (keywords_literal <> '' OR keywordpaths <> '')";
     if (!folder.isEmpty()) sql += " AND folder = ?";
 
     QSqlQuery q(db);
@@ -1704,7 +1727,7 @@ QList<CatalogKeyword> Catalog::flatKeywords(const QString &folder)
         const QString kp = q.value(1).toString();
         if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
         if (!kp.isEmpty()) r.keywordPaths = kp.split('\n', Qt::SkipEmptyParts);
-        for (const QString &f : flatOf(r)) {
+        for (const QString &f : tidyOf(r, vocabFold)) {
             auto &e = tally[keywordFold(f)];
             if (e.second == 0) e.first = f;
             e.second++;
@@ -1728,10 +1751,11 @@ QList<CatalogKeyword> Catalog::flatKeywords(const QString &folder)
     return out;
 }
 
-QVector<CatalogRow> Catalog::flatKeywordRows(const QString &folder)
+QVector<CatalogRow> Catalog::tidyKeywordRows(const QSet<QString> &vocabFold,
+                                             const QString &folder)
 {
 /*
-    Every image with at least one flat keyword, as WHOLE rows.
+    Every image with at least one keyword to tidy (tidyOf), as WHOLE rows.
 
     WHOLE ROWS BECAUSE THE CALLER MUST COMMIT THEM BACK. An image the tidy rewrites is
     usually not loaded -- a merge near the root of the vocabulary reaches folders the
@@ -1751,7 +1775,10 @@ QVector<CatalogRow> Catalog::flatKeywordRows(const QString &folder)
     if (!db.isOpen()) return out;
 
     QString sql = QString("SELECT") + kRowColumns + " FROM image i"
-                  " WHERE i.live = 1 AND i.keywords_literal <> ''";
+                  " WHERE i.live = 1 AND "
+                  + (vocabFold.isEmpty()
+                         ? "i.keywords_literal <> ''"
+                         : "(i.keywords_literal <> '' OR i.keywordpaths <> '')");
     if (!folder.isEmpty()) sql += " AND i.folder = ?";
 
     QSqlQuery q(db);
@@ -1762,7 +1789,7 @@ QVector<CatalogRow> Catalog::flatKeywordRows(const QString &folder)
     while (q.next()) {
         CatalogRow r;
         readRow(q, r);
-        if (flatOf(r).isEmpty()) continue;
+        if (tidyOf(r, vocabFold).isEmpty()) continue;
         /*  r.keywords -- the prefix expansion -- is deliberately NOT fetched. The caller
             recomputes it from the keywords it is about to write, exactly as
             MW::retagKeywordPath does, so a joined copy of the OLD expansion would only

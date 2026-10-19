@@ -41,6 +41,7 @@ private slots:
     void aFlatOnlyFileIsNotADegradedCase();
     void malformedPathsAreNormalisedNotDuplicated();
     void effectivePathsAreDeterministic();
+    void aRedundantAncestorPathIsPruned();
     void prefixExpansionEmitsEveryAncestor();
     void siblingsShareAncestorsInTheExpansion();
     void sameLeafUnderTwoParentsStaysTwoKeywords();
@@ -126,6 +127,23 @@ void tst_keywordpaths::malformedPathsAreNormalisedNotDuplicated()
                                                    " Fauna | Bird ",
                                                    "Fauna||Bird"});
     QCOMPARE(out, QStringList() << "Fauna|Bird");
+}
+
+void tst_keywordpaths::aRedundantAncestorPathIsPruned()
+{
+/*
+    lr:hierarchicalSubject listing "People" beside "People|Harry". dc:subject consumption
+    cannot reach it -- both entries are PATHS -- so the read path prunes ancestors: one
+    keyword, "People|Harry", whose prefix expansion still answers a search for "People".
+    The separator test keeps "Peoples" (not an ancestor) and an unrelated root intact.
+*/
+    const QStringList out = keywordEffectivePaths(
+        {"Harry", "People"}, {"People", "People|Harry", "Peoples", "Location|BC"});
+    QCOMPARE(out, QStringList() << "People|Harry" << "Peoples" << "Location|BC");
+    QVERIFY(keywordPrefixExpand(out).contains("People"));
+
+    /*  A depth-1 "People" alone is not redundant and stays. */
+    QCOMPARE(keywordEffectivePaths({"People"}, {}), QStringList() << "People");
 }
 
 void tst_keywordpaths::effectivePathsAreDeterministic()

@@ -3731,6 +3731,8 @@ void MW::createKeywordsDock()
             this, &MW::keywordsDockVisibilityChange);
 
     connect(keywordTree, &KeywordTree::pathChanged, this, &MW::keywordPathChanged);
+    connect(keywordTree, &KeywordTree::removeEverywhereRequested,
+            this, &MW::removeKeywordEverywhere);
 
     /*  THE FILTERS PANEL'S UNFILED MARKING FOLLOWS THE VOCABULARY, and it is hooked to
         the MODEL rather than to each gesture that changes it. Add, delete, rename,
@@ -3751,7 +3753,7 @@ void MW::createKeywordsDock()
         refreshKeywordsDock();
     });
     connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
-    connect(keywordTree, &KeywordTree::tidyRequested, this, &MW::tidyFlatKeywords);
+    connect(keywordTree, &KeywordTree::tidyRequested, this, &MW::tidyKeywords);
     connect(keywordTree, &KeywordTree::auditRequested, this, &MW::auditKeywords);
     connect(keywordTree, &KeywordTree::helpRequested, this, &MW::helpKeywordList);
     /*  QUEUED: the drop is still inside the dragged tag's QDrag::exec(), and

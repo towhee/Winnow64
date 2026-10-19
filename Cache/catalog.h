@@ -516,6 +516,16 @@ public:
         dialog showed and the set the apply touches cannot disagree. */
     QVector<CatalogRow> flatKeywordRows(const QString &folder = QString());
 
+    /*  WHAT "TIDY KEYWORDS" REVIEWS: the flat keywords above, PLUS every hierarchical
+        path an image carries that the authored vocabulary (vocabFold: folded paths) does
+        not hold -- "Birds|Robin" where the list has "Fauna|Bird|Robin". Same scan, same
+        counting, same row test for both halves, so the dialog's numbers and the apply's
+        set cannot disagree. An empty vocabFold reduces both to the flat versions. */
+    QList<CatalogKeyword> tidyKeywords(const QSet<QString> &vocabFold,
+                                       const QString &folder = QString());
+    QVector<CatalogRow> tidyKeywordRows(const QSet<QString> &vocabFold,
+                                        const QString &folder = QString());
+
     /*  Delete every keyword row no live image links to any more, and report how many
         went. An emptied keyword is DERIVED rubbish, not a decision: the `keyword` table
         is the OBSERVED vocabulary, so a row whose last image was retagged or deleted is

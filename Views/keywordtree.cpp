@@ -19,7 +19,9 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QFileDialog>
+#include <QCheckBox>
 #include <QMessageBox>
+#include <QPushButton>
 
 #include <functional>
 #include <QPainter>
@@ -372,9 +374,19 @@ void KeywordTree::contextMenuEvent(QContextMenuEvent *event)
 
     menu.addSeparator();
 
-    QAction *tidy = menu.addAction("Tidy flat keywords...");
-    tidy->setToolTip("File keywords that sit outside the tree into their branches, "
-                     "in the keyword list and in the images.");
+    /*  Whole-list, not the row under the mouse: a vocabulary of a couple of thousand
+        nodes is opened and closed a branch at a time otherwise. */
+    QAction *expand = menu.addAction("Expand all");
+    connect(expand, &QAction::triggered, this, &QTreeView::expandAll);
+    QAction *collapse = menu.addAction("Collapse all");
+    connect(collapse, &QAction::triggered, this, &QTreeView::collapseAll);
+
+    menu.addSeparator();
+
+    QAction *tidy = menu.addAction("Tidy keywords...");
+    tidy->setToolTip("File keywords that are not in your keyword list -- names on their "
+                     "own and branches the list does not have -- into its branches, in "
+                     "the images.");
     connect(tidy, &QAction::triggered, this, &KeywordTree::tidyRequested);
 
     QAction *audit = menu.addAction("Audit keywords...");
@@ -513,24 +525,72 @@ void KeywordTree::deleteSelected()
     const QString name = idx.data().toString();
     const int children = model()->rowCount(idx);
     const int count = idx.data(KeywordVocab::CountRole).toInt();
+    const QString path = idx.data(KeywordVocab::PathRole).toString();
 
-    QString msg = "Delete the keyword \"" + name + "\"";
-    if (children > 0) msg += " and everything inside it";
-    msg += "?";
-    /*  NAMING WHAT IS NOT AFFECTED, because it is the thing a user would reasonably
-        fear. Deleting a vocabulary node removes a NAME; the keyword stays in every file
-        that carries it, and those images simply show it as unfiled. */
-    msg += "\n\nThis removes it from your keyword list only. ";
-    msg += count > 0
-        ? QString("The %1 image%2 already tagged with it keep the keyword in their own "
-                  "files; it will show as unfiled.").arg(count).arg(count == 1 ? "" : "s")
-        : QString("No images are tagged with it.");
+    const QString images = QString("%1 image%2").arg(count).arg(count == 1 ? "" : "s");
 
-    if (QMessageBox::question(this, "Delete keyword", msg,
-                              QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
-        != QMessageBox::Yes) return;
+    QString msg = "Delete the keyword \"" + name + "\"?";
+    /*  NAMING WHAT EACH CHOICE TOUCHES, because the files are the thing a user would
+        reasonably fear for. Removing a vocabulary node removes a NAME; only "Remove
+        everywhere" goes on to rewrite the images that carry it. */
+    if (count > 0) {
+        msg += "\n\nRemove from list: changes your keyword list only. The " + images
+               + " tagged with it keep the keyword in their own files; it will show as "
+               "unfiled.";
+        msg += "\n\nRemove everywhere: also takes it off those " + images
+               + ", rewriting their files.";
+    }
+    else {
+        msg += "\n\nNo catalogued images are tagged with it, so there is nothing to "
+               "remove beyond your keyword list.";
+    }
+    /*  THE CHILDREN, and why "Remove from list" greys out without them: a branch cannot
+        leave the tree while its children stay in it, so with the box off the list does
+        not change and only the images' own tag can go. A real child is the example,
+        because "the paths beneath it" is abstract and "People > Harry" is not. */
+    if (children > 0) {
+        const QString child = model()->index(0, 0, idx).data().toString();
+        msg += QString("\n\nIt has %1 keyword%2 inside it. Without \"Remove all "
+                       "children\" it stays in your list as their parent, and Remove "
+                       "everywhere only takes \"%3\" off images tagged with just that; "
+                       "images tagged \"%3 > %4\" keep it.")
+                   .arg(children).arg(children == 1 ? "" : "s").arg(name, child);
+    }
 
-    vocab->remove(idx);
+    QMessageBox box(QMessageBox::Question, "Delete keyword", msg, QMessageBox::NoButton,
+                    this);
+    QPushButton *cancel = box.addButton(QMessageBox::Cancel);
+    QPushButton *fromList = box.addButton("Remove from list", QMessageBox::AcceptRole);
+    QPushButton *everywhere = box.addButton("Remove everywhere",
+                                            QMessageBox::DestructiveRole);
+    everywhere->setEnabled(count > 0);
+    /*  Only when there are children to decide about; unchecked by default, so the
+        lighter outcome is the one a user gets without reading. */
+    QCheckBox *withChildren = nullptr;
+    if (children > 0) {
+        withChildren = new QCheckBox("Remove all children");
+        box.setCheckBox(withChildren);      // the box owns it
+        fromList->setEnabled(false);
+        connect(withChildren, &QCheckBox::toggled, fromList, &QPushButton::setEnabled);
+    }
+    box.setDefaultButton(cancel);
+    box.setEscapeButton(cancel);
+    box.exec();
+
+    QAbstractButton *clicked = box.clickedButton();
+    if (clicked != fromList && clicked != everywhere) return;
+    const bool wholeBranch = children == 0 || (withChildren && withChildren->isChecked());
+
+    /*  The list first, then the files: the retag ends by refreshing the vocabulary's
+        counts and the filters' unfiled marking, which should see the node gone. Without
+        the children the node stays -- it is their parent. */
+    if (wholeBranch && !vocab->remove(idx)) {
+        QMessageBox::warning(this, "Delete keyword",
+            "Could not delete \"" + name + "\" from your keyword list.");
+        return;
+    }
+    if (clicked == everywhere && !path.isEmpty())
+        emit removeEverywhereRequested(path, wholeBranch);
 }
 
 void KeywordTree::buildFromCatalog(QWidget *)

@@ -1345,7 +1345,7 @@ QString MW::keywordDiagnostics()
     else {
         const QList<CatalogKeyword> flat = cat.flatKeywords();
         rpt << "\n" << "  Distinct flat keywords  = " << G::s(flat.size());
-        rpt << "\n" << "  (Tidy flat keywords... files these into the tree)";
+        rpt << "\n" << "  (Tidy keywords... files these into the tree)";
         for (int i = 0; i < flat.size() && i < 15; ++i)
             rpt << "\n" << QString("    %1  %2")
                        .arg(flat.at(i).count, 7).arg(flat.at(i).path);

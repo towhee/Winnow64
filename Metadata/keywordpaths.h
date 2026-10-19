@@ -88,6 +88,54 @@ inline QString keywordLeafOf(const QString &path)
 }
 
 /*
+    Drop every path that is a proper ANCESTOR of another path in the same list.
+
+        {"Location", "Location|Canada", "Location|Canada|BC", "Fauna|Bird"}
+            -> {"Location|Canada|BC", "Fauna|Bird"}
+
+    WHY IT IS SAFE TO DROP THEM. keywordPrefixExpand emits every ancestor of every path,
+    so "Location" stays searchable, filterable and countable for an image tagged only
+    "Location|Canada|BC". A separate depth-1 "Location" is therefore not a second fact
+    about the picture -- it is the same fact spelled without its parents, which is exactly
+    what keywordEffectivePaths already consumes when the file says it twice.
+
+    IT IS ON THE READ PATH (keywordEffectivePaths), so an image carrying "People" AND
+    "People|Harry" carries one keyword, "People|Harry", everywhere Winnow looks: the tag
+    zone, the info and table views, the flat-keyword scan, the audit. Reading used to keep
+    what the file said and only Tidy keywords pruned; that left a redundant root
+    showing as a separate tag that "Delete keyword" then had to reason about. Nothing is
+    lost by pruning on read, for the reason above, and the writers prune too, so Winnow's
+    next write of the image drops the redundant entry from the file.
+
+    ORDER IS PRESERVED for the survivors, so a pruned list stays as deterministic as the
+    list it came from.
+*/
+inline QStringList keywordPruneAncestors(const QStringList &paths)
+{
+    QStringList out;
+    QList<QString> folded;
+    folded.reserve(paths.size());
+    for (const QString &p : paths) folded << keywordFold(p);
+
+    for (int i = 0; i < paths.size(); ++i) {
+        bool covered = false;
+        for (int j = 0; j < paths.size(); ++j) {
+            if (i == j) continue;
+            /*  A PROPER ancestor: the separator test, not startsWith, or "Fauna" would
+                be swallowed by "Faunal|Study". Equality is not pruning -- two identical
+                paths are a duplicate, which the callers de-duplicate on their own. */
+            if (folded.at(j) != folded.at(i)
+                && folded.at(j).startsWith(folded.at(i) + '|')) {
+                covered = true;
+                break;
+            }
+        }
+        if (!covered) out << paths.at(i);
+    }
+    return out;
+}
+
+/*
     The paths one image actually carries, from its two properties.
 
     THE LIGHTROOM DOUBLE, AND WHY CONSUMPTION RATHER THAN COLLAPSE. A hierarchical file
@@ -168,7 +216,10 @@ inline QStringList keywordEffectivePaths(const QStringList &subject,
         add(keywordNodes(trimmed).join('|'));
     }
 
-    return out;
+    /*  A PATH THAT IS AN ANCESTOR OF ANOTHER IS REDUNDANT -- lr:hierarchicalSubject
+        listing "People" beside "People|Harry", which the dc:subject consumption above
+        cannot reach. See keywordPruneAncestors. */
+    return keywordPruneAncestors(out);
 }
 
 /*
@@ -206,50 +257,6 @@ inline QStringList keywordPrefixExpand(const QStringList &paths)
     return out;
 }
 
-/*
-    Drop every path that is a proper ANCESTOR of another path in the same list.
-
-        {"Location", "Location|Canada", "Location|Canada|BC", "Fauna|Bird"}
-            -> {"Location|Canada|BC", "Fauna|Bird"}
-
-    WHY IT IS SAFE TO DROP THEM. keywordPrefixExpand emits every ancestor of every path,
-    so "Location" stays searchable, filterable and countable for an image tagged only
-    "Location|Canada|BC". A separate depth-1 "Location" is therefore not a second fact
-    about the picture -- it is the same fact spelled without its parents, which is exactly
-    what keywordEffectivePaths already consumes when the file says it twice.
-
-    IT IS NOT USED ON THE READ PATH. Reading keeps what the file says; only an operation
-    that deliberately merges keywords (Tidy flat keywords) prunes, because that is the
-    operation that CREATES the redundancy -- moving a flat "Canada" onto an image that
-    already carries "Location|Canada|BC" would otherwise leave both.
-
-    ORDER IS PRESERVED for the survivors, so a pruned list stays as deterministic as the
-    list it came from.
-*/
-inline QStringList keywordPruneAncestors(const QStringList &paths)
-{
-    QStringList out;
-    QList<QString> folded;
-    folded.reserve(paths.size());
-    for (const QString &p : paths) folded << keywordFold(p);
-
-    for (int i = 0; i < paths.size(); ++i) {
-        bool covered = false;
-        for (int j = 0; j < paths.size(); ++j) {
-            if (i == j) continue;
-            /*  A PROPER ancestor: the separator test, not startsWith, or "Fauna" would
-                be swallowed by "Faunal|Study". Equality is not pruning -- two identical
-                paths are a duplicate, which the callers de-duplicate on their own. */
-            if (folded.at(j) != folded.at(i)
-                && folded.at(j).startsWith(folded.at(i) + '|')) {
-                covered = true;
-                break;
-            }
-        }
-        if (!covered) out << paths.at(i);
-    }
-    return out;
-}
 
 /* The parent of a path -- "A|B|C" -> "A|B". A root has no parent and returns empty. */
 inline QString keywordParentPath(const QString &path)

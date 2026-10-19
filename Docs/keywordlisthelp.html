@@ -155,21 +155,41 @@ your photographs.</p>
 
 <h2>Delete keyword</h2>
 
-<p><b>What it does:</b> removes the keyword, and anything inside it, from your
-<span class="highlight">list</span>.</p>
+<p><b>What it does:</b> asks how far to remove the keyword. Winnow tells you how many
+photographs carry it before you choose.</p>
 
-<p><b>What it does not do:</b> it does not remove the keyword from photographs that
-already have it. They keep it in their own files, where it shows as a
-<span style="color:#9a5a5a">red</span> tag (a keyword that is not in your list). Winnow
-tells you how many photographs that is before you confirm.</p>
+<p><span class="highlight">Remove from list</span> takes it out of your
+<span class="highlight">list</span> only. Photographs that already have it keep it in their
+own files, where it shows as a <span style="color:#9a5a5a">red</span> tag (a keyword that
+is not in your list).</p>
+
+<p><span class="highlight">Remove everywhere</span> also takes it off every catalogued
+photograph that carries it, rewriting their files. It is greyed out when no catalogued
+photograph has the keyword.</p>
+
+<p>If the keyword has others inside it, a <span class="highlight">Remove all
+children</span> checkbox appears. Ticked, everything inside goes too. Left off (the
+default), the keyword stays in your list, because it is still the parent of the ones
+inside it, so <span class="highlight">Remove from list</span> is greyed out.
+<span class="highlight">Remove everywhere</span> then takes
+<span class="highlight">People</span> off photographs tagged with just People, and
+photographs tagged <span class="highlight">People &gt; Harry</span> keep it.</p>
 
 <p><b>Why:</b> to clear out a keyword you have stopped using, or one created by
 mistake.</p>
 
-<h2>Tidy flat keywords...</h2>
+<h2>Expand all / Collapse all</h2>
 
-<p><b>What it does:</b> files loose keywords into your branches, in your list
-<span class="highlight">and</span> in your photographs, all in one go.</p>
+<p><b>What it does:</b> opens or closes every branch in the list at once, wherever you
+right-click.</p>
+
+<p><b>Why:</b> to see the whole list laid out, or to fold a large list back down to its
+top-level keywords.</p>
+
+<h2>Tidy keywords...</h2>
+
+<p><b>What it does:</b> files keywords that are not in your list into your branches, in
+your photographs, all in one go.</p>
 
 <p><b>Why:</b> photographs keyworded by other programs, or by you before you used
 branches, often carry bare names &mdash; <span class="highlight">Nanaimo</span> rather
@@ -178,14 +198,25 @@ work, but they pile up at the top of your list beside the branches they belong i
 search on <span class="highlight">Canada</span> does not find them. On a large library
 there can be hundreds; filing them one by one would take all day.</p>
 
+<p>The same goes for branches your list does not have: another program may have tagged
+photographs <span class="highlight">Birds &gt; Robin</span> where your list has
+<span class="highlight">Fauna &gt; Bird &gt; Robin</span>. Tidy lists those too, and
+matches them on their last name (Robin), preferring a branch that shares more of their
+parent names.</p>
+
 <p><b>How:</b></p>
 <ol>
-<li>Choose Tidy flat keywords.... Winnow lists every loose keyword, how many photographs
+<li>Choose Tidy keywords.... Winnow lists every unfiled keyword, how many photographs
 carry it, and the branch in your list it matched.</li>
-<li>For each one, choose <span class="highlight">Move</span> (into the branch shown; you
-can pick another), <span class="highlight">Remove</span> (take the bare name off those
+<li>For each one, choose <span class="highlight">Move to</span> (replace it with the
+branch shown; you can pick another), <span class="highlight">Append to</span> (put it
+underneath the branch shown: <span class="highlight">Nanaimo</span> appended to
+<span class="highlight">Location &gt; Canada &gt; BC</span> becomes
+<span class="highlight">Location &gt; Canada &gt; BC &gt; Nanaimo</span>),
+<span class="highlight">Remove</span> (take the bare name off those
 photographs) or <span class="highlight">Leave alone</span>. Winnow suggests an answer for
-every row. Rows marked <span class="highlight">review</span> matched more than one branch
+every row: an unfiled branch that matched nothing is left alone, since it may hold
+detail you want. Rows marked <span class="highlight">review</span> matched more than one branch
 &mdash; hover over them to see the choices.</li>
 <li>Use the <span class="highlight">Show</span> list to deal with a whole group at once,
 for example everything that matched exactly one branch.</li>
@@ -261,7 +292,7 @@ list.</p>
 
 <p>Opens this page.</p>
 
-<p>Tidy flat keywords, Audit keywords, Build vocabulary from catalog, Import and Export
+<p>Tidy keywords, Audit keywords, Build vocabulary from catalog, Import and Export
 are also in the main menu, under <span class="highlight">Tools &gt; Keywords</span>.</p>
 
 <h1>Where to start</h1>
@@ -274,7 +305,7 @@ with New keyword..., add keywords inside them as you need them, and tag a few ph
 by double-clicking. Click a keyword to see it working.</li>
 <li><span class="highlight">Photographs already keyworded elsewhere?</span> Run Build
 vocabulary from catalog (or Import Lightroom keywords... if you have an export), then Tidy
-flat keywords... to file the loose ones into branches.</li>
+keywords... to file the loose ones into branches.</li>
 <li><span class="highlight">A big, long-keyworded library?</span> Run Audit keywords...
 now and then to catch mistakes.</li>
 </ul>

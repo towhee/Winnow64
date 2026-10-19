@@ -106,9 +106,21 @@ that have never been indexed shows no number. The
 <span class="highlight">Manage Catalog</span> dialog (File &gt; Manage Catalog...) is
 where you say which folders those are.</p>
 
-<p>Deleting a keyword removes it from your <span class="highlight">list only</span>. Images
-already tagged with it keep it in their own files, where it shows as a
-<span style="color:#9a5a5a">red</span> tag.</p>
+<p>Deleting a keyword offers two choices. <span class="highlight">Remove from list</span>
+removes it from your list only: images already tagged with it keep it in their own files,
+where it shows as a <span style="color:#9a5a5a">red</span> tag.</p>
+
+<p><span class="highlight">Remove everywhere</span> also takes it off every catalogued
+image that carries it.</p>
+
+<p>If the keyword has others inside it, tick <span class="highlight">Remove all
+children</span> to remove them too. Without it, the keyword stays as their parent and only
+images tagged with just that keyword lose it.</p>
+
+<p>An image tagged both <span class="highlight">People</span> and
+<span class="highlight">People &gt; Harry</span> has one keyword, not two:
+People &gt; Harry already says People, so Winnow shows only People &gt; Harry, and drops
+the extra People from the file the next time it writes that image's keywords.</p>
 
 <h1>When images need updating</h1>
 
@@ -148,19 +160,30 @@ keywords...</span> writes your list back out in the same format.</p>
 Canada &gt; BC &gt; Vancouver Island &gt; Nanaimo</span>. They work, but they pile up at
 the top of your list beside the branches they belong in.</p>
 
-<p><span class="highlight">Tidy flat keywords...</span> on the right-click menu files them
+<p>The same happens one level up: another program may have tagged images
+<span class="highlight">Birds &gt; Robin</span> where your list has
+<span class="highlight">Fauna &gt; Bird &gt; Robin</span>.</p>
+
+<p><span class="highlight">Tidy keywords...</span> on the right-click menu files both kinds
 all in one go. It lists every such keyword with how many images carry it, and what it
 matched in your keyword list. For each one you can:</p>
 
 <ul>
 <li><span class="highlight">Move</span> it into the branch shown &mdash; the deepest match
 is chosen for you, and you can pick another or type any keyword path.</li>
+<li><span class="highlight">Append</span> it underneath the branch shown, keeping its own
+name: <span class="highlight">Nanaimo</span> appended to
+<span class="highlight">Location &gt; Canada &gt; BC</span> becomes
+<span class="highlight">Location &gt; Canada &gt; BC &gt; Nanaimo</span>. Use it when your
+list has the right branch but not the keyword itself. Hover the branch to see what the
+keyword will become.</li>
 <li><span class="highlight">Remove</span> it from those images. This is the default for a
 name that matched nothing, which is usually a container name such as
 <span class="highlight">Location</span> or <span class="highlight">Fauna</span>: an image
 filed under Location &gt; Canada is already found by searching for Location, so the bare
 name adds nothing.</li>
-<li><span class="highlight">Leave alone</span>.</li>
+<li><span class="highlight">Leave alone</span>. This is the default for an unfiled
+branch that matched nothing, since it may hold detail you want.</li>
 </ul>
 
 <p>Rows marked <span class="highlight">review</span> matched more than one branch &mdash;

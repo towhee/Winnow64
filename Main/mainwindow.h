@@ -1794,7 +1794,7 @@ private:
     QAction *runDropletAction;
     QAction *reportMetadataAction;
     QAction *findDuplicatesAction;
-    QAction *tidyFlatKeywordsAction;
+    QAction *tidyKeywordsAction;
     QAction *buildKeywordVocabAction;
     QAction *importLightroomKeywordsAction;
     QAction *exportKeywordsAction;
@@ -3268,18 +3268,31 @@ private:
         tails and all. The one operation neither the drag nor KeywordVocab's own merge
         could do -- see the definition. */
     void mergeUnfiledKeyword(const QString &unfiledPath);
+    /*  What retagKeywordPath does to oldPath and the paths beneath it. Rename: both are
+        re-prefixed to newPath. Remove: both are dropped. RemoveOwn: only oldPath itself
+        is dropped and the paths beneath it are kept -- the Delete dialog with "Remove
+        all children" off. newPath is ignored by both removals. */
+    enum class RetagMode { Rename, Remove, RemoveOwn };
     /*  Rewrite oldPath to newPath on every image carrying it or anything beneath it,
         optionally restricted to one folder. Driven from the CATALOG, so it reaches
         images the datamodel has never loaded. Returns how many files were written. */
     int retagKeywordPath(const QString &oldPath, const QString &newPath,
-                         const QString &folder = QString());
+                         const QString &folder = QString(),
+                         RetagMode mode = RetagMode::Rename);
+    /*  "Delete keyword" > "Remove everywhere": take path off every catalogued image,
+        with everything beneath it (Remove) or only the path itself (RemoveOwn). */
+    void removeKeywordEverywhere(const QString &path, bool withChildren);
     /*  TIDY FLAT KEYWORDS: open the review list of every depth-1 keyword the catalog
         holds, then carry out what the user approved. See Dialogs/keywordtidydlg.h for
-        what a flat keyword is and why the list is reviewed rather than applied. */
-    void tidyFlatKeywords();
+        what a flat keyword and an unfiled branch are, and why the list is reviewed
+        rather than applied. */
+    void tidyKeywords();
     /*  Carry out an approved tidy: ONE pass over the affected images, applying every
-        move and removal at once. Returns how many files were written. */
-    int applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan);
+        move and removal at once. vocabFold is the folded vocabulary the review was
+        built against, so the apply walks the same images. Returns how many files were
+        written. */
+    int applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan,
+                             const QSet<QString> &vocabFold);
     /*  An image's keywords have been written to its file: put the new lists into the
         MODEL if the row is loaded, and into the INDEX either way. Shared by the retag
         and the tidy, which differ in what they compute and not at all in how the result

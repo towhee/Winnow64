@@ -13,6 +13,7 @@
 #include <QLineEdit>
 #include <QLocale>
 #include <QPushButton>
+#include <QSet>
 #include <QStyledItemDelegate>
 #include <QTableWidget>
 #include <QVBoxLayout>
@@ -26,9 +27,25 @@ enum Column { ColKeyword = 0, ColImages = 1, ColAction = 2, ColTarget = 3, ColMa
 
 /* What a row will do. The order is the order in the combo, and Move is first because it
    is the operation the dialog exists for. */
-enum Action { Move = 0, Remove = 1, Skip = 2 };
+enum Action { Move = 0, Append = 1, Remove = 2, Skip = 3 };
 
-const char *kActionText[] = { "Move to", "Remove", "Leave alone" };
+const char *kActionText[] = { "Move to", "Append to", "Remove", "Leave alone" };
+
+/* Move and Append both file the keyword somewhere, and both need a "Goes to". */
+bool files(int action) { return action == Move || action == Append; }
+
+/*
+    APPEND PUTS THE ROW'S WHOLE KEYWORD UNDER "Goes to": "Nanaimo" appended to
+    Location|Canada|BC is Location|Canada|BC|Nanaimo, and the branch "Birds|Robin"
+    appended to Fauna is Fauna|Birds|Robin -- its own structure kept, not cut to the leaf.
+    Normalised through the node splitter, as a hand-typed Move target is. Empty when there
+    is no target.
+*/
+QString appendedPath(const QString &target, const QString &keyword)
+{
+    const QString t = keywordNodes(target).join('|');
+    return t.isEmpty() ? QString() : t + '|' + keywordNodes(keyword).join('|');
+}
 
 /* What the Show list restricts the table to. The first four are about what a row MATCHED
    -- the fact the user is working through -- and the last three about what it will DO,
@@ -96,27 +113,32 @@ private:
 
 }  // namespace
 
-KeywordTidyDlg::KeywordTidyDlg(const QList<CatalogKeyword> &flat,
+KeywordTidyDlg::KeywordTidyDlg(const QList<CatalogKeyword> &keywords,
                                const QStringList &vocabPaths,
                                const QHash<QString, int> &pathCounts, QWidget *parent)
     : QDialog(parent)
 {
     if (G::isLogger) G::log("KeywordTidyDlg::KeywordTidyDlg");
 
-    setWindowTitle("Tidy Flat Keywords");
+    setWindowTitle("Tidy Keywords");
     setModal(true);
     setMinimumSize(880, 560);
 
     allPaths = vocabPaths;
     counts = pathCounts;
     for (const QString &p : vocabPaths) {
-        if (!p.contains('|')) continue;         // a root is not somewhere to move a root
+        if (!p.contains('|')) { rootByFold.insert(keywordFold(p), p); continue; }
         byLeafFold[keywordFold(keywordLeafOf(p))] << p;
     }
 
     QLabel *intro = new QLabel(
-        "These keywords sit on their own, outside your keyword list's branches -- the "
-        "way keywords arrive from an application that never wrote a hierarchy.\n\n"
+        "These keywords are not filed in your keyword list: names that sit on their own "
+        "(the way keywords arrive from an application that never wrote a hierarchy), and "
+        "branches your list does not have (\"Birds|Robin\" where your list has "
+        "\"Fauna|Bird|Robin\").\n\n"
+        "Move to replaces the keyword with the branch in \"Goes to\"; Append to puts the "
+        "keyword underneath it (\"Nanaimo\" appended to Location|Canada|BC becomes "
+        "Location|Canada|BC|Nanaimo).\n\n"
         "Every row carries an ACTION, and Apply carries out all of them -- not just the "
         "rows you have selected. Set them with the buttons below the list, or one row "
         "at a time in the Action column.\n\n"
@@ -141,7 +163,7 @@ KeywordTidyDlg::KeywordTidyDlg(const QList<CatalogKeyword> &flat,
     showCombo->addItem("Matched one branch", int(ShowUnique));
     showCombo->addItem("Matched several -- review", int(ShowReview));
     showCombo->addItem("Matched nothing", int(ShowNoMatch));
-    showCombo->addItem("Will move", int(ShowWillMove));
+    showCombo->addItem("Will move or append", int(ShowWillMove));
     showCombo->addItem("Will be removed", int(ShowWillRemove));
     showCombo->addItem("Left alone", int(ShowSkipped));
 
@@ -153,7 +175,7 @@ KeywordTidyDlg::KeywordTidyDlg(const QList<CatalogKeyword> &flat,
 
     table = new QTableWidget(0, ColCount, this);
     table->setHorizontalHeaderLabels(QStringList()
-        << "Flat keyword" << "Images" << "Action" << "Goes to" << "Match");
+        << "Keyword" << "Images" << "Action" << "Goes to" << "Match");
     table->verticalHeader()->setVisible(false);
     table->setSelectionBehavior(QAbstractItemView::SelectRows);
     table->setEditTriggers(QAbstractItemView::AllEditTriggers);
@@ -175,7 +197,7 @@ KeywordTidyDlg::KeywordTidyDlg(const QList<CatalogKeyword> &flat,
         table->setColumnWidth(ColAction, fm.horizontalAdvance("Leave alone") + 40);
     }
 
-    for (const CatalogKeyword &k : flat) addRow(k);
+    for (const CatalogKeyword &k : keywords) addRow(k);
 
     /* Sorting is on AFTER the rows are in: with it on during the fill, every insert
        re-sorts the table and the row indexes move under the code doing the filling. */
@@ -229,26 +251,51 @@ KeywordTidyDlg::KeywordTidyDlg(const QList<CatalogKeyword> &flat,
             [this]{ updateScopeHint(); });
     connect(table, &QTableWidget::itemChanged, this, [this](QTableWidgetItem *item){
         if (!item) return;
-        /*  Choosing a branch by hand IS choosing to move: a user who types a path into a
-            row left at Remove and then presses Apply has said what they want twice, and
-            making them also change the action would be pedantry. */
+        /*  Choosing a branch by hand IS choosing to file: a user who types a path into
+            a row left at Remove and then presses Apply has said what they want twice,
+            and making them also change the action would be pedantry. A row already at
+            Append stays at Append -- the path typed is where it appends. */
         if (item->column() == ColTarget && !item->text().isEmpty()) {
             QTableWidgetItem *act = table->item(item->row(), ColAction);
-            if (act && act->data(Qt::UserRole).toInt() != Move) {
+            if (act && !files(act->data(Qt::UserRole).toInt())) {
                 act->setData(Qt::UserRole, int(Move));
                 act->setText(kActionText[Move]);
             }
         }
         if (item->column() == ColAction) {
-            item->setText(kActionText[item->data(Qt::UserRole).toInt()]);
+            const int a = item->data(Qt::UserRole).toInt();
+            item->setText(kActionText[a]);
             QTableWidgetItem *tgt = table->item(item->row(), ColTarget);
+            const QTableWidgetItem *name = table->item(item->row(), ColKeyword);
+            /*  SWITCHING TO APPEND FROM A LEAF MATCH. The pre-selected target is a path
+                ENDING in this keyword's name (Fauna|Bird|Robin for "Robin"), and appending
+                to it would say Robin twice; its parent is the branch meant. A target the
+                user chose that does not end that way is left exactly as it is. */
+            if (tgt && name && a == Append) {
+                const QString t = tgt->text();
+                if (t.contains('|') && keywordFold(keywordLeafOf(t))
+                                       == keywordFold(keywordLeafOf(name->text())))
+                    tgt->setText(keywordParentPath(t));
+            }
             /*  Remove and Leave alone have nowhere to go, so the target is greyed rather
                 than cleared: the match it found is still worth reading, and coming back
                 to Move must not have thrown the choice away. */
             if (tgt) tgt->setForeground(
-                item->data(Qt::UserRole).toInt() == Move
-                    ? table->palette().text() : table->palette().brush(QPalette::Disabled,
-                                                                       QPalette::Text));
+                files(a) ? table->palette().text()
+                         : table->palette().brush(QPalette::Disabled, QPalette::Text));
+        }
+        /*  WHAT APPEND WILL MAKE, on the target's tooltip, because the column shows the
+            branch and not the result. */
+        if (item->column() == ColAction || item->column() == ColTarget) {
+            const QTableWidgetItem *act = table->item(item->row(), ColAction);
+            const QTableWidgetItem *name = table->item(item->row(), ColKeyword);
+            QTableWidgetItem *tgt = table->item(item->row(), ColTarget);
+            if (act && name && tgt) {
+                const QString result = act->data(Qt::UserRole).toInt() == Append
+                    ? appendedPath(tgt->text(), name->text()) : QString();
+                const QString tip = result.isEmpty() ? QString() : "Becomes " + result;
+                if (tgt->toolTip() != tip) tgt->setToolTip(tip);
+            }
         }
         if (!bulkEdit) updateSummary();
     });
@@ -279,7 +326,8 @@ void KeywordTidyDlg::addRow(const CatalogKeyword &k)
     count->setFlags(count->flags() & ~Qt::ItemIsEditable);
     table->setItem(row, ColImages, count);
 
-    const int action = cands.isEmpty() ? Remove : Move;
+    /*  NO MATCH: Remove for a flat name, Leave alone for a branch -- see the header. */
+    const int action = !cands.isEmpty() ? Move : k.path.contains('|') ? Skip : Remove;
     QTableWidgetItem *act = new QTableWidgetItem(kActionText[action]);
     act->setData(Qt::UserRole, action);
     table->setItem(row, ColAction, act);
@@ -320,10 +368,16 @@ void KeywordTidyDlg::addRow(const CatalogKeyword &k)
     table->setItem(row, ColMatch, m);
 }
 
-QStringList KeywordTidyDlg::candidatesFor(const QString &name) const
+QStringList KeywordTidyDlg::candidatesFor(const QString &path) const
 {
 /*
-    DEEPEST FIRST, WITH THE SELF-NESTED ONES LAST.
+    MOST SHARED PARENTS, THEN DEEPEST FIRST, WITH THE SELF-NESTED ONES LAST.
+
+    Shared parents only rank a HIERARCHICAL row, whose own path is evidence: "Birds|Robin"
+    belongs under Fauna|Bird|Robin rather than Food|Robin because "Bird" appears in one
+    and not the other. Compared by node name with a trailing "s" dropped, because Birds
+    and Bird are the commonest difference between two applications' trees. A flat name
+    has no parents, every candidate shares none, and the ranking is the one below.
 
     Depth is the ranking because a longer path is the more completely filed one: where a
     name sits under both Canada|BC and Location|Canada|BC, the second is where it ends up
@@ -347,10 +401,32 @@ QStringList KeywordTidyDlg::candidatesFor(const QString &name) const
         return false;
     };
 
-    QStringList out = byLeafFold.value(keywordFold(name));
-    std::sort(out.begin(), out.end(), [&selfNested](const QString &a, const QString &b) {
+    const QStringList srcNodes = keywordNodes(path);
+    auto stem = [](const QString &node) {
+        QString f = keywordFold(node);
+        if (f.size() > 3 && f.endsWith('s')) f.chop(1);
+        return f;
+    };
+    QSet<QString> srcParents;
+    for (int i = 0; i < srcNodes.size() - 1; ++i) srcParents.insert(stem(srcNodes.at(i)));
+    auto shared = [&](const QString &p) {
+        const QStringList nodes = keywordNodes(p);
+        int n = 0;
+        for (int i = 0; i < nodes.size() - 1; ++i)
+            if (srcParents.contains(stem(nodes.at(i)))) ++n;
+        return n;
+    };
+
+    const QString leafFold = keywordFold(keywordLeafOf(path));
+    QStringList out = byLeafFold.value(leafFold);
+    const bool hierarchical = srcNodes.size() > 1;
+    if (hierarchical && rootByFold.contains(leafFold)) out << rootByFold.value(leafFold);
+
+    std::sort(out.begin(), out.end(), [&](const QString &a, const QString &b) {
         const bool na = selfNested(a), nb = selfNested(b);
         if (na != nb) return nb;                            // sane paths first
+        const int sa = shared(a), sb = shared(b);
+        if (sa != sb) return sa > sb;                       // then most shared parents
         const int da = a.count('|'), db = b.count('|');
         if (da != db) return da > db;                       // then deepest
         return a.compare(b, Qt::CaseInsensitive) < 0;
@@ -380,10 +456,10 @@ void KeywordTidyDlg::applyFilter()
             /*  WILL MOVE, not "is set to Move": a Move with no branch in Goes to writes
                 nothing, and listing it here would show a row under a heading the plan
                 does not agree with. Same rule as plan(). */
-            case ShowWillMove:   ok = (a == Move && !tgt->text().isEmpty()); break;
+            case ShowWillMove:   ok = (files(a) && !tgt->text().isEmpty()); break;
             case ShowWillRemove: ok = (a == Remove); break;
             case ShowSkipped:    ok = (a == Skip
-                                       || (a == Move && tgt->text().isEmpty())); break;
+                                       || (files(a) && tgt->text().isEmpty())); break;
             default: break;
             }
         }
@@ -465,7 +541,7 @@ void KeywordTidyDlg::setRows(const QList<int> &rows, int action)
 
 void KeywordTidyDlg::updateSummary()
 {
-    int move = 0, remove = 0, review = 0, images = 0;
+    int move = 0, append = 0, remove = 0, review = 0, images = 0;
     for (int r = 0; r < table->rowCount(); ++r) {
         const QTableWidgetItem *act = table->item(r, ColAction);
         const QTableWidgetItem *name = table->item(r, ColKeyword);
@@ -473,8 +549,10 @@ void KeywordTidyDlg::updateSummary()
         const QTableWidgetItem *cnt = table->item(r, ColImages);
         if (!act || !name || !tgt || !cnt) continue;
         const int a = act->data(Qt::UserRole).toInt();
-        if (a == Move && !tgt->text().isEmpty()) { ++move; images += cnt->data(
-                                                       Qt::DisplayRole).toInt(); }
+        if (files(a) && !tgt->text().isEmpty()) {
+            ++(a == Append ? append : move);
+            images += cnt->data(Qt::DisplayRole).toInt();
+        }
         else if (a == Remove) { ++remove; images += cnt->data(Qt::DisplayRole).toInt(); }
         if (a != Skip && name->data(ReviewRole).toBool()) ++review;
     }
@@ -483,10 +561,12 @@ void KeywordTidyDlg::updateSummary()
         count of files: one image carrying six flat keywords is counted six times and
         written once. Said plainly here rather than reported as a number that will not
         match the one the operation ends with. */
-    QString s = QString("Apply will move %1 and remove %2, leaving %3 alone -- up to %4 "
-                        "keyword changes across the catalog.")
-                    .arg(move).arg(remove).arg(table->rowCount() - move - remove)
+    QString s = QString("Apply will move %1, append %2 and remove %3, leaving %4 alone "
+                        "-- up to %5 keyword changes across the catalog.")
+                    .arg(move).arg(append).arg(remove)
+                    .arg(table->rowCount() - move - append - remove)
                     .arg(QLocale().toString(images));
+    move += append;     // the button counts every row it acts on
     if (review > 0)
         s += QString("  %1 of the rows it acts on matched more than one branch.")
                  .arg(review);
@@ -515,17 +595,20 @@ QList<KeywordTidyAction> KeywordTidyDlg::plan() const
         if (a == Skip) continue;
 
         KeywordTidyAction ta;
-        ta.flat = name->text();
+        ta.from = name->text();
         if (a == Remove) {
             ta.remove = true;
         }
         else {
             /*  A Move with an empty or unchanged target is not a move. Normalised
                 through the node splitter so a hand-typed " A | B " reaches the write
-                path as the same identity the index holds. */
-            const QString target = keywordNodes(tgt->text()).join('|');
+                path as the same identity the index holds. An Append is a Move to the
+                path it makes, so the apply needs no third case. */
+            const QString target = a == Append
+                ? appendedPath(tgt->text(), ta.from)
+                : keywordNodes(tgt->text()).join('|');
             if (target.isEmpty()) continue;
-            if (keywordFold(target) == keywordFold(ta.flat)) continue;
+            if (keywordFold(target) == keywordFold(ta.from)) continue;
             ta.target = target;
         }
         out << ta;

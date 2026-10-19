@@ -328,6 +328,11 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
             next << trimmed;
         }
 
+        /*  An added keyword that is an ancestor of one the image already carries says
+            nothing new, and one that is a descendant supersedes its ancestor: pruned the
+            way the read path prunes (keywordEffectivePaths), so the comparison below is
+            like for like and a no-op add rewrites no file. */
+        next = keywordPruneAncestors(next);
         next.sort(Qt::CaseInsensitive);
 
         /*  NOTHING CHANGED FOR THIS ROW, which is the ordinary case rather than an
@@ -615,7 +620,7 @@ void MW::keywordPathChanged(const QString &oldPath, const QString &newPath)
 }
 
 int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
-                         const QString &folder)
+                         const QString &folder, RetagMode mode)
 {
 /*
     Rewrite oldPath to newPath on every image that carries it, or anything beneath it.
@@ -642,7 +647,12 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
     old keyword until the folder was reopened.
 */
     if (G::isLogger) G::log("MW::retagKeywordPath");
-    if (!metadata) return 0;
+    if (!metadata || oldPath.isEmpty()) return 0;
+
+    /*  THE REMOVALS ARE THE SAME PASS as a rename -- "Remove everywhere" in the
+        keyword list's Delete dialog -- with the same catalog query, subtree test, write
+        and publish; only what an affected path becomes differs. See RetagMode. */
+    const bool removing = mode != RetagMode::Rename;
 
     Catalog &cat = Catalog::instance();
     if (!cat.isAvailable()) return 0;
@@ -678,8 +688,14 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
                 /*  Rewrite the PREFIX and keep the tail. mid() rather than replace(),
                     because a path can legitimately contain the old text further along
                     ("Fauna|Bird|Bird of prey") and only the prefix is being renamed. */
-                next << newPath + p.mid(oldPath.size());
+                const QString tail = p.mid(oldPath.size());     // "" or "|Harry..."
+                /*  RemoveOwn keeps what is beneath: only the image's own oldPath goes. */
+                if (mode == RetagMode::RemoveOwn && !tail.isEmpty()) {
+                    next << p;
+                    continue;
+                }
                 changed = true;
+                if (mode == RetagMode::Rename) next << newPath + tail;
             }
             else {
                 next << p;
@@ -701,8 +717,7 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
             seen.insert(fold);
             unique << p;
         }
-        next = unique;
-
+        next = keywordPruneAncestors(unique);     // as the read path will
         next.sort(Qt::CaseInsensitive);
 
         /*  Composed exactly as applyKeywordsToSelection composes it, because it is the
@@ -734,9 +749,30 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
         run. One caller, one definition. */
     rebuildKeywordFilters("MW::retagKeywordPath");
 
-    G::popup->showPopup(QString("Updated %1 image%2.")
-                            .arg(written).arg(written == 1 ? "" : "s"), 3000);
+    QString done = QString("Updated %1 image%2.").arg(written).arg(written == 1 ? "" : "s");
+    if (removing && written > 0)
+        done = QString("Removed \"%1\" from %2 image%3.")
+                   .arg(oldPath).arg(written).arg(written == 1 ? "" : "s");
+    /*  RemoveOwn over a branch commonly changes nothing: every image found carries a path
+        BENEATH the keyword, which it keeps. Say so rather than "removed from 0". */
+    else if (mode == RetagMode::RemoveOwn)
+        done = QString("No images were tagged with just \"%1\".").arg(oldPath);
+    G::popup->showPopup(done, 3000);
     return written;
+}
+
+void MW::removeKeywordEverywhere(const QString &path, bool withChildren)
+{
+/*
+    The images half of KeywordTree::deleteSelected. With the children: the path and
+    everything beneath it come off. Without: only images tagged with the path ITSELF lose
+    it -- "People|Harry" stays, and with it the "People" its prefix expansion implies,
+    which is why a redundant "People" beside it is not a case here at all (the read path
+    already prunes it; see keywordPruneAncestors).
+*/
+    if (G::isLogger) G::log("MW::removeKeywordEverywhere", path);
+    retagKeywordPath(path, QString(), QString(),
+                     withChildren ? RetagMode::Remove : RetagMode::RemoveOwn);
 }
 
 void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
@@ -797,10 +833,13 @@ void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
     Catalog::instance().commit({updated});
 }
 
-void MW::tidyFlatKeywords()
+void MW::tidyKeywords()
 {
 /*
-    FILE THE FLAT KEYWORDS INTO THE TREE -- the whole legacy vocabulary in one review.
+    FILE THE FLAT KEYWORDS AND THE UNFILED BRANCHES INTO THE TREE -- the whole legacy
+    vocabulary in one review. A branch is a hierarchical path images carry that the
+    keyword list does not hold ("Birds|Robin" beside "Fauna|Bird|Robin"); it is matched
+    and replaced the same way, as one whole path (see KeywordTidyDlg).
 
     WHY IT IS ONE OPERATION AND NOT A THOUSAND RENAMES. Every flat keyword could be filed
     by hand: drag the node into place in the tree and accept the retag. On a library that
@@ -819,7 +858,7 @@ void MW::tidyFlatKeywords()
     the files about to change. This rewrites metadata in thousands of photographs, and it
     is not undoable from inside Winnow.
 */
-    if (G::isLogger) G::log("MW::tidyFlatKeywords");
+    if (G::isLogger) G::log("MW::tidyKeywords");
 
     Catalog &cat = Catalog::instance();
     if (!cat.isAvailable()) {
@@ -850,19 +889,22 @@ void MW::tidyFlatKeywords()
     }
 
     if (vocabPaths.isEmpty()) {
-        QMessageBox::information(this, "Tidy Flat Keywords",
+        QMessageBox::information(this, "Tidy Keywords",
             "Your keyword list is empty, so there is nothing to file these keywords "
             "into.\n\nImport a keyword list, or build one from the catalog, from the "
             "Keywords panel first.");
         return;
     }
 
-    G::popup->showPopupNow("Looking for flat keywords...", 0, true, 0.75);
-    const QList<CatalogKeyword> flat = cat.flatKeywords();
+    QSet<QString> vocabFold;
+    for (const QString &p : std::as_const(vocabPaths)) vocabFold.insert(keywordFold(p));
+
+    G::popup->showPopupNow("Looking for unfiled keywords...", 0, true, 0.75);
+    const QList<CatalogKeyword> unfiled = cat.tidyKeywords(vocabFold);
     G::popup->reset();
 
-    if (flat.isEmpty()) {
-        QMessageBox::information(this, "Tidy Flat Keywords",
+    if (unfiled.isEmpty()) {
+        QMessageBox::information(this, "Tidy Keywords",
             "Every keyword in the catalog is already filed in your keyword list.");
         return;
     }
@@ -874,7 +916,7 @@ void MW::tidyFlatKeywords()
     for (const CatalogKeyword &k : cat.keywords())
         pathCounts.insert(keywordFold(k.path), k.count);
 
-    KeywordTidyDlg dlg(flat, vocabPaths, pathCounts, this);
+    KeywordTidyDlg dlg(unfiled, vocabPaths, pathCounts, this);
     if (dlg.exec() != QDialog::Accepted) return;
 
     const QList<KeywordTidyAction> plan = dlg.plan();
@@ -882,14 +924,14 @@ void MW::tidyFlatKeywords()
 
     /*  THE SECOND CONFIRMATION, and the only place a real file count appears: the dialog
         can only add up its rows, and an image carrying six flat keywords is one file. */
-    const int images = cat.flatKeywordRows().size();
+    const int images = cat.tidyKeywordRows(vocabFold).size();
     const QString ask =
         QString("%1 keyword%2 will be changed in up to %3 image%4.\n\n"
                 "Winnow writes the change into each image's XMP sidecar or file. This "
                 "cannot be undone from inside Winnow.\n\nGo ahead?")
             .arg(plan.size()).arg(plan.size() == 1 ? "" : "s")
             .arg(QLocale().toString(images)).arg(images == 1 ? "" : "s");
-    if (QMessageBox::question(this, "Tidy Flat Keywords", ask,
+    if (QMessageBox::question(this, "Tidy Keywords", ask,
                               QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
         != QMessageBox::Yes) return;
 
@@ -899,7 +941,7 @@ void MW::tidyFlatKeywords()
         while that runs is indistinguishable from a hang. Each phase renames the message so
         it never describes work that has already finished. */
     G::popup->showPopupNow("Finding the images to tidy...", 0, true, 0.75);
-    const int written = applyKeywordTidyPlan(plan);
+    const int written = applyKeywordTidyPlan(plan, vocabFold);
 
     /*  THE VOCABULARY AND THE INDEX ARE TIDIED LAST, in that order, because both are
         answering "is anything still using this?" and the answer only becomes true once
@@ -910,12 +952,26 @@ void MW::tidyFlatKeywords()
         the library says any more, and leaving it would keep offering a filter that
         matches nothing. The AUTHORED nodes are removed only where the user had one for a
         flat keyword and it is now empty -- see KeywordVocab::removeUnusedRoots. */
+    /*  Flat names only: removeUnusedRoots deletes ROOTS, and an unfiled branch was never
+        in the list to begin with. */
     QStringList tidied;
-    for (const KeywordTidyAction &a : plan) tidied << a.flat;
+    for (const KeywordTidyAction &a : plan)
+        if (!a.from.contains('|')) tidied << a.from;
     G::popup->showPopupNow("Removing unused keywords from the catalog...", 0, true, 0.75);
     cat.pruneUnusedKeywords();
-    int vocabGone = 0;
+    int vocabGone = 0, vocabAdded = 0;
     if (keywordVocab) {
+        /*  WHERE THE KEYWORDS WENT IS IN THE LIST. An Append makes a path the list has
+            never held (Location|Canada|BC|Nanaimo), and so can a Move to a hand-typed
+            path; left out, the images just filed would show it as unfiled -- the state
+            the tidy exists to end. insertPaths adds the missing ancestors too, in one
+            reset, and costs a lookup for a path already there. */
+        QStringList targets;
+        for (const KeywordTidyAction &a : plan)
+            if (!a.remove && !a.target.isEmpty()
+                && !vocabFold.contains(keywordFold(a.target))) targets << a.target;
+        if (!targets.isEmpty()) vocabAdded = keywordVocab->insertPaths(targets);
+
         G::popup->showPopupNow("Updating the keyword list counts...", 0, true, 0.75);
         keywordVocab->refreshCounts();
         vocabGone = keywordVocab->removeUnusedRoots(tidied);
@@ -923,17 +979,22 @@ void MW::tidyFlatKeywords()
     refreshKeywordsDock();
     G::popup->reset();
 
-    QMessageBox::information(this, "Tidy Flat Keywords",
-        QString("Filed %1 keyword%2 and updated %3 image%4.%5")
+    QMessageBox::information(this, "Tidy Keywords",
+        QString("Filed %1 keyword%2 and updated %3 image%4.%5%6")
             .arg(plan.size()).arg(plan.size() == 1 ? "" : "s")
             .arg(QLocale().toString(written)).arg(written == 1 ? "" : "s")
+            .arg(vocabAdded > 0
+                     ? QString("\n\n%1 keyword%2 added to your keyword list.")
+                           .arg(vocabAdded).arg(vocabAdded == 1 ? " was" : "s were")
+                     : QString())
             .arg(vocabGone > 0
                      ? QString("\n\n%1 empty keyword%2 removed from your keyword list.")
                            .arg(vocabGone).arg(vocabGone == 1 ? " was" : "s were")
                      : QString()));
 }
 
-int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
+int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan,
+                             const QSet<QString> &vocabFold)
 {
 /*
     ONE PASS OVER THE IMAGES, WITH THE WHOLE PLAN IN HAND. That is the reason this is not
@@ -942,7 +1003,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
     open, rewrite and re-index the same sidecar once per keyword it happens to carry, and
     would touch every file's ModifyDate that many times.
 
-    THE SET IT WALKS IS Catalog::flatKeywordRows, the same scan and the same test that
+    THE SET IT WALKS IS Catalog::tidyKeywordRows, the same scan and the same test that
     produced the counts the user was shown, so a row cannot be affected here that the
     dialog did not know about.
 
@@ -962,17 +1023,17 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
     Catalog &cat = Catalog::instance();
     if (!cat.isAvailable()) return 0;
 
-    QHash<QString, QString> moveTo;     // folded flat keyword -> the path it becomes
+    QHash<QString, QString> moveTo;     // folded keyword path -> the path it becomes
     QSet<QString> removeFold;
     for (const KeywordTidyAction &a : plan) {
-        const QString fold = keywordFold(a.flat);
+        const QString fold = keywordFold(a.from);
         if (fold.isEmpty()) continue;
         if (a.remove) removeFold.insert(fold);
         else if (!a.target.isEmpty()) moveTo.insert(fold, a.target);
     }
     if (moveTo.isEmpty() && removeFold.isEmpty()) return 0;
 
-    const QVector<CatalogRow> rows = cat.flatKeywordRows();
+    const QVector<CatalogRow> rows = cat.tidyKeywordRows(vocabFold);
     if (rows.isEmpty()) return 0;
 
     int written = 0;
@@ -1010,12 +1071,13 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
         bool changed = false;
         for (const QString &p : have) {
             QString use = p;
-            /*  ONLY DEPTH-1 PATHS ARE IN THE PLAN. A hierarchical path is not touched
-                even when its ROOT is a flat keyword being filed: "Canada|BC|Nanaimo" is
-                a hierarchy the user has, moving it is a re-parent, and it is offered in
-                the vocabulary tree where the counts and the confirmation are about that.
-                Doing it here would rewrite thousands of paths the dialog never named. */
-            if (!use.contains('|')) {
+            /*  EXACT PATHS ONLY. A row is one whole path -- a flat name, or an unfiled
+                branch like "Birds|Robin" -- and nothing is matched by PREFIX: when a
+                flat "Canada" is filed, "Canada|BC|Nanaimo" is not touched. That is a
+                hierarchy the user has, moving it is a re-parent, and doing it here would
+                rewrite thousands of paths the dialog never named. If it is unfiled it is
+                a row of its own. */
+            {
                 const QString fold = keywordFold(use);
                 if (removeFold.contains(fold)) { changed = true; continue; }
                 const auto it = moveTo.constFind(fold);
@@ -1064,7 +1126,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
                             .arg(QLocale().toString(i + 1), total));
     }
 
-    /*  NOT reset here: tidyFlatKeywords still has the index and the vocabulary to tidy,
+    /*  NOT reset here: tidyKeywords still has the index and the vocabulary to tidy,
         and resets the popup after the last of them. */
     G::popup->setProgressVisible(false);
 
@@ -1260,7 +1322,7 @@ void MW::refreshFilterVocabMarking()
         keywordVocab->reload();
     }
 
-    /*  The same recursive walk MW::tidyFlatKeywords uses. There is no allPaths() on the
+    /*  The same recursive walk MW::tidyKeywords uses. There is no allPaths() on the
         model, and adding one would be a second way to enumerate the vocabulary. */
     QSet<QString> pathsFold;
     std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {

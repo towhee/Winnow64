@@ -9,6 +9,7 @@ WHAT'S NEW
 - Map
 
 BUGS / TO DO
+- Review virtual machines for building, packaging and deploying to multiple platforms.
 - Panos
 - Add all help items to the main menu Help.
 - Set catalog location

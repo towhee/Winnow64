@@ -1537,10 +1537,10 @@ void MW::createUtilActions()
         menu. The vocabulary is loaded first because the Keywords dock may never have been
         opened this session, and an unloaded list would export as empty. Audit is the Edit
         menu's own action, added to this submenu too. */
-    tidyFlatKeywordsAction = new QAction(tr("Tidy flat keywords..."), this);
-    tidyFlatKeywordsAction->setObjectName("tidyFlatKeywords");
-    addAction(tidyFlatKeywordsAction);
-    connect(tidyFlatKeywordsAction, &QAction::triggered, this, &MW::tidyFlatKeywords);
+    tidyKeywordsAction = new QAction(tr("Tidy keywords..."), this);
+    tidyKeywordsAction->setObjectName("tidyKeywords");
+    addAction(tidyKeywordsAction);
+    connect(tidyKeywordsAction, &QAction::triggered, this, &MW::tidyKeywords);
 
     buildKeywordVocabAction = new QAction(tr("Build vocabulary from catalog"), this);
     buildKeywordVocabAction->setObjectName("buildKeywordVocab");
@@ -2942,7 +2942,7 @@ void MW::createUtilMenu()
     // utilMenu->addAction(reportHueCountAction);
     utilMenu->addSeparator();
     utilKeywordsMenu = utilMenu->addMenu(tr("Keywords"));
-    utilKeywordsMenu->addAction(tidyFlatKeywordsAction);
+    utilKeywordsMenu->addAction(tidyKeywordsAction);
     utilKeywordsMenu->addAction(auditKeywordsAction);
     utilKeywordsMenu->addAction(buildKeywordVocabAction);
     utilKeywordsMenu->addSeparator();

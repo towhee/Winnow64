@@ -61,11 +61,16 @@ signals:
     /*  A node was renamed or re-parented and its path changed. The dock decides what, if
         anything, to do about the images that carry the old path. */
     void pathChanged(const QString &oldPath, const QString &newPath);
+    /*  "Delete keyword" > "Remove everywhere": the dock takes the path off every image
+        that carries it -- with the paths beneath it (withChildren; the node has already
+        left the list), or only the images' own tag (the node stays, as their parent). */
+    void removeEverywhereRequested(const QString &path, bool withChildren);
     /*  The user asked to put this path on the selection (Enter, or double-click). */
     void assignRequested(const QString &path);
-    /*  "Tidy flat keywords...": file the whole legacy flat vocabulary into the tree.
+    /*  "Tidy keywords...": file the legacy flat vocabulary, and unfiled branches, into
+        the tree.
         Emitted rather than done here for the same reason as the rest of this class --
-        it rewrites IMAGES, and this view never touches one. MW::tidyFlatKeywords. */
+        it rewrites IMAGES, and this view never touches one. MW::tidyKeywords. */
     void tidyRequested();
     /*  "Audit keywords...": review images whose keywords do not match how they look.
         MW::auditKeywords. */

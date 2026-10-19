@@ -16,18 +16,20 @@ class QPushButton;
 class QTableWidget;
 
 /*
-    What the tidy will do to ONE flat keyword. Empty target with remove = false is a row
-    the user left alone; nothing is written for it.
+    What the tidy will do to ONE keyword -- a flat name, or a whole unfiled hierarchical
+    path. Empty target with remove = false is a row the user left alone; nothing is
+    written for it.
 */
 struct KeywordTidyAction
 {
-    QString flat;       // the keyword as the catalog spells it, always depth-1
-    QString target;     // the vocabulary path it becomes; empty when removing
+    QString from;       // the keyword path as the catalog spells it
+    QString target;     // the path it becomes (Append: already joined); empty = removing
     bool remove = false;
 };
 
 /*
-    TIDY FLAT KEYWORDS -- filing a legacy flat vocabulary into the hierarchy.
+    TIDY KEYWORDS -- filing a legacy flat vocabulary, and stray branches, into the
+    hierarchy.
 
     THE PROBLEM IT SOLVES. A library that predates hierarchical keywords, or one imported
     from an application that never wrote lr:hierarchicalSubject, carries its keywords as
@@ -40,6 +42,15 @@ struct KeywordTidyAction
     row for every ancestor PREFIX, so "Location" exists as the parent of Location|Canada
     whether or not any file says it. A flat keyword is one an image carries as a ROOT
     after leaf consumption -- see Catalog::flatKeywords.
+
+    AND THE UNFILED BRANCHES. A hierarchical path an image carries that the keyword list
+    does not hold -- "Birds|Robin" from another application, where the list files Robin
+    as "Fauna|Bird|Robin" -- is the same problem one level up, and is reviewed in the same
+    table. It is matched on its LEAF like a flat name, with candidates that share more of
+    its parent names ranked first, and it is replaced WHOLE: a row is one exact path.
+    UNLIKE A FLAT NAME, ONE THAT MATCHES NOTHING DEFAULTS TO LEAVE ALONE: a bare
+    "Location" is a container name with nothing to lose, but "Birds|Robin|Juvenile" is
+    information.
 
     IT IS A REVIEW LIST, NOT A BUTTON. On a real library this finds around a thousand
     names, and roughly a fifth of them match SEVERAL branches ("BC" is under both
@@ -64,13 +75,13 @@ class KeywordTidyDlg : public QDialog
     Q_OBJECT
 
 public:
-    /*  flat comes from Catalog::flatKeywords (biggest first); vocabPaths is every path in
+    /*  keywords comes from Catalog::tidyKeywords (biggest first); vocabPaths is every path in
         the authored vocabulary, which supplies both the candidate matches and the
         type-ahead for choosing a branch by hand. pathCounts is how many images each
         vocabulary path already holds, folded, which is what makes a review row decidable:
         "Animal" under Fauna|Animal (257 images) or under Fauna|Bird|Arctic Ground
         Squirrel|Animal (1) is not a coin toss once the numbers are on screen. */
-    KeywordTidyDlg(const QList<CatalogKeyword> &flat, const QStringList &vocabPaths,
+    KeywordTidyDlg(const QList<CatalogKeyword> &keywords, const QStringList &vocabPaths,
                    const QHash<QString, int> &pathCounts, QWidget *parent = nullptr);
 
     /*  The rows the user did not skip. Empty when there is nothing to do, which the
@@ -79,10 +90,11 @@ public:
 
 private:
     void addRow(const CatalogKeyword &k);
-    /*  Vocabulary paths of depth 2 or more whose LEAF is this name, deepest first. The
-        pre-selection and the row's combo come from the same list, so what the row says it
-        matched is what it offers. */
-    QStringList candidatesFor(const QString &name) const;
+    /*  Vocabulary paths whose LEAF is this keyword's leaf, best first. For a flat name
+        they are depth 2 or more (a root is not somewhere to move a root); a hierarchical
+        path may also land on a root. The pre-selection and the row's combo come from the
+        same list, so what the row says it matched is what it offers. */
+    QStringList candidatesFor(const QString &path) const;
     void applyFilter();
     /*  The rows a bulk button acts on: the SELECTED rows when anything is selected, and
         every row SHOWN otherwise. Both readings of "do this to these" are live at once
@@ -112,6 +124,7 @@ private:
     QHash<QString, int> counts;              // folded vocabulary path -> images
     QStringList allPaths;                    // every vocabulary path, for the completer
     QHash<QString, QStringList> byLeafFold;  // folded leaf -> paths with that leaf
+    QHash<QString, QString> rootByFold;      // folded root name -> root path
 };
 
 #endif // KEYWORDTIDYDLG_H

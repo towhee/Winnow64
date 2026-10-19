@@ -179,7 +179,7 @@ public:
     QModelIndex insertParentAbove(const QModelIndex &idx, const QString &name);
     bool remove(const QModelIndex &idx);
     /*  Delete the ROOT node for each of these names if it is empty and childless --
-        the tail of a flat-keyword tidy (MW::tidyFlatKeywords), where a bare "Nanaimo"
+        the tail of a flat-keyword tidy (MW::tidyKeywords), where a bare "Nanaimo"
         that has just been filed under Location|...|Nanaimo leaves behind a top-level
         node no image uses.
 

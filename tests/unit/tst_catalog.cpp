@@ -64,6 +64,7 @@ private slots:
     void lightroomDoubleCollapsesToOneKeyword();
     void flatKeywordsAreTheROOTSAnImageCarries();
     void flatKeywordRowsMatchTheCounts();
+    void tidyKeywordsAddUnfiledBranches();
     void pruneUnusedKeywordsKeepsWhatIsStillLinked();
     void sameLeafUnderTwoParentsIsTwoKeywords();
     void subtreeCountRespectsTheSeparator();
@@ -2536,6 +2537,38 @@ void tst_catalog::flatKeywordsAreTheROOTSAnImageCarries()
     const QList<CatalogKeyword> ordered = cat.flatKeywords();
     QVERIFY(ordered.size() >= 2);
     QVERIFY(ordered.first().count >= ordered.last().count);
+}
+
+void tst_catalog::tidyKeywordsAddUnfiledBranches()
+{
+/*
+    TIDY KEYWORDS reviews unfiled BRANCHES as well as flat names: a hierarchical path an
+    image carries that the vocabulary does not hold. A path the vocabulary DOES hold is
+    filed and is not offered; the flat name is offered as before; and an image whose only
+    keyword is an unfiled branch -- no dc:subject at all -- is still found.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("filed.nef", {"Robin"}, {"Fauna|Bird|Robin"}),
+                rowFor("stray1.nef", {"Robin"}, {"Birds|Robin"}),
+                rowFor("stray2.nef", {}, {"Birds|Robin"}),
+                rowFor("flat.jpg", {"Nanaimo"}, {})});
+
+    const QSet<QString> vocab = {"fauna", "fauna|bird", "fauna|bird|robin"};
+
+    QHash<QString, int> tidy;
+    for (const CatalogKeyword &k : cat.tidyKeywords(vocab))
+        tidy.insert(keywordFold(k.path), k.count);
+    QCOMPARE(tidy.value("birds|robin"), 2);
+    QCOMPARE(tidy.value("nanaimo"), 1);
+    QVERIFY2(!tidy.contains("fauna|bird|robin"), "a filed path is not offered");
+
+    /*  The rows the apply walks are the rows the counts came from. */
+    QCOMPARE(cat.tidyKeywordRows(vocab).size(), 3);
+
+    /*  No vocabulary: exactly the flat scan, as flatKeywords() reports it. */
+    QCOMPARE(cat.tidyKeywords(QSet<QString>()).size(), cat.flatKeywords().size());
+    QVERIFY(!cat.flatKeywords().isEmpty());
+    for (const CatalogKeyword &k : cat.flatKeywords()) QVERIFY(!k.path.contains('|'));
 }
 
 void tst_catalog::flatKeywordRowsMatchTheCounts()
