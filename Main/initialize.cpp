@@ -3753,6 +3753,7 @@ void MW::createKeywordsDock()
     connect(keywordTree, &KeywordTree::assignToPaths, this, &MW::applyKeywordToPaths);
     connect(keywordTree, &KeywordTree::tidyRequested, this, &MW::tidyFlatKeywords);
     connect(keywordTree, &KeywordTree::auditRequested, this, &MW::auditKeywords);
+    connect(keywordTree, &KeywordTree::helpRequested, this, &MW::helpKeywordList);
     /*  QUEUED: the drop is still inside the dragged tag's QDrag::exec(), and
         refreshKeywordsDock rebuilds the tag zone -- deleting that very tag under it. */
     connect(keywordTree, &KeywordTree::tagFiled, this,

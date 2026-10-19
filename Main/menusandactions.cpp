@@ -1532,6 +1532,45 @@ void MW::createUtilActions()
     addAction(mediaReadSpeedAction);
     connect(mediaReadSpeedAction, &QAction::triggered, this, &MW::mediaReadSpeed);
 
+    /*  TOOLS > KEYWORDS: the list-wide commands from the Keyword list's context menu,
+        which nobody finds unless they think to right-click the list. Same names as that
+        menu. The vocabulary is loaded first because the Keywords dock may never have been
+        opened this session, and an unloaded list would export as empty. Audit is the Edit
+        menu's own action, added to this submenu too. */
+    tidyFlatKeywordsAction = new QAction(tr("Tidy flat keywords..."), this);
+    tidyFlatKeywordsAction->setObjectName("tidyFlatKeywords");
+    addAction(tidyFlatKeywordsAction);
+    connect(tidyFlatKeywordsAction, &QAction::triggered, this, &MW::tidyFlatKeywords);
+
+    buildKeywordVocabAction = new QAction(tr("Build vocabulary from catalog"), this);
+    buildKeywordVocabAction->setObjectName("buildKeywordVocab");
+    addAction(buildKeywordVocabAction);
+    connect(buildKeywordVocabAction, &QAction::triggered, this, [this]{
+        ensureKeywordVocabLoaded();
+        if (keywordTree) keywordTree->buildFromCatalog(this);
+    });
+
+    importLightroomKeywordsAction = new QAction(tr("Import Lightroom keywords..."), this);
+    importLightroomKeywordsAction->setObjectName("importLightroomKeywords");
+    addAction(importLightroomKeywordsAction);
+    connect(importLightroomKeywordsAction, &QAction::triggered, this, [this]{
+        ensureKeywordVocabLoaded();
+        if (keywordTree) keywordTree->importLightroom(this);
+    });
+
+    exportKeywordsAction = new QAction(tr("Export keywords..."), this);
+    exportKeywordsAction->setObjectName("exportKeywords");
+    addAction(exportKeywordsAction);
+    connect(exportKeywordsAction, &QAction::triggered, this, [this]{
+        ensureKeywordVocabLoaded();
+        if (keywordTree) keywordTree->exportLightroom(this);
+    });
+
+    helpKeywordListAction = new QAction(tr("Keyword list help..."), this);
+    helpKeywordListAction->setObjectName("helpKeywordList");
+    addAction(helpKeywordListAction);
+    connect(helpKeywordListAction, &QAction::triggered, this, &MW::helpKeywordList);
+
     findDuplicatesAction = new QAction(tr("Find duplicates"), this);
     findDuplicatesAction->setObjectName("visCmpImages");
     findDuplicatesAction->setShortcutVisibleInContextMenu(true);
@@ -2901,6 +2940,16 @@ void MW::createUtilMenu()
     utilMenu->addAction(findDuplicatesAction);
     utilMenu->addAction(mediaReadSpeedAction);
     // utilMenu->addAction(reportHueCountAction);
+    utilMenu->addSeparator();
+    utilKeywordsMenu = utilMenu->addMenu(tr("Keywords"));
+    utilKeywordsMenu->addAction(tidyFlatKeywordsAction);
+    utilKeywordsMenu->addAction(auditKeywordsAction);
+    utilKeywordsMenu->addAction(buildKeywordVocabAction);
+    utilKeywordsMenu->addSeparator();
+    utilKeywordsMenu->addAction(importLightroomKeywordsAction);
+    utilKeywordsMenu->addAction(exportKeywordsAction);
+    utilKeywordsMenu->addSeparator();
+    utilKeywordsMenu->addAction(helpKeywordListAction);
     utilMenu->addSeparator();
     utilMenu->addAction(manageAppAction);
 }

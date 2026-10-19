@@ -100,7 +100,9 @@ select the sky, invert, and you have everything but the sky.</p>
 <p><b>Edge</b> does what Feather cannot: it <i>moves</i> the boundary instead of softening
 it. Positive values grow the submask, negative values shrink it, and one unit is one pixel
 of the full-size image &mdash; so the same setting means the same thing on screen and on
-export. It is most useful on the AI masks: when Select Subject lands a pixel or two inside
+export.</p>
+
+<p>It is most useful on the AI masks: when Select Subject lands a pixel or two inside
 your subject and leaves a pale halo of background, an Edge of +2 pushes the cutout out past
 it. On a Color or Luminance Range, a small negative Edge is a quick way to drop the speckle
 that any content-based selection picks up, and a small positive one closes pinholes.</p>
@@ -108,7 +110,9 @@ that any content-based selection picks up, and a small positive one closes pinho
 <p>At the top of the panel, in the <b>Mask</b> section above the submask list, there is a
 second <b>Edge</b> belonging to the mask as a whole. It grows or shrinks the finished mask
 &mdash; every submask folded together &mdash; so you can choke or spread the assembled
-result without visiting each submask in turn. The two add up: a submask at +5 inside a
+result without visiting each submask in turn.</p>
+
+<p>The two add up: a submask at +5 inside a
 mask at &minus;3 ends up 2 pixels out. The section appears as soon as the mask has a
 submask to work on; its <b>[:]</b> menu puts both of its sliders back to zero, leaving each submask's own Edge alone.</p>
 
@@ -117,12 +121,16 @@ boundary does not quite follow your subject, whatever you do to that mask spills
 thin rim of background and reads as a glow around the subject &mdash; most obvious when
 you have brightened the subject. Edge only slides the whole boundary by the same amount
 everywhere, so if the mask is out by different amounts in different places it just moves
-the problem. Halo instead finds the edges <i>in the picture</i> near the mask boundary and
+the problem.</p>
+
+<p>Halo instead finds the edges <i>in the picture</i> near the mask boundary and
 fades the adjustment out across them, so the rim stops reading as an outline. Raise it
 until the rim disappears. It does nothing until it reaches far enough to find the real
 edge, so if nothing seems to be happening, keep going &mdash; and if you push it hard, a
 narrow band just inside your subject can end up slightly under-adjusted, which is the
-trade. A mask made only of Linear or Radial Gradients has no edge in the picture to work
+trade.</p>
+
+<p>A mask made only of Linear or Radial Gradients has no edge in the picture to work
 from, and there the control is greyed out.</p>
 
 <h2>Seeing the mask</h2>

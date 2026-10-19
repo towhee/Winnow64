@@ -1718,6 +1718,7 @@ private:
     QMenu *sortMenu;
 
     QMenu *utilMenu;
+    QMenu *utilKeywordsMenu;        // Tools > Keywords: the Keyword list's commands
         QMenu *developMenu;
         QMenu *embelMenu;
             QMenu *embelExportMenu;
@@ -1793,6 +1794,11 @@ private:
     QAction *runDropletAction;
     QAction *reportMetadataAction;
     QAction *findDuplicatesAction;
+    QAction *tidyFlatKeywordsAction;
+    QAction *buildKeywordVocabAction;
+    QAction *importLightroomKeywordsAction;
+    QAction *exportKeywordsAction;
+    QAction *helpKeywordListAction;
     QAction *mediaReadSpeedAction;
     QAction *reportHueCountAction;
     QAction *meanStackAction;
@@ -3597,6 +3603,7 @@ private:
     void helpPerformanceTips();
     void helpFocusStackingTips();
     void helpPictures();          // Developed / Original / Camera, Show Edits, Compare
+    void helpKeywordList();       // the Keyword list, for someone new to keywords
 
     void mediaReadSpeed();
     void findDuplicates();

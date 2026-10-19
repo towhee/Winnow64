@@ -7,13 +7,20 @@
 
 <h1>Develop Module</h1>
 
-<h2>Overview</h2> p>The develop module edits the image, changing the light, color and <effects. The changes are parametric, like a recipe. The image file is not changed, <instead the develop recipe is saved in a sidecar file (same name as image file with the <.xmp extension).</p>
+<h2>Overview</h2>
+<p>The develop module edits the image, changing the light, color and effects. The changes are parametric, like a recipe.</p>
 
-<h2>Layers</h2>
-<p>The base layer is the original image.  All edits are applied to the entire image.  Raw image noise reduction is applied to the base image.</p>
+<p>The image file is not changed; instead the develop recipe is saved in a sidecar file (same name as the image file, with the .xmp extension).</p>
 
-<p>Additional layers each contain a layer mask.  The layer mask is created and modified using mask tools (linear gradient, brush ...).  Each mask tool can add to or subtract from the layer mask.  While a mask is active, the edits to Basic, Color and Effects are localized to the layer mask.
- 
+<h2>Global and masks</h2>
+<p>Every image starts with one <b>scope</b> called <b>Global</b>, which covers the whole frame.  Edits made while Global is selected apply to the entire image.</p>
+
+<p>To change only part of the picture, add a <b>mask</b> (press <b>N</b>, or <b>[+]</b> on the Edits bar).  Each mask is a scope of its own, Mask 1, Mask 2 and so on, which you can rename (Sky, Face).  It has its own complete set of Basic, Curves, Color and Effects values, applied only where the mask covers.</p>
+
+<p>A mask is built from one or more <b>submasks</b>: a gradient, a brush stroke, a colour or luminance range, or an AI selection such as Subject or Sky.  Each submask can add to, subtract from or intersect with the mask.  Choose a scope in the Edits dropdown and the panels below edit that scope.</p>
+
+<p>Scopes are applied in order: Global first, then each mask on top of the result.  The Edits and Mask panels have their own help pages.</p>
+
 <h2>Curves</h2>
 <p>The <b>Curves</b> panel shapes tone directly, and works two ways.</p>
 
@@ -26,15 +33,21 @@
 <h2>Editing more than one image</h2>
 <p>Develop edits apply to <b>every selected image</b>.  If more than one image is selected a red banner appears at the top of the Develop panel telling you how many, because the other images are not on screen while you edit.  Each adjustment is copied to the other images as an absolute value, so Exposure +0.5 means +0.5 on all of them, whatever they started from.  Only settings that you actually change are copied &mdash; the rest of each image's recipe is left alone.</p>
 
-<p>Masks and spot heals are specific to the image they were made on and are never copied by an adjustment.  The exception is a <b>Subject</b>, <b>Sky</b> or <b>Background</b> mask: Winnow finds the subject or the sky in each image itself, so adding one with several images selected gives every selected image its own, and the adjustments you make inside it apply to all of them.  A crop or straighten is copied, proportionally, to every selected image.  Paste Settings (and applying a preset) also apply to the whole selection, and those do carry the crop and spot heals, because you asked for that exact recipe.</p>
+<p>Masks and spot heals are specific to the image they were made on and are never copied by an adjustment.  The exception is a <b>Subject</b>, <b>Sky</b> or <b>Background</b> mask: Winnow finds the subject or the sky in each image itself, so adding one with several images selected gives every selected image its own, and the adjustments you make inside it apply to all of them.</p>
+
+<p>A crop or straighten is copied, proportionally, to every selected image.  Paste Settings (and applying a preset) also apply to the whole selection, and those do carry the crop and spot heals, because you asked for that exact recipe.</p>
 
 <h2>Raw Files</h2>
-<p>In the base layer you can choose to source: either the raw data or the embedded preview image all cameras save in the raw files.  If you select 'Raw' then you can select how to demosaic (convert raw data into pixels).  If you choose Winnow to demosaic, then you can also run noise reduction on the raw data, which is much better than running noise reduction later in the develop pipeline when the pixels are already 'baked'.</p>
+<p>The <b>Raw</b> panel, at the top of the Develop dock, chooses what is developed: either the raw data or the embedded preview image every camera saves in its raw files.  These choices apply to the whole image, underneath Global and every mask.</p>
+
+<p>If you select 'Raw' then you can select how to demosaic (convert raw data into pixels).  If you choose Winnow to demosaic, then you can also run noise reduction on the raw data, which is much better than running noise reduction later in the develop pipeline when the pixels are already 'baked'.</p>
 
 <h2>Export</h2>
 <p>Press <b>X</b> (or Develop &gt; Export Developed Image) to write the selected images out with their develop settings applied.  Every selected image is exported with <b>its own recipe</b> &mdash; masks, spot heals and crop included &mdash; not the recipe of the image you happen to be looking at.</p>
 
-<p>The export dialog covers where the files go (a subfolder of the source folder, or any folder you choose), what they are called (a filename template plus a suffix, and what to do when the name already exists), the format, and the size.  Beyond JPEG, PNG and BMP you can write <b>TIFF</b> &mdash; at 8 or <b>16 bits</b> per channel, which is worth using when the image will be edited further &mdash; and, on macOS, HEIC.  Turn on <b>Copy metadata from the original</b> to carry the camera, lens, date and copyright across; it costs about a fifth of a second per image.</p>
+<p>The export dialog covers where the files go (a subfolder of the source folder, or any folder you choose), what they are called (a filename template plus a suffix, and what to do when the name already exists), the format, and the size.</p>
+
+<p>Beyond JPEG, PNG and BMP you can write <b>TIFF</b> &mdash; at 8 or <b>16 bits</b> per channel, which is worth using when the image will be edited further &mdash; and, on macOS, HEIC.  Turn on <b>Copy metadata from the original</b> to carry the camera, lens, date and copyright across; it costs about a fifth of a second per image.</p>
 
 <p>Exporting a folder of raw files takes a while, so the export runs in the background: the progress bar counts the images and <b>Stop</b> ends the run, leaving the files already written in place.</p>
 

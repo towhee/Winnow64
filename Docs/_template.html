@@ -28,6 +28,16 @@ Rendering notes:
   - QTextBrowser supports only the HTML 4 / CSS 2.1 subset documented at
     https://doc.qt.io/qt-6/richtext-html-subset.html. Avoid flexbox, grid,
     custom properties, and HTML5 semantic tags - Qt will silently ignore them.
+
+Spacing (avoid the crowded look):
+  - One <p> per point. Never join lines with <br> inside a paragraph (e.g.
+    "What it does: ... <br>Why: ... <br>How: ..."): <p> gets 12px above and
+    below, <br> gets nothing, so br-joined lines read as one dense block.
+  - Split a paragraph that runs past ~80 words at its natural break.
+  - Text that continues a list item AFTER a nested list goes in its own <p>
+    inside the <li>; bare text there gets no space before the next item.
+  - Paragraph, list and heading spacing lives in help.css; do not tighten it
+    per page.
 -->
 <!DOCTYPE html>
 <html>

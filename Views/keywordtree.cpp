@@ -326,6 +326,17 @@ void KeywordTree::applyFilter(const QModelIndex &parent, const QString &needle)
 
 void KeywordTree::contextMenuEvent(QContextMenuEvent *event)
 {
+    /*  THE MENU IS ABOUT THE ROW UNDER THE MOUSE, not whatever was current before. Without
+        this, right-clicking the empty space below the list still offered "New keyword
+        inside" the last keyword touched, where the label (and the help) promise a
+        top-level keyword. Rename, Delete and the rest read currentNode(), so the clicked
+        row is made current rather than passed along. */
+    const QModelIndex hit = indexAt(event->pos());
+    if (hit.isValid()) setCurrentIndex(hit);
+    else if (event->reason() == QContextMenuEvent::Mouse) {
+        clearSelection();
+        setCurrentIndex(QModelIndex());
+    }
     const QModelIndex idx = currentNode();
     const bool haveNode = idx.isValid();
     const QString path = idx.data(KeywordVocab::PathRole).toString();
@@ -374,18 +385,25 @@ void KeywordTree::contextMenuEvent(QContextMenuEvent *event)
     QAction *build = menu.addAction("Build vocabulary from catalog");
     build->setToolTip("Add a keyword for everything the catalog has indexed. "
                       "Never removes anything.");
-    connect(build, &QAction::triggered, this, &KeywordTree::buildFromCatalog);
+    connect(build, &QAction::triggered, this, [this]{ buildFromCatalog(); });
 
     menu.addSeparator();
 
     QAction *import = menu.addAction("Import Lightroom keywords...");
     import->setToolTip("Merge a Lightroom keyword export into your list. "
                        "Never removes anything.");
-    connect(import, &QAction::triggered, this, &KeywordTree::importLightroom);
+    connect(import, &QAction::triggered, this, [this]{ importLightroom(); });
 
     QAction *exportAct = menu.addAction("Export keywords...");
-    connect(exportAct, &QAction::triggered, this, &KeywordTree::exportLightroom);
+    connect(exportAct, &QAction::triggered, this, [this]{ exportLightroom(); });
 
+    menu.addSeparator();
+
+    QAction *help = menu.addAction("Keyword list help...");
+    help->setToolTip("What keywords are, and how and why to use each command here.");
+    connect(help, &QAction::triggered, this, &KeywordTree::helpRequested);
+
+    menu.setToolTipsVisible(true);
     menu.exec(event->globalPos());
     event->accept();
 }
@@ -515,7 +533,7 @@ void KeywordTree::deleteSelected()
     vocab->remove(idx);
 }
 
-void KeywordTree::buildFromCatalog()
+void KeywordTree::buildFromCatalog(QWidget *)
 {
     const int added = vocab->buildFromCatalog();
     if (G::popup) {
@@ -816,7 +834,7 @@ void KeywordTree::dropEvent(QDropEvent *event)
     event->ignore();
 }
 
-void KeywordTree::importLightroom()
+void KeywordTree::importLightroom(QWidget *dlgParent)
 {
 /*
     MERGE, AND SAY SO BEFORE AND AFTER. An import that might replace someone's curated
@@ -824,8 +842,9 @@ void KeywordTree::importLightroom()
     result says what was added -- including "nothing new", which is the ordinary outcome
     of a second import and should not look like a failure.
 */
+    if (!dlgParent) dlgParent = this;
     const QString path = QFileDialog::getOpenFileName(
-        this, "Merge Lightroom keywords", QString(),
+        dlgParent, "Merge Lightroom keywords", QString(),
         "Lightroom keyword export (*.csv *.txt);;All files (*)");
     if (path.isEmpty()) return;
 
@@ -845,19 +864,20 @@ void KeywordTree::importLightroom()
                    .arg(skipped.mid(0, 8).join("\n    "));
         if (skipped.size() > 8) msg += "\n    ...";
     }
-    QMessageBox::information(this, "Merge Lightroom keywords", msg);
+    QMessageBox::information(dlgParent, "Merge Lightroom keywords", msg);
 }
 
-void KeywordTree::exportLightroom()
+void KeywordTree::exportLightroom(QWidget *dlgParent)
 {
+    if (!dlgParent) dlgParent = this;
     QString path = QFileDialog::getSaveFileName(
-        this, "Export keywords", "Keywords.csv",
+        dlgParent, "Export keywords", "Keywords.csv",
         "Lightroom keyword export (*.csv);;All files (*)");
     if (path.isEmpty()) return;
     if (!path.contains('.')) path += ".csv";
 
     if (!vocab->exportLightroom(path)) {
-        QMessageBox::warning(this, "Export keywords",
+        QMessageBox::warning(dlgParent, "Export keywords",
                              "Could not write \"" + path + "\".");
     }
     else if (G::popup) {

@@ -665,6 +665,7 @@
     - [16.5.3 Clicking a Keyword Filters on It](#1653-clicking-a-keyword-filters-on-it)
     - [16.5.4 Correcting a Red Tag](#1654-correcting-a-red-tag)
     - [16.5.5 The Add Field](#1655-the-add-field)
+    - [16.5.6 Keyword List Help and Tools > Keywords](#1656-keyword-list-help-and-tools--keywords)
   - [16.6 Node Consumption (the Phantom Top-Level Keyword)](#166-node-consumption-the-phantom-top-level-keyword)
   - [16.7 Tidying Flat Keywords](#167-tidying-flat-keywords)
     - [16.7.1 What "Flat" Means](#1671-what-flat-means)
@@ -837,6 +838,7 @@
   - [19.3 Panning the Loupe](#193-panning-the-loupe)
 - [20 Help System](#20-help-system)
   - [20.1 Architecture](#201-architecture)
+    - [20.1.1 Spacing (No Crowded Pages)](#2011-spacing-no-crowded-pages)
   - [20.2 Adding a Help Page](#202-adding-a-help-page)
   - [20.3 Formatting](#203-formatting)
     - [20.3.1 Editing Tools](#2031-editing-tools)
@@ -8007,6 +8009,14 @@ The fast path, because a tree is the wrong instrument for the twentieth image. I
 
 THE FIELD NEVER CREATES A KEYWORD. Return with nothing chosen from the popup (KeywordTags::commitTyped) resolves the text against the vocabulary (a full path first, then a name or synonym that names exactly ONE node) and adds that node's path. Two nodes sharing the name are refused as ambiguous (pick from the popup, which shows each branch); no match is refused with a popup pointing at the Keyword list, and the text is left for correction. It used to take the text literally and put a new root keyword on the images, which is how stray red keywords were born.
 
+#### 16.5.6 Keyword List Help and Tools > Keywords
+
+The list's context menu ends with "Keyword list help...", which opens Docs/keywordlisthelp.html through MW::helpKeywordList (KeywordTree::helpRequested). It is a separate page from the panel's ? (Docs/keywordshelp.html), and written for a different reader: someone who does not yet know what a keyword is. It explains keywords, the list-versus-photographs distinction and branches, then takes every context-menu command in turn as what it does, why you would use it and how, and which ones touch files. Keep it in step with the menu: a command added to KeywordTree::contextMenuEvent gets a section there.
+
+The list-wide commands (Tidy flat keywords, Audit keywords, Build vocabulary from catalog, Import Lightroom keywords, Export keywords, and the help) are also in Tools > Keywords (MW::createUtilMenu), because nobody finds a context menu they do not think to open. They use the same names as the context menu. Audit reuses the Edit menu's auditKeywordsAction. Build, Import and Export are KeywordTree methods made public for this. They call ensureKeywordVocabLoaded first (the dock may never have been opened, and an unloaded list would export as empty), and they take a dlgParent so their dialogs sit on the main window rather than on a tree that may be in a hidden dock.
+
+The menu now acts on the row under the mouse. KeywordTree::contextMenuEvent makes the clicked row current, and a mouse right-click on empty space clears it. Before, the menu read whatever had been current, so right-clicking below the list offered "New keyword inside" the last keyword touched rather than the top-level "New keyword..." its label promises.
+
 ### 16.6 Node Consumption (the Phantom Top-Level Keyword)
 
 A keyword filter that appeared to do nothing. Reported as "I tagged the image, the tag is on the file, and filtering on it finds nothing." Traced with five temporary probes down the whole path (the edit, the snapshot, the category rebuild, the compiled predicate, the row test), every stage was right. The compiled predicate read
@@ -9755,6 +9765,16 @@ winnow.qrc                 Every .html and image referenced from help must be li
 ```
 
 HtmlWindow lifecycle: the constructor sets Qt::Window (top-level with a title bar) and Qt::WA_DeleteOnClose. Callers pass a parent (window() for embedded widgets, this for top-level dialogs) so the help window is destroyed with its owner; MW::closeEvent also sweeps findChildren&lt;HtmlWindow\*>() as a safety net. Do not store the returned pointer or delete it manually.
+
+#### 20.1.1 Spacing (No Crowded Pages)
+
+Help pages must not read as one dense block (reviewed across every page 2026-10-19).
+
+- One &lt;p> per point. Never join lines with &lt;br> inside a paragraph ("What it does: ... &lt;br>Why: ... &lt;br>How: ..."). Qt gives &lt;p> 12px above and below and &lt;br> nothing, so br-joined lines run together. That was the complaint that started the review.
+- Split a paragraph past roughly 80 words at its natural break.
+- Text that continues a list item after a nested list goes in its own &lt;p> inside the &lt;li>. Bare text there gets no space before the next item.
+- The spacing itself is global, in help.css: line-height 1.25 on p and li, 0.7em between list items, 1em above h1/h2, and padding on table cells. In Qt's rich text an em in a margin is the element's line height (qcssparser.cpp lengthValueFromData), and a bare-number line-height is a proportional multiplier. Do not tighten any of it per page.
+- To check a page without building the app, render it with QTextDocument using help.css plus HtmlWindow::applyStyle's overrides, at 700px width.
 
 ### 20.2 Adding a Help Page
 

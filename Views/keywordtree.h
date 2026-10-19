@@ -46,6 +46,14 @@ public:
         or the Find filter hides it -- the caller clears the filter and tries again. */
     bool revealPath(const QString &path);
 
+    /*  The list-wide commands, public because Tools > Keywords offers them as well as the
+        context menu. dlgParent is the window their file dialogs and messages sit on: the
+        main window when called from the menu bar, since this tree may be in a hidden
+        dock then. nullptr means this tree. */
+    void buildFromCatalog(QWidget *dlgParent = nullptr);
+    void importLightroom(QWidget *dlgParent = nullptr);
+    void exportLightroom(QWidget *dlgParent = nullptr);
+
 signals:
     /*  Images were dropped on a keyword node: tag them with its path. The view does not
         touch a file -- the dock routes this to MW::applyKeywordsToSelection. */
@@ -62,6 +70,8 @@ signals:
     /*  "Audit keywords...": review images whose keywords do not match how they look.
         MW::auditKeywords. */
     void auditRequested();
+    /*  "Keyword list help...": MW::helpKeywordList (also Tools > Keywords). */
+    void helpRequested();
     /*  A plain single click on a keyword: filter the images on it. Delayed by the
         double-click interval and cancelled by a double-click -- see the constructor. */
     void filterRequested(const QString &path);
@@ -91,9 +101,6 @@ private:
     void addChildOfSelected();
     void insertParentAboveSelected();
     void deleteSelected();
-    void buildFromCatalog();
-    void importLightroom();
-    void exportLightroom();
     QModelIndex currentNode() const;
     /*  Names already used beside a node, for InputDlg's doNotUse list. */
     QStringList siblingNames(const QModelIndex &parent, const QModelIndex &except) const;

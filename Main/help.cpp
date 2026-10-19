@@ -9,6 +9,19 @@ void MW::helpPerformanceTips()
                    QSize(600, 400), r, window());
 }
 
+void MW::helpKeywordList()
+{
+/*
+    The Keyword list and every command on its context menu, written for someone who does
+    not yet know what a keyword is. Opened from that menu and from Tools > Keywords. The
+    panel's own ? (Docs/keywordshelp.html) covers the whole panel for someone who does.
+*/
+    if (G::isLogger) G::log("MW::helpKeywordList");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Keyword List", ":/Docs/keywordlisthelp.html",
+                   QSize(720, 680), r, window());
+}
+
 void MW::helpFocusStackingTips()
 {
     if (G::isLogger) G::log("MW::helpFocusStackingTips");

@@ -9,6 +9,8 @@ WHAT'S NEW
 - Map
 
 BUGS / TO DO
+- Panos
+- Add all help items to the main menu Help.
 - Set catalog location
 - Render devPreviews in background (entire catalog??)
 - RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights
@@ -19,8 +21,6 @@ BUGS / TO DO
   segmentation, guided laplacians) and "color reconstruction". Validate against libraw /
   Lightroom on a frame with real sensor clipping (Horne Lake is NOT one: its +2.5 push is
   digital, the raw data is intact).
-- Move Embellish export off the GUI thread. Requires reworking the Embellish render path
-  from QPixmap/QGraphicsScene to QImage-only, since QPixmap is GUI-thread-only.
 - One possible colour problem in Embellish export, not checked: after writing the file it
   still copies the source file's colour profile into it. The new render is sRGB, so a
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.

@@ -28,13 +28,23 @@ body {
 }
 /* h1/h2/h3 colours and font-sizes here are fallbacks: HtmlWindow overrides the
    colours with G::header1/2/3Color and scales the sizes by G::fontSize/12. */
-h1 { color: #02b0cf;    font-size: 22px; margin: 0.6em 0 0.3em; }
-h2 { color: #016f82;    font-size: 18px; margin: 0.6em 0 0.3em; }
-h3 { color: #013640;    font-size: 15px; margin: 0.5em 0 0.2em; }
+/* SPACING, so a page never reads as one dense block (the "crowded" look).
+   em here is the element's own LINE HEIGHT in Qt's rich text (qcssparser.cpp
+   lengthValueFromData), not its font size. A section heading gets clearly more
+   space above it than below, so it binds to the text it introduces. <p> keeps
+   Qt's own 12px top and bottom; Qt collapses adjacent margins. */
+h1 { color: #02b0cf;    font-size: 22px; margin: 1.0em 0 0.4em; }
+h2 { color: #016f82;    font-size: 18px; margin: 1.0em 0 0.3em; }
+h3 { color: #013640;    font-size: 15px; margin: 0.8em 0 0.2em; }
+/* A little more leading than single spacing: long help paragraphs read far
+   more easily. Qt takes a bare number as a proportional multiplier. */
+p, li { line-height: 1.25; }
 a  { color: #88BBEE; }
-/* Small gap between list items — less than a full line — so bullet/number
-   lists are easier to read. em scales with the app font (like the headings). */
-li { margin-bottom: 0.4em; }
+/* A clear gap between list items -- many are several sentences long, and at a
+   smaller gap a list reads as one block. em scales with the app font. */
+li { margin-bottom: 0.7em; }
+/* Table cells need padding or their text runs into the borders. */
+th, td { padding: 4px 8px; }
 code, pre {
     color: #E0C070;
     background-color: #1A1A1A;
