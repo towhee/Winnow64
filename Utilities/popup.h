@@ -37,6 +37,7 @@ public:
                       Qt::Alignment alignment = Qt::AlignHCenter,
                       Qt::Alignment corner = Qt::AlignCenter);
     void pulse(int minIntervalMs = 100);
+    void pulse(const QString &text, int minIntervalMs = 100);
     QLabel label;
     QProgressBar progressBar;
     bool openAndNoTimeout = false;
@@ -79,6 +80,7 @@ private:
     QString popupText;
     QWidget *source;
     QElapsedTimer pulseClock;
+    void paintNow();
 };
 
 #endif // POPUP_H

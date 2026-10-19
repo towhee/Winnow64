@@ -141,7 +141,7 @@ void Popup::showPopupNow(const QString &text,
 
     showPopup1(text, msDuration, isAutoSize, opacity, alignment, corner);
     raise();
-    repaint();
+    paintNow();
     pulseClock.restart();
 }
 
@@ -167,7 +167,44 @@ void Popup::pulse(int minIntervalMs)
     if (pulseClock.isValid() && pulseClock.elapsed() < minIntervalMs) return;
     pulseClock.restart();
     QCoreApplication::sendPostedEvents(this, 0);
+    paintNow();
+}
+
+void Popup::pulse(const QString &text, int minIntervalMs)
+{
+/*
+    pulse, with a message that changes as the loop runs ("1,234 of 10,781 images").
+    The label is only touched when the throttle lets a paint through, so a loop over
+    tens of thousands of rows does not pay a relayout per row for text nobody sees.
+*/
+    if (QThread::currentThread() != thread()) return;
+    if (!isVisible()) return;
+    if (pulseClock.isValid() && pulseClock.elapsed() < minIntervalMs) return;
+    label.setText(text);
+    pulse(0);
+}
+
+void Popup::paintNow()
+{
+/*
+    REPAINT AND PUT IT ON THE SCREEN, WITHOUT A RUN-LOOP TURN.
+
+    repaint() alone is enough on Windows, where the flush is a synchronous blit. On macOS
+    it is NOT: QCALayerBackingStore::flush (Qt 6.11, qcocoabackingstore.mm) only assigns
+    layer.contents and sets viewsNeedDisplay, and Core Animation commits that implicit
+    transaction when the run loop next turns. A synchronous GUI-thread loop never turns
+    it, so every pulse painted into the back buffer and none of them reached the screen:
+    the tidy's progress bar was invisible for the whole write, which is what the user
+    reported. [CATransaction flush] commits the pending transaction now. It touches only
+    layer state already changed -- the main window's pending updates are still queued
+    events and are not delivered, so this keeps showPopupNow's whole point.
+*/
     repaint();
+#ifdef Q_OS_MAC
+    id caTransaction = (id)objc_getClass("CATransaction");
+    if (caTransaction)
+        ((void(*)(id, SEL))objc_msgSend)(caTransaction, sel_registerName("flush"));
+#endif
 }
 
 void Popup::showPopup1(const QString &text,

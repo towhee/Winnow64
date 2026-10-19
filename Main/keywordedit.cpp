@@ -893,6 +893,12 @@ void MW::tidyFlatKeywords()
                               QMessageBox::Yes | QMessageBox::No, QMessageBox::No)
         != QMessageBox::Yes) return;
 
+    /*  ONE POPUP FROM HERE TO THE SUMMARY, reset LAST. Everything after the confirmation
+        can take seconds on a large library -- the row scan, the sidecar writes, the filter
+        rebuild, the prune and the vocabulary counts -- and a window that looks finished
+        while that runs is indistinguishable from a hang. Each phase renames the message so
+        it never describes work that has already finished. */
+    G::popup->showPopupNow("Finding the images to tidy...", 0, true, 0.75);
     const int written = applyKeywordTidyPlan(plan);
 
     /*  THE VOCABULARY AND THE INDEX ARE TIDIED LAST, in that order, because both are
@@ -906,13 +912,16 @@ void MW::tidyFlatKeywords()
         flat keyword and it is now empty -- see KeywordVocab::removeUnusedRoots. */
     QStringList tidied;
     for (const KeywordTidyAction &a : plan) tidied << a.flat;
+    G::popup->showPopupNow("Removing unused keywords from the catalog...", 0, true, 0.75);
     cat.pruneUnusedKeywords();
     int vocabGone = 0;
     if (keywordVocab) {
+        G::popup->showPopupNow("Updating the keyword list counts...", 0, true, 0.75);
         keywordVocab->refreshCounts();
         vocabGone = keywordVocab->removeUnusedRoots(tidied);
     }
     refreshKeywordsDock();
+    G::popup->reset();
 
     QMessageBox::information(this, "Tidy Flat Keywords",
         QString("Filed %1 keyword%2 and updated %3 image%4.%5")
@@ -983,8 +992,11 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
         Showing it synchronously answers that without an application pump, which on this
         path was never a fair price: every one of those repainted the whole main window,
         measured at 112-577 ms apiece on a keyword move. */
-    G::popup->showPopupNow(QString("Tidying keywords in %1 images...")
-                               .arg(QLocale().toString(rows.size())), 0, true, 0.75);
+    /*  Sized on the WIDEST text the loop will show, so the auto-sized popup does not
+        clip the running count as it grows. */
+    const QString total = QLocale().toString(rows.size());
+    G::popup->showPopupNow(QString("Tidying keywords: %1 of %1 images").arg(total),
+                           0, true, 0.75);
 
     for (int i = 0; i < rows.size(); ++i) {
         const CatalogRow &r = rows.at(i);
@@ -1048,11 +1060,13 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
             everything this walks. Nothing is delivered now, so there is nothing to
             exclude. */
         G::popup->setProgress(i + 1);
-        G::popup->pulse();
+        G::popup->pulse(QString("Tidying keywords: %1 of %2 images")
+                            .arg(QLocale().toString(i + 1), total));
     }
 
+    /*  NOT reset here: tidyFlatKeywords still has the index and the vocabulary to tidy,
+        and resets the popup after the last of them. */
     G::popup->setProgressVisible(false);
-    G::popup->reset();
 
     if (G::isLogger)
         G::log("MW::applyKeywordTidyPlan", QString("wrote %1 of %2 rows")
@@ -1063,6 +1077,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan)
         re-run. runSync is not optional when a filterChange follows -- the rebuild deletes
         and recreates the whole keyword tree. */
     if (buildFilters && filters && filters->filtersBuilt) {
+        G::popup->showPopupNow("Rebuilding the keyword filters...", 0, true, 0.75);
         dm->sf->suspend(true, "MW::applyKeywordTidyPlan");
         buildFilters->updateCategory(BuildFilters::KeywordEdit,
                                      BuildFilters::NoAfterAction, /*runSync*/ true);
