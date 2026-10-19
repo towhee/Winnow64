@@ -14,6 +14,28 @@
 //#endif
 #include <functional>
 
+/*  The file writer for an Embellish export, on its own thread: the image encode, the
+    thumbnail, and the ExifTool tag, ICC and thumbnail copies.  ExifTool is a
+    stay-open QProcess driven with blocking waits, so it is created on this thread, on
+    the first write, and lives for the batch. */
+class EmbelWriter : public QObject
+{
+    Q_OBJECT
+
+public:
+    ~EmbelWriter() override;
+
+public slots:
+    void write(const QImage &image, const QString &src, const QString &dst,
+               const QString &dstThumb, const QString &extension);
+
+signals:
+    void written(bool ok, const QString &dst);
+
+private:
+    ExifTool *et = nullptr;
+};
+
 class EmbelExport : public QGraphicsView
 {
     Q_OBJECT
@@ -34,33 +56,48 @@ public:
     using PixelSource = std::function<void(const QString &fPath, PixelDone done)>;
     void setPixelSource(PixelSource source) { pixelSource = std::move(source); }
 
-    void exportImages(const QStringList &srcList, bool isRemote = false);
-    QStringList exportRemoteFiles(QString templateName, QStringList &pathList);
-    bool exportImage(const QString &fPath);
+    /* Both return at once; the export runs from the event loop and emits finished.
+       They return false, and emit nothing, when there is nothing to export. */
+    bool exportImages(const QStringList &srcList, bool isRemote = false);
+    bool exportRemoteFiles(QString templateName, const QStringList &pathList);
     QString exportSubfolderPath(QString folderPath = "", bool allowOverride = false);
+    bool isRunning() const { return running; }
 
-    bool exportingEmbellishedImages = false;
+signals:
+    void finished(const QStringList &dstPaths, bool aborted);
 
 public slots:
     void abortEmbelExport();
 
 private:
+    void startNext();
+    void onPixels(bool ok, const QImage &developed);
+    void compose(const QString &fPath);
+    void onWritten(bool ok, const QString &dst);
+    void finish();
     bool loadImage(QString fPath);
-    bool renderDeveloped(const QString &fPath, QImage &image);
-    PixelSource pixelSource;
     bool isValidExportFolder();
+
+    PixelSource pixelSource;
     Metadata *metadata;
     DataModel *dm;
     ImageCacheData *icd;
-    ImageCache *imageCacheThread;
     EmbelProperties *embelProperties;
     Embel *embellish;
     QGraphicsScene *scene;
     QGraphicsPixmapItem *pmItem;
+    QThread *writerThread = nullptr;
+    EmbelWriter *writer = nullptr;
     QString exportFolderIfNotSubfolder;
-    QString lastFileExportedPath;
-    QString lastFileExportedThumbPath;
+    QStringList srcList;
     QStringList dstPaths;
+    QSet<QString> reservedPaths;        // destinations claimed by this batch
+    QStringList remoteTempFiles;        // a winnet's temp copies, removed when done
+    int index = 0;                      // the image being rendered
+    int pendingWrites = 0;              // handed to the writer, not yet written
+    bool waitingForWriter = false;      // render paused: the writer is two behind
+    bool remote = false;                // a winnet's files: no datamodel
+    bool running = false;
     bool abort = false;
 };
 

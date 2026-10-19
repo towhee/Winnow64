@@ -1694,7 +1694,10 @@ private:
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap = nullptr, int degreesSnap = -1,
                             bool requireSensor = false);
-    void setEmbelPixelSource(EmbelExport &embelExport);
+    void setEmbelPixelSource(EmbelExport *embelExport, const QStringList &paths);
+    EmbelExport *beginEmbelExport();
+    void endEmbelExport();
+    void setEmbelExportLock(bool locked);
     void previewPixelSource(const QString &fPath,
                             std::function<void(bool, const QImage &)> done);
     void onExportFinished(const ImageExporter::Result &result, bool addToFolderView);
@@ -2674,7 +2677,9 @@ private:
     TableView *tableView;
     ImageView *imageView;
     VideoView *videoView;
-    EmbelExport *embelExport;
+    /* The Embellish export in progress, else null.  One at a time; it locks the
+       Embellish editor and menu until it finishes (see MW::beginEmbelExport). */
+    EmbelExport *embelExporter = nullptr;
     EmbelProperties *embelProperties;
     DevelopProperties *developProperties = nullptr;
     /* Live Develop scopes (histogram + vectorscope) shown above the property tree in the

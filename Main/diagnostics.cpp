@@ -774,7 +774,16 @@ void MW::diagnosticsTableView() {} // dummy for now
 void MW::diagnosticsCompareView() {} // dummy for now
 void MW::diagnosticsMetadata() {
     dm->imMetadata(dm->currentKey, true);
-    diagnosticsReport(metadata->diagnostics(dm->currentSourcePath()), "Winnow Diagnostics: Metadata");
+    ReportDialog *dlg = new ReportDialog(this);
+    dlg->setReport("Winnow Diagnostics: Metadata",
+                   metadata->diagnostics(dm->currentSourcePath()));
+    fitDiagnostics(dlg, dlg->browser());
+    // 1700 px wide, or the screen width if the screen is narrower
+    int w = qMin(1700, screen()->availableGeometry().width());
+    dlg->resize(w, dlg->height());
+    openWindows.append(dlg);
+    dlg->show();
+    dlg->setFocus();
 }
 void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}

@@ -46,6 +46,8 @@ public:
 
     // set true when called from EmbelExport (see explanation in EmBel::build)
     bool isRemote = false;
+    // the instance EmbelExport owns: it renders whatever mode the loupe is in
+    bool isExport() const { return src == "Export"; }
 
     QGraphicsPixmapItem *pmItem;
 
@@ -57,6 +59,7 @@ public slots:
     void refreshTexts();
 
 protected:
+    bool isActive() const;
     bool eventFilter(QObject *object, QEvent *event) override;
 
 signals:

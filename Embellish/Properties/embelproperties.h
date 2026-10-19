@@ -120,6 +120,7 @@ public:
     void doNotEmbellish();
     QString metaString(QString key);
     QString metaString(QString key, QString fPath);
+    QString metaStringOf(QString key, QString fPath);
     void test1(QIcon icon = QIcon());
     void test2();
     void setRemote(bool isRemote);

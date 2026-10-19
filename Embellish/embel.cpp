@@ -37,6 +37,16 @@ Embel::~Embel()
     clear();
 }
 
+bool Embel::isActive() const
+{
+/*
+    The loupe's instance only renders in Loupe mode.  The export's instance renders
+    regardless: the user can switch to Grid while an export runs, and every image after
+    that would otherwise be written without its borders, texts and graphics.
+*/
+    return isExport() || G::mode == "Loupe";
+}
+
 void Embel::exportImage()
 {
     if (G::isLogger) G::log("Embel::exportImage");
@@ -201,7 +211,7 @@ void Embel::build(QString path, QString src)
     if (G::isFileLogger) Utilities::log("Embel::build", msg);
     //*/
 
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
 
     if (p->templateId == 0) {
         doNotEmbellish();
@@ -600,8 +610,11 @@ void Embel::addImageToScene()
     // }
 
     // QHash<QString, QImage> imCache
+    /*  Not for an export: EmbelExport has already put the image on pmItem, usually the
+        develop render, and the image cache holds the embedded preview of a raw.  Taking
+        the cached image here would quietly export the preview. */
     QImage cached;                                  // one locked lookup
-    if (icd->get(fPath, cached) && !cached.isNull()) {
+    if (!isExport() && icd->get(fPath, cached) && !cached.isNull()) {
         pm = QPixmap::fromImage(cached).scaledToWidth(image.w);
     }
     else {
@@ -627,7 +640,7 @@ void Embel::addFlashToScene()
 void Embel::updateBorder(int i)
 {
     if (G::isLogger) G::log("Embel::updateBorder");
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
     //qDebug() << "Embel::updateBorder";
     // index guard
     if (bItems.count() < i + 1) return;
@@ -672,7 +685,7 @@ void Embel::updateBorder(int i)
 void Embel::updateText(int i)
 {
     if (G::isLogger) G::log("Embel::updateText");
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
     //qDebug() << "Embel::updateText";
 
     // index guard
@@ -687,6 +700,11 @@ void Embel::updateText(int i)
     else {
         if (isRemote) // from Embel::Export
             tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate, fPath));
+        /*  An export of images in Winnow: the EXPORTED image's metadata.  The loupe's
+            current image is what the plain metaString reads, which stamped one image's
+            title, date and exposure on every image in a multi-image export. */
+        else if (isExport())
+            tItems[i]->setPlainText(p->metaStringOf(p->t[i].metadataTemplate, fPath));
         else
             tItems[i]->setPlainText(p->metaString(p->t[i].metadataTemplate));
     }
@@ -751,7 +769,7 @@ void Embel::updateText(int i)
 void Embel::updateGraphic(int i)
 {
     if (G::isLogger) G::log("Embel::updateGraphic");
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
     //qDebug() << "Embel::updateGraphic";
 
     // index guard
@@ -831,7 +849,7 @@ void Embel::updateGraphic(int i)
 void Embel::updateImage()       // all effects bundled in style
 {
     if (G::isLogger) G::log("Embel::updateImage");
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
     //qDebug() << "Embel::updateImage" << fPath;
 
     bool isEffects = (p->styleMap[p->image.style].size() > 0);
@@ -851,7 +869,7 @@ void Embel::updateImage()       // all effects bundled in style
 
         // QHash<QString, QImage> imCache
         QImage cached;                              // one locked lookup
-        if (icd->get(fPath, cached) && !cached.isNull()) {
+        if (!isExport() && icd->get(fPath, cached) && !cached.isNull()) {
             pmItem->setPixmap(QPixmap::fromImage(cached).scaledToWidth(image.w));
         }
 
@@ -927,7 +945,7 @@ void Embel::removeGraphic(int i)
 void Embel::updateStyle(QString style)
 {
     if (G::isLogger) G::log("Embel::updateStyle");
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
 
     // update any borders with this style
     for (int i = 0; i < bItems.size(); ++i) {
@@ -951,7 +969,7 @@ void Embel::updateStyle(QString style)
 void Embel::flashObject(QString type, int index, bool show)
 {
     if (G::isLogger) G::log("Embel::flashObject");
-    if (G::mode != "Loupe") return;
+    if (!isActive()) return;
 
     flashItem->setVisible(show);
     if (!show) return;

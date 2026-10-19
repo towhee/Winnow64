@@ -1542,6 +1542,14 @@ void MW::closeEvent(QCloseEvent *event)
     saveLibrarySnapshot();          // the next session's first Library is a restore
     lastScopeWasLibrary = G::scope == G::Scope::Catalog;
 
+    /*  An Embellish export in progress stops after the image being written: deleting
+        it waits for that write and its ExifTool copies, so no file is left half done. */
+    if (embelExporter) {
+        emit abortEmbelExport();
+        delete embelExporter;
+        embelExporter = nullptr;
+    }
+
     setCentralMessage("Closing Winnow ...");
 
     // for debugging crash test
@@ -1751,7 +1759,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         // cancel slideshow
         else if (G::isSlideShow) slideShow();
         // abort Embellish export process
-        else if (G::isProcessingExportedImages) emit abortEmbelExport();
+        else if (embelExporter) emit abortEmbelExport();
         // abort color analysis
         else if (G::isRunningColorAnalysis) emit abortHueReport();
         // abort focus stacking
@@ -3640,37 +3648,50 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
-        // create an instance of EmbelExport
-        EmbelExport embelExport(metadata, dm, icd, embelProperties);
-
-        // embellish src images (pathList) and return paths to embellished images
-        QStringList embellishedPaths = embelExport.exportRemoteFiles(templateName, pathList);
-        if (!embellishedPaths.size()) return;
-
-        qDebug() << "MW::handleStartupArgs" << embellishedPaths;
-
-        // sort embellishedPaths
-        embellishedPaths.sort(Qt::CaseInsensitive);
-
-        // go to first embellished image
-        info.setFile(embellishedPaths.at(0));
-        QString fDir = info.dir().absolutePath();
-        QString fPath = embellishedPaths.at(0);
-
-        // if folder with embellished images is not already selected
-        if (!dm->folderList.contains(fDir)) {
-            // fsTree->select(fDir, "", "handleStartupArgs");
-            folderAndFileSelectionChange(fPath, "handleStartupArgs");
+        /* embellish src images (pathList).  The export runs from the event loop; the
+           embellished paths arrive with finished. */
+        /* A winnet sent while an export is running (this is also the running instance's
+           messageReceived slot) waits for it, then starts over: its files are found by
+           modified time, so the rescan then still finds them. */
+        if (embelExporter) {
+            connect(embelExporter, &EmbelExport::finished, this, [this, args]() {
+                QTimer::singleShot(0, this, [this, args]() { handleStartupArgs(args); });
+            }, Qt::SingleShotConnection);
+            return;
         }
-        else {
-            imageView->currentImageHasChanged = true;
-            insertFiles(embellishedPaths);
-            // update filter counts
-            buildFilters->recount();
-            filterChange("MW::handleStartupArgs_remoteEmbellish");
-            // select first new embellished image
-            sel->select(fPath);
-        }
+        EmbelExport *embelExport = beginEmbelExport();
+        if (!embelExport) return;
+        connect(embelExport, &EmbelExport::finished, this,
+                [this](const QStringList &dstPaths, bool /*aborted*/) {
+            if (!dstPaths.size()) return;
+            QStringList embellishedPaths = dstPaths;
+
+            qDebug() << "MW::handleStartupArgs" << embellishedPaths;
+
+            // sort embellishedPaths
+            embellishedPaths.sort(Qt::CaseInsensitive);
+
+            // go to first embellished image
+            QFileInfo info(embellishedPaths.at(0));
+            QString fDir = info.dir().absolutePath();
+            QString fPath = embellishedPaths.at(0);
+
+            // if folder with embellished images is not already selected
+            if (!dm->folderList.contains(fDir)) {
+                // fsTree->select(fDir, "", "handleStartupArgs");
+                folderAndFileSelectionChange(fPath, "handleStartupArgs");
+            }
+            else {
+                imageView->currentImageHasChanged = true;
+                insertFiles(embellishedPaths);
+                // update filter counts
+                buildFilters->recount();
+                filterChange("MW::handleStartupArgs_remoteEmbellish");
+                // select first new embellished image
+                sel->select(fPath);
+            }
+        });
+        if (!embelExport->exportRemoteFiles(templateName, pathList)) endEmbelExport();
     }
 
     // startup not triggered by embellish winnet
@@ -16110,22 +16131,80 @@ void MW::changeInfoOverlay()
     embelProperties->updateMetadataTemplateList();
 }
 
-void MW::setEmbelPixelSource(EmbelExport &embelExport)
+void MW::setEmbelPixelSource(EmbelExport *embelExport, const QStringList &paths)
 {
 /*
     Embellish exports the DEVELOP render: the recipe (or default settings) from the raw
     sensor data, as Develop's own export does. Pending multi-image edits are flushed
     first so the stored recipes are current (see prepareExport). 8-bit sRGB: the
     embellish scene renders into an 8-bit image anyway.
+
+    The metadata and orientation of every image are snapshotted now, as the focus
+    stacker does: the export runs from the event loop with the UI live, and a folder
+    change part way through would otherwise leave the later images with nothing in the
+    datamodel to render from.
 */
     if (!developProperties) return;
     developProperties->flushPropagation();
     developProperties->flushAll();
-    embelExport.setPixelSource([this](const QString &fPath,
-                                      EmbelExport::PixelDone done) {
+
+    auto metaSnap = std::make_shared<QHash<QString, ImageMetadata>>();
+    auto degreesSnap = std::make_shared<QHash<QString, int>>();
+    for (const QString &p : paths) {
+        if (dm->proxyRowFromKey(p) < 0) continue;
+        metaSnap->insert(p, dm->imMetadata(p));
+        degreesSnap->insert(p, developOrientationDegrees(WorkingImage(), p));
+    }
+
+    embelExport->setPixelSource([this, metaSnap, degreesSnap](const QString &fPath,
+                                                             EmbelExport::PixelDone done) {
+        const auto it = metaSnap->constFind(fPath);
+        const ImageMetadata *m = it == metaSnap->cend() || it->fPath.isEmpty()
+                                 ? nullptr : &*it;
         developPixelSource(fPath, /*want16Bit*/false, OutputTransform::Space::sRGB,
-                           std::move(done));
+                           std::move(done), m, degreesSnap->value(fPath, -1));
     });
+}
+
+EmbelExport *MW::beginEmbelExport()
+{
+/*
+    Create the Embellish export, or null when one is already running (the editor and
+    menu are greyed while it does, so this is only a backstop).  It deletes itself, and
+    the lock is released, when it emits finished -- connected here first, so a caller's
+    own finished handler runs after.  A caller whose export then does not start (nothing
+    to export) calls endEmbelExport.
+*/
+    if (G::isLogger) G::log("MW::beginEmbelExport");
+    if (embelExporter) return nullptr;
+    embelExporter = new EmbelExport(metadata, dm, icd, embelProperties);
+    connect(this, &MW::abortEmbelExport, embelExporter, &EmbelExport::abortEmbelExport);
+    connect(embelExporter, &EmbelExport::finished, this, [this]() { endEmbelExport(); });
+    setEmbelExportLock(true);
+    return embelExporter;
+}
+
+void MW::endEmbelExport()
+{
+    if (G::isLogger) G::log("MW::endEmbelExport");
+    if (!embelExporter) return;
+    embelExporter->deleteLater();
+    embelExporter = nullptr;
+    setEmbelExportLock(false);
+}
+
+void MW::setEmbelExportLock(bool locked)
+{
+/*
+    While an Embellish export runs the UI is live, but the export reads the template from
+    embelProperties image by image: the editor, its run button and the export menu are
+    greyed, and the editor's title says why.
+*/
+    embelProperties->setEnabled(!locked);
+    embelRunBtn->setEnabled(!locked);
+    embelTitleBar->setTitle(locked ? "Embellish Editor  (exporting...)"
+                                   : "Embellish Editor");
+    enableSelectionDependentMenus();
 }
 
 void MW::exportEmbelFromAction(QAction *embelExportAction)
@@ -16146,18 +16225,18 @@ void MW::exportEmbelFromAction(QAction *embelExportAction)
         return;
     }
 
-    EmbelExport embelExport(metadata, dm, icd, embelProperties);
-    connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
-    setEmbelPixelSource(embelExport);
-
-//    embelExport.exportRemoteFiles(embelExportAction->text(), picks);
-
+    EmbelExport *embelExport = beginEmbelExport();
+    if (!embelExport) return;
     embelProperties->setCurrentTemplate(embelExportAction->text());
-    G::isProcessingExportedImages = true;
-    bool isRemote = true;
-    embelExport.exportImages(picks, isRemote);
-    embelProperties->doNotEmbellish();
-    G::isProcessingExportedImages = false;
+    setEmbelPixelSource(embelExport, picks);
+    connect(embelExport, &EmbelExport::finished, this, [this]() {
+        embelProperties->doNotEmbellish();
+    });
+    bool isRemote = true;                   // no destination folder dialog
+    if (!embelExport->exportImages(picks, isRemote)) {
+        endEmbelExport();
+        embelProperties->doNotEmbellish();
+    }
     bookmarks->updateCount();
 }
 
@@ -16178,11 +16257,10 @@ void MW::exportEmbel()
         return;
     }
 
-    EmbelExport embelExport(metadata, dm, icd, embelProperties);
-    connect(this, &MW::abortEmbelExport, &embelExport, &EmbelExport::abortEmbelExport);
-    setEmbelPixelSource(embelExport);
-
-    embelExport.exportImages(picks);
+    EmbelExport *embelExport = beginEmbelExport();
+    if (!embelExport) return;
+    setEmbelPixelSource(embelExport, picks);
+    if (!embelExport->exportImages(picks)) endEmbelExport();
 }
 
 void MW::ingest()

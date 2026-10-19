@@ -2,65 +2,83 @@
 #include "Main/global.h"
 #include "Utilities/fileops.h"
 
-/*  EXPORT INPUT GUARD.  EmbelExport::exportImages runs on the GUI thread and pumps the
-    event loop (G::wait) between images, because that pump is how Esc reaches the abort:
-    MW::keyReleaseEvent emits abortEmbelExport while G::isProcessingExportedImages is set.
-    But the same pump also delivered every other key, click, wheel, drop and window close
-    in the middle of the export -- a folder change, a selection change or a quit could
-    run underneath it.  The render cannot simply move to a worker thread: it goes through
-    a QGraphicsScene of QPixmap items, which are GUI-thread only.
+/*  AN ASYNCHRONOUS EXPORT.  Each image is a chain of steps run from the event loop, the
+    same shape as ImageExporter: startNext asks pixelSource for the develop render,
+    onPixels puts it on the scene, compose builds the embellishment and renders the scene
+    to a QImage, and the EmbelWriter thread encodes it and runs the ExifTool copies.  The
+    GUI thread is never held across an image and never pumped.
 
-    So for the export's duration this filter, installed on the application, swallows USER
-    INPUT except Esc.  Paint, timers, layout, the popup's progress and everything else
-    the pump exists for still pass.  Esc passes in every form it arrives in (override,
-    shortcut, press, release).  Scoped: installed and removed by its own lifetime. */
-namespace {
-class ExportInputGuard : public QObject
+    It used to be one loop on the GUI thread that pumped the event loop (G::wait) between
+    images and while each develop render ran, with an application-wide filter that
+    swallowed every user input except Esc for the duration -- because the pump would
+    otherwise have delivered a folder change, a selection change or a quit underneath it.
+    Both are gone.  The UI stays usable while an export runs, so the export depends on
+    nothing the user can change: the template is locked by MW (startEmbelExport), the
+    develop render takes a metadata snapshot (setEmbelPixelSource), the export's Embel
+    renders whatever mode the loupe is in, and texts read the exported image's metadata.
+
+    Only the scene stays on the GUI thread: it is a QGraphicsScene of QPixmap items.
+    Moving that off too means a QImage-only render path (see notes/_ToDo.txt). */
+
+/* ---------------------------------------------------------------------------------- */
+/*  EmbelWriter                                                                         */
+/* ---------------------------------------------------------------------------------- */
+
+EmbelWriter::~EmbelWriter()
 {
-public:
-    ExportInputGuard() { qApp->installEventFilter(this); }
-    ~ExportInputGuard() override { qApp->removeEventFilter(this); }
-
-protected:
-    bool eventFilter(QObject *obj, QEvent *event) override
-    {
-        switch (event->type()) {
-        case QEvent::KeyPress:
-        case QEvent::KeyRelease:
-        case QEvent::ShortcutOverride:
-            return static_cast<QKeyEvent *>(event)->key() != Qt::Key_Escape;
-        case QEvent::Shortcut:
-            return static_cast<QShortcutEvent *>(event)->key()
-                   != QKeySequence(Qt::Key_Escape);
-        case QEvent::MouseButtonPress:
-        case QEvent::MouseButtonRelease:
-        case QEvent::MouseButtonDblClick:
-        case QEvent::NonClientAreaMouseButtonPress:
-        case QEvent::NonClientAreaMouseButtonRelease:
-        case QEvent::NonClientAreaMouseButtonDblClick:
-        case QEvent::Wheel:
-        case QEvent::ContextMenu:
-        case QEvent::DragEnter:
-        case QEvent::DragMove:
-        case QEvent::Drop:
-        case QEvent::TouchBegin:
-        case QEvent::TouchUpdate:
-        case QEvent::TouchEnd:
-        case QEvent::NativeGesture:
-        case QEvent::TabletPress:
-        case QEvent::TabletRelease:
-        case QEvent::InputMethod:
-            return true;
-        case QEvent::Close:
-            /*  Only a close the USER or the OS asked for (window button, Cmd+Q, Dock);
-                a widget closing itself in code during the export is left alone. */
-            return event->spontaneous();
-        default:
-            return QObject::eventFilter(obj, event);
-        }
+    // runs on the writer thread (deleteLater on QThread::finished), where et was made
+    if (et) {
+        et->close();
+        delete et;
     }
-};
-}   // namespace
+}
+
+void EmbelWriter::write(const QImage &image, const QString &src, const QString &dst,
+                        const QString &dstThumb, const QString &extension)
+{
+/*
+    Save the embellished image, then copy the source's tags and ICC into it and embed a
+    thumbnail.  The thumbnail file is only a vehicle for ExifTool and is removed after.
+*/
+    QString srcFun = "EmbelWriter::write";
+    if (G::embelLog) G::log(srcFun, dst);
+
+    bool ok = false;
+    if (extension == "JPG") ok = image.save(dst, "JPG", 100);
+    if (extension == "PNG") ok = image.save(dst, "PNG", 100);
+    if (extension == "TIF") ok = image.save(dst, "TIF");
+
+    QString msg = dst + (ok ? " saved" : " failed") +
+                  " Image width: " + QString::number(image.width());
+    if (G::embelLog) G::log(srcFun, msg);
+
+    if (ok) {
+        QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
+        const bool hasThumb = thumb.save(dstThumb, "JPG", 60);
+        if (!et) {
+            et = new ExifTool;
+            et->setOverWrite(true);
+        }
+        // copy all metadata tags from src to dst
+        // embellished pixels are upright: the source's Orientation must not follow
+        et->copyAllTags(src, dst, /*excludeIcc*/ false, /*upright*/ true);
+        // copy ICC from src to dst
+        et->copyICC(src, dst);
+        // add thumbnail to dst
+        if (hasThumb) {
+            et->addThumb(dstThumb, dst);
+            QFile::remove(dstThumb);
+        }
+        if (G::embelLog)
+            G::log(srcFun, "ExifTool copied tags, ICC and thumbnail to embellished image");
+    }
+
+    emit written(ok, dst);
+}
+
+/* ---------------------------------------------------------------------------------- */
+/*  EmbelExport                                                                         */
+/* ---------------------------------------------------------------------------------- */
 
 EmbelExport::EmbelExport(Metadata *metadata,
                          DataModel *dm,
@@ -78,15 +96,10 @@ EmbelExport::EmbelExport(Metadata *metadata,
     the current embellish template, the remote defined template is set, and then
     EmbelExport::exportImages is called.
 
-    Local exports call EmbelExport::exportImages.
+    Local exports call EmbelExport::exportImages (via MW::startEmbelExport).
 
-    EmbelExport::exportImages cycles through the list of images to be processed, reporting the
-    progress and calling EmbelExport::exportImage for each image.
-
-    In EmbelExport::exportImage the image file is read and embellished. The resulting graphics
-    scene is copied to a new QImage and saved to the assigned image format (jpg, png or tif).
-    The metadata is copied from the source image file to the exported image file. Finally, the
-    ICC color space is updated.
+    EmbelExport::exportImages starts the chain described at the top of this file, which
+    emits finished when the last image has been written.
 */
     if (G::isLogger) G::log("EmbelExport::EmbelExport");
     this->metadata = metadata;
@@ -104,110 +117,19 @@ EmbelExport::EmbelExport(Metadata *metadata,
 
 EmbelExport::~EmbelExport()
 {
-    if (G::isLogger) G::log("EmbelExport::~EmbelExport");
-//    delete embellish;
-//    delete scene;
-//    delete pmItem;
-}
-
-bool EmbelExport::loadImage(QString fPath)
-{
 /*
-    Read the image file, extract metadata, apply ICC profile and convert to
-    QGraphicsPixmapItem.
-
-    If Winnow has been launched remotely via a winnet then no folder has been loaded so
-    no point in looking for an existing QImage or loading metadata.
-*/QString srcFun = "EmbelExport::loadImage";
-
-    if (G::isLogger) G::log(srcFun);
-    QImage image;
-    int dmRow = dm->rowFromKey(fPath);
-
-    QString msg = "embellish->isRemote = " + QVariant(embellish->isRemote).toString();
-    if (G::embelLog) G::log(srcFun, msg);
-
-    if (!embellish->isRemote) {
-        /*  The develop render first: the image cache holds the EMBEDDED PREVIEW of a raw
-            while the user browses (3200x2400 for an OM-1, against a 5184x3888 sensor),
-            and nothing in it carries the develop recipe. */
-        if (pixelSource) {
-            QImage developed;
-            if (renderDeveloped(fPath, developed)) {
-                pmItem->setPixmap(QPixmap::fromImage(developed));
-                return true;
-            }
-            if (abort) return false;
-            if (G::embelLog) G::log(srcFun, "Develop render failed, fallback: " + fPath);
-        }
-        /*  One locked lookup, and a null image falls through to the decode below rather
-            than exporting a blank frame.  See ImageCacheData::get. */
-        QImage cached;
-        if (icd->get(fPath, cached) && !cached.isNull()) {
-            pmItem->setPixmap(QPixmap::fromImage(cached));
-            return true;
-        }
-        // check metadata loaded for image
-        if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
-            QFileInfo fileInfo(fPath);
-            if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "EmbelExport::")) {
-                // metadata->m.row = dmRow;
-                // metadata->m.instance = dm->instance;
-                dm->addMetadataForItem(metadata->m, "EmbelExport::loadImage");
-            }
-            else {
-                return false;
-            }
-        }
-    }
-    // load QImage
-    QImage im(fPath);
-    // confirm load was successful
-    if (im.isNull()) {
-        return false;
-    }
-    // color manage if available
-    #ifdef Q_OS_WIN
-    QString ext = metadata->m.type.toLower();
-    if (metadata->iccFormats.contains(ext)) {
-        QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
-//        ICC::setInProfile(ba);   // if ba.isEmpty then sRGB used
-        ICC::transform(ba, im);
-    }
-    #endif
-    // convert QImage to QGraphicsPixmapItem
-    pmItem->setPixmap(QPixmap::fromImage(im));
-
-    return true;
-}
-
-bool EmbelExport::renderDeveloped(const QString &fPath, QImage &image)
-{
-/*
-    Run pixelSource for fPath and wait for it. The render is asynchronous (decode and
-    composite on developRenderPool, with GUI-thread steps between), so this pumps the
-    event loop -- as exportImages already does between images, under ExportInputGuard --
-    until it lands or Esc sets abort. The callback writes to shared state, not to this,
-    so a render that lands after an abort is harmless.
+    Deleted mid-export only by MW::closeEvent, after abortEmbelExport.  The write in
+    progress completes (a half-written file is worse than a finished one); any queued
+    after it are dropped with the thread's event loop.
 */
-    QString srcFun = "EmbelExport::renderDeveloped";
-    if (G::embelLog) G::log(srcFun, fPath);
-
-    struct Pending { bool done = false; bool ok = false; QImage image; };
-    auto pending = std::make_shared<Pending>();
-    pixelSource(fPath, [pending](bool ok, const QImage &img) {
-        pending->ok = ok;
-        pending->image = img;
-        pending->done = true;
-    });
-    while (!pending->done && !abort) G::wait(20);
-    if (!pending->done || !pending->ok || pending->image.isNull()) return false;
-
-    image = pending->image;
-    if (G::embelLog) {
-        G::log(srcFun, QString("%1x%2").arg(image.width()).arg(image.height()));
+    if (G::isLogger) G::log("EmbelExport::~EmbelExport");
+    if (writerThread) {
+        writerThread->quit();
+        writerThread->wait();
+        delete writerThread;
     }
-    return true;
+    delete embellish;
+    delete scene;                       // and pmItem with it
 }
 
 QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
@@ -267,7 +189,8 @@ bool EmbelExport::isValidExportFolder()
     return true;
 }
 
-QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pathList)
+
+bool EmbelExport::exportRemoteFiles(QString templateName, const QStringList &pathList)
 {
 /*
     Images sent from another program, such as lightroom, are sent here from
@@ -279,6 +202,9 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     In Embel it is important to call setRemote(true). If Embel::isRemote == false then
     the datamodel is expected to be loaded and up-to-date. For remote situations, the
     data model may not be loaded, and Embel will call Metadata to load the image data.
+
+    Returns at once; the temp files are removed and the template reset in finish, before
+    finished carries the embellished paths.
 */
     QString srcFun = "EmbelExport::exportRemoteFiles";
     if (G::isLogger) G::log(srcFun);
@@ -286,60 +212,46 @@ QStringList EmbelExport::exportRemoteFiles(QString templateName, QStringList &pa
     // set global isRemote flag
     G::isRemote = true;
 
-    // clear dstPaths
-    dstPaths.clear();
     // set remote flag to avoid mainwindow updates
     embellish->setRemote(true);
     embelProperties->setRemote(true);
-    // save current embellish template
-    QString prevTemplate = embelProperties->templateName;
     // set the embellish template, which updates all the parameters
     embelProperties->setCurrentTemplate(templateName);
     // make sure export folder has been set
-    if (!isValidExportFolder()) {
-        return dstPaths;
+    if (!isValidExportFolder() || pathList.isEmpty()) {
+        G::isRemote = false;
+        return false;
     }
 
-    //QMessageBox::information(this, "EmbelExport::exportRemoteFiles", pathList.at(0));
     if (G::embelLog) G::log(srcFun, "First file =" + pathList.at(0));
 
-    exportImages(pathList, true);
-
-    // remove the temp image files used to create the embellished version
-    for (int i = 0; i < pathList.size(); i++) {
-        if (QFile(pathList.at(i)).remove()) FileOps::onDeleted(pathList.at(i));
+    remoteTempFiles = pathList;
+    if (!exportImages(pathList, true)) {
+        remoteTempFiles.clear();
+        G::isRemote = false;
+        return false;
     }
-
-    // clear embellish
-    embelProperties->setCurrentTemplate("Do not Embellish");
-    
-    if (G::embelLog) G::log(srcFun, "Completed. lastExportedPath = " + lastFileExportedPath);
-
-    // set global isRemote flag
-    G::isRemote = false;
-
-    return dstPaths;
+    return true;
 }
 
-void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
+bool EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
 {
 /*
-    Each image in the list is rendered to the assigned embellish template. The
-    metadata is copied from the source image file to the exported image file.
-    Finally, the ICC color space is updated.
+    Start embellishing the images in srcList with the current embellish template.  Returns
+    false, having said why, when there is nothing to do; otherwise the export runs from
+    the event loop and emits finished.
+
+    isRemote only skips the destination folder dialog.  Whether the SOURCE is remote --
+    a winnet's temp files, no datamodel -- is embellish->isRemote, set by
+    exportRemoteFiles.
 */
     QString srcFun = "EmbelExport::exportImages";
     if (G::isLogger) G::log(srcFun);
 
-    G::isProcessingExportedImages = true;
-    abort = false;
-    int count = srcList.size();
-    /*  Every early return below clears the flag again: while it is set ImageView::loadImage
-        refuses to load anything, and MW::exportEmbel does not reset it after us. */
-    if (count == 0) {
-        G::isProcessingExportedImages = false;
+    if (running) return false;
+    if (srcList.isEmpty()) {
         G::popup->showPopup("No images picked or selected");
-        return;
+        return false;
     }
 
     if (embelProperties->templateName == "Do not Embellish") {
@@ -347,8 +259,7 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
                             "Please select an embellish template and try again.<p><hr>"
                             "Press <font color=\"red\"><b>Esc</b></font> to continue.",
                             0);
-        G::isProcessingExportedImages = false;
-        return;
+        return false;
     }
 
     exportFolderIfNotSubfolder = embelProperties->exportFolderPath;
@@ -358,149 +269,124 @@ void EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
             QString msg = "Select export destination folder";
             exportFolderIfNotSubfolder = QFileDialog::getExistingDirectory(this, msg,
                 "/home", QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
-            if (exportFolderIfNotSubfolder == "") {
-                G::isProcessingExportedImages = false;
-                return;
-            }
+            if (exportFolderIfNotSubfolder == "") return false;
         }
     }
 
-    QElapsedTimer t;
-    t.start();
+    this->srcList = srcList;
+    dstPaths.clear();
+    reservedPaths.clear();
+    index = 0;
+    pendingWrites = 0;
+    waitingForWriter = false;
+    abort = false;
+    remote = embellish->isRemote;
+    running = true;
 
-    QFileInfo filedir(srcList.at(0));
-    QString folderPath = filedir.dir().path();
-    QStringList thumbList;
+    /*  A remote export runs at startup, before any folder is shown: nothing may load
+        into the loupe underneath it (ImageView::loadImage).  A local one leaves the
+        user free to browse. */
+    if (remote) G::isProcessingExportedImages = true;
 
-    /*  From here to the end only Esc reaches the app -- see ExportInputGuard.  After the
-        folder dialog above, which needs normal input. */
-    ExportInputGuard inputGuard;
+    writerThread = new QThread;
+    writerThread->setObjectName("EmbelWriter");
+    writer = new EmbelWriter;
+    writer->moveToThread(writerThread);
+    connect(writerThread, &QThread::finished, writer, &QObject::deleteLater);
+    connect(writer, &EmbelWriter::written, this, &EmbelExport::onWritten);
+    writerThread->start();
 
+    QString folderPath = QFileInfo(srcList.at(0)).dir().path();
     G::popup->setProgressVisible(true);
-    G::popup->setProgressMax(count);
-    QString txt = "Exporting " + QString::number(count) +
+    G::popup->setProgressMax(srcList.size());
+    QString txt = "Exporting " + QString::number(srcList.size()) +
                   " embellished images to " + folderPath +
                   "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
     G::popup->showPopup(txt, 0, true, 1);
-    G::wait(50); // avoid qApp->processEvents()
 
-    exportingEmbellishedImages = true;
-
-    // iterate list of files, embellish and transfer metadata, ICC and insert thumbnail
-    ExifTool et;
-    et.setOverWrite(true);
-    for (int i = 0; i < count; i++) {
-        G::popup->setProgress(i+1);
-        G::wait(50); // avoid qApp->processEvents()
-
-        if (abort) break;
-        QString src = srcList.at(i);
-        // embellish src image
-        if (exportImage(src)) {
-            QString dst = lastFileExportedPath;
-            QString dstThumb = lastFileExportedThumbPath;
-            thumbList << dstThumb;
-            // copy all metadata tags from src to dst
-            // embellished pixels are upright: the source's Orientation must not follow
-            et.copyAllTags(src, dst, /*excludeIcc*/ false, /*upright*/ true);
-            // copy ICC from src to dst
-            et.copyICC(src, dst);
-            // add thumbnail to dst
-            et.addThumb(dstThumb, dst);
-
-            // qDebug() << "EmbelExport::exportImages" << i << dst;
-            dstPaths << dst;
-            FileOps::onCreated({dst});
-
-            QString msg = "ExifTool copied tags, ICC and thumbnail to embellished image";
-            if (G::embelLog) G::log(srcFun, msg);
-        }
-    }
-    et.close();
-    exportingEmbellishedImages = false;
-
-    // delete the thumbnail files
-    if (G::isRunByExtern) Utilities::log("EmbelExport::exportImages", "Delete thumbnail files");
-    for (int i = 0; i < thumbList.length(); ++i) {
-        QFile::remove(thumbList.at(i));
-    }
-
-    Utilities::log("EmbelExport::exportImages", "Resetting popup");
-
-    G::popup->setProgressVisible(false);
-    G::popup->reset();
-    G::wait(50); // avoid qApp->processEvents()
-
-
-    G::isProcessingExportedImages = false;
-    if (G::embelLog) G::log(srcFun, "Delete embellish");
-    delete embellish;
-
-    if (abort) {
-        abort = false;
-        G::isProcessingExportedImages = false;
-        G::popup->showPopup("Export has been aborted", 1500);
-        return;
-    }
-    /*
-    qint64 ms = t.elapsed();
-    QString _ms = QString("%L1").arg(ms);
-    double sec = ms * 1.0 / 1000;
-    QString _sec = QString::number(sec, 'g', 2);
-    QString second;
-    sec > 1 ? second = " seconds." : second = " second.";
-    int msperim = static_cast<int>(ms * 1.0 / count);
-    QString _msperim = QString("%L1").arg(msperim);
-    QString msg = "Rendered and exported " +
-                  QString::number(count) + " images.<p>"
-                  "Elapsed time " + _sec + second + "<p>" +
-                  _msperim + " milliseconds per image.<p>" +
-                  "<hr>" +
-                  "Press <font color=\"red\"><b>Esc</b></font> to continue";
-    G::popUp->showPopup(msg, 2000);
-    //*/
+    QTimer::singleShot(0, this, &EmbelExport::startNext);
+    return true;
 }
 
-bool EmbelExport::exportImage(const QString &fPath)
+void EmbelExport::startNext()
 {
 /*
-    The image file is read and embellished. The resulting graphics scene is copied to a
-    new QImage and saved to the assigned image format (jpg, png or tif). A thumbnail is
-    created and saved to ":/thumb.jpg" in the export folder.
+    Render the next image, or finish once every image has been rendered and written.
+    The render waits while two images are with the writer: a remote export renders far
+    faster than ExifTool writes, and each one queued is a full-size image held.
 */
-    QString srcFun ="EmbelExport::exportImage";
+    if (!running) return;
+    if (abort || index >= srcList.size()) {
+        if (pendingWrites == 0) finish();
+        return;
+    }
+    if (pendingWrites >= 2) {
+        waitingForWriter = true;
+        return;
+    }
+
+    G::popup->setProgress(index + 1);
+    const QString fPath = srcList.at(index);
+
+    /*  The develop render first: the image cache holds the EMBEDDED PREVIEW of a raw
+        while the user browses (3200x2400 for an OM-1, against a 5184x3888 sensor), and
+        nothing in it carries the develop recipe.  `done` may arrive on a worker thread,
+        and after this export has been deleted (a quit): it is delivered through qApp,
+        which outlives both, and checked against the QPointer on the GUI thread. */
+    if (pixelSource && !remote) {
+        QPointer<EmbelExport> self(this);
+        pixelSource(fPath, [self](bool ok, const QImage &img) {
+            QMetaObject::invokeMethod(qApp, [self, ok, img]() {
+                if (self) self->onPixels(ok, img);
+            }, Qt::QueuedConnection);
+        });
+        return;
+    }
+    onPixels(false, QImage());
+}
+
+void EmbelExport::onPixels(bool ok, const QImage &developed)
+{
+/*
+    The develop render for srcList[index] has landed (or there is none).  Fall back to
+    the image cache, else the file, and compose.
+*/
+    QString srcFun = "EmbelExport::onPixels";
+    if (!running) return;
+    if (abort) { startNext(); return; }
+
+    const QString fPath = srcList.at(index);
+    if (ok && !developed.isNull()) {
+        if (G::embelLog) {
+            G::log(srcFun, QString("%1x%2").arg(developed.width()).arg(developed.height()));
+        }
+        pmItem->setPixmap(QPixmap::fromImage(developed));
+        compose(fPath);
+        return;
+    }
+    if (pixelSource && !remote && G::embelLog)
+        G::log(srcFun, "Develop render failed, fallback: " + fPath);
+
+    if (loadImage(fPath)) {
+        compose(fPath);
+        return;
+    }
+    if (G::embelLog) G::log(srcFun, "Failed to load Image " + fPath);
+    ++index;
+    QTimer::singleShot(0, this, &EmbelExport::startNext);
+}
+
+void EmbelExport::compose(const QString &fPath)
+{
+/*
+    Embellish the image on pmItem, render the scene to a QImage and hand it to the
+    writer.  The scene is GUI-thread only, so this is the one step that stays here.
+*/
+    QString srcFun = "EmbelExport::compose";
     if (G::isLogger) G::log(srcFun);
 
-    QString extension = embelProperties->exportFileType;
-    QFileInfo fileInfo(fPath);
-    QString baseName = fileInfo.baseName() + embelProperties->exportSuffix;
-    QString exportFolder;
-    if (embelProperties->saveMethod == "Subfolder") {
-       exportFolder = exportSubfolderPath(fPath);
-    }
-    else {
-        exportFolder = exportFolderIfNotSubfolder;
-    }
-    QString exportPath = exportFolder + "/" + baseName + "." + extension;
-    QString exportThumbPath = exportFolder + "/" + baseName + "_thumb." + extension;
-
-    // Check if destination image file already exists
-    if (!embelProperties->overwriteFiles) Utilities::uniqueFilePath(exportPath);
-
-    QString msg = "src = " + fPath + " dst = " + exportPath;
-    if (G::embelLog) G::log(srcFun, msg);
-
-    // read the image, add it to the graphics scene and embellish
-    if (loadImage(fPath)) {
-        // embellish
-        embellish->build(fPath, srcFun);
-        setSceneRect(scene->itemsBoundingRect());
-    }
-    else {
-        msg = "Failed to load Image " + fPath;
-        if (G::embelLog) G::log(srcFun, msg);
-        return false;
-    }
+    embellish->build(fPath, srcFun);
+    setSceneRect(scene->itemsBoundingRect());
 
     // Create QImage with the exact size of the scene
     QImage image(scene->sceneRect().size().toSize(), QImage::Format_ARGB32);
@@ -509,41 +395,143 @@ bool EmbelExport::exportImage(const QString &fPath)
     // Copy the scene to the QImage
     QPainter painter(&image);
     scene->render(&painter);
+    painter.end();
+    pmItem->setPixmap(QPixmap());       // release the full-size source
 
-    bool wasSaved = false;
+    const QString extension = embelProperties->exportFileType;
+    const QString baseName = QFileInfo(fPath).baseName() + embelProperties->exportSuffix;
+    const QString exportFolder = embelProperties->saveMethod == "Subfolder"
+                                 ? exportSubfolderPath(fPath)
+                                 : exportFolderIfNotSubfolder;
 
-    // save
-    if (extension == "JPG") wasSaved = image.save(exportPath, "JPG", 100);
-    if (extension == "PNG") wasSaved = image.save(exportPath, "PNG", 100);
-    if (extension == "TIF") wasSaved = image.save(exportPath, "TIF");
+    /*  A destination name is decided here, before the file exists: the writer may still
+        be saving an earlier image of the same name, which a check of the disk alone
+        would not see.  So the batch's own names are reserved too.  Overwrite replaces an
+        old file on disk, never another image of this batch. */
+    QString dst = exportFolder + "/" + baseName + "." + extension;
+    int n = 0;
+    while (reservedPaths.contains(dst) ||
+           (!embelProperties->overwriteFiles && QFile::exists(dst))) {
+        dst = exportFolder + "/" + baseName + "_" + QString::number(++n) + "." + extension;
+    }
+    reservedPaths.insert(dst);
+    const QString dstThumb = dst.left(dst.length() - extension.length() - 1) +
+                             "_thumb." + extension;
 
-    msg = exportPath
-            + (wasSaved ? " saved" : " failed")
-            + " Image width: " + QString::number(image.width());
-    if (G::embelLog) G::log(srcFun, msg);
+    if (G::embelLog) G::log(srcFun, "src = " + fPath + " dst = " + dst);
 
+    EmbelWriter *w = writer;
+    QMetaObject::invokeMethod(w, [w, image, fPath, dst, dstThumb, extension]() {
+        w->write(image, fPath, dst, dstThumb, extension);
+    }, Qt::QueuedConnection);
+    ++pendingWrites;
 
-    if (wasSaved) {
-        // add thumbnail
-        QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
-        lastFileExportedThumbPath = exportThumbPath;
-        thumb.save(lastFileExportedThumbPath, "JPG", 60);
-    //    thumb.save(":/thumb.jpg", "JPG", 60);
+    ++index;
+    QTimer::singleShot(0, this, &EmbelExport::startNext);
+}
 
-        lastFileExportedPath = exportPath;
+void EmbelExport::onWritten(bool ok, const QString &dst)
+{
+    if (!running) return;
+    --pendingWrites;
+    if (ok) {
+        dstPaths << dst;
+        FileOps::onCreated({dst});
+    }
+    if (waitingForWriter || abort || index >= srcList.size()) {
+        waitingForWriter = false;
+        startNext();
+    }
+}
+
+void EmbelExport::finish()
+{
+    QString srcFun = "EmbelExport::finish";
+    if (G::isLogger) G::log(srcFun);
+
+    running = false;
+    writerThread->quit();               // the writer (and its ExifTool) close on it
+
+    G::popup->setProgressVisible(false);
+    G::popup->reset();
+    if (abort) G::popup->showPopup("Export has been aborted", 1500);
+
+    if (remote) {
+        G::isProcessingExportedImages = false;
+        // remove the temp image files used to create the embellished version
+        for (const QString &path : std::as_const(remoteTempFiles)) {
+            if (QFile(path).remove()) FileOps::onDeleted(path);
+        }
+        remoteTempFiles.clear();
+        // clear embellish
+        embelProperties->setCurrentTemplate("Do not Embellish");
+        G::isRemote = false;
     }
 
-//    QFile f(exportPath);
-//    f.close();
+    if (G::embelLog)
+        G::log(srcFun, "Completed. " + QString::number(dstPaths.size()) + " exported");
+    emit finished(dstPaths, abort);
+}
 
-    return wasSaved;
+bool EmbelExport::loadImage(QString fPath)
+{
+/*
+    The fallback when there is no develop render: the image cache, else the file decoded
+    by Qt (color managed on Windows).  Puts the image on pmItem.
+
+    If Winnow has been launched remotely via a winnet then no folder has been loaded so
+    no point in looking for an existing QImage or loading metadata.  Nor for an image
+    that left the datamodel during the export (a folder change).
+*/
+    QString srcFun = "EmbelExport::loadImage";
+    if (G::isLogger) G::log(srcFun);
+
+    int dmRow = dm->rowFromKey(fPath);
+
+    if (!remote && dmRow >= 0) {
+        /*  One locked lookup, and a null image falls through to the decode below rather
+            than exporting a blank frame.  See ImageCacheData::get. */
+        QImage cached;
+        if (icd->get(fPath, cached) && !cached.isNull()) {
+            pmItem->setPixmap(QPixmap::fromImage(cached));
+            return true;
+        }
+        // check metadata loaded for image
+        if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
+            QFileInfo fileInfo(fPath);
+            if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "EmbelExport::")) {
+                dm->addMetadataForItem(metadata->m, "EmbelExport::loadImage");
+            }
+            else {
+                return false;
+            }
+        }
+    }
+    // load QImage
+    QImage im(fPath);
+    // confirm load was successful
+    if (im.isNull()) {
+        return false;
+    }
+    // color manage if available
+    #ifdef Q_OS_WIN
+    QString ext = metadata->m.type.toLower();
+    if (metadata->iccFormats.contains(ext)) {
+        QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
+        ICC::transform(ba, im);
+    }
+    #endif
+    // convert QImage to QGraphicsPixmapItem
+    pmItem->setPixmap(QPixmap::fromImage(im));
+    return true;
 }
 
 void EmbelExport::abortEmbelExport()
 {
-    // if (G::useProcessEvents) qApp->processEvents();
-    G::isProcessingExportedImages = false;
-    G::popup->showPopup("Export has been aborted", 1500);
-    qDebug() << "EmbelExport::" << "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX";
+/*
+    Esc (MW::keyReleaseEvent) or a quit.  The image being rendered and any with the
+    writer complete; nothing after them starts.
+*/
+    if (!running) return;
     abort = true;
 }

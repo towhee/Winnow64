@@ -206,7 +206,7 @@
       - [6.4.1.1 The Wait in scrollToCurrentRowIfNotVisible](#6411-the-wait-in-scrolltocurrentrowifnotvisible)
       - [6.4.1.2 The View Switches' Waits (2026-10-01)](#6412-the-view-switches-waits-2026-10-01)
       - [6.4.1.3 Other Waits Removed (2026-10-01)](#6413-other-waits-removed-2026-10-01)
-      - [6.4.1.4 Embellish Export Keeps Its Pump, Behind an Input Guard](#6414-embellish-export-keeps-its-pump-behind-an-input-guard)
+      - [6.4.1.4 Embellish Export Runs From the Event Loop (2026-10-18)](#6414-embellish-export-runs-from-the-event-loop-2026-10-18)
     - [6.4.2 A Window Resize Keeps the Grid on the Same Image (2026-10-01)](#642-a-window-resize-keeps-the-grid-on-the-same-image-2026-10-01)
     - [6.4.3 Rejustify Obeys the Enlarge Ceiling (2026-10-16)](#643-rejustify-obeys-the-enlarge-ceiling-2026-10-16)
 - [7 Actions and Shortcuts](#7-actions-and-shortcuts)
@@ -3276,11 +3276,32 @@ The table's first show was off-centre. TableView set its row height (verticalHea
 - DockWidget::restore's 10 ms pause, which let the platform place the newly floating native window before the saved geometry was applied, is now a 10 ms deferred setGeometry. Same ordering, without pumping every queued event inside the double-click handler; it is skipped if the dock has been docked again in between.
 - Quitting during a background ingest no longer waits inside MW::closeEvent. It used to run while (G::isRunningBackgroundIngest) G::wait(100), a nested event loop inside a half-closed window for as long as the copy took. Now closeEvent DECLINES the close (event->ignore()), sets quitWhenIngestDone and shows the popup. The check comes first, ahead of the picks question, so that question is asked once. MW::ingestFinished queues MW::close when the copy is done, and that close runs the normal teardown. The app stays usable while the ingest finishes, and an OS-level quit (Dock, logout) is cancelled rather than held, with Winnow quitting by itself afterwards. Ingest::run's early return when no filename template matched now emits ingestFinished as well; it used to leave the flag set forever, which would have hung the old loop on quit.
 
-##### 6.4.1.4 Embellish Export Keeps Its Pump, Behind an Input Guard
+##### 6.4.1.4 Embellish Export Runs From the Event Loop (2026-10-18)
 
-EmbelExport::exportImages runs on the GUI thread with a G::wait(50) per image, and that pump is how Esc reaches the abort (MW::keyReleaseEvent emits abortEmbelExport while G::isProcessingExportedImages is set). It also delivered every other key, click, wheel, drop and window close mid-export.
+EmbelExport::exportImages used to be one loop on the GUI thread with a G::wait(50) per image, and renderDeveloped pumped G::wait(20) until each develop render landed. That pump was how Esc reached the abort, but it also delivered every other key, click, wheel, drop and window close mid-export, so ExportInputGuard, an application event filter, swallowed all user input except Esc for the whole export. The UI was frozen for as long as the batch took.
 
-Moving the export to a worker thread was considered and deferred: the render goes through a QGraphicsScene of QPixmap items, which are GUI-thread only, so it would mean reworking the Embellish render path. Instead, ExportInputGuard (embelexport.cpp), an application event filter scoped to the export loop, swallows user input except Esc in every form (override, shortcut, press, release). It also swallows spontaneous Close events, so a user or OS quit cannot tear the window down mid-export. Paint, timers, layout and the popup's progress still pass. It is installed after the folder dialog, which needs normal input.
+Both the pump and the guard are gone. The export is now a chain of steps run from the event loop, the same shape as ImageExporter:
+
+- startNext asks pixelSource (MW::developPixelSource) for the develop render. Its GUI-thread steps (the recipe, the metadata, the mask prerequisites) run as ordinary events between the worker steps, as that function was written to. `done` is delivered through qApp and checked against a QPointer, so a render that lands after a quit is dropped.
+- onPixels puts the render on the scene, or falls back to the image cache, else the file (loadImage).
+- compose builds the embellishment and renders the scene to a QImage. This is the one step left on the GUI thread, because the scene is a QGraphicsScene of QPixmap items.
+- EmbelWriter, on its own thread, encodes the file and the thumbnail and runs the ExifTool tag, ICC and thumbnail copies. ExifTool is a stay-open QProcess driven with blocking waits, so it is created on that thread and lives for the batch. The render runs ahead of the writer by at most two images, since each one queued is a full-size image held.
+
+With the UI live, the export depends on nothing the user can change:
+
+- The template: MW::beginEmbelExport greys the Embellish editor, its run button and the Embellish export menu (reason "an Embellish export is running"), and the editor's title reads "Embellish Editor (exporting...)". One export at a time; a winnet that arrives during one waits for it, then runs.
+- The datamodel: MW::setEmbelPixelSource snapshots every image's metadata and orientation at the start, as the focus stacker does, so a folder change part way through does not leave the later images with nothing to render from. loadImage skips the datamodel for an image no longer in it.
+- The view mode: Embel's gates on G::mode == "Loupe" (Embel::isActive) do not apply to the export's instance, which would otherwise have written every image after a switch to Grid without its embellishments.
+- Destinations: names are decided before the writer has saved the earlier images, so the batch reserves its own names as well as checking the disk. Overwrite replaces an old file, never another image of the same batch.
+
+G::isProcessingExportedImages, which makes ImageView::loadImage refuse to load, is now set only for a remote (winnet) export, which runs at startup before any folder is shown. A local export leaves the user free to browse. Esc aborts while MW::embelExporter is set. A quit deletes the export after the image being written, so no file is left half done.
+
+Two bugs fixed on the way, both in what an export of several local images wrote:
+
+- Text items with a metadata template read the LOUPE's current image (EmbelProperties::metaString), so every image in a multi-image export got the same title, date and exposure. The export's instance now uses EmbelProperties::metaStringOf, the exported image's row, and the file when the row has left the view.
+- Embel::addImageToScene and updateImage replaced the image EmbelExport had put on the scene with the image cache's copy whenever there was one, which for a raw while browsing is the embedded preview. That undid the develop render of [14.2.3 Embellish Export](#1423-embellish-export) for every cached image. The export's instance now keeps the image it was given.
+
+Still to do: a QImage-only render path so compose can leave the GUI thread too (notes/_ToDo.txt).
 
 Also fixed: exportImages' three early returns (no images, "Do not Embellish", folder dialog cancelled) left G::isProcessingExportedImages set. ImageView::loadImage refuses to load while it is set and MW::exportEmbel never cleared it, so after one of those returns the loupe stopped loading images.
 
@@ -7676,7 +7697,7 @@ Fixed 2026-10-06. G::useRaw follows the operation mode (MW::setOperationMode tur
 
 #### 14.2.3 Embellish Export
 
-Since 2026-10-06 it renders through Develop too. EmbelExport::loadImage used the image-cache copy (the embedded preview of a raw while browsing, and never the develop recipe) or QImage(fPath). MW::exportEmbel and MW::exportEmbelFromAction now give it MW::setEmbelPixelSource -> developPixelSource (8-bit sRGB; pending edits flushed first), and EmbelExport::renderDeveloped waits for the asynchronous render by pumping G::wait(20), as exportImages already pumps between images, so Esc still aborts. A remote (winnet / Lightroom) Embellish export keeps the old path: its sources are temporary TIFFs that are not in the DataModel. If the develop render fails, the old path is the fallback.
+Since 2026-10-06 it renders through Develop too. EmbelExport::loadImage used the image-cache copy (the embedded preview of a raw while browsing, and never the develop recipe) or QImage(fPath). MW::exportEmbel and MW::exportEmbelFromAction now give it MW::setEmbelPixelSource -> developPixelSource (8-bit sRGB; pending edits flushed first), and the asynchronous render is one step of the export's event-loop chain (see [6.4.1.4 Embellish Export Runs From the Event Loop](#6414-embellish-export-runs-from-the-event-loop-2026-10-18)). Until 2026-10-18 the cached-image fallback in Embel quietly replaced the render with the image cache's copy whenever there was one. A remote (winnet / Lightroom) Embellish export keeps the old path: its sources are temporary TIFFs that are not in the DataModel. If the develop render fails, the old path is the fallback.
 
 #### 14.2.4 The Focus Stacker
 

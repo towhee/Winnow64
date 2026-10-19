@@ -5348,6 +5348,22 @@ QString EmbelProperties::metaString(QString key, QString fPath)
     return mw3->infoString->parseTokenString(tokenString, fPath);
 }
 
+QString EmbelProperties::metaStringOf(QString key, QString fPath)
+{
+/*
+    The token string for the image fPath, which is in the datamodel but need not be the
+    current image (an Embellish export of several images).  An image no longer in the
+    view, after a folder or filter change during the export, is read from its file.
+*/
+    if (G::isLogger) G::log("EmbelProperties::metaStringOf");
+    if (!mw3->infoString->infoTemplates.contains(key)) return "";
+    const int row = mw3->dm->proxyRowFromKey(fPath);
+    if (row < 0) return metaString(key, fPath);
+    QString tokenString = mw3->infoString->infoTemplates[key];
+    QModelIndex idx = mw3->dm->sf->index(row, 0);
+    return mw3->infoString->parseTokenString(tokenString, fPath, idx);
+}
+
 QString EmbelProperties::diagnostics()
 {
     if (G::isLogger) G::log("EmbelProperties::diagnostics");
