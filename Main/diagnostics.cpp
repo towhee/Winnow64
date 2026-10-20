@@ -462,6 +462,11 @@ QString MW::developDiagnostics()
             << "   centre = " << G::s(p.kaleidoX) << ", " << G::s(p.kaleidoY)
             << "   angle = " << G::s(p.kaleidoAngle)
             << "   source = " << G::s(p.kaleidoSource);
+        rpt << "\n" << indent << "blurType = " << G::s(p.blurType)
+            << "   blurAmount = " << G::s(p.blurAmount)
+            << "   angle = " << G::s(p.blurAngle)
+            << "   centre = " << G::s(p.blurX) << ", " << G::s(p.blurY)
+            << "   size = " << G::s(p.blurSize) << "   feather = " << G::s(p.blurFeather);
     };
     auto dims = [](const std::shared_ptr<const WorkingImage> &w) -> QString {
         return w ? QString("%1 x %2").arg(w->width).arg(w->height) : QString("(none)");

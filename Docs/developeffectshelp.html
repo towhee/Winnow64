@@ -18,8 +18,8 @@ detail sharpening puts back.</p>
 
 <h2>Choosing an effect</h2>
 <p>The list at the top of the panel picks the effect to work on, and only that effect's
-sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b> or
-<b>Kaleidoscope</b>.</p>
+sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b>,
+<b>Blur</b> or <b>Kaleidoscope</b>.</p>
 
 <p>Every effect is always applied, whichever one is showing: the list only chooses which
 sliders you see.  An effect marked <b>*</b> in the list has been changed, so you can tell
@@ -101,6 +101,40 @@ itself stays.  Hold <b>Space</b> to pan the image while they are up.</p>
 mirrored: crop to a detail first.  While the Transform panel is open, and while a mask or
 the spot brush is on the image, the picture is shown un-mirrored so what you draw lands
 where you see it.</p>
+
+<h2>Blur</h2>
+<p>The artistic blurs: soft focus, movement and glow, applied on purpose for the look.  A
+lens blur, which imitates a wide aperture by blurring with depth, belongs to the Lens
+panel and is separate from these.</p>
+
+<p>Pick one with <b>Type</b>; only the sliders that type uses are shown.  Each scope has
+its own blur, so on a mask it blurs just the masked part &mdash; blur the background to
+make a subject stand out, or put Motion on a car and nothing else.</p>
+
+<ul>
+<li><b>Gaussian</b> &mdash; an even soft blur.  <b>Amount</b> is how soft.</li>
+<li><b>Motion</b> &mdash; a streak in one direction, like panning or a moving subject.
+<b>Angle</b> sets the direction; on the image, drag the yellow spoke.</li>
+<li><b>Spin</b> &mdash; a rotation blur around a centre, like a spinning wheel.  Drag the
+white centre on the image, or click where it should be.</li>
+<li><b>Zoom</b> &mdash; streaks radiating out from a centre, like zooming the lens during
+the exposure.  The centre stays sharp.</li>
+<li><b>Tilt-shift</b> &mdash; a sharp band with blur coming in above and below it, which
+makes a scene look like a miniature.  <b>Angle</b> turns the band, <b>Size</b> is its
+width and <b>Feather</b> how gradually the blur arrives.  On the image the solid lines are
+the band's edges and the dashed lines where the blur is full.</li>
+<li><b>Glow</b> &mdash; a soft bloom laid over the photo (the Orton look): dreamy light
+while the detail underneath stays.  <b>Size</b> is how far the glow spreads.  It only
+ever brightens.</li>
+</ul>
+
+<p>The square under the sliders is the same <b>1:1</b> view the Detail panel has: a live
+100% look at part of the image.  Click its target button and then the photo to choose the
+part, or drag inside the square.  The point is shared with the Detail panel.</p>
+
+<p>The blur is worked out on the full picture, so it looks the same on the small preview,
+on the loupe and in an export.  Grain is added after it, so grain stays crisp on top of a
+blur.</p>
 
 <h2>Working with the sliders</h2>
 <ul>

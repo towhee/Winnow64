@@ -31,6 +31,8 @@
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
+#include "Develop/editrotate.h"     // EditRotate::turnBlur: blur centre/angle -> source
+#include "Develop/artblur.h"        // ArtBlur::reach: the Detail patch's padding
 #include "Develop/depthmask.h"
 #include "Develop/objectmask.h"
 #include "Develop/develop.h"
@@ -9977,6 +9979,19 @@ namespace {
 /* upscaleToFull=false leaves a proxy render at PROXY resolution: the loupe presents it
    at the full size itself (ScaledPixmapItem), so the ~w*h*4 byte upscale a drag tick used
    to pay is skipped. The caller then tells ImageView what size the result stands for. */
+/* The params a MASK REFERENCE (range ref, AI guides) is developed with: the Global
+   look, minus what must never reach a model or a threshold -- Point Color's Visualize
+   Range (a greyed VIEW of the loupe) and Effects > Blur (Select Subject on a blurred
+   frame finds a blurred subject; a range mask would threshold smeared tones). Also the
+   range ref's cache key, so dragging a blur never rebuilds it. */
+static EditParams guideParams(const EditParams &base)
+{
+    EditParams p = base;
+    p.pointColorVisualize = -1;
+    p.blurAmount = 0.0f;
+    return p;
+}
+
 QImage developComposite(const WorkingImage &src, const EditParams &edit, int degrees,
                         bool fullRes, int fullW, int fullH,
                         WorkingImageCache::RenderTimings *timings = nullptr,
@@ -11386,6 +11401,9 @@ sampleMaskRoi(const std::vector<float> &mask, int mw, int mh,
     return out;
 }
 
+/* Defined below, with the other stack predicates. */
+static int jobBlurReach(const DevelopProperties::StackRenderJob &job, int fw, int fh);
+
 /* Render the patch. scopes carry THIS tick's proxy masks (empty for a global-only stack);
    maskW/maskH are the proxy dimensions those masks were rasterized at. */
 static QImage renderDetailRoiImage(const DetailRoiJob &job,
@@ -11396,7 +11414,19 @@ static QImage renderDetailRoiImage(const DetailRoiJob &job,
     const WorkingImage &full = *job.fullSrc;
     const DetailRoi::Rect r =
         DetailRoi::sourceRoi(job.nx, job.ny, full.width, full.height, degrees, job.size);
-    WorkingImage roi = cutDetailRoi(full, r, job.lens);
+    /* Effects > Blur reaches beyond the patch: render a PADDED patch so its edges see
+       the pixels the full frame would, then cut the window back out. Capped -- a long
+       Spin arc far from its centre is approximated at the patch edge beyond it. */
+    constexpr int kMaxBlurPad = 512;
+    const int pad = std::min(kMaxBlurPad, jobBlurReach(stackJob, full.width, full.height));
+    DetailRoi::Rect rp = r;
+    if (pad > 0) {
+        const int x0 = std::max(0, r.x - pad), y0 = std::max(0, r.y - pad);
+        const int x1 = std::min(full.width, r.x + r.w + pad);
+        const int y1 = std::min(full.height, r.y + r.h + pad);
+        rp.x = x0; rp.y = y0; rp.w = x1 - x0; rp.h = y1 - y0;
+    }
+    WorkingImage roi = cutDetailRoi(full, rp, job.lens);
     if (!roi.isValid()) return QImage();
 
     std::vector<WorkingImageCache::StackScope> roiScopes;
@@ -11404,7 +11434,7 @@ static QImage renderDetailRoiImage(const DetailRoiJob &job,
     for (const WorkingImageCache::StackScope &s : scopes) {
         WorkingImageCache::StackScope rs;
         rs.params = s.params;
-        if (s.mask) rs.mask = sampleMaskRoi(*s.mask, maskW, maskH, r,
+        if (s.mask) rs.mask = sampleMaskRoi(*s.mask, maskW, maskH, rp,
                                             full.width, full.height);
         roiScopes.push_back(std::move(rs));
     }
@@ -11412,6 +11442,8 @@ static QImage renderDetailRoiImage(const DetailRoiJob &job,
     QImage out;
     if (!WorkingImageCache::renderStack(roi, stackJob.global, roiScopes, out))
         return QImage();
+    if (!(rp == r) && !out.isNull())                // the window, out of the padding
+        out = out.copy(r.x - rp.x, r.y - rp.y, r.w, r.h);
     /* Orientation only: geometry (crop / warp) is deliberately not applied -- see the
        header note in Develop/detailroi.h. Smooth, not fast: the patch is tiny and it is
        being examined at 1:1, which is exactly where a nearest-neighbour rotate shows. */
@@ -11437,6 +11469,42 @@ static bool jobHasKaleido(const DevelopProperties::StackRenderJob &job)
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
         if (L.params.hasKaleido()) return true;
     return false;
+}
+
+/* Effects > Blur on any scope of the job. */
+static bool jobHasBlur(const DevelopProperties::StackRenderJob &job)
+{
+    if (job.global.blurAmount > 0.0f) return true;
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        if (L.params.blurAmount > 0.0f) return true;
+    return false;
+}
+
+/* The stored blur centre / angle are in the ORIENTED frame (like a mask); the develop
+   runs on the unrotated SOURCE, so turn them back by the EXIF rotation first. */
+static void blursToSource(DevelopProperties::StackRenderJob &job, int degrees)
+{
+    const int back = (360 - degrees) % 360;
+    if (job.global.blurAmount > 0.0f) EditRotate::turnBlur(job.global, back);
+    for (DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        if (L.params.blurAmount > 0.0f) EditRotate::turnBlur(L.params, back);
+}
+
+/* Pixels of context the job's blurs need around a Detail patch (the widest of them),
+   in the SOURCE frame fw x fh. */
+static int jobBlurReach(const DevelopProperties::StackRenderJob &job, int fw, int fh)
+{
+    auto one = [fw, fh](const EditParams &p) {
+        if (p.blurAmount <= 0.0f) return 0;
+        ArtBlur::Settings s;
+        s.type = p.blurType; s.amount = p.blurAmount; s.angle = p.blurAngle;
+        s.x = p.blurX; s.y = p.blurY; s.size = p.blurSize; s.feather = p.blurFeather;
+        return ArtBlur::reach(s, fw, fh);
+    };
+    int r = one(job.global);
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        r = std::max(r, one(L.params));
+    return r;
 }
 
 /* Switch every kaleidoscope in the job off (settings kept), for a render that has to
@@ -11545,11 +11613,15 @@ QImage developCompositeStack(const WorkingImage &src,
        instead of re-developing the stack. */
     DevelopProperties::StackRenderJob stripped;
     const bool folds = jobHasKaleido(jobIn);
-    if (folds) {
+    /* Effects > Blur's centre / angle are stored in the oriented frame; the develop
+       runs on the unrotated source, so the same copy carries them back. */
+    const bool turnBlurs = degrees != 0 && jobHasBlur(jobIn);
+    if (folds || turnBlurs) {
         stripped = jobIn;
-        stripKaleidos(stripped);
+        if (folds) stripKaleidos(stripped);
+        if (turnBlurs) blursToSource(stripped, degrees);
     }
-    const DevelopProperties::StackRenderJob &job = folds ? stripped : jobIn;
+    const DevelopProperties::StackRenderJob &job = (folds || turnBlurs) ? stripped : jobIn;
     /* The masked scopes' coverage, kept from the composite for their folds and for
        "Hide global image" below (index = scope; null for a scope without a mask, or one
        neither step needs). */
@@ -11960,7 +12032,8 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
     /* The params JSON misses what the lens profile resolves to (an unset recipe follows
        the preference), so the applied correction is part of the key. */
     const QByteArray key =
-        QJsonDocument(EditStack::paramsToJson(base)).toJson(QJsonDocument::Compact)
+        QJsonDocument(EditStack::paramsToJson(guideParams(base)))
+            .toJson(QJsonDocument::Compact)
         + lensProfileState(lensShotFor(fPath), base, work.sceneReferred).key.toUtf8();
     if (fPath == developRangeRefPath && key == developRangeRefBaseKey && RangeMask::getRef(fPath))
         return;                                       // already current
@@ -11975,8 +12048,7 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     /* Point Color's Visualize Range is a VIEW of the loupe; a range mask must threshold
        the real colours, not the greyed-out preview of them. */
-    EditParams refBase = base;
-    refBase.pointColorVisualize = -1;
+    const EditParams refBase = guideParams(base);
     const QImage img = developComposite(lowRes, refBase, degrees, /*fullRes*/true, fw, fh);
     if (img.isNull()) return;
     const QImage rgb = img.convertToFormat(QImage::Format_ARGB32);
@@ -12035,7 +12107,8 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     correctGuideForLens(lowRes, fPath, base);
     int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
+                                        fw, fh);
     if (img.isNull()) return;
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
@@ -12090,7 +12163,8 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
 
     if (G::popup) G::popup->showPopupNow("Finding the sky...", 0, true, 0.75);
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
-    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
+                                        fw, fh);
     auto r = std::make_shared<SkyMask::SkyRef>();
     const bool ok = !img.isNull() && skyPredictor->predict(img, r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
@@ -12130,7 +12204,8 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     correctGuideForLens(lowRes, fPath, base);
     int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
-    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, fw, fh);
+    const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
+                                        fw, fh);
     if (img.isNull()) return;
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
@@ -12367,7 +12442,8 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     crop = r.intersected(QRect(0, 0, gw, gh));
     if (crop.width() < 8 || crop.height() < 8) return false;
 
-    const QImage img = developComposite(lowRes, base, degrees, /*fullRes*/true, gw, gh);
+    const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
+                                        gw, gh);
     if (img.isNull()) return false;
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
     const bool okEnc = objectMaskPredictor->setImage(crop == QRect(0, 0, gw, gh) ? img
@@ -12398,7 +12474,7 @@ QImage MW::segmenterGuideImage(const QString &fPath, const WorkingImage &work,
     int gw = lowRes.width, gh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(gw, gh);
     if (gw <= 0 || gh <= 0) return QImage();
-    return developComposite(lowRes, base, degrees, /*fullRes*/true, gw, gh);
+    return developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true, gw, gh);
 }
 
 void MW::segmenterNote(const QString &panel, const QString &canvas)
@@ -13995,6 +14071,7 @@ void MW::renderDevelopFullResAsync()
                                    << " dehaze" << rt.dehazeMs
                                    << " vignette" << rt.vignetteMs
                                    << " sharpen" << rt.sharpenMs
+                                   << " blur" << rt.blurMs
                                    << " grain" << rt.grainMs << "]";
             if (dm && fPath == dm->currentKey) {
                 developVerifyMaxAbs = vMaxAbs;
@@ -16119,12 +16196,25 @@ void MW::syncDevelopKaleidoOverlay()
 */
     if (!imageView) return;
     const EditParams p = developProperties ? developProperties->kaleidoParams() : EditParams();
-    const bool want = developProperties && G::operationMode == G::OperationMode::Develop
-                      && developProperties->kaleidoToolWanted() && p.hasKaleido()
-                      && !developCropEditing && !developKaleidoSuppressed();
-    if (want) imageView->beginKaleido(QPointF(p.kaleidoX, p.kaleidoY), p.kaleidoAngle,
-                                      p.kaleidoSegments);
-    else      imageView->endKaleido();
+    const bool inDevelop = developProperties
+                           && G::operationMode == G::OperationMode::Develop
+                           && !developCropEditing;
+    const bool kaleido = inDevelop && developProperties->kaleidoToolWanted()
+                         && p.hasKaleido() && !developKaleidoSuppressed();
+    /* Effects > Blur's handles (Motion / Spin / Zoom / Tilt-shift): the blur's space is
+       the mask space, mapped through the geometry, so nothing has to be suppressed for
+       them -- but a mask or spot tool owns the canvas while it is up. */
+    const bool blur = !kaleido && inDevelop && developProperties->blurToolWanted()
+                      && !imageView->needsUnfoldedFrame();
+    if (kaleido)
+        imageView->beginKaleido(QPointF(p.kaleidoX, p.kaleidoY), p.kaleidoAngle,
+                                p.kaleidoSegments);
+    else if (blur)
+        imageView->beginBlurHandles(QPointF(p.blurX, p.blurY), p.blurAngle, p.blurType,
+                                    ArtBlur::tiltHalf(p.blurSize),
+                                    ArtBlur::tiltRamp(p.blurFeather));
+    else
+        imageView->endKaleido();
 }
 
 void MW::setDevelopLevelAngle(double degrees)

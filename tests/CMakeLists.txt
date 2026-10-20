@@ -407,12 +407,17 @@ winnow_add_unit_test(tst_xmpkeywords unit/tst_xmpkeywords.cpp
 # tst_editrotate is header-only (Develop/editrotate.h): a Develop recipe's masks, spots,
 # crop and perspective quad follow the photo through Cmd+[ / Cmd+] rotation.
 winnow_add_unit_test(tst_editrotate unit/tst_editrotate.cpp)
-# tst_kaleidoscope tests the Transform panel's kaleidoscope fold (CropTransform::
-# applyKaleidoscope, after the crop): mirror seams, the untouched first wedge, the point
-# form, 16-bit depth, and the stored settings' JSON / sanitize / rotation.
+# tst_kaleidoscope tests Effects > Kaleidoscope's fold (CropTransform::applyKaleidoscope
+# and the masked variant, after the crop): mirror seams, the untouched first wedge, the
+# point form, zoom, opacity, 16-bit depth, and the settings' JSON / sanitize / rotation.
 winnow_add_unit_test(tst_kaleidoscope unit/tst_kaleidoscope.cpp
     ${CMAKE_SOURCE_DIR}/Develop/Transform/croptransform.cpp)
 winnow_test_link_opencv(tst_kaleidoscope PRIVATE opencv_core opencv_imgproc)
+# tst_artblur tests Effects > Blur's kernels (header-only Develop/artblur.h): what each
+# artistic blur keeps and smears, resolution independence (proxy vs full), a padded
+# Detail patch matching the full frame, and the timings for the record.
+winnow_add_unit_test(tst_artblur unit/tst_artblur.cpp)
+winnow_test_link_opencv(tst_artblur PRIVATE opencv_core opencv_imgproc)
 # tst_xmpembed pins the container writers behind "Permit image file modification":
 # splicing the XMP packet into JPEG (APP1), PNG (iTXt) and TIFF/DNG (IFD0 tag 700)
 # without disturbing anything else in the file, and the XMP shapes Lightroom reads

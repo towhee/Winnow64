@@ -35,7 +35,7 @@ public:
                           qint64 pointMs = 0; qint64 textureMs = 0;
                           qint64 clarityMs = 0; qint64 dehazeMs = 0;
                           qint64 vignetteMs = 0; qint64 sharpenMs = 0;
-                          qint64 grainMs = 0; };
+                          qint64 grainMs = 0; qint64 blurMs = 0; };
 
     /* Apply p to img in place. Returns true on success (and trivially when p is identity,
        leaving img untouched). Fills *t when non-null. */
@@ -192,6 +192,14 @@ private:
        the strength, grainSize the particle size, grainRoughness the amplitude
        irregularity. No-op when grainAmount is 0. */
     void Grain(WorkingImage &img, const EditParams &p);
+
+    /* Spatial op (after Sharpen, before Grain): Effects > Blur, the artistic blurs
+       (Gaussian / Motion / Spin / Zoom / Tilt-shift / Glow -- Develop/artblur.h). The
+       centre and angle must already be in the SOURCE frame (MW::developCompositeStack
+       converts the stored, oriented-frame values); distances are fractions of the
+       frame's long edge, and positions frame pixels via img.frameX/Y/W/H, so a proxy,
+       the settle render and the Detail 1:1 patch agree. No-op when blurAmount is 0. */
+    void Blur(WorkingImage &img, const EditParams &p);
 
     /* Precomputed once per Apply(); the fused point pass reads only these. active == false
        means no implemented point op would change a pixel, so the pass is skipped entirely. */

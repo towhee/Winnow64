@@ -486,6 +486,23 @@ struct EditParams {
     float kaleidoOpacity  = 1.0f;
     bool hasKaleido() const { return kaleidoSegments >= 2; }
 
+    /* Blur (Effects, a SPATIAL Develop op after Sharpen, before Grain -- Develop::Blur,
+       Develop/artblur.h). The ARTISTIC blurs; a depth / bokeh lens blur belongs to the
+       Lens panel. blurType picks one (ArtBlur::Type: 0 Gaussian, 1 Motion, 2 Spin,
+       3 Zoom, 4 Tilt-shift, 5 Glow); blurAmount (0..1) is its strength and the only field
+       in isIdentity. blurAngle (deg, y-down) is the Motion direction and the Tilt-shift
+       band; blurX / blurY the centre (Spin, Zoom, Tilt-shift), normalized in the ORIENTED
+       frame like a mask -- MW converts both to the source frame before the develop;
+       blurSize (0..1) the Glow radius / Tilt-shift band width; blurFeather (0..1) the
+       Tilt-shift transition. Distances are fractions of the long edge. */
+    int   blurType    = 0;
+    float blurAmount  = 0.0f;
+    float blurAngle   = 0.0f;
+    float blurX       = 0.5f;
+    float blurY       = 0.5f;
+    float blurSize    = 0.5f;
+    float blurFeather = 0.5f;
+
     int version = 1;
 
     /* Adjustment groups, matching the Develop panel's section headers (Basic / Color / Effects).
@@ -586,6 +603,13 @@ struct EditParams {
             p.kaleidoSource = def.kaleidoSource;
             p.kaleidoZoom = def.kaleidoZoom;
             p.kaleidoOpacity = def.kaleidoOpacity;
+            p.blurType = def.blurType;                       // "Blur"
+            p.blurAmount = def.blurAmount;
+            p.blurAngle = def.blurAngle;
+            p.blurX = def.blurX;
+            p.blurY = def.blurY;
+            p.blurSize = def.blurSize;
+            p.blurFeather = def.blurFeather;
             break;
         case Group::Lens:
             p.lensProfile = def.lensProfile;
@@ -648,7 +672,7 @@ struct EditParams {
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&
-               kaleidoSegments < 2 &&
+               kaleidoSegments < 2 && blurAmount == 0.0f &&
                curvesAreIdentity() &&
                /* A sample with no shift moves no pixel, but it IS the user's work: count
                   it, or the sidecar is never written and the sample is gone on return. */

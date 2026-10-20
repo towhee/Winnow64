@@ -130,6 +130,7 @@ struct EditScope {
     bool showVignette   = true;
     bool showGrain      = true;
     bool showKaleido    = true;
+    bool showBlur       = true;
     /* GLOBAL scope only: "Hide global image" (the scope bar's menu). The picture is cut
        out to the mask scopes -- only the pixels their masks cover show (folded with any
        kaleidoscope), everything else is transparent -- in the loupe and in every export,
@@ -174,6 +175,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
         p.grainRoughness = def.grainRoughness;
     }
     if (!l.showKaleido) p.kaleidoSegments = def.kaleidoSegments;   // off, settings kept
+    if (!l.showBlur)    p.blurAmount = def.blurAmount;             // likewise
     if (!l.showLens) {
         EditParams::resetGroup(p, EditParams::Group::Lens);
         /* An explicit removeCA / lensProfile previews as OFF; the reset's unset would
@@ -271,6 +273,7 @@ struct EditStack {
                               !l.showPointColor ||
                               !l.showDetail || !l.showEffects || !l.showLens ||
                               !l.showVignette || !l.showGrain || !l.showKaleido ||
+                              !l.showBlur ||
                               l.hideImage))
                 return false;
         return true;
@@ -398,6 +401,16 @@ struct EditStack {
             if (p.kaleidoZoom != 1.0f) o["kaleidoZoom"] = p.kaleidoZoom;
             if (p.kaleidoOpacity != 1.0f) o["kaleidoOpacity"] = p.kaleidoOpacity;
         }
+        /* Blur: only when on, so existing recipes keep their JSON (and hash). */
+        if (p.blurAmount != 0.0f) {
+            o["blurType"]    = p.blurType;
+            o["blurAmount"]  = p.blurAmount;
+            o["blurAngle"]   = p.blurAngle;
+            o["blurX"]       = p.blurX;
+            o["blurY"]       = p.blurY;
+            o["blurSize"]    = p.blurSize;
+            o["blurFeather"] = p.blurFeather;
+        }
         o["version"]         = p.version;
         return o;
     }
@@ -491,6 +504,13 @@ struct EditStack {
         p.kaleidoSource   = static_cast<float>(o.value("kaleidoSource").toDouble(p.kaleidoSource));
         p.kaleidoZoom     = static_cast<float>(o.value("kaleidoZoom").toDouble(p.kaleidoZoom));
         p.kaleidoOpacity  = static_cast<float>(o.value("kaleidoOpacity").toDouble(p.kaleidoOpacity));
+        p.blurType        = o.value("blurType").toInt(p.blurType);
+        p.blurAmount      = static_cast<float>(o.value("blurAmount").toDouble(p.blurAmount));
+        p.blurAngle       = static_cast<float>(o.value("blurAngle").toDouble(p.blurAngle));
+        p.blurX           = static_cast<float>(o.value("blurX").toDouble(p.blurX));
+        p.blurY           = static_cast<float>(o.value("blurY").toDouble(p.blurY));
+        p.blurSize        = static_cast<float>(o.value("blurSize").toDouble(p.blurSize));
+        p.blurFeather     = static_cast<float>(o.value("blurFeather").toDouble(p.blurFeather));
         p.version         = o.value("version").toInt(p.version);
         return p;
     }
@@ -522,6 +542,7 @@ struct EditStack {
             if (!l.showVignette)   lo["showVignette"]   = false;
             if (!l.showGrain)      lo["showGrain"]      = false;
             if (!l.showKaleido)    lo["showKaleido"]    = false;
+            if (!l.showBlur)       lo["showBlur"]       = false;
             if (l.hideImage)       lo["hideImage"]      = true;
             QJsonArray marr;
             for (const MaskComponent &m : l.components) {
@@ -628,6 +649,7 @@ struct EditStack {
             l.showVignette = lo.value("showVignette").toBool(l.showVignette);
             l.showGrain = lo.value("showGrain").toBool(l.showGrain);
             l.showKaleido = lo.value("showKaleido").toBool(l.showKaleido);
+            l.showBlur = lo.value("showBlur").toBool(l.showBlur);
             l.hideImage = lo.value("hideImage").toBool(l.hideImage);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
@@ -845,6 +867,13 @@ struct EditStack {
         if (clampF(p.kaleidoSource, -180.0f, 180.0f, 0.0f)) ++fixed;
         if (clampF(p.kaleidoZoom,   0.25f, 8.0f, def.kaleidoZoom)) ++fixed;
         if (clampF(p.kaleidoOpacity, 0.0f, 1.0f, def.kaleidoOpacity)) ++fixed;
+        if (p.blurType < 0 || p.blurType > 5) { p.blurType = def.blurType; ++fixed; }
+        if (clampF(p.blurAmount,  0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.blurAngle,   -180.0f, 180.0f, 0.0f)) ++fixed;
+        if (clampF(p.blurX,       0.0f, 1.0f, def.blurX)) ++fixed;
+        if (clampF(p.blurY,       0.0f, 1.0f, def.blurY)) ++fixed;
+        if (clampF(p.blurSize,    0.0f, 1.0f, def.blurSize)) ++fixed;
+        if (clampF(p.blurFeather, 0.0f, 1.0f, def.blurFeather)) ++fixed;
 
         if (fixed && issues)
             issues->append(QStringLiteral("%1: %2 adjustment%3 out of range")

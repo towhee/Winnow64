@@ -520,6 +520,13 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "kaleidoSource")       p.kaleidoSource       = f;
     else if (key == "kaleidoZoom")         p.kaleidoZoom         = f;
     else if (key == "kaleidoOpacity")      p.kaleidoOpacity      = f;
+    else if (key == "blurType")            p.blurType            = v.toInt();
+    else if (key == "blurAmount")          p.blurAmount          = f;
+    else if (key == "blurAngle")           p.blurAngle           = f;
+    else if (key == "blurX")               p.blurX               = f;
+    else if (key == "blurY")               p.blurY               = f;
+    else if (key == "blurSize")            p.blurSize            = f;
+    else if (key == "blurFeather")         p.blurFeather         = f;
     /* Global-only (always scope 0), listed here so one function covers every raw key. */
     else if (key == "denoiseLuma")         p.denoiseLuma         = f;
     else if (key == "denoiseChroma")       p.denoiseChroma       = f;

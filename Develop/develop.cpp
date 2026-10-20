@@ -13,6 +13,7 @@
 #include "Develop/outputtransform.h"
 #include "Develop/sharpen.h"
 #include "Develop/localcontrast.h"
+#include "Develop/artblur.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QElapsedTimer>
@@ -1055,6 +1056,11 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     Sharpen(img, p);
     if (t) t->sharpenMs = probe.restart();
 
+    /* After Sharpen (which would otherwise fight it), before Grain (which belongs on
+       top of the finished picture, blurred or not). */
+    Blur(img, p);
+    if (t) t->blurMs = probe.restart();
+
     Grain(img, p);
     if (t) t->grainMs = probe.restart();
 
@@ -1765,6 +1771,27 @@ void Develop::Sharpen(WorkingImage &img, const EditParams &p)
    luminance and folded back as a ratio-preserving RGB scale (like Texture) so only the
    luminance is perturbed. A midtone weight fades the grain toward pure black / white. See
    the grain constants block for the size / roughness / proxy-match model. No-op at 0. */
+void Develop::Blur(WorkingImage &img, const EditParams &p)
+{
+    if (p.blurAmount <= 0.0f) return;
+    const int w = img.width, h = img.height;
+    if (w < 2 || h < 2 || img.rgb.size() < size_t(w) * size_t(h) * 3) return;
+    ArtBlur::Settings s;
+    s.type    = std::clamp(p.blurType, 0, int(ArtBlur::TypeCount) - 1);
+    s.amount  = p.blurAmount;
+    s.angle   = p.blurAngle;
+    s.x       = p.blurX;
+    s.y       = p.blurY;
+    s.size    = p.blurSize;
+    s.feather = p.blurFeather;
+    ArtBlur::Frame f;
+    if (img.frameW > 0 && img.frameH > 0) {
+        f.fx = img.frameX; f.fy = img.frameY; f.fw = img.frameW; f.fh = img.frameH;
+    }
+    cv::Mat view(h, w, CV_32FC3, img.rgb.data());
+    ArtBlur::apply(view, s, f);
+}
+
 void Develop::Grain(WorkingImage &img, const EditParams &p)
 {
     const float amount = qBound(0.0f, p.grainAmount, 1.0f);

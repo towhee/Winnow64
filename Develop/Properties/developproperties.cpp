@@ -194,7 +194,7 @@ void DevelopProperties::initialize()
     setSolo(setting->value("Develop/isSolo", false).toBool());
     combinedColorPanel = setting->value("Develop/combinedColorPanel", true).toBool();
     colorPanelMode = qBound(0, setting->value("Develop/colorPanelMode", 0).toInt(), 2);
-    effectsChoice = qBound(0, setting->value("Develop/effectsChoice", 0).toInt(), 2);
+    effectsChoice = qBound(0, setting->value("Develop/effectsChoice", 0).toInt(), 3);
     setIndentation(10);
     setAlternatingRowColors(false);
     /* Fill every NON-header row with the subpanel content background (the delegate's
@@ -2055,7 +2055,8 @@ void DevelopProperties::resetActiveScope()
     l->params = EditParams();
     l->showScope = l->showBasic = l->showCurves = l->showColor = l->showCalibrate =
         l->showColorGrade = l->showPointColor = l->showDetail = l->showEffects =
-        l->showLens = l->showVignette = l->showGrain = l->showKaleido = true;
+        l->showLens = l->showVignette = l->showGrain = l->showKaleido =
+        l->showBlur = true;
     l->hideImage = false;
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
@@ -2813,7 +2814,7 @@ namespace {
    one shows. applyEffectsChoice hides every other entry's rows. */
 struct EffectDef { const char *label; QStringList rows; bool globalOnly; };
 /* Indexed by effect id (effectsChoice, the combo items' data). */
-enum EffectId { EffectVignette = 0, EffectGrain = 1, EffectKaleido = 2 };
+enum EffectId { EffectVignette = 0, EffectGrain = 1, EffectKaleido = 2, EffectBlur = 3 };
 const QVector<EffectDef> &effectDefs()
 {
     static const QVector<EffectDef> defs = {
@@ -2822,6 +2823,9 @@ const QVector<EffectDef> &effectDefs()
         /* Per scope: a mask scope folds only its masked pixels (see EditParams). */
         {"Kaleidoscope", {"kaleidoSegments", "kaleidoAngle", "kaleidoSource",
                           "kaleidoZoom", "kaleidoOpacity"}, false},
+        /* The artistic blurs (Develop/artblur.h); a lens blur belongs to Lens. */
+        {"Blur",         {"blurType", "blurAmount", "blurAngle", "blurSize",
+                          "blurFeather", "blurPreview"}, false},
     };
     return defs;
 }
@@ -2840,8 +2844,26 @@ bool effectEdited(const EditStack &s, int scopeIdx, int e)
                p.grainRoughness != def.grainRoughness;
     case EffectKaleido:
         return p.hasKaleido();
+    case EffectBlur:
+        return p.blurAmount > 0.0f;
     }
     return false;
+}
+
+/* Effects > Blur's types, in ArtBlur::Type order, and the slider rows each one uses
+   (the rest are hidden by applyBlurTypeRows). */
+struct BlurTypeDef { const char *label; QStringList rows; };
+const QVector<BlurTypeDef> &blurTypeDefs()
+{
+    static const QVector<BlurTypeDef> defs = {
+        {"Gaussian",   {"blurAmount"}},
+        {"Motion",     {"blurAmount", "blurAngle"}},
+        {"Spin",       {"blurAmount"}},
+        {"Zoom",       {"blurAmount"}},
+        {"Tilt-shift", {"blurAmount", "blurAngle", "blurSize", "blurFeather"}},
+        {"Glow",       {"blurAmount", "blurSize"}},
+    };
+    return defs;
 }
 }  // namespace
 
@@ -4138,25 +4160,34 @@ QIcon DevelopProperties::curveSamplerIcon(bool armed)
 
 void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
 {
+    addPreviewRow(parIdx, "DetailHeader", "detailPreview",
+                  "A live 100% view of part of the image, for judging sharpening and "
+                  "noise.", detailPreview, detailPickBtn);
+}
+
+void DevelopProperties::addPreviewRow(QModelIndex parIdx, const QString &parentName,
+                                      const QString &name, const QString &tooltip,
+                                      QPointer<DetailPreview> &preview,
+                                      QPointer<BarBtn> &pickBtn)
+{
 /*
     The 1:1 preview at the head of the Detail section: ONE spanned row holding "1:1" and
     the target button down its left side and the preview square beside them, the
     square's top level with the button. The square is sized to the patch it shows (the
     patch is square), so there is no unused black well either side of it.
 */
-    if (G::isLogger) G::log("DevelopProperties::addDetailPreviewRow");
+    if (G::isLogger) G::log("DevelopProperties::addPreviewRow");
 
     /* Side of the preview square = the ROI it renders, in logical (= image) pixels. */
     const int side = G::propertyRowHeight() + 170;
     const int vPad = 2;                 // above and below the row's contents
 
     clearItemInfo(i);
-    i.name = "detailPreview";
+    i.name = name;
     i.parIdx = parIdx;
-    i.parentName = "DetailHeader";
+    i.parentName = parentName;
     i.captionText = "";
-    i.tooltip = "A live 100% view of part of the image, for judging sharpening and "
-                "noise.";
+    i.tooltip = tooltip;
     i.isIndent = true;
     i.hasValue = false;
     i.captionIsEditable = false;
@@ -4186,8 +4217,10 @@ void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
     tgt->setToolTip("Choose the area to show: click here, then click the photo.\n"
                     "You can also drag inside the preview.");
     tgt->setEnabled(!currentImagePath.isEmpty());
+    tgt->setActive(detailPickActive);
+    tgt->setIcon(detailTargetIcon(detailPickActive));
     connect(tgt, &BarBtn::clicked, this, &DevelopProperties::toggleDetailPick);
-    detailPickBtn = tgt;
+    pickBtn = tgt;
     chb->addWidget(lbl);
     chb->addWidget(tgt);
     capW->setFixedWidth(capW->sizeHint().width());
@@ -4197,7 +4230,7 @@ void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
        balances it, so the column does not push the square off centre. */
     DetailPreview *dp = new DetailPreview(row);
     dp->setFixedSize(side, side);
-    detailPreview = dp;
+    preview = dp;
     connect(dp, &DetailPreview::pointNudged, this, &DevelopProperties::nudgeDetailPoint);
     hb->addStretch(1);
     hb->addWidget(dp, 0, Qt::AlignTop);
@@ -4212,23 +4245,30 @@ void DevelopProperties::addDetailPreviewRow(QModelIndex parIdx)
    the same one wantsScopeData uses for the histogram) and a point has been picked. */
 bool DevelopProperties::detailPreviewWanted() const
 {
-    return detailPreview && detailPreview->isVisible() && detailPtSet;
+    /* Either window: Detail's, or the same patch under Effects > Blur. */
+    const bool shown = (detailPreview && detailPreview->isVisible()) ||
+                       (blurPreview && blurPreview->isVisible());
+    return shown && detailPtSet;
 }
 
 int DevelopProperties::detailRoiSize() const
 {
-    if (!detailPreview || !detailPreview->isVisible()) return 0;
-    return detailPreview->roiSize();
+    /* The two windows are the same size; ask whichever is on screen. */
+    if (detailPreview && detailPreview->isVisible()) return detailPreview->roiSize();
+    if (blurPreview && blurPreview->isVisible()) return blurPreview->roiSize();
+    return 0;
 }
 
 void DevelopProperties::setDetailRoiImage(const QImage &img)
 {
     if (detailPreview) detailPreview->setImage(img);
+    if (blurPreview) blurPreview->setImage(img);
 }
 
 void DevelopProperties::setDetailMessage(const QString &text)
 {
     if (detailPreview) detailPreview->setMessage(text);
+    if (blurPreview) blurPreview->setMessage(text);
 }
 
 void DevelopProperties::setDetailPoint(QPointF n)
@@ -4281,9 +4321,10 @@ void DevelopProperties::setDetailPickActive(bool on)
 {
     if (detailPickActive == on) return;
     detailPickActive = on;
-    if (detailPickBtn) {
-        detailPickBtn->setActive(on);
-        detailPickBtn->setIcon(detailTargetIcon(on));
+    for (BarBtn *b : {detailPickBtn.data(), blurPickBtn.data()}) {
+        if (!b) continue;
+        b->setActive(on);
+        b->setIcon(detailTargetIcon(on));
     }
     if (on) {
         setDetailMessage(tr("Click the part of the photo to inspect"));
@@ -6728,8 +6769,13 @@ void DevelopProperties::addEffects()
         hb->setSpacing(8);
         QComboBox *combo = new QComboBox(rw);
         const QVector<EffectDef> &defs = effectDefs();
-        for (int e = 0; e < defs.size(); ++e)
-            if (!defs.at(e).globalOnly || activeScopeIndex == 0)
+        /* The LIST order, separate from the ids: an id is what QSettings
+           ("Develop/effectsChoice") and each item's data remember, so reordering the
+           list must never renumber the effects. */
+        static const int kListOrder[] = {EffectVignette, EffectGrain, EffectBlur,
+                                         EffectKaleido};
+        for (int e : kListOrder)
+            if (e < defs.size() && (!defs.at(e).globalOnly || activeScopeIndex == 0))
                 combo->addItem(defs.at(e).label, e);
         /* 10% taller than the style's natural combo, so the picker reads as the
            section's lead control; the row grows by the same amount so it still has its
@@ -6841,6 +6887,76 @@ void DevelopProperties::addEffects()
                   parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 100);
     }
 
+    /* Blur: the artistic blurs (Develop/artblur.h, Develop::Blur -- a scene-linear op
+       after Sharpen, before Grain, so a mask scope's blur is just its layer). A type
+       picker (blurType), then the sliders the type uses (applyBlurTypeRows hides the
+       rest), then the SAME 1:1 patch the Detail panel shows, so the blur can be judged
+       at 100%. Amount / Size / Feather are 0..100 on the panel, 0..1 stored; Angle is
+       degrees. A lens (depth / bokeh) blur belongs to the Lens panel, not here. */
+    {
+        clearItemInfo(i);
+        i.name = "blurType";
+        i.parIdx = parIdx;
+        i.parentName = "EffectsHeader";
+        i.captionText = "";
+        i.isIndent = true;
+        i.hasValue = false;
+        i.captionIsEditable = false;
+        addItem(i);
+        const QModelIndex typeIdx = capIdx;
+        setFirstColumnSpanned(typeIdx.row(), parIdx, true);
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(0, 0, 0, 0);
+        hb->setSpacing(8);
+        QLabel *lbl = new QLabel("Type", rw);
+        lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
+        QComboBox *combo = new QComboBox(rw);
+        for (const BlurTypeDef &d : blurTypeDefs()) combo->addItem(d.label);
+        {
+            QSignalBlocker b(combo);
+            combo->setCurrentIndex(std::clamp(kaleidoParams().blurType, 0,
+                                              int(blurTypeDefs().size()) - 1));
+        }
+        combo->setToolTip("Gaussian: an even soft blur.  Motion: a streak along the Angle.\n"
+                          "Spin: round the centre.  Zoom: out from the centre.\n"
+                          "Tilt-shift: a sharp band, blurred above and below.\n"
+                          "Glow: a soft bloom over the photo (Orton).");
+        connect(combo, &QComboBox::currentIndexChanged, this, [this](int idx){
+            if (idx < 0 || currentImagePath.isEmpty()) return;
+            EditParams &p = activeParams();
+            if (p.blurType == idx) return;
+            p.blurType = idx;
+            noteEdit("Blur type", blurTypeDefs().value(idx).label,
+                     historyScopeLabel() + "/blurType");
+            applyBlurTypeRows();
+            emit paramsChanged();
+            emit kaleidoToolChanged();       // the canvas handles depend on the type
+        });
+        blurTypeCombo = combo;
+        hb->addWidget(lbl);
+        hb->addWidget(combo);
+        hb->addStretch(1);
+        setIndexWidget(typeIdx, rw);
+    }
+    addSlider("blurAmount", "Amount",
+              "Strength of the blur (0 = off).",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 0);
+    addSlider("blurAngle", "Angle",
+              "Direction of the motion, or of the tilt-shift band (degrees).\n"
+              "Or drag the yellow spoke on the image.",
+              parIdx, "EffectsHeader", -180, 180, 0, G::darkgray, G::lightgray, 0);
+    addSlider("blurSize", "Size",
+              "Glow: how far the glow spreads.  Tilt-shift: the width of the sharp band.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addSlider("blurFeather", "Feather",
+              "Tilt-shift: how gradually the blur comes in beside the band.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addPreviewRow(parIdx, "EffectsHeader", "blurPreview",
+                  "A live 100% view of part of the image, the same one the Detail panel "
+                  "shows.", blurPreview, blurPickBtn);
+
     addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
 
     applyEffectsChoice();
@@ -6864,9 +6980,30 @@ void DevelopProperties::applyEffectsChoice()
             setRowHidden(idx.row(), idx.parent(), e != shown);
         }
     }
+    applyBlurTypeRows();         // within Blur, only the chosen type's rows
     scheduleContentFit();        // setRowHidden emits nothing: re-fit the block ourselves
     refreshPreviewButtons();     // the row's eye now speaks for the newly shown effect
     emit kaleidoToolChanged();   // Kaleidoscope in or out of view: the handles follow
+}
+
+void DevelopProperties::applyBlurTypeRows()
+{
+    /* While Blur shows, hide the sliders its TYPE does not use (Motion has an Angle,
+       Glow a Size, ...). The type combo and the preview always show. UR_isHidden too,
+       for the same reason as applyEffectsChoice. */
+    if (shownEffect() != EffectBlur) return;
+    const QVector<BlurTypeDef> &defs = blurTypeDefs();
+    /* A const read (kaleidoParams: the active scope's stored params): this runs from
+       buildTree, with or without an image, and activeParams() would create an entry. */
+    const int t = std::clamp(kaleidoParams().blurType, 0, int(defs.size()) - 1);
+    for (const char *row : {"blurAmount", "blurAngle", "blurSize", "blurFeather"}) {
+        const QModelIndex idx = findCaptionIndex(row);
+        if (!idx.isValid()) continue;
+        const bool hide = !defs.at(t).rows.contains(QString::fromLatin1(row));
+        model->setData(idx, hide, UR_isHidden);
+        setRowHidden(idx.row(), idx.parent(), hide);
+    }
+    scheduleContentFit();
 }
 
 bool *DevelopProperties::effectShowFlag(EditScope *l, int effect)
@@ -6876,6 +7013,7 @@ bool *DevelopProperties::effectShowFlag(EditScope *l, int effect)
     case EffectVignette: return &l->showVignette;
     case EffectGrain:    return &l->showGrain;
     case EffectKaleido:  return &l->showKaleido;
+    case EffectBlur:     return &l->showBlur;
     }
     return nullptr;
 }
@@ -6921,6 +7059,15 @@ void DevelopProperties::resetEffect()
             p.kaleidoSource   = def.kaleidoSource;
             p.kaleidoZoom     = def.kaleidoZoom;
             p.kaleidoOpacity  = def.kaleidoOpacity;
+        }
+        else if (e == EffectBlur) {
+            /* The type is kept: Reset clears the blur, not the choice of blur. */
+            p.blurAmount  = def.blurAmount;
+            p.blurAngle   = def.blurAngle;
+            p.blurX       = def.blurX;
+            p.blurY       = def.blurY;
+            p.blurSize    = def.blurSize;
+            p.blurFeather = def.blurFeather;
         }
         else if (e == EffectVignette) {
             p.vignetteExposure = def.vignetteExposure;
@@ -6981,6 +7128,47 @@ bool DevelopProperties::kaleidoToolWanted() const
     for (QModelIndex p = idx.parent(); p.isValid(); p = p.parent())
         if (!isExpanded(p) || isRowHidden(p.row(), p.parent())) return false;
     return true;
+}
+
+bool DevelopProperties::blurToolWanted() const
+{
+    if (currentImagePath.isEmpty()) return false;
+    if (shownEffect() != EffectBlur || !isVisible()) return false;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return false;
+    const EditScope &l = s.scopes.at(activeScopeIndex);
+    if (!l.showScope || !l.showEffects || !l.showBlur) return false;   // an eye shut
+    if (l.params.blurAmount <= 0.0f) return false;
+    const int t = l.params.blurType;          // ArtBlur::Type: Gaussian / Glow have none
+    if (t != 1 && t != 2 && t != 3 && t != 4) return false;
+    /* The rows really on screen: every section above them expanded, none hidden. */
+    const QModelIndex idx = sourceIdx.value("blurAmount");
+    if (!idx.isValid() || isRowHidden(idx.row(), idx.parent())) return false;
+    for (QModelIndex p = idx.parent(); p.isValid(); p = p.parent())
+        if (!isExpanded(p) || isRowHidden(p.row(), p.parent())) return false;
+    return true;
+}
+
+void DevelopProperties::setBlurHandles(double x, double y, double angleDeg)
+{
+    if (G::isLogger) G::log("DevelopProperties::setBlurHandles");
+    if (currentImagePath.isEmpty()) return;
+    EditParams &p = activeParams();
+    const float fx = float(qBound(0.0, x, 1.0)), fy = float(qBound(0.0, y, 1.0));
+    const float fa = float(angleDeg);
+    if (p.blurX == fx && p.blurY == fy && p.blurAngle == fa) return;
+    p.blurX = fx;
+    p.blurY = fy;
+    p.blurAngle = fa;
+    /* One row per drag, whichever handle: the centre and the spoke are one control. */
+    noteEdit("Blur", QString(), historyScopeLabel() + "/blurHandles");
+    {
+        const bool wasPop = isPopulating;
+        isPopulating = true;
+        setSliderReal("blurAngle", p.blurAngle);     // the Angle slider follows the spoke
+        isPopulating = wasPop;
+    }
+    emit paramsChanged();
 }
 
 EditParams DevelopProperties::kaleidoParams() const
@@ -7595,11 +7783,16 @@ void DevelopProperties::itemChange(QModelIndex idx)
         static const QHash<QString, QString> kEffectsHistory = {
             {"vignetteExposure", "Vignette"}, {"vignetteFeather", "Vignette feather"},
             {"grainAmount", "Grain"},         {"grainSize", "Grain size"},
-            {"grainRoughness", "Grain roughness"}};
+            {"grainRoughness", "Grain roughness"},
+            {"blurAmount", "Blur"}, {"blurAngle", "Blur angle"},
+            {"blurSize", "Blur size"}, {"blurFeather", "Blur feather"}};
         const QString action = kCalHistory.value(source, kEffectsHistory.value(source,
                                                  idx.siblingAtColumn(0).data().toString()));
         noteEdit(action, historyValueText(idx, v), historyScopeLabel() + "/" + source);
         emit paramsChanged();
+        /* A blur slider can switch the blur's canvas handles on or off, or move the
+           tilt-shift band they draw. */
+        if (source.startsWith("blur")) emit kaleidoToolChanged();
     }
 }
 
@@ -7649,6 +7842,10 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "grainAmount")        p.grainAmount        = f / 100.0f;   // "Grain"
     else if (key == "grainSize")          p.grainSize          = f / 100.0f;
     else if (key == "grainRoughness")     p.grainRoughness     = f / 100.0f;
+    else if (key == "blurAmount")         p.blurAmount         = f / 100.0f;   // "Blur"
+    else if (key == "blurAngle")          p.blurAngle          = f;            // degrees
+    else if (key == "blurSize")           p.blurSize           = f / 100.0f;
+    else if (key == "blurFeather")        p.blurFeather        = f / 100.0f;
 }
 
 EditParams DevelopProperties::editParams()
@@ -8328,6 +8525,7 @@ const PresetLeafDef kEffectsLeaves[] = {
     {"vignette", "Vignette"},
     {"grain",    "Grain"},
     {"kaleido",  "Kaleidoscope"},
+    {"blur",     "Blur"},
 };
 
 struct PresetSectionDef {
@@ -8403,6 +8601,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "vignette")     return p.vignetteExposure != def.vignetteExposure;
     if (key == "grain")        return p.grainAmount      != def.grainAmount;
     if (key == "kaleido")      return p.hasKaleido();
+    if (key == "blur")         return p.blurAmount != def.blurAmount;
     return false;
 }
 
@@ -8531,6 +8730,16 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("kaleidoSource", p.kaleidoSource);
         out.insert("kaleidoZoom", p.kaleidoZoom);
         out.insert("kaleidoOpacity", p.kaleidoOpacity);
+    }
+    if (lk.contains("blur")) {
+        /* All seven, even when off: a checked leaf with no blur turns the target's off. */
+        out.insert("blurType", p.blurType);
+        out.insert("blurAmount", p.blurAmount);
+        out.insert("blurAngle", p.blurAngle);
+        out.insert("blurX", p.blurX);
+        out.insert("blurY", p.blurY);
+        out.insert("blurSize", p.blurSize);
+        out.insert("blurFeather", p.blurFeather);
     }
     if (lk.contains("pointColors"))
         out.insert("pointColors", PointColor::encode(p.pointColorN, p.pointColor));
@@ -9101,7 +9310,8 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
         else if (k == "lensDistortion" || k == "lensVignetting") {
             it.value() = 1.0;
         }
-        else if (k == "lensManualMidpoint" || k == "kaleidoX" || k == "kaleidoY") {
+        else if (k == "lensManualMidpoint" || k == "kaleidoX" || k == "kaleidoY" ||
+                 k == "blurX" || k == "blurY" || k == "blurSize" || k == "blurFeather") {
             it.value() = 0.5;
         }
         else if (k == "kaleidoZoom" || k == "kaleidoOpacity") {
@@ -9465,6 +9675,12 @@ const FloatField kFloatFields[] = {
     {"kaleidoSource",       &EditParams::kaleidoSource},
     {"kaleidoZoom",         &EditParams::kaleidoZoom},
     {"kaleidoOpacity",      &EditParams::kaleidoOpacity},
+    {"blurAmount",          &EditParams::blurAmount},
+    {"blurAngle",           &EditParams::blurAngle},
+    {"blurX",               &EditParams::blurX},
+    {"blurY",               &EditParams::blurY},
+    {"blurSize",            &EditParams::blurSize},
+    {"blurFeather",         &EditParams::blurFeather},
     {"defringePurple",      &EditParams::defringePurple},
     {"defringeGreen",       &EditParams::defringeGreen},
     {"lensDistortion",      &EditParams::lensDistortion},
@@ -9483,6 +9699,7 @@ const IntField kIntFields[] = {
     {"removeCA", &EditParams::removeCA},
     {"lensProfile", &EditParams::lensProfile},
     {"kaleidoSegments", &EditParams::kaleidoSegments},
+    {"blurType", &EditParams::blurType},
 };
 
 /* The tone curve cannot go in kFloatFields: it is three ARRAYS, and the table above is
@@ -9723,7 +9940,7 @@ bool sameScopeState(const EditScope &a, const EditScope &b)
            a.showPointColor == b.showPointColor && a.showDetail == b.showDetail &&
            a.showEffects == b.showEffects && a.showLens == b.showLens &&
            a.showVignette == b.showVignette && a.showGrain == b.showGrain &&
-           a.showKaleido == b.showKaleido;
+           a.showKaleido == b.showKaleido && a.showBlur == b.showBlur;
 }
 
 void copyScopeState(const EditScope &src, EditScope &dst)
@@ -9738,6 +9955,7 @@ void copyScopeState(const EditScope &src, EditScope &dst)
     dst.showEffects = src.showEffects;       dst.showLens = src.showLens;
     dst.showVignette = src.showVignette;     dst.showGrain = src.showGrain;
     dst.showKaleido = src.showKaleido;
+    dst.showBlur = src.showBlur;
 }
 
 int scopeIndexForLink(const EditStack &s, const QString &link)
@@ -10052,6 +10270,16 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("grainAmount",        p.grainAmount        * 100.0);   // "Grain"
     setSliderReal("grainSize",          p.grainSize          * 100.0);
     setSliderReal("grainRoughness",     p.grainRoughness     * 100.0);
+    setSliderReal("blurAmount",         p.blurAmount         * 100.0);   // "Blur"
+    setSliderReal("blurAngle",          p.blurAngle);
+    setSliderReal("blurSize",           p.blurSize           * 100.0);
+    setSliderReal("blurFeather",        p.blurFeather        * 100.0);
+    if (blurTypeCombo) {
+        QSignalBlocker b(blurTypeCombo);
+        blurTypeCombo->setCurrentIndex(std::clamp(p.blurType, 0,
+                                                  int(blurTypeDefs().size()) - 1));
+    }
+    applyBlurTypeRows();
     syncLensPanel();                  // Global's Remove CA / fringe rows (scope 0 always)
     syncKaleidoSliders();             // Effects > Kaleidoscope (handled apart)
     emit kaleidoToolChanged();        // new image / scope: the handles re-evaluate

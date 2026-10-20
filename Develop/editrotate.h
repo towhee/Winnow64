@@ -35,6 +35,7 @@
       brush / spot sizes                          unchanged (fraction of the long edge)
       straighten                                  unchanged (a rotation about the centre
                                                   commutes with a quarter turn)
+      blur centre / angle (every scope's params)  rotated / turned, like the kaleidoscope's
       kaleidoscope centre (every scope's params)  rotated (a point in the cropped frame,
                                                   which turns with the photo)
       kaleidoscope angle                          + the turn (y-down degrees, so clockwise
@@ -210,6 +211,38 @@ inline bool kaleido(EditParams &p, int degrees)
                               before.kaleidoAngle != p.kaleidoAngle);
 }
 
+/* Turn a scope's Effects > Blur centre (a point) and angle (y-down degrees + the turn)
+   by a quarter turn, unconditionally. MW also uses it to carry the stored, ORIENTED-
+   frame values into the SOURCE frame for the develop -- with the inverse turn, and
+   whatever the values are (a Motion blur at angle 0 still turns on a portrait frame). */
+inline void turnBlur(EditParams &p, int degrees)
+{
+    if (!isRotation(degrees)) return;
+    const QPointF c = point(p.blurX, p.blurY, degrees);
+    p.blurX = float(c.x());
+    p.blurY = float(c.y());
+    float a = p.blurAngle + (degrees == 270 ? -90.0f : float(degrees));
+    if (a > 180.0f) a -= 360.0f;
+    if (a <= -180.0f) a += 360.0f;
+    p.blurAngle = a;
+}
+
+/* The photo turned: the blur turns with it. An OFF blur still at its DEFAULTS is left
+   alone (as the kaleidoscope's), or an untouched scope would read as edited. Returns
+   whether an ON blur moved. */
+inline bool blur(EditParams &p, int degrees)
+{
+    if (!isRotation(degrees)) return false;
+    const EditParams def;
+    if (p.blurAmount == def.blurAmount && p.blurX == def.blurX && p.blurY == def.blurY &&
+        p.blurAngle == def.blurAngle)
+        return false;
+    const EditParams before = p;
+    turnBlur(p, degrees);
+    return p.blurAmount > 0.0f && (before.blurX != p.blurX || before.blurY != p.blurY ||
+                                   before.blurAngle != p.blurAngle);
+}
+
 /* The whole recipe. Returns whether anything positional was there to move, so the
    caller can skip a sidecar write for a recipe that is only tone and colour. */
 inline bool stack(EditStack &s, int degrees)
@@ -218,6 +251,7 @@ inline bool stack(EditStack &s, int degrees)
     bool moved = false;
     for (EditScope &scope : s.scopes) {
         moved |= kaleido(scope.params, degrees);
+        moved |= blur(scope.params, degrees);
         for (MaskComponent &m : scope.components) {
             const QString after = maskParams(m.tool, m.paramsJson, degrees);
             if (after != m.paramsJson) { m.paramsJson = after; moved = true; }

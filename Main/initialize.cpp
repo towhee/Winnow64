@@ -2977,6 +2977,11 @@ void MW::createDevelopDock()
             [this](double x, double y, double angleDeg, bool){
         developProperties->setKaleidoHandles(x, y, angleDeg);
     });
+    /* Effects > Blur's handles (centre / direction / tilt-shift band), the same way. */
+    connect(imageView, &ImageView::blurHandlesEdited, developProperties,
+            [this](double x, double y, double angleDeg, bool){
+        developProperties->setBlurHandles(x, y, angleDeg);
+    });
     /* Effects > Kaleidoscope came into or out of view (chosen in the dropdown, Effects
        expanded / collapsed, scope or image changed): the handles follow it. */
     connect(developProperties, &DevelopProperties::kaleidoToolChanged,

@@ -1940,7 +1940,9 @@ void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments)
     in displayed-image coords and need no geometry mapping.
 */
     if (G::isLogger) G::log("ImageView::beginKaleido");
-    const bool wasActive = kaleidoMode;
+    const bool wasActive = kaleidoMode && kaleidoKind == 0;
+    kaleidoKind = 0;
+    kaleidoShowCentre = kaleidoShowSpoke = true;
     kaleidoMode = true;
     kaleidoC = centreN;
     kaleidoAngleDeg = angleDeg;
@@ -1950,6 +1952,87 @@ void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments)
         setCursor(Qt::CrossCursor);
     }
     viewport()->update();
+}
+
+void ImageView::beginBlurHandles(QPointF centreN, double angleDeg, int type,
+                                 double bandHalf, double bandRamp)
+{
+    if (G::isLogger) G::log("ImageView::beginBlurHandles");
+    const bool wasActive = kaleidoMode && kaleidoKind == 1;
+    kaleidoKind = 1;
+    kaleidoMode = true;
+    kaleidoC = centreN;
+    kaleidoAngleDeg = angleDeg;
+    kaleidoSegs = 0;
+    /* ArtBlur::Type: 1 Motion, 2 Spin, 3 Zoom, 4 Tilt-shift. */
+    kaleidoShowCentre = (type == 2 || type == 3 || type == 4);
+    kaleidoShowSpoke  = (type == 1 || type == 4);
+    blurBandHalf = (type == 4) ? bandHalf : 0.0;
+    blurBandRamp = (type == 4) ? bandRamp : 0.0;
+    if (!wasActive) {
+        kaleidoDrag = -1;
+        setCursor(Qt::CrossCursor);
+    }
+    viewport()->update();
+}
+
+QPointF ImageView::effNormToVp(QPointF n) const
+{
+    if (kaleidoKind == 1) return maskNormToViewport(n);
+    const QRectF br = pmItem->boundingRect();
+    const QPointF item(br.left() + n.x() * br.width(), br.top() + n.y() * br.height());
+    return QPointF(mapFromScene(pmItem->mapToScene(item)));
+}
+
+bool ImageView::effVpToNorm(QPointF vp, QPointF &n) const
+{
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return false;
+    if (kaleidoKind == 1) n = maskViewportToNorm(vp.toPoint());
+    else {
+        const QPointF item = pmItem->mapFromScene(mapToScene(vp.toPoint()));
+        n = QPointF((item.x() - br.left()) / br.width(), (item.y() - br.top()) / br.height());
+    }
+    n = QPointF(qBound(0.0, n.x(), 1.0), qBound(0.0, n.y(), 1.0));
+    return true;
+}
+
+QPointF ImageView::effDirVp(double angleDeg) const
+{
+    /* The kaleidoscope's angle IS a screen angle (its space is the displayed image).
+       The blur's is an angle in its FRAME's pixels, so a straightened or warped
+       geometry turns it on screen: map a short step through the geometry. */
+    const double a = angleDeg * 0.017453292519943295;
+    if (kaleidoKind != 1) return QPointF(std::cos(a), std::sin(a));
+    const QSizeF fs = maskNormFrameSize();
+    if (fs.isEmpty()) return QPointF(std::cos(a), std::sin(a));
+    const double step = 0.05 * std::max(fs.width(), fs.height());
+    const QPointF n2 = kaleidoC + QPointF(std::cos(a) * step / fs.width(),
+                                          std::sin(a) * step / fs.height());
+    const QPointF d = effNormToVp(n2) - effNormToVp(kaleidoC);
+    const double len = std::hypot(d.x(), d.y());
+    return len > 1e-9 ? d / len : QPointF(std::cos(a), std::sin(a));
+}
+
+double ImageView::effAngleAt(QPointF vp) const
+{
+    if (kaleidoKind != 1) {
+        const QPointF d = vp - kaleidoCentreVp();
+        return std::atan2(d.y(), d.x()) * 57.29577951308232;
+    }
+    /* In frame pixels, so it is the angle the render uses. */
+    const QSizeF fs = maskNormFrameSize();
+    const QPointF n = maskViewportToNorm(vp.toPoint());
+    return std::atan2((n.y() - kaleidoC.y()) * fs.height(),
+                      (n.x() - kaleidoC.x()) * fs.width()) * 57.29577951308232;
+}
+
+void ImageView::emitEffectEdited(bool finished)
+{
+    if (kaleidoKind == 1)
+        emit blurHandlesEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, finished);
+    else
+        emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, finished);
 }
 
 void ImageView::endKaleido()
@@ -1964,25 +2047,23 @@ void ImageView::endKaleido()
 
 QPointF ImageView::kaleidoCentreVp() const
 {
-    const QRectF br = pmItem->boundingRect();
-    const QPointF item(br.left() + kaleidoC.x() * br.width(),
-                       br.top()  + kaleidoC.y() * br.height());
-    return QPointF(mapFromScene(pmItem->mapToScene(item)));
+    return effNormToVp(kaleidoC);
 }
 
 QPointF ImageView::kaleidoSpokeVp() const
 {
     /* A fixed SCREEN distance, so the handle is grabbable at any zoom. */
     const double kSpokePx = 80.0;
-    const double a = kaleidoAngleDeg * 0.017453292519943295;
-    return kaleidoCentreVp() + QPointF(std::cos(a), std::sin(a)) * kSpokePx;
+    return kaleidoCentreVp() + effDirVp(kaleidoAngleDeg) * kSpokePx;
 }
 
 int ImageView::kaleidoHitTest(QPoint vp) const
 {
     const double kGrabPx = 10.0;
-    if (QLineF(kaleidoSpokeVp(), QPointF(vp)).length() <= kGrabPx) return 1;
-    if (QLineF(kaleidoCentreVp(), QPointF(vp)).length() <= kGrabPx) return 0;
+    if (kaleidoShowSpoke && QLineF(kaleidoSpokeVp(), QPointF(vp)).length() <= kGrabPx)
+        return 1;
+    if (kaleidoShowCentre && QLineF(kaleidoCentreVp(), QPointF(vp)).length() <= kGrabPx)
+        return 0;
     return -1;
 }
 
@@ -2011,30 +2092,65 @@ void ImageView::kaleidoDrawOverlay(QPainter *painter)
             painter->drawLine(c, c + QPointF(std::cos(a), std::sin(a)) * reach);
         }
     }
+    /* Tilt-shift: the sharp band's two edges (solid) and where the blur reaches full
+       strength (dashed), along the band's direction through the centre. */
+    if (kaleidoKind == 1 && blurBandHalf > 0.0) {
+        const QSizeF fs = maskNormFrameSize();
+        if (!fs.isEmpty()) {
+            const double L = std::max(fs.width(), fs.height());
+            const double a = kaleidoAngleDeg * 0.017453292519943295;
+            const QPointF nrm(-std::sin(a) * L / fs.width(), std::cos(a) * L / fs.height());
+            const QPointF dir = effDirVp(kaleidoAngleDeg);
+            auto edge = [&](double off, bool dashed) {
+                const QPointF p = effNormToVp(kaleidoC + nrm * off);
+                QPen pen(QColor(255, 255, 255, dashed ? 90 : 170));
+                pen.setWidthF(1.0); pen.setCosmetic(true);
+                if (dashed) pen.setStyle(Qt::DashLine);
+                painter->setPen(pen);
+                painter->drawLine(p - dir * reach, p + dir * reach);
+            };
+            for (double sgn : {-1.0, 1.0}) {
+                edge(sgn * blurBandHalf, false);
+                edge(sgn * (blurBandHalf + blurBandRamp), true);
+            }
+        }
+    }
     painter->setClipping(false);
 
-    /* The spoke: the seam the angle handle sits on, drawn solid to the handle. */
-    const QPointF h = kaleidoSpokeVp();
     QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
     QPen line(QColor(255, 235, 90, 240)); line.setWidthF(1.4); line.setCosmetic(true);
-    painter->setPen(halo); painter->drawLine(c, h);
-    painter->setPen(line); painter->drawLine(c, h);
+    /* The spoke: the seam the angle handle sits on, drawn solid to the handle. */
+    const QPointF h = kaleidoSpokeVp();
+    if (kaleidoShowSpoke) {
+        painter->setPen(halo); painter->drawLine(c, h);
+        painter->setPen(line); painter->drawLine(c, h);
+    }
 
     /* Handles: a ring + crosshair at the centre, a dot at the spoke's end. */
     const double rc = 8.0, rh = 5.5;
-    painter->setBrush(Qt::NoBrush);
-    painter->setPen(halo);
-    painter->drawEllipse(c, rc, rc);
-    painter->drawLine(c - QPointF(rc + 4, 0), c + QPointF(rc + 4, 0));
-    painter->drawLine(c - QPointF(0, rc + 4), c + QPointF(0, rc + 4));
-    QPen white(QColor(255, 255, 255, 240)); white.setWidthF(1.4); white.setCosmetic(true);
-    painter->setPen(white);
-    painter->drawEllipse(c, rc, rc);
-    painter->drawLine(c - QPointF(rc + 4, 0), c + QPointF(rc + 4, 0));
-    painter->drawLine(c - QPointF(0, rc + 4), c + QPointF(0, rc + 4));
-    painter->setPen(halo);
-    painter->setBrush(QColor(255, 235, 90, 240));
-    painter->drawEllipse(h, rh, rh);
+    if (kaleidoShowCentre) {
+        painter->setBrush(Qt::NoBrush);
+        painter->setPen(halo);
+        painter->drawEllipse(c, rc, rc);
+        painter->drawLine(c - QPointF(rc + 4, 0), c + QPointF(rc + 4, 0));
+        painter->drawLine(c - QPointF(0, rc + 4), c + QPointF(0, rc + 4));
+        QPen white(QColor(255, 255, 255, 240)); white.setWidthF(1.4); white.setCosmetic(true);
+        painter->setPen(white);
+        painter->drawEllipse(c, rc, rc);
+        painter->drawLine(c - QPointF(rc + 4, 0), c + QPointF(rc + 4, 0));
+        painter->drawLine(c - QPointF(0, rc + 4), c + QPointF(0, rc + 4));
+    }
+    else if (kaleidoShowSpoke) {
+        /* A Motion spoke has no centre to drag: a small anchor dot says where it starts. */
+        painter->setPen(halo);
+        painter->setBrush(QColor(255, 255, 255, 200));
+        painter->drawEllipse(c, 3.0, 3.0);
+    }
+    if (kaleidoShowSpoke) {
+        painter->setPen(halo);
+        painter->setBrush(QColor(255, 235, 90, 240));
+        painter->drawEllipse(h, rh, rh);
+    }
     painter->restore();
 }
 
@@ -5582,14 +5698,19 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         const int h = kaleidoHitTest(event->pos());
         isLeftMouseBtnPressed = true;
         if (h == 1) { kaleidoDrag = 1; return; }
+        /* No centre to move (a Motion blur): a click elsewhere does nothing. */
+        if (h < 0 && !kaleidoShowCentre) { kaleidoDrag = -1; return; }
         kaleidoDrag = 0;
         kaleidoGrabOffsetVp = (h == 0) ? QPointF(event->pos()) - kaleidoCentreVp() : QPointF();
         if (h < 0) {
             QPointF n;
-            if (!displayedNormAt(event->pos(), n)) { kaleidoDrag = -1; return; }
+            if (kaleidoKind == 0) {
+                if (!displayedNormAt(event->pos(), n)) { kaleidoDrag = -1; return; }
+            }
+            else if (!effVpToNorm(QPointF(event->pos()), n)) { kaleidoDrag = -1; return; }
             kaleidoC = n;
             viewport()->update();
-            emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, false);
+            emitEffectEdited(false);
         }
         setCursor(Qt::ClosedHandCursor);
         return;
@@ -5987,23 +6108,22 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
        frame; cropN is then recomputed from the (unchanged) frame after the pan, below. */
     if (!spacePanOverride && kaleidoActive()) {
         if (kaleidoDrag == 0) {
-            const QRectF br = pmItem->boundingRect();
-            const QPointF vp = QPointF(event->pos()) - kaleidoGrabOffsetVp;
-            const QPointF item = pmItem->mapFromScene(mapToScene(vp.toPoint()));
-            kaleidoC = QPointF(qBound(0.0, (item.x() - br.left()) / br.width(), 1.0),
-                               qBound(0.0, (item.y() - br.top()) / br.height(), 1.0));
-            viewport()->update();
-            emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, false);
+            QPointF n;
+            if (effVpToNorm(QPointF(event->pos()) - kaleidoGrabOffsetVp, n)) {
+                kaleidoC = n;
+                viewport()->update();
+                emitEffectEdited(false);
+            }
         }
         else if (kaleidoDrag == 1) {
             const QPointF d = QPointF(event->pos()) - kaleidoCentreVp();
             if (d.manhattanLength() > 2.0) {
-                double a = std::atan2(d.y(), d.x()) * 57.29577951308232;
+                double a = effAngleAt(QPointF(event->pos()));
                 /* Shift snaps to 15 degrees, as rotation handles usually do. */
                 if (event->modifiers() & Qt::ShiftModifier) a = std::round(a / 15.0) * 15.0;
                 kaleidoAngleDeg = a;
                 viewport()->update();
-                emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, false);
+                emitEffectEdited(false);
             }
         }
         else setCursor(kaleidoHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor
@@ -6262,7 +6382,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         kaleidoDrag = -1;
         isLeftMouseBtnPressed = false;
         setCursor(kaleidoHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::CrossCursor);
-        emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, true);
+        emitEffectEdited(true);
         return;
     }
     /* Finish a level line: reduce its tilt to the nearest horizontal/vertical and emit

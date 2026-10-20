@@ -396,6 +396,14 @@ public slots:
        kaleidoEdited; MW writes the geometry and re-renders. beginKaleido also re-syncs
        the overlay after a slider edit. */
     void   beginKaleido(QPointF centreN, double angleDeg, int segments);
+    /* The same overlay for Effects > Blur (MW::syncDevelopEffectHandles), in the MASK
+       space -- the oriented, uncropped frame the blur is stored in -- mapped onto the
+       displayed image through the geometry (maskNormToViewport / maskViewportToNorm).
+       type is ArtBlur::Type: Spin / Zoom show the centre, Motion the direction spoke,
+       Tilt-shift both plus the band (bandHalf, bandRamp: fractions of the frame's long
+       edge). Drags emit blurHandlesEdited. endKaleido ends either. */
+    void   beginBlurHandles(QPointF centreN, double angleDeg, int type, double bandHalf,
+                            double bandRamp);
     void   endKaleido();
     bool   kaleidoActive() const { return kaleidoMode && pmItem && pmItem->isVisible(); }
     /* True while an overlay is drawn in the geometry stage's INPUT space (a mask tool, a
@@ -465,6 +473,9 @@ signals:
     /* Kaleido: the centre (normalized, displayed image) or the angle was dragged.
        finished is true on the release, so history can close the gesture. */
     void kaleidoEdited(double x, double y, double angleDeg, bool finished);
+    /* Effects > Blur's centre (normalized, MASK space) or angle (frame degrees) was
+       dragged; finished on the release. */
+    void blurHandlesEdited(double x, double y, double angleDeg, bool finished);
     /* needsUnfoldedFrame() flipped: re-render so the kaleidoscope comes off / goes back. */
     void unfoldedFrameNeedChanged();
     /* A regenerative-fill spot stroke finished: FillSpotGeom paramsJson (size/feather/
@@ -995,6 +1006,17 @@ private:
     int     kaleidoSegs = 0;
     int     kaleidoDrag = -1;
     QPointF kaleidoGrabOffsetVp;        // press point minus the centre, so it does not jump
+    /* What the overlay is editing: 0 the kaleidoscope (displayed space, seams), 1 the
+       blur (mask space; which handles show follows its type). */
+    int     kaleidoKind = 0;
+    bool    kaleidoShowCentre = true;
+    bool    kaleidoShowSpoke = true;
+    double  blurBandHalf = 0.0, blurBandRamp = 0.0;   // Tilt-shift band, long-edge fractions
+    QPointF effNormToVp(QPointF n) const;               // the overlay's space -> viewport
+    bool    effVpToNorm(QPointF vp, QPointF &n) const;  // ... and back (clamped)
+    QPointF effDirVp(double angleDeg) const;            // a unit screen direction
+    double  effAngleAt(QPointF vp) const;               // the angle from the centre to vp
+    void    emitEffectEdited(bool finished);
     bool    lastNeedsUnfolded = false;  // for syncUnfoldedFrameNeed's edge detect
     QPointF kaleidoCentreVp() const;
     QPointF kaleidoSpokeVp() const;     // the angle handle, a fixed screen distance out

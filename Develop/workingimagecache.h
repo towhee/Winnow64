@@ -105,6 +105,7 @@ public:
         qint64 profileMs = 0; qint64 denoiseMs = 0; qint64 pointMs = 0;
         qint64 textureMs = 0; qint64 clarityMs = 0;
         qint64 dehazeMs = 0; qint64 vignetteMs = 0; qint64 sharpenMs = 0; qint64 grainMs = 0;
+        qint64 blurMs = 0;
         /* renderStack sub-stages (together they make up developMs on the stack path).
            developMs alone could not tell a full-frame WorkingImage COPY from the develop
            pass from the mask blend -- three very different fixes -- so on a params drag,

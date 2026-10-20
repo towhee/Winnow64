@@ -191,6 +191,13 @@ public:
        MW shows the canvas handles while this holds and that scope's kaleidoscope is on
        (MW::syncDevelopKaleidoOverlay). */
     bool kaleidoToolWanted() const;
+    /* Effects > Blur is on show for the ACTIVE scope with a type that has handles
+       (Motion, Spin, Zoom, Tilt-shift), the blur on and the eyes open -- MW then puts
+       its handles on the image (MW::syncDevelopKaleidoOverlay). */
+    bool blurToolWanted() const;
+    /* A blur handle drag: the active scope's centre (normalized, oriented frame) and
+       angle (deg). One merged history row per drag. */
+    void setBlurHandles(double x, double y, double angleDeg);
     /* An AI mask's model result (Subject / Background / Sky) landed or changed: the
        Submasks list re-reads it, to mark a submask that found nothing "(null)". */
     void autoMaskResultsChanged();
@@ -907,6 +914,10 @@ private:
        effect that is not showing gets " *" on its item (updateSectionHeaderCaptions). */
     int  effectsChoice = 0;
     QPointer<QComboBox> effectsCombo;
+    /* Effects > Blur's type picker (EditParams::blurType) and the rows each type uses
+       (applyBlurTypeRows hides the rest, like applyEffectsChoice). */
+    QPointer<QComboBox> blurTypeCombo;
+    void applyBlurTypeRows();
     int  shownEffect() const;              // effectsChoice, or Vignette where it is absent
     void applyEffectsChoice();             // show the chosen effect's rows, hide the rest
     /* The Lens section (Global scope only): the lensfun profile (on/off, the lens, the
@@ -1026,10 +1037,18 @@ private:
     static QIcon detailTargetIcon(bool armed);   // drawn, like dropperIcon
     QPointer<DetailPreview> detailPreview;
     QPointer<BarBtn> detailPickBtn;
+    /* The SAME 1:1 patch, shown again under Effects > Blur (one target point, one
+       render: whichever window is on screen asks for it). */
+    QPointer<DetailPreview> blurPreview;
+    QPointer<BarBtn> blurPickBtn;
     QPointF detailPt;
     bool detailPtSet = false;
     bool detailPickActive = false;
     void addDetailPreviewRow(QModelIndex parIdx);
+    /* The 1:1 preview row, for any section: Detail's and Effects > Blur's. */
+    void addPreviewRow(QModelIndex parIdx, const QString &parentName, const QString &name,
+                       const QString &tooltip, QPointer<DetailPreview> &preview,
+                       QPointer<BarBtn> &pickBtn);
     void updateSectionHeaderCaptions();   // section names + the edited " *" marker
     /* Current " *" state of each section header: 1 = starred, 0 = plain, -1 = unknown
        (after a tree rebuild). Indexed BY POSITION in updateSectionHeaderCaptions's hdrs[]

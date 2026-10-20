@@ -294,6 +294,7 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
         timings->vignetteMs = stage.vignetteMs;
         timings->sharpenMs = stage.sharpenMs;
         timings->grainMs = stage.grainMs;
+        timings->blurMs = stage.blurMs;
     }
     const bool ok = toImage(developed, out);
     if (timings) timings->toImageMs = t.restart();
