@@ -75,6 +75,8 @@ private slots:
     void firstWedgeIsThePhoto();
     void pointFormMatchesPixels();
     void keepsSizeAndDepth();
+    void zoomMagnifiesAboutTheCentre();
+    void opacityBlendsWithTheFrame();
     void maskedFoldsOnlyTheMaskedPixels();
     void maskedKeepsDepth();
     void paramsJsonRoundTripAndSanitize();
@@ -150,6 +152,7 @@ void TestKaleidoscope::pointFormMatchesPixels()
     const QImage src = smooth(W, H);
     Kaleido k = kaleido(8, 33.0, -12.0);
     k.x = 0.35; k.y = 0.6;
+    k.zoom = 1.7;                       // the point form must carry the zoom too
     const QImage out = CropTransform::applyKaleidoscope(src, k);
     for (int y = 3; y < H; y += 7) {
         for (int x = 3; x < W; x += 7) {
@@ -181,6 +184,54 @@ void TestKaleidoscope::keepsSizeAndDepth()
     const QImage cropped = CropTransform::applyGeometry(pattern(80, 60), g);
     QCOMPARE(cropped.size(), QSize(40, 30));
     QCOMPARE(CropTransform::applyKaleidoscope(cropped, kaleido(6)).size(), QSize(40, 30));
+}
+
+void TestKaleidoscope::zoomMagnifiesAboutTheCentre()
+{
+    /* N = 2 at angle 0: the lower half is the photo. At zoom 2 a pixel d below the
+       centre samples the photo d / 2 below it -- the slice is magnified about the
+       centre, which itself does not move. */
+    const int W = 64, H = 64;
+    const QImage src = smooth(W, H);
+    Kaleido k = kaleido(2);
+    k.zoom = 2.0;
+    const QImage out = CropTransform::applyKaleidoscope(src, k);
+    for (int d = 2; d < 28; d += 4) {
+        const QRgb got = out.pixel(20, 32 + d);
+        /* x moves toward the centre too: 32 + (20.5 - 32) / 2. */
+        const QRgb want = src.pixel(26, 32 + d / 2);
+        QVERIFY2(near(got, want, 4),
+                 qPrintable(QString("zoom sample off at d=%1").arg(d)));
+    }
+    /* Zoom 1 is the plain fold. */
+    k.zoom = 1.0;
+    QCOMPARE(CropTransform::applyKaleidoscope(src, k),
+             CropTransform::applyKaleidoscope(src, kaleido(2)));
+}
+
+void TestKaleidoscope::opacityBlendsWithTheFrame()
+{
+    const int W = 64, H = 48;
+    const QImage src = pattern(W, H);
+    Kaleido k = kaleido(2);
+    const QImage full = CropTransform::applyKaleidoscope(src, k);
+    k.opacity = 0.0;
+    QVERIFY(near(CropTransform::applyKaleidoscope(src, k).pixel(20, 5), src.pixel(20, 5)));
+    k.opacity = 0.5;
+    const QImage half = CropTransform::applyKaleidoscope(src, k);
+    for (int x = 4; x < W; x += 9) {
+        const QRgb a = src.pixel(x, 5), b = full.pixel(x, 5), h = half.pixel(x, 5);
+        QVERIFY(qAbs(qRed(h) - (qRed(a) + qRed(b)) / 2) <= 1);
+        QVERIFY(qAbs(qGreen(h) - (qGreen(a) + qGreen(b)) / 2) <= 1);
+    }
+    /* The masked fold: half opacity lays half the mirrored subject over the photo. */
+    Kaleido kv = kaleido(2, 90.0);
+    const QImage m = maskOf(W, H, [&](int x, int) { return x < W / 2; });
+    const QImage mFull = CropTransform::applyKaleidoscopeMasked(src, m, kv);
+    kv.opacity = 0.5;
+    const QImage mHalf = CropTransform::applyKaleidoscopeMasked(src, m, kv);
+    const QRgb a = src.pixel(50, 20), b = mFull.pixel(50, 20), h = mHalf.pixel(50, 20);
+    QVERIFY(qAbs(qRed(h) - (qRed(a) + qRed(b)) / 2) <= 2);
 }
 
 void TestKaleidoscope::maskedFoldsOnlyTheMaskedPixels()
@@ -247,6 +298,8 @@ void TestKaleidoscope::paramsJsonRoundTripAndSanitize()
     p.kaleidoSegments = 10;
     p.kaleidoX = 0.25f; p.kaleidoY = 0.75f;
     p.kaleidoAngle = -45.5f; p.kaleidoSource = 12.0f;
+    p.kaleidoZoom = 2.5f;
+    p.kaleidoOpacity = 0.4f;
     QVERIFY(!p.isIdentity());
     QVERIFY(!EditParams::groupIsDefault(p, EditParams::Group::Effects));
     const EditParams back = EditStack::paramsFromJson(EditStack::paramsToJson(p));
@@ -255,6 +308,12 @@ void TestKaleidoscope::paramsJsonRoundTripAndSanitize()
     QCOMPARE(back.kaleidoY, 0.75f);
     QCOMPARE(back.kaleidoAngle, -45.5f);
     QCOMPARE(back.kaleidoSource, 12.0f);
+    QCOMPARE(back.kaleidoZoom, 2.5f);
+    QCOMPARE(back.kaleidoOpacity, 0.4f);
+    /* Zoom 1 (the default) is not written even when on. */
+    EditParams z = p;
+    z.kaleidoZoom = 1.0f;
+    QVERIFY(!EditStack::paramsToJson(z).contains("kaleidoZoom"));
 
     /* Reset Effects takes it with the rest of the section. */
     EditParams r = p;

@@ -518,6 +518,8 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "kaleidoY")            p.kaleidoY            = f;
     else if (key == "kaleidoAngle")        p.kaleidoAngle        = f;
     else if (key == "kaleidoSource")       p.kaleidoSource       = f;
+    else if (key == "kaleidoZoom")         p.kaleidoZoom         = f;
+    else if (key == "kaleidoOpacity")      p.kaleidoOpacity      = f;
     /* Global-only (always scope 0), listed here so one function covers every raw key. */
     else if (key == "denoiseLuma")         p.denoiseLuma         = f;
     else if (key == "denoiseChroma")       p.denoiseChroma       = f;

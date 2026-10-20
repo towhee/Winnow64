@@ -11610,6 +11610,12 @@ QImage developCompositeStack(const WorkingImage &src,
                     maskKeys[i] += '#';
                     maskKeys[i] += baseKey;
                 }
+                /* The mask's Opacity scales the CACHED buffer, so it keys it -- with the
+                   mask, not the params, so an opacity drag re-blends this scope's
+                   developed layer instead of re-developing it. Only below 1, so every
+                   existing key is unchanged. */
+                if (L.opacity < 1.0f)
+                    maskKeys[i] += "#op" + QByteArray::number(double(L.opacity), 'g', 6);
                 paramsKeys[i] = QJsonDocument(EditStack::paramsToJson(L.params))
                                     .toJson(QJsonDocument::Compact);
                 /* Visualize Range is not in the sidecar JSON (it is view state), but it
@@ -11655,13 +11661,20 @@ QImage developCompositeStack(const WorkingImage &src,
                 s.mask = cache ? cache->mask(i, maskKeys[i]) : nullptr;
                 if (!s.mask) {
                     bool refsReady = true;
-                    s.mask = std::make_shared<const std::vector<float>>(
+                    std::vector<float> built =
                         buildMaskBuffer(L.components, src.width, src.height, degrees,
                                         fPath, &refsReady, maskStats,
                                         double(src.renderScale), L.maskEdge,
                                         L.maskHalo,
                                         haloGuide.empty() ? nullptr : &haloGuide,
-                                        refineGuide.empty() ? nullptr : &refineGuide));
+                                        refineGuide.empty() ? nullptr : &refineGuide);
+                    /* The mask's Opacity: the whole coverage, scaled. Downstream (the
+                       blend, the kaleidoscope, "Hide global image") all read it. */
+                    if (L.opacity < 1.0f) {
+                        const float op = std::clamp(L.opacity, 0.0f, 1.0f);
+                        for (float &v : built) v *= op;
+                    }
+                    s.mask = std::make_shared<const std::vector<float>>(std::move(built));
                     if (timings) ++timings->maskScopes;
                     /* A buffer built without one of its references is a placeholder --
                        cache it and nothing would ever retire it (the components do not
@@ -11798,7 +11811,13 @@ QImage developCompositeStack(const WorkingImage &src,
                 }
                 else {
                     frame = CropTransform::applyKaleidoscopeMasked(frame, cov, k);
-                    if (hide) unionCoverage(alpha, CropTransform::applyKaleidoscope(cov, k));
+                    /* What shows: the mask itself, plus its folded copies at the fold's
+                       opacity (applyKaleidoscope with k's opacity is lerp(cov, fold,
+                       op), so the union with cov leaves op x fold off the mask). */
+                    if (hide) {
+                        unionCoverage(alpha, cov);
+                        unionCoverage(alpha, CropTransform::applyKaleidoscope(cov, k));
+                    }
                 }
             }
             else if (cov.isNull()) alpha.fill(255);
@@ -12025,8 +12044,12 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     QGuiApplication::restoreOverrideCursor();
     if (!ok || !r->valid()) return;
 
+    r->markEmpty();                 // "(null)" in the Submasks list when nothing was found
     SubjectMask::putRef(fPath, r);
     developSubjectRefPath = fPath;
+    /* Queued: this runs inside a render; the list re-reads the new ref after it. */
+    QTimer::singleShot(0, this, [this]{
+        if (developProperties) developProperties->autoMaskResultsChanged(); });
 }
 
 void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
@@ -12074,8 +12097,11 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     if (G::popup) G::popup->reset();
     if (!ok || !r->valid()) return;
 
+    r->markEmpty();                 // "(null)" in the Submasks list when no sky was found
     SkyMask::putRef(fPath, r);
     developSkyRefPath = fPath;
+    QTimer::singleShot(0, this, [this]{       // queued, as ensureSubjectMask
+        if (developProperties) developProperties->autoMaskResultsChanged(); });
 }
 
 void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,

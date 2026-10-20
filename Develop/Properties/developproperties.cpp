@@ -1,4 +1,6 @@
 #include "Develop/Properties/developproperties.h"
+#include "Develop/subjectmask.h"     // autoSubmaskIsNull: the AI refs' "found nothing"
+#include "Develop/skymask.h"
 #include "Develop/cameraprofilestore.h"
 #include "Develop/cameraprofile.h"
 #include "Cache/devpreviewcache.h"
@@ -989,6 +991,9 @@ void DevelopProperties::syncMaskPanel()
         r.toolName = maskToolName(m.tool);
         if (r.toolName.endsWith(" Mask"))
             r.toolName = r.toolName.chopped(5) + " Submask";
+        /* An auto (AI) submask whose model found nothing to select says so, or it reads
+           as a working mask that mysteriously changes nothing. */
+        if (autoSubmaskIsNull(m.tool)) r.toolName += " (null)";
         /* The PENDING submask shows the op the veil and the button are previewing, not
            the (not yet written) one on the component -- the row and the button must not
            disagree about what is about to happen. */
@@ -1004,7 +1009,8 @@ void DevelopProperties::syncMaskPanel()
        submasks there is no mask to grow or shrink, so the row goes away entirely. */
     if (MaskEditor *ed = maskPanel->levelEditor()) {
         ed->setCaptionWidth(maskPanelCaptionWidth());
-        ed->showMaskLevel(scope->maskEdge, scope->maskHalo, maskHasRealEdge(*scope));
+        ed->showMaskLevel(scope->maskEdge, scope->maskHalo, maskHasRealEdge(*scope),
+                          scope->opacity);
     }
     maskPanel->showMaskLevel(!scope->components.isEmpty());
     /* The settings only make sense with a submask open; an empty mask shows nothing
@@ -1016,6 +1022,30 @@ void DevelopProperties::syncMaskPanel()
     syncAttributeScopeLabel();      // names what the settings below will affect
     syncSegmenterNote();
     maskPanel->setVisible(true);
+}
+
+bool DevelopProperties::autoSubmaskIsNull(int tool) const
+{
+    /* Read from the model result for the image on screen (registered by MW's
+       ensureSubjectMask / ensureSkyMask; empty-ness computed once, there). No result yet
+       -- still being built, or the model is missing -- is not "null". */
+    if (currentImagePath.isEmpty()) return false;
+    if (tool == int(MaskTool::Subject) || tool == int(MaskTool::Background)) {
+        const auto r = SubjectMask::getRef(currentImagePath);
+        if (!r) return false;
+        return tool == int(MaskTool::Subject) ? r->noSubject : r->noBackground;
+    }
+    if (tool == int(MaskTool::Sky)) {
+        const auto r = SkyMask::getRef(currentImagePath);
+        return r && r->noSky;
+    }
+    return false;
+}
+
+void DevelopProperties::autoMaskResultsChanged()
+{
+    if (G::isLogger) G::log("DevelopProperties::autoMaskResultsChanged");
+    syncMaskPanel();
 }
 
 void DevelopProperties::onMaskFolded(bool folded)
@@ -1178,6 +1208,7 @@ static QString maskSettingLabel(const QString &key)
     /* Distinct from the submask's "Edge" so the History dock says which level moved. */
     if (key == "scopeMaskEdge")    return "Mask edge";
     if (key == "scopeHalo")        return "Mask halo";
+    if (key == "scopeOpacity")     return "Mask opacity";
     if (key == "maskInvert")       return "Invert";
     if (key == "maskSize")         return "Brush size";
     if (key == "maskFlow")         return "Brush flow";
@@ -1385,6 +1416,8 @@ void DevelopProperties::onMaskLevelSetting(const QString &key, const QVariant &v
     if (!l) return;
     if      (key == "scopeMaskEdge") l->maskEdge = v.toFloat();
     else if (key == "scopeHalo")     l->maskHalo = v.toFloat();
+    else if (key == "scopeOpacity")
+        l->opacity = float(qBound(0.0, v.toDouble(), 100.0) / 100.0);
     else return;
     noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v), "mask/" + key);
     emit paramsChanged();
@@ -1396,12 +1429,13 @@ void DevelopProperties::resetMaskLevel()
     if (G::isLogger) G::log("DevelopProperties::resetMaskLevel");
     EditScope *l = activeScope();
     if (!l) return;
-    if (l->maskEdge == 0.0f && l->maskHalo == 0.0f) return;
+    if (l->maskEdge == 0.0f && l->maskHalo == 0.0f && l->opacity == 1.0f) return;
     l->maskEdge = 0.0f;
     l->maskHalo = 0.0f;
+    l->opacity = 1.0f;
     /* No mergeKey: this is one discrete act, not a slider settling, so it gets its own
        history entry rather than folding into the last Edge drag. */
-    noteEdit(tr("Reset mask edge and halo"));
+    noteEdit(tr("Reset mask edge, halo and opacity"));
     syncMaskPanel();                    // push the zeroed rows back into the sliders
     emit paramsChanged();
 }
@@ -2786,7 +2820,8 @@ const QVector<EffectDef> &effectDefs()
         {"Vignette",     {"vignetteExposure", "vignetteFeather"}, false},
         {"Grain",        {"grainAmount", "grainSize", "grainRoughness"}, false},
         /* Per scope: a mask scope folds only its masked pixels (see EditParams). */
-        {"Kaleidoscope", {"kaleidoSegments", "kaleidoAngle", "kaleidoSource"}, false},
+        {"Kaleidoscope", {"kaleidoSegments", "kaleidoAngle", "kaleidoSource",
+                          "kaleidoZoom", "kaleidoOpacity"}, false},
     };
     return defs;
 }
@@ -6795,6 +6830,15 @@ void DevelopProperties::addEffects()
                   "Turns the slice of the photo that is mirrored,\n"
                   "without turning the pattern (degrees).",
                   parIdx, "EffectsHeader", -180, 180, 0, G::darkgray, G::lightgray, 0);
+        /* Percent (25..800, 100 = as is), stored as a factor (kaleidoZoom 0.25..8). */
+        addSlider("kaleidoZoom", "Zoom",
+                  "Magnifies the mirrored slice about the centre (percent).\n"
+                  "Below 100 takes in more of the photo.",
+                  parIdx, "EffectsHeader", 25, 800, 0, G::darkgray, G::lightgray, 100);
+        /* Percent (0..100), stored 0..1 (kaleidoOpacity). */
+        addSlider("kaleidoOpacity", "Opacity",
+                  "How strongly the mirrored pattern covers the photo (percent).",
+                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 100);
     }
 
     addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
@@ -6875,6 +6919,8 @@ void DevelopProperties::resetEffect()
             p.kaleidoY        = def.kaleidoY;
             p.kaleidoAngle    = def.kaleidoAngle;
             p.kaleidoSource   = def.kaleidoSource;
+            p.kaleidoZoom     = def.kaleidoZoom;
+            p.kaleidoOpacity  = def.kaleidoOpacity;
         }
         else if (e == EffectVignette) {
             p.vignetteExposure = def.vignetteExposure;
@@ -6978,6 +7024,8 @@ void DevelopProperties::syncKaleidoSliders()
     setSliderReal("kaleidoSegments", p.kaleidoSegments);
     setSliderReal("kaleidoAngle", p.kaleidoAngle);
     setSliderReal("kaleidoSource", p.kaleidoSource);
+    setSliderReal("kaleidoZoom", p.kaleidoZoom * 100.0);      // factor -> percent
+    setSliderReal("kaleidoOpacity", p.kaleidoOpacity * 100.0);
     isPopulating = wasPop;
     updateSectionHeaderCaptions();   // the Effects " *" and the list's Kaleidoscope " *"
 }
@@ -7446,7 +7494,8 @@ void DevelopProperties::itemChange(QModelIndex idx)
        it on at 2, and the slider is re-seeded on the even count) and the canvas handles
        must follow (kaleidoToolChanged -> MW::syncDevelopKaleidoOverlay). */
     if (source == "kaleidoSegments" || source == "kaleidoAngle" ||
-        source == "kaleidoSource") {
+        source == "kaleidoSource" || source == "kaleidoZoom" ||
+        source == "kaleidoOpacity") {
         if (currentImagePath.isEmpty()) return;
         noteNonMaskInteraction();
         EditParams &p = activeParams();
@@ -7467,6 +7516,16 @@ void DevelopProperties::itemChange(QModelIndex idx)
             p.kaleidoAngle = v.toFloat();
             noteEdit("Kaleidoscope angle", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoAngle");
+        }
+        else if (source == "kaleidoOpacity") {
+            p.kaleidoOpacity = float(qBound(0.0, v.toDouble(), 100.0) / 100.0);
+            noteEdit("Kaleidoscope opacity", historyValueText(idx, v),
+                     historyScopeLabel() + "/kaleidoOpacity");
+        }
+        else if (source == "kaleidoZoom") {
+            p.kaleidoZoom = float(qBound(25.0, v.toDouble(), 800.0) / 100.0);
+            noteEdit("Kaleidoscope zoom", historyValueText(idx, v),
+                     historyScopeLabel() + "/kaleidoZoom");
         }
         else {
             p.kaleidoSource = v.toFloat();
@@ -7684,6 +7743,7 @@ DevelopProperties::buildStackJob(const EditStack &s, bool useGeometry, bool useS
         lj.combine = l.combine;
         lj.maskEdge = l.maskEdge;
         lj.maskHalo = l.maskHalo;
+        lj.opacity = l.opacity;
         for (const MaskComponent &m : l.components) {
             if (!m.enabled) continue;
             /* Content-derived AI masks (Select Subject/Sky/Background) carry NO paramsJson -- their
@@ -8469,6 +8529,8 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("kaleidoY", p.kaleidoY);
         out.insert("kaleidoAngle", p.kaleidoAngle);
         out.insert("kaleidoSource", p.kaleidoSource);
+        out.insert("kaleidoZoom", p.kaleidoZoom);
+        out.insert("kaleidoOpacity", p.kaleidoOpacity);
     }
     if (lk.contains("pointColors"))
         out.insert("pointColors", PointColor::encode(p.pointColorN, p.pointColor));
@@ -9042,6 +9104,9 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
         else if (k == "lensManualMidpoint" || k == "kaleidoX" || k == "kaleidoY") {
             it.value() = 0.5;
         }
+        else if (k == "kaleidoZoom" || k == "kaleidoOpacity") {
+            it.value() = 1.0;
+        }
         else if (k == "lensProfileId") {
             it.value() = QString();
         }
@@ -9398,6 +9463,8 @@ const FloatField kFloatFields[] = {
     {"kaleidoY",            &EditParams::kaleidoY},
     {"kaleidoAngle",        &EditParams::kaleidoAngle},
     {"kaleidoSource",       &EditParams::kaleidoSource},
+    {"kaleidoZoom",         &EditParams::kaleidoZoom},
+    {"kaleidoOpacity",      &EditParams::kaleidoOpacity},
     {"defringePurple",      &EditParams::defringePurple},
     {"defringeGreen",       &EditParams::defringeGreen},
     {"lensDistortion",      &EditParams::lensDistortion},
@@ -9649,6 +9716,7 @@ bool sameScopeState(const EditScope &a, const EditScope &b)
 {
     return a.combine == b.combine && a.maskEdge == b.maskEdge &&
            a.maskHalo == b.maskHalo && a.enabled == b.enabled &&
+           a.opacity == b.opacity &&
            a.showScope == b.showScope && a.showBasic == b.showBasic &&
            a.showCurves == b.showCurves && a.showColor == b.showColor &&
            a.showCalibrate == b.showCalibrate && a.showColorGrade == b.showColorGrade &&
@@ -9662,6 +9730,7 @@ void copyScopeState(const EditScope &src, EditScope &dst)
 {
     dst.combine = src.combine;   dst.maskEdge = src.maskEdge;
     dst.maskHalo = src.maskHalo; dst.enabled = src.enabled;
+    dst.opacity = src.opacity;
     dst.showScope = src.showScope;           dst.showBasic = src.showBasic;
     dst.showCurves = src.showCurves;         dst.showColor = src.showColor;
     dst.showCalibrate = src.showCalibrate;   dst.showColorGrade = src.showColorGrade;

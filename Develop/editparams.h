@@ -471,7 +471,9 @@ struct EditParams {
        around a centre: kaleidoSegments wedges (0 = off, else EVEN 2..32 so every seam is
        a mirror), kaleidoX / kaleidoY the centre normalized in the CROPPED frame,
        kaleidoAngle (deg, -180..180, y-down) turns the mirror lines and the sampled slice
-       together, kaleidoSource (deg) turns only the slice. Per scope: on a mask scope only
+       together, kaleidoSource (deg) turns only the slice, kaleidoZoom magnifies the
+       slice about the centre (the photo is sampled at radius r / zoom; 1 = as is, 0.25
+       .. 8), kaleidoOpacity (0..1) blends the fold with the unfolded frame. Per scope: on a mask scope only
        the masked pixels are folded (unmasked = transparent) and laid over the frame;
        Global (and a mask-less scope) folds the whole frame, last. Only kaleidoSegments is
        in isIdentity (the rest are inert while it is off). */
@@ -480,6 +482,8 @@ struct EditParams {
     float kaleidoY        = 0.5f;
     float kaleidoAngle    = 0.0f;
     float kaleidoSource   = 0.0f;
+    float kaleidoZoom     = 1.0f;
+    float kaleidoOpacity  = 1.0f;
     bool hasKaleido() const { return kaleidoSegments >= 2; }
 
     int version = 1;
@@ -580,6 +584,8 @@ struct EditParams {
             p.kaleidoY = def.kaleidoY;
             p.kaleidoAngle = def.kaleidoAngle;
             p.kaleidoSource = def.kaleidoSource;
+            p.kaleidoZoom = def.kaleidoZoom;
+            p.kaleidoOpacity = def.kaleidoOpacity;
             break;
         case Group::Lens:
             p.lensProfile = def.lensProfile;

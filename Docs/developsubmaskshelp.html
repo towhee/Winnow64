@@ -89,6 +89,12 @@ submasks</b> in the Mask band's <b>[&#8942;]</b> menu do the same for all of the
 you add gives a different mask than adding then subtracting.  If a result surprises you,
 walk the list with the row eyes.</p>
 
+<p>A row that reads <b>(null)</b> &mdash; <b>Subject Submask (null)</b>, <b>Sky Submask
+(null)</b> &mdash; is an automatic submask that found nothing in this picture: no sky in
+an indoor shot, no clear subject, or (for Background) a subject filling the whole frame.
+It selects nothing, so it changes nothing; delete it, or use a brush or gradient
+instead.</p>
+
 <h2>Feather, Edge, Halo and Invert</h2>
 <p>The selected submask's own settings appear below the list &mdash; Feather, Edge, Invert,
 and whatever else the tool needs (size for a brush, the sampled colours for a Color Range).
@@ -132,6 +138,13 @@ trade.</p>
 
 <p>A mask made only of Linear or Radial Gradients has no edge in the picture to work
 from, and there the control is greyed out.</p>
+
+<p><b>Opacity</b>, under Halo, sets how strongly the whole mask applies, in percent.  At
+100 the mask's adjustments land at full strength wherever it reaches; at 50 they land at
+half, everywhere at once, without changing the shape of the mask.  It is the quick way to
+tone a mask down after you have set its sliders.  It also fades the mask's kaleidoscope
+and, with <b>Hide global image</b> on, how solidly the masked area shows.  The Mask band's
+<b>Reset mask Edge, Halo and Opacity</b> puts it back to 100.</p>
 
 <h2>Seeing the mask</h2>
 <p>The overlay appears by itself while the mask has your attention &mdash; whenever the

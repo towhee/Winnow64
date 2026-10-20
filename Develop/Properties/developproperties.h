@@ -72,6 +72,7 @@ public:
             int                    combine = 0;  // MaskCombine across the components
             float                  maskEdge = 0; // grow/shrink the FOLDED mask, full-res px
             float                  maskHalo = 0; // halo suppression on the FOLDED mask
+            float                  opacity = 1;  // scales the FOLDED mask (EditScope)
         };
         EditParams     global;                  // scope 0 params (whole image)
         QVector<Scope> scopes;                  // masks, in order, enabled only
@@ -190,6 +191,9 @@ public:
        MW shows the canvas handles while this holds and that scope's kaleidoscope is on
        (MW::syncDevelopKaleidoOverlay). */
     bool kaleidoToolWanted() const;
+    /* An AI mask's model result (Subject / Background / Sky) landed or changed: the
+       Submasks list re-reads it, to mark a submask that found nothing "(null)". */
+    void autoMaskResultsChanged();
     /* The active scope's stored params (the kaleidoscope the handles edit). */
     EditParams kaleidoParams() const;
     /* Any scope of the current image has a kaleidoscope on. */
@@ -1585,6 +1589,7 @@ private:
        visibility/state. Called at the end of every buildTree, so the list tracks image,
        scope and mask changes without any caller having to remember. */
     void syncMaskPanel();
+    bool autoSubmaskIsNull(int tool) const;   // AI submask whose model found nothing
     /* Caption split for the MaskPanel's embedded editor. The panel starts at the panel
        edge, like the tree, so this is simply the tree's split -- it stays a function so
        the panel and the tree cannot drift apart. */

@@ -177,11 +177,13 @@ void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effecti
 }
 
 /*
-    The MASK-level rows: Edge and Halo, applied to the mask every submask folds into. They
+    The MASK-level rows: Edge, Halo and Opacity, applied to the mask every submask
+    folds into. They
     are NOT part of showTool's per-tool rows because they must survive with no submask
     selected -- that block hides, this one does not.
 */
-void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful)
+void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful,
+                               float opacityVal)
 {
     isPopulating = true;
     wheel = nullptr;
@@ -203,8 +205,15 @@ void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful)
               0, 100);
     setSliderReal("scopeHalo", int(haloVal + 0.5f));
     setRowEnabled("scopeHalo", haloUseful);
+
+    /* The strength of the whole mask: the adjustment lands at this fraction of its
+       coverage everywhere (EditScope::opacity). Percent here, 0..1 stored. */
+    addSlider("scopeOpacity", "Opacity",
+              "How strongly this mask's adjustments apply, everywhere it reaches.",
+              0, 100);
+    setSliderReal("scopeOpacity", int(opacityVal * 100.0f + 0.5f));
     isPopulating = false;
-    /* No slack under Halo: the rule below it (SubmaskList::setTopRule) is spaced like
+    /* No slack under the last row: the rule below it (SubmaskList::setTopRule) is spaced like
        the tree's group dividers, and the default 6px would push it further away. */
     fitHeight(0);
 }

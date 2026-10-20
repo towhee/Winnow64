@@ -78,7 +78,11 @@ struct MaskComponent {
 struct EditScope {
     QString    name    = "Global";      // index 0 = Global; masks are "Mask 1", "Mask 2", ...
     QString    mask;                    // empty = global; reserved (legacy single-mask slot)
-    float      opacity = 1.0f;          // reserved (compositor deferred)
+    /* Mask OPACITY, 0..1 (the Mask band's "Opacity", under Halo): scales the folded
+       coverage, so the scope's adjustment lands at that strength everywhere its mask
+       reaches. A scope with no mask (whole image) has no coverage to scale and ignores
+       it. Always written (it predates the control, as a reserved key). */
+    float      opacity = 1.0f;
     bool       enabled = true;
     int        combine = int(MaskCombine::Union);   // how this scope's masks combine
     QVector<MaskComponent> components;       // empty (Global scope) = whole image
@@ -391,6 +395,8 @@ struct EditStack {
             o["kaleidoY"]        = p.kaleidoY;
             o["kaleidoAngle"]    = p.kaleidoAngle;
             o["kaleidoSource"]   = p.kaleidoSource;
+            if (p.kaleidoZoom != 1.0f) o["kaleidoZoom"] = p.kaleidoZoom;
+            if (p.kaleidoOpacity != 1.0f) o["kaleidoOpacity"] = p.kaleidoOpacity;
         }
         o["version"]         = p.version;
         return o;
@@ -483,6 +489,8 @@ struct EditStack {
         p.kaleidoY        = static_cast<float>(o.value("kaleidoY").toDouble(p.kaleidoY));
         p.kaleidoAngle    = static_cast<float>(o.value("kaleidoAngle").toDouble(p.kaleidoAngle));
         p.kaleidoSource   = static_cast<float>(o.value("kaleidoSource").toDouble(p.kaleidoSource));
+        p.kaleidoZoom     = static_cast<float>(o.value("kaleidoZoom").toDouble(p.kaleidoZoom));
+        p.kaleidoOpacity  = static_cast<float>(o.value("kaleidoOpacity").toDouble(p.kaleidoOpacity));
         p.version         = o.value("version").toInt(p.version);
         return p;
     }
@@ -835,6 +843,8 @@ struct EditStack {
         if (clampF(p.kaleidoY,      0.0f, 1.0f, def.kaleidoY)) ++fixed;
         if (clampF(p.kaleidoAngle,  -180.0f, 180.0f, 0.0f)) ++fixed;
         if (clampF(p.kaleidoSource, -180.0f, 180.0f, 0.0f)) ++fixed;
+        if (clampF(p.kaleidoZoom,   0.25f, 8.0f, def.kaleidoZoom)) ++fixed;
+        if (clampF(p.kaleidoOpacity, 0.0f, 1.0f, def.kaleidoOpacity)) ++fixed;
 
         if (fixed && issues)
             issues->append(QStringLiteral("%1: %2 adjustment%3 out of range")

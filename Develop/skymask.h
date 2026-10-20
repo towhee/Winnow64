@@ -39,7 +39,16 @@ namespace SkyMask {
 struct SkyRef {
     std::vector<uint8_t> cov;   // alpha 0..255, row-major, output-oriented
     int w = 0, h = 0;
+    /* The models found no sky (see markEmpty). Set once, when the ref is built, so the
+       Submasks list can say "(null)" without rescanning a map of up to 4096 px. */
+    bool noSky = false;
     bool valid() const { return w > 0 && h > 0 && cov.size() == size_t(w) * size_t(h); }
+    /* "Null" = under 0.05% of the map at a quarter coverage (64) or more. */
+    void markEmpty() {
+        size_t n = 0;
+        for (uint8_t v : cov) if (v >= 64) ++n;
+        noSky = n < std::max<size_t>(1, cov.size() / 2000);
+    }
 };
 
 /* Path-registered store (mirrors SubjectMask::refStore): the GUI thread builds/registers the ref;

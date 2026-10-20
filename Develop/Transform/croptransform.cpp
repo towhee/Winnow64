@@ -8,6 +8,7 @@
 #include <vector>
 #include <cmath>
 #include <cstring>
+#include <algorithm>
 
 namespace {
 
@@ -99,13 +100,14 @@ inline float reflectCoord(float v, int len)
 /* The kaleidoscope fold for one point in output PIXEL coords (pixel centres at +0.5):
    the source pixel coords it samples, before the border reflection. */
 struct KaleidoFold {
-    float cx, cy, a, s, wedge;
+    float cx, cy, a, s, wedge, inv;     // inv = 1 / zoom: the source radius factor
     int n;
     KaleidoFold(const CropTransform::Kaleido &k, double W, double H)
         : cx(float(k.x * W)), cy(float(k.y * H)),
           a(float(k.angle * 0.017453292519943295)),
           s(float(k.source * 0.017453292519943295)),
           wedge(float(6.283185307179586 / std::max(2, k.segments))),
+          inv(float(1.0 / std::clamp(k.zoom, 0.25, 8.0))),
           n(std::max(2, k.segments)) {}
     /* One strip's remap coordinates (rows y0 .. y0 + rows - 1 of a W x H frame), with
        the border reflection folded in. */
@@ -133,8 +135,9 @@ struct KaleidoFold {
         float t = (u - k) * wedge;                  // angle into this wedge, [0, wedge)
         if (int(k) & 1) t = wedge - t;              // odd wedges are the mirror image
         const float phi = a + s + t;
-        sx = cx + r * std::cos(phi);
-        sy = cy + r * std::sin(phi);
+        const float rs = r * inv;                   // the zoom: sample nearer the centre
+        sx = cx + rs * std::cos(phi);
+        sy = cy + rs * std::sin(phi);
     }
 };
 
@@ -287,6 +290,7 @@ QImage CropTransform::applyKaleidoscope(const QImage &src, const Kaleido &k)
        its rows of dst: no full-frame map pair (2 x 4 bytes x pixels), and every strip
        runs on its own thread. */
     const KaleidoFold fold(k, W, H);
+    const double op = std::clamp(k.opacity, 0.0, 1.0);
     const int kStrip = 32;
     const int nStrips = (H + kStrip - 1) / kStrip;
     cv::parallel_for_(cv::Range(0, nStrips), [&](const cv::Range &range) {
@@ -297,6 +301,9 @@ QImage CropTransform::applyKaleidoscope(const QImage &src, const Kaleido &k)
             fold.strip(y0, rows, W, H, mapX, mapY);
             cv::Mat roi = dst.rowRange(y0, y0 + rows);
             cv::remap(in, roi, mapX, mapY, cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+            /* Below full opacity: lerp the strip back toward the unfolded frame. */
+            if (op < 1.0)
+                cv::addWeighted(roi, op, in.rowRange(y0, y0 + rows), 1.0 - op, 0.0, roi);
         }
     });
     return out;
@@ -319,6 +326,8 @@ QImage CropTransform::applyKaleidoscopeMasked(const QImage &frame, const QImage 
     /* Same strips as applyKaleidoscope; each folds its rows of colour AND coverage with
        one map pair, then blends: out = frame + (fold(frame) - frame) * fold(mask). */
     const KaleidoFold fold(k, W, H);
+    /* The opacity scales the folded coverage: 0..255 as an integer weight. */
+    const int op255 = int(std::clamp(k.opacity, 0.0, 1.0) * 255.0 + 0.5);
     const int kStrip = 32;
     const int nStrips = (H + kStrip - 1) / kStrip;
     cv::parallel_for_(cv::Range(0, nStrips), [&](const cv::Range &range) {
@@ -336,7 +345,7 @@ QImage CropTransform::applyKaleidoscopeMasked(const QImage &frame, const QImage 
                     const quint16 *b = in.ptr<quint16>(y0 + r);
                     quint16 *o = dst.ptr<quint16>(y0 + r);
                     for (int x = 0; x < W; ++x) {
-                        const float t = a[x] * (1.0f / 255.0f);
+                        const float t = a[x] * op255 * (1.0f / (255.0f * 255.0f));
                         for (int c = 0; c < 4; ++c) {
                             const int i = x * 4 + c;
                             o[i] = quint16(b[i] + (float(f[i]) - b[i]) * t + 0.5f);
@@ -348,7 +357,7 @@ QImage CropTransform::applyKaleidoscopeMasked(const QImage &frame, const QImage 
                     const uchar *b = in.ptr<uchar>(y0 + r);
                     uchar *o = dst.ptr<uchar>(y0 + r);
                     for (int x = 0; x < W; ++x) {
-                        const int t = a[x];               // 0..255, integer blend
+                        const int t = (a[x] * op255 + 127) / 255;   // 0..255 blend
                         for (int c = 0; c < 4; ++c) {
                             const int i = x * 4 + c;
                             o[i] = uchar((b[i] * (255 - t) + f[i] * t + 127) / 255);

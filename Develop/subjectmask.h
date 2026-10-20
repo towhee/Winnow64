@@ -35,7 +35,24 @@ namespace SubjectMask {
 struct SubjectRef {
     std::vector<float> cov;     // single channel 0..1, row-major, output-oriented
     int w = 0, h = 0;
+    /* The model found nothing to select (see markEmpty): no subject for Select
+       Subject, no background for Select Background (= 1 - subject). Set once, when the
+       ref is built, so the Submasks list can say "(null)" without rescanning the map. */
+    bool noSubject = false;
+    bool noBackground = false;
     bool valid() const { return w > 0 && h > 0 && cov.size() == size_t(w) * size_t(h); }
+    /* "Null" = under 0.05% of the map at a quarter coverage or more: nothing a mask
+       would visibly select. */
+    void markEmpty() {
+        size_t fg = 0, bg = 0;
+        for (float v : cov) {
+            if (v >= 0.25f) ++fg;
+            if (v <= 0.75f) ++bg;
+        }
+        const size_t minPx = std::max<size_t>(1, cov.size() / 2000);
+        noSubject = fg < minPx;
+        noBackground = bg < minPx;
+    }
 };
 
 /* Path-registered store (mirrors RangeMask::refStore): the GUI thread builds/registers the ref; the

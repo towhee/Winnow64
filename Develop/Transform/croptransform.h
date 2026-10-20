@@ -44,12 +44,16 @@ struct Kaleido {
     double x = 0.5, y = 0.5;        // centre, normalized
     double angle = 0.0;             // deg, y-down: turns the mirror lines + the slice
     double source = 0.0;            // deg: turns only the sampled slice
+    double zoom = 1.0;              // magnifies the slice about the centre (r / zoom)
+    double opacity = 1.0;           // 0..1: the fold blended over the unfolded frame
     bool on() const { return segments >= 2; }
     static Kaleido from(const EditParams &p) {
         Kaleido k;
         k.segments = p.kaleidoSegments;
         k.x = p.kaleidoX; k.y = p.kaleidoY;
         k.angle = p.kaleidoAngle; k.source = p.kaleidoSource;
+        k.zoom = p.kaleidoZoom;
+        k.opacity = p.kaleidoOpacity;
         return k;
     }
 };
@@ -59,9 +63,11 @@ struct Kaleido {
     output pixel is put in polar form about the centre, its angle is folded into ONE
     wedge of 360/N degrees -- reflected in every other wedge, so neighbouring wedges
     meet as mirror images -- and the source is sampled at the same radius along the
-    folded angle (bilinear). A ray that leaves the frame is reflected at the border, so
-    there are no empty corners. Output size and format family match the input (8-bit ->
-    ARGB32, 16-bit -> RGBA64). Returns src unchanged when off.
+    folded angle (bilinear), divided by the zoom -- so a zoom above 1 magnifies the slice
+    about the centre, below 1 takes in more of the photo. A ray that leaves the frame is reflected at the border, so
+    there are no empty corners. Below full opacity the fold is blended over the unfolded
+    frame. Output size and format family match the input (8-bit -> ARGB32, 16-bit ->
+    RGBA64). Returns src unchanged when off.
 */
 QImage applyKaleidoscope(const QImage &src, const Kaleido &k);
 
@@ -72,7 +78,7 @@ QImage applyKaleidoscope(const QImage &src, const Kaleido &k);
     (read as grey, 0..255), the same size as frame. Folding colour and coverage with the
     one map and blending by the folded coverage is lerp(frame, fold(frame), fold(mask)),
     which equals fold(frame x mask) over the frame except within a bilinear tap of a hard
-    mask edge. Returns frame unchanged when off or when the mask does not match.
+    mask edge. The opacity scales the folded coverage. Returns frame unchanged when off or when the mask does not match.
 */
 QImage applyKaleidoscopeMasked(const QImage &frame, const QImage &mask, const Kaleido &k);
 
