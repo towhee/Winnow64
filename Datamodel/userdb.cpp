@@ -238,7 +238,7 @@ bool UserDb::migrate(QSqlDatabase &d)
         const QStringList ddl = {
             "CREATE TABLE IF NOT EXISTS audit_verdict ("
             "  pathkey TEXT    NOT NULL,"
-            "  kind    TEXT    NOT NULL,"           // suspect | missing
+            "  kind    TEXT    NOT NULL,"           // suspect | missing | suggested
             "  keyword TEXT    NOT NULL,"
             "  verdict TEXT    NOT NULL,"           // correct
             "  at      INTEGER NOT NULL DEFAULT 0,"

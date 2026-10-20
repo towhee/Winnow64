@@ -4,6 +4,7 @@
 #include "Utilities/rowtrail.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "Metadata/keywordpaths.h"
+#include "Main/keywordsuggester.h"
 #include <QtConcurrent>
 #include <QSslConfiguration>
 #include <QFutureWatcher>
@@ -1589,6 +1590,7 @@ void MW::closeEvent(QCloseEvent *event)
     if (catalogScanner) catalogScanner->shutdown();
     /* The same for an audit that is still embedding or scoring: stop it and wait. */
     if (keywordAuditJob) keywordAuditJob->shutdown();
+    if (keywordSuggester) keywordSuggester->shutdown();
     /* And a Segmenter object search: its decoder threads run OpenCV, which exit() tears
        down under them. */
     if (segmenterJob) segmenterJob->shutdown();
@@ -11629,8 +11631,31 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
        orientation -- on the full-output-dimension image, so the crop dims match for the
        proxy and the full-res render. Callers pass identity geometry while the crop tool
        is being edited (the loupe then shows the full frame for the overlay). */
-    if (!out.isNull() && !job.geometry.isIdentity())
-        out = CropTransform::applyGeometry(out, job.geometry);
+    if (!out.isNull() && !job.geometry.isIdentity()) {
+        if (!fullRes && job.geometry.hasKaleido()) {
+            /* The kaleidoscope is a per-pixel fold, and on an interactive tick it would
+               run at FULL output size (see the upscale note at the top). Fold at proxy
+               resolution instead and stretch back, so the output keeps the dimensions
+               the settle render will have while a centre drag stays cheap. */
+            Geometry g = job.geometry;
+            g.suppressKaleido();
+            out = CropTransform::applyGeometry(out, g);
+            const double fullLong = std::max(fullW, fullH);
+            const double s = fullLong > 0.0
+                ? std::min(1.0, std::max(src.width, src.height) / fullLong) : 1.0;
+            if (s < 0.999) {
+                const QSize full = out.size();
+                const QSize small(qMax(2, qRound(full.width() * s)),
+                                  qMax(2, qRound(full.height() * s)));
+                out = CropTransform::applyKaleidoscope(
+                          out.scaled(small, Qt::IgnoreAspectRatio, Qt::FastTransformation),
+                          job.geometry)
+                          .scaled(full, Qt::IgnoreAspectRatio, Qt::FastTransformation);
+            }
+            else out = CropTransform::applyKaleidoscope(out, job.geometry);
+        }
+        else out = CropTransform::applyGeometry(out, job.geometry);
+    }
     return out;
 }
 
@@ -12979,10 +13004,23 @@ static bool sameDevelopGeometry(const Geometry &a, const Geometry &b)
     if (a.cropX != b.cropX || a.cropY != b.cropY ||
         a.cropW != b.cropW || a.cropH != b.cropH ||
         a.straighten != b.straighten || a.hasWarp != b.hasWarp ||
-        a.show != b.show) return false;
+        a.show != b.show || !a.kaleidoEquals(b)) return false;
     if (a.hasWarp)
         for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
     return true;
+}
+
+bool MW::developKaleidoSuppressed() const
+{
+/*
+    True when a render must leave the kaleidoscope OFF even though the recipe has one:
+    while the crop overlay is editing (you crop the real photo, not the mirror), and
+    while an overlay drawn in the geometry stage's input space is up (a mask tool, a
+    committed mask's tint, the spot brush) -- the fold has no inverse to map those
+    through. ImageView::unfoldedFrameNeedChanged re-renders when the latter flips.
+*/
+    if (developCropEditing && !developCropShowResult) return true;
+    return imageView && imageView->needsUnfoldedFrame();
 }
 
 void MW::renderDevelopPreview(bool fullRes)
@@ -13022,6 +13060,8 @@ void MW::renderDevelopPreview(bool fullRes)
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
+    const bool kaleidoSuppressed = mj.geometry.hasKaleido() && developKaleidoSuppressed();
+    if (kaleidoSuppressed) mj.geometry.suppressKaleido();
 
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
@@ -13195,7 +13235,8 @@ void MW::renderDevelopPreview(bool fullRes)
     /* Pair the frame with whether it actually depicts the STORED recipe. Captured here,
        on the GUI thread with the job, because the view overrides it reflects (History
        hover, Transform eye, Replace eye) can change while the render is in flight. */
-    const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe();
+    const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe()
+                          && !kaleidoSuppressed;
     /* Only a faithful frame can ever be cached, so only a faithful one pays for the hash. */
     const QByteArray recipe = faithful ? developRecipeKey(fPath) : QByteArray();
     /* Arm the full-resolution settle render for the callers that re-render WITHOUT going
@@ -13617,13 +13658,15 @@ void MW::renderDevelopFullResAsync()
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
+    const bool kaleidoSuppressed = mj.geometry.hasKaleido() && developKaleidoSuppressed();
+    if (kaleidoSuppressed) mj.geometry.suppressKaleido();
     /* Pair the frame with whether it actually depicts the STORED recipe, captured here on
        the GUI thread with the job because the view overrides it reflects can change while
        the render is in flight (same reason as the proxy path). Suppressing the crop for an
        interactive crop drag also makes the frame the wrong SHAPE for the stored recipe, so
        it cannot be cached either. Only a faithful frame may become a devPreview. */
     const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe()
-                          && !cropSuppressed;
+                          && !cropSuppressed && !kaleidoSuppressed;
     /* The recipe this render depicts, captured with the job (see MW::developFrameRecipe).
        gen alone cannot stand in for it: the crop / warp / level callers re-render without
        bumping developParamsGen, so a gen match does not mean the recipe has not moved. */
@@ -13919,6 +13962,7 @@ Geometry MW::developRenderGeometry() const
     if (developCropEditing && !developCropShowResult) {
         g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
     }
+    if (g.hasKaleido() && developKaleidoSuppressed()) g.suppressKaleido();
     return g;
 }
 
@@ -15717,6 +15761,7 @@ void MW::enterDevelopCrop()
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Level field
     setDevelopTransformMode(transformPanel->mode());     // arm the panel's current mode's tool
+    syncDevelopKaleidoOverlay();     // the crop session owns the canvas: handles off
 }
 
 void MW::exitDevelopCrop()
@@ -15741,6 +15786,7 @@ void MW::exitDevelopCrop()
     developCropEditing = false;
     developCropShowResult = false;
     renderDevelopPreview(false);     // geometry applied -> cropped result
+    syncDevelopKaleidoOverlay();     // the Effects handles come back if they are wanted
 }
 
 void MW::cancelDevelopTransform()
@@ -15756,8 +15802,12 @@ void MW::cancelDevelopTransform()
     if (!developTransformVisible || !developCropEditing) return;
 
     if (imageView) imageView->endCropEdit();     // drop overlay; do NOT commit cropRect()
-    if (developProperties)
-        developProperties->setCurrentGeometry(developCropGeometryBackup);   // revert
+    if (developProperties) {
+        /* The kaleidoscope is an Effect, not part of the session: keep it as it is now. */
+        Geometry g = developCropGeometryBackup;
+        g.copyKaleidoFrom(developProperties->currentGeometry());
+        developProperties->setCurrentGeometry(g);      // revert crop/straighten/warp
+    }
     developCropEditing = false;
     developCropShowResult = false;
 
@@ -15866,6 +15916,41 @@ void MW::setDevelopTransformMode(int mode)
         imageView->beginWarp();
         break;
     }
+}
+
+void MW::setDevelopKaleido(const Geometry &g)
+{
+/*
+    The one writer for the kaleidoscope (Effects > Kaleidoscope sliders and the canvas
+    handles): the image's geometry, the Effects sliders, the render, the handles.
+*/
+    if (G::isLogger) G::log("MW::setDevelopKaleido");
+    if (!developProperties) return;
+    if (!g.kaleidoEquals(developProperties->currentGeometry()))
+        developProperties->setCurrentGeometry(g);
+    developProperties->syncKaleidoSliders();
+    renderDevelopPreview(false);
+    syncDevelopKaleidoOverlay();
+}
+
+void MW::syncDevelopKaleidoOverlay()
+{
+/*
+    Show the kaleidoscope's centre / angle handles exactly while Effects > Kaleidoscope is
+    the effect on show (DevelopProperties::kaleidoToolWanted: Global scope, Effects
+    expanded, Kaleidoscope chosen) AND the loupe shows the folded result -- in Develop,
+    the kaleidoscope on, no Transform session (it owns the canvas and shows the unfolded
+    frame) and nothing that needs the unfolded frame (a mask tool / tint, the spot brush).
+    Called from every one of those edges; also re-syncs the handles to the stored values.
+*/
+    if (!imageView) return;
+    const Geometry g = developProperties ? developProperties->currentGeometry() : Geometry();
+    const bool want = developProperties && G::operationMode == G::OperationMode::Develop
+                      && developProperties->kaleidoToolWanted() && g.hasKaleido()
+                      && !developCropEditing && !developKaleidoSuppressed();
+    if (want) imageView->beginKaleido(QPointF(g.kaleidoX, g.kaleidoY), g.kaleidoAngle,
+                                      g.kaleidoSegments);
+    else      imageView->endKaleido();
 }
 
 void MW::setDevelopLevelAngle(double degrees)

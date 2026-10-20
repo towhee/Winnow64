@@ -410,6 +410,8 @@ void TransformPanel::buildUi()
         }
     }
     currentMode = setting ? setting->value("Develop/Transform/mode", CropMode).toInt() : CropMode;
+    /* 3 was a short-lived Kaleido mode (now an Effect): anything unknown is Crop. */
+    if (currentMode < CropMode || currentMode > WarpMode) currentMode = CropMode;
     setMode(currentMode);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);

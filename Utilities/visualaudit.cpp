@@ -1,7 +1,10 @@
 #include "Utilities/visualaudit.h"
 
+#include <QDataStream>
+#include <QFile>
 #include <QMutex>
 #include <QMutexLocker>
+#include <QSaveFile>
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -9,6 +12,7 @@
 #include <numeric>
 #include <queue>
 #include <set>
+#include <unordered_map>
 #include <opencv2/core.hpp>
 
 namespace VisualAudit {
@@ -18,10 +22,33 @@ QString foldKey(const QString &path)
     return path.trimmed().toCaseFolded();
 }
 
+QString kindName(Finding::Kind kind)
+{
+    switch (kind) {
+    case Finding::Suspect:   return "suspect";
+    case Finding::Missing:   return "missing";
+    case Finding::Suggested: return "suggested";
+    }
+    return "missing";
+}
+
 QString verdictKey(const QString &pathKey, Finding::Kind kind, const QString &keyword)
 {
-    return pathKey + '|' + (kind == Finding::Suspect ? "suspect" : "missing") + '|'
-           + foldKey(keyword);
+    return pathKey + '|' + kindName(kind) + '|' + foldKey(keyword);
+}
+
+QString Suggestion::reason() const
+{
+    QStringList why;
+    if (visual) {
+        const int i = keyword.lastIndexOf('|');
+        why << QString("Looks like your %1 images")
+                   .arg(i < 0 ? keyword : keyword.mid(i + 1));
+    }
+    if (sessionOf > 0)
+        why << QString("On %1 of %2 keyworded images from this session")
+                   .arg(sessionHits).arg(sessionOf);
+    return why.join(" · ");
 }
 
 namespace {
@@ -38,16 +65,18 @@ bool hasCol(const std::vector<int> &sorted, int c)
 }
 
 /* Bursts: union adjacent frames of a folder, in path order, that are near-duplicates.
-   Returns the burst id of every image, compacted to 0..B-1. */
-std::vector<int> findBursts(const QVector<Image> &im, const float *E, int dim,
-                            const Params &p, int &count)
+   Over the images im[idx[0..]]; returns the burst id of each POSITION in idx, compacted
+   to 0..B-1. */
+std::vector<int> findBursts(const QVector<Image> &im, const std::vector<int> &idx,
+                            const float *E, int dim, const Params &p, int &count)
 {
-    const int n = im.size();
+    const int n = int(idx.size());
     std::vector<int> order(n);
     std::iota(order.begin(), order.end(), 0);
     std::sort(order.begin(), order.end(), [&](int a, int b) {
-        const int f = QString::compare(im[a].folder, im[b].folder);
-        return f != 0 ? f < 0 : im[a].pathKey < im[b].pathKey;
+        const Image &x = im[idx[a]], &y = im[idx[b]];
+        const int f = QString::compare(x.folder, y.folder);
+        return f != 0 ? f < 0 : x.pathKey < y.pathKey;
     });
 
     std::vector<int> parent(n);
@@ -58,13 +87,15 @@ std::vector<int> findBursts(const QVector<Image> &im, const float *E, int dim,
     };
     for (int a = 0; a < n; ++a) {
         const int i = order[a];
+        const Image &ii = im[idx[i]];
         for (int b = a + 1; b < std::min(a + 6, n); ++b) {
             const int j = order[b];
-            if (im[i].folder != im[j].folder) break;
-            if (im[i].captured > 0 && im[j].captured > 0
-                && std::llabs(im[i].captured - im[j].captured) > p.burstSecs)
+            const Image &jj = im[idx[j]];
+            if (ii.folder != jj.folder) break;
+            if (ii.captured > 0 && jj.captured > 0
+                && std::llabs(ii.captured - jj.captured) > p.burstSecs)
                 continue;
-            const float *x = E + size_t(i) * dim, *y = E + size_t(j) * dim;
+            const float *x = E + size_t(idx[i]) * dim, *y = E + size_t(idx[j]) * dim;
             double dot = 0;
             for (int d = 0; d < dim; ++d) dot += double(x[d]) * y[d];
             if (dot >= p.burstCos) parent[root(j)] = root(i);
@@ -105,11 +136,14 @@ struct Candidate
 
 Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
            const QHash<QString, QString> &vocab, const QSet<QString> &dismissed,
-           const QSet<QString> &skipped, const Params &p, const ProgressFn &progress)
+           const QSet<QString> &skipped, const Params &p, const ProgressFn &progress,
+           int trainCount, const std::vector<char> *inScope)
 {
     Result res;
-    const int n = images.size();
-    if (n == 0 || dim <= 0 || emb.size() != size_t(n) * dim) return res;
+    const int n = trainCount < 0 ? int(images.size())
+                                 : std::min(trainCount, int(images.size()));
+    if (n == 0 || dim <= 0 || emb.size() < size_t(n) * dim) return res;
+    if (inScope && inScope->size() < size_t(n)) inScope = nullptr;
     const float *E = emb.data();
 
     auto report = [&](const QString &stage, int pct) {
@@ -123,8 +157,8 @@ Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
     /* ---------------------------------------------------------------- columns */
     if (!report("Grouping bursts", 0)) return res;
     QHash<QString, int> carriers;
-    for (const Image &im : images)
-        for (const QString &path : im.expandedPaths) {
+    for (int i = 0; i < n; ++i)                     // the training images only
+        for (const QString &path : images[i].expandedPaths) {
             const QString key = foldKey(path);
             if (vocab.contains(key)) ++carriers[key];
         }
@@ -161,7 +195,9 @@ Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
     for (int c = 0; c < K; ++c) children[parentKey(colKey[c])] << c;
 
     /* ---------------------------------------------------------------- bursts */
-    const std::vector<int> burst = findBursts(images, E, dim, p, res.bursts);
+    std::vector<int> all(n);
+    std::iota(all.begin(), all.end(), 0);
+    const std::vector<int> burst = findBursts(images, all, E, dim, p, res.bursts);
     std::vector<std::vector<int>> burstMembers(res.bursts);
     for (int i = 0; i < n; ++i) burstMembers[burst[i]].push_back(i);
     std::vector<int> fold(n);
@@ -239,6 +275,7 @@ Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
         foldRows[fold[i]].push_back(i);
     }
     std::vector<cv::Mat> W(p.folds);
+    cv::Mat Wfull;                                     // every row: for suggestions
     {
         std::vector<cv::Mat> G(p.folds), B(p.folds);
         cv::Mat Gt = cv::Mat::zeros(da, da, CV_64F), Bt = cv::Mat::zeros(da, K, CV_64F);
@@ -275,6 +312,12 @@ Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
             cv::solve(Gt - G[f] + reg, Bt - B[f], Wd, cv::DECOMP_CHOLESKY);
             Wd.convertTo(W[f], CV_32F);
         }
+        /*  NO FOLD HELD OUT. Cross-fitting stops a carrier vouching for itself; an image
+            being suggested for was never a label, so the model it is scored by may as
+            well have seen everything. One more solve with the totals already summed. */
+        cv::Mat Wd;
+        cv::solve(Gt + reg, Bt, Wd, cv::DECOMP_CHOLESKY);
+        Wd.convertTo(Wfull, CV_32F);
     }
     auto ridgeScore = [&](int i, int c) {
         const float *x = Xf[fold[i]].ptr<float>(rowInFold[i]);
@@ -384,6 +427,7 @@ Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
     std::map<std::tuple<int, int, int>, Group> groups;      // (burst, kind, col)
     auto add = [&](int i, int c, Finding::Kind kind, double score,
                    const QString &alt, const QStringList &sib) {
+        if (inScope && !(*inScope)[i]) return;          // learned from, not reported on
         const QString vk = verdictKey(images[i].pathKey, kind, colKey[c]);
         if (dismissed.contains(vk)) return;
         auto [it, fresh] = groups.try_emplace({burst[i], int(kind), c});
@@ -470,9 +514,384 @@ Result run(const QVector<Image> &images, const std::vector<float> &emb, int dim,
                      [](const KeywordStat &a, const KeywordStat &b) {
                          return a.images > b.images;
                      });
+
+    /* ---------------------------------------------------------------- model */
+    /*  The visual columns only, with their carriers' CROSS-FITTED ridge scores: a new
+        image scored by the full fit is ranked against what the carriers scored when
+        each was unseen, which is the like-for-like comparison. */
+    {
+        SuggestModel &m = res.model;
+        m.learned = QDateTime::currentDateTime();
+        m.images = n;
+        m.dim = dim;
+        m.minTpr = p.missingTpr;
+        std::vector<int> cols;
+        for (int c = 0; c < K; ++c)
+            if (visual[c] && !posR[c].empty()) cols.push_back(c);
+        const int kv = int(cols.size());
+        m.W.assign(size_t(da) * kv, 0.0f);
+        for (int j = 0; j < kv; ++j) {
+            const int c = cols[j];
+            m.keywords << vocab.value(colKey[c]);
+            for (int d = 0; d < da; ++d)
+                m.W[size_t(d) * kv + j] = Wfull.at<float>(d, c);
+            m.carrierScores.push_back(posR[c]);
+        }
+    }
     res.ok = true;
     report("Done", 100);
     return res;
+}
+
+/* ================================================================ suggestions */
+
+namespace {
+
+constexpr quint32 kModelMagic = 0x57534B4D;     // "WSKM"
+constexpr qint32 kModelVersion = 1;
+
+/* Every ancestor of every path, folded, the paths themselves included. */
+QSet<QString> expandFold(const QStringList &paths)
+{
+    QSet<QString> out;
+    for (const QString &p : paths) {
+        QString f = foldKey(p);
+        while (!f.isEmpty()) {
+            out.insert(f);
+            f = parentKey(f);
+        }
+    }
+    return out;
+}
+
+}   // namespace
+
+bool SuggestModel::save(const QString &file) const
+{
+    QSaveFile f(file);
+    if (!f.open(QIODevice::WriteOnly)) return false;
+    QDataStream s(&f);
+    s.setVersion(QDataStream::Qt_6_0);
+    s << kModelMagic << kModelVersion << modelTag << learned << qint32(images)
+      << qint32(dim) << minTpr << keywords;
+    s << quint64(W.size());
+    s.writeRawData(reinterpret_cast<const char *>(W.data()),
+                   int(W.size() * sizeof(float)));
+    s << quint32(carrierScores.size());
+    for (const std::vector<float> &v : carrierScores) {
+        s << quint32(v.size());
+        s.writeRawData(reinterpret_cast<const char *>(v.data()),
+                       int(v.size() * sizeof(float)));
+    }
+    if (s.status() != QDataStream::Ok) { f.cancelWriting(); return false; }
+    return f.commit();
+}
+
+bool SuggestModel::load(const QString &file)
+{
+/*
+    All or nothing: a file from another version, or one cut short, leaves the model
+    EMPTY rather than half-read -- an empty model suggests nothing, a garbled one would
+    suggest nonsense.
+*/
+    *this = SuggestModel();
+    QFile f(file);
+    if (!f.open(QIODevice::ReadOnly)) return false;
+    QDataStream s(&f);
+    s.setVersion(QDataStream::Qt_6_0);
+    quint32 magic = 0;
+    qint32 version = 0, imgs = 0, d = 0;
+    SuggestModel m;
+    s >> magic >> version;
+    if (magic != kModelMagic || version != kModelVersion) return false;
+    s >> m.modelTag >> m.learned >> imgs >> d >> m.minTpr >> m.keywords;
+    m.images = imgs;
+    m.dim = d;
+    quint64 nw = 0;
+    s >> nw;
+    if (d <= 0 || nw != quint64(d + 1) * quint64(m.keywords.size())) return false;
+    m.W.resize(nw);
+    if (s.readRawData(reinterpret_cast<char *>(m.W.data()), int(nw * sizeof(float)))
+        != int(nw * sizeof(float))) return false;
+    quint32 nc = 0;
+    s >> nc;
+    if (nc != quint32(m.keywords.size())) return false;
+    m.carrierScores.resize(nc);
+    for (quint32 c = 0; c < nc; ++c) {
+        quint32 len = 0;
+        s >> len;
+        m.carrierScores[c].resize(len);
+        if (len && s.readRawData(reinterpret_cast<char *>(m.carrierScores[c].data()),
+                                 int(len * sizeof(float))) != int(len * sizeof(float)))
+            return false;
+    }
+    if (s.status() != QDataStream::Ok) return false;
+    *this = std::move(m);
+    return true;
+}
+
+QVector<Suggestion> SuggestModel::score(const float *vec, const QSet<QString> &carriedFold,
+                                        const QSet<QString> &dismissedFold) const
+{
+    if (!isValid() || !vec) return {};
+    const int kv = keywords.size();
+    std::vector<double> s(kv, 0.0);
+    for (int d = 0; d < dim; ++d) {
+        const double x = vec[d];
+        const float *w = W.data() + size_t(d) * kv;
+        for (int c = 0; c < kv; ++c) s[c] += x * w[c];
+    }
+    const float *bias = W.data() + size_t(dim) * kv;
+    std::vector<float> raw(kv);
+    for (int c = 0; c < kv; ++c) raw[c] = float(s[c] + bias[c]);
+    return rank(raw.data(), carriedFold, dismissedFold);
+}
+
+QVector<Suggestion> SuggestModel::rank(const float *raw, const QSet<QString> &carriedFold,
+                                       const QSet<QString> &dismissedFold) const
+{
+    QVector<Suggestion> out;
+    if (!isValid() || !raw) return out;
+    const int kv = keywords.size();
+    for (int c = 0; c < kv; ++c) {
+        const std::vector<float> &carriers = carrierScores[c];
+        if (carriers.empty()) continue;
+        /*  The share of the keyword's own images this one outscores -- the rule Missing
+            uses, so "suggested" means the same thing in the panel and in the audit. */
+        const double tpr = double(std::upper_bound(carriers.begin(), carriers.end(), raw[c])
+                                  - carriers.begin()) / carriers.size();
+        if (tpr < minTpr) continue;
+        const QString fold = foldKey(keywords[c]);
+        if (carriedFold.contains(fold) || dismissedFold.contains(fold)) continue;
+        Suggestion sg;
+        sg.keyword = keywords[c];
+        sg.score = tpr;
+        sg.visual = true;
+        out << sg;
+    }
+    return out;
+}
+
+QVector<Suggestion> sessionSuggestions(const SessionImage &me,
+                                       const QVector<SessionImage> &candidates,
+                                       const QHash<QString, QString> &vocab,
+                                       const QSet<QString> &carriedFold,
+                                       const QSet<QString> &dismissedFold,
+                                       const Params &p)
+{
+/*
+    Counted on the EXPANDED paths of each neighbour, so a session tagged
+    "Event|Wedding|Ceremony" on some frames and "Event|Wedding|Reception" on others still
+    agrees on "Event|Wedding" -- mergeSuggestions then keeps the deeper one wherever a
+    deeper one also passes.
+*/
+    QVector<Suggestion> out;
+    if (me.captured <= 0 || me.folder.isEmpty()) return out;
+    QHash<QString, int> hits;
+    int of = 0;
+    for (const SessionImage &c : candidates) {
+        if (c.folder != me.folder || c.captured <= 0 || c.explicitPaths.isEmpty()) continue;
+        if (std::llabs(c.captured - me.captured) > p.sessionSecs) continue;
+        ++of;
+        for (const QString &f : expandFold(c.explicitPaths))
+            if (vocab.contains(f)) hits[f]++;
+    }
+    if (of < p.sessionMinImages) return out;
+    for (auto it = hits.cbegin(); it != hits.cend(); ++it) {
+        const double share = double(it.value()) / of;
+        if (share < p.sessionShare) continue;
+        if (carriedFold.contains(it.key()) || dismissedFold.contains(it.key())) continue;
+        Suggestion sg;
+        sg.keyword = vocab.value(it.key());
+        sg.score = share;
+        sg.sessionHits = it.value();
+        sg.sessionOf = of;
+        out << sg;
+    }
+    return out;
+}
+
+QVector<Suggestion> mergeSuggestions(const QVector<Suggestion> &visual,
+                                     const QVector<Suggestion> &session, const Params &p)
+{
+    QHash<QString, Suggestion> byFold;
+    auto take = [&](const Suggestion &s) {
+        const QString f = foldKey(s.keyword);
+        auto it = byFold.find(f);
+        if (it == byFold.end()) { byFold.insert(f, s); return; }
+        it->visual |= s.visual;
+        if (s.sessionOf > 0) { it->sessionHits = s.sessionHits; it->sessionOf = s.sessionOf; }
+        it->score = std::max(it->score, s.score);
+    };
+    for (const Suggestion &s : visual) take(s);
+    for (const Suggestion &s : session) take(s);
+
+    /*  DEEPEST WINS. "Fauna|Bird" beside "Fauna|Bird|Heron" says nothing the second does
+        not; prefix expansion puts it on the image anyway. */
+    QVector<Suggestion> out;
+    for (auto it = byFold.cbegin(); it != byFold.cend(); ++it) {
+        const QString prefix = it.key() + '|';
+        bool deeper = false;
+        for (auto jt = byFold.cbegin(); jt != byFold.cend(); ++jt)
+            if (jt.key().startsWith(prefix)) { deeper = true; break; }
+        if (!deeper) out << it.value();
+    }
+    /*  Both reasons first, then the stronger: two independent signals agreeing beat
+        either alone. */
+    std::sort(out.begin(), out.end(), [](const Suggestion &a, const Suggestion &b) {
+        const bool ba = a.visual && a.sessionOf > 0, bb = b.visual && b.sessionOf > 0;
+        if (ba != bb) return ba;
+        if (a.score != b.score) return a.score > b.score;
+        return a.keyword < b.keyword;
+    });
+    if (out.size() > p.maxSuggestions) out.resize(p.maxSuggestions);
+    return out;
+}
+
+QVector<Finding> suggest(const QVector<Image> &images, const std::vector<float> &emb,
+                         int dim, const QVector<int> &rows, const SuggestModel &model,
+                         const QHash<QString, QString> &vocab,
+                         const QSet<QString> &dismissed, const QSet<QString> &exclude,
+                         const Params &p, const ProgressFn &progress)
+{
+/*
+    BLOCKS OF ROWS, EACH ONE GEMM AND ONE PARALLEL PASS. The visual scores of a block are
+    (rows x dim+1) x (dim+1 x keywords) -- the shape run() already scores in -- instead of
+    a dot product per image per keyword on one core; ranking, the session window and the
+    merge are per image and independent, so they run across cores into one slot each.
+    Only grouping by burst, which joins images, stays serial. A block of 2,048 rows
+    against ~2,000 keywords is 16 MB of scores, so a whole catalog never holds more.
+*/
+    QVector<Finding> out;
+    if (rows.isEmpty() || dim <= 0 || emb.size() < size_t(images.size()) * dim) return out;
+    const float *E = emb.data();
+    const int nr = rows.size();
+
+    /*  The session index: per folder, every keyworded image with a capture time, in
+        time order, so a row's session is a window rather than a scan of the folder.
+        Read-only from here on, which is what lets the rows share it across threads.
+
+        KEYWORDS AS IDS, folded and expanded ONCE per image. sessionSuggestions takes
+        strings, which is right for the panel's one image; here every image visits a
+        whole session of neighbours (hundreds, at a shoot's pace), and re-folding their
+        paths for each visit was three quarters of the step (3.3 of 4.4 s measured at
+        158k images). The rule is the same -- see sessionSuggestions. */
+    QHash<QString, int> vocabId;
+    QStringList idDisplay;
+    for (auto it = vocab.cbegin(); it != vocab.cend(); ++it) {
+        vocabId.insert(it.key(), idDisplay.size());
+        idDisplay << it.value();
+    }
+    std::vector<std::vector<int>> kwIds(images.size());
+    QHash<QString, std::vector<std::pair<qint64, int>>> byFolder;
+    for (int i = 0; i < images.size(); ++i) {
+        if (images[i].captured <= 0 || images[i].explicitPaths.isEmpty()) continue;
+        for (const QString &f : expandFold(images[i].explicitPaths)) {
+            const int id = vocabId.value(f, -1);
+            if (id >= 0) kwIds[size_t(i)].push_back(id);
+        }
+        byFolder[images[i].folder].emplace_back(images[i].captured, i);
+    }
+    for (auto &v : byFolder) std::sort(v.begin(), v.end());
+
+    const bool visual = model.isValid() && model.dim == dim;
+    const int kv = visual ? model.keywords.size() : 0;
+    const int da = dim + 1;
+    const cv::Mat Wm = visual ? cv::Mat(da, kv, CV_32F, const_cast<float *>(model.W.data()))
+                              : cv::Mat();
+
+    std::vector<QVector<Suggestion>> perRow(nr);
+    constexpr int kBlock = 2048;
+    for (int b0 = 0; b0 < nr; b0 += kBlock) {
+        const int b1 = std::min(nr, b0 + kBlock), bn = b1 - b0;
+        cv::Mat S;
+        if (visual) {
+            cv::Mat X(bn, da, CV_32F);
+            for (int r = 0; r < bn; ++r) {
+                float *d = X.ptr<float>(r);
+                const float *v = E + size_t(rows[b0 + r]) * dim;
+                std::copy(v, v + dim, d);
+                d[dim] = 1.0f;                                  // the bias row of W
+            }
+            cv::gemm(X, Wm, 1.0, cv::noArray(), 0.0, S);
+        }
+
+        cv::parallel_for_(cv::Range(0, bn), [&](const cv::Range &range) {
+            std::unordered_map<int, int> hits;                  // per thread: id -> count
+            for (int r = range.start; r < range.end; ++r) {
+                const int i = rows[b0 + r];
+                const Image &im = images[i];
+                const QSet<QString> carried = expandFold(im.expandedPaths);
+                const QVector<Suggestion> vis =
+                    visual ? model.rank(S.ptr<float>(r), carried, {}) : QVector<Suggestion>();
+
+                QVector<Suggestion> ses;
+                const auto fit = byFolder.constFind(im.folder);
+                if (im.captured > 0 && fit != byFolder.cend()) {
+                    const auto &v = *fit;
+                    auto lo = std::lower_bound(
+                        v.begin(), v.end(), std::make_pair(im.captured - p.sessionSecs, -1));
+                    int of = 0;
+                    hits.clear();
+                    for (auto it = lo;
+                         it != v.end() && it->first <= im.captured + p.sessionSecs; ++it) {
+                        if (it->second == i) continue;
+                        ++of;
+                        for (int id : kwIds[size_t(it->second)]) ++hits[id];
+                    }
+                    if (of >= p.sessionMinImages)
+                        for (const auto &[id, n] : hits) {
+                            const double share = double(n) / of;
+                            if (share < p.sessionShare) continue;
+                            const QString &kw = idDisplay[id];
+                            if (carried.contains(foldKey(kw))) continue;
+                            Suggestion sg;
+                            sg.keyword = kw;
+                            sg.score = share;
+                            sg.sessionHits = n;
+                            sg.sessionOf = of;
+                            ses << sg;
+                        }
+                }
+                perRow[size_t(b0 + r)] = mergeSuggestions(vis, ses, p);
+            }
+        });
+        if (progress && !progress("Suggesting keywords", int(100.0 * b1 / nr))) return {};
+    }
+
+    /* ---------------------------------------------------------------- group */
+    std::vector<int> idx(rows.begin(), rows.end());
+    int bursts = 0;
+    const std::vector<int> burst = findBursts(images, idx, E, dim, p, bursts);
+
+    std::map<std::pair<int, QString>, Finding> groups;     // (burst, fold)
+    for (int r = 0; r < nr; ++r) {
+        const int i = idx[size_t(r)];
+        const Image &im = images[i];
+        for (const Suggestion &s : perRow[size_t(r)]) {
+            const QString fold = foldKey(s.keyword);
+            if (exclude.contains(QString::number(i) + '|' + fold)) continue;
+            if (dismissed.contains(verdictKey(im.pathKey, Finding::Suggested, s.keyword)))
+                continue;
+            auto [it, fresh] = groups.try_emplace({burst[size_t(r)], fold});
+            Finding &f = it->second;
+            if (fresh) {
+                f.kind = Finding::Suggested;
+                f.keyword = s.keyword;
+                f.reason = s.reason();
+                f.score = s.score;
+            }
+            else if (s.score > f.score) {
+                f.score = s.score;
+                f.reason = s.reason();
+            }
+            f.members << i;
+        }
+    }
+    for (auto &[key, f] : groups) out << f;
+    std::stable_sort(out.begin(), out.end(),
+                     [](const Finding &a, const Finding &b) { return a.score > b.score; });
+    return out;
 }
 
 }   // namespace VisualAudit

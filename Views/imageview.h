@@ -388,6 +388,22 @@ public slots:
     void   cropQuad(double q[8]) const;
     QRectF computeRectifyCrop() const;
 
+    /* Kaleidoscope (Effects > Kaleidoscope, shown by MW::syncDevelopKaleidoOverlay while
+       that effect is on show): an overlay on the RENDERED kaleidoscope --
+       a centre handle to drag, a spoke handle that turns the mirror lines, and faint
+       lines on every wedge seam. Coordinates are normalized in the displayed image (the
+       geometry stage's output, which is the kaleidoscope's own space). Drags emit
+       kaleidoEdited; MW writes the geometry and re-renders. beginKaleido also re-syncs
+       the overlay after a slider edit. */
+    void   beginKaleido(QPointF centreN, double angleDeg, int segments);
+    void   endKaleido();
+    bool   kaleidoActive() const { return kaleidoMode && pmItem && pmItem->isVisible(); }
+    /* True while an overlay is drawn in the geometry stage's INPUT space (a mask tool, a
+       committed mask's tint, the spot brush): the kaleidoscope's fold cannot be mapped
+       through, so MW renders without it until this goes false again. */
+    bool   needsUnfoldedFrame() const
+           { return maskEditMode || spotEditMode || (scopeHasMask && !maskTintHidden); }
+
 signals:
     void togglePick();
     void updateStatus(bool, QString, QString);
@@ -446,6 +462,11 @@ signals:
     void levelAngleChanged(double deltaDeg);
     /* Warp mode: user asked to commit the traced quad (Enter/Return or double-click). */
     void warpCommitRequested();
+    /* Kaleido: the centre (normalized, displayed image) or the angle was dragged.
+       finished is true on the release, so history can close the gesture. */
+    void kaleidoEdited(double x, double y, double angleDeg, bool finished);
+    /* needsUnfoldedFrame() flipped: re-render so the kaleidoscope comes off / goes back. */
+    void unfoldedFrameNeedChanged();
     /* A regenerative-fill spot stroke finished: FillSpotGeom paramsJson (size/feather/
        pts), for DevelopProperties to append as a FillSpot. */
     void spotStrokeCommitted(const QString &paramsJson);
@@ -966,6 +987,20 @@ private:
     bool    cropLevelMode = false;      // "draw a level line" is armed (one-shot)
     bool    cropLevelDragging = false;
     QPoint  cropLevelP1, cropLevelP2;
+
+    /* Kaleido overlay (see beginKaleido). kaleidoDrag: -1 none, 0 centre, 1 spoke. */
+    bool    kaleidoMode = false;
+    QPointF kaleidoC {0.5, 0.5};
+    double  kaleidoAngleDeg = 0.0;
+    int     kaleidoSegs = 0;
+    int     kaleidoDrag = -1;
+    QPointF kaleidoGrabOffsetVp;        // press point minus the centre, so it does not jump
+    bool    lastNeedsUnfolded = false;  // for syncUnfoldedFrameNeed's edge detect
+    QPointF kaleidoCentreVp() const;
+    QPointF kaleidoSpokeVp() const;     // the angle handle, a fixed screen distance out
+    int     kaleidoHitTest(QPoint vp) const;
+    void    kaleidoDrawOverlay(QPainter *p);
+    void    syncUnfoldedFrameNeed();    // emit unfoldedFrameNeedChanged on an edge
 
     void    cropSetPanSceneRect();                  // pad the scene so the image pans under the frame
     void    cropRestorePanRoom();                   // re-pad after a pixmap swap

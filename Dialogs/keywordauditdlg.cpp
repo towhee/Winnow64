@@ -141,15 +141,26 @@ void KeywordAuditDlg::buildUi()
     /* Run row: what is happening, and the one button that starts or stops it. */
     auto *runRow = new QHBoxLayout;
     stageLabel = new QLabel(tr("Compares every keyworded image with your other images "
-                               "carrying the same keywords, and lists the ones that "
-                               "do not fit."));
+                               "carrying the same keywords, lists the ones that do not "
+                               "fit, and suggests keywords for any image -- from how it "
+                               "looks and from its session."));
     stageLabel->setWordWrap(true);
     progressBar = new QProgressBar;
     progressBar->setMaximumWidth(260);
     progressBar->setVisible(false);
     runBtn = new QPushButton(tr("Run Audit"));
+    /*  WHAT IS REPORTED ON, beside the button that starts it: the choice is made per
+        run, and reading it there is what makes the result's scope unsurprising. */
+    scopeCombo = new QComboBox;
+    scopeCombo->addItem(tr("Whole catalog"), 0);
+    scopeCombo->addItem(tr("Current filter"), 1);
+    scopeCombo->setToolTip(tr("Which images findings and suggestions are reported for. "
+                              "Keywords are always learned from every keyworded image "
+                              "in the catalog."));
     runRow->addWidget(stageLabel, 1);
     runRow->addWidget(progressBar);
+    runRow->addWidget(new QLabel(tr("Report on:")));
+    runRow->addWidget(scopeCombo);
     runRow->addWidget(runBtn);
     root->addLayout(runRow);
     connect(runBtn, &QPushButton::clicked, this, [this] {
@@ -168,6 +179,7 @@ void KeywordAuditDlg::buildUi()
     kindCombo->addItem(tr("All findings"), -1);
     kindCombo->addItem(tr("Suspect keywords"), int(Finding::Suspect));
     kindCombo->addItem(tr("Missing keywords"), int(Finding::Missing));
+    kindCombo->addItem(tr("Suggested keywords"), int(Finding::Suggested));
     keywordFilter = new QLineEdit;
     keywordFilter->setPlaceholderText(tr("Filter by keyword"));
     keywordFilter->setClearButtonEnabled(true);
@@ -199,7 +211,9 @@ void KeywordAuditDlg::buildUi()
 
         const QRect text = r.adjusted(kListThumb + 10, 0, 0, 0);
         const bool sus = f.kind == Finding::Suspect;
+        const bool sug = f.kind == Finding::Suggested;
         QString claim = sus ? tr("Tagged %1").arg(leaf(f.keyword))
+                      : sug ? tr("Suggest %1").arg(leaf(f.keyword))
                             : tr("Not tagged %1").arg(leaf(f.keyword));
         if (sus && !f.alternative.isEmpty())
             claim += tr("  →  looks like %1").arg(leaf(f.alternative));
@@ -224,9 +238,10 @@ void KeywordAuditDlg::buildUi()
                                       "Applied"};
         const int d = decision[fi];
         QString right = d == Undecided
-                            ? (sus ? tr("Suspect") : tr("Missing"))
-                            : tr(names[d]);
-        QColor c = d == Undecided ? (sus ? QColor(220, 110, 100) : QColor(110, 160, 220))
+                            ? (sus ? tr("Suspect") : sug ? tr("Suggested") : tr("Missing"))
+                            : d == Correct && sug ? tr("Not this one") : tr(names[d]);
+        QColor c = d == Undecided ? (sus ? QColor(220, 110, 100)
+                                   : sug ? QColor(170, 150, 220) : QColor(110, 160, 220))
                  : d == Correct   ? QColor(140, 140, 140)
                                   : QColor(110, 190, 120);
         p->setPen(c);
@@ -372,11 +387,25 @@ void KeywordAuditDlg::setUnavailableReason(const QString &reason)
     if (!reason.isEmpty() && !running) stageLabel->setText(reason);
 }
 
+bool KeywordAuditDlg::scopeToFilter() const
+{
+    return scopeCombo->currentData().toInt() == 1;
+}
+
+void KeywordAuditDlg::setFilterCount(int images, bool filtered)
+{
+    scopeCombo->setItemText(1, filtered
+        ? tr("Current filter (%1 images)").arg(QLocale().toString(images))
+        : tr("Current filter (nothing filtered: %1 images)")
+              .arg(QLocale().toString(images)));
+}
+
 void KeywordAuditDlg::setRunning(bool on)
 {
     running = on;
     runBtn->setText(on ? tr("Stop") : tr("Run Audit"));
     runBtn->setEnabled(on || unavailable.isEmpty());
+    scopeCombo->setEnabled(!on);
     progressBar->setVisible(on);
     if (on) {
         progressBar->setRange(0, 0);
@@ -416,15 +445,31 @@ void KeywordAuditDlg::setOutcome(const KeywordAuditOutcome &o)
     else if (o.cancelled) stageLabel->setText(tr("Stopped. Run again to continue -- "
                                                  "images already read are kept."));
     else if (o.ok) {
-        int sus = 0;
-        for (const Finding &f : o.result.findings) sus += f.kind == Finding::Suspect;
-        stageLabel->setText(
-            tr("%1 images checked in %2 s: %3 suspect keywords, %4 possibly missing. "
-               "Most confident first.")
+        int sus = 0, mis = 0, sug = 0;
+        for (const Finding &f : o.result.findings) {
+            sus += f.kind == Finding::Suspect;
+            mis += f.kind == Finding::Missing;
+            sug += f.kind == Finding::Suggested;
+        }
+        QString text =
+            tr("%1 images read in %2 s: %3 suspect keywords, %4 possibly missing, %5 "
+               "suggested. Most confident first.")
                 .arg(QLocale().toString(o.images.size()))
                 .arg(o.ms / 1000)
-                .arg(QLocale().toString(sus))
-                .arg(QLocale().toString(o.result.findings.size() - sus)));
+                .arg(QLocale().toString(sus), QLocale().toString(mis),
+                     QLocale().toString(sug));
+        /*  The scope said in the result, and what it could not reach: a filtered image
+            the catalog does not hold was not audited, and silently leaving it out would
+            read as "nothing to report". */
+        if (o.scoped) {
+            text += tr(" Reported for the %1 images in the current filter")
+                        .arg(QLocale().toString(o.scopeImages));
+            text += o.scopeUncatalogued > 0
+                ? tr("; %1 of them are not in the catalog and were not read.")
+                      .arg(QLocale().toString(o.scopeUncatalogued))
+                : QString(".");
+        }
+        stageLabel->setText(text);
     }
     fillKeywordTable();
     refilter();
@@ -509,6 +554,7 @@ void KeywordAuditDlg::showCurrent()
     const Finding &f = outcome.result.findings[fi];
     const KeywordAuditImage &im = outcome.images[f.members.first()];
     const bool sus = f.kind == Finding::Suspect;
+    const bool sug = f.kind == Finding::Suggested;
     bigImage->setPixmap(thumb(im.path, kBigThumb));
 
     const QString kw = f.keyword.toHtmlEscaped(), alt = f.alternative.toHtmlEscaped();
@@ -518,6 +564,8 @@ void KeywordAuditDlg::showCurrent()
     else if (sus)
         claim = tr("Tagged <b>%1</b>, but does not look like your other %2 images.")
                     .arg(kw, leaf(f.keyword).toHtmlEscaped());
+    else if (sug)
+        claim = tr("Suggested: <b>%1</b>.<br>%2.").arg(kw, f.reason.toHtmlEscaped());
     else {
         claim = tr("Not tagged <b>%1</b>, but looks like your %2 images.")
                     .arg(kw, leaf(f.keyword).toHtmlEscaped());
@@ -545,7 +593,9 @@ void KeywordAuditDlg::showCurrent()
     fillEx(altExLabel, altEx, f.alternative);
 
     pathLabel->setText(im.path);
-    tagsLabel->setText(tr("Keywords: %1").arg(im.explicitPaths.join(", ")));
+    tagsLabel->setText(im.explicitPaths.isEmpty()
+                           ? tr("Keywords: none")
+                           : tr("Keywords: %1").arg(im.explicitPaths.join(", ")));
 
     replaceBtn->setVisible(sus && !f.alternative.isEmpty());
     replaceBtn->setText(tr("Replace with %1 (R)").arg(leaf(f.alternative)));
@@ -554,6 +604,11 @@ void KeywordAuditDlg::showCurrent()
     addBtn->setVisible(!sus);
     addBtn->setText(tr("Add %1 (A)").arg(leaf(f.keyword)));
     skipBtn->setText(tr("Don't Audit %1").arg(leaf(f.keyword)));
+    /*  Not for a suggestion: excluding a keyword from the audit is about judging its
+        carriers, and a session suggestion is often exactly the non-visual kind the
+        exclusion exists for. */
+    skipBtn->setVisible(!sug);
+    correctBtn->setText(sug ? tr("Not This Keyword (C)") : tr("Keywords Are Right (C)"));
 
     const bool done = decision[fi] == Applied;
     for (QPushButton *b : {replaceBtn, removeBtn, addBtn, correctBtn, undoBtn})
@@ -574,7 +629,7 @@ void KeywordAuditDlg::decide(Decision d)
         return;
 
     /* "Keywords are right" is remembered now; anything else forgets it. */
-    const QString kind = sus ? "suspect" : "missing";
+    const QString kind = VisualAudit::kindName(f.kind);
     if (d == Correct || decision[fi] == Correct)
         for (int m : f.members)
             KeywordAuditStore::setDismissed(outcome.images[m].pathKey, kind, f.keyword,

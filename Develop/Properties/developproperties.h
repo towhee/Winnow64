@@ -182,6 +182,12 @@ public:
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
     Geometry currentGeometry() const;
+    /* Effects > Kaleidoscope is on show: Global scope, Effects expanded, Kaleidoscope the
+       chosen effect, Global's Effects eye open. MW shows the canvas handles while this
+       holds and the kaleidoscope is on (MW::syncDevelopKaleidoOverlay). */
+    bool kaleidoToolWanted() const;
+    /* Seed the Effects > Kaleidoscope sliders from the current image's geometry. */
+    void syncKaleidoSliders();
     void     setCurrentGeometry(const Geometry &g);
 
     /* Per-image edit state (Increment 1). The dock now reflects the CURRENT IMAGE's EditStack
@@ -711,6 +717,12 @@ public slots:
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
+    /* An Effects > Kaleidoscope slider moved: the whole kaleidoscope as it now stands
+       (segments 0 = off, else even 2..32; angles in degrees). MW writes the geometry. */
+    void kaleidoEdited(int segments, double angleDeg, double sourceDeg);
+    /* kaleidoToolWanted() may have flipped (effect chosen, section folded, scope or
+       image changed, Effects eye): MW re-evaluates the canvas handles. */
+    void kaleidoToolChanged();
     /* An image's edits were just written to its sidecar, together with a new cached
        thumbnail preview (or, when thumb is null, with the old one cleared because no
        preview could be made for the new recipe). MW updates the grid from this. */
@@ -877,6 +889,14 @@ private:
     void setCombinedColorPanel(bool on);
     void addDetail();
     void addEffects();
+    /* The Effects dropdown: one effect's rows at a time (0 Vignette, 1 Grain, 2
+       Kaleidoscope -- the ids are the combo items' data, and Kaleidoscope is listed on
+       the Global scope only). UI state, persisted ("Develop/effectsChoice"); an edited
+       effect that is not showing gets " *" on its item (updateSectionHeaderCaptions). */
+    int  effectsChoice = 0;
+    QPointer<QComboBox> effectsCombo;
+    int  shownEffect() const;              // effectsChoice, or Vignette where it is absent
+    void applyEffectsChoice();             // show the chosen effect's rows, hide the rest
     /* The Lens section (Global scope only): the lensfun profile (on/off, the lens, the
        distortion and vignetting amounts), then Remove CA and the fringe sliders. */
     void addLens();
@@ -1160,6 +1180,12 @@ private:
            *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr, *lensEyeBtn = nullptr,
            *detailEyeBtn = nullptr, *pointColorEyeBtn = nullptr,
            *colorPanelEyeBtn = nullptr;
+    /* The Effects dropdown row's own [eye] [reset], acting on the SHOWN effect only
+       (EditScope::showVignette / showGrain / showKaleido; resetEffect). */
+    BarBtn *effectEyeBtn = nullptr;
+    bool *effectShowFlag(EditScope *l, int effect);   // that effect's eye on a scope
+    void toggleEffectShown();
+    void resetEffect();
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 

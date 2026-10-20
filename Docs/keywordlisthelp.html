@@ -73,6 +73,8 @@ photograph already has.</li>
 <li>The <span class="highlight">Find keyword</span> box above the list hides everything
 that does not match what you type, so you can find a keyword in a long list. Its branches
 stay visible so you can see where it sits.</li>
+<li>Select a keyword you found that way, then clear the box: the whole list opens with
+that keyword centred, so you can see it among its neighbours.</li>
 </ul>
 
 <h1>Everyday use</h1>
@@ -231,26 +233,40 @@ alone, or back up your photographs (and their .xmp files) first.</p>
 <h2>Audit keywords...</h2>
 
 <p><b>What it does:</b> finds photographs whose keywords look wrong, by comparing each
-photograph with your other photographs that have the same keyword. It reports two kinds of
-finding:</p>
+photograph with your other photographs that have the same keyword, and suggests keywords
+for photographs that have few or none. It reports three kinds of finding:</p>
 <ul>
 <li><span class="highlight">Suspect</span> &mdash; "tagged Egret, but looks like your
 Heron images".</li>
 <li><span class="highlight">Missing</span> &mdash; "not tagged Heron, but looks like your
 Heron images".</li>
+<li><span class="highlight">Suggested</span> &mdash; a keyword for any photograph, even
+one with no keywords at all: because it looks like your photographs that carry it, or
+because most photographs from the same session (same folder, within about three hours)
+carry it.</li>
 </ul>
 <p><b>Why:</b> after years of keywording, mistakes creep in &mdash; a mis-click, a
 keyword applied to the whole selection when one picture was different. They are almost
 impossible to find by looking. The audit learns what <i>your</i> photographs of each
 keyword look like, so it works for places and people, not just objects.</p>
 
-<p><b>How:</b> press <span class="highlight">Run Audit</span>. The first time, Winnow
-downloads the image-recognition model it needs, and looking at every photograph can take
-several minutes on a large library; later runs only look at what has changed.</p>
+<p><b>How:</b> choose what to <span class="highlight">Report on</span> &mdash;
+<span class="highlight">Whole catalog</span>, or <span class="highlight">Current
+filter</span> for just the images the main window is showing &mdash; and press
+<span class="highlight">Run Audit</span>. Either way, every keyworded photograph in the
+catalog is used to learn what your keywords look like; the choice only decides which
+photographs you are shown findings for. The first time, Winnow downloads the
+image-recognition model it needs, and looking at every photograph can take several minutes
+on a large library; later runs only look at what has changed.</p>
+
+<p>Each run also refreshes the <span class="highlight">Suggested</span> keywords in the
+Keywords panel.</p>
 
 <p>Then work through the findings: <span class="highlight">Replace</span>,
-<span class="highlight">Remove</span>, or <span class="highlight">Keywords Are
-Right</span> (Winnow remembers that, and does not ask about it again). Nothing changes in
+<span class="highlight">Remove</span>, <span class="highlight">Add</span>, or
+<span class="highlight">Keywords Are Right</span> (for a suggestion,
+<span class="highlight">Not This Keyword</span>). Winnow remembers that, and does not ask
+about it again. Nothing changes in
 your photographs until you press <span class="highlight">Apply Changes</span>.</p>
 
 <p><b>Note:</b> the audit can only learn a keyword that enough of your photographs

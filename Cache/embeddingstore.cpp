@@ -107,6 +107,22 @@ bool loadAll(const QString &model, int dim, QStringList &keys, std::vector<float
     return true;
 }
 
+QVector<float> get(const QString &model, const QString &pathKey, int dim, qint64 srcSize,
+                   qint64 srcMtime)
+{
+    QSqlDatabase db = CacheDb::instance().db();
+    if (!db.isOpen()) return {};
+    QSqlQuery q(db);
+    q.prepare("SELECT vec FROM image_embedding WHERE model = ? AND pathkey = ?"
+              " AND srcsize = ? AND srcmtime = ?");
+    q.addBindValue(model);
+    q.addBindValue(pathKey);
+    q.addBindValue(srcSize);
+    q.addBindValue(srcMtime);
+    if (!q.exec() || !q.next()) return {};
+    return decode(q.value(0).toByteArray(), dim);
+}
+
 int prune(const QString &model)
 {
     QSqlDatabase db = CacheDb::instance().db();

@@ -638,12 +638,15 @@ QString MW::developDiagnostics()
     }
     rpt << "\n";
     const Geometry &g = mj.geometry;
-    rpt << "\n" << "GEOMETRY (crop / straighten / warp -- applied last)";
+    rpt << "\n" << "GEOMETRY (crop / straighten / warp / kaleidoscope -- applied last)";
     rpt << "\n" << "  isIdentity = " << G::s(g.isIdentity()) << "   show = " << G::s(g.show);
     rpt << "\n" << "  crop = x " << G::s(g.cropX) << "  y " << G::s(g.cropY)
         << "  w " << G::s(g.cropW) << "  h " << G::s(g.cropH);
     rpt << "\n" << "  straighten = " << G::s(g.straighten) << " deg"
         << "   hasWarp = " << G::s(g.hasWarp) << "   fillCanvas = " << G::s(g.fillCanvas);
+    rpt << "\n" << "  kaleidoSegments = " << G::s(g.kaleidoSegments)
+        << "   centre = " << G::s(g.kaleidoX) << ", " << G::s(g.kaleidoY)
+        << "   angle = " << G::s(g.kaleidoAngle) << "   source = " << G::s(g.kaleidoSource);
     rpt << "\n";
 
     // DENOISE / PMRID CACHE STATE
@@ -1323,7 +1326,7 @@ QString MW::keywordDiagnostics()
             rpt << "\n" << "  ... unfiled (no vocab node) = " << G::s(unfiled.size());
             rpt << "\n" << "  Authored nodes never observed = " << G::s(authoredOnly)
                 << "   (empty branches -- not a fault)";
-            rpt << "\n" << "  Filters panel unfiled count = "
+            rpt << "\n" << "  Filters panel unfiled count (top-most) = "
                 << G::s(filters ? filters->unfiledKeywordCount() : -1);
             if (!unfiled.isEmpty()) {
                 rpt << "\n" << "  Biggest unfiled keywords:";

@@ -912,6 +912,7 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
         segMessage.clear();
     }
     maskEditMode = true;
+    syncUnfoldedFrameNeed();
     emit maskTintAvailabilityChanged(true);
     maskHover = underMouse();        // show at once if the cursor is already over view
     maskBrushCursorOn = maskHover && (maskTool == 2 || maskIsObject());
@@ -931,6 +932,7 @@ void ImageView::endMaskEdit()
     scopeHasMask = false;
     if (!maskEditMode) {
         if (wasAvailable) emit maskTintAvailabilityChanged(false);
+        syncUnfoldedFrameNeed();
         return;
     }
     if (G::isLogger) G::log("ImageView::endMaskEdit");
@@ -958,12 +960,14 @@ void ImageView::endMaskEdit()
     setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
     emit maskTintAvailabilityChanged(false);
     viewport()->update();
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::beginSpotEdit()
 {
     if (G::isLogger) G::log("ImageView::beginSpotEdit");
     spotEditMode = true;
+    syncUnfoldedFrameNeed();
     spotPainting = false;
     spotStrokePts.clear();
     spotPending.clear();
@@ -987,6 +991,7 @@ void ImageView::endSpotEdit()
     spotPins.clear();
     unsetCursor();
     viewport()->update();
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::beginWbPick()
@@ -1436,16 +1441,16 @@ double ImageView::spotSizeMin() const
    interaction, so with one active a click behaves like the normal loupe (zoom / pan). */
 bool ImageView::developToolActive() const
 {
-    return cropActive() || maskToolUsesMouse() || spotEditMode || wbPickMode
-           || detailPickMode || curvePickMode || pointColorPickMode;
+    return cropActive() || kaleidoActive() || maskToolUsesMouse() || spotEditMode
+           || wbPickMode || detailPickMode || curvePickMode || pointColorPickMode;
 }
 
 /* See the header: the Curves picker is a toggle, not a one-shot tool, so it defers to
    anything the user picked up deliberately. */
 bool ImageView::curvePickOwnsMouse() const
 {
-    return curvePickMode && !cropActive() && !maskToolUsesMouse() && !spotEditMode
-           && !wbPickMode && !detailPickMode && !pointColorPickMode;
+    return curvePickMode && !cropActive() && !kaleidoActive() && !maskToolUsesMouse()
+           && !spotEditMode && !wbPickMode && !detailPickMode && !pointColorPickMode;
 }
 
 /* See the header: DISPLAYED (post-geometry) normalized coords, the space
@@ -1472,7 +1477,7 @@ void ImageView::setSpacePanOverride(bool on)
 {
     if (on == spacePanOverride) { spacePanDeferred = false; return; }
     const bool gestureInFlight = isLeftMouseBtnPressed || maskPainting || spotPainting
-                              || maskObjDrawing || maskDrag >= 0 || cropDrag >= 0
+                              || maskObjDrawing || maskDrag >= 0 || cropDrag >= 0 || kaleidoDrag >= 0
                               || cropLevelDragging;
     if (gestureInFlight) { spacePanDeferred = true; spacePanDeferredVal = on; return; }
     spacePanDeferred = false;
@@ -1647,6 +1652,7 @@ void ImageView::clearScopeMaskTint()
         viewport()->update();
     }
     if (wasAvailable && !maskTintAvailable()) emit maskTintAvailabilityChanged(false);
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::setScopeHasMask(bool hasMask)
@@ -1655,6 +1661,7 @@ void ImageView::setScopeHasMask(bool hasMask)
     const bool wasAvailable = maskTintAvailable();
     scopeHasMask = hasMask;
     if (maskTintAvailable() != wasAvailable) emit maskTintAvailabilityChanged(!wasAvailable);
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::setSharpenMaskImage(const QImage &mask)
@@ -1746,6 +1753,7 @@ void ImageView::toggleMaskTint()
     maskTintHidden = !maskTintHidden;
     emit maskTintVisibilityChanged(!maskTintHidden);
     viewport()->update();
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::hideMaskTint()
@@ -1758,6 +1766,7 @@ void ImageView::hideMaskTint()
     maskTintHidden = true;
     emit maskTintVisibilityChanged(false);
     viewport()->update();
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::showMaskTint()
@@ -1770,6 +1779,7 @@ void ImageView::showMaskTint()
     maskTintHidden = false;
     emit maskTintVisibilityChanged(true);
     viewport()->update();
+    syncUnfoldedFrameNeed();
 }
 
 void ImageView::setMaskFeather(double feather)
@@ -1920,6 +1930,120 @@ void ImageView::beginWarp()
     cropSyncFrameFromN();
     setCursor(Qt::ArrowCursor);
     viewport()->update();
+}
+
+void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments)
+{
+/*
+    Arm (or re-sync) the Kaleido overlay. The loupe is showing the RENDERED kaleidoscope
+    here (MW leaves the crop overlay and applies the whole geometry), so the handles sit
+    in displayed-image coords and need no geometry mapping.
+*/
+    if (G::isLogger) G::log("ImageView::beginKaleido");
+    const bool wasActive = kaleidoMode;
+    kaleidoMode = true;
+    kaleidoC = centreN;
+    kaleidoAngleDeg = angleDeg;
+    kaleidoSegs = segments;
+    if (!wasActive) {
+        kaleidoDrag = -1;
+        setCursor(Qt::CrossCursor);
+    }
+    viewport()->update();
+}
+
+void ImageView::endKaleido()
+{
+    if (!kaleidoMode) return;
+    if (G::isLogger) G::log("ImageView::endKaleido");
+    kaleidoMode = false;
+    kaleidoDrag = -1;
+    setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+    viewport()->update();
+}
+
+QPointF ImageView::kaleidoCentreVp() const
+{
+    const QRectF br = pmItem->boundingRect();
+    const QPointF item(br.left() + kaleidoC.x() * br.width(),
+                       br.top()  + kaleidoC.y() * br.height());
+    return QPointF(mapFromScene(pmItem->mapToScene(item)));
+}
+
+QPointF ImageView::kaleidoSpokeVp() const
+{
+    /* A fixed SCREEN distance, so the handle is grabbable at any zoom. */
+    const double kSpokePx = 80.0;
+    const double a = kaleidoAngleDeg * 0.017453292519943295;
+    return kaleidoCentreVp() + QPointF(std::cos(a), std::sin(a)) * kSpokePx;
+}
+
+int ImageView::kaleidoHitTest(QPoint vp) const
+{
+    const double kGrabPx = 10.0;
+    if (QLineF(kaleidoSpokeVp(), QPointF(vp)).length() <= kGrabPx) return 1;
+    if (QLineF(kaleidoCentreVp(), QPointF(vp)).length() <= kGrabPx) return 0;
+    return -1;
+}
+
+void ImageView::kaleidoDrawOverlay(QPainter *painter)
+{
+    const QRectF br = pmItem->boundingRect();
+    if (br.width() <= 0 || br.height() <= 0) return;
+    painter->save();
+    painter->resetTransform();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+
+    const QPointF c = kaleidoCentreVp();
+    /* Seams: one faint line per wedge edge, out to the image's on-screen bounds (long
+       enough to leave it from any centre; clipped to the image). */
+    const QRectF imgVp = QRectF(mapFromScene(pmItem->mapToScene(br.topLeft())),
+                                mapFromScene(pmItem->mapToScene(br.bottomRight())))
+                             .normalized();
+    const double reach = std::hypot(imgVp.width(), imgVp.height()) * 2.0;
+    painter->setClipRect(imgVp);
+    if (kaleidoSegs >= 2) {
+        QPen seam(QColor(255, 255, 255, 70));
+        seam.setWidthF(1.0); seam.setCosmetic(true); seam.setStyle(Qt::DashLine);
+        painter->setPen(seam);
+        for (int k = 1; k < kaleidoSegs; ++k) {
+            const double a = (kaleidoAngleDeg + 360.0 * k / kaleidoSegs) * 0.017453292519943295;
+            painter->drawLine(c, c + QPointF(std::cos(a), std::sin(a)) * reach);
+        }
+    }
+    painter->setClipping(false);
+
+    /* The spoke: the seam the angle handle sits on, drawn solid to the handle. */
+    const QPointF h = kaleidoSpokeVp();
+    QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
+    QPen line(QColor(255, 235, 90, 240)); line.setWidthF(1.4); line.setCosmetic(true);
+    painter->setPen(halo); painter->drawLine(c, h);
+    painter->setPen(line); painter->drawLine(c, h);
+
+    /* Handles: a ring + crosshair at the centre, a dot at the spoke's end. */
+    const double rc = 8.0, rh = 5.5;
+    painter->setBrush(Qt::NoBrush);
+    painter->setPen(halo);
+    painter->drawEllipse(c, rc, rc);
+    painter->drawLine(c - QPointF(rc + 4, 0), c + QPointF(rc + 4, 0));
+    painter->drawLine(c - QPointF(0, rc + 4), c + QPointF(0, rc + 4));
+    QPen white(QColor(255, 255, 255, 240)); white.setWidthF(1.4); white.setCosmetic(true);
+    painter->setPen(white);
+    painter->drawEllipse(c, rc, rc);
+    painter->drawLine(c - QPointF(rc + 4, 0), c + QPointF(rc + 4, 0));
+    painter->drawLine(c - QPointF(0, rc + 4), c + QPointF(0, rc + 4));
+    painter->setPen(halo);
+    painter->setBrush(QColor(255, 235, 90, 240));
+    painter->drawEllipse(h, rh, rh);
+    painter->restore();
+}
+
+void ImageView::syncUnfoldedFrameNeed()
+{
+    const bool need = needsUnfoldedFrame();
+    if (need == lastNeedsUnfolded) return;
+    lastNeedsUnfolded = need;
+    emit unfoldedFrameNeedChanged();
 }
 
 void ImageView::cropClampN()
@@ -2714,6 +2838,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         }
         return;
     }
+    if (kaleidoActive()) { kaleidoDrawOverlay(painter); return; }
     /* Spot-removal mode owns the overlay (pins + live stroke + brush cursor); it is
        mutually exclusive with mask editing (arming it does not set maskEditMode). */
     if (spotEditMode && pmItem && pmItem->isVisible()) {
@@ -5451,6 +5576,24 @@ void ImageView::mousePressEvent(QMouseEvent *event)
        rectangle mode breaks the rectangle into a free 4-point warp quad. Anywhere else is a normal
        canvas pan that slides the image under the fixed frame, so fall through to the pan handling
        below (cropDrag stays -1; the frame is re-derived from cropN as the image moves). */
+    /* Kaleido: grab the spoke (angle) or the centre; a click elsewhere on the image moves
+       the centre there and keeps dragging it. */
+    if (!spacePanOverride && kaleidoActive() && event->button() == Qt::LeftButton) {
+        const int h = kaleidoHitTest(event->pos());
+        isLeftMouseBtnPressed = true;
+        if (h == 1) { kaleidoDrag = 1; return; }
+        kaleidoDrag = 0;
+        kaleidoGrabOffsetVp = (h == 0) ? QPointF(event->pos()) - kaleidoCentreVp() : QPointF();
+        if (h < 0) {
+            QPointF n;
+            if (!displayedNormAt(event->pos(), n)) { kaleidoDrag = -1; return; }
+            kaleidoC = n;
+            viewport()->update();
+            emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, false);
+        }
+        setCursor(Qt::ClosedHandCursor);
+        return;
+    }
     if (!spacePanOverride && cropActive() && cropLevelMode && event->button() == Qt::LeftButton) {
         cropLevelP1 = cropLevelP2 = event->pos();   // start the level line
         cropLevelDragging = true;
@@ -5842,6 +5985,31 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     /* Crop interaction. A handle drag resizes the frame over the STATIC image (consumed here).
        Otherwise it is a normal canvas pan -- fall through so the image scrolls under the fixed
        frame; cropN is then recomputed from the (unchanged) frame after the pan, below. */
+    if (!spacePanOverride && kaleidoActive()) {
+        if (kaleidoDrag == 0) {
+            const QRectF br = pmItem->boundingRect();
+            const QPointF vp = QPointF(event->pos()) - kaleidoGrabOffsetVp;
+            const QPointF item = pmItem->mapFromScene(mapToScene(vp.toPoint()));
+            kaleidoC = QPointF(qBound(0.0, (item.x() - br.left()) / br.width(), 1.0),
+                               qBound(0.0, (item.y() - br.top()) / br.height(), 1.0));
+            viewport()->update();
+            emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, false);
+        }
+        else if (kaleidoDrag == 1) {
+            const QPointF d = QPointF(event->pos()) - kaleidoCentreVp();
+            if (d.manhattanLength() > 2.0) {
+                double a = std::atan2(d.y(), d.x()) * 57.29577951308232;
+                /* Shift snaps to 15 degrees, as rotation handles usually do. */
+                if (event->modifiers() & Qt::ShiftModifier) a = std::round(a / 15.0) * 15.0;
+                kaleidoAngleDeg = a;
+                viewport()->update();
+                emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, false);
+            }
+        }
+        else setCursor(kaleidoHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor
+                                                         : Qt::CrossCursor);
+        return;
+    }
     /* drawing / hovering the level line */
     if (!spacePanOverride && cropActive() && cropLevelMode) {
         if (cropLevelDragging) { cropLevelP2 = event->pos(); viewport()->update(); }
@@ -6090,6 +6258,13 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         return;
     }
 
+    if (!spacePanOverride && kaleidoActive() && kaleidoDrag >= 0) {
+        kaleidoDrag = -1;
+        isLeftMouseBtnPressed = false;
+        setCursor(kaleidoHitTest(event->pos()) >= 0 ? Qt::OpenHandCursor : Qt::CrossCursor);
+        emit kaleidoEdited(kaleidoC.x(), kaleidoC.y(), kaleidoAngleDeg, true);
+        return;
+    }
     /* Finish a level line: reduce its tilt to the nearest horizontal/vertical and emit
        angle (a delta added to the straighten). A too-short line is ignored. */
     if (!spacePanOverride && cropActive() && cropLevelMode) {

@@ -21,11 +21,14 @@ keyword to see its full path.</p>
 <p>Winnow writes keywords into each image's <span class="highlight">XMP sidecar</span>,
 which is where Lightroom and other applications read them from.</p>
 
-<h1>The two halves of the panel</h1>
+<h1>The parts of the panel</h1>
 
 <p>At the top, under <span class="highlight">Selected images tags</span>, are the keywords
 carried by the images you have <span class="highlight">selected</span>. This is where you
 put a keyword onto a photograph, and where you take one off.</p>
+
+<p>Under them, <span class="highlight">Suggested</span> offers keywords the current image
+may be missing.</p>
 
 <p>At the bottom, under <span class="highlight">Keyword list</span>, is your own
 vocabulary: every keyword you have available to use, in its tree. Adding, renaming, moving
@@ -63,6 +66,31 @@ Fauna &gt; Bird off an image cannot leave Fauna &gt; Bird &gt; Heron on it.</p>
 
 <p>A keyword drawn in <span style="color:#b4a45a">dull yellow</span> in the list is one the
 current image already has.</p>
+
+<h1>Suggested keywords</h1>
+
+<p>The <span class="highlight">Suggested</span> row offers keywords for the current image,
+for two reasons. Hover a suggestion to see which:</p>
+
+<ul>
+<li><span class="highlight">It looks like your images that carry it.</span> These come
+from what <span class="highlight">Audit keywords</span> last learned, so run the audit once
+before they appear, and again now and then as your keywording grows. Only keywords that can
+be judged from the picture are suggested this way.</li>
+<li><span class="highlight">Most images from the same session carry it.</span> Other
+images in the same folder, taken within about three hours, decide this one. That covers
+what a picture cannot show &mdash; an event, a client, a person's name &mdash; and needs no
+audit.</li>
+</ul>
+
+<p>Click a suggestion to add it to the selected images. Click its
+<span class="highlight">&times;</span> if it is wrong: Winnow will not suggest that keyword
+for that image again. Suggestions work for any image, whether it has no keywords or
+several, and only ever offer keywords that are in your list.</p>
+
+<p>The line under the suggestions says when they were learned. Its
+<span class="highlight">Audit keywords...</span> link opens the audit, which is how you
+learn them the first time and refresh them later.</p>
 
 <h1>What the tag markings mean</h1>
 
@@ -233,9 +261,12 @@ afterwards, put the <span class="highlight">Filters</span> panel and the
 
 <p>Any keyword in the Filters panel that is not in your keyword list is shown in
 <span class="highlight">dull red</span>, and the Keywords category header says how many
-there are &mdash; <span class="highlight">Keywords (63 unfiled)</span>. Right-click the
+there are &mdash; <span class="highlight">Keywords (63 unfiled)</span>. A red keyword
+with others inside it counts once: everything inside it is unfiled too, and it is filed
+as one. Right-click the
 category and choose <span class="highlight">Show unfiled only</span> to see just those,
-with the branches above them so you can read where they sit. This only changes what is
+with the branches above them opened so you can read where they sit. Turning it off puts
+the branches back the way you had them. This only changes what is
 shown; it does not change what you are filtering.</p>
 
 <p>To file one: check it in the Filters panel, select the images it found, and drag them

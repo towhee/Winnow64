@@ -639,6 +639,31 @@ void Selection::recover(QString src)
     // qDebug() << "Selection::recovered" << src << dmSelectedRows;
 }
 
+bool Selection::recoverVisible(QString src)
+{
+/*
+    See the header. Same translation as recover(), skipping what the filter hid: an
+    invalid proxy index in a QItemSelection is not a no-op to rely on, and a hidden
+    current row would leave the views with no current at all.
+*/
+    if (G::isLogger || isDebug) G::log("Selection::recoverVisible", src);
+    if (!dmCurrentIndex.isValid()) return false;
+    const QModelIndex current = dm->sf->mapFromSource(dmCurrentIndex);
+    if (!current.isValid()) return false;
+
+    QItemSelection selection;
+    for (const QModelIndex &dmIdx : std::as_const(dmSelectedRows)) {
+        if (!dmIdx.isValid()) continue;
+        const QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
+        if (sfIdx.isValid()) selection.select(sfIdx, sfIdx);
+    }
+    if (selection.isEmpty()) selection.select(current, current);
+    sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    dm->currentSfIdx = current;
+    sm->setCurrentIndex(current, QItemSelectionModel::NoUpdate);
+    return true;
+}
+
 void Selection::selectionChanged(const QItemSelection &selected, const QItemSelection &deselected)
 {
     // update number selected on status bar

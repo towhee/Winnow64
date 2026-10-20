@@ -385,6 +385,8 @@ set(WINNOW_SOURCES
     Dialogs/keywordauditdlg.h
     Main/keywordauditjob.cpp
     Main/keywordauditjob.h
+    Main/keywordsuggester.cpp
+    Main/keywordsuggester.h
     Main/keywordauditprobe.cpp
     Main/keywordauditprobe.h
     Datamodel/keywordauditstore.cpp

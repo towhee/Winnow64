@@ -2,6 +2,7 @@
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
+#include <opencv2/core/utility.hpp>   // parallel_for_
 #include <QTransform>
 #include <QPolygonF>
 #include <vector>
@@ -80,6 +81,45 @@ inline double dist(const cv::Point2f &a, const cv::Point2f &b)
 {
     return std::hypot(double(a.x) - b.x, double(a.y) - b.y);
 }
+
+/* Fold a pixel coordinate back into [0, len - 1] by mirroring at the frame edges (edges
+   at -0.5 and len - 0.5, so the reflection repeats the edge pixel like BORDER_REFLECT).
+   Done here rather than by cv::remap's border mode because remap's fixed-point maps
+   saturate at +/-32767, which a long reflected ray on a big frame can exceed. */
+inline float reflectCoord(float v, int len)
+{
+    const float period = 2.0f * float(len);
+    float m = std::fmod(v + 0.5f, period);
+    if (m < 0.0f) m += period;
+    if (m >= float(len)) m = period - m;
+    m -= 0.5f;
+    return std::min(std::max(m, 0.0f), float(len - 1));
+}
+
+/* The kaleidoscope fold for one point in output PIXEL coords (pixel centres at +0.5):
+   the source pixel coords it samples, before the border reflection. */
+struct KaleidoFold {
+    float cx, cy, a, s, wedge;
+    int n;
+    KaleidoFold(const Geometry &g, double W, double H)
+        : cx(float(g.kaleidoX * W)), cy(float(g.kaleidoY * H)),
+          a(float(g.kaleidoAngle * 0.017453292519943295)),
+          s(float(g.kaleidoSource * 0.017453292519943295)),
+          wedge(float(6.283185307179586 / std::max(2, g.kaleidoSegments))),
+          n(std::max(2, g.kaleidoSegments)) {}
+    inline void map(float x, float y, float &sx, float &sy) const {
+        const float dx = x - cx, dy = y - cy;
+        const float r = std::sqrt(dx * dx + dy * dy);
+        if (r < 1e-6f) { sx = cx; sy = cy; return; }
+        const float u = (std::atan2(dy, dx) - a) / wedge;
+        const float k = std::floor(u);
+        float t = (u - k) * wedge;                  // angle into this wedge, [0, wedge)
+        if (int(k) & 1) t = wedge - t;              // odd wedges are the mirror image
+        const float phi = a + s + t;
+        sx = cx + r * std::cos(phi);
+        sy = cy + r * std::sin(phi);
+    }
+};
 
 } // namespace
 
@@ -212,7 +252,64 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
                               .toRect().intersected(img.rect());
         if (cri.isValid() && cri != img.rect()) img = img.copy(cri);
     }
+
+    /* 4) Kaleidoscope: folds the cropped frame, so the crop chooses what is mirrored. */
+    if (g.hasKaleido()) img = applyKaleidoscope(img, g);
     return img;
+}
+
+QImage CropTransform::applyKaleidoscope(const QImage &src, const Geometry &g)
+{
+    if (src.isNull() || !g.hasKaleido()) return src;
+    const int W = src.width(), H = src.height();
+    if (W < 2 || H < 2) return src;
+
+    const bool deep = isDeep(src);
+    const cv::Mat in = deep ? toRgba64(src) : toBgra(src);
+    QImage out(W, H, deep ? QImage::Format_RGBA64 : QImage::Format_ARGB32);
+    cv::Mat dst(H, W, deep ? CV_16UC4 : CV_8UC4, out.bits(), out.bytesPerLine());
+
+    /* Strips, each building its own small coordinate maps and remapping straight into
+       its rows of dst: no full-frame map pair (2 x 4 bytes x pixels), and every strip
+       runs on its own thread. */
+    const KaleidoFold fold(g, W, H);
+    const int kStrip = 32;
+    const int nStrips = (H + kStrip - 1) / kStrip;
+    cv::parallel_for_(cv::Range(0, nStrips), [&](const cv::Range &range) {
+        cv::Mat mapX, mapY;
+        for (int si = range.start; si < range.end; ++si) {
+            const int y0 = si * kStrip;
+            const int rows = std::min(kStrip, H - y0);
+            mapX.create(rows, W, CV_32F);
+            mapY.create(rows, W, CV_32F);
+            for (int r = 0; r < rows; ++r) {
+                float *mx = mapX.ptr<float>(r);
+                float *my = mapY.ptr<float>(r);
+                const float y = float(y0 + r) + 0.5f;
+                for (int x = 0; x < W; ++x) {
+                    float sx, sy;
+                    fold.map(float(x) + 0.5f, y, sx, sy);
+                    mx[x] = reflectCoord(sx - 0.5f, W);
+                    my[x] = reflectCoord(sy - 0.5f, H);
+                }
+            }
+            cv::Mat roi = dst.rowRange(y0, y0 + rows);
+            cv::remap(in, roi, mapX, mapY, cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+        }
+    });
+    return out;
+}
+
+QPointF CropTransform::kaleidoSourceNorm(QPointF outN, double W, double H,
+                                         const Geometry &g)
+{
+    if (!g.hasKaleido() || W < 2.0 || H < 2.0) return outN;
+    const KaleidoFold fold(g, W, H);
+    float sx, sy;
+    fold.map(float(outN.x() * W), float(outN.y() * H), sx, sy);
+    const int iw = int(W), ih = int(H);
+    return QPointF((reflectCoord(sx - 0.5f, iw) + 0.5) / W,
+                   (reflectCoord(sy - 0.5f, ih) + 0.5) / H);
 }
 
 QTransform CropTransform::geometryTransform(double srcW, double srcH, const Geometry &g,

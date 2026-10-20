@@ -6,6 +6,7 @@
 #include "Utilities/flowlayout.h"
 #include "Utilities/gradientheader.h"
 #include "Utilities/popup.h"
+#include "Utilities/visualaudit.h"
 
 #include <QApplication>
 #include <QCompleter>
@@ -153,6 +154,45 @@ public:
 
 };
 
+/*  One suggested keyword: "+ Heron", click to add, x to say "not this keyword". Not a
+    Tag -- it is not on the image yet, and a chip that looked like the tags above it
+    would read as already applied. */
+class SuggestChip : public QFrame
+{
+public:
+    SuggestChip(const QString &path, const QString &tip, QWidget *parent)
+        : QFrame(parent), path(path)
+    {
+        setObjectName("KeywordSuggestion");
+        setFrameShape(QFrame::StyledPanel);
+        setCursor(Qt::PointingHandCursor);
+        QHBoxLayout *l = new QHBoxLayout(this);
+        l->setContentsMargins(6, 1, 2, 1);
+        l->setSpacing(4);
+        QLabel *name = new QLabel("+ " + keywordLeafOf(path), this);
+        name->setEnabled(false);            // dimmed: a proposal, not a tag
+        l->addWidget(name);
+        setToolTip(tip);
+        QToolButton *no = new QToolButton(this);
+        no->setText("×");
+        no->setAutoRaise(true);
+        no->setToolTip("Not this keyword -- don't suggest it for this image again");
+        no->setCursor(Qt::ArrowCursor);
+        l->addWidget(no);
+        QObject::connect(no, &QToolButton::clicked, this, [this] {
+            if (onDismiss) onDismiss(this->path);
+        });
+    }
+    std::function<void(const QString &)> onAccept, onDismiss;
+    const QString path;
+
+protected:
+    void mouseReleaseEvent(QMouseEvent *event) override
+    {
+        if (event->button() == Qt::LeftButton && onAccept) onAccept(path);
+    }
+};
+
 /*  The completer popup: leaf in the normal weight, its branch dimmed after it. Two
     keywords sharing a leaf are two rows that differ only in the dimmed half, which is
     exactly the information needed to pick the right one. */
@@ -232,6 +272,28 @@ KeywordTags::KeywordTags(KeywordVocab *vocab, QWidget *parent)
     tagArea->setLayout(flow);
     scroll->setWidget(tagArea);
     outer->addWidget(scroll, 1);
+
+    /*  SUGGESTED: keywords for the current image from Audit keywords' model and the
+        image's session (KeywordSuggester). Its own band, because these are NOT on the
+        image -- they are a question -- and below the tags, because what the image
+        carries is read first. Always there, with a status line, so the feature can be
+        found before it has anything to say. */
+    suggestHeader = new GradientHeader(tr("Suggested"), this);
+    suggestHeader->setToolTip(tr("Keywords this image may be missing: ones it looks like "
+                                 "your images carrying them, and ones most images from "
+                                 "the same session carry. Click to add; x to dismiss."));
+    outer->addWidget(suggestHeader);
+    suggestArea = new QWidget(this);
+    suggestFlow = new FlowLayout(suggestArea, 2, 4, 3);
+    suggestArea->setLayout(suggestFlow);
+    outer->addWidget(suggestArea);
+    suggestStatus = new QLabel(this);
+    suggestStatus->setEnabled(false);
+    suggestStatus->setWordWrap(true);
+    suggestStatus->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
+    suggestStatus->setTextFormat(Qt::RichText);
+    connect(suggestStatus, &QLabel::linkActivated, this, [this] { emit auditRequested(); });
+    outer->addWidget(suggestStatus);
 
     legend = new QLabel(this);
     legend->setEnabled(false);
@@ -449,6 +511,31 @@ void KeywordTags::updateLegend()
     legend->setText(QString("Replacing <span style='color:%1'>%2</span> -- pick a "
                             "keyword from your list (clear the box to cancel)")
                         .arg(G::unfiledKeywordColor.name(), replacing.toHtmlEscaped()));
+}
+
+void KeywordTags::setSuggestions(const QVector<VisualAudit::Suggestion> &suggestions,
+                                 const QString &status)
+{
+    QLayoutItem *item;
+    while ((item = suggestFlow->takeAt(0)) != nullptr) {
+        if (item->widget()) item->widget()->deleteLater();
+        delete item;
+    }
+    const QString target = selectionSize > 1
+        ? tr("Click to add to the %1 selected images.").arg(selectionSize)
+        : tr("Click to add to this image.");
+    for (const VisualAudit::Suggestion &s : suggestions) {
+        SuggestChip *chip = new SuggestChip(
+            s.keyword, s.keyword + "\n" + s.reason() + "\n\n" + target, suggestArea);
+        chip->onAccept = [this](const QString &p) { emit suggestionAccepted(p); };
+        chip->onDismiss = [this](const QString &p) { emit suggestionDismissed(p); };
+        suggestFlow->addWidget(chip);
+    }
+    /*  The audit link is offered in the status whatever it says: it is how the visual
+        half is learned the first time and re-learned once the keywords have moved on. */
+    suggestStatus->setText(status.isEmpty() ? QString()
+        : status.toHtmlEscaped() + QString("  <a href='audit'>%1</a>").arg(tr("Audit "
+                                                                            "keywords...")));
 }
 
 void KeywordTags::setSelection(const QMap<QString, int> &counts, int selectionSize)

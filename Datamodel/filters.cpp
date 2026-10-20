@@ -1661,9 +1661,21 @@ void Filters::applyVocabMarking()
 
 int Filters::unfiledKeywordCount() const
 {
+/*
+    TOP-MOST ONLY. Counting every unfiled item made one stray "Recipe" branch with five
+    keywords inside it read as six, and the unfiled items inside FILED branches -- out of
+    sight under a collapsed Fauna -- made the header disagree with the red rows the user
+    could see. What the number is for is "how many things are there to file", and a
+    branch is filed (or tidied) as one: so an unfiled item counts only when its parent is
+    filed or is the category. This is also exactly the set of red rows "Show unfiled only"
+    leads to, rather than every row beneath them.
+*/
     int n = 0;
-    for (QTreeWidgetItem *item : itemsInCategory(keywords))
-        if (item->data(0, UnfiledRole).toBool()) ++n;
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        if (!item->data(0, UnfiledRole).toBool()) continue;
+        QTreeWidgetItem *parent = item->parent();
+        if (parent == keywords || !parent || !parent->data(0, UnfiledRole).toBool()) ++n;
+    }
     return n;
 }
 
@@ -1701,6 +1713,9 @@ bool Filters::applyUnfiledVisibility(QTreeWidgetItem *item)
         bool any = false;
         for (int i = 0; i < item->childCount(); ++i)
             if (applyUnfiledVisibility(item->child(i))) any = true;
+        /*  Also after a REBUILD (a keyword edit remakes the tree), so a keyword that
+            became unfiled while the mode is on is opened to like the rest. */
+        if (showUnfiledOnly) expandToUnfiled();
         return any;
     }
 
@@ -1729,10 +1744,53 @@ void Filters::setShowUnfiledOnly(bool showUnfiled)
     if (showUnfiledOnly == showUnfiled) return;
 
     QMutexLocker locker(&mutex);
+
+    /*  THE USER'S OWN EXPANSION IS KEPT ACROSS THE MODE. Turning it on opens every branch
+        down to every stray (below); turning it off closes what was opened for that and
+        nothing the user had open before. Keyed on the path, because a keyword edit while
+        the mode is on rebuilds every item. */
+    if (showUnfiled) {
+        expandedBeforeUnfiled.clear();
+        for (QTreeWidgetItem *item : itemsInCategory(keywords))
+            if (item->isExpanded())
+                expandedBeforeUnfiled.insert(keywordFold(item->data(1, Qt::EditRole)
+                                                             .toString()));
+    }
+
     showUnfiledOnly = showUnfiled;
-    applyUnfiledVisibility(keywords);
-    if (showUnfiledOnly)
+    applyUnfiledVisibility(keywords);       // expands to the strays when turning on
+
+    if (showUnfiledOnly) {
         for (QTreeWidgetItem *up = keywords; up; up = up->parent()) up->setExpanded(true);
+    }
+    else {
+        for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+            const bool was = expandedBeforeUnfiled.contains(
+                keywordFold(item->data(1, Qt::EditRole).toString()));
+            if (item->isExpanded() != was) item->setExpanded(was);
+        }
+        expandedBeforeUnfiled.clear();
+    }
+}
+
+void Filters::expandToUnfiled()
+{
+/*
+    EVERY BRANCH DOWN TO EVERY STRAY. It expanded only the Keywords category itself, so
+    the unfiled keywords inside filed branches -- most of them, on a real library -- sat
+    hidden in collapsed rows while the header counted them, and the one branch that showed
+    open was whichever the user had happened to open before. An item is opened when
+    anything beneath it is visible, which with the mode on means it leads to an unfiled
+    keyword (or is one, with keywords inside). No lock: called with the mutex held.
+*/
+    for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
+        if (item->isHidden() || item->isExpanded()) continue;
+        for (int i = 0; i < item->childCount(); ++i) {
+            if (item->child(i)->isHidden()) continue;
+            item->setExpanded(true);
+            break;
+        }
+    }
 }
 
 int Filters::keywordItemCount(const QString &path, bool filtered) const

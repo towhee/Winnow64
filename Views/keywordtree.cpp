@@ -270,8 +270,20 @@ QModelIndex KeywordTree::currentNode() const
 
 void KeywordTree::setFilterText(const QString &text)
 {
+    const bool wasFiltered = !filterText.isEmpty();
     filterText = text.trimmed();
     applyFilter(QModelIndex(), keywordFold(filterText));
+
+    /*  CLEARING THE FILTER WITH A KEYWORD SELECTED: the filter was how the user FOUND it,
+        so the whole list opens and that keyword is centred in it -- found, in context,
+        rather than lost somewhere in the thousands of rows that just came back. */
+    if (wasFiltered && filterText.isEmpty()) {
+        const QModelIndex idx = currentNode();
+        if (idx.isValid() && selectionModel()->isSelected(currentIndex())) {
+            expandAll();
+            scrollTo(idx, QAbstractItemView::PositionAtCenter);
+        }
+    }
 }
 
 bool KeywordTree::revealPath(const QString &path)

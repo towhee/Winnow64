@@ -60,6 +60,11 @@ int put(const QString &model, const QVector<Entry> &entries);
     "mistake" in an image that no longer looks like that. */
 bool loadAll(const QString &model, int dim, QStringList &keys, std::vector<float> &mat);
 
+/*  One image's vector, when this model made it from the file as it is now (the stamps
+    match), else empty -- the Keywords panel's suggestion for the current image. */
+QVector<float> get(const QString &model, const QString &pathKey, int dim, qint64 srcSize,
+                   qint64 srcMtime);
+
 /* Delete rows whose image is no longer in the catalog, or that another model made.
    Returns the number deleted. */
 int prune(const QString &model);

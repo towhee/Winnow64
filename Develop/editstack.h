@@ -121,6 +121,12 @@ struct EditScope {
     bool showDetail     = true;
     bool showEffects    = true;
     bool showLens       = true;     // Global only: the Lens section
+    /* Per-effect eyes on the Effects dropdown row, inside showEffects (both must be on).
+       showKaleido is read on the Global scope only (the kaleidoscope is Geometry, folded
+       in DevelopProperties::buildStackJob, not here). */
+    bool showVignette   = true;
+    bool showGrain      = true;
+    bool showKaleido    = true;
 };
 
 /* The params the renderer should apply for one scope: a COPY of the stored params with any
@@ -149,6 +155,16 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     if (!l.showPointColor) EditParams::resetGroup(p, EditParams::Group::PointColor);
     if (!l.showDetail)     EditParams::resetGroup(p, EditParams::Group::Detail);
     if (!l.showEffects)    EditParams::resetGroup(p, EditParams::Group::Effects);
+    const EditParams def;
+    if (!l.showVignette) {
+        p.vignetteExposure = def.vignetteExposure;
+        p.vignetteFeather  = def.vignetteFeather;
+    }
+    if (!l.showGrain) {
+        p.grainAmount    = def.grainAmount;
+        p.grainSize      = def.grainSize;
+        p.grainRoughness = def.grainRoughness;
+    }
     if (!l.showLens) {
         EditParams::resetGroup(p, EditParams::Group::Lens);
         /* An explicit removeCA / lensProfile previews as OFF; the reset's unset would
@@ -181,11 +197,40 @@ struct Geometry {
                                                                  // keeps the stored crop/warp so the
                                                                  // overlay still draws (default true)
 
+    /* Kaleidoscope (Transform panel Kaleido mode): a mirror fold applied AFTER the crop,
+       in the cropped output's pixel space (see CropTransform::applyKaleidoscope).
+       kaleidoSegments is the number of wedges around the centre, 0 = off, else EVEN
+       2..32 so every seam is a mirror (2 = a plain mirror across one line). The centre
+       is normalized in the cropped output; kaleidoAngle (deg) turns the mirror lines and
+       the slice with them; kaleidoSource (deg) turns only the slice sampled from the
+       photo, so the pattern's orientation stays put while its content changes. */
+    int    kaleidoSegments = 0;
+    double kaleidoX = 0.5, kaleidoY = 0.5;
+    double kaleidoAngle = 0.0;
+    double kaleidoSource = 0.0;
+
     bool cropIsIdentity() const {
         return cropX == 0.0 && cropY == 0.0 && cropW == 1.0 && cropH == 1.0;
     }
+    bool hasKaleido() const { return kaleidoSegments >= 2; }
+    bool kaleidoEquals(const Geometry &o) const {
+        if (kaleidoSegments != o.kaleidoSegments) return false;
+        if (!hasKaleido()) return true;
+        return kaleidoX == o.kaleidoX && kaleidoY == o.kaleidoY &&
+               kaleidoAngle == o.kaleidoAngle && kaleidoSource == o.kaleidoSource;
+    }
+    /* Turn the kaleidoscope off but keep its settings, so re-enabling restores them
+       (the render suppresses it while a tool needs the un-mirrored frame). */
+    void suppressKaleido() { kaleidoSegments = 0; }
+    /* The kaleidoscope is an Effect riding in Geometry: a Transform reset / cancel
+       replaces the rest of the geometry but carries these over unchanged. */
+    void copyKaleidoFrom(const Geometry &o) {
+        kaleidoSegments = o.kaleidoSegments;
+        kaleidoX = o.kaleidoX; kaleidoY = o.kaleidoY;
+        kaleidoAngle = o.kaleidoAngle; kaleidoSource = o.kaleidoSource;
+    }
     bool isIdentity() const {
-        return cropIsIdentity() && straighten == 0.0 && !hasWarp;
+        return cropIsIdentity() && straighten == 0.0 && !hasWarp && !hasKaleido();
     }
 };
 
@@ -239,7 +284,8 @@ struct EditStack {
                               !l.showColor ||
                               !l.showCalibrate || !l.showColorGrade ||
                               !l.showPointColor ||
-                              !l.showDetail || !l.showEffects || !l.showLens))
+                              !l.showDetail || !l.showEffects || !l.showLens ||
+                              !l.showVignette || !l.showGrain || !l.showKaleido))
                 return false;
         return true;
     }
@@ -470,6 +516,9 @@ struct EditStack {
             if (!l.showDetail)     lo["showDetail"]     = false;
             if (!l.showEffects)    lo["showEffects"]    = false;
             if (!l.showLens)       lo["showLens"]       = false;
+            if (!l.showVignette)   lo["showVignette"]   = false;
+            if (!l.showGrain)      lo["showGrain"]      = false;
+            if (!l.showKaleido)    lo["showKaleido"]    = false;
             QJsonArray marr;
             for (const MaskComponent &m : l.components) {
                 QJsonObject mo;
@@ -516,6 +565,14 @@ struct EditStack {
             for (double v : g.quad) q.append(v);
             o["quad"] = q;
         }
+        /* Only when on, so an existing recipe's JSON (and its hash) does not change. */
+        if (g.hasKaleido()) {
+            o["kaleidoSegments"] = g.kaleidoSegments;
+            o["kaleidoX"] = g.kaleidoX;
+            o["kaleidoY"] = g.kaleidoY;
+            o["kaleidoAngle"] = g.kaleidoAngle;
+            o["kaleidoSource"] = g.kaleidoSource;
+        }
         return o;
     }
 
@@ -531,6 +588,11 @@ struct EditStack {
         g.show = o.value("show").toBool(g.show);
         const QJsonArray q = o.value("quad").toArray();
         if (q.size() == 8) for (int i = 0; i < 8; ++i) g.quad[i] = q[i].toDouble(g.quad[i]);
+        g.kaleidoSegments = o.value("kaleidoSegments").toInt(g.kaleidoSegments);
+        g.kaleidoX = o.value("kaleidoX").toDouble(g.kaleidoX);
+        g.kaleidoY = o.value("kaleidoY").toDouble(g.kaleidoY);
+        g.kaleidoAngle = o.value("kaleidoAngle").toDouble(g.kaleidoAngle);
+        g.kaleidoSource = o.value("kaleidoSource").toDouble(g.kaleidoSource);
         return g;
     }
 
@@ -572,6 +634,9 @@ struct EditStack {
             l.showDetail = lo.value("showDetail").toBool(l.showDetail);
             l.showEffects = lo.value("showEffects").toBool(l.showEffects);
             l.showLens = lo.value("showLens").toBool(l.showLens);
+            l.showVignette = lo.value("showVignette").toBool(l.showVignette);
+            l.showGrain = lo.value("showGrain").toBool(l.showGrain);
+            l.showKaleido = lo.value("showKaleido").toBool(l.showKaleido);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
                 const QJsonObject mo = mv.toObject();
@@ -802,6 +867,16 @@ struct EditStack {
             bool quadBad = false;
             for (double &q : g.quad) quadBad |= clampD(q, -4.0, 5.0, 0.0);
             if (quadBad) { g.hasWarp = false; geomFixed = true; }
+        }
+        if (g.kaleidoSegments != 0) {
+            /* 0 = off, else even 2..32: an odd count leaves one seam unmirrored. */
+            const int n = g.kaleidoSegments;
+            const int fixedN = (n < 2 || n > 32) ? 0 : n + (n & 1);
+            if (fixedN != n) { g.kaleidoSegments = fixedN; geomFixed = true; }
+            geomFixed |= clampD(g.kaleidoX, 0.0, 1.0, 0.5);
+            geomFixed |= clampD(g.kaleidoY, 0.0, 1.0, 0.5);
+            geomFixed |= clampD(g.kaleidoAngle, -180.0, 180.0, 0.0);
+            geomFixed |= clampD(g.kaleidoSource, -180.0, 180.0, 0.0);
         }
         if (geomFixed && issues)
             issues->append(QStringLiteral("Crop / perspective was out of range"));

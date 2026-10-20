@@ -28,8 +28,13 @@ namespace KeywordAuditStore {
    findings. */
 QSet<QString> dismissed();
 
+/* The folded keywords dismissed for ONE image and kind -- what the Keywords panel needs
+   per current image, without reading every verdict. */
+QSet<QString> dismissedFor(const QString &pathKey, const QString &kind);
+
 /* Remember (or forget) that one image's finding was judged correct. keyword is the
-   display path; it is folded here. kind is "suspect" or "missing". */
+   display path; it is folded here. kind is "suspect", "missing" or "suggested" -- for
+   a suggestion, "correct" means "not this keyword": it is not suggested again. */
 bool setDismissed(const QString &pathKey, const QString &kind, const QString &keyword,
                   bool on);
 

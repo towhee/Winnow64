@@ -13,6 +13,7 @@ class QCompleter;
 class QLineEdit;
 class QLabel;
 struct VocabNode;
+namespace VisualAudit { struct Suggestion; }
 
 /*
     THE TAG ZONE -- the upper zone of the Keywords dock, and the only place a keyword is
@@ -65,6 +66,14 @@ public:
         are partial. */
     void setSelection(const QMap<QString, int> &counts, int selectionSize);
 
+    /*  The "Suggested" row: keywords suggested for the CURRENT image (KeywordSuggester),
+        and one line of status under them -- where they came from, or why there are
+        none. MW clears it (empty list) the moment the current image changes, so a
+        suggestion for the previous image is never on screen to be clicked while the
+        next one's is being worked out. */
+    void setSuggestions(const QVector<VisualAudit::Suggestion> &suggestions,
+                        const QString &status);
+
 signals:
     void addRequested(const QString &path);
     /*  A DROP CARRIES SEVERAL KEYWORDS AND IS ONE USER ACTION. Emitting addRequested per
@@ -84,6 +93,12 @@ signals:
     /*  Vocabulary keyword(s) dropped on an unfiled tag, or picked for it after clicking
         it: swap unfiledPath for them on the selected images that carry it. */
     void replaceRequested(const QString &unfiledPath, const QStringList &paths);
+    /* A suggestion was clicked: add it to the selected images. */
+    void suggestionAccepted(const QString &path);
+    /* A suggestion's x: not this keyword, for this image -- never suggested again. */
+    void suggestionDismissed(const QString &path);
+    /* The status line's "Audit keywords" link. */
+    void auditRequested();
 
 protected:
     /*  Accepts a keyword dragged down from the vocabulary tree. The other direction --
@@ -115,6 +130,10 @@ private:
     QWidget *tagArea = nullptr;
     QLineEdit *addEdit = nullptr;
     QLabel *legend = nullptr;
+    GradientHeader *suggestHeader = nullptr;
+    QWidget *suggestArea = nullptr;
+    FlowLayout *suggestFlow = nullptr;
+    QLabel *suggestStatus = nullptr;
     QCompleter *completer = nullptr;
     QString legendBase;
     /*  The red keyword a click put the Add field into REPLACE mode for; empty = ADD

@@ -23,6 +23,22 @@ QSet<QString> dismissed()
     return out;
 }
 
+QSet<QString> dismissedFor(const QString &pathKey, const QString &kind)
+{
+    QSet<QString> out;
+    QSqlDatabase d = UserDb::instance().db();
+    if (!d.isOpen()) return out;
+    QSqlQuery q(d);
+    q.setForwardOnly(true);
+    q.prepare("SELECT keyword FROM audit_verdict"
+              " WHERE pathkey = ? AND kind = ? AND verdict = 'correct'");
+    q.addBindValue(pathKey);
+    q.addBindValue(kind);
+    if (!q.exec()) return out;
+    while (q.next()) out.insert(q.value(0).toString());
+    return out;
+}
+
 bool setDismissed(const QString &pathKey, const QString &kind, const QString &keyword,
                   bool on)
 {

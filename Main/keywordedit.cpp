@@ -9,6 +9,8 @@
 #include "Utilities/inference/imageembedder.h"
 #include "Utilities/modelstore.h"
 #include "Metadata/keywordpaths.h"
+#include "Main/keywordsuggester.h"
+#include "Cache/pathkey.h"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -1283,6 +1285,7 @@ void MW::refreshKeywordsDock()
             dm->index(dmRow, G::KeywordsColumn).data().toStringList(),
             dm->index(dmRow, G::KeywordPathsColumn).data().toStringList()));
     }
+    requestKeywordSuggestions();
 }
 
 void MW::refreshFilterVocabMarking()
@@ -1324,18 +1327,72 @@ void MW::refreshFilterVocabMarking()
 
     /*  The same recursive walk MW::tidyKeywords uses. There is no allPaths() on the
         model, and adding one would be a second way to enumerate the vocabulary. */
+    QHash<QString, QString> vocabByFold;     // the same walk, for the suggester
     QSet<QString> pathsFold;
     std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
         for (int i = 0; i < keywordVocab->rowCount(parent); ++i) {
             const QModelIndex idx = keywordVocab->index(i, 0, parent);
             const QString p = idx.data(KeywordVocab::PathRole).toString();
-            if (!p.isEmpty()) pathsFold.insert(keywordFold(p));
+            if (!p.isEmpty()) {
+                pathsFold.insert(keywordFold(p));
+                vocabByFold.insert(keywordFold(p), p);
+            }
             walk(idx);
         }
     };
     walk(QModelIndex());
 
     filters->setVocabPaths(pathsFold);
+
+    /*  The session suggestions are drawn from the keyword list too, and this is the one
+        place every vocabulary change already reaches. */
+    if (keywordSuggester) {
+        QMetaObject::invokeMethod(keywordSuggester, [s = keywordSuggester, vocabByFold] {
+            s->setVocab(vocabByFold);
+        }, Qt::QueuedConnection);
+        requestKeywordSuggestions(true);
+    }
+}
+
+void MW::requestKeywordSuggestions(bool force)
+{
+/*
+    Suggestions for the CURRENT image -- the one the dull-yellow marks in the Keyword
+    list describe -- and added, on a click, to the whole selection like every other add
+    in the panel.
+
+    ONLY WHEN THE CURRENT IMAGE CHANGED, unless forced: refreshKeywordsDock runs on every
+    selection signal, and arrowing within a selection must not re-ask for an image whose
+    suggestions are already on screen. Cleared at once on a change, so the previous
+    image's chips are never there to be clicked.
+*/
+    if (!keywordSuggester || !keywordTags || !dm) return;
+    if (!keywordsDock || !keywordsDock->isVisible()) return;
+    const int dmRow = dm->currentSfRow >= 0
+        ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
+    QString path = dmRow >= 0
+        ? dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString() : QString();
+    /*  A version shares its master's FILE, and with it the keywords and the picture. */
+    if (VersionKey::isVersion(path)) path = VersionKey::sourceOf(path);
+    const QStringList carried = dmRow >= 0 ? keywordEffectivePaths(
+        dm->index(dmRow, G::KeywordsColumn).data().toStringList(),
+        dm->index(dmRow, G::KeywordPathsColumn).data().toStringList()) : QStringList();
+    /*  ...or its keywords changed: a keyword just added from the tag zone must not stay
+        suggested. */
+    if (!force && path == keywordSuggestPath && carried == keywordSuggestCarried) return;
+    keywordSuggestPath = path;
+    keywordSuggestCarried = carried;
+    keywordTags->setSuggestions({}, path.isEmpty() ? QString() : tr("Looking..."));
+    if (path.isEmpty()) return;
+
+    const QSet<QString> dismissedFold =
+        KeywordAuditStore::dismissedFor(cachePathKey(path), "suggested");
+    keywordSuggestGeneration = keywordSuggester->nextGeneration();
+    const int gen = keywordSuggestGeneration;
+    QMetaObject::invokeMethod(keywordSuggester,
+                              [s = keywordSuggester, gen, path, carried, dismissedFold] {
+        s->request(gen, path, carried, dismissedFold);
+    }, Qt::QueuedConnection);
 }
 
 void MW::verifyKeywordMoveCounts(const QList<KeywordMove> &moves)
@@ -1935,6 +1992,24 @@ void MW::auditKeywords()
             const QList<QString> skipKeys = KeywordAuditStore::skipped().keys();
             const QSet<QString> skipped(skipKeys.begin(), skipKeys.end());
 
+            /*  THE CURRENT FILTER, captured now: what is reported on is what was showing
+                when Run was pressed, not whatever the filter becomes during a run. A
+                version is its master's file. */
+            QStringList scope;
+            if (keywordAuditDlg->scopeToFilter() && dm) {
+                QSet<QString> seen;
+                for (int r = 0; r < dm->sf->rowCount(); ++r) {
+                    QString p = dm->sf->index(r, 0).data(G::KeyRole).toString();
+                    if (VersionKey::isVersion(p)) p = VersionKey::sourceOf(p);
+                    if (!p.isEmpty() && !seen.contains(p)) { seen.insert(p); scope << p; }
+                }
+                if (scope.isEmpty()) {
+                    keywordAuditDlg->setProgress(tr("The current filter shows no "
+                                                    "images."), 0, 0);
+                    return;
+                }
+            }
+
             if (!keywordAuditJob) {
                 keywordAuditJob = new KeywordAuditJob;
                 connect(keywordAuditJob, &KeywordAuditJob::progress, this,
@@ -1947,11 +2022,21 @@ void MW::auditKeywords()
                     keywordAuditDlg->setRunning(false);
                     keywordAuditDlg->setOutcome(o);
                 });
+                /*  The panel's suggestions are learned by this audit: reload the model,
+                    then ask again for the image on screen (queued in that order on the
+                    suggester's thread). */
+                connect(keywordAuditJob, &KeywordAuditJob::modelSaved, this, [this] {
+                    if (!keywordSuggester) return;
+                    QMetaObject::invokeMethod(keywordSuggester, [s = keywordSuggester] {
+                        s->reloadModel();
+                    }, Qt::QueuedConnection);
+                    requestKeywordSuggestions(true);
+                });
             }
             keywordAuditDlg->setRunning(true);
             KeywordAuditJob *job = keywordAuditJob;
-            QMetaObject::invokeMethod(job, [job, vocab, dismissed, skipped] {
-                job->run(vocab, dismissed, skipped);
+            QMetaObject::invokeMethod(job, [job, vocab, dismissed, skipped, scope] {
+                job->run(vocab, dismissed, skipped, scope);
             }, Qt::QueuedConnection);
         });
 
@@ -1983,6 +2068,8 @@ void MW::auditKeywords()
     else if (!Catalog::instance().isAvailable())
         reason = tr("Audit Keywords works on the catalog, which is not available.");
     keywordAuditDlg->setUnavailableReason(reason);
+    if (dm) keywordAuditDlg->setFilterCount(dm->sf->rowCount(),
+                                            dm->sf->rowCount() < dm->rowCount());
 
     keywordAuditDlg->show();
     keywordAuditDlg->raise();

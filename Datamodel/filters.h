@@ -546,7 +546,9 @@ public:
         from 0. */
     int keywordItemCount(const QString &path, bool filtered = false) const;
 
-    /*  How many keyword items are unfiled, for the category header. */
+    /*  How many unfiled BRANCHES there are, for the category header: an unfiled keyword
+        item whose parent is filed or is the category itself. Everything beneath an
+        unfiled item is unfiled too and is not counted again. */
     int unfiledKeywordCount() const;
 
     /*  Hide keyword items that ARE filed, keeping the ancestors of an unfiled one visible
@@ -610,6 +612,9 @@ private:
     /*  Show or hide keyword items for showUnfiledOnly. Returns true when anything at or
         beneath item is visible, which is how an unfiled node keeps its ancestors. */
     bool applyUnfiledVisibility(QTreeWidgetItem *item);
+    /*  Expand every keyword item with a visible child, so with showUnfiledOnly on every
+        unfiled keyword is on screen rather than inside a collapsed filed branch. */
+    void expandToUnfiled();
     /*  "Keywords", or "Keywords (63 unfiled)". The stable name is in CategoryNameRole, so
         this may say whatever is most useful. */
     void updateKeywordCategoryHeader();
@@ -666,6 +671,9 @@ private:
         filed" -- see setVocabPaths. */
     QSet<QString> vocabPathsFold;
     bool showUnfiledOnly = false;
+    /*  Folded paths of the keyword items the user had open when showUnfiledOnly went on,
+        so turning it off puts the tree back instead of leaving everything expanded. */
+    QSet<QString> expandedBeforeUnfiled;
     QStringList folderAnchors;          // see setFolderAnchors
     QList<QTreeWidgetItem *> sessionCats;       // see addSessionCategory
     QList<QTreeWidgetItem *> retiredSessionCats;    // see removeSessionCategory

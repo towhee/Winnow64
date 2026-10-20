@@ -35,6 +35,11 @@
       brush / spot sizes                          unchanged (fraction of the long edge)
       straighten                                  unchanged (a rotation about the centre
                                                   commutes with a quarter turn)
+      kaleidoscope centre                         rotated (a point in the cropped frame,
+                                                  which turns with the photo)
+      kaleidoscope angle                          + the turn (y-down degrees, so clockwise
+                                                  is +90), wrapped to -180..180; the source
+                                                  angle is relative to it, so unchanged
       colour / luminance / depth ranges, AI masks unchanged (not positional)
 
     Pure and header-only, so tst_editrotate can pin it.
@@ -177,6 +182,15 @@ inline void geometry(Geometry &g, int degrees)
         q[i * 2 + 1] = p.y();
     }
     for (int i = 0; i < 8; ++i) g.quad[i] = q[i];
+
+    // kaleidoscope: the centre is a point; the mirror lines turn with the photo
+    const QPointF kc = point(g.kaleidoX, g.kaleidoY, degrees);
+    g.kaleidoX = kc.x();
+    g.kaleidoY = kc.y();
+    double a = g.kaleidoAngle + (degrees == 270 ? -90.0 : double(degrees));
+    if (a > 180.0) a -= 360.0;
+    if (a <= -180.0) a += 360.0;
+    g.kaleidoAngle = a;
 }
 
 /* The whole recipe. Returns whether anything positional was there to move, so the
@@ -203,6 +217,7 @@ inline bool stack(EditStack &s, int degrees)
     moved |= before.cropX != s.geometry.cropX || before.cropY != s.geometry.cropY
              || before.cropW != s.geometry.cropW || before.cropH != s.geometry.cropH;
     for (int i = 0; i < 8; ++i) moved |= before.quad[i] != s.geometry.quad[i];
+    moved |= !before.kaleidoEquals(s.geometry);
     return moved;
 }
 

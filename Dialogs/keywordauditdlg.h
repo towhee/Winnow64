@@ -26,11 +26,18 @@ class FindingModel;
     "does this look like my Heron pictures?" is answered by looking, not by trusting a
     score.
 
+    THREE KINDS OF FINDING: Suspect (a keyword the image does not look like), Missing
+    (one it looks like but lacks) and Suggested (VisualAudit::suggest -- for ANY image in
+    the report scope, keyworded or not, from how it looks and from its session).
+
+    THE SCOPE is what is REPORTED on: the whole catalog, or the images in the main
+    window's current filter. Learning always uses every keyworded catalog image.
+
     DECISIONS ARE KEYS, because a reviewed catalog is hundreds of findings:
         R  Replace the keyword with the suggested one     (Suspect with an alternative)
         D  Remove the keyword                             (Suspect)
-        A  Add the keyword                                (Missing)
-        C  The keywords are right                         (either)
+        A  Add the keyword                                (Missing, Suggested)
+        C  The keywords are right / not this keyword      (any)
         U  Undecide          S  Show the image in Winnow
     and the list moves on to the next undecided finding.
 
@@ -64,6 +71,12 @@ public:
     /* Why the audit cannot run here (no inference backend, no model, no catalog), or
        empty. Shown greyed in place of the Run button's action. */
     void setUnavailableReason(const QString &reason);
+
+    /* Report on the current filter rather than the whole catalog. */
+    bool scopeToFilter() const;
+    /* How many images the main window's filter shows, for the scope choice's label;
+       filtered = false when nothing is filtered out (the choice then means "loaded"). */
+    void setFilterCount(int images, bool filtered);
 
     void setRunning(bool running);
     void setProgress(const QString &stage, int done, int total);
@@ -108,6 +121,7 @@ private:
     QLabel *stageLabel = nullptr;
     QProgressBar *progressBar = nullptr;
     QPushButton *runBtn = nullptr;
+    QComboBox *scopeCombo = nullptr;
     QComboBox *kindCombo = nullptr;
     QLineEdit *keywordFilter = nullptr;
     QCheckBox *hideDecided = nullptr;

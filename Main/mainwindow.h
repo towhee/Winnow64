@@ -54,6 +54,7 @@
 #include "Main/catalogscanner.h"
 #include "Main/keywordauditjob.h"
 #include "Dialogs/keywordauditdlg.h"
+class KeywordSuggester;
 #include "Cache/cachedb.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Views/infostring.h"
@@ -1187,6 +1188,9 @@ private slots:
     /* The geometry a render started now would apply (stored, crop suppressed while the
        crop tool edits). Full-res completions compare against it. */
     Geometry developRenderGeometry() const;
+    /* True when a render must leave the recipe's kaleidoscope off: the crop overlay is
+       editing, or an input-space overlay (mask / tint / spot brush) is up. */
+    bool developKaleidoSuppressed() const;
     /* Global image the develop render pipeline should start from: the raw-DENOISED WorkingImage when
        the Global scope has "Denoise raw" (denoiseLuma/denoiseChroma) set and it is ready, else the
        clean cached WorkingImage. Pure lookup (no work); the async compute is ensureRawDenoise(). */
@@ -1351,6 +1355,11 @@ private slots:
     void setDevelopLevelAngle(double degrees);
     /* Per-row Transform reset: clear just the crop / straighten / warp (TransformPanel::Mode). */
     void resetDevelopTransformMode(int mode);
+    /* Write a kaleidoscope change into the image's geometry and re-render; also re-syncs
+       the Effects sliders and the canvas handles. */
+    void setDevelopKaleido(const Geometry &g);
+    /* Show / hide the kaleidoscope's canvas handles for the current state (see .cpp). */
+    void syncDevelopKaleidoOverlay();
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
        drive the scopes' readout marker (no-op while the scopes are hidden). */
     void onImageCursorPos(double xFraction, double yFraction);
@@ -2457,6 +2466,12 @@ private:
     /* Audit Keywords: the job (own thread, created on first use) and its review. */
     KeywordAuditJob *keywordAuditJob = nullptr;
     QPointer<KeywordAuditDlg> keywordAuditDlg;
+    /* The Keywords panel's "Suggested" row (own thread, created with the panel), and the
+       image its showing suggestions are for -- a reply for any other is stale. */
+    KeywordSuggester *keywordSuggester = nullptr;
+    QString keywordSuggestPath;
+    QStringList keywordSuggestCarried;      // its keywords when last asked
+    int keywordSuggestGeneration = 0;
     /* What the background scanner may walk: one ordered table of include/exclude rows,
        each with its own subfolder reach. In QSettings, NOT in the index database:
        CacheDb::moveAside discards that file without asking, and this is user intent
@@ -3240,6 +3255,10 @@ private:
     void refreshKeywordsDock();
     /*  Coalesced refresh for selectionChanged, which a rubber band emits per row. */
     void scheduleKeywordsDockRefresh();
+    /*  Ask KeywordSuggester for the current image's suggestions -- only when the current
+        image changed, unless force (a keyword was added, a suggestion dismissed, a new
+        model learned). */
+    void requestKeywordSuggestions(bool force = false);
     bool keywordsDockRefreshPending = false;
     /*  Coalesced keyword-count refresh for the dock becoming visible -- see
         MW::scheduleKeywordCountsRefresh. */

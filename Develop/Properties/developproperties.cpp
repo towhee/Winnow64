@@ -156,6 +156,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
         persistSectionExpanded(idx, true);
         onSectionExpanded(idx);                 // Solo: fold the Scope row in
         scheduleContentFit();                   // fit mode: more rows -> taller block
+        emit kaleidoToolChanged();              // Effects > Kaleidoscope may now show
     });
     connect(this, &QTreeView::collapsed, this, [this](const QModelIndex &idx){
         persistSectionExpanded(idx, false);
@@ -169,6 +170,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
            of which is the user putting the panel away. */
         if (idx.data(UR_Name).toString() == "CurvesHeader") setCurveSamplerActive(false);
         scheduleContentFit();
+        emit kaleidoToolChanged();              // folding Effects puts the handles away
     });
 
     /* Programmatic row selection reveals that mask tool's settings (clicks go via mousePressEvent,
@@ -190,6 +192,7 @@ void DevelopProperties::initialize()
     setSolo(setting->value("Develop/isSolo", false).toBool());
     combinedColorPanel = setting->value("Develop/combinedColorPanel", true).toBool();
     colorPanelMode = qBound(0, setting->value("Develop/colorPanelMode", 0).toInt(), 2);
+    effectsChoice = qBound(0, setting->value("Develop/effectsChoice", 0).toInt(), 2);
     setIndentation(10);
     setAlternatingRowColors(false);
     /* Fill every NON-header row with the subpanel content background (the delegate's
@@ -366,7 +369,7 @@ void DevelopProperties::buildTree()
     btns.clear();
     basicEyeBtn = curvesEyeBtn = colorEyeBtn = calibrateEyeBtn = colorGradeEyeBtn =
         detailEyeBtn = effectsEyeBtn = lensEyeBtn = pointColorEyeBtn = colorPanelEyeBtn =
-        nullptr;
+        effectEyeBtn = nullptr;
     if (model->rowCount() > 0) {
         close(QModelIndex());
         model->removeRows(0, model->rowCount());
@@ -2016,7 +2019,7 @@ void DevelopProperties::resetActiveScope()
     l->params = EditParams();
     l->showScope = l->showBasic = l->showCurves = l->showColor = l->showCalibrate =
         l->showColorGrade = l->showPointColor = l->showDetail = l->showEffects =
-        l->showLens = true;
+        l->showLens = l->showVignette = l->showGrain = l->showKaleido = true;
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
     emit paramsChanged();
@@ -2768,6 +2771,43 @@ void DevelopProperties::showSectionMenu(int group)
         sectionHelp(group);
 }
 
+namespace {
+/* The Effects dropdown's entries, in combo order: the item text and the slider rows each
+   one shows. applyEffectsChoice hides every other entry's rows. */
+struct EffectDef { const char *label; QStringList rows; bool globalOnly; };
+/* Indexed by effect id (effectsChoice, the combo items' data). */
+enum EffectId { EffectVignette = 0, EffectGrain = 1, EffectKaleido = 2 };
+const QVector<EffectDef> &effectDefs()
+{
+    static const QVector<EffectDef> defs = {
+        {"Vignette",     {"vignetteExposure", "vignetteFeather"}, false},
+        {"Grain",        {"grainAmount", "grainSize", "grainRoughness"}, false},
+        /* Geometry, not EditParams (Geometry::kaleido*): whole-image, so Global only. */
+        {"Kaleidoscope", {"kaleidoSegments", "kaleidoAngle", "kaleidoSource"}, true},
+    };
+    return defs;
+}
+
+/* True when effect `e` is off its defaults (its " *"). The kaleidoscope counts only on
+   Global, where it lives. */
+bool effectEdited(const EditStack &s, int scopeIdx, int e)
+{
+    const EditParams def;
+    const EditParams &p = s.scopes.at(scopeIdx).params;
+    switch (e) {
+    case EffectVignette:
+        return p.vignetteExposure != def.vignetteExposure ||
+               p.vignetteFeather != def.vignetteFeather;
+    case EffectGrain:
+        return p.grainAmount != def.grainAmount || p.grainSize != def.grainSize ||
+               p.grainRoughness != def.grainRoughness;
+    case EffectKaleido:
+        return scopeIdx == 0 && s.geometry.hasKaleido();
+    }
+    return false;
+}
+}  // namespace
+
 void DevelopProperties::refreshPreviewButtons()
 {
     EditScope *l = activeScope();
@@ -2786,6 +2826,12 @@ void DevelopProperties::refreshPreviewButtons()
                             : true);
     set(detailEyeBtn,   l ? l->showDetail   : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
+    if (effectEyeBtn) {
+        const bool *f = effectShowFlag(l, shownEffect());
+        set(effectEyeBtn, f ? *f : true);
+        effectEyeBtn->setToolTip(QString("Show or hide %1")
+                                     .arg(effectDefs().at(shownEffect()).label));
+    }
     set(lensEyeBtn,     l ? l->showLens     : true);
     /* The whole-mask eye lives in the ScopeHeader widget, not the tree. */
     if (scopeHeader) scopeHeader->setPreviewShown(l ? l->showScope : true);
@@ -2811,6 +2857,7 @@ void DevelopProperties::togglePreviewSection(int group)
     noteEdit((*f ? "Show " : "Hide ") + groupLabel(group));
     refreshPreviewButtons();
     emit paramsChanged();                   // re-render with the folded params
+    if (group == PV_Effects) emit kaleidoToolChanged();   // Global's eye hides the fold
 }
 
 void DevelopProperties::resetSection(int group)
@@ -2835,6 +2882,12 @@ void DevelopProperties::resetSection(int group)
     }
     else {
         EditParams::resetGroup(p, paramsGroup(group));
+    }
+    /* Global's Effects (or the whole Global scope) includes the kaleidoscope, which
+       lives in Geometry: off, with its settings back to the defaults. */
+    if ((group == PV_Effects || group == PV_Scope) && activeScopeIndex == 0) {
+        Geometry &g = stackCache[currentImagePath].geometry;
+        g.copyKaleidoFrom(Geometry());
     }
     noteEdit("Reset " + groupLabel(group));
     populateSlidersFromStack();      // reflect the restored defaults (sliders + tone)
@@ -2935,7 +2988,7 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
     /* -------- Transform / Replace: their header buttons, reachable by right-click -------- */
     QAction *aResetTransform = nullptr, *aReplaceTips = nullptr;
     if (section == SectionTransform && transformPanel) {
-        aResetTransform = menu.addAction(tr("Reset crop, straighten and perspective"));
+        aResetTransform = menu.addAction(tr("Reset crop, straighten, perspective and kaleidoscope"));
         aResetTransform->setEnabled(haveImage);
         menu.addSeparator();
     }
@@ -6601,38 +6654,271 @@ void DevelopProperties::addDetail()
     addGroupDivider(parIdx, "DetailHeader", "DetailEndDivider");
 }
 
+
 void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
-    addHeader("EffectsHeader", "???", "Effects", "Vignette and grain.", PV_Effects);
+    addHeader("EffectsHeader", "???", "Effects",
+              "Vignette, grain and (Global scope) kaleidoscope.\n"
+              "Choose an effect from the list.", PV_Effects);
     QModelIndex parIdx = capIdx;
 
+    /* The effect picker: a spanned row with a plain combo, the same idiom as the Curves
+       mode row. Only the chosen effect's rows show below it (applyEffectsChoice), so
+       the section stays short as effects are added. Which effect you are LOOKING at is
+       not part of the recipe, so it is UI state, not EditParams. */
+    clearItemInfo(i);
+    i.name = "effectsChoice";
+    i.parIdx = parIdx;
+    i.parentName = "EffectsHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex choiceIdx = capIdx;
+    model->setData(choiceIdx, 6, UR_ExtraRowHeight);
+    setFirstColumnSpanned(choiceIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        /* No left inset: the spanned cell starts where the slider captions do, so the
+           combo lines up with them (the Curves mode row's inset does not apply here). */
+        hb->setContentsMargins(0, 0, 0, 0);
+        hb->setSpacing(8);
+        QComboBox *combo = new QComboBox(rw);
+        const QVector<EffectDef> &defs = effectDefs();
+        for (int e = 0; e < defs.size(); ++e)
+            if (!defs.at(e).globalOnly || activeScopeIndex == 0)
+                combo->addItem(defs.at(e).label, e);
+        /* 10% taller than the style's natural combo, so the picker reads as the
+           section's lead control; the row grows by the same amount so it still has its
+           6px of breathing room. */
+        const int natH = combo->sizeHint().height();
+        const int tallH = qRound(natH * 1.1);
+        combo->setFixedHeight(tallH);
+        model->setData(choiceIdx, 6 + (tallH - natH), UR_ExtraRowHeight);
+        /* Blocked, as the Curves mode combo: the rows it shows and hides are not built
+           yet. The call at the end of addEffects applies the choice. */
+        {
+            QSignalBlocker b(combo);
+            combo->setCurrentIndex(qMax(0, combo->findData(shownEffect())));
+        }
+        combo->setToolTip("The effect to adjust. An effect marked * has been changed.");
+        connect(combo, &QComboBox::currentIndexChanged, this, [this, combo](int idx){
+            const int id = combo->itemData(idx).toInt();
+            if (idx < 0 || id == shownEffect()) return;
+            effectsChoice = id;
+            setting->setValue("Develop/effectsChoice", id);
+            applyEffectsChoice();
+        });
+        effectsCombo = combo;
+        hb->addWidget(combo);
+        hb->addStretch(1);
+
+        /* [eye] [reset] for the shown effect, laid out like a section header's trailing
+           pair (BarBtnEditor: G::headerBtnGap between, G::headerBtnRightInset after), so
+           they sit straight under the Effects header's [eye] [:]. The row is spanned,
+           so its right edge is the header value cell's right edge. */
+        QHBoxLayout *bb = new QHBoxLayout;
+        bb->setContentsMargins(0, 0, G::headerBtnRightInset, 0);
+        bb->setSpacing(G::headerBtnGap);
+        BarBtn *eye = new BarBtn();
+        connect(eye, &BarBtn::clicked, this, &DevelopProperties::toggleEffectShown);
+        effectEyeBtn = eye;
+        BarBtn *reset = new BarBtn();
+        reset->setIcon(":/images/icon16/reset.png", G::iconOpacity);
+        reset->setToolTip("Reset this effect");
+        connect(reset, &BarBtn::clicked, this, &DevelopProperties::resetEffect);
+        bb->addWidget(eye);
+        bb->addWidget(reset);
+        hb->addLayout(bb);
+        setIndexWidget(choiceIdx, rw);
+    }
+    /* A group divider (rule) under the picker, separating it and its [eye] [reset] from
+       the chosen effect's sliders. addGroupDivider leaves capIdx on the divider; parIdx
+       is unchanged. */
+    addGroupDivider(parIdx, "EffectsHeader", "EffectsChoiceDivider");
+
+    /* Every effect's rows sit flush at the section's caption indent, sub-controls
+       included: the dropdown above names the effect, so its first slider is a plain
+       "Amount" and there is no "Effect:" head row to hang the others under. History
+       names them in full (kEffectsHistory in itemChange), since "Amount" alone would
+       not say which effect moved. */
+
     /* Vignette: a global radial exposure falloff about the image centre (see
-       Develop::Vignette). Two sliders: Exposure (a 2-decimal EV slider like Basic
+       Develop::Vignette). Two sliders: Amount (a 2-decimal EV slider like Basic
        Exposure, the corner adjustment -- negative darkens, positive brightens) and
        Feather (0..100, how far it reaches inward). Off-centre / shaped vignettes use
        radial masks instead. */
-    addSlider("vignetteExposure", "Vignette:", "Corner exposure (EV): - darkens, + brightens.",
+    addSlider("vignetteExposure", "Amount", "Corner exposure (EV): - darkens, + brightens.",
               parIdx, "EffectsHeader", -500, 500, 100, G::darkgray, G::lightgray);
-    addSlider("vignetteFeather", "   Feather", "How far the vignette reaches inward.",
+    addSlider("vignetteFeather", "Feather", "How far the vignette reaches inward.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
-
-    addGroupDivider(parIdx, "EffectsHeader", "GrainDivider");
 
     /* Grain: monochromatic film grain added to luminance (see Develop::Grain). Amount is
        the strength, size the particle size (scaled to the image so the proxy matches full
        res), roughness how patchy / irregular the grain is. Size and roughness are
-       sub-controls of Amount (indented "  " captions, like the vignette feather) and are
-       inert until Amount is non-zero. All three 0..100 sliders mapped to 0..1. */
+       sub-controls of Amount and are inert until Amount is non-zero. All three 0..100
+       sliders mapped to 0..1. No divider above it: the dropdown shows one effect at a
+       time. */
 
-    addSlider("grainAmount", "Grain:", "Add monochromatic film grain to the image.",
+    addSlider("grainAmount", "Amount", "Add monochromatic film grain to the image.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray);
-    addSlider("grainSize", "   Size", "Grain particle size (fine to coarse).",
+    addSlider("grainSize", "Size", "Grain particle size (fine to coarse).",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 25);
-    addSlider("grainRoughness", "   Roughness", "How patchy / irregular the grain is.",
+    addSlider("grainRoughness", "Roughness", "How patchy / irregular the grain is.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
 
+    /* Kaleidoscope (Global only): mirror the cropped photo around a centre. It is
+       GEOMETRY (Geometry::kaleido*, folded last in CropTransform::applyGeometry, after
+       the crop), not an EditParams value, so its rows are handled in itemChange and
+       seeded by syncKaleidoSliders; MW::setDevelopKaleido is the writer. While it shows,
+       MW puts the centre / angle handles on the image (kaleidoToolWanted). Segments 0 =
+       off, else even (an odd value rounds up); the angles are whole degrees here, while
+       a handle drag may store a fraction (shown rounded). */
+    if (activeScopeIndex == 0) {
+        addSlider("kaleidoSegments", "Segments",
+                  "Number of mirrored wedges around the centre (0 = off).\n"
+                  "Even counts only, so every seam is a mirror; 2 is a plain mirror.\n"
+                  "Drag the white centre or the yellow spoke on the image.",
+                  parIdx, "EffectsHeader", 0, 32, 0, G::darkgray, G::lightgray, 0);
+        addSlider("kaleidoAngle", "Angle",
+                  "Turns the mirror lines (degrees). Or drag the yellow spoke.",
+                  parIdx, "EffectsHeader", -180, 180, 0, G::darkgray, G::lightgray, 0);
+        addSlider("kaleidoSource", "Source",
+                  "Turns the slice of the photo that is mirrored,\n"
+                  "without turning the pattern (degrees).",
+                  parIdx, "EffectsHeader", -180, 180, 0, G::darkgray, G::lightgray, 0);
+    }
+
     addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
+
+    applyEffectsChoice();
+}
+
+void DevelopProperties::applyEffectsChoice()
+{
+    /* Show the chosen effect's rows and hide the others'. Hiding keeps every slider in
+       the model, so populateSlidersFromStack, presets and resets still reach the hidden
+       ones. */
+    const QVector<EffectDef> &defs = effectDefs();
+    const int shown = shownEffect();
+    for (int e = 0; e < defs.size(); ++e) {
+        for (const QString &row : defs.at(e).rows) {
+            const QModelIndex idx = findCaptionIndex(row);
+            if (!idx.isValid()) continue;
+            /* UR_isHidden as well as the view flag: buildTree ends with
+               updateHiddenRows, which re-derives every row's visibility from the model
+               and would otherwise show all the effects again. */
+            model->setData(idx, e != shown, UR_isHidden);
+            setRowHidden(idx.row(), idx.parent(), e != shown);
+        }
+    }
+    scheduleContentFit();        // setRowHidden emits nothing: re-fit the block ourselves
+    refreshPreviewButtons();     // the row's eye now speaks for the newly shown effect
+    emit kaleidoToolChanged();   // Kaleidoscope in or out of view: the handles follow
+}
+
+bool *DevelopProperties::effectShowFlag(EditScope *l, int effect)
+{
+    if (!l) return nullptr;
+    switch (effect) {
+    case EffectVignette: return &l->showVignette;
+    case EffectGrain:    return &l->showGrain;
+    case EffectKaleido:  return &l->showKaleido;
+    }
+    return nullptr;
+}
+
+void DevelopProperties::toggleEffectShown()
+{
+/*
+    The dropdown row's eye: hide / show the SHOWN effect only, non-destructively, as a
+    section eye does for its section (the values are kept; the render folds them out --
+    effectiveScopeParams for vignette and grain, buildStackJob for the kaleidoscope).
+    Inside the Effects eye: an effect renders only while both are open.
+*/
+    if (G::isLogger) G::log("DevelopProperties::toggleEffectShown");
+    if (currentImagePath.isEmpty()) return;
+    const int e = shownEffect();
+    bool *f = effectShowFlag(activeScope(), e);
+    if (!f) return;
+    *f = !*f;
+    noteEdit(QString(*f ? "Show " : "Hide ") + effectDefs().at(e).label);
+    refreshPreviewButtons();
+    emit paramsChanged();
+    if (e == EffectKaleido) emit kaleidoToolChanged();   // hidden: the handles go too
+}
+
+void DevelopProperties::resetEffect()
+{
+/*
+    The dropdown row's reset: the SHOWN effect's values back to their defaults (its eye
+    is left alone, as a section reset leaves the section eye). The kaleidoscope is
+    Geometry, so its reset writes the stored geometry: off, defaults restored.
+*/
+    if (G::isLogger) G::log("DevelopProperties::resetEffect");
+    if (currentImagePath.isEmpty()) return;
+    const int e = shownEffect();
+    const EditParams def;
+    if (e == EffectKaleido) {
+        if (activeScopeIndex != 0) return;
+        stackCache[currentImagePath].geometry.copyKaleidoFrom(Geometry());
+    }
+    else {
+        EditParams &p = activeParams();
+        if (e == EffectVignette) {
+            p.vignetteExposure = def.vignetteExposure;
+            p.vignetteFeather  = def.vignetteFeather;
+        }
+        else {
+            p.grainAmount    = def.grainAmount;
+            p.grainSize      = def.grainSize;
+            p.grainRoughness = def.grainRoughness;
+        }
+    }
+    noteEdit(QString("Reset ") + effectDefs().at(e).label);
+    populateSlidersFromStack();      // the sliders, the " *" and the kaleidoscope handles
+    emit paramsChanged();
+}
+
+int DevelopProperties::shownEffect() const
+{
+    /* Kaleidoscope is listed on Global only: a mask scope shows Vignette instead, and
+       the stored choice is kept for the next visit to Global. */
+    if (effectsChoice < 0 || effectsChoice >= effectDefs().size()) return EffectVignette;
+    if (effectDefs().at(effectsChoice).globalOnly && activeScopeIndex != 0)
+        return EffectVignette;
+    return effectsChoice;
+}
+
+bool DevelopProperties::kaleidoToolWanted() const
+{
+    if (currentImagePath.isEmpty() || activeScopeIndex != 0) return false;
+    if (shownEffect() != EffectKaleido || !isVisible()) return false;
+    const EditStack s = stackCache.value(currentImagePath);
+    if (!s.scopes.isEmpty() &&
+        (!s.scopes.at(0).showEffects || !s.scopes.at(0).showKaleido)) return false;   // eye shut
+    /* The row is really on screen: every section above it expanded, none hidden. */
+    const QModelIndex idx = sourceIdx.value("kaleidoSegments");   // its value cell
+    if (!idx.isValid() || isRowHidden(idx.row(), idx.parent())) return false;
+    for (QModelIndex p = idx.parent(); p.isValid(); p = p.parent())
+        if (!isExpanded(p) || isRowHidden(p.row(), p.parent())) return false;
+    return true;
+}
+
+void DevelopProperties::syncKaleidoSliders()
+{
+    const Geometry g = currentGeometry();
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setSliderReal("kaleidoSegments", g.kaleidoSegments);
+    setSliderReal("kaleidoAngle", g.kaleidoAngle);
+    setSliderReal("kaleidoSource", g.kaleidoSource);
+    isPopulating = wasPop;
+    updateSectionHeaderCaptions();   // the Effects " *" and the list's Kaleidoscope " *"
 }
 
 void DevelopProperties::addLens()
@@ -6880,6 +7166,9 @@ void DevelopProperties::updateSectionHeaderCaptions()
                          !EditParams::groupIsDefault(sp, EditParams::Group::Calibrate);
             else
                 edited = !EditParams::groupIsDefault(sp, paramsGroup(h.group));
+            /* The kaleidoscope is an Effect that lives in Geometry (Global only). */
+            if (h.group == PV_Effects && scopeIdx == 0 && s.geometry.hasKaleido())
+                edited = true;
         }
         if (hdrStar[i] == int(edited)) continue;     // caption already correct
         const QModelIndex idx = findCaptionIndex(h.name);
@@ -6902,6 +7191,20 @@ void DevelopProperties::updateSectionHeaderCaptions()
             !EditParams::groupIsDefault(s.scopes.at(scopeIdx).params, kModeGroup[m]);
         const QString text = edited ? QString(kModeLabel[m]) + " *" : QString(kModeLabel[m]);
         if (r->text() != text) r->setText(text);
+    }
+
+    /* The Effects dropdown's items get the same " *", so an edited effect that is not
+       the one showing is still visible from the list. */
+    if (effectsCombo) {
+        const QVector<EffectDef> &defs = effectDefs();
+        for (int ix = 0; ix < effectsCombo->count(); ++ix) {
+            const int e = effectsCombo->itemData(ix).toInt();
+            if (e < 0 || e >= defs.size()) continue;
+            const bool edited = haveParams && effectEdited(s, scopeIdx, e);
+            const QString text = edited ? QString(defs.at(e).label) + " *"
+                                        : QString(defs.at(e).label);
+            if (effectsCombo->itemText(ix) != text) effectsCombo->setItemText(ix, text);
+        }
     }
 }
 
@@ -7080,6 +7383,31 @@ void DevelopProperties::itemChange(QModelIndex idx)
         return;
     }
 
+    /* Effects > Kaleidoscope (Global only): geometry, not EditParams -- MW writes it
+       (setDevelopKaleido), which re-seeds these sliders. Odd segment counts round up
+       to even, so moving off 0 turns it on at 2. */
+    if (source == "kaleidoSegments" || source == "kaleidoAngle" ||
+        source == "kaleidoSource") {
+        if (currentImagePath.isEmpty()) return;
+        noteNonMaskInteraction();
+        const Geometry g = currentGeometry();
+        int n = g.kaleidoSegments;
+        double angle = g.kaleidoAngle, src = g.kaleidoSource;
+        if (source == "kaleidoSegments") {
+            n = qRound(v.toDouble());
+            if (n & 1) n += 1;
+            if (n != qRound(v.toDouble())) {
+                isPopulating = true;
+                setSliderReal("kaleidoSegments", n);
+                isPopulating = false;
+            }
+        }
+        else if (source == "kaleidoAngle") angle = v.toDouble();
+        else                               src = v.toDouble();
+        emit kaleidoEdited(n, angle, src);
+        return;
+    }
+
     /* Lens corrections: Global-only recipe values with their own setters (removeCA is
        tri-state, and both always write scope 0). The rows exist only on Global. */
     if (source == "removeCA") {
@@ -7132,8 +7460,14 @@ void DevelopProperties::itemChange(QModelIndex idx)
             {"calRedHue", "Red hue"},     {"calRedSat", "Red saturation"},
             {"calGreenHue", "Green hue"}, {"calGreenSat", "Green saturation"},
             {"calBlueHue", "Blue hue"},   {"calBlueSat", "Blue saturation"}};
-        const QString action = kCalHistory.value(source,
-                                                 idx.siblingAtColumn(0).data().toString());
+        /* The Effects rows are captioned "Amount" / "Feather" / "Size" under the effect
+           dropdown, which History would read without the effect's name. */
+        static const QHash<QString, QString> kEffectsHistory = {
+            {"vignetteExposure", "Vignette"}, {"vignetteFeather", "Vignette feather"},
+            {"grainAmount", "Grain"},         {"grainSize", "Grain size"},
+            {"grainRoughness", "Grain roughness"}};
+        const QString action = kCalHistory.value(source, kEffectsHistory.value(source,
+                                                 idx.siblingAtColumn(0).data().toString()));
         noteEdit(action, historyValueText(idx, v), historyScopeLabel() + "/" + source);
         emit paramsChanged();
     }
@@ -7258,6 +7592,12 @@ DevelopProperties::buildStackJob(const EditStack &s, bool useGeometry, bool useS
 */
     StackRenderJob job;
     job.geometry = useGeometry ? s.geometry : Geometry();
+    /* The kaleidoscope is an Effect (Effects > Kaleidoscope), so the Transform eye does
+       not hide it -- Global's Effects eye does, here and in every export (stackJobFor). */
+    if (!useGeometry) job.geometry.copyKaleidoFrom(s.geometry);
+    if (!s.scopes.isEmpty() &&
+        (!s.scopes.at(0).showEffects || !s.scopes.at(0).showKaleido))
+        job.geometry.suppressKaleido();
     if (useSpots) job.spots = s.spots;   // healed before geometry (Global-only too)
     if (s.scopes.isEmpty()) return job;
     /* Global (scope 0): apply its params (previewed groups folded off) when enabled; a
@@ -7317,6 +7657,15 @@ void DevelopProperties::setCurrentGeometry(const Geometry &g)
     }
     else if (g.show != was.show) {
         action = g.show ? "Show transform" : "Hide transform";
+    }
+    /* Before the crop test, which matches whenever ANY crop exists, changed or not. */
+    else if (!g.kaleidoEquals(was)) {
+        if (!g.hasKaleido()) action = "Kaleidoscope off";
+        else {
+            action = "Kaleidoscope";
+            value = QString::number(g.kaleidoSegments);
+        }
+        mergeKey = "geom/kaleido";
     }
     else if (!g.cropIsIdentity() || !was.cropIsIdentity()) {
         action = g.cropIsIdentity() ? "Remove crop" : "Crop";
@@ -8123,6 +8472,12 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         for (double v : s.geometry.quad) q << QString::number(v);
         preset.globals.insert("warp", q.join(','));
     }
+    if (gk.contains("kaleido")) {
+        const Geometry &g = s.geometry;
+        preset.globals.insert("kaleido", QStringLiteral("%1,%2,%3,%4,%5")
+            .arg(g.kaleidoSegments).arg(g.kaleidoX).arg(g.kaleidoY)
+            .arg(g.kaleidoAngle).arg(g.kaleidoSource));
+    }
     if (gk.contains("spots")) preset.spots = s.spots;
 
     /* The adjustments, from the chosen scope. */
@@ -8180,6 +8535,7 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
     gg.leaves.append({"crop", "Crop", !s.geometry.cropIsIdentity()});
     gg.leaves.append({"level", "Level", s.geometry.straighten != gdef.straighten});
     gg.leaves.append({"warp", "Warp", s.geometry.hasWarp});
+    gg.leaves.append({"kaleido", "Kaleidoscope", s.geometry.hasKaleido()});
     gg.leaves.append({"spots", "Spots", !s.spots.isEmpty()});
     groups.append(gg);
 
@@ -8294,6 +8650,19 @@ EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack 
             if (v.size() == 8) {
                 for (int i = 0; i < 8; ++i) s.geometry.quad[i] = v[i].toDouble();
                 s.geometry.hasWarp = true;
+            }
+        }
+        else if (k == "kaleido") {
+            /* segments,x,y,angle,source. A checked leaf with the kaleidoscope off travels
+               as segments 0, which turns the target's off -- what the checkbox said. */
+            const QStringList v = it.value().toString().split(',');
+            if (v.size() == 5) {
+                Geometry &g = s.geometry;
+                g.kaleidoSegments = v[0].toInt();
+                g.kaleidoX = v[1].toDouble();
+                g.kaleidoY = v[2].toDouble();
+                g.kaleidoAngle = v[3].toDouble();
+                g.kaleidoSource = v[4].toDouble();   // range-checked with the merge, below
             }
         }
         else if (k == "demosaicEngine") {
@@ -8605,6 +8974,12 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
             QStringList q;
             for (double v : s.geometry.quad) q << QString::number(v);
             it.value() = q.join(',');
+        }
+        else if (k == "kaleido") {
+            const Geometry &g = s.geometry;
+            it.value() = QStringLiteral("%1,%2,%3,%4,%5")
+                .arg(g.kaleidoSegments).arg(g.kaleidoX).arg(g.kaleidoY)
+                .arg(g.kaleidoAngle).arg(g.kaleidoSource);
         }
         /* paramsToJson OMITS a field at its default (the tri-states when unset, the
            defringe amounts at 0), and an absent key would be stored as an invalid
@@ -9066,6 +9441,7 @@ void copyCurves(const EditParams &src, EditParams &dst)
 constexpr const char *kCropField       = "crop";
 constexpr const char *kStraightenField = "straighten";
 constexpr const char *kWarpField       = "warp";
+constexpr const char *kKaleidoField    = "kaleido";
 
 QSet<QString> diffGeometryFields(const Geometry &a, const Geometry &b)
 {
@@ -9076,6 +9452,7 @@ QSet<QString> diffGeometryFields(const Geometry &a, const Geometry &b)
     if (a.hasWarp != b.hasWarp ||
         !std::equal(std::begin(a.quad), std::end(a.quad), std::begin(b.quad)))
         changed.insert(QString::fromLatin1(kWarpField));
+    if (!a.kaleidoEquals(b)) changed.insert(QString::fromLatin1(kKaleidoField));
     return changed;
 }
 
@@ -9092,6 +9469,13 @@ void copyGeometryFields(const Geometry &src, Geometry &dst, const QSet<QString> 
     if (fields.contains(QString::fromLatin1(kWarpField))) {
         dst.hasWarp = src.hasWarp;
         std::copy(std::begin(src.quad), std::end(src.quad), std::begin(dst.quad));
+    }
+    if (fields.contains(QString::fromLatin1(kKaleidoField))) {
+        dst.kaleidoSegments = src.kaleidoSegments;
+        dst.kaleidoX = src.kaleidoX;
+        dst.kaleidoY = src.kaleidoY;
+        dst.kaleidoAngle = src.kaleidoAngle;
+        dst.kaleidoSource = src.kaleidoSource;
     }
 }
 
@@ -9227,7 +9611,9 @@ bool sameScopeState(const EditScope &a, const EditScope &b)
            a.showCurves == b.showCurves && a.showColor == b.showColor &&
            a.showCalibrate == b.showCalibrate && a.showColorGrade == b.showColorGrade &&
            a.showPointColor == b.showPointColor && a.showDetail == b.showDetail &&
-           a.showEffects == b.showEffects && a.showLens == b.showLens;
+           a.showEffects == b.showEffects && a.showLens == b.showLens &&
+           a.showVignette == b.showVignette && a.showGrain == b.showGrain &&
+           a.showKaleido == b.showKaleido;
 }
 
 void copyScopeState(const EditScope &src, EditScope &dst)
@@ -9239,6 +9625,8 @@ void copyScopeState(const EditScope &src, EditScope &dst)
     dst.showCalibrate = src.showCalibrate;   dst.showColorGrade = src.showColorGrade;
     dst.showPointColor = src.showPointColor; dst.showDetail = src.showDetail;
     dst.showEffects = src.showEffects;       dst.showLens = src.showLens;
+    dst.showVignette = src.showVignette;     dst.showGrain = src.showGrain;
+    dst.showKaleido = src.showKaleido;
 }
 
 int scopeIndexForLink(const EditStack &s, const QString &link)
@@ -9554,6 +9942,8 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("grainSize",          p.grainSize          * 100.0);
     setSliderReal("grainRoughness",     p.grainRoughness     * 100.0);
     syncLensPanel();                  // Global's Remove CA / fringe rows (scope 0 always)
+    syncKaleidoSliders();             // Global's Effects > Kaleidoscope (geometry)
+    emit kaleidoToolChanged();        // new image / scope: the handles re-evaluate
     if (toneSlider)
         toneSlider->setPositions(p.toneShadowCenter, p.toneCrossover, p.toneHighlightCenter);
     refreshCurveRow();

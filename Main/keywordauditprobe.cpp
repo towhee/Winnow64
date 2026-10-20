@@ -70,8 +70,12 @@ int run(const QString &keywordFilter)
     }
 
     const auto &res = out.result;
-    int sus = 0, visual = 0;
-    for (const auto &f : res.findings) sus += f.kind == VisualAudit::Finding::Suspect;
+    int sus = 0, mis = 0, sug = 0, visual = 0;
+    for (const auto &f : res.findings) {
+        sus += f.kind == VisualAudit::Finding::Suspect;
+        mis += f.kind == VisualAudit::Finding::Missing;
+        sug += f.kind == VisualAudit::Finding::Suggested;
+    }
     for (const auto &s : res.stats) visual += s.visual;
     say("");
     say(QString("  backend    %1").arg(ImageEmbedder::BackendName()));
@@ -79,13 +83,14 @@ int run(const QString &keywordFilter)
             .arg(out.images.size()).arg(out.embedded).arg(out.unreadable));
     say(QString("  bursts     %1 units").arg(res.bursts));
     say(QString("  keywords   %1 learned, %2 visual").arg(res.stats.size()).arg(visual));
-    say(QString("  findings   %1 suspect, %2 missing").arg(sus)
-            .arg(res.findings.size() - sus));
+    say(QString("  findings   %1 suspect, %2 missing, %3 suggested").arg(sus).arg(mis)
+            .arg(sug));
     say(QString("  time       %1 s").arg(out.ms / 1000.0, 0, 'f', 1));
 
     /* Per top-level branch: where the findings are. */
     QMap<QString, QPair<int, int>> byRoot;
     for (const auto &f : res.findings) {
+        if (f.kind == VisualAudit::Finding::Suggested) continue;   // not a mistake
         auto &c = byRoot[f.keyword.section('|', 0, 0)];
         (f.kind == VisualAudit::Finding::Suspect ? c.first : c.second)++;
     }
@@ -103,9 +108,9 @@ int run(const QString &keywordFilter)
         if (!keywordFilter.isEmpty() && !f.keyword.contains(keywordFilter, Qt::CaseInsensitive)
             && !f.alternative.contains(keywordFilter, Qt::CaseInsensitive))
             continue;
-        const bool s = f.kind == VisualAudit::Finding::Suspect;
         QString line = QString("  %1 %2  %3").arg(f.score, 0, 'f', 2)
-                           .arg(s ? "SUSPECT" : "MISSING").arg(f.keyword);
+                           .arg(VisualAudit::kindName(f.kind).toUpper(), -9)
+                           .arg(f.keyword);
         if (!f.alternative.isEmpty()) line += "  ->  " + f.alternative;
         if (f.members.size() > 1) line += QString("  (burst of %1)").arg(f.members.size());
         say(line);

@@ -16,9 +16,25 @@ section it is per scope, so either can be confined to a mask.</p>
 Sharpening, because the two are one decision &mdash; noise reduction removes exactly the
 detail sharpening puts back.</p>
 
+<h2>Choosing an effect</h2>
+<p>The list at the top of the panel picks the effect to work on, and only that effect's
+sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b> or, on the Global
+scope, <b>Kaleidoscope</b>.</p>
+
+<p>Every effect is always applied, whichever one is showing: the list only chooses which
+sliders you see.  An effect marked <b>*</b> in the list has been changed, so you can tell
+from the list that grain is on while you are looking at the vignette.  Winnow remembers
+the last effect you chose.</p>
+
+<p>The <b>eye</b> and <b>reset</b> at the right end of the list's row act on the effect
+that is showing, and nothing else.  The eye hides that one effect without losing its
+settings, so you can compare with and without it; the reset puts its sliders back to
+their defaults (for the kaleidoscope, that turns it off).  The eye on the Effects header
+still hides all of them at once.</p>
+
 <h2>Vignette</h2>
 <ul>
-<li><b>Vignette</b> is corner exposure in stops (EV), &plusmn;5.00: negative darkens the
+<li><b>Amount</b> is the corner exposure in stops (EV), &plusmn;5.00: negative darkens the
 corners (the familiar look), positive brightens them, which is how you correct a lens that
 falls off.</li>
 <li><b>Feather</b> is how far the falloff reaches in toward the centre.  Low values keep
@@ -34,7 +50,7 @@ mask and put an exposure adjustment in that scope instead.</p>
 Roughness are sub-controls of Amount and do nothing until Amount is above zero.</p>
 
 <ul>
-<li><b>Grain</b> &mdash; the strength.</li>
+<li><b>Amount</b> &mdash; the strength of the grain.</li>
 <li><b>Size</b> &mdash; particle size, fine to coarse.  It is scaled to the image, so what
 you see on the editing proxy is what you get at full resolution.</li>
 <li><b>Roughness</b> &mdash; how patchy and irregular the grain is.  Low is an even
@@ -44,15 +60,45 @@ sprinkle; high clumps it, which reads as a faster, older stock.</li>
 <p>Grain is also a practical tool, not only a look: a little of it hides banding in smooth
 skies and disguises the plastic texture that heavy noise reduction leaves behind.</p>
 
+<h2>Kaleidoscope</h2>
+<p>Mirrors the picture around a centre point, the way a kaleidoscope does: the frame is
+divided into wedges, and each one shows the same slice of the photo, every other wedge
+reflected so the seams always meet as mirror images.  It is on the <b>Global</b> scope
+only, because it rearranges the whole picture.</p>
+
+<ul>
+<li><b>Segments</b> is the number of wedges, in even numbers so every seam is a mirror
+(an odd setting moves up to the next even one).  <b>0</b> is off, and <b>2</b> is a plain
+mirror across one line.</li>
+<li><b>Angle</b> turns the mirror lines.</li>
+<li><b>Source</b> turns the slice of the photo that gets mirrored without turning the
+pattern, so the design stays put while its content changes.</li>
+</ul>
+
+<p>While Kaleidoscope is the effect showing and it is on, its handles are on the image:
+drag the white <b>centre</b>, or click anywhere on the image to move the centre there, and
+drag the yellow <b>spoke</b> to turn the mirror lines (hold <b>Shift</b> to snap to 15
+degree steps).  The faint dashed lines are the seams between the wedges.  Choose another
+effect, or fold the Effects panel away, and the handles go &mdash; the kaleidoscope
+itself stays.  Hold <b>Space</b> to pan the image while they are up.</p>
+
+<p>The kaleidoscope works on the <i>cropped</i> picture, so the crop decides what gets
+mirrored: crop to a detail first.  While the Transform panel is open, and while a mask or
+the spot brush is on the image, the picture is shown un-mirrored so what you draw lands
+where you see it.</p>
+
 <h2>Working with the sliders</h2>
 <ul>
 <li><b>Double-click</b> a slider returns it to its default (Feather 50, Size 25,
-Roughness 50, Vignette and Grain 0).</li>
+Roughness 50, both Amounts 0).</li>
 <li>Click a slider and the <b>arrow keys</b> nudge one unit, <b>Page Up / Page Down</b>
 ten.</li>
 <li>The section's <b>[&#8942;]</b> menu has <b>Show Effects changes</b> (a before / after
 that keeps your values) and <b>Reset Effects</b>.</li>
-<li>The header reads <b>Effects *</b> when anything in the panel is off its default.</li>
+<li>On Global, <b>Reset Effects</b> turns the kaleidoscope off too, and the eye hides
+it.</li>
+<li>The header reads <b>Effects *</b> when anything in the panel is off its default,
+and the list marks which effect it is.</li>
 </ul>
 
 <h2>Where it sits in the pipeline</h2>
@@ -61,9 +107,13 @@ panel), then grain last of all &mdash; grain belongs on top of the finished pict
 underneath a vignette that would modulate it, and not under a sharpener that would crisp
 it up.</p>
 
+<p>The kaleidoscope runs after all of that, and after the crop, straighten and
+perspective in the Transform panel: it folds the finished, cropped picture.</p>
+
 <h2>What is saved</h2>
-<p>All five values are part of the develop recipe, stored per scope in the sidecar, and
-travel with presets, Copy / Paste Settings, History and multi-image editing.</p>
+<p>Every value is part of the develop recipe, stored in the sidecar, and travels with
+presets, Copy / Paste Settings, History and multi-image editing.  Vignette and grain are
+stored per scope; the kaleidoscope is stored once for the whole image, with the crop.</p>
 
 </body>
 </html>

@@ -31,6 +31,9 @@ struct KeywordAuditOutcome
     QString error;                  // why ok is false, for the dialog
     VisualAudit::Result result;     // finding members index images below
     QVector<KeywordAuditImage> images;
+    bool scoped = false;            // findings limited to the images the user filtered
+    int scopeImages = 0;            // images in that filter
+    int scopeUncatalogued = 0;      // ... that the catalog does not hold (not audited)
     int embedded = 0;               // vectors computed this run
     int unreadable = 0;             // images no picture could be read for
     qint64 ms = 0;
@@ -40,9 +43,10 @@ Q_DECLARE_METATYPE(KeywordAuditOutcome)
 /*
     AUDIT KEYWORDS, OFF THE GUI THREAD: bring the image vectors up to date, then score.
 
-    TWO STAGES. First every live, keyworded catalog image whose vector is missing or
-    stale (EmbeddingStore stamps vs the catalog row) is embedded -- from its cached
-    browsing thumbnail when there is one, otherwise from the file's embedded preview.
+    TWO STAGES. First every live, keyworded catalog image -- and every unkeyworded one
+    in the report scope, for suggestions -- whose vector is missing or stale
+    (EmbeddingStore stamps vs the catalog row) is embedded: from its cached browsing
+    thumbnail when there is one, otherwise from the file's embedded preview.
     That is the whole catalog the first time (~8 minutes for 100k images on an M1 Ultra
     GPU, plus a one-time ~90 s model compile on a Mac) and only what changed afterwards.
     Then VisualAudit::run scores every vector against the user's keyword list (~25 s at
@@ -75,17 +79,25 @@ public:
 
 public slots:
     /*  vocab: folded path -> display path of every keyword in the user's list.
-        dismissed / skipped: see VisualAudit::run. */
+        dismissed / skipped: see VisualAudit::run. scopePaths: the images to REPORT on
+        (the current filter), or empty for the whole catalog -- learning always uses
+        every keyworded catalog image. */
     void run(const QHash<QString, QString> &vocab, const QSet<QString> &dismissed,
-             const QSet<QString> &skipped);
+             const QSet<QString> &skipped, const QStringList &scopePaths = {});
 
     /* Any thread. The job ends at its next check. */
     void stop();
+
+public:
+    /* Where the suggestion model is saved (beside index.db). Any thread. */
+    static QString suggestModelPath();
 
 signals:
     /* stage is shown as is; total 0 means "percent in done". Throttled. */
     void progress(const QString &stage, int done, int total);
     void finished(const KeywordAuditOutcome &outcome);
+    /* A new suggestion model was saved -- the Keywords panel reloads it. */
+    void modelSaved();
 
 private:
     bool shouldPause() const;

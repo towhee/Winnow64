@@ -1,4 +1,5 @@
 #include "Main/keywordauditjob.h"
+#include "Cache/cachedb.h"
 #include "Cache/catalog.h"
 #include "Cache/embeddingstore.h"
 #include "Cache/pathkey.h"
@@ -14,6 +15,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QImageReader>
+#include <QStandardPaths>
 #include <QTransform>
 
 namespace {
@@ -146,8 +148,20 @@ QImage KeywordAuditJob::loadPicture(const QString &path, qint64 srcSize, qint64 
     return img;
 }
 
+QString KeywordAuditJob::suggestModelPath()
+{
+    /*  Beside index.db: derived data, rebuilt by the next audit if lost, like the vectors
+        it was learned from. */
+    const QString db = CacheDb::instance().path();
+    const QString dir = db.isEmpty()
+        ? QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+        : QFileInfo(db).absolutePath();
+    return dir + "/keywordsuggest.bin";
+}
+
 void KeywordAuditJob::run(const QHash<QString, QString> &vocab,
-                          const QSet<QString> &dismissed, const QSet<QString> &skipped)
+                          const QSet<QString> &dismissed, const QSet<QString> &skipped,
+                          const QStringList &scopePaths)
 {
     if (running.exchange(true)) return;
     abort.store(false, std::memory_order_relaxed);
@@ -163,13 +177,33 @@ void KeywordAuditJob::run(const QHash<QString, QString> &vocab,
         emit finished(out);
     };
 
+    /*  THE SCOPE IS WHAT IS REPORTED, NOT WHAT IS LEARNED. Every keyworded image still
+        teaches its keywords; the scope only says which images' findings and suggestions
+        the user is shown. Empty = the whole catalog. */
+    const bool scoped = !scopePaths.isEmpty();
+    QSet<QString> scopeKeys;
+    for (const QString &p : scopePaths) scopeKeys.insert(cachePathKey(p));
+    out.scoped = scoped;
+    out.scopeImages = scopeKeys.size();
+
     /* ---------------------------------------------------------------- catalog */
     report(tr("Reading the catalog"), 0, 0, true);
     QVector<CatalogRow> rows = Catalog::instance().searchRows(CatalogQuery{}, 0);
-    rows.erase(std::remove_if(rows.begin(), rows.end(), [](const CatalogRow &r) {
-                   return r.keywordsLiteral.isEmpty() && r.keywordPaths.isEmpty();
+    auto keyworded = [](const CatalogRow &r) {
+        return !r.keywordsLiteral.isEmpty() || !r.keywordPaths.isEmpty();
+    };
+    /*  Keyworded rows teach; unkeyworded rows are only scored for suggestions, and only
+        the ones the user will be shown -- embedding a whole unkeyworded catalog to
+        report on a filtered handful would be minutes of GPU for nothing. */
+    QSet<QString> catalogued;
+    rows.erase(std::remove_if(rows.begin(), rows.end(), [&](const CatalogRow &r) {
+                   const QString key = cachePathKey(r.path);
+                   if (scoped && scopeKeys.contains(key)) catalogued.insert(key);
+                   if (keyworded(r)) return false;
+                   return scoped && !scopeKeys.contains(key);
                }), rows.end());
-    if (rows.isEmpty()) {
+    out.scopeUncatalogued = scoped ? int(scopeKeys.size() - catalogued.size()) : 0;
+    if (std::none_of(rows.cbegin(), rows.cend(), keyworded)) {
         finish(tr("No catalogued image has keywords yet."));
         return;
     }
@@ -227,12 +261,13 @@ void KeywordAuditJob::run(const QHash<QString, QString> &vocab,
     QHash<QString, int> rowOf;
     for (int i = 0; i < rows.size(); ++i) rowOf.insert(cachePathKey(rows[i].path), i);
 
+    /*  TRAINING IMAGES FIRST, then the unkeyworded ones -- VisualAudit::run learns from
+        [0, trainCount) and suggest() scores anything. */
     QVector<VisualAudit::Image> images;
     std::vector<float> emb;
     emb.reserve(mat.size());
-    for (int k = 0; k < keys.size(); ++k) {
-        const int i = rowOf.value(keys[k], -1);
-        if (i < 0) continue;                         // no longer keyworded
+    std::vector<char> inScope;
+    auto take = [&](int k, int i) {
         const CatalogRow &r = rows[i];
         const QStringList eff = keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths);
         VisualAudit::Image im;
@@ -242,19 +277,57 @@ void KeywordAuditJob::run(const QHash<QString, QString> &vocab,
         im.explicitPaths = keywordPruneAncestors(eff);
         im.expandedPaths = keywordPrefixExpand(eff);
         images << im;
+        inScope.push_back(!scoped || scopeKeys.contains(keys[k]));
         out.images.push_back({r.path, keys[k], im.explicitPaths, r.keywordsLiteral,
                               r.keywordPaths});
         const auto *v = mat.data() + size_t(k) * ImageEmbedder::kDim;
         emb.insert(emb.end(), v, v + ImageEmbedder::kDim);
+    };
+    int trained = 0;
+    for (int pass = 0; pass < 2; ++pass) {
+        for (int k = 0; k < keys.size(); ++k) {
+            const int i = rowOf.value(keys[k], -1);
+            if (i < 0) continue;                     // not a row this run reads
+            if (keyworded(rows[i]) == (pass == 0)) take(k, i);
+        }
+        if (pass == 0) trained = images.size();
     }
     mat.clear();
     mat.shrink_to_fit();
 
-    out.result = VisualAudit::run(images, emb, ImageEmbedder::kDim, vocab, dismissed,
-                                   skipped, {}, [&](const QString &stage, int pct) {
+    auto progressFn = [&](const QString &stage, int pct) {
         report(stage, pct, 0);
         return !abort.load(std::memory_order_relaxed);
-    });
-    out.ok = out.result.ok;
+    };
+    out.result = VisualAudit::run(images, emb, ImageEmbedder::kDim, vocab, dismissed,
+                                   skipped, {}, progressFn, trained, &inScope);
+    if (!out.result.ok) { finish(); return; }
+
+    /*  SAVED FOR THE KEYWORDS PANEL, which suggests for the current image between
+        audits. A failed save costs the panel its suggestions, not the audit. */
+    out.result.model.modelTag = model;
+    if (out.result.model.isValid() && out.result.model.save(suggestModelPath()))
+        emit modelSaved();
+
+    /*  SUGGESTED, for every in-scope image -- keyworded or not. A keyword the audit
+        already reported as Missing for an image is that finding, not a second one. */
+    QSet<QString> exclude;
+    for (const VisualAudit::Finding &f : std::as_const(out.result.findings))
+        if (f.kind == VisualAudit::Finding::Missing)
+            for (int m : f.members)
+                exclude.insert(QString::number(m) + '|' + VisualAudit::foldKey(f.keyword));
+    QVector<int> reportRows;
+    for (int i = 0; i < images.size(); ++i)
+        if (inScope[size_t(i)]) reportRows << i;
+    const QVector<VisualAudit::Finding> sug = VisualAudit::suggest(
+        images, emb, ImageEmbedder::kDim, reportRows, out.result.model, vocab, dismissed,
+        exclude, {}, progressFn);
+    if (abort.load(std::memory_order_relaxed)) { finish(); return; }
+    out.result.findings += sug;
+    std::stable_sort(out.result.findings.begin(), out.result.findings.end(),
+                     [](const VisualAudit::Finding &a, const VisualAudit::Finding &b) {
+                         return a.score > b.score;
+                     });
+    out.ok = true;
     finish();
 }

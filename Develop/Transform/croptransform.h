@@ -34,6 +34,24 @@ QImage rectifyPerspective(const QImage &src, const QPointF quad[4], QRectF &outC
 QImage applyGeometry(const QImage &src, const Geometry &g);
 
 /*
+    The kaleidoscope fold, the last step of applyGeometry (after the crop). Every output
+    pixel is put in polar form about the centre (g.kaleidoX/Y, normalized in src), its
+    angle is folded into ONE wedge of 360/N degrees -- reflected in every other wedge,
+    so neighbouring wedges meet as mirror images -- and the source is sampled at the same
+    radius along the folded angle (bilinear). A ray that leaves the frame is reflected at
+    the border, so there are no empty corners. Output size and format family match the
+    input (8-bit -> ARGB32, 16-bit -> RGBA64). Returns src unchanged when off.
+*/
+QImage applyKaleidoscope(const QImage &src, const Geometry &g);
+
+/*
+    The POINT form of the fold: where in the kaleidoscope's INPUT (the cropped frame,
+    normalized) the output point outN samples. Lets a picker clicked on the mirrored
+    image find the photo pixel it is really looking at.
+*/
+QPointF kaleidoSourceNorm(QPointF outN, double W, double H, const Geometry &g);
+
+/*
     The POINT twin of applyGeometry: the transform a pixel undergoes in the geometry
     stage, without touching any pixels. Maps a point in the stage's INPUT space (the
     developed/oriented full frame, srcW x srcH pixels) to the OUTPUT space (the

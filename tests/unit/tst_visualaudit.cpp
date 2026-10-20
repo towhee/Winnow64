@@ -148,6 +148,11 @@ private slots:
     void randomKeywordIsNotVisual();
     void dismissedAndSkippedAreFiltered();
     void cleanImagesProduceFewFindings();
+    void unkeywordedImageIsSuggestedItsLookalike();
+    void suggestModelRoundTrips();
+    void sessionSuggestsWhatMostOfTheSessionCarries();
+    void scopeLimitsWhatIsReported();
+    void batchSessionMatchesThePanelsRule();
 };
 
 void TestVisualAudit::plantedMislabelIsSuspectWithAlternative()
@@ -245,4 +250,195 @@ void TestVisualAudit::cleanImagesProduceFewFindings()
 }
 
 QTEST_MAIN(TestVisualAudit)
+void TestVisualAudit::unkeywordedImageIsSuggestedItsLookalike()
+{
+/*
+    An image with NO keywords is not learned from, so it is appended after the training
+    images and scored by suggest(): it looks like the Herons, so Heron is suggested --
+    deepest only, not also Fauna|Bird or Fauna.
+*/
+    for (unsigned seed : kSeeds) {
+        Fixture fx = build(None, seed);
+        const int train = fx.images.size();
+        std::mt19937 rng(seed + 100);
+        std::normal_distribution<float> noise(0.0f, 0.06f);
+        std::vector<float> v(kDim);
+        double norm = 0;
+        for (int d = 0; d < kDim; ++d) { v[d] = (d == 0 ? 1.0f : 0.0f) + noise(rng);
+                                         norm += double(v[d]) * v[d]; }
+        for (float &x : v) x = float(x / std::sqrt(norm));
+        fx.emb.insert(fx.emb.end(), v.begin(), v.end());
+        Image im;
+        im.pathKey = "/pics/new.jpg";
+        im.folder = "/pics/new";
+        fx.images << im;
+
+        const Result r = run(fx.images, fx.emb, kDim, fx.vocab, {}, {}, {}, {}, train);
+        QVERIFY(r.ok);
+        QVERIFY(r.model.isValid());
+        QCOMPARE(r.model.images, train);
+        const QVector<Finding> sug = suggest(fx.images, fx.emb, kDim, {train}, r.model,
+                                             fx.vocab, {}, {});
+        bool heron = false;
+        for (const Finding &f : sug) {
+            QCOMPARE(f.kind, Finding::Suggested);
+            QVERIFY2(f.keyword != "Fauna|Bird" && f.keyword != "Fauna",
+                     "an ancestor of a suggestion is not suggested");
+            heron |= f.keyword == "Fauna|Bird|Heron";
+        }
+        QVERIFY2(heron, qPrintable(QString("seed %1: Heron not suggested").arg(seed)));
+    }
+}
+
+void TestVisualAudit::suggestModelRoundTrips()
+{
+/*
+    The panel scores from the SAVED model, so a saved and reloaded model must score a
+    vector exactly as the one the audit made.
+*/
+    const Fixture fx = build(None, 1);
+    const Result r = run(fx.images, fx.emb, kDim, fx.vocab, {}, {});
+    QVERIFY(r.model.isValid());
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    SuggestModel m = r.model;
+    m.modelTag = "test";
+    const QString file = dir.filePath("model.bin");
+    QVERIFY(m.save(file));
+    SuggestModel back;
+    QVERIFY(back.load(file));
+    QCOMPARE(back.modelTag, QString("test"));
+    QCOMPARE(back.keywords, m.keywords);
+    QCOMPARE(back.dim, m.dim);
+    const float *vec = fx.emb.data();                    // a Heron
+    const QVector<Suggestion> a = m.score(vec, {}, {}), b = back.score(vec, {}, {});
+    QCOMPARE(a.size(), b.size());
+    for (int i = 0; i < a.size(); ++i) {
+        QCOMPARE(a[i].keyword, b[i].keyword);
+        QCOMPARE(a[i].score, b[i].score);
+    }
+    /*  A truncated file is no model at all, not half of one. */
+    QFile f(file);
+    QVERIFY(f.open(QIODevice::ReadWrite));
+    QVERIFY(f.resize(f.size() / 2));
+    f.close();
+    QVERIFY(!back.load(file));
+    QVERIFY(!back.isValid());
+}
+
+void TestVisualAudit::sessionSuggestsWhatMostOfTheSessionCarries()
+{
+    QHash<QString, QString> vocab;
+    for (const char *p : {"Event", "Event|Wedding", "Event|Wedding|Ceremony",
+                          "Event|Wedding|Reception", "People|Ann"})
+        vocab.insert(foldKey(p), p);
+    const SessionImage me{"/s", 100'000, {}};
+    QVector<SessionImage> near = {
+        {"/s", 100'100, {"Event|Wedding|Ceremony", "People|Ann"}},
+        {"/s", 100'200, {"Event|Wedding|Ceremony"}},
+        {"/s", 100'300, {"Event|Wedding|Reception"}},
+        {"/other", 100'050, {"People|Ann"}},            // another folder
+        {"/s", 900'000, {"People|Ann"}},                // another day
+    };
+    const Params p;
+    const QVector<Suggestion> s = mergeSuggestions(
+        {}, sessionSuggestions(me, near, vocab, {}, {}, p), p);
+    QStringList got;
+    for (const Suggestion &x : s) got << x.keyword;
+    /*  Ceremony: 2 of 3. Event|Wedding: 3 of 3, but Ceremony beneath it says more.
+        Ann: 1 of 3 -- the other two were out of the session. Reception: 1 of 3. */
+    QCOMPARE(got, QStringList{"Event|Wedding|Ceremony"});
+    QCOMPARE(s.first().sessionHits, 2);
+    QCOMPARE(s.first().sessionOf, 3);
+
+    /*  Already carried, or dismissed: not suggested. */
+    for (const Suggestion &x : sessionSuggestions(me, near, vocab,
+                                                  {foldKey("Event|Wedding|Ceremony")}, {},
+                                                  p))
+        QVERIFY(x.keyword != "Event|Wedding|Ceremony");
+    for (const Suggestion &x : sessionSuggestions(me, near, vocab, {},
+                                                  {foldKey("Event|Wedding|Ceremony")}, p))
+        QVERIFY(x.keyword != "Event|Wedding|Ceremony");
+    /*  Too few keyworded neighbours to call it a session. */
+    QVERIFY(sessionSuggestions(me, {near.first()}, vocab, {}, {}, p).isEmpty());
+    /*  No capture time: no session. */
+    QVERIFY(sessionSuggestions({"/s", 0, {}}, near, vocab, {}, {}, p).isEmpty());
+}
+
+void TestVisualAudit::scopeLimitsWhatIsReported()
+{
+/*
+    A planted mislabel OUTSIDE the scope is learned from but not reported; inside it,
+    it is.
+*/
+    const Fixture fx = build(PlantSuspect, 1);
+    std::vector<char> scope(fx.images.size(), 0);
+    Result out = run(fx.images, fx.emb, kDim, fx.vocab, {}, {}, {}, {}, -1, &scope);
+    QVERIFY(out.ok);
+    QVERIFY(!find(out, Finding::Suspect, "Fauna|Bird|Egret", fx.plantedSuspect));
+    scope[size_t(fx.plantedSuspect)] = 1;
+    Result in = run(fx.images, fx.emb, kDim, fx.vocab, {}, {}, {}, {}, -1, &scope);
+    QVERIFY(find(in, Finding::Suspect, "Fauna|Bird|Egret", fx.plantedSuspect));
+    for (const Finding &f : in.findings)
+        for (int m : f.members) QVERIFY(scope[size_t(m)]);
+}
+
+void TestVisualAudit::batchSessionMatchesThePanelsRule()
+{
+/*
+    suggest() counts sessions on precomputed keyword ids for speed; the panel uses
+    sessionSuggestions on strings. Same rule, so the same answer: with no visual model,
+    every Suggested finding suggest() makes must be exactly what sessionSuggestions (then
+    mergeSuggestions) says for that image.
+*/
+    QHash<QString, QString> vocab;
+    QStringList kws = {"Event|Wedding|Ceremony", "Event|Wedding|Reception", "People|Ann",
+                       "People|Bob", "Flora|Tree"};
+    for (const QString &k : kws)
+        for (QString a = k; !a.isEmpty();
+             a = a.contains('|') ? a.section('|', 0, -2) : QString())
+            vocab.insert(foldKey(a), a);
+    std::mt19937 rng(7);
+    std::uniform_int_distribution<int> pick(0, kws.size() - 1), coin(0, 2);
+    QVector<Image> images;
+    std::vector<float> emb;
+    for (int i = 0; i < 300; ++i) {
+        Image im;
+        im.pathKey = QString("/s/%1.jpg").arg(i);
+        im.folder = QString("/s/f%1").arg(i / 50);
+        im.captured = 1'000'000 + qint64(i) * 600;      // 10 min apart: ~36 per session
+        if (coin(rng)) {
+            im.explicitPaths << kws[pick(rng)];
+            if (coin(rng)) im.explicitPaths << kws[pick(rng)];
+            im.explicitPaths.removeDuplicates();
+        }
+        im.expandedPaths = expand(im.explicitPaths);
+        images << im;
+        emb.insert(emb.end(), kDim, 0.0f);
+    }
+    QVector<int> rows;
+    for (int i = 0; i < images.size(); ++i) rows << i;
+    const Params p;
+    const QVector<Finding> got = suggest(images, emb, kDim, rows, SuggestModel(), vocab,
+                                         {}, {}, p);
+    QSet<QString> fromBatch, fromRule;
+    for (const Finding &f : got)
+        for (int m : f.members) fromBatch.insert(QString::number(m) + '|' + f.keyword);
+    for (int i = 0; i < images.size(); ++i) {
+        QVector<SessionImage> near;
+        for (int j = 0; j < images.size(); ++j)
+            if (j != i) near << SessionImage{images[j].folder, images[j].captured,
+                                             images[j].explicitPaths};
+        QSet<QString> carried;
+        for (const QString &x : images[i].expandedPaths) carried.insert(foldKey(x));
+        const SessionImage me{images[i].folder, images[i].captured,
+                              images[i].explicitPaths};
+        for (const Suggestion &s : mergeSuggestions(
+                 {}, sessionSuggestions(me, near, vocab, carried, {}, p), p))
+            fromRule.insert(QString::number(i) + '|' + s.keyword);
+    }
+    QVERIFY(!fromRule.isEmpty());
+    QCOMPARE(fromBatch, fromRule);
+}
+
 #include "tst_visualaudit.moc"

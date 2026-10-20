@@ -463,11 +463,16 @@ void MW::filterChange(QString source)
     // // // clear selection and update datamodel current index
     // sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
 
-    // Recover full selection if filter didn't eliminate any rows; otherwise fall
-    // back to selecting the current single item.
-    if (dm->rowCount() == dm->sf->rowCount()) {
-        sel->recover("MW::filterChange");
-    } else {
+    /*  THE SELECTION SURVIVES A FILTER THAT KEEPS ITS CURRENT IMAGE. This recovered only
+        when the filter eliminated NO rows and otherwise collapsed to the current image --
+        so with any filter active, every filterChange threw a multi-image selection away.
+        The commonest victim was not a filter edit at all: tagging a selection (a keyword
+        dropped on the Keywords panel) rebuilds the keyword category and comes through
+        here, and in the Keywords workflow a filter is nearly always on, so the next
+        keyword dropped would have gone onto ONE image. Now the selected rows the filter still shows are
+        re-selected; only when the current image itself was filtered out does this fall
+        back to selecting a single new current, as before. */
+    if (!sel->recoverVisible("MW::filterChange")) {
         sel->select(newSfIdx, Qt::NoModifier, "MW::filterChange");
     }
     phase("select");

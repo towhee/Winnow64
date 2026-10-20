@@ -6,6 +6,9 @@
 #include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
 #include "Metadata/keywordpaths.h"
+#include "Main/keywordsuggester.h"
+#include "Datamodel/keywordauditstore.h"
+#include "Cache/pathkey.h"
 #include "Views/libtree.h"
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/applerawdecode.h"
@@ -2631,6 +2634,7 @@ void MW::createDevelopDock()
        the old ratio. In result-preview there is no overlay; the render shows the
        revert. */
     connect(developProperties, &DevelopProperties::historyApplied, this, [this]{
+        syncDevelopKaleidoOverlay();         // the restored kaleidoscope's handles
         if (!developCropEditing || !imageView || !transformPanel) return;
         const Geometry g = developProperties->currentGeometry();
         transformPanel->setLevelAngle(g.straighten);
@@ -2966,6 +2970,35 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
     /* Per-row reset: clear just the crop / straighten / warp contribution. */
     connect(transformPanel, &TransformPanel::resetModeRequested, this, &MW::resetDevelopTransformMode);
+    /* Kaleidoscope (Effects): the canvas handles and the Effects sliders both write the
+       geometry through setDevelopKaleido (history merges a drag into one row). */
+    connect(imageView, &ImageView::kaleidoEdited, this,
+            [this](double x, double y, double angleDeg, bool){
+        if (!developProperties) return;
+        Geometry g = developProperties->currentGeometry();
+        g.kaleidoX = x; g.kaleidoY = y; g.kaleidoAngle = angleDeg;
+        setDevelopKaleido(g);
+    });
+    connect(developProperties, &DevelopProperties::kaleidoEdited, this,
+            [this](int segments, double angleDeg, double sourceDeg){
+        Geometry g = developProperties->currentGeometry();
+        g.kaleidoSegments = segments;
+        g.kaleidoAngle = angleDeg;
+        g.kaleidoSource = sourceDeg;
+        setDevelopKaleido(g);
+    });
+    /* Effects > Kaleidoscope came into or out of view (chosen in the dropdown, Effects
+       expanded / collapsed, scope or image changed): the handles follow it. */
+    connect(developProperties, &DevelopProperties::kaleidoToolChanged,
+            this, &MW::syncDevelopKaleidoOverlay, Qt::QueuedConnection);
+    /* A mask / tint / spot overlay came up or went away: the kaleidoscope comes off or
+       goes back on (developKaleidoSuppressed). Queued -- it fires from inside ImageView
+       state changes, which should finish before a render reads them. */
+    connect(imageView, &ImageView::unfoldedFrameNeedChanged, this, [this]{
+        if (!developProperties || G::operationMode != G::OperationMode::Develop) return;
+        if (developProperties->currentGeometry().hasKaleido()) renderDevelopPreview(false);
+        syncDevelopKaleidoOverlay();     // the handles go with the fold
+    }, Qt::QueuedConnection);
     /* Transform Preview eye: a LIVE result toggle while the crop tool is active. ON = commit the
        overlay's crop, drop the overlay and render the cropped/warped RESULT; OFF = back to full-frame
        editing with the overlay. (The panel is only visible while crop-editing, so that is the only
@@ -2999,7 +3032,10 @@ void MW::createDevelopDock()
        return to editing on the full frame. */
     connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
         if (!developProperties) return;
-        developProperties->setCurrentGeometry(Geometry());      // identity
+        /* Identity, but the kaleidoscope is an Effect, not a transform: it stays. */
+        Geometry identity;
+        identity.copyKaleidoFrom(developProperties->currentGeometry());
+        developProperties->setCurrentGeometry(identity);
         transformPanel->resetCropState();       // free aspect + no lock/flip, else the full frame re-fits to them
         transformPanel->setLevelAngle(0.0);     // clear the straighten field
         developCropShowResult = false;
@@ -3789,6 +3825,30 @@ void MW::createKeywordsDock()
         if (keywordVocab) keywordVocab->refreshCounts();
         refreshKeywordsDock();
     });
+
+    /*  SUGGESTED KEYWORDS (Main/keywordsuggester.h). The worker answers on its own
+        thread; a reply is shown only if it is still about the current image. */
+    keywordSuggester = new KeywordSuggester;
+    connect(keywordSuggester, &KeywordSuggester::ready, this,
+            [this](int generation, const QString &path,
+                   const QVector<VisualAudit::Suggestion> &suggestions,
+                   const QString &status) {
+        if (generation != keywordSuggestGeneration || path != keywordSuggestPath) return;
+        if (keywordTags) keywordTags->setSuggestions(suggestions, status);
+    });
+    connect(keywordTags, &KeywordTags::suggestionAccepted, this, [this](const QString &p) {
+        applyKeywordsToSelection({p}, {});
+        refreshKeywordsDock();
+        requestKeywordSuggestions(true);
+    });
+    connect(keywordTags, &KeywordTags::suggestionDismissed, this,
+            [this](const QString &p) {
+        if (keywordSuggestPath.isEmpty()) return;
+        KeywordAuditStore::setDismissed(cachePathKey(keywordSuggestPath), "suggested", p,
+                                        true);
+        requestKeywordSuggestions(true);
+    });
+    connect(keywordTags, &KeywordTags::auditRequested, this, &MW::auditKeywords);
     // customize the keywordsDock titlebar
     QHBoxLayout *keywordsTitleLayout = new QHBoxLayout();
     keywordsTitleLayout->setContentsMargins(0, 0, 0, 0);
@@ -3952,6 +4012,7 @@ void MW::setOperationMode(G::OperationMode mode)
         && G::operationMode == G::OperationMode::Develop) {
         if (developTransformVisible) toggleDevelopTransform();
         if (developProperties) developProperties->cancelCanvasTools();
+        if (imageView) imageView->endKaleido();      // the Effects > Kaleidoscope handles
         if (imageView) imageView->resetToolCursor();
     }
 
@@ -3993,6 +4054,9 @@ void MW::setOperationMode(G::OperationMode mode)
     }
     G::operationMode = mode;
     updateDevelopRenderingHint();     // Preview hides the chip; Develop re-evaluates
+    /* Entering Develop with Effects > Kaleidoscope on show: its handles come back. */
+    if (mode == G::OperationMode::Develop)
+        QTimer::singleShot(0, this, [this]{ syncDevelopKaleidoOverlay(); });
 
     /* Refresh the status bar for the new mode: it hides the metadata / image cache
        running lights in Develop and shows them in Preview. */

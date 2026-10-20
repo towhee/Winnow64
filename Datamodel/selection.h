@@ -36,6 +36,10 @@ public:
     int count();
     void save(QString src = "");
     void recover(QString src = "");
+    /*  recover() for after a FILTER: the saved rows the proxy still shows are selected
+        again, the hidden ones dropped. Returns false, touching nothing, when the saved
+        CURRENT row is hidden -- the caller then picks a new current itself. */
+    bool recoverVisible(QString src = "");
     //void report();
     QString diagnostics();
 
