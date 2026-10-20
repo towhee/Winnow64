@@ -466,6 +466,22 @@ struct EditParams {
     float grainSize      = 0.25f;
     float grainRoughness = 0.5f;
 
+    /* Kaleidoscope (Effects, a GEOMETRIC op -- not run by Develop::Apply). After the crop
+       (MW::developCompositeStack, CropTransform::applyKaleidoscope*), the frame is folded
+       around a centre: kaleidoSegments wedges (0 = off, else EVEN 2..32 so every seam is
+       a mirror), kaleidoX / kaleidoY the centre normalized in the CROPPED frame,
+       kaleidoAngle (deg, -180..180, y-down) turns the mirror lines and the sampled slice
+       together, kaleidoSource (deg) turns only the slice. Per scope: on a mask scope only
+       the masked pixels are folded (unmasked = transparent) and laid over the frame;
+       Global (and a mask-less scope) folds the whole frame, last. Only kaleidoSegments is
+       in isIdentity (the rest are inert while it is off). */
+    int   kaleidoSegments = 0;
+    float kaleidoX        = 0.5f;
+    float kaleidoY        = 0.5f;
+    float kaleidoAngle    = 0.0f;
+    float kaleidoSource   = 0.0f;
+    bool hasKaleido() const { return kaleidoSegments >= 2; }
+
     int version = 1;
 
     /* Adjustment groups, matching the Develop panel's section headers (Basic / Color / Effects).
@@ -559,6 +575,11 @@ struct EditParams {
             p.grainAmount = def.grainAmount;                 // "Grain" (film grain)
             p.grainSize = def.grainSize;
             p.grainRoughness = def.grainRoughness;
+            p.kaleidoSegments = def.kaleidoSegments;         // "Kaleidoscope"
+            p.kaleidoX = def.kaleidoX;
+            p.kaleidoY = def.kaleidoY;
+            p.kaleidoAngle = def.kaleidoAngle;
+            p.kaleidoSource = def.kaleidoSource;
             break;
         case Group::Lens:
             p.lensProfile = def.lensProfile;
@@ -621,6 +642,7 @@ struct EditParams {
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&
+               kaleidoSegments < 2 &&
                curvesAreIdentity() &&
                /* A sample with no shift moves no pixel, but it IS the user's work: count
                   it, or the sidecar is never written and the sample is gone on return. */

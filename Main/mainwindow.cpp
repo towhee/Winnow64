@@ -11430,7 +11430,102 @@ static QImage renderDetailRoiImage(const DetailRoiJob &job,
 /* Defined below, next to the other stack predicates; needed here for the mask keys. */
 bool scopeMaskDependsOnBase(const DevelopProperties::StackRenderJob::Scope &L);
 
-QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::StackRenderJob &job,
+/* Effects > Kaleidoscope on any scope of the job (Global or a mask scope). */
+static bool jobHasKaleido(const DevelopProperties::StackRenderJob &job)
+{
+    if (job.global.hasKaleido()) return true;
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        if (L.params.hasKaleido()) return true;
+    return false;
+}
+
+/* Switch every kaleidoscope in the job off (settings kept), for a render that has to
+   show the unfolded frame (MW::developKaleidoSuppressed). Returns whether any was on. */
+static bool stripKaleidos(DevelopProperties::StackRenderJob &job)
+{
+    bool any = false;
+    if (job.global.hasKaleido()) { job.global.kaleidoSegments = 0; any = true; }
+    for (DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        if (L.params.hasKaleido()) { L.params.kaleidoSegments = 0; any = true; }
+    return any;
+}
+
+/* A scope's proxy/full-res coverage buffer (src.width x src.height, UNROTATED, as
+   buildMaskBuffer makes it) carried into the frame the kaleidoscope folds: oriented like
+   the composite, through the same geometry stage, at the frame's size. The geometry is
+   resolution-independent (normalized crop, proportional straighten / warp), so running
+   it at the mask's own resolution and scaling after lands on the same pixels. */
+static QImage kaleidoMaskInFrame(const std::vector<float> &mask, int mw, int mh,
+                                 int degrees, const Geometry &geometry, QSize frame,
+                                 bool smooth)
+{
+    if (mw <= 0 || mh <= 0 || mask.size() != size_t(mw) * size_t(mh)) return QImage();
+    QImage m(mw, mh, QImage::Format_Grayscale8);
+    for (int y = 0; y < mh; ++y) {
+        uchar *row = m.scanLine(y);
+        const float *src = mask.data() + size_t(y) * mw;
+        for (int x = 0; x < mw; ++x)
+            row[x] = uchar(std::clamp(src[x], 0.0f, 1.0f) * 255.0f + 0.5f);
+    }
+    const Qt::TransformationMode mode =
+        smooth ? Qt::SmoothTransformation : Qt::FastTransformation;
+    if (degrees != 0) {
+        QTransform t;
+        t.rotate(degrees);
+        m = m.transformed(t, mode);
+    }
+    if (!geometry.isIdentity()) m = CropTransform::applyGeometry(m, geometry);
+    if (m.size() != frame) m = m.scaled(frame, Qt::IgnoreAspectRatio, mode);
+    return m;
+}
+
+/* "Hide global image": acc |= cov (both Grayscale8, the same size), as coverage unions
+   -- a + b - ab -- so two soft edges overlapping do not leave a seam. */
+static void unionCoverage(QImage &acc, const QImage &cov)
+{
+    const QImage c = cov.convertToFormat(QImage::Format_Grayscale8);
+    if (c.size() != acc.size()) return;
+    for (int y = 0; y < acc.height(); ++y) {
+        uchar *a = acc.scanLine(y);
+        const uchar *b = c.constScanLine(y);
+        for (int x = 0; x < acc.width(); ++x)
+            a[x] = uchar(a[x] + b[x] - (a[x] * b[x] + 127) / 255);
+    }
+}
+
+/* "Hide global image": cut the frame out to its coverage. PREMULTIPLIED, so wherever
+   the alpha is dropped (a JPEG export, a devPreview) the hidden part is black rather
+   than the photo it was hiding; the loupe shows its own background through it. Keeps
+   the bit depth: a 16-bit export stays 16-bit. */
+static QImage cutOutToCoverage(const QImage &frame, const QImage &alpha)
+{
+    const QImage a8 = alpha.convertToFormat(QImage::Format_Grayscale8);
+    if (frame.isNull() || a8.size() != frame.size()) return frame;
+    const bool deep = frame.depth() == 64;
+    QImage out = frame.convertToFormat(deep ? QImage::Format_RGBA64_Premultiplied
+                                            : QImage::Format_ARGB32_Premultiplied);
+    for (int y = 0; y < out.height(); ++y) {
+        const uchar *a = a8.constScanLine(y);
+        if (deep) {
+            quint16 *p = reinterpret_cast<quint16 *>(out.scanLine(y));
+            for (int x = 0; x < out.width(); ++x, p += 4)
+                for (int c = 0; c < 4; ++c) p[c] = quint16((p[c] * a[x] + 127) / 255);
+        }
+        else {
+            QRgb *p = reinterpret_cast<QRgb *>(out.scanLine(y));
+            for (int x = 0; x < out.width(); ++x) {
+                const int t = a[x];
+                p[x] = qRgba((qRed(p[x]) * t + 127) / 255, (qGreen(p[x]) * t + 127) / 255,
+                             (qBlue(p[x]) * t + 127) / 255, (qAlpha(p[x]) * t + 127) / 255);
+            }
+        }
+    }
+    return out;
+}
+
+
+QImage developCompositeStack(const WorkingImage &src,
+                             const DevelopProperties::StackRenderJob &jobIn,
                              int degrees, bool fullRes, int fullW, int fullH, const QString &fPath,
                              WorkingImageCache::RenderTimings *timings = nullptr,
                              WorkingImageCache::OutDepth depth =
@@ -11443,6 +11538,24 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                              const QByteArray &baseKey = QByteArray(),
                              DetailRoiJob *roiJob = nullptr)
 {
+    /* Effects > Kaleidoscope is a GEOMETRIC op folded after the geometry stage (bottom of
+       this function), so the develop never sees it: the job is rendered with every
+       kaleidoscope switched off. That also keeps the per-scope cache keys (paramsToJson)
+       still while a kaleidoscope is dragged, so a centre drag re-folds a cached frame
+       instead of re-developing the stack. */
+    DevelopProperties::StackRenderJob stripped;
+    const bool folds = jobHasKaleido(jobIn);
+    if (folds) {
+        stripped = jobIn;
+        stripKaleidos(stripped);
+    }
+    const DevelopProperties::StackRenderJob &job = folds ? stripped : jobIn;
+    /* The masked scopes' coverage, kept from the composite for their folds and for
+       "Hide global image" below (index = scope; null for a scope without a mask, or one
+       neither step needs). */
+    std::vector<std::shared_ptr<const std::vector<float>>> foldMasks(
+        size_t(jobIn.scopes.size()));
+
     /* An interactive (proxy) render is normally left at PROXY resolution -- the loupe
        stretches it (ScaledPixmapItem) instead of this function allocating and filling a
        full-dimension QImage on every drag tick. *displaySize reports the size it stands
@@ -11560,6 +11673,8 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
                 }
             }
             if (cache) cache->setParamsKey(i, paramsKeys[i]);
+            if (jobIn.hideGlobal || jobIn.scopes.at(int(i)).params.hasKaleido())
+                foldMasks[i] = s.mask;
             sl.push_back(std::move(s));
         }
         if (timings) timings->maskBuildMs = probe.restart();
@@ -11631,30 +11746,74 @@ QImage developCompositeStack(const WorkingImage &src, const DevelopProperties::S
        orientation -- on the full-output-dimension image, so the crop dims match for the
        proxy and the full-res render. Callers pass identity geometry while the crop tool
        is being edited (the loupe then shows the full frame for the overlay). */
-    if (!out.isNull() && !job.geometry.isIdentity()) {
-        if (!fullRes && job.geometry.hasKaleido()) {
-            /* The kaleidoscope is a per-pixel fold, and on an interactive tick it would
-               run at FULL output size (see the upscale note at the top). Fold at proxy
-               resolution instead and stretch back, so the output keeps the dimensions
-               the settle render will have while a centre drag stays cheap. */
-            Geometry g = job.geometry;
-            g.suppressKaleido();
-            out = CropTransform::applyGeometry(out, g);
+    if (!out.isNull() && !job.geometry.isIdentity())
+        out = CropTransform::applyGeometry(out, job.geometry);
+
+    /* Effects > Kaleidoscope, after the geometry so the crop chooses what is mirrored.
+       Each mask scope's, in stack order, folds only its masked pixels (the unmasked
+       part is transparent) and lays them over the frame; a scope with no mask folds the
+       whole frame; Global's folds the whole frame LAST, over everything.
+
+       Then "Hide global image" (job.hideGlobal): the frame is cut out to the UNION of
+       what the mask scopes show -- each one's coverage, folded where its kaleidoscope
+       laid it, and the whole union folded again by Global's -- so a mirrored subject
+       stays visible with nothing else around it. */
+    if (!out.isNull() && (folds || jobIn.hideGlobal)) {
+        const bool hide = jobIn.hideGlobal;
+        /* An interactive tick whose geometry forced the full-size upscale (see the note
+           at the top) folds at proxy resolution and stretches back, so the output keeps
+           the settle render's dimensions while a centre drag stays cheap. */
+        double s = 1.0;
+        if (!fullRes && upscale) {
             const double fullLong = std::max(fullW, fullH);
-            const double s = fullLong > 0.0
-                ? std::min(1.0, std::max(src.width, src.height) / fullLong) : 1.0;
-            if (s < 0.999) {
-                const QSize full = out.size();
-                const QSize small(qMax(2, qRound(full.width() * s)),
-                                  qMax(2, qRound(full.height() * s)));
-                out = CropTransform::applyKaleidoscope(
-                          out.scaled(small, Qt::IgnoreAspectRatio, Qt::FastTransformation),
-                          job.geometry)
-                          .scaled(full, Qt::IgnoreAspectRatio, Qt::FastTransformation);
-            }
-            else out = CropTransform::applyKaleidoscope(out, job.geometry);
+            if (fullLong > 0.0)
+                s = std::min(1.0, std::max(src.width, src.height) / fullLong);
         }
-        else out = CropTransform::applyGeometry(out, job.geometry);
+        const QSize full = out.size();
+        QImage frame = out;
+        if (s < 0.999)
+            frame = frame.scaled(qMax(2, qRound(full.width() * s)),
+                                 qMax(2, qRound(full.height() * s)),
+                                 Qt::IgnoreAspectRatio, Qt::FastTransformation);
+        QImage alpha;                       // hide: what the mask scopes show, so far
+        if (hide) {
+            alpha = QImage(frame.size(), QImage::Format_Grayscale8);
+            alpha.fill(0);
+        }
+        for (int i = 0; i < jobIn.scopes.size(); ++i) {
+            const EditParams &p = jobIn.scopes.at(i).params;
+            const bool fold = p.hasKaleido();
+            if (!fold && !hide) continue;
+            const std::shared_ptr<const std::vector<float>> &m = foldMasks[size_t(i)];
+            /* No mask: the scope covers the whole frame. */
+            const QImage cov = m ? kaleidoMaskInFrame(*m, src.width, src.height, degrees,
+                                                      job.geometry, frame.size(), fullRes)
+                                 : QImage();
+            if (m && cov.isNull()) continue;
+            if (fold) {
+                const CropTransform::Kaleido k = CropTransform::Kaleido::from(p);
+                if (cov.isNull()) {
+                    frame = CropTransform::applyKaleidoscope(frame, k);
+                    if (hide) alpha.fill(255);
+                }
+                else {
+                    frame = CropTransform::applyKaleidoscopeMasked(frame, cov, k);
+                    if (hide) unionCoverage(alpha, CropTransform::applyKaleidoscope(cov, k));
+                }
+            }
+            else if (cov.isNull()) alpha.fill(255);
+            else unionCoverage(alpha, cov);
+        }
+        if (jobIn.global.hasKaleido()) {
+            const CropTransform::Kaleido k = CropTransform::Kaleido::from(jobIn.global);
+            frame = CropTransform::applyKaleidoscope(frame, k);
+            if (hide)
+                alpha = CropTransform::applyKaleidoscope(alpha, k)
+                            .convertToFormat(QImage::Format_Grayscale8);
+        }
+        if (hide) frame = cutOutToCoverage(frame, alpha);
+        out = (frame.size() == full)
+            ? frame : frame.scaled(full, Qt::IgnoreAspectRatio, Qt::FastTransformation);
     }
     return out;
 }
@@ -13004,7 +13163,7 @@ static bool sameDevelopGeometry(const Geometry &a, const Geometry &b)
     if (a.cropX != b.cropX || a.cropY != b.cropY ||
         a.cropW != b.cropW || a.cropH != b.cropH ||
         a.straighten != b.straighten || a.hasWarp != b.hasWarp ||
-        a.show != b.show || !a.kaleidoEquals(b)) return false;
+        a.show != b.show || a.renderFolds != b.renderFolds) return false;
     if (a.hasWarp)
         for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
     return true;
@@ -13060,8 +13219,9 @@ void MW::renderDevelopPreview(bool fullRes)
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
-    const bool kaleidoSuppressed = mj.geometry.hasKaleido() && developKaleidoSuppressed();
-    if (kaleidoSuppressed) mj.geometry.suppressKaleido();
+    const bool kaleidoSuppressed = jobHasKaleido(mj) && developKaleidoSuppressed();
+    if (kaleidoSuppressed) stripKaleidos(mj);
+    mj.geometry.renderFolds = jobHasKaleido(mj);     // see Geometry::renderFolds
 
     /* Reuse the cached pre-develop (full-res) WorkingImage. RAW always caches it at decode;
        non-raw caches it the first time it is developed. */
@@ -13198,7 +13358,11 @@ void MW::renderDevelopPreview(bool fullRes)
     bool cacheSurvived = false;             // [DevTime] probe only
     QByteArray baseKey;
     if (!fullRes) {
-        baseKey = QJsonDocument(EditStack::paramsToJson(mj.global))
+        /* Without the kaleidoscope: it is folded after the develop
+           (developCompositeStack), so it does not change the base. */
+        EditParams baseParams = mj.global;
+        baseParams.kaleidoSegments = 0;
+        baseKey = QJsonDocument(EditStack::paramsToJson(baseParams))
                       .toJson(QJsonDocument::Compact);
         /* Global's Visualize Range changes the base pixels but not its JSON. */
         if (mj.global.pointColorVisualize >= 0)
@@ -13658,8 +13822,9 @@ void MW::renderDevelopFullResAsync()
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
         mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
     }
-    const bool kaleidoSuppressed = mj.geometry.hasKaleido() && developKaleidoSuppressed();
-    if (kaleidoSuppressed) mj.geometry.suppressKaleido();
+    const bool kaleidoSuppressed = jobHasKaleido(mj) && developKaleidoSuppressed();
+    if (kaleidoSuppressed) stripKaleidos(mj);
+    mj.geometry.renderFolds = jobHasKaleido(mj);     // see Geometry::renderFolds
     /* Pair the frame with whether it actually depicts the STORED recipe, captured here on
        the GUI thread with the job because the view overrides it reflects can change while
        the render is in flight (same reason as the proxy path). Suppressing the crop for an
@@ -13958,11 +14123,12 @@ Geometry MW::developRenderGeometry() const
     suppressed while the crop tool is editing (see renderDevelopPreview).
 */
     if (!developProperties) return Geometry();
-    Geometry g = developProperties->stackJob().geometry;
+    const DevelopProperties::StackRenderJob job = developProperties->stackJob();
+    Geometry g = job.geometry;
     if (developCropEditing && !developCropShowResult) {
         g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
     }
-    if (g.hasKaleido() && developKaleidoSuppressed()) g.suppressKaleido();
+    g.renderFolds = jobHasKaleido(job) && !developKaleidoSuppressed();
     return g;
 }
 
@@ -15802,12 +15968,8 @@ void MW::cancelDevelopTransform()
     if (!developTransformVisible || !developCropEditing) return;
 
     if (imageView) imageView->endCropEdit();     // drop overlay; do NOT commit cropRect()
-    if (developProperties) {
-        /* The kaleidoscope is an Effect, not part of the session: keep it as it is now. */
-        Geometry g = developCropGeometryBackup;
-        g.copyKaleidoFrom(developProperties->currentGeometry());
-        developProperties->setCurrentGeometry(g);      // revert crop/straighten/warp
-    }
+    if (developProperties)
+        developProperties->setCurrentGeometry(developCropGeometryBackup);   // revert
     developCropEditing = false;
     developCropShowResult = false;
 
@@ -15918,38 +16080,24 @@ void MW::setDevelopTransformMode(int mode)
     }
 }
 
-void MW::setDevelopKaleido(const Geometry &g)
-{
-/*
-    The one writer for the kaleidoscope (Effects > Kaleidoscope sliders and the canvas
-    handles): the image's geometry, the Effects sliders, the render, the handles.
-*/
-    if (G::isLogger) G::log("MW::setDevelopKaleido");
-    if (!developProperties) return;
-    if (!g.kaleidoEquals(developProperties->currentGeometry()))
-        developProperties->setCurrentGeometry(g);
-    developProperties->syncKaleidoSliders();
-    renderDevelopPreview(false);
-    syncDevelopKaleidoOverlay();
-}
-
 void MW::syncDevelopKaleidoOverlay()
 {
 /*
-    Show the kaleidoscope's centre / angle handles exactly while Effects > Kaleidoscope is
-    the effect on show (DevelopProperties::kaleidoToolWanted: Global scope, Effects
-    expanded, Kaleidoscope chosen) AND the loupe shows the folded result -- in Develop,
-    the kaleidoscope on, no Transform session (it owns the canvas and shows the unfolded
-    frame) and nothing that needs the unfolded frame (a mask tool / tint, the spot brush).
-    Called from every one of those edges; also re-syncs the handles to the stored values.
+    Show the ACTIVE scope's kaleidoscope centre / angle handles exactly while Effects >
+    Kaleidoscope is the effect on show (DevelopProperties::kaleidoToolWanted: Effects
+    expanded, Kaleidoscope chosen, the eyes open) AND the loupe shows the folded result
+    -- in Develop, that kaleidoscope on, no Transform session (it owns the canvas and
+    shows the unfolded frame) and nothing that needs the unfolded frame (a mask tool /
+    tint, the spot brush). Called from every one of those edges; also re-syncs the
+    handles to the stored values.
 */
     if (!imageView) return;
-    const Geometry g = developProperties ? developProperties->currentGeometry() : Geometry();
+    const EditParams p = developProperties ? developProperties->kaleidoParams() : EditParams();
     const bool want = developProperties && G::operationMode == G::OperationMode::Develop
-                      && developProperties->kaleidoToolWanted() && g.hasKaleido()
+                      && developProperties->kaleidoToolWanted() && p.hasKaleido()
                       && !developCropEditing && !developKaleidoSuppressed();
-    if (want) imageView->beginKaleido(QPointF(g.kaleidoX, g.kaleidoY), g.kaleidoAngle,
-                                      g.kaleidoSegments);
+    if (want) imageView->beginKaleido(QPointF(p.kaleidoX, p.kaleidoY), p.kaleidoAngle,
+                                      p.kaleidoSegments);
     else      imageView->endKaleido();
 }
 

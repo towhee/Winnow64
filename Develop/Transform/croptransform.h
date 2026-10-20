@@ -26,7 +26,8 @@ namespace CropTransform {
 QImage rectifyPerspective(const QImage &src, const QPointF quad[4], QRectF &outCropNorm);
 
 /*
-    Apply a stored Geometry (straighten -> warp -> crop) to a developed/oriented image. This is the
+    Apply a stored Geometry (straighten -> warp -> crop) to a developed/oriented image.
+    The kaleidoscope is NOT part of it (it is a per-scope Effect -- applyKaleidoscope*). This is the
     geometry-last render stage: the develop pipeline calls it after the develop ops + EXIF rotation,
     and it is the same transform used for display and export. Returns src unchanged when the
     geometry is identity; the crop-only case is a fast QImage::copy of the sub-rectangle.
@@ -34,22 +35,53 @@ QImage rectifyPerspective(const QImage &src, const QPointF quad[4], QRectF &outC
 QImage applyGeometry(const QImage &src, const Geometry &g);
 
 /*
-    The kaleidoscope fold, the last step of applyGeometry (after the crop). Every output
-    pixel is put in polar form about the centre (g.kaleidoX/Y, normalized in src), its
-    angle is folded into ONE wedge of 360/N degrees -- reflected in every other wedge,
-    so neighbouring wedges meet as mirror images -- and the source is sampled at the same
-    radius along the folded angle (bilinear). A ray that leaves the frame is reflected at
-    the border, so there are no empty corners. Output size and format family match the
-    input (8-bit -> ARGB32, 16-bit -> RGBA64). Returns src unchanged when off.
+    A kaleidoscope's settings, from one scope's EditParams (Effects > Kaleidoscope). The
+    centre is normalized in the frame being folded -- the CROPPED frame, since the fold
+    runs after applyGeometry.
 */
-QImage applyKaleidoscope(const QImage &src, const Geometry &g);
+struct Kaleido {
+    int    segments = 0;            // 0 = off, else even 2..32
+    double x = 0.5, y = 0.5;        // centre, normalized
+    double angle = 0.0;             // deg, y-down: turns the mirror lines + the slice
+    double source = 0.0;            // deg: turns only the sampled slice
+    bool on() const { return segments >= 2; }
+    static Kaleido from(const EditParams &p) {
+        Kaleido k;
+        k.segments = p.kaleidoSegments;
+        k.x = p.kaleidoX; k.y = p.kaleidoY;
+        k.angle = p.kaleidoAngle; k.source = p.kaleidoSource;
+        return k;
+    }
+};
+
+/*
+    The kaleidoscope fold (MW::developCompositeStack runs it after applyGeometry). Every
+    output pixel is put in polar form about the centre, its angle is folded into ONE
+    wedge of 360/N degrees -- reflected in every other wedge, so neighbouring wedges
+    meet as mirror images -- and the source is sampled at the same radius along the
+    folded angle (bilinear). A ray that leaves the frame is reflected at the border, so
+    there are no empty corners. Output size and format family match the input (8-bit ->
+    ARGB32, 16-bit -> RGBA64). Returns src unchanged when off.
+*/
+QImage applyKaleidoscope(const QImage &src, const Kaleido &k);
+
+/*
+    The MASKED fold (a mask scope's kaleidoscope): only the masked pixels are folded --
+    the unmasked part of the frame is treated as transparent -- and the result is laid
+    over the frame. mask is the scope's coverage in the SAME (cropped) frame, any format
+    (read as grey, 0..255), the same size as frame. Folding colour and coverage with the
+    one map and blending by the folded coverage is lerp(frame, fold(frame), fold(mask)),
+    which equals fold(frame x mask) over the frame except within a bilinear tap of a hard
+    mask edge. Returns frame unchanged when off or when the mask does not match.
+*/
+QImage applyKaleidoscopeMasked(const QImage &frame, const QImage &mask, const Kaleido &k);
 
 /*
     The POINT form of the fold: where in the kaleidoscope's INPUT (the cropped frame,
     normalized) the output point outN samples. Lets a picker clicked on the mirrored
     image find the photo pixel it is really looking at.
 */
-QPointF kaleidoSourceNorm(QPointF outN, double W, double H, const Geometry &g);
+QPointF kaleidoSourceNorm(QPointF outN, double W, double H, const Kaleido &k);
 
 /*
     The POINT twin of applyGeometry: the transform a pixel undergoes in the geometry

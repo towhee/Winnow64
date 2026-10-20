@@ -18,8 +18,8 @@ detail sharpening puts back.</p>
 
 <h2>Choosing an effect</h2>
 <p>The list at the top of the panel picks the effect to work on, and only that effect's
-sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b> or, on the Global
-scope, <b>Kaleidoscope</b>.</p>
+sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b> or
+<b>Kaleidoscope</b>.</p>
 
 <p>Every effect is always applied, whichever one is showing: the list only chooses which
 sliders you see.  An effect marked <b>*</b> in the list has been changed, so you can tell
@@ -63,8 +63,16 @@ skies and disguises the plastic texture that heavy noise reduction leaves behind
 <h2>Kaleidoscope</h2>
 <p>Mirrors the picture around a centre point, the way a kaleidoscope does: the frame is
 divided into wedges, and each one shows the same slice of the photo, every other wedge
-reflected so the seams always meet as mirror images.  It is on the <b>Global</b> scope
-only, because it rearranges the whole picture.</p>
+reflected so the seams always meet as mirror images.</p>
+
+<p>On the <b>Global</b> scope it mirrors the whole picture.  On a <b>mask</b> scope it
+mirrors only what the mask covers: everything outside the mask is treated as transparent,
+and the mirrored result is laid over the photo.  Mask a flower, and the flower is repeated
+around the centre over the unchanged picture.  Only masked content inside the slice being
+mirrored shows up, so if nothing appears, turn <b>Source</b> or <b>Angle</b>, or move the
+centre, until the slice takes in your subject.  Each scope has its own kaleidoscope, and a
+mask scope's adjustments come with it: brighten the flower in that scope and the
+reflections are bright too.</p>
 
 <ul>
 <li><b>Segments</b> is the number of wedges, in even numbers so every seam is a mirror
@@ -75,7 +83,8 @@ mirror across one line.</li>
 pattern, so the design stays put while its content changes.</li>
 </ul>
 
-<p>While Kaleidoscope is the effect showing and it is on, its handles are on the image:
+<p>While Kaleidoscope is the effect showing and it is on for the selected scope, its
+handles are on the image:
 drag the white <b>centre</b>, or click anywhere on the image to move the centre there, and
 drag the yellow <b>spoke</b> to turn the mirror lines (hold <b>Shift</b> to snap to 15
 degree steps).  The faint dashed lines are the seams between the wedges.  Choose another
@@ -95,8 +104,7 @@ Roughness 50, both Amounts 0).</li>
 ten.</li>
 <li>The section's <b>[&#8942;]</b> menu has <b>Show Effects changes</b> (a before / after
 that keeps your values) and <b>Reset Effects</b>.</li>
-<li>On Global, <b>Reset Effects</b> turns the kaleidoscope off too, and the eye hides
-it.</li>
+<li><b>Reset Effects</b> turns the kaleidoscope off too, and the eye hides it.</li>
 <li>The header reads <b>Effects *</b> when anything in the panel is off its default,
 and the list marks which effect it is.</li>
 </ul>
@@ -112,8 +120,8 @@ perspective in the Transform panel: it folds the finished, cropped picture.</p>
 
 <h2>What is saved</h2>
 <p>Every value is part of the develop recipe, stored in the sidecar, and travels with
-presets, Copy / Paste Settings, History and multi-image editing.  Vignette and grain are
-stored per scope; the kaleidoscope is stored once for the whole image, with the crop.</p>
+presets, Copy / Paste Settings, History and multi-image editing.  All three are stored
+per scope, so each mask can have its own.</p>
 
 </body>
 </html>

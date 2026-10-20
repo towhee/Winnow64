@@ -2970,22 +2970,12 @@ void MW::createDevelopDock()
     connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
     /* Per-row reset: clear just the crop / straighten / warp contribution. */
     connect(transformPanel, &TransformPanel::resetModeRequested, this, &MW::resetDevelopTransformMode);
-    /* Kaleidoscope (Effects): the canvas handles and the Effects sliders both write the
-       geometry through setDevelopKaleido (history merges a drag into one row). */
-    connect(imageView, &ImageView::kaleidoEdited, this,
+    /* Kaleidoscope (Effects, per scope): a canvas handle drag writes the ACTIVE scope's
+       centre / angle (history merges the drag into one row); the sliders write theirs in
+       DevelopProperties::itemChange. Both re-render through paramsChanged. */
+    connect(imageView, &ImageView::kaleidoEdited, developProperties,
             [this](double x, double y, double angleDeg, bool){
-        if (!developProperties) return;
-        Geometry g = developProperties->currentGeometry();
-        g.kaleidoX = x; g.kaleidoY = y; g.kaleidoAngle = angleDeg;
-        setDevelopKaleido(g);
-    });
-    connect(developProperties, &DevelopProperties::kaleidoEdited, this,
-            [this](int segments, double angleDeg, double sourceDeg){
-        Geometry g = developProperties->currentGeometry();
-        g.kaleidoSegments = segments;
-        g.kaleidoAngle = angleDeg;
-        g.kaleidoSource = sourceDeg;
-        setDevelopKaleido(g);
+        developProperties->setKaleidoHandles(x, y, angleDeg);
     });
     /* Effects > Kaleidoscope came into or out of view (chosen in the dropdown, Effects
        expanded / collapsed, scope or image changed): the handles follow it. */
@@ -2996,7 +2986,7 @@ void MW::createDevelopDock()
        state changes, which should finish before a render reads them. */
     connect(imageView, &ImageView::unfoldedFrameNeedChanged, this, [this]{
         if (!developProperties || G::operationMode != G::OperationMode::Develop) return;
-        if (developProperties->currentGeometry().hasKaleido()) renderDevelopPreview(false);
+        if (developProperties->stackHasKaleido()) renderDevelopPreview(false);
         syncDevelopKaleidoOverlay();     // the handles go with the fold
     }, Qt::QueuedConnection);
     /* Transform Preview eye: a LIVE result toggle while the crop tool is active. ON = commit the
@@ -3032,10 +3022,7 @@ void MW::createDevelopDock()
        return to editing on the full frame. */
     connect(transformPanel, &TransformPanel::resetRequested, this, [this]{
         if (!developProperties) return;
-        /* Identity, but the kaleidoscope is an Effect, not a transform: it stays. */
-        Geometry identity;
-        identity.copyKaleidoFrom(developProperties->currentGeometry());
-        developProperties->setCurrentGeometry(identity);
+        developProperties->setCurrentGeometry(Geometry());      // identity
         transformPanel->resetCropState();       // free aspect + no lock/flip, else the full frame re-fits to them
         transformPanel->setLevelAngle(0.0);     // clear the straighten field
         developCropShowResult = false;

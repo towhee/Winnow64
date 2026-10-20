@@ -79,6 +79,8 @@ public:
        mask-overlay menu (see the class comment), but DevelopProperties still pushes the
        state and reads it back. */
     void setPreviewShown(bool shown) { previewShown = shown; }
+    /* Tick state of the menu's "Hide global image" (EditScope::hideImage on Global). */
+    void setGlobalImageHidden(bool hidden) { globalImageHidden = hidden; }
     void setGlobalActive(bool isGlobal) { globalActive = isGlobal; }
     void setMaskOverlayAvailable(bool available) { maskOverlayAvailable = available; }
     void setMaskOverlayShown(bool shown) { maskOverlayShown = shown; }
@@ -106,6 +108,7 @@ signals:
     void removeScopeRequested();                 // menu: remove the selected scope
     void addScopeRequested();                    // [+] / menu: add a new scope
     void resetAllEditsRequested();               // menu: wipe every edit on this image
+    void hideGlobalImageToggled(bool hide);      // menu: "Hide global image"
     void addMaskRequested();                     // menu: add a mask tool to this scope
     void maskOverlayToggled();                   // show/hide the mask overlay
     void previewToggled(bool shown);             // show/ignore the whole scope
@@ -160,6 +163,7 @@ private:
     QVector<bool> enabledStates;
     int  activeIndex  = 0;
     bool previewShown = true;
+    bool globalImageHidden = false;
     bool collapsed    = false;             // setCollapsed state (inert)
     bool editsCollapsed = false;           // the bar's arrow: details below hidden
     bool globalActive = true;

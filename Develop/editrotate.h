@@ -35,7 +35,7 @@
       brush / spot sizes                          unchanged (fraction of the long edge)
       straighten                                  unchanged (a rotation about the centre
                                                   commutes with a quarter turn)
-      kaleidoscope centre                         rotated (a point in the cropped frame,
+      kaleidoscope centre (every scope's params)  rotated (a point in the cropped frame,
                                                   which turns with the photo)
       kaleidoscope angle                          + the turn (y-down degrees, so clockwise
                                                   is +90), wrapped to -180..180; the source
@@ -182,15 +182,32 @@ inline void geometry(Geometry &g, int degrees)
         q[i * 2 + 1] = p.y();
     }
     for (int i = 0; i < 8; ++i) g.quad[i] = q[i];
+}
 
-    // kaleidoscope: the centre is a point; the mirror lines turn with the photo
-    const QPointF kc = point(g.kaleidoX, g.kaleidoY, degrees);
-    g.kaleidoX = kc.x();
-    g.kaleidoY = kc.y();
-    double a = g.kaleidoAngle + (degrees == 270 ? -90.0 : double(degrees));
-    if (a > 180.0) a -= 360.0;
-    if (a <= -180.0) a += 360.0;
-    g.kaleidoAngle = a;
+/* A scope's kaleidoscope (Effects): the centre is a point in the cropped frame; the
+   mirror lines turn with the photo. Turned whether or not it is on, like the quad, so
+   switching it back on still matches the photo -- but settings still at their DEFAULTS
+   are left alone, or every untouched scope would come out with a 90 degree angle and
+   read as edited. Returns whether an ON kaleidoscope moved. */
+inline bool kaleido(EditParams &p, int degrees)
+{
+    if (!isRotation(degrees)) return false;
+    const EditParams def;
+    if (p.kaleidoSegments == def.kaleidoSegments && p.kaleidoX == def.kaleidoX &&
+        p.kaleidoY == def.kaleidoY && p.kaleidoAngle == def.kaleidoAngle &&
+        p.kaleidoSource == def.kaleidoSource) return false;
+    const EditParams before = p;
+    const QPointF kc = point(p.kaleidoX, p.kaleidoY, degrees);
+    p.kaleidoX = float(kc.x());
+    p.kaleidoY = float(kc.y());
+    float a = p.kaleidoAngle + (degrees == 270 ? -90.0f : float(degrees));
+    if (a > 180.0f) a -= 360.0f;
+    if (a <= -180.0f) a += 360.0f;
+    p.kaleidoAngle = a;
+    /* Only an ON kaleidoscope counts as moved: an untouched recipe needs no write. */
+    return p.hasKaleido() && (before.kaleidoX != p.kaleidoX ||
+                              before.kaleidoY != p.kaleidoY ||
+                              before.kaleidoAngle != p.kaleidoAngle);
 }
 
 /* The whole recipe. Returns whether anything positional was there to move, so the
@@ -200,6 +217,7 @@ inline bool stack(EditStack &s, int degrees)
     if (!isRotation(degrees)) return false;
     bool moved = false;
     for (EditScope &scope : s.scopes) {
+        moved |= kaleido(scope.params, degrees);
         for (MaskComponent &m : scope.components) {
             const QString after = maskParams(m.tool, m.paramsJson, degrees);
             if (after != m.paramsJson) { m.paramsJson = after; moved = true; }
@@ -217,7 +235,6 @@ inline bool stack(EditStack &s, int degrees)
     moved |= before.cropX != s.geometry.cropX || before.cropY != s.geometry.cropY
              || before.cropW != s.geometry.cropW || before.cropH != s.geometry.cropH;
     for (int i = 0; i < 8; ++i) moved |= before.quad[i] != s.geometry.quad[i];
-    moved |= !before.kaleidoEquals(s.geometry);
     return moved;
 }
 

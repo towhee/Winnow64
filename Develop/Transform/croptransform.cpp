@@ -101,12 +101,29 @@ inline float reflectCoord(float v, int len)
 struct KaleidoFold {
     float cx, cy, a, s, wedge;
     int n;
-    KaleidoFold(const Geometry &g, double W, double H)
-        : cx(float(g.kaleidoX * W)), cy(float(g.kaleidoY * H)),
-          a(float(g.kaleidoAngle * 0.017453292519943295)),
-          s(float(g.kaleidoSource * 0.017453292519943295)),
-          wedge(float(6.283185307179586 / std::max(2, g.kaleidoSegments))),
-          n(std::max(2, g.kaleidoSegments)) {}
+    KaleidoFold(const CropTransform::Kaleido &k, double W, double H)
+        : cx(float(k.x * W)), cy(float(k.y * H)),
+          a(float(k.angle * 0.017453292519943295)),
+          s(float(k.source * 0.017453292519943295)),
+          wedge(float(6.283185307179586 / std::max(2, k.segments))),
+          n(std::max(2, k.segments)) {}
+    /* One strip's remap coordinates (rows y0 .. y0 + rows - 1 of a W x H frame), with
+       the border reflection folded in. */
+    void strip(int y0, int rows, int W, int H, cv::Mat &mapX, cv::Mat &mapY) const {
+        mapX.create(rows, W, CV_32F);
+        mapY.create(rows, W, CV_32F);
+        for (int r = 0; r < rows; ++r) {
+            float *mx = mapX.ptr<float>(r);
+            float *my = mapY.ptr<float>(r);
+            const float y = float(y0 + r) + 0.5f;
+            for (int x = 0; x < W; ++x) {
+                float sx, sy;
+                map(float(x) + 0.5f, y, sx, sy);
+                mx[x] = reflectCoord(sx - 0.5f, W);
+                my[x] = reflectCoord(sy - 0.5f, H);
+            }
+        }
+    }
     inline void map(float x, float y, float &sx, float &sy) const {
         const float dx = x - cx, dy = y - cy;
         const float r = std::sqrt(dx * dx + dy * dy);
@@ -252,15 +269,12 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
                               .toRect().intersected(img.rect());
         if (cri.isValid() && cri != img.rect()) img = img.copy(cri);
     }
-
-    /* 4) Kaleidoscope: folds the cropped frame, so the crop chooses what is mirrored. */
-    if (g.hasKaleido()) img = applyKaleidoscope(img, g);
     return img;
 }
 
-QImage CropTransform::applyKaleidoscope(const QImage &src, const Geometry &g)
+QImage CropTransform::applyKaleidoscope(const QImage &src, const Kaleido &k)
 {
-    if (src.isNull() || !g.hasKaleido()) return src;
+    if (src.isNull() || !k.on()) return src;
     const int W = src.width(), H = src.height();
     if (W < 2 || H < 2) return src;
 
@@ -272,7 +286,7 @@ QImage CropTransform::applyKaleidoscope(const QImage &src, const Geometry &g)
     /* Strips, each building its own small coordinate maps and remapping straight into
        its rows of dst: no full-frame map pair (2 x 4 bytes x pixels), and every strip
        runs on its own thread. */
-    const KaleidoFold fold(g, W, H);
+    const KaleidoFold fold(k, W, H);
     const int kStrip = 32;
     const int nStrips = (H + kStrip - 1) / kStrip;
     cv::parallel_for_(cv::Range(0, nStrips), [&](const cv::Range &range) {
@@ -280,19 +294,7 @@ QImage CropTransform::applyKaleidoscope(const QImage &src, const Geometry &g)
         for (int si = range.start; si < range.end; ++si) {
             const int y0 = si * kStrip;
             const int rows = std::min(kStrip, H - y0);
-            mapX.create(rows, W, CV_32F);
-            mapY.create(rows, W, CV_32F);
-            for (int r = 0; r < rows; ++r) {
-                float *mx = mapX.ptr<float>(r);
-                float *my = mapY.ptr<float>(r);
-                const float y = float(y0 + r) + 0.5f;
-                for (int x = 0; x < W; ++x) {
-                    float sx, sy;
-                    fold.map(float(x) + 0.5f, y, sx, sy);
-                    mx[x] = reflectCoord(sx - 0.5f, W);
-                    my[x] = reflectCoord(sy - 0.5f, H);
-                }
-            }
+            fold.strip(y0, rows, W, H, mapX, mapY);
             cv::Mat roi = dst.rowRange(y0, y0 + rows);
             cv::remap(in, roi, mapX, mapY, cv::INTER_LINEAR, cv::BORDER_REPLICATE);
         }
@@ -300,11 +302,70 @@ QImage CropTransform::applyKaleidoscope(const QImage &src, const Geometry &g)
     return out;
 }
 
-QPointF CropTransform::kaleidoSourceNorm(QPointF outN, double W, double H,
-                                         const Geometry &g)
+QImage CropTransform::applyKaleidoscopeMasked(const QImage &frame, const QImage &mask,
+                                              const Kaleido &k)
 {
-    if (!g.hasKaleido() || W < 2.0 || H < 2.0) return outN;
-    const KaleidoFold fold(g, W, H);
+    if (frame.isNull() || !k.on() || mask.size() != frame.size()) return frame;
+    const int W = frame.width(), H = frame.height();
+    if (W < 2 || H < 2) return frame;
+
+    const bool deep = isDeep(frame);
+    const cv::Mat in = deep ? toRgba64(frame) : toBgra(frame);
+    const QImage g8 = mask.convertToFormat(QImage::Format_Grayscale8);
+    const cv::Mat m(H, W, CV_8U, const_cast<uchar *>(g8.bits()), g8.bytesPerLine());
+    QImage out(W, H, deep ? QImage::Format_RGBA64 : QImage::Format_ARGB32);
+    cv::Mat dst(H, W, deep ? CV_16UC4 : CV_8UC4, out.bits(), out.bytesPerLine());
+
+    /* Same strips as applyKaleidoscope; each folds its rows of colour AND coverage with
+       one map pair, then blends: out = frame + (fold(frame) - frame) * fold(mask). */
+    const KaleidoFold fold(k, W, H);
+    const int kStrip = 32;
+    const int nStrips = (H + kStrip - 1) / kStrip;
+    cv::parallel_for_(cv::Range(0, nStrips), [&](const cv::Range &range) {
+        cv::Mat mapX, mapY, fc, fm;
+        for (int si = range.start; si < range.end; ++si) {
+            const int y0 = si * kStrip;
+            const int rows = std::min(kStrip, H - y0);
+            fold.strip(y0, rows, W, H, mapX, mapY);
+            cv::remap(in, fc, mapX, mapY, cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+            cv::remap(m,  fm, mapX, mapY, cv::INTER_LINEAR, cv::BORDER_REPLICATE);
+            for (int r = 0; r < rows; ++r) {
+                const uchar *a = fm.ptr<uchar>(r);
+                if (deep) {
+                    const quint16 *f = fc.ptr<quint16>(r);
+                    const quint16 *b = in.ptr<quint16>(y0 + r);
+                    quint16 *o = dst.ptr<quint16>(y0 + r);
+                    for (int x = 0; x < W; ++x) {
+                        const float t = a[x] * (1.0f / 255.0f);
+                        for (int c = 0; c < 4; ++c) {
+                            const int i = x * 4 + c;
+                            o[i] = quint16(b[i] + (float(f[i]) - b[i]) * t + 0.5f);
+                        }
+                    }
+                }
+                else {
+                    const uchar *f = fc.ptr<uchar>(r);
+                    const uchar *b = in.ptr<uchar>(y0 + r);
+                    uchar *o = dst.ptr<uchar>(y0 + r);
+                    for (int x = 0; x < W; ++x) {
+                        const int t = a[x];               // 0..255, integer blend
+                        for (int c = 0; c < 4; ++c) {
+                            const int i = x * 4 + c;
+                            o[i] = uchar((b[i] * (255 - t) + f[i] * t + 127) / 255);
+                        }
+                    }
+                }
+            }
+        }
+    });
+    return out;
+}
+
+QPointF CropTransform::kaleidoSourceNorm(QPointF outN, double W, double H,
+                                         const Kaleido &k)
+{
+    if (!k.on() || W < 2.0 || H < 2.0) return outN;
+    const KaleidoFold fold(k, W, H);
     float sx, sy;
     fold.map(float(outN.x() * W), float(outN.y() * H), sx, sy);
     const int iw = int(W), ih = int(H);

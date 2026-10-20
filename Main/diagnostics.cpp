@@ -458,6 +458,10 @@ QString MW::developDiagnostics()
                                                        : (p.denoiseRaw ? "on" : "off"));
         rpt << "\n" << indent << "localDenoiseLuma = " << G::s(p.localDenoiseLuma)
             << "   localDenoiseChroma = " << G::s(p.localDenoiseChroma);
+        rpt << "\n" << indent << "kaleidoSegments = " << G::s(p.kaleidoSegments)
+            << "   centre = " << G::s(p.kaleidoX) << ", " << G::s(p.kaleidoY)
+            << "   angle = " << G::s(p.kaleidoAngle)
+            << "   source = " << G::s(p.kaleidoSource);
     };
     auto dims = [](const std::shared_ptr<const WorkingImage> &w) -> QString {
         return w ? QString("%1 x %2").arg(w->width).arg(w->height) : QString("(none)");
@@ -638,15 +642,12 @@ QString MW::developDiagnostics()
     }
     rpt << "\n";
     const Geometry &g = mj.geometry;
-    rpt << "\n" << "GEOMETRY (crop / straighten / warp / kaleidoscope -- applied last)";
+    rpt << "\n" << "GEOMETRY (crop / straighten / warp -- applied last, then kaleidoscopes)";
     rpt << "\n" << "  isIdentity = " << G::s(g.isIdentity()) << "   show = " << G::s(g.show);
     rpt << "\n" << "  crop = x " << G::s(g.cropX) << "  y " << G::s(g.cropY)
         << "  w " << G::s(g.cropW) << "  h " << G::s(g.cropH);
     rpt << "\n" << "  straighten = " << G::s(g.straighten) << " deg"
         << "   hasWarp = " << G::s(g.hasWarp) << "   fillCanvas = " << G::s(g.fillCanvas);
-    rpt << "\n" << "  kaleidoSegments = " << G::s(g.kaleidoSegments)
-        << "   centre = " << G::s(g.kaleidoX) << ", " << G::s(g.kaleidoY)
-        << "   angle = " << G::s(g.kaleidoAngle) << "   source = " << G::s(g.kaleidoSource);
     rpt << "\n";
 
     // DENOISE / PMRID CACHE STATE

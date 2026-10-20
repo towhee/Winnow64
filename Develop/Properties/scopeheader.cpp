@@ -392,6 +392,17 @@ void ScopeHeader::showScopeMenu()
         menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
     }
 
+    /* Global's "Hide global image", offered from every scope's menu: it is most use while
+       a MASK scope is being worked, and it changes no selection. Its own connect, like
+       "Reset all edits" below, so the per-scope dispatch ignores it. */
+    menu.addSeparator();
+    QAction *aHide = menu.addAction(tr("Hide global image"));
+    aHide->setCheckable(true);
+    aHide->setChecked(globalImageHidden);
+    aHide->setToolTip(tr("Show only what the masks cover; the rest is transparent"));
+    connect(aHide, &QAction::triggered, this,
+            [this](bool on){ emit hideGlobalImageToggled(on); });
+
     /* Wipes the whole recipe (every scope, the geometry and the spots), the history and
        the sidecar record, on every selected image. DevelopProperties confirms first.
        It fires through its own connect (no data code), so the per-scope dispatch below

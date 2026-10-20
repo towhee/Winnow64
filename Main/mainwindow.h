@@ -1355,9 +1355,6 @@ private slots:
     void setDevelopLevelAngle(double degrees);
     /* Per-row Transform reset: clear just the crop / straighten / warp (TransformPanel::Mode). */
     void resetDevelopTransformMode(int mode);
-    /* Write a kaleidoscope change into the image's geometry and re-render; also re-syncs
-       the Effects sliders and the canvas handles. */
-    void setDevelopKaleido(const Geometry &g);
     /* Show / hide the kaleidoscope's canvas handles for the current state (see .cpp). */
     void syncDevelopKaleidoOverlay();
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and

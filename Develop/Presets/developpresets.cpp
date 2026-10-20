@@ -513,6 +513,11 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "grainAmount")         p.grainAmount         = f;
     else if (key == "grainSize")           p.grainSize           = f;
     else if (key == "grainRoughness")      p.grainRoughness      = f;
+    else if (key == "kaleidoSegments")     p.kaleidoSegments     = v.toInt();
+    else if (key == "kaleidoX")            p.kaleidoX            = f;
+    else if (key == "kaleidoY")            p.kaleidoY            = f;
+    else if (key == "kaleidoAngle")        p.kaleidoAngle        = f;
+    else if (key == "kaleidoSource")       p.kaleidoSource       = f;
     /* Global-only (always scope 0), listed here so one function covers every raw key. */
     else if (key == "denoiseLuma")         p.denoiseLuma         = f;
     else if (key == "denoiseChroma")       p.denoiseChroma       = f;

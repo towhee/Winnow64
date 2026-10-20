@@ -77,6 +77,9 @@ public:
         QVector<Scope> scopes;                  // masks, in order, enabled only
         Geometry       geometry;       // crop/straighten/warp, applied last
         QVector<FillSpot> spots;       // spot heals, applied before geometry
+        /* "Hide global image" (EditScope::hideImage on Global): only the mask scopes'
+           pixels show, the rest is transparent (developCompositeStack, last). */
+        bool           hideGlobal = false;
     };
     StackRenderJob stackJob();
 
@@ -182,11 +185,19 @@ public:
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
     Geometry currentGeometry() const;
-    /* Effects > Kaleidoscope is on show: Global scope, Effects expanded, Kaleidoscope the
-       chosen effect, Global's Effects eye open. MW shows the canvas handles while this
-       holds and the kaleidoscope is on (MW::syncDevelopKaleidoOverlay). */
+    /* Effects > Kaleidoscope is on show for the ACTIVE scope: Effects expanded,
+       Kaleidoscope the chosen effect, that scope's Effects and Kaleidoscope eyes open.
+       MW shows the canvas handles while this holds and that scope's kaleidoscope is on
+       (MW::syncDevelopKaleidoOverlay). */
     bool kaleidoToolWanted() const;
-    /* Seed the Effects > Kaleidoscope sliders from the current image's geometry. */
+    /* The active scope's stored params (the kaleidoscope the handles edit). */
+    EditParams kaleidoParams() const;
+    /* Any scope of the current image has a kaleidoscope on. */
+    bool stackHasKaleido() const;
+    /* A canvas handle drag: the active scope's centre (normalized in the cropped frame)
+       and mirror angle (deg). One merged history row per drag. */
+    void setKaleidoHandles(double x, double y, double angleDeg);
+    /* Seed the Effects > Kaleidoscope sliders from the active scope's params. */
     void syncKaleidoSliders();
     void     setCurrentGeometry(const Geometry &g);
 
@@ -717,9 +728,6 @@ public slots:
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
-    /* An Effects > Kaleidoscope slider moved: the whole kaleidoscope as it now stands
-       (segments 0 = off, else even 2..32; angles in degrees). MW writes the geometry. */
-    void kaleidoEdited(int segments, double angleDeg, double sourceDeg);
     /* kaleidoToolWanted() may have flipped (effect chosen, section folded, scope or
        image changed, Effects eye): MW re-evaluates the canvas handles. */
     void kaleidoToolChanged();
@@ -890,7 +898,7 @@ private:
     void addDetail();
     void addEffects();
     /* The Effects dropdown: one effect's rows at a time (0 Vignette, 1 Grain, 2
-       Kaleidoscope -- the ids are the combo items' data, and Kaleidoscope is listed on
+       Kaleidoscope -- the ids are the combo items' data; formerly Kaleidoscope was listed on
        the Global scope only). UI state, persisted ("Develop/effectsChoice"); an edited
        effect that is not showing gets " *" on its item (updateSectionHeaderCaptions). */
     int  effectsChoice = 0;
@@ -1186,6 +1194,9 @@ private:
     bool *effectShowFlag(EditScope *l, int effect);   // that effect's eye on a scope
     void toggleEffectShown();
     void resetEffect();
+    /* "Hide global image" (the scope bar's menu): Global's EditScope::hideImage. Only
+       the mask scopes' pixels show; the rest is transparent (developCompositeStack). */
+    void setGlobalImageHidden(bool hide);
 
     void contextMenuEvent(QContextMenuEvent *event) override;   // right-click menu
 

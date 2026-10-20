@@ -1,12 +1,5 @@
 WHAT'S NEW
-- Develop Module
-- Develop History panel
-- Develop Presets panel
-- Go to folder
-- Original/Developed previews
-- Catalog
-- Keywords
-- Map
+- Kaleidoscope effect
 
 BUGS / TO DO
 - /Users/roryhill/Photos/2000-2009/2003/200305_[4524]/20030528_Trent River/DSC_5175.jpg
