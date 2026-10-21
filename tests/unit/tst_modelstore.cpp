@@ -163,21 +163,21 @@ private slots:
     void silentlyRottedModelIsStillRefused()
     {
         const QByteArray body = "0123456789";
-        placeFile("midas.onnx", body);
-        ModelStore::recordDownloaded(Model::Midas, sha(body));
+        placeFile("depth_anything.onnx", body);
+        ModelStore::recordDownloaded(Model::DepthAnything, sha(body));
 
-        const QString path = QDir(ModelStore::dir()).filePath("midas.onnx");
+        const QString path = QDir(ModelStore::dir()).filePath("depth_anything.onnx");
         const QDateTime when = QFileInfo(path).lastModified();
-        placeFile("midas.onnx", "9876543210");               // same length
+        placeFile("depth_anything.onnx", "9876543210");               // same length
         {   // restore the mtime too, so the record still looks current
             QFile f(path);
             QVERIFY(f.open(QIODevice::ReadWrite));
             QVERIFY(f.setFileTime(when, QFileDevice::FileModificationTime));
         }
-        ModelStore::invalidate(Model::Midas);
+        ModelStore::invalidate(Model::DepthAnything);
 
-        QVERIFY(ModelStore::state(Model::Midas) != State::Ready);
-        QVERIFY2(ModelStore::path(Model::Midas).isEmpty(),
+        QVERIFY(ModelStore::state(Model::DepthAnything) != State::Ready);
+        QVERIFY2(ModelStore::path(Model::DepthAnything).isEmpty(),
                  "a file that does not match this build must never be loaded");
     }
 

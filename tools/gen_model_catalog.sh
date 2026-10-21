@@ -35,7 +35,7 @@ MODELS=(
     "u2net|Select Subject|0"
     "skyseg|Select Sky|0"
     "sky_segformer|Select Sky|0"
-    "midas|Depth Range|0"
+    "depth_anything|Depth Range / Lens Blur|0"
     "migan|Spot Heal|0"
     "lama|Spot Heal|0"
     "sam2_encoder|Object Mask|0"

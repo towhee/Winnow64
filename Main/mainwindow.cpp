@@ -34,6 +34,7 @@
 #include "Develop/editrotate.h"     // EditRotate::turnBlur: blur centre/angle -> source
 #include "Develop/artblur.h"        // ArtBlur::reach: the Detail patch's padding
 #include "Develop/depthmask.h"
+#include "Develop/lensblur.h"       // Lens > Lens Blur, on the composited frame
 #include "Develop/objectmask.h"
 #include "Develop/develop.h"
 #include "Utilities/screensampler.h"
@@ -2007,6 +2008,13 @@ bool MW::developShortcutIntercept(QEvent *event)
         && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
         event->accept();
         if (!isOverride) developProperties->cancelDetailPick();
+        return true;
+    }
+    /* Lens Blur's focus picker: Esc disarms it, for the same reason. */
+    if (developProperties && developProperties->isLensFocusPickActive()
+        && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
+        event->accept();
+        if (!isOverride) developProperties->cancelLensFocusPick();
         return true;
     }
 
@@ -11518,6 +11526,260 @@ static bool stripKaleidos(DevelopProperties::StackRenderJob &job)
     return any;
 }
 
+/* Is any Lens Blur field off its default? */
+static bool lensBlurFieldsSet(const EditParams &p)
+{
+    const EditParams def;
+    return p.lensBlurAmount != def.lensBlurAmount || p.lensBlurRefine != def.lensBlurRefine
+        || p.lensBlurFocus != def.lensBlurFocus || p.lensBlurRange != def.lensBlurRange
+        || p.lensBlurShape != def.lensBlurShape || p.lensBlurBoost != def.lensBlurBoost;
+}
+
+/* Does any scope carry a Lens Blur field off its default (so stripLensBlur has work)? */
+static bool jobHasLensBlurFields(const DevelopProperties::StackRenderJob &job)
+{
+    if (lensBlurFieldsSet(job.global)) return true;
+    for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
+        if (lensBlurFieldsSet(L.params)) return true;
+    return false;
+}
+
+/* Lens Blur runs on the composited frame (applyLensBlur), not in the develop: switch it
+   off in the job the develop sees, so the per-scope cache keys (paramsToJson) hold
+   still while it is dragged -- a Lens Blur drag re-blurs a cached frame instead of
+   re-developing the stack, as the kaleidoscope's does. Returns whether any was set. */
+static bool stripLensBlur(DevelopProperties::StackRenderJob &job)
+{
+    const EditParams def;
+    bool any = false;
+    auto strip = [&](EditParams &p) {
+        if (!lensBlurFieldsSet(p)) return;
+        p.lensBlurAmount = def.lensBlurAmount;
+        p.lensBlurFocus = def.lensBlurFocus;
+        p.lensBlurRange = def.lensBlurRange;
+        p.lensBlurShape = def.lensBlurShape;
+        p.lensBlurBoost = def.lensBlurBoost;
+        p.lensBlurRefine = def.lensBlurRefine;
+        any = true;
+    };
+    strip(job.global);
+    for (DevelopProperties::StackRenderJob::Scope &L : job.scopes) strip(L.params);
+    return any;
+}
+
+namespace {
+
+/* The output transfer functions (OutputTransform::Space): sRGB and Display P3 share the
+   sRGB curve, Adobe RGB is a pure 563/256 power. */
+inline float decodeTransfer(float v, bool adobe)
+{
+    if (adobe) return v <= 0.0f ? 0.0f : std::pow(v, 2.19921875f);
+    return v <= 0.04045f ? v / 12.92f : std::pow((v + 0.055f) / 1.055f, 2.4f);
+}
+inline float encodeTransfer(float v, bool adobe)
+{
+    v = std::clamp(v, 0.0f, 1.0f);
+    if (adobe) return std::pow(v, 1.0f / 2.19921875f);
+    return v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
+}
+
+/* A scope's coverage buffer (mw x mh, UNROTATED, as buildMaskBuffer makes it) in the
+   oriented frame the composite is, at size sz -- the frame before the geometry. */
+cv::Mat coverageInFrame(const std::vector<float> &mask, int mw, int mh, int degrees,
+                        cv::Size sz)
+{
+    if (mw <= 0 || mh <= 0 || mask.size() != size_t(mw) * size_t(mh)) return cv::Mat();
+    const cv::Mat m(mh, mw, CV_32F, const_cast<float *>(mask.data()));
+    cv::Mat r;
+    if      (degrees == 90)  cv::rotate(m, r, cv::ROTATE_90_CLOCKWISE);
+    else if (degrees == 180) cv::rotate(m, r, cv::ROTATE_180);
+    else if (degrees == 270) cv::rotate(m, r, cv::ROTATE_90_COUNTERCLOCKWISE);
+    else r = m;
+    cv::Mat out;
+    cv::resize(r, out, sz, 0, 0, cv::INTER_LINEAR);
+    return out;
+}
+
+}   // namespace
+
+/*
+    Lens > Lens Blur on the composited frame `out` (oriented, before the geometry, so the
+    depth field and the masks line up without the crop). See Develop/lensblur.h for the
+    blur and EditParams for the settings.
+
+    The frame is display-encoded; the blur runs in LINEAR light (decoded through the
+    space's transfer function and back), so a highlight spreads its energy as light
+    does. It runs at a working size: the proxy's own on an interactive tick, at most
+    kLensWorkLong px on the long edge for a settle render or an export -- the blur is
+    smooth, and its cost does not then grow with the sensor. Back at full size, pixels
+    whose blur is under a quarter of a working pixel keep the full-resolution original,
+    so what is in focus stays exactly as sharp; the rest takes the upscaled blur.
+
+    refineMasks[i]: scope i's coverage when its lensBlurRefine is set (null = a scope
+    with no mask, i.e. the whole frame).
+
+    "Show depth" (job.lensVisualize) draws the depth field instead: near light, far
+    dark, and what the focal range keeps sharp tinted green.
+*/
+static constexpr int kLensWorkLong = 3072;
+static void applyLensBlur(QImage &out, const DevelopProperties::StackRenderJob &job,
+                          const std::vector<std::shared_ptr<const std::vector<float>>> &refineMasks,
+                          int srcW, int srcH, int degrees, bool fullRes,
+                          WorkingImageCache::Space space, const QString &fPath)
+{
+    const EditParams &g = job.global;
+    if (out.isNull() || (!g.hasLensBlur() && !job.lensVisualize)) return;
+    const std::shared_ptr<const DepthMask::DepthRef> ref = DepthMask::getRef(fPath);
+    if (!ref || !ref->valid()) return;           // not built yet: the next render has it
+
+    const bool deep = out.depth() == 64;
+    if (deep && out.format() != QImage::Format_RGBX64)
+        out = out.convertToFormat(QImage::Format_RGBX64);
+    if (!deep && out.format() != QImage::Format_RGB888)
+        out = out.convertToFormat(QImage::Format_RGB888);
+    const int W0 = out.width(), H0 = out.height();
+    const int long0 = std::max(W0, H0);
+    /* An interactive tick works at the proxy's size even when the frame was upscaled to
+       full dimensions for the geometry (developCompositeStack's note). */
+    const int cap = fullRes ? kLensWorkLong : std::max(srcW, srcH);
+    const double ws = std::min(1.0, double(cap) / long0);
+    const cv::Size wsz(std::max(1, int(std::lround(W0 * ws))),
+                       std::max(1, int(std::lround(H0 * ws))));
+    const bool adobe = space == WorkingImageCache::Space::AdobeRGB;
+
+    /* The frame as a cv::Mat over the QImage (RGB888, or RGBX64 = 4 x 16-bit). */
+    const int ch = deep ? 4 : 3;
+    cv::Mat full(H0, W0, deep ? CV_16UC4 : CV_8UC3, out.bits(),
+                       size_t(out.bytesPerLine()));
+    cv::Mat work;
+    if (wsz.width == W0 && wsz.height == H0) work = full;
+    else cv::resize(full, work, wsz, 0, 0, cv::INTER_AREA);
+
+    /* Decode to linear float RGB, through a LUT on the code value. */
+    const int levels = deep ? 65536 : 256;
+    std::vector<float> lut(static_cast<size_t>(levels));
+    for (int i = 0; i < levels; ++i) lut[size_t(i)] = decodeTransfer(float(i) / (levels - 1), adobe);
+    cv::Mat lin(wsz, CV_32FC3);
+    cv::parallel_for_(cv::Range(0, wsz.height), [&](const cv::Range &rr) {
+        for (int y = rr.start; y < rr.end; ++y) {
+            cv::Vec3f *o = lin.ptr<cv::Vec3f>(y);
+            if (deep) {
+                const ushort *p = work.ptr<ushort>(y);
+                for (int x = 0; x < wsz.width; ++x)
+                    o[x] = cv::Vec3f(lut[p[4 * x]], lut[p[4 * x + 1]], lut[p[4 * x + 2]]);
+            }
+            else {
+                const uchar *p = work.ptr<uchar>(y);
+                for (int x = 0; x < wsz.width; ++x)
+                    o[x] = cv::Vec3f(lut[p[3 * x]], lut[p[3 * x + 1]], lut[p[3 * x + 2]]);
+            }
+        }
+    });
+
+    /* The depth field (oriented, normalized) at the working size, and the CoC map. */
+    cv::Mat depth;
+    cv::resize(cv::Mat(ref->h, ref->w, CV_32F, const_cast<float *>(ref->depth.data())),
+               depth, wsz, 0, 0, cv::INTER_LINEAR);
+    LensBlur::Settings ls;
+    ls.amount = g.lensBlurAmount;
+    ls.focus  = g.lensBlurFocus;
+    ls.range  = g.lensBlurRange;
+    ls.shape  = g.lensBlurShape;
+    ls.boost  = g.lensBlurBoost;
+    const double longW = std::max(wsz.width, wsz.height);
+    cv::Mat coc = LensBlur::cocMap(depth, ls, longW);
+    for (int i = 0; i < job.scopes.size() && i < int(refineMasks.size()); ++i) {
+        const float k = job.scopes.at(i).params.lensBlurRefine;
+        if (k == 0.0f) continue;
+        const std::shared_ptr<const std::vector<float>> &m = refineMasks[size_t(i)];
+        const cv::Mat cov = m ? coverageInFrame(*m, srcW, srcH, degrees, wsz)
+                              : cv::Mat(wsz, CV_32F, cv::Scalar(1.0f));
+        LensBlur::refine(coc, cov, k, LensBlur::refineBlurRadius(ls, longW));
+    }
+
+    cv::Mat res;                            // linear float RGB at the working size
+    if (job.lensVisualize) {
+        /* Near light .. far dark; the in-focus part tinted green -- the focal range
+           itself while Amount is still 0 (every CoC is 0 then). */
+        const bool byCoc = ls.on();
+        const float half = std::clamp(ls.range, 0.0f, 1.0f) * 0.5f;
+        res.create(wsz, CV_32FC3);
+        cv::parallel_for_(cv::Range(0, wsz.height), [&](const cv::Range &rr) {
+            for (int y = rr.start; y < rr.end; ++y) {
+                const float *d = depth.ptr<float>(y);
+                const float *c = coc.ptr<float>(y);
+                cv::Vec3f *o = res.ptr<cv::Vec3f>(y);
+                for (int x = 0; x < wsz.width; ++x) {
+                    const float v = decodeTransfer(1.0f - std::clamp(d[x], 0.0f, 1.0f), false);
+                    const bool sharp = byCoc ? std::abs(c[x]) < 0.5f
+                                             : std::abs(d[x] - ls.focus) <= half;
+                    o[x] = sharp ? cv::Vec3f(v * 0.45f, 0.25f + v * 0.6f, v * 0.45f)
+                                 : cv::Vec3f(v, v, v);
+                }
+            }
+        });
+    }
+    else {
+        res = LensBlur::render(lin, coc, ls.shape, ls.boost,
+                               fullRes ? LensBlur::Quality::final()
+                                       : LensBlur::Quality::draft());
+    }
+
+    /* Encode back at the working size. */
+    cv::Mat enc(wsz, deep ? CV_16UC4 : CV_8UC3);
+    const float top = float(levels - 1);
+    cv::parallel_for_(cv::Range(0, wsz.height), [&](const cv::Range &rr) {
+        for (int y = rr.start; y < rr.end; ++y) {
+            const cv::Vec3f *r = res.ptr<cv::Vec3f>(y);
+            if (deep) {
+                ushort *o = enc.ptr<ushort>(y);
+                for (int x = 0; x < wsz.width; ++x) {
+                    for (int c = 0; c < 3; ++c)
+                        o[4 * x + c] = ushort(encodeTransfer(r[x][c], adobe) * top + 0.5f);
+                    o[4 * x + 3] = 65535;
+                }
+            }
+            else {
+                uchar *o = enc.ptr<uchar>(y);
+                for (int x = 0; x < wsz.width; ++x)
+                    for (int c = 0; c < 3; ++c)
+                        o[3 * x + c] = uchar(encodeTransfer(r[x][c], adobe) * top + 0.5f);
+            }
+        }
+    });
+
+    if (wsz.width == W0 && wsz.height == H0) {
+        enc.copyTo(full);
+        return;
+    }
+    cv::Mat up;
+    cv::resize(enc, up, full.size(), 0, 0, cv::INTER_LINEAR);
+    if (job.lensVisualize) { up.copyTo(full); return; }
+    /* Keep the full-resolution original where the blur is under a quarter of a working
+       pixel (in focus), the upscaled blur where it is over one, a blend between. */
+    cv::Mat cocUp;
+    cv::resize(cv::abs(coc), cocUp, full.size(), 0, 0, cv::INTER_LINEAR);
+    cv::parallel_for_(cv::Range(0, H0), [&](const cv::Range &rr) {
+        for (int y = rr.start; y < rr.end; ++y) {
+            const float *c = cocUp.ptr<float>(y);
+            for (int x = 0; x < W0; ++x) {
+                const float t = std::clamp((c[x] - 0.25f) / 0.75f, 0.0f, 1.0f);
+                if (t <= 0.0f) continue;
+                if (deep) {
+                    ushort *o = full.ptr<ushort>(y) + ch * x;
+                    const ushort *u = up.ptr<ushort>(y) + ch * x;
+                    for (int k = 0; k < 3; ++k) o[k] = ushort(o[k] + (u[k] - o[k]) * t + 0.5f);
+                }
+                else {
+                    uchar *o = full.ptr<uchar>(y) + ch * x;
+                    const uchar *u = up.ptr<uchar>(y) + ch * x;
+                    for (int k = 0; k < 3; ++k) o[k] = uchar(o[k] + (u[k] - o[k]) * t + 0.5f);
+                }
+            }
+        }
+    });
+}
+
 /* A scope's proxy/full-res coverage buffer (src.width x src.height, UNROTATED, as
    buildMaskBuffer makes it) carried into the frame the kaleidoscope folds: oriented like
    the composite, through the same geometry stage, at the frame's size. The geometry is
@@ -11616,12 +11878,18 @@ QImage developCompositeStack(const WorkingImage &src,
     /* Effects > Blur's centre / angle are stored in the oriented frame; the develop
        runs on the unrotated source, so the same copy carries them back. */
     const bool turnBlurs = degrees != 0 && jobHasBlur(jobIn);
-    if (folds || turnBlurs) {
+    /* Lens Blur runs on the composite too (applyLensBlur, below the spots), so the
+       develop renders without it. */
+    const bool lensSet = jobHasLensBlurFields(jobIn);
+    const bool lensBlur = jobIn.global.hasLensBlur() || jobIn.lensVisualize;
+    if (folds || turnBlurs || lensSet) {
         stripped = jobIn;
+        if (lensSet) stripLensBlur(stripped);
         if (folds) stripKaleidos(stripped);
         if (turnBlurs) blursToSource(stripped, degrees);
     }
-    const DevelopProperties::StackRenderJob &job = (folds || turnBlurs) ? stripped : jobIn;
+    const DevelopProperties::StackRenderJob &job =
+        (folds || turnBlurs || lensSet) ? stripped : jobIn;
     /* The masked scopes' coverage, kept from the composite for their folds and for
        "Hide global image" below (index = scope; null for a scope without a mask, or one
        neither step needs). */
@@ -11758,7 +12026,8 @@ QImage developCompositeStack(const WorkingImage &src,
                 }
             }
             if (cache) cache->setParamsKey(i, paramsKeys[i]);
-            if (jobIn.hideGlobal || jobIn.scopes.at(int(i)).params.hasKaleido())
+            if (jobIn.hideGlobal || jobIn.scopes.at(int(i)).params.hasKaleido() ||
+                (lensBlur && jobIn.scopes.at(int(i)).params.lensBlurRefine != 0.0f))
                 foldMasks[i] = s.mask;
             sl.push_back(std::move(s));
         }
@@ -11826,6 +12095,12 @@ QImage developCompositeStack(const WorkingImage &src,
        Object kinds (or clone fallbacks) with LaMa; the model path no-ops warn-if-absent.
        Flip G::useLamaSpotFill off (global.cpp) to revert to the MI-GAN engine. */
     if (!out.isNull() && !job.spots.isEmpty()) applySpots(out, job.spots, fPath);
+
+    /* Lens Blur, on the healed oriented frame and before the geometry, where the depth
+       field and the masks are indexed (jobIn: the job above has it stripped). */
+    if (!out.isNull() && lensBlur)
+        applyLensBlur(out, jobIn, foldMasks, src.width, src.height, degrees, fullRes, space,
+                      fPath);
 
     /* Geometry (crop / straighten / warp) is applied LAST -- after the develop ops + EXIF
        orientation -- on the full-output-dimension image, so the crop dims match for the
@@ -11957,9 +12232,11 @@ bool stackHasSkyMask(const DevelopProperties::StackRenderJob &job)
     return false;
 }
 
-/* True if any enabled scope carries an AI Depth Range mask -- needs the depth field (ensureDepthMask). */
+/* True if the render needs the depth field (ensureDepthMask): any enabled scope carries
+   an AI Depth Range mask, or Global's Lens Blur is on (or shown as depth). */
 bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
 {
+    if (job.global.hasLensBlur() || job.lensVisualize) return true;
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
         for (const MaskComponent &m : L.components)
             if (m.tool == int(MaskTool::Depth)) return true;
@@ -12182,20 +12459,21 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
                          const EditParams &base, int degrees)
 {
 /*
-    Depth twin of ensureSkyMask: build (once per image) the MiDaS depth field the "Depth Range" mask
-    bands over, from the developed GLOBAL scope (downscaled, output-oriented). Cached by path only;
-    synchronous on the GUI thread with a busy cursor. Lazily loads midas.onnx.
+    Depth twin of ensureSkyMask: build (once per image) the depth field the "Depth Range" mask
+    bands over and Lens Blur blurs by, from the developed GLOBAL scope (downscaled, output-
+    oriented). Cached by path only; synchronous on the GUI thread with a busy cursor (~0.3 s).
+    Lazily loads depth_anything.onnx (Depth Anything V2 Small, Utilities/depthpredictor).
 */
     if (G::isLogger) G::log("MW::ensureDepthMask");
     noteLensGeometry(fPath, work, base);
     if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) return;      // already current
 
     if (!depthPredictor) {                  // downloaded on demand -- see ensureSubjectMask
-        const QString modelPath = ModelStore::path(ModelStore::Model::Midas);
+        const QString modelPath = ModelStore::path(ModelStore::Model::DepthAnything);
         if (modelPath.isEmpty()) return;
-        depthPredictor = new DepthPredictor(modelPath, 256);
+        depthPredictor = new DepthPredictor(modelPath);
         if (!depthPredictor->isLoaded())
-            qWarning("Depth Range: midas.onnx failed to load at %s",
+            qWarning("Depth: depth_anything.onnx failed to load at %s",
                      modelPath.toUtf8().constData());
     }
     if (!depthPredictor->isLoaded()) return;
@@ -12708,7 +12986,7 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     QVector<ModelStore::Model> need;
     if (needsSubject)  need << ModelStore::Model::U2Net;        // Background = inverted subject
     else if (isSky)    need << ModelStore::Model::SkySeg << ModelStore::Model::SkySegFormer;
-    else if (isDepth)  need << ModelStore::Model::Midas;
+    else if (isDepth)  need << ModelStore::Model::DepthAnything;
     else if (isObject) need << ModelStore::Model::Sam2Encoder << ModelStore::Model::Sam2Decoder;
     if (!ModelStore::ensure(need, this)) return;
 
@@ -13464,6 +13742,13 @@ void MW::renderDevelopPreview(bool fullRes)
            (developCompositeStack), so it does not change the base. */
         EditParams baseParams = mj.global;
         baseParams.kaleidoSegments = 0;
+        /* Nor Lens Blur: it blurs the composite, not the base. */
+        {
+            DevelopProperties::StackRenderJob probe;
+            probe.global = baseParams;
+            stripLensBlur(probe);
+            baseParams = probe.global;
+        }
         baseKey = QJsonDocument(EditStack::paramsToJson(baseParams))
                       .toJson(QJsonDocument::Compact);
         /* Global's Visualize Range changes the base pixels but not its JSON. */
@@ -14085,6 +14370,58 @@ void MW::renderDevelopFullResAsync()
     });
 }
 
+void MW::onDepthWanted()
+{
+/*
+    Lens Blur needs the depth field: the dock's GESTURE (turning Lens Blur on, arming its
+    focus picker, Show depth), so the one place the model download may be offered -- the
+    render path's ensureDepthMask just no-ops on a missing model. Builds the field for
+    the current image and re-renders if it is new.
+*/
+    if (G::isLogger) G::log("MW::onDepthWanted");
+    if (!developProperties) return;
+    const QString fPath = dm->currentKey;
+    if (fPath.isEmpty()) return;
+    const QVector<ModelStore::Model> need{ModelStore::Model::DepthAnything};
+    if (!ModelStore::isAvailable(need)) {
+        if (depthModelDeclinedPath == fPath) return;      // asked once per image
+        if (!ModelStore::ensure(need, this)) {
+            depthModelDeclinedPath = fPath;
+            return;
+        }
+    }
+    const std::shared_ptr<const DepthMask::DepthRef> before = DepthMask::getRef(fPath);
+    auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
+    if (!work) return;
+    const auto mj = developProperties->stackJob();
+    const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
+    ensureDepthMask(fPath, *work, mj.global, degrees);
+    if (DepthMask::getRef(fPath) != before) developParamsChange();
+}
+
+void MW::onLensFocusPicked(double nx, double ny)
+{
+/*
+    Lens Blur's focus picker landed on (nx, ny), mask space -- where the depth field is
+    indexed. Disarm, and focus at that point's depth: the median of a small cross around
+    it, so a click on an edge or a speck of noise does not pick the wrong plane.
+*/
+    if (G::isLogger) G::log("MW::onLensFocusPicked");
+    if (!developProperties) return;
+    developProperties->cancelLensFocusPick();
+    onDepthWanted();
+    const std::shared_ptr<const DepthMask::DepthRef> ref = DepthMask::getRef(dm->currentKey);
+    if (!ref || !ref->valid()) return;
+    const double r = 0.004;                     // of the frame
+    std::vector<float> v;
+    for (int i = -2; i <= 2; ++i) {
+        v.push_back(DepthMask::sampleDepth(*ref, nx + i * r, ny));
+        if (i) v.push_back(DepthMask::sampleDepth(*ref, nx, ny + i * r));
+    }
+    std::nth_element(v.begin(), v.begin() + v.size() / 2, v.end());
+    developProperties->setLensBlurFocus(v[v.size() / 2]);
+}
+
 void MW::onDetailPointPicked(double nx, double ny)
 {
 /*
@@ -14149,6 +14486,8 @@ void MW::resetDetailPoint()
 */
     if (!developProperties) return;
     developProperties->cancelDetailPick();
+    developProperties->cancelLensFocusPick();
+    depthModelDeclinedPath.clear();
     developProperties->clearDetailPoint();
     developProperties->setDetailRoiImage(QImage());
     developProperties->setDetailMessage(tr("Pick a location in the image"));

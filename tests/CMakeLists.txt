@@ -418,6 +418,11 @@ winnow_test_link_opencv(tst_kaleidoscope PRIVATE opencv_core opencv_imgproc)
 # Detail patch matching the full frame, and the timings for the record.
 winnow_add_unit_test(tst_artblur unit/tst_artblur.cpp)
 winnow_test_link_opencv(tst_artblur PRIVATE opencv_core opencv_imgproc)
+# tst_lensblur tests Lens > Lens Blur (header-only Develop/lensblur.h): an in-focus
+# subject stays sharp and does not bleed, a blurred foreground spreads, a flat field stays
+# flat, the CoC map / refine / kernels / boost, and the timings for the record.
+winnow_add_unit_test(tst_lensblur unit/tst_lensblur.cpp)
+winnow_test_link_opencv(tst_lensblur PRIVATE opencv_core opencv_imgproc)
 # tst_xmpembed pins the container writers behind "Permit image file modification":
 # splicing the XMP packet into JPEG (APP1), PNG (iTXt) and TIFF/DNG (IFD0 tag 700)
 # without disturbing anything else in the file, and the XMP shapes Lightroom reads

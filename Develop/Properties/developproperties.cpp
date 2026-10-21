@@ -21,6 +21,7 @@
 #include "Develop/Scopes/toneregionslider.h"
 #include "Develop/whitebalance.h"
 #include "Develop/lensdb.h"
+#include "Utilities/inference/inferencesession.h"   // Lens Blur: can the depth model run
 #include "Develop/calibrate.h"
 #include "Develop/outputtransform.h"
 #include "Develop/rangemask.h"
@@ -194,6 +195,7 @@ void DevelopProperties::initialize()
     setSolo(setting->value("Develop/isSolo", false).toBool());
     combinedColorPanel = setting->value("Develop/combinedColorPanel", true).toBool();
     colorPanelMode = qBound(0, setting->value("Develop/colorPanelMode", 0).toInt(), 2);
+    lensPanelMode = qBound(0, setting->value("Develop/lensPanelMode", 0).toInt(), 2);
     effectsChoice = qBound(0, setting->value("Develop/effectsChoice", 0).toInt(), 3);
     setIndentation(10);
     setAlternatingRowColors(false);
@@ -619,8 +621,18 @@ void DevelopProperties::syncLensPanel()
     setCheckboxValue("removeCA", g.wantsRemoveCA(G::autoRemoveCA, raw));
     setSliderReal("defringePurple", g.defringePurple * 100.0);
     setSliderReal("defringeGreen",  g.defringeGreen  * 100.0);
+    setSliderReal("lensBlurAmount", g.lensBlurAmount * 100.0);
+    setSliderReal("lensBlurFocus",  g.lensBlurFocus  * 100.0);
+    setSliderReal("lensBlurRange",  g.lensBlurRange  * 100.0);
+    setSliderReal("lensBlurBoost",  g.lensBlurBoost  * 100.0);
+    setCheckboxValue("lensBlurVisualize", lensDepthVisualize);
+    if (lensShapeCombo) {
+        QSignalBlocker b(lensShapeCombo);
+        lensShapeCombo->setCurrentIndex(std::clamp(g.lensBlurShape, 0, 5));
+    }
     repopulateLensCombo();          // the matched lens is per image; also the row enables
     isPopulating = wasPop;
+    syncLensBlurAvailability();
 }
 
 void DevelopProperties::setGlobalLensProfile(bool on)
@@ -2771,6 +2783,13 @@ void DevelopProperties::showSectionMenu(int group)
         aResetMode = menu.addAction(tr("Reset %1").arg(kModeName[colorPanelMode]));
         aResetMode->setEnabled(!currentImagePath.isEmpty());
     }
+    /* The Lens panel (Global) likewise: the showing mode first, then the whole section. */
+    static const char *kLensModeName[] = {"Profile", "Fringe", "Lens Blur"};
+    QAction *aResetLensMode = nullptr;
+    if (group == PV_Lens && activeScopeIndex == 0) {
+        aResetLensMode = menu.addAction(tr("Reset %1").arg(kLensModeName[lensPanelMode]));
+        aResetLensMode->setEnabled(!currentImagePath.isEmpty());
+    }
     QAction *aReset = menu.addAction(group == PV_ColorPanel ? tr("Reset Tone, Hue and RGB")
                                                             : tr("Reset %1").arg(label));
     aReset->setEnabled(!currentImagePath.isEmpty());
@@ -2795,6 +2814,11 @@ void DevelopProperties::showSectionMenu(int group)
     if (chosen == aResetMode) {
         const int g = colorPanelModeGroup();
         QTimer::singleShot(0, this, [this, g]{ resetSection(g); });
+        return;
+    }
+    if (chosen == aResetLensMode) {
+        const int m = lensPanelMode;
+        QTimer::singleShot(0, this, [this, m]{ resetLensMode(m); });
         return;
     }
     if (chosen == aLayout) {
@@ -2824,8 +2848,9 @@ const QVector<EffectDef> &effectDefs()
         {"Kaleidoscope", {"kaleidoSegments", "kaleidoAngle", "kaleidoSource",
                           "kaleidoZoom", "kaleidoOpacity"}, false},
         /* The artistic blurs (Develop/artblur.h); a lens blur belongs to Lens. */
-        {"Blur",         {"blurType", "blurAmount", "blurAngle", "blurSize",
-                          "blurFeather", "blurPreview"}, false},
+        {"Blur",         {"BlurPreviewTopSpacer", "blurPreview", "BlurPreviewSpacer",
+                          "blurType", "blurAmount", "blurAngle", "blurSize",
+                          "blurFeather"}, false},
     };
     return defs;
 }
@@ -3290,6 +3315,7 @@ void DevelopProperties::cancelCanvasTools()
     if (G::isLogger) G::log("DevelopProperties::cancelCanvasTools");
     cancelWbDropper();
     cancelDetailPick();
+    cancelLensFocusPick();
     cancelPointColorPick();
     if (spotMode) onSpotToolToggled(false);
     setCurveSamplerActive(false);
@@ -5010,6 +5036,7 @@ void DevelopProperties::updateEditorGeometries()
     centre(curveEditor);
     centre(curveSplitsRow);
     centre(colorPanelModesRow);   // the Tone / Hue / RGB radios
+    centre(lensPanelModesRow);    // the Profile / Fringe / Blur radios
     /* This is also where an expand / collapse / scroll of the Edits tree lands, which is
        exactly what moves the plot on and off screen. */
     updateCurvePickState();
@@ -6102,6 +6129,76 @@ void DevelopProperties::setCombinedColorPanel(bool on)
     buildTree();
 }
 
+void DevelopProperties::addModeRadioRow(const QModelIndex &parIdx, const QString &parent,
+                                        const QString &name, const QStringList &labels,
+                                        const QStringList &tips, int current,
+                                        QPointer<QWidget> &row, QPointer<QRadioButton> *radios,
+                                        const std::function<void(int)> &onPick)
+{
+/*
+    A panel's mode radios (the Color panel's Tone / Hue / RGB, the Lens panel's Profile /
+    Fringe / Blur): one spanned row, centred in the panel (updateEditorGeometries), then
+    the caller's divider. Picking a mode calls onPick (store + persist it) and rebuilds
+    the tree, which builds only the chosen mode's rows.
+
+    THE GAPS around the radios are EXPLICIT, kModeGapPt points (12 px at the default
+    12 pt font, scaling with it) above them to the header band and below them to the
+    divider's rule. So the header's TopSpacer is shrunk to its 1 px minimum here (it
+    would otherwise put a full groupSeparatorHeight above), and the radio row is sized
+    to exactly gap + radios + gap, less what the neighbours already contribute: that
+    1 px above, and half the divider below (it draws its rule at its own middle).
+*/
+    constexpr double kModeGapPt = 12.0;
+    const int gap = qMax(2, int(std::lround(G::strFontSize.toInt() * G::ptToPx
+                                            * kModeGapPt / 12.0)));
+    const int halfSep = G::groupSeparatorHeight / 2;
+    model->setData(model->index(0, CapColumn, parIdx), 1, UR_DividerHeight);  // TopSpacer
+
+    clearItemInfo(i);
+    i.name = name;
+    i.parIdx = parIdx;
+    i.parentName = parent;
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex modesIdx = capIdx;
+    setFirstColumnSpanned(modesIdx.row(), parIdx, true);
+
+    QWidget *rw = new QWidget;
+    row = rw;                            // centred in the panel, updateEditorGeometries
+    rw->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *hb = new QHBoxLayout(rw);
+    hb->setSpacing(10);
+    hb->addStretch(1);
+    QButtonGroup *group = new QButtonGroup(rw);       // exclusive by default
+    int radioH = 0;
+    for (int m = 0; m < labels.size(); ++m) {
+        QRadioButton *r = new QRadioButton(labels.at(m), rw);
+        r->setToolTip(tips.value(m));
+        r->setStyleSheet("QRadioButton { background: transparent; }");  // panel background
+        group->addButton(r, m);
+        radios[m] = r;                   // updateSectionHeaderCaptions stars them
+        hb->addWidget(r);
+        radioH = qMax(radioH, r->sizeHint().height());
+    }
+    hb->addStretch(1);                   // stretch both sides: centred in the row
+    if (QAbstractButton *b = group->button(current)) b->setChecked(true);
+    connect(group, &QButtonGroup::idToggled, this, [this, onPick, current](int id, bool on){
+        if (!on || id == current) return;
+        onPick(id);
+        QTimer::singleShot(0, this, [this]{ buildTree(); });
+    });
+    /* Now the radios exist, size the row around them (see the gap note above). */
+    const int top = qMax(0, gap - 1);
+    const int bottom = qMax(0, gap - halfSep);
+    hb->setContentsMargins(0, top, 0, bottom);
+    model->setData(modesIdx, top + radioH + bottom - G::propertyRowHeight(),
+                   UR_ExtraRowHeight);
+    setIndexWidget(modesIdx, rw);
+}
+
 void DevelopProperties::addColorPanel()
 {
     if (G::isLogger) G::log("DevelopProperties::addColorPanel");
@@ -6110,76 +6207,20 @@ void DevelopProperties::addColorPanel()
               "RGB (re-point the primaries).", PV_ColorPanel);
     QModelIndex parIdx = capIdx;
 
-    /* THE GAPS around the radios are EXPLICIT, kModeGapPt points (12 px at the default
-       12 pt font, scaling with it) above them to the header band and below them to the
-       divider's rule. So the header's TopSpacer is shrunk to its 1 px minimum here (it
-       would otherwise put a full groupSeparatorHeight above), and the radio row is sized
-       to exactly gap + radios + gap, less what the neighbours already contribute: that
-       1 px above, and half the divider below (it draws its rule at its own middle). */
-    constexpr double kModeGapPt = 12.0;
-    const int gap = qMax(2, int(std::lround(G::strFontSize.toInt() * G::ptToPx
-                                            * kModeGapPt / 12.0)));
-    const int halfSep = G::groupSeparatorHeight / 2;
-    model->setData(model->index(0, CapColumn, parIdx), 1, UR_DividerHeight);  // TopSpacer
-
-    clearItemInfo(i);
-    i.name = "colorPanelModes";
-    i.parIdx = parIdx;
-    i.parentName = "ColorPanelHeader";
-    i.captionText = "";
-    i.isIndent = true;
-    i.hasValue = false;
-    i.captionIsEditable = false;
-    addItem(i);
-    const QModelIndex modesIdx = capIdx;
-    setFirstColumnSpanned(modesIdx.row(), parIdx, true);
-    {
-        QWidget *rw = new QWidget;
-        colorPanelModesRow = rw;           // centred in the panel, updateEditorGeometries
-        rw->setAttribute(Qt::WA_TranslucentBackground);
-        QHBoxLayout *hb = new QHBoxLayout(rw);
-        hb->setSpacing(10);
-        hb->addStretch(1);
-        QRadioButton *tone = new QRadioButton("Tone", rw);
-        QRadioButton *hue  = new QRadioButton("Hue",  rw);
-        QRadioButton *rgb  = new QRadioButton("RGB",  rw);
-        tone->setToolTip("Grade by tonal range: tint the shadows, midtones, highlights "
-                         "or the whole image.");
-        hue->setToolTip("Sample colours in the image and shift their hue, saturation "
-                        "and luminance.");
-        rgb->setToolTip("Adjust the base red, green and blue colours.");
-        for (QRadioButton *r : {tone, hue, rgb})      // panel background, see gradeRanges
-            r->setStyleSheet("QRadioButton { background: transparent; }");
-        QButtonGroup *group = new QButtonGroup(rw);   // exclusive by default
-        group->addButton(tone, 0);
-        group->addButton(hue,  1);
-        group->addButton(rgb,  2);
-        colorPanelRadios[0] = tone;        // updateSectionHeaderCaptions stars them
-        colorPanelRadios[1] = hue;
-        colorPanelRadios[2] = rgb;
-        if (QAbstractButton *b = group->button(colorPanelMode)) b->setChecked(true);
-        connect(group, &QButtonGroup::idToggled, this, [this](int id, bool on){
-            if (!on || id == colorPanelMode) return;
-            colorPanelMode = id;
-            setting->setValue("Develop/colorPanelMode", id);
-            /* The eyedropper belongs to Hue: leaving it puts the dropper away. */
-            if (id != 1) cancelPointColorPick();
-            QTimer::singleShot(0, this, [this]{ buildTree(); });
-        });
-        hb->addWidget(tone);
-        hb->addWidget(hue);
-        hb->addWidget(rgb);
-        hb->addStretch(1);               // stretch both sides: centred in the row
-        /* Now the radios exist, size the row around them (see the gap note above). */
-        int radioH = 0;
-        for (QRadioButton *r : {tone, hue, rgb}) radioH = qMax(radioH, r->sizeHint().height());
-        const int top = qMax(0, gap - 1);
-        const int bottom = qMax(0, gap - halfSep);
-        hb->setContentsMargins(0, top, 0, bottom);
-        model->setData(modesIdx, top + radioH + bottom - G::propertyRowHeight(),
-                       UR_ExtraRowHeight);
-        setIndexWidget(modesIdx, rw);
-    }
+    addModeRadioRow(parIdx, "ColorPanelHeader", "colorPanelModes",
+                    {"Tone", "Hue", "RGB"},
+                    {"Grade by tonal range: tint the shadows, midtones, highlights or the "
+                     "whole image.",
+                     "Sample colours in the image and shift their hue, saturation and "
+                     "luminance.",
+                     "Adjust the base red, green and blue colours."},
+                    colorPanelMode, colorPanelModesRow, colorPanelRadios,
+                    [this](int id) {
+        colorPanelMode = id;
+        setting->setValue("Develop/colorPanelMode", id);
+        /* The eyedropper belongs to Hue: leaving it puts the dropper away. */
+        if (id != 1) cancelPointColorPick();
+    });
     addGroupDivider(parIdx, "ColorPanelHeader", "ColorPanelModesDivider");
 
     switch (colorPanelMode) {
@@ -6888,11 +6929,20 @@ void DevelopProperties::addEffects()
     }
 
     /* Blur: the artistic blurs (Develop/artblur.h, Develop::Blur -- a scene-linear op
-       after Sharpen, before Grain, so a mask scope's blur is just its layer). A type
+       after Sharpen, before Grain, so a mask scope's blur is just its layer). The SAME
+       1:1 patch the Detail panel shows, so the blur can be judged at 100%, then a type
        picker (blurType), then the sliders the type uses (applyBlurTypeRows hides the
-       rest), then the SAME 1:1 patch the Detail panel shows, so the blur can be judged
-       at 100%. Amount / Size / Feather are 0..100 on the panel, 0..1 stored; Angle is
+       rest). Amount / Size / Feather are 0..100 on the panel, 0..1 stored; Angle is
        degrees. A lens (depth / bokeh) blur belongs to the Lens panel, not here. */
+    /* The preview first, as in Detail, with Detail's gaps: the header's half spacer
+       above it and a full spacer between it and the Type row. */
+    addDivider(G::groupSeparatorHeight / 2, 0, Qt::transparent, parIdx, "EffectsHeader",
+               "BlurPreviewTopSpacer");
+    addPreviewRow(parIdx, "EffectsHeader", "blurPreview",
+                  "A live 100% view of part of the image, the same one the Detail panel "
+                  "shows.", blurPreview, blurPickBtn);
+    addDivider(G::groupSeparatorHeight, 0, Qt::transparent, parIdx, "EffectsHeader",
+               "BlurPreviewSpacer");
     {
         clearItemInfo(i);
         i.name = "blurType";
@@ -6953,9 +7003,6 @@ void DevelopProperties::addEffects()
     addSlider("blurFeather", "Feather",
               "Tilt-shift: how gradually the blur comes in beside the band.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
-    addPreviewRow(parIdx, "EffectsHeader", "blurPreview",
-                  "A live 100% view of part of the image, the same one the Detail panel "
-                  "shows.", blurPreview, blurPickBtn);
 
     addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
 
@@ -7221,10 +7268,11 @@ void DevelopProperties::syncKaleidoSliders()
 void DevelopProperties::addLens()
 {
 /*
-    The Lens section, Global scope only: every row here is applied to the BASE image
-    before any scope develops (MW's lensCorrectedSource), so every mask, guide and scope
-    sees the corrected frame -- which is also why a mask scope cannot carry them and does
-    not get the section.
+    The Lens section. Its corrections are Global only: every one is applied to the BASE
+    image before any scope develops (MW's lensCorrectedSource), so every mask, guide and
+    scope sees the corrected frame -- which is also why a mask scope cannot carry them.
+    Lens Blur (addLensBlurRows) is Global too, but runs on the composited frame; a mask
+    scope's Lens section holds only its refine slider.
 
     Lens profile (Develop/lensdb.h, Develop/lensprofile.h): lensfun's calibration for the
     lens in the EXIF -- distortion, transverse chromatic aberration and vignetting --
@@ -7233,67 +7281,399 @@ void DevelopProperties::addLens()
     CA (whose estimate a profile's own TCA replaces) and the two fringe sliders.
 */
     if (G::isLogger) G::log("DevelopProperties::addLens");
-    if (activeScopeIndex != 0) return;
+    /* A mask scope: only Lens Blur's refine -- over the mask, pull Global's lens blur
+       toward sharp or push it toward a strong blur (a depth estimate that got the
+       subject or a background object wrong). Inert, and greyed with the reason, while
+       Global's Lens Blur is off (syncLensBlurAvailability). */
+    if (activeScopeIndex != 0) {
+        addHeader("LensHeader", "???", "Lens",
+                  "Refine the Global scope's Lens Blur over this mask.", PV_Lens);
+        QModelIndex parIdx = capIdx;
+        addSlider("lensBlurRefine", "Lens blur",
+                  "Over this mask: - keeps it in focus, + blurs it.\n"
+                  "Fixes what the depth estimate got wrong.",
+                  parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
+        addLensBlurNote(parIdx);
+        addGroupDivider(parIdx, "LensHeader", "LensEndDivider");
+        return;
+    }
     addHeader("LensHeader", "???", "Lens",
-              "Correct lens distortion, vignetting and colour fringes.\n"
-              "Global scope only: it applies to the whole image.", PV_Lens);
+              "Profile: correct distortion and vignetting.  Fringe: remove colour\n"
+              "fringes.  Blur: blur by depth, like a wide aperture.\n"
+              "Global scope: it applies to the whole image.", PV_Lens);
     QModelIndex parIdx = capIdx;
 
-    addCheckbox("lensProfile", "Lens profile",
-                "Correct distortion and vignetting using a profile for this lens.\n"
-                "Usually not needed for JPEGs: the camera already corrected them.",
-                parIdx, "LensHeader");
-    addLensProfileRow(parIdx);
-    addSlider("lensDistortion", "   Distortion",
-              "Strength of the profile's distortion fix (100 = normal).",
-              parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
-    addSlider("lensVignetting", "   Vignetting",
-              "Strength of the profile's vignetting fix (100 = normal).\n"
-              "Needs the photo's aperture.",
-              parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
+    /* Profile / Fringe / Blur, the Color panel's arrangement: only the chosen mode's
+       rows are built (lensPanelMode, persisted). */
+    addModeRadioRow(parIdx, "LensHeader", "lensPanelModes", {"Profile", "Fringe", "Blur"},
+                    {"Correct distortion and vignetting, with a lens profile or by eye.",
+                     "Remove chromatic aberration and the colour fringes along edges.",
+                     "Blur the photo by depth, like a wide aperture (Lens Blur)."},
+                    lensPanelMode, lensPanelModesRow, lensPanelRadios, [this](int id) {
+        lensPanelMode = id;
+        setting->setValue("Develop/lensPanelMode", id);
+        /* The focus picker belongs to Blur: leaving it puts the picker away. */
+        if (id != 2) cancelLensFocusPick();
+    });
+    addGroupDivider(parIdx, "LensHeader", "LensModesDivider");
 
-    /* Manual (Lightroom's Manual tab): corrections that need NO profile, so a lens
-       lensfun never calibrated -- or a JPEG with the profile off -- can still be fixed
-       by eye. Applied on top of the profile when it is on, in the same resample
-       (LensProfile::Amounts::manual*). A caption row heads them so they do not read as
-       a second copy of the profile's two amounts above. */
-    addGroupDivider(parIdx, "LensHeader", "LensManualDivider");
+    switch (lensPanelMode) {
+    case 1:
+        addCheckbox("removeCA", "Remove CA",
+                    "Remove the colour fringes that appear toward the corners of the\n"
+                    "frame.",
+                    parIdx, "LensHeader");
+        addSlider("defringePurple", "Purple fringe",
+                  "Defringe the cyan, blue, purple and magenta rim along\n"
+                  "high-contrast edges.",
+                  parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray);
+        addSlider("defringeGreen", "Green fringe",
+                  "Defringe the green rim along high-contrast edges.",
+                  parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray);
+        break;
+    case 2:
+        addLensBlurRows(parIdx);
+        break;
+    default:
+        addCheckbox("lensProfile", "Lens profile",
+                    "Correct distortion and vignetting using a profile for this lens.\n"
+                    "Usually not needed for JPEGs: the camera already corrected them.",
+                    parIdx, "LensHeader");
+        addLensProfileRow(parIdx);
+        addSlider("lensDistortion", "   Distortion",
+                  "Strength of the profile's distortion fix (100 = normal).",
+                  parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
+        addSlider("lensVignetting", "   Vignetting",
+                  "Strength of the profile's vignetting fix (100 = normal).\n"
+                  "Needs the photo's aperture.",
+                  parIdx, "LensHeader", 0, 200, 0, G::darkgray, G::lightgray, 100);
+
+        /* Manual (Lightroom's Manual tab): corrections that need NO profile, so a lens
+           lensfun never calibrated -- or a JPEG with the profile off -- can still be
+           fixed by eye. Applied on top of the profile when it is on, in the same
+           resample (LensProfile::Amounts::manual*). A caption row heads them so they do
+           not read as a second copy of the profile's two amounts above. */
+        addGroupDivider(parIdx, "LensHeader", "LensManualDivider");
+        clearItemInfo(i);
+        i.name = "lensManualCaption";
+        i.parIdx = parIdx;
+        i.parentName = "LensHeader";
+        i.captionText = "Manual";
+        i.tooltip = "Lens corrections by eye, with or without a profile. Applied on top\n"
+                    "of the profile when it is on.";
+        i.isIndent = true;
+        i.hasValue = false;
+        i.captionIsEditable = false;
+        addItem(i);
+        addSlider("lensManualDistortion", "   Distortion",
+                  "Straighten bulging (+) or pinched (-) lines by eye.",
+                  parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
+        addSlider("lensManualVignetting", "   Vignetting",
+                  "Brighten (+) or darken (-) the corners to fix lens shading.\n"
+                  "Unlike Effects > Vignette, it ignores the crop.",
+                  parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
+        addSlider("lensManualMidpoint", "   Midpoint",
+                  "How far in from the corners the vignetting fix reaches.",
+                  parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+        break;
+    }
+
+    addGroupDivider(parIdx, "LensHeader", "LensEndDivider");
+}
+
+bool DevelopProperties::lensModeEdited(const EditParams &p, int mode)
+{
+    /* Is the Lens panel's mode off its defaults (its radio's " *")? */
+    const EditParams d;
+    switch (mode) {
+    case 1:
+        return p.removeCA != d.removeCA || p.defringePurple != d.defringePurple ||
+               p.defringeGreen != d.defringeGreen;
+    case 2:
+        return p.lensBlurAmount != d.lensBlurAmount || p.lensBlurFocus != d.lensBlurFocus ||
+               p.lensBlurRange != d.lensBlurRange || p.lensBlurShape != d.lensBlurShape ||
+               p.lensBlurBoost != d.lensBlurBoost;
+    default:
+        return p.lensProfile != d.lensProfile || p.lensDistortion != d.lensDistortion ||
+               p.lensVignetting != d.lensVignetting || p.lensProfileId != d.lensProfileId ||
+               p.lensManualDistortion != d.lensManualDistortion ||
+               p.lensManualVignetting != d.lensManualVignetting ||
+               p.lensManualMidpoint != d.lensManualMidpoint;
+    }
+}
+
+void DevelopProperties::resetLensMode(int mode)
+{
+    /* The section menu's "Reset Profile / Fringe / Lens Blur": that mode's fields only,
+       on Global (the only scope with the radios). */
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    EditParams &p = s.scopes[0].params;
+    const EditParams d;
+    QString label;
+    switch (mode) {
+    case 1:
+        p.removeCA = d.removeCA;
+        p.defringePurple = d.defringePurple;
+        p.defringeGreen = d.defringeGreen;
+        label = "Fringe";
+        break;
+    case 2:
+        p.lensBlurAmount = d.lensBlurAmount;
+        p.lensBlurFocus = d.lensBlurFocus;
+        p.lensBlurRange = d.lensBlurRange;
+        p.lensBlurShape = d.lensBlurShape;
+        p.lensBlurBoost = d.lensBlurBoost;
+        label = "Lens Blur";
+        break;
+    default:
+        p.lensProfile = d.lensProfile;
+        p.lensDistortion = d.lensDistortion;
+        p.lensVignetting = d.lensVignetting;
+        p.lensProfileId = d.lensProfileId;
+        p.lensManualDistortion = d.lensManualDistortion;
+        p.lensManualVignetting = d.lensManualVignetting;
+        p.lensManualMidpoint = d.lensManualMidpoint;
+        label = "Lens profile";
+        break;
+    }
+    noteScopeEdit("Global", "Reset " + label);
+    populateSlidersFromStack();
+    emit paramsChanged();
+}
+
+void DevelopProperties::addLensBlurNote(const QModelIndex &parIdx)
+{
+    /* Why Lens Blur is greyed, in its place (syncLensBlurAvailability fills it and
+       shows the row only when there is a reason). */
     clearItemInfo(i);
-    i.name = "lensManualCaption";
+    i.name = "lensBlurNote";
     i.parIdx = parIdx;
     i.parentName = "LensHeader";
-    i.captionText = "Manual";
-    i.tooltip = "Lens corrections by eye, with or without a profile. Applied on top of\n"
-                "the profile when it is on.";
+    i.captionText = "";
     i.isIndent = true;
     i.hasValue = false;
     i.captionIsEditable = false;
     addItem(i);
-    addSlider("lensManualDistortion", "   Distortion",
-              "Straighten bulging (+) or pinched (-) lines by eye.",
-              parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
-    addSlider("lensManualVignetting", "   Vignetting",
-              "Brighten (+) or darken (-) the corners to fix lens shading.\n"
-              "Unlike Effects > Vignette, it ignores the crop.",
-              parIdx, "LensHeader", -100, 100, 0, G::darkgray, G::lightgray, 0);
-    addSlider("lensManualMidpoint", "   Midpoint",
-              "How far in from the corners the vignetting fix reaches.",
-              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+    const QModelIndex noteIdx = capIdx;
+    setFirstColumnSpanned(noteIdx.row(), parIdx, true);
+    QWidget *rw = new QWidget;
+    rw->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *hb = new QHBoxLayout(rw);
+    hb->setContentsMargins(QTreeView::indentation() + 4, 0, 0, 0);
+    hb->setSpacing(0);
+    QLabel *note = new QLabel(rw);
+    note->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
+    note->setEnabled(false);                     // dim: a caption, not a control
+    hb->addWidget(note);
+    hb->addStretch(1);
+    setIndexWidget(noteIdx, rw);
+    lensBlurNote = note;
+}
 
-    addGroupDivider(parIdx, "LensHeader", "LensCADivider");
-    addCheckbox("removeCA", "Remove CA",
-                "Remove the colour fringes that appear toward the corners of the\n"
-                "frame.",
+void DevelopProperties::addLensBlurRows(const QModelIndex &parIdx)
+{
+/*
+    Lens Blur (Develop/lensblur.h; MW::applyLensBlur runs it on the composited frame):
+    a depth-of-field blur from the AI depth field. Amount is the aperture; Focus the
+    depth kept sharp (0 near .. 100 far), set by the slider or by clicking the photo
+    (the target button, MW::onLensFocusPicked); Focal range how much depth around it
+    stays sharp; Bokeh the shape a blurred highlight takes; Boost how bright those
+    highlights bloom. Show depth is a VIEW (not saved): the frame drawn as the depth
+    field, the focal range lit. Mask scopes refine it (lensBlurRefine).
+*/
+    addLensBlurNote(parIdx);
+
+    /* The focus picker: a target button, as the Detail panel's, then click the photo. */
+    clearItemInfo(i);
+    i.name = "lensBlurPick";
+    i.parIdx = parIdx;
+    i.parentName = "LensHeader";
+    i.captionText = "";
+    i.isIndent = true;
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+    const QModelIndex pickIdx = capIdx;
+    setFirstColumnSpanned(pickIdx.row(), parIdx, true);
+    {
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(0, 0, 0, 0);
+        hb->setSpacing(6);
+        QLabel *lbl = new QLabel("Focus point", rw);
+        lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
+        /* Takes the mouse (unlike the Detail panel's "1:1"), so it can show its tip. */
+        lbl->setToolTip("Set the focus by clicking the photo: click the target button,\n"
+                        "then click the part that should be sharp. Focus is set to that\n"
+                        "point's depth, and Lens Blur turns on if it was off.");
+        BarBtn *tgt = new BarBtn();
+        tgt->setIconSize(QSize(16, 16));
+        tgt->setToolTip("Click here, then click the photo where it should be sharp.");
+        tgt->setEnabled(!currentImagePath.isEmpty());
+        tgt->setActive(lensFocusPickActive);
+        tgt->setIcon(detailTargetIcon(lensFocusPickActive));
+        connect(tgt, &BarBtn::clicked, this, &DevelopProperties::toggleLensFocusPick);
+        lensFocusPickBtn = tgt;
+        hb->addWidget(lbl);
+        hb->addWidget(tgt);
+        hb->addStretch(1);
+        setIndexWidget(pickIdx, rw);
+    }
+    addCheckbox("lensBlurVisualize", "Show depth",
+                "Show the depth estimate instead of the photo: near is light, far is\n"
+                "dark, and what stays sharp is tinted green. Only a view: not saved.",
                 parIdx, "LensHeader");
-    addSlider("defringePurple", "Purple fringe:",
-              "Defringe the cyan, blue, purple and magenta rim along\n"
-              "high-contrast edges.",
-              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray);
-    addSlider("defringeGreen", "Green fringe:",
-              "Defringe the green rim along high-contrast edges.",
-              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray);
+    /* A gap under the picker and Show depth: aids for setting focus, not sliders. */
+    addDivider(G::groupSeparatorHeight, 0, Qt::transparent, parIdx, "LensHeader",
+               "lensBlurPickSpacer");
+    addSlider("lensBlurAmount", "Amount",
+              "How strong the blur is: the aperture (0 = off).",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 0);
+    addSlider("lensBlurFocus", "Focus",
+              "The depth kept sharp: 0 is the nearest part of the photo, 100 the\n"
+              "farthest. Or use the target button and click the photo.",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 0);
+    addSlider("lensBlurRange", "Focal range",
+              "How much depth around the focus stays sharp.",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 10);
 
-    addGroupDivider(parIdx, "LensHeader", "LensEndDivider");
+    /* Bokeh: the shape a blurred point of light takes (LensBlur::Shape order). A gap
+       above it sets the look controls apart from the focus ones; the combo owns the
+       row's value cell (the Lens profile row's idiom), so it starts where the sliders
+       do. */
+    addDivider(G::groupSeparatorHeight, 0, Qt::transparent, parIdx, "LensHeader",
+               "lensBlurShapeSpacer");
+    clearItemInfo(i);
+    i.name = "lensBlurShape";
+    i.parIdx = parIdx;
+    i.parentName = "LensHeader";
+    i.captionText = "Bokeh";
+    i.tooltip = "The shape a blurred point of light takes.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "lensBlurShape";
+    i.delegateType = DT_None;       // we own the value cell
+    addItem(i);
+    const QModelIndex shapeVal = findValueIndex("lensBlurShape");
+    if (shapeVal.isValid()) {
+        QWidget *cell = new QWidget;
+        cell->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(cell);
+        hb->setContentsMargins(0, 0, 0, 0);
+        hb->setSpacing(0);
+        QComboBox *combo = new QComboBox(cell);
+        combo->addItems({"Circle", "5 blades", "6 blades", "Cat's eye", "Soap bubble",
+                         "Anamorphic"});
+        {
+            QSignalBlocker b(combo);
+            combo->setCurrentIndex(std::clamp(kaleidoParams().lensBlurShape, 0, 5));
+        }
+        combo->setToolTip("The shape a blurred point of light takes.\n"
+                          "Circle: a modern lens wide open.  5 / 6 blades: stopped down.\n"
+                          "Cat's eye: clipped toward the corners, like a fast lens.\n"
+                          "Soap bubble: a bright rim.  Anamorphic: tall ovals.");
+        connect(combo, &QComboBox::currentIndexChanged, this, [this, combo](int idx){
+            if (idx < 0 || currentImagePath.isEmpty()) return;
+            EditParams &p = activeParams();
+            if (p.lensBlurShape == idx) return;
+            p.lensBlurShape = idx;
+            noteEdit("Lens blur bokeh", combo->itemText(idx),
+                     historyScopeLabel() + "/lensBlurShape");
+            emit paramsChanged();
+        });
+        lensShapeCombo = combo;
+        hb->addWidget(combo);
+        hb->addStretch(1);
+        setIndexWidget(shapeVal, cell);
+    }
+    addSlider("lensBlurBoost", "Boost",
+              "How brightly the blurred highlights bloom.",
+              parIdx, "LensHeader", 0, 100, 0, G::darkgray, G::lightgray, 0);
+}
+
+void DevelopProperties::syncLensBlurAvailability()
+{
+    /* The reason, if any, Lens Blur cannot work here -- see the header. */
+    QString reason;
+    const bool global = activeScopeIndex == 0;
+    if (!InferenceSession::BackendCompiledIn())
+        reason = tr("Needs the AI depth model, which this build cannot run.");
+    else if (!global) {
+        const EditStack s = stackCache.value(currentImagePath);
+        const bool on = !s.scopes.isEmpty() && s.scopes.at(0).params.hasLensBlur();
+        if (!on) reason = tr("Turn on Lens Blur in the Global scope first.");
+    }
+    static const char *globalRows[] = {"lensBlurAmount", "lensBlurPick", "lensBlurFocus",
+                                       "lensBlurRange", "lensBlurShape", "lensBlurBoost",
+                                       "lensBlurVisualize"};
+    if (global) {
+        const bool ok = InferenceSession::BackendCompiledIn();
+        for (const char *row : globalRows) setItemEnabled(row, ok);
+        if (lensShapeCombo) lensShapeCombo->setEnabled(ok);
+        if (lensFocusPickBtn) lensFocusPickBtn->setEnabled(ok && !currentImagePath.isEmpty());
+    }
+    else setItemEnabled("lensBlurRefine", reason.isEmpty());
+    if (lensBlurNote) lensBlurNote->setText(reason);
+    const QModelIndex idx = findCaptionIndex("lensBlurNote");
+    if (idx.isValid()) {
+        model->setData(idx, reason.isEmpty(), UR_isHidden);
+        setRowHidden(idx.row(), idx.parent(), reason.isEmpty());
+    }
+}
+
+void DevelopProperties::cancelLensFocusPick()
+{
+    setLensFocusPickActive(false);
+}
+
+void DevelopProperties::toggleLensFocusPick()
+{
+    if (!lensFocusPickActive && currentImagePath.isEmpty()) return;
+    setLensFocusPickActive(!lensFocusPickActive);
+}
+
+void DevelopProperties::setLensFocusPickActive(bool on)
+{
+    if (lensFocusPickActive == on) return;
+    lensFocusPickActive = on;
+    if (lensFocusPickBtn) {
+        lensFocusPickBtn->setActive(on);
+        lensFocusPickBtn->setIcon(detailTargetIcon(on));
+    }
+    if (on) {
+        emit depthWanted();              // the click samples the depth field
+        emit lensFocusPickBegin();
+    }
+    else emit lensFocusPickEnd();
+}
+
+void DevelopProperties::setLensBlurFocus(float depth)
+{
+    /* From the focus picker (MW::onLensFocusPicked). Picking a focus point is asking for
+       the blur, so an image with Lens Blur off gets it at half strength -- the same
+       reasoning as picking a lens turning its profile on. */
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (s.scopes.isEmpty()) s.scopes.append(EditScope());
+    EditParams &g = s.scopes[0].params;
+    const float d = std::clamp(depth, 0.0f, 1.0f);
+    const bool turnOn = !g.hasLensBlur();
+    if (g.lensBlurFocus == d && !turnOn) return;
+    g.lensBlurFocus = d;
+    if (turnOn) g.lensBlurAmount = 0.5f;
+    noteScopeEdit("Global", "Lens blur focus", QString::number(qRound(d * 100.0f)),
+                  "global/lensBlurFocus");
+    const bool wasPop = isPopulating;
+    isPopulating = true;
+    setSliderReal("lensBlurFocus", g.lensBlurFocus * 100.0);
+    setSliderReal("lensBlurAmount", g.lensBlurAmount * 100.0);
+    isPopulating = wasPop;
+    updateSectionHeaderCaptions();
+    emit paramsChanged();
 }
 
 /* lensfun's database is CC BY-SA: the attribution rides on the row that uses it. */
@@ -7487,6 +7867,17 @@ void DevelopProperties::updateSectionHeaderCaptions()
         if (r->text() != text) r->setText(text);
     }
 
+    /* The Lens panel's radios likewise (Global only, where they exist). */
+    static const char *kLensModeLabel[] = {"Profile", "Fringe", "Blur"};
+    for (int m = 0; m < 3; ++m) {
+        QRadioButton *r = lensPanelRadios[m];
+        if (!r) continue;
+        const bool edited = haveParams && lensModeEdited(s.scopes.at(0).params, m);
+        const QString text = edited ? QString(kLensModeLabel[m]) + " *"
+                                    : QString(kLensModeLabel[m]);
+        if (r->text() != text) r->setText(text);
+    }
+
     /* The Effects dropdown's items get the same " *", so an edited effect that is not
        the one showing is still visible from the list. */
     if (effectsCombo) {
@@ -7661,6 +8052,13 @@ void DevelopProperties::itemChange(QModelIndex idx)
         emit paramsChanged();
         return;
     }
+    /* Lens Blur's Show depth: VIEW state, like Visualize Range above. */
+    if (source == "lensBlurVisualize") {
+        lensDepthVisualize = v.toBool();
+        if (lensDepthVisualize) emit depthWanted();
+        emit paramsChanged();
+        return;
+    }
     if (source.startsWith("pc") && source.size() > 2 && source.at(2).isUpper()) {
         if (currentImagePath.isEmpty()) return;
         noteNonMaskInteraction();
@@ -7785,7 +8183,11 @@ void DevelopProperties::itemChange(QModelIndex idx)
             {"grainAmount", "Grain"},         {"grainSize", "Grain size"},
             {"grainRoughness", "Grain roughness"},
             {"blurAmount", "Blur"}, {"blurAngle", "Blur angle"},
-            {"blurSize", "Blur size"}, {"blurFeather", "Blur feather"}};
+            {"blurSize", "Blur size"}, {"blurFeather", "Blur feather"},
+            /* Lens Blur's rows are a bare "Amount" / "Focus" under the Blur radio. */
+            {"lensBlurAmount", "Lens blur"}, {"lensBlurFocus", "Lens blur focus"},
+            {"lensBlurRange", "Lens blur focal range"},
+            {"lensBlurBoost", "Lens blur boost"}, {"lensBlurRefine", "Lens blur refine"}};
         const QString action = kCalHistory.value(source, kEffectsHistory.value(source,
                                                  idx.siblingAtColumn(0).data().toString()));
         noteEdit(action, historyValueText(idx, v), historyScopeLabel() + "/" + source);
@@ -7793,6 +8195,13 @@ void DevelopProperties::itemChange(QModelIndex idx)
         /* A blur slider can switch the blur's canvas handles on or off, or move the
            tilt-shift band they draw. */
         if (source.startsWith("blur")) emit kaleidoToolChanged();
+        /* Lens Blur on (or refined): the depth field has to exist -- the user's
+           gesture, where MW may offer the model download. */
+        if (source.startsWith("lensBlur")) {
+            const EditStack &st = stackCache[currentImagePath];
+            if (!st.scopes.isEmpty() && st.scopes.at(0).params.hasLensBlur())
+                emit depthWanted();
+        }
     }
 }
 
@@ -7843,6 +8252,11 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "grainSize")          p.grainSize          = f / 100.0f;
     else if (key == "grainRoughness")     p.grainRoughness     = f / 100.0f;
     else if (key == "blurAmount")         p.blurAmount         = f / 100.0f;   // "Blur"
+    else if (key == "lensBlurAmount")     p.lensBlurAmount     = f / 100.0f;   // Lens
+    else if (key == "lensBlurFocus")      p.lensBlurFocus      = f / 100.0f;
+    else if (key == "lensBlurRange")      p.lensBlurRange      = f / 100.0f;
+    else if (key == "lensBlurBoost")      p.lensBlurBoost      = f / 100.0f;
+    else if (key == "lensBlurRefine")     p.lensBlurRefine     = f / 100.0f;
     else if (key == "blurAngle")          p.blurAngle          = f;            // degrees
     else if (key == "blurSize")           p.blurSize           = f / 100.0f;
     else if (key == "blurFeather")        p.blurFeather        = f / 100.0f;
@@ -7894,7 +8308,10 @@ DevelopProperties::StackRenderJob DevelopProperties::stackJob()
        currentGeometry). */
     const bool useGeometry = s.geometry.show;
     /* Replace preview eye off -> render without the heals (spots stay in the cache). */
-    return buildStackJob(s, useGeometry, spotsShown);
+    job = buildStackJob(s, useGeometry, spotsShown);
+    /* Lens Blur's Show depth: a view, so here and never in stackJobFor. */
+    job.lensVisualize = !previewActive && lensDepthVisualize;
+    return job;
 }
 
 DevelopProperties::StackRenderJob DevelopProperties::stackJobFor(const QString &fPath)
@@ -8527,6 +8944,11 @@ const PresetLeafDef kEffectsLeaves[] = {
     {"kaleido",  "Kaleidoscope"},
     {"blur",     "Blur"},
 };
+/* A mask scope's Lens Blur refine. Global's Lens Blur itself (like the rest of the Lens
+   section) is a per-image "Global settings" leaf, not a scope one. */
+const PresetLeafDef kLensLeaves[] = {
+    {"lensRefine", "Lens blur refine"},
+};
 
 struct PresetSectionDef {
     const char *title;
@@ -8543,6 +8965,7 @@ const PresetSectionDef kSections[] = {
     {"Color Grade", kColorGradeLeaves, int(sizeof(kColorGradeLeaves) / sizeof(PresetLeafDef))},
     {"Detail",    kDetailLeaves,   int(sizeof(kDetailLeaves)   / sizeof(PresetLeafDef))},
     {"Effects",   kEffectsLeaves,  int(sizeof(kEffectsLeaves)  / sizeof(PresetLeafDef))},
+    {"Lens",      kLensLeaves,     int(sizeof(kLensLeaves)     / sizeof(PresetLeafDef))},
 };
 
 /* Does this leaf differ from its default? A folded leaf tests its PRIMARY params, the
@@ -8602,6 +9025,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "grain")        return p.grainAmount      != def.grainAmount;
     if (key == "kaleido")      return p.hasKaleido();
     if (key == "blur")         return p.blurAmount != def.blurAmount;
+    if (key == "lensRefine")   return p.lensBlurRefine != def.lensBlurRefine;
     return false;
 }
 
@@ -8741,6 +9165,7 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("blurSize", p.blurSize);
         out.insert("blurFeather", p.blurFeather);
     }
+    if (lk.contains("lensRefine")) out.insert("lensBlurRefine", p.lensBlurRefine);
     if (lk.contains("pointColors"))
         out.insert("pointColors", PointColor::encode(p.pointColorN, p.pointColor));
 }
@@ -8792,6 +9217,13 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         preset.globals.insert("lensDistortion", base.lensDistortion);
         preset.globals.insert("lensVignetting", base.lensVignetting);
         preset.globals.insert("lensProfileId", base.lensProfileId);
+    }
+    if (gk.contains("lensBlur")) {
+        preset.globals.insert("lensBlurAmount", base.lensBlurAmount);
+        preset.globals.insert("lensBlurFocus", base.lensBlurFocus);
+        preset.globals.insert("lensBlurRange", base.lensBlurRange);
+        preset.globals.insert("lensBlurShape", base.lensBlurShape);
+        preset.globals.insert("lensBlurBoost", base.lensBlurBoost);
     }
     if (gk.contains("lensManual")) {
         preset.globals.insert("lensManualDistortion", base.lensManualDistortion);
@@ -8863,6 +9295,7 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
         base.lensManualDistortion != def.lensManualDistortion ||
         base.lensManualVignetting != def.lensManualVignetting});
     gg.leaves.append({"lensCA", "Remove chromatic aberration", base.removeCA >= 0});
+    gg.leaves.append({"lensBlur", "Lens blur", base.lensBlurAmount != def.lensBlurAmount});
     gg.leaves.append({"defringe", "Defringe (Purple + Green)",
         base.defringePurple != def.defringePurple || base.defringeGreen != def.defringeGreen});
     gg.leaves.append({"histogram", "Histogram tonal ranges",
@@ -9317,6 +9750,9 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
         else if (k == "kaleidoZoom" || k == "kaleidoOpacity") {
             it.value() = 1.0;
         }
+        else if (k == "lensBlurRange") {
+            it.value() = double(EditParams().lensBlurRange);
+        }
         else if (k == "lensProfileId") {
             it.value() = QString();
         }
@@ -9688,6 +10124,11 @@ const FloatField kFloatFields[] = {
     {"lensManualDistortion", &EditParams::lensManualDistortion},
     {"lensManualVignetting", &EditParams::lensManualVignetting},
     {"lensManualMidpoint",   &EditParams::lensManualMidpoint},
+    {"lensBlurAmount",       &EditParams::lensBlurAmount},
+    {"lensBlurFocus",        &EditParams::lensBlurFocus},
+    {"lensBlurRange",        &EditParams::lensBlurRange},
+    {"lensBlurBoost",        &EditParams::lensBlurBoost},
+    {"lensBlurRefine",       &EditParams::lensBlurRefine},
 };
 struct IntField { const char *name; int EditParams::*m; };
 const IntField kIntFields[] = {
@@ -9696,6 +10137,7 @@ const IntField kIntFields[] = {
     {"denoiseRaw", &EditParams::denoiseRaw},
     {"rawEngine", &EditParams::rawEngine},
     {"appleRawVersion", &EditParams::appleRawVersion},
+    {"lensBlurShape", &EditParams::lensBlurShape},
     {"removeCA", &EditParams::removeCA},
     {"lensProfile", &EditParams::lensProfile},
     {"kaleidoSegments", &EditParams::kaleidoSegments},
@@ -10274,6 +10716,7 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("blurAngle",          p.blurAngle);
     setSliderReal("blurSize",           p.blurSize           * 100.0);
     setSliderReal("blurFeather",        p.blurFeather        * 100.0);
+    setSliderReal("lensBlurRefine",     p.lensBlurRefine     * 100.0);   // a mask's Lens
     if (blurTypeCombo) {
         QSignalBlocker b(blurTypeCombo);
         blurTypeCombo->setCurrentIndex(std::clamp(p.blurType, 0,

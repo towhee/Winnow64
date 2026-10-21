@@ -115,6 +115,19 @@ void TstPresetParams::lensKeysAreGlobalAndRaw()
     QCOMPARE(p.lensManualDistortion, -0.3f);
     QCOMPARE(p.lensManualVignetting, 0.4f);
     QCOMPARE(p.lensManualMidpoint, 0.7f);
+    /* Lens Blur: raw 0..1 (refine -1..1), not the dock's 0..100; the shape is an INT. */
+    DevelopPresets::assignParam("lensBlurAmount", QVariant("0.6"), p);
+    DevelopPresets::assignParam("lensBlurFocus", QVariant("0.2"), p);
+    DevelopPresets::assignParam("lensBlurRange", QVariant("0.15"), p);
+    DevelopPresets::assignParam("lensBlurShape", QVariant("3"), p);
+    DevelopPresets::assignParam("lensBlurBoost", QVariant("0.4"), p);
+    DevelopPresets::assignParam("lensBlurRefine", QVariant("-0.5"), p);
+    QCOMPARE(p.lensBlurAmount, 0.6f);
+    QCOMPARE(p.lensBlurFocus, 0.2f);
+    QCOMPARE(p.lensBlurRange, 0.15f);
+    QCOMPARE(p.lensBlurShape, 3);
+    QCOMPARE(p.lensBlurBoost, 0.4f);
+    QCOMPARE(p.lensBlurRefine, -0.5f);
 }
 
 void TstPresetParams::unknownKeysAreIgnored()

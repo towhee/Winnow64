@@ -408,6 +408,38 @@ struct EditParams {
         return lensProfile >= 0 ? lensProfile > 0 : (autoRaw && isRaw);
     }
 
+    /*
+        LENS BLUR (Develop/lensblur.h, run by MW on the composited frame, before the
+        geometry): a depth-of-field blur from the AI depth field (Develop/depthmask.h).
+        Unlike the corrections above it does NOT touch the base, so the base and the
+        stack caches ignore it (MW strips it from the job, as it does the kaleidoscope).
+
+        Global scope:
+        lensBlurAmount -- 0..1 (panel 0..100), 0 = off; the aperture. The only one in
+                          isIdentity; the rest are inert until it is non-zero.
+        lensBlurFocus  -- 0..1 depth of the focal plane, 0 = nearest .. 1 = farthest
+                          (panel 0..100, or click the photo). Default 0: near in focus.
+        lensBlurRange  -- 0..1 depth range kept sharp, centred on the focus (panel
+                          0..100). Default 0.1.
+        lensBlurShape  -- LensBlur::Shape: 0 circle, 1 five blades, 2 six blades,
+                          3 cat's eye, 4 soap bubble, 5 anamorphic.
+        lensBlurBoost  -- 0..1 (panel 0..100) highlight boost.
+
+        Mask scope:
+        lensBlurRefine -- -1..1 (panel -100..100), 0 = none. Over the mask, - pulls the
+                          blur toward in focus, + pushes it toward a strong blur: the
+                          fix for a depth estimate that got something wrong. In
+                          isIdentity, since on its own it is an edit (it only shows
+                          while Global's Lens Blur is on).
+    */
+    float lensBlurAmount = 0.0f;
+    float lensBlurFocus  = 0.0f;
+    float lensBlurRange  = 0.1f;
+    int   lensBlurShape  = 0;
+    float lensBlurBoost  = 0.0f;
+    float lensBlurRefine = 0.0f;
+    bool hasLensBlur() const { return lensBlurAmount > 0.0f; }
+
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
        "Scope & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
@@ -521,10 +553,11 @@ struct EditParams {
        in Lightroom. localDenoise* moved here from Effects; the saved preset format is
        unaffected (presets store a flat map of field names, section titles only group the
        checklist UI), but a scope's showDetail rather than showEffects now gates them. */
-    /* Lens = the Global-only lens corrections (profile, removeCA, defringe), the Global
-       scope's Lens section. They sat under Effects until the Lens section existed; the
-       preset format is unaffected (presets store field names, not sections). A mask
-       scope never sets them. */
+    /* Lens = the Global-only lens corrections (profile, removeCA, defringe) and Lens
+       Blur, the Global scope's Lens section. They sat under Effects until the Lens
+       section existed; the preset format is unaffected (presets store field names, not
+       sections). A mask scope never sets them, except lensBlurRefine -- the one row its
+       own Lens section shows. */
     enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects,
                        PointColor, Lens };
 
@@ -622,6 +655,12 @@ struct EditParams {
             p.removeCA = def.removeCA;
             p.defringePurple = def.defringePurple;
             p.defringeGreen = def.defringeGreen;
+            p.lensBlurAmount = def.lensBlurAmount;
+            p.lensBlurFocus = def.lensBlurFocus;
+            p.lensBlurRange = def.lensBlurRange;
+            p.lensBlurShape = def.lensBlurShape;
+            p.lensBlurBoost = def.lensBlurBoost;
+            p.lensBlurRefine = def.lensBlurRefine;
             break;
         }
     }
@@ -669,6 +708,7 @@ struct EditParams {
                lensProfile < 0 && lensDistortion == 1.0f && lensVignetting == 1.0f &&
                lensProfileId.isEmpty() &&
                lensManualDistortion == 0.0f && lensManualVignetting == 0.0f &&
+               lensBlurAmount == 0.0f && lensBlurRefine == 0.0f &&
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&

@@ -1030,6 +1030,23 @@ void ImageView::endDetailPick()
     viewport()->update();
 }
 
+void ImageView::beginLensFocusPick()
+{
+    if (G::isLogger) G::log("ImageView::beginLensFocusPick");
+    lensFocusPickMode = true;
+    setCursor(Qt::CrossCursor);         // "click where it should be sharp"
+    viewport()->update();
+}
+
+void ImageView::endLensFocusPick()
+{
+    if (!lensFocusPickMode) return;
+    if (G::isLogger) G::log("ImageView::endLensFocusPick");
+    lensFocusPickMode = false;
+    unsetCursor();
+    viewport()->update();
+}
+
 void ImageView::beginPointColorPick()
 {
     if (G::isLogger) G::log("ImageView::beginPointColorPick");
@@ -1442,7 +1459,8 @@ double ImageView::spotSizeMin() const
 bool ImageView::developToolActive() const
 {
     return cropActive() || kaleidoActive() || maskToolUsesMouse() || spotEditMode
-           || wbPickMode || detailPickMode || curvePickMode || pointColorPickMode;
+           || wbPickMode || detailPickMode || curvePickMode || pointColorPickMode
+           || lensFocusPickMode;
 }
 
 /* See the header: the Curves picker is a toggle, not a one-shot tool, so it defers to
@@ -1450,7 +1468,8 @@ bool ImageView::developToolActive() const
 bool ImageView::curvePickOwnsMouse() const
 {
     return curvePickMode && !cropActive() && !kaleidoActive() && !maskToolUsesMouse()
-           && !spotEditMode && !wbPickMode && !detailPickMode && !pointColorPickMode;
+           && !spotEditMode && !wbPickMode && !detailPickMode && !pointColorPickMode
+           && !lensFocusPickMode;
 }
 
 /* See the header: DISPLAYED (post-geometry) normalized coords, the space
@@ -4123,9 +4142,9 @@ void ImageView::buildSkyPreview()
 
 void ImageView::buildDepthPreview()
 {
-    /* Depth Range tint: band [lo,hi] over the shared DepthMask field (built + registered by MW from
-       midas.onnx). Like buildRangePreview but the value is depth, not luminance; lo/hi come from the
-       Near/Far sliders via maskRangeParams. */
+    /* Depth Range tint: band [lo,hi] over the shared DepthMask field (built + registered
+       by MW from depth_anything.onnx). Like buildRangePreview but the value is depth, not
+       luminance; lo/hi come from the Near/Far sliders via maskRangeParams. */
     maskRangePreview = QImage();
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = DepthMask::getRef(currentImagePath);
@@ -5511,6 +5530,10 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         emit detailPickExited();
         return;
     }
+    if (lensFocusPickMode && event->key() == Qt::Key_Escape) {
+        emit lensFocusPickExited();
+        return;
+    }
     if (pointColorPickMode && event->key() == Qt::Key_Escape) {
         emit pointColorPickExited();
         return;
@@ -5658,6 +5681,16 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         const QPointF n = maskViewportToNorm(event->pos());
         if (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0)
             emit detailPointPicked(n.x(), n.y());
+        return;
+    }
+
+    /* Lens Blur's focus picker: the same one-shot contract, in MASK space (the space the
+       depth field is indexed in, pre-geometry). */
+    if (!spacePanOverride && lensFocusPickMode && event->button() == Qt::LeftButton) {
+        suppressClickZoom = true;
+        const QPointF n = maskViewportToNorm(event->pos());
+        if (n.x() >= 0.0 && n.x() <= 1.0 && n.y() >= 0.0 && n.y() <= 1.0)
+            emit lensFocusPicked(n.x(), n.y());
         return;
     }
 
@@ -6026,7 +6059,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     /* Detail preview picker: re-assert the crosshair for the same reason the dropper
        above re-asserts the pipette (the base view resets the cursor over the canvas), and
        consume the move so the canvas cannot pan while aiming. */
-    if (!spacePanOverride && detailPickMode) {
+    if (!spacePanOverride && (detailPickMode || lensFocusPickMode)) {
         setCursor(Qt::CrossCursor);
         event->accept();
         return;

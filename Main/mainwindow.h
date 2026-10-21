@@ -1146,6 +1146,10 @@ private slots:
        picker landed, the point moved / the panel opened, a drag inside the preview, and
        the per-image reset. The point is VIEW state -- no EditParams, no sidecar. */
     void onDetailPointPicked(double nx, double ny);
+    /* Lens > Lens Blur: the focus picker landed (a mask-space point -> its depth), and
+       the dock's gesture that needs the depth field (DevelopProperties::depthWanted). */
+    void onLensFocusPicked(double nx, double ny);
+    void onDepthWanted();
     void onDetailRoiNeeded();
     void onDetailPointNudged(int dx, int dy);
     void resetDetailPoint();
@@ -2989,12 +2993,16 @@ private:
                        const EditParams &base, int degrees);
     QString developSkyRefPath;
     class SkyPredictor *skyPredictor = nullptr;
-    /* AI "Depth Range" mask: a MiDaS depth field (DepthMask store) built once per image by
-       ensureDepthMask (midas.onnx, lazily loaded). Keyed on path only. The mask selects a [near,far]
-       band of the field (like Luminance Range over depth). */
+    /* AI depth field (DepthMask store, Depth Anything V2 Small) built once per image by
+       ensureDepthMask (depth_anything.onnx, lazily loaded). Keyed on path only. The "Depth
+       Range" mask selects a [near,far] band of it (like Luminance Range over depth); Lens
+       Blur blurs by it. */
     void ensureDepthMask(const QString &fPath, const WorkingImage &work,
                          const EditParams &base, int degrees);
     QString developDepthRefPath;
+    /* The image whose depth-model download prompt was declined: asked at most once per
+       image, as a Lens Blur drag re-emits depthWanted on every tick. */
+    QString depthModelDeclinedPath;
     class DepthPredictor *depthPredictor = nullptr;
     /* AI "Object Mask" (SAM 2): a PROMPTABLE brush mask. Two-phase, unlike the other AI masks:
        ensureObjectMask encodes the developed base ONCE per image (cached in objectMaskPredictor)

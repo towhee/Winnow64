@@ -467,6 +467,12 @@ QString MW::developDiagnostics()
             << "   angle = " << G::s(p.blurAngle)
             << "   centre = " << G::s(p.blurX) << ", " << G::s(p.blurY)
             << "   size = " << G::s(p.blurSize) << "   feather = " << G::s(p.blurFeather);
+        rpt << "\n" << indent << "lensBlurAmount = " << G::s(p.lensBlurAmount)
+            << "   focus = " << G::s(p.lensBlurFocus)
+            << "   range = " << G::s(p.lensBlurRange)
+            << "   shape = " << G::s(p.lensBlurShape)
+            << "   boost = " << G::s(p.lensBlurBoost)
+            << "   refine = " << G::s(p.lensBlurRefine);
     };
     auto dims = [](const std::shared_ptr<const WorkingImage> &w) -> QString {
         return w ? QString("%1 x %2").arg(w->width).arg(w->height) : QString("(none)");

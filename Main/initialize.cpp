@@ -2740,6 +2740,16 @@ void MW::createDevelopDock()
             this, &MW::onDetailPointPicked);
     connect(imageView, &ImageView::detailPickExited,
             developProperties, &DevelopProperties::cancelDetailPick);
+    /* Lens Blur's focus picker: the same arrangement; MW turns the point into a depth.
+       depthWanted is the dock's gesture that may offer the depth model's download. */
+    connect(developProperties, &DevelopProperties::lensFocusPickBegin,
+            imageView, &ImageView::beginLensFocusPick);
+    connect(developProperties, &DevelopProperties::lensFocusPickEnd,
+            imageView, &ImageView::endLensFocusPick);
+    connect(imageView, &ImageView::lensFocusPicked, this, &MW::onLensFocusPicked);
+    connect(imageView, &ImageView::lensFocusPickExited,
+            developProperties, &DevelopProperties::cancelLensFocusPick);
+    connect(developProperties, &DevelopProperties::depthWanted, this, &MW::onDepthWanted);
     /* Curves point picker: the dock arms ImageView while its sampler toggle is on, the
        Curves panel is expanded and the mode is Point; a click comes back as a normalized
        point that MW turns into a pixel and the dock adds to the curve. Unlike the two

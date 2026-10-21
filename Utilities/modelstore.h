@@ -52,7 +52,7 @@ enum class Model {
     U2Net,          // u2net.onnx
     SkySeg,         // skyseg.onnx
     SkySegFormer,   // sky_segformer.onnx (Select Sky's second model)
-    Midas,          // midas.onnx
+    DepthAnything,  // depth_anything.onnx (Depth Range, Lens Blur; replaced midas.onnx)
     Migan,          // migan.onnx
     Lama,           // lama.onnx
     Sam2Encoder,    // sam2_encoder.onnx

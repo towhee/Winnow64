@@ -91,6 +91,7 @@ packaging/windows/config.ps1
 # On-demand models: downloaded at runtime from winnow.ca, not shipped.
 # See Utilities/modelstore.h and tools/gen_model_catalog.sh.
 ReleaseExtras/midas.onnx
+ReleaseExtras/depth_anything.onnx
 ReleaseExtras/skyseg.onnx
 ReleaseExtras/sky_segformer.onnx
 ReleaseExtras/u2net.onnx

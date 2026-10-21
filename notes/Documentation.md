@@ -466,103 +466,109 @@
     - [11.24.6 UI](#11246-ui)
     - [11.24.7 Recipe and Presets](#11247-recipe-and-presets)
     - [11.24.8 Tests](#11248-tests)
-  - [11.25 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1125-overlays-over-a-transformed-image-mask-space-vs-displayed-space)
-    - [11.25.1 One Map](#11251-one-map)
-    - [11.25.2 Consequences](#11252-consequences)
-  - [11.26 Rotating a Developed Image (the Recipe Follows the Photo)](#1126-rotating-a-developed-image-the-recipe-follows-the-photo)
-    - [11.26.1 The Pixels Develop Renders From](#11261-the-pixels-develop-renders-from)
-    - [11.26.2 The Recipe's Coordinates](#11262-the-recipes-coordinates)
-    - [11.26.3 The Stored Previews](#11263-the-stored-previews)
-    - [11.26.4 The Grid Thumbnail](#11264-the-grid-thumbnail)
-  - [11.27 White Balance (Absolute, Kelvin)](#1127-white-balance-absolute-kelvin)
-    - [11.27.1 The Colour Science](#11271-the-colour-science)
-    - [11.27.2 Adobe's Temperature Convention](#11272-adobes-temperature-convention)
-    - [11.27.3 The Inverse, solve()](#11273-the-inverse-solve)
-    - [11.27.4 What Carries It](#11274-what-carries-it)
-    - [11.27.5 Storage (EditParams)](#11275-storage-editparams)
-    - [11.27.6 The Temp Box Reads As Shot the Way the Render Does](#11276-the-temp-box-reads-as-shot-the-way-the-render-does)
-    - [11.27.7 The WB Row](#11277-the-wb-row)
-    - [11.27.8 Presets](#11278-presets)
-    - [11.27.9 The Kelvin Slider](#11279-the-kelvin-slider)
-    - [11.27.10 The Dropper](#112710-the-dropper)
-    - [11.27.11 The Dropper Loupe](#112711-the-dropper-loupe)
-    - [11.27.12 Skin Tone (Opt/Alt-Click)](#112712-skin-tone-optalt-click)
-  - [11.28 Curves Panel (Tone Curve)](#1128-curves-panel-tone-curve)
-    - [11.28.1 There Are No Parametric Params](#11281-there-are-no-parametric-params)
-    - [11.28.2 The Coupling Is Shown, Not Hidden](#11282-the-coupling-is-shown-not-hidden)
-    - [11.28.3 Layout: The Plot Is Centred in the Panel, Not in Its Cell](#11283-layout-the-plot-is-centred-in-the-panel-not-in-its-cell)
-    - [11.28.4 The Pointer Toggle](#11284-the-pointer-toggle)
-    - [11.28.5 It Owns the Click in Point Mode](#11285-it-owns-the-click-in-point-mode)
-    - [11.28.6 Curve Math](#11286-curve-math)
-    - [11.28.7 Pipeline](#11287-pipeline)
-    - [11.28.8 Data, Presets and Multi-Image](#11288-data-presets-and-multi-image)
-  - [11.29 Calibrate Panel (RGB Primaries)](#1129-calibrate-panel-rgb-primaries)
-    - [11.29.1 UI](#11291-ui)
-    - [11.29.2 Shadows Tint](#11292-shadows-tint)
-    - [11.29.3 Data and Pipeline](#11293-data-and-pipeline)
-    - [11.29.4 A New Section Must Join Every Per-Group Sweep](#11294-a-new-section-must-join-every-per-group-sweep)
-  - [11.30 Color Grade Panel (Colour Grading)](#1130-color-grade-panel-colour-grading)
-    - [11.30.1 Naming (Historical)](#11301-naming-historical)
-    - [11.30.2 UI](#11302-ui)
-    - [11.30.3 The Grade Is Lightroom's, Measured](#11303-the-grade-is-lightrooms-measured)
-    - [11.30.4 Implementation](#11304-implementation)
-    - [11.30.5 Data](#11305-data)
-  - [11.31 Point Color Panel](#1131-point-color-panel)
-    - [11.31.1 Params](#11311-params)
-    - [11.31.2 Multiple Samples](#11312-multiple-samples)
-    - [11.31.3 Pipeline](#11313-pipeline)
-    - [11.31.4 Eyedropper](#11314-eyedropper)
-    - [11.31.5 Visualize Range](#11315-visualize-range)
-    - [11.31.6 The Widget](#11316-the-widget)
-  - [11.32 The Combined Color Panel](#1132-the-combined-color-panel)
-  - [11.33 Develop Presets](#1133-develop-presets)
-    - [11.33.1 The Apply Is a Merge Onto the Active Scope](#11331-the-apply-is-a-merge-onto-the-active-scope)
-    - [11.33.2 A Section of the History Panel, Not a Dock](#11332-a-section-of-the-history-panel-not-a-dock)
-    - [11.33.3 The List](#11333-the-list)
-    - [11.33.4 Categories](#11334-categories)
-    - [11.33.5 The Save Dialog](#11335-the-save-dialog)
-    - [11.33.6 The Store](#11336-the-store)
-    - [11.33.7 Shortcuts](#11337-shortcuts)
-  - [11.34 Copy and Paste Develop Settings](#1134-copy-and-paste-develop-settings)
-    - [11.34.1 The Buffer](#11341-the-buffer)
-    - [11.34.2 UI](#11342-ui)
-  - [11.35 Multi-Image Editing](#1135-multi-image-editing)
-    - [11.35.1 The Rules](#11351-the-rules)
-    - [11.35.2 AI Mask Scopes Travel](#11352-ai-mask-scopes-travel)
-    - [11.35.3 Where It Hooks](#11353-where-it-hooks)
-    - [11.35.4 History Follows the Link](#11354-history-follows-the-link)
-  - [11.36 Develop History](#1136-develop-history)
-    - [11.36.1 The Panel](#11361-the-panel)
-    - [11.36.2 The Copy / Paste Button Row](#11362-the-copy--paste-button-row)
-    - [11.36.3 Showing the Dock](#11363-showing-the-dock)
-    - [11.36.4 The Sidecar Does Not Record Actions](#11364-the-sidecar-does-not-record-actions)
-    - [11.36.5 Persisted in the Local Index](#11365-persisted-in-the-local-index)
-    - [11.36.6 Recording (One Seam)](#11366-recording-one-seam)
-    - [11.36.7 Reverting and Previewing](#11367-reverting-and-previewing)
-    - [11.36.8 Before / After](#11368-before--after)
-    - [11.36.9 Files](#11369-files)
-  - [11.37 Reset All Edits](#1137-reset-all-edits)
-  - [11.38 Adding or Changing a Develop Adjustment (Checklist)](#1138-adding-or-changing-a-develop-adjustment-checklist)
-    - [11.38.1 Changing an Existing Op's Math](#11381-changing-an-existing-ops-math)
-    - [11.38.2 A Whole New Section](#11382-a-whole-new-section)
-    - [11.38.3 Maskable or Global-Only?](#11383-maskable-or-global-only)
-  - [11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift)
-    - [11.39.1 Presets Are the Exposure Point](#11391-presets-are-the-exposure-point)
-    - [11.39.2 The Migration Hook](#11392-the-migration-hook)
-    - [11.39.3 History Is No Longer Immune](#11393-history-is-no-longer-immune)
-    - [11.39.4 Retired Sidecar Key: "cameraProfileLook"](#11394-retired-sidecar-key-cameraprofilelook)
-  - [11.40 Corrupted or Changed Develop Settings](#1140-corrupted-or-changed-develop-settings)
-    - [11.40.1 What Is Validated](#11401-what-is-validated)
-    - [11.40.2 When to Notify (and When Not To)](#11402-when-to-notify-and-when-not-to)
-    - [11.40.3 A Damaged or Repaired Sidecar Is Never Rewritten Behind the User](#11403-a-damaged-or-repaired-sidecar-is-never-rewritten-behind-the-user)
-    - [11.40.4 Winnow No Longer Creates One](#11404-winnow-no-longer-creates-one)
-  - [11.41 Investigations and Fixes](#1141-investigations-and-fixes)
-    - [11.41.1 A Stack Overflow on a Pool Thread](#11411-a-stack-overflow-on-a-pool-thread)
-    - [11.41.2 Develop Render Latency (the Measurement Record)](#11412-develop-render-latency-the-measurement-record)
-      - [11.41.2.1 Slider Drag (2026-06)](#114121-slider-drag-2026-06)
-      - [11.41.2.2 Mask Drag (2026-08)](#114122-mask-drag-2026-08)
-      - [11.41.2.3 Adjustment Drag (2026-08)](#114123-adjustment-drag-2026-08)
-      - [11.41.2.4 A Stale Fold-Cache Slot](#114124-a-stale-fold-cache-slot)
+  - [11.25 Lens Blur (Depth of Field)](#1125-lens-blur-depth-of-field)
+    - [11.25.1 The Depth Model (Depth Anything V2 Small)](#11251-the-depth-model-depth-anything-v2-small)
+    - [11.25.2 The Blur (Develop/lensblur.h)](#11252-the-blur-developlensblurh)
+    - [11.25.3 Pipeline (MW::applyLensBlur)](#11253-pipeline-mwapplylensblur)
+    - [11.25.4 UI, Recipe and Presets](#11254-ui-recipe-and-presets)
+    - [11.25.5 Tests and Timings](#11255-tests-and-timings)
+  - [11.26 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1126-overlays-over-a-transformed-image-mask-space-vs-displayed-space)
+    - [11.26.1 One Map](#11261-one-map)
+    - [11.26.2 Consequences](#11262-consequences)
+  - [11.27 Rotating a Developed Image (the Recipe Follows the Photo)](#1127-rotating-a-developed-image-the-recipe-follows-the-photo)
+    - [11.27.1 The Pixels Develop Renders From](#11271-the-pixels-develop-renders-from)
+    - [11.27.2 The Recipe's Coordinates](#11272-the-recipes-coordinates)
+    - [11.27.3 The Stored Previews](#11273-the-stored-previews)
+    - [11.27.4 The Grid Thumbnail](#11274-the-grid-thumbnail)
+  - [11.28 White Balance (Absolute, Kelvin)](#1128-white-balance-absolute-kelvin)
+    - [11.28.1 The Colour Science](#11281-the-colour-science)
+    - [11.28.2 Adobe's Temperature Convention](#11282-adobes-temperature-convention)
+    - [11.28.3 The Inverse, solve()](#11283-the-inverse-solve)
+    - [11.28.4 What Carries It](#11284-what-carries-it)
+    - [11.28.5 Storage (EditParams)](#11285-storage-editparams)
+    - [11.28.6 The Temp Box Reads As Shot the Way the Render Does](#11286-the-temp-box-reads-as-shot-the-way-the-render-does)
+    - [11.28.7 The WB Row](#11287-the-wb-row)
+    - [11.28.8 Presets](#11288-presets)
+    - [11.28.9 The Kelvin Slider](#11289-the-kelvin-slider)
+    - [11.28.10 The Dropper](#112810-the-dropper)
+    - [11.28.11 The Dropper Loupe](#112811-the-dropper-loupe)
+    - [11.28.12 Skin Tone (Opt/Alt-Click)](#112812-skin-tone-optalt-click)
+  - [11.29 Curves Panel (Tone Curve)](#1129-curves-panel-tone-curve)
+    - [11.29.1 There Are No Parametric Params](#11291-there-are-no-parametric-params)
+    - [11.29.2 The Coupling Is Shown, Not Hidden](#11292-the-coupling-is-shown-not-hidden)
+    - [11.29.3 Layout: The Plot Is Centred in the Panel, Not in Its Cell](#11293-layout-the-plot-is-centred-in-the-panel-not-in-its-cell)
+    - [11.29.4 The Pointer Toggle](#11294-the-pointer-toggle)
+    - [11.29.5 It Owns the Click in Point Mode](#11295-it-owns-the-click-in-point-mode)
+    - [11.29.6 Curve Math](#11296-curve-math)
+    - [11.29.7 Pipeline](#11297-pipeline)
+    - [11.29.8 Data, Presets and Multi-Image](#11298-data-presets-and-multi-image)
+  - [11.30 Calibrate Panel (RGB Primaries)](#1130-calibrate-panel-rgb-primaries)
+    - [11.30.1 UI](#11301-ui)
+    - [11.30.2 Shadows Tint](#11302-shadows-tint)
+    - [11.30.3 Data and Pipeline](#11303-data-and-pipeline)
+    - [11.30.4 A New Section Must Join Every Per-Group Sweep](#11304-a-new-section-must-join-every-per-group-sweep)
+  - [11.31 Color Grade Panel (Colour Grading)](#1131-color-grade-panel-colour-grading)
+    - [11.31.1 Naming (Historical)](#11311-naming-historical)
+    - [11.31.2 UI](#11312-ui)
+    - [11.31.3 The Grade Is Lightroom's, Measured](#11313-the-grade-is-lightrooms-measured)
+    - [11.31.4 Implementation](#11314-implementation)
+    - [11.31.5 Data](#11315-data)
+  - [11.32 Point Color Panel](#1132-point-color-panel)
+    - [11.32.1 Params](#11321-params)
+    - [11.32.2 Multiple Samples](#11322-multiple-samples)
+    - [11.32.3 Pipeline](#11323-pipeline)
+    - [11.32.4 Eyedropper](#11324-eyedropper)
+    - [11.32.5 Visualize Range](#11325-visualize-range)
+    - [11.32.6 The Widget](#11326-the-widget)
+  - [11.33 The Combined Color Panel](#1133-the-combined-color-panel)
+  - [11.34 Develop Presets](#1134-develop-presets)
+    - [11.34.1 The Apply Is a Merge Onto the Active Scope](#11341-the-apply-is-a-merge-onto-the-active-scope)
+    - [11.34.2 A Section of the History Panel, Not a Dock](#11342-a-section-of-the-history-panel-not-a-dock)
+    - [11.34.3 The List](#11343-the-list)
+    - [11.34.4 Categories](#11344-categories)
+    - [11.34.5 The Save Dialog](#11345-the-save-dialog)
+    - [11.34.6 The Store](#11346-the-store)
+    - [11.34.7 Shortcuts](#11347-shortcuts)
+  - [11.35 Copy and Paste Develop Settings](#1135-copy-and-paste-develop-settings)
+    - [11.35.1 The Buffer](#11351-the-buffer)
+    - [11.35.2 UI](#11352-ui)
+  - [11.36 Multi-Image Editing](#1136-multi-image-editing)
+    - [11.36.1 The Rules](#11361-the-rules)
+    - [11.36.2 AI Mask Scopes Travel](#11362-ai-mask-scopes-travel)
+    - [11.36.3 Where It Hooks](#11363-where-it-hooks)
+    - [11.36.4 History Follows the Link](#11364-history-follows-the-link)
+  - [11.37 Develop History](#1137-develop-history)
+    - [11.37.1 The Panel](#11371-the-panel)
+    - [11.37.2 The Copy / Paste Button Row](#11372-the-copy--paste-button-row)
+    - [11.37.3 Showing the Dock](#11373-showing-the-dock)
+    - [11.37.4 The Sidecar Does Not Record Actions](#11374-the-sidecar-does-not-record-actions)
+    - [11.37.5 Persisted in the Local Index](#11375-persisted-in-the-local-index)
+    - [11.37.6 Recording (One Seam)](#11376-recording-one-seam)
+    - [11.37.7 Reverting and Previewing](#11377-reverting-and-previewing)
+    - [11.37.8 Before / After](#11378-before--after)
+    - [11.37.9 Files](#11379-files)
+  - [11.38 Reset All Edits](#1138-reset-all-edits)
+  - [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist)
+    - [11.39.1 Changing an Existing Op's Math](#11391-changing-an-existing-ops-math)
+    - [11.39.2 A Whole New Section](#11392-a-whole-new-section)
+    - [11.39.3 Maskable or Global-Only?](#11393-maskable-or-global-only)
+  - [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)
+    - [11.40.1 Presets Are the Exposure Point](#11401-presets-are-the-exposure-point)
+    - [11.40.2 The Migration Hook](#11402-the-migration-hook)
+    - [11.40.3 History Is No Longer Immune](#11403-history-is-no-longer-immune)
+    - [11.40.4 Retired Sidecar Key: "cameraProfileLook"](#11404-retired-sidecar-key-cameraprofilelook)
+  - [11.41 Corrupted or Changed Develop Settings](#1141-corrupted-or-changed-develop-settings)
+    - [11.41.1 What Is Validated](#11411-what-is-validated)
+    - [11.41.2 When to Notify (and When Not To)](#11412-when-to-notify-and-when-not-to)
+    - [11.41.3 A Damaged or Repaired Sidecar Is Never Rewritten Behind the User](#11413-a-damaged-or-repaired-sidecar-is-never-rewritten-behind-the-user)
+    - [11.41.4 Winnow No Longer Creates One](#11414-winnow-no-longer-creates-one)
+  - [11.42 Investigations and Fixes](#1142-investigations-and-fixes)
+    - [11.42.1 A Stack Overflow on a Pool Thread](#11421-a-stack-overflow-on-a-pool-thread)
+    - [11.42.2 Develop Render Latency (the Measurement Record)](#11422-develop-render-latency-the-measurement-record)
+      - [11.42.2.1 Slider Drag (2026-06)](#114221-slider-drag-2026-06)
+      - [11.42.2.2 Mask Drag (2026-08)](#114222-mask-drag-2026-08)
+      - [11.42.2.3 Adjustment Drag (2026-08)](#114223-adjustment-drag-2026-08)
+      - [11.42.2.4 A Stale Fold-Cache Slot](#114224-a-stale-fold-cache-slot)
 - [12 Previews](#12-previews)
   - [12.1 Original and Developed Previews](#121-original-and-developed-previews)
   - [12.2 Which Picture Is Shown](#122-which-picture-is-shown)
@@ -3536,7 +3542,7 @@ A key-less QAction renders no shortcut column, so each Develop action embeds its
 
 syncDevelopMenuEnabled must run on the MODE CHANGE, not only on the menu's aboutToShow. The arbiter dispatches the keys by calling QAction::trigger(), which is a no-op on a disabled action, so opening the Develop menu once in Preview (which greys those items) left R/S/O/N/M/W/X dead for the whole next Develop session. MW::setOperationMode calls it too.
 
-Save Develop Preset (Cmd+Shift+N) is the exception: a modified combo owned by no other action, so it is a normal QAction with a real QKeySequence, kept Develop-only by its enabled state (setOperationMode enables it only in Develop; syncDevelopMenuEnabled greys it in Preview). See [11.33 Develop Presets](#1133-develop-presets).
+Save Develop Preset (Cmd+Shift+N) is the exception: a modified combo owned by no other action, so it is a normal QAction with a real QKeySequence, kept Develop-only by its enabled state (setOperationMode enables it only in Develop; syncDevelopMenuEnabled greys it in Preview). See [11.34 Develop Presets](#1134-develop-presets).
 
 Develop > Export with preset is a QMenu rebuilt on aboutToShow from the export preset store (MW::buildDevelopExportPresetMenu), as embelExportMenu is rebuilt from the embellish templates. It has no action and no shortcut; syncDevelopMenuEnabled disables the MENU outside Develop and when no export preset has been saved. See [14 Export](#14-export).
 
@@ -3797,7 +3803,7 @@ The ownership test needs the folder's file names. existingSidecar is on the fold
 
 The Metadata writers and readers (writeXMP, writeOrientation, writeDevelopSidecar, writeKeywordsToSidecar, readDevelopSidecar, readDevThumb, parseSidecar, the metadata report), the catalog freshness stamps (catalogscanner, catalogenumerate, IndexMetadata::candidate, catalogRowFor, the keyword write-backs), the focus-stack output label, and FileOps::companionDest for anything that renames a companion (move, copy, ingest, Utilities::backup): DSC_1.JPG.xmp becomes &lt;new>.JPG.xmp, never &lt;new>.xmp. The rename dialog keeps its own base-name scan but rebuilds names with completeSuffix, so it preserves everything after the base name. Metadata::sidecarPath is gone. Base names use the LAST dot, as Lightroom does: a.b.NEF -> a.b.xmp (older Winnow wrote a.xmp). Pinned by tst_fileops.
 
-Sidecar writes are atomic (QSaveFile) and serialised per image (FileOps::sidecarLock); see [11.40.4 Winnow No Longer Creates One](#11404-winnow-no-longer-creates-one) and [13.2 Storage](#132-storage).
+Sidecar writes are atomic (QSaveFile) and serialised per image (FileOps::sidecarLock); see [11.41.4 Winnow No Longer Creates One](#11414-winnow-no-longer-creates-one) and [13.2 Storage](#132-storage).
 
 ### 9.3 Renaming Images
 
@@ -4076,7 +4082,7 @@ The second cause of the same 6500 / 0 symptom. MW::fileSelectionChange points th
 
 #### 10.4.3 As Shot Is Profile-Dependent
 
-asShotK / asShotTint are solved at decode against the BUILT-IN per-model matrix, because a profile is an edit attached only at render time. A DCP REPLACES that matrix, so the same file is balanced for a measurably different temperature under it. attachProfile therefore re-solves (CameraProfile::resolveAsShot) via the DNG specification's NeutralToXY, a fixed-point iteration because the matrix to invert depends on the temperature being solved for: start at D50, invert the ColorMatrix resolved there onto the camera neutral (1/asShotMul), read the temperature off the chromaticity with WhiteBalance::tempTintFromXY, resolve again, repeat. Without it, picking a profile moved the rendering without moving the Temp number, and since relativeGains anchors on asShotK/asShotTint, "as shot" would stop being an exact no-op. See [11.27 White Balance (Absolute, Kelvin)](#1127-white-balance-absolute-kelvin).
+asShotK / asShotTint are solved at decode against the BUILT-IN per-model matrix, because a profile is an edit attached only at render time. A DCP REPLACES that matrix, so the same file is balanced for a measurably different temperature under it. attachProfile therefore re-solves (CameraProfile::resolveAsShot) via the DNG specification's NeutralToXY, a fixed-point iteration because the matrix to invert depends on the temperature being solved for: start at D50, invert the ColorMatrix resolved there onto the camera neutral (1/asShotMul), read the temperature off the chromaticity with WhiteBalance::tempTintFromXY, resolve again, repeat. Without it, picking a profile moved the rendering without moving the Temp number, and since relativeGains anchors on asShotK/asShotTint, "as shot" would stop being an exact no-op. See [11.28 White Balance (Absolute, Kelvin)](#1128-white-balance-absolute-kelvin).
 
 ### 10.5 Format Decoders
 
@@ -4296,7 +4302,7 @@ The fix reads the LensData version and its offset (see [10.5.6.1 Nikon Lens Name
 
 Lightroom-style non-destructive adjustments (denoise, white balance, exposure, contrast, highlights, shadows, whites, blacks, texture, dehaze ...). They apply to ALL image types (JPEG / TIFF / HEIC / raw), so they are a shared stage AFTER decode and BEFORE the display tone / gamma / ICC transform, not part of RawFormat. Adjustments run on a FLOAT LINEAR working buffer, because exposure, tone and dehaze need headroom.
 
-Adding or changing an adjustment touches about twelve files; follow [11.38 Adding or Changing a Develop Adjustment (Checklist)](#1138-adding-or-changing-a-develop-adjustment-checklist). Preset and sidecar keys are a published format: add freely, never rename or rescale in place (see [11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift)).
+Adding or changing an adjustment touches about twelve files; follow [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist). Preset and sidecar keys are a published format: add freely, never rename or rescale in place (see [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)).
 
 ### 11.1 The Pipeline
 
@@ -4350,6 +4356,8 @@ Stage  Operation            What it does
                             ABSOLUTE pixel radius
 9      Grain                monochromatic film grain (amount / size / roughness)
 ```
+
+After the develop, on the composited frame (MW::developCompositeStack): spot heals, then Lens Blur (before the geometry, in mask space; see [11.25 Lens Blur (Depth of Field)](#1125-lens-blur-depth-of-field)), then the geometry, then the kaleidoscope.
 
 Stages 0, 2, 2b, 3 and 3b fold into ONE 3x3 (PointCoeffs::preMat), and 4 through 5d are one fused point-op pass (see [11.12 Develop Performance](#1112-develop-performance)). The local-contrast ladder is 1 px (Sharpen) / 13 px (Texture) / 60 px (Clarity) / 170 px (Dehaze).
 
@@ -4894,7 +4902,7 @@ tst_toneregions (16 cases), including:
 - highlightsAdaptsToTheFrame: the same ramp level takes at least twice the pull in a dark frame as in a bright one.
 - highlightsStatisticIsTheFrameNotTheCrop: a crop sharing the frame's sample renders within 1 level of the full frame; the control crop measuring itself differs, so the test can see the bug. It fills the LocalSample before cutting its crop, as cutDetailRoi does.
 - highlightsDoNotDragTheWhitePoint measures white in a flat white tail after the ramp.
-- highlightsDevelopsOnAPoolThread develops the local-Highlights path on the global pool (see [11.41.1 A Stack Overflow on a Pool Thread](#11411-a-stack-overflow-on-a-pool-thread)).
+- highlightsDevelopsOnAPoolThread develops the local-Highlights path on the global pool (see [11.42.1 A Stack Overflow on a Pool Thread](#11421-a-stack-overflow-on-a-pool-thread)).
 - shadowsIsAGainNotAnOffset, highlightsRecoverAPushPastWhite, highlightsRecoveryDoesNotCompound, regionsDoNotSlideWithContrast.
 
 ### 11.9 Panel Focus and Slider Arrow-Nudge
@@ -4958,7 +4966,7 @@ How each op is implemented; the tone controls have their own section ([11.8 The 
 
 All per-pixel, fused into one pass (Develop::buildPointCoeffs + applyPointOps):
 
-- White balance and exposure are linear multiplies, so buildPointCoeffs folds them, the input profile and the Colour RGB gains into one matrix (PointCoeffs::preMat). Exposure = a 2^EV scene-linear gain. White balance is ABSOLUTE (Kelvin + tint); see [11.27 White Balance (Absolute, Kelvin)](#1127-white-balance-absolute-kelvin).
+- White balance and exposure are linear multiplies, so buildPointCoeffs folds them, the input profile and the Colour RGB gains into one matrix (PointCoeffs::preMat). Exposure = a 2^EV scene-linear gain. White balance is ABSOLUTE (Kelvin + tint); see [11.28 White Balance (Absolute, Kelvin)](#1128-white-balance-absolute-kelvin).
 - The tone curve (contrast + the four tone controls + the Curves panel's curves) is a pure 1-D function of a channel's white-normalised value, applied in a PERCEPTUAL (\~gamma 2.2) domain, NOT scene-linear: a linear-space curve about 0.18 explodes highlights, which sit several stops above the pivot, while encoding to gamma first puts mid-grey near 0.46 so tones shape evenly. buildPointCoeffs BAKES the whole chain into a per-render LUT (PointCoeffs::toneLut, indexed by s = (v/white)^(1/gamma), returning white-normalised linear), so the hot loop does ONE encode pow + one interpolated lookup per channel. The LUT spans \~3 stops above white (kToneLutMaxN) so highlight headroom is shaped, not clipped.
 - Contrast = a gentle slope (1 + 0.4\*amount, [0.6, 1.4]) about mid-grey. The -100..100 slider is NORMALISED to amount -1..1 (without that the first slider unit already hits the extreme).
 - Colour RGB (red / green / blue, -100..100) are per-channel scene-linear gains folded into the matrix (kRgbGain 0.5: full slider = +/-50% on a channel).
@@ -5010,13 +5018,13 @@ Each scope maps onto one EditParams (DevelopProperties::editParams()); the secti
 - Basic: Profile (a combo: the built-in "Winnow Standard", the synthesised "Camera Base", and every DNG camera profile installed for THIS camera), Tone mapping (a combo), WB (dropper + preset dropdown), Temp, Tint, Exposure, Contrast, Highlights, Shadows, Whites, Blacks, Texture, Clarity, Dehaze, Vibrance, Saturation. Integer -100..100 except Exposure (EV, -5.00..5.00), Temp (KELVIN, 2000..50000, log ramp) and Tint (-150..150). Vibrance and Saturation sit at the bottom of Basic (Lightroom's Presence group) and belong to EditParams::Group::Basic for Reset / Show changes; the pipeline is unchanged (they still run in the post-tone-curve HSL block), and their preset keys "vibrance" / "saturation" are unchanged.
 - Color: Red, Green, Blue (per-channel gain); Hue, Luminance. Integer -100..100.
 - Detail: Sharpening (sharpenAmount, 0..150 -> 0..1.5, default 0), Radius (sharpenRadius, 50..300 -> 0.50..3.00 PIXELS at full res, default 1.0), Detail (sharpenDetail, 0..100 -> 0..1, default 25), Masking (sharpenMasking, 0..100 -> 0..1, default 0). Radius / Detail / Masking are inert until Amount is non-zero. Also Denoise (localDenoiseLuma) and Denoise Color (localDenoiseChroma), 0..100 -> 0..1, default 0. The denoise pair MOVED here from Effects (2026-08-20): NR and sharpening are one decision, so they share a panel as in Lightroom.
-- Effects: Vignette (vignetteExposure, EV -5.00..5.00, default 0) + Feather (vignetteFeather, 0..100 -> 0..1, default 50); Grain (grainAmount, 0..100 -> 0..1, default 0) + Size (grainSize, default 25) + Roughness (grainRoughness, default 50); size and roughness are inert until the amount is non-zero. The section opens with an effect dropdown (the "effectsChoice" spanned row, the Curves mode-row idiom, added 2026-10-20): only the chosen effect's rows are shown (DevelopProperties::applyEffectsChoice, setRowHidden over the effectDefs() table, which pairs each item with its row keys); the others stay in the model, so populate, presets and resets still reach them, and every effect renders whichever is shown. The choice is UI state, persisted in QSettings "Develop/effectsChoice" (effectsChoice). updateSectionHeaderCaptions puts " *" on the item of any effect off its defaults (effectEdited), like the combined Color panel's mode radios. Layout (2026-10-20): the combo row has no left inset, so it lines up with the slider captions, and every effect's rows are flush at that indent (no "   " sub-control captions); each effect's first slider is captioned "Amount" (vignetteExposure, grainAmount), and itemChange's kEffectsHistory gives History the full names ("Vignette", "Grain size", ...). Per-effect [eye] [reset] (2026-10-20) at the right of the dropdown row, laid out like BarBtnEditor (G::headerBtnGap, G::headerBtnRightInset) so they sit under the Effects header's [eye] [:]; both act on shownEffect() only. The eye toggles EditScope::showVignette / showGrain / showKaleido (default true, written to the sidecar only when false, carried by sameScopeState / copyScopeState, cleared by Reset all), INSIDE showEffects: effectiveScopeParams folds vignette / grain fields to their defaults, and effectiveScopeParams folds the kaleidoscope too (segments to 0; kaleidoToolWanted reads the same eyes, so the handles go). History "Hide Vignette" / "Show Grain". The reset (resetEffect) restores that effect's values only and leaves its eye; for the kaleidoscope it restores all five fields. The fourth entry, Blur (2026-10-20), is the ARTISTIC blurs -- a lens (depth / bokeh) blur is planned for the Lens panel and kept separate. EditParams blurType (ArtBlur::Type: 0 Gaussian, 1 Motion, 2 Spin, 3 Zoom, 4 Tilt-shift, 5 Glow), blurAmount (0..1, the only isIdentity field; panel 0..100), blurAngle (deg: Motion direction, Tilt-shift band), blurX / blurY (centre, normalized in the ORIENTED frame like a mask), blurSize, blurFeather (0..1); Group::Effects; JSON only when blurAmount != 0; sanitized; preset leaf "blur" (all seven); kIntFields / kFloatFields; EditScope::showBlur is its row eye. It is a scene-linear DEVELOP op, Develop::Blur, after Sharpen and before Grain (so a mask scope's blur is just its layer, blended by coverage, and grain stays crisp on top); the kernels are header-only Develop/artblur.h (tst_artblur). Every distance is a fraction of the FRAME's long edge and positions are frame pixels via WorkingImage::frameX/Y/W/H, so proxy, settle and the Detail patch agree (tested). Gaussian: a downscaled Gaussian. Motion: rotate onto a bounding canvas, one cv::blur box (a constant exposure along the streak), rotate back. Spin / Zoom: REPEATED HALVING -- each pass averages the image with a copy rotated / scaled about the centre by half the previous step, so K passes give 2^K evenly spaced copies, K chosen so the last step is under a pixel at the farthest corner; each pass is one fused bilinear sweep (a warpAffine + addWeighted per pass measured 185 ms at 2.7 MP, fused 18 ms). Tilt-shift: two Gaussian levels blended by distance from the band (ArtBlur::tiltHalf / tiltRamp, shared with the overlay). Glow: lighten toward a Gaussian copy. Measured on Quark at 2.7 MP / 24 MP: Gaussian 16 / 45 ms, Motion 28 / 188, Spin 18 / 166, Zoom 9 / 94, Tilt-shift 21 / 83, Glow 2 / 92. MW: developCompositeStack's job copy turns the stored centre / angle into the SOURCE frame (blursToSource, EditRotate::turnBlur with the inverse EXIF turn, unconditionally -- a Motion at angle 0 on a portrait frame still turns); EditRotate::blur turns an ON blur with the photo (an off one at its defaults is left alone). The mask references (range ref, Subject / Sky / Depth / Object / Segmenter guides) develop with guideParams(), which drops the blur (and Point Color's Visualize), so no model sees a blurred frame and a blur drag never rebuilds a reference. The Detail 1:1 patch is PADDED by jobBlurReach (ArtBlur::reach, capped at 512 px) and cut back, so a blur is right at the patch edge; a Spin arc far from its centre beyond the cap is approximated there. UI: a "Type" combo row (blurTypeCombo, History "Blur type"), Amount / Angle / Size / Feather (applyBlurTypeRows hides the rows a type does not use, via UR_isHidden like applyEffectsChoice), then the 1:1 preview: addDetailPreviewRow is now addPreviewRow, and Effects > Blur gets a second DetailPreview (blurPreview / blurPickBtn) on the SAME detailPt -- detailPreviewWanted is either window visible, setDetailRoiImage / setDetailMessage feed both, the target buttons arm together. Handles: the kaleidoscope overlay in ImageView is generalized by kaleidoKind (0 kaleido, displayed space; 1 blur, MASK space via maskNormToViewport / maskViewportToNorm, angles in frame pixels so a straightened frame turns them correctly). beginBlurHandles shows the centre for Spin / Zoom / Tilt-shift, the spoke for Motion / Tilt-shift, and the Tilt-shift band (solid edges, dashed full-blur lines); drags emit blurHandlesEdited -> DevelopProperties::setBlurHandles (one History row per drag). MW::syncDevelopKaleidoOverlay picks kaleido, else blur (blurToolWanted, and no mask / spot tool up), else neither; a blur slider emits kaleidoToolChanged so the band follows. The third entry, Kaleidoscope, is per scope like the others (EditParams kaleido*, Group::Effects), but a GEOMETRIC op folded after the crop, not by Develop::Apply; on a mask scope only the masked pixels are folded (see [11.22.8 Kaleidoscope](#11228-kaleidoscope)). A new effect = a row in effectDefs(), a case in effectEdited, and its addSlider calls in addEffects.
-- Lens (Global scope only): see [11.24 Lens Profile (lensfun)](#1124-lens-profile-lensfun) and [11.23 Lens Corrections (Chromatic Aberration and Defringe)](#1123-lens-corrections-chromatic-aberration-and-defringe).
+- Effects: Vignette (vignetteExposure, EV -5.00..5.00, default 0) + Feather (vignetteFeather, 0..100 -> 0..1, default 50); Grain (grainAmount, 0..100 -> 0..1, default 0) + Size (grainSize, default 25) + Roughness (grainRoughness, default 50); size and roughness are inert until the amount is non-zero. The section opens with an effect dropdown (the "effectsChoice" spanned row, the Curves mode-row idiom, added 2026-10-20): only the chosen effect's rows are shown (DevelopProperties::applyEffectsChoice, setRowHidden over the effectDefs() table, which pairs each item with its row keys); the others stay in the model, so populate, presets and resets still reach them, and every effect renders whichever is shown. The choice is UI state, persisted in QSettings "Develop/effectsChoice" (effectsChoice). updateSectionHeaderCaptions puts " *" on the item of any effect off its defaults (effectEdited), like the combined Color panel's mode radios. Layout (2026-10-20): the combo row has no left inset, so it lines up with the slider captions, and every effect's rows are flush at that indent (no "   " sub-control captions); each effect's first slider is captioned "Amount" (vignetteExposure, grainAmount), and itemChange's kEffectsHistory gives History the full names ("Vignette", "Grain size", ...). Per-effect [eye] [reset] (2026-10-20) at the right of the dropdown row, laid out like BarBtnEditor (G::headerBtnGap, G::headerBtnRightInset) so they sit under the Effects header's [eye] [:]; both act on shownEffect() only. The eye toggles EditScope::showVignette / showGrain / showKaleido (default true, written to the sidecar only when false, carried by sameScopeState / copyScopeState, cleared by Reset all), INSIDE showEffects: effectiveScopeParams folds vignette / grain fields to their defaults, and effectiveScopeParams folds the kaleidoscope too (segments to 0; kaleidoToolWanted reads the same eyes, so the handles go). History "Hide Vignette" / "Show Grain". The reset (resetEffect) restores that effect's values only and leaves its eye; for the kaleidoscope it restores all five fields. The fourth entry, Blur (2026-10-20), is the ARTISTIC blurs -- a lens (depth / bokeh) blur is planned for the Lens panel and kept separate. EditParams blurType (ArtBlur::Type: 0 Gaussian, 1 Motion, 2 Spin, 3 Zoom, 4 Tilt-shift, 5 Glow), blurAmount (0..1, the only isIdentity field; panel 0..100), blurAngle (deg: Motion direction, Tilt-shift band), blurX / blurY (centre, normalized in the ORIENTED frame like a mask), blurSize, blurFeather (0..1); Group::Effects; JSON only when blurAmount != 0; sanitized; preset leaf "blur" (all seven); kIntFields / kFloatFields; EditScope::showBlur is its row eye. It is a scene-linear DEVELOP op, Develop::Blur, after Sharpen and before Grain (so a mask scope's blur is just its layer, blended by coverage, and grain stays crisp on top); the kernels are header-only Develop/artblur.h (tst_artblur). Every distance is a fraction of the FRAME's long edge and positions are frame pixels via WorkingImage::frameX/Y/W/H, so proxy, settle and the Detail patch agree (tested). Gaussian: a downscaled Gaussian. Motion: rotate onto a bounding canvas, one cv::blur box (a constant exposure along the streak), rotate back. Spin / Zoom: REPEATED HALVING -- each pass averages the image with a copy rotated / scaled about the centre by half the previous step, so K passes give 2^K evenly spaced copies, K chosen so the last step is under a pixel at the farthest corner; each pass is one fused bilinear sweep (a warpAffine + addWeighted per pass measured 185 ms at 2.7 MP, fused 18 ms). Tilt-shift: two Gaussian levels blended by distance from the band (ArtBlur::tiltHalf / tiltRamp, shared with the overlay). Glow: lighten toward a Gaussian copy. Measured on Quark at 2.7 MP / 24 MP: Gaussian 16 / 45 ms, Motion 28 / 188, Spin 18 / 166, Zoom 9 / 94, Tilt-shift 21 / 83, Glow 2 / 92. MW: developCompositeStack's job copy turns the stored centre / angle into the SOURCE frame (blursToSource, EditRotate::turnBlur with the inverse EXIF turn, unconditionally -- a Motion at angle 0 on a portrait frame still turns); EditRotate::blur turns an ON blur with the photo (an off one at its defaults is left alone). The mask references (range ref, Subject / Sky / Depth / Object / Segmenter guides) develop with guideParams(), which drops the blur (and Point Color's Visualize), so no model sees a blurred frame and a blur drag never rebuilds a reference. The Detail 1:1 patch is PADDED by jobBlurReach (ArtBlur::reach, capped at 512 px) and cut back, so a blur is right at the patch edge; a Spin arc far from its centre beyond the cap is approximated there. UI: the 1:1 preview first (2026-10-21), spaced like Detail's (a half-height transparent spacer above, BlurPreviewTopSpacer, and a full one below, BlurPreviewSpacer; both are Blur rows in effectDefs so they hide with it), then a "Type" combo row (blurTypeCombo, History "Blur type"), then Amount / Angle / Size / Feather (applyBlurTypeRows hides the rows a type does not use, via UR_isHidden like applyEffectsChoice). The preview: addDetailPreviewRow is now addPreviewRow, and Effects > Blur gets a second DetailPreview (blurPreview / blurPickBtn) on the SAME detailPt -- detailPreviewWanted is either window visible, setDetailRoiImage / setDetailMessage feed both, the target buttons arm together. Handles: the kaleidoscope overlay in ImageView is generalized by kaleidoKind (0 kaleido, displayed space; 1 blur, MASK space via maskNormToViewport / maskViewportToNorm, angles in frame pixels so a straightened frame turns them correctly). beginBlurHandles shows the centre for Spin / Zoom / Tilt-shift, the spoke for Motion / Tilt-shift, and the Tilt-shift band (solid edges, dashed full-blur lines); drags emit blurHandlesEdited -> DevelopProperties::setBlurHandles (one History row per drag). MW::syncDevelopKaleidoOverlay picks kaleido, else blur (blurToolWanted, and no mask / spot tool up), else neither; a blur slider emits kaleidoToolChanged so the band follows. The third entry, Kaleidoscope, is per scope like the others (EditParams kaleido*, Group::Effects), but a GEOMETRIC op folded after the crop, not by Develop::Apply; on a mask scope only the masked pixels are folded (see [11.22.8 Kaleidoscope](#11228-kaleidoscope)). A new effect = a row in effectDefs(), a case in effectEdited, and its addSlider calls in addEffects.
+- Lens (Global scope only): see [11.24 Lens Profile (lensfun)](#1124-lens-profile-lensfun) and [11.23 Lens Corrections (Chromatic Aberration and Defringe)](#1123-lens-corrections-chromatic-aberration-and-defringe). Lens Blur: Amount (lensBlurAmount, 0..100 -> 0..1, default 0), Focus (lensBlurFocus, 0..100 -> 0..1, default 0 = near), Focal range (lensBlurRange, 0..100 -> 0..1, default 10), Bokeh (lensBlurShape, 0..5), Boost (lensBlurBoost, 0..100 -> 0..1, default 0); a mask scope's Lens blur (lensBlurRefine, -100..100 -> -1..1, default 0). See [11.25 Lens Blur (Depth of Field)](#1125-lens-blur-depth-of-field).
 - Curves, Point Color, Calibrate and Color Grade have their own sections below.
 
 ### 11.12 Develop Performance
 
-Develop is optimised aggressively: an interactive drag must stay well inside a frame on a 50-60 MP raw. The architecture that achieves it, then the rules every new op must follow. How each piece was found is in [11.41.2 Develop Render Latency (the Measurement Record)](#11412-develop-render-latency-the-measurement-record).
+Develop is optimised aggressively: an interactive drag must stay well inside a frame on a 50-60 MP raw. The architecture that achieves it, then the rules every new op must follow. How each piece was found is in [11.42.2 Develop Render Latency (the Measurement Record)](#11422-develop-render-latency-the-measurement-record).
 
 #### 11.12.1 Ops Are Split by Cost, and the Cheap Ones Are Fused
 
@@ -5091,8 +5099,8 @@ Result: on a 1618x1214 proxy with a \~24-submask scope, a brush drag went from \
 
 - Every per-pixel Develop loop uses parallelFor.
 - Every large-kernel blur uses a downscaled base (or an O(1) box / integral approach): Texture's base is computed on a luminance image downscaled by kDown = clamp(sigma/3, 1, 4) (INTER_AREA down / INTER_LINEAR up), cost \~1/kDown^2.
-- Develop runs on 512 KB pool stacks: never hold PointCoeffs (or any large struct) by value, and never name a large struct inside a [=] lambda (see [11.41.1 A Stack Overflow on a Pool Thread](#11411-a-stack-overflow-on-a-pool-thread)).
-- An index chosen under one lock acquisition means nothing under the next; only the data copied out under the lock is safe to keep (see [11.41.2.4 A Stale Fold-Cache Slot](#114124-a-stale-fold-cache-slot)).
+- Develop runs on 512 KB pool stacks: never hold PointCoeffs (or any large struct) by value, and never name a large struct inside a [=] lambda (see [11.42.1 A Stack Overflow on a Pool Thread](#11421-a-stack-overflow-on-a-pool-thread)).
+- An index chosen under one lock acquisition means nothing under the next; only the data copied out under the lock is safe to keep (see [11.42.2.4 A Stale Fold-Cache Slot](#114224-a-stale-fold-cache-slot)).
 - Before optimising, split the [DevTime] number until the stages SUM to the wall clock, and read the whole line, not just the stage you changed; check allocation churn before reaching for per-pixel cleverness.
 
 #### 11.12.8 Measuring
@@ -5151,7 +5159,7 @@ Develop/Properties/scopeheader.cpp: ONE gradient-headed line carrying the whole 
 - The combo carries every scope on the image, index 0 always Global, and only a USER pick selects one (QComboBox::activated; updateScopeBar refills with signals blocked) -> scopeSelected -> onScopeSelected: switch activeScopeIndex, open NO submask (selectedMaskIndex = -1) and latch the scope's COMBINED mask (red, no handles) when it has one. Its submasks are listed in the Mask panel below, and clicking one re-opens it.
 - [+] -> addScopeRequested -> newScope (a name dialog at the cursor, default "Mask n"), promoted out of the menu because it is the primary action. On accept it immediately calls showMaskMenu: a new scope exists to carry a masked adjustment, so choosing the mask tool is the next step (Escape leaves an empty scope).
 - [eye] -> scopeEnabledToggled(activeIndex, !on) -> onScopeEnabledToggled (EditScope::enabled; the compositor skips a disabled scope, so Global off renders with no develop adjustments).
-- [:] -> showScopeMenu, the ONLY menu in the panel, so it carries both the active scope's actions and the panel-wide ones: Global gets "New mask" + "Reset Global"; a mask scope gets "Modify &lt;mask> mask" (M) / Reset / Rename / Delete; then, always, a checkable "Hide global image" (any scope; its own connect -> hideGlobalImageToggled -> DevelopProperties::setGlobalImageHidden, ticked from refreshPreviewButtons via setGlobalImageHidden), "Reset all edits" (see [11.37 Reset All Edits](#1137-reset-all-edits)) and "Edits help".
+- [:] -> showScopeMenu, the ONLY menu in the panel, so it carries both the active scope's actions and the panel-wide ones: Global gets "New mask" + "Reset Global"; a mask scope gets "Modify &lt;mask> mask" (M) / Reset / Rename / Delete; then, always, a checkable "Hide global image" (any scope; its own connect -> hideGlobalImageToggled -> DevelopProperties::setGlobalImageHidden, ticked from refreshPreviewButtons via setGlobalImageHidden), "Reset all edits" (see [11.38 Reset All Edits](#1138-reset-all-edits)) and "Edits help".
 
 "Hide global image" (2026-10-20) is EditScope::hideImage on the GLOBAL scope: a recipe setting like the eyes (written to the sidecar only when true, joins EditStack::isIdentity, cleared by "Reset all" on Global; one History row per toggle, no merge key; not propagated by multi-image editing). buildStackJob carries it as StackRenderJob::hideGlobal and, while it is on, KEEPS a mask scope with no visible adjustment (normally skipped as identity) unless that scope's own eye (showScope) is shut, because such a mask still decides what shows. MW::developCompositeStack applies it LAST, after the geometry and the kaleidoscopes: it keeps every mask scope's coverage buffer (foldMasks), carries each into the frame (kaleidoMaskInFrame), unions them (unionCoverage, a + b - ab; a scope with no placed mask covers everything) -- a folding scope contributes its FOLDED coverage, and Global's kaleidoscope folds the union -- and cuts the frame out to it (cutOutToCoverage: PREMULTIPLIED ARGB32 / RGBA64, so a format without alpha gets black, not the hidden photo). The masked pixels are the full render's, Global's adjustments included. It changes nothing before the cut, so no develop cache is invalidated. The choice is read as an int code while the menu is alive and fired on the NEXT TICK, after re-selecting the scope it was raised on. A select can be REFUSED (a pending submask prompts; Cancel keeps the old scope), so the code re-checks currentScopeName() before acting, or "Delete Mask 2" would delete Mask 1.
 - Every emission from this widget is DEFERRED a tick, since each loops back through setScopeRows and refills the combo the click came from.
@@ -5216,8 +5224,8 @@ Per-image develop state is an EditStack (Develop/editstack.h) stored in the imag
 - The sidecar: the winnow:Develop rdf:Description attribute (Xmp::initialize registers definedElements["develop"]; the winnow namespace already existed). Metadata::writeDevelopSidecar / readDevelopSidecar mirror writeOrientation. An identity stack writes "", which CLEARS the attribute: no sidecar is created just to store nothing.
 - An all-identity stack is never persisted, so empty scopes added to an unedited image are not written. Exception: a scope that has any mask component counts as non-identity, so masks survive navigation.
 - The dock reflects the CURRENT IMAGE's EditStack. setCurrentImage(fPath) flushes the previous image, then loads and caches this image's stack and pushes its params into the editors (populateSlidersFromStack, guarded by isPopulating so the programmatic setValue -> itemChanged does not re-mark dirty). itemChange writes into the current image's active-scope params, marks it dirty, drives the live preview, and arms the debounced write. editParams() returns the ACTIVE scope's params.
-- The sidecar is written only where source files may be modified or a sidecar is allowed (see [9.4 Writing Metadata Into Image Files](#94-writing-metadata-into-image-files)), and every edit is also a History row (see [11.36 Develop History](#1136-develop-history)).
-- Schema drift and recovery are in [11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift) and [11.40 Corrupted or Changed Develop Settings](#1140-corrupted-or-changed-develop-settings).
+- The sidecar is written only where source files may be modified or a sidecar is allowed (see [9.4 Writing Metadata Into Image Files](#94-writing-metadata-into-image-files)), and every edit is also a History row (see [11.37 Develop History](#1137-develop-history)).
+- Schema drift and recovery are in [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift) and [11.41 Corrupted or Changed Develop Settings](#1141-corrupted-or-changed-develop-settings).
 
 #### 11.14.1 When State Is Read and Written
 
@@ -5306,7 +5314,7 @@ One colour, outcome preview. The overlay does NOT colour-code Add / Subtract / I
 - One ring is still drawn: a thin outline of the pending submask's footprint, painted ONLY where the result is absent (buf &lt;= \~0.12), because a Subtract whose footprint misses the mask would otherwise change nothing on screen. The veil winning everywhere it covers also keeps a noisy content submask (Color/Luminance Range), whose per-pixel "edges" are everywhere, from fogging the subject.
 - Disabled submasks are not veiled: a submask whose row eye is off is dropped by the render, so updateMaskOverlayTint filters it out of the vector it hands buildMaskBuffer (which never reads the flag) and REMAPS the pending index onto the filtered vector. Before the fix the veil advertised coverage the image did not have. The filter also drives the ensure\*() reference builds, so an unchecked AI/range submask costs nothing. A hidden pending submask leaves the veil too (no ring, no chip); the tool's own live preview still draws.
 - Visibility is explicit-only (2026-10-07): the overlay STARTS HIDDEN and is shown only by an explicit toggle: "O" or "M" (toggleMaskOverlayAction -> MW::toggleMaskOverlay -> ImageView::toggleMaskTint, which flips maskTintHidden, gating both the veil and the per-submask preview; handles and cursor keep drawing), the action-row tint button, the scope menu's "Show mask overlay" row, or the new-submask dialog. Changing an adjustment slider while shown hides it (maskTintHideRequested -> hideMaskTint) so the effect is visible; mask-only edits (Feather / Invert / Range / Brush) keep it. Committing a submask hides it (commitPendingMask emits maskTintHideRequested after paramsChanged) but leaves the overlay LATCHED (maskLatched -> maskOverlayActive), so it is only hidden. maskTintHidden is sticky. The automatic re-show on selecting another scope (onScopeSelected -> maskTintShowRequested -> ImageView::showMaskTint) was removed by request; the signal and showMaskTint are kept for when auto-show rules are decided.
-- When hidden, MW skips building the veil entirely (ImageView::maskTintVisible()); see [11.41.2 Develop Render Latency (the Measurement Record)](#11412-develop-render-latency-the-measurement-record).
+- When hidden, MW skips building the veil entirely (ImageView::maskTintVisible()); see [11.42.2 Develop Render Latency (the Measurement Record)](#11422-develop-render-latency-the-measurement-record).
 
 The overlay colour: G::maskOverlayColor (default 220,40,40) is the single colour of the veil, the per-submask live preview (ImageView::maskTintColor) and the pending footprint ring. The tint button's CONTEXT MENU picks it (red / green / blue / yellow / magenta / white; red reads badly over a red subject) via DevelopProperties::setMaskOverlayColour, which writes "Develop/maskOverlayColor" and asks for a veil rebuild; the DevelopProperties ctor seeds G:: from that key. The palette is MaskPanel::overlayColours(). (The Mask panel's own swatch row was removed on 2026-08-15: the overlay's appearance describes the veil, not a submask, so it belongs with the tint button.)
 
@@ -5314,7 +5322,7 @@ Overlay greyscale (same menu): no overlay colour reads well over every subject, 
 
 #### 11.15.6 Linear and Radial Gradients
 
-Edited directly on the loupe, not the dock. Geometry lives in MaskComponent.paramsJson in normalised coordinates: Linear {x1,y1,x2,y2}; Radial {cx,cy,rx,ry,angle} (cx/cy by W,H; rx by W, ry by H; angle in degrees). Resolution- and zoom-independent; survives proxy/full re-render. Overlays map through the geometry stage (see [11.25 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1125-overlays-over-a-transformed-image-mask-space-vs-displayed-space)).
+Edited directly on the loupe, not the dock. Geometry lives in MaskComponent.paramsJson in normalised coordinates: Linear {x1,y1,x2,y2}; Radial {cx,cy,rx,ry,angle} (cx/cy by W,H; rx by W, ry by H; angle in degrees). Resolution- and zoom-independent; survives proxy/full re-render. Overlays map through the geometry stage (see [11.26 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1126-overlays-over-a-transformed-image-mask-space-vs-displayed-space)).
 
 - Handshake (wired in MW, mirroring paramsChanged): selecting a spatial tool fires DevelopProperties::maskEditBegin(tool, op, inverted, paramsJson, feather) -> ImageView::beginMaskEdit; deselecting fires maskEditEnd. developDockVisibilityChange() ends / re-asserts it so the overlay never leaks into the plain loupe.
 - ImageView::drawForeground dispatches by tool to drawLinearMask / drawRadialMask, shown only while the cursor is over the view (maskHover via enter/leaveEvent). Tints and handles draw in viewport coordinates for a constant on-screen size; a miss falls through to pan/zoom.
@@ -5479,7 +5487,7 @@ The mask-level pass runs AFTER the prefix snapshot, never before: the prefix is 
 
 Refine was built, tested and REJECTED (2026-08-24), recorded because it is the obvious thing to reach for again: instead of fading the adjustment, MOVE the alpha (guided-filter the folded mask against the picture, SegRefine::guidedFilterGray, then pinch about 0.5 to kill the residual fringe). It passed its displacement tests (a boundary 6 px out pulled to within 2 px, monotonic in the slider, preview matching render across a 0.4 proxy), and IN THE LOUPE IT BLURRED THE HALO RATHER THAN REMOVING IT. A guided filter reconstructs the alpha as a local linear function of the guide, and a wide window over a soft, low-contrast boundary (fur, hair, foliage, exactly where masks miss) has no sharp answer to converge on, so it returns a smooth ramp. Damping never has to decide where the edge IS, only that one is near. The unit tests' synthetic step edge is precisely the case Refine was good at, which is why they passed and a photograph caught it. Do not re-add the guided-filter path without a real picture it beats damping on.
 
-Retired sidecar key: both algorithms shipped briefly behind a method combo, so sidecars written on 2026-08-24 may carry "maskHaloMode" (0 = Refine, 1 = Damp, 2 = Both). It is no longer read or written, but the NAME must never be reused (see [11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift)). A maskHalo value dialled in while Refine was selected now renders as damping, a one-off break confined to that day's test images.
+Retired sidecar key: both algorithms shipped briefly behind a method combo, so sidecars written on 2026-08-24 may carry "maskHaloMode" (0 = Refine, 1 = Damp, 2 = Both). It is no longer read or written, but the NAME must never be reused (see [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)). A maskHalo value dialled in while Refine was selected now renders as damping, a one-off break confined to that day's test images.
 
 #### 11.15.13 The Mask Tint Button
 
@@ -5639,7 +5647,7 @@ Modes (Add / Remove ARE the op: Add = add, Subtract or Intersect = remove, so th
 
 Utilities/inference/ is the unified model-inference seam for NEW neural features. InferenceSession (the front door) owns an InferenceBackend; the only concrete backend is OrtBackend (ONNX Runtime). All ORT contact is confined to ortbackend.cpp behind a PIMPL, and the whole scope is guarded by WINNOW_HAVE_ORT: built without ORT (CMake option WINNOW_ENABLE_ORT=OFF) it compiles to a stub (IsLoaded() == false, Run() no-ops), so features degrade like a missing model.
 
-- It deliberately supersedes cv::dnn for NEW models (it reaches the ANE / GPU and loads architectures cv::dnn cannot, e.g. attention / diffusion). The existing cv::dnn predictors (u2net, skyseg, SegFormer, MiDaS, focus, SAM 2) keep working and migrate opportunistically.
+- It deliberately supersedes cv::dnn for NEW models (it reaches the ANE / GPU and loads architectures cv::dnn cannot, e.g. attention / diffusion). The existing cv::dnn predictors (u2net, skyseg, SegFormer, focus, SAM 2) keep working and migrate opportunistically; the depth field moved to ORT with Depth Anything V2 (2026-10-21).
 - InferenceBackend is an ESCAPE HATCH: a native CoreMLBackend can be added for a model that needs maximal ANE use (generative fill) without touching callers. A full native-per-platform solution (Core ML on the Mac, DirectML on Windows) remains an option if ORT's CoreML EP underuses the hardware.
 - Models are downloaded on demand by ModelStore (Utilities/modelstore.\*) or bundled (pmrid.onnx in ReleaseExtras/, warn-if-absent).
 - Consumers: PMRID "Denoise raw" ([11.17 Raw Denoise](#1117-raw-denoise)), the LaMa / MI-GAN fills (lamafill / miganfill), ImageEmbedder (SigLIP, [16.12 Audit Keywords (Finding Keywording Mistakes by How Images Look)](#1612-audit-keywords-finding-keywording-mistakes-by-how-images-look)).
@@ -5670,7 +5678,7 @@ The INVERSE of Select Subject, with no new model or store. It reuses the Subject
 
 A HYBRID: the MODEL produces a depth field (like Subject/Sky), but the SELECTION is a [near, far] BAND (like Luminance Range over depth).
 
-- The model is MiDaS v2.1 small (midas.onnx, \~64 MB, convolutional, an official OpenCV DNN sample; ViT DPT / Depth-Anything will not load in cv::dnn), via Utilities/depthpredictor: input [1,3,256,256], /255 + ImageNet mean/std, a single output [1,256,256] of inverse depth. The map is min-max'd and INVERTED to 0 = near .. 1 = far, then guided-UPSAMPLED against the photo (SegRefine::guidedUpsample: a continuous field, joint upsampling, NO binary contrast).
+- The model is Depth Anything V2 Small (depth_anything.onnx, 50 MB, through the ONNX Runtime layer on the CPU; it replaced MiDaS v2.1 small on 2026-10-21, see [11.25.1 The Depth Model (Depth Anything V2 Small)](#11251-the-depth-model-depth-anything-v2-small)), via Utilities/depthpredictor: input [1,3,518,518] RGB 0..1, a single output [1,518,518] of relative disparity. The map is min-max'd and INVERTED to 0 = near .. 1 = far, then guided-UPSAMPLED against the photo (SegRefine::guidedUpsample: a continuous field, joint upsampling, NO binary contrast). The same field drives Lens Blur.
 - Stored in Develop/depthmask.h (DepthMask::DepthRef, its own path store), built by MW::ensureDepthMask (stackHasDepthMask + a depthRef fetch + onAiMaskEditBegin, all mirroring Sky).
 - buildMaskBuffer's isDepth CompDesc carries the band [lo, hi] from paramsJson {lo, hi}; per pixel DepthMask::coverage is a feathered band over the sampled depth (the analogue of RangeMask::lumCoverage).
 - Dock rows Near / Far / Feather / Invert (Near/Far reuse the maskRangeLo / maskRangeHi sources -> maskRangeChanged -> ImageView::setMaskRangeParams, which accepts Depth; live tint buildDepthPreview). paramsJson is non-empty, so it survives stackJob's empty-params skip.
@@ -5973,7 +5981,7 @@ ToneRegionSlider, under the histogram and sharing its x-axis: a black -> white t
 
 - A drag writes the active scope's params and emits paramsChanged() (a live, coalesced re-render). The splits only change pixels when a tone slider is non-zero, so they are NOT part of EditParams::isIdentity().
 - DevelopProperties::bindToneSlider() connects the slider (drag -> onToneSplitsChanged), and populateSlidersFromStack() pushes the saved positions back on image switch.
-- The same handles appear in the Curves panel, under its plot in Parametric mode: one set of params, two ToneRegionSlider instances. onToneSplitsChanged cross-pushes to the instance that did not originate the change (setPositions emits nothing, so it cannot loop). They stay here as well because this is where they align with real histogram data. See [11.28 Curves Panel (Tone Curve)](#1128-curves-panel-tone-curve).
+- The same handles appear in the Curves panel, under its plot in Parametric mode: one set of params, two ToneRegionSlider instances. onToneSplitsChanged cross-pushes to the instance that did not originate the change (setPositions emits nothing, so it cannot loop). They stay here as well because this is where they align with real histogram data. See [11.29 Curves Panel (Tone Curve)](#1129-curves-panel-tone-curve).
 
 ### 11.21 Detail 1:1 Preview
 
@@ -6000,7 +6008,7 @@ The sample point is VIEW STATE, not an edit: not in EditParams, the sidecar or a
 
 ### 11.22 Transform Panel (Crop, Straighten, Perspective)
 
-TransformPanel (Develop/Transform/) is a compact control strip below the scopes and above the property tree, the sibling of ScopesView. It is the UI for a non-destructive crop / straighten / perspective edit and carries NO geometry or pixel state itself: the crop rectangle, straighten angle and perspective quad live in the edit stack (EditStack::Geometry) and are applied LAST in the pipeline, after the develop ops, so they stay non-destructive and masks map through them (see [11.25 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1125-overlays-over-a-transformed-image-mask-space-vs-displayed-space)).
+TransformPanel (Develop/Transform/) is a compact control strip below the scopes and above the property tree, the sibling of ScopesView. It is the UI for a non-destructive crop / straighten / perspective edit and carries NO geometry or pixel state itself: the crop rectangle, straighten angle and perspective quad live in the edit stack (EditStack::Geometry) and are applied LAST in the pipeline, after the develop ops, so they stay non-destructive and masks map through them (see [11.26 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1126-overlays-over-a-transformed-image-mask-space-vs-displayed-space)).
 
 #### 11.22.1 Layout
 
@@ -6163,7 +6171,9 @@ Preferences > Develop > "Remove chromatic aberration on raw files" (G::autoRemov
 
 #### 11.23.5 UI
 
-The Global scope's LENS section (DevelopProperties::addLens, between Detail and Effects, Lightroom's order), below the lens-profile rows ([11.24 Lens Profile (lensfun)](#1124-lens-profile-lensfun)): a "Remove CA" checkbox showing the EFFECTIVE state, then "Purple fringe" and "Green fringe" sliders (0..100, addSlider). The section exists only while Global is the active scope; a mask scope cannot carry lens corrections.
+The Global scope's LENS section (DevelopProperties::addLens, between Detail and Effects, Lightroom's order), under its FRINGE radio: a "Remove CA" checkbox showing the EFFECTIVE state, then "Purple fringe" and "Green fringe" sliders (0..100, addSlider). A mask scope cannot carry lens corrections (its Lens section holds only Lens Blur's refine).
+
+Mode radios (2026-10-21): the Global Lens section opens with Profile / Fringe / Blur radio buttons and a divider, the combined Color panel's arrangement (addModeRadioRow, now shared by both panels: centred in updateEditorGeometries, explicit gaps, the header's TopSpacer shrunk to 1 px). Only the chosen mode's rows are BUILT (switching rebuilds the tree), so syncLensPanel's setters find no row for the other two and do nothing. The mode is UI state, QSettings "Develop/lensPanelMode" (lensPanelMode: 0 Profile, 1 Fringe, 2 Blur). "Fringe" was chosen over "Edges" (which reads as sharpening): Remove CA and Defringe both remove colour fringes. The three modes are not EditParams groups, so a radio's " \*" (updateSectionHeaderCaptions) and the section menu's "Reset Profile / Fringe / Lens Blur" (resetLensMode, before "Reset Lens") test and reset their fields directly (lensModeEdited). Leaving Blur disarms its focus picker.
 
 - itemChange routes the three keys to setGlobalRemoveCA / setGlobalDefringe (always scope 0; removeCA written explicitly as 1 / 0). syncLensPanel loads them from populateSlidersFromStack (image switch, History, undo, scope change) and when the preference changes.
 - They belong to EditParams::Group::Lens (with the profile fields), so the Lens header's Reset clears them, its "\*" marks them, and its eye (EditScope::showLens, sidecar key showLens) previews them off. An explicit removeCA / lensProfile folds to 0 under the eye; an unset one stays unset, so with the raw preferences on, an untouched raw keeps its automatic corrections.
@@ -6260,7 +6270,7 @@ Everything built from the base must see the same geometry. The AI mask guides (s
 
 #### 11.24.6 UI
 
-DevelopProperties::addLens / addLensProfileRow / repopulateLensCombo:
+DevelopProperties::addLens / addLensProfileRow / repopulateLensCombo, under the Lens section's PROFILE radio (see [11.23.5 UI](#11235-ui)):
 
 - "Lens profile" checkbox, showing the EFFECTIVE state like Remove CA.
 - "Lens" row: a combo owning its value cell (the camera-profile row's idiom). Its first entry is the automatic match WITH its result: "Auto: &lt;lens>", "Auto (&lt;reason>)", or, when a lens IS matched but has nothing for this shot, "Auto: &lt;lens>  (&lt;reason>)". The reason sits where the user looks ([11.19 Develop Alerts and the Greyed Panel (Severity Rows, Disabled States)](#1119-develop-alerts-and-the-greyed-panel-severity-rows-disabled-states)). Then every profiled lens that fits the camera's mount (names the database uses twice get "(crop N)"). A picked lens the camera cannot take is shown, marked and selected, never swapped for Auto. Picking a lens turns the profile on. The combo elides (AdjustToMinimumContentsLengthWithIcon) so long names cannot widen the dock; its tooltip lists what the profile corrects for this shot, the EXIF lens and the lensfun credit.
@@ -6285,11 +6295,59 @@ tests/unit/tst_lensprofile.cpp tests against liblensfun ITSELF. tests/fixtures/l
 - manualWithoutProfile pins the manual terms with an EMPTY Coeffs: identity at zero, the corner's documented scale, the auto-scale direction for barrel vs pincushion, and the vignetting gain at centre / corner and its midpoint ordering.
 - tst_presetparams pins the four preset keys and the three manual ones.
 
-### 11.25 Overlays Over a Transformed Image (Mask Space vs Displayed Space)
+### 11.25 Lens Blur (Depth of Field)
+
+Lens > Lens Blur (2026-10-21) imitates a wide aperture: every pixel is blurred by its circle of confusion (CoC), which grows with its distance in depth from the focal plane, in the lens's bokeh shape. It is the OPTICAL blur; the artistic ones (Gaussian, Motion, Spin, Zoom, Tilt-shift, Glow) are Effects > Blur, kept separate by decision. Depth comes from an AI estimate; mask scopes refine it. The Detail 1:1 patch does not show it (decided: no 1:1 preview for Lens Blur).
+
+#### 11.25.1 The Depth Model (Depth Anything V2 Small)
+
+- Depth Anything V2 SMALL replaced MiDaS v2.1 small for the whole depth field (the Depth Range mask too; no back-compat, AI masks are still in development). MiDaS's 256 px field lost every thin edge (chair legs, a fork, the gap between people); Depth Anything at 518 px resolves them. Only Small is Apache-2.0; Base / Large are CC-BY-NC and must not ship.
+- Exported by tools/export_depth_anything.py (the SigLIP export's recipe): input "pixels" [1,3,518,518] RGB 0..1 squashed, ImageNet normalisation INSIDE the graph; output "depth" [1,518,518] relative DISPARITY (high = near). Float16 weights, float32 I/O: 50 MB, within 0.4% of fp32 after min-max. Parity is checked torch vs ORT CPU vs CoreML on real photos.
+- It is a ViT, so it needs the ONNX Runtime layer (cv::dnn cannot load it). Utilities/depthpredictor runs it on the CPU EP: about 0.25 s per image on an M1 Ultra, once per image. CoreML GPU runs it in 20 ms but its first compile took 26 s; for one run per image that is not worth it (and the CoreML EP has miscomputed before, see [11.17 Raw Denoise](#1117-raw-denoise)).
+- The disparity is min-max'd, INVERTED to 0 = near .. 1 = far and guided-upsampled as before (DepthMask::DepthRef). Being normalised disparity, the field is LINEAR in a lens's CoC, which is what the blur relies on.
+- ModelStore: Model::DepthAnything (depth_anything.onnx, "Depth Range / Lens Blur", v1) replaced Model::Midas; a downloaded midas.onnx becomes an orphan the Manage dialog lists. The file has to be uploaded to the models server (tools/gen_model_catalog.sh prints the step).
+
+#### 11.25.2 The Blur (Develop/lensblur.h)
+
+Header-only, OpenCV only (tst_lensblur).
+
+- CoC: coc = amount \* kMaxCoc (0.05) \* longEdge \* e, with e = sign(d) \* max(0, |d| - range/2) and d = depth - focus. Signed: positive behind the focal plane, negative in front.
+- LAYERS BY DEPTH. A per-pixel variable blur is not one convolution, and a plain gather bleeds a sharp subject into the blurred background behind it (the halo cheap fakes show). The frame is split into slices of signed CoC (radii 0, then geometric from 1 px; tent memberships, so a slope blends between neighbours), each slice is blurred by the bokeh kernel at its radius, and the slices are composited BACK TO FRONT with "over", premultiplied. A background slice never contains the subject, so the subject cannot bleed; a blurred foreground spreads over what is behind it, as a lens does. Where the slices leave a pixel partly uncovered (behind an occluder, which the photo never recorded) the result is renormalised by the accumulated coverage instead of darkening.
+- COST. A slice of radius r is blurred at scale min(1, kernelCap / r), so its kernel never exceeds kernelCap px; the far slices are tiny images. Each slice works only inside its bounding box plus its reach (an in-focus subject costs its own pixels). filter2D runs in parallel horizontal strips (filterPar): OpenCV switches to a SINGLE-THREADED DFT for any kernel of 9 x 9 or more, which measured 150 ms per 3 MP slice, the whole of the first version's 1.6 s.
+- SHAPES, rasterised 4 x 4 supersampled from an indicator: circle, 5 / 6 blades (a vertex up), cat's eye, soap bubble (weight 0.25 + 0.75 r^8: a bright rim), anamorphic (a 0.55 : 1 tall oval). The cat's eye varies across the frame (a disc clipped by a second disc offset toward the centre, more toward the corners: a tangential almond), so it is convolved per tile on an 8 x 8 grid, tiles in parallel, blended bilinearly. 4 x 4 tiles showed doubled shapes where tiles blend.
+- BOOST: in the blurred slices only (fading in from 1.5 px), pixels brighter than 0.7 are scaled up to 1 + 3 \* boost, so clipped highlights bloom into bright discs.
+- REFINE (a mask scope's lensBlurRefine k over its coverage): k < 0 pulls |coc| toward 0, k > 0 pushes it toward 0.6 \* the maximum CoC; the sign (side) is kept.
+- Quality: draft (kernelCap 6, step 1.55) on an interactive tick, final (10, 1.3) on a settle or export.
+
+#### 11.25.3 Pipeline (MW::applyLensBlur)
+
+- It runs on the COMPOSITED frame in developCompositeStack: after the spot heals, BEFORE the geometry (where the depth field and the masks are indexed, mask space) and before the kaleidoscope. Not inside Develop::Apply: it is a whole-frame op over every scope's result, and it needs the depth field.
+- The develop never sees it: stripLensBlur clears the fields in the job copy (as stripKaleidos does), and renderDevelopPreview's baseKey strips them too, so a Lens Blur drag re-blurs a cached composite instead of re-developing the stack.
+- The frame is display-encoded; it is decoded through the output space's transfer (sRGB / P3 curve, Adobe RGB 563/256) to LINEAR light, blurred, and encoded back, 8 or 16 bit.
+- Working size: the proxy's on an interactive tick (even when the frame was upscaled for the geometry), at most kLensWorkLong = 3072 px on a settle or export. Back at full size a pixel whose CoC is under a quarter of a working pixel keeps the full-resolution original, over one takes the upscaled blur, a blend between -- so what is in focus stays exactly as sharp at 45 MP.
+- The depth field: stackHasDepthMask is now "needs the depth field" and is also true for Lens Blur (or Show depth), so every render path builds it with ensureDepthMask. The model download is offered only on a GESTURE (MW::onDepthWanted: turning Lens Blur on, arming the focus picker, Show depth), at most once per image if declined.
+- Refine masks: the mask scopes with lensBlurRefine set keep their coverage (foldMasks, like the kaleidoscope's) and it is rotated into the oriented frame (coverageInFrame).
+- Show depth (job.lensVisualize, stackJob only, never an export): the depth field drawn near light .. far dark, with what stays sharp tinted green (the focal range itself while Amount is 0).
+
+#### 11.25.4 UI, Recipe and Presets
+
+- Global's Lens section, under its BLUR radio (see [11.23.5 UI](#11235-ui)): Focus point first (a target button: ImageView's lensFocusPickMode, the Detail picker's arrangement, in mask space; MW::onLensFocusPicked takes the median depth of a small cross at the click and calls setLensBlurFocus, which also turns an off blur on at 50, as picking a lens turns its profile on), Show depth, a transparent spacer (lensBlurPickSpacer), Amount, Focus, Focal range, another spacer (lensBlurShapeSpacer), Bokeh (a captioned row whose combo owns the value cell, the Lens profile row's idiom, so it starts where the sliders do), Boost. Esc disarms the picker (developShortcutIntercept); it joins developToolActive().
+- A mask scope's Lens section now exists, with ONE row: "Lens blur" (lensBlurRefine, -100..100). The section eye folds it (Group::Lens).
+- Greyed with the reason in a note row (syncLensBlurAvailability): no inference backend in the build (Global), or Global's Lens Blur off (a mask's refine).
+- EditParams lensBlurAmount (0..1, the isIdentity field), lensBlurFocus (0..1, default 0 = near), lensBlurRange (0..1, default 0.1), lensBlurShape (int 0..5), lensBlurBoost (0..1), lensBlurRefine (-1..1, per scope, also in isIdentity); Group::Lens. JSON: the five Global fields only when the amount is non-zero, the refine only when non-zero; sanitised.
+- Presets: a Global-settings leaf "lensBlur" (the five fields; updatePresetFromCurrent restores lensBlurRange's 0.1), and a scope section "Lens" with one leaf "lensRefine". Multi-image: kFloatFields (five) + kIntFields (shape). History names: "Lens blur", "Lens blur focus", "... focal range", "... boost", "... bokeh", "... refine".
+
+#### 11.25.5 Tests and Timings
+
+tests/unit/tst_lensblur.cpp: zero CoC is identity; the CoC map's focal range, sign and linearity; resolution independence; refine; every kernel sums to 1 and has its form; a flat field stays flat under any CoC and shape (no seams between slices); an in-focus subject is untouched and does not bleed into the blurred background; a blurred foreground spreads over a sharp background; Boost brightens blurred highlights only; the slice radii cover the range.
+
+Measured on Quark (M1 Ultra), a 1512 x 2016 photo, focus on the near subject, amount 0.6: Circle draft 64 ms / final 125 ms, Cat's eye 93 / 248 ms (the 8 x 8 tiles). The depth model: ~0.25 s per image, once.
+
+### 11.26 Overlays Over a Transformed Image (Mask Space vs Displayed Space)
 
 Geometry is the LAST render stage, but every mask and spot coordinate is normalised in its INPUT, the developed, EXIF-oriented, UNCROPPED frame ("mask space"), so an edit stays glued to the photo content when the crop later changes. The loupe shows the OUTPUT. Everything the overlays do has to cross that gap. Before this was in place, a cropped image painted its submasks (and drew its veils, gradients, ellipses, brush cursor and auto-mask guide) in the wrong place: normalised against the visible edges instead of the full frame.
 
-#### 11.25.1 One Map
+#### 11.26.1 One Map
 
 CropTransform::geometryTransform(srcW, srcH, g) is the POINT twin of applyGeometry: the same straighten -> warp -> crop order, in QTransforms instead of pixels (the warp reuses QTransform::quadToQuad for the homography applyGeometry gets from cv). Only the input frame's ASPECT matters, so a proxy-sized frame maps identically.
 
@@ -6297,7 +6355,7 @@ MW pairs each render with the geometry that produced it: imageView->setDevelopGe
 
 ImageView::maskNormToItem() (+ maskItemToNorm) is then the ONLY place the two spaces meet: mask-normalised -> geometry-input px -> geometry-output px -> displayed px. With an identity geometry it collapses to a scale by the pixmap size, which is what each overlay used to do inline.
 
-#### 11.25.2 Consequences
+#### 11.26.2 Consequences
 
 - maskViewportToNorm / maskNormToViewport go through it, so hit-testing, dragging, brush stamping, the range eyedropper and the WB dropper land in mask space.
 - The overlay RASTERS (brush + object tint, content / AI coverage tint, MW's whole-mask veil) are built in mask space, sized from maskNormFrameSize(), and painted by maskDrawSpaceImage(): through the map and CLIPPED to the photo, since the buffer spans the uncropped frame.
@@ -6308,11 +6366,11 @@ ImageView::maskNormToItem() (+ maskItemToNorm) is then the ONLY place the two sp
 
 Under a perspective warp the gradient RAMPS (linear / radial) are positioned correctly, but their spacing stays linear on screen; the tint rasters, which go through the full projective map, are exact.
 
-### 11.26 Rotating a Developed Image (the Recipe Follows the Photo)
+### 11.27 Rotating a Developed Image (the Recipe Follows the Photo)
 
 Cmd+[ / Cmd+] (MW::setRotation) turns the image. Four things used to stay behind in Develop, each found by rotating in Develop and then opening the crop tool.
 
-#### 11.26.1 The Pixels Develop Renders From
+#### 11.27.1 The Pixels Develop Renders From
 
 The loupe and the ImageCache image were turned, but Develop renders from its own copies. MW::invalidateDevelopAfterRotation drops them:
 
@@ -6320,7 +6378,7 @@ The loupe and the ImageCache image were turned, but Develop renders from its own
 - A scene-referred raw work is sensor-native, and developOrientationDegrees applies the model's orientation on every render, so it is kept rather than re-demosaiced.
 - For the current image these go too, all computed in the old frame: the interactive proxy (keyed only by path, so it survived), the stack cache (a 180 deg turn keeps its size check happy), the retained frames and, for display-referred works, the Range / Subject / Sky / Depth refs and the brush guide.
 
-#### 11.26.2 The Recipe's Coordinates
+#### 11.27.2 The Recipe's Coordinates
 
 Everything positional in an EditStack is normalised in the ORIENTED frame: gradients, brush and object strokes, Replace spots, the perspective quad, and the crop (post-warp, which turns with it). That holds for raw as much as JPEG, since raw masks are mapped from output coordinates. Develop/editrotate.h re-expresses them:
 
@@ -6330,22 +6388,22 @@ Everything positional in an EditStack is normalised in the ORIENTED frame: gradi
 
 DevelopProperties::rotateImageEdits applies it to the stack and to every History snapshot of the image (DevelopHistory::transformAll: a rotation is not an edit step, and undoing across it must not bring back the old frame), flushes the sidecar and re-renders. Pinned by tst_editrotate: each stored form, a turn and its inverse, four quarter turns.
 
-#### 11.26.3 The Stored Previews
+#### 11.27.3 The Stored Previews
 
 The 256 px sidecar thumbnail and the DevPreviewCache loupe preview are rendered already rotated and checked only against the recipe's hash (Metadata::devPreviewKey), which a tone-only recipe keeps through a rotation, so they were served as current. rotateImageEdits runs AFTER MW has dropped its frames, so flushImage's provider has nothing to give and CLEARS them; an unedited image (a raw's default render) has its preview dropped directly. The next render writes fresh ones.
 
-#### 11.26.4 The Grid Thumbnail
+#### 11.27.4 The Grid Thumbnail
 
 Dropping the develop preview makes MW::devPreviewUpdated re-read the camera thumbnail, and two things turned that re-read back to the old orientation:
 
 - ThumbCache stores icons ALREADY ROTATED and judges freshness by the image file's size and mtime, which a rotation into the sidecar does not change. invalidateDevelopAfterRotation now drops the entry (ThumbCache::onDeleted).
 - On an ICON-ONLY read, Reader passed loadThumb the PREVIOUS row's ImageMetadata (readMetadata was skipped), so the icon was turned by whatever image that reader had parsed last. Reader::read now fills orientation, rotationDegrees, developEdited and the size from the model, as it already did the thumbnail offsets.
 
-### 11.27 White Balance (Absolute, Kelvin)
+### 11.28 White Balance (Absolute, Kelvin)
 
 The Basic panel's white balance is ABSOLUTE, like Lightroom's: Temp is a colour temperature in KELVIN and Tint a green/magenta offset, both resolved against the image's own colour characterisation rather than applied as a blind per-channel nudge. "5500 K" therefore means the same light on every camera body.
 
-#### 11.27.1 The Colour Science
+#### 11.28.1 The Colour Science
 
 Develop/whitebalance.h/.cpp: self-contained, no Qt widgets, unit tested by tests/unit/tst_whitebalance.cpp. The model: a white balance names the illuminant the scene was lit by. For a target (Kelvin, tint) the forward chain is
 
@@ -6361,7 +6419,7 @@ gains() returns (s.g/s.r, 1, s.g/s.b): the scene-linear gains that make s neutra
 
 Sign of both controls: they describe the LIGHT, so the image moves the opposite way. A higher Kelvin says "the light was bluer" and renders the image WARMER; a positive tint assumes a GREENER light and renders the image MORE MAGENTA. This matches the Lightroom sliders under the hand.
 
-#### 11.27.2 Adobe's Temperature Convention
+#### 11.28.2 Adobe's Temperature Convention
 
 Changed 2026-09-16 (it was two crossfaded loci). The mapping between (Kelvin, tint) and chromaticity is the DNG SDK's dng_temperature: Robertson's isotemperature-line method over the PLANCKIAN locus in CIE 1960 (u,v), with a 31-row (mired, u, v, slope) table interpolated between rows, and tint scaled at Adobe's kTintScale = -3000 units per Duv. locusXY is the forward map (Get_xy_coord), tempTintFromXY the exact inverse (Set_xy_coord).
 
@@ -6371,13 +6429,13 @@ Why: the number in the Temp box is only useful if it means what everyone else's 
 - Drift on stored tints, accepted deliberately. EditParams::temp / tint are absolute and there is no convention version key in the sidecar, so a tint written under the old scale is interpreted against the new one: images edited before this change shift green/magenta by roughly 10-20 tint units (Kelvin barely moves). The alternative was carrying two conventions forever, but it is the reason a re-opened old edit may not look identical.
 - Out of gamut at the slider ends. Adobe's scale reaches much further off the locus, so the extremes of the +/-150 tint range can name an illuminant a given camera cannot represent with all-positive channels (3400 K at +150 is off the chromaticity triangle entirely, z &lt; 0). renderIlluminant clamps the dead channel, gains() stays finite and the render is well behaved; what is not defined there is the ROUND TRIP, so solve() refuses such a colour exactly as it refuses a black or clipped dropper sample.
 
-#### 11.27.3 The Inverse, solve()
+#### 11.28.3 The Inverse, solve()
 
 Given a colour in linear sRGB, find the (K, tint) whose illuminant renders to that chromaticity. NESTED bisection: for every candidate K the tint is solved exactly first, then that K is judged on the warmth it produces with its own matched tint. Alternating the two searches instead (bisect K, bisect tint, repeat) leaves each K step judged against a stale tint and drifts badly at strong tints: a +80 tint at 3400 K came back as 2742 K / +42. Cost is \~1600 evaluations of a 30-flop function, irrelevant because solve() runs on a dropper click, an Auto pick and once per decode, never per rendered pixel.
 
 ONE function serves three callers: the as-shot estimate (solve for neutral: the as-shot render IS neutral by construction, so the illuminant that renders neutral is the shooting illuminant), the dropper (solve for the sampled pixel), and Auto.
 
-#### 11.27.4 What Carries It
+#### 11.28.4 What Carries It
 
 - WorkingImage::cam (struct CameraColor, workingimage.h) holds xyzToCam / asShotMul / camToWorking plus the solved asShotK + asShotTint.
 - RawColor::ToCameraNative fills it from the model matrix and the as-shot multipliers, which it computes but no longer APPLIES, since cam is now also the input profile Develop's stage 0 reads. The characterisation half is split out as RawColor::Characterise (matrix + multipliers -> CameraColor, no pixels) because the Apple Core Image engine needs it too ([10.4.1 Under the Apple Engine](#1041-under-the-apple-engine)).
@@ -6385,18 +6443,18 @@ ONE function serves three callers: the as-shot estimate (solve for neutral: the 
 - WorkingImageCache::downscaled COPIES cam; otherwise the interactive proxy would resolve white balance differently from the full-res render.
 - Under a DCP the as-shot point is re-solved against the profile's matrix ([10.4.3 As Shot Is Profile-Dependent](#1043-as-shot-is-profile-dependent)).
 
-#### 11.27.5 Storage (EditParams)
+#### 11.28.5 Storage (EditParams)
 
 temp is Kelvin and tint the offset, both ABSOLUTE, with temp == 0 the sentinel for "as shot" (NOT 0 K), so an untouched image reads as identity and never marks itself edited. The panel always writes the pair together (moving Tint alone still commits the resolved Kelvin), so temp == 0 only ever means a pristine image and the two can never disagree about their reference. Develop uses relativeGains(), which divides by the gains at (asShotK, asShotTint) and so is an EXACT no-op at as shot even though asShotK came from a bisection fit. wbPreset (a WhiteBalance::Preset as int) is stored only so the dropdown can show what was picked; temp / tint are what render.
 
-#### 11.27.6 The Temp Box Reads As Shot the Way the Render Does
+#### 11.28.6 The Temp Box Reads As Shot the Way the Render Does
 
 Fixed 2026-10-10. DevelopProperties::currentCam returned the cached image's cam, whose asShotK / asShotTint were solved at decode against the built-in per-model matrix, while the render re-solves them against the selected camera profile (WorkingImageCache attachProfile -> CameraProfile::resolveAsShot). So under a profile the box showed the built-in answer (an E-M1 frame read 5020 K / +5 under Adobe Standard, which renders it at 5106 K / +12), and a Tint-only drag committed the built-in Kelvin. currentCam now applies the same re-solve (same CameraProfileStore lookup, same CameraNative gate; cam.profile is left unset), and setCameraProfile refreshes the WB row.
 
 - Still NOT matching Lightroom on that frame (5700 / +6): Adobe's DNG of the ORF carries CameraCalibration1/2 = diag(1.0579, 1, 0.9159), a per-body correction Winnow has no source for; the DNG solve WITH it gives 5716 / +6.3. Its render effect is small: a diagonal calibration cancels out of the colour conversion (the neutral still maps to white); it only moves the warm/D65 interpolation weight of the profile's matrices and HueSatMaps (0.21 vs 0.11).
 - The WB dropper and Auto still solve against work->cam (the built-in matrix); not changed here.
 
-#### 11.27.7 The WB Row
+#### 11.28.7 The WB Row
 
 DevelopProperties::addWhiteBalanceRow, above Temp: a DT_None row owning both cells (the Core rows' idiom), with a dropper button in the caption cell and the preset dropdown in the value cell.
 
@@ -6405,7 +6463,7 @@ DevelopProperties::addWhiteBalanceRow, above Temp: a DT_None row owning both cel
 - Double-click on the WB row = As Shot, the row's equivalent of the double-click-resets-to-default every slider row has (the base class has no default to restore for a DT_None row, so DevelopProperties::mouseDoubleClickEvent handles it before falling through). The "WB" label carries WA_TransparentForMouseEvents so its clicks reach the tree; the attribute is set on the LABEL, never the cell widget, since it also covers a widget's children and would deafen the dropper.
 - Double-click on the Temp or Tint CAPTION resets THAT axis to its as-shot value (resetWbAxisToAsShot), not to the slider's 0 default: 0 is the untouched sentinel, not a temperature, and the base reset would slam Temp to the 2000 K floor. The other axis keeps its value and is rewritten as resolved absolute Kelvin/tint, since the pair always commits together; when both land back on as shot, the row restores the 0 sentinel and the As Shot preset, so the image reads as unedited.
 
-#### 11.27.8 Presets
+#### 11.28.8 Presets
 
 As Shot, Auto, Daylight 5500/+10, Cloudy 6500/+10, Shade 7500/+10, Tungsten 2850/0, Fluorescent 3800/+21, Flash 5500/0, Custom (Adobe's standard values).
 
@@ -6414,11 +6472,11 @@ As Shot, Auto, Daylight 5500/+10, Cloudy 6500/+10, Shade 7500/+10, Tungsten 2850
 - Custom is a readout, not a command: picking it changes nothing, and any manual slider move demotes the selection to it.
 - Non-raw files are offered only As Shot / Auto / Custom, matching Lightroom: a rendered JPEG has no camera-neutral reference for the named illuminants to mean anything against.
 
-#### 11.27.9 The Kelvin Slider
+#### 11.28.9 The Kelvin Slider
 
 2000..50000 K on a LOGARITHMIC ramp (ItemInfo::logScale -> UR_LogScale -> SliderEditor); linear would bury every useful temperature in the first sixth of the track. The slider's integer position is a point on the ramp, not the value; valueFromPos / posFromValue convert, and everything outside SliderEditor still sees real Kelvin, rounded to 10 K (finer resolution is meaningless and reads as noise). Above 25000 K the daylight branch is extrapolated: well behaved, but no real illuminant lives there. Temp's gradient runs blue -> yellow WITH the value, which is correct: a higher Kelvin renders the image warmer.
 
-#### 11.27.10 The Dropper
+#### 11.28.10 The Dropper
 
 Armed from the row's button, the Develop menu, or W (a Develop-mode local shortcut; New Workspace in Preview; an active Transform owns W for Warp, so W reaches the dropper only when no Transform is up). All three go through DevelopProperties::toggleWbDropper, which refuses to arm with no current image, so the key cannot arm a dropper that can only fail. It toggles ImageView's wbPickMode (beginWbPick / endWbPick).
 
@@ -6439,7 +6497,7 @@ The on-demand buffer: the dropper and Auto WB are the only Develop actions that 
 
 Esc disarms it, and that MUST live in MW::developShortcutIntercept (rule 1b), not ImageView: the dropper is armed from the dock, so focus is in the dock and ImageView's keyPressEvent never runs (the same reason Transform's Esc is arbitrated there). ImageView keeps an Esc handler only as a fallback for when it does hold focus. The dropper is checked BEFORE the Transform block, so the more recently armed tool owns Esc.
 
-#### 11.27.11 The Dropper Loupe
+#### 11.28.11 The Dropper Loupe
 
 While the dropper is armed and over the image, ImageView::drawWbLoupe paints a "Pick a target neutral:" panel that follows the tip, modelled on Lightroom's: a 5x5 grid of the pixels under the tip (one image pixel per cell), a crosshair on the centre cell, and an R/G/B readout in PERCENT.
 
@@ -6448,7 +6506,7 @@ While the dropper is armed and over the image, ImageView::drawWbLoupe paints a "
 - Pixels are read from the displayed pixmap PER PAINT over the clamped 5x5 rect. Caching the whole pixmap as a QImage would cost \~180 MB on a 45 MP raw for 25 pixels of data, and would go stale when an edit re-rendered the preview.
 - It is painted from an overridden paintEvent (after QGraphicsView::paintEvent) rather than drawForeground, whose many early returns cannot guarantee the panel lands on top.
 
-#### 11.27.12 Skin Tone (Opt/Alt-Click)
+#### 11.28.12 Skin Tone (Opt/Alt-Click)
 
 Opt/Alt-click samples SKIN instead of a neutral (WhiteBalance::solveSkin), for portraits, where there is often no neutral in frame but always a face. It does NOT drive the sample to grey; it drives it back onto the skin HUE LINE, keeping the skin's own saturation and lightness. Measured skin of very different depths agrees on hue to 0.3 deg in the (warmth, green) plane while chroma magnitude differs 23% (ColorChecker light vs dark skin patches), so hue is the part a cast corrupts and the part safe to correct; a fixed reference chromaticity would desaturate deep skin by about a quarter.
 
@@ -6456,20 +6514,20 @@ Opt/Alt-click samples SKIN instead of a neutral (WhiteBalance::solveSkin), for p
 - It reduces to the neutral case exactly: solving for the component-wise ratio s/T neutralises it, and a neutral pick is just T = (1,1,1), so both dropper modes share one solver and cannot drift apart. Exact in one shot; the corrected sample lands ON the line by construction, no iteration.
 - Guard: a sample more than kSkinHueToleranceDeg (60) off the line, or with almost no chroma, is REFUSED with a message naming the reason. 60 deg is deliberately generous: skin under a strong tungsten cast is already 14 deg off, and a tighter limit would refuse exactly the images the tool exists for. It rejects foliage (67 deg) and blue sky (167). It CANNOT reject a red or orange object (a red shirt is only 18 deg off, because skin hue genuinely IS orange), so it catches gross mis-clicks, not subtle ones. An extreme blue cast can push skin past the tolerance; the neutral dropper is the fallback there.
 
-### 11.28 Curves Panel (Tone Curve)
+### 11.29 Curves Panel (Tone Curve)
 
 Lightroom's Tone Curve, as its own Develop section (DevelopProperties::addCurves, header "CurvesHeader", preview group PV_Curves, EditParams::Group::Curves), placed directly under Basic because that is the order it is reached in. Two MODES over one square plot (Develop/Properties/curveeditor.{h,cpp}), with the image's histogram drawn behind it:
 
 - Point: the free-form curve. A channel combo picks RGB (the COMPOSITE, applied to every channel) or Red / Green / Blue, which layer on top of the composite for that channel alone. Drag a point; click empty space to add one (it lands ON the current curve, so adding an anchor changes nothing until it is moved); double-click a point to delete it; double-click the background to reset the channel. Endpoints are pinned in x but FREE in y, which is the black-point / white-point move. Max 16 points per channel.
 - Parametric: the curve Basic's tone sliders already produce, drawn from Develop::ParametricCurve. Dragging inside one of the four tonal bands writes that band's EXISTING Basic slider (blacks | shadows | highlights | whites, in x order) and moves the slider itself; double-clicking a band zeroes it.
 
-#### 11.28.1 There Are No Parametric Params
+#### 11.29.1 There Are No Parametric Params
 
 The Curves panel is a SECOND VIEW of Basic's tone controls, not a second tone system. Winnow already had Lightroom's four parametric regions as Basic sliders driven by the tone splits, and duplicating them would have left two sets of fields that could disagree about the same image. Which mode and which channel you are looking at are UI state and deliberately not in the recipe.
 
 The default mode is POINT (curveModeIndex = 1, changed 2026-09-20 from Parametric). The mode is not persisted, so that initial value is what the panel shows the FIRST time Curves is expanded in a session; after that it holds whatever the user last picked, surviving a tree rebuild the way curveSamplerActive does. Point is the default because it has controls of its own (the channel combo, the plot's points) and is the only mode the canvas point picker works in; Parametric is a view of sliders already on screen in Basic. The combo is synced to curveModeIndex under a QSignalBlocker on rebuild: an unblocked setCurrentIndex(1) would re-enter applyCurveMode while addCurves is still adding the very rows applyCurveMode shows and hides.
 
-#### 11.28.2 The Coupling Is Shown, Not Hidden
+#### 11.29.2 The Coupling Is Shown, Not Hidden
 
 The one cost of that decision is perceptual: a band drag edits a control in ANOTHER panel, which reads as the app changing settings behind your back. Three cues answer it, and the first carries the message:
 
@@ -6479,11 +6537,11 @@ The one cost of that decision is perceptual: a band drag edits a control in ANOT
 
 The tone splits live in two places on purpose: under the histogram scope and under this panel's plot in Parametric mode, one set of params with two ToneRegionSlider instances ([11.20.3 The Tone-Region Slider](#11203-the-tone-region-slider)). They stay in the scopes strip because that is where they align with real histogram data; they are here too because the strip can be hidden, which would make them unreachable while the panel that depends on them is open.
 
-#### 11.28.3 Layout: The Plot Is Centred in the Panel, Not in Its Cell
+#### 11.29.3 Layout: The Plot Is Centred in the Panel, Not in Its Cell
 
 A spanned row's index widget starts after the tree indentation (2 x 15 px for a row one level under a section header), which left the plot with a 30 px gap down its left side and none on its right. Invisible on a row of sliders; on the one full-width graphic in the panel it reads as off-centre. A negative left margin would just be clipped to the cell, so DevelopProperties::updateEditorGeometries nudges the geometry the base class computes: the WIDTH the view handed it is kept and only the x moves, so the plot does not shrink. That hook rather than resizeEvent, because it is where the base class re-lays out every persistent index widget: a resize, a scroll and an expand all pass through it, and nothing can move the widgets back afterwards. The SPLITS ROW is centred alongside it and carries only kPlotMargin as its own inset (it used to carry the caption indent the other Curves rows need, which pushed the handles 19 px right of the x-axis they sit under).
 
-#### 11.28.4 The Pointer Toggle
+#### 11.29.4 The Pointer Toggle
 
 Where the pixel you are pointing at sits on the curve. The button at the left of the mode row is styled and armed exactly like the WB dropper (a BarBtn, accent border via setActive, a drawn icon, DevelopProperties::curveSamplerIcon). While it is on, hovering the image marks the pixel under the pointer on the plot: a vertical line at its tone, a dot where that line meets the curve, and the tone as a percentage along the bottom (CurveEditor::setSample / drawSampleMarker). The component it reads follows the curve being edited: R / G / B in Point mode on a single channel, Rec.709 luma for the RGB composite and for Parametric (which has no channels), so a channel change re-reads the SAME sample.
 
@@ -6491,7 +6549,7 @@ The x is the DISPLAY-REFERRED tone, the axis the histogram BEHIND the plot is dr
 
 No new sampling path for the marker: MW::onImageCursorPos already samples the hovered pixel out of developShownImage for the scopes' readout marker (ImageView::cursorImagePos), so the marker rides on that one sample, with two consumers gated separately (DevelopProperties::wantsCurveSample = armed AND the plot on screen), because the scopes strip and the Curves panel can each be showing without the other. cursorLeftImage clears both.
 
-#### 11.28.5 It Owns the Click in Point Mode
+#### 11.29.5 It Owns the Click in Point Mode
 
 Added 2026-09-20. It is not a second dropper: the WB dropper is a one-shot, while this is a TOGGLE that stays on until turned off. While three conditions hold together (the toggle is on, the Curves panel is expanded, and the mode is POINT), a click on the image ADDS A CONTROL POINT at the clicked pixel's tone, exactly as clicking empty space on the plot does: Lightroom's targeted-adjustment gesture. Otherwise the loupe keeps click-to-zoom and drag-to-pan unchanged.
 
@@ -6501,19 +6559,19 @@ Added 2026-09-20. It is not a second dropper: the WB dropper is a one-shot, whil
 - The click's pixel is read at the CLICKED point, not from the last hover: ImageView emits curvePointPicked(nx, ny) and MW::onCurvePointPicked samples that point out of the same developShownImage. Both the hover and the click go through ImageView::displayedNormAt, so they cannot sample different pixels for one cursor position.
 - MW::onCurvePointPicked hands the pixel to DevelopProperties::addCurvePointFromPixel, which pushes it through setCurveSample (so marker and new point share one x by construction) and calls CurveEditor::addPointAtSample. That emits curveChanged + curveCommitted together (a canvas click is a complete gesture, unlike a plot drag), so the render and the debounced sidecar write both run. The point lands ON the current curve and leaves dragPt clear, so placing one changes nothing until it is moved. A channel already at kMaxPts, or a tone another point occupies, is a silent no-op.
 
-displayedNormAt exists because the first cut used maskViewportToNorm and was WRONG: mask / spot coordinates are normalised in the geometry stage's INPUT (the uncropped oriented frame) while developShownImage is its OUTPUT, so on a cropped or straightened image the click landed on a different pixel than the marker was reading (pointing at a 9% shadow placed the point near 50%). With an identity geometry the two spaces coincide, which is why the bug survives an untouched image and appears the moment a crop is applied. The rule: anything that indexes developShownImage (or lines up with the backdrop histogram) uses displayedNormAt; anything stored as mask / spot geometry uses maskViewportToNorm. See [11.25 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1125-overlays-over-a-transformed-image-mask-space-vs-displayed-space).
+displayedNormAt exists because the first cut used maskViewportToNorm and was WRONG: mask / spot coordinates are normalised in the geometry stage's INPUT (the uncropped oriented frame) while developShownImage is its OUTPUT, so on a cropped or straightened image the click landed on a different pixel than the marker was reading (pointing at a 9% shadow placed the point near 50%). With an identity geometry the two spaces coincide, which is why the bug survives an untouched image and appears the moment a crop is applied. The rule: anything that indexes developShownImage (or lines up with the backdrop histogram) uses displayedNormAt; anything stored as mask / spot geometry uses maskViewportToNorm. See [11.26 Overlays Over a Transformed Image (Mask Space vs Displayed Space)](#1126-overlays-over-a-transformed-image-mask-space-vs-displayed-space).
 
 Lifetime: the armed state is UI state and not in the recipe. It outlives a tree rebuild (addCurves restores the button from curveSamplerActive) and an image change, while the stale sample does not (the marker is dropped on navigation and waits for the next hover). COLLAPSING THE CURVES SECTION TURNS IT OFF (2026-09-20): setCurveSamplerActive(false) from the QTreeView::collapsed handler, which also clears the marker and disarms the canvas picker. Disarmed, not merely gated: an armed tool behind a closed panel would keep adding curve points with nothing on screen to explain it. It hangs off the COLLAPSED SIGNAL, not curveEditor->isVisible(), on purpose: the plot is also invisible during a buildTree and while the dock is hidden, and neither is the user putting the panel away. Solo mode and Collapse all fold the section through the same signal, so they disarm it too. There is no re-arm on expand: turning it on is always an explicit click.
 
-#### 11.28.6 Curve Math
+#### 11.29.6 Curve Math
 
 Develop/tonecurve.h, header-only beside calibrate.h / colorgrade.h, unit-tested by tst_tonecurve. MONOTONE CUBIC HERMITE (Fritsch-Carlson), not Catmull-Rom: a plain cubic overshoots between closely spaced control points, and an overshoot in a tone curve is a locally INVERTED tone (a bright halo inside a shadow ramp). The limiter is the whole reason for the choice, so tst_tonecurve::monotoneControlPointsGiveMonotoneCurve is the test not to "tidy" away. Past x = 1 the curve continues with its END SLOPE rather than clamping, so pulling the white point down scales the \~3 stops of highlight headroom the LUT spans instead of flattening it into one value.
 
-#### 11.28.7 Pipeline
+#### 11.29.7 Pipeline
 
 Stage 5a: composed into the SAME perceptual tone LUT that already bakes contrast and the region lifts (Develop::buildPointCoeffs), after them, matching Lightroom's order, so the curve costs LUT-build time and nothing per pixel. PointCoeffs::toneLut became toneLut[3][kLutSize], one table per channel, because the per-channel curves differ; the three are identical when only the composite is in play, and the hot loop does the same single lookup either way. The parametric shape was factored into buildToneShape / applyToneShape in develop.cpp, so ParametricCurve (what the panel DRAWS) and buildPointCoeffs (what RENDERS) cannot drift apart.
 
-#### 11.28.8 Data, Presets and Multi-Image
+#### 11.29.8 Data, Presets and Multi-Image
 
 - EditParams gains curveN[4] + curveX[4][16] + curveY[4][16]: fixed-size arrays, not a container, so operator== stays defaulted, the struct stays cheap to copy per render and per history snapshot, and sanitizeParams stays numeric. UNLIKE the tone splits, the curve IS a primary control and DOES count towards isIdentity().
 - One sidecar key, "curves", holds ToneCurve::encode's compact string ("ch:x,y,...;ch:..." with identity channels omitted, so an untouched image adds nothing). Because MW::developCompositeStack keys the per-scope render cache on paramsToJson's output, adding that key is also what gives the curve correct cache invalidation.
@@ -6521,13 +6579,13 @@ Stage 5a: composed into the SAME perceptual tone LUT that already bakes contrast
 - Presets carry TWO leaves, "curveRgb" (composite) and "curveChannels" (R/G/B), because a look built on the composite curve is often wanted without the colour crossover that came with it. Each is encoded over a copy with the other channels reset, and assignParam merges each key back into only its own channels, so ticking one never clears the other.
 - Multi-image: the curve cannot go in kFloatFields (that table is scalar member pointers). It gets one pseudo-field, "curves", with curvesDiffer / copyCurves as the two halves: the same discipline the table enforces for scalars, and the thing to remember if the curve ever grows another channel.
 
-### 11.29 Calibrate Panel (RGB Primaries)
+### 11.30 Calibrate Panel (RGB Primaries)
 
-Lightroom's Calibration panel: a hue shift + saturation scale for each of the three PRIMARIES of the working space (DevelopProperties::addCalibrate, header "CalibrateHeader", preview group PV_Calibrate), sitting between Color and Color Grade so the sections read in pipeline order. It is also the RGB mode of the combined Color panel ([11.32 The Combined Color Panel](#1132-the-combined-color-panel)); both layouts use addCalibrateBody.
+Lightroom's Calibration panel: a hue shift + saturation scale for each of the three PRIMARIES of the working space (DevelopProperties::addCalibrate, header "CalibrateHeader", preview group PV_Calibrate), sitting between Color and Color Grade so the sections read in pipeline order. It is also the RGB mode of the combined Color panel ([11.33 The Combined Color Panel](#1133-the-combined-color-panel)); both layouts use addCalibrateBody.
 
 It is NOT the Color panel's Red / Green / Blue. Those are per-channel linear GAINS folded into the white-balance vector (buildPointCoeffs), a cruder second white balance; Calibration re-points the primaries themselves. Both exist: the gains stay until Calibrate has proved out, the same approach Color Grade got.
 
-#### 11.29.1 UI
+#### 11.30.1 UI
 
 Redone as Lightroom's on 2026-10-12, at the user's request. Seven plain -100..100 sliders, keyed by their EditParams field names so the generic applyKeyToParams path, history and populateSlidersFromStack carry them: "Tint" (calShadowTint), then a plain "Hue" / "Saturation" pair for red, green and blue, separated by group dividers.
 
@@ -6537,13 +6595,13 @@ Redone as Lightroom's on 2026-10-12, at the user's request. Seven plain -100..10
 
 All the hue/sat wheels share one base, HueSatWheel (Develop/Properties/huesatwheel.\*): it owns the cached HSV disc, centre / radius, paintDisc and the hue/sat &lt;-> pixel mapping, leaving each subclass only its dots, interaction and signals. discMargin is the one thing they size differently (a wheel that labels handles OUTSIDE the rim needs the room). Subclasses: ColorGradeWheel, ColorRangeWheel and the unused PrimaryWheel.
 
-#### 11.29.2 Shadows Tint
+#### 11.30.2 Shadows Tint
 
 calShadowTint (2026-10-12), Lightroom's Calibration > Shadows > Tint: green (-) / magenta (+) in the shadows only. Applied per pixel in the fused pass right after the primaries, before the tone curve (Calibrate::applyShadowTint): green x (1 - a), red + blue x (1 + b) with b set so a grey keeps its luma, then the pixel rescaled to its OWN original luma, so it moves colour, not brightness. a = kShadowTintMax (0.25) x tint/100 x w, w a smoothstep window over perceptual luma, 1 at black -> 0 at kShadowTintEnd (0.5). It depends on luma, so it cannot fold into calMat / preMat.
 
 Part of Group::Calibrate and isIdentity; the sidecar key is written ONLY when non-zero (older recipes unchanged); preset leaf "calShadowTint"; a kFloatFields row. The constants are UNCALIBRATED estimates. Pinned by tst_calibrate::shadowTintIsLumaPreservingAndShadowOnly.
 
-#### 11.29.3 Data and Pipeline
+#### 11.30.3 Data and Pipeline
 
 EditParams gains six fields (calRed/Green/Blue x Hue/Sat), its own Group::Calibrate and a per-scope showCalibrate preview flag. The math is header-only in Develop/calibrate.h (tst_calibrate). buildPointCoeffs turns the six into one 3x3 (c.calMat / c.calActive), and applyPointOps applies it in the fused pass right after channelGain, BEFORE the tone curve: calibration is a change of colour space and belongs upstream of anything perceptual.
 
@@ -6551,15 +6609,15 @@ Why the rows are normalised: each primary's unit vector is rotated about the neu
 
 The sliders interact, by design. Turning red toward green gives reds a green response, and holding white fixed forces green's own response down to compensate. That is what a real primary change does, and Lightroom's sliders interact the same way. What survives is direction: an untouched primary's column stays parallel to its own axis and is only rescaled.
 
-#### 11.29.4 A New Section Must Join Every Per-Group Sweep
+#### 11.30.4 A New Section Must Join Every Per-Group Sweep
 
-Three were missed when the panel landed and were fixed later: refreshPreviewButtons (the Calibrate eye never redrew as eye_off), resetSection(PV_Scope) ("Reset all" left the calibration in place), and buildTree's eye-pointer clear (calibrateEyeBtn / colorGradeEyeBtn dangled between removeRows and the rebuild). None affected the render, which is exactly why they survived: a new section is only done when it appears in ALL of them. See [11.38 Adding or Changing a Develop Adjustment (Checklist)](#1138-adding-or-changing-a-develop-adjustment-checklist).
+Three were missed when the panel landed and were fixed later: refreshPreviewButtons (the Calibrate eye never redrew as eye_off), resetSection(PV_Scope) ("Reset all" left the calibration in place), and buildTree's eye-pointer clear (calibrateEyeBtn / colorGradeEyeBtn dangled between removeRows and the rebuild). None affected the render, which is exactly why they survived: a new section is only done when it appears in ALL of them. See [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist).
 
-### 11.30 Color Grade Panel (Colour Grading)
+### 11.31 Color Grade Panel (Colour Grading)
 
 A minimalist take on Lightroom's Color Grading, as its own Develop section (DevelopProperties::addColorGrade, header "ColorGradeHeader", preview group PV_ColorGrade) ALONGSIDE the Color panel (RGB + global HSL), which stays. The functions differ: grading selects pixels by TONE and adds a tint; the HSL sliders remap existing hues globally.
 
-#### 11.30.1 Naming (Historical)
+#### 11.31.1 Naming (Historical)
 
 This section was called "Color Mix" in code until it was renamed. The name had been claimed for a planned Lightroom-style 8-band HSL mixer that was then cancelled, leaving the grading panel wearing it; the header read "Color Grade" while groupLabel(), the section context menu and the Save Preset dialog still said "Color Mix", so history rows named a panel that did not exist. Everything is now ColorGrade. The per-scope preview flag's SIDECAR KEY moved from "showColorMix" to "showColorGrade"; editstack.h reads the legacy spelling first and lets the current one win, so pre-rename sidecars keep their preview state. The nine value keys were always grade\* and did not change.
 
@@ -6568,7 +6626,7 @@ The 8-band mixer is CANCELLED, not deferred. The Color Range mask (rangemask.h, 
 - The hue presets: the Color Range mask's rows carry eight colour CHIPS (Red, Orange, Yellow, Green, Aqua, Blue, Purple, Magenta, Lightroom's band set). Clicking one calls DevelopProperties::applyColorRangeHuePreset, which REPLACES the mask's samples with a synthetic one at the band's centre hue (sat 0.6, mid-radius on the wheel with room to widen either way) and sets hueLo / hueHi to the 22.5 deg half-band: exactly what the pipette would write given a perfectly representative pixel. No new selection maths. Replace, not append, because a chip means "select this colour"; Shift-clicking the image still adds further samples on top.
 - Isolating the selection is the existing "Grayscale background" item on the action-row tint button's context menu (G::maskOverlayGrayscale): it desaturates the image while any overlay is shown, a VIEW effect in ImageView / ScaledPixmapItem only. Do not add a second, competing isolation overlay: the combine-modifier work settled on ONE overlay colour and one outcome preview.
 
-#### 11.30.2 UI
+#### 11.31.2 UI
 
 Compact, per the mockup: four Shadows / Midtones / Highlights / GLOBAL radio buttons on one row, one shared hue/saturation wheel, Hue / Saturation / Luminance sliders, then Blending + Balance below a divider.
 
@@ -6579,7 +6637,7 @@ Compact, per the mockup: four Shadows / Midtones / Highlights / GLOBAL radio but
 - GLOBAL is a fourth range (range [3]) not tied to a tonal range: its own broad measured window, unaffected by Blending / Balance, on top of the three windowed ranges.
 - Blending (0..100, default 50) and Balance (-100..100, default 0) are PANEL-WIDE, not per-range. Blending pushes the shadow and highlight edges apart (&lt; 50, a broader pure-midtone band) or together (> 50, more overlap); Balance slides both, positive favouring highlights. They warp the L\* axis the measured windows are read at (ColorGrade::gradeWindowAmp).
 
-#### 11.30.3 The Grade Is Lightroom's, Measured
+#### 11.31.3 The Grade Is Lightroom's, Measured
 
 Recalibrated 2026-10-12. The first implementation added a zero-luma tint in SCENE-LINEAR light with windows keyed on scene values ahead of the view transform. Against Lightroom it was 2-30x too strong (Delta-ab 55-70 where LR has 1-5 below L\* 20, plus an L\* lift of 14-20 in the shadows), its highlight window sat above nearly every pixel, and its hues were 10-40 deg off. It was replaced outright; every image graded before this re-renders, deliberately (the panel was new and the old look was wrong). The method is the [11.8.5 The Calibration Loop](#1185-the-calibration-loop).
 
@@ -6601,7 +6659,7 @@ Second pass (same day): Global, Luminance, Blending and Balance, from the \_Glob
 
 Still extrapolated, not measured: Blending &lt; 50, negative Balance, Blending / Balance effects on the Shadows and Highlights ranges, Global's linearity in sat.
 
-#### 11.30.4 Implementation
+#### 11.31.4 Implementation
 
 Develop/colorgrade.h holds the model as pure math (gradePushDir, gradeWindowAmp, gradeLightOffset, lstarFromY, the Rec.2020 &lt;-> ProPhoto Bradford-D65 matrices); tst_colorgrade guards it. buildPointCoeffs bakes tables:
 
@@ -6613,19 +6671,19 @@ applyPointOps (stage 5d, after HSL), per pixel: per channel to display-linear; L
 
 Result (same NEF, Winnow vs LR, per 10-L\* bin): all first- and second-pass cases within \~1-3 Delta-ab and \~1 L\* in every bin, except the deepest shadows of the Shadow range (14-15 vs 17) and one noisy L\* 20-30 bin in the Luminance cases. The shadow table below L\* 20 was raised \~1.5x over the raw medians to get there (those medians were depressed by clipping at black).
 
-#### 11.30.5 Data
+#### 11.31.5 Data
 
 EditParams carries the grade fields (gradeShadow/Mid/High/Global x Hue/Sat/Lum, gradeBlending, gradeBalance), its own Group::ColorGrade and a per-scope showColorGrade preview flag, all persisted through editstack.h (forward-tolerant, so old sidecars load as identity). Sidecar keys and units are unchanged by the recalibration (hue 0..360, sat 0..1, lum -100..100).
 
-### 11.31 Point Color Panel
+### 11.32 Point Color Panel
 
-Lightroom's Color Mixer > Point Color, WITHOUT the Mixer half (the 8-band HSL mixer stays cancelled; see [11.30.1 Naming (Historical)](#11301-naming-historical)). Its own Develop section directly under Color (DevelopProperties::addPointColor, header "PointColorHeader", preview group PV_PointColor, EditParams::Group::PointColor, EditScope::showPointColor), added 2026-10-12. Maths and the shared encoding: Develop/pointcolor.h; the picture half of the UI: Develop/Properties/pointcolorwidget.\*; unit test tests/unit/tst_pointcolor.cpp.
+Lightroom's Color Mixer > Point Color, WITHOUT the Mixer half (the 8-band HSL mixer stays cancelled; see [11.31.1 Naming (Historical)](#11311-naming-historical)). Its own Develop section directly under Color (DevelopProperties::addPointColor, header "PointColorHeader", preview group PV_PointColor, EditParams::Group::PointColor, EditScope::showPointColor), added 2026-10-12. Maths and the shared encoding: Develop/pointcolor.h; the picture half of the UI: Develop/Properties/pointcolorwidget.\*; unit test tests/unit/tst_pointcolor.cpp.
 
 The user samples up to PointColor::kMaxPts (8) colours with an eyedropper. Each point is a 3-D target (hue AND chroma AND lightness), so "this skin" moves without "that orange wall" of the same hue, which a hue band cannot do. Per point: Hue Shift, Sat. Shift, Lum. Shift, Variance (-100..100, 0 = none), Range plus Hue / Saturation / Luminance range (0..100, 50 = nominal), and a Visualize Range checkbox.
 
 Not yet calibrated: kHueShiftMaxDeg (60), kSatUpMax, kLumMax, the three nominal widths and the range scale (2^((v-50)/25)) are first estimates. Calibrate against Lightroom exports with the LR loop (tests/calibration) before trusting the numbers.
 
-#### 11.31.1 Params
+#### 11.32.1 Params
 
 EditParams::pointColorN + a FIXED array pointColor[8] of PointColor::Point: the sample(s) as DISPLAYED sRGB-encoded 0..1 (not OKLCh, so calibration can change the selection space without invalidating sidecars) plus the eight slider values on the slider's own scale. A fixed array for the same reasons as the tone curve (defaulted operator==, cheap copies).
 
@@ -6634,7 +6692,7 @@ EditParams::pointColorN + a FIXED array pointColor[8] of PointColor::Point: the 
 - Sidecar: one key "pointColors" holding PointColor::encode ("r,g,b,hue,sat,lum,var,range,hueR,satR,lumR[,r2,g2,b2...];..."), written ONLY when there are points, so every sidecar written before the panel (and every recipe key hashed from one) is byte-identical.
 - Preset leaf "pointColors" (one tick, replaces). Multi-image: the kPointColorField pseudo-field (pointColorsDiffer / copyPointColors). The whole list travels as one, because "point 2's hue shift" means nothing on an image whose point 2 is another colour.
 
-#### 11.31.2 Multiple Samples
+#### 11.32.2 Multiple Samples
 
 Added 2026-10-13. A point can carry up to PointColor::kMaxSamples (8) samples: the first (Point::r/g/b) plus up to kMaxExtra (7) added ones (Point::extraN + a fixed extra[7\*3] array of sRGB triples, tail always zero, which sanitize enforces for operator==).
 
@@ -6650,7 +6708,7 @@ UI for samples:
 - A multi-sample swatch is drawn as vertical stripes, one per sample. The field centres on the envelope and widens to cover the samples' arc (+35 deg margin, at least +/-75), draws every sample as a small ring and the envelope as a dashed box (and a dashed bracket on the luminance strip); the before | after bar shows every sample and its shifted colour.
 - The swatch's right-click menu adds Remove Last Added Sample / Remove Added Samples (removePointColorSamples); the first sample goes only with the point. Deleting a point while the add-sample dropper is armed disarms it.
 
-#### 11.31.3 Pipeline
+#### 11.32.3 Pipeline
 
 In the fused point pass after HSL and BEFORE Color Grade, on the DISPLAY axis: each channel goes scene-linear -> display-linear through the active view transform (the gradeFwd / gradeInv tables, built when EITHER grade or point colour is active), then OKLab (PointCoeffs::pcToLms folds working Rec.2020 -> sRGB into OKLab's M1).
 
@@ -6659,13 +6717,13 @@ In the fused point pass after HSL and BEFORE Color Grade, on the DISPLAY axis: e
 - Variance scales the pixel's distance from the sample in hue and chroma by (1 + v/100) (negative pulls the selection together, which evens skin); then Hue / Sat / Lum Shift apply, and the pixel moves toward that target by its weight. Only the CHANGE comes back through gradeInv, as in Color Grade.
 - It is measured on the display axis because the sample is read off the displayed image: keyed on scene values, the selection lands on the wrong pixels wherever the view transform compresses.
 
-#### 11.31.4 Eyedropper
+#### 11.32.4 Eyedropper
 
 One-shot like the WB dropper: the widget's dropper -> setPointColorPickActive -> pointColorPickBegin -> ImageView::beginPointColorPick (pointColorPickMode, in developToolActive so the click cannot zoom; suppressClickZoom latched for the release). The click reports DISPLAYED normalised coords (displayedNormAt, as the Curves picker does); MW::onPointColorPicked averages a 5x5 patch of developShownImage and calls addPointColorFromPixel, which appends + selects the point and disarms. Esc is handled in MW::developShortcutIntercept (1b(i)), ahead of the mask-tool Esc; cancelCanvasTools and an image change disarm it.
 
 Known limit: developShownImage carries every edit, so sampling a spot an existing point already moved picks up the moved colour, and the later stages (Color Grade, the profile look) are in the sample too.
 
-#### 11.31.5 Visualize Range
+#### 11.32.5 Visualize Range
 
 VIEW STATE: DevelopProperties::pointColorVisualize (not stored) is written into EditParams::pointColorVisualize on the LOCAL COPY stackJob() renders, never the stored stack, so stackJobFor (export, the devPreview builder) never sees it and paramsToJson never writes it. The render keeps that point even when inert and multiplies every pixel's a/b by that point's weight (grey outside the range). Three things had to learn about it:
 
@@ -6675,11 +6733,11 @@ VIEW STATE: DevelopProperties::pointColorVisualize (not stored) is written into 
 
 Arming the eyedropper turns it off, since the dropper reads the displayed pixels.
 
-#### 11.31.6 The Widget
+#### 11.32.6 The Widget
 
 PointColorWidget, an index widget on a spanned row: the dropper; swatches (the selected one outlined; right-click Delete Point / Delete All Points; a cross at the row's end deletes the selected one); the hue x chroma FIELD about the selected sample (x = sample hue +/- 75 deg, y = chroma 0..max(0.12, 2.2 x sample C)) with the luminance STRIP beside it; and the before | after bar. A small ring = the sample, a large ring = where the shifts take it. Dragging the large ring writes Hue + Sat Shift (field) or Lum Shift (strip) through the exact inverses in pointcolor.h (hueShiftFor / satShiftFor / lumShiftFor, pinned by tst_pointcolor). The sliders are ordinary addSlider rows whose keys ("pc\*") itemChange routes to setPointColorSlider for the selected point (pointColorSel, UI state); with no point they are greyed and the widget's empty field says why.
 
-### 11.32 The Combined Color Panel
+### 11.33 The Combined Color Panel
 
 Tone / Hue / RGB. Added 2026-10-12, PENDING THE USER'S SIGN-OFF; after it the separate colour sections are removed. One "Color" section (DevelopProperties::addColorPanel, header "ColorPanelHeader", PV_ColorPanel) in the old Color panel's slot, under Curves. Three radio buttons at its top pick what it shows: Tone = the Color Grade rows, Hue = the Point Color rows, RGB = the Calibrate rows.
 
@@ -6696,18 +6754,18 @@ The layout switch (temporary): combinedColorPanel, QSettings "Develop/combinedCo
 
 Open question before removal: the OLD Color panel's own sliders (Red / Green / Blue gains, Hue, Luminance; Group::Color) have no place in the combined panel. Images that set them still render them, but they cannot be edited in the combined layout. Decide whether they move (e.g. under RGB) or are retired.
 
-### 11.33 Develop Presets
+### 11.34 Develop Presets
 
 Named, reusable develop recipes (Lightroom's Presets panel). ONLY USER-DEFINED presets exist; Winnow ships none. A preset is created from the current image (Cmd+Shift+N, the Develop dock context menu, the Presets band's [+], or the list's right-click "New Preset...") and applied by clicking it in the Presets list.
 
-#### 11.33.1 The Apply Is a Merge Onto the Active Scope
+#### 11.34.1 The Apply Is a Merge Onto the Active Scope
 
 - A preset holds only the settings that were TICKED when it was saved, so applying it writes those and leaves everything else on the image alone: a Temp-only preset moves Temp and nothing else. This is Lightroom's behaviour, and it is what makes small, stackable presets useful. Mechanically it falls out of the store: DevelopPresets::read reports only the keys QSettings actually holds, and DevelopProperties::mergePreset writes only those.
 - The target is the ACTIVE SCOPE. The preset records which scope it was captured from (sourceScope), but that is display metadata only: the values land on whatever scope is selected when the preset is clicked, so a preset saved from a Sky mask can be dropped onto Global, or onto another image's Subject mask. Nothing can fail to match. The exceptions are the per-image items: the raw decode engine, the raw NR pair, the lens corrections and the tone splits belong to no scope (they are Global by definition), and the crop / level / warp / spots are geometry, so those always go to scope 0 / the Geometry.
 - The MASK DOES NOT TRAVEL. A mask's geometry is specific to the source image's content, so a preset captured from a mask scope carries its ADJUSTMENTS only.
 - Applying records ONE history entry, labelled with the scope that received it ("Sky: Preset: Warm Portrait"), so a preset is undone by clicking the History row above it.
 
-#### 11.33.2 A Section of the History Panel, Not a Dock
+#### 11.34.2 A Section of the History Panel, Not a Dock
 
 Presets had a dock of its own until three tabs for one tool proved one too many. It is now the second section of the HISTORY PANEL, under its own gradient band (PanelSectionHeader), with the History list above it. The band carries [+] (new preset) and [:] (the list's context menu plus help); the arrow, or a click on the word "Presets", folds the list away, persisted under Develop/SectionExpanded/PresetsSection. Retiring the dock bumped winnowStateVersion to 6 and undid its new-dock checklist entries; presets_white.png is left in the qrc, unused.
 
@@ -6717,7 +6775,7 @@ Reaching it: click the History tab and open the section, press P, pick View > De
 - presetsDockVisibleAction survives as the View-menu item and the workspace field isPresetsDockVisible, but both now mean "the Presets SECTION is expanded". HistoryPanel is the source of truth, and the action mirrors it via presetsExpandedChanged.
 - Full screen has no separate "Show develop presets" toggle: Preferences > Full screen defaults > "Show history panel" (fullScreenDocks.isHistory) governs both lists, because they share one dock.
 
-#### 11.33.3 The List
+#### 11.34.3 The List
 
 Develop/Presets/presetsview.{h,cpp} (PresetsView + PresetDelegate) is deliberately the same interaction as the History list beside it, and a trimmed copy of its code: a QListWidget with a hover-fill delegate, a DEBOUNCED hover (kHoverDelayMs) so a fast sweep does not queue a render per row, and a click emitted a tick late, because applying rebuilds the Develop tree from inside the row's own event handler.
 
@@ -6726,7 +6784,7 @@ Develop/Presets/presetsview.{h,cpp} (PresetsView + PresetDelegate) is deliberate
 - Right-clicking a preset gives Update with Current Settings / Rename... / Delete (and New Preset... anywhere in the list). The band's [:] raises the SAME menu (PresetsView::showSectionMenu -> runMenu, one menu so the two entry points cannot drift), acting on the SELECTED preset, with a trailing "Presets help". The view owns the confirm / input prompts, so DevelopProperties only ever receives a decided action.
 - "Update" keeps the preset's SHAPE (the same ticked settings) and refills their values from the current image's active scope, so updating never silently widens a preset. Omitted fields are refilled with their defaults where an absent key would read back wrongly (see [11.23.3 Recipe](#11233-recipe)).
 
-#### 11.33.4 Categories
+#### 11.34.4 Categories
 
 The list is grouped under user-named header categories (Lightroom's preset folders).
 
@@ -6744,7 +6802,7 @@ Develop Preset Layout/categories = array of { name, presets (QStringList, displa
 
 DevelopPresets::layout() reconciles it on every read: entries for vanished presets and duplicates are dropped, Winnow is guaranteed, and unplaced presets append to Winnow in name order. rename keeps the preset's slot; remove drops its entry. movePreset / moveCategory take the DROP GAP (an index counted before the item is removed) and correct for the removal themselves.
 
-#### 11.33.5 The Save Dialog
+#### 11.34.5 The Save Dialog
 
 Dialogs/savedeveloppresetdlg.{h,cpp} (SaveDevelopPresetDlg): a preset-name field, a Scope combo, and a collapsible, scrollable checklist grouped like the Develop panel's tree.
 
@@ -6763,7 +6821,7 @@ Items that differ from their default IN THE SELECTED SCOPE are pre-checked and t
 - Gotcha: the global stylesheet's "QPushButton { min-width: 100px }" would force the dialog absurdly wide via the per-group [All] / [None] pairs. They clear it with a local "min-width: 0", the same override MaskPanel needs.
 - The dialog is UI-only: it renders a model of PresetGroup { title, checkable, showAllNone, leaves } and reports back the name, the chosen scope index and the checked leaf keys per group. It knows nothing of the develop data model or the settings layout.
 
-#### 11.33.6 The Store
+#### 11.34.6 The Store
 
 Develop/Presets/developpresets.{h,cpp} (DevelopPresets) owns ALL preset persistence (names / read / write / rename / remove), so DevelopProperties never touches QSettings for presets. Layout:
 
@@ -6774,28 +6832,28 @@ Develop Presets/<name>/Edits/<key>  = the captured scope's adjustments
 Develop Presets/<name>/Global/spots = a QSettings array of FillSpot paramsJson
 ```
 
-- Leaf keys reuse the EditParams JSON field names and store the RAW param values (the source of truth, e.g. denoise 0..1), so applying is a straight assignment back. DevelopPresets::assignParam mirrors EditStack::paramsFromJson and is kept apart from DevelopProperties::applyKeyToParams, which takes the DOCK's slider keys and div-scales them (0..100 -> 0..1). The two key namespaces are the trap the [11.38 Adding or Changing a Develop Adjustment (Checklist)](#1138-adding-or-changing-a-develop-adjustment-checklist) warns about.
+- Leaf keys reuse the EditParams JSON field names and store the RAW param values (the source of truth, e.g. denoise 0..1), so applying is a straight assignment back. DevelopPresets::assignParam mirrors EditStack::paramsFromJson and is kept apart from DevelopProperties::applyKeyToParams, which takes the DOCK's slider keys and div-scales them (0..100 -> 0..1). The two key namespaces are the trap the [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist) warns about.
 - Geometry is stored as crop ("x,y,w,h"), straighten and warp ("q0..q7").
 - Writing a preset first clears any prior group of the same name (overwrite).
 - "Edits" was called "Global edits" in the first, save-only build, when a preset could only come from the Global scope; read() still accepts that name, and ignores the per-scope "Mask N" groups that build also wrote.
-- Preset keys are a published format: see [11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift).
+- Preset keys are a published format: see [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift).
 
-#### 11.33.7 Shortcuts
+#### 11.34.7 Shortcuts
 
 - developSavePresetAction (SAVE, Cmd+Shift+N). Unlike the bare-key Develop actions (developShortcutIntercept arbitrates only unmodified keys), this is a modified combo owned by no other action, so it carries a REAL QKeySequence ("Ctrl+Shift+N"). It is enabled only in Develop mode: setOperationMode tracks the mode (a disabled QAction's shortcut does not fire) and syncDevelopMenuEnabled greys the menu item in Preview.
 - presetsDockVisibleAction (SHOW: P, the action-row Preset button, the View menu). P is globally Pick, so it is dispatched by developShortcutIntercept via the developShortcuts table (loadDevelopShortcuts), NOT a real QKeySequence.
 
-### 11.34 Copy and Paste Develop Settings
+### 11.35 Copy and Paste Develop Settings
 
-Lightroom's Copy Settings / Paste Settings. It is AN UNNAMED PRESET, deliberately not a second mechanism: Copy opens the SAME checklist dialog and captures with the same DevelopProperties::buildPreset; Paste merges with the same mergePreset. Everything [11.33 Develop Presets](#1133-develop-presets) says therefore holds unchanged: only the ticked settings are written, the target is the ACTIVE scope, the per-image items (raw engine, raw NR, lens, tone splits, crop / level / warp) go to scope 0 / the geometry whatever is active, spots APPEND rather than replace, and the mask does not travel. Pasting is one history step ("Sky: Paste settings"), undone by clicking the row above it in History.
+Lightroom's Copy Settings / Paste Settings. It is AN UNNAMED PRESET, deliberately not a second mechanism: Copy opens the SAME checklist dialog and captures with the same DevelopProperties::buildPreset; Paste merges with the same mergePreset. Everything [11.34 Develop Presets](#1134-develop-presets) says therefore holds unchanged: only the ticked settings are written, the target is the ACTIVE scope, the per-image items (raw engine, raw NR, lens, tone splits, crop / level / warp) go to scope 0 / the geometry whatever is active, spots APPEND rather than replace, and the mask does not travel. Pasting is one history step ("Sky: Paste settings"), undone by clicking the row above it in History.
 
-#### 11.34.1 The Buffer
+#### 11.35.1 The Buffer
 
 A single slot that every Copy overwrites, held by the SAME store class (DevelopPresets) under its own QSettings root, "Develop Clipboard/buffer". read / write / migrate are shared with presets via readGroup / writeGroup, so the copy buffer gets the schema version and forward tolerance for free, and cannot appear in names() or collide with a preset the user names "clipboard". DevelopPreset also carries sourceImage (display only), which is what lets the UI say WHAT would be pasted.
 
 The buffer is SESSION SCOPED, unlike Lightroom's: the DevelopPresets constructor calls clearClipboard(), which removes the whole "Develop Clipboard" group, so every run starts with nothing copied and Paste reports nothing until the first Copy. QSettings holds the buffer only because that is where the preset store already reads and writes; persistence would be an accident of sharing the store, not a feature, and pasting adjustments copied in an earlier session, from an image long out of view, is far more often a slip than an intent.
 
-#### 11.34.2 UI
+#### 11.35.2 UI
 
 - Dialog: SaveDevelopPresetDlg::Mode::CopySettings: the same groups, Scope combo, pre-checked "differs from default" and All / None, minus the name field and its overwrite check. Title "Copy Develop Settings", button "Copy". One dialog class, because "pick a set of develop settings, from a scope" is the same question either way.
 - Menu: Utilities > Develop, above Save Develop Preset. Paste RENAMES itself to "Paste Develop Settings from IMG_1234.NEF" in syncDevelopMenuEnabled, so the menu answers "have I copied anything?" without being opened twice. The Develop dock context menu carries the same three items.
@@ -6803,13 +6861,13 @@ The buffer is SESSION SCOPED, unlike Lightroom's: the DevelopPresets constructor
 
 Gotcha: Paste is NOT disabled on an empty clipboard. syncDevelopMenuEnabled runs on aboutToShow, and a disabled QAction's shortcut does not fire, so greying it there would leave Cmd+Opt+V dead until the menu happened to be opened again after a copy. The slot reports "No develop settings have been copied yet" instead.
 
-Paste lands on the WHOLE selection ([11.35 Multi-Image Editing](#1135-multi-image-editing)). Paste is the whole-object path: every other selected image gets the same mergePreset onto its scope 0, so the copied crop, straighten, warp and spot heals travel with it exactly as on the current image. The confirmation says how many images were written ("Pasted develop settings from IMG_1234.NEF onto 12 images"), since silence about a bulk overwrite is how a user loses forty recipes.
+Paste lands on the WHOLE selection ([11.36 Multi-Image Editing](#1136-multi-image-editing)). Paste is the whole-object path: every other selected image gets the same mergePreset onto its scope 0, so the copied crop, straighten, warp and spot heals travel with it exactly as on the current image. The confirmation says how many images were written ("Pasted develop settings from IMG_1234.NEF onto 12 images"), since silence about a bulk overwrite is how a user loses forty recipes.
 
-### 11.35 Multi-Image Editing
+### 11.36 Multi-Image Editing
 
 With more than one image selected, EVERY develop edit made on the current image is copied to every other selected image (Lightroom's Auto Sync, always on); Paste Settings and Apply Preset do the same. The Develop dock carries an AMBER warning row ("Multiple images will have edits applied.") whenever the selection is larger than one, because the images being changed are off screen and the change is otherwise invisible until the user navigates to them. Amber, not red: the edit does work, it just works on more than the visible image; red is reserved for a show stopper ([11.19 Develop Alerts and the Greyed Panel (Severity Rows, Disabled States)](#1119-develop-alerts-and-the-greyed-panel-severity-rows-disabled-states)). Videos in the selection are skipped: they have no develop recipe, and writing one would leave a sidecar the pipeline never reads.
 
-#### 11.35.1 The Rules
+#### 11.36.1 The Rules
 
 The "Multi-image editing" block in DevelopProperties' header:
 
@@ -6819,7 +6877,7 @@ The "Multi-image editing" block in DevelopProperties' header:
 - CROP / STRAIGHTEN / WARP travel (2026-09-30). Geometry is per-stack, outside EditParams, but cropping with several images selected is a sync the user expects; the original "per-image" rule left the warning row claiming every edit applied while the crop silently stayed on one image. Each Transform control is its own pseudo-field ("crop", "straighten", "warp"; diffGeometryFields / copyGeometryFields beside kFloatFields), diffed against propagateGeomBase, so a crop does not drag the current image's straighten onto images that have their own. Coordinates are normalised, so the same rect lands proportionally on every image (on a mixed portrait/landscape selection the crop's aspect therefore differs between orientations). Geometry::show (Transform Preview) is a view toggle and stays per-image.
 - AI MASK SCOPES travel (2026-10-13), described next.
 
-#### 11.35.2 AI Mask Scopes Travel
+#### 11.36.2 AI Mask Scopes Travel
 
 A mask scope built ONLY from Subject / Sky / Background submasks (DevelopProperties::isPortableScope) is the exception to the mask rule: the model redraws that selection from each image's own pixels, so "the sky" means the same thing on every image. Add a Sky mask with 12 images selected and all 12 get a Sky mask scope, each masked by its own sky; the adjustments made in it apply to all 12.
 
@@ -6833,9 +6891,9 @@ A mask scope built ONLY from Subject / Sky / Background submasks (DevelopPropert
 
 Still open: the other CONTENT masks (Depth, Luminance / Color Range) also compute their coverage from each image's own pixels and could travel the same way, but isPortableScope admits only Subject / Sky / Background today. Brush, gradient and Object (SAM) masks are drawn in one image's coordinates and stay per-image. If they are added: inference is GUI-thread (\~200-400 ms per image), so a large selection needs visible progress, and the ensure\* early-outs that key on the LAST path only should test the per-path ref instead, so moving between images does not re-run the model.
 
-#### 11.35.3 Where It Hooks
+#### 11.36.3 Where It Hooks
 
-queuePropagation() is called from noteScopeEdit(), the single commit point every develop action already goes through. That is deliberate: any future edit path gets multi-image behaviour by construction rather than by remembering to add a call. The field-by-field diff and copy share ONE table of member pointers (kFloatFields / kIntFields, above diffParamFields), so they cannot drift apart; see [11.38 Adding or Changing a Develop Adjustment (Checklist)](#1138-adding-or-changing-a-develop-adjustment-checklist).
+queuePropagation() is called from noteScopeEdit(), the single commit point every develop action already goes through. That is deliberate: any future edit path gets multi-image behaviour by construction rather than by remembering to add a call. The field-by-field diff and copy share ONE table of member pointers (kFloatFields / kIntFields, above diffParamFields), so they cannot drift apart; see [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist).
 
 Batching: a slider drag commits continuously and each target may need a sidecar read, so commits accumulate in pendingFields and land once edits settle (kPropagateMs, 400 ms). propagateTargets is captured when a batch OPENS, so changing the selection mid-drag cannot redirect edits already made, and the drag reads the selection once instead of once per tick. flushPropagation() forces the batch out early: MW::updateDevelopSelectionWarning calls it on every selection change, and it also runs before an image switch, a history revert, a preset / paste, and flushAll.
 
@@ -6843,7 +6901,7 @@ Thumbnails: a propagated image has no render in memory, so its flush writes no p
 
 Persistence: propagated images are marked dirty like any edited image and written by the ordinary flush path. The debounced write was widened from flushImage(current) to flushAll() for this: a crash should lose no more of the other selected images than of the one being edited.
 
-#### 11.35.4 History Follows the Link
+#### 11.36.4 History Follows the Link
 
 Every image an edit lands on gets the step, and the steps are linked (2026-09-30). This used to be recorded only on images the user had already opened (to spare DevelopHistory's then-40-image LRU store), so after a multi-image crop the other images had no step and a History revert could only undo the current one.
 
@@ -6853,13 +6911,13 @@ Every image an edit lands on gets the step, and the steps are linked (2026-09-30
 
 Reverting follows the link, on the selection. A click in History moves the current image to that entry; then revertSelectionToMatch moves every OTHER selected image that shares linked steps with it to the matching point in its own history: just before its first linked step that is no longer in force (DevelopHistory::syncedPos), or its newest step when all are (so a forward click is a redo). An image sharing no linked step is untouched, and so is every image outside the selection: a revert follows the same rule as an edit. Reverted images are marked dirty, so the flush writes them and the devPreview builder rebuilds their thumbnails. Hover still previews only the current image.
 
-### 11.36 Develop History
+### 11.37 Develop History
 
 A Lightroom-style list of every develop action on the current image. Hovering an entry previews that state in the loupe; clicking it reverts the image to it.
 
-#### 11.36.1 The Panel
+#### 11.37.1 The Panel
 
-The dock is called History and holds TWO sections, each under a gradient band: History (this list) and Presets ([11.33 Develop Presets](#1133-develop-presets)). Its body is HistoryPanel (Develop/History/historypanel.{h,cpp}), which creates both QListWidgets and hands them to MW to bind; it knows nothing about develop state itself.
+The dock is called History and holds TWO sections, each under a gradient band: History (this list) and Presets ([11.34 Develop Presets](#1134-develop-presets)). Its body is HistoryPanel (Develop/History/historypanel.{h,cpp}), which creates both QListWidgets and hands them to MW to bind; it knows nothing about develop state itself.
 
 - The bands are PanelSectionHeader, painting the same G::backgroundShade a -> b ramp PropertyDelegate paints behind the Develop editor's section rows, so a section header reads the same everywhere. Each carries a 9 px branch arrow (the ScopeHeader pattern), a caption that toggles on click, and a trailing [:] menu with that section's help. A collapsed section hides its LIST, never its band. Expand state persists per section under Develop/SectionExpanded/&lt;name> and defaults to expanded.
 - The panel's own title bar is just "History" and an X; there is no [?], because the help lives in the section menus.
@@ -6876,9 +6934,9 @@ Right-click anywhere in the panel for Expand all / Collapse all / Solo mode (His
 - Turning solo ON with both sections open resolves the contradiction immediately in History's favour, it being the primary list.
 - "Expand all" stays live while solo is on and turns solo OFF on its way: asking for every section open has already said which half of the contradiction the user meant. The restore path re-checks the pair as well, since the two expand keys are written independently and a half-written settings file must not open the panel in a state solo mode forbids.
 
-#### 11.36.2 The Copy / Paste Button Row
+#### 11.37.2 The Copy / Paste Button Row
 
-Pinned to the bottom of the panel: the two actions most used while carrying a look from one image to the next, where the lists they work with already are, reachable without the menu or the modified combo ([11.34 Copy and Paste Develop Settings](#1134-copy-and-paste-develop-settings)). They TRIGGER developCopySettingsAction / developPasteSettingsAction rather than duplicating anything, so they grey with those menu items outside Develop mode. The labels are the literals "Copy" and "Paste": the Paste action's own text is rewritten at runtime to "Paste Develop Settings from &lt;image>", which no button should grow to fit. The row is built in createUtilActions beside the two actions, NOT in createHistoryDock, because createDocks() runs BEFORE createActions().
+Pinned to the bottom of the panel: the two actions most used while carrying a look from one image to the next, where the lists they work with already are, reachable without the menu or the modified combo ([11.35 Copy and Paste Develop Settings](#1135-copy-and-paste-develop-settings)). They TRIGGER developCopySettingsAction / developPasteSettingsAction rather than duplicating anything, so they grey with those menu items outside Develop mode. The labels are the literals "Copy" and "Paste": the Paste action's own text is rewritten at runtime to "Paste Develop Settings from &lt;image>", which no button should grow to fit. The row is built in createUtilActions beside the two actions, NOT in createHistoryDock, because createDocks() runs BEFORE createActions().
 
 The row itself is general: PanelButtonBar (Utilities/panelbuttonbar.h) adds a row of push buttons to the TOP or BOTTOM edge of any panel with a vertical layout, each stretched to an equal share of the width (Add(panel, buttons, edge); MakeButton(action, label) for a button that follows a QAction's enabled state). Header-only with no Q_OBJECT, the shape of Utilities/gradientheader.h. A BOTTOM row is APPENDED after the trailing addStretch(1) a packed panel ends with, so the stretch eats the slack and the row lands on the bottom edge as the dock resizes; a TOP row is inserted at index 0. It handles three things every hand-rolled row before it (CatalogView's Load/Add, MaskPanel's commit row) had to rediscover:
 
@@ -6888,18 +6946,18 @@ The row itself is general: PanelButtonBar (Utilities/panelbuttonbar.h) adds a ro
 
 The bar carries the usual panel separator (G::panelBorderHeight in G::panelSeparatorColor) on the side facing the panel contents. That colour tracks backgroundShade, and a per-widget stylesheet is not regenerated by the app-sheet rebuild, so MW::setBackgroundShade and MW::setFontSize call PanelButtonBar::Restyle(this).
 
-#### 11.36.3 Showing the Dock
+#### 11.37.3 Showing the Dock
 
 The dock is tabbed with the Develop dock in the right area and shown / hidden with it; the two are one tool. Develop is always raised as the front tab of the group (History is shown first, then Develop, then raised), so History is reached by clicking its tab, or with H (View > History Panel). H is a Develop MODE LOCAL key (developShortcuts / developShortcutIntercept), not a QKeySequence, since the dock is Develop-only; the F-key series the other docks use ran out at F10 (F11 is taken by macOS). Like F3-F9 it shows / raises rather than toggles. In FULL SCREEN it is independent of the group: Preferences > Full screen defaults > "Show history panel" (fullScreenDocks.isHistory, persisted as isFullScreenHistory), one toggle for both sections.
 
 - Startup: Winnow always opens in Preview mode, so MW::showEvent hides the Develop tool after restoreState() through closeDevelopDock(), which takes the History panel with it and unchecks both dock actions. Hiding developDock alone was not enough: restoreState() re-shows every dock the last session had visible, so quitting from Develop reopened with History on screen, visible but disabled.
 - Gotcha (cost an afternoon): a TABIFIED dock keeps isVisible() == true even when a sibling tab is selected; that is why isSelectedDockTab tests the visible REGION. developDockVisibilityChange used to raise() developDock on any visibilityChanged where isVisible() was true, which yanked Develop back to the front the moment a sibling tab was clicked, so the History tab appeared dead. It now raises only when Develop really is the front tab. Any future dock tabbed with Develop needs the same care.
 
-#### 11.36.4 The Sidecar Does Not Record Actions
+#### 11.37.4 The Sidecar Does Not Record Actions
 
 winnow:Develop holds ONE base64 blob: the current EditStack, i.e. the RESULT state (Metadata::readDevelopSidecar / writeDevelopSidecar, DevelopProperties::flushImage). There is no action log to read, so History builds its own timeline of labelled EditStack SNAPSHOTS. It stays in sync with the sidecar by sharing the same object: an entry IS an EditStack, so restoring one just writes it back into stackCache and marks the image dirty, and the ordinary flush persists it. The sidecar remains the single source of truth for the current state.
 
-#### 11.36.5 Persisted in the Local Index
+#### 11.37.5 Persisted in the Local Index
 
 Since 2026-09-30 (it used to be session scoped). Nothing new is written to the sidecar. flushImage saves the image's whole history to index.db, in the same pass as the sidecar write: HistoryStore (Develop/History/historystore.\*), table develop_history (schema 18): pathkey, pos, recipe stamp, and the entries as qCompress'd JSON.
 
@@ -6910,9 +6968,9 @@ Since 2026-09-30 (it used to be session scoped). Nothing new is written to the s
 - Cost measured on a 69-step, 68-spot history: save \~6-7 ms, load \~4 ms, 5 KB stored.
 - In memory DevelopHistory caps at kMaxEntries (100) steps per image, dropping the oldest EDITS after Original and counting them in Original's `trimmed` (persisted in the entry JSON), which the dock shows as a dimmed, unclickable "N earlier steps trimmed" row above Original; and at kMaxImages (200) images LRU. An evicted image's history is still in the store.
 
-Entry 0 is always the TRUE ORIGINAL (2026-10-03): the image with no develop edits, DevelopHistory::originalStack (one default Global scope), never advanced, relabelled or replaced. An image whose sidecar already carried edits when first seen gets a second step, "Saved settings". Previously the cap ADVANCED "Original" to the dropped step's state, so once history persisted, a truncated history showed a mid-edit state labelled "Original" in every later session. Trimming strands nothing, because every step is a whole EditStack. Histories saved before the change are fixed on load (DevelopHistory::normalizeOriginal): an entry 0 that is not identity is kept as an ordinary step ("Original" relabelled "Earlier edits"; "Saved settings" kept) and the real original is inserted under it, pos shifted by one. tst_historystore::capKeepsTrueOriginal / legacyBaselineGetsOriginal pin both. Multi-image steps are LINKED across images ([11.35.4 History Follows the Link](#11354-history-follows-the-link)).
+Entry 0 is always the TRUE ORIGINAL (2026-10-03): the image with no develop edits, DevelopHistory::originalStack (one default Global scope), never advanced, relabelled or replaced. An image whose sidecar already carried edits when first seen gets a second step, "Saved settings". Previously the cap ADVANCED "Original" to the dropped step's state, so once history persisted, a truncated history showed a mid-edit state labelled "Original" in every later session. Trimming strands nothing, because every step is a whole EditStack. Histories saved before the change are fixed on load (DevelopHistory::normalizeOriginal): an entry 0 that is not identity is kept as an ordinary step ("Original" relabelled "Earlier edits"; "Saved settings" kept) and the real original is inserted under it, pos shifted by one. tst_historystore::capKeepsTrueOriginal / legacyBaselineGetsOriginal pin both. Multi-image steps are LINKED across images ([11.36.4 History Follows the Link](#11364-history-follows-the-link)).
 
-#### 11.36.6 Recording (One Seam)
+#### 11.37.6 Recording (One Seam)
 
 Every develop action already ended with the same three lines (dirty.insert(currentImagePath) / emit paramsChanged() / debounceWriteTimer->start()). That dirty.insert was the exact commit point, and every one of them (\~30) is now DevelopProperties::noteEdit(action, value, mergeKey): mark dirty, record the snapshot, arm the debounced write. Use noteScopeEdit(scope, ...) where the prefix is not the active scope: "Global" for the raw rows (they always write scope 0) and "" for whole-image actions (crop, spot heals) that belong to no scope.
 
@@ -6920,7 +6978,7 @@ Every develop action already ended with the same three lines (dirty.insert(curre
 - Coalescing: a non-empty mergeKey that matches the top entry REPLACES it, so a whole slider or colour-wheel drag is ONE entry. Structural actions (add / delete mask, reset, crop) pass no mergeKey.
 - Guards: isPopulating (pushing saved values into the editors) and isRestoringHistory (a revert repopulating the panel) suppress recording.
 
-#### 11.36.7 Reverting and Previewing
+#### 11.37.7 Reverting and Previewing
 
 The revert model is Lightroom's. pos is the entry currently applied. Recording a new action while pos is not the last entry DISCARDS everything after pos: editing from an earlier state truncates, like an undo stack. Rows after pos are painted dimmed meanwhile.
 
@@ -6928,7 +6986,7 @@ The revert model is Lightroom's. pos is the entry currently applied. Recording a
 - The click (applyHistoryEntry) takes the full path: retire any half-built mask tool, write the snapshot into stackCache, mark dirty, refreshScopeList + buildTree (scope / mask structure may differ), emit paramsChanged.
 - A chosen row RE-SEEDS THE CROP OVERLAY. While the crop tool is open the overlay owns its own rectangle (ImageView::cropN) and exitDevelopCrop commits it on close, so a revert that only replaced stackCache left the old crop on screen and wrote it straight back (entering with R and choosing Original did nothing). applyHistoryEntry emits historyApplied (before paramsChanged); MW restarts the overlay from the restored geometry exactly as Transform Reset does, clearing the aspect lock / flip (TransformPanel::resetCropState) when the restored state has no crop, else beginCropEdit re-inscribes the full frame to the old ratio. The Level field follows the restored straighten. In result preview (Transform eye on) there is no overlay to re-seed.
 
-#### 11.36.8 Before / After
+#### 11.37.8 Before / After
 
 "\\" (Develop menu > Before / After) flips the loupe between BEFORE (the image with no develop edits, DevelopHistory::originalStack, the same state as History's "Original" row) and AFTER (the entry currently applied, which is just the stored stack). DevelopProperties::toggleBeforeAfter owns it; MW::toggleDevelopBeforeAfter is only the mode gate. It rides the SAME previewStack / previewActive override the hover uses, so the stored stack, the sliders and the history are never touched, and renderMatchesStoredRecipe keeps the Before frame out of the devPreview cache. Two things set it apart from a hover:
 
@@ -6937,11 +6995,11 @@ The revert model is Lightroom's. pos is the entry currently applied. Recording a
 
 The state is reported through DevelopProperties::beforeAfterChanged(bool), which ticks the checkable developBeforeAfterAction (the latch comes down on routes the user did not press a key for, so the menu follows the signal). A popup names the side that just came up ("Before  (Original)" / "After"), and declines with a reason when Before and After are the same (pos == 0, nothing edited yet) or a tool owns the canvas.
 
-#### 11.36.9 Files
+#### 11.37.9 Files
 
 Develop/History/develophistory.h (HistoryEntry + DevelopHistory, header-only, owned by DevelopProperties) and Develop/History/historyview.{h,cpp} (HistoryView, a QListWidget themed by WidgetCSS::listWidget, plus HistoryDelegate painting the action left and the value right). MW::createHistoryDock runs AFTER createDevelopDock (it binds to developProperties). Adding the dock required the full new-dock checklist ([2.5.3 Every Tabbable Dock Needs a Glyph](#253-every-tabbable-dock-needs-a-glyph)), including the history_white.png glyph and a winnowStateVersion bump.
 
-### 11.37 Reset All Edits
+### 11.38 Reset All Edits
 
 "Reset all edits" wipes one image's recipe. It sits in the Edits bar's [:] menu directly under "New mask" (ScopeHeader::showScopeMenu -> resetAllEditsRequested, connected once in bindScopeHeader) and runs DevelopProperties::resetAllEdits.
 
@@ -6951,7 +7009,7 @@ Develop/History/develophistory.h (HistoryEntry + DevelopHistory, header-only, ow
 - Confirmed, not undoable: history is wiped with the edits, so there is nothing to revert to. A QMessageBox with a destructive "Reset" button (Cancel default) asks first, naming the image or the number of selected images.
 - Teardown, in applyHistoryEntry's order: retire a half-built mask tool (no commit prompt; the scope it would land in is being deleted), clear selectedMaskIndex, hide the mask panel, drop any hover preview, then rebuild under isRestoringHistory (so the repopulation records nothing), re-seed the propagate base and emit paramsChanged.
 
-### 11.38 Adding or Changing a Develop Adjustment (Checklist)
+### 11.39 Adding or Changing a Develop Adjustment (Checklist)
 
 A new slider, or a change to an existing one, is NOT a one-file edit: the value has to reach the pipeline, survive a round trip through the sidecar, repopulate the panel on the next image, and be capturable by a preset. Thirteen touch points, in dependency order. Working example: grainAmount (the Effects "Grain" slider); grep it to see every site at once.
 
@@ -6977,16 +7035,16 @@ A new slider, or a change to an existing one, is NOT a one-file edit: the value 
    - If an absent key must not read back as 0 (a tri-state, a non-zero default), updatePresetFromCurrent must restore its default explicitly.
 10. Multi-image editing: kFloatFields (or kIntFields) in the anonymous namespace above DevelopProperties::diffParamFields. ONE row: the EditParams field name and a pointer to the member. The diff and the copy both walk that table, so a field missing from it silently does NOT propagate to the rest of the selection while every other slider does: the worst kind of bug to notice. A NON-SCALAR field (the tone curve's arrays) cannot use a member pointer: give it a named pseudo-field plus a differs / copy pair beside the table, wired into diffParamFields AND copyParamFields (see curvesDiffer / copyCurves).
 11. History: FREE for a normal slider (the generic tree-edit handler calls noteEdit with the caption and value, and noteEdit snapshots the whole EditStack). NOT free for a custom editor (the colour wheel, the WB row, the tone-region slider): those need their own noteEdit(action, value, mergeKey) call, and the mergeKey is what collapses a drag into one history row instead of forty.
-12. This document: the op under [11.11 The Adjustments](#1111-the-adjustments) (and [11.1.1 Operation Order](#1111-operation-order) if it adds a stage), the slider in [11.11.4 The Panel Sections and Their Ranges](#11114-the-panel-sections-and-their-ranges), and any leaf folding under [11.33.5 The Save Dialog](#11335-the-save-dialog).
+12. This document: the op under [11.11 The Adjustments](#1111-the-adjustments) (and [11.1.1 Operation Order](#1111-operation-order) if it adds a stage), the slider in [11.11.4 The Panel Sections and Their Ranges](#11114-the-panel-sections-and-their-ranges), and any leaf folding under [11.34.5 The Save Dialog](#11345-the-save-dialog).
 13. The in-app help: the section's page, Docs/develop&lt;section>help.html (e.g. developeffectshelp.html, which carries Vignette and Grain).
 
-Preset keys are a published format: add freely, never rename or rescale in place ([11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift)).
+Preset keys are a published format: add freely, never rename or rescale in place ([11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)).
 
-#### 11.38.1 Changing an Existing Op's Math
+#### 11.39.1 Changing an Existing Op's Math
 
 A different job from adding a slider, and a riskier one: the ops shape recipes users have already saved, so a "harmless" rewrite silently re-renders their pictures. tests/unit/tst_localcontrast.cpp is the worked example: capture golden values from the CURRENT build FIRST, confirm they pass before touching anything, then refactor and require them still to pass. Mutation-check the gate too (a 0.1% change in any tuning constant should fail it); a characterisation test whose goldens match its own inputs proves nothing.
 
-#### 11.38.2 A Whole New Section
+#### 11.39.2 A Whole New Section
 
 A new section (rather than a slider in an existing one) adds a fixed set of bookkeeping on top of the thirteen, and every item fails SILENTLY if missed. Working examples: the Curves panel (grep PV_Curves) and the Detail panel (grep PV_Detail), which also shows what MOVING an existing control between sections costs (see [11.13.4 The Adjustment Tree](#11134-the-adjustment-tree)).
 
@@ -6995,19 +7053,19 @@ A new section (rather than a slider in an existing one) adds a fixed set of book
 - EditScope gains show&lt;Name>; effectiveScopeParams() folds it, EditStack::isIdentity tests it, and toJson / fromJson read + write its key.
 - updateSectionHeaderCaptions()'s hdrs[] table (the " \*" edited marker), and GROW hdrStar[] with it: it is indexed by POSITION in hdrs[], so a new row with a too-short array walks off the end.
 - buildTree(): the add&lt;Name>() call in pipeline order, the &lt;name>EyeBtn nulling, and the expand-state capture / restore pair; addHeader()'s eye-assignment chain; persistSectionExpanded()'s name list.
-- refreshPreviewButtons and resetSection(PV_Scope) ("Reset all"); see [11.29.4 A New Section Must Join Every Per-Group Sweep](#11294-a-new-section-must-join-every-per-group-sweep).
+- refreshPreviewButtons and resetSection(PV_Scope) ("Reset all"); see [11.30.4 A New Section Must Join Every Per-Group Sweep](#11304-a-new-section-must-join-every-per-group-sweep).
 - kSections gains the section's leaf table.
 - sectionHelp()'s switch + a Docs/develop&lt;name>help.html page + its winnow.qrc entry.
 
-#### 11.38.3 Maskable or Global-Only?
+#### 11.39.3 Maskable or Global-Only?
 
 A per-scope adjustment belongs to a Group and is edited on whichever scope is active. A Global-only one (denoiseLuma / denoiseChroma, the tone splits, the lens corrections) belongs to NO Group (or to Group::Lens, shown only on Global), cannot be previewed or reset per mask scope, and must be read from scopes[0] in buildPreset() and written to scopes[0] in mergePreset() whatever scope is active.
 
-### 11.39 Stale Presets and History (Schema Drift)
+### 11.40 Stale Presets and History (Schema Drift)
 
 What happens to a user's saved presets and their History when an adjustment is later renamed, rescaled or removed. The two behave quite differently.
 
-#### 11.39.1 Presets Are the Exposure Point
+#### 11.40.1 Presets Are the Exposure Point
 
 They live in QSettings indefinitely, key by key, and are applied by assigning the stored value straight into an EditParams field. Three ways a key goes stale, in increasing order of harm:
 
@@ -7017,7 +7075,7 @@ They live in QSettings indefinitely, key by key, and are applied by assigning th
 
 THE RULE: treat a preset key as a published format. ADD keys freely (an absent key is a no-op both in a preset, where childKeys() reports only what was written, and in a sidecar, where paramsFromJson defaults it). NEVER rename or rescale one in place.
 
-#### 11.39.2 The Migration Hook
+#### 11.40.2 The Migration Hook
 
 For when a change is genuinely unavoidable. Every preset carries a schema stamp: DevelopPresets::write() stores `version = kVersion` at the preset root (beside sourceScope, so it never lands in the Global/Edits key sweeps), and read() calls migrate() before returning, i.e. before any value reaches assignParam. To change an existing key, bump kVersion and append ONE ordered step to migrate():
 
@@ -7031,24 +7089,24 @@ Presets written before the stamp existed have no version key and read back as 1,
 
 Export presets have the same exposure and the same contract (Export/exportpresets.h): they live in QSettings indefinitely and are applied by assigning stored values into an ExportSettings, so add keys freely and never rename or rescale one in place. They are less fragile in one respect: read() starts from a default-constructed ExportSettings and overwrites field by field, so a key added after a preset was saved keeps its struct default instead of reading back as 0. When a key genuinely must change meaning, bump kVersion and convert in migrate(), which runs inside read() before any value reaches the struct.
 
-#### 11.39.3 History Is No Longer Immune
+#### 11.40.3 History Is No Longer Immune
 
-Since 2026-09-30 history persists in index.db ([11.36.5 Persisted in the Local Index](#11365-persisted-in-the-local-index)), so a snapshot CAN be written by an older build. It is safe for the same reason a sidecar is: every snapshot is EditStack JSON read back through EditStack::fromJson, the sidecar's own forward-tolerant path, so a stale snapshot gets exactly the treatment a stale sidecar gets, and the "never rename or rescale in place" rule protects both. Two drifts remain, both cosmetic:
+Since 2026-09-30 history persists in index.db ([11.37.5 Persisted in the Local Index](#11375-persisted-in-the-local-index)), so a snapshot CAN be written by an older build. It is safe for the same reason a sidecar is: every snapshot is EditStack JSON read back through EditStack::fromJson, the sidecar's own forward-tolerant path, so a stale snapshot gets exactly the treatment a stale sidecar gets, and the "never rename or rescale in place" rule protects both. Two drifts remain, both cosmetic:
 
 - An entry's action label is the slider caption FROZEN as a string at record time, so a renamed caption leaves older rows reading the old name, now across launches.
 - A history whose stamp no longer matches the sidecar is set aside, never migrated.
 
-#### 11.39.4 Retired Sidecar Key: "cameraProfileLook"
+#### 11.40.4 Retired Sidecar Key: "cameraProfileLook"
 
 The camera-profile feature shipped for one day (2026-09-13) with a Look checkbox on the Profile row, storing 0 or 1 under that key. It was removed on 2026-09-14 in favour of applying a profile WHOLE and offering its bare characterisation as a separate "Camera Base" entry. paramsFromJson ignores the key, so an image edited during that day with the look switched OFF now renders WITH its look. Not migrated, deliberately: the key can only appear in that day's test images, and a migration would have to reach the profile store from the sidecar loader. The NAME must never be reused for anything else.
 
-### 11.40 Corrupted or Changed Develop Settings
+### 11.41 Corrupted or Changed Develop Settings
 
 Develop state is read back from three stores the app does not fully control: the per-image XMP sidecar (a user file that a crash, a sync client or a hand edit can damage), the preset store in QSettings, and the general settings.ini. Forward tolerance handles values that are ABSENT. This section is about values that are PRESENT but wrong: unreadable, out of range, or naming something this build has no code for, like an unknown demosaic engine.
 
 The old failure mode was uniform and silent: every read path fell back to a default without telling anyone. A corrupt sidecar came back as "this image has no edits" (indistinguishable from an untouched image), and the user's next edit overwrote what was still on disk.
 
-#### 11.40.1 What Is Validated
+#### 11.41.1 What Is Validated
 
 - Sidecar: EditStack::fromBase64 returns a Status (Ok / Absent / Corrupt), so callers can tell "unedited" from "unreadable", plus a list of repairs. A stack stamped newer than EditStack::kVersion is reported.
 - EditStack::sanitize / sanitizeParams range-check every value that reaches the render pipeline, against the SAME limits the panel sliders enforce, so a repaired value is always one the user could have dialled in. They reject NaN and infinity (one NaN turns the whole image black), order the three tone splits, repair a degenerate crop (a zero or negative width divides by zero downstream), and drop a warp whose quad did not survive (geometryFromJson only fills quad when the array is exactly 8 long, so a truncated one would otherwise warp through the DEFAULTS).
@@ -7061,27 +7119,27 @@ The demosaic engine was the worst of the silent cases. G::DecodeRawEngine has tw
 - A preset: applyPreset tested `== "apple"` and treated everything else as Winnow; it now matches both tokens explicitly and warns on anything else.
 - Cross-platform: the Apple engine is macOS-only and its branch is compiled out elsewhere, but MW's demosaicEngineChanged handler set it unconditionally, so a preset built on a Mac silently disabled raw denoise on Windows. Now clamped.
 
-#### 11.40.2 When to Notify (and When Not To)
+#### 11.41.2 When to Notify (and When Not To)
 
 Notify when the user would otherwise discover the loss themselves: settings that could not be read, a mask that will not be drawn, values that had to be limited, a store written by a newer Winnow. Do NOT notify for the cases forward tolerance exists to absorb: an absent sidecar (the normal state of an unedited image) or an unknown KEY in an otherwise valid record.
 
 Anti-spam is the hard part. Sidecars are read on EVERY image the user visits, so a damaged folder could fire one popup per file. DevelopProperties::warnOnce reports each KIND of problem at most once per session (warnedIssues holds the kinds already shown) while still logging every occurrence, and the message says other images may be affected. Startup settings use a second channel: MW::loadSettings runs long before G::newPopUp exists, so those messages queue in G::startupWarnings and MW::whenActivated shows them as ONE popup once the window is up.
 
-#### 11.40.3 A Damaged or Repaired Sidecar Is Never Rewritten Behind the User
+#### 11.41.3 A Damaged or Repaired Sidecar Is Never Rewritten Behind the User
 
 - A CORRUPT sidecar stays on disk: it may be recoverable, and a silent overwrite is the exact failure this path exists to prevent. It is replaced only when the user edits that image, an explicit act, and the popup says so.
 - Nor is a REPAIRED one (2026-10-16). The two preview writers, DevelopProperties::topUpDevPreviews (on a Develop view) and MW's devPreview builder (background), rewrite the sidecar with developBlobFor, i.e. the IN-MEMORY stack, which is the SANITISED one, so any repair (a dropped mask, a clamped value, a newer-format stack's unknown settings) became permanent on a mere view. DevelopProperties::repairedStacks records paths whose load produced issues; sidecarRecipeRewritable(fPath) gates both writers' sidecar write (the loupe tier, cache-only, is still written); flushImage, a real edit, clears the flag.
 - Found because the sanitize bound was a literal MaskTool::RefineBrush that was not moved when Segmenter was appended: every Segmenter mask was dropped on load (the "uses a tool this version does not have" popup), and a top-up then wrote the stripped stack over the sidecar. One image lost its mask; its develop_history row in index.db still held it.
 
-#### 11.40.4 Winnow No Longer Creates One
+#### 11.41.4 Winnow No Longer Creates One
 
 Xmp::writeSidecar used to truncate the open handle with resize(0) and write the document in place, so a crash, a power loss or a full volume between the two left an empty or half-written sidecar, and the sidecar is the only copy of the develop recipe, the rating, the label, the title and the copyright. It is now a QSaveFile: a temporary is written and renamed over the original, so what is on disk is either the whole old document or the whole new one. It also treats a SHORT write as a failure (only a return of zero was tested before, so a partial write on a full disk was reported as success).
 
 Develop previews are why this stopped being theoretical. The 256 px tier puts a base64 JPEG in the sidecar, roughly ten times the bytes the file used to carry, so the write window is ten times longer, and topUpDevPreviews rewrites sidecars for images the user merely VIEWED, so the window is entered far more often than an edit session would suggest. The caller's QFile is closed inside writeSidecar, because on Windows the rename fails while another handle to the target is open, and every caller opens the sidecar ReadWrite to construct the Xmp.
 
-### 11.41 Investigations and Fixes
+### 11.42 Investigations and Fixes
 
-#### 11.41.1 A Stack Overflow on a Pool Thread
+#### 11.42.1 A Stack Overflow on a Pool Thread
 
 2026-10-11, fixed the same day. Developing the forest raw in-app died with SIGBUS / "Thread stack size exceeded" in \_\_\_chkstk_darwin under Develop::applyPointOps, on a QThreadPool thread (512 KB stack on macOS). PointCoeffs carries its tone tables inline (\~150 KB once the frame-relative Highlights tables were added), and it was (1) held BY VALUE in Develop::Apply, which nests (the frame's StatSample is developed through Apply first), and (2) COPIED into the fused pass's row lambda, which captures [=] and named c.hiBackLut[...]. Two Apply frames plus the lambda's copy exceeded the stack.
 
@@ -7091,17 +7149,17 @@ Why no test saw it: every unit test and developrender run Apply on the main thre
 
 RULE: Develop runs on 512 KB pool stacks. Never hold PointCoeffs by value, and never name a large struct inside a [=] lambda: hoist the fields or pointers first.
 
-#### 11.41.2 Develop Render Latency (the Measurement Record)
+#### 11.42.2 Develop Render Latency (the Measurement Record)
 
 The rules in [11.12 Develop Performance](#1112-develop-performance) came out of four rounds of measurement, each of which overturned a plan reasoned from the code.
 
-##### 11.41.2.1 Slider Drag (2026-06)
+##### 11.42.2.1 Slider Drag (2026-06)
 
 The naive path re-rendered the full image synchronously on the GUI thread every tick: \~520 ms/tick for a 50 MP raw, dominated by OutputTransform::ToImage (\~420 ms), the only serial stage. Fixes: the proxy, a parallel ToImage, coalesce + settle. [DevTime] then showed proxy ticks \~45 ms (render 25 / rotate+scale 18 / preview 2), but interleaved `full 8640x5760 render 1300-1440 ms`: the settle ran synchronously and froze the drag, and the freeze drained queued slider events in bursts whose gaps re-fired the settle timer, so the 1.3 s render ran REPEATEDLY mid-drag. Fix: renderDevelopFullResAsync.
 
 With texture/dehaze left non-zero the async settle was still \~1.45 s: point 64 / texture 899 / dehaze 399 ms. The per-pixel loops in Develop::Denoise / Texture / Dehaze were single-threaded (now parallelFor, bit-identical), and Texture's large-sigma cv::GaussianBlur dominated what remained (now a downscaled base). Net \~1.45 s -> \~360 ms (texture 899 -> 72, dehaze 399 -> 120) on an M4.
 
-##### 11.41.2.2 Mask Drag (2026-08)
+##### 11.42.2.2 Mask Drag (2026-08)
 
 With masked scopes the proxy tick still did all of the work every time: paramsChanged fanned out to developParamsChange (coalesced) AND updateMaskOverlayTint (NOT coalesced, one or two full buildMaskBuffer passes at a 1600 px cap on every mouse-move); developCompositeStack re-rasterised EVERY scope's mask and renderStack redid the base and every scope even when one mask had moved; and Linear/Radial handle drags emitted on every mouse-move while brush strokes went through a 10 Hz throttle. Fixed by the coalesced veil, the shared throttle, and the per-scope mask and layer cache.
 
@@ -7117,7 +7175,7 @@ Lesson: three fixes were aimed at this before the split existed (dab spacing, da
 
 Veil gating (2026-08): (a) maskTintHidden lived entirely in ImageView and was read only by drawForeground, so pressing "O" hid the veil while MW kept compositing it at full proxy resolution every tick (\~87 ms for something nothing drew). MW::updateMaskOverlayTint now asks ImageView::maskTintVisible() first; the stored QImage is left in place and maskTintVisibilityChanged rebuilds on the way back up, so re-showing cannot flash a stale overlay. (b) It mattered beyond the veil: with veil \~87 + render \~47 ms against a 100 ms live-emit throttle, the GUI thread was over 100% occupied, mouse-moves queued, and the brush CURSOR RING (painted by ImageView on the GUI thread) visibly lagged. A saturation problem, not a hot loop; the structural fix was moving the proxy render off the GUI thread.
 
-##### 11.41.2.3 Adjustment Drag (2026-08)
+##### 11.42.2.3 Adjustment Drag (2026-08)
 
 Dragging a slider was slow even with NO edits and NO masks, and the cause was not pixel maths: 87 ms of a 121 ms tick was releasing memory (the tell: `copy 2` next to `free 29`). Fixes, each exposing the next allocation down:
 
@@ -7133,7 +7191,7 @@ The settle render had the same disease at full size: a 9600x6376 file with 2 mas
 
 Lesson: the plan going in was to bound the develop pass and the blend to the mask's BOUNDING BOX, worked out down to the guard list. Measured, those two stages were 1 ms and 7 ms; the design would have saved 8 ms of 121 while the allocator ate 87.
 
-##### 11.41.2.4 A Stale Fold-Cache Slot
+##### 11.42.2.4 A Stale Fold-Cache Slot
 
 Found by the TSan driver on its first run, a real crash. buildMaskBuffer picked foldSlot while holding g_maskFoldMutex during the LOOKUP, then re-acquired the mutex to store. Between the two the cache could be cleared (maskFoldCacheClear() from the GUI thread's ensureRangeRef, the key cap, or another render), leaving entries[] shorter than foldSlot: QVector::operator[] out of range, a SEGV. foldSlot is now a HINT, re-validated against the vector under the store lock. An index chosen under one lock acquisition means nothing under the next.
 
@@ -7263,7 +7321,7 @@ Full sensor resolution is the default, and it is what makes the devPreview more 
 
 Full size does not mean a new render: MW::onDevelopFullResReady already produces a crisp full-resolution frame for the loupe (the settle render, \~1.3 s on a 50 MP raw) and RETAINS it as developFullFrame. The provider prefers it and falls back to developFrame, the screen-resolution proxy, when the settle render has not landed. Either way a preview is a scale plus a JPEG encode off a buffer that existed anyway.
 
-It writes BOTH tiers and gates on both. The thumbnail and the devPreview must never come from different recipes (a grid showing one picture while the loupe shows another is worse than neither), so if EITHER tier is missing or stale, both are rewritten. Accepted consequence: visiting an edited image in Develop can rewrite its sidecar. Only the preview attributes and modifydate move; the recipe is passed through unchanged (but see [11.40.3 A Damaged or Repaired Sidecar Is Never Rewritten Behind the User](#11403-a-damaged-or-repaired-sidecar-is-never-rewritten-behind-the-user)).
+It writes BOTH tiers and gates on both. The thumbnail and the devPreview must never come from different recipes (a grid showing one picture while the loupe shows another is worse than neither), so if EITHER tier is missing or stale, both are rewritten. Accepted consequence: visiting an edited image in Develop can rewrite its sidecar. Only the preview attributes and modifydate move; the recipe is passed through unchanged (but see [11.41.3 A Damaged or Repaired Sidecar Is Never Rewritten Behind the User](#11413-a-damaged-or-repaired-sidecar-is-never-rewritten-behind-the-user)).
 
 #### 12.4.2 Only a Faithful Frame May Be Cached
 
@@ -7644,7 +7702,7 @@ setColorClassForRow had a WRONG-FILE bug, independent of versions: it asked keyF
 
 Title, creator, copyright, email, url, keywords and orientation. An edit made with a version row selected is retargeted to its master's row and file, written once per file however many of the group were selected (InfoView::dataChanged, MW::applyKeywordsToSelection), and DataModel::syncSharedToVersions copies the master row's values onto its version rows and into the captured master metadata, so a later refill keeps them; MW::publishKeywordWrite (retag) does the same.
 
-Rotation (MW::setRotation) walks DATAMODEL rows, expanding the selection to whole groups (a collapsed version is not in the proxy), so rotating any row turns the file once (writeOrientation on the source) and every row of the group, each row's recipe re-expressed in the new frame by rotateImageEdits ([11.26 Rotating a Developed Image (the Recipe Follows the Photo)](#1126-rotating-a-developed-image-the-recipe-follows-the-photo)). Pinned by model_mutation "shared keywords", "rotate group" and "refill keeps edits".
+Rotation (MW::setRotation) walks DATAMODEL rows, expanding the selection to whole groups (a collapsed version is not in the proxy), so rotating any row turns the file once (writeOrientation on the source) and every row of the group, each row's recipe re-expressed in the new frame by rotateImageEdits ([11.27 Rotating a Developed Image (the Recipe Follows the Photo)](#1127-rotating-a-developed-image-the-recipe-follows-the-photo)). Pinned by model_mutation "shared keywords", "rotate group" and "refill keeps edits".
 
 ### 13.8 File Operations With Versions
 
@@ -7836,7 +7894,7 @@ The preset bar is ONE row: the combo and New / Update / Rename / Delete, with th
 
 #### 14.4.4 Export Presets Are Complete
 
-Unlike develop presets. A develop preset is partial on purpose (an absent key means "don't touch that adjustment"); an export preset is a whole ExportSettings INCLUDING the destination, which is what lets Develop > Export with preset > &lt;name> run with no dialog at all. An absent key falls back to the ExportSettings default, so an old preset survives a new field. The same versioning contract as develop presets applies: add keys freely, never rename or rescale one in place ([11.39 Stale Presets and History (Schema Drift)](#1139-stale-presets-and-history-schema-drift)).
+Unlike develop presets. A develop preset is partial on purpose (an absent key means "don't touch that adjustment"); an export preset is a whole ExportSettings INCLUDING the destination, which is what lets Develop > Export with preset > &lt;name> run with no dialog at all. An absent key falls back to the ExportSettings default, so an old preset survives a new field. The same versioning contract as develop presets applies: add keys freely, never rename or rescale one in place ([11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)).
 
 #### 14.4.5 File Naming: One Token Parser, One Template Editor
 
@@ -9402,7 +9460,7 @@ Two hypotheses died first. Not the develop gate (ThumbCache stands aside for an 
 
 The cause is that `m` describes the PREVIOUS ROW. On an icon-only read Reader::readMetadata is skipped, so m still holds the last row's metadata, or a default-constructed struct on the reader's first task. readIcon gated its header re-read on m->fromIndex, which is therefore that row's answer, and false by default. The walk was skipped for exactly the rows needing it: a hydrated catalog row, whose offsets were preset from the model and are 0, because the decode geometry is deliberately not stored (an offset of 0 is a legal offset, so leaving the fields unset is what makes the gap detectable). A JPEG survives (loadThumb finds an embedded thumbnail unaided); a RAW cannot (the preview's location is only in the header). So it produced no image, fell back to the error icon, never reached putImage, and missed the cache again next time.
 
-The gate now asks what it can answer LOCALLY (do I have usable offsets?) rather than interrogating a struct that may belong to another row. The cache then fills itself through ordinary loads: 8,437 to 9,675 of 9,789 over six of them, the residual being 112 develop-edited rows (correctly excluded), two PNGs with no embedded preview and a video. (The same stale-struct trap later turned rotated icons the wrong way; Reader::read now fills orientation, rotation, develop state and size from the model on an icon-only read, [11.26.4 The Grid Thumbnail](#11264-the-grid-thumbnail).)
+The gate now asks what it can answer LOCALLY (do I have usable offsets?) rather than interrogating a struct that may belong to another row. The cache then fills itself through ordinary loads: 8,437 to 9,675 of 9,789 over six of them, the residual being 112 develop-edited rows (correctly excluded), two PNGs with no embedded preview and a video. (The same stale-struct trap later turned rotated icons the wrong way; Reader::read now fills orientation, rotation, develop state and size from the model on an icon-only read, [11.27.4 The Grid Thumbnail](#11274-the-grid-thumbnail).)
 
 No backfill scanner was built, and the plan had called for one. The premise (coverage was a gap to be filled by indexing more eagerly) was wrong: ordinary browsing already writes every thumbnail it decodes, and coverage was not growing because of a defect in the path that decodes them. A scanner-side thumbnailer would have hidden it.
 
@@ -9668,7 +9726,7 @@ Back and forward through filter states (2026-10-06), like a browser's history. P
 - Stepping: MW::stepFilterHistory applies an entry through the path a folder change's restore uses (Filters::setStateToRestore, Filters::restore(keepMissing false), one filterChange). filterHistoryStepping stops that filterChange (and the nested one restore triggers when the search text changes) from recording. A step is REFUSED, with a popup, while a load runs or a restore is pending (restoreFiltersPending): filterChange would apply nothing, and setStateToRestore would overwrite the states the pending restore is waiting for.
 - Scope of a history: MW::reset clears it, so it covers one loaded set (a folder, a recursive tree, the Library): another set's checks mostly name values not in this one. Session categories (Filter on..., Map pin) are not in persistableState, so changing only one of them records nothing, and a step leaves them as they are.
 
-The same controls under every Browse panel (2026-10-13). A PanelButtonBar ([11.36.2 The Copy / Paste Button Row](#11362-the-copy--paste-button-row)) is pinned to the bottom of the Filters, Bookmarks, Collections and Queries panels: Previous, Clear filters, Next. Those four are one tab group in the left area, and Qt has nowhere to put a widget UNDER a QDockWidget tab group, so each panel carries its own copy and whichever tab is raised shows the row in the same place.
+The same controls under every Browse panel (2026-10-13). A PanelButtonBar ([11.37.2 The Copy / Paste Button Row](#11372-the-copy--paste-button-row)) is pinned to the bottom of the Filters, Bookmarks, Collections and Queries panels: Previous, Clear filters, Next. Those four are one tab group in the left area, and Qt has nowhere to put a widget UNDER a QDockWidget tab group, so each panel carries its own copy and whichever tab is raised shows the row in the same place.
 
 - MW::createFilterNavBars builds them, called from the end of createFilterActions (createDocks runs before createActions, and the Clear button follows clearAllFiltersAction via PanelButtonBar::MakeButton). The row goes in each dock's FrameLineBox (DockWidget::widget()), after the content, so a dock whose content is a bare view needs no wrapper.
 - Previous / Next call filterHistoryBack / filterHistoryForward; syncFilterHistoryButtons sets the enabled state and tooltips of every copy (MW::filterNavBackBtns / filterNavForwardBtns). They REPLACED the Filters title bar's own arrows, so the filter history has one control, reachable from every panel in the group. The arrows are drawn as a vector at 22 px (filterNavArrowIcon in Main/sortandfilter.cpp) from the old bitmap's outline.

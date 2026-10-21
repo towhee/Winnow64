@@ -1,74 +1,64 @@
 #include "depthpredictor.h"
+#include "Utilities/inference/inferencesession.h"
 #include "Utilities/segrefine.h"
-#include <algorithm>
-#include <cmath>
+#include <opencv2/imgproc.hpp>
 
 /*
-    MiDaS v2.1 small monocular depth via OpenCV DNN. See the header + DEPTH RANGE MASK in
-    notes/Documentation.txt. Upsampling shared with the AI masks in Utilities/segrefine.h.
+    Depth Anything V2 Small via the ONNX Runtime layer. See the header, and DEPTH RANGE
+    MASK / LENS BLUR in notes/Documentation.md. Upsampling shared with the AI masks in
+    Utilities/segrefine.h.
 */
 
-DepthPredictor::DepthPredictor(const QString& onnxPath, int inputSize)
-    : imageSize(inputSize)
+DepthPredictor::DepthPredictor(const QString &onnxPath)
 {
-    if (G::isLogger)
-        G::log("DepthPredictor::DepthPredictor", onnxPath);
-    try {
-        net = cv::dnn::readNetFromONNX(onnxPath.toStdString());
-        net.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
-        net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
-    } catch (const cv::Exception& e) {
-        qWarning("Failed to load depth ONNX model: %s", e.what());
-    }
+    if (G::isLogger) G::log("DepthPredictor::DepthPredictor", onnxPath);
+    session = std::make_unique<InferenceSession>(onnxPath, InferenceDevice::CPU);
+    if (!session->IsLoaded())
+        qWarning("DepthPredictor: failed to load %s", onnxPath.toUtf8().constData());
 }
 
-bool DepthPredictor::isLoaded() const {
-    return !net.empty();
+DepthPredictor::~DepthPredictor() = default;
+
+bool DepthPredictor::isLoaded() const
+{
+    return session && session->IsLoaded();
 }
 
-bool DepthPredictor::predict(const QImage& image, std::vector<float>& depth, int& w, int& h)
+bool DepthPredictor::predict(const QImage &image, std::vector<float> &depth, int &w, int &h)
 {
-    if (net.empty()) return false;
+    if (!isLoaded() || image.isNull()) return false;
 
-    const int sz = imageSize;
-    const QImage rgb = image.convertToFormat(QImage::Format_RGB888)
-                            .scaled(sz, sz, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    /* Squashed to the model's square, bicubic, RGB 0..1 planar. */
+    const QImage rgb = image.convertToFormat(QImage::Format_RGB888);
+    const cv::Mat in(rgb.height(), rgb.width(), CV_8UC3,
+                     const_cast<uchar *>(rgb.constBits()), size_t(rgb.bytesPerLine()));
+    cv::Mat sq;
+    cv::resize(in, sq, cv::Size(kSize, kSize), 0, 0, cv::INTER_CUBIC);
 
-    /* /255 then per-channel ImageNet mean/std (MiDaS small), built by hand (blobFromImage cannot do a
-       per-channel std divide). */
-    static const float mean[3] = {0.485f, 0.456f, 0.406f};
-    static const float istd[3] = {1.0f/0.229f, 1.0f/0.224f, 1.0f/0.225f};
-    std::vector<float> in(size_t(3) * sz * sz);
-    const size_t plane = size_t(sz) * sz;
-    for (int y = 0; y < sz; ++y) {
-        const uchar *line = rgb.constScanLine(y);
-        for (int x = 0; x < sz; ++x) {
-            const size_t idx = size_t(y) * sz + x;
-            for (int c = 0; c < 3; ++c)
-                in[c * plane + idx] = (line[x * 3 + c] / 255.0f - mean[c]) * istd[c];
+    Tensor t;
+    t.shape = {1, 3, kSize, kSize};
+    t.data.resize(size_t(3) * kSize * kSize);
+    const size_t plane = size_t(kSize) * kSize;
+    for (int y = 0; y < kSize; ++y) {
+        const uchar *p = sq.ptr<uchar>(y);
+        for (int x = 0; x < kSize; ++x) {
+            const size_t i = size_t(y) * kSize + x;
+            for (int c = 0; c < 3; ++c) t.data[c * plane + i] = p[3 * x + c] / 255.0f;
         }
     }
 
-    const int dims[4] = {1, 3, sz, sz};
-    cv::Mat blob(4, dims, CV_32F, in.data());
-
-    std::vector<cv::String> outNames = net.getUnconnectedOutLayersNames();
-    std::vector<cv::Mat> outs;
-    try {
-        net.setInput(blob);
-        net.forward(outs, outNames);
-    } catch (const cv::Exception& e) {
-        qWarning("Depth inference failed: %s", e.what());
+    std::vector<Tensor> out;
+    if (!session->Run({"pixels"}, {t}, {"depth"}, out) || out.empty()) {
+        qWarning("DepthPredictor: inference failed");
         return false;
     }
-    if (outs.empty() || outs[0].empty()) return false;
-    const cv::Mat out = outs[0];                  // [1,H,W] inverse depth (high = near)
+    const Tensor &d = out[0];
+    if (d.shape.size() < 2) return false;
+    const int H = int(d.shape[d.shape.size() - 2]), W = int(d.shape[d.shape.size() - 1]);
+    if (size_t(W) * size_t(H) != d.data.size()) return false;
+    const cv::Mat disp(H, W, CV_32F, const_cast<float *>(d.data.data()));
 
-    const int od = out.dims;
-    const int H = out.size[od - 2], W = out.size[od - 1];
-    cv::Mat inv(H, W, CV_32F, const_cast<float*>(out.ptr<float>()));
-
-    /* invert=true: MiDaS is inverse depth (high=near); flip to 0=near..1=far after min-max, then
-       guided-upsample against the photo (continuous field, edge-aware). */
-    return SegRefine::guidedUpsample(inv, image, /*invert*/true, depth, w, h);
+    /* invert = true: disparity is high = near; flip to 0 = near .. 1 = far after the
+       min-max, then guided-upsample against the photo (continuous, edge-aware). */
+    return SegRefine::guidedUpsample(disp, image, /*invert*/true, depth, w, h);
 }

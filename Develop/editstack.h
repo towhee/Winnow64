@@ -380,6 +380,15 @@ struct EditStack {
         if (p.lensManualDistortion != 0.0f) o["lensManualDistortion"] = p.lensManualDistortion;
         if (p.lensManualVignetting != 0.0f) o["lensManualVignetting"] = p.lensManualVignetting;
         if (p.lensManualMidpoint != 0.5f)   o["lensManualMidpoint"]   = p.lensManualMidpoint;
+        /* Lens Blur: only when on, so existing recipes keep their JSON (and hash). */
+        if (p.lensBlurAmount != 0.0f) {
+            o["lensBlurAmount"] = p.lensBlurAmount;
+            o["lensBlurFocus"]  = p.lensBlurFocus;
+            o["lensBlurRange"]  = p.lensBlurRange;
+            o["lensBlurShape"]  = p.lensBlurShape;
+            o["lensBlurBoost"]  = p.lensBlurBoost;
+        }
+        if (p.lensBlurRefine != 0.0f) o["lensBlurRefine"] = p.lensBlurRefine;
         o["localDenoiseLuma"]= p.localDenoiseLuma;
         o["localDenoiseChroma"]= p.localDenoiseChroma;
         o["sharpenAmount"]   = p.sharpenAmount;
@@ -486,6 +495,12 @@ struct EditStack {
             o.value("lensManualVignetting").toDouble(p.lensManualVignetting));
         p.lensManualMidpoint   = static_cast<float>(
             o.value("lensManualMidpoint").toDouble(p.lensManualMidpoint));
+        p.lensBlurAmount = static_cast<float>(o.value("lensBlurAmount").toDouble(p.lensBlurAmount));
+        p.lensBlurFocus  = static_cast<float>(o.value("lensBlurFocus").toDouble(p.lensBlurFocus));
+        p.lensBlurRange  = static_cast<float>(o.value("lensBlurRange").toDouble(p.lensBlurRange));
+        p.lensBlurShape  = o.value("lensBlurShape").toInt(p.lensBlurShape);
+        p.lensBlurBoost  = static_cast<float>(o.value("lensBlurBoost").toDouble(p.lensBlurBoost));
+        p.lensBlurRefine = static_cast<float>(o.value("lensBlurRefine").toDouble(p.lensBlurRefine));
         p.localDenoiseLuma= static_cast<float>(o.value("localDenoiseLuma").toDouble(p.localDenoiseLuma));
         p.localDenoiseChroma= static_cast<float>(o.value("localDenoiseChroma").toDouble(p.localDenoiseChroma));
         p.sharpenAmount   = static_cast<float>(o.value("sharpenAmount").toDouble(p.sharpenAmount));
@@ -843,6 +858,12 @@ struct EditStack {
         if (clampF(p.lensManualDistortion, -1.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.lensManualVignetting, -1.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.lensManualMidpoint, 0.0f, 1.0f, def.lensManualMidpoint)) ++fixed;
+        if (clampF(p.lensBlurAmount, 0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.lensBlurFocus,  0.0f, 1.0f, def.lensBlurFocus)) ++fixed;
+        if (clampF(p.lensBlurRange,  0.0f, 1.0f, def.lensBlurRange)) ++fixed;
+        if (p.lensBlurShape < 0 || p.lensBlurShape > 5) { p.lensBlurShape = def.lensBlurShape; ++fixed; }
+        if (clampF(p.lensBlurBoost,  0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.lensBlurRefine, -1.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.localDenoiseLuma,   0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.localDenoiseChroma, 0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.sharpenAmount,  0.0f, 1.5f, 0.0f)) ++fixed;

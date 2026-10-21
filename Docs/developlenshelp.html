@@ -13,11 +13,25 @@ bow), <b>chromatic aberration</b> (red and blue edges that drift apart toward th
 <b>vignetting</b> (corners darker than the centre) and <b>colour fringing</b> along
 high-contrast edges.</p>
 
-<p>Every row here is applied to the <b>whole image before anything else</b>, so every
-mask, AI selection and scope works on the corrected picture.  That is also why Lens appears
-only in the <b>Global</b> scope: a mask cannot have a different lens.</p>
+<p>It can also do what a fast lens would have done: <b>Lens Blur</b> blurs the photo by
+depth, so the subject stays sharp and the background melts away.</p>
 
-<h2>Lens profile</h2>
+<p>The corrections are applied to the <b>whole image before anything else</b>, so every
+mask, AI selection and scope works on the corrected picture.  That is also why they appear
+only in the <b>Global</b> scope: a mask cannot have a different lens.  A mask scope's Lens
+section has just one slider, which refines the Lens Blur (see below).</p>
+
+<h2>Profile, Fringe and Blur</h2>
+<p>The radio buttons at the top of the panel choose what it shows: <b>Profile</b>
+(distortion and vignetting, with a lens profile or by eye), <b>Fringe</b> (chromatic
+aberration and colour fringes) or <b>Blur</b> (Lens Blur).  Each shows only its own
+controls; the others keep their settings.</p>
+
+<p>A button reads <b>Profile *</b> (or <b>Fringe *</b>, <b>Blur *</b>) when anything under
+it is off its default, so you can see an edit that is not showing.  The section's
+<b>[&#8942;]</b> menu resets just the showing one, or the whole section.</p>
+
+<h2>Profile: lens profile</h2>
 <p>A lens profile is a measurement of one lens model, made by photographing test charts.
 Winnow uses the profiles of the <b>lensfun</b> project, which cover about 1,500 lenses and
 1,000 cameras.</p>
@@ -49,7 +63,7 @@ the EXIF.  Hover over the Lens row to see what the profile corrects.</li>
 <p>Correcting distortion moves the edges of the frame, so the picture is scaled just
 enough that <b>no empty corners</b> show.</p>
 
-<h2>Manual</h2>
+<h2>Profile: manual</h2>
 <p>Manual corrections are set by eye and need <b>no profile</b>.  Use them when the
 Lens row says <i>no profile found</i> (a lens the database does not have yet), on a JPEG,
 or to fine-tune a profile.  When the profile is on they are applied on top of it.</p>
@@ -64,7 +78,7 @@ creative one, applied to the cropped picture.</li>
 reaches: low values reach most of the picture, high values only the corners.</li>
 </ul>
 
-<h2>Chromatic aberration and fringing</h2>
+<h2>Fringe: chromatic aberration and fringing</h2>
 <ul>
 <li><b>Remove CA</b> re-aligns red and blue with green.  When the lens profile is on and
 measures chromatic aberration, that measurement is used.  Otherwise Winnow measures it from
@@ -76,21 +90,60 @@ Purple covers cyan, blue, purple and magenta.  Only edge pixels whose colour has
 hue are changed, so a real coloured edge is left alone.</li>
 </ul>
 
+<h2>Blur: Lens Blur</h2>
+<p>Lens Blur imitates a wide aperture.  An AI model estimates how far away every part of
+the photo is, and each part is blurred by how far it is in front of or behind the focus.
+The model is downloaded the first time you use Lens Blur (about 50 MB).</p>
+
+<p>Like a real lens, the blur respects what is in front: a sharp subject does not smear
+into the blurred background behind it, while a blurred foreground spreads over what is
+behind it.</p>
+
+<ul>
+<li><b>Amount</b> is how strong the blur is, like opening the aperture.  0 is off.</li>
+<li><b>Focus point</b>: click the target button, then click the photo where it should be
+sharp.  That sets <b>Focus</b> to the depth of the point you clicked.  If Lens Blur was
+off, this turns it on.</li>
+<li><b>Focus</b> is the depth kept sharp, from 0 (the nearest part of the photo) to 100
+(the farthest).  The default, 0, keeps the nearest things sharp, which suits most
+portraits.</li>
+<li><b>Focal range</b> is how much depth around the focus stays sharp.  Raise it to keep
+a whole group of people sharp.</li>
+<li><b>Bokeh</b> is the shape a blurred point of light takes: <b>Circle</b> (a modern lens
+wide open), <b>5 blades</b> and <b>6 blades</b> (a lens stopped down a little),
+<b>Cat's eye</b> (round in the middle and clipped toward the corners, like many fast
+lenses), <b>Soap bubble</b> (a bright rim) and <b>Anamorphic</b> (tall ovals).</li>
+<li><b>Boost</b> brightens the blurred highlights, so street lights and sparkles bloom
+into bright discs instead of dim grey ones.</li>
+<li><b>Show depth</b> shows the depth estimate instead of the photo: near is light, far is
+dark, and what stays sharp is tinted green.  It is only a view and is not saved.</li>
+</ul>
+
+<p>The depth estimate is very good but not perfect.  When it gets something wrong, make a
+mask over it (a brush, Select Subject, an object) and use that mask's <b>Lens blur</b>
+slider: minus keeps the masked area in focus, plus blurs it.  It does nothing while the
+Global scope's Lens Blur is off, and the panel says so.</p>
+
+<p>Lens Blur is applied after everything else in the develop and before the crop.  The
+Detail panel's 1:1 view does not show it.</p>
+
 <h2>Working with the controls</h2>
 <ul>
 <li><b>Double-click</b> a slider to return it to its default (100 for the profile's
 Distortion and Vignetting, 0 for the Manual sliders and the fringe sliders, 50 for
 Midpoint).</li>
 <li>The section's eye button shows the picture without any Lens corrections, keeping your
-settings.  Its <b>[&#8942;]</b> menu has <b>Reset Lens</b>.</li>
+settings.  Its <b>[&#8942;]</b> menu has <b>Reset Profile</b> (or Fringe, or Lens Blur:
+whichever is showing) and <b>Reset Lens</b>.</li>
 <li>The header reads <b>Lens *</b> when anything in the section is off its default.</li>
 </ul>
 
 <h2>What is saved</h2>
-<p>Every setting here is part of the develop recipe in the sidecar.  The <b>Lens
-profile</b>, <b>Lens manual corrections</b>, <b>Remove chromatic aberration</b> and
-<b>Defringe</b> items travel with
-presets and Copy / Paste Settings (under Global settings).  They are recorded in History,
+<p>Every setting here is part of the develop recipe in the sidecar, except Show depth.
+The <b>Lens profile</b>, <b>Lens manual corrections</b>, <b>Remove chromatic
+aberration</b>, <b>Defringe</b> and <b>Lens blur</b> items travel with presets and
+Copy / Paste Settings (under Global settings); a mask's refine travels as <b>Lens blur
+refine</b> in the Lens section.  They are recorded in History,
 and they apply to the whole selection when several images are selected.</p>
 
 <h2>Adding or updating profiles</h2>

@@ -81,6 +81,9 @@ public:
         /* "Hide global image" (EditScope::hideImage on Global): only the mask scopes'
            pixels show, the rest is transparent (developCompositeStack, last). */
         bool           hideGlobal = false;
+        /* Lens > Lens Blur's "Show depth" (a view, so stackJob() only: never an
+           export). The frame is drawn as the depth field with the focal range. */
+        bool           lensVisualize = false;
     };
     StackRenderJob stackJob();
 
@@ -716,6 +719,20 @@ public slots:
     void toggleDetailPick();               // the target button
     bool isDetailPickActive() const { return detailPickActive; }
 
+    /* Lens > Lens Blur's focus picker: arm "click the photo to focus there", the Detail
+       picker's arrangement. MW turns the click into a depth (the AI depth field) and
+       hands it back through setLensBlurFocus, which is an EDIT (History, sidecar). */
+    void cancelLensFocusPick();            // Esc / image change / another tool
+    void toggleLensFocusPick();            // the target button
+    bool isLensFocusPickActive() const { return lensFocusPickActive; }
+    void setLensBlurFocus(float depth);    // 0 near .. 1 far, Global
+    /* "Show depth": a VIEW of the depth field and the focal range, not an edit (no
+       history, no sidecar; stackJob() only). */
+    bool lensDepthVisualized() const { return lensDepthVisualize; }
+    /* Grey Lens Blur, with the reason in a note row, when it cannot work: no inference
+       backend in this build (Global), or Global's Lens Blur off (a mask's refine). */
+    void syncLensBlurAvailability();
+
     /* MW-driven raw-denoise completion state for the "Denoise"/"Denoised" checkbox:
        checked + "Denoised" when a denoised base is ready for the current image, else
        unchecked + "Denoise". Signal-blocked so it never re-triggers a run. */
@@ -791,6 +808,11 @@ signals:
        re-render the patch (the point moved, or the panel just became visible). */
     void detailPickBegin();
     void detailPickEnd();
+    void lensFocusPickBegin();
+    void lensFocusPickEnd();
+    /* Lens Blur needs the AI depth field: the user's GESTURE (turning it on, arming the
+       focus picker, Show depth), where MW may ask to download the model. */
+    void depthWanted();
     void detailRoiNeeded();
     /* Curves point picking: arm/disarm ImageView's "click the image to add a curve
        point" mode (see wantsCurvePointPick). Unlike the dropper and the Detail picker
@@ -905,6 +927,22 @@ private:
     QPointer<QWidget> colorPanelModesRow;  // the radios' row, centred in the panel
     QPointer<QRadioButton> colorPanelRadios[3];  // Tone/Hue/RGB, " *" when edited
     int  colorPanelModeGroup() const;      // the PV_* the selected mode shows
+    /* A panel's centred mode radios + their gaps (the Color and Lens panels). */
+    void addModeRadioRow(const QModelIndex &parIdx, const QString &parent,
+                         const QString &name, const QStringList &labels,
+                         const QStringList &tips, int current, QPointer<QWidget> &row,
+                         QPointer<QRadioButton> *radios,
+                         const std::function<void(int)> &onPick);
+    /* The Lens panel's Profile / Fringe / Blur radios (Global only), the Color panel's
+       arrangement: only the chosen mode's rows are built. UI state, persisted
+       ("Develop/lensPanelMode"). The three are not EditParams groups, so the " *" and
+       the mode Reset test and reset their fields directly (lensModeEdited /
+       resetLensMode). */
+    int  lensPanelMode = 0;                // 0 Profile, 1 Fringe, 2 Blur
+    QPointer<QWidget> lensPanelModesRow;
+    QPointer<QRadioButton> lensPanelRadios[3];
+    static bool lensModeEdited(const EditParams &p, int mode);
+    void resetLensMode(int mode);
     void setCombinedColorPanel(bool on);
     void addDetail();
     void addEffects();
@@ -917,6 +955,15 @@ private:
     /* Effects > Blur's type picker (EditParams::blurType) and the rows each type uses
        (applyBlurTypeRows hides the rest, like applyEffectsChoice). */
     QPointer<QComboBox> blurTypeCombo;
+    /* Lens > Lens Blur. */
+    QPointer<QComboBox> lensShapeCombo;
+    QPointer<BarBtn> lensFocusPickBtn;
+    QPointer<QLabel> lensBlurNote;
+    bool lensFocusPickActive = false;
+    bool lensDepthVisualize = false;
+    void setLensFocusPickActive(bool on);
+    void addLensBlurRows(const QModelIndex &parIdx);
+    void addLensBlurNote(const QModelIndex &parIdx);
     void applyBlurTypeRows();
     int  shownEffect() const;              // effectsChoice, or Vignette where it is absent
     void applyEffectsChoice();             // show the chosen effect's rows, hide the rest

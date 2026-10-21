@@ -217,6 +217,11 @@ public slots:
     void beginDetailPick();
     void endDetailPick();
     bool detailPickArmed() const { return detailPickMode; }
+    /* Lens Blur's focus picker: the same one-shot arrangement. A click emits
+       lensFocusPicked with the MASK-space normalized point (where the depth field is
+       indexed); MW turns it into a focus depth. */
+    void beginLensFocusPick();
+    void endLensFocusPick();
     /* Point Color eyedropper: arm/disarm "click a colour to adjust". One-shot like the WB
        dropper -- a click emits pointColorPicked with the DISPLAYED normalized point (the
        space developShownImage is indexed in, as for the Curves picker) and the dock
@@ -488,6 +493,8 @@ signals:
     /* The Detail 1:1 preview's location picker was clicked at this normalized point. */
     void detailPointPicked(double nx, double ny);
     void detailPickExited();        // dismissed with Esc
+    void lensFocusPicked(double nx, double ny);
+    void lensFocusPickExited();     // dismissed with Esc
     void pointColorPicked(double xFraction, double yFraction);
     void pointColorPickExited();    // dismissed with Esc
     /* The Curves point picker was clicked at this normalized image point. */
@@ -642,6 +649,7 @@ private:
        small marker whenever it is set so the user can see WHERE the preview is looking --
        without it the preview is a patch of pixels with no context. */
     bool    detailPickMode = false;
+    bool    lensFocusPickMode = false;    // Lens Blur's focus picker is armed
     bool    pointColorPickMode = false;   // the Point Color eyedropper is armed
     /* The Curves panel's point picker is armed (see beginCurvePick). It is a passive
        toggle that stays armed, so it yields the canvas to any explicit tool -- see

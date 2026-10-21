@@ -112,9 +112,10 @@ below and keep their upstream licenses.
 - **SegFormer-B4, ADE20K** (Select Sky).
   [NVlabs/SegFormer](https://github.com/NVlabs/SegFormer).
   NVIDIA Source Code License, **non-commercial**: [segformer](licenses/segformer.txt).
-- **MiDaS v2.1 small** (Depth Range mask).
-  [isl-org/MiDaS](https://github.com/isl-org/MiDaS).
-  MIT: [midas](licenses/midas.txt).
+- **Depth Anything V2 Small** (Depth Range mask, Lens Blur).
+  [DepthAnything/Depth-Anything-V2](https://github.com/DepthAnything/Depth-Anything-V2).
+  Apache-2.0: [Apache-2.0](licenses/Apache-2.0.txt). Only the Small model is
+  Apache-2.0; the larger ones are non-commercial and are not used.
 - **MI-GAN** (Spot removal).
   [Picsart-AI-Research/MI-GAN](https://github.com/Picsart-AI-Research/MI-GAN).
   MIT: [migan](licenses/migan.txt).

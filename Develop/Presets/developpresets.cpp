@@ -541,6 +541,13 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "lensManualDistortion") p.lensManualDistortion = f;
     else if (key == "lensManualVignetting") p.lensManualVignetting = f;
     else if (key == "lensManualMidpoint")   p.lensManualMidpoint   = f;
+    else if (key == "lensBlurAmount")      p.lensBlurAmount      = f;
+    else if (key == "lensBlurFocus")       p.lensBlurFocus       = f;
+    else if (key == "lensBlurRange")       p.lensBlurRange       = f;
+    else if (key == "lensBlurShape")       p.lensBlurShape       = v.toInt();
+    else if (key == "lensBlurBoost")       p.lensBlurBoost       = f;
+    /* Per scope (a mask scope's Lens Blur refine), unlike the five above. */
+    else if (key == "lensBlurRefine")      p.lensBlurRefine      = f;
     /* By lens id; a lens the target's camera cannot take does not resolve, and the
        Lens row says so. */
     else if (key == "lensProfileId")       p.lensProfileId       = v.toString();
