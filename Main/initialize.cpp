@@ -1451,6 +1451,9 @@ void MW::createAppStyle()
     pal.setColor(QPalette::ToolTipText, QColor(255, 255, 255));
     QToolTip::setPalette(pal);
     #endif
+    #ifdef Q_OS_LINUX
+    Linux::setTitleBarColor(G::backgroundColor);
+    #endif
 }
 
 void MW::createStatusBar()

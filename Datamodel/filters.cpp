@@ -2873,6 +2873,20 @@ void Filters::save()
     QMutexLocker locker(&mutex);
 
     itemStates = checkedItemStates();
+    /*  THE EXPANSION TRAVELS WITH THE CHECKS. A rebuild (a delete, a folder added)
+        deletes every Folders and Keywords node and builds them again, collapsed, so the
+        tree the user had opened came back shut. Only the nested nodes: the category
+        headers are never deleted and keep their own state. Same key as ItemState. */
+    expandedStates.clear();
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        QTreeWidgetItem *item = *it;
+        ++it;
+        if (!item->isExpanded() || !isFilterItem(item)) continue;
+        QTreeWidgetItem *root = categoryOf(item);
+        expandedStates.insert({root->data(0, CategoryNameRole).toString(),
+                               itemMapKey(root, item)});
+    }
     savedKeywordsMatchAll = keywordsMatchAll();
     searchText = searchTrue->text(0);
     if (searchText == enterSearchString) searchText = "";
@@ -2930,6 +2944,7 @@ void Filters::setStateToRestore(const QVariantMap &m)
 {
     QMutexLocker locker(&mutex);
     itemStates.clear();
+    expandedStates.clear();     // a history step keeps the tree as it is
     for (const QString &line : m.value("items").toStringList()) {
         const QStringList parts = line.split(kStateSep);
         if (parts.size() != 3) continue;
@@ -2983,6 +2998,12 @@ void Filters::restore(bool keepMissing)
         item->setCheckState(0, state.state);
         styleFilterItem(item);
     }
+    // the nodes save() found open, where they still exist (see save)
+    for (const auto &key : std::as_const(expandedStates)) {
+        QTreeWidgetItem *item = byCategoryAndValue.value(key.first).value(key.second);
+        if (item && !item->isExpanded()) item->setExpanded(true);
+    }
+    expandedStates.clear();
     /*  ONLY IF IT DIFFERS, AND THE PLACEHOLDER WHEN NOTHING WAS SEARCHED. save() stores
         an unsearched row as "", and writing that back replaced the "Enter search query"
         placeholder with an empty row -- an EDIT of the search text, which ran a search
@@ -2997,6 +3018,54 @@ void Filters::restore(bool keepMissing)
         history step (MW::stepFilterHistory) can land on an unfiltered state. */
     notifyFilteringState();
     // emit filterChange("Filters::restore");
+}
+
+void Filters::holdPaint(bool hold, const QString &src)
+{
+/*
+    A REBUILD OF THE SAME SET BLANKED THE PANEL. BuildFilters::rebuild -> Filters::reset
+    removes every value row and greys the headers (clearAll), and the tree stays that way
+    until the worker's build lands and MW::restoreFiltersAfterFolderChange puts the checks
+    and the expansion back -- a visible flash on every delete. MW::applyModelChange and
+    MW::updateAllFilters hold from before the rebuild until that restore, so the old tree
+    stays on screen and is replaced by the finished one at once.
+
+    A SNAPSHOT LAID OVER THE TREE, NOT setUpdatesEnabled(false). The first cut froze
+    painting, and the panel still went blank for about half a second: a widget with
+    updates off is skipped when the window repaints around it (the grid after a delete,
+    the progress dialog closing), so its parent's background showed through. The
+    snapshot is an ordinary widget that paints like any other. It is a sibling in
+    FilterPanel, outside its layout, and it takes no clicks (a QLabel ignores them, and
+    the tree is disabled while it builds anyway).
+
+    THE SCROLL POSITION GOES BACK TOO: emptying the tree clamps the scroll bar to the
+    top, which would make the panel jump on release.
+
+    A FALLBACK RELEASE, because the restore is not guaranteed: a build that is aborted
+    emits no finishedBuildFilters, and a snapshot left up would look like a hang.
+*/
+    if (G::isLogger) G::log("Filters::holdPaint", (hold ? "hold " : "release ") + src);
+    if (hold == paintHeld) return;
+    paintHeld = hold;
+    if (hold) {
+        heldScroll = verticalScrollBar()->value();
+        if (isVisible() && parentWidget()) {
+            heldSnapshot = new QLabel(parentWidget());
+            heldSnapshot->setPixmap(grab());
+            heldSnapshot->setGeometry(geometry());
+            heldSnapshot->show();
+            heldSnapshot->raise();
+        }
+        const quint64 seq = ++holdSeq;
+        QTimer::singleShot(3000, this, [this, seq] {
+            if (paintHeld && holdSeq == seq) holdPaint(false, "Filters::holdPaint timeout");
+        });
+        return;
+    }
+    executeDelayedItemsLayout();        // the scroll range must cover the rebuilt rows
+    verticalScrollBar()->setValue(heldScroll);
+    if (heldSnapshot) heldSnapshot->deleteLater();
+    heldSnapshot.clear();
 }
 
 QTreeWidgetItem *Filters::emptyItemFor(const ItemState &state)

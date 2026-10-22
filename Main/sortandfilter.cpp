@@ -167,6 +167,7 @@ void MW::updateAllFilters()
         restoreKeepsMissing = true;
     }
     if (G::popup) G::popup->showPopup(tr("Rebuilding filters..."));
+    filters->holdPaint(true, "MW::updateAllFilters");      // see applyModelChange
     buildFilters->rebuild();
 }
 

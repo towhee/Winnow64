@@ -1320,7 +1320,11 @@ void MW::restoreFiltersAfterFolderChange()
 */
     // the build is done: the tree compiles again (held by MW::applyModelChange)
     if (dm && dm->sf) dm->sf->holdPredicate(false, "MW::restoreFiltersAfterFolderChange");
-    if (!restoreFiltersPending || !filters) return;
+    if (!filters) return;
+    if (!restoreFiltersPending) {
+        filters->holdPaint(false, "MW::restoreFiltersAfterFolderChange");
+        return;
+    }
     const bool keepMissing = restoreKeepsMissing && !libraryFilterRestorePending
                              && !foldersFilterRestorePending;
     restoreFiltersPending = false;
@@ -1331,6 +1335,8 @@ void MW::restoreFiltersAfterFolderChange()
     filters->restore(keepMissing);
     if (hadChecks || filters->isAnyFilter())
         filterChange("MW::restoreFiltersAfterFolderChange");
+    // the rebuilt tree, checked and expanded, in one paint (held by applyModelChange)
+    filters->holdPaint(false, "MW::restoreFiltersAfterFolderChange");
     // the filtered set is what is loaded now: show it
     lowerLoadCurtain("MW::restoreFiltersAfterFolderChange", true);
 }

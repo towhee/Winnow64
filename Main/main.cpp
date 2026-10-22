@@ -20,6 +20,9 @@
 #include "Utilities/mac.h"
 #include <QAccessibleWidget>
 #endif
+#ifdef Q_OS_LINUX
+#include "Utilities/linux.h"
+#endif
 
 static QString rory = "Rory";
 
@@ -181,6 +184,10 @@ int main(int argc, char *argv[])
         return runDumpWorking(argc, argv, QString::fromLocal8Bit(argv[2]),
                               QString::fromLocal8Bit(argv[3]),
                               argc >= 5 && QString::fromLocal8Bit(argv[4]) == "engine=apple");
+
+#ifdef Q_OS_LINUX
+    Linux::useBradientDecoration();         // title bar in the Winnow background
+#endif
 
 #ifdef Q_OS_MAC
     // Suppress the system-appended "Start Dictation" / "Emoji & Symbols" items

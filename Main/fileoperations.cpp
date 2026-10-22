@@ -445,6 +445,8 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
             (a second applyModelChange, as New Version makes) must keep the user's checks.
             Released by restoreFiltersAfterFolderChange. See SortFilter::holdPredicate. */
         dm->sf->holdPredicate(true, "MW::applyModelChange");
+        // no blank panel while it rebuilds; released by restoreFiltersAfterFolderChange
+        filters->holdPaint(true, "MW::applyModelChange");
         buildFilters->rebuild();
     }
 

@@ -2,6 +2,7 @@ WHAT'S NEW
 - Kaleidoscope effect
 
 BUGS / TO DO
+- Show feather part of masks
 - /Users/roryhill/Photos/2000-2009/2003/200305_[4524]/20030528_Trent River/DSC_5175.jpg
   thumb not rotated
 - Review virtual machines for building, packaging and deploying to multiple platforms.

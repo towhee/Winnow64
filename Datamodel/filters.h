@@ -385,6 +385,9 @@ public slots:
         needs to know to decide whether the compiled predicate is now stale. */
     bool hasSavedStates() const { return !itemStates.isEmpty(); }
     void restore(bool keepMissing = false);
+    /*  Freeze the panel's painting across a rebuild of the SAME set, so it shows the
+        old tree until the new one is complete. See holdPaint in filters.cpp. */
+    void holdPaint(bool hold, const QString &src);
     void reportSaved();
     void disable();
     void enable();
@@ -709,6 +712,12 @@ private:
         Qt::CheckState state = Qt::Checked;
     };
     QList<ItemState>itemStates;
+    // {category, value} of every nested node open at save(); re-opened by restore()
+    QSet<QPair<QString, QString>> expandedStates;
+    bool paintHeld = false;
+    QPointer<QLabel> heldSnapshot;  // the pre-rebuild tree, laid over it while held
+    int heldScroll = 0;             // vertical scroll position at holdPaint(true)
+    quint64 holdSeq = 0;            // matches a fallback release to its hold
     QTreeWidgetItem *emptyItemFor(const ItemState &state);
     /*  Every item that is not Unchecked, keyed as ItemState says. save()'s walk. */
     QList<ItemState> checkedItemStates() const;
