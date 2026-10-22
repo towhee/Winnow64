@@ -1457,8 +1457,8 @@ void MW::createStatusBar()
     // progress width (Progress is created in MW::createDataModel, where first req'd)
     if (isSettings && settings->contains("cacheStatusWidth"))
         cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
-    else cacheBarProgressWidth = 100;
-    if (cacheBarProgressWidth < 100 || cacheBarProgressWidth > 1000) cacheBarProgressWidth = 200;
+    else cacheBarProgressWidth = 300;
+    if (cacheBarProgressWidth < 100 || cacheBarProgressWidth > 1000) cacheBarProgressWidth = 300;
 
     // progress tooltip
     QString progressToolTip = "Cache status for current folder(s):\n";

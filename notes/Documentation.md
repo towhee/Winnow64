@@ -1777,6 +1777,8 @@ G::autoAddMissingThumbnails
 G::renderVideoThumb
 ```
 
+G::renderVideoThumb is Preferences > General > "Render video thumbnails" (settings key "renderVideoThumb", default ON since 2026-10-22). It gates Reader::readIcon / Thumb asking FrameDecoder for a video's first frame: AVFoundation on macOS (~10-50 ms), QMediaPlayer + QVideoSink on the FrameDecoder thread elsewhere (~150-400 ms in the Windows VM, software decode). Until 2026-10-22 the preference row was commented out of Preferences::addGeneral and the default was OFF, so no new install on any platform could render video thumbnails; only profiles saved before the row was hidden had it on.
+
 ### 3.8 Investigations and Fixes
 
 #### 3.8.1 Pick Counts Are Maintained, Not Counted (2026-09-24)
@@ -2710,7 +2712,7 @@ The progress display is the Progress class (Utilities/progress.h/.cpp), a self-c
 - Height. The container grows to fit the visible rows and Progress::sizeHint() reports it, so the status bar grows. heightChanged() is also connected in MW to set the status-bar minimum height; because QStatusBar centres its widgets and reserves its own vertical margin, the handler requests a few extra pixels (h + overhead), or the reserved padding is squeezed out when Progress fills the bar. MW floors the status-bar height at its pre-Progress height (MW::statusBarBaseHeight), so collapsing rows never clips the other status text.
 - clicked() opens the Caching preferences.
 
-G::showCacheProgress gates both ImageCache and MetaRead progress: when false, progress is neither calculated nor displayed (ImageCache::updateStatus forces InfoOnly, MetaRead::dispatch skips its progress emit, and the rows are disabled). It is set by Preferences > Caching > "Hide caching progress", persisted as "showCacheProgress", default true.
+G::showCacheProgress gates both ImageCache and MetaRead progress: when false, progress is neither calculated nor displayed (ImageCache::updateStatus forces InfoOnly, MetaRead::dispatch skips its progress emit, and the rows are disabled). It is set by Preferences > Caching > "Hide caching progress", persisted as "showCacheProgress", default false (hidden) since 2026-10-22; it was true before. Turning G::isRory on or off also sets it (on for Rory, off otherwise). The bar width is Preferences > Caching > "Cache progress bar width" (MW::cacheBarProgressWidth, settings key "cacheStatusWidth"), default 300 px since 2026-10-22 (was 100), and an out-of-range saved value (outside 100-1000) also falls back to 300.
 
 ### 5.3 Icon Caching
 

@@ -827,19 +827,17 @@ void Preferences::addGeneral()
     // Render video thumbnails
     i.name = "renderVideoThumb";
     i.parentName = "GeneralHeader";
-    i.captionText = "Render video thumbnails (slow).";
-    i.tooltip = "If true, the first frame of the video with be shown as the\n"
-                "thumbnail.  If false, then ""Video"" will be shown at the\n"
-                "bottom of the video.  Rendering the first frame cam be quite\n"
-                "slow, so if performance is important then do not render."
-                ;
+    i.captionText = "Render video thumbnails";
+    i.tooltip = "Show the first frame of each video as its thumbnail.\n"
+                "Turn off to show a plain video placeholder instead, which is\n"
+                "faster in folders with many videos.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::renderVideoThumb;
     i.key = "renderVideoThumb";
     i.delegateType = DT_Checkbox;
     i.type = "bool";
-    // addItem(i);
+    addItem(i);
 
     // Issue Logger
     i.name = "isLogAllToFileForDebugging";
@@ -1454,7 +1452,7 @@ void Preferences::addCaching()
     i.tooltip = "Change the width of the cache progress bar in the status bar.";
     i.hasValue = true;
     i.captionIsEditable = false;
-    i.defaultValue = 120;
+    i.defaultValue = 300;
     i.value = mw->cacheBarProgressWidth;
     i.key = "progressWidthSlider";
     i.delegateType = DT_Slider;

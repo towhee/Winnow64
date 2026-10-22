@@ -87,6 +87,9 @@ IssueLog::~IssueLog() {
 bool IssueLog::open() {
     issueLogFile.setFileName(issueLogPath);
 
+    // A fresh profile has no AppData/Log folder yet; QFile will not create it
+    QDir().mkpath(QFileInfo(issueLogPath).absolutePath());
+
     // Check if the file exists
     if (!QFile::exists(issueLogPath)) {
         QFile newFile(issueLogPath);

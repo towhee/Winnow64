@@ -486,7 +486,7 @@ bool MW::loadSettings()
         // filters
 
         // performance / productivity
-        G::showCacheProgress = true;
+        G::showCacheProgress = false;
         G::useJitIconCache = false;
 
         // cache (see MW::createImageCache in initialize.cpp)
@@ -539,7 +539,7 @@ bool MW::loadSettings()
     if (settings->contains("renderVideoThumb"))
         G::renderVideoThumb = settings->value("renderVideoThumb").toBool();
     else
-        G::renderVideoThumb = false;
+        G::renderVideoThumb = true;
 
     /* Mouse wheel sensitivity is now a percent (1 - 100, larger = more sensitive).
        The superseded wheelSensitivity key held 1 - 210 on the opposite scale, so an
