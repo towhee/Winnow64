@@ -2,8 +2,8 @@
 
 #include "fsalign_types.h"
 #include "fsfusion.h"
-#include "FSMerge.h"
-#include "FSFusionReassign.h"
+#include "fsmerge.h"
+#include "fsfusionreassign.h"
 
 #include <opencv2/core.hpp>
 #include <atomic>

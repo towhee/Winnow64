@@ -1,4 +1,7 @@
 #include "Main/mainwindow.h"
+#ifdef Q_OS_LINUX
+#include "Utilities/linux.h"
+#endif
 #include "Utilities/panelprobe.h"
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/rawformat.h"
@@ -840,6 +843,8 @@ void MW::diagnosticsMemory()
     Mac::availableMemory();
 #elif defined(Q_OS_WIN)
     Win::availableMemory();
+#elif defined(Q_OS_LINUX)
+    Linux::availableMemory();
 #endif
 
     quint64 totalRamMB = 0;
@@ -849,6 +854,8 @@ void MW::diagnosticsMemory()
     pressureLevel = Mac::memoryPressureLevel();
 #elif defined(Q_OS_WIN)
     totalRamMB = Win::totalMemoryMB();
+#elif defined(Q_OS_LINUX)
+    totalRamMB = Linux::totalMemoryMB();
 #endif
 
     const quint64 mb           = 1024ull * 1024ull;

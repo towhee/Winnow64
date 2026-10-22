@@ -70,6 +70,12 @@ void Winnets::sync(const QStringList &embellishDropletNames)
             copy.waitForFinished();
         }
     #endif
+    #ifdef Q_OS_LINUX
+        /* The master sits beside the Winnow executable (CMake puts both in app/);
+           it links the system Qt, so there is no runtime to stage. */
+        ext = "";
+        winnetPath = executableDirPath + "/Winnet";
+    #endif
     }
 
     // list of all existing droplet executables in the Winnets folder

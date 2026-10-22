@@ -9,7 +9,7 @@
 #include "qiodevice.h"
 #include "qbytearray.h"
 #include "lcms2.h"
-#include "image/colorprofile.h"
+#include "Image/colorprofile.h"
 #include "qhash.h"
 #include <QSharedData>
 #include "qdebug.h"

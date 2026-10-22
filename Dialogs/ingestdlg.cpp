@@ -1063,7 +1063,7 @@ void IngestDlg::getAvailableStorageMB()
             if (info.rootPath() == info.displayName()) drive = drivePath;
             else drive = drivePath + " (" + info.displayName() + ")";
         #endif
-        #ifdef Q_OS_MAC
+        #ifndef Q_OS_WIN
             drive = info.displayName();
         #endif
         qint64 bytes = info.bytesAvailable();
@@ -1098,7 +1098,7 @@ void IngestDlg::getAvailableStorageMB()
             if (info.rootPath() == info.displayName()) drive2 = drive2Path;
             else drive2 = drive2Path + " (" + info.displayName() + ")";
         #endif
-        #ifdef Q_OS_MAC
+        #ifndef Q_OS_WIN
             drive2 = info.displayName() + ":";
         #endif
         qint64 bytes = info.bytesAvailable();

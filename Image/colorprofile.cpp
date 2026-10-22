@@ -2,8 +2,8 @@
    This code was created by Qt and then abandoned
 */
 
-#include "image/colorprofile.h"
-#include "image/colorprofile_p.h"
+#include "Image/colorprofile.h"
+#include "Image/colorprofile_p.h"
 #include "qshareddata.h"
 #include "qiodevice.h"
 #include "lcms2.h"

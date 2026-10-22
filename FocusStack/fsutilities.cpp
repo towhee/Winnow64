@@ -1,4 +1,4 @@
-#include "FSUtilities.h"
+#include "fsutilities.h"
 #include "Main/global.h"
 #include <QtCore/qdebug.h>
 #include <QFileInfo>

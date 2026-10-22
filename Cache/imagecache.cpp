@@ -1,4 +1,7 @@
 #include "Cache/imagecache.h"
+#ifdef Q_OS_LINUX
+#include "Utilities/linux.h"
+#endif
 #include "Main/global.h"
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/rawformat.h"
@@ -1200,6 +1203,9 @@ void ImageCache::memChk()
     const quint64 cacheMB = (quint64)icd->sizeMB();
     //*/
     Mac::availableMemory();
+#endif
+#ifdef Q_OS_LINUX
+    Linux::availableMemory();
 #endif
 
     /*

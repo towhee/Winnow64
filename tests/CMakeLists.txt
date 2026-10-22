@@ -50,6 +50,10 @@ set(WINNOW_CORE_TEST_SOURCES
 if(WIN32)
     list(APPEND WINNOW_CORE_TEST_SOURCES ${CMAKE_SOURCE_DIR}/Utilities/win.cpp)
 endif()
+# Linux: global.cpp's processFootprintMB calls Linux:: (Utilities/linux.cpp).
+if(UNIX AND NOT APPLE)
+    list(APPEND WINNOW_CORE_TEST_SOURCES ${CMAKE_SOURCE_DIR}/Utilities/linux.cpp)
+endif()
 
 set(WINNOW_TEST_INCLUDE_DIRS
     ${CMAKE_SOURCE_DIR}
@@ -79,6 +83,11 @@ function(winnow_test_link_opencv target scope)
             ${LIB_DIR}/opencv/windows/build/include)
         target_link_libraries(${target} ${scope}
             ${LIB_DIR}/opencv/windows/build/x64/vc16/lib/opencv_world4110.lib)
+    else()
+        # Linux: the distro OpenCV found by the top-level find_package (imported
+        # targets named like the macOS libs)
+        target_include_directories(${target} ${scope} ${OpenCV_INCLUDE_DIRS})
+        target_link_libraries(${target} ${scope} ${ARGN})
     endif()
 endfunction()
 
@@ -381,7 +390,7 @@ target_link_libraries(tst_cameraprofile PRIVATE winnow_test_color)
 # instead of falling back to the container's own ispe. Fixtures are built byte by byte in
 # the test -- nothing here decodes a pixel.
 winnow_add_unit_test(tst_heicboxes unit/tst_heicboxes.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Heic/Heic.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Heic/heic.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/gps.cpp
@@ -804,6 +813,18 @@ if(TARGET Winnow)
             LABELS "soak"
         )
     endif()
+endif()
+
+# -----------------------------------------------------------------------------
+# Linux: every test runs headless. The app-launching tests that do not set
+# QT_QPA_PLATFORM themselves (smoke_launch, metadata_read, soak_smoke) find a display
+# on the Mac, but a Linux run is usually an SSH session or CI with none, where Qt aborts
+# with "no Qt platform plugin could be initialized".
+# -----------------------------------------------------------------------------
+if(UNIX AND NOT APPLE)
+    get_directory_property(_winnowLinuxTests TESTS)
+    set_property(TEST ${_winnowLinuxTests} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+        "QT_QPA_PLATFORM=set:offscreen")
 endif()
 
 # -----------------------------------------------------------------------------

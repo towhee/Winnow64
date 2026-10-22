@@ -1,8 +1,8 @@
-#include "FSFusionPMax.h"
+#include "fsfusionpmax.h"
 
-#include "FSFusionWavelet.h"
-#include "FSUtilities.h"
-#include "FSLoader.h"
+#include "fsfusionwavelet.h"
+#include "fsutilities.h"
+#include "fsloader.h"
 #include "Main/global.h"
 
 #include <opencv2/imgproc.hpp>

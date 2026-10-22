@@ -1,5 +1,5 @@
-#include "macos/macscale.h"
-#include "macos/macscale_p.h"
+#include "MacOS/macscale.h"
+#include "MacOS/macScale_p.h"
 #import <AppKit/AppKit.h>
 
 namespace QtMac {

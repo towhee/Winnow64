@@ -320,11 +320,10 @@ void InfoView::setColumn0Width()
     QFont ft = this->font();
     ft.setPixelSize(static_cast<int>(G::strFontSize.toInt() * 1.333/* * G::ptToPx*/));
     QFontMetrics fm(ft);
-    #ifdef Q_OS_WIN
-    setColumnWidth(0, fm.boundingRect("---Shutter speed---").width());
-    #endif
     #ifdef Q_OS_MAC
     setColumnWidth(0, fm.boundingRect("Shutter speed").width());
+    #else
+    setColumnWidth(0, fm.boundingRect("---Shutter speed---").width());
     #endif
 }
 

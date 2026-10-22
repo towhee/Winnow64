@@ -723,8 +723,8 @@ bool ImageDecoder::load()
 
         // SELECT DECODER TO USE
 
-        // only Qt image library available in windows code
-        #ifdef Q_OS_WIN
+        // only Qt image library available in windows and linux code
+        #ifndef Q_OS_MAC
         decoderToUse = QtImage;
         #endif
 
@@ -768,9 +768,8 @@ bool ImageDecoder::load()
         /*
         qDebug() << "ImageDecoder::load" << "HEIC image" << image.width() << image.height();
         //*/
-        #endif
-
-        #ifdef Q_OS_MAC
+        #else
+        // Mac and Linux: Qt's HEIF image plugin
         imFile.close();
 
         // Fast path: Apple's ImageIO uses the platform's hardware HEVC
@@ -876,7 +875,7 @@ bool ImageDecoder::load()
     /**************************************************************************/
     // JPEG format
     else if (ext == "jpg" || ext == "jpeg") {
-        #ifdef Q_OS_WIN
+        #ifndef Q_OS_MAC
         decoderToUse = QtImage;
         #endif
         #ifdef Q_OS_MAC

@@ -1,7 +1,7 @@
 #ifndef MACSCALE_H
 #define MACSCALE_H
 
-#include "MacOS/macScale.h"
+#include "MacOS/macscale.h"
 #include <QtCore/qglobal.h>
 #include <QSize>
 

@@ -744,6 +744,19 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         });
     }
 
+    /*  THE CATALOG MODES PUT THE FOLDER IN SCOPE FIRST. A folder load only catalogues
+        folders inside the scope table, which a fresh test-mode session does not have, so
+        catalog_capture and catalog_load passed only on an index an earlier run had left
+        behind (a fresh Linux VM, running the tests in parallel, had none). Scope only, no
+        scanner: what catalog_capture checks is that BROWSING an in-scope folder commits
+        it. Same cause as selfTestCatalogueFolder. */
+    if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_CATALOG") == 1
+        || !qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_QUERY").isNull()) {
+        CatalogScopeEntry e;
+        e.path = catalogScopeNormalize(loadPath);
+        catalogScope = CatalogScope{e};
+    }
+
     if (fsTree->select(loadPath))
         folderSelectionChange(loadPath, G::FolderOp::Add, /*resetDataModel*/true, recurse);
 
@@ -922,7 +935,8 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             deliberately separate. */
         if (qEnvironmentVariableIntValue("WINNOW_SELFTEST_CATALOG") == 1) {
             QThreadPool::globalInstance()->waitForDone(30000);
-            const int catalogued = Catalog::instance().count();
+            // this folder's rows, not the whole index an earlier run may have filled
+            const int catalogued = Catalog::instance().countUnder(folderPath, false);
             fprintf(stderr, "SELFTEST: catalogued=%d rows=%d\n", catalogued, rows);
             fflush(stderr);
             if (catalogued <= 0) {
@@ -17687,6 +17701,16 @@ void MW::revealInFileBrowser(QString path)
     args << "-e";
     args << "end tell";
     if (!QProcess::execute("/usr/bin/osascript", args))
+        return;
+#elif defined(Q_OS_LINUX)
+    // freedesktop FileManager1 (Nautilus, Dolphin, Nemo...) opens the folder with
+    // the item selected; exit code 0 = a file manager answered
+    QStringList args;
+    args << "--session" << "--print-reply" << "--dest=org.freedesktop.FileManager1"
+         << "--type=method_call" << "/org/freedesktop/FileManager1"
+         << "org.freedesktop.FileManager1.ShowItems"
+         << "array:string:" + QUrl::fromLocalFile(path).toString() << "string:";
+    if (!QProcess::execute("dbus-send", args))
         return;
 #endif
     QDesktopServices::openUrl(QUrl::fromLocalFile(info.isDir()? path : info.path()));

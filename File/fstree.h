@@ -3,7 +3,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Utilities/utilities.h"
-#include "HoverDelegate.h"
+#include "hoverdelegate.h"
 
 #ifndef FSTREE_H
 #define FSTREE_H

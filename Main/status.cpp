@@ -466,11 +466,10 @@ void MW::setCacheProgressEnabled(bool on)
 
 void MW::setCacheRunningLightsWidth() {
     QFontMetrics fm(metadataThreadRunningLabel->font());
-    #ifdef Q_OS_WIN
-    int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 2;
-    #endif
     #ifdef Q_OS_MAC
     int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 1.3;
+    #else
+    int charWidth = fm.horizontalAdvance(QStringLiteral("◉")) * 2;
     #endif
     metadataThreadRunningLabel->setFixedWidth(charWidth);
     imageThreadRunningLabel->setFixedWidth(charWidth);

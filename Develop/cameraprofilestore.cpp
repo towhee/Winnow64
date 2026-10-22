@@ -52,6 +52,11 @@ QStringList CameraProfileStore::roots()
     out << programFiles + "/RawTherapee";
     if (!localAppData.isEmpty()) out << localAppData + "/RawTherapee/dcpprofiles";
 #endif
+#ifdef Q_OS_LINUX
+    // no Adobe Camera Raw on Linux: the distro RawTherapee package + per-user folder
+    out << "/usr/share/rawtherapee/dcpprofiles"
+        << QDir::homePath() + "/.config/RawTherapee/dcpprofiles";
+#endif
 
     /* Winnow's own folder, for profiles the user made or was given. Listed LAST because
        the sweep keeps the FIRST profile of a given name for a camera (see scan()): a

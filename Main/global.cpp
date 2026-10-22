@@ -9,6 +9,9 @@
     #include <Windows.h>
     #include <psapi.h>
 #endif
+#ifdef Q_OS_LINUX
+    #include "Utilities/linux.h"
+#endif
 
 namespace G
 {
@@ -422,6 +425,8 @@ quint64 processFootprintMB()
         return static_cast<quint64>(pmc.WorkingSetSize / (1024ull * 1024ull));
     }
     return 0;
+#elif defined(Q_OS_LINUX)
+    return Linux::processFootprintMB();
 #else
     return 0;
 #endif

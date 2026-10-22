@@ -1,6 +1,6 @@
 #include "stack_depth_map.h"
 #include "ImageStack/focusstackutilities.h"
-#include "ImageStack/focusstackconstants.h"
+#include "ImageStack/FocusStackConstants.h"
 #include <QFileInfoList>
 #include <QElapsedTimer>
 #include <algorithm>    // std::clamp

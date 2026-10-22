@@ -5,7 +5,7 @@
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "File/fstree.h"
-#include "HoverDelegate.h"
+#include "hoverdelegate.h"
 
 class BookMarks : public QTreeWidget
 {

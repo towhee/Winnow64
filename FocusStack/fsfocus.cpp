@@ -1,4 +1,4 @@
-#include "FSFocus.h"
+#include "fsfocus.h"
 #include "fsutilities.h"
 #include "Main/global.h"
 
@@ -8,7 +8,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-#include "FSFusionWavelet.h"
+#include "fsfusionwavelet.h"
 
 /*
     FSFocus module overview

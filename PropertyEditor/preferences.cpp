@@ -1,5 +1,8 @@
 #include "preferences.h"
 #include "Main/mainwindow.h"
+#ifdef Q_OS_LINUX
+#include "Utilities/linux.h"
+#endif
 #include "Main/global.h"
 #include <QDebug>
 #include "Cache/devpreviewcache.h"
@@ -382,6 +385,9 @@ void Preferences::itemChange(QModelIndex idx)
         #endif
         #ifdef Q_OS_MAC
         Mac::availableMemory();     // sets G::availableMemoryMB
+        #endif
+        #ifdef Q_OS_LINUX
+        Linux::availableMemory();   // sets G::availableMemoryMB
         #endif
 
         quint64 memAvail = mw->icd->sizeMB() + G::availableMemoryMB;

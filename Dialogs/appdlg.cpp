@@ -32,7 +32,7 @@ Appdlg::Appdlg(QList<G::App> &externalApps, QWidget *parent)
     //     "border-radius: 20px; padding: 6px; }");
 
 
-    #ifdef Q_OS_LINIX
+    #ifdef Q_OS_LINUX
     //
     #endif
     #ifdef Q_OS_WIN

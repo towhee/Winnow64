@@ -397,11 +397,11 @@ cv::Mat focusEnergy(const Pyramid& pyr)
     return acc;
 }
 
-cv::Mat FSWavelet::fuseWavelet(const std::vector<cv::Mat>& stack32f,
-                               const cv::Mat& mu32f_in,
-                               const cv::Mat& sigma32f_in,
-                               const cv::Mat& amp32f_in,
-                               int levels)
+cv::Mat fuseWavelet(const std::vector<cv::Mat>& stack32f,
+                    const cv::Mat& mu32f_in,
+                    const cv::Mat& sigma32f_in,
+                    const cv::Mat& amp32f_in,
+                    int levels)
 {
     QString src = "FSWavelet::fuseWavelet";
     qDebug() << src;

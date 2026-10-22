@@ -50,14 +50,19 @@
     - [2.12.2 Collapse Is Not the F-Keys](#2122-collapse-is-not-the-f-keys)
     - [2.12.3 When a Bar Shows](#2123-when-a-bar-shows)
     - [2.12.4 Persisted for the Session and in Every Workspace](#2124-persisted-for-the-session-and-in-every-workspace)
-  - [2.13 Investigations and Fixes](#213-investigations-and-fixes)
-    - [2.13.1 Two Aborts From Holding What the Model Threw Away](#2131-two-aborts-from-holding-what-the-model-threw-away)
-      - [2.13.1.1 A Proxy Index Does Not Survive a Filter Change](#21311-a-proxy-index-does-not-survive-a-filter-change)
-      - [2.13.1.2 An Invalid QVariant Is Not Equal to 0](#21312-an-invalid-qvariant-is-not-equal-to-0)
-    - [2.13.2 Two Aborts on the Way In, and a Column Resize](#2132-two-aborts-on-the-way-in-and-a-column-resize)
-      - [2.13.2.1 Opening an Image Directly Crashed](#21321-opening-an-image-directly-crashed)
-      - [2.13.2.2 The Icon Delegate Painted From Uninitialised Members](#21322-the-icon-delegate-painted-from-uninitialised-members)
-      - [2.13.2.3 A Column Width Was Measured From a Thousand Rows](#21323-a-column-width-was-measured-from-a-thousand-rows)
+  - [2.13 Platforms (macOS, Windows, Linux)](#213-platforms-macos-windows-linux)
+    - [2.13.1 Building on Linux](#2131-building-on-linux)
+    - [2.13.2 What Linux Uses Where macOS and Windows Differ](#2132-what-linux-uses-where-macos-and-windows-differ)
+    - [2.13.3 Guarding Platform Code](#2133-guarding-platform-code)
+    - [2.13.4 Not Yet Done on Linux](#2134-not-yet-done-on-linux)
+  - [2.14 Investigations and Fixes](#214-investigations-and-fixes)
+    - [2.14.1 Two Aborts From Holding What the Model Threw Away](#2141-two-aborts-from-holding-what-the-model-threw-away)
+      - [2.14.1.1 A Proxy Index Does Not Survive a Filter Change](#21411-a-proxy-index-does-not-survive-a-filter-change)
+      - [2.14.1.2 An Invalid QVariant Is Not Equal to 0](#21412-an-invalid-qvariant-is-not-equal-to-0)
+    - [2.14.2 Two Aborts on the Way In, and a Column Resize](#2142-two-aborts-on-the-way-in-and-a-column-resize)
+      - [2.14.2.1 Opening an Image Directly Crashed](#21421-opening-an-image-directly-crashed)
+      - [2.14.2.2 The Icon Delegate Painted From Uninitialised Members](#21422-the-icon-delegate-painted-from-uninitialised-members)
+      - [2.14.2.3 A Column Width Was Measured From a Thousand Rows](#21423-a-column-width-was-measured-from-a-thousand-rows)
 - [3 Folder Loading](#3-folder-loading)
   - [3.1 Overview](#31-overview)
     - [3.1.1 Phase 1: Build the DataModel (GUI Thread)](#311-phase-1-build-the-datamodel-gui-thread)
@@ -1404,13 +1409,73 @@ Several paths push dock visibility back from the actions and would silently undo
 - MW::invokeWorkspace applies w.areaCollapse LAST, after restoreState, placeShowHideBars and restoreDockTabSelection.
 - At startup MW::applySessionAreaCollapse runs at the end of showEvent, and again in MW::startLibraryWhenExposed after chooseSource applies the Library layout, so the SESSION'S collapse wins over the startup layout's. (It used to be session-only and every workspace apply dropped it, which also lost it across a restart for a session left in the Library.)
 
-### 2.13 Investigations and Fixes
+### 2.13 Platforms (macOS, Windows, Linux)
 
-#### 2.13.1 Two Aborts From Holding What the Model Threw Away
+Winnow builds and runs on macOS, Windows and Linux. macOS and Windows are the shipped platforms; Linux builds and runs, and passes the test suite apart from model_mutation's "new version" step, which fails on macOS too (after New Version the selection stays on the master); it is not packaged yet (see [2.13.4 Not Yet Done on Linux](#2134-not-yet-done-on-linux)). Platform code is guarded with `Q_OS_MAC`, `Q_OS_WIN` and `Q_OS_LINUX`; the native helpers live in `Utilities/mac.mm`, `Utilities/win.cpp` and `Utilities/linux.cpp`.
+
+#### 2.13.1 Building on Linux
+
+Developed on Ubuntu 26.04 LTS (arm64) in a UTM virtual machine. Everything comes from distro packages:
+
+```
+sudo apt install build-essential clang cmake ninja-build git pkg-config \
+  qt6-base-dev qt6-base-dev-tools qt6-multimedia-dev qt6-svg-dev qt6-tools-dev \
+  qt6-tools-dev-tools qt6-l10n-tools libqt6sql6-sqlite qt6-image-formats-plugins \
+  kimageformat6-plugins libopencv-dev libtiff-dev zlib1g-dev libonnxruntime-dev \
+  libimage-exiftool-perl libgl1-mesa-dev libxkbcommon-dev \
+  gstreamer1.0-plugins-good gstreamer1.0-libav
+```
+
+Then, from the repository root:
+
+```
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+ctest --test-dir build/linux-debug --output-on-failure -j4
+```
+
+- The presets are `linux-debug` and `linux-release`. The executable lands in `build/<preset>/app/` with the Winnet master and the two bundled models beside it, as on Windows.
+- The presets use clang, not GCC. The golden-hash tests (`tst_outputtransform`) pin rendered output bit for bit, and clang contracts multiply-adds into FMA by default where GCC in `-std=c++20` mode does not; the 16-bit sRGB case differed in the last bit under GCC and matches the Mac under clang. GCC still compiles the tree (it was the first compiler used, and it found code clang and MSVC accept, such as a redundant `Namespace::` qualifier inside that namespace).
+- ONNX Runtime is on (`WINNOW_ENABLE_ORT`), using the CPU execution provider: Linux has no CoreML or DirectML equivalent wired in. `OrtBackend` sets free-dimension overrides through the C API because the C++ wrapper in Ubuntu's ORT 1.23 lacks `AddFreeDimensionOverrideByName`.
+- `kimageformat6-plugins` is what decodes HEIC/HEIF (and AVIF, JPEG XL) on Linux, through Qt's image plugin interface.
+- Tests run headless on Linux: every test gets `QT_QPA_PLATFORM=offscreen` (tests/CMakeLists.txt), because a Linux run is usually an SSH session or CI with no display.
+- To see the GUI without a desktop session, run it under Xvfb (`Xvfb :99 &`, then `DISPLAY=:99 QT_QPA_PLATFORM=xcb build/linux-debug/app/Winnow --selftest <folder>`) and capture the screen with ImageMagick's `import -window root`.
+
+#### 2.13.2 What Linux Uses Where macOS and Windows Differ
+
+- Image decoding: JPEG through Qt (as on Windows; jpegturbo and LibTiff are Mac-only sources), TIFF through libtiff in `Tiff` (as on Windows), HEIC through the Qt HEIF plugin (as on the Mac, without the ImageIO fast path).
+- Memory: `Linux::availableMemory` reads MemAvailable from /proc/meminfo, `Linux::totalMemoryMB` reads MemTotal, and `G::processFootprintMB` reads the resident set from /proc/self/statm. These drive the image cache budget and the memory-overrun watchdog exactly as the Mac and Windows figures do.
+- ExifTool: the distro `exiftool` on the PATH, else `ExifTool/exiftool` beside the executable.
+- Reveal: the freedesktop `org.freedesktop.FileManager1.ShowItems` D-Bus call (GNOME Files, Dolphin, Nemo), which opens the folder with the item selected; if no file manager answers it falls back to opening the folder. The menu text is "Show in File Manager".
+- Trash: `QFile::moveToTrash` (the freedesktop trash); the UI says "trash", as on the Mac.
+- Volumes: removable drives are `/media/<user>/<vol>`, `/run/media/<user>/<vol>` or `/mnt/<vol>` (`Utilities::getDrive`, `getDriveName`); eject is `gio mount -e`.
+- Folders panel: at the root only `/home`, `/media` and `/mnt` are shown, and hidden folders are hidden everywhere (the Mac shows `/Users` and `/Volumes`).
+- Locked files: a file the user cannot write counts as locked (`Utilities::isLocked`), as the read-only attribute does on Windows.
+- Camera profiles: no Adobe Camera Raw on Linux; the DCP sweep adds RawTherapee's `/usr/share/rawtherapee/dcpprofiles` and `~/.config/RawTherapee/dcpprofiles`.
+- Style metrics: Linux draws with Qt's own style, as Windows does, so it takes the Windows values for the dock title-bar height, the checkbox CSS, the tooltip palette, the status glyph width and the Info panel's first column.
+- Winnets: the master is `Winnet` beside the executable and links the system Qt, so no Qt runtime is staged into the Winnets folder.
+
+#### 2.13.3 Guarding Platform Code
+
+- A Mac block and a Windows block with no `#else` leave Linux with neither. Where Linux should share one side, write `#ifdef Q_OS_MAC ... #else ... #endif` (or `#ifndef Q_OS_WIN`); where it needs its own answer, add a `Q_OS_LINUX` block. Code that only skips an optional platform nicety (a title-bar colour, an ImageIO fast path) needs nothing.
+- A non-void function must return on every platform. With every return inside Mac and Windows blocks, Linux fell off the end of `WidgetCSS::checkBox` and the app trapped at startup; GCC and clang both warn (`-Wreturn-type`), so treat that warning as an error.
+- Linux filenames are case-sensitive. Every `#include` and every CMake source path must match the file's case in git exactly; macOS and Windows forgive a mismatch, so it only shows up on Linux. The first Linux build found 46 (for example `ImageFormats/Tiff/` for `ImageFormats/TIFF/`, `HoverDelegate.h` for `hoverdelegate.h`).
+
+#### 2.13.4 Not Yet Done on Linux
+
+- Packaging and installation (AppImage or .deb), and the auto-updater.
+- Share (the Share menu item exists only on macOS and Windows).
+- The display colour profile: Linux renders to sRGB.
+- At the root of the Folders panel, Fedora-style `/run/media` is not listed (it is under `/run`, which is hidden).
+- Qt prints "QFont::setPointSizeF: Point size <= 0" a few times at startup: a stylesheet passes a zero font size. Qt ignores it and keeps the inherited size; the source is not yet found.
+
+### 2.14 Investigations and Fixes
+
+#### 2.14.1 Two Aborts From Holding What the Model Threw Away
 
 Both are the same mistake: keeping a value the model has since invalidated, and being told about it by an assert Qt only added in 6.9.
 
-##### 2.13.1.1 A Proxy Index Does Not Survive a Filter Change
+##### 2.14.1.1 A Proxy Index Does Not Survive a Filter Change
 
 Selection held shiftAnchorIndex and shiftExtendIndex as QModelIndex members across operations. SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits layoutChanged WITHOUT a persistent-index remapping (its own comment says so). A stored index then keeps reporting isValid() TRUE, because row, column and model are all still set, while its internalPointer() is a freed QSortFilterProxyModelPrivate::Mapping. isValid() cannot protect against that; the next read segfaults inside proxy_to_source.
 
@@ -1418,7 +1483,7 @@ Setting a colour or a rating calls MW::filterChange, so an ordinary cull sequenc
 
 Fix: they are ints now (shiftAnchorRow / shiftExtendRow), and Selection::shiftIdx(row) rebuilds an index against the proxy as it currently is, returning an invalid one when the row no longer exists. A row that has gone out of range is a recoverable answer; a dangling pointer is not.
 
-##### 2.13.1.2 An Invalid QVariant Is Not Equal to 0
+##### 2.14.1.2 An Invalid QVariant Is Not Equal to 0
 
 InfoView::updateInfo guarded its shutter-speed reciprocal with `if (value == 0)`, which compares a QVariant against QVariant(int 0). An invalid QVariant (a row whose metadata has not landed; the info panel updates on every selection, including during a load or a re-sort) is not equal to it, so the guard passed, toDouble() returned 0.0, and 1 / 0.0 is +inf. Qt 6.9 made qRound's conversion checked, so that is now qCheckedFPConversionToInteger asserting; before, it was a garbage shutter speed in the panel.
 
@@ -1426,23 +1491,23 @@ Fix: the guard tests the DOUBLE now.
 
 It was caught by the --selftest stress pass (WINNOW_SELFTEST_STRESS=1), which re-sorts mid-load and so selects rows whose metadata is still in flight. That is the pass that finds this shape of bug.
 
-#### 2.13.2 Two Aborts on the Way In, and a Column Resize
+#### 2.14.2 Two Aborts on the Way In, and a Column Resize
 
 Three things that happen at or near startup, all found while planning the ingest follow-ups rather than from a user report.
 
-##### 2.13.2.1 Opening an Image Directly Crashed
+##### 2.14.2.1 Opening an Image Directly Crashed
 
 MW::handleStartupArgs documents its argument convention as arg[0] = srcProgram, arg[1+] = paths. That is Winnets' convention. It does not hold for `Winnow <file>`, for Finder's Open With, or for a drop on the app icon: those send ONE element, which main.cpp joins into an args string with no delimiter, so argList has length 1, arg[0] IS the path, and the final else branch's unguarded argList.at(1) read past the end (an ASSERT in QList::at in a debug build, an out-of-bounds read in a release one). Every other branch guards its indexing (FocusStack tests &lt; 3, Embellish tests &lt; 2) and the function-wide guard above it is commented out.
 
 Fix: it takes arg[1] when there is one and arg[0] otherwise, and hands the path to folderAndFileSelectionChange, which is what that function is for. Opening an image now lands ON the image rather than merely in its folder.
 
-##### 2.13.2.2 The Icon Delegate Painted From Uninitialised Members
+##### 2.14.2.2 The Icon Delegate Painted From Uninitialised Members
 
 IconViewDelegate held a block of int members with no in-class initialiser (labelFontSize, fontHt, textHeadroom, textHeight, badgeSize, iconNumberSize, ratingDiam, ratingTextSize, alignVertPad, alignHorPad, starsWidth), assigned in exactly one place, setThumbDimensions, and read by paint(). Before that first call they held whatever was on the heap. Qt 6.9 made QRect's constructor compute x2 = x + w - 1 with CHECKED arithmetic, so a garbage starsWidth going into the rating badge's QRect became an abort rather than a wrong rectangle: qt_assert_x -> QCheckedInt operator+ -> QRect -> IconViewDelegate::paint (captured 2026-09-06, debug build).
 
 Fix: all are zero-initialised, which turns the worst case back into an empty rect. The file already carried a scar from the same class of bug (see the setPixelSize note in setThumbDimensions).
 
-##### 2.13.2.3 A Column Width Was Measured From a Thousand Rows
+##### 2.14.2.3 A Column Width Was Measured From a Thousand Rows
 
 MW::folderChangeCompleted measured 809 ms on a 3,404-row card folder, although almost everything in its body is one-shot, queued or O(1). The outlier was tableView->resizeColumns(), which is unconditional and calls resizeColumnToContents for each of the \~78 columns. That goes to sizeHintForColumn, which samples up to QHeaderView::resizeContentsPrecision() rows per column, and nothing had set it, so it was Qt's default of 1000: up to 78,000 delegate sizeHint() calls, each pulling a cell through the proxy, on the GUI thread.
 
@@ -1845,7 +1910,7 @@ MW::scrollToCurrentRowIfNotVisible
 
 SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits ONE layoutAboutToBeChanged / layoutChanged pair; the mapping is rebuilt lazily and once. The incremental invalidateRowsFilter() emits one begin/endInsertRows per CONTIGUOUS RUN of rows changing visibility, and a filter over a photo library is scattered by nature: 348 signal pairs for one action, each splicing the proxy's mapping vectors and reaching three views.
 
-The price is persistent indexes. layoutChanged carries no remapping, so the selection model and any open editor are invalidated rather than moved. That is acceptable only because of what surrounds it: MW::filterChange saves the selection before and restores it after (Selection::recoverVisible, or a fresh select when the current row was filtered out), as it has always done around a sort. Nothing else in the app listens to the proxy's rowsInserted, and the snapshot rebuild is wired to layoutChanged as well, so the workers are still told. A QModelIndex held across a filter change is a dangling pointer (see [2.13.1.1 A Proxy Index Does Not Survive a Filter Change](#21311-a-proxy-index-does-not-survive-a-filter-change)).
+The price is persistent indexes. layoutChanged carries no remapping, so the selection model and any open editor are invalidated rather than moved. That is acceptable only because of what surrounds it: MW::filterChange saves the selection before and restores it after (Selection::recoverVisible, or a fresh select when the current row was filtered out), as it has always done around a sort. Nothing else in the app listens to the proxy's rowsInserted, and the snapshot rebuild is wired to layoutChanged as well, so the workers are still told. A QModelIndex held across a filter change is a dangling pointer (see [2.14.1.1 A Proxy Index Does Not Survive a Filter Change](#21411-a-proxy-index-does-not-survive-a-filter-change)).
 
 #### 4.1.2 No Re-Sort Unless the Sort Is Wrong
 

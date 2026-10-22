@@ -1,4 +1,4 @@
-#include "FolderCompressor.h"
+#include "foldercompressor.h"
 
 FolderCompressor::FolderCompressor(QObject *parent) :
     QObject(parent)

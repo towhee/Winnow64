@@ -538,7 +538,7 @@ void MW::deleteSelectedFiles()
         #ifdef Q_OS_WIN
         msgBox.setText("This operation will move all selected images to the recycle bin.");
         #endif
-        #ifdef Q_OS_MAC
+        #ifndef Q_OS_WIN
         msgBox.setText("This operation will move all selected images to the trash.");
         #endif
         QString info = "Do you want continue?";
@@ -729,7 +729,7 @@ void MW::deleteFolder()
         #ifdef Q_OS_WIN
         QString trash = "recycle bin";
         #endif
-        #ifdef Q_OS_MAC
+        #ifndef Q_OS_WIN
         QString trash = "trash";
         #endif
         msgBox.setText("This operation will move the folder<br>"
@@ -792,7 +792,7 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     #ifdef Q_OS_WIN
     QString trash = "recycle bin";
     #endif
-    #ifdef Q_OS_MAC
+    #ifndef Q_OS_WIN
     QString trash = "trash";
     #endif
     msgBox.setText("This operation will DELETE ALL\n"

@@ -1,4 +1,4 @@
-#include "FSDepth.h"
+#include "fsdepth.h"
 #include "Main/global.h"
 
 #include <QDir>
@@ -12,7 +12,7 @@
 #include "FocusStack/fsfocus.h"
 #include "FocusStack/fsfusionwavelet.h"
 #include "FocusStack/fsmerge.h"
-#include "FocusStack/FSUtilities.h"
+#include "FocusStack/fsutilities.h"
 
 /*
 FSDepth implements the “depth map” stage of the focus stacking pipeline.  It
@@ -958,14 +958,14 @@ bool runFromGraySlices(
     return false;
 }
 
-bool FSDepth::streamGraySlice(const cv::Mat        &graySlice,
-                              int                  sliceIndex,
-                              const QString        &depthFolder,
-                              const Options        &opt,
-                              StreamState          &state,
-                              std::atomic_bool     *abortFlag,
-                              ProgressCallback      progressCb,
-                              StatusCallback        statusCb)
+bool streamGraySlice(const cv::Mat        &graySlice,
+                     int                  sliceIndex,
+                     const QString        &depthFolder,
+                     const Options        &opt,
+                     StreamState          &state,
+                     std::atomic_bool     *abortFlag,
+                     ProgressCallback      progressCb,
+                     StatusCallback        statusCb)
 {
     const QString srcFun = "FSDepth::streamGraySlice";
     QString s = QString::number(sliceIndex);
@@ -1053,12 +1053,12 @@ bool FSDepth::streamGraySlice(const cv::Mat        &graySlice,
     return true;
 }
 
-bool FSDepth::finishStreaming(const QString    &depthFolder,
-                              const Options    &opt,
-                              int              sliceCount,
-                              StreamState      &state,
-                              StatusCallback    statusCb,
-                              cv::Mat          *depthIndex16Out)
+bool finishStreaming(const QString    &depthFolder,
+                     const Options    &opt,
+                     int              sliceCount,
+                     StreamState      &state,
+                     StatusCallback    statusCb,
+                     cv::Mat          *depthIndex16Out)
 {
     QString srcFun = "FSDepth::finishStreaming";
     if (G::FSLog) G::log(srcFun);

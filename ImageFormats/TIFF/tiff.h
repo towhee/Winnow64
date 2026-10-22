@@ -15,14 +15,15 @@
 #include <cstring>
 
 #ifdef Q_OS_MAC
-#include "ImageFormats/Tiff/libtiff.h"
+#include "ImageFormats/TIFF/libtiff.h"
 #include <tiffio.h>    // libtiff
 // used on macbookair
 // #include "/opt/homebrew/Cellar/libtiff/4.7.0/include/tiffio.h"    // libtiff
 // #include "zlib.h"
 #endif
-#ifdef Q_OS_WIN
-#include "tiffio.h"     // vendored libtiff — Lib/libtiff/include is on the include path
+#ifndef Q_OS_MAC
+// Windows: vendored libtiff (Lib/libtiff/include); Linux: libtiff-dev
+#include "tiffio.h"
 #include "zlib.h"
 #endif
 

@@ -1,4 +1,4 @@
-#include "FusionPyr.h"
+#include "fusionpyr.h"
 #include "fsutilities.h"
 
 #include <opencv2/imgproc.hpp>

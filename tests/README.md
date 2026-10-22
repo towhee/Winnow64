@@ -27,6 +27,11 @@ ctest --test-dir build/mac-debug --output-on-failure
 Filter by layer with `ctest -L unit` or `ctest -L smoke`. Unit tests run headless
 (`QT_QPA_PLATFORM=offscreen`); the smoke test runs the real app via `--selftest`.
 
+On Linux use the `linux-debug` preset (`cmake --preset linux-debug`, then
+`cmake --build --preset linux-debug` and `ctest --test-dir build/linux-debug`).
+Every Linux test runs headless, including the app-launching ones. Setup is in
+notes/Documentation.md, "2.13.1 Building on Linux".
+
 ## ThreadSanitizer layer
 
 A full instrumented build of the app, exercised via `--selftest`:

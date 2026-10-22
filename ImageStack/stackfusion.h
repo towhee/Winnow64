@@ -7,7 +7,7 @@
 #include <QVector>
 #include <QtMath>
 #include <QDebug>
-#include "main/global.h"
+#include "Main/global.h"
 #include <opencv2/opencv.hpp>
 #include "ImageStack/focusstackutilities.h"
 #include "ImageStack/focuswavelet.h"

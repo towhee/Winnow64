@@ -4,7 +4,7 @@
 #include <QStyledItemDelegate>
 #include <QPainter>
 #include <QDebug>
-#include "main/global.h"
+#include "Main/global.h"
 
 class HoverDelegate : public QStyledItemDelegate {
     Q_OBJECT

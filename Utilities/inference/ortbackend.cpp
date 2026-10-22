@@ -59,8 +59,10 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
 
     Ort::SessionOptions so;
     so.SetGraphOptimizationLevel(GraphOptimizationLevel::ORT_ENABLE_ALL);
+    // C API: the C++ wrapper only gained this in newer ORT (Ubuntu ships 1.23)
     for (const auto &[name, value] : fixedDims)
-        so.AddFreeDimensionOverrideByName(name.c_str(), value);
+        Ort::ThrowOnError(Ort::GetApi().AddFreeDimensionOverrideByName(so, name.c_str(),
+                                                                       value));
 
     /* Try the platform accelerator EP first; on any failure fall through to a plain CPU
        session (ORT runs every node on CPU when no EP claims it). */

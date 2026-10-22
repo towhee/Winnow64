@@ -258,7 +258,7 @@ set(WINNOW_SOURCES
     ImageFormats/Dng/dng.cpp
     ImageFormats/Fuji/fuji.cpp
     ImageFormats/Fuji/fujicompressed.cpp
-    ImageFormats/Heic/Heic.cpp
+    ImageFormats/Heic/heic.cpp
     ImageFormats/Jpeg/jpeg.cpp
     ImageFormats/Nikon/nikon.cpp
     ImageFormats/Olympus/olympus.cpp
@@ -274,8 +274,8 @@ set(WINNOW_SOURCES
     ImageFormats/Raw/rawformat.cpp
     ImageFormats/Raw/tiffwalk.cpp
     ImageFormats/Sony/sony.cpp
-    ImageFormats/Tiff/rorytiff.cpp
-    ImageFormats/Tiff/tiff.cpp
+    ImageFormats/TIFF/rorytiff.cpp
+    ImageFormats/TIFF/tiff.cpp
     ImageFormats/Video/mov.cpp
     ImageFormats/Video/mp4.cpp
 
@@ -405,7 +405,7 @@ set(WINNOW_SOURCES
 
     # Metadata
     Metadata/exif.cpp
-    Metadata/exiftool.cpp
+    Metadata/ExifTool.cpp
     Metadata/gps.cpp
     Metadata/ifd.cpp
     Metadata/iptc.cpp
@@ -676,8 +676,8 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/rawimage.h
     ImageFormats/Raw/decoderrevision.h
     ImageFormats/Sony/sony.h
-    ImageFormats/Tiff/rorytiff.h
-    ImageFormats/Tiff/tiff.h
+    ImageFormats/TIFF/rorytiff.h
+    ImageFormats/TIFF/tiff.h
     ImageFormats/Video/mov.h
     ImageFormats/Video/mp4.h
 
@@ -711,7 +711,7 @@ set(WINNOW_HEADERS
     Main/widgetcss.h
 
     Metadata/exif.h
-    Metadata/exiftool.h
+    Metadata/ExifTool.h
     Metadata/gps.h
     Metadata/ifd.h
     Metadata/imagemetadata.h
@@ -872,7 +872,7 @@ if(APPLE)
         ImageFormats/Jpeg/jpeg2.cpp
         ImageFormats/Jpeg/jpegturbo.cpp
         ImageFormats/Jpeg/jpgdecoder.cpp
-        ImageFormats/Tiff/libtiff.cpp
+        ImageFormats/TIFF/libtiff.cpp
         # qtlockedfile_unix.cpp is #included by qtlocalpeer.cpp — do not compile standalone
         Utilities/mac.mm
     )
@@ -881,7 +881,7 @@ if(APPLE)
         ImageFormats/Jpeg/jpeg2.h
         ImageFormats/Jpeg/jpgdecoder.h
         ImageFormats/Jpeg/jpegturbo.h
-        ImageFormats/Tiff/libtiff.h
+        ImageFormats/TIFF/libtiff.h
         Utilities/mac.h
     )
 elseif(WIN32)
@@ -894,6 +894,13 @@ elseif(WIN32)
         ImageFormats/Heic/de265.h
         Main/winnativeeventfilter.h
         Utilities/win.h
+    )
+elseif(UNIX)
+    list(APPEND WINNOW_SOURCES
+        Utilities/linux.cpp
+    )
+    list(APPEND WINNOW_HEADERS
+        Utilities/linux.h
     )
 endif()
 
@@ -1436,6 +1443,58 @@ if(WIN32)
             "$<TARGET_FILE:Winnet>" "${_winnow_out}"
         COMMENT "Deploying Winnet.exe (built target)"
         VERBATIM)
+endif()
+
+# =============================================================================
+# Linux dependencies (distro packages; developed on Ubuntu 26.04 arm64)
+#   apt: qt6-base-dev qt6-multimedia-dev qt6-svg-dev libopencv-dev libtiff-dev
+#        zlib1g-dev libonnxruntime-dev (only with WINNOW_ENABLE_ORT) libimage-exiftool-perl
+#   As on Windows, libtiff backs Tiff (tiff.cpp); the Mac-only LibTiff/jpegturbo
+#   fast-path sources are not compiled.
+#   Like Windows, the exe lands in <build>/app with its bundled models beside it,
+#   which is where applicationDirPath() looks for them.
+# =============================================================================
+if(UNIX AND NOT APPLE)
+    find_package(OpenCV 4 REQUIRED COMPONENTS
+        core imgproc imgcodecs video dnn photo)
+    set(WINNOW_OPENCV_PREFIX "${OpenCV_INSTALL_PATH}"
+        CACHE INTERNAL "OpenCV prefix for tests")
+    target_link_libraries(Winnow PRIVATE ${OpenCV_LIBS})
+    target_include_directories(Winnow PRIVATE ${OpenCV_INCLUDE_DIRS})
+
+    find_package(ZLIB REQUIRED)
+    find_package(TIFF REQUIRED)
+    target_link_libraries(Winnow PRIVATE ZLIB::ZLIB TIFF::TIFF)
+
+    if(WINNOW_ENABLE_ORT)
+        find_package(onnxruntime CONFIG)
+        if(onnxruntime_FOUND)
+            target_link_libraries(Winnow PRIVATE onnxruntime::onnxruntime)
+            target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_ORT)
+            message(STATUS "ONNX Runtime enabled (Linux/CPU)")
+        else()
+            message(WARNING "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
+                            "(apt install libonnxruntime-dev); "
+                            "neural inference stays disabled.")
+        endif()
+    endif()
+
+    set_target_properties(Winnow Winnet PROPERTIES
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/app")
+
+    foreach(_m focus_point_model pmrid)
+        if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx")
+            add_custom_command(TARGET Winnow POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${CMAKE_CURRENT_SOURCE_DIR}/ReleaseExtras/${_m}.onnx"
+                    "$<TARGET_FILE_DIR:Winnow>"
+                COMMENT "Deploying ${_m}.onnx"
+                VERBATIM)
+        else()
+            message(FATAL_ERROR "ReleaseExtras/${_m}.onnx is missing -- it is a BUNDLED "
+                                "model and must ship beside the Winnow executable.")
+        endif()
+    endforeach()
 endif()
 
 # =============================================================================

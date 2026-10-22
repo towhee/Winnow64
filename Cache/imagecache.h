@@ -9,7 +9,7 @@
 #include "Metadata/metadata.h"
 #include "Image/pixmap.h"
 #include "Cache/imagedecoder.h"
-#include "Utilities/MovingAvg.h"
+#include "Utilities/movingavg.h"
 #include <algorithm>         // reqd to sort cache
 #include <QMutex>
 #include <QSize>

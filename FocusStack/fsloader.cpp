@@ -380,13 +380,13 @@ static inline bool rectInside(const cv::Rect& r, const cv::Size& s)
 }
 
 // not being used
-bool FSLoader::loadAlignedSliceOrig(int sliceIdx,
-                                    const QStringList& inputPaths,
-                                    const std::vector<Result>& globals,
-                                    cv::Rect roiPadToAlign,
-                                    cv::Rect validAreaAlign,
-                                    cv::Mat& gray8Orig,
-                                    cv::Mat& colorOrig)
+bool loadAlignedSliceOrig(int sliceIdx,
+                          const QStringList& inputPaths,
+                          const std::vector<Result>& globals,
+                          cv::Rect roiPadToAlign,
+                          cv::Rect validAreaAlign,
+                          cv::Mat& gray8Orig,
+                          cv::Mat& colorOrig)
 {
     QString srcFun = "FSLoader::loadAlignedSliceOrig";
     QString s = QString::number(sliceIdx);

@@ -16,6 +16,12 @@ ExifTool::ExifTool()
     // exifToolPath = contentsDir + "/Resources/ExifTool/exiftool";
     exifToolPath = macOSDir + "/exiftool_wrapper";
     #endif
+    #ifdef Q_OS_LINUX
+    // distro exiftool (libimage-exiftool-perl), else a bundled copy beside the exe
+    exifToolPath = QStandardPaths::findExecutable("exiftool");
+    if (exifToolPath.isEmpty())
+        exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+    #endif
     // confirm exifToolPath exists
     QFileInfo etInfo(exifToolPath);
     if (!etInfo.exists()) {

@@ -1,7 +1,7 @@
 #include <iostream>
 #include <fstream>
 
-#include "jpgDecoder.h"
+#include "jpgdecoder.h"
 
 
 

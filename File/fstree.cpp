@@ -308,7 +308,18 @@ bool FSFilter::filterAcceptsRow(int sourceRow, const QModelIndex &sourceParent) 
     return true;
 #endif
 
-#ifdef Q_OS_LINIX
+#ifdef Q_OS_LINUX
+    /* As on the Mac (/Users, /Volumes): at the root show only the user's homes and
+       the removable/mounted volumes, and hide hidden folders everywhere. */
+    if (sourceParent.row() == -1) return true;
+    if (!sourceParent.isValid()) return true;
+
+    QString fParentPath = sourceParent.data(QFileSystemModel::FilePathRole).toString();
+    QString fPath = sourceParent.model()->index(sourceRow, 0, sourceParent).data(QFileSystemModel::FilePathRole).toString();
+    if (fParentPath == "/")
+        return fPath == "/home" || fPath == "/media" || fPath == "/mnt";
+    if (QFileInfo(fPath).isHidden()) return false;
+
     return true;
 #endif
 }

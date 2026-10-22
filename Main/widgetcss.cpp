@@ -1179,9 +1179,7 @@ QString WidgetCSS::checkBox()
 {
 #ifdef Q_OS_MAC
     return "";
-#endif
-
-#ifdef Q_OS_WIN
+#else
     return
     "QCheckBox {"
         "spacing: 5px;"

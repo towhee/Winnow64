@@ -14,7 +14,7 @@
 #include <opencv2/imgproc.hpp>
 
 #include "ImageStack/focusstackutilities.h"
-#include "ImageStack/focusstackconstants.h"
+#include "ImageStack/FocusStackConstants.h"
 #include "ImageStack/focuswavelet.h"
 
 class FocusMeasure : public QObject

@@ -434,19 +434,19 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     }
 
     return Status::Fail;
-    #endif
-
-    #ifdef Q_OS_MAC
+    #else
     if (abort) return Status::Fail;
 
+    #ifdef Q_OS_MAC
     // Fast path: ImageIO returns the embedded thumbnail when present, or
     // decodes at the requested size. Either is far cheaper than a full
     // QImage::load() + scaled() of the primary image.
     if (macImageIOThumbnail(fPath, G::maxIconSize, image) && !image.isNull()) {
         return Status::Success;
     }
+    #endif
 
-    // Fallback: Heic natively supported on Mac via Qt's image plugin.
+    // Fallback: Heic via Qt's image plugin (Mac native; Linux kimageformats).
     if (image.load(fPath)) {
         if (image.isNull()) {
             QString msg = "Could not read thumb using QImage::load.";

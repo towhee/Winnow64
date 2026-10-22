@@ -1,4 +1,4 @@
-#include "HoverDelegate.h"
+#include "hoverdelegate.h"
 
 HoverDelegate::HoverDelegate(QObject *parent)
     : QStyledItemDelegate(parent), hoveredIndex(QModelIndex())

@@ -130,6 +130,41 @@
         "CMAKE_BUILD_TYPE": "Release",
         "WINNOW_ENABLE_ORT": "ON"
       }
+    },
+
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug (Ninja, clang, system Qt)",
+      "inherits": "_base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "WINNOW_ENABLE_ORT": "ON"
+      }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release (Ninja, clang, system Qt)",
+      "inherits": "_base",
+      "generator": "Ninja",
+      "condition": {
+        "type": "equals",
+        "lhs": "${hostSystemName}",
+        "rhs": "Linux"
+      },
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "CMAKE_C_COMPILER": "clang",
+        "CMAKE_CXX_COMPILER": "clang++",
+        "WINNOW_ENABLE_ORT": "ON"
+      }
     }
   ],
 
@@ -140,6 +175,8 @@
     { "name": "mac-tsan",    "configurePreset": "mac-tsan"    },
     { "name": "mac-asan",    "configurePreset": "mac-asan"    },
     { "name": "win-debug",   "configurePreset": "win-debug"   },
-    { "name": "win-release", "configurePreset": "win-release" }
+    { "name": "win-release", "configurePreset": "win-release" },
+    { "name": "linux-debug",   "configurePreset": "linux-debug"   },
+    { "name": "linux-release", "configurePreset": "linux-release" }
   ]
 }

@@ -7,7 +7,7 @@
 #include <QPainter>
 #include <QTransform>
 #include <QtMath>
-#include "main/global.h"
+#include "Main/global.h"
 
 // OpenCV
 #include <opencv2/opencv.hpp>

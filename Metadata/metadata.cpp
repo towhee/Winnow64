@@ -45,6 +45,12 @@ Metadata::Metadata(QObject *parent) : QObject(parent)
     #ifdef Q_OS_MAC
     exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
     #endif
+    #ifdef Q_OS_LINUX
+    // distro exiftool (libimage-exiftool-perl), else a bundled copy beside the exe
+    exifToolPath = QStandardPaths::findExecutable("exiftool");
+    if (exifToolPath.isEmpty())
+        exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+    #endif
 }
 
 /* METADATA NOTES
@@ -1606,8 +1612,7 @@ bool Metadata::parseHEIF()
     bool ok = heic->parseLibHeif(p, m, ifd, exif, gps);
     if (ok && p.report) reportMetadata();
     return ok;
-    #endif
-    #ifdef Q_OS_MAC
+    #else
     heic = new Heic;
     bool ok = heic->parseHeic(p, m, ifd, exif, gps);
     delete heic;

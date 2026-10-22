@@ -55,6 +55,13 @@ QString Utilities::getDriveName(QString path)
             return segments.at(1);
         }
     #endif    // 1st segment should be Volumes
+    #ifdef Q_OS_LINUX
+        // removable volumes: /media/<user>/<vol>, /run/media/<user>/<vol>, /mnt/<vol>
+        if (segments.at(0) == "media" && segments.count() >= 3) return segments.at(2);
+        if (segments.at(0) == "run" && segments.count() >= 4 && segments.at(1) == "media")
+            return segments.at(3);
+        if (segments.at(0) == "mnt" && segments.count() >= 2) return segments.at(1);
+    #endif
     return "";
 }
 
@@ -79,6 +86,17 @@ QString Utilities::getDrive(QString path)
     else {
         if (path.at(0) == '/') drivePath = "/";
     }
+#endif
+#ifdef Q_OS_LINUX
+    // the mount point of a removable volume (see getDriveName), else the root
+    QStringList segments = listFromPath(path);
+    int depth = 0;
+    if (segments.count() >= 3 && segments.at(0) == "media") depth = 3;
+    else if (segments.count() >= 4 && segments.at(0) == "run" && segments.at(1) == "media")
+        depth = 4;
+    else if (segments.count() >= 2 && segments.at(0) == "mnt") depth = 2;
+    if (depth) drivePath = "/" + segments.mid(0, depth).join("/");
+    else if (path.at(0) == '/') drivePath = "/";
 #endif
 //    qDebug() << "Utilities::getDrive" << path << drivePath;
     return drivePath;
@@ -341,6 +359,11 @@ bool Utilities::isLocked(const QString& fPath)
     DWORD attrs = GetFileAttributesW(reinterpret_cast<const wchar_t*>(fPath.utf16()));
     if (attrs == INVALID_FILE_ATTRIBUTES) return false;
     return (attrs & FILE_ATTRIBUTE_READONLY) != 0;
+#endif
+#ifdef Q_OS_LINUX
+    // as on Windows: a file the user cannot write is locked
+    QFileInfo info(fPath);
+    return info.exists() && !info.isWritable();
 #endif
 }
 

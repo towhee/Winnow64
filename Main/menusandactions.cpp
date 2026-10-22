@@ -159,6 +159,9 @@ void MW::createFileActions()
     #ifdef Q_OS_MAC
     revealText = "Reveal in Finder";
     #endif
+    #ifdef Q_OS_LINUX
+    revealText = "Show in File Manager";
+    #endif
 
     saveAsFileAction = new QAction("Save Preview as...", this);
     saveAsFileAction->setObjectName("saveAs");
@@ -332,7 +335,7 @@ void MW::createFileActions()
     moveFilesToWhatever = "Move file(s) to recycle bin";
     moveFolderToWhatever = "Move folder to recycle bin";
 #endif
-#ifdef Q_OS_MAC
+#ifndef Q_OS_WIN
     moveFilesToWhatever = "Move file(s) to trash";
     moveFolderToWhatever = "Move folder to trash";
 #endif
@@ -1460,6 +1463,9 @@ void MW::createUtilActions()
     #endif
     #ifdef Q_OS_MAC
     revealText = "Show Winnets in Finder";
+    #endif
+    #ifdef Q_OS_LINUX
+    revealText = "Show Winnets in File Manager";
     #endif
 
     embelRevealWinnetsAction = new QAction(revealText, this);
@@ -3559,6 +3565,9 @@ void MW::renameRevealFileAction(QString folderName)
     #ifdef Q_OS_MAC
     app = "Finder";
     #endif
+    #ifdef Q_OS_LINUX
+    app = "File Manager";
+    #endif
     QString txt = "Reveal in " + app + " folder " + Utilities::enquote(folderName) ;
     revealFileActionFromContext->setText(txt);
 }
@@ -3575,7 +3584,7 @@ void MW::renameDeleteFolderAction(QString folderName)
     #ifdef Q_OS_WIN
     whatever = "Recycle Bin";
     #endif
-    #ifdef Q_OS_MAC
+    #ifndef Q_OS_WIN
     whatever = "Trash";
     #endif
     QString txt = "Move to " + whatever + ": folder " + Utilities::enquote(folderName);

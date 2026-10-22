@@ -34,6 +34,11 @@ bool UsbUtil::eject(QString driveName)
     QProcess p;
     p.start("diskutil", QStringList() << "eject" << driveName);
     return p.waitForFinished() && p.exitStatus() == QProcess::NormalExit && p.exitCode() == 0;
+#else
+    // gio unmounts the mount at driveName and powers off its drive (GNOME/KDE/udisks)
+    QProcess p;
+    p.start("gio", QStringList() << "mount" << "-e" << driveName);
+    return p.waitForFinished() && p.exitStatus() == QProcess::NormalExit && p.exitCode() == 0;
 #endif
 }
 

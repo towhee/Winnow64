@@ -10,7 +10,7 @@
 #include <QElapsedTimer>
 #include <QDebug>
 #include <QThread>
-#include "ImageStack/focusstackconstants.h"
+#include "ImageStack/FocusStackConstants.h"
 #include "ImageStack/stackaligner.h"
 #include "ImageStack/stack_focus_measure.h"
 #include "ImageStack/stack_depth_map.h"

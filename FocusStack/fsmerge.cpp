@@ -1,5 +1,5 @@
 // FSMerge.cpp
-#include "FSMerge.h"
+#include "fsmerge.h"
 #include "Main/global.h"
 
 #include <opencv2/core.hpp>

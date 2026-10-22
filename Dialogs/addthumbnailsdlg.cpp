@@ -1,6 +1,6 @@
 #include "addthumbnailsdlg.h"
 #include "ui_addthumbnailsdlg.h"
-#include "main/global.h"
+#include "Main/global.h"
 #ifdef Q_OS_WIN
 #include "Utilities/win.h"
 #endif

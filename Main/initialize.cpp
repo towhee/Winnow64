@@ -1,4 +1,7 @@
 #include "Main/mainwindow.h"
+#ifdef Q_OS_LINUX
+#include "Utilities/linux.h"
+#endif
 #include "Develop/lensdb.h"
 #ifdef Q_OS_MAC
 #include <execinfo.h>
@@ -139,8 +142,11 @@ void MW::initialize()
 void MW::setupPlatform()
 {
     if (G::isLogger) G::log("MW::setupPlatform");
-    #ifdef Q_OS_LINIX
+    #ifdef Q_OS_LINUX
         G::actDevicePixelRatio = 1;
+        setWindowIcon(QIcon(":/images/winnow.png"));
+        Linux::availableMemory();
+        G::trash = "Trash";
     #endif
     #ifdef Q_OS_WIN
         setWindowIcon(QIcon(":/images/winnow.png"));
@@ -162,6 +168,8 @@ void MW::setupPlatform()
         totalMB = static_cast<quint64>(Mac::totalMemoryMB());
     #elif defined(Q_OS_WIN)
         totalMB = Win::totalMemoryMB();
+    #elif defined(Q_OS_LINUX)
+        totalMB = Linux::totalMemoryMB();
     #endif
     if (totalMB > 0) G::memoryAbortMB = G::computeMemoryAbortMB(totalMB);
     /*
@@ -1435,8 +1443,8 @@ void MW::createAppStyle()
     G::css = widgetCSS.css();
     this->setStyleSheet(G::css);
 
-    // fix tooltips for windows (still works in MacOS)
-    #ifdef Q_OS_WIN
+    // fix tooltips for windows and linux (still works in MacOS)
+    #ifndef Q_OS_MAC
     QPalette pal;
     int b = G::backgroundShade;
     pal.setColor(QPalette::ToolTipBase, QColor(b,b,b));

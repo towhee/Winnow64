@@ -248,8 +248,7 @@ QSize DockTitleBar::sizeHint() const
 {
 #ifdef Q_OS_MAC
     int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.1;
-#endif
-#ifdef Q_OS_WIN
+#else
     int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.6;
 #endif
     return QSize(width(), h);
