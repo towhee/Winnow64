@@ -137,24 +137,24 @@ if (G::isFileLogger) Utilities::log("Effects::transparentEdgeMap", "");
             pt.y = y;
             // transparent to opaque edge
             if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
-                edge.insertMulti(d, pt);
+                edge.insert(d, pt);
                 em[y][x] = d;
                 prevTransparent = false;
             }
             // opaque to transparent edge
             if (qAlpha(s[y][x]) == 0 && !prevTransparent)  {
                 pt.x = x-1;
-                edge.insertMulti(d, pt);
+                edge.insert(d, pt);
                 em[y][x-1] = d;
                 prevTransparent = true;
             }
             // right and bottom of image
             if (x == w - 1 && qAlpha(s[y][x]) > 0) {
-                edge.insertMulti(d, pt);
+                edge.insert(d, pt);
                 em[y][x] = d;
             }
             if (y == h - 1 && qAlpha(s[y][x]) > 0) {
-                edge.insertMulti(d, pt);
+                edge.insert(d, pt);
                 em[y][x] = d;
             }
         }
@@ -170,7 +170,7 @@ if (G::isFileLogger) Utilities::log("Effects::transparentEdgeMap", "");
             if (qAlpha(s[y][x]) > 0 && prevTransparent)  {
                 // check if already tallied
                 if (em[y][x] == 0) {
-                    edge.insertMulti(d, pt);
+                    edge.insert(d, pt);
                     em[y][x] = d;
                 }
                 prevTransparent = false;
@@ -180,7 +180,7 @@ if (G::isFileLogger) Utilities::log("Effects::transparentEdgeMap", "");
                 pt.y = y-1;
                 // check if already tallied
                 if (em[y-1][x] == 0) {
-                    edge.insertMulti(d, pt);
+                    edge.insert(d, pt);
                     em[y-1][x] = d;
                 }
                 prevTransparent = true;
@@ -219,7 +219,7 @@ if (G::isFileLogger) Utilities::log("Effects::transparentEdgeMap", "");
                 // if not already tallied and not transparent then tally
                 if (em[y][x] == 0 && qAlpha(s[y][x]) > 0) {
                     // add new pixel
-                    edge.insertMulti(d, sPts.at(j));
+                    edge.insert(d, sPts.at(j));
                     // tally new pixel
                     em[y][x] = d;
                     morePtsToProcess = true;

@@ -1809,7 +1809,7 @@ bool IconView::event(QEvent *event) {
         QNativeGestureEvent *e = static_cast<QNativeGestureEvent *>(event);
         QPoint d = m2->thumbDock->pos();
         QPoint i = pos();
-        QPoint c = e->pos();
+        QPoint c = e->position().toPoint();
         QPoint p;
         if (m2->thumbDock->isFloating()) p = c;
         else p = c - i - d;

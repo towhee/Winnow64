@@ -135,10 +135,10 @@ void Win::collectScreensInfo()
                     tadaptorName = "\\\\.\\DISPLAY6" :: adaptorStringW = "NVIDIA GeForce GT 740    " tdeviceStringW =  "Dell 3007WFP         " tprofileName = "3007WFP.icm"
                     */
                     G::WinScreen winScreen;
-                    winScreen.device = QString::fromUtf16((const ushort *)(deviceStringW));
-                    winScreen.adaptor = QString::fromUtf16((const ushort *)(adaptorStringW));
-                    winScreen.profile = QString::fromUtf16((const ushort *)(profileName));
-                    QString name = QString::fromUtf16((const ushort *)(adaptorNameW));
+                    winScreen.device = QString::fromUtf16(reinterpret_cast<const char16_t *>(deviceStringW));
+                    winScreen.adaptor = QString::fromUtf16(reinterpret_cast<const char16_t *>(adaptorStringW));
+                    winScreen.profile = QString::fromUtf16(reinterpret_cast<const char16_t *>(profileName));
+                    QString name = QString::fromUtf16(reinterpret_cast<const char16_t *>(adaptorNameW));
                     G::winScreenHash.insert(name, winScreen);
                     /*
                     qDebug() << "tadaptorName =" << QString::fromUtf16((const ushort *)(adaptorNameW)).leftJustified(25, ' ')

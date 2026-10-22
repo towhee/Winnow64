@@ -1,5 +1,6 @@
 #include "mov.h"
 #include "Main/global.h"
+#include <QTimeZone>
 
 bool MOV::isDebug = false;
 
@@ -171,7 +172,7 @@ QDateTime MOV::createDate(const QString &filePath) {
     }
 
     // --- Convert to QDateTime ---
-    QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), Qt::UTC);
+    QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), QTimeZone::UTC);
     QDateTime createDate = baseDate.addSecs(static_cast<qint64>(creationTime));
 
     // Debug info

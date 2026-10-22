@@ -101,16 +101,16 @@ void KeywordSuggester::request(int generation, const QString &path,
         q.folder = row.folder;
         q.from = row.captured.addSecs(-params.sessionSecs);
         q.to = row.captured.addSecs(params.sessionSecs);
-        QVector<VisualAudit::SessionImage> near;
+        QVector<VisualAudit::SessionImage> nearby;
         for (const CatalogRow &r : Catalog::instance().searchRows(q, 0)) {
             if (r.path == path || !r.captured.isValid()) continue;
             const QStringList eff = keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths);
             if (eff.isEmpty()) continue;
-            near << VisualAudit::SessionImage{r.folder, Catalog::wallClockSecs(r.captured),
-                                              keywordPruneAncestors(eff)};
+            nearby << VisualAudit::SessionImage{r.folder, Catalog::wallClockSecs(r.captured),
+                                                keywordPruneAncestors(eff)};
         }
         session = VisualAudit::sessionSuggestions(
-            {row.folder, Catalog::wallClockSecs(row.captured), {}}, near, vocab,
+            {row.folder, Catalog::wallClockSecs(row.captured), {}}, nearby, vocab,
             carriedFold, dismissedFold, params);
     }
 

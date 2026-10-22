@@ -950,8 +950,8 @@ QByteArray Utilities::getByteArray(QFile &file, quint32 offset, quint32 length)
 
 QBitArray Utilities::bytes2Bits(QByteArray bytes)
 {
-    QBitArray bits(bytes.count() * 8);
-    for (int i = 0; i < bytes.count(); i++) {
+    QBitArray bits(bytes.size() * 8);
+    for (int i = 0; i < bytes.size(); i++) {
         for (int b = 0; b < 8; b++) {
             bits.setBit(i * 8 + b, bytes.at(i) & (1 << (7 - b)));
         }

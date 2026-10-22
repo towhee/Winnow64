@@ -1,6 +1,7 @@
 #include "png.h"
 #include <QtEndian>
 #include <QBuffer>
+#include <QTimeZone>
 #include "Utilities/utilities.h"
 #include "Metadata/xmp.h"
 
@@ -415,7 +416,7 @@ bool PNG::parse(MetadataParameters &p,
                 int hr = static_cast<quint8>(data[4]);
                 int mn = static_cast<quint8>(data[5]);
                 int sc = static_cast<quint8>(data[6]);
-                QDateTime dt(QDate(yr, mo, dy), QTime(hr, mn, sc), Qt::UTC);
+                QDateTime dt(QDate(yr, mo, dy), QTime(hr, mn, sc), QTimeZone::UTC);
                 if (dt.isValid()) m.modifiedDate = dt;
             }
             p.file.seek(dataStart + size + 4);

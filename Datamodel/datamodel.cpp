@@ -4498,7 +4498,7 @@ void DataModel::processErr(Error e)
     QString p;                                              // path
     QString l = "\n";                                       // newline separator
     QString o = " ";                                        // offset datetime string width
-    o = o.repeated(d.count());
+    o = o.repeated(d.size());
 
     switch(e.type) {
     case ErrorType::General:

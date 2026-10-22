@@ -4938,19 +4938,19 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
 
     switch (orientation) {
         case 2:
-            image = image.mirrored(true, false);
+            image = image.flipped(Qt::Horizontal);
             break;
         case 3:
             trans.rotate(180);
             image = image.transformed(trans, Qt::SmoothTransformation);
             break;
         case 4:
-            image = image.mirrored(false, true);
+            image = image.flipped(Qt::Vertical);
             break;
         case 5:
             trans.rotate(90);
             image = image.transformed(trans, Qt::SmoothTransformation);
-            image = image.mirrored(true, false);
+            image = image.flipped(Qt::Horizontal);
             break;
         case 6:
             trans.rotate(90);
@@ -4959,7 +4959,7 @@ void ImageView::rotateByExifRotation(QImage &image, QString &imageFullPath)
         case 7:
             trans.rotate(90);
             image = image.transformed(trans, Qt::SmoothTransformation);
-            image = image.mirrored(false, true);
+            image = image.flipped(Qt::Vertical);
             break;
         case 8:
             trans.rotate(270);
@@ -5625,8 +5625,8 @@ void ImageView::mouseDoubleClickEvent(QMouseEvent *event)
     if (!spacePanOverride && developToolActive()) { event->accept(); return; }
     if (event->button() == Qt::LeftButton) {
         isLeftMouseBtnPressed = true;
-        mousePressPt.setX(event->x());
-        mousePressPt.setY(event->y());
+        mousePressPt.setX(event->position().toPoint().x());
+        mousePressPt.setY(event->position().toPoint().y());
         QGraphicsView::mousePressEvent(event);
         return;
     }
@@ -5968,10 +5968,10 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         if (!spacePanOverride && developToolActive() && !(cropActive() && cropDrag < 0)) { event->accept(); return; }
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
-        mousePressPt.setX(event->x());
-        mousePressPt.setY(event->y());
-        mouseDragPt.setX(event->x());
-        mouseDragPt.setY(event->y());
+        mousePressPt.setX(event->position().toPoint().x());
+        mousePressPt.setY(event->position().toPoint().y());
+        mouseDragPt.setX(event->position().toPoint().x());
+        mouseDragPt.setY(event->position().toPoint().y());
         QGraphicsView::mousePressEvent(event);
         mouseMovementElapsedTimer->restart();
         return;
@@ -6300,9 +6300,9 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             int oldHSB = horizontalScrollBar()->value();
             int oldVSB = verticalScrollBar()->value();
             horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
-                                           (event->x() - mouseDragPt.x()));
+                                           (event->position().toPoint().x() - mouseDragPt.x()));
             verticalScrollBar()->setValue(verticalScrollBar()->value() -
-                                          (event->y() - mouseDragPt.y()));
+                                          (event->position().toPoint().y() - mouseDragPt.y()));
             int hDelta = horizontalScrollBar()->value() - oldHSB;
             int vDelta = verticalScrollBar()->value() - oldVSB;
             if (!isMouseDrag) {
@@ -6315,8 +6315,8 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                      << "vDelta =" << vDelta
                      << "isMouseDrag =" << isMouseDrag
                 ; //*/
-            mouseDragPt.setX(event->x());
-            mouseDragPt.setY(event->y());
+            mouseDragPt.setX(event->position().toPoint().x());
+            mouseDragPt.setY(event->position().toPoint().y());
 
             /* Crop pan: the frame is fixed on screen and the image scrolls under it. Clamp the
                scroll so the image always covers the frame (you can't pan the crop off the image),
@@ -6597,7 +6597,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     else setCursor(Qt::ArrowCursor);
 
     // Amount of movement px
-    int px = qMax(qAbs(mousePressPt.x() - event->x()), qAbs(mousePressPt.y() - event->y()));
+    int px = qMax(qAbs(mousePressPt.x() - event->position().toPoint().x()), qAbs(mousePressPt.y() - event->position().toPoint().y()));
 
     // Delay between mouse press and release ms
     int ms = mouseMovementElapsedTimer->elapsed();

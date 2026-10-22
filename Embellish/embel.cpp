@@ -650,7 +650,7 @@ void Embel::updateBorder(int i)
     pen.setWidth(0);
     pen.setColor(Qt::transparent);
     bItems[i]->setPen(pen);
-    color.setNamedColor(p->b[i].color);
+    color = QColor::fromString(p->b[i].color);
     // index guard
     if (p->b.count() < i + 1) return;
     // tile or color background

@@ -723,7 +723,7 @@ CheckBoxEditor::CheckBoxEditor(const QModelIndex &idx, QWidget *parent) : QWidge
     checkBox->setWindowFlags(Qt::FramelessWindowHint);
     checkBox->setAttribute(Qt::WA_TranslucentBackground);
 
-    connect(checkBox, &QCheckBox::stateChanged, this, &CheckBoxEditor::change);
+    connect(checkBox, &QCheckBox::checkStateChanged, this, &CheckBoxEditor::change);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(checkBox, Qt::AlignLeft);

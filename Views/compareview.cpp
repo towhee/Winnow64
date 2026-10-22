@@ -576,8 +576,8 @@ void CompareView::mousePressEvent(QMouseEvent *event)
         propagate = true;
         if (event->modifiers() & Qt::ShiftModifier) propagate = false;
         isLeftMouseBtnPressed = true;
-        mousePressPt.setX(event->x());
-        mousePressPt.setY(event->y());
+        mousePressPt.setX(event->position().toPoint().x());
+        mousePressPt.setY(event->position().toPoint().y());
         if (isZoom) {
             startOfPanPct = getScrollPct();
             emit panStartPct(imageIndex);
@@ -602,12 +602,12 @@ void CompareView::mouseMoveEvent(QMouseEvent *event)
            is fired by changes to the scrollbars which signals the other
            instances to mirror the pan  */
         horizontalScrollBar()->setValue(horizontalScrollBar()->value() -
-                                       (event->x() - mousePressPt.x()));
+                                       (event->position().toPoint().x() - mousePressPt.x()));
         verticalScrollBar()->setValue(verticalScrollBar()->value() -
-                                      (event->y() - mousePressPt.y()));
+                                      (event->position().toPoint().y() - mousePressPt.y()));
         // keep point to calc next delta
-        mousePressPt.setX(event->x());
-        mousePressPt.setY(event->y());
+        mousePressPt.setX(event->position().toPoint().x());
+        mousePressPt.setY(event->position().toPoint().y());
     }
     event->ignore();
 }

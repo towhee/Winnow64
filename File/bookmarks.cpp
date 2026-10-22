@@ -543,7 +543,7 @@ void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
 void BookMarks::dragMoveEvent(QDragMoveEvent *event)
 {
     if (G::isLogger) G::log("BookMarks::dragMoveEvent");
-    QModelIndex idx = indexAt(event->pos());
+    QModelIndex idx = indexAt(event->position().toPoint());
     // same row, column 0 (folder name)
     QModelIndex idx0 = idx.sibling(idx.row(), 0);
     if (idx0.isValid()) {

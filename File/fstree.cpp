@@ -1838,7 +1838,7 @@ void FSTree::dragEnterEvent(QDragEnterEvent *event)
     event->source() ? isInternal = true : isInternal = false;
     msg = "Copy to folder.";
     if (isInternal) {
-        if (!(event->keyboardModifiers() & Qt::AltModifier)) {
+        if (!(event->modifiers() & Qt::AltModifier)) {
             msg = "Move to folder.";
         }
     }

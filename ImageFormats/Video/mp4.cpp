@@ -1,5 +1,6 @@
 #include "mp4.h"
 #include "Main/global.h"
+#include <QTimeZone>
 
 MP4::MP4()
 {
@@ -120,7 +121,7 @@ QDateTime MP4::createDate(const QString &filePath) {
     qDebug() << "Creation time =" << creationTime;
 
     // Convert to QDateTime
-    QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), Qt::UTC);
+    QDateTime baseDate(QDate(1904, 1, 1), QTime(0, 0), QTimeZone::UTC);
     QDateTime createDate = baseDate.addSecs(creationTime);
 
     return createDate;
