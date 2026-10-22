@@ -650,7 +650,7 @@ void MetaRead::debugRunStatus()
     }
 }
 
-void MetaRead::initialize(QString src)
+void MetaRead::initialize(QString src, bool owesSelection)
 /*
     Called when change folders.
     Must use QMetaObject::invokeMethod when calling this function
@@ -683,8 +683,12 @@ void MetaRead::initialize(QString src)
     bIsDone = false;
     isDone = false;
     allFinishedFired = false;
-    /* A new folder owes one selection; see the members in metaread.h. */
-    firstSelectionPending = true;
+    /*  A new folder owes one selection; see the members in metaread.h. A filter change
+        leaves the flag as it was (still owed if the folder is mid-load). Re-armed there,
+        the backstop in allFinished re-selected the row current at the filter change once
+        the cycle finished, undoing any selection made since: New Version selected the
+        new version and landed back on the master. */
+    if (owesSelection) firstSelectionPending = true;
     pendingSelectionDmRow = -1;
     success = false;
     quitAfterTimeoutInitiated = false;

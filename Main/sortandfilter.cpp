@@ -424,7 +424,7 @@ void MW::filterChange(QString source)
         dereference. Nothing here depends on it having run before this function returns --
         the setStartRow that acts on it is itself queued, behind this. */
     QMetaObject::invokeMethod(metaRead, "initialize", Qt::QueuedConnection,
-                              Q_ARG(QString, srcFun));
+                              Q_ARG(QString, srcFun), Q_ARG(bool, false));
 
     /*  IS THE CURRENT IMAGE STILL IN THE FILTER? If not, fall back to a row that
         EXISTS -- and the clamp is the whole point, because every candidate here can be -1.

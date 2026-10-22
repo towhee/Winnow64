@@ -127,7 +127,10 @@ public slots:
         video row whose frame decode has been resolved. */
     void onVideoReadingCleared(int dmRow, int fromInstance);
 
-    void initialize(QString src = "");
+    /*  owesSelection: a folder load owes its first image a selection (see
+        firstSelectionPending). A re-initialize that keeps the folder (MW::filterChange)
+        does its own selecting and passes false, which leaves the flag as it was. */
+    void initialize(QString src = "", bool owesSelection = true);
     void dispatchReaders();
     void dispatch(int id, bool isReturning);
     void setStartRow(int row, bool fileSelectionChanged, QString src = "");
