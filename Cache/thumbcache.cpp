@@ -652,6 +652,86 @@ void ThumbCache::onDeleted(const QString &fPath)
     q.prepare("DELETE FROM thumb WHERE pathkey = ?");
     q.addBindValue(key);
     q.exec();
+    q.prepare("DELETE FROM stale_thumb WHERE pathkey = ?");
+    q.addBindValue(key);
+    q.exec();
+}
+
+void ThumbCache::markStale(const QStringList &paths)
+{
+    struct Row { QString key; QString path; qint64 size; qint64 mtime; };
+    QList<Row> rows;
+    for (const QString &p : paths) {                // stats outside the lock
+        const QString key = cachePathKey(p);
+        const QFileInfo fi(p);
+        if (key.isEmpty() || !fi.exists()) continue;
+        rows.append({key, p, fi.size(), fi.lastModified().toSecsSinceEpoch()});
+    }
+    if (rows.isEmpty()) return;
+    QMutexLocker lk(&mMutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    const bool inTxn = db.transaction();
+    QSqlQuery q(db);
+    q.prepare("INSERT INTO stale_thumb (pathkey, path, srcsize, srcmtime)"
+              " VALUES (?,?,?,?) ON CONFLICT(pathkey) DO UPDATE SET path=excluded.path,"
+              " srcsize=excluded.srcsize, srcmtime=excluded.srcmtime");
+    for (const Row &r : std::as_const(rows)) {
+        q.addBindValue(r.key);
+        q.addBindValue(r.path);
+        q.addBindValue(r.size);
+        q.addBindValue(r.mtime);
+        q.exec();
+    }
+    if (inTxn) db.commit();
+}
+
+void ThumbCache::clearStale(const QStringList &paths)
+{
+    if (paths.isEmpty()) return;
+    QMutexLocker lk(&mMutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    const bool inTxn = db.transaction();
+    QSqlQuery q(db);
+    q.prepare("DELETE FROM stale_thumb WHERE pathkey = ?");
+    for (const QString &p : paths) {
+        q.addBindValue(cachePathKey(p));
+        q.exec();
+    }
+    if (inTxn) db.commit();
+}
+
+QStringList ThumbCache::staleFiles()
+{
+    struct Row { QString path; qint64 size; qint64 mtime; };
+    QList<Row> rows;
+    {
+        QMutexLocker lk(&mMutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return {};
+        QSqlQuery q(db);
+        if (!q.exec("SELECT path, srcsize, srcmtime FROM stale_thumb")) return {};
+        while (q.next())
+            rows.append({q.value(0).toString(), q.value(1).toLongLong(),
+                         q.value(2).toLongLong()});
+    }
+    /*  The stats happen outside the lock. A MISSING file is kept, not dropped -- it may
+        be on a drive that is not plugged in (the same rule as sweep()); it is just not
+        offered. A file that is there with a different stamp has changed, and its next
+        decode judges it afresh, so its row goes. A file deleted through Winnow loses
+        its row in onDeleted; one deleted elsewhere lingers, never offered. */
+    QStringList still, changed;
+    for (const Row &r : std::as_const(rows)) {
+        const QFileInfo fi(r.path);
+        if (!fi.exists()) continue;
+        if (fi.size() == r.size && fi.lastModified().toSecsSinceEpoch() == r.mtime)
+            still << r.path;
+        else
+            changed << r.path;
+    }
+    clearStale(changed);
+    return still;
 }
 
 void ThumbCache::onFolderDeleted(const QString &folder)

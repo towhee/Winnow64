@@ -745,16 +745,24 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
             status = loadFromJpgData(fPath, image);
             /*  A STALE EMBEDDED THUMB (Image/stalethumb.h): the image was rotated by a
                 tool that left its thumbnail behind. It is dropped, the icon is made
-                from the image itself, and MW is told so it can offer the repair. */
-            if (status == Status::Success && StaleThumb::isChecked(ext)
-                && StaleThumb::embeddedIsStale(image.size(), m.width, m.height)) {
-                QString msg = "Embedded thumbnail orientation does not match the "
-                              "image; building the thumbnail from the image.";
-                G::issueDedup("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
-                isEmbeddedThumb = false;
-                image = QImage();
-                status = Status::None;
-                emit staleEmbeddedThumb(fPath);
+                from the image itself, and MW is told so it can offer the repair.
+                Judged against the FRAME HEADER, not m.width/m.height: a catalog row
+                can still hold the size Jpeg::parse once took from the Exif tags,
+                which is wrong in exactly these files -- it both invented ~100 false
+                reports and hid real ones. The file is open for the thumb anyway; the
+                header walk is a few small reads. Unreadable header = never stale. */
+            if (status == Status::Success && StaleThumb::isChecked(ext)) {
+                const QSize frame = StaleThumb::jpegFrameSize(fPath);
+                if (StaleThumb::embeddedIsStale(image.size(), frame.width(),
+                                                frame.height())) {
+                    QString msg = "Embedded thumbnail orientation does not match the "
+                                  "image; building the thumbnail from the image.";
+                    G::issueDedup("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
+                    isEmbeddedThumb = false;
+                    image = QImage();
+                    status = Status::None;
+                    emit staleEmbeddedThumb(fPath);
+                }
             }
             if (status == Status::Success) break;
         }

@@ -118,8 +118,18 @@ bool Jpeg::getDimensions(MetadataParameters &p, ImageMetadata &m)
 
 bool Jpeg::getDimensions2(MetadataParameters &p, ImageMetadata &m)
 {
-    if (!segmentHash.contains("SOF0")) return false;
-    p.offset = segmentHash.value("SOF0") + 5;
+/*
+    The frame header's dimensions: the size of the pixels a decoder produces. Any SOFn,
+    not only baseline SOF0 -- a progressive JPEG (SOF2) had none, and fell back to
+    whatever the Exif tags claimed. segmentHash holds each marker's offset; +5 skips
+    the marker, the length and the sample precision.
+*/
+    static const char *sofs[] = {"SOF0", "SOF1", "SOF2", "SOF3", "SOF5", "SOF6", "SOF7",
+                                 "SOF9", "SOF10", "SOF11", "SOF13", "SOF14", "SOF15"};
+    QString sof;
+    for (const char *k : sofs) if (segmentHash.contains(k)) { sof = k; break; }
+    if (sof.isEmpty()) return false;
+    p.offset = segmentHash.value(sof) + 5;
     bool isBigEnd = true;                  // only IFD/EXIF can be little endian
     p.file.seek(p.offset);
     m.height = u.get16(p.file.read(2), isBigEnd);
@@ -270,10 +280,20 @@ bool Jpeg::parse(MetadataParameters &p,
     p.offset = offsetEXIF;
     ifd->readIFD(p, isBigEnd);
 
-    m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
-    m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
+    /*  THE FRAME HEADER FIRST, the Exif tags only without one. PixelXDimension and
+        PixelYDimension (40962/40963) are a COPY of the size that a writer is meant to
+        keep in step, and older lossless-rotate tools did not: they turned the pixels to
+        portrait and left the tags (and the IFD1 thumbnail) landscape. Trusting the tags
+        made a portrait image 3008x2000 in the table, the catalog and the cache budget,
+        and hid its stale thumbnail from Image/stalethumb.h, which compares against
+        these dimensions. The SOF is the pixels themselves. */
+    m.width = 0;
+    m.height = 0;
+    if (!getDimensions2(p, m) || !m.width || !m.height) {
+        m.width = static_cast<int>(ifd->ifdDataHash.value(40962).tagValue);
+        m.height = static_cast<int>(ifd->ifdDataHash.value(40963).tagValue);
+    }
     p.offset = 0;
-    if (!m.width || !m.height) getDimensions2(p, m);
     m.widthOrigPreview = m.width;
     m.heightOrigPreview = m.height;
 

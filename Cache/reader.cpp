@@ -342,7 +342,16 @@ void Reader::readIcon()
         if (fromThumbCache && m && !m->developEdited
             && StaleThumb::isChecked(QFileInfo(fPath).suffix())
             && StaleThumb::cachedIsStale(image.size(), m->width, m->height,
-                                         m->orientation, m->rotationDegrees)) {
+                                         m->orientation, m->rotationDegrees)
+            /*  Confirmed from the file: m's size may be a catalog row's stale Exif
+                size (see StaleThumb::jpegFrameSize), and a false miss here would
+                re-decode the icon on every visit. */
+            && [&] {
+                const QSize frame = StaleThumb::jpegFrameSize(fPath);
+                return StaleThumb::cachedIsStale(image.size(), frame.width(),
+                                                 frame.height(), m->orientation,
+                                                 m->rotationDegrees);
+            }()) {
             image = QImage();
             loadedIcon = false;
             fromThumbCache = false;

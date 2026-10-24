@@ -252,8 +252,16 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         added NO table -- the eighth data repair: it drops the thumb rows of every
         image with develop_history, because Reader::readIcon could cache an image's
         DEVELOPED thumbnail as its camera thumb and nothing invalidated it once the
-        recipe was reset. */
-    QCOMPARE(CacheDb::schemaVersion(), 23);
+        recipe was reset; version 24 added NO table -- the ninth data repair: Jpeg::parse
+        took dimensions from the Exif PixelX/YDimension tags, which old lossless-rotate
+        tools left landscape on portrait pixels, so it clears the freshness stamp of
+        every JPEG row and the next scan re-reads it from the frame header; version 25
+        added stale_thumb (Cache/thumbcache.h), the JPEGs whose embedded thumbnail is
+        stale, remembered until repaired because a cache hit never looks again; version
+        26 added NO table -- the tenth data repair: IFD::readIFD read a little-endian
+        SHORT with its padding, so rows with an impossible orientation or JPEG/TIFF ISO
+        have their stamp and thumb row cleared to be re-read. */
+    QCOMPARE(CacheDb::schemaVersion(), 26);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

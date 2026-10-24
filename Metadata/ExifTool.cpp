@@ -321,7 +321,13 @@ bool ExifTool::replaceEmbeddedImages(const QString &thumbSrc, const QString &pre
     QByteArray args;
     args += "-ThumbnailImage<=" + thumbSrc.toUtf8() + "\n";
     if (!previewSrc.isEmpty()) args += "-PreviewImage<=" + previewSrc.toUtf8() + "\n";
-    if (isOverWrite) args += "-overwrite_original\n";
+    /*  IN PLACE, always. -overwrite_original writes a new file and renames it over the
+        original, which drops the original's macOS extended attributes (Finder tags and
+        comments) and resets its creation date -- verified on a copy. _in_place rewrites
+        the existing file and keeps both; the modification time still moves, which the
+        repair relies on (ThumbCache and the catalog re-read on it). There is no
+        "<file>_original" backup either way: G::backupBeforeModifying is the backup. */
+    args += "-overwrite_original_in_place\n";
     args += dst.toUtf8() + "\n";
     args += "-execute\n";
     process.write(args);

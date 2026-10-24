@@ -6,8 +6,9 @@
 // so the fixture is a hand-built IFD written to a QTemporaryFile.
 //
 // readIFD does not dereference value offsets — it stores the raw 4-byte value —
-// so inline values suffice. It also has a special case: a big-endian short
-// (tagType 3, tagCount 1) is read from the first 2 bytes of the value field.
+// so inline values suffice. It also has a special case: a single SHORT/SSHORT
+// (tagType 3 or 8, tagCount 1) is read from the first 2 bytes of the value field,
+// in either byte order, so junk in the 2 padding bytes is ignored.
 
 #include <QtTest>
 #include <QTemporaryFile>
@@ -20,6 +21,7 @@ class TstIfd : public QObject
 private slots:
     void readIFD_bigEndian();
     void readIFD_littleEndian();
+    void readIFD_shortIgnoresPadding();
 
 private:
     // Build one 12-byte IFD entry. value4 must be exactly 4 bytes.
@@ -107,6 +109,38 @@ void TstIfd::readIFD_littleEndian()
     QCOMPARE(reader.ifdDataHash.size(), 2);
     QCOMPARE(reader.ifdDataHash.value(256).tagValue, quint32(1920));
     QCOMPARE(reader.ifdDataHash.value(257).tagValue, quint32(1080));
+}
+
+void TstIfd::readIFD_shortIgnoresPadding()
+{
+    /*  A single SHORT sits in the first 2 bytes of the value field; the other 2 are
+        padding the spec says is zero and ACD Systems' writer leaves as junk. Read as 32
+        bits, little-endian Orientation 1 with "II" in the padding became 1229520897
+        and the catalog stored it. Both byte orders, SHORT and SSHORT. */
+    for (bool be : {false, true}) {
+        QByteArray ifd;
+        ifd += Utilities::put16(3, be);
+        ifd += entry(274, 3, 1, Utilities::put16(1, be) + QByteArray("II", 2), be);
+        ifd += entry(34855, 3, 1, Utilities::put16(50, be) + QByteArray("\x5E\x49", 2),
+                     be);
+        ifd += entry(37500, 8, 1, Utilities::put16(7, be) + QByteArray("\xFF\xFF", 2),
+                     be);
+        ifd += Utilities::put32(0, be);
+
+        MetadataParameters p;
+        p.hash = nullptr;
+        p.offset = 0;
+        p.report = false;
+        QTemporaryFile tmp;
+        QVERIFY(loadIntoFile(p, tmp, ifd));
+        IFD reader;
+        reader.readIFD(p, be);
+        p.file.close();
+
+        QCOMPARE(reader.ifdDataHash.value(274).tagValue, quint32(1));
+        QCOMPARE(reader.ifdDataHash.value(34855).tagValue, quint32(50));
+        QCOMPARE(reader.ifdDataHash.value(37500).tagValue, quint32(7));
+    }
 }
 
 QTEST_GUILESS_MAIN(TstIfd)

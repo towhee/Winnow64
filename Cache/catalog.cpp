@@ -2394,6 +2394,20 @@ QStringList Catalog::pathsChangedSince(qint64 seq, int limit, bool *overflow)
     return out;
 }
 
+QStringList Catalog::liveJpegPaths()
+{
+    QStringList out;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+    QSqlQuery q(db);
+    if (!q.exec("SELECT path FROM image WHERE live = 1"
+                " AND lower(ext) IN ('jpg', 'jpeg', 'jpe') ORDER BY path"))
+        return out;
+    while (q.next()) out << q.value(0).toString();
+    return out;
+}
+
 void Catalog::trackChangedPaths(bool on)
 {
     QMutexLocker lk(&mutex);

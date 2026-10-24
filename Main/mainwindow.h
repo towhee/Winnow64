@@ -808,6 +808,8 @@ public slots:
         A Reader found one and drew the icon from the image instead; collect it and,
         once the burst settles, offer to repair the files. */
     void noteStaleEmbeddedThumb(QString fPath);
+    // a catalog scan's findings (CatalogScanner::staleEmbeddedThumbs)
+    void noteStaleEmbeddedThumbs(const QStringList &paths);
     /*  The catalog payload for the rows refreshStaleRows cleared, built once their
         re-read has landed. Rows still unread stay pending for the next completion. */
     QVector<CatalogRow> catalogRowsForStale();
@@ -2533,10 +2535,16 @@ private:
        is what Esc sets. */
     QSet<QString> staleThumbSeen;
     QSet<QString> staleThumbPending;
+    QStringList staleThumbToMark;     // detections not yet written to stale_thumb
+    void flushStaleThumbMarks();
     QTimer *staleThumbTimer = nullptr;
     bool skipStaleThumbPrompt = false;
     std::shared_ptr<std::atomic<bool>> staleThumbAbort;
     void showStaleThumbPrompt();
+    void recallStaleThumbs();
+    void checkCatalogStaleThumbs();
+    void scheduleStaleThumbPrompt();
+    bool staleThumbsRecalled = false;       // recallStaleThumbs ran this session
     void repairStaleThumbs(const QStringList &paths);
     /* The scope editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */

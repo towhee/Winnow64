@@ -249,6 +249,20 @@ public:
         maps straight back to rows. Safe to call off the GUI thread; it decodes nothing. */
     QHash<QString, QByteArray> getBatch(const QVector<ThumbRequest> &reqs);
 
+    /*  STALE EMBEDDED THUMBNAILS, REMEMBERED (table stale_thumb, schema 25). A JPEG
+        whose embedded thumb no longer matches its image (Image/stalethumb.h) is found
+        only when that thumb is decoded, and from then on its icon is a cache hit -- so
+        the finding is kept here until the file is repaired or changes. See
+        Main/mwstalethumbs.cpp. markStale stamps each file as it is now; staleFiles
+        returns the paths whose file still has that stamp, drops the rows of files that
+        have CHANGED, and keeps (without returning) those of files that are missing --
+        possibly on an unplugged drive. All three take mMutex, which the writer holds
+        for whole batch transactions, and the first two stat files: call them OFF the
+        GUI thread. One transaction per call. */
+    void markStale(const QStringList &paths);
+    void clearStale(const QStringList &paths);
+    QStringList staleFiles();
+
     /*  File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);

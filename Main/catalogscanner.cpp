@@ -1,4 +1,5 @@
 #include "Main/catalogscanner.h"
+#include "Image/stalethumb.h"
 #include "Utilities/fileops.h"
 #include "Main/catalogenumerate.h"
 #include "Cache/pathkey.h"
@@ -229,7 +230,21 @@ bool CatalogScanner::parseInto(CatalogRow &row)
         above forbids. It matters beyond tidiness: the literal list is the only one that
         may ever be written back to a file, and schema 10's rebuild reads it. */
     row.keywordsLiteral = m.keywords;
+
+    /*  A STALE EMBEDDED THUMBNAIL, caught as the file joins the catalog (Image/
+        stalethumb.h). Headers only -- two short seeks -- against the parse that just
+        opened the file, and JPEG only. Without it a file is checked only when its
+        thumbnail is first decoded for display; a library added through Manage Catalog
+        and browsed from the thumbnail index would never be. */
+    if (StaleThumb::isChecked(fi.suffix()) && StaleThumb::fileIsStale(row.path))
+        staleThumbs << row.path;
     return true;
+}
+
+void CatalogScanner::emitStaleThumbs()
+{
+    if (!staleThumbs.isEmpty()) emit staleEmbeddedThumbs(staleThumbs);
+    staleThumbs.clear();
 }
 
 void CatalogScanner::indexFiles(const QStringList &paths)
@@ -282,6 +297,7 @@ void CatalogScanner::indexFiles(const QStringList &paths)
     }
     flush();
 
+    emitStaleThumbs();
     emit filesIndexed(indexed);
 }
 
@@ -567,5 +583,6 @@ void CatalogScanner::scan(const CatalogScope &scope)
     }
 
     running.store(false, std::memory_order_relaxed);
+    emitStaleThumbs();
     emit finished(scanned, indexed, unreadable, st.newFolders, demoted, aborted);
 }

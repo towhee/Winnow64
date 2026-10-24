@@ -315,6 +315,9 @@ public:
     qint64 changeSeq();
     QString catalogId();
     QStringList pathsChangedSince(qint64 seq, int limit, bool *overflow = nullptr);
+    /* Every live catalogued JPEG, for the whole-catalog stale-thumbnail check
+       (MW::checkCatalogStaleThumbs). */
+    QStringList liveJpegPaths();
     /* The index's row for each path, unconditionally (fetchFresh without the stamps). */
     QHash<QString, CatalogRow> rowsForPaths(const QStringList &paths);
 

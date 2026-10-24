@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 23;
+constexpr int kSchemaVersion = 26;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1668,6 +1668,79 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("DELETE FROM thumb WHERE pathkey IN"
                     " (SELECT pathkey FROM develop_history)")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 24) {
+    /*
+        A DATA REPAIR: JPEG dimensions came from the Exif tags, not the pixels.
+
+        Jpeg::parse took width and height from PixelXDimension/PixelYDimension and read
+        the frame header only when they were missing. Older lossless-rotate tools turned
+        a JPEG's pixels to portrait without updating those tags (or the IFD1 thumbnail),
+        so the index holds 3008x2000 for an image that is 2000x3008 -- and with it the
+        stale thumbnail could not be recognised (Image/stalethumb.h compares the
+        thumbnail's shape with these dimensions). The parser now reads the SOF first.
+
+        Which rows are wrong cannot be told from the index: the stored size is the
+        wrong one. So every JPEG row's freshness stamp is cleared and the next scan or
+        folder load re-reads it with the fixed parser -- a header walk per file, no
+        decode. Thumb rows are kept: once the dimensions are right, Reader::readIcon
+        recognises a stale cached thumb by its shape and replaces it. Re-runnable.
+    */
+        if (!q.exec("UPDATE image SET srcmtime = 0"
+                    " WHERE lower(ext) IN ('jpg', 'jpeg', 'jpe')")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 25) {
+    /*
+        stale_thumb: JPEGs whose EMBEDDED thumbnail no longer matches the image
+        (Image/stalethumb.h), remembered until repaired. ADDITIVE.
+
+        Detection happens only when the embedded thumb is decoded, and the icon then
+        made from the image is what ThumbCache stores -- so from the next session on
+        every such file is a cache hit and is never looked at again. Without this
+        table a "Not Now" was forgotten at quit. The stamp (srcsize, srcmtime) is the
+        file's when it was found: a file that has changed since is dropped, because
+        the change makes its thumb a cache miss and it is judged afresh. Re-runnable.
+    */
+        if (!q.exec("CREATE TABLE IF NOT EXISTS stale_thumb ("
+                    "  pathkey  TEXT    PRIMARY KEY,"
+                    "  path     TEXT    NOT NULL,"
+                    "  srcsize  INTEGER NOT NULL,"
+                    "  srcmtime INTEGER NOT NULL)")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 26) {
+    /*
+        A DATA REPAIR: single SHORT values read with their padding (IFD::readIFD).
+
+        A little-endian TIFF/EXIF SHORT was read as all four bytes of its value field,
+        so a writer that leaves junk in the two padding bytes (ACD Systems) produced
+        Orientation 1229520897 and ISO 1230897202 -- the real values, 1 and 50, in the
+        low 16 bits. The reader now takes the first two bytes in either byte order.
+
+        The damaged rows are the ones showing it: an orientation outside 0..8, or a
+        JPEG/TIFF ISO over 65535 (a SHORT cannot hold more; a raw's makernote ISO
+        can, so raws are left alone). Their freshness stamp is cleared so the next
+        scan or load re-reads them, and their thumb rows are dropped with it, as
+        schema 14 did: an icon cached under a junk orientation was never turned, and
+        its stamp -- the file, which has not changed -- would keep it. Re-runnable.
+    */
+        const char *damaged =
+            "(orientation NOT BETWEEN 0 AND 8"
+            " OR (iso > 65535 AND lower(ext) IN ('jpg', 'jpeg', 'jpe', 'tif', 'tiff')))";
+        if (!q.exec(QString("DELETE FROM thumb WHERE pathkey IN"
+                            " (SELECT pathkey FROM image WHERE %1)").arg(damaged))
+            || !q.exec(QString("UPDATE image SET srcmtime = 0 WHERE %1").arg(damaged))) {
             db.rollback();
             return false;
         }

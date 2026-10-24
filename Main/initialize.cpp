@@ -602,6 +602,9 @@ void MW::createCatalogScanner()
         if (catalogRootsDlg) catalogRootsDlg->setScanProgress(p);
     }, Qt::QueuedConnection);
 
+    // JPEGs a scan indexed with a stale embedded thumbnail (Main/mwstalethumbs.cpp)
+    connect(catalogScanner, &CatalogScanner::staleEmbeddedThumbs,
+            this, &MW::noteStaleEmbeddedThumbs, Qt::QueuedConnection);
     connect(catalogScanner, &CatalogScanner::finished, this,
             [this](int scanned, int indexed, int unreadable,
                    int newFolders, int demoted, bool aborted) {

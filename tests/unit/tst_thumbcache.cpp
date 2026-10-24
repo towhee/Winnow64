@@ -52,6 +52,7 @@ private slots:
     void getImageReturnsAPaintableIcon();
     void getImageUsesACallerSuppliedStat();
     void getBatchAnswersManyWithoutStattingAnything();
+    void staleFilesAreRememberedUntilRepairedOrChanged();
 
 private:
     QTemporaryDir *tmp = nullptr;
@@ -563,6 +564,41 @@ void tst_thumbcache::getBatchAnswersManyWithoutStattingAnything()
 
     /*  An empty ask is an empty answer and touches no database. */
     QVERIFY(t.getBatch({}).isEmpty());
+}
+
+void tst_thumbcache::staleFilesAreRememberedUntilRepairedOrChanged()
+{
+    /*  stale_thumb (schema 25): a JPEG whose embedded thumb is stale is remembered
+        until it is repaired (clearStale) or the file changes. A missing file -- maybe
+        on an unplugged drive -- is not offered but not forgotten either. */
+    ThumbCache &t = ThumbCache::instance();
+    t.clearStale(t.staleFiles());
+    const QString kept = makeFile("stale1.jpg");
+    const QString edited = makeFile("stale2.jpg");
+    const QString repaired = makeFile("stale3.jpg");
+    const QString unplugged = makeFile("stale4.jpg");
+    t.markStale({kept, edited, repaired, unplugged});
+    QCOMPARE(t.staleFiles().size(), 4);
+
+    t.clearStale({repaired});
+    {
+        QFile f(edited);                    // a different size is a different file
+        QVERIFY(f.open(QIODevice::Append));
+        f.write("more");
+    }
+    QVERIFY(QFile::rename(unplugged, unplugged + ".away"));
+
+    QCOMPARE(t.staleFiles(), QStringList{kept});
+    // the missing one comes back when its file does; the changed one does not
+    QVERIFY(QFile::rename(unplugged + ".away", unplugged));
+    QStringList back = t.staleFiles();
+    back.sort();
+    QStringList want{kept, unplugged};
+    want.sort();
+    QCOMPARE(back, want);
+
+    t.onDeleted(kept);
+    QCOMPARE(t.staleFiles(), QStringList{unplugged});
 }
 
 QTEST_MAIN(tst_thumbcache)

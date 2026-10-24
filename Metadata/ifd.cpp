@@ -64,7 +64,13 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
         tagCount = Utilities::get32(p.file.read(4), isBigEnd);
         // check for orientation and save offset for subsequent writing
 //        if (p.hdr == "IFD0" && tagId == 274) m.orientationOffset = static_cast<uint>(p.file.pos());
-        if (tagType == 3 && tagCount == 1 && isBigEnd) {
+        /*  ONE SHORT (or SSHORT) IS 2 BYTES OF THE 4-BYTE FIELD, IN EITHER BYTE ORDER.
+            This was big-endian only, so a little-endian file had all four bytes read
+            -- right only while the 2 bytes of padding are zero, which the spec asks
+            for and not every writer does. ACD Systems' leaves junk there: Orientation
+            1 read as 0x49490001 (1229520897), ISO 50 as 0x495E0032, and so on for
+            every SHORT in the file. The value is the first 2 bytes either way. */
+        if ((tagType == 3 || tagType == 8) && tagCount == 1) {
             tagValue = Utilities::get16(p.file.read(2), isBigEnd);
             p.file.read(2);
         }

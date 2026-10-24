@@ -182,8 +182,18 @@ signals:
     /* indexFiles is done; indexed = rows written. Sent even when nothing was, so a
        caller tracking work in flight can rely on one reply per call. */
     void filesIndexed(int indexed);
+    /*  JPEGs this pass indexed whose embedded EXIF thumbnail is the wrong shape for the
+        pixels (Image/stalethumb.h). Sent once, just before finished / filesIndexed, and
+        only when there are any. MW feeds them to the stale-thumbnail prompt
+        (Main/mwstalethumbs.cpp). */
+    void staleEmbeddedThumbs(const QStringList &paths);
 
 private:
+    /*  Found by parseInto during the current scan() or indexFiles(); scanner thread
+        only. Emitted and cleared at the end of each. */
+    QStringList staleThumbs;
+    void emitStaleThumbs();
+
     /* True when the scan should give way -- a folder load is running, or the app is
        shutting down. */
     bool shouldPause() const;

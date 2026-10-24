@@ -1543,6 +1543,16 @@ void MW::closeEvent(QCloseEvent *event)
         event->ignore();
         return;
     }
+
+    // a stale-thumbnail repair stops after the file it is writing (mwstalethumbs.cpp)
+    if (staleThumbAbort) *staleThumbAbort = true;
+    /*  and detections still waiting for the debounce are written now, synchronously --
+        at quit a moment on the GUI thread costs nothing, and a pool task could be cut
+        off by the exit. */
+    if (!staleThumbToMark.isEmpty()) {
+        ThumbCache::instance().markStale(staleThumbToMark);
+        staleThumbToMark.clear();
+    }
     quitWhenIngestDone = false;
 
     /*  AHEAD OF EVERY TEARDOWN STEP, including the "Closing Winnow ..." message: quitting
@@ -8316,6 +8326,9 @@ void MW::folderChangeCompleted()
                QString::number(dm->rowCount()) + " images");
 
     metadataComplete("MetaRead::done");
+
+    // offer stale embedded thumbnails an earlier session found (once a session)
+    recallStaleThumbs();
 
     // hide metadata read progress
     progress->clearProgress(progressMetaReadRow);
