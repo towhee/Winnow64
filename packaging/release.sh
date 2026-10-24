@@ -147,15 +147,19 @@ function job_mac() {
     WINNOW_ARCH=$arch "$MAC_DEPLOY" --steps 0,1,2,3,4,V || return 1
     local sub="" suffix="" preset=mac-release
     [[ $arch == x86_64 ]] && { sub="x86_64/"; suffix="_Intel"; preset=mac-release-x86_64; }
-    local app="$REPO_ROOT/out/${sub}Notarized/Winnow$LABEL.app"
+    local app="$REPO_ROOT/out/${sub}Notarized/Winnow$LABEL$suffix.app"
     local dmg="$REPO_ROOT/out/${sub}DMG/Winnow$LABEL$suffix.dmg"
     [[ -d "$app" && -f "$dmg" ]] || { echo "❌ expected $app and $dmg"; return 1; }
     cp -f "$dmg" "$RDIR/" || return 1
     local failed=0
     if [[ $arch == arm64 ]]; then
         echo "=== ctest ($preset) ==="
-        ctest --test-dir "$REPO_ROOT/build/$preset" ${=CTEST_UNIT_ARGS} || failed=1
-        ctest --test-dir "$REPO_ROOT/build/$preset" ${=CTEST_SMOKE_ARGS} || failed=1
+        # ctest sits beside the real cmake; /usr/local/bin may hold only a cmake symlink
+        local cm; cm=$(command -v cmake) || { echo "❌ cmake not on PATH"; return 2; }
+        local ct="${cm:A:h}/ctest"
+        [[ -x "$ct" ]] || ct=$(command -v ctest) || { echo "❌ ctest not found beside $cm"; return 2; }
+        "$ct" --test-dir "$REPO_ROOT/build/$preset" ${=CTEST_UNIT_ARGS} || failed=1
+        "$ct" --test-dir "$REPO_ROOT/build/$preset" ${=CTEST_SMOKE_ARGS} || failed=1
         echo "=== selftest of the notarized app ==="
         "$app/Contents/MacOS/Winnow" --selftest "$REPO_ROOT/tests/fixtures/images" || failed=1
     else
@@ -214,12 +218,12 @@ function build_all() {
     preflight
     RDIR=$(release_dir "$LABEL")
     mkdir -p "$RDIR/logs" || die "cannot create $RDIR"
-    rm -f "$RDIR"/*.dmg "$RDIR"/*.exe "$RDIR"/SHA256SUMS "$RDIR"/RESULTS
+    rm -f "$RDIR"/*.(dmg|exe)(N) "$RDIR"/SHA256SUMS(N) "$RDIR"/RESULTS(N)
     echo "$COMMIT" > "$RDIR/COMMIT"
 
     typeset -A pids
     typeset -gA RESULT
-    local p
+    local p pid
     for p in ${=RELEASE_PLATFORMS}; do
         case $p in
             mac)     ( job_mac arm64 )  > "$RDIR/logs/mac.log" 2>&1 & ;;
@@ -228,7 +232,7 @@ function build_all() {
             linux)   ( job_linux )      > "$RDIR/logs/linux.log" 2>&1 & ;;
             *) die "unknown platform $p" ;;
         esac
-        pids[$p]=$!
+        pid=$!; pids[$p]=$pid             # zsh: pids[$p]=$! would store the text "$!"
         echo "▶️  $p started (log: out/release/$LABEL/logs/$p.log)"
     done
 
