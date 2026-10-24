@@ -690,6 +690,22 @@ bool PropertyEditor::toggleBranchAt(const QPoint &pos)
     return true;
 }
 
+void PropertyEditor::drawBranches(QPainter *painter, const QRect &rect,
+                                  const QModelIndex &index) const
+{
+/*
+    Centre the native expand/collapse arrow on the caption text, not the full row.
+    PropertyDelegate::paint draws a non-header caption in a rect trimmed at the bottom
+    (r3: 3px when indented, r2: 1px otherwise) with AlignVCenter, so the text sits
+    slightly high; trim the branch rect the same way so the arrow matches (e.g. the
+    "Permit image file modification" subheader in Preferences). Header rows paint
+    their own arrow over this gutter, so the trim does not affect them.
+*/
+    QModelIndex capIdx = index.sibling(index.row(), CapColumn);
+    int trim = capIdx.data(UR_isIndent).toBool() ? 3 : 1;
+    QTreeView::drawBranches(painter, rect.adjusted(0, 0, 0, -trim), index);
+}
+
 void PropertyEditor::mousePressEvent(QMouseEvent *event)
 /*
     Set the current index and expand/collapse when click anywhere on a row that

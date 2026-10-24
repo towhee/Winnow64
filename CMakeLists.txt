@@ -274,8 +274,8 @@ set(WINNOW_SOURCES
     ImageFormats/Raw/rawformat.cpp
     ImageFormats/Raw/tiffwalk.cpp
     ImageFormats/Sony/sony.cpp
-    ImageFormats/TIFF/rorytiff.cpp
-    ImageFormats/TIFF/tiff.cpp
+    ImageFormats/Tiff/rorytiff.cpp
+    ImageFormats/Tiff/tiff.cpp
     ImageFormats/Video/mov.cpp
     ImageFormats/Video/mp4.cpp
 
@@ -679,8 +679,8 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/rawimage.h
     ImageFormats/Raw/decoderrevision.h
     ImageFormats/Sony/sony.h
-    ImageFormats/TIFF/rorytiff.h
-    ImageFormats/TIFF/tiff.h
+    ImageFormats/Tiff/rorytiff.h
+    ImageFormats/Tiff/tiff.h
     ImageFormats/Video/mov.h
     ImageFormats/Video/mp4.h
 
@@ -875,7 +875,7 @@ if(APPLE)
         ImageFormats/Jpeg/jpeg2.cpp
         ImageFormats/Jpeg/jpegturbo.cpp
         ImageFormats/Jpeg/jpgdecoder.cpp
-        ImageFormats/TIFF/libtiff.cpp
+        ImageFormats/Tiff/libtiff.cpp
         # qtlockedfile_unix.cpp is #included by qtlocalpeer.cpp — do not compile standalone
         Utilities/mac.mm
     )
@@ -884,7 +884,7 @@ if(APPLE)
         ImageFormats/Jpeg/jpeg2.h
         ImageFormats/Jpeg/jpgdecoder.h
         ImageFormats/Jpeg/jpegturbo.h
-        ImageFormats/TIFF/libtiff.h
+        ImageFormats/Tiff/libtiff.h
         Utilities/mac.h
     )
 elseif(WIN32)

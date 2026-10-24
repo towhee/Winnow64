@@ -19,7 +19,7 @@
 #include "utilities.h"
 #include "Utilities/versionkey.h"
 #include "ImageFormats/Jpeg/jpeg.h"
-#include "ImageFormats/TIFF/tiff.h"
+#include "ImageFormats/Tiff/tiff.h"
 
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>

@@ -40,7 +40,7 @@
 #include "ImageFormats/Olympus/olympus.h"
 #include "ImageFormats/Panasonic/panasonic.h"
 #include "ImageFormats/Sony/sony.h"
-#include "ImageFormats/TIFF/tiff.h"
+#include "ImageFormats/Tiff/tiff.h"
 #include "ImageFormats/Png/png.h"
 
 class Metadata : public QObject

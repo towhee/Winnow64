@@ -15,7 +15,7 @@
 #include <cstring>
 
 #ifdef Q_OS_MAC
-#include "ImageFormats/TIFF/libtiff.h"
+#include "ImageFormats/Tiff/libtiff.h"
 #include <tiffio.h>    // libtiff
 // used on macbookair
 // #include "/opt/homebrew/Cellar/libtiff/4.7.0/include/tiffio.h"    // libtiff

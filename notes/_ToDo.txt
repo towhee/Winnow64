@@ -2,11 +2,6 @@ WHAT'S NEW
 - Kaleidoscope effect
 
 BUGS / TO DO
-A separate bug I noticed, not fixed: about 30 JPEG rows in the catalog have nonsense orientation values such as 1229455361. It looks like the parser sometimes reads the 16-bit
- orientation value as 32 bits. Do you want me to look into it?
- yes, remember locked stale files across sessions
-- /Users/roryhill/Photos/2000-2009/2003/200305_[4524]/20030528_Trent River/DSC_5175.jpg
-  thumb not rotated
 - Review virtual machines for building, packaging and deploying to multiple platforms.
 - Figure out mask refine
 - Review develop presets

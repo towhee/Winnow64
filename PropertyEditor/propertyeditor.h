@@ -116,6 +116,8 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
+    void drawBranches(QPainter *painter, const QRect &rect,
+                      const QModelIndex &index) const override;
 
 signals:
     void fontSizeChange(int fontSize);
