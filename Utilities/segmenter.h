@@ -96,7 +96,8 @@ struct Segmentation {
     /* Per Detail level, the segment offered under each grid cell, -1 = none. Painted
        largest first, so the SMALLEST segment at that level wins a cell. */
     std::vector<int16_t> label[kLevels];
-    /* Segment under mask-normalized n at a Detail level, -1 if none. */
+    /* Segment under mask-normalized n at a Detail level -- or, where that level offers
+       nothing, the next finer level that does -- -1 if none. */
     int at(QPointF n, int level) const;
     /* How many segments a Detail level offers. */
     int count(int level) const;

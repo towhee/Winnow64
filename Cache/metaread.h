@@ -106,6 +106,8 @@ signals:
                   int instance, QString src = "",
                   int role = Qt::EditRole);
     void cleanupIcons(int instance);
+    // a Reader's embedded JPEG thumb was stale (Image/stalethumb.h); MW collects them
+    void staleEmbeddedThumb(QString fPath);
     void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void fileSelectionChange(QModelIndex sfIdx,
                              QModelIndex idx2 = QModelIndex(),

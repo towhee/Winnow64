@@ -22,6 +22,11 @@ public:
     void writeXMP(QString dst, QString tag, QString val);
     void readXMP(QString dst, QString tag, QString &val);
     void addThumb(QString src, QString dst);
+    /*  Replace dst's EXIF thumbnail (IFD1) with thumbSrc and its PreviewImage, where it
+        has one, with previewSrc, and WAIT for ExifTool's answer. True only when it
+        reports the file updated; err gets its stderr otherwise. See the definition. */
+    bool replaceEmbeddedImages(const QString &thumbSrc, const QString &previewSrc,
+                               const QString &dst, QString &err);
     void writeOrientation(QString src, QString orientation);
     int copyAll(QString src, QString dst);
     int copyAll(const QStringList &src, QStringList &dst);

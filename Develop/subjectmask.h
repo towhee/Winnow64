@@ -13,8 +13,8 @@
     model (Utilities/subjectpredictor), then edge-refined against the photo (guided filter) and stored
     at the reference (~1024) resolution so the cutout follows real boundaries rather than a blocky
     320-px ramp. SubjectRef stores that single-channel coverage (0..1), output-oriented; coverage()
-    bilinearly samples it and applies the component's feather/invert at eval time (like
-    RangeMask::lumCoverage).
+    bilinearly samples it; Feather is a spatial blur of the cutout (feathered(), see
+    Develop/maskfeather.h) and invert is applied at eval time.
 
     onx/ony are OUTPUT-normalized (0..1 of the oriented image) -- the same space the geometric and
     range tools and buildMaskBuffer's degrees mapping already use, so a subject component drops into
@@ -25,10 +25,11 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
-#include "Develop/maskfalloff.h"
+#include "Develop/maskfeather.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
+#include "Develop/aimaskprobe.h"
 
 namespace SubjectMask {
 
@@ -64,7 +65,11 @@ inline QHash<QString, std::shared_ptr<const SubjectRef>> &refStore()
 inline void putRef(const QString &path, std::shared_ptr<const SubjectRef> r)
 {
     QMutexLocker lk(&refMutex());
-    if (refStore().size() > 8) refStore().clear();
+    if (refStore().size() > 8) {
+        refStore().clear();
+        AiMaskProbe::note("subject store: size cap hit, ALL refs cleared before " + path);
+    }
+    if (!r) AiMaskProbe::note("subject store: ref set to NULL for " + path);
     refStore().insert(path, std::move(r));
 }
 
@@ -92,22 +97,36 @@ inline float sampleCov(const SubjectRef &ref, double onx, double ony)
     return float(top + (bot - top) * ty);
 }
 
-/*
-    Coverage for the subject at (onx,ony). The saliency is thresholded around 0.5 with a feather band
-    (featherPct 0..100 -> up to 0.5 half-width) so Feather softens the cutout edge; feather 0 gives a
-    hard 0.5 threshold. inverted flips the selection (background instead of subject).
-*/
-inline float coverage(const SubjectRef &ref, double onx, double ony,
-                      float featherPct, bool inverted)
+/* Feather 0: a hard threshold of the saliency at 0.5 -- the cutout itself. */
+inline float baseCov(const SubjectRef &ref, double onx, double ony)
 {
-    const float s = sampleCov(ref, onx, ony);
-    const double band = std::clamp(double(featherPct) / 100.0, 0.0, 1.0) * 0.5;
-    double v;
-    if (band <= 1e-6)  v = (s >= 0.5f) ? 1.0 : 0.0;      // hard threshold
-    /* Gaussian edge (MaskFalloff::cdf), sigma matched to the 10-90 width of the
-       smootherstep it replaces, so the band reads the same but has no hard ends. */
-    else               v = MaskFalloff::cdf((s - 0.5) / (0.48 * band));
-    const float c = float(v);
+    return sampleCov(ref, onx, ony) >= 0.5f ? 1.0f : 0.0f;
+}
+
+/*
+    The Feather-blurred cutout (Develop/maskfeather.h), or null at feather 0. Fetched ONCE
+    per render or overlay build, then sampled per pixel by coverage(). Subject and
+    Background share it: blurring commutes with 1 - x.
+*/
+inline std::shared_ptr<const MaskFeather::Map>
+feathered(const std::shared_ptr<const SubjectRef> &ref, float featherPct)
+{
+    if (!ref || !ref->valid() || featherPct < MaskFeather::kMinFeather) return nullptr;
+    return MaskFeather::cached(ref, featherPct, [&] {
+        cv::Mat1f base(ref->h, ref->w);
+        for (int y = 0; y < ref->h; ++y)
+            for (int x = 0; x < ref->w; ++x)
+                base(y, x) = ref->cov[size_t(y) * ref->w + x] >= 0.5f ? 1.0f : 0.0f;
+        return MaskFeather::build(base, 0.0, 0.0, 1.0, 1.0, featherPct);
+    });
+}
+
+/* Coverage at (onx,ony): the feathered map when there is one, else the hard cutout.
+   inverted flips the selection (background instead of subject). */
+inline float coverage(const SubjectRef &ref, const MaskFeather::Map *fm,
+                      double onx, double ony, bool inverted)
+{
+    const float c = fm ? fm->sample(onx, ony) : baseCov(ref, onx, ony);
     return inverted ? 1.0f - c : c;
 }
 

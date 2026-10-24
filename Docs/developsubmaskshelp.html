@@ -20,6 +20,11 @@ are combined into the one mask the scope applies.</p>
 <ul>
 <li><b>Linear Gradient</b> and <b>Radial Gradient</b> &mdash; drag on the image to place
 them; both can be moved, rotated and re-shaped afterwards.</li>
+<li><b>Beam Gradient</b> &mdash; a band across the photo, strongest along its centre line
+and fading out the same way on both sides.  Drag the centre to move it, an end handle to
+turn it, and a side handle to set its width.  Its <b>Taper</b> slider narrows the beam
+toward one end (positive) or the other (negative); at 100 the edges meet in a point at
+that end's handle, like a shaft of light.</li>
 <li><b>Brush</b> &mdash; paint the selection by hand; Opt/Alt erases.</li>
 <li><b>Color Range</b> and <b>Luminance Range</b> &mdash; content-based: sample a colour
 or set a band of tones and the selection follows the picture, not a shape.</li>
@@ -103,6 +108,15 @@ calibrated falloff, so a feather of 50 means the same thing whichever tool drew 
 <b>Invert</b> flips that one submask, which is often quicker than describing the opposite:
 select the sky, invert, and you have everything but the sky.</p>
 
+<p>On a <b>Linear Gradient</b>, the two outer handles mark where the ramp starts and ends,
+and they are tied to Feather.  Raise Feather and the handles spread apart; drag a handle
+outward and Feather rises with it.  At Feather 0 the handles close in on the centre for a
+hard edge, and at 100 the ramp spans the whole photo.</p>
+
+<p>A low Feather puts those handles close together, which makes them hard to turn, so a
+Linear Gradient also has a <b>Rotation</b> slider.  It turns the gradient about its
+centre, in degrees clockwise, and follows along when you turn it with the handles.</p>
+
 <p><b>Edge</b> does what Feather cannot: it <i>moves</i> the boundary instead of softening
 it. Positive values grow the submask, negative values shrink it, and one unit is one pixel
 of the full-size image &mdash; so the same setting means the same thing on screen and on
@@ -120,9 +134,17 @@ result without visiting each submask in turn.</p>
 
 <p>The two add up: a submask at +5 inside a
 mask at &minus;3 ends up 2 pixels out. The section appears as soon as the mask has a
-submask to work on; its <b>[:]</b> menu puts both of its sliders back to zero, leaving each submask's own Edge alone.</p>
+submask to work on; its <b>[:]</b> menu puts its Feather, Edge and Halo back to zero, leaving each submask's own Feather and Edge alone.</p>
 
-<p><b>Halo</b>, the other row in that Mask section, is for the case Edge cannot fix. When a mask
+<p><b>Feather</b>, at the top of that Mask section, softens the finished mask as a whole
+&mdash; every submask folded together &mdash; so a mask built from several pieces can be
+softened once instead of submask by submask.</p>
+
+<p>It adds to each submask's own Feather, and it is applied last, after Edge and Halo, so
+what you set is the softness you see.  At 100 the transition spreads across roughly a
+tenth of the photo's shorter side.</p>
+
+<p><b>Halo</b>, another row in that Mask section, is for the case Edge cannot fix. When a mask
 boundary does not quite follow your subject, whatever you do to that mask spills onto a
 thin rim of background and reads as a glow around the subject &mdash; most obvious when
 you have brightened the subject. Edge only slides the whole boundary by the same amount
@@ -136,7 +158,7 @@ edge, so if nothing seems to be happening, keep going &mdash; and if you push it
 narrow band just inside your subject can end up slightly under-adjusted, which is the
 trade.</p>
 
-<p>A mask made only of Linear or Radial Gradients has no edge in the picture to work
+<p>A mask made only of Linear, Radial or Beam Gradients has no edge in the picture to work
 from, and there the control is greyed out.</p>
 
 <p><b>Opacity</b>, under Halo, sets how strongly the whole mask applies, in percent.  At
@@ -144,7 +166,7 @@ from, and there the control is greyed out.</p>
 half, everywhere at once, without changing the shape of the mask.  It is the quick way to
 tone a mask down after you have set its sliders.  It also fades the mask's kaleidoscope
 and, with <b>Hide global image</b> on, how solidly the masked area shows.  The Mask band's
-<b>Reset mask Edge, Halo and Opacity</b> puts it back to 100.</p>
+<b>Reset mask Feather, Edge, Halo and Opacity</b> puts it back to 100.</p>
 
 <h2>Seeing the mask</h2>
 <p>The overlay appears by itself while the mask has your attention &mdash; whenever the
@@ -179,7 +201,7 @@ on a submask's row.</p>
 <h2>What is saved</h2>
 <p>The submask list &mdash; each tool, its op, its inverted and enabled flags, its feather
 and its geometry or samples &mdash; is part of the develop recipe, stored with the scope in
-the image's sidecar, as are the mask's own Edge and Halo.  Masks are per image and never travel with a preset, Copy / Paste
+the image's sidecar, as are the mask's own Feather, Edge and Halo.  Masks are per image and never travel with a preset, Copy / Paste
 Settings, or a multi-image edit: they describe these pixels.</p>
 
 </body>

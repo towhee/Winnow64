@@ -1,5 +1,6 @@
 #include "Develop/Properties/maskeditor.h"
 #include "Develop/Properties/colorrangewheel.h"
+#include "Develop/beammask.h"
 #include "Main/global.h"
 #include "Utilities/segmenter.h"
 
@@ -162,7 +163,48 @@ void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effecti
         break;
     }
 
-    default:    // Gradients, Subject, Sky, Background: Feather + Invert
+    case int(MaskTool::LinearGradient):
+        /* Rotation: a precise alternative to the end handles, which sit close together
+           (and so are hard to turn) at a low Feather. Tenths of a degree; the value is set
+           by the canvas (ImageView::maskAngleReported), which knows the frame's aspect. */
+        addSlider("maskFeather", "Feather", "Soften the mask edge.", 0, 100);
+        addSlider("maskAngle", "Rotation",
+                  "Turn the gradient about its centre (degrees, clockwise).",
+                  -1800, 1800, 10);
+        addSlider("maskEdge", "Edge", kEdgeTip, -100, 100);
+        addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.");
+        setSliderReal("maskFeather", feather);
+        setSliderReal("maskAngle", 0.0);
+        setSliderReal("maskEdge", edge);
+        setCheckboxValue("maskInvert", m.inverted);
+        break;
+
+    case int(MaskTool::Beam): {
+        /* Width is also the canvas's side handles; Taper and Rotation are panel-first
+           (the end handles turn the beam, but a precise angle wants the slider). Width
+           is the FULL width in % of the frame's short side; params store the half. */
+        addSlider("maskFeather", "Feather", "Soften both edges of the beam.", 0, 100);
+        addSlider("maskBeamWidth", "Width",
+                  "Width of the beam at its centre (% of the photo's short side).",
+                  1, 2000, 10);
+        addSlider("maskBeamTaper", "Taper",
+                  "Narrow the beam toward one end (-) or the other (+). At 100 the edges "
+                  "meet at that end's handle.", -100, 100);
+        addSlider("maskAngle", "Rotation",
+                  "Turn the beam about its centre (degrees, clockwise).", -1800, 1800, 10);
+        addSlider("maskEdge", "Edge", kEdgeTip, -100, 100);
+        addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.");
+        setSliderReal("maskFeather", feather);
+        setSliderReal("maskBeamWidth",
+                      200.0 * o.value("width").toDouble(BeamMask::kDefaultWidth));
+        setSliderReal("maskBeamTaper", o.value("taper").toDouble(0.0));
+        setSliderReal("maskAngle", 0.0);
+        setSliderReal("maskEdge", edge);
+        setCheckboxValue("maskInvert", m.inverted);
+        break;
+    }
+
+    default:    // Radial Gradient, Subject, Sky, Background: Feather + Invert
         addSlider("maskFeather", "Feather", "Soften the mask edge.", 0, 100);
         addSlider("maskEdge", "Edge", kEdgeTip, -100, 100);
         addCheckbox("maskInvert", "Invert", "Invert this tool's contribution.");
@@ -177,17 +219,23 @@ void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effecti
 }
 
 /*
-    The MASK-level rows: Edge, Halo and Opacity, applied to the mask every submask
+    The MASK-level rows: Feather, Edge, Halo and Opacity, applied to the mask every submask
     folds into. They
     are NOT part of showTool's per-tool rows because they must survive with no submask
     selected -- that block hides, this one does not.
 */
-void MaskEditor::showMaskLevel(float edgeVal, float haloVal, bool haloUseful,
-                               float opacityVal)
+void MaskEditor::showMaskLevel(float featherVal, float edgeVal, float haloVal,
+                               bool haloUseful, float opacityVal)
 {
     isPopulating = true;
     wheel = nullptr;
     clearRows();
+    /* Above Edge, in the order the submask rows use. Softens the folded mask after Edge
+       and Halo (EditScope::maskFeather), so each submask's own Feather still composes. */
+    addSlider("scopeMaskFeather", "Feather",
+              "Soften the whole mask's edge (0 = as the submasks make it).",
+              0, 100);
+    setSliderReal("scopeMaskFeather", int(featherVal + 0.5f));
     addSlider("scopeMaskEdge", "Edge",
               "Grow (+) or shrink (-) the whole mask.",
               -100, 100);

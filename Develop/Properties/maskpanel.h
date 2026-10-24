@@ -20,6 +20,7 @@ class MaskEditor;
 
         | Edits  [Mask 2 v] [+] [eye] [:]         |   <- the scope bar (ScopeHeader)
         | |  v Mask                  [+] [■] [:]  |   <- MASK level: [+] adds a submask
+        | |    Feather   -----o-----              |
         | |    Edge      -----o-----              |
         | |    Halo      -----o-----              |
         | |  -------------------------------      |
@@ -114,7 +115,7 @@ public:
     static const QStringList &overlayColourNames();
 
 signals:
-    /* Mask band [:]: put the folded mask back to Edge 0 / Halo 0. The panel holds no
+    /* Mask band [:]: put the folded mask back to Feather 0 / Edge 0 / Halo 0. The panel holds no
        model state, so DevelopProperties does the zeroing and pushes the rows back. */
     void resetMaskLevelRequested();
     /* Mask band [:] last item, as on every band in the dock: the submasks help page

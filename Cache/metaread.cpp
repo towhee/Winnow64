@@ -125,6 +125,7 @@ MetaRead::MetaRead(QObject *parent,
         reader->readerThread = thread;
         reader->moveToThread(thread);
         connect(reader, &Reader::done, this, &MetaRead::dispatch);
+        connect(reader, &Reader::staleEmbeddedThumb, this, &MetaRead::staleEmbeddedThumb);
         connect(thread, &QThread::finished, reader, &QObject::deleteLater);
         connect(thread, &QThread::finished, thread, &QObject::deleteLater);
         thread->start(QThread::LowPriority);

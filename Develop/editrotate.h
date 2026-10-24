@@ -102,7 +102,8 @@ inline QString maskParams(int tool, const QString &json, int degrees)
     QJsonObject o = d.object();
 
     switch (MaskTool(tool)) {
-    case MaskTool::LinearGradient: {
+    case MaskTool::LinearGradient:
+    case MaskTool::Beam: {          // Beam's width is a short-side fraction: unchanged
         if (!o.contains("x1") || !o.contains("x2")) return json;
         const QPointF a = point(o.value("x1").toDouble(), o.value("y1").toDouble(), degrees);
         const QPointF b = point(o.value("x2").toDouble(), o.value("y2").toDouble(), degrees);

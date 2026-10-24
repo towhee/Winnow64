@@ -51,7 +51,6 @@ constexpr double kGapMinArea    = 0.002;   // an uncovered region worth a prompt
    mask (SAM's remove_small_regions); a segment below it is dropped. */
 constexpr double kMinArea       = 0.0005;
 constexpr double kMaxArea       = 0.95;    // "the whole frame" is not an object
-constexpr double kRemainderMinArea = 0.003;
 /* Hierarchy: B is A's parent if it holds kContain of A and is meaningfully larger. */
 constexpr double kContain       = 0.80;
 constexpr double kParentGrowth  = 1.10;
@@ -305,9 +304,14 @@ int Segmentation::at(QPointF n, int level) const
 {
     if (level < 0 || level >= kLevels || gw <= 0 || gh <= 0) return -1;
     if (n.x() < 0.0 || n.y() < 0.0 || n.x() >= 1.0 || n.y() >= 1.0) return -1;
-    const std::vector<int16_t> &L = label[level];
     const size_t i = size_t(int(n.y() * gh)) * size_t(gw) + size_t(int(n.x() * gw));
-    return i < L.size() ? int(L[i]) : -1;
+    /* Nothing at this level here (only a finer piece covers the cell): offer the
+       nearest finer one rather than nothing, so no visible region is unclickable. */
+    for (int l = level; l < kLevels; ++l) {
+        const std::vector<int16_t> &L = label[l];
+        if (i < L.size() && L[i] >= 0) return int(L[i]);
+    }
+    return -1;
 }
 
 int Segmentation::count(int level) const
@@ -427,8 +431,11 @@ std::shared_ptr<const Segmentation> assemble(const DecodeFn &decode, int gw, int
         seg->segs << s;
         bins.push_back(b);
     }
-    /* Whatever no prompt claimed, so every sizeable region of the frame can be clicked.
-       Opened first so the hairline gaps between neighbouring masks do not count. */
+    /* Whatever no prompt claimed, so every region of the frame can be clicked. Opened
+       first so the hairline gaps between neighbouring masks do not count. The floor is
+       kMinArea, the size a mask keeps a hole at: a hole left in a segment is uncovered
+       here, and with a larger floor it was a dead spot -- in a selected object it could
+       not be clicked to add what shows through it. */
     {
         cv::Mat unc = (covered == 0);
         const int k = std::max(3, (std::max(gw, gh) / 128) | 1);
@@ -438,7 +445,7 @@ std::shared_ptr<const Segmentation> assemble(const DecodeFn &decode, int gw, int
         const int n = cv::connectedComponentsWithStats(unc, lab, st, cen, 8, CV_32S);
         for (int i = 1; i < n; ++i) {
             const int a = st.at<int>(i, cv::CC_STAT_AREA);
-            if (a < kRemainderMinArea * frame) continue;
+            if (a < kMinArea * frame) continue;
             cv::Mat b = (lab == i);
             Segment s;
             s.rings = traceRings(b, gw, gh);

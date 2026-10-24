@@ -29,8 +29,6 @@ public:
         used only to walk the source's header on a thumbnail-cache miss. */
     bool loadVersionThumb(const QString &key, int dmRow, QImage &image, int instance,
                           Metadata *metadata, QString src);
-    void insertThumbnailsInJpg(QModelIndexList &selection);
-    bool insertingThumbnails = false;
 
     enum Status {
         None,
@@ -47,6 +45,10 @@ signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                   int role = Qt::EditRole); // not used
     void getFrame(QString fPath);
+    /*  The embedded JPEG thumbnail disagreed with the image's shape and was not used
+        (Image/stalethumb.h). Emitted on the Reader's thread; MW collects these and
+        offers to repair the files (MW::noteStaleEmbeddedThumb). */
+    void staleEmbeddedThumb(QString fPath);
 
 private:
     mutable QMutex mutex;

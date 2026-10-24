@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Image/stalethumb.h"
 #include "Develop/workingdump.h"
 #include "Utilities/versionkey.h"
 #include "Utilities/rowtrail.h"
@@ -25,6 +26,7 @@
 #include "Develop/workingimagecache.h"
 #include "Develop/inputtransform.h"
 #include "Develop/brushstamp.h"
+#include "Develop/beammask.h"
 #include "Develop/maskedge.h"
 #include "Develop/maskhalo.h"
 #include "Develop/maskrefine.h"
@@ -33,6 +35,7 @@
 #include "Develop/maskfalloff.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
+#include "Develop/aimaskprobe.h"
 #include "Develop/skymask.h"
 #include "Develop/editrotate.h"     // EditRotate::turnBlur: blur centre/angle -> source
 #include "Develop/artblur.h"        // ArtBlur::reach: the Detail patch's padding
@@ -1766,6 +1769,8 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         G::popup->reset();
         // end stress test
         if (G::isStressTest) G::isStressTest = false;
+        // stop repairing stale embedded thumbnails (Main/mwstalethumbs.cpp)
+        else if (staleThumbAbort) *staleThumbAbort = true;
         // stop selecting a new folder in FSTree
         // else if (fsTree->isSelectingFolders) {
         //     G::stop = true;
@@ -7363,8 +7368,13 @@ void MW::prefetchIconsFromIndex(QString src)
         rather than sorted afterwards so the first page really is the visible page. */
     QVector<ThumbRequest> reqs;
     QVector<int> dmRows;
+    /*  Per request: the shape a cached thumb must have (Image/stalethumb.h). check is
+        false for anything not judged -- not a JPEG, or developed (cropped to any shape). */
+    struct ShapeCheck { bool check = false; int w = 0, h = 0, orientation = 0, rot = 0; };
+    QVector<ShapeCheck> shapes;
     reqs.reserve(last - first + 1);
     dmRows.reserve(last - first + 1);
+    shapes.reserve(last - first + 1);
 
     auto consider = [&](int sfRow) {
         if (sfRow < first || sfRow > last) return;
@@ -7387,8 +7397,17 @@ void MW::prefetchIconsFromIndex(QString src)
         r.srcMtime = dm->index(dmRow, G::ModifiedColumn).data()
                          .toDateTime().toSecsSinceEpoch();
         r.hasDevelopRecipe = dm->index(dmRow, G::DevelopColumn).data().toBool();
+        ShapeCheck sc;
+        sc.check = !r.hasDevelopRecipe && StaleThumb::isChecked(QFileInfo(fPath).suffix());
+        if (sc.check) {
+            sc.w = dm->index(dmRow, G::WidthColumn).data().toInt();
+            sc.h = dm->index(dmRow, G::HeightColumn).data().toInt();
+            sc.orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
+            sc.rot = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
+        }
         reqs.append(r);
         dmRows.append(dmRow);
+        shapes.append(sc);
     };
 
     consider(startSf);
@@ -7402,7 +7421,7 @@ void MW::prefetchIconsFromIndex(QString src)
     /*  PAGED, so the first icons paint while the rest are still being read, and so a
         folder change part way through abandons the remainder rather than finishing a
         read nobody is waiting for. */
-    QThreadPool::globalInstance()->start([this, reqs, dmRows, instance]{
+    QThreadPool::globalInstance()->start([this, reqs, dmRows, shapes, instance]{
         constexpr int kPage = 512;
         int found = 0;
         for (int from = 0; from < reqs.size(); from += kPage) {
@@ -7425,6 +7444,12 @@ void MW::prefetchIconsFromIndex(QString src)
                 if (it == hits.cend()) continue;
                 QImage im;
                 if (!im.loadFromData(*it, "JPG") || im.isNull()) continue;
+                /*  A stale thumb cached before Image/stalethumb.h caught it: leave the
+                    row for MetaRead, whose Reader rebuilds it and REPLACES the entry. */
+                const ShapeCheck &sc = shapes.at(i);
+                if (sc.check && StaleThumb::cachedIsStale(im.size(), sc.w, sc.h,
+                                                          sc.orientation, sc.rot))
+                    continue;
                 /*  The same clamp getImage applies: a row written by an older build or a
                     larger icon setting must not paint over its cell. */
                 if (im.width() > G::maxIconSize || im.height() > G::maxIconSize)
@@ -10052,7 +10077,7 @@ QImage developComposite(const WorkingImage &src, const EditParams &edit, int deg
    Radial fields are precomputed in OUTPUT-PIXEL space (Wo,Ho) so the ellipse keeps its aspect and
    rotation; eval converts the normalized pixel to output pixels via Wo,Ho. */
 struct MaskComp {
-    int    tool = 0;                // 0 Linear, 1 Radial
+    int    tool = 0;                // 0 Linear, 1 Radial, MaskTool::Beam
     int    op = 0;                  // 0 Add (union), 1 Subtract (removes)
     bool   inverted = false;
     bool   hardStep = true;         // feather == 0
@@ -10063,8 +10088,10 @@ struct MaskComp {
     double tShift = 0.0;            // Edge, as a shift of the 0.5 crossing in t
     /* Radial (output-pixel space) */
     double cpx = 0, cpy = 0, iax = 0, iay = 0, cosA = 1, sinA = 0;
-    /* Feather profile (MaskFalloff). Radial reads the table; Linear uses the CDF and
-       only needs invSigma. Built once per component, never in the per-pixel loop. */
+    /* Beam (output-pixel space, Develop/beammask.h) */
+    BeamMask::Shape beam;
+    /* Feather profile (MaskFalloff). Radial and Beam read the table; Linear uses the CDF
+       and only needs invSigma. Built once per component, never in the per-pixel loop. */
     MaskFalloff::Lut falloff;
 };
 
@@ -10137,6 +10164,14 @@ MaskComp parseMaskComp(const MaskComponent &m, double Wo, double Ho, double edge
         if (!g.hardStep) g.falloff.build(m.feather);
         g.valid = true;
     }
+    else if (m.tool == int(MaskTool::Beam)) {
+        /* Edge rides the half-width everywhere along the spine, so the feather (a
+           fraction of the local half-width, as on Radial) moves with it. */
+        g.beam = BeamMask::fromJson(o, Wo, Ho, edgePx);
+        if (!g.beam.valid) return g;
+        if (!g.hardStep) g.falloff.build(m.feather);
+        g.valid = true;
+    }
     return g;
 }
 
@@ -10153,6 +10188,11 @@ inline float evalMaskComp(const MaskComp &g, double onx, double ony, double Wo, 
            runs past 1 (a Gaussian tail, as Lightroom's does), so a mask reaches slightly
            beyond its drawn outline -- see MaskFalloff. */
         if (g.hardStep) v = (d <= 1.0) ? 1.0 : 0.0;     // hard edge at the boundary
+        else            v = g.falloff.at(d);
+    }
+    else if (g.tool == int(MaskTool::Beam)) {   // Beam: spine distance / half-width
+        const double d = g.beam.t(onx*Wo, ony*Ho);
+        if (g.hardStep) v = (d <= 1.0) ? 1.0 : 0.0;
         else            v = g.falloff.at(d);
     }
     else {                          // Linear: projection along p1->p2
@@ -10301,6 +10341,9 @@ struct CompDesc {
     bool isDepth = false;           // Depth Range: band [rlo,rhi] over the depth field
     bool isObject = false;          // Object Mask (SAM 2): per-brush ObjectRef (not shared by path)
     std::shared_ptr<const ObjectMask::ObjectRef> objRef;  // this component's decoded coverage
+    /* Subject/Sky/Object: the Feather-blurred coverage map, or null at feather 0. Fetched
+       once here so the per-pixel fold only samples it -- see Develop/maskfeather.h. */
+    std::shared_ptr<const MaskFeather::Map> fmap;
     MaskComp param;                                       // parametric
     std::shared_ptr<const std::vector<float>> brush;      // brush coverage (raw, pre-invert)
     int  op = 0;
@@ -10363,15 +10406,15 @@ inline float evalCompAt(const CompDesc &d, double onx, double ony, size_t k,
                                             d.hueLo, d.hueHi, d.satLo, d.satHi,
                                             d.feather, d.inverted);
     if (d.isSubject)
-        return SubjectMask::coverage(*subjp, onx, ony, float(d.feather),
+        return SubjectMask::coverage(*subjp, d.fmap.get(), onx, ony,
                                      d.inverted ^ d.subjectBaseInvert);
     if (d.isSky)
-        return SkyMask::coverage(*skyp, onx, ony, float(d.feather), d.inverted);
+        return SkyMask::coverage(*skyp, d.fmap.get(), onx, ony, d.inverted);
     if (d.isDepth)
         return DepthMask::coverage(*depthp, onx, ony, d.rlo, d.rhi, d.feather,
                                    d.inverted);
     if (d.isObject)
-        return ObjectMask::coverage(*d.objRef, onx, ony, float(d.feather), d.inverted);
+        return ObjectMask::coverage(*d.objRef, d.fmap.get(), onx, ony, d.inverted);
     return evalMaskComp(d.param, onx, ony, Wo, Ho);            // invert applied inside
 }
 
@@ -10800,13 +10843,16 @@ bool componentsHaveRefine(const QVector<MaskComponent> &components)
     pixelScale converts an Edge slider value (which is FULL-RESOLUTION pixels, so it means
     the same thing in the sidecar whatever this render's size) into pixels of THIS buffer:
     this render's long edge over the full-res long edge. 1.0 for a settle or export, ~0.3
-    for a screen proxy. scopeEdge is EditScope::maskEdge, applied to the folded mask.
+    for a screen proxy. scopeEdge is EditScope::maskEdge, applied to the folded mask;
+    scopeFeather is EditScope::maskFeather, a blur of it relative to the buffer's short
+    side, so it needs no pixelScale.
 */
 std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int w, int h, int degrees,
                                    const QString &fPath, bool *refsReady = nullptr,
                                    MaskBuildStats *stats = nullptr,
                                    double pixelScale = 1.0, float scopeEdge = 0.0f,
                                    float scopeHalo = 0.0f,
+                                   float scopeFeather = 0.0f,
                                    const std::vector<float> *haloGuide = nullptr,
                                    const std::vector<float> *refineGuide = nullptr)
 {
@@ -10863,6 +10909,13 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         if (stats) haloProbe.start();
         MaskHalo::apply(out, *haloGuide, w, h, scopeHalo, pixelScale, par);
         if (stats) { stats->haloMs += haloProbe.elapsed(); ++stats->halos; }
+    };
+
+    /* Mask-level Feather: soften the finished mask. LAST, after Edge and Halo, so it is
+       the softness the user sees -- run before Halo, Halo would pull the transition back
+       onto the picture's edge and undo it. */
+    auto applyScopeFeather = [&]() {
+        MaskFeather::blurInPlace(out, w, h, double(scopeFeather));
     };
 
     /* Resume the fold from the deepest still-valid prefix (see the fold-prefix cache
@@ -11014,6 +11067,9 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
         }
         else if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)) {
             if (!subjRef || !subjRef->valid()) {      // saliency not ready -> no effect
+                AiMaskProbe::note(QString("buildMaskBuffer: subject ref MISSING for %1 "
+                                          "(%2x%3 @%4) -> component skipped")
+                                  .arg(QFileInfo(fPath).fileName()).arg(w).arg(h).arg(degrees));
                 refsHereReady = false;
                 continue;
             }
@@ -11023,11 +11079,15 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.fmap      = SubjectMask::feathered(subjRef, m.feather);
             d.edgePx    = morphPx;
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Sky)) {
             if (!skyRef || !skyRef->valid()) {            // sky not ready -> no effect
+                AiMaskProbe::note(QString("buildMaskBuffer: sky ref MISSING for %1 "
+                                          "(%2x%3 @%4) -> component skipped")
+                                  .arg(QFileInfo(fPath).fileName()).arg(w).arg(h).arg(degrees));
                 refsHereReady = false;
                 continue;
             }
@@ -11036,11 +11096,15 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.fmap      = SkyMask::feathered(skyRef, m.feather);
             d.edgePx    = morphPx;
             comps.append(d);
         }
         else if (m.tool == int(MaskTool::Depth)) {
             if (!depthRef || !depthRef->valid()) {      // depth not ready -> no effect
+                AiMaskProbe::note(QString("buildMaskBuffer: depth ref MISSING for %1 "
+                                          "(%2x%3 @%4) -> component skipped")
+                                  .arg(QFileInfo(fPath).fileName()).arg(w).arg(h).arg(degrees));
                 refsHereReady = false;
                 continue;
             }
@@ -11075,6 +11139,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.op        = m.op;
             d.inverted  = m.inverted;
             d.feather   = m.feather;
+            d.fmap      = ObjectMask::feathered(objRef, m.feather);
             d.edgePx    = morphPx;
             comps.append(d);
         }
@@ -11092,7 +11157,10 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
     /* Nothing new to fold -> the prefix (or zeros). The mask-level Edge still applies:
        dragging THAT slider changes no component signature, so this is the path it takes
        on every tick. */
-    if (comps.isEmpty()) { applyScopeEdge(); applyScopeHalo(); return out; }
+    if (comps.isEmpty()) {
+        applyScopeEdge(); applyScopeHalo(); applyScopeFeather();
+        return out;
+    }
     const RangeMask::RangeRef *refp = ref ? ref.get() : nullptr;
     const SubjectMask::SubjectRef *subjp = subjRef ? subjRef.get() : nullptr;
     const SkyMask::SkyRef *skyp = skyRef ? skyRef.get() : nullptr;
@@ -11263,6 +11331,7 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
        would hand every later resume a shape that is not a prefix of anything. */
     applyScopeEdge();
     applyScopeHalo();
+    applyScopeFeather();
     if (stats) stats->foldMs += buildProbe.elapsed();
     return out;
 }
@@ -11489,6 +11558,9 @@ static QImage renderDetailRoiImage(const DetailRoiJob &job,
    which is also what keeps the cache lock-free. */
 /* Defined below, next to the other stack predicates; needed here for the mask keys. */
 bool scopeMaskDependsOnBase(const DevelopProperties::StackRenderJob::Scope &L);
+void probeAiMaskBuffer(const char *who, const QString &fPath,
+                       const QVector<MaskComponent> &comps,
+                       const std::vector<float> &buf, int w, int h, bool refsReady);
 
 /* Effects > Kaleidoscope on any scope of the job (Global or a mask scope). */
 static bool jobHasKaleido(const DevelopProperties::StackRenderJob &job)
@@ -11960,7 +12032,7 @@ QImage developCompositeStack(const WorkingImage &src,
             for (size_t i = 0; i < nScopes; ++i) {
                 const DevelopProperties::StackRenderJob::Scope &L = job.scopes.at(int(i));
                 maskKeys[i] = maskComponentsSignature(L.components, L.maskEdge,
-                                                      L.maskHalo);
+                                                      L.maskHalo, L.maskFeather);
                 /* A content-range mask thresholds a reference derived from the developed
                    base, so its coverage moves when the base does even though no component
                    changed -- fold the base signature in for those scopes and ONLY those.
@@ -12025,9 +12097,11 @@ QImage developCompositeStack(const WorkingImage &src,
                         buildMaskBuffer(L.components, src.width, src.height, degrees,
                                         fPath, &refsReady, maskStats,
                                         double(src.renderScale), L.maskEdge,
-                                        L.maskHalo,
+                                        L.maskHalo, L.maskFeather,
                                         haloGuide.empty() ? nullptr : &haloGuide,
                                         refineGuide.empty() ? nullptr : &refineGuide);
+                    probeAiMaskBuffer("render", fPath, L.components, built,
+                                      src.width, src.height, refsReady);
                     /* The mask's Opacity: the whole coverage, scaled. Downstream (the
                        blend, the kaleidoscope, "Hide global image") all read it. */
                     if (L.opacity < 1.0f) {
@@ -12232,6 +12306,32 @@ bool stackHasRangeMask(const DevelopProperties::StackRenderJob &job)
     return false;
 }
 
+/* AUTO-MASK PROBE (Develop/aimaskprobe.h): does this component list carry a model mask
+   (Subject/Background/Sky/Depth), and is a finished buffer for it effectively blank? */
+bool componentsHaveAiMask(const QVector<MaskComponent> &comps)
+{
+    for (const MaskComponent &m : comps)
+        if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Background)
+            || m.tool == int(MaskTool::Sky) || m.tool == int(MaskTool::Depth)) return true;
+    return false;
+}
+void probeAiMaskBuffer(const char *who, const QString &fPath,
+                       const QVector<MaskComponent> &comps,
+                       const std::vector<float> &buf, int w, int h, bool refsReady)
+{
+    if (!componentsHaveAiMask(comps)) return;
+    float mx = 0.0f;
+    for (float v : buf) if (v > mx) mx = v;
+    if (mx >= 0.001f) return;
+    QStringList tools;
+    for (const MaskComponent &m : comps)
+        tools << QString("%1%2%3").arg(m.tool).arg(m.enabled ? "" : "(off)")
+                                  .arg(m.inverted ? "(inv)" : "");
+    AiMaskProbe::note(QString("%1: mask EMPTY for %2 (%3x%4, buf %5, refsReady=%6, tools %7)")
+                      .arg(who, QFileInfo(fPath).fileName()).arg(w).arg(h)
+                      .arg(buf.size()).arg(refsReady).arg(tools.join(',')));
+}
+
 /* True if any enabled scope carries an AI Subject mask -- these need the saliency map
    (MW::ensureSubjectMask) built before the composite. */
 bool stackHasSubjectMask(const DevelopProperties::StackRenderJob &job)
@@ -12382,7 +12482,14 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
 */
     if (G::isLogger) G::log("MW::ensureSubjectMask");
     noteLensGeometry(fPath, work, base);
-    if (fPath == developSubjectRefPath && SubjectMask::getRef(fPath)) return;   // already current
+    if (fPath == developSubjectRefPath && SubjectMask::getRef(fPath)) {   // already current
+        AiMaskProbe::countCachedHit();
+        return;
+    }
+    /* Every exit below records its outcome (Develop/aimaskprobe.h). */
+    const QString probeTag = "subject " + QFileInfo(fPath).fileName() + ": ";
+    QElapsedTimer probeClock;
+    probeClock.start();
 
     /* Lazily load u2net.onnx. It is DOWNLOADED ON DEMAND, so it may legitimately be
        absent here: this is also reached from the render paths, which must stay silent.
@@ -12392,13 +12499,16 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
        cached, so nothing needs resetting after a download. */
     if (!subjectPredictor) {
         const QString modelPath = ModelStore::path(ModelStore::Model::U2Net);
-        if (modelPath.isEmpty()) return;
+        if (modelPath.isEmpty()) { AiMaskProbe::note(probeTag + "NO MODEL file"); return; }
         subjectPredictor = new SubjectPredictor(modelPath, 320);
         if (!subjectPredictor->isLoaded())
             qWarning("Select Subject: u2net.onnx failed to load at %s",
                      modelPath.toUtf8().constData());
     }
-    if (!subjectPredictor->isLoaded()) return;
+    if (!subjectPredictor->isLoaded()) {
+        AiMaskProbe::note(probeTag + "MODEL NOT LOADED");
+        return;
+    }
 
     WorkingImage lowRes = WorkingImageCache::downscaled(work, 1024);
     correctGuideForLens(lowRes, fPath, base);
@@ -12406,17 +12516,30 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
                                         fw, fh);
-    if (img.isNull()) return;
+    if (img.isNull()) {
+        AiMaskProbe::note(probeTag + QString("NULL guide composite (work %1x%2 sceneRef=%3)")
+                          .arg(work.width).arg(work.height).arg(work.sceneReferred));
+        return;
+    }
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
     auto r = std::make_shared<SubjectMask::SubjectRef>();
     const bool ok = subjectPredictor->predict(img, r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
-    if (!ok || !r->valid()) return;
+    if (!ok || !r->valid()) {
+        AiMaskProbe::note(probeTag + QString("PREDICT FAILED ok=%1 ref %2x%3 cov=%4")
+                          .arg(ok).arg(r->w).arg(r->h).arg(r->cov.size()));
+        return;
+    }
 
     r->markEmpty();                 // "(null)" in the Submasks list when nothing was found
     SubjectMask::putRef(fPath, r);
     developSubjectRefPath = fPath;
+    AiMaskProbe::note(probeTag + QString("BUILT %1x%2 noSubject=%3 noBackground=%4 deg=%5 "
+                                         "sceneRef=%6 %7 ms (store now %8)")
+                      .arg(r->w).arg(r->h).arg(r->noSubject).arg(r->noBackground)
+                      .arg(degrees).arg(work.sceneReferred).arg(probeClock.elapsed())
+                      .arg(SubjectMask::getRef(fPath) ? "has it" : "MISSING it"));
     /* Queued: this runs inside a render; the list re-reads the new ref after it. */
     QTimer::singleShot(0, this, [this]{
         if (developProperties) developProperties->autoMaskResultsChanged(); });
@@ -12439,18 +12562,25 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
 */
     if (G::isLogger) G::log("MW::ensureSkyMask");
     noteLensGeometry(fPath, work, base);
-    if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) return;      // already current
+    if (fPath == developSkyRefPath && SkyMask::getRef(fPath)) {      // already current
+        AiMaskProbe::countCachedHit();
+        return;
+    }
+    const QString probeTag = "sky " + QFileInfo(fPath).fileName() + ": ";   // aimaskprobe.h
 
     if (!skyPredictor) {                    // downloaded on demand -- see ensureSubjectMask
         const QString skyPath = ModelStore::path(ModelStore::Model::SkySeg);
         const QString segPath = ModelStore::path(ModelStore::Model::SkySegFormer);
-        if (skyPath.isEmpty() || segPath.isEmpty()) return;
+        if (skyPath.isEmpty() || segPath.isEmpty()) {
+            AiMaskProbe::note(probeTag + "NO MODEL file");
+            return;
+        }
         skyPredictor = new SkyPredictor(skyPath, segPath);
         if (!skyPredictor->isLoaded())
             qWarning("Select Sky: a sky model failed to load (%s, %s)",
                      skyPath.toUtf8().constData(), segPath.toUtf8().constData());
     }
-    if (!skyPredictor->isLoaded()) return;
+    if (!skyPredictor->isLoaded()) { AiMaskProbe::note(probeTag + "MODEL NOT LOADED"); return; }
 
     constexpr int kSkyMatteLongEdge = 4096;
     WorkingImage lowRes = WorkingImageCache::downscaled(work, kSkyMatteLongEdge);
@@ -12466,11 +12596,17 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     const bool ok = !img.isNull() && skyPredictor->predict(img, r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
     if (G::popup) G::popup->reset();
-    if (!ok || !r->valid()) return;
+    if (!ok || !r->valid()) {
+        AiMaskProbe::note(probeTag + QString("FAILED nullImg=%1 ok=%2 ref %3x%4")
+                          .arg(img.isNull()).arg(ok).arg(r->w).arg(r->h));
+        return;
+    }
 
     r->markEmpty();                 // "(null)" in the Submasks list when no sky was found
     SkyMask::putRef(fPath, r);
     developSkyRefPath = fPath;
+    AiMaskProbe::note(probeTag + QString("BUILT %1x%2 noSky=%3 deg=%4")
+                      .arg(r->w).arg(r->h).arg(r->noSky).arg(degrees));
     QTimer::singleShot(0, this, [this]{       // queued, as ensureSubjectMask
         if (developProperties) developProperties->autoMaskResultsChanged(); });
 }
@@ -12486,17 +12622,21 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
 */
     if (G::isLogger) G::log("MW::ensureDepthMask");
     noteLensGeometry(fPath, work, base);
-    if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) return;      // already current
+    if (fPath == developDepthRefPath && DepthMask::getRef(fPath)) {      // already current
+        AiMaskProbe::countCachedHit();
+        return;
+    }
+    const QString probeTag = "depth " + QFileInfo(fPath).fileName() + ": ";  // aimaskprobe.h
 
     if (!depthPredictor) {                  // downloaded on demand -- see ensureSubjectMask
         const QString modelPath = ModelStore::path(ModelStore::Model::DepthAnything);
-        if (modelPath.isEmpty()) return;
+        if (modelPath.isEmpty()) { AiMaskProbe::note(probeTag + "NO MODEL file"); return; }
         depthPredictor = new DepthPredictor(modelPath);
         if (!depthPredictor->isLoaded())
             qWarning("Depth: depth_anything.onnx failed to load at %s",
                      modelPath.toUtf8().constData());
     }
-    if (!depthPredictor->isLoaded()) return;
+    if (!depthPredictor->isLoaded()) { AiMaskProbe::note(probeTag + "MODEL NOT LOADED"); return; }
 
     WorkingImage lowRes = WorkingImageCache::downscaled(work, 1024);
     correctGuideForLens(lowRes, fPath, base);
@@ -12504,16 +12644,21 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
                                         fw, fh);
-    if (img.isNull()) return;
+    if (img.isNull()) { AiMaskProbe::note(probeTag + "NULL guide composite"); return; }
 
     QGuiApplication::setOverrideCursor(Qt::BusyCursor);
     auto r = std::make_shared<DepthMask::DepthRef>();
     const bool ok = depthPredictor->predict(img, r->depth, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
-    if (!ok || !r->valid()) return;
+    if (!ok || !r->valid()) {
+        AiMaskProbe::note(probeTag + QString("PREDICT FAILED ok=%1 ref %2x%3")
+                          .arg(ok).arg(r->w).arg(r->h));
+        return;
+    }
 
     DepthMask::putRef(fPath, r);
     developDepthRefPath = fPath;
+    AiMaskProbe::note(probeTag + QString("BUILT %1x%2 deg=%3").arg(r->w).arg(r->h).arg(degrees));
 }
 
 namespace {
@@ -12994,6 +13139,13 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     if (!needsSubject && !isSky && !isDepth && !isObject) return;
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty()) return;
+    /* AUTO-MASK PROBE (Develop/aimaskprobe.h): the gesture, and each way it can stop
+       short of building the reference. */
+    const QString probeTag = QString("editBegin tool %1 %2: ")
+                             .arg(tool).arg(QFileInfo(fPath).fileName());
+    if (!isObject && developProperties->currentPath() != fPath)
+        AiMaskProbe::note(probeTag + "dock path DIFFERS: "
+                          + QFileInfo(developProperties->currentPath()).fileName());
 
     /* THE DOWNLOAD GATE. The AI masks run on models that are downloaded on demand, and
        this slot is the user's GESTURE -- the one place a prompt belongs. The ensure*
@@ -13008,10 +13160,19 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
     else if (isSky)    need << ModelStore::Model::SkySeg << ModelStore::Model::SkySegFormer;
     else if (isDepth)  need << ModelStore::Model::DepthAnything;
     else if (isObject) need << ModelStore::Model::Sam2Encoder << ModelStore::Model::Sam2Decoder;
-    if (!ModelStore::ensure(need, this)) return;
+    if (!ModelStore::ensure(need, this)) {
+        if (!isObject) AiMaskProbe::note(probeTag + "model download declined/failed");
+        return;
+    }
 
     auto work = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
-    if (!work) return;
+    if (!work) {
+        if (!isObject) AiMaskProbe::note(probeTag + "NO WORKING IMAGE yet -> nothing built");
+        return;
+    }
+    if (!isObject)
+        AiMaskProbe::note(probeTag + QString("building (work %1x%2 sceneRef=%3)")
+                          .arg(work->width).arg(work->height).arg(work->sceneReferred));
     const auto mj = developProperties->stackJob();
     const int degrees = work->sceneReferred ? developOrientationDegrees(*work, fPath) : 0;
     if (needsSubject)   ensureSubjectMask(fPath, *work, mj.global, degrees);   // Background = inverted subject
@@ -13112,6 +13273,24 @@ void MW::updateMaskOverlayTint()
        render showed the stroke and the overlay did not (2026-10-14). */
     if (imageView->maskStrokeInFlight()
         && developProperties->focusSubmaskOp() == int(MaskOp::Add)) return;
+    /* Every exit below that does not draw the veil forgets the outline's focus key, so
+       the next veil drawn -- tint re-shown, scope revisited, same submask re-selected --
+       flashes the outline again. Not the stroke early-out above: the veil is still up
+       there, and a flash after every stroke would be exactly the noise the flash avoids. */
+    bool veilDrawn = false;
+    const auto focusKeyGuard = qScopeGuard([this, &veilDrawn] {
+        if (!veilDrawn) developVeilFocusKey.clear();
+    });
+    /* DEVELOP ONLY, and only over the image the dock's state belongs to. Leaving Develop
+       clears the veil once (developDockVisibilityChange -> endMaskEdit), but a rebuild
+       queued before the switch -- the proxy render timer, a tint-visibility change --
+       still landed here afterwards and drew the PREVIOUS image's mask (the dock still
+       held it as the active scope) over the new image in Browse (2026-10-23). */
+    if (!developDock || !developDock->isVisible()
+        || developProperties->currentPath() != dm->currentKey) {
+        imageView->clearScopeMaskTint();
+        return;
+    }
     if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
 
     const QString fPath = dm->currentKey;
@@ -13243,8 +13422,10 @@ void MW::updateMaskOverlayTint()
         buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
                         G::isReportDevelopTime ? &tintStats : nullptr,
                         edgeScale, developProperties->activeScopeMaskEdge(),
-                        veilHalo, veilGuide.empty() ? nullptr : &veilGuide,
+                        veilHalo, developProperties->activeScopeMaskFeather(),
+                        veilGuide.empty() ? nullptr : &veilGuide,
                         veilRefineGuide.empty() ? nullptr : &veilRefineGuide);
+    probeAiMaskBuffer("veil", fPath, masks, buf, bw, bh, true);
 
     /* THE FOCUS SUBMASK'S OWN COVERAGE, if one is open. Its own footprint, not its
        signed contribution: op forced to Add so a Subtract submask still rasterizes as
@@ -13273,16 +13454,23 @@ void MW::updateMaskOverlayTint()
        overlay colours (including white) and the grayscale-backdrop mode; a fixed
        contrast colour would collide with at least two of them.
 
-         mask only      kAlphaMask   the rest of the mask, exactly as before
+         mask only      kAlphaMask   the rest of the mask -- thinned (kAlphaRest) while
+                                     a submask is open, so the open one stands out
          overlap        kAlphaOver   denser: the submask contributes here
          submask only   kAlphaSub    a ghost: the submask falls outside the result
+
+       This density step is the STEADY cue for which submask is selected. The boundary
+       line below only flashes when the selection changes (2026-10-23): drawn all the
+       time it sat on the very edge being painted.
 
        Written as a blend, not as three branches, because coverage is FEATHERED: m and s
        are weights in 0..1, not memberships, and a gradient's ramp has to stay a ramp.
        With s == 0 the first term is all that survives and this reduces exactly to the
        no-selection veil. */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
-    const float kAlphaMask = 150.0f;         // full-coverage alpha (unchanged)
+    const float kAlphaRest = 85.0f;          // the rest of the mask, a submask open
+    const float kAlphaMask = (hasFocus && cov.size() == size_t(bw) * size_t(bh))
+                             ? kAlphaRest : 150.0f;
     const float kAlphaOver = 215.0f;
     const float kAlphaSub  =  55.0f;
     const QColor ovc = G::maskOverlayColor;
@@ -13313,7 +13501,9 @@ void MW::updateMaskOverlayTint()
     });
 
     /* THE FOCUS SUBMASK'S BOUNDARY: a white line with a dark halo along its s = 0.5
-       iso-line, over everything including the overlap.
+       iso-line, over everything including the overlap. Built into its OWN image, not the
+       tint: ImageView flashes it (full strength, hold, fade) when the selection changes
+       and otherwise does not draw it -- see setScopeMaskOutline.
 
        It replaces a ring that was painted only where the RESULT was absent. That gate
        existed so a Subtract submask lying outside the mask could be seen at all -- but
@@ -13330,6 +13520,7 @@ void MW::updateMaskOverlayTint()
        rather than the raw buffer, which removes isolated pixels; and if the line still
        comes out covering more than kContourMaxFrac of the buffer then it is not a
        boundary, so it is dropped and the density step carries the distinction alone. */
+    QImage outline;
     if (hasFocus && cov.size() == size_t(bw) * size_t(bh)) {
         const float T = 0.5f;
         const double kContourMaxFrac = 0.08;
@@ -13383,12 +13574,14 @@ void MW::updateMaskOverlayTint()
             /* Halo first, line second, both from the same one-pixel boundary: the halo
                is the boundary dilated by one, so the white core keeps its full weight
                and only the outside of the line is darkened. */
-            uchar *const tintBits = tint.bits();
-            const qsizetype tintBpl = tint.bytesPerLine();
+            outline = QImage(bw, bh, QImage::Format_ARGB32_Premultiplied);
+            outline.fill(Qt::transparent);
+            uchar *const outBits = outline.bits();
+            const qsizetype outBpl = outline.bytesPerLine();
             const int haloA = 150, lineA = 235;
             developParallelRows(bw, bh, [&](int y0, int y1) {
                 for (int y = y0; y < y1; ++y) {
-                    QRgb *row = reinterpret_cast<QRgb*>(tintBits + qsizetype(y) * tintBpl);
+                    QRgb *row = reinterpret_cast<QRgb*>(outBits + qsizetype(y) * outBpl);
                     for (int x = 0; x < bw; ++x) {
                         const size_t idx = size_t(y) * bw + x;
                         if (edge[idx]) {
@@ -13409,7 +13602,18 @@ void MW::updateMaskOverlayTint()
         }
     }
     if (degrees != 0) tint = tint.transformed(QTransform().rotate(degrees));
+    if (degrees != 0 && !outline.isNull())
+        outline = outline.transformed(QTransform().rotate(degrees));
     imageView->setScopeMaskTint(tint);
+    /* Flash the outline only when the focus (image, scope, submask) changed. */
+    const QString focusKey = hasFocus
+        ? fPath + "|" + QString::number(developProperties->activeScopeNumber())
+              + "|" + QString::number(focusSrcIdx)
+        : QString();
+    const bool flash = hasFocus && focusKey != developVeilFocusKey;
+    imageView->setScopeMaskOutline(outline, flash);
+    developVeilFocusKey = focusKey;
+    veilDrawn = true;
 
     /* Op indicator: tell ImageView which submask is being defined and which op the
        veil previews, so the on-canvas chip can name it (see ImageView::setMaskLegend). The
@@ -14141,6 +14345,8 @@ void MW::noteLensGeometry(const QString &fPath, const WorkingImage &work,
        is why emptying it drops every reference below too. */
     const bool changed = it != developLensGeomKeys.end();
     if (!changed && developLensGeomKeys.size() > 64) {
+        AiMaskProbe::note("noteLensGeometry: table cap hit, ALL AI refs cleared (first sight of "
+                          + QFileInfo(fPath).fileName() + ")");
         developLensGeomKeys.clear();
         { QMutexLocker lk(&SubjectMask::refMutex()); SubjectMask::refStore().clear(); }
         { QMutexLocker lk(&SkyMask::refMutex());     SkyMask::refStore().clear(); }
@@ -14154,8 +14360,12 @@ void MW::noteLensGeometry(const QString &fPath, const WorkingImage &work,
         segmenterCacheOrder.clear();
         developSegmenterGuideKey.clear();
     }
+    const QString oldKey = changed ? it.value() : QString();
     developLensGeomKeys.insert(fPath, key);
     if (!changed) return;
+    AiMaskProbe::note("noteLensGeometry: geometry key moved, AI refs DROPPED for "
+                      + QFileInfo(fPath).fileName() + " [" + oldKey + "] -> [" + key
+                      + "] sceneRef=" + QString::number(work.sceneReferred));
 
     /* The geometry moved: this image's references were built on other pixels. Object
        refs are keyed by path + brush, so the whole (small) store goes. */
@@ -16565,9 +16775,21 @@ void MW::syncDevelopKaleidoOverlay()
        them -- but a mask or spot tool owns the canvas while it is up. */
     const bool blur = !kaleido && inDevelop && developProperties->blurToolWanted()
                       && !imageView->needsUnfoldedFrame();
-    if (kaleido)
-        imageView->beginKaleido(QPointF(p.kaleidoX, p.kaleidoY), p.kaleidoAngle,
-                                p.kaleidoSegments);
+    if (kaleido) {
+        /* Seams: Mirror / Hyperbolic / mirrored Polar have one per wedge, a wrapped
+           Polar one per copy, the rest none (no seams through the centre). The
+           circle: Hyperbolic's rim, Polar's planet edge (zoom x half the short side). */
+        int seams = p.kaleidoSegments;
+        double circle = 0.0;
+        if (p.kaleidoType == 1) circle = p.kaleidoRadius;
+        if (p.kaleidoType == 2) {
+            circle = p.kaleidoZoom;
+            if (p.kaleidoWrap) seams = p.kaleidoSegments / 2;
+        }
+        if (p.kaleidoType >= 3) seams = 0;
+        imageView->beginKaleido(QPointF(p.kaleidoX, p.kaleidoY), p.kaleidoAngle, seams,
+                                circle);
+    }
     else if (blur)
         imageView->beginBlurHandles(QPointF(p.blurX, p.blurY), p.blurAngle, p.blurType,
                                     ArtBlur::tiltHalf(p.blurSize),

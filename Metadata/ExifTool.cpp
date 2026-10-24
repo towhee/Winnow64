@@ -298,6 +298,53 @@ void ExifTool::addThumb(QString src, QString dst)
     process.waitForBytesWritten(30000);
 }
 
+bool ExifTool::replaceEmbeddedImages(const QString &thumbSrc, const QString &previewSrc,
+                                     const QString &dst, QString &err)
+{
+/*
+    Used by MW::repairStaleThumbs for a JPEG whose embedded images were left behind
+    when its pixels were rotated (Image/stalethumb.h).
+
+    BOTH IMAGES IN ONE WRITE. ThumbnailImage is the EXIF IFD1 thumbnail. PreviewImage
+    is a maker's larger preview (Nikon's PreviewIFD in these files), stale for the same
+    reason. ExifTool replaces it where it exists and silently creates nothing where it
+    does not (verified on a JPEG without one), so one command serves every file.
+
+    UNLIKE addThumb THIS WAITS for "{ready}" and reads the verdict, because a repair
+    has to report which files it actually fixed.
+*/
+    err.clear();
+    if (!ensureRunning("ExifTool::replaceEmbeddedImages")) {
+        err = "ExifTool is not running.";
+        return false;
+    }
+    QByteArray args;
+    args += "-ThumbnailImage<=" + thumbSrc.toUtf8() + "\n";
+    if (!previewSrc.isEmpty()) args += "-PreviewImage<=" + previewSrc.toUtf8() + "\n";
+    if (isOverWrite) args += "-overwrite_original\n";
+    args += dst.toUtf8() + "\n";
+    args += "-execute\n";
+    process.write(args);
+    if (!process.waitForBytesWritten(30000)) {
+        err = "Timed out writing to ExifTool.";
+        return false;
+    }
+
+    QByteArray out;
+    while (!out.contains("{ready}")) {
+        if (!process.waitForReadyRead(30000)) break;
+        out += process.readAllStandardOutput();
+    }
+    err = QString::fromUtf8(process.readAllStandardError()).trimmed();
+    if (!out.contains("{ready}")) {
+        if (err.isEmpty()) err = "No answer from ExifTool.";
+        return false;
+    }
+    if (out.contains("1 image files updated")) return true;
+    if (err.isEmpty()) err = QString::fromUtf8(out).remove("{ready}").trimmed();
+    return false;
+}
+
 int ExifTool::copyAll(QString src, QString dst)
 {
     QStringList args;

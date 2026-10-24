@@ -504,6 +504,10 @@ void MW::createMetaRead()
     // message metadata reading completed
     connect(metaRead, &MetaRead::done, this, &MW::folderChangeCompleted);
 
+    // a Reader found a stale embedded JPEG thumbnail (Main/mwstalethumbs.cpp)
+    connect(metaRead, &MetaRead::staleEmbeddedThumb, this, &MW::noteStaleEmbeddedThumb,
+            Qt::QueuedConnection);
+
     /*  SCROLL-IN VERIFICATION. Rows filled from the local index are never opened, so
         nothing checks them against their files; this stats the ones the user can
         actually see and says which the catalog can no longer vouch for. See
@@ -2808,11 +2812,15 @@ void MW::createDevelopDock()
             this, [this]{ imageView->viewport()->update(); });
     connect(imageView, &ImageView::maskGeometryChanged, developProperties, &DevelopProperties::setActiveMaskParams);
     connect(developProperties, &DevelopProperties::maskFeatherChanged, imageView, &ImageView::setMaskFeather);
+    connect(developProperties, &DevelopProperties::maskLinearAngleChanged, imageView, &ImageView::setMaskLinearAngle);
+    connect(developProperties, &DevelopProperties::maskBeamShapeChanged, imageView, &ImageView::setMaskBeamShape);
+    connect(imageView, &ImageView::maskAngleReported, developProperties, &DevelopProperties::syncActiveMaskAngle);
     connect(developProperties, &DevelopProperties::maskInvertChanged, imageView, &ImageView::setMaskInverted);
     connect(developProperties, &DevelopProperties::maskRangeChanged, imageView, &ImageView::setMaskRangeParams);
     connect(developProperties, &DevelopProperties::maskBrushSettingsChanged, imageView, &ImageView::setMaskBrushSettings);
     connect(imageView, &ImageView::maskBrushSizeRequested, developProperties, &DevelopProperties::setActiveBrushSize);
     connect(imageView, &ImageView::maskFeatherRequested, developProperties, &DevelopProperties::setActiveMaskFeather);
+    connect(imageView, &ImageView::maskFeatherDragged, developProperties, &DevelopProperties::syncActiveMaskFeather);
     connect(imageView, &ImageView::maskBrushAutoMaskRequested, developProperties, &DevelopProperties::setActiveBrushAutoMask);
     /* Adjustment slider changed while a mask overlay is shown -> hide coverage tint. */
     connect(developProperties, &DevelopProperties::maskTintHideRequested,

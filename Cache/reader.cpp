@@ -1,5 +1,6 @@
 #include "reader.h"
 #include "Cache/thumbcache.h"
+#include "Image/stalethumb.h"
 #include "Cache/catalog.h"
 #include "Metadata/indexmetadata.h"
 #include "Main/global.h"
@@ -33,6 +34,8 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
             Qt::QueuedConnection);
 
     thumb = new Thumb(dm, frameDecoder);
+    // relayed to MetaRead, then MW (MW::noteStaleEmbeddedThumb)
+    connect(thumb, &Thumb::staleEmbeddedThumb, this, &Reader::staleEmbeddedThumb);
 
     /* FrameDecoder→DataModel signals are connected once in MetaRead. Here we
        only wire this Reader's videoFrameDecode emission into the shared queue. */
@@ -320,6 +323,8 @@ void Reader::readIcon()
     /*  Did the picture come out of the thumbnail cache? If it did there is nothing to
         write back -- see the putImage call below. */
     bool fromThumbCache = false;
+    // the cached thumb was stale: the rebuilt one must overwrite it, not be skipped
+    bool replaceCachedThumb = false;
 
     if (!abort && !isVersion) {
         QElapsedTimer tGet;
@@ -327,6 +332,22 @@ void Reader::readIcon()
         image = ThumbCache::instance().getImage(fPath, m && m->developEdited,
                                                srcSize, srcMtime);
         if (!image.isNull()) { loadedIcon = true; fromThumbCache = true; }
+        /*  A CACHED STALE THUMB. Before Image/stalethumb.h, a JPEG whose embedded
+            thumbnail was left behind by a rotation was cached on its side, and the
+            stamps (size, mtime) cannot tell -- the file never changed. Its shape
+            against the image's (m is this row's here: read() fills width, height and
+            orientation from the model on an icon-only read) makes it a MISS, the
+            icon is rebuilt by loadThumb below, and the put REPLACES the row. A
+            developed thumb may be cropped to any shape, so it is not judged. */
+        if (fromThumbCache && m && !m->developEdited
+            && StaleThumb::isChecked(QFileInfo(fPath).suffix())
+            && StaleThumb::cachedIsStale(image.size(), m->width, m->height,
+                                         m->orientation, m->rotationDegrees)) {
+            image = QImage();
+            loadedIcon = false;
+            fromThumbCache = false;
+            replaceCachedThumb = true;
+        }
         if (G::isPerfProbe) {
             G::probeIconCacheGetNs.fetch_add(tGet.nsecsElapsed(), std::memory_order_relaxed);
             (loadedIcon ? G::probeIconCacheHits : G::probeIconCacheMisses)
@@ -445,7 +466,8 @@ void Reader::readIcon()
         if (!image.isNull() && !fromThumbCache && !isVersion && !thumb->lastWasDevThumb) {
             QElapsedTimer tCache;
             if (G::isPerfProbe) tCache.start();
-            ThumbCache::instance().putImage(fPath, image, m && m->developEdited);
+            ThumbCache::instance().putImage(fPath, image, m && m->developEdited,
+                                            replaceCachedThumb);
             if (G::isPerfProbe)
                 G::probeIconCacheNs.fetch_add(tCache.nsecsElapsed(),
                                               std::memory_order_relaxed);

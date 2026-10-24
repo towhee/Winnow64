@@ -804,6 +804,10 @@ public slots:
         clear the row so MetaRead reads it again, and remember it so the corrected row
         is committed back to the catalog when the read lands. See Cache/scrollverify.h. */
     void refreshStaleRows(const QStringList &paths);
+    /*  STALE EMBEDDED JPEG THUMBNAILS (Image/stalethumb.h, Main/mwstalethumbs.cpp).
+        A Reader found one and drew the icon from the image instead; collect it and,
+        once the burst settles, offer to repair the files. */
+    void noteStaleEmbeddedThumb(QString fPath);
     /*  The catalog payload for the rows refreshStaleRows cleared, built once their
         re-read has landed. Rows still unread stay pending for the next completion. */
     QVector<CatalogRow> catalogRowsForStale();
@@ -2523,6 +2527,17 @@ private:
     bool catalogScopePrompted = false;
     /* The prompt's "Don't show this message again" box. Persisted. */
     bool skipCatalogScopePrompt = false;
+    /* Stale embedded thumbnails (Main/mwstalethumbs.cpp). Seen = reported once per
+       session; pending = waiting for the debounced prompt; skip = the prompt's "Don't
+       show this message again" (persisted). abort is non-null while a repair runs and
+       is what Esc sets. */
+    QSet<QString> staleThumbSeen;
+    QSet<QString> staleThumbPending;
+    QTimer *staleThumbTimer = nullptr;
+    bool skipStaleThumbPrompt = false;
+    std::shared_ptr<std::atomic<bool>> staleThumbAbort;
+    void showStaleThumbPrompt();
+    void repairStaleThumbs(const QStringList &paths);
     /* The scope editor. Null until first opened; MW owns the list itself, so the dialog
        may come and go without the setting being at risk. */
     CatalogRootsDlg *catalogRootsDlg = nullptr;
@@ -2873,6 +2888,12 @@ private:
        ms -- more than one veil rebuild per render means the tint is not coalesced. */
     qint64 developTintMs = 0;
     int developTintCount = 0;
+    /* (image, scope, focus submask) the veil last drew an outline for. The outline of the
+       focus submask FLASHES -- shown, then faded out by ImageView -- only when this
+       changes, so it marks a new selection without sitting on the photo while the user
+       paints. Cleared whenever the veil is not drawn, so showing it again (or re-selecting
+       the same submask) flashes it too. */
+    QString developVeilFocusKey;
 
     /* Develop render verification (cheap, updated on each full-res settle; reported by
        the Develop diagnostics). Renders the base at a small fixed size TWICE -- the clean

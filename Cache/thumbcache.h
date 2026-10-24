@@ -5,6 +5,7 @@
 #include <QByteArray>
 #include <QImage>
 #include <QList>
+#include <QSet>
 #include <atomic>
 
 #include <QMutex>
@@ -78,7 +79,7 @@ Q_OBJECT
 public:
 explicit ThumbWriter(ThumbCache *owner) : mOwner(owner) {}
 public slots:
-void take(const QString &fPath, const QImage &im);
+void take(const QString &fPath, const QImage &im, bool replace);
     /*  THE LRU STAMP, OFF THE READ PATH. Refreshing `used` inline made a cache HIT
         take the write lock and, in WAL, commit -- 10.2 ms of lock wait per hit measured
         on an idle machine while the SELECT under that lock took 210 us. Day-granularity
@@ -95,6 +96,7 @@ ThumbCache *mOwner;
         /*  Worker thread only -- never touched from anywhere else, which is the
             whole point of accumulating here rather than in a shared queue. */
 QList<QPair<QString, QImage>> mPending;
+QSet<QString> mPendingReplace;     // paths in mPending that overwrite (putImage replace)
 QStringList mPendingStamps;
 bool mScheduled = false;
 bool mStampScheduled = false;
@@ -157,8 +159,14 @@ public:
         QImage is a quarter of a megabyte, so an unbounded backlog behind a slow
         disk is a memory leak with a good excuse. Dropping is free of
         consequence -- this is a cache, and the next visit to the folder offers
-        the thumbnail again. */
-    void putImage(const QString &fPath, const QImage &im, bool hasDevelopRecipe);
+        the thumbnail again.
+
+        replace = OVERWRITE a row that is already there with the same stamps. The
+        writer normally skips such a row (a revisit must cost nothing), so a stored
+        thumb found to be WRONG -- a stale embedded JPEG thumb cached before
+        Image/stalethumb.h caught it -- could never be corrected without it. */
+    void putImage(const QString &fPath, const QImage &im, bool hasDevelopRecipe,
+                  bool replace = false);
 
     /*  Finish what is queued and stop the writer. Called at shutdown; also what
         a test calls to make an asynchronous write observable. */
@@ -284,7 +292,8 @@ private:
     bool containsLocked(QSqlDatabase &db, const QString &fPath,
                         qint64 srcSize, qint64 srcMtime) const;
     /*  Write one batch inside a single transaction. Writer thread only. */
-    void writeBatch(const QList<QPair<QString, QImage>> &batch);
+    void writeBatch(const QList<QPair<QString, QImage>> &batch,
+                    const QSet<QString> &replace);
 
     QSqlDatabase dbLocked() const;
     /*  Drop rows until the total is within the cap: demoted first, then least

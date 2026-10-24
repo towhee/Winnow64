@@ -520,6 +520,17 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "kaleidoSource")       p.kaleidoSource       = f;
     else if (key == "kaleidoZoom")         p.kaleidoZoom         = f;
     else if (key == "kaleidoOpacity")      p.kaleidoOpacity      = f;
+    else if (key == "kaleidoType")         p.kaleidoType         = v.toInt();
+    else if (key == "kaleidoVertex")       p.kaleidoVertex       = v.toInt();
+    else if (key == "kaleidoRadius")       p.kaleidoRadius       = f;
+    else if (key == "kaleidoInvert")       p.kaleidoInvert       = v.toInt();
+    else if (key == "kaleidoWrap")         p.kaleidoWrap         = v.toInt();
+    else if (key == "kaleidoNest")         p.kaleidoNest         = f;
+    else if (key == "kaleidoGroup")        p.kaleidoGroup        = v.toInt();
+    else if (key == "kaleidoTile")         p.kaleidoTile         = f;
+    else if (key == "kaleidoFlute")        p.kaleidoFlute        = f;
+    else if (key == "kaleidoBend")         p.kaleidoBend         = f;
+    else if (key == "kaleidoShade")        p.kaleidoShade        = f;
     else if (key == "blurType")            p.blurType            = v.toInt();
     else if (key == "blurAmount")          p.blurAmount          = f;
     else if (key == "blurAngle")           p.blurAngle           = f;

@@ -36,17 +36,19 @@ public:
     /* Color Range: push the pipette-sampled colours into the wheel (hue 0..360, sat
        0..1). No-op unless a Color Range tool is showing. */
     void setWheelSamples(const QVector<QPointF> &samples);
-    /* Build + seed the MASK-level rows -- Edge, which grows or shrinks the whole folded
-       mask, and Halo, which pulls its boundary onto the picture's real edge. A second
-       MaskEditor instance renders these above the selected submask's settings, so it
-       needs its own populate and its own settingChanged consumer (the keys are
-       "scopeMaskEdge" / "scopeHalo" / "scopeOpacity", not the per-submask
-       spellings). Opacity (0..1, shown in percent) scales the whole mask.
+    /* Build + seed the MASK-level rows -- Feather, which softens the whole folded mask,
+       Edge, which grows or shrinks it, and Halo, which pulls its boundary onto the
+       picture's real edge. A second MaskEditor instance renders these above the
+       selected submask's settings, so it needs its own populate and its own
+       settingChanged consumer (the keys are "scopeMaskFeather" / "scopeMaskEdge" /
+       "scopeHalo" / "scopeOpacity", not the per-submask spellings). Opacity (0..1,
+       shown in percent) scales the whole mask.
 
        haloUseful = this mask has at least one submask with an edge in the picture to
        work from. False (an all-gradient mask) greys the Halo row and says why, rather
        than leaving a live slider that does nothing. */
-    void showMaskLevel(float edge, float halo, bool haloUseful, float opacity = 1.0f);
+    void showMaskLevel(float feather, float edge, float halo, bool haloUseful,
+                       float opacity = 1.0f);
 
 signals:
     /* Color Range wheel dragged: hue bounds in degrees, sat bounds in 0..100, commit on

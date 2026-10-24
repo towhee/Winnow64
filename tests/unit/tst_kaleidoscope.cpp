@@ -1,4 +1,5 @@
 #include <QtTest>
+#include <functional>
 
 #include "Develop/Transform/croptransform.h"
 #include "Develop/editrotate.h"
@@ -64,6 +65,41 @@ Kaleido kaleido(int segments, double angle = 0.0, double source = 0.0)
     return k;
 }
 
+/* A hyperbolic {p,q} kaleidoscope (segments = 2p). */
+Kaleido hyper(int p, int q, double angle = 0.0, double source = 0.0)
+{
+    Kaleido k = kaleido(2 * p, angle, source);
+    k.type = 1;
+    k.vertex = q;
+    return k;
+}
+
+/* A Polar / Droste kaleidoscope: type 2 / 3, count copies or strands. */
+Kaleido polar(int copies, bool wrap = false, bool insideOut = false)
+{
+    Kaleido k = kaleido(2 * copies);
+    k.type = 2;
+    k.wrap = wrap;
+    k.invert = insideOut;
+    return k;
+}
+Kaleido droste(int strands, double nest = 0.25, bool reverse = false)
+{
+    Kaleido k = kaleido(2 * strands);
+    k.type = 3;
+    k.nest = nest;
+    k.invert = reverse;
+    return k;
+}
+
+/* |OM| of the {p,q} tiling's fundamental triangle in disk units (the central
+   polygon's inradius), and its edge circle (centre on the x axis, radius). */
+double hyperInradius(int p, int q)
+{
+    const double pi = 3.141592653589793;
+    return std::tanh(0.5 * std::acosh(std::cos(pi / q) / std::sin(pi / p)));
+}
+
 }  // namespace
 
 class TestKaleidoscope : public QObject
@@ -82,6 +118,26 @@ private slots:
     void paramsJsonRoundTripAndSanitize();
     void eyeFoldsItOut();
     void rotatesWithThePhoto();
+    void hyperbolicMinVertex();
+    void hyperbolicCentreIsTheMirror();
+    void hyperbolicMirrorsAcrossTheEdge();
+    void hyperbolicOutsideMirrorsTheRim();
+    void hyperbolicRimIsSmooth();
+    void hyperbolicKeepsSizeDepthAndMask();
+    void hyperbolicParamsJsonAndSanitize();
+    void polarRadiusIsTheHeight();
+    void polarMirroredSeamsMatch();
+    void polarWrapGoesRoundOnce();
+    void drosteIsSeamlessAcrossTheCut();
+    void drosteSamplesTheAnnulus();
+    void mipTypesPointFormMatchesPixels();
+    void polarDrosteParamsJsonAndSanitize();
+    void wallpaperGroupsHaveTheirSymmetries();
+    void wallpaperRegionIsThePhoto();
+    void wallpaperParamsJsonAndSanitize();
+    void fluteFlatGlassIsIdentity();
+    void fluteReedsRepeatAndBend();
+    void fluteShadingAndParams();
 };
 
 void TestKaleidoscope::offIsIdentity()
@@ -385,6 +441,576 @@ void TestKaleidoscope::rotatesWithThePhoto()
     plain.scopes.append(EditScope());
     QVERIFY(!EditRotate::stack(plain, 90));
     QVERIFY(EditParams::groupIsDefault(plain.scopes[0].params, EditParams::Group::Effects));
+}
+
+void TestKaleidoscope::hyperbolicMinVertex()
+{
+    /* (p - 2)(q - 2) > 4: the smallest hyperbolic corner count for each polygon. */
+    QCOMPARE(EditParams::kaleidoMinVertex(3), 7);
+    QCOMPARE(EditParams::kaleidoMinVertex(4), 5);
+    QCOMPARE(EditParams::kaleidoMinVertex(5), 4);
+    QCOMPARE(EditParams::kaleidoMinVertex(6), 4);
+    QCOMPARE(EditParams::kaleidoMinVertex(7), 3);
+    QCOMPARE(EditParams::kaleidoMinVertex(1), 7);        // below a triangle reads as one
+}
+
+void TestKaleidoscope::hyperbolicCentreIsTheMirror()
+{
+    /* Inside the central polygon nothing but the wedge fold applies, so a {4,5} tiling
+       samples exactly where the Mirror type with 8 segments does. */
+    const double W = 300, H = 200;
+    Kaleido h = hyper(4, 5, 20.0, -35.0);
+    h.x = 0.45; h.y = 0.55;
+    h.zoom = 1.5;
+    Kaleido m = h;
+    m.type = 0;
+    const double R = 0.5 * std::min(W, H);
+    const double rIn = 0.9 * hyperInradius(4, 5) * R;   // pixels, inside the polygon
+    for (int i = 0; i < 24; ++i) {
+        const double a = i * 0.29, r = rIn * (i + 1) / 24.0;
+        const QPointF n((h.x * W + r * std::cos(a)) / W, (h.y * H + r * std::sin(a)) / H);
+        const QPointF sh = CropTransform::kaleidoSourceNorm(n, W, H, h);
+        const QPointF sm = CropTransform::kaleidoSourceNorm(n, W, H, m);
+        QVERIFY2(std::abs(sh.x() - sm.x()) < 1e-4 && std::abs(sh.y() - sm.y()) < 1e-4,
+                 qPrintable(QString("centre differs at sample %1").arg(i)));
+    }
+}
+
+void TestKaleidoscope::hyperbolicMirrorsAcrossTheEdge()
+{
+    /* A point just inside the central polygon's edge and its reflection in the edge
+       (inversion in the edge circle) sample the same photo pixel: the neighbouring
+       polygon is the mirror image, so the seam matches. */
+    const double W = 400, H = 400;
+    for (const auto &pq : {std::pair<int, int>{4, 5}, {3, 7}, {6, 4}, {5, 5}}) {
+        const Kaleido k = hyper(pq.first, pq.second);
+        const double m = hyperInradius(pq.first, pq.second);
+        const double r = (1.0 - m * m) / (2.0 * m), ec = m + r;
+        const double R = 0.5 * W;
+        for (double off : {0.02, 0.05}) {
+            for (double vy : {0.0, 0.03}) {
+                const double ux = m - off, uy = vy;                 // inside, disk units
+                const double ex = ux - ec, e2 = ex * ex + uy * uy;
+                const double ox = ec + ex * r * r / e2, oy = uy * r * r / e2;   // mirrored
+                const QPointF a = CropTransform::kaleidoSourceNorm(
+                    QPointF((0.5 * W + ux * R) / W, (0.5 * H + uy * R) / H), W, H, k);
+                const QPointF b = CropTransform::kaleidoSourceNorm(
+                    QPointF((0.5 * W + ox * R) / W, (0.5 * H + oy * R) / H), W, H, k);
+                QVERIFY2(std::abs(a.x() - b.x()) < 1e-4 && std::abs(a.y() - b.y()) < 1e-4,
+                         qPrintable(QString("{%1,%2} edge seam off").arg(pq.first)
+                                        .arg(pq.second)));
+            }
+        }
+    }
+}
+
+void TestKaleidoscope::hyperbolicOutsideMirrorsTheRim()
+{
+    /* Beyond the disk is its mirror image across the rim: rho and 1 / rho along the
+       same ray sample the same pixel. */
+    const double W = 500, H = 500, R = 250;
+    const Kaleido k = hyper(5, 4, 10.0);
+    for (double rho : {0.3, 0.6, 0.85}) {
+        for (double a : {0.1, 1.3, 2.9, 4.4}) {
+            const QPointF in((250 + rho * R * std::cos(a)) / W, (250 + rho * R * std::sin(a)) / H);
+            const QPointF out((250 + R / rho * std::cos(a)) / W,
+                              (250 + R / rho * std::sin(a)) / H);
+            const QPointF si = CropTransform::kaleidoSourceNorm(in, W, H, k);
+            const QPointF so = CropTransform::kaleidoSourceNorm(out, W, H, k);
+            QVERIFY(std::abs(si.x() - so.x()) < 1e-4 && std::abs(si.y() - so.y()) < 1e-4);
+        }
+    }
+}
+
+void TestKaleidoscope::hyperbolicRimIsSmooth()
+{
+    /* Near the rim the copies are far smaller than a pixel; the mip sampling averages
+       them, so neighbouring pixels agree instead of sparkling. pattern() wraps every
+       few pixels, so at full size (the central polygon) neighbours differ a lot; a
+       point-sampled rim would differ MORE. Measured 2026-10-22 ({4,5}, 400 px): centre
+       75, rim 20 with the mips, rim 204 with them off. */
+    const int W = 400, H = 400;
+    const QImage out = CropTransform::applyKaleidoscope(pattern(W, H), hyper(4, 5));
+    auto step = [&](double lo, double hi) {
+        double sum = 0.0;
+        int n = 0;
+        for (int y = 1; y < H; ++y) {
+            for (int x = 1; x < W; ++x) {
+                const double rho = std::hypot(x + 0.5 - 200, y + 0.5 - 200) / 200.0;
+                if (rho < lo || rho > hi) continue;
+                const QRgb a = out.pixel(x, y), b = out.pixel(x - 1, y);
+                sum += qAbs(qRed(a) - qRed(b)) + qAbs(qGreen(a) - qGreen(b)) +
+                       qAbs(qBlue(a) - qBlue(b));
+                ++n;
+            }
+        }
+        return n > 100 ? sum / n : -1.0;
+    };
+    const double centre = step(0.0, 0.2), rim = step(0.97, 0.995);
+    QVERIFY(centre > 0.0 && rim >= 0.0);
+    QVERIFY2(rim < centre * 0.4,
+             qPrintable(QString("rim step %1 vs centre %2").arg(rim).arg(centre)));
+}
+
+void TestKaleidoscope::hyperbolicKeepsSizeDepthAndMask()
+{
+    QImage deep(60, 40, QImage::Format_RGBA64);
+    deep.fill(QColor::fromRgba64(30000, 20000, 10000, 65535));
+    const QImage out = CropTransform::applyKaleidoscope(deep, hyper(4, 5));
+    QCOMPARE(out.size(), deep.size());
+    QCOMPARE(out.format(), QImage::Format_RGBA64);
+    QCOMPARE(out.pixelColor(5, 5).rgba64().red(), quint16(30000));
+
+    /* An empty mask folds nothing: the frame comes back as it was. */
+    const QImage src = pattern(80, 60);
+    const QImage none = maskOf(80, 60, [](int, int){ return false; });
+    const QImage m = CropTransform::applyKaleidoscopeMasked(src, none, hyper(3, 7));
+    for (int y = 0; y < 60; y += 5)
+        for (int x = 0; x < 80; x += 5)
+            QVERIFY(near(m.pixel(x, y), src.pixel(x, y), 0));
+    /* A full mask is the whole-frame fold. */
+    const QImage all = maskOf(80, 60, [](int, int){ return true; });
+    const QImage f = CropTransform::applyKaleidoscope(src, hyper(3, 7));
+    const QImage fm = CropTransform::applyKaleidoscopeMasked(src, all, hyper(3, 7));
+    for (int y = 0; y < 60; y += 5)
+        for (int x = 0; x < 80; x += 5)
+            QVERIFY(near(fm.pixel(x, y), f.pixel(x, y), 1));
+}
+
+void TestKaleidoscope::hyperbolicParamsJsonAndSanitize()
+{
+    /* Mirror (type 0): no hyperbolic keys, so existing recipes keep their JSON. */
+    EditParams p;
+    p.kaleidoSegments = 8;
+    QVERIFY(!EditStack::paramsToJson(p).contains("kaleidoType"));
+    QVERIFY(!EditStack::paramsToJson(p).contains("kaleidoVertex"));
+
+    p.kaleidoType = 1;
+    p.kaleidoVertex = 6;
+    p.kaleidoRadius = 1.75f;
+    const EditParams back = EditStack::paramsFromJson(EditStack::paramsToJson(p));
+    QCOMPARE(back.kaleidoType, 1);
+    QCOMPARE(back.kaleidoVertex, 6);
+    QCOMPARE(back.kaleidoRadius, 1.75f);
+
+    EditParams r = p;
+    EditParams::resetGroup(r, EditParams::Group::Effects);
+    QCOMPARE(r.kaleidoType, 0);
+    QCOMPARE(r.kaleidoVertex, EditParams().kaleidoVertex);
+    QCOMPARE(r.kaleidoRadius, 1.0f);
+
+    /* Hyperbolic needs a triangle at least, and enough polygons at each corner. */
+    EditStack s;
+    EditScope scope;
+    scope.params.kaleidoType = 1;
+    scope.params.kaleidoSegments = 4;
+    scope.params.kaleidoVertex = 4;
+    scope.params.kaleidoRadius = 9.0f;
+    s.scopes.append(scope);
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.kaleidoSegments, 6);
+    QCOMPARE(s.scopes[0].params.kaleidoVertex, 7);
+    QCOMPARE(s.scopes[0].params.kaleidoRadius, 4.0f);
+    s.scopes[0].params.kaleidoType = 9;                   // not a type
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.kaleidoType, 0);
+}
+
+void TestKaleidoscope::polarRadiusIsTheHeight()
+{
+    /* The bottom row at the centre, the top row on the planet's edge (zoom x half the
+       short side); inside out swaps them. */
+    const double W = 300, H = 200, R = 100;
+    for (bool io : {false, true}) {
+        const Kaleido k = polar(1, false, io);
+        for (double rho : {0.05, 0.5, 0.95}) {
+            const QPointF n((150 + rho * R * std::cos(0.7)) / W,
+                            (100 + rho * R * std::sin(0.7)) / H);
+            const QPointF sn = CropTransform::kaleidoSourceNorm(n, W, H, k);
+            const double want = io ? rho : 1.0 - rho;
+            QVERIFY2(std::abs(sn.y() - want) < 0.01,
+                     qPrintable(QString("rho %1 -> y %2").arg(rho).arg(sn.y())));
+        }
+    }
+    /* Zoom 2: the planet is twice as large. */
+    Kaleido z = polar(1);
+    z.zoom = 2.0;
+    const QPointF sn = CropTransform::kaleidoSourceNorm(QPointF((150 + 100) / W, 0.5), W, H, z);
+    QVERIFY(std::abs(sn.y() - 0.5) < 0.01);
+}
+
+void TestKaleidoscope::polarMirroredSeamsMatch()
+{
+    /* Mirrored copies: either side of every seam samples the same column. */
+    const double W = 300, H = 300, r = 80;
+    const int copies = 3;
+    const Kaleido k = polar(copies);
+    for (int seam = 0; seam < 2 * copies; ++seam) {
+        const double a = seam * 3.141592653589793 / copies;
+        auto at = [&](double t) {
+            return CropTransform::kaleidoSourceNorm(
+                QPointF((150 + r * std::cos(t)) / W, (150 + r * std::sin(t)) / H), W, H, k);
+        };
+        const QPointF lo = at(a - 0.002), hi = at(a + 0.002);
+        QVERIFY2(std::abs(lo.x() - hi.x()) < 0.01 && std::abs(lo.y() - hi.y()) < 0.01,
+                 qPrintable(QString("seam %1 off").arg(seam)));
+    }
+}
+
+void TestKaleidoscope::polarWrapGoesRoundOnce()
+{
+    /* Wrap, one copy: the frame's width goes once round, from the spoke (angle 0). */
+    const double W = 360, H = 200, r = 60;
+    const Kaleido k = polar(1, true);
+    for (double deg : {10.0, 90.0, 200.0, 350.0}) {
+        const double t = deg * 0.017453292519943295;
+        const QPointF sn = CropTransform::kaleidoSourceNorm(
+            QPointF((180 + r * std::cos(t)) / W, (100 + r * std::sin(t)) / H), W, H, k);
+        QVERIFY2(std::abs(sn.x() - deg / 360.0) < 0.01,
+                 qPrintable(QString("%1 deg -> x %2").arg(deg).arg(sn.x())));
+    }
+}
+
+void TestKaleidoscope::drosteIsSeamlessAcrossTheCut()
+{
+    /* The log's branch cut (straight out to the left of the centre) must not show:
+       just above and just below it sample the same pixel, except where the sample
+       sits on the nested copy's own edge (the picture-in-picture border, which is
+       part of the look). */
+    const double W = 400, H = 300;
+    for (const Kaleido &k : {droste(1), droste(2, 0.4), droste(3, 0.2, true)}) {
+        int same = 0, n = 0;
+        for (double r = 6.0; r < 190.0; r += 3.7) {
+            auto at = [&](double t) {
+                return CropTransform::kaleidoSourceNorm(
+                    QPointF((200 + r * std::cos(t)) / W, (150 + r * std::sin(t)) / H),
+                    W, H, k);
+            };
+            const QPointF a = at(3.141592653589793 - 1e-4), b = at(-3.141592653589793 + 1e-4);
+            ++n;
+            if (std::abs(a.x() - b.x()) * W < 1.5 && std::abs(a.y() - b.y()) * H < 1.5) ++same;
+        }
+        QVERIFY2(same >= n * 9 / 10, qPrintable(QString("%1 of %2").arg(same).arg(n)));
+    }
+}
+
+void TestKaleidoscope::drosteSamplesTheAnnulus()
+{
+    /* Every sample lies inside the frame and outside the nested copy. */
+    const double W = 400, H = 300, nest = 0.3;
+    Kaleido k = droste(2, nest);
+    k.x = 0.4; k.y = 0.6;
+    const double cx = 160, cy = 180;
+    for (int i = 0; i < 200; ++i) {
+        const QPointF n(((i * 37) % 400 + 0.5) / W, ((i * 53) % 300 + 0.5) / H);
+        const QPointF sn = CropTransform::kaleidoSourceNorm(n, W, H, k);
+        const double px = sn.x() * W - cx, py = sn.y() * H - cy;
+        const bool inner = px > -cx * nest + 1 && px < (W - cx) * nest - 1 &&
+                           py > -cy * nest + 1 && py < (H - cy) * nest - 1;
+        QVERIFY2(!inner, qPrintable(QString("sample %1 inside the nested copy").arg(i)));
+    }
+    /* Size and depth kept. */
+    QImage deep(60, 40, QImage::Format_RGBA64);
+    deep.fill(QColor::fromRgba64(30000, 20000, 10000, 65535));
+    for (const Kaleido &kk : {droste(1), polar(2)}) {
+        const QImage out = CropTransform::applyKaleidoscope(deep, kk);
+        QCOMPARE(out.size(), deep.size());
+        QCOMPARE(out.format(), QImage::Format_RGBA64);
+        QCOMPARE(out.pixelColor(7, 9).rgba64().green(), quint16(20000));
+    }
+}
+
+void TestKaleidoscope::mipTypesPointFormMatchesPixels()
+{
+    /* The point form and the pixels agree where the copies are not much smaller than
+       a pixel (on a linear gradient a mip average is the centre value anyway). */
+    const int W = 120, H = 80;         // smooth() wraps beyond 127 x 85
+    const QImage src = smooth(W, H);
+    struct Case { Kaleido k; double rMin, rMax; };
+    const Case cases[] = {
+        {polar(1), 0.3, 0.9},
+        {polar(2, true, true), 0.3, 0.9},
+        {droste(1, 0.35), 0.5, 0.95},
+    };
+    for (const Case &c : cases) {
+        const QImage out = CropTransform::applyKaleidoscope(src, c.k);
+        int bad = 0, n = 0;
+        for (int y = 1; y < H; y += 3) {
+            for (int x = 1; x < W; x += 3) {
+                const double rho = std::hypot(x + 0.5 - 60, y + 0.5 - 40) / 40.0;
+                if (rho < c.rMin || rho > c.rMax) continue;
+                const QPointF sn = CropTransform::kaleidoSourceNorm(
+                    QPointF((x + 0.5) / W, (y + 0.5) / H), W, H, c.k);
+                const int sx = qBound(0, int(sn.x() * W), W - 1);
+                const int sy = qBound(0, int(sn.y() * H), H - 1);
+                ++n;
+                if (!near(out.pixel(x, y), src.pixel(sx, sy), 8)) ++bad;
+            }
+        }
+        QVERIFY(n > 50);
+        QVERIFY2(bad <= n / 20, qPrintable(QString("type %1: %2 of %3 disagree")
+                                               .arg(c.k.type).arg(bad).arg(n)));
+    }
+}
+
+void TestKaleidoscope::polarDrosteParamsJsonAndSanitize()
+{
+    EditParams p;
+    p.kaleidoSegments = 4;
+    p.kaleidoType = 3;
+    QJsonObject o = EditStack::paramsToJson(p);
+    QVERIFY(!o.contains("kaleidoNest"));                 // defaults are not written
+    QVERIFY(!o.contains("kaleidoInvert"));
+    p.kaleidoNest = 0.4f;
+    p.kaleidoInvert = 1;
+    p.kaleidoWrap = 1;
+    const EditParams back = EditStack::paramsFromJson(EditStack::paramsToJson(p));
+    QCOMPARE(back.kaleidoType, 3);
+    QCOMPARE(back.kaleidoNest, 0.4f);
+    QCOMPARE(back.kaleidoInvert, 1);
+    QCOMPARE(back.kaleidoWrap, 1);
+
+    EditParams r = p;
+    EditParams::resetGroup(r, EditParams::Group::Effects);
+    QCOMPARE(r.kaleidoNest, 0.25f);
+    QCOMPARE(r.kaleidoInvert, 0);
+    QCOMPARE(r.kaleidoWrap, 0);
+
+    EditStack s;
+    EditScope scope;
+    scope.params = p;
+    scope.params.kaleidoNest = 2.0f;
+    scope.params.kaleidoInvert = 7;
+    s.scopes.append(scope);
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.kaleidoNest, 0.8f);
+    QCOMPARE(s.scopes[0].params.kaleidoInvert, 1);
+    QCOMPARE(s.scopes[0].params.kaleidoType, 3);         // 3 is a real type now
+    QCOMPARE(s.scopes[0].params.kaleidoSegments, 4);     // Droste keeps 2 strands
+}
+
+void TestKaleidoscope::wallpaperGroupsHaveTheirSymmetries()
+{
+    /* Every group: the pattern is unchanged by its lattice translations and its own
+       turns / mirrors / glides (about the centre, in tile units). Points are spread
+       over a few cells; a point right on a region edge may pick the other side's copy
+       where the group has no mirror there, so allow a few. */
+    using Op = std::function<QPointF(QPointF)>;
+    const double h = 0.8660254037844386;
+    const Op tx = [](QPointF p){ return p + QPointF(1, 0); };
+    const Op ty = [](QPointF p){ return p + QPointF(0, 1); };
+    const Op hx = [h](QPointF p){ return p + QPointF(0.5, h); };
+    auto rot = [](double deg) {
+        const double a = deg * 0.017453292519943295;
+        return Op([a](QPointF p){ return QPointF(p.x() * std::cos(a) - p.y() * std::sin(a),
+                                                 p.x() * std::sin(a) + p.y() * std::cos(a)); });
+    };
+    const Op mx = [](QPointF p){ return QPointF(-p.x(), p.y()); };
+    const Op my = [](QPointF p){ return QPointF(p.x(), -p.y()); };
+    const Op diag = [](QPointF p){ return QPointF(p.y(), p.x()); };
+    const Op cent = [](QPointF p){ return p + QPointF(0.5, 0.5); };
+    const Op glideX = [](QPointF p){ return QPointF(p.x() + 0.5, -p.y()); };
+    const Op glidePgg = [](QPointF p){ return QPointF(p.x() + 0.5, 0.5 - p.y()); };
+    const Op p4gMirror = [](QPointF p){ return QPointF(0.5 - p.y(), 0.5 - p.x()); };
+    const QVector<QVector<Op>> ops = {
+        {tx, ty},                                   // p1
+        {tx, ty, rot(180)},                         // p2
+        {tx, ty, mx},                               // pm
+        {tx, ty, glideX},                           // pg
+        {tx, ty, mx, cent},                         // cm
+        {tx, ty, mx, my},                           // pmm
+        {tx, ty, mx, glideX},                       // pmg
+        {tx, ty, rot(180), glidePgg},               // pgg
+        {tx, ty, mx, my, cent},                     // cmm
+        {tx, ty, rot(90)},                          // p4
+        {tx, ty, rot(90), diag},                    // p4m
+        {tx, ty, rot(90), p4gMirror},               // p4g
+        {tx, hx, rot(120)},                         // p3
+        {tx, hx, rot(120), mx},                     // p3m1
+        {tx, hx, rot(120), my},                     // p31m
+        {tx, hx, rot(60)},                          // p6
+        {tx, hx, rot(60), my},                      // p6m
+    };
+    const double W = 1000, H = 1000, T = 100;       // tile 0.1 of the short side
+    for (int g = 0; g < 17; ++g) {
+        Kaleido k = kaleido(2);
+        k.type = 4;
+        k.group = g;
+        k.tile = 0.1;
+        auto f = [&](QPointF c) {
+            return CropTransform::kaleidoSourceNorm(
+                QPointF((500 + c.x() * T) / W, (500 + c.y() * T) / H), W, H, k);
+        };
+        int bad = 0, n = 0;
+        for (int i = 0; i < 60; ++i) {
+            const QPointF z(((i * 37) % 97) / 97.0 * 3.0 - 1.5, ((i * 61) % 89) / 89.0 * 3.0 - 1.5);
+            const QPointF a = f(z);
+            for (const Op &op : ops.at(g)) {
+                const QPointF b = f(op(z));
+                ++n;
+                if (std::abs(a.x() - b.x()) * W > 0.5 || std::abs(a.y() - b.y()) * H > 0.5) ++bad;
+            }
+        }
+        QVERIFY2(bad <= n / 50, qPrintable(QString("group %1: %2 of %3 differ")
+                                               .arg(g).arg(bad).arg(n)));
+    }
+
+    /* And not the symmetries a group lacks, so the check above can fail: p1 has no
+       half turn, p4 and p6 no mirror, pm no half turn, p3 no sixth turn. */
+    const QVector<std::pair<int, Op>> lacks = {
+        {0, rot(180)}, {9, mx}, {15, my}, {2, rot(180)}, {12, rot(60)},
+    };
+    for (const auto &gl : lacks) {
+        Kaleido k = kaleido(2);
+        k.type = 4;
+        k.group = gl.first;
+        k.tile = 0.1;
+        auto f = [&](QPointF c) {
+            return CropTransform::kaleidoSourceNorm(
+                QPointF((500 + c.x() * T) / W, (500 + c.y() * T) / H), W, H, k);
+        };
+        int differ = 0;
+        for (int i = 0; i < 60; ++i) {
+            const QPointF z(((i * 37) % 97) / 97.0 * 3.0 - 1.5, ((i * 61) % 89) / 89.0 * 3.0 - 1.5);
+            const QPointF a = f(z), b = f(gl.second(z));
+            if (std::abs(a.x() - b.x()) * W > 0.5 || std::abs(a.y() - b.y()) * H > 0.5) ++differ;
+        }
+        QVERIFY2(differ >= 30, qPrintable(QString("group %1 has a symmetry it should lack")
+                                              .arg(gl.first)));
+    }
+}
+
+void TestKaleidoscope::wallpaperRegionIsThePhoto()
+{
+    /* Just beside the centre, inside each group's own region, the photo is untouched
+       (angle, source 0, zoom 1). The p6m region is the thin wedge just above the
+       +x axis; a point at (0.2, 0.05) tiles is inside it and inside p4m's (quarter
+       turns + the diagonal: u >= v >= 0). */
+    const double W = 1000, H = 1000;
+    for (int g : {10, 16}) {
+        Kaleido k = kaleido(2);
+        k.type = 4;
+        k.group = g;
+        k.tile = 0.1;
+        const QPointF n(0.52, 0.505);
+        const QPointF sn = CropTransform::kaleidoSourceNorm(n, W, H, k);
+        QVERIFY2(std::abs(sn.x() - n.x()) < 1e-3 && std::abs(sn.y() - n.y()) < 1e-3,
+                 qPrintable(QString("group %1 moved the photo").arg(g)));
+    }
+}
+
+void TestKaleidoscope::wallpaperParamsJsonAndSanitize()
+{
+    EditParams p;
+    p.kaleidoSegments = 2;
+    p.kaleidoType = 4;
+    QVERIFY(!EditStack::paramsToJson(p).contains("kaleidoGroup"));     // default p6m
+    p.kaleidoGroup = 7;
+    p.kaleidoTile = 0.5f;
+    const EditParams back = EditStack::paramsFromJson(EditStack::paramsToJson(p));
+    QCOMPARE(back.kaleidoType, 4);
+    QCOMPARE(back.kaleidoGroup, 7);
+    QCOMPARE(back.kaleidoTile, 0.5f);
+
+    EditStack s;
+    EditScope scope;
+    scope.params = p;
+    scope.params.kaleidoGroup = 30;
+    scope.params.kaleidoTile = 0.0f;
+    s.scopes.append(scope);
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.kaleidoGroup, 16);
+    QCOMPARE(s.scopes[0].params.kaleidoTile, 0.02f);
+    QCOMPARE(s.scopes[0].params.kaleidoType, 4);
+}
+
+/* Fluted glass: reeds w = flute x short side wide, vertical at angle 0. */
+Kaleido flute(double width, double bend, double shade = 0.0)
+{
+    Kaleido k = kaleido(2);
+    k.type = 5;
+    k.flute = width;
+    k.bend = bend;
+    k.shade = shade;
+    return k;
+}
+
+void TestKaleidoscope::fluteFlatGlassIsIdentity()
+{
+    /* Refraction 0, no shading: flat glass, the photo as it was. */
+    const int W = 120, H = 80;
+    const QImage src = smooth(W, H);
+    const Kaleido k = flute(0.1, 0.0);
+    const QImage out = CropTransform::applyKaleidoscope(src, k);
+    for (int y = 0; y < H; y += 7)
+        for (int x = 0; x < W; x += 7) {
+            const QPointF n((x + 0.5) / W, (y + 0.5) / H);
+            const QPointF sn = CropTransform::kaleidoSourceNorm(n, W, H, k);
+            QVERIFY(std::abs(sn.x() - n.x()) < 1e-4 && std::abs(sn.y() - n.y()) < 1e-4);
+            QVERIFY(near(out.pixel(x, y), src.pixel(x, y), 1));
+        }
+}
+
+void TestKaleidoscope::fluteReedsRepeatAndBend()
+{
+    /* One reed over, the sample moves exactly one reed over (across = x at angle 0),
+       and nothing moves along the reed. Positive refraction squeezes more photo into
+       a reed (the sample runs faster than the pixel); negative runs it backwards. */
+    const double W = 1000, H = 1000, w = 50;               // flute 0.05
+    const Kaleido k = flute(0.05, 0.5);
+    auto f = [&](const Kaleido &kk, double x, double y) {
+        return CropTransform::kaleidoSourceNorm(QPointF(x / W, y / H), W, H, kk);
+    };
+    for (double x : {510.0, 523.0, 547.0}) {
+        const QPointF a = f(k, x, 400), b = f(k, x + w, 400);
+        QVERIFY(std::abs((b.x() - a.x()) * W - w) < 1e-2);
+        QVERIFY(std::abs(a.y() * H - 400.0) < 1e-2);            // along: unmoved
+    }
+    /* Within the reed centred on the centre (x 475..525). */
+    const double d = f(k, 510, 400).x() - f(k, 505, 400).x();
+    QVERIFY(d * W > 5.0);                                      // magnified
+    const double r = f(flute(0.05, -1.0), 510, 400).x() - f(flute(0.05, -1.0), 505, 400).x();
+    QVERIFY(r < 0.0);                                          // reversed
+    /* Angle 90: the reeds lie horizontal, so x no longer matters. */
+    Kaleido t = k;
+    t.angle = 90.0;
+    QVERIFY(std::abs(f(t, 505, 470).x() - 0.505) < 1e-4);
+}
+
+void TestKaleidoscope::fluteShadingAndParams()
+{
+    /* Flat grey through shaded flat glass: brighter on one side of each reed, darker
+       on the other, untouched at the reed's middle. */
+    QImage grey(200, 100, QImage::Format_ARGB32);
+    grey.fill(qRgb(128, 128, 128));
+    const QImage out = CropTransform::applyKaleidoscope(grey, flute(0.25, 0.0, 1.0));
+    /* w = 25 px (the widest), the centre reed spans x 87.5..112.5: a quarter in on
+       each side, and its middle (pixel 100's centre is 1/50 of a reed off it). */
+    QVERIFY(qRed(out.pixel(106, 50)) > 155);
+    QVERIFY(qRed(out.pixel(94, 50)) < 100);
+    QVERIFY(qAbs(qRed(out.pixel(100, 50)) - 128) <= 6);
+
+    EditParams p;
+    p.kaleidoSegments = 2;
+    p.kaleidoType = 5;
+    QVERIFY(!EditStack::paramsToJson(p).contains("kaleidoFlute"));
+    p.kaleidoFlute = 0.1f;
+    p.kaleidoBend = -0.3f;
+    p.kaleidoShade = 0.0f;
+    const EditParams back = EditStack::paramsFromJson(EditStack::paramsToJson(p));
+    QCOMPARE(back.kaleidoFlute, 0.1f);
+    QCOMPARE(back.kaleidoBend, -0.3f);
+    QCOMPARE(back.kaleidoShade, 0.0f);
+    EditStack s;
+    EditScope scope;
+    scope.params = p;
+    scope.params.kaleidoFlute = 0.9f;
+    scope.params.kaleidoBend = -4.0f;
+    s.scopes.append(scope);
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.kaleidoFlute, 0.25f);
+    QCOMPARE(s.scopes[0].params.kaleidoBend, -1.0f);
+    QCOMPARE(s.scopes[0].params.kaleidoType, 5);
 }
 
 QTEST_GUILESS_MAIN(TestKaleidoscope)

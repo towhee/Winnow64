@@ -256,6 +256,12 @@ public slots:
        clear when no tool is expanded. */
     void setScopeMaskTint(const QImage &tint);
     void clearScopeMaskTint();
+    /* The focus submask's boundary (same mask space and size as the tint), drawn over
+       it. Not shown steadily: flash = true shows it at full strength, holds, then fades
+       it out (outlineFade) -- MW passes true only when the selected submask changes. A
+       new outline with flash = false replaces the image without restarting the fade, so
+       a drag keeps it in step while it is still showing. A null image clears it. */
+    void setScopeMaskOutline(const QImage &outline, bool flash);
     void setScopeHasMask(bool hasMask);
 
     /* The Detail panel's SHARPENING mask preview (MW::updateSharpenMaskPreview): the
@@ -344,6 +350,11 @@ public slots:
        combined mask should be visible). No-op if it is already showing. */
     void showMaskTint();
     void setMaskFeather(double feather);
+    /* Rotation slider: turn the Linear Gradient about its centre to `deg` (see
+       maskLinearAngle), keeping its feather; persists via maskGeometryChanged. */
+    void setMaskLinearAngle(double deg);
+    /* Beam Width/Taper changed in the panel: adopt the submask's new params. */
+    void setMaskBeamShape(const QString &paramsJson);
     void setMaskInverted(bool inverted);
     void setMaskBrushSettings(double size, double feather, double flow, bool autoMask);
     /* Content-range tools (Luminance/Color Range): the dock changed lo/hi/refine (or samples) ->
@@ -399,8 +410,11 @@ public slots:
        lines on every wedge seam. Coordinates are normalized in the displayed image (the
        geometry stage's output, which is the kaleidoscope's own space). Drags emit
        kaleidoEdited; MW writes the geometry and re-renders. beginKaleido also re-syncs
-       the overlay after a slider edit. */
-    void   beginKaleido(QPointF centreN, double angleDeg, int segments);
+       the overlay after a slider edit. segments is the number of seams to draw (0 for
+       none); diskRadius > 0 also draws a circle of that multiple of half the image's
+       short side (the Hyperbolic disk's rim, the Polar planet's edge). */
+    void   beginKaleido(QPointF centreN, double angleDeg, int segments,
+                        double diskRadius = 0.0);
     /* The same overlay for Effects > Blur (MW::syncDevelopEffectHandles), in the MASK
        space -- the oriented, uncropped frame the blur is stored in -- mapped onto the
        displayed image through the geometry (maskNormToViewport / maskViewportToNorm).
@@ -462,6 +476,13 @@ signals:
     /* Feather changed on the canvas (Shift + wheel / two-finger drag over a gradient or
        brush mask); sync the dock slider + persist. */
     void maskFeatherRequested(double feather);
+    /* A Linear Gradient end-handle drag set the feather (the handles ARE the ramp's
+       extent). Sync the dock slider and store it only: the drag's own geometry emit
+       re-composites and records the history entry. */
+    void maskFeatherDragged(double feather);
+    /* The Linear Gradient's rotation (degrees, see maskLinearAngle) as the canvas has it:
+       on beginMaskEdit and on every end-handle drag. Syncs the Rotation slider only. */
+    void maskAngleReported(double deg);
     /* Auto-mask toggled on the canvas ("A"); sync the dock checkbox. */
     void maskBrushAutoMaskRequested(bool on);
     /* [ / ] over the photo stepped the Segmenter's Detail level; the dock shows it. */
@@ -730,11 +751,21 @@ private:
     int     maskOp       = 0;           // MaskOp: 0 = Add, 1 = Subtract (tint colour)
     bool    maskInverted = false;       // flip the ramp
     double  maskFeather  = 50.0;        // 0..100, ramp softness
-    /* Linear: endpoints (0%/100%) in normalized image coords. */
+    /* Linear: endpoints in normalized image coords. The ramp runs over the middle
+       feather% of p1->p2, so p1/p2 are NOT the on-screen handles: those mark the ramp's
+       real extent (maskLinearHandles) and move with Feather. */
     QPointF maskP1, maskP2;
     /* Radial: centre (normalized), semi-axes rx (of W) / ry (of H), rotation in degrees. */
     QPointF maskC = QPointF(0.5, 0.5);
     double  maskRx = 0.25, maskRy = 0.30, maskAngle = 0.0;
+    /* Beam: the spine is maskP1 -> maskP2 (the end handles themselves, unlike Linear's);
+       half-width as a fraction of the frame's short side, taper -100..100. See
+       Develop/beammask.h. 0.12 = BeamMask::kDefaultWidth. */
+    double  maskBeamWidth = 0.12, maskBeamTaper = 0.0;
+    /* The Beam's tint, rasterized in mask space and rebuilt only when its key (geometry,
+       feather, invert, colour, frame) changes. */
+    QImage  maskBeamTint;
+    QString maskBeamTintKey;
     /* Brush current settings (0..100; for the cursor + the next stroke). */
     double  maskBrushSize = 20.0, maskBrushFlow = 100.0;
     bool    maskBrushAutoMask = false;
@@ -852,10 +883,28 @@ private:
        radii and the like are stored that way), and the same length in displayed px. */
     double     maskNormLongEdgeItemPx() const;
     int     maskHitTest(QPoint vp) const;           // which handle is under vp (-1 none)
+    /* Linear: the 0% / 100% end handles in viewport px. `ramp` gets the ramp's true ends
+       (they meet at the centre at feather 0); `grab` the drawn/clickable handles, held a
+       few px off the centre so a hard step can still be grabbed. */
+    void    maskLinearHandles(QPointF ramp[2], QPointF grab[2]) const;
+    /* Linear end-handle drag to n: sets the ramp's extent (feather) and direction about
+       the fixed centre. */
+    void    maskLinearDragEnd(int handle, QPointF n);
+    /* Linear: on-screen direction of p1->p2 in degrees, 0 = the default (0% at the top,
+       100% at the bottom), positive = clockwise, -180..180. Measured in mask-frame px so
+       it matches what the eye sees, not the anisotropic normalized coords. */
+    double  maskLinearAngle() const;
     /* drawTint=false draws only the tool's handles/guides/cursor/swatches (the whole-mask composite
        tint has already been painted underneath by the mask overlay). */
     void    drawLinearMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Linear tool
     void    drawRadialMask(QPainter *p, const QRectF &br, bool drawTint = true);  // overlay for the Radial tool
+    void    drawBeamMask(QPainter *p, const QRectF &br, bool drawTint = true);    // Beam overlay
+    void    beamEnsureTint();
+    /* Beam handles in viewport px: 0 p1 end, 1 p2 end, 2 centre, 3/4 the width handles
+       either side of the centre. */
+    void    maskBeamHandles(QPointF h[5]) const;
+    void    maskBeamDragEnd(int handle, QPointF n);     // rotate + lengthen about the centre
+    void    maskBeamDragWidth(QPointF n);               // width from the spine to n
     void    drawBrushMask(QPainter *p, const QRectF &br, bool drawTint = true);   // overlay for the Brush tool
     void    drawObjectMask(QPainter *p, const QRectF &br, bool drawTint = true);
     /* Object Mask perimeter-paint helpers (reuse brush buffers; amber/green closure). */
@@ -897,6 +946,7 @@ private:
     bool    maskIsDepth()      const { return maskTool == 8; }   // depth-band over the MiDaS field
     bool    maskIsObject()     const { return maskTool == 9; }   // SAM 2 freehand-lasso object mask
     bool    maskIsSegmenter()  const { return maskTool == 11; }  // SAM 2: click objects
+    bool    maskIsBeam()       const { return maskTool == 12; }  // two-sided tapered gradient
     bool    maskIsContent() const {
         return maskIsRange() || maskIsSubject() || maskIsSky() || maskIsBackground() || maskIsDepth();
     }
@@ -909,6 +959,7 @@ private:
         if (!maskEditMode) return false;
         switch (maskTool) {
         case 0: case 1:   // Linear / Radial drag handles
+        case 12:          // Beam drag handles
         case 2:           // Brush paint
         case 3:           // Color Range eyedropper
         case 9:           // Object perimeter-paint
@@ -923,6 +974,9 @@ private:
     QImage  maskRangePreview;                       // coverage tint (output-oriented), like the brush
     QString renderingHint;                          // non-empty => chip shown
     QImage  scopeMaskTint;                          // whole-mask composite coverage tint (output-oriented), all tools
+    QImage  scopeMaskOutline;                       // focus submask boundary, same space as the tint
+    qreal   scopeMaskOutlineOpacity = 0.0;          // 0 = not drawn; driven by outlineFade
+    QVariantAnimation *outlineFade = nullptr;       // hold, then fade the outline out
     QImage  sharpenMaskImage;                       // sharpening gate, grayscale (displayed space)
     /* The mask overlay tint starts HIDDEN and is shown only by an explicit toggle (the
        tint button, "M"/"O", the scope menu) -- by request, 2026-10-07: the automatic
@@ -1012,6 +1066,7 @@ private:
     QPointF kaleidoC {0.5, 0.5};
     double  kaleidoAngleDeg = 0.0;
     int     kaleidoSegs = 0;
+    double  kaleidoDisk = 0.0;          // Hyperbolic: the rim, x half the short side
     int     kaleidoDrag = -1;
     QPointF kaleidoGrabOffsetVp;        // press point minus the centre, so it does not jump
     /* What the overlay is editing: 0 the kaleidoscope (displayed space, seams), 1 the

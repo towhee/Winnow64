@@ -173,6 +173,7 @@ QCursor buildDropperCursor()
 #include "Utilities/segmenter.h"
 #include "Develop/fillspot.h"
 #include "Develop/maskfalloff.h"
+#include "Develop/beammask.h"
 #include "Develop/rangemask.h"
 #include "Develop/subjectmask.h"
 #include "Develop/skymask.h"
@@ -861,8 +862,9 @@ bool ImageView::applyDevelopCapturedView()
    it (beginMaskEdit) when its caption is selected; the overlay is shown only while the cursor is
    over the view (maskHover). Geometry is normalized image coords (0..1) so it is independent of
    zoom and of proxy/full render resolution. The red tint previews the mask coverage; it is purely
-   an overlay here and does not touch developComposite. Endpoint drags rotate+scale the gradient
-   about its centre; the centre handle (or the line) translates it.
+   an overlay here and does not touch developComposite. Linear end-handle drags rotate the
+   gradient about its centre and set its Feather (the handles mark the ramp's extent, so they
+   also follow the Feather slider); the centre handle (or the line) translates it.
    ----------------------------------------------------------------------------------------------- */
 
 void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &paramsJson, double feather)
@@ -878,8 +880,15 @@ void ImageView::beginMaskEdit(int tool, int op, bool inverted, const QString &pa
        DevelopProperties::addMaskTool -> maskTintShowRequested / maskTintHideRequested. */
     if (!parseMaskParams(paramsJson)) {     // missing/invalid -> a sensible default
         if (maskTool == 1) { maskC = QPointF(0.5, 0.5); maskRx = 0.25; maskRy = 0.30; maskAngle = 0; }
-        else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.34); maskP2 = QPointF(0.5, 0.66); }
+        else if (maskTool == 0) { maskP1 = QPointF(0.5, 0.0); maskP2 = QPointF(0.5, 1.0); }
+        else if (maskIsBeam()) {
+            maskP1 = QPointF(0.5, 0.15); maskP2 = QPointF(0.5, 0.85);
+            maskBeamWidth = BeamMask::kDefaultWidth; maskBeamTaper = 0.0;
+        }
     }
+    /* The panel can't measure the angle (it needs the frame's aspect), so the canvas
+       reports it; every panel rebuild ends in a beginMaskEdit, so the slider follows. */
+    if (maskTool == 0 || maskIsBeam()) emit maskAngleReported(maskLinearAngle());
     maskPainting = false;
     maskBrushVeilStale = false;
     maskGuide.reset();                                   // recompute the auto-mask guide for this image
@@ -929,6 +938,7 @@ void ImageView::endMaskEdit()
        hidden) would leave the red tint painted over the image. */
     const bool wasAvailable = maskTintAvailable();
     if (!scopeMaskTint.isNull()) { scopeMaskTint = QImage(); viewport()->update(); }
+    setScopeMaskOutline(QImage(), false);
     scopeHasMask = false;
     if (!maskEditMode) {
         if (wasAvailable) emit maskTintAvailabilityChanged(false);
@@ -1659,11 +1669,47 @@ void ImageView::setScopeMaskTint(const QImage &tint)
     viewport()->update();       // may be a committed-mask display (not in maskEditMode)
 }
 
+void ImageView::setScopeMaskOutline(const QImage &outline, bool flash)
+{
+    /* Flash, not steady: full strength for ~0.7 s, then a ~0.5 s fade. The steady cue
+       for the selected submask is the veil's DENSITY (MW::updateMaskOverlayTint); the
+       line only marks the moment the selection changes, so it is not left sitting on the
+       edge being painted. */
+    if (!outlineFade) {
+        outlineFade = new QVariantAnimation(this);
+        outlineFade->setDuration(1200);
+        outlineFade->setStartValue(1.0);
+        outlineFade->setKeyValueAt(0.6, 1.0);
+        outlineFade->setEndValue(0.0);
+        connect(outlineFade, &QVariantAnimation::valueChanged, this,
+                [this](const QVariant &v) {
+            scopeMaskOutlineOpacity = v.toReal();
+            viewport()->update();
+        });
+    }
+    scopeMaskOutline = outline;
+    if (outline.isNull()) {
+        outlineFade->stop();
+        if (scopeMaskOutlineOpacity > 0.0) {
+            scopeMaskOutlineOpacity = 0.0;
+            viewport()->update();
+        }
+        return;
+    }
+    if (flash) {
+        outlineFade->stop();
+        scopeMaskOutlineOpacity = 1.0;
+        outlineFade->start();
+    }
+    if (scopeMaskOutlineOpacity > 0.0) viewport()->update();
+}
+
 void ImageView::clearScopeMaskTint()
 {
     /* MW's "nothing to tint" path: no mask on the active scope (or no image), so the
        availability goes with the veil. */
     maskBrushVeilStale = false;
+    setScopeMaskOutline(QImage(), false);
     const bool wasAvailable = maskTintAvailable();
     scopeHasMask = false;
     if (!scopeMaskTint.isNull()) {
@@ -1810,6 +1856,58 @@ void ImageView::setMaskFeather(double feather)
     if (maskEditMode && (maskHover || maskIsContent())) viewport()->update();
 }
 
+void ImageView::setMaskLinearAngle(double deg)
+{
+/*
+    Rotate p1->p2 about the centre to `deg` on screen (mask-frame px). The span is
+    rescaled so it keeps the same fraction of the frame's extent along the new direction
+    (|ux| + |uy| in normalized coords, as in maskLinearDragEnd): Feather keeps meaning
+    "this % of the frame" at every angle rather than drifting as the gradient turns.
+*/
+    if (!maskEditMode || (maskTool != 0 && !maskIsBeam())) return;
+    const QSizeF fr = maskNormFrameSize();
+    const double fw = fr.width() > 0 ? fr.width() : 1.0;
+    const double fh = fr.height() > 0 ? fr.height() : 1.0;
+    const QPointF c = (maskP1 + maskP2) / 2.0;
+    const QPointF d = maskP2 - maskP1;
+    const double dl = std::hypot(d.x(), d.y());
+    if (dl <= 1e-9) return;
+    if (maskIsBeam()) {
+        /* The Beam keeps its spine's ON-SCREEN length: its taper is a slope along that
+           length, so rescaling it the Linear way would change the beam's shape. */
+        const double rad = qDegreesToRadians(deg);
+        const double halfPx = std::hypot(d.x() * fw, d.y() * fh) / 2.0;
+        const QPointF h(-std::sin(rad) * halfPx / fw, std::cos(rad) * halfPx / fh);
+        maskP1 = c - h;
+        maskP2 = c + h;
+        viewport()->update();
+        emit maskGeometryChanged(maskParamsJson());
+        return;
+    }
+    const double fullOld = (std::abs(d.x()) + std::abs(d.y())) / dl;
+    const double rad = qDegreesToRadians(deg);
+    QPointF u(-std::sin(rad) / fw, std::cos(rad) / fh);  // px direction -> normalized
+    const double ul = std::hypot(u.x(), u.y());
+    if (ul <= 1e-12) return;
+    u /= ul;
+    const double span = dl / fullOld * (std::abs(u.x()) + std::abs(u.y()));
+    maskP1 = c - u * (span / 2.0);
+    maskP2 = c + u * (span / 2.0);
+    viewport()->update();
+    emit maskGeometryChanged(maskParamsJson());     // store + history + re-composite
+}
+
+double ImageView::maskLinearAngle() const
+{
+    const QSizeF fr = maskNormFrameSize();
+    const double fw = fr.width() > 0 ? fr.width() : 1.0;
+    const double fh = fr.height() > 0 ? fr.height() : 1.0;
+    const double dx = (maskP2.x() - maskP1.x()) * fw;
+    const double dy = (maskP2.y() - maskP1.y()) * fh;
+    if (std::abs(dx) + std::abs(dy) <= 1e-12) return 0.0;
+    return qRadiansToDegrees(std::atan2(-dx, dy));
+}
+
 void ImageView::setMaskInverted(bool inverted)
 {
     maskInverted = inverted;
@@ -1951,7 +2049,8 @@ void ImageView::beginWarp()
     viewport()->update();
 }
 
-void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments)
+void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments,
+                             double diskRadius)
 {
 /*
     Arm (or re-sync) the Kaleido overlay. The loupe is showing the RENDERED kaleidoscope
@@ -1966,6 +2065,7 @@ void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments)
     kaleidoC = centreN;
     kaleidoAngleDeg = angleDeg;
     kaleidoSegs = segments;
+    kaleidoDisk = diskRadius;
     if (!wasActive) {
         kaleidoDrag = -1;
         setCursor(Qt::CrossCursor);
@@ -1983,6 +2083,7 @@ void ImageView::beginBlurHandles(QPointF centreN, double angleDeg, int type,
     kaleidoC = centreN;
     kaleidoAngleDeg = angleDeg;
     kaleidoSegs = 0;
+    kaleidoDisk = 0.0;
     /* ArtBlur::Type: 1 Motion, 2 Spin, 3 Zoom, 4 Tilt-shift. */
     kaleidoShowCentre = (type == 2 || type == 3 || type == 4);
     kaleidoShowSpoke  = (type == 1 || type == 4);
@@ -2110,6 +2211,17 @@ void ImageView::kaleidoDrawOverlay(QPainter *painter)
             const double a = (kaleidoAngleDeg + 360.0 * k / kaleidoSegs) * 0.017453292519943295;
             painter->drawLine(c, c + QPointF(std::cos(a), std::sin(a)) * reach);
         }
+    }
+    /* Hyperbolic: the disk's rim (the seams run on through it: diameters are
+       geodesics, so they mirror the whole tiling). Polar: the planet's edge, where
+       the top of the photo lies. */
+    if (kaleidoKind == 0 && kaleidoDisk > 0.0) {
+        const double r = kaleidoDisk * 0.5 * std::min(imgVp.width(), imgVp.height());
+        QPen rim(QColor(255, 255, 255, 110));
+        rim.setWidthF(1.0); rim.setCosmetic(true); rim.setStyle(Qt::DashLine);
+        painter->setPen(rim);
+        painter->setBrush(Qt::NoBrush);
+        painter->drawEllipse(c, r, r);
     }
     /* Tilt-shift: the sharp band's two edges (solid) and where the blur reaches full
        strength (dashed), along the band's direction through the centre. */
@@ -2699,9 +2811,13 @@ bool ImageView::parseMaskParams(const QString &json)
         return true;
     }
     if (!o.contains("x1") || !o.contains("y1") || !o.contains("x2") || !o.contains("y2"))
-        return false;               // Linear
+        return false;               // Linear, Beam
     maskP1 = QPointF(o["x1"].toDouble(), o["y1"].toDouble());
     maskP2 = QPointF(o["x2"].toDouble(), o["y2"].toDouble());
+    if (maskIsBeam()) {
+        maskBeamWidth = o.value("width").toDouble(BeamMask::kDefaultWidth);
+        maskBeamTaper = o.value("taper").toDouble(0.0);
+    }
     return true;
 }
 
@@ -2713,9 +2829,13 @@ QString ImageView::maskParamsJson() const
         o["rx"] = maskRx;    o["ry"] = maskRy;
         o["angle"] = maskAngle;
     }
-    else {                          // Linear
+    else {                          // Linear, Beam
         o["x1"] = maskP1.x(); o["y1"] = maskP1.y();
         o["x2"] = maskP2.x(); o["y2"] = maskP2.y();
+        if (maskIsBeam()) {
+            o["width"] = maskBeamWidth;
+            o["taper"] = maskBeamTaper;
+        }
     }
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
@@ -2938,9 +3058,26 @@ int ImageView::maskHitTest(QPoint vp) const
         return -1;
     }
 
-    /* Linear: 0 p1, 1 p2, 2 move (centre line). */
-    const QPointF v1 = maskNormToViewport(maskP1);
-    const QPointF v2 = maskNormToViewport(maskP2);
+    if (maskIsBeam()) {                 // 0/1 spine ends, 3/4 width, 2 move
+        QPointF h[5];
+        maskBeamHandles(h);
+        for (int i : {0, 1, 3, 4, 2})
+            if (QLineF(p, h[i]).length() <= rHandle) return i;
+        const QPointF d = h[1] - h[0];
+        const double len2 = d.x()*d.x() + d.y()*d.y();
+        if (len2 > 1e-6) {
+            const QPointF ph = p - h[0];
+            const double t = qBound(0.0, (ph.x()*d.x() + ph.y()*d.y()) / len2, 1.0);
+            if (QLineF(p, h[0] + t * d).length() <= rHandle) return 2;
+        }
+        return -1;
+    }
+
+    /* Linear: 0 the 0% end, 1 the 100% end, 2 move (centre line). */
+    QPointF ramp[2], grab[2];
+    maskLinearHandles(ramp, grab);
+    const QPointF v1 = grab[0];
+    const QPointF v2 = grab[1];
     if (QLineF(p, v1).length() <= rHandle) return 0;
     if (QLineF(p, v2).length() <= rHandle) return 1;
     const QPointF d = v2 - v1;
@@ -3022,7 +3159,16 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
         const QRectF cbr = pmItem->boundingRect();
         /* MW builds the veil in MASK space (the uncropped oriented frame), so it goes
            through the geometry map like every other mask raster. */
-        if (cbr.width() > 0 && cbr.height() > 0) maskDrawSpaceImage(painter, scopeMaskTint);
+        if (cbr.width() > 0 && cbr.height() > 0) {
+            maskDrawSpaceImage(painter, scopeMaskTint);
+            /* The focus submask's outline, while its flash is running. */
+            if (!scopeMaskOutline.isNull() && scopeMaskOutlineOpacity > 0.0) {
+                painter->save();
+                painter->setOpacity(scopeMaskOutlineOpacity);
+                maskDrawSpaceImage(painter, scopeMaskOutline);
+                painter->restore();
+            }
+        }
     }
     /* Op-indicator chip: names the submask + the op the veil is previewing. Shown while a
        submask is being defined and the overlay is not toggled off ("O"). */
@@ -3039,6 +3185,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
     if (br.width() <= 0 || br.height() <= 0) return;
     const bool tint = showTint && !haveComposite;   // "M" off, or composite already painted -> handles only
     if      (maskTool == 1) drawRadialMask(painter, br, tint);
+    else if (maskIsBeam())  drawBeamMask(painter, br, tint);
     else if (maskTool == 2) drawBrushMask(painter, br, tint);
     else if (maskIsObject()) drawObjectMask(painter, br, tint);
     else if (maskIsSegmenter()) { drawSegmenter(painter, tint); drawSegmenterChip(painter); }
@@ -3337,15 +3484,17 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
 
     /* 2) Centre line, perpendicular end guide ticks, and handles -- drawn in viewport
        coords (identity transform) so they stay a constant on-screen size at any zoom.
-       The ticks mark p1 and p2; with the Gaussian ramp those are the ~2% and ~98%
-       coverage lines at feather 100 (the tails run a little past them), not hard
-       0%/100% boundaries. */
+       They mark the RAMP, not p1/p2: the ramp runs over the middle feather% of p1->p2,
+       so the ticks and end handles spread apart as Feather rises and meet at the centre
+       for a hard step (maskLinearHandles). With the Gaussian ramp they are the ~2% and
+       ~98% coverage lines (the tails run a little past them). */
     painter->save();
     painter->resetTransform();
-    const QPointF v1 = mapFromScene(s1);
-    const QPointF v2 = mapFromScene(s2);
-    QPointF dir = v2 - v1;
-    const double dlen = QLineF(v1, v2).length();
+    QPointF ramp[2], grab[2];
+    maskLinearHandles(ramp, grab);
+    const QPointF vc = maskNormToViewport((maskP1 + maskP2) / 2.0);
+    QPointF dir = mapFromScene(s2) - mapFromScene(s1);
+    const double dlen = QLineF(QPointF(0, 0), dir).length();
     QPointF perp(0, 0);
     if (dlen > 1e-6) { dir /= dlen; perp = QPointF(-dir.y(), dir.x()); }
     const double guide = 46;        // half-length of the perpendicular guide ticks (px)
@@ -3353,18 +3502,232 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
     QPen guidePen(QColor(255,255,255,210)); guidePen.setWidthF(1.4);
     painter->setPen(guidePen);
     painter->setBrush(Qt::NoBrush);
-    painter->drawLine(v1, v2);                                   // centre line
-    painter->drawLine(v1 - perp*guide, v1 + perp*guide);         // 0% boundary
-    painter->drawLine(v2 - perp*guide, v2 + perp*guide);         // 100% boundary
+    painter->drawLine(grab[0], grab[1]);                                 // centre line
+    painter->drawLine(ramp[0] - perp*guide, ramp[0] + perp*guide);       // 0% end
+    painter->drawLine(ramp[1] - perp*guide, ramp[1] + perp*guide);       // 100% end
 
     auto handle = [&](const QPointF &c, double r, const QColor &fill) {
         painter->setPen(QPen(QColor(0,0,0,180), 1.2));
         painter->setBrush(fill);
         painter->drawEllipse(c, r, r);
     };
-    handle((v1+v2)/2.0, 4.5, QColor(255,255,255,235));           // centre (move)
-    handle(v1, 5.5, QColor(120,200,255,235));                    // p1 (0%)
-    handle(v2, 5.5, QColor(120,200,255,235));                    // p2 (100%)
+    handle(vc, 4.5, QColor(255,255,255,235));                   // centre (move)
+    handle(grab[0], 5.5, QColor(120,200,255,235));              // 0% end
+    handle(grab[1], 5.5, QColor(120,200,255,235));              // 100% end
+    painter->restore();
+}
+
+void ImageView::maskLinearHandles(QPointF ramp[2], QPointF grab[2]) const
+{
+    const double f = qBound(0.0, maskFeather, 100.0) / 100.0;
+    const QPointF c = (maskP1 + maskP2) / 2.0;
+    const QPointF vc = maskNormToViewport(c);
+    ramp[0] = maskNormToViewport(c + f * (maskP1 - c));
+    ramp[1] = maskNormToViewport(c + f * (maskP2 - c));
+    QPointF dir = maskNormToViewport(maskP2) - maskNormToViewport(maskP1);
+    const double dlen = QLineF(QPointF(0, 0), dir).length();
+    const double minPx = 14;        // > the 11 px pick radius, so the centre stays grabbable
+    for (int i = 0; i < 2; ++i) {
+        grab[i] = ramp[i];
+        if (dlen > 1e-6 && QLineF(vc, ramp[i]).length() < minPx)
+            grab[i] = vc + (i ? 1.0 : -1.0) * dir / dlen * minPx;
+    }
+}
+
+void ImageView::maskLinearDragEnd(int handle, QPointF n)
+{
+/*
+    The end handles ARE the ramp's extent, so dragging one sets Feather (and the
+    direction), synced to the dock slider. Feather 100 = the ramp spans the whole frame
+    along its direction, measured in the render's own normalized metric (where t lives,
+    see MW's evalMaskComp): the frame's corners spread |ux| + |uy| along unit u (1 when
+    axis-aligned, sqrt 2 on the diagonal). p1->p2 is then sized so feather% of it ends
+    exactly under the cursor; past 100 the span itself grows. The render is unchanged:
+    it still reads p1, p2 and feather.
+*/
+    const QPointF c = (maskP1 + maskP2) / 2.0;      // centre stays fixed
+    QPointF h = n - c;                              // centre -> grabbed handle
+    if (handle == 0) h = -h;                        // as centre -> 100% end
+    const double hl = std::hypot(h.x(), h.y());
+    QPointF u;
+    if (hl > 1e-9) u = h / hl;
+    else {
+        const QPointF d = maskP2 - maskP1;
+        const double dl = std::hypot(d.x(), d.y());
+        if (dl <= 1e-9) return;
+        u = d / dl;
+    }
+    const double full = std::abs(u.x()) + std::abs(u.y());
+    const double w = 2.0 * hl;                      // ramp width, centre-symmetric
+    const int f = qBound(0, int(100.0 * w / full + 0.5), 100);
+    const double span = (f > 0) ? w * 100.0 / f : full;   // f 0 = hard step: span is moot
+    maskP1 = c - u * (span / 2.0);
+    maskP2 = c + u * (span / 2.0);
+    if (double(f) != maskFeather) {
+        maskFeather = f;
+        emit maskFeatherDragged(maskFeather);
+    }
+    emit maskAngleReported(maskLinearAngle());
+}
+
+void ImageView::setMaskBeamShape(const QString &paramsJson)
+{
+    if (!maskEditMode || !maskIsBeam()) return;
+    const QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    maskBeamWidth = o.value("width").toDouble(maskBeamWidth);
+    maskBeamTaper = o.value("taper").toDouble(maskBeamTaper);
+    viewport()->update();           // the tint key changed: drawBeamMask rebuilds it
+}
+
+void ImageView::maskBeamHandles(QPointF h[5]) const
+{
+    const QSizeF fr = maskNormFrameSize();
+    const double fw = fr.width() > 0 ? fr.width() : 1.0;
+    const double fh = fr.height() > 0 ? fr.height() : 1.0;
+    const QPointF c = (maskP1 + maskP2) / 2.0;
+    h[0] = maskNormToViewport(maskP1);
+    h[1] = maskNormToViewport(maskP2);
+    h[2] = maskNormToViewport(c);
+    /* Width handles: either side of the centre, where the taper does not reach, so
+       they always sit on the drawn edges. Frame px, then back to normalized. */
+    const double dx = (maskP2.x() - maskP1.x()) * fw, dy = (maskP2.y() - maskP1.y()) * fh;
+    const double len = std::hypot(dx, dy);
+    const double hw = maskBeamWidth * std::min(fw, fh);
+    const QPointF nrm = (len > 1e-9) ? QPointF(-dy / len, dx / len) : QPointF(1, 0);
+    const QPointF off(nrm.x() * hw / fw, nrm.y() * hw / fh);
+    h[3] = maskNormToViewport(c + off);
+    h[4] = maskNormToViewport(c - off);
+}
+
+void ImageView::maskBeamDragEnd(int handle, QPointF n)
+{
+/*
+    An end handle turns the spine about its fixed centre and sets its length; the other
+    end mirrors it. The length matters only to the taper (it narrows to a point at a
+    handle at Taper 100), so a short spine is a steep taper. Kept at least a few screen
+    pixels long so the two ends stay separately grabbable.
+*/
+    const QPointF c = (maskP1 + maskP2) / 2.0;
+    if (QLineF(maskNormToViewport(c), maskNormToViewport(n)).length() < 16.0) return;
+    if (handle == 0) { maskP1 = n; maskP2 = 2.0 * c - n; }
+    else             { maskP2 = n; maskP1 = 2.0 * c - n; }
+    emit maskAngleReported(maskLinearAngle());
+}
+
+void ImageView::maskBeamDragWidth(QPointF n)
+{
+    /* The half-width is n's distance from the spine line, in frame px, as a fraction of
+       the frame's short side (Develop/beammask.h). */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) return;
+    const double fw = fr.width(), fh = fr.height();
+    const QPointF c = (maskP1 + maskP2) / 2.0;
+    const double dx = (maskP2.x() - maskP1.x()) * fw, dy = (maskP2.y() - maskP1.y()) * fh;
+    const double len = std::hypot(dx, dy);
+    if (len <= 1e-9) return;
+    const double px = (n.x() - c.x()) * fw, py = (n.y() - c.y()) * fh;
+    const double d = std::abs(-px * dy + py * dx) / len;
+    maskBeamWidth = qMax(1.0, d) / std::min(fw, fh);
+}
+
+void ImageView::beamEnsureTint()
+{
+    /* Coverage in mask space at <= 640 px on the long edge, from the SAME BeamMask math
+       and MaskFalloff profile the render uses, drawn by maskDrawSpaceImage. The shape is
+       resolution-independent (width is a short-side fraction), so it is built directly
+       at the buffer's size. */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) { maskBeamTint = QImage(); maskBeamTintKey.clear(); return; }
+    const double sc = std::min(1.0, 640.0 / std::max(fr.width(), fr.height()));
+    const int w = std::max(1, int(fr.width() * sc + 0.5));
+    const int h = std::max(1, int(fr.height() * sc + 0.5));
+    const QColor base = maskTintColor();
+    const QString key = QString::asprintf("%.6f %.6f %.6f %.6f %.6f %.3f %.2f %d %d %d %u",
+        maskP1.x(), maskP1.y(), maskP2.x(), maskP2.y(), maskBeamWidth, maskBeamTaper,
+        maskFeather, int(maskInverted), w, h, base.rgb());
+    if (key == maskBeamTintKey && !maskBeamTint.isNull()) return;
+    maskBeamTintKey = key;
+
+    const BeamMask::Shape b =
+        BeamMask::make(maskP1, maskP2, maskBeamWidth, maskBeamTaper, w, h);
+    const bool hard = maskFeather <= 0.0;
+    MaskFalloff::Lut lut;
+    if (!hard) lut.build(maskFeather);
+    maskBeamTint = QImage(w, h, QImage::Format_ARGB32_Premultiplied);
+    for (int y = 0; y < h; ++y) {
+        QRgb *row = reinterpret_cast<QRgb *>(maskBeamTint.scanLine(y));
+        for (int x = 0; x < w; ++x) {
+            double v = 0.0;
+            if (b.valid) {
+                const double t = b.t(x + 0.5, y + 0.5);
+                v = hard ? (t <= 1.0 ? 1.0 : 0.0) : lut.at(t);
+            }
+            if (maskInverted) v = 1.0 - v;
+            const int a = int(150.0 * v + 0.5);     // 150 = the gradients' full tint
+            row[x] = qPremultiply(qRgba(base.red(), base.green(), base.blue(), a));
+        }
+    }
+}
+
+void ImageView::drawBeamMask(QPainter *painter, const QRectF &br, bool drawTint)
+{
+    /* 1) Tint, in mask space (skipped when the whole-mask composite is already shown). */
+    if (drawTint) {
+        beamEnsureTint();
+        maskDrawSpaceImage(painter, maskBeamTint);
+    }
+
+    /* 2) The two edges (where coverage is ~half, t = 1), the spine between its handles,
+       and the handles -- viewport coords, so they keep a constant on-screen size. The
+       edges run across the whole frame, stopping where a taper brings them together. */
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) return;
+    const double fw = fr.width(), fh = fr.height();
+    const BeamMask::Shape b = BeamMask::make(maskP1, maskP2, maskBeamWidth, maskBeamTaper,
+                                             fw, fh);
+    QPointF h[5];
+    maskBeamHandles(h);
+
+    painter->save();
+    painter->resetTransform();
+    painter->setRenderHint(QPainter::Antialiasing, true);
+    QPainterPath clip;
+    clip.addPolygon(mapFromScene(pmItem->mapToScene(br)));
+    painter->setClipPath(clip);
+
+    if (b.valid) {
+        /* s spans every point of the frame the spine can reach. */
+        const double S = std::hypot(fw, fh) + std::hypot(b.cx - fw / 2.0, b.cy - fh / 2.0);
+        double sLo = -S, sHi = S;
+        if (b.slope < 0.0) sHi = std::min(sHi, -b.hw / b.slope);    // apex toward p2
+        if (b.slope > 0.0) sLo = std::max(sLo, -b.hw / b.slope);    // apex toward p1
+        auto edgePt = [&](double s, double side) {
+            const double off = side * std::max(0.0, b.hw + b.slope * s);
+            return maskNormToViewport(QPointF((b.cx + b.ux * s - b.uy * off) / fw,
+                                              (b.cy + b.uy * s + b.ux * off) / fh));
+        };
+        QPen edgePen(QColor(255, 255, 255, 210)); edgePen.setWidthF(1.4);
+        edgePen.setStyle(Qt::DashLine);
+        painter->setPen(edgePen);
+        painter->setBrush(Qt::NoBrush);
+        for (double side : {1.0, -1.0})
+            painter->drawLine(edgePt(sLo, side), edgePt(sHi, side));
+    }
+
+    QPen spinePen(QColor(255, 255, 255, 210)); spinePen.setWidthF(1.4);
+    painter->setPen(spinePen);
+    painter->drawLine(h[0], h[1]);
+
+    auto handle = [&](const QPointF &c, double r, const QColor &fill) {
+        painter->setPen(QPen(QColor(0,0,0,180), 1.2));
+        painter->setBrush(fill);
+        painter->drawEllipse(c, r, r);
+    };
+    handle(h[2], 4.5, QColor(255,255,255,235));                 // centre (move)
+    handle(h[0], 5.5, QColor(120,200,255,235));                 // spine ends (turn)
+    handle(h[1], 5.5, QColor(120,200,255,235));
+    handle(h[3], 4.5, QColor(255,220,120,235));                 // width
+    handle(h[4], 4.5, QColor(255,220,120,235));
     painter->restore();
 }
 
@@ -4080,6 +4443,7 @@ void ImageView::buildSubjectPreview()
     auto ref = SubjectMask::getRef(currentImagePath);
     if (!ref || !ref->valid()) return;
     const bool invert = maskInverted ^ maskIsBackground();
+    const auto fmap = SubjectMask::feathered(ref, float(maskFeather));   // same as render
     const QSizeF fr = maskNormFrameSize();
     if (fr.width() <= 0 || fr.height() <= 0) return;
 
@@ -4099,7 +4463,7 @@ void ImageView::buildSubjectPreview()
         const double ony = (y + 0.5) / th;
         for (int x = 0; x < tw; ++x) {
             const double onx = (x + 0.5) / tw;
-            const float cov = SubjectMask::coverage(*ref, onx, ony, float(maskFeather), invert);
+            const float cov = SubjectMask::coverage(*ref, fmap.get(), onx, ony, invert);
             line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
         }
     }
@@ -4114,6 +4478,7 @@ void ImageView::buildSkyPreview()
     if (currentImagePath.isEmpty() || !pmItem) return;
     auto ref = SkyMask::getRef(currentImagePath);
     if (!ref || !ref->valid()) return;
+    const auto fmap = SkyMask::feathered(ref, float(maskFeather));       // same as render
     const QSizeF fr = maskNormFrameSize();
     if (fr.width() <= 0 || fr.height() <= 0) return;
 
@@ -4133,7 +4498,7 @@ void ImageView::buildSkyPreview()
         const double ony = (y + 0.5) / th;
         for (int x = 0; x < tw; ++x) {
             const double onx = (x + 0.5) / tw;
-            const float cov = SkyMask::coverage(*ref, onx, ony, float(maskFeather), maskInverted);
+            const float cov = SkyMask::coverage(*ref, fmap.get(), onx, ony, maskInverted);
             line[x] = qRgba(R, Gc, B, int(cov * tint * 255.0 + 0.5));
         }
     }
@@ -5285,7 +5650,7 @@ void ImageView::wheelEvent(QWheelEvent *event)
        change the FEATHER instead of zooming / resizing. Space held bypasses it. */
     if (!spacePanOverride && maskEditMode &&
         (event->modifiers() & Qt::ShiftModifier) &&
-        (maskTool == 0 || maskTool == 1 || maskIsBrush())) {   // 0 Linear, 1 Radial
+        (maskTool == 0 || maskTool == 1 || maskIsBeam() || maskIsBrush())) {
         adjustMaskFeather(wheelDelta(event) * 0.15);     // up = softer
         event->accept();
         return;
@@ -6233,13 +6598,20 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
                 else            maskRy = qMax(2.0, std::abs(ly)) / bh;
             }
         }
+        else if (maskIsBeam()) {                            // ---- Beam ----
+            const QPointF n = maskViewportToNorm(event->pos());
+            if (maskDrag == 0 || maskDrag == 1) maskBeamDragEnd(maskDrag, n);
+            else if (maskDrag == 3 || maskDrag == 4) maskBeamDragWidth(n);
+            else {                                          // translate
+                const QPointF d = n - maskMoveAnchorN;
+                maskP1 = maskP1Anchor + d;
+                maskP2 = maskP2Anchor + d;
+            }
+        }
         else {                                              // ---- Linear ----
             const QPointF n = maskViewportToNorm(event->pos());
-            if (maskDrag == 0 || maskDrag == 1) {
-                const QPointF c = (maskP1 + maskP2) / 2.0;  // centre stays fixed -> rotate+scale
-                if (maskDrag == 0) { maskP1 = n;          maskP2 = 2.0*c - n; }
-                else               { maskP2 = n;          maskP1 = 2.0*c - n; }
-            }
+            if (maskDrag == 0 || maskDrag == 1)             // rotate + set feather
+                maskLinearDragEnd(maskDrag, n);
             else {                                          // translate
                 const QPointF d = n - maskMoveAnchorN;
                 maskP1 = maskP1Anchor + d;

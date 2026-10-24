@@ -508,7 +508,37 @@ struct EditParams {
        .. 8), kaleidoOpacity (0..1) blends the fold with the unfolded frame. Per scope: on a mask scope only
        the masked pixels are folded (unmasked = transparent) and laid over the frame;
        Global (and a mask-less scope) folds the whole frame, last. Only kaleidoSegments is
-       in isIdentity (the rest are inert while it is off). */
+       in isIdentity (the rest are inert while it is off).
+       kaleidoType picks the fold: 0 Mirror (the wedges above), 1 Hyperbolic -- a
+       Poincare disk tiled by the regular {p,q} tiling, p = kaleidoSegments / 2 sides
+       (so >= 6 segments), kaleidoVertex = q polygons meeting at each corner (3..16,
+       at least kaleidoMinVertex(p), or the tiling is not hyperbolic), kaleidoRadius
+       the disk's radius as a multiple of half the frame's short side (0.25..4).
+       2 Polar -- the whole frame wrapped round the centre ("tiny planet"), p =
+       kaleidoSegments / 2 copies round the circle, each the frame and its mirror image,
+       or with kaleidoWrap = 1 the frame alone (a 360-degree panorama); kaleidoInvert =
+       1 puts the top row at the centre instead of the bottom (inside out); the planet's
+       radius is kaleidoZoom x half the short side. 3 Droste -- the photo nested in
+       itself at kaleidoNest x its size (0.05..0.8) about the centre and twisted into a
+       spiral of kaleidoSegments / 2 strands; kaleidoInvert = 1 turns it the other way.
+       4 Wallpaper -- the plane tiled by wallpaper group kaleidoGroup (0 p1 .. 16 p6m,
+       CropTransform::Kaleido), cells of kaleidoTile x the frame's short side (0.02..1);
+       kaleidoSegments is only on (2) / off (0) here. 5 Fluted glass -- the frame seen
+       through reeded glass: reeds kaleidoFlute x the short side wide (0.01..0.25) square
+       to kaleidoAngle (vertical at 0), each a cylindrical lens of refraction kaleidoBend (-1..1, 0 = flat
+       glass, negative = reversed strips), shaded as if lit from the side by
+       kaleidoShade (0..1); kaleidoSegments is only on / off. */
+    int   kaleidoType     = 0;
+    int   kaleidoVertex   = 4;
+    float kaleidoRadius   = 1.0f;
+    int   kaleidoInvert   = 0;
+    int   kaleidoWrap     = 0;
+    float kaleidoNest     = 0.25f;
+    int   kaleidoGroup    = 16;
+    float kaleidoTile     = 0.25f;
+    float kaleidoFlute    = 0.04f;
+    float kaleidoBend     = 0.5f;
+    float kaleidoShade    = 0.3f;
     int   kaleidoSegments = 0;
     float kaleidoX        = 0.5f;
     float kaleidoY        = 0.5f;
@@ -517,6 +547,14 @@ struct EditParams {
     float kaleidoZoom     = 1.0f;
     float kaleidoOpacity  = 1.0f;
     bool hasKaleido() const { return kaleidoSegments >= 2; }
+    /* The fewest polygons that can meet at a corner of a HYPERBOLIC {p,q} tiling:
+       the smallest q with (p - 2)(q - 2) > 4 (3 sides -> 7, 4 -> 5, 5 or 6 -> 4). */
+    static int kaleidoMinVertex(int sides) {
+        const int p = sides < 3 ? 3 : sides;
+        int q = 3;
+        while ((p - 2) * (q - 2) <= 4) ++q;
+        return q;
+    }
 
     /* Blur (Effects, a SPATIAL Develop op after Sharpen, before Grain -- Develop::Blur,
        Develop/artblur.h). The ARTISTIC blurs; a depth / bokeh lens blur belongs to the
@@ -636,6 +674,17 @@ struct EditParams {
             p.kaleidoSource = def.kaleidoSource;
             p.kaleidoZoom = def.kaleidoZoom;
             p.kaleidoOpacity = def.kaleidoOpacity;
+            p.kaleidoType = def.kaleidoType;
+            p.kaleidoVertex = def.kaleidoVertex;
+            p.kaleidoRadius = def.kaleidoRadius;
+            p.kaleidoInvert = def.kaleidoInvert;
+            p.kaleidoWrap = def.kaleidoWrap;
+            p.kaleidoNest = def.kaleidoNest;
+            p.kaleidoGroup = def.kaleidoGroup;
+            p.kaleidoTile = def.kaleidoTile;
+            p.kaleidoFlute = def.kaleidoFlute;
+            p.kaleidoBend = def.kaleidoBend;
+            p.kaleidoShade = def.kaleidoShade;
             p.blurType = def.blurType;                       // "Blur"
             p.blurAmount = def.blurAmount;
             p.blurAngle = def.blurAngle;

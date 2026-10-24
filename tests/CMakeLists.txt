@@ -213,6 +213,12 @@ winnow_add_unit_test(tst_presetparams unit/tst_presetparams.cpp
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_maskfalloff unit/tst_maskfalloff.cpp)
+# tst_beammask tests the Beam Gradient submask's shape (Develop/beammask.h, header-only):
+# both sides alike, the whole-frame run, and the taper meeting at the named end.
+winnow_add_unit_test(tst_beammask unit/tst_beammask.cpp)
+# tst_stalethumb tests Image/stalethumb.h (header-only): recognising an embedded JPEG
+# thumbnail left behind when the image's pixels were rotated, raw and cached.
+winnow_add_unit_test(tst_stalethumb unit/tst_stalethumb.cpp)
 # tst_brushstamp tests the brush Auto mask's per-dab field (Develop/brushstamp.h,
 # header-only): soft edges stop a dab, one textured surface fills without holes, the
 # feather band never crosses an edge the core did not see.

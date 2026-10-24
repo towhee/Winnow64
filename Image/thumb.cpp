@@ -1,4 +1,5 @@
 #include "Image/thumb.h"
+#include "Image/stalethumb.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Metadata/versions.h"
@@ -742,6 +743,19 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
            loadFromJpgData also content-sniffs as a fallback for safety. */
         if (isEmbeddedThumb) {
             status = loadFromJpgData(fPath, image);
+            /*  A STALE EMBEDDED THUMB (Image/stalethumb.h): the image was rotated by a
+                tool that left its thumbnail behind. It is dropped, the icon is made
+                from the image itself, and MW is told so it can offer the repair. */
+            if (status == Status::Success && StaleThumb::isChecked(ext)
+                && StaleThumb::embeddedIsStale(image.size(), m.width, m.height)) {
+                QString msg = "Embedded thumbnail orientation does not match the "
+                              "image; building the thumbnail from the image.";
+                G::issueDedup("Comment", msg, "Thumb::loadThumb", dmRow, fPath);
+                isEmbeddedThumb = false;
+                image = QImage();
+                status = Status::None;
+                emit staleEmbeddedThumb(fPath);
+            }
             if (status == Status::Success) break;
         }
 
@@ -835,76 +849,6 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     if (status == Status::Success) return true;
     else return false;
-}
-
-void Thumb::insertThumbnailsInJpg(QModelIndexList &selection)
-{
-/*
-    Fix missing thumbnails in JPG.  Not being used.  Also see Jpeg::embedThumbnail().
-*/
-    qDebug() << "Thumb::insertThumbnailsInJpg";
-    if (!G::modifySourceFiles) return;
-    int count = selection.count();
-
-    G::popup->setProgressVisible(true);
-    G::popup->setProgressMax(count);
-    QString txt = "Embedding thumbnail(s) for " + QString::number(count) +
-                  " JPG images <p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
-    G::popup->showPopup(txt, 0, true, 1);
-    insertingThumbnails = true;
-
-
-    ExifTool et;
-    et.setOverWrite(true);
-    QStringList thumbList;
-    for (int i = 0; i < count; ++i) {
-        G::popup->setProgress(i+1);
-        if (abort) break;
-
-        // check if already a thumbnail
-        int offsetThumb = selection.at(i).data(G::OffsetThumbColumn).toInt();
-        int offsetFull = selection.at(i).data(G::OffsetFullColumn).toInt();
-        if (offsetThumb != offsetFull) continue;
-
-        // collect path information
-        QString fPath = selection.at(i).data(G::SourcePathRole).toString();
-        QFileInfo info(fPath);
-        QString folder = info.dir().path();
-        QString base = info.baseName();
-        QString thumbPath = folder + "/" + base + "_thumb.jpg";
-
-        // add this thumbPath to the list
-        thumbList << thumbPath;
-
-        /*
-        qDebug() << "Thumb::insertThumbnails" << i
-                 << "fPath =" << fPath
-                 << "thumbPath =" << thumbPath
-                 ; //*/
-
-        // create a thumbnail size jpg
-        QImage thumb = QImage(fPath).scaled(160, 160, Qt::KeepAspectRatio);
-        thumb.save(thumbPath, "JPG", 60);
-
-        // back up the source file before modifying it in place
-        if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup")) {
-            G::issue("Warning", "Backup failed; thumbnail not embedded.",
-                     "Thumb::insertThumbnailsInJpg", -1, fPath);
-            continue;
-        }
-
-        // add the thumb.jpg to the source file
-        et.addThumb(thumbPath, fPath);
-    }
-    et.close();
-    insertingThumbnails = false;
-
-    // delete the thumbnail files
-    for (int i = 0; i < thumbList.length(); ++i) {
-        QFile::remove(thumbList.at(i));
-    }
-    G::popup->setProgressVisible(false);
-    G::popup->reset();
 }
 
 

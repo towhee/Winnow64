@@ -4,6 +4,10 @@
 #endif
 #include "Utilities/panelprobe.h"
 #include "Develop/workingimagecache.h"
+#include "Develop/subjectmask.h"
+#include "Develop/skymask.h"
+#include "Develop/depthmask.h"
+#include "Develop/aimaskprobe.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/pmrid.h"
 #include "ImageFormats/Raw/pmridcache.h"
@@ -464,7 +468,18 @@ QString MW::developDiagnostics()
         rpt << "\n" << indent << "kaleidoSegments = " << G::s(p.kaleidoSegments)
             << "   centre = " << G::s(p.kaleidoX) << ", " << G::s(p.kaleidoY)
             << "   angle = " << G::s(p.kaleidoAngle)
-            << "   source = " << G::s(p.kaleidoSource);
+            << "   source = " << G::s(p.kaleidoSource)
+            << "   type = " << G::s(p.kaleidoType)
+            << "   vertex = " << G::s(p.kaleidoVertex)
+            << "   radius = " << G::s(p.kaleidoRadius)
+            << "   invert = " << G::s(p.kaleidoInvert)
+            << "   wrap = " << G::s(p.kaleidoWrap)
+            << "   nest = " << G::s(p.kaleidoNest)
+            << "   group = " << G::s(p.kaleidoGroup)
+            << "   tile = " << G::s(p.kaleidoTile)
+            << "   flute = " << G::s(p.kaleidoFlute)
+            << "   bend = " << G::s(p.kaleidoBend)
+            << "   shade = " << G::s(p.kaleidoShade);
         rpt << "\n" << indent << "blurType = " << G::s(p.blurType)
             << "   blurAmount = " << G::s(p.blurAmount)
             << "   angle = " << G::s(p.blurAngle)
@@ -773,6 +788,64 @@ QString MW::developDiagnostics()
     rpt << "\n" << "  depth  = " << (developDepthRefPath.isEmpty()   ? "(none)" : developDepthRefPath);
     rpt << "\n" << "  object = " << (developObjectImagePath.isEmpty()? "(none)" : developObjectImagePath);
     rpt << "\n";
+
+    /* AUTO-MASK PROBE (Develop/aimaskprobe.h): take this while a just-made Subject/Sky
+       mask shows nothing -- BEFORE leaving the image, which heals it. */
+    rpt << "\n" << "AUTO-MASK PROBE (take before leaving the image)";
+    {
+        const QString cur = dm->currentKey;
+        rpt << "\n" << "  dm->currentKey        = " << cur;
+        rpt << "\n" << "  dock currentPath      = "
+            << (developProperties ? developProperties->currentPath() : QString("(no dock)"))
+            << (developProperties && developProperties->currentPath() != cur ? "   <-- DIFFERS" : "");
+        rpt << "\n" << "  imageView path        = "
+            << (imageView ? imageView->currentImagePath : QString("(none)"))
+            << (imageView && imageView->currentImagePath != cur ? "   <-- DIFFERS" : "");
+        if (auto r = SubjectMask::getRef(cur))
+            rpt << "\n" << "  subject ref           = " << r->w << "x" << r->h
+                << " valid=" << G::s(r->valid()) << " noSubject=" << G::s(r->noSubject)
+                << " noBackground=" << G::s(r->noBackground);
+        else rpt << "\n" << "  subject ref           = (none for current key)";
+        if (auto r = SkyMask::getRef(cur))
+            rpt << "\n" << "  sky ref               = " << r->w << "x" << r->h
+                << " valid=" << G::s(r->valid()) << " noSky=" << G::s(r->noSky);
+        else rpt << "\n" << "  sky ref               = (none for current key)";
+        if (auto r = DepthMask::getRef(cur))
+            rpt << "\n" << "  depth ref             = " << r->w << "x" << r->h
+                << " valid=" << G::s(r->valid());
+        else rpt << "\n" << "  depth ref             = (none for current key)";
+        {
+            QMutexLocker lk(&SubjectMask::refMutex());
+            rpt << "\n" << "  subject store keys    = " << SubjectMask::refStore().size();
+        }
+        rpt << "\n" << "  lens geometry key     = [" << developLensGeomKeys.value(cur) << "]";
+        if (developProperties) {
+            rpt << "\n" << "  active scope          = " << developProperties->activeScopeNumber()
+                << "   maskOverlayActive=" << G::s(developProperties->maskOverlayActive());
+            const QVector<MaskComponent> comps = developProperties->activeScopeComponents();
+            for (int i = 0; i < comps.size(); ++i) {
+                const MaskComponent &m = comps.at(i);
+                rpt << "\n" << "    component " << i << ": tool=" << m.tool << " op=" << m.op
+                    << " enabled=" << G::s(m.enabled) << " inverted=" << G::s(m.inverted)
+                    << " feather=" << m.feather << " params=" << m.paramsJson.size() << " chars";
+            }
+            const auto job = developProperties->stackJob();
+            rpt << "\n" << "  render job scopes     = " << job.scopes.size()
+                << "  (identity scopes are dropped from the job)";
+            for (int i = 0; i < job.scopes.size(); ++i) {
+                QStringList tools;
+                for (const MaskComponent &m : job.scopes.at(i).components)
+                    tools << QString::number(m.tool);
+                rpt << "\n" << "    job scope " << i << ": tools [" << tools.join(',')
+                    << "] opacity=" << job.scopes.at(i).opacity;
+            }
+        }
+        if (imageView)
+            rpt << "\n" << "  mask tint visible     = " << G::s(imageView->maskTintVisible());
+        rpt << "\n" << "  developProxyPath      = " << developProxyPath
+            << (developProxyPath != cur ? "   <-- not current" : "");
+        rpt << "\n" << "  events (oldest first):\n" << AiMaskProbe::dump();
+    }
 
     // FOLDERS WITH CACHED DEVPREVIEWS
     dumpDevPreviewFolders();

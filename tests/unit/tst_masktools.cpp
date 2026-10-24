@@ -51,6 +51,7 @@ void TestMaskTools::everyToolSurvivesTheRoundTrip()
     }
     /* Segmenter by name: the tool that was being dropped. */
     QVERIFY(int(kLastMaskTool) >= int(MaskTool::Segmenter));
+    QVERIFY(int(kLastMaskTool) >= int(MaskTool::Beam));
 }
 
 void TestMaskTools::aToolPastTheLastIsDropped()

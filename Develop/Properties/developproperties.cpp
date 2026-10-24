@@ -1,6 +1,7 @@
 #include "Develop/Properties/developproperties.h"
 #include "Develop/subjectmask.h"     // autoSubmaskIsNull: the AI refs' "found nothing"
 #include "Develop/skymask.h"
+#include "Develop/beammask.h"      // kDefaultWidth: the Beam's default + panel sync
 #include "Develop/cameraprofilestore.h"
 #include "Develop/cameraprofile.h"
 #include "Cache/devpreviewcache.h"
@@ -971,7 +972,8 @@ static bool maskHasRealEdge(const EditScope &l)
     for (const MaskComponent &m : l.components) {
         if (!m.enabled) continue;
         if (m.tool != int(MaskTool::LinearGradient) &&
-            m.tool != int(MaskTool::RadialGradient)) return true;
+            m.tool != int(MaskTool::RadialGradient) &&
+            m.tool != int(MaskTool::Beam)) return true;
     }
     return false;
 }
@@ -1021,8 +1023,8 @@ void DevelopProperties::syncMaskPanel()
        submasks there is no mask to grow or shrink, so the row goes away entirely. */
     if (MaskEditor *ed = maskPanel->levelEditor()) {
         ed->setCaptionWidth(maskPanelCaptionWidth());
-        ed->showMaskLevel(scope->maskEdge, scope->maskHalo, maskHasRealEdge(*scope),
-                          scope->opacity);
+        ed->showMaskLevel(scope->maskFeather, scope->maskEdge, scope->maskHalo,
+                          maskHasRealEdge(*scope), scope->opacity);
     }
     maskPanel->showMaskLevel(!scope->components.isEmpty());
     /* The settings only make sense with a submask open; an empty mask shows nothing
@@ -1219,10 +1221,13 @@ static QString maskSettingLabel(const QString &key)
     if (key == "maskEdge")         return "Edge";
     /* Distinct from the submask's "Edge" so the History dock says which level moved. */
     if (key == "scopeMaskEdge")    return "Mask edge";
+    if (key == "scopeMaskFeather") return "Mask feather";
     if (key == "scopeHalo")        return "Mask halo";
     if (key == "scopeOpacity")     return "Mask opacity";
     if (key == "maskInvert")       return "Invert";
     if (key == "maskSize")         return "Brush size";
+    if (key == "maskBeamWidth")    return "Beam width";
+    if (key == "maskBeamTaper")    return "Beam taper";
     if (key == "maskFlow")         return "Brush flow";
     if (key == "maskAutoMask")     return "Auto mask";
     if (key == "maskRangeLo" || key == "maskRangeHi") return "Range";
@@ -1391,6 +1396,27 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
         noteMaskInteraction();
         return;
     }
+    /* Beam Width / Taper: shape the panel can set without the frame's aspect (width is
+       a fraction of the short side), so they go straight into the submask's params; the
+       canvas is told so its overlay and handles follow. Width is the FULL width in % of
+       the short side, the params hold the half-width as a fraction. */
+    else if (key == "maskBeamWidth" || key == "maskBeamTaper") {
+        const bool isWidth = (key == "maskBeamWidth");
+        const double val = isWidth ? v.toDouble() / 200.0 : v.toDouble();
+        mm->paramsJson = brushWith(mm->paramsJson, isWidth ? "width" : "taper", val);
+        noteEdit(maskSettingLabel(key), QString::number(v.toDouble()), "mask/" + key);
+        emit maskBeamShapeChanged(mm->paramsJson);
+        emit paramsChanged();
+        noteMaskInteraction();
+        return;
+    }
+    /* Linear Gradient Rotation: geometry, and only the canvas knows the frame's aspect,
+       so ImageView turns the gradient and sends it back through setActiveMaskParams,
+       which records the history entry, re-composites and arms the settle. */
+    else if (key == "maskAngle") {
+        emit maskLinearAngleChanged(v.toDouble());
+        return;
+    }
     /* Segmenter Detail: a TOOL preference (which level of the object hierarchy the
        canvas offers), not an edit -- the selection made so far is untouched, so there is
        no history entry, no render and no settle. */
@@ -1419,15 +1445,16 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
     noteMaskInteraction();     // ... and the veil stays up while the mask is the subject
 }
 
-/* MASK level: reshape the folded mask (Edge, Halo). Edits the SCOPE, so unlike every
+/* MASK level: reshape the folded mask (Feather, Edge, Halo). Edits the SCOPE, so unlike every
    other row in the panel it does not need -- or look for -- a selected submask. */
 void DevelopProperties::onMaskLevelSetting(const QString &key, const QVariant &v)
 {
     if (G::isLogger) G::log("DevelopProperties::onMaskLevelSetting");
     EditScope *l = activeScope();
     if (!l) return;
-    if      (key == "scopeMaskEdge") l->maskEdge = v.toFloat();
-    else if (key == "scopeHalo")     l->maskHalo = v.toFloat();
+    if      (key == "scopeMaskFeather") l->maskFeather = v.toFloat();
+    else if (key == "scopeMaskEdge")    l->maskEdge = v.toFloat();
+    else if (key == "scopeHalo")        l->maskHalo = v.toFloat();
     else if (key == "scopeOpacity")
         l->opacity = float(qBound(0.0, v.toDouble(), 100.0) / 100.0);
     else return;
@@ -1441,13 +1468,15 @@ void DevelopProperties::resetMaskLevel()
     if (G::isLogger) G::log("DevelopProperties::resetMaskLevel");
     EditScope *l = activeScope();
     if (!l) return;
-    if (l->maskEdge == 0.0f && l->maskHalo == 0.0f && l->opacity == 1.0f) return;
+    if (l->maskFeather == 0.0f && l->maskEdge == 0.0f && l->maskHalo == 0.0f &&
+        l->opacity == 1.0f) return;
+    l->maskFeather = 0.0f;
     l->maskEdge = 0.0f;
     l->maskHalo = 0.0f;
     l->opacity = 1.0f;
     /* No mergeKey: this is one discrete act, not a slider settling, so it gets its own
        history entry rather than folding into the last Edge drag. */
-    noteEdit(tr("Reset mask edge, halo and opacity"));
+    noteEdit(tr("Reset mask feather, edge, halo and opacity"));
     syncMaskPanel();                    // push the zeroed rows back into the sliders
     emit paramsChanged();
 }
@@ -1500,12 +1529,15 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     m.tool = tool;
     m.paramsJson = defaultMaskParams(tool);
     if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
-    /* Sky is a real matte -- its fractional edge IS the result (Utilities/skyrefine.h) --
-       and Feather > 0 re-sharpens it around 0.5, undoing the halo work. Start at the matte
-       as-is. (Refine Brush keeps the default: a soft stroke edge fades the refinement in
-       rather than leaving a seam where the region ends.) The Segmenter's coverage is a
-       matte too -- its outlines snapped to the photo by SegRefine -- so the same holds. */
-    if (tool == int(MaskTool::Sky) || tool == int(MaskTool::Segmenter)) m.feather = 0.0f;
+    /* The AI masks start CRISP: their cutout or matte is the result, and Feather is a
+       real spatial blur on top of it (Develop/maskfeather.h) -- at the old default of 50
+       every new mask would arrive with a ~5% halo. (Refine Brush keeps the default: a
+       soft stroke edge fades the refinement in rather than leaving a seam where the
+       region ends.) */
+    if (tool == int(MaskTool::Sky) || tool == int(MaskTool::Segmenter)
+        || tool == int(MaskTool::Subject) || tool == int(MaskTool::Background)
+        || tool == int(MaskTool::Object))
+        m.feather = 0.0f;
 
     /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
        submask is pending until its edits settle (or Return lands it early) -- the first
@@ -2462,6 +2494,7 @@ QString DevelopProperties::maskToolName(int tool)
     case MaskTool::Object:          return "Object Mask";
     case MaskTool::RefineBrush:     return "Refine Brush";
     case MaskTool::Segmenter:       return "Segmenter";
+    case MaskTool::Beam:            return "Beam Gradient Mask";
     }
     return "Mask";
 }
@@ -2681,6 +2714,16 @@ float DevelopProperties::activeScopeMaskHalo() const
     return s.scopes[activeScopeIndex].maskHalo;
 }
 
+float DevelopProperties::activeScopeMaskFeather() const
+{
+    if (currentImagePath.isEmpty()) return 0.0f;
+    auto it = stackCache.constFind(currentImagePath);
+    if (it == stackCache.constEnd()) return 0.0f;
+    const EditStack &s = it.value();
+    if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return 0.0f;
+    return s.scopes[activeScopeIndex].maskFeather;
+}
+
 
 int DevelopProperties::activeMaskIndex() const
 {
@@ -2845,8 +2888,13 @@ const QVector<EffectDef> &effectDefs()
         {"Vignette",     {"vignetteExposure", "vignetteFeather"}, false},
         {"Grain",        {"grainAmount", "grainSize", "grainRoughness"}, false},
         /* Per scope: a mask scope folds only its masked pixels (see EditParams). */
-        {"Kaleidoscope", {"kaleidoSegments", "kaleidoAngle", "kaleidoSource",
-                          "kaleidoZoom", "kaleidoOpacity"}, false},
+        {"Kaleidoscope", {"kaleidoType", "KaleidoTypeSpacer", "kaleidoSegments",
+                          "kaleidoSides", "kaleidoVertex", "kaleidoRadius",
+                          "kaleidoCopies", "kaleidoWrap", "kaleidoInsideOut",
+                          "kaleidoStrands", "kaleidoNest", "kaleidoReverse",
+                          "kaleidoGroup", "kaleidoTile", "kaleidoFlute",
+                          "kaleidoBend", "kaleidoShade", "kaleidoAngle", "kaleidoSource", "kaleidoZoom",
+                          "kaleidoOpacity"}, false},
         /* The artistic blurs (Develop/artblur.h); a lens blur belongs to Lens. */
         {"Blur",         {"BlurPreviewTopSpacer", "blurPreview", "BlurPreviewSpacer",
                           "blurType", "blurAmount", "blurAngle", "blurSize",
@@ -2873,6 +2921,42 @@ bool effectEdited(const EditStack &s, int scopeIdx, int e)
         return p.blurAmount > 0.0f;
     }
     return false;
+}
+
+/* Effects > Kaleidoscope's types, in EditParams::kaleidoType order, and the rows only
+   that type shows (applyKaleidoTypeRows hides the other types'; Angle / Source / Zoom /
+   Opacity are common). Segments, Sides, Copies and Strands all write kaleidoSegments
+   (the last three as 2 x the count), and Inside out / Reverse both write kaleidoInvert. */
+struct KaleidoTypeDef { const char *label; QStringList rows; };
+const QVector<KaleidoTypeDef> &kaleidoTypeDefs()
+{
+    static const QVector<KaleidoTypeDef> defs = {
+        {"Mirror",     {"kaleidoSegments"}},
+        {"Hyperbolic", {"kaleidoSides", "kaleidoVertex", "kaleidoRadius"}},
+        {"Polar",      {"kaleidoCopies", "kaleidoWrap", "kaleidoInsideOut"}},
+        {"Droste",     {"kaleidoStrands", "kaleidoNest", "kaleidoReverse"}},
+        {"Wallpaper",  {"kaleidoGroup", "kaleidoTile"}},
+        {"Fluted glass", {"kaleidoFlute", "kaleidoBend", "kaleidoShade"}},
+    };
+    return defs;
+}
+
+/* Effects > Kaleidoscope > Wallpaper's patterns, in EditParams::kaleidoGroup order (the
+   17 wallpaper groups, CropTransform::Kaleido): the group's name and what it does. */
+const QStringList &wallpaperGroupLabels()
+{
+    static const QStringList labels = {
+        "p1 - repeats",              "p2 - half turns",
+        "pm - mirrors",              "pg - glides",
+        "cm - staggered mirrors",    "pmm - mirror grid",
+        "pmg - mirrors and glides",  "pgg - crossed glides",
+        "cmm - staggered mirror grid",
+        "p4 - quarter turns",        "p4m - square kaleidoscope",
+        "p4g - pinwheel",            "p3 - third turns",
+        "p3m1 - triangle kaleidoscope", "p31m - turns and mirrors",
+        "p6 - sixth turns",          "p6m - hexagon kaleidoscope",
+    };
+    return labels;
 }
 
 /* Effects > Blur's types, in ArtBlur::Type order, and the slider rows each one uses
@@ -3057,7 +3141,7 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         EditScope *l = activeScope();
         const QString scopeName = l ? l->name : tr("scope");
         if (section == SectionMask) {
-            aResetMask = menu.addAction(tr("Reset mask Edge and Halo"));
+            aResetMask = menu.addAction(tr("Reset mask Feather, Edge, Halo and Opacity"));
             aResetMask->setEnabled(haveImage && l != nullptr);
         }
         aResetScope = menu.addAction(tr("Reset %1").arg(scopeName));
@@ -3329,10 +3413,24 @@ QString DevelopProperties::defaultMaskParams(int tool)
     /* Geometry is stored normalized (0..1 of the image), so it is resolution-independent and
        survives proxy/full re-renders. Other tools: empty until implemented. */
     if (tool == int(MaskTool::LinearGradient)) {
-        /* A vertical line down the middle, ramping 0% (top) -> 100% (bottom) across the middle third. */
+        /* Vertical, ramping 0% (top) -> 100% (bottom). p1->p2 spans the frame, which is
+           what ImageView's handle drag assumes (feather 100 = the whole frame), so the
+           ramp is the middle feather% of the height and grabbing a handle never jumps
+           the Feather slider. */
         QJsonObject o;
-        o["x1"] = 0.5; o["y1"] = 0.34;
-        o["x2"] = 0.5; o["y2"] = 0.66;
+        o["x1"] = 0.5; o["y1"] = 0.0;
+        o["x2"] = 0.5; o["y2"] = 1.0;
+        return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+    }
+    if (tool == int(MaskTool::Beam)) {
+        /* A vertical beam through the centre, untapered. The spine handles sit inside
+           the frame so both are grabbable; the beam itself still crosses the whole
+           frame (Develop/beammask.h). */
+        QJsonObject o;
+        o["x1"] = 0.5; o["y1"] = 0.15;
+        o["x2"] = 0.5; o["y2"] = 0.85;
+        o["width"] = BeamMask::kDefaultWidth;
+        o["taper"] = 0.0;
         return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
     }
     if (tool == int(MaskTool::RadialGradient)) {
@@ -3511,6 +3609,7 @@ void DevelopProperties::setActiveMaskFeather(double feather)
     MaskComponent &m = l->components[selectedMaskIndex];
     if (m.tool != int(MaskTool::LinearGradient) &&
         m.tool != int(MaskTool::RadialGradient) &&
+        m.tool != int(MaskTool::Beam) &&
         !isBrushCanvasTool(m.tool)) return;
     const int f = qBound(0, int(feather + 0.5), 100);
     if (int(m.feather + 0.5f) == f) return;
@@ -3524,6 +3623,26 @@ void DevelopProperties::setActiveMaskFeather(double feather)
        Either way ImageView already holds the new value, so no maskFeatherChanged echo. */
     if (isBrushCanvasTool(m.tool)) emitBrushSettings(m);
     else emit paramsChanged();
+}
+
+void DevelopProperties::syncActiveMaskFeather(double feather)
+{
+    EditScope *l = activeScope();
+    if (!l || selectedMaskIndex < 0 || selectedMaskIndex >= l->components.size()) return;
+    MaskComponent &m = l->components[selectedMaskIndex];
+    if (m.tool != int(MaskTool::LinearGradient)) return;
+    const int f = qBound(0, int(feather + 0.5), 100);
+    if (int(m.feather + 0.5f) == f) return;
+    m.feather = f;
+    syncMaskSlider("maskFeather", f);
+}
+
+void DevelopProperties::syncActiveMaskAngle(double deg)
+{
+    const MaskComponent *m = editingMaskComp();
+    if (!m || (m->tool != int(MaskTool::LinearGradient) &&
+               m->tool != int(MaskTool::Beam))) return;
+    syncMaskSlider("maskAngle", deg);
 }
 
 void DevelopProperties::syncMaskSlider(const QString &key, double value)
@@ -3605,7 +3724,7 @@ void DevelopProperties::updateMaskEdit()
     if (scope && selectedMaskIndex >= 0 && selectedMaskIndex < scope->components.size()) {
         const MaskComponent &m = scope->components[selectedMaskIndex];
         if (m.tool == int(MaskTool::LinearGradient) || m.tool == int(MaskTool::RadialGradient) ||
-            m.tool == int(MaskTool::Brush) ||
+            m.tool == int(MaskTool::Beam) || m.tool == int(MaskTool::Brush) ||
             m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
             m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
             m.tool == int(MaskTool::Background) || m.tool == int(MaskTool::Depth) ||
@@ -3653,6 +3772,10 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
         return;
     }
     scope->components[selectedMaskIndex].paramsJson = incoming;
+    /* A Beam's width handle is the panel's Width slider: keep the slider under it. */
+    if (scope->components[selectedMaskIndex].tool == int(MaskTool::Beam))
+        syncMaskSlider("maskBeamWidth", 200.0 * QJsonDocument::fromJson(incoming.toUtf8())
+                           .object().value("width").toDouble(BeamMask::kDefaultWidth));
     /* One entry per tool being shaped, not per drag tick / per brush stroke. */
     noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex].tool),
              QString(), QString("mask/geom/%1").arg(selectedMaskIndex));
@@ -6905,11 +7028,183 @@ void DevelopProperties::addEffects()
        image (kaleidoToolWanted). The angles are whole degrees here, while a handle drag
        may store a fraction (shown rounded). */
     {
+        /* The type first, laid out like Blur's: Mirror (the wedges) or Hyperbolic (a
+           Poincare disk tiling, CropTransform::applyKaleidoscope). applyKaleidoTypeRows
+           shows the type's own rows: Mirror has Segments, Hyperbolic has Sides / Per
+           corner / Disk. Sides is the same stored field as Segments (2 x sides). */
+        clearItemInfo(i);
+        i.name = "kaleidoType";
+        i.parIdx = parIdx;
+        i.parentName = "EffectsHeader";
+        i.captionText = "";
+        i.isIndent = true;
+        i.hasValue = false;
+        i.captionIsEditable = false;
+        addItem(i);
+        const QModelIndex typeIdx = capIdx;
+        setFirstColumnSpanned(typeIdx.row(), parIdx, true);
+        QWidget *rw = new QWidget;
+        rw->setAttribute(Qt::WA_TranslucentBackground);
+        QHBoxLayout *hb = new QHBoxLayout(rw);
+        hb->setContentsMargins(0, 0, 0, 0);
+        hb->setSpacing(8);
+        QLabel *lbl = new QLabel("Type", rw);
+        lbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
+        QComboBox *combo = new QComboBox(rw);
+        for (const KaleidoTypeDef &d : kaleidoTypeDefs()) combo->addItem(d.label);
+        {
+            QSignalBlocker b(combo);
+            combo->setCurrentIndex(std::clamp(kaleidoParams().kaleidoType, 0,
+                                              int(kaleidoTypeDefs().size()) - 1));
+        }
+        combo->setToolTip("Mirror: wedges mirrored around the centre.\n"
+                          "Hyperbolic: a disk tiled with polygons that shrink without end "
+                          "toward its rim\n(as in Escher's Circle Limit prints).\n"
+                          "Polar: the whole photo wrapped round the centre "
+                          "(a tiny planet).\n"
+                          "Droste: the photo inside itself, again and again, twisted "
+                          "into a spiral\n(as in Escher's Print Gallery).\n"
+                          "Wallpaper: the photo tiled across the frame in one of the 17 "
+                          "wallpaper patterns.\n"
+                          "Fluted glass: the photo seen through reeded glass.");
+        connect(combo, &QComboBox::currentIndexChanged, this, [this](int idx){
+            if (idx < 0 || currentImagePath.isEmpty()) return;
+            EditParams &p = activeParams();
+            if (p.kaleidoType == idx) return;
+            p.kaleidoType = idx;
+            /* Hyperbolic needs a triangle at least (6 segments), and enough polygons
+               at each corner for the tiling to be hyperbolic. */
+            if (idx == 1 && p.kaleidoSegments != 0) {
+                p.kaleidoSegments = std::max(p.kaleidoSegments, 6);
+                p.kaleidoVertex = std::max(p.kaleidoVertex,
+                    EditParams::kaleidoMinVertex(p.kaleidoSegments / 2));
+            }
+            noteEdit("Kaleidoscope type", kaleidoTypeDefs().value(idx).label,
+                     historyScopeLabel() + "/kaleidoType");
+            applyKaleidoTypeRows();
+            syncKaleidoSliders();
+            emit paramsChanged();
+            emit kaleidoToolChanged();       // the overlay draws the disk or not
+        });
+        kaleidoTypeCombo = combo;
+        hb->addWidget(lbl);
+        hb->addWidget(combo);
+        hb->addStretch(1);
+        setIndexWidget(typeIdx, rw);
+        /* A gap under the picker, setting it apart from the sliders (as in Lens). */
+        addDivider(G::groupSeparatorHeight, 0, Qt::transparent, parIdx, "EffectsHeader",
+                   "KaleidoTypeSpacer");
+
         addSlider("kaleidoSegments", "Segments",
                   "Number of mirrored wedges around the centre (0 = off).\n"
                   "Even counts only, so every seam is a mirror; 2 is a plain mirror.\n"
                   "Drag the white centre or the yellow spoke on the image.",
                   parIdx, "EffectsHeader", 0, 32, 0, G::darkgray, G::lightgray, 0);
+        /* Hyperbolic: Sides is kaleidoSegments / 2, Per corner is kaleidoVertex (raised
+           to the least the sides allow), Disk is kaleidoRadius in percent. */
+        addSlider("kaleidoSides", "Sides",
+                  "Sides of each polygon in the tiling (0 = off, at least 3).\n"
+                  "Drag the white centre or the yellow spoke on the image.",
+                  parIdx, "EffectsHeader", 0, 16, 0, G::darkgray, G::lightgray, 0);
+        addSlider("kaleidoVertex", "Per corner",
+                  "How many polygons meet at each corner.\n"
+                  "Fewer sides need more: triangles at least 7, squares 5, others 4.",
+                  parIdx, "EffectsHeader", 3, 16, 0, G::darkgray, G::lightgray, 4);
+        addSlider("kaleidoRadius", "Disk",
+                  "Size of the disk (percent of half the frame's short side).\n"
+                  "Outside it the tiling is mirrored across the rim.",
+                  parIdx, "EffectsHeader", 25, 400, 0, G::darkgray, G::lightgray, 100);
+        /* Polar: Copies is kaleidoSegments / 2, Panorama wrap is kaleidoWrap, Inside
+           out is kaleidoInvert. The planet's size is Zoom. */
+        addSlider("kaleidoCopies", "Copies",
+                  "How many times the photo goes round the centre (0 = off).\n"
+                  "Zoom sets the planet's size.\n"
+                  "Drag the white centre or the yellow spoke on the image.",
+                  parIdx, "EffectsHeader", 0, 16, 0, G::darkgray, G::lightgray, 0);
+        addCheckbox("kaleidoWrap", "Panorama wrap",
+                    "Wrap the photo round once per copy, with no mirror image.\n"
+                    "For a 360 degree panorama whose two ends meet. Off: each copy is the\n"
+                    "photo and its mirror image, so there is no seam.",
+                    parIdx, "EffectsHeader");
+        addCheckbox("kaleidoInsideOut", "Inside out",
+                    "Put the top of the photo at the centre instead of the bottom\n"
+                    "(a tunnel instead of a planet).",
+                    parIdx, "EffectsHeader");
+        /* Droste: Strands is kaleidoSegments / 2, Inner size is kaleidoNest in percent,
+           Reverse is kaleidoInvert. */
+        addSlider("kaleidoStrands", "Strands",
+                  "How many arms the spiral has (0 = off).\n"
+                  "Drag the white centre or the yellow spoke on the image.",
+                  parIdx, "EffectsHeader", 0, 16, 0, G::darkgray, G::lightgray, 0);
+        addSlider("kaleidoNest", "Inner size",
+                  "Size of each copy of the photo inside the last (percent).",
+                  parIdx, "EffectsHeader", 5, 80, 0, G::darkgray, G::lightgray, 25);
+        addCheckbox("kaleidoReverse", "Reverse",
+                    "Turn the spiral the other way.",
+                    parIdx, "EffectsHeader");
+        /* Wallpaper: a Pattern combo (kaleidoGroup, laid out like Type) and Tile
+           (kaleidoTile in percent of the short side; 0 = off, which writes
+           kaleidoSegments 0 and keeps the size). */
+        {
+            clearItemInfo(i);
+            i.name = "kaleidoGroup";
+            i.parIdx = parIdx;
+            i.parentName = "EffectsHeader";
+            i.captionText = "";
+            i.isIndent = true;
+            i.hasValue = false;
+            i.captionIsEditable = false;
+            addItem(i);
+            const QModelIndex groupIdx = capIdx;
+            setFirstColumnSpanned(groupIdx.row(), parIdx, true);
+            QWidget *gw = new QWidget;
+            gw->setAttribute(Qt::WA_TranslucentBackground);
+            QHBoxLayout *gb = new QHBoxLayout(gw);
+            gb->setContentsMargins(0, 0, 0, 0);
+            gb->setSpacing(8);
+            QLabel *glbl = new QLabel("Pattern", gw);
+            glbl->setStyleSheet(G::labelCss(G::textColor, G::strFontSize.toInt()));
+            QComboBox *gcombo = new QComboBox(gw);
+            gcombo->addItems(wallpaperGroupLabels());
+            {
+                QSignalBlocker b(gcombo);
+                gcombo->setCurrentIndex(std::clamp(kaleidoParams().kaleidoGroup, 0, 16));
+            }
+            gcombo->setToolTip("The wallpaper pattern: how the tiles repeat.\n"
+                               "Patterns with mirrors join without seams; turns and "
+                               "glides show\nwhere the copies of the photo meet.");
+            connect(gcombo, &QComboBox::currentIndexChanged, this, [this](int idx){
+                if (idx < 0 || currentImagePath.isEmpty()) return;
+                EditParams &p = activeParams();
+                if (p.kaleidoGroup == idx) return;
+                p.kaleidoGroup = idx;
+                noteEdit("Kaleidoscope pattern", wallpaperGroupLabels().value(idx),
+                         historyScopeLabel() + "/kaleidoGroup");
+                emit paramsChanged();
+            });
+            kaleidoGroupCombo = gcombo;
+            gb->addWidget(glbl);
+            gb->addWidget(gcombo);
+            gb->addStretch(1);
+            setIndexWidget(groupIdx, gw);
+        }
+        addSlider("kaleidoTile", "Tile",
+                  "Size of each tile (percent of the frame's short side; 0 = off).\n"
+                  "Drag the white centre or the yellow spoke on the image.",
+                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 0);
+        /* Fluted glass: Width is kaleidoFlute in percent of the short side (0 = off, as
+           Tile), Refraction kaleidoBend and Shading kaleidoShade in percent. */
+        addSlider("kaleidoFlute", "Width",
+                  "Width of each reed (percent of the frame's short side; 0 = off).\n"
+                  "The yellow spoke points across the reeds: drag it to turn them.",
+                  parIdx, "EffectsHeader", 0, 25, 0, G::darkgray, G::lightgray, 0);
+        addSlider("kaleidoBend", "Refraction",
+                  "How strongly each reed bends the picture behind it.\n"
+                  "0 is flat glass; below 0 each reed shows its strip reversed.",
+                  parIdx, "EffectsHeader", -100, 100, 0, G::darkgray, G::lightgray, 50);
+        addSlider("kaleidoShade", "Shading",
+                  "Light and shadow across each reed, as if lit from the side.",
+                  parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 30);
         addSlider("kaleidoAngle", "Angle",
                   "Turns the mirror lines (degrees). Or drag the yellow spoke.",
                   parIdx, "EffectsHeader", -180, 180, 0, G::darkgray, G::lightgray, 0);
@@ -7028,6 +7323,7 @@ void DevelopProperties::applyEffectsChoice()
         }
     }
     applyBlurTypeRows();         // within Blur, only the chosen type's rows
+    applyKaleidoTypeRows();      // within Kaleidoscope, likewise
     scheduleContentFit();        // setRowHidden emits nothing: re-fit the block ourselves
     refreshPreviewButtons();     // the row's eye now speaks for the newly shown effect
     emit kaleidoToolChanged();   // Kaleidoscope in or out of view: the handles follow
@@ -7049,6 +7345,25 @@ void DevelopProperties::applyBlurTypeRows()
         const bool hide = !defs.at(t).rows.contains(QString::fromLatin1(row));
         model->setData(idx, hide, UR_isHidden);
         setRowHidden(idx.row(), idx.parent(), hide);
+    }
+    scheduleContentFit();
+}
+
+void DevelopProperties::applyKaleidoTypeRows()
+{
+    /* While Kaleidoscope shows, only the chosen type's own rows (kaleidoTypeDefs) and
+       the common ones. UR_isHidden too, as applyBlurTypeRows. */
+    if (shownEffect() != EffectKaleido) return;
+    const QVector<KaleidoTypeDef> &defs = kaleidoTypeDefs();
+    const int t = std::clamp(kaleidoParams().kaleidoType, 0, int(defs.size()) - 1);
+    for (int d = 0; d < defs.size(); ++d) {
+        for (const QString &row : defs.at(d).rows) {
+            const QModelIndex idx = findCaptionIndex(row);
+            if (!idx.isValid()) continue;
+            const bool hide = d != t;
+            model->setData(idx, hide, UR_isHidden);
+            setRowHidden(idx.row(), idx.parent(), hide);
+        }
     }
     scheduleContentFit();
 }
@@ -7106,6 +7421,17 @@ void DevelopProperties::resetEffect()
             p.kaleidoSource   = def.kaleidoSource;
             p.kaleidoZoom     = def.kaleidoZoom;
             p.kaleidoOpacity  = def.kaleidoOpacity;
+            /* The type is kept, as Blur's is. */
+            p.kaleidoVertex   = def.kaleidoVertex;
+            p.kaleidoRadius   = def.kaleidoRadius;
+            p.kaleidoInvert   = def.kaleidoInvert;
+            p.kaleidoWrap     = def.kaleidoWrap;
+            p.kaleidoNest     = def.kaleidoNest;
+            p.kaleidoGroup    = def.kaleidoGroup;
+            p.kaleidoTile     = def.kaleidoTile;
+            p.kaleidoFlute    = def.kaleidoFlute;
+            p.kaleidoBend     = def.kaleidoBend;
+            p.kaleidoShade    = def.kaleidoShade;
         }
         else if (e == EffectBlur) {
             /* The type is kept: Reset clears the blur, not the choice of blur. */
@@ -7170,7 +7496,7 @@ bool DevelopProperties::kaleidoToolWanted() const
     const EditScope &l = s.scopes.at(activeScopeIndex);
     if (!l.showScope || !l.showEffects || !l.showKaleido) return false;     // an eye shut
     /* The row is really on screen: every section above it expanded, none hidden. */
-    const QModelIndex idx = sourceIdx.value("kaleidoSegments");   // its value cell
+    const QModelIndex idx = sourceIdx.value("kaleidoAngle");   // a row every type shows
     if (!idx.isValid() || isRowHidden(idx.row(), idx.parent())) return false;
     for (QModelIndex p = idx.parent(); p.isValid(); p = p.parent())
         if (!isExpanded(p) || isRowHidden(p.row(), p.parent())) return false;
@@ -7257,11 +7583,34 @@ void DevelopProperties::syncKaleidoSliders()
     const bool wasPop = isPopulating;
     isPopulating = true;
     setSliderReal("kaleidoSegments", p.kaleidoSegments);
+    setSliderReal("kaleidoSides", p.kaleidoSegments / 2);
+    setSliderReal("kaleidoVertex", p.kaleidoVertex);
+    setSliderReal("kaleidoRadius", p.kaleidoRadius * 100.0);  // factor -> percent
+    setSliderReal("kaleidoCopies", p.kaleidoSegments / 2);
+    setSliderReal("kaleidoStrands", p.kaleidoSegments / 2);
+    setSliderReal("kaleidoNest", p.kaleidoNest * 100.0);
+    setCheckboxValue("kaleidoWrap", p.kaleidoWrap != 0);
+    setCheckboxValue("kaleidoInsideOut", p.kaleidoInvert != 0);
+    setCheckboxValue("kaleidoReverse", p.kaleidoInvert != 0);
+    setSliderReal("kaleidoTile", p.hasKaleido() ? p.kaleidoTile * 100.0 : 0.0);
+    setSliderReal("kaleidoFlute", p.hasKaleido() ? p.kaleidoFlute * 100.0 : 0.0);
+    setSliderReal("kaleidoBend", p.kaleidoBend * 100.0);
+    setSliderReal("kaleidoShade", p.kaleidoShade * 100.0);
+    if (kaleidoGroupCombo) {
+        QSignalBlocker b(kaleidoGroupCombo);
+        kaleidoGroupCombo->setCurrentIndex(std::clamp(p.kaleidoGroup, 0, 16));
+    }
     setSliderReal("kaleidoAngle", p.kaleidoAngle);
     setSliderReal("kaleidoSource", p.kaleidoSource);
     setSliderReal("kaleidoZoom", p.kaleidoZoom * 100.0);      // factor -> percent
     setSliderReal("kaleidoOpacity", p.kaleidoOpacity * 100.0);
+    if (kaleidoTypeCombo) {
+        QSignalBlocker b(kaleidoTypeCombo);
+        kaleidoTypeCombo->setCurrentIndex(std::clamp(p.kaleidoType, 0,
+                                                     int(kaleidoTypeDefs().size()) - 1));
+    }
     isPopulating = wasPop;
+    applyKaleidoTypeRows();
     updateSectionHeaderCaptions();   // the Effects " *" and the list's Kaleidoscope " *"
 }
 
@@ -8081,7 +8430,13 @@ void DevelopProperties::itemChange(QModelIndex idx)
        must follow (kaleidoToolChanged -> MW::syncDevelopKaleidoOverlay). */
     if (source == "kaleidoSegments" || source == "kaleidoAngle" ||
         source == "kaleidoSource" || source == "kaleidoZoom" ||
-        source == "kaleidoOpacity") {
+        source == "kaleidoOpacity" || source == "kaleidoSides" ||
+        source == "kaleidoVertex" || source == "kaleidoRadius" ||
+        source == "kaleidoCopies" || source == "kaleidoStrands" ||
+        source == "kaleidoNest" || source == "kaleidoWrap" ||
+        source == "kaleidoInsideOut" || source == "kaleidoReverse" ||
+        source == "kaleidoTile" || source == "kaleidoFlute" ||
+        source == "kaleidoBend" || source == "kaleidoShade") {
         if (currentImagePath.isEmpty()) return;
         noteNonMaskInteraction();
         EditParams &p = activeParams();
@@ -8097,6 +8452,99 @@ void DevelopProperties::itemChange(QModelIndex idx)
             noteEdit(n >= 2 ? "Kaleidoscope" : "Kaleidoscope off",
                      n >= 2 ? QString::number(n) : QString(),
                      historyScopeLabel() + "/kaleidoSegments");
+        }
+        else if (source == "kaleidoSides") {
+            /* Hyperbolic: 0 = off, else at least a triangle; stored as 2 x sides. Per
+               corner rises to the least these sides allow. */
+            const int raw = qRound(v.toDouble());
+            const int n = raw <= 0 ? 0 : std::max(3, raw);
+            p.kaleidoSegments = 2 * n;
+            if (n) p.kaleidoVertex = std::max(p.kaleidoVertex,
+                                              EditParams::kaleidoMinVertex(n));
+            isPopulating = true;
+            if (n != raw) setSliderReal("kaleidoSides", n);
+            setSliderReal("kaleidoVertex", p.kaleidoVertex);
+            isPopulating = false;
+            noteEdit(n ? "Kaleidoscope" : "Kaleidoscope off",
+                     n ? QString::number(n) + " sides" : QString(),
+                     historyScopeLabel() + "/kaleidoSegments");
+        }
+        else if (source == "kaleidoCopies" || source == "kaleidoStrands") {
+            /* Polar / Droste: 0 = off, else the count; stored as 2 x the count. */
+            const int n = std::max(0, qRound(v.toDouble()));
+            p.kaleidoSegments = 2 * n;
+            const bool copies = source == "kaleidoCopies";
+            noteEdit(n ? "Kaleidoscope" : "Kaleidoscope off",
+                     n ? QString::number(n) + (copies ? " copies" : " strands") : QString(),
+                     historyScopeLabel() + "/kaleidoSegments");
+        }
+        else if (source == "kaleidoTile") {
+            /* Wallpaper: 0 = off (the size is kept), else the size; at least 2%. */
+            const int raw = qRound(v.toDouble());
+            if (raw <= 0) p.kaleidoSegments = 0;
+            else {
+                p.kaleidoSegments = std::max(p.kaleidoSegments, 2);
+                p.kaleidoTile = float(std::clamp(raw, 2, 100) / 100.0);
+            }
+            noteEdit(raw > 0 ? "Kaleidoscope tile" : "Kaleidoscope off",
+                     raw > 0 ? historyValueText(idx, v) : QString(),
+                     historyScopeLabel() + "/kaleidoTile");
+        }
+        else if (source == "kaleidoFlute") {
+            /* Fluted glass: 0 = off (the width is kept), else the width; at least 1%. */
+            const int raw = qRound(v.toDouble());
+            if (raw <= 0) p.kaleidoSegments = 0;
+            else {
+                p.kaleidoSegments = std::max(p.kaleidoSegments, 2);
+                p.kaleidoFlute = float(std::clamp(raw, 1, 25) / 100.0);
+            }
+            noteEdit(raw > 0 ? "Fluted glass width" : "Kaleidoscope off",
+                     raw > 0 ? historyValueText(idx, v) : QString(),
+                     historyScopeLabel() + "/kaleidoFlute");
+        }
+        else if (source == "kaleidoBend") {
+            p.kaleidoBend = float(qBound(-100.0, v.toDouble(), 100.0) / 100.0);
+            noteEdit("Fluted glass refraction", historyValueText(idx, v),
+                     historyScopeLabel() + "/kaleidoBend");
+        }
+        else if (source == "kaleidoShade") {
+            p.kaleidoShade = float(qBound(0.0, v.toDouble(), 100.0) / 100.0);
+            noteEdit("Fluted glass shading", historyValueText(idx, v),
+                     historyScopeLabel() + "/kaleidoShade");
+        }
+        else if (source == "kaleidoNest") {
+            p.kaleidoNest = float(qBound(5.0, v.toDouble(), 80.0) / 100.0);
+            noteEdit("Kaleidoscope inner size", historyValueText(idx, v),
+                     historyScopeLabel() + "/kaleidoNest");
+        }
+        else if (source == "kaleidoWrap") {
+            p.kaleidoWrap = v.toBool() ? 1 : 0;
+            noteEdit(p.kaleidoWrap ? "Kaleidoscope panorama wrap on"
+                                   : "Kaleidoscope panorama wrap off",
+                     QString(), historyScopeLabel() + "/kaleidoWrap");
+        }
+        else if (source == "kaleidoInsideOut" || source == "kaleidoReverse") {
+            p.kaleidoInvert = v.toBool() ? 1 : 0;
+            const QString what = source == "kaleidoReverse" ? "reverse" : "inside out";
+            noteEdit("Kaleidoscope " + what + (p.kaleidoInvert ? " on" : " off"),
+                     QString(), historyScopeLabel() + "/kaleidoInvert");
+        }
+        else if (source == "kaleidoVertex") {
+            const int raw = qRound(v.toDouble());
+            const int q = std::max(raw, EditParams::kaleidoMinVertex(p.kaleidoSegments / 2));
+            if (q != raw) {
+                isPopulating = true;
+                setSliderReal("kaleidoVertex", q);
+                isPopulating = false;
+            }
+            p.kaleidoVertex = q;
+            noteEdit("Kaleidoscope per corner", QString::number(q),
+                     historyScopeLabel() + "/kaleidoVertex");
+        }
+        else if (source == "kaleidoRadius") {
+            p.kaleidoRadius = float(qBound(25.0, v.toDouble(), 400.0) / 100.0);
+            noteEdit("Kaleidoscope disk", historyValueText(idx, v),
+                     historyScopeLabel() + "/kaleidoRadius");
         }
         else if (source == "kaleidoAngle") {
             p.kaleidoAngle = v.toFloat();
@@ -8357,6 +8805,7 @@ DevelopProperties::buildStackJob(const EditStack &s, bool useGeometry, bool useS
         lj.combine = l.combine;
         lj.maskEdge = l.maskEdge;
         lj.maskHalo = l.maskHalo;
+        lj.maskFeather = l.maskFeather;
         lj.opacity = l.opacity;
         for (const MaskComponent &m : l.components) {
             if (!m.enabled) continue;
@@ -9154,6 +9603,17 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("kaleidoSource", p.kaleidoSource);
         out.insert("kaleidoZoom", p.kaleidoZoom);
         out.insert("kaleidoOpacity", p.kaleidoOpacity);
+        out.insert("kaleidoType", p.kaleidoType);
+        out.insert("kaleidoVertex", p.kaleidoVertex);
+        out.insert("kaleidoRadius", p.kaleidoRadius);
+        out.insert("kaleidoInvert", p.kaleidoInvert);
+        out.insert("kaleidoWrap", p.kaleidoWrap);
+        out.insert("kaleidoNest", p.kaleidoNest);
+        out.insert("kaleidoGroup", p.kaleidoGroup);
+        out.insert("kaleidoTile", p.kaleidoTile);
+        out.insert("kaleidoFlute", p.kaleidoFlute);
+        out.insert("kaleidoBend", p.kaleidoBend);
+        out.insert("kaleidoShade", p.kaleidoShade);
     }
     if (lk.contains("blur")) {
         /* All seven, even when off: a checked leaf with no blur turns the target's off. */
@@ -9747,8 +10207,25 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
                  k == "blurX" || k == "blurY" || k == "blurSize" || k == "blurFeather") {
             it.value() = 0.5;
         }
-        else if (k == "kaleidoZoom" || k == "kaleidoOpacity") {
+        else if (k == "kaleidoZoom" || k == "kaleidoOpacity" || k == "kaleidoRadius") {
             it.value() = 1.0;
+        }
+        else if (k == "kaleidoVertex") {
+            it.value() = EditParams().kaleidoVertex;
+        }
+        else if (k == "kaleidoNest") {
+            it.value() = double(EditParams().kaleidoNest);
+        }
+        else if (k == "kaleidoTile") {
+            it.value() = double(EditParams().kaleidoTile);
+        }
+        else if (k == "kaleidoFlute" || k == "kaleidoBend" || k == "kaleidoShade") {
+            const EditParams d;
+            it.value() = double(k == "kaleidoFlute" ? d.kaleidoFlute
+                                : k == "kaleidoBend" ? d.kaleidoBend : d.kaleidoShade);
+        }
+        else if (k == "kaleidoGroup") {
+            it.value() = EditParams().kaleidoGroup;
         }
         else if (k == "lensBlurRange") {
             it.value() = double(EditParams().lensBlurRange);
@@ -10111,6 +10588,12 @@ const FloatField kFloatFields[] = {
     {"kaleidoSource",       &EditParams::kaleidoSource},
     {"kaleidoZoom",         &EditParams::kaleidoZoom},
     {"kaleidoOpacity",      &EditParams::kaleidoOpacity},
+    {"kaleidoRadius",       &EditParams::kaleidoRadius},
+    {"kaleidoNest",         &EditParams::kaleidoNest},
+    {"kaleidoTile",         &EditParams::kaleidoTile},
+    {"kaleidoFlute",        &EditParams::kaleidoFlute},
+    {"kaleidoBend",         &EditParams::kaleidoBend},
+    {"kaleidoShade",        &EditParams::kaleidoShade},
     {"blurAmount",          &EditParams::blurAmount},
     {"blurAngle",           &EditParams::blurAngle},
     {"blurX",               &EditParams::blurX},
@@ -10141,6 +10624,11 @@ const IntField kIntFields[] = {
     {"removeCA", &EditParams::removeCA},
     {"lensProfile", &EditParams::lensProfile},
     {"kaleidoSegments", &EditParams::kaleidoSegments},
+    {"kaleidoType", &EditParams::kaleidoType},
+    {"kaleidoVertex", &EditParams::kaleidoVertex},
+    {"kaleidoInvert", &EditParams::kaleidoInvert},
+    {"kaleidoWrap", &EditParams::kaleidoWrap},
+    {"kaleidoGroup", &EditParams::kaleidoGroup},
     {"blurType", &EditParams::blurType},
 };
 
@@ -10374,7 +10862,8 @@ bool sameComponents(const EditScope &a, const EditScope &b)
 bool sameScopeState(const EditScope &a, const EditScope &b)
 {
     return a.combine == b.combine && a.maskEdge == b.maskEdge &&
-           a.maskHalo == b.maskHalo && a.enabled == b.enabled &&
+           a.maskHalo == b.maskHalo && a.maskFeather == b.maskFeather &&
+           a.enabled == b.enabled &&
            a.opacity == b.opacity &&
            a.showScope == b.showScope && a.showBasic == b.showBasic &&
            a.showCurves == b.showCurves && a.showColor == b.showColor &&
@@ -10389,6 +10878,7 @@ void copyScopeState(const EditScope &src, EditScope &dst)
 {
     dst.combine = src.combine;   dst.maskEdge = src.maskEdge;
     dst.maskHalo = src.maskHalo; dst.enabled = src.enabled;
+    dst.maskFeather = src.maskFeather;
     dst.opacity = src.opacity;
     dst.showScope = src.showScope;           dst.showBasic = src.showBasic;
     dst.showCurves = src.showCurves;         dst.showColor = src.showColor;

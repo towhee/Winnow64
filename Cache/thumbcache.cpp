@@ -115,10 +115,11 @@ constexpr int kStampBatch = 1024;
 constexpr int kStampDelayMs = 2000;
 }
 
-void ThumbWriter::take(const QString &fPath, const QImage &im)
+void ThumbWriter::take(const QString &fPath, const QImage &im, bool replace)
 {
     /*  Worker thread. mPending exists only here, so there is nothing to lock. */
     mPending.append({fPath, im});
+    if (replace) mPendingReplace.insert(fPath);
     if (mPending.size() >= kBatch) { flushPending(); return; }
     if (!mScheduled) {
         mScheduled = true;
@@ -156,12 +157,15 @@ void ThumbWriter::flushPending()
     flushStamps();
     if (mPending.isEmpty()) return;
     const QList<QPair<QString, QImage>> batch = mPending;
+    const QSet<QString> replace = mPendingReplace;
     mPending.clear();
-    mOwner->writeBatch(batch);
+    mPendingReplace.clear();
+    mOwner->writeBatch(batch, replace);
     mOwner->mInFlight.fetchAndAddRelaxed(-batch.size());
 }
 
-void ThumbCache::writeBatch(const QList<QPair<QString, QImage>> &batch)
+void ThumbCache::writeBatch(const QList<QPair<QString, QImage>> &batch,
+                            const QSet<QString> &replace)
 {
 /*
     ONE TRANSACTION FOR THE WHOLE BATCH. Committing per row is what made the
@@ -195,7 +199,8 @@ void ThumbCache::writeBatch(const QList<QPair<QString, QImage>> &batch)
                 the producer so a revisit costs the loader nothing at all. Without
                 it every revisit re-encodes and rewrites the whole folder, which is
                 the opposite of what the cache is for. */
-            if (containsLocked(db, job.first, srcSize, srcMtime)) continue;
+            if (!replace.contains(job.first)
+                && containsLocked(db, job.first, srcSize, srcMtime)) continue;
 
             /*  Quality 85 at thumbnail size is visually indistinguishable from 100
                 and roughly half the bytes; the icon is a browsing aid, never a
@@ -275,7 +280,8 @@ void ThumbCache::startWriterLocked()
     mThread->start(QThread::LowPriority);
 }
 
-void ThumbCache::putImage(const QString &fPath, const QImage &im, bool hasDevelopRecipe)
+void ThumbCache::putImage(const QString &fPath, const QImage &im, bool hasDevelopRecipe,
+                          bool replace)
 {
     /*  wantsOriginalThumb: for an edited image in a developed-showing mode the
         picture in hand is the DEVELOPED thumbnail, and storing that would serve
@@ -289,7 +295,8 @@ void ThumbCache::putImage(const QString &fPath, const QImage &im, bool hasDevelo
     if (mInFlight.loadRelaxed() >= kInFlightMax) return;
     mInFlight.fetchAndAddRelaxed(1);
     QMetaObject::invokeMethod(w, "take", Qt::QueuedConnection,
-                              Q_ARG(QString, fPath), Q_ARG(QImage, im));
+                              Q_ARG(QString, fPath), Q_ARG(QImage, im),
+                              Q_ARG(bool, replace));
 }
 
 void ThumbCache::flush()

@@ -141,6 +141,523 @@ struct KaleidoFold {
     }
 };
 
+/* The MIP FOLDS (Hyperbolic, Polar, Droste) share one shape: map(x, y, px, py, foot)
+   takes a point in output PIXEL coords (centres at +0.5) to the source PIXEL INDEX
+   coords it samples (centres at integers, already inside the frame) and the
+   footprint, and maxLevel caps the mips. applyMipFold runs any of them.
+
+   The hyperbolic fold (Kaleido type 1): the source pixel coords and the FOOTPRINT --
+   how many source pixels one output pixel spans there, which picks the mip level.
+   Disk units: the disk is the unit circle about the centre, turned by -angle, so the
+   fundamental triangle O-M-V has its 180/p corner O at the origin, its right angle M
+   (the central polygon's edge midpoint) on the +x axis and its 180/q corner V (a
+   polygon corner) on the ray at 180/p. Its three mirrors: the x axis, the ray to V,
+   and the polygon edge -- a circle orthogonal to the rim. */
+struct HyperFold {
+    static constexpr int kMaxReflections = 400;
+    double cx, cy, R;            // centre and disk radius, output pixels
+    double ca, sa;               // cos / sin of the angle (output -> disk)
+    double cs, ss;               // cos / sin of angle + source (triangle -> photo)
+    double inv;                  // 1 / zoom: the source radius factor
+    double nx, ny;               // outward normal of the mirror through O and V
+    double ec, er2;              // the edge mirror: circle centre (ec, 0), radius^2
+    int maxLevel;                // the coarsest mip level worth sampling
+    int iw, ih;                  // the frame, for the border reflection
+    HyperFold(const CropTransform::Kaleido &k, double W, double H) : iw(int(W)), ih(int(H)) {
+        const double pi = 3.141592653589793;
+        const int p = std::max(3, k.segments / 2);
+        const int q = std::max(k.vertex, EditParams::kaleidoMinVertex(p));
+        cx = k.x * W;
+        cy = k.y * H;
+        R = std::max(1.0, std::clamp(k.radius, 0.25, 4.0) * 0.5 * std::min(W, H));
+        const double a = k.angle * 0.017453292519943295;
+        const double s = (k.angle + k.source) * 0.017453292519943295;
+        ca = std::cos(a); sa = std::sin(a);
+        cs = std::cos(s); ss = std::sin(s);
+        inv = 1.0 / std::clamp(k.zoom, 0.25, 8.0);
+        nx = -std::sin(pi / p);
+        ny = std::cos(pi / p);
+        /* The right triangle: cosh|OM| = cos(pi/q) / sin(pi/p), and a hyperbolic
+           distance d lies at tanh(d / 2) in the disk. The edge circle passes through
+           M = (m, 0), centred on the x axis, orthogonal to the rim: (m + r)^2 = r^2 + 1. */
+        const double m = std::tanh(0.5 * std::acosh(std::cos(pi / q) / std::sin(pi / p)));
+        const double r = (1.0 - m * m) / (2.0 * m);
+        ec = m + r;
+        er2 = r * r;
+        /* Beyond about the slice's own size a coarser level would blend in photo the
+           tiling never shows, so the mips stop there. */
+        maxLevel = std::max(0, int(std::floor(std::log2(std::max(1.0, m * R * inv)))));
+    }
+    inline void map(double x, double y, double &sx, double &sy, double &foot) const {
+        const double dx = x - cx, dy = y - cy;
+        double u = (dx * ca + dy * sa) / R;
+        double v = (-dx * sa + dy * ca) / R;
+        /* Each reflection in a circle multiplies the scale by its local magnification
+           (r^2 / d^2), so scale ends as source pixels per output pixel, before zoom. */
+        double scale = 1.0;
+        const double r2 = u * u + v * v;
+        if (r2 > 1.0) { u /= r2; v /= r2; scale /= r2; }   // beyond the rim: its mirror
+        int i = 0;
+        for (; i < kMaxReflections; ++i) {
+            bool moved = false;
+            if (v < 0.0) { v = -v; moved = true; }
+            const double dn = u * nx + v * ny;
+            if (dn > 0.0) { u -= 2.0 * dn * nx; v -= 2.0 * dn * ny; moved = true; }
+            const double ex = u - ec, e2 = ex * ex + v * v;
+            if (e2 < er2) {
+                const double f = er2 / e2;
+                u = ec + ex * f;
+                v *= f;
+                scale *= f;
+                moved = true;
+            }
+            if (!moved) break;
+        }
+        const double kk = R * inv;
+        sx = reflectCoord(float(cx + kk * (u * cs - v * ss) - 0.5), iw);
+        sy = reflectCoord(float(cy + kk * (u * ss + v * cs) - 0.5), ih);
+        /* Unresolved after the cap: right at the rim, where only the average shows. */
+        foot = (i == kMaxReflections) ? 1.0e9 : scale * inv;
+    }
+};
+
+/* The polar fold (Kaleido type 2, a "tiny planet"): the whole frame is wrapped round
+   the centre -- its width along the angle, its height along the radius, the bottom row
+   at the centre and the top row on a circle of zoom x half the short side (inside out:
+   the top row at the centre). copies = segments / 2 go round the circle; each is the
+   frame followed by its mirror image (the Mirror type's alternate reflection, so no
+   seam), or with wrap the frame alone (for a 360-degree panorama whose ends meet).
+   Source slides the frame along the angle. Beyond the circle the frame is reflected.
+   The footprint is the geometric mean of the angular and radial scales. */
+struct PolarFold {
+    double cx, cy, Rp, ca, sa, shift;
+    int n, iw, ih, maxLevel;
+    bool wrap, insideOut;
+    PolarFold(const CropTransform::Kaleido &k, double W, double H)
+        : iw(int(W)), ih(int(H)) {
+        cx = k.x * W;
+        cy = k.y * H;
+        Rp = std::max(1.0, std::clamp(k.zoom, 0.25, 8.0) * 0.5 * std::min(W, H));
+        const double a = k.angle * 0.017453292519943295;
+        ca = std::cos(a); sa = std::sin(a);
+        shift = k.source / 360.0;
+        n = std::max(1, k.segments / 2);
+        wrap = k.wrap;
+        insideOut = k.invert;
+        /* The centre averages a ring of the frame's width, not the whole frame. */
+        maxLevel = std::max(0, int(std::floor(std::log2(std::max(1.0, std::min(W, H) / 8.0)))));
+    }
+    inline void map(double x, double y, double &sx, double &sy, double &foot) const {
+        const double twoPi = 6.283185307179586;
+        const double dx = x - cx, dy = y - cy;
+        const double u = (dx * ca + dy * sa) / Rp, v = (-dx * sa + dy * ca) / Rp;
+        const double rho = std::sqrt(u * u + v * v);
+        double th = std::atan2(v, u);
+        if (th < 0.0) th += twoPi;                         // 0 .. 2pi from the spoke
+        double fx;
+        if (wrap) {
+            double t = th * n / twoPi + shift;
+            t -= std::floor(t);
+            sx = std::min(t * iw - 0.5, double(iw) - 1.0);
+            sx = std::max(sx, 0.0);
+            fx = iw * n / twoPi;
+        }
+        else {
+            const double w = th * (2 * n) / twoPi;          // wedges of pi / n
+            const double kf = std::floor(w);
+            double t = w - kf;
+            if (int(kf) & 1) t = 1.0 - t;                   // odd wedges: the mirror image
+            sx = reflectCoord(float((t + shift) * iw - 0.5), iw);
+            fx = iw * (2 * n) / twoPi;
+        }
+        const double ry = insideOut ? rho : 1.0 - rho;
+        sy = reflectCoord(float(ry * ih - 0.5), ih);
+        /* Source pixels per output pixel: along the angle W n / (2 pi rho Rp) (twice
+           that mirrored), along the radius H / Rp. */
+        const double fa = fx / (std::max(rho, 1e-6) * Rp), fr = ih / Rp;
+        foot = std::sqrt(fa * fr);
+    }
+};
+
+/* The Droste fold (Kaleido type 3, Escher's "Print Gallery" spiral). The photo is
+   nested in itself about the centre -- a copy at nest x the size in the middle, and so
+   on without end -- and log-polar coords are twisted so that once round the centre
+   steps strands = segments / 2 nestings: z -> z^alpha, alpha = 1 -+ i strands L / 2pi,
+   L = ln(1 / nest). The nested photo repeats under a scale by 1 / nest, so the result
+   is seamless. Each sample is scaled back into the ANNULUS (inside the frame, outside
+   the nested copy). Invert turns the spiral the other way; zoom slides along it. */
+struct DrosteFold {
+    double cx, cy, ca, sa, cs, ss, inv, s, L, ai, absAlpha, target;
+    double fx0, fx1, fy0, fy1;               // the frame about the centre, pixels
+    int iw, ih, maxLevel;
+    DrosteFold(const CropTransform::Kaleido &k, double W, double H)
+        : iw(int(W)), ih(int(H)) {
+        const double pi = 3.141592653589793;
+        cx = k.x * W;
+        cy = k.y * H;
+        const double a = k.angle * 0.017453292519943295;
+        const double b = (k.angle + k.source) * 0.017453292519943295;
+        ca = std::cos(a); sa = std::sin(a);
+        cs = std::cos(b); ss = std::sin(b);
+        inv = 1.0 / std::clamp(k.zoom, 0.25, 8.0);
+        s = 1.0 / std::clamp(k.nest, 0.05, 0.8);
+        L = std::log(s);
+        const int strands = std::max(1, k.segments / 2);
+        ai = (k.invert ? 1.0 : -1.0) * strands * L / (2.0 * pi);
+        absAlpha = std::sqrt(1.0 + ai * ai);
+        /* The frame must hold a neighbourhood of the centre, or no nesting contains it. */
+        fx0 = std::min(-cx, -1.0); fx1 = std::max(W - cx, 1.0);
+        fy0 = std::min(-cy, -1.0); fy1 = std::max(H - cy, 1.0);
+        target = std::log(0.5 * std::min(fx1 - fx0, fy1 - fy0));
+        maxLevel = std::max(0, int(std::floor(std::log2(std::max(1.0, std::min(W, H) / 8.0)))));
+    }
+    inline bool inFrame(double x, double y, double f) const {
+        return x >= fx0 * f && x < fx1 * f && y >= fy0 * f && y < fy1 * f;
+    }
+    inline void map(double x, double y, double &sx, double &sy, double &foot) const {
+        const double dx = x - cx, dy = y - cy;
+        const double u = (dx * ca + dy * sa) * inv, v = (-dx * sa + dy * ca) * inv;
+        const double r2 = u * u + v * v;
+        if (r2 < 1e-12) {                    // the centre itself: every nesting at once
+            sx = std::clamp(cx - 0.5, 0.0, iw - 1.0);
+            sy = std::clamp(cy - 0.5, 0.0, ih - 1.0);
+            foot = 1.0e9;
+            return;
+        }
+        const double lr = 0.5 * std::log(r2), th = std::atan2(v, u);
+        /* (1 + i ai)(lr + i th), then a whole number of nestings off the real part so
+           the point lands near the frame's size; the loop finishes the job. */
+        double re = lr - ai * th;
+        const double im = th + ai * lr;
+        re -= std::floor((re - target) / L) * L;
+        const double mag = std::exp(re);
+        const double wx = mag * std::cos(im), wy = mag * std::sin(im);
+        double px = wx * cs - wy * ss, py = wx * ss + wy * cs;
+        double scale = 1.0;
+        for (int i = 0; i < 64; ++i) {
+            if (!inFrame(px, py, 1.0)) { px /= s; py /= s; scale /= s; }
+            else if (inFrame(px, py, 1.0 / s)) { px *= s; py *= s; scale *= s; }
+            else break;
+        }
+        sx = std::clamp(cx + px - 0.5, 0.0, iw - 1.0);
+        sy = std::clamp(cy + py - 0.5, 0.0, ih - 1.0);
+        /* |d w / d z| = |alpha| |w| / |z|, times the zoom's 1 / zoom. */
+        foot = absAlpha * mag * scale / std::sqrt(r2) * inv;
+    }
+};
+
+/* The wallpaper fold (Kaleido type 4): one of the 17 wallpaper groups tiles the plane
+   about the centre. Output -> cell units (turned by -angle, divided by the tile size
+   T); the group reduces the point to ONE canonical point of its orbit (inside the
+   group's fundamental region), which samples the photo as the Mirror wedge does:
+   centre + T / zoom x turn(angle + source). Square-lattice groups (0..11) work in
+   fractional cell coords with the kaleidoscope's centre at a cell centre; hexagonal
+   groups (12..16) subtract the nearest lattice point (all five are symmorphic, so the
+   point group about it does the rest) and fold the angle. The mirror groups are
+   seamless; groups with turns or glides but no mirror show where copies of the slice
+   meet, as any such pattern made from a photo does. No minification: the footprint
+   is just 1 / zoom. */
+struct WallpaperFold {
+    double cx, cy, T, ca, sa, cs, ss, inv;
+    int g, iw, ih, maxLevel;
+    WallpaperFold(const CropTransform::Kaleido &k, double W, double H)
+        : iw(int(W)), ih(int(H)) {
+        cx = k.x * W;
+        cy = k.y * H;
+        T = std::max(2.0, std::clamp(k.tile, 0.02, 1.0) * std::min(W, H));
+        const double a = k.angle * 0.017453292519943295;
+        const double b = (k.angle + k.source) * 0.017453292519943295;
+        ca = std::cos(a); sa = std::sin(a);
+        cs = std::cos(b); ss = std::sin(b);
+        inv = 1.0 / std::clamp(k.zoom, 0.25, 8.0);
+        g = std::clamp(k.group, 0, 16);
+        maxLevel = 2;                                   // zoom down to 25%
+    }
+    /* Square-lattice groups, fractional cell coords (x, y) -> the canonical point. */
+    static void squareRep(int g, double &x, double &y) {
+        x -= std::floor(x);
+        y -= std::floor(y);
+        auto frac = [](double t) { return t - std::floor(t); };
+        switch (g) {
+        case 0:                                          // p1: translations only
+            break;
+        case 1:                                          // p2: half turn about (1/2, 1/2)
+            if (y > 0.5) { x = 1.0 - x; y = 1.0 - y; }
+            break;
+        case 2:                                          // pm: mirrors x = 0, 1/2
+            if (x > 0.5) x = 1.0 - x;
+            break;
+        case 3:                                          // pg: glide (x + 1/2, -y)
+            if (y > 0.5) { x = frac(x + 0.5); y = 1.0 - y; }
+            break;
+        case 4:                                          // cm: centring + mirror
+            if (y > 0.5) { x = frac(x + 0.5); y -= 0.5; }
+            if (x > 0.5) x = 1.0 - x;
+            break;
+        case 5:                                          // pmm: two mirror families
+            if (x > 0.5) x = 1.0 - x;
+            if (y > 0.5) y = 1.0 - y;
+            break;
+        case 6:                                          // pmg: glide, then mirror
+            if (y > 0.5) { x = frac(x + 0.5); y = 1.0 - y; }
+            if (x > 0.5) x = 1.0 - x;
+            break;
+        case 7:                                          // pgg: two crossed glides
+            if (y >= 0.5) { x = frac(0.5 - x); y -= 0.5; }
+            if (x >= 0.5) { x -= 0.5; y = 0.5 - y; }
+            break;
+        case 8:                                          // cmm: centring + two mirrors
+            if (y > 0.5) { x = frac(x + 0.5); y -= 0.5; }
+            if (y > 0.25) { x = frac(x + 0.5); y = 0.5 - y; }
+            if (x > 0.5) x = 1.0 - x;
+            break;
+        default: {                                       // p4 / p4m / p4g
+            double u = x - 0.5, v = y - 0.5;             // about a 4-fold centre
+            for (int i = 0; i < 4 && !(u >= 0.0 && v >= 0.0); ++i) {
+                const double t = u; u = -v; v = t;       // quarter turn
+            }
+            if (g == 10 && v > u) std::swap(u, v);       // p4m: the diagonal mirror
+            if (g == 11 && u + v > 0.5) {                // p4g: mirror u + v = 1/2
+                const double t = u; u = 0.5 - v; v = 0.5 - t;
+            }
+            x = u + 0.5;
+            y = v + 0.5;
+        }
+        }
+    }
+    /* Hexagonal groups, Cartesian cell units about a lattice point (lattice (1, 0),
+       (1/2, sqrt3/2)) -> the canonical point. */
+    static void hexRep(int g, double &u, double &v) {
+        const double h = 0.8660254037844386;            // sqrt(3) / 2
+        const double j0 = std::floor(v / h), i0 = std::floor(u - (v / h) * 0.5);
+        double best = 1e300, bu = u, bv = v;
+        for (int dj = 0; dj <= 1; ++dj) {
+            for (int di = 0; di <= 1; ++di) {
+                const double j = j0 + dj, i = i0 + di;
+                const double du = u - (i + 0.5 * j), dv = v - h * j;
+                const double d = du * du + dv * dv;
+                if (d < best) { best = d; bu = du; bv = dv; }
+            }
+        }
+        const double pi3 = 1.0471975511965976;          // 60 degrees
+        const double r = std::sqrt(best);
+        double th = std::atan2(bv, bu);
+        auto modp = [](double t, double p) { t = std::fmod(t, p); return t < 0.0 ? t + p : t; };
+        switch (g) {
+        case 12: th = modp(th, 2.0 * pi3); break;                    // p3
+        case 13:                                                     // p3m1: mirrors 30/90/150
+            th = 0.5 * pi3 + modp(th - 0.5 * pi3, 2.0 * pi3);
+            if (th > 1.5 * pi3) th = 3.0 * pi3 - th;
+            break;
+        case 14:                                                     // p31m: mirrors 0/60/120
+            th = modp(th, 2.0 * pi3);
+            if (th > pi3) th = 2.0 * pi3 - th;
+            break;
+        case 15: th = modp(th, pi3); break;                          // p6
+        default:                                                     // p6m
+            th = modp(th, pi3);
+            if (th > 0.5 * pi3) th = pi3 - th;
+        }
+        u = r * std::cos(th);
+        v = r * std::sin(th);
+    }
+    inline void map(double x, double y, double &sx, double &sy, double &foot) const {
+        const double dx = x - cx, dy = y - cy;
+        double u = (dx * ca + dy * sa) / T, v = (-dx * sa + dy * ca) / T;
+        if (g >= 12) hexRep(g, u, v);
+        else {
+            double fx = u + 0.5, fy = v + 0.5;
+            squareRep(g, fx, fy);
+            u = fx - 0.5;
+            v = fy - 0.5;
+        }
+        const double kk = T * inv;
+        sx = reflectCoord(float(cx + kk * (u * cs - v * ss) - 0.5), iw);
+        sy = reflectCoord(float(cy + kk * (u * ss + v * cs) - 0.5), ih);
+        foot = inv;
+    }
+};
+
+/* The fluted-glass fold (Kaleido type 5): the frame seen through reeded glass. Reeds
+   of width w (flute x the short side) run SQUARE to the angle (the spoke points across
+   them, so at angle 0 they are vertical), one centred on the centre;
+   each is a cylindrical lens, so across a reed (t = -1/2 .. 1/2) the sample sits at
+   the reed's centre + w x (t + 3 bend q(t)), q the barrel profile (t + sin(pi t) / 2)
+   / 2 (q(1/2) = 1/2, steepest in the middle like a cylinder). bend 0 is flat glass
+   (the photo untouched), 1 squeezes four reeds' width of the photo into each reed,
+   -1 shows each reed's strip reversed. Along the reed nothing moves. gain() shades each reed as if lit from one
+   side, dark to bright across it and back to 1 at its edges. Source turns and zoom
+   scales what lies behind the glass, as elsewhere. */
+struct FluteFold {
+    double cx, cy, w, ca, sa, cs, ss, inv, bend3, shade;
+    int iw, ih, maxLevel;
+    FluteFold(const CropTransform::Kaleido &k, double W, double H)
+        : iw(int(W)), ih(int(H)) {
+        cx = k.x * W;
+        cy = k.y * H;
+        w = std::max(2.0, std::clamp(k.flute, 0.01, 0.25) * std::min(W, H));
+        const double a = k.angle * 0.017453292519943295;
+        const double b = (k.angle + k.source) * 0.017453292519943295;
+        ca = std::cos(a); sa = std::sin(a);
+        cs = std::cos(b); ss = std::sin(b);
+        inv = 1.0 / std::clamp(k.zoom, 0.25, 8.0);
+        bend3 = 3.0 * std::clamp(k.bend, -1.0, 1.0);
+        shade = std::clamp(k.shade, 0.0, 1.0);
+        maxLevel = 3;
+    }
+    /* Across-reed position: the reed index and t in [-1/2, 1/2). */
+    inline void reed(double x, double y, double &along, double &across, double &kf,
+                     double &t) const {
+        const double dx = x - cx, dy = y - cy;
+        across = dx * ca + dy * sa;
+        along = -dx * sa + dy * ca;
+        const double r = across / w;
+        kf = std::floor(r + 0.5);
+        t = r - kf;
+    }
+    inline void map(double x, double y, double &sx, double &sy, double &foot) const {
+        const double pi = 3.141592653589793;
+        double along, across, kf, t;
+        reed(x, y, along, across, kf, t);
+        const double q = 0.5 * (t + 0.5 * std::sin(pi * t));
+        const double dq = 0.5 * (1.0 + 0.5 * pi * std::cos(pi * t));
+        const double b = (kf + t + bend3 * q) * w;
+        sx = reflectCoord(float(cx + inv * (b * cs - along * ss) - 0.5), iw);
+        sy = reflectCoord(float(cy + inv * (b * ss + along * cs) - 0.5), ih);
+        /* Across, |1 + 3 bend q'| source pixels per output pixel; along, 1: their mean. */
+        foot = std::sqrt(std::max(std::abs(1.0 + bend3 * dq), 1e-3)) * inv;
+    }
+    inline float gain(double x, double y) const {
+        if (shade <= 0.0) return 1.0f;
+        double along, across, kf, t;
+        reed(x, y, along, across, kf, t);
+        return float(1.0 + 0.3 * shade * std::sin(2.0 * 3.141592653589793 * t));
+    }
+};
+
+/* A mip pyramid (cv::pyrDown, 8-bit or 16-bit, 1 or 4 channels) and a trilinear sample
+   from it, for the hyperbolic fold's shrinking copies. x, y are level-0 pixel coords
+   (centres at integers); level L samples at (x + 0.5) / 2^L - 0.5. */
+struct MipSampler {
+    std::vector<cv::Mat> lv;
+    int cn = 4;
+    bool deep = false;
+    MipSampler(const cv::Mat &base, int maxLevel) {
+        lv.push_back(base);
+        while (int(lv.size()) <= maxLevel && lv.back().cols > 1 && lv.back().rows > 1) {
+            cv::Mat d;
+            cv::pyrDown(lv.back(), d);
+            lv.push_back(d);
+        }
+        cn = base.channels();
+        deep = base.depth() == CV_16U;
+    }
+    template <typename T>
+    void bilinear(const cv::Mat &m, double x, double y, float *o) const {
+        x = std::clamp(x, 0.0, double(m.cols - 1));
+        y = std::clamp(y, 0.0, double(m.rows - 1));
+        const int x0 = int(x), y0 = int(y);
+        const int x1 = std::min(x0 + 1, m.cols - 1), y1 = std::min(y0 + 1, m.rows - 1);
+        const float fx = float(x - x0), fy = float(y - y0);
+        const T *r0 = m.ptr<T>(y0);
+        const T *r1 = m.ptr<T>(y1);
+        for (int c = 0; c < cn; ++c) {
+            const float t = r0[x0 * cn + c] + (r0[x1 * cn + c] - float(r0[x0 * cn + c])) * fx;
+            const float b = r1[x0 * cn + c] + (r1[x1 * cn + c] - float(r1[x0 * cn + c])) * fx;
+            o[c] = t + (b - t) * fy;
+        }
+    }
+    void tap(int L, double x, double y, float *o) const {
+        const double sc = std::ldexp(1.0, -L);
+        const double lx = (x + 0.5) * sc - 0.5, ly = (y + 0.5) * sc - 0.5;
+        if (deep) bilinear<quint16>(lv[size_t(L)], lx, ly, o);
+        else      bilinear<uchar>(lv[size_t(L)], lx, ly, o);
+    }
+    /* foot: source pixels per output pixel; at or below 1 a plain bilinear tap. */
+    void sample(double x, double y, double foot, float *o) const {
+        const int top = int(lv.size()) - 1;
+        const double level = foot > 1.0 ? std::min(std::log2(foot), double(top)) : 0.0;
+        const int l0 = int(level);
+        const float t = float(level - l0);
+        tap(l0, x, y, o);
+        if (t > 0.001f && l0 < top) {
+            float o2[4];
+            tap(l0 + 1, x, y, o2);
+            for (int c = 0; c < cn; ++c) o[c] += (o2[c] - o[c]) * t;
+        }
+    }
+};
+
+/* A mip fold, whole frame (mask == nullptr) or masked: the masked form folds colour
+   and coverage with the same map and blends by the folded coverage, exactly as
+   applyKaleidoscopeMasked does. Every row on its own task; no maps. */
+template <typename Fold>
+QImage applyMipFold(const QImage &frame, const QImage *mask, const CropTransform::Kaleido &k)
+{
+    const int W = frame.width(), H = frame.height();
+    const bool deep = isDeep(frame);
+    const cv::Mat in = deep ? toRgba64(frame) : toBgra(frame);
+    QImage g8;
+    cv::Mat m;
+    if (mask) {
+        g8 = mask->convertToFormat(QImage::Format_Grayscale8);
+        m = cv::Mat(H, W, CV_8U, const_cast<uchar *>(g8.bits()), g8.bytesPerLine());
+    }
+    QImage out(W, H, deep ? QImage::Format_RGBA64 : QImage::Format_ARGB32);
+    cv::Mat dst(H, W, deep ? CV_16UC4 : CV_8UC4, out.bits(), out.bytesPerLine());
+
+    const Fold fold(k, W, H);
+    const MipSampler colour(in, fold.maxLevel);
+    const MipSampler cover(mask ? m : cv::Mat(1, 1, CV_8U, cv::Scalar(255)),
+                           mask ? fold.maxLevel : 0);
+    const float op = float(std::clamp(k.opacity, 0.0, 1.0));
+    cv::parallel_for_(cv::Range(0, H), [&](const cv::Range &range) {
+        float c[4], a[4];
+        for (int y = range.start; y < range.end; ++y) {
+            for (int x = 0; x < W; ++x) {
+                double px, py, foot;
+                fold.map(x + 0.5, y + 0.5, px, py, foot);
+                colour.sample(px, py, foot, c);
+                /* A fold may shade what it shows (fluted glass): colour, not alpha. */
+                if constexpr (requires { fold.gain(0.0, 0.0); }) {
+                    const float gn = fold.gain(x + 0.5, y + 0.5);
+                    for (int ch = 0; ch < 3; ++ch) c[ch] *= gn;
+                }
+                float t = op;
+                if (mask) {
+                    cover.sample(px, py, foot, a);
+                    t *= a[0] * (1.0f / 255.0f);
+                }
+                if (deep) {
+                    const quint16 *b = in.ptr<quint16>(y) + x * 4;
+                    quint16 *o = dst.ptr<quint16>(y) + x * 4;
+                    for (int ch = 0; ch < 4; ++ch)
+                        o[ch] = cv::saturate_cast<quint16>(b[ch] + (c[ch] - b[ch]) * t);
+                }
+                else {
+                    const uchar *b = in.ptr<uchar>(y) + x * 4;
+                    uchar *o = dst.ptr<uchar>(y) + x * 4;
+                    for (int ch = 0; ch < 4; ++ch)
+                        o[ch] = cv::saturate_cast<uchar>(b[ch] + (c[ch] - b[ch]) * t);
+                }
+            }
+        }
+    });
+    return out;
+}
+
+/* The Kaleido types that run through applyMipFold (all but Mirror). */
+QImage applyMipType(const QImage &frame, const QImage *mask, const CropTransform::Kaleido &k)
+{
+    switch (k.type) {
+    case 2:  return applyMipFold<PolarFold>(frame, mask, k);
+    case 3:  return applyMipFold<DrosteFold>(frame, mask, k);
+    case 4:  return applyMipFold<WallpaperFold>(frame, mask, k);
+    case 5:  return applyMipFold<FluteFold>(frame, mask, k);
+    default: return applyMipFold<HyperFold>(frame, mask, k);
+    }
+}
+
 } // namespace
 
 QImage CropTransform::rectifyPerspective(const QImage &src, const QPointF quad[4],
@@ -280,6 +797,7 @@ QImage CropTransform::applyKaleidoscope(const QImage &src, const Kaleido &k)
     if (src.isNull() || !k.on()) return src;
     const int W = src.width(), H = src.height();
     if (W < 2 || H < 2) return src;
+    if (k.usesMips()) return applyMipType(src, nullptr, k);
 
     const bool deep = isDeep(src);
     const cv::Mat in = deep ? toRgba64(src) : toBgra(src);
@@ -315,6 +833,7 @@ QImage CropTransform::applyKaleidoscopeMasked(const QImage &frame, const QImage 
     if (frame.isNull() || !k.on() || mask.size() != frame.size()) return frame;
     const int W = frame.width(), H = frame.height();
     if (W < 2 || H < 2) return frame;
+    if (k.usesMips()) return applyMipType(frame, &mask, k);
 
     const bool deep = isDeep(frame);
     const cv::Mat in = deep ? toRgba64(frame) : toBgra(frame);
@@ -374,9 +893,21 @@ QPointF CropTransform::kaleidoSourceNorm(QPointF outN, double W, double H,
                                          const Kaleido &k)
 {
     if (!k.on() || W < 2.0 || H < 2.0) return outN;
-    const KaleidoFold fold(k, W, H);
+    if (k.usesMips()) {
+        /* These maps already land on source pixel indices inside the frame. */
+        const double x = outN.x() * W, y = outN.y() * H;
+        double px = 0.0, py = 0.0, foot;
+        switch (k.type) {
+        case 2:  PolarFold(k, W, H).map(x, y, px, py, foot); break;
+        case 3:  DrosteFold(k, W, H).map(x, y, px, py, foot); break;
+        case 4:  WallpaperFold(k, W, H).map(x, y, px, py, foot); break;
+        case 5:  FluteFold(k, W, H).map(x, y, px, py, foot); break;
+        default: HyperFold(k, W, H).map(x, y, px, py, foot); break;
+        }
+        return QPointF((px + 0.5) / W, (py + 0.5) / H);
+    }
     float sx, sy;
-    fold.map(float(outN.x() * W), float(outN.y() * H), sx, sy);
+    KaleidoFold(k, W, H).map(float(outN.x() * W), float(outN.y() * H), sx, sy);
     const int iw = int(W), ih = int(H);
     return QPointF((reflectCoord(sx - 0.5f, iw) + 0.5) / W,
                    (reflectCoord(sy - 0.5f, ih) + 0.5) / H);

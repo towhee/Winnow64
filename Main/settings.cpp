@@ -214,6 +214,7 @@ void MW::writeSettings()
     /* Survives a restart, or the editor would ask for a scan that can never close the
        gap every time Winnow is launched. */
     settings->setValue("skipCatalogScopePrompt", skipCatalogScopePrompt);
+    settings->setValue("skipStaleThumbPrompt", skipStaleThumbPrompt);
     settings->remove("catalogScopePrompted");    // superseded by skipCatalogScopePrompt
     settings->setValue("catalogUncatalogable", catalogUncatalogable);
     settings->setValue("catalogScanIncomplete", catalogScanIncomplete);
@@ -840,6 +841,7 @@ bool MW::loadSettings()
 
     /* read the catalog scope (see the write side for why it is not in the db) */
     skipCatalogScopePrompt = settings->value("skipCatalogScopePrompt", false).toBool();
+    skipStaleThumbPrompt = settings->value("skipStaleThumbPrompt", false).toBool();
     catalogUncatalogable = settings->value("catalogUncatalogable", 0).toInt();
     catalogScanIncomplete = settings->value("catalogScanIncomplete", false).toBool();
     catalogScope.clear();

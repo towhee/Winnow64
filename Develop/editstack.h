@@ -51,13 +51,16 @@ enum class MaskTool {
     /* Segmenter: SAM 2 cuts the photo into its objects; the user clicks the ones wanted
        and the submask is their union (Utilities/segmenter.h). paramsJson holds the
        selected outlines, so the render needs no model. */
-    Segmenter
+    Segmenter,
+    /* Beam Gradient: a band along a spine, feathered on both sides, optionally tapered
+       (Develop/beammask.h). paramsJson {x1,y1,x2,y2,width,taper}. */
+    Beam
 };
 /* The last MaskTool. A loaded mask whose tool is past it is dropped as "unknown tool"
    (sanitize). MOVE THIS when appending a tool: it was left at RefineBrush when Segmenter
    was added, so every Segmenter mask was dropped on load -- and a preview top-up then
    wrote the stripped stack back to the sidecar. */
-constexpr MaskTool kLastMaskTool = MaskTool::Segmenter;
+constexpr MaskTool kLastMaskTool = MaskTool::Beam;
 enum class MaskOp      { Add, Subtract, Intersect };   // APPEND ONLY (serialized as int)
 enum class MaskCombine { Union, Intersect };
 
@@ -91,6 +94,12 @@ struct EditScope {
        walking each submask. Composes with MaskComponent::edge. Meaningless with no
        components, and the panel hides its row there. */
     float      maskEdge = 0.0f;
+    /* Feather the COMBINED mask, 0..100, 0 = off: a Gaussian blur of the folded coverage
+       with sigma a fraction of the image's short side (MaskFeather::blurInPlace), so an
+       assembled mask can be softened as a whole. Runs after Edge and Halo, so it is the
+       softness the user sees. Composes with each MaskComponent::feather. Sidecar key
+       "maskFeather" on the scope, written only when non-zero. */
+    float      maskFeather = 0.0f;
     /* Halo suppression on the COMBINED mask, 0..100, 0 = off. Where the mask boundary
        does not land on the subject's real edge, the masked adjustment spills onto a rim
        of background; this refines the alpha against the image so it follows that edge.
@@ -409,6 +418,19 @@ struct EditStack {
             o["kaleidoSource"]   = p.kaleidoSource;
             if (p.kaleidoZoom != 1.0f) o["kaleidoZoom"] = p.kaleidoZoom;
             if (p.kaleidoOpacity != 1.0f) o["kaleidoOpacity"] = p.kaleidoOpacity;
+            if (p.kaleidoType != 0) {
+                o["kaleidoType"]   = p.kaleidoType;
+                o["kaleidoVertex"] = p.kaleidoVertex;
+                if (p.kaleidoRadius != 1.0f) o["kaleidoRadius"] = p.kaleidoRadius;
+                if (p.kaleidoInvert != 0) o["kaleidoInvert"] = p.kaleidoInvert;
+                if (p.kaleidoWrap != 0) o["kaleidoWrap"] = p.kaleidoWrap;
+                if (p.kaleidoNest != 0.25f) o["kaleidoNest"] = p.kaleidoNest;
+                if (p.kaleidoGroup != 16) o["kaleidoGroup"] = p.kaleidoGroup;
+                if (p.kaleidoTile != 0.25f) o["kaleidoTile"] = p.kaleidoTile;
+                if (p.kaleidoFlute != 0.04f) o["kaleidoFlute"] = p.kaleidoFlute;
+                if (p.kaleidoBend != 0.5f) o["kaleidoBend"] = p.kaleidoBend;
+                if (p.kaleidoShade != 0.3f) o["kaleidoShade"] = p.kaleidoShade;
+            }
         }
         /* Blur: only when on, so existing recipes keep their JSON (and hash). */
         if (p.blurAmount != 0.0f) {
@@ -519,6 +541,17 @@ struct EditStack {
         p.kaleidoSource   = static_cast<float>(o.value("kaleidoSource").toDouble(p.kaleidoSource));
         p.kaleidoZoom     = static_cast<float>(o.value("kaleidoZoom").toDouble(p.kaleidoZoom));
         p.kaleidoOpacity  = static_cast<float>(o.value("kaleidoOpacity").toDouble(p.kaleidoOpacity));
+        p.kaleidoType     = o.value("kaleidoType").toInt(p.kaleidoType);
+        p.kaleidoVertex   = o.value("kaleidoVertex").toInt(p.kaleidoVertex);
+        p.kaleidoRadius   = static_cast<float>(o.value("kaleidoRadius").toDouble(p.kaleidoRadius));
+        p.kaleidoInvert   = o.value("kaleidoInvert").toInt(p.kaleidoInvert);
+        p.kaleidoWrap     = o.value("kaleidoWrap").toInt(p.kaleidoWrap);
+        p.kaleidoNest     = static_cast<float>(o.value("kaleidoNest").toDouble(p.kaleidoNest));
+        p.kaleidoGroup    = o.value("kaleidoGroup").toInt(p.kaleidoGroup);
+        p.kaleidoTile     = static_cast<float>(o.value("kaleidoTile").toDouble(p.kaleidoTile));
+        p.kaleidoFlute    = static_cast<float>(o.value("kaleidoFlute").toDouble(p.kaleidoFlute));
+        p.kaleidoBend     = static_cast<float>(o.value("kaleidoBend").toDouble(p.kaleidoBend));
+        p.kaleidoShade    = static_cast<float>(o.value("kaleidoShade").toDouble(p.kaleidoShade));
         p.blurType        = o.value("blurType").toInt(p.blurType);
         p.blurAmount      = static_cast<float>(o.value("blurAmount").toDouble(p.blurAmount));
         p.blurAngle       = static_cast<float>(o.value("blurAngle").toDouble(p.blurAngle));
@@ -540,6 +573,7 @@ struct EditStack {
             lo["enabled"] = l.enabled;
             lo["combine"] = l.combine;
             lo["maskEdge"] = l.maskEdge;
+            if (l.maskFeather != 0.0f) lo["maskFeather"] = l.maskFeather;
             lo["maskHalo"] = l.maskHalo;
             if (!l.link.isEmpty()) lo["link"] = l.link;
             /* Preview flags: only emit the non-default (false = previewed off) ones, so a normal
@@ -645,6 +679,8 @@ struct EditStack {
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
             l.maskEdge = static_cast<float>(lo.value("maskEdge").toDouble(l.maskEdge));
+            l.maskFeather =
+                static_cast<float>(lo.value("maskFeather").toDouble(l.maskFeather));
             l.maskHalo = static_cast<float>(lo.value("maskHalo").toDouble(l.maskHalo));
             l.link = lo.value("link").toString();
             l.showScope = lo.value("showLayer").toBool(l.showScope);
@@ -888,6 +924,26 @@ struct EditStack {
         if (clampF(p.kaleidoSource, -180.0f, 180.0f, 0.0f)) ++fixed;
         if (clampF(p.kaleidoZoom,   0.25f, 8.0f, def.kaleidoZoom)) ++fixed;
         if (clampF(p.kaleidoOpacity, 0.0f, 1.0f, def.kaleidoOpacity)) ++fixed;
+        if (p.kaleidoType < 0 || p.kaleidoType > 5) { p.kaleidoType = def.kaleidoType; ++fixed; }
+        if (clampF(p.kaleidoFlute, 0.01f, 0.25f, def.kaleidoFlute)) ++fixed;
+        if (clampF(p.kaleidoBend, -1.0f, 1.0f, def.kaleidoBend)) ++fixed;
+        if (clampF(p.kaleidoShade, 0.0f, 1.0f, def.kaleidoShade)) ++fixed;
+        if (p.kaleidoGroup < 0 || p.kaleidoGroup > 16) { p.kaleidoGroup = def.kaleidoGroup; ++fixed; }
+        if (clampF(p.kaleidoTile, 0.02f, 1.0f, def.kaleidoTile)) ++fixed;
+        if (p.kaleidoInvert != 0 && p.kaleidoInvert != 1) { p.kaleidoInvert = 1; ++fixed; }
+        if (p.kaleidoWrap != 0 && p.kaleidoWrap != 1) { p.kaleidoWrap = 1; ++fixed; }
+        if (clampF(p.kaleidoNest, 0.05f, 0.8f, def.kaleidoNest)) ++fixed;
+        if (clampF(p.kaleidoRadius, 0.25f, 4.0f, def.kaleidoRadius)) ++fixed;
+        if (p.kaleidoVertex < 3 || p.kaleidoVertex > 16) {
+            p.kaleidoVertex = def.kaleidoVertex; ++fixed;
+        }
+        if (p.kaleidoType == 1 && p.kaleidoSegments != 0) {
+            /* Hyperbolic: at least a triangle (6 segments), and enough polygons at each
+               corner for the {p,q} tiling to be hyperbolic. */
+            if (p.kaleidoSegments < 6) { p.kaleidoSegments = 6; ++fixed; }
+            const int qMin = EditParams::kaleidoMinVertex(p.kaleidoSegments / 2);
+            if (p.kaleidoVertex < qMin) { p.kaleidoVertex = qMin; ++fixed; }
+        }
         if (p.blurType < 0 || p.blurType > 5) { p.blurType = def.blurType; ++fixed; }
         if (clampF(p.blurAmount,  0.0f, 1.0f, 0.0f)) ++fixed;
         if (clampF(p.blurAngle,   -180.0f, 180.0f, 0.0f)) ++fixed;
@@ -932,6 +988,7 @@ struct EditStack {
                 l.combine = int(MaskCombine::Union);
             clampF(l.opacity, 0.0f, 1.0f, 1.0f);
             clampF(l.maskEdge, -100.0f, 100.0f, 0.0f);
+            clampF(l.maskFeather, 0.0f, 100.0f, 0.0f);
             clampF(l.maskHalo, 0.0f, 100.0f, 0.0f);
             for (int i = l.components.size() - 1; i >= 0; --i) {
                 MaskComponent &m = l.components[i];

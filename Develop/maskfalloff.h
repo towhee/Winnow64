@@ -59,7 +59,8 @@
       cdf     the Linear Gradient's two-sided S. A Gaussian CDF, sigma matched to the
               smootherstep's old 10-90 width, so the ramp keeps its apparent width but
               gains tails past p1/p2 instead of stopping dead.
-      taper   the fixed-band tools (Luminance/Colour Range, Depth, Subject, Sky, Object).
+      taper   the fixed-band tools (Luminance/Colour Range, Depth). Subject, Sky and
+              Object feather spatially now (Develop/maskfeather.h).
               There the feather is a TOLERANCE band the caller has already scaled, so
               only the curve's character is shared: same half-coverage at mid-band as the
               smootherstep it replaces, but no flat start and a softer landing. Not

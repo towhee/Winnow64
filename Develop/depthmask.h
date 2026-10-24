@@ -3,7 +3,7 @@
 
 /*
     Shared reference + coverage for the AI "Depth Range" develop mask. A single-channel DEPTH FIELD
-    (0 = near, 1 = far), produced once by the MiDaS depth model (Utilities/depthpredictor) and guided-
+    (0 = near, 1 = far), produced once by Depth Anything V2 Small (Utilities/depthpredictor) and guided-
     upsampled (Utilities/segrefine.h), registered by image path and sampled identically by the
     ImageView overlay (preview) and the develop render (buildMaskBuffer) so the two are pixel-identical.
     Header-only (all inline, no Q_OBJECT).
@@ -23,6 +23,7 @@
 #include <QHash>
 #include <QString>
 #include <QMutex>
+#include "Develop/aimaskprobe.h"
 
 namespace DepthMask {
 
@@ -39,7 +40,11 @@ inline QHash<QString, std::shared_ptr<const DepthRef>> &refStore()
 inline void putRef(const QString &path, std::shared_ptr<const DepthRef> r)
 {
     QMutexLocker lk(&refMutex());
-    if (refStore().size() > 8) refStore().clear();
+    if (refStore().size() > 8) {
+        refStore().clear();
+        AiMaskProbe::note("depth store: size cap hit, ALL refs cleared before " + path);
+    }
+    if (!r) AiMaskProbe::note("depth store: ref set to NULL for " + path);
     refStore().insert(path, std::move(r));
 }
 

@@ -122,7 +122,7 @@ void SubmaskDialog::buildUi()
     v->addWidget(toolList, 1);
 
     addToolGroup(tr("Drawn"),     {int(MaskTool::LinearGradient), int(MaskTool::RadialGradient),
-                                   int(MaskTool::Brush)});
+                                   int(MaskTool::Beam), int(MaskTool::Brush)});
     addToolGroup(tr("Content"),   {int(MaskTool::ColorRange), int(MaskTool::LuminanceRange)});
     addToolGroup(tr("Automatic"), {int(MaskTool::Subject), int(MaskTool::Sky),
                                    int(MaskTool::Background), int(MaskTool::Depth),

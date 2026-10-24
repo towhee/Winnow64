@@ -72,6 +72,7 @@ public:
             int                    combine = 0;  // MaskCombine across the components
             float                  maskEdge = 0; // grow/shrink the FOLDED mask, full-res px
             float                  maskHalo = 0; // halo suppression on the FOLDED mask
+            float                  maskFeather = 0; // blur of the FOLDED mask, 0..100
             float                  opacity = 1;  // scales the FOLDED mask (EditScope)
         };
         EditParams     global;                  // scope 0 params (whole image)
@@ -179,6 +180,9 @@ public:
     /* The active scope's mask-level Halo, so the loupe veil suppresses the halo on the
        composited mask exactly as the render does. 0 on Global and with no image. */
     float activeScopeMaskHalo() const;
+    /* The active scope's mask-level Feather, so the loupe veil softens the composited
+       mask exactly as the render does. 0 on Global and with no image. */
+    float activeScopeMaskFeather() const;
     /* Index into activeScopeComponents() of the tool whose settings are expanded (the one
        the user clicked in the scope panel), or -1. MW tints this component in its own
        colour so the user can see the selected tool's share of the mask. */
@@ -401,10 +405,17 @@ public:
     /* Index (into activeScopeComponents()) of the submask the user is WORKING ON -- the
        pending one if there is one, else the one re-opened from the list. The veil
        distinguishes it from the rest of the mask (denser where the two overlap, a ghost
-       where the submask falls outside the mask, a contour along its boundary), which is
-       the only way a Subtract submask -- contributing nothing to the folded mask -- can
-       be seen at all. -1 when nothing is open. */
+       where the submask falls outside the mask, a contour flashed along its boundary when
+       it is selected), which is the only way a Subtract submask -- contributing nothing
+       to the folded mask -- can be seen at all. -1 when nothing is open. */
     int focusSubmaskIndex() const { return pendingIdx >= 0 ? pendingIdx : selectedMaskIndex; }
+    /* The scope the dock is editing (0 = Global). MW keys the veil's outline flash on
+       (image, scope, focus submask), so a change of any of them shows the outline again. */
+    int activeScopeNumber() const { return activeScopeIndex; }
+    /* The image the dock's state (active scope, open submask) belongs to. It can lag the
+       image on screen -- the dock stops following navigation while it is hidden -- so a
+       caller drawing that state over the loupe checks it against dm->currentKey. */
+    QString currentPath() const { return currentImagePath; }
     /* The op the overlay AND the render are currently previewing for the pending submask
        (MaskOp: 0 Add, 1 Subtract, 2 Intersect). Not written into the component until
        commit. */
@@ -550,6 +561,13 @@ public slots:
     /* ImageView changed the feather of a gradient / brush mask (Shift + wheel); sync the
        dock slider, persist and re-composite. */
     void setActiveMaskFeather(double feather);
+    /* ImageView dragged a Linear Gradient end handle, which sets its feather: store it
+       and sync the slider only -- the drag's geometry emit (setActiveMaskParams)
+       re-composites and owns the history entry. */
+    void syncActiveMaskFeather(double feather);
+    /* ImageView reported the Linear Gradient's rotation (opened, or an end handle was
+       dragged): sync the Rotation slider only. */
+    void syncActiveMaskAngle(double deg);
     /* ImageView toggled auto-mask ("A"); sync the dock checkbox. */
     void setActiveBrushAutoMask(bool on);
     /* Re-read the sharpening-mask-preview state (Opt edge, mouse press/release, app
@@ -835,6 +853,11 @@ signals:
     /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
     void spotPinsChanged(const QVector<QPointF> &pins);
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
+    /* Rotation slider -> ImageView turns the Linear Gradient, which persists the new
+       geometry through maskGeometryChanged (setActiveMaskParams owns history + render). */
+    void maskLinearAngleChanged(double deg);
+    /* Beam Width/Taper set from the panel: the submask's new params, for the canvas. */
+    void maskBeamShapeChanged(const QString &paramsJson);
     void maskInvertChanged(bool inverted);      // Invert checkbox -> live overlay flip
     /* Content-range tool params (Luminance lo/hi, Color refine + samples) changed in the dock ->
        ImageView rebuilds its coverage tint. */
@@ -955,6 +978,11 @@ private:
     /* Effects > Blur's type picker (EditParams::blurType) and the rows each type uses
        (applyBlurTypeRows hides the rest, like applyEffectsChoice). */
     QPointer<QComboBox> blurTypeCombo;
+    /* Effects > Kaleidoscope's type picker (EditParams::kaleidoType: Mirror /
+       Hyperbolic); applyKaleidoTypeRows shows the type's own rows. */
+    QPointer<QComboBox> kaleidoTypeCombo;
+    /* Wallpaper's pattern picker (EditParams::kaleidoGroup, the 17 wallpaper groups). */
+    QPointer<QComboBox> kaleidoGroupCombo;
     /* Lens > Lens Blur. */
     QPointer<QComboBox> lensShapeCombo;
     QPointer<BarBtn> lensFocusPickBtn;
@@ -965,6 +993,7 @@ private:
     void addLensBlurRows(const QModelIndex &parIdx);
     void addLensBlurNote(const QModelIndex &parIdx);
     void applyBlurTypeRows();
+    void applyKaleidoTypeRows();
     int  shownEffect() const;              // effectsChoice, or Vignette where it is absent
     void applyEffectsChoice();             // show the chosen effect's rows, hide the rest
     /* The Lens section (Global scope only): the lensfun profile (on/off, the lens, the

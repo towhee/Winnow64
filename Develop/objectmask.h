@@ -12,8 +12,8 @@
     the user's brush stroke, edge-refined against the photo (shared SegRefine) and stored at the guide
     (~1024) resolution. Unlike the range masks it is NOT re-thresholded on slider ticks; unlike the
     Subject mask it is re-produced whenever the user edits the brush (a new decoder pass, ~40ms), and
-    the ObjectRef is re-registered. coverage() bilinearly samples it and applies the component's
-    feather/invert at eval time -- identical semantics to SubjectMask::coverage.
+    the ObjectRef is re-registered. coverage() bilinearly samples it; Feather is a spatial blur
+    (feathered(), Develop/maskfeather.h) and invert is applied at eval time.
 
     onx/ony are OUTPUT-normalized (0..1 of the oriented image) -- the same space the geometric and
     range tools and buildMaskBuffer's degrees mapping already use, so an object component drops into
@@ -25,7 +25,7 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
-#include "Develop/maskfalloff.h"
+#include "Develop/maskfeather.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
@@ -206,26 +206,35 @@ inline float sampleCov(const ObjectRef &ref, double onx, double ony)
 }
 
 /*
-    Coverage for the object at (onx,ony). inverted flips the selection (everything but the object).
+    The Feather-blurred matte (Develop/maskfeather.h), or null at feather 0.
 
-    Feather 0 passes the stored alpha through UNCHANGED. Unlike the Subject/Sky refs -- coarse
-    saliency maps that have to be thresholded to mean anything -- the object coverage is a genuine
-    matte (SegRefine::AlphaLogits keeps the partial alpha instead of stretching it to near-binary),
-    so a hard 0.5 threshold here would throw away exactly the soft fringe the matting produced. That
-    binarization was the second half of the fur defect: the edge detail survived the pipeline and
-    then died at the last sampling step.
+    Feather 0 passes the stored alpha through UNCHANGED. Unlike the Subject ref -- a
+    saliency map that has to be thresholded to mean anything -- the object coverage is a
+    genuine matte (SegRefine::AlphaLogits keeps the partial alpha instead of stretching it
+    to near-binary), so a hard 0.5 threshold here would throw away exactly the soft fringe
+    the matting produced. That binarization was the second half of the fur defect.
 
-    Feather > 0 still SOFTENS, as the slider promises: a Gaussian band around 0.5 (MaskFalloff::cdf,
-    sigma matched to the 10-90 width of the smootherstep it replaced) widens the transition.
+    The ref is a CROP of the frame; build() pads it so the feather spreads past the crop.
 */
-inline float coverage(const ObjectRef &ref, double onx, double ony,
-                      float featherPct, bool inverted)
+inline std::shared_ptr<const MaskFeather::Map>
+feathered(const std::shared_ptr<const ObjectRef> &ref, float featherPct)
 {
-    const float s = sampleCov(ref, onx, ony);
-    const double band = std::clamp(double(featherPct) / 100.0, 0.0, 1.0) * 0.5;
-    const double v = (band <= 1e-6) ? std::clamp(double(s), 0.0, 1.0)     // matte as-is
-                                    : MaskFalloff::cdf((s - 0.5) / (0.48 * band));
-    const float c = float(v);
+    if (!ref || !ref->valid() || featherPct < MaskFeather::kMinFeather) return nullptr;
+    return MaskFeather::cached(ref, featherPct, [&] {
+        cv::Mat1f base(ref->h, ref->w);
+        for (int y = 0; y < ref->h; ++y)
+            std::copy(ref->cov.data() + size_t(y) * ref->w,
+                      ref->cov.data() + size_t(y + 1) * ref->w, base.ptr<float>(y));
+        return MaskFeather::build(base, ref->x0, ref->y0, ref->x1, ref->y1, featherPct);
+    });
+}
+
+/* Coverage for the object at (onx,ony). inverted flips the selection (everything but
+   the object). */
+inline float coverage(const ObjectRef &ref, const MaskFeather::Map *fm,
+                      double onx, double ony, bool inverted)
+{
+    const float c = fm ? fm->sample(onx, ony) : std::clamp(sampleCov(ref, onx, ony), 0.0f, 1.0f);
     return inverted ? 1.0f - c : c;
 }
 

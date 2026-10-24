@@ -343,7 +343,7 @@ void MaskPanel::showLevelMenu()
     aShowAll->setEnabled(hasSubmasks);
     aHideAll->setEnabled(hasSubmasks);
     menu.addSeparator();
-    QAction *aReset = menu.addAction(tr("Reset mask Edge, Halo and Opacity"));
+    QAction *aReset = menu.addAction(tr("Reset mask Feather, Edge, Halo and Opacity"));
     aReset->setEnabled(hasSubmasks);
     /* Last item, as on every band in the Develop dock. Edge and Halo are documented on
        the submask page, which is the mask's page. */

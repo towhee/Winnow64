@@ -63,6 +63,7 @@ signals:
     // void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
     void done(int threadId, bool isReturning);
+    void staleEmbeddedThumb(QString fPath);     // relayed from Thumb
 
 public slots:
     void read(int dmRow, QString filePath, int instance,

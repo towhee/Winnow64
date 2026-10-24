@@ -29,10 +29,11 @@
 #include <cmath>
 #include <algorithm>
 #include <memory>
-#include "Develop/maskfalloff.h"
+#include "Develop/maskfeather.h"
 #include <QHash>
 #include <QString>
 #include <QMutex>
+#include "Develop/aimaskprobe.h"
 
 namespace SkyMask {
 
@@ -60,7 +61,11 @@ inline QHash<QString, std::shared_ptr<const SkyRef>> &refStore()
 inline void putRef(const QString &path, std::shared_ptr<const SkyRef> r)
 {
     QMutexLocker lk(&refMutex());
-    if (refStore().size() > 8) refStore().clear();
+    if (refStore().size() > 8) {
+        refStore().clear();
+        AiMaskProbe::note("sky store: size cap hit, ALL refs cleared before " + path);
+    }
+    if (!r) AiMaskProbe::note("sky store: ref set to NULL for " + path);
     refStore().insert(path, std::move(r));
 }
 
@@ -88,20 +93,31 @@ inline float sampleCov(const SkyRef &ref, double onx, double ony)
     return float(top + (bot - top) * ty) * (1.0f / 255.0f);
 }
 
-/* Coverage for the sky at (onx,ony). Feather 0 uses the matte AS IS -- its fractional
-   edge is the result, as for the Object Mask. Feather > 0 re-shapes it with a Gaussian
-   band around 0.5 (featherPct 0..100 -> up to 0.5 half-width), the same control every
-   AI mask has. inverted flips (selects non-sky). */
-inline float coverage(const SkyRef &ref, double onx, double ony, float featherPct, bool inverted)
+/*
+    The Feather-blurred matte (Develop/maskfeather.h), or null at feather 0, where the
+    matte is used AS IS -- its fractional edge is the result. Fetched once per render or
+    overlay build, then sampled per pixel by coverage().
+*/
+inline std::shared_ptr<const MaskFeather::Map>
+feathered(const std::shared_ptr<const SkyRef> &ref, float featherPct)
 {
-    const float s = sampleCov(ref, onx, ony);
-    const double band = std::clamp(double(featherPct) / 100.0, 0.0, 1.0) * 0.5;
-    const double v = (band <= 1e-6) ? std::clamp(double(s), 0.0, 1.0)     // matte as-is
-                                    : MaskFalloff::cdf((s - 0.5) / (0.48 * band));
-    const float c = float(v);
-    return inverted ? 1.0f - c : c;
+    if (!ref || !ref->valid() || featherPct < MaskFeather::kMinFeather) return nullptr;
+    return MaskFeather::cached(ref, featherPct, [&] {
+        cv::Mat1f base(ref->h, ref->w);
+        for (int y = 0; y < ref->h; ++y)
+            for (int x = 0; x < ref->w; ++x)
+                base(y, x) = ref->cov[size_t(y) * ref->w + x] * (1.0f / 255.0f);
+        return MaskFeather::build(base, 0.0, 0.0, 1.0, 1.0, featherPct);
+    });
 }
 
+/* Coverage for the sky at (onx,ony). inverted flips (selects non-sky). */
+inline float coverage(const SkyRef &ref, const MaskFeather::Map *fm,
+                      double onx, double ony, bool inverted)
+{
+    const float c = fm ? fm->sample(onx, ony) : sampleCov(ref, onx, ony);
+    return inverted ? 1.0f - c : c;
+}
 } // namespace SkyMask
 
 #endif // SKYMASK_H

@@ -88,6 +88,7 @@ private slots:
     void pointMapsCorners();
     void linearGradientPointsTurn();
     void radialSwapsRadiiOnQuarterTurnsOnly();
+    void beamTurnsAndKeepsWidthAndTaper();
     void strokesTurnAndKeepTheirSettings();
     void segmenterOutlinesTurn();
     void spotTurns();
@@ -119,6 +120,20 @@ void tst_editrotate::linearGradientPointsTurn()
     QVERIFY(near(o.value("y1").toDouble(), 0.2));
     QVERIFY(near(o.value("x2").toDouble(), 0.6));
     QVERIFY(near(o.value("y2").toDouble(), 0.7));
+}
+
+void tst_editrotate::beamTurnsAndKeepsWidthAndTaper()
+{
+    /* The spine ends turn like the Linear gradient's; width is a fraction of the short
+       side and taper is relative to p1 -> p2, so neither changes. */
+    const QJsonObject o = obj(EditRotate::maskParams(int(MaskTool::Beam),
+        R"({"x1":0.2,"y1":0.1,"x2":0.7,"y2":0.4,"width":0.15,"taper":-30})", 90));
+    QVERIFY(near(o.value("x1").toDouble(), 0.9));
+    QVERIFY(near(o.value("y1").toDouble(), 0.2));
+    QVERIFY(near(o.value("x2").toDouble(), 0.6));
+    QVERIFY(near(o.value("y2").toDouble(), 0.7));
+    QVERIFY(near(o.value("width").toDouble(), 0.15));
+    QVERIFY(near(o.value("taper").toDouble(), -30));
 }
 
 void tst_editrotate::radialSwapsRadiiOnQuarterTurnsOnly()

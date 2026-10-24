@@ -74,10 +74,59 @@ centre, until the slice takes in your subject.  Each scope has its own kaleidosc
 mask scope's adjustments come with it: brighten the flower in that scope and the
 reflections are bright too.</p>
 
+<p><b>Type</b> picks the kind of kaleidoscope.  <b>Mirror</b> is the wedges described
+here.  <b>Hyperbolic</b> tiles a disk with polygons that get smaller and smaller toward
+its rim without ever reaching it, as in M.&nbsp;C.&nbsp;Escher's <i>Circle Limit</i>
+prints.  <b>Polar</b> wraps the whole photo round the centre, a &ldquo;tiny
+planet&rdquo;.  <b>Droste</b> puts the photo inside itself, again and again, and twists
+the copies into a spiral, as in Escher's <i>Print Gallery</i>.  <b>Wallpaper</b> tiles
+a slice of the photo across the whole frame in one of the 17 ways a flat pattern can
+repeat.  <b>Fluted glass</b> shows the photo through reeded glass, the ribbed kind used
+in shower doors and shop fronts.</p>
+
 <ul>
-<li><b>Segments</b> is the number of wedges, in even numbers so every seam is a mirror
+<li><b>Segments</b> (Mirror) is the number of wedges, in even numbers so every seam is a mirror
 (an odd setting moves up to the next even one).  <b>0</b> is off, and <b>2</b> is a plain
 mirror across one line.</li>
+<li><b>Sides</b> (Hyperbolic) is the number of sides of each polygon: 3 for triangles,
+4 for squares, and so on.  <b>0</b> is off.  The middle polygon is exactly a Mirror
+kaleidoscope with twice as many segments; every polygon around it is its mirror image.</li>
+<li><b>Per corner</b> (Hyperbolic) is how many polygons meet at each corner.  Fewer sides
+need more polygons at a corner for the pattern to curve: triangles need at least 7,
+squares 5, and anything larger 4.  If you go below that, it moves back up.</li>
+<li><b>Disk</b> (Hyperbolic) is the size of the disk, in percent of half the picture's
+short side, so 100 just fits a centred disk in the frame.  Outside the disk the
+pattern is mirrored across the rim, so the frame has no empty corners.  Above 100 the
+rim moves out of the frame.</li>
+<li><b>Copies</b> (Polar) is how many times the photo goes round the centre.  <b>0</b>
+is off.  The bottom of the photo is at the centre and the top on the planet's edge (the
+dashed circle); <b>Zoom</b> sets the planet's size.</li>
+<li><b>Panorama wrap</b> (Polar) wraps the photo round once per copy as it is.  Use it
+for a 360 degree panorama whose two ends meet.  Off, each copy is the photo followed by
+its mirror image, so there is no seam whatever the photo.</li>
+<li><b>Inside out</b> (Polar) puts the top of the photo at the centre instead: a tunnel
+instead of a planet.</li>
+<li><b>Strands</b> (Droste) is how many arms the spiral has.  <b>0</b> is off.</li>
+<li><b>Inner size</b> (Droste) is the size of each copy of the photo inside the last, in
+percent.  The edges of the copies are part of the look: crop first if the photo has a
+border or something frame-like, and the copies sit inside it.</li>
+<li><b>Reverse</b> (Droste) turns the spiral the other way.  <b>Zoom</b> slides along
+the spiral.</li>
+<li><b>Pattern</b> (Wallpaper) picks how the tiles repeat: plain repeats, half turns,
+mirrors, glides (a mirror image shifted along), and square, triangle and hexagon
+kaleidoscopes.  Patterns with mirrors join without seams; patterns built only from
+turns and glides show where the copies of the photo meet, which is part of their
+look.</li>
+<li><b>Tile</b> (Wallpaper) is the size of each tile, in percent of the picture's short
+side.  <b>0</b> is off.  <b>Zoom</b> magnifies the slice inside each tile.</li>
+<li><b>Width</b> (Fluted glass) is the width of each reed, in percent of the picture's
+short side.  <b>0</b> is off.  The reeds stand upright until you turn them: the yellow
+spoke points across them.</li>
+<li><b>Refraction</b> (Fluted glass) is how strongly each reed bends the picture behind
+it.  <b>0</b> is flat glass.  Higher values squeeze more of the picture into each reed;
+below 0 each reed shows its strip reversed.</li>
+<li><b>Shading</b> (Fluted glass) adds light and shadow across each reed, as if lit
+from the side, so the glass reads as rounded.</li>
 <li><b>Angle</b> turns the mirror lines.</li>
 <li><b>Source</b> turns the slice of the photo that gets mirrored without turning the
 pattern, so the design stays put while its content changes.</li>
@@ -93,7 +142,8 @@ the mirrored copies laid over the photo.</li>
 handles are on the image:
 drag the white <b>centre</b>, or click anywhere on the image to move the centre there, and
 drag the yellow <b>spoke</b> to turn the mirror lines (hold <b>Shift</b> to snap to 15
-degree steps).  The faint dashed lines are the seams between the wedges.  Choose another
+degree steps).  The faint dashed lines are the seams between the wedges; with
+Hyperbolic, a dashed circle marks the disk's rim, and with Polar the planet's edge.  Choose another
 effect, or fold the Effects panel away, and the handles go &mdash; the kaleidoscope
 itself stays.  Hold <b>Space</b> to pan the image while they are up.</p>
 

@@ -340,6 +340,7 @@ set(WINNOW_SOURCES
     Main/menusandactions.cpp
     Main/navigate.cpp
     Main/mwversions.cpp
+    Main/mwstalethumbs.cpp
     Main/mwcollections.cpp
     Main/mwplaces.cpp
     Main/mwgeotag.cpp
@@ -544,6 +545,7 @@ set(WINNOW_HEADERS
     Develop/tonecurve.h
     Develop/editparams.h
     Develop/inputtransform.h
+    Develop/beammask.h
     Develop/maskfalloff.h
     Develop/outputtransform.h
     Develop/rangemask.h
@@ -648,6 +650,7 @@ set(WINNOW_HEADERS
     Image/pixmap.h
     Image/stack.h
     Image/thumb.h
+    Image/stalethumb.h
 
     ImageFormats/Canon/canon.h
     ImageFormats/Canon/crxcodec.h
