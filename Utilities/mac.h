@@ -18,6 +18,7 @@
 
 #include "Main/global.h"                // req'd by availableMemory
 #include <QtCore>
+#include <QColor>
 // #include <QStringList>
 
 class Mac
@@ -35,6 +36,7 @@ public:
     static void startMemoryPressureMonitor(void (^handler)(int level));
 
     static void joinAllSpaces(WId wId);
+    static void setTitleBarColor(WId wId, const QColor &bgColor);
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);

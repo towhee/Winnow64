@@ -268,6 +268,29 @@ void Mac::joinAllSpaces(WId wId)
     [ myWindow setCollectionBehavior: collectionBehavior ];
 }
 
+void Mac::setTitleBarColor(WId wId, const QColor &bgColor)
+{
+/*
+    The macOS counterpart of Win::setTitleBarColor (see TitleBar, which calls it for
+    every window as it is shown). A transparent title bar shows the NSWindow's own
+    background colour, which Qt leaves alone for an opaque window: its content view
+    covers the rest, so only the title bar takes the colour. The window's appearance
+    follows the shade so the title text and traffic lights stay readable on it.
+*/
+    NSView *view = reinterpret_cast<NSView *>(wId);
+    NSWindow *window = view.window;
+    if (!window || !(window.styleMask & NSWindowStyleMaskTitled)) return;
+    // Qt resets this from Qt::NoTitleBarBackgroundHint, which TitleBar::apply also sets
+    window.titlebarAppearsTransparent = YES;
+    window.backgroundColor = [NSColor colorWithSRGBRed:bgColor.redF()
+                                                 green:bgColor.greenF()
+                                                  blue:bgColor.blueF()
+                                                 alpha:1.0];
+    NSAppearanceName name = bgColor.lightness() < 128 ? NSAppearanceNameDarkAqua
+                                                      : NSAppearanceNameAqua;
+    window.appearance = [NSAppearance appearanceNamed:name];
+}
+
 bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
 {
     ColorSyncIteratorData *iterData = (ColorSyncIteratorData *)data;

@@ -165,7 +165,8 @@ private:
     int containerWidth = 200;            // total widget width
     int textColWidth = 0;                // column 1 width (0 = bars use full width)
     int textGap = 6;                     // gap between text and bar columns
-    int textFontSize = 8;                // 0 = use widget font
+    int textFontSize = qRound(G::fontSize * 0.75);
+    // int textFontSize = 8;                // 0 = use widget font
     int vGap = 3;                        // vertical gap between rows (not after last)
     int topPad = 2;                      // top margin: keeps a single row centered with other status text
     int botPad = 2;                      // bottom margin: matches topPad so content stays centered

@@ -12,9 +12,7 @@
 #include <QLocale>
 #include "Utilities/fileops.h"
 #include "Utilities/panelprobe.h"
-#ifdef Q_OS_LINUX
-#include "Utilities/linux.h"
-#endif
+#include "Utilities/titlebar.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
 #include "Cache/cachedb.h"
@@ -9294,12 +9292,7 @@ void MW::setBackgroundShade(int shade)
        sheet rebuild above, so the rule would otherwise keep the old shade. */
     PanelButtonBar::Restyle(this);
     statusBar()->setStyleSheet(G::css);
-    #ifdef Q_OS_WIN
-    Win::setTitleBarColor(winId(), G::backgroundColor);
-    #endif
-    #ifdef Q_OS_LINUX
-    Linux::setTitleBarColor(G::backgroundColor);
-    #endif
+    TitleBar::setColor(G::backgroundColor);
 }
 
 void MW::setInfoFontSize()

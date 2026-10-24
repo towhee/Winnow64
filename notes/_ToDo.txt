@@ -7,7 +7,6 @@ BUGS / TO DO
 - Review develop presets
 - Review FX (F3...) shortcuts
 - Fix expand decoration alignment in preferences.
-- Font size on progress bar in status is too small
 - Panos
 - Add all help items to the main menu Help.
 - Set catalog location

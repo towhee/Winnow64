@@ -8,6 +8,7 @@
 #endif
 #include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/titlebar.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/keywordsuggester.h"
 #include "Datamodel/keywordauditstore.h"
@@ -152,7 +153,6 @@ void MW::setupPlatform()
         setWindowIcon(QIcon(":/images/winnow.png"));
         Win::collectScreensInfo();
         Win::availableMemory();
-        Win::setTitleBarColor(winId(), G::backgroundColor);
         G::trash = "Recycle Bin";
     #endif
     #ifdef Q_OS_MAC
@@ -1458,9 +1458,8 @@ void MW::createAppStyle()
     pal.setColor(QPalette::ToolTipText, QColor(255, 255, 255));
     QToolTip::setPalette(pal);
     #endif
-    #ifdef Q_OS_LINUX
-    Linux::setTitleBarColor(G::backgroundColor);
-    #endif
+    // every window's title bar in the Winnow background (all platforms)
+    TitleBar::setColor(G::backgroundColor);
 }
 
 void MW::createStatusBar()
