@@ -64,6 +64,7 @@ class KeywordSuggester;
 
 class QToolBar;
 class ScreenSampler;
+class TitleBarStrip;
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
 #include "Develop/workingimage.h"
@@ -2262,6 +2263,15 @@ private:
     DockWidget *moduleDock = nullptr;
     QList<QToolButton *> moduleBtns;        // indexed by Workflow, like workflowBtns
     QList<QLabel *> moduleSeparators;       // the " | " between them, restyled with them
+    /*  The Module dock's buttons again, in the window's title bar (macOS; null
+        elsewhere). Trial: the Module dock keeps its row until this one is settled.
+        See MW::createTitleModeBar. */
+    TitleBarStrip *titleModeBar = nullptr;
+    QList<QToolButton *> titleModeBtns;     // indexed by Workflow, like workflowBtns
+    QToolButton *titleSourceLibraryBtn = nullptr;
+    QToolButton *titleSourceFoldersBtn = nullptr;
+    QToolButton *titleVersionMastersBtn = nullptr;
+    QToolButton *titleVersionAllBtn = nullptr;
     DockWidget *metadataDock;
     DockWidget *thumbDock;
     DockWidget *propertiesDock;
@@ -3268,6 +3278,12 @@ private:
     void createKeywordsDock();
     void createCollectionsDock();
     void createModuleDock();
+    void createTitleModeBar();
+    QWidget *buildSourcePair(QWidget *parent, QToolButton *&libraryBtn,
+                             QToolButton *&foldersBtn, QLabel **separator);
+    QWidget *buildVersionPair(QWidget *parent, QToolButton *&mastersBtn,
+                              QToolButton *&allBtn);
+    void syncSourceButtons();
     /*  Build one row of workflow buttons (Browse ... Map) into `layout`, filling
         `btns` (indexed by Workflow) and, when `separators` is given, putting a " | "
         label between them. Shared by the Module dock and the (hidden)

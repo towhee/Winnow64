@@ -291,6 +291,47 @@ void Mac::setTitleBarColor(WId wId, const QColor &bgColor)
     window.appearance = [NSAppearance appearanceNamed:name];
 }
 
+void Mac::setTitleTextVisible(WId wId, bool visible)
+{
+    // TitleBarStrip puts widgets where the title text would be
+    NSWindow *window = reinterpret_cast<NSView *>(wId).window;
+    if (!window) return;
+    window.titleVisibility = visible ? NSWindowTitleVisible : NSWindowTitleHidden;
+}
+
+void Mac::titleBarDoubleClick(WId wId)
+{
+/*
+    A double click on a TitleBarStrip does what a double click on a real title bar does:
+    System Settings > Desktop & Dock > "Double-click a window's title bar to" (Zoom,
+    Fill or Minimize; "None" does nothing). Unset means zoom.
+*/
+    NSWindow *window = reinterpret_cast<NSView *>(wId).window;
+    if (!window) return;
+    NSString *action =
+        [[NSUserDefaults standardUserDefaults] stringForKey:@"AppleActionOnDoubleClick"];
+    if ([action isEqualToString:@"None"]) return;
+    if ([action isEqualToString:@"Minimize"]) [window performMiniaturize:nil];
+    else [window performZoom:nil];
+}
+
+int Mac::titleBarButtonsRight(WId wId)
+{
+    /* The right edge of the close / minimise / zoom buttons, in window points: where
+       TitleBarStrip's content may start. 0 if the window has none. */
+    NSWindow *window = reinterpret_cast<NSView *>(wId).window;
+    if (!window) return 0;
+    CGFloat right = 0;
+    for (NSWindowButton b : {NSWindowCloseButton, NSWindowMiniaturizeButton,
+                             NSWindowZoomButton}) {
+        NSButton *btn = [window standardWindowButton:b];
+        if (!btn || btn.hidden) continue;
+        NSRect r = [btn convertRect:btn.bounds toView:nil];
+        right = MAX(right, NSMaxX(r));
+    }
+    return static_cast<int>(ceil(right));
+}
+
 bool Mac::colorSyncIterateCallback(CFDictionaryRef dict, void *data)
 {
     ColorSyncIteratorData *iterData = (ColorSyncIteratorData *)data;

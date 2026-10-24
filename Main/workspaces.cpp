@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/titlebar.h"
 
 /*  *******************************************************************************************
 
@@ -1780,12 +1781,7 @@ void MW::chooseSource(bool library, const QString &src)
     }
     /*  setScope pushes the buttons back, but an empty catalog returns before it is
         called; say what is actually loaded. */
-    if (sourceFoldersBtn && sourceLibraryBtn) {
-        const bool lib = G::scope == G::Scope::Catalog;
-        QSignalBlocker a(sourceFoldersBtn), b(sourceLibraryBtn);
-        sourceLibraryBtn->setChecked(lib);
-        sourceFoldersBtn->setChecked(!lib);
-    }
+    syncSourceButtons();
 }
 
 void MW::invokeEmbellishWorkflow()
@@ -1947,14 +1943,34 @@ void MW::resetLayout()
     if (wf == WfSource) requestView(browseView);
 }
 
+void MW::syncSourceButtons()
+{
+/*
+    Library | Folders, in the Module dock and the title bar (macOS), say what G::scope
+    holds. Called by MW::setScope and MW::chooseSource, so a refused click shows the
+    truth again. Signals blocked: the buttons act on clicked, and this is not one.
+*/
+    const bool lib = G::scope == G::Scope::Catalog;
+    const QList<QPair<QToolButton *, QToolButton *>> pairs{
+        {sourceLibraryBtn, sourceFoldersBtn},               // Module dock
+        {titleSourceLibraryBtn, titleSourceFoldersBtn},     // title bar (macOS)
+    };
+    for (const auto &p : pairs) {
+        if (!p.first || !p.second) continue;
+        QSignalBlocker a(p.first), b(p.second);
+        p.first->setChecked(lib);
+        p.second->setChecked(!lib);
+    }
+}
+
 void MW::syncWorkflowSwitcher()
 {
 /*
-    Light the button for currentWorkflow in the Module dock and in the (hidden)
-    status-bar switcher; none while a named workspace is in use.  Set programmatically,
+    Light the button for currentWorkflow in the Module dock, the title bar (macOS) and
+    the (hidden) status-bar switcher; none while a named workspace is in use.  Set programmatically,
     so a click the workflow refused shows the truth again.
 */
-    for (const QList<QToolButton *> *btns : {&moduleBtns, &workflowBtns}) {
+    for (const QList<QToolButton *> *btns : {&moduleBtns, &workflowBtns, &titleModeBtns}) {
         for (int wf = 0; wf < btns->count(); ++wf) {
             QToolButton *btn = btns->at(wf);
             if (!btn) continue;
@@ -2003,7 +2019,8 @@ void MW::syncWorkflowButtonEnabled(int wf)
         const QString why = a->property("disabledReason").toString();
         if (!why.isEmpty()) tip += "\n" + why;
     }
-    for (QToolButton *btn : {workflowBtns.value(wf), moduleBtns.value(wf)}) {
+    for (QToolButton *btn : {workflowBtns.value(wf), moduleBtns.value(wf),
+                             titleModeBtns.value(wf)}) {
         if (!btn) continue;
         btn->setEnabled(a->isEnabled() && hasRows && !isCatalogLoading);
         btn->setToolTip(tip);
@@ -2057,6 +2074,14 @@ void MW::styleWorkflowSwitcher()
     const QString css = segmentedOptionCss(0, /*boldSelected*/ false) + moduleCss;
     for (QToolButton *btn : std::as_const(workflowBtns))
         if (btn) btn->setStyleSheet(css);
+
+    /* The title bar copy (macOS): the Module dock's size and colours, with no vertical
+       padding. The strip grows the bar if the text is taller (TitleBarStrip::place). */
+    if (titleModeBar) {
+        titleModeBar->setStyleSheet(
+            segmentedOptionCss(qRound(1.5 * G::fontSize), false, 0) + moduleCss);
+        titleModeBar->relayout();
+    }
 
     if (!moduleDock || !moduleDock->content()) return;
     moduleDock->content()->setStyleSheet(

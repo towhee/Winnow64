@@ -37,6 +37,9 @@ public:
 
     static void joinAllSpaces(WId wId);
     static void setTitleBarColor(WId wId, const QColor &bgColor);
+    static void setTitleTextVisible(WId wId, bool visible);
+    static void titleBarDoubleClick(WId wId);
+    static int titleBarButtonsRight(WId wId);
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);

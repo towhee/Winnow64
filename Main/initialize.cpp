@@ -3524,6 +3524,99 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
     }
 }
 
+QWidget *MW::buildSourcePair(QWidget *parent, QToolButton *&libraryBtn,
+                             QToolButton *&foldersBtn, QLabel **separator)
+{
+/*
+    LIBRARY | FOLDERS: where the images come from. An exclusive pair, so exactly one is
+    lit and it always says what is loaded -- in every module, not only Browse. Built
+    for the Module dock and again for the title bar (MW::createTitleModeBar).
+
+    THE BUTTONS DO NOT HOLD THE SCOPE -- G::scope does. A click asks MW::chooseSource
+    (setCatalogScopeWhole / showFoldersSource), and MW::syncSourceButtons pushes the
+    answer back to every pair, so a folder or bookmark click that changes the scope
+    flips them too, and a refused change (unsaved picks) leaves them where they were.
+    clicked, not toggled: the sync sets them with the signals blocked.
+*/
+    QWidget *box = new QWidget(parent);
+    QHBoxLayout *layout = new QHBoxLayout(box);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    libraryBtn = new QToolButton;
+    foldersBtn = new QToolButton;
+    libraryBtn->setText(tr("Library"));
+    foldersBtn->setText(tr("Folders"));
+    libraryBtn->setToolTip(tr(
+        "Browse every image in the Library.  (Ctrl+Shift+L)"));
+    foldersBtn->setToolTip(tr(
+        "Browse any folder on disk.  (Ctrl+Shift+F)"));
+    QButtonGroup *group = new QButtonGroup(box);
+    group->setExclusive(true);
+    for (QToolButton *b : {libraryBtn, foldersBtn}) {
+        b->setCheckable(true);
+        b->setAutoRaise(true);
+        b->setFocusPolicy(Qt::NoFocus);
+        group->addButton(b);
+    }
+    foldersBtn->setChecked(true);
+    connect(libraryBtn, &QToolButton::clicked, this, [this] {
+        chooseSource(true, "Module dock Library");
+    });
+    connect(foldersBtn, &QToolButton::clicked, this, [this] {
+        chooseSource(false, "Module dock Folders");
+    });
+    QLabel *sep = new QLabel("|");
+    if (separator) *separator = sep;
+    layout->addWidget(libraryBtn);
+    layout->addWidget(sep);
+    layout->addWidget(foldersBtn);
+    return box;
+}
+
+QWidget *MW::buildVersionPair(QWidget *parent, QToolButton *&mastersBtn,
+                              QToolButton *&allBtn)
+{
+/*
+    MASTERS | VERSIONS: the outermost scope on the rows. An image with no versions is
+    its own master, so Masters shows every image once -- no version row under any
+    filter (SortFilter::mastersOnly) -- and Versions shows every row. The same pattern
+    as Library | Folders: the buttons are a view of the proxy's state, pushed back to
+    every pair by MW::syncVersionModeButtons, so the menu item and a badge click (which
+    both lift Masters) flip them too.
+*/
+    QWidget *box = new QWidget(parent);
+    QHBoxLayout *layout = new QHBoxLayout(box);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(0);
+    mastersBtn = new QToolButton;
+    allBtn = new QToolButton;
+    mastersBtn->setText(tr("Masters"));
+    allBtn->setText(tr("Versions"));
+    mastersBtn->setToolTip(tr(
+        "Show only master images, one per file.  An image with no versions is its own "
+        "master."));
+    allBtn->setToolTip(tr(
+        "Show every image, including all versions (virtual copies)."));
+    QButtonGroup *group = new QButtonGroup(box);
+    group->setExclusive(true);
+    for (QToolButton *b : {mastersBtn, allBtn}) {
+        b->setCheckable(true);
+        b->setAutoRaise(true);
+        b->setFocusPolicy(Qt::NoFocus);
+        group->addButton(b);
+    }
+    connect(mastersBtn, &QToolButton::clicked, this, [this] {
+        setVersionMastersOnly(true);
+    });
+    connect(allBtn, &QToolButton::clicked, this, [this] {
+        setShowAllVersions(true);           // lifts Masters as well
+    });
+    layout->addWidget(mastersBtn);
+    layout->addWidget(new QLabel("|"));
+    layout->addWidget(allBtn);
+    return box;
+}
+
 void MW::createModuleDock()
 {
 /*
@@ -3567,45 +3660,9 @@ void MW::createModuleDock()
     grid->setColumnStretch(0, 1);
     grid->setColumnStretch(2, 1);
 
-    /*  LIBRARY | FOLDERS: where the images come from. An exclusive pair, so exactly one
-        is lit and it always says what is loaded -- in every module, not only Browse.
-
-        THE BUTTONS DO NOT HOLD THE SCOPE -- G::scope does. A click asks MW::chooseSource
-        (setCatalogScopeWhole / showFoldersSource), and MW::setScope pushes the answer
-        back here, so a folder or bookmark click that changes the scope flips them too,
-        and a refused change (unsaved picks) leaves them where they were. clicked, not
-        toggled: setScope sets them with the signals blocked. */
-    QWidget *sourceBox = new QWidget(body);
-    QHBoxLayout *sourceLayout = new QHBoxLayout(sourceBox);
-    sourceLayout->setContentsMargins(0, 0, 0, 0);
-    sourceLayout->setSpacing(0);
-    sourceLibraryBtn = new QToolButton;
-    sourceFoldersBtn = new QToolButton;
-    sourceLibraryBtn->setText(tr("Library"));
-    sourceFoldersBtn->setText(tr("Folders"));
-    sourceLibraryBtn->setToolTip(tr(
-        "Browse every image in the Library.  (Ctrl+Shift+L)"));
-    sourceFoldersBtn->setToolTip(tr(
-        "Browse any folder on disk.  (Ctrl+Shift+F)"));
-    QButtonGroup *sourceGroup = new QButtonGroup(sourceBox);
-    sourceGroup->setExclusive(true);
-    for (QToolButton *b : {sourceLibraryBtn, sourceFoldersBtn}) {
-        b->setCheckable(true);
-        b->setAutoRaise(true);
-        b->setFocusPolicy(Qt::NoFocus);
-        sourceGroup->addButton(b);
-    }
-    sourceFoldersBtn->setChecked(true);
-    connect(sourceLibraryBtn, &QToolButton::clicked, this, [this] {
-        chooseSource(true, "Module dock Library");
-    });
-    connect(sourceFoldersBtn, &QToolButton::clicked, this, [this] {
-        chooseSource(false, "Module dock Folders");
-    });
-    sourceSeparator = new QLabel("|");
-    sourceLayout->addWidget(sourceLibraryBtn);
-    sourceLayout->addWidget(sourceSeparator);
-    sourceLayout->addWidget(sourceFoldersBtn);
+    // Library | Folders: see MW::buildSourcePair
+    QWidget *sourceBox = buildSourcePair(body, sourceLibraryBtn, sourceFoldersBtn,
+                                         &sourceSeparator);
     grid->addWidget(sourceBox, 0, 0, Qt::AlignLeft | Qt::AlignVCenter);
 
     QWidget *modeBox = new QWidget(body);
@@ -3616,34 +3673,8 @@ void MW::createModuleDock()
     buildWorkflowButtons(modeLayout, moduleBtns, &moduleSeparators);
     grid->addWidget(modeBox, 0, 1, Qt::AlignCenter);
 
-    /*  MASTERS | VERSIONS: the outermost scope on the rows. An image with no versions
-        is its own master, so Masters shows every image once -- no version row under
-        any filter (SortFilter::mastersOnly) -- and Versions shows every row. The same
-        pair as Library | Folders: the buttons are a view of the proxy's state, pushed
-        back by MW::syncVersionModeButtons, so the menu item and a badge click (which
-        both lift Masters) flip them too. The proxy exists already (createDataModel),
-        so the persisted setting goes straight onto it. */
-    QWidget *versionBox = new QWidget(body);
-    QHBoxLayout *versionLayout = new QHBoxLayout(versionBox);
-    versionLayout->setContentsMargins(0, 0, 0, 0);
-    versionLayout->setSpacing(0);
-    versionMastersBtn = new QToolButton;
-    versionAllBtn = new QToolButton;
-    versionMastersBtn->setText(tr("Masters"));
-    versionAllBtn->setText(tr("Versions"));
-    versionMastersBtn->setToolTip(tr(
-        "Show only master images, one per file.  An image with no versions is its own "
-        "master."));
-    versionAllBtn->setToolTip(tr(
-        "Show every image, including all versions (virtual copies)."));
-    QButtonGroup *versionGroup = new QButtonGroup(versionBox);
-    versionGroup->setExclusive(true);
-    for (QToolButton *b : {versionMastersBtn, versionAllBtn}) {
-        b->setCheckable(true);
-        b->setAutoRaise(true);
-        b->setFocusPolicy(Qt::NoFocus);
-        versionGroup->addButton(b);
-    }
+    /*  Masters | Versions: see MW::buildVersionPair. The proxy exists already
+        (createDataModel), so the persisted setting goes straight onto it. */
     if (dm && dm->sf) {
         dm->sf->setMastersOnly(isSettings && settings->value("versionMastersOnly").toBool());
         // the version groups left open last session (MW::writeSettings)
@@ -3651,21 +3682,51 @@ void MW::createModuleDock()
             for (const QString &m : settings->value("expandedVersions").toStringList())
                 dm->sf->setVersionsExpanded(m, true);
     }
+    QWidget *versionBox = buildVersionPair(body, versionMastersBtn, versionAllBtn);
     syncVersionModeButtons();
-    connect(versionMastersBtn, &QToolButton::clicked, this, [this] {
-        setVersionMastersOnly(true);
-    });
-    connect(versionAllBtn, &QToolButton::clicked, this, [this] {
-        setShowAllVersions(true);           // lifts Masters as well
-    });
-    versionLayout->addWidget(versionMastersBtn);
-    versionLayout->addWidget(new QLabel("|"));
-    versionLayout->addWidget(versionAllBtn);
     grid->addWidget(versionBox, 0, 2, Qt::AlignRight | Qt::AlignVCenter);
 
     moduleDock->setWidget(body);
     /* No frameLine: the Module dock is a strip of workflow names, not a panel to outline. */
     moduleDock->setFrameLineVisible(false);
+}
+
+void MW::createTitleModeBar()
+{
+/*
+    THE MODULE DOCK IN THE TITLE BAR: Library | Folders at the left (after the window
+    buttons), Browse | Develop | ... | Slide Show centred and Masters | Versions at the
+    right, where the file path used to be. The title text is hidden; the
+    title string is still kept up to date (MW::updateWindowTitle) for the Window menu,
+    Mission Control and the Dock.
+
+    A SECOND COPY OF THE DOCK'S BUTTONS: built by the same MW::buildSourcePair,
+    MW::buildWorkflowButtons and MW::buildVersionPair, lit by MW::syncSourceButtons,
+    MW::syncWorkflowSwitcher and MW::syncVersionModeButtons, enabled and tipped by
+    MW::syncWorkflowButtonEnabled and styled by MW::styleWorkflowSwitcher, exactly like
+    the Module dock's, which stays until this one is settled.
+
+    macOS only (TitleBarStrip::isSupported): on Windows and Linux the title bar keeps
+    its text and the Module dock is where the modes are. Hidden in full screen, where
+    there is no title bar; the Module dock row is still there then.
+*/
+    if (G::isLogger) G::log("MW::createTitleModeBar");
+    if (!TitleBarStrip::isSupported()) return;
+    titleModeBar = new TitleBarStrip(this);
+    QWidget *modeBox = new QWidget(titleModeBar);
+    QHBoxLayout *modeLayout = new QHBoxLayout(modeBox);
+    modeLayout->setContentsMargins(0, 0, 0, 0);
+    modeLayout->setSpacing(0);
+    QList<QLabel *> separators;     // styled by the strip's sheet, so not kept
+    buildWorkflowButtons(modeLayout, titleModeBtns, &separators);
+    titleModeBar->setContent(
+        buildSourcePair(titleModeBar, titleSourceLibraryBtn, titleSourceFoldersBtn,
+                        nullptr),
+        modeBox,
+        buildVersionPair(titleModeBar, titleVersionMastersBtn, titleVersionAllBtn));
+    syncSourceButtons();
+    syncVersionModeButtons();
+    styleWorkflowSwitcher();
 }
 
 void MW::createKeywordsDock()
@@ -4437,6 +4498,7 @@ void MW::createDocks()
     createDevelopDock();
     createHistoryDock();   // after Develop: it binds to developProperties
     createModuleDock();
+    createTitleModeBar();
 
     // connect(this, &MW::tabifiedDockWidgetActivated, this, &MW::embelDockActivated);
 

@@ -176,14 +176,21 @@ void MW::setVersionMastersOnly(bool on)
 void MW::syncVersionModeButtons()
 {
 /*
-    Masters | Versions say what SortFilter::mastersOnly holds. Signals blocked: the
+    Masters | Versions, in the Module dock and the title bar, say what
+    SortFilter::mastersOnly holds. Signals blocked: the
     buttons act on clicked, and this is not one.
 */
-    if (!versionMastersBtn || !versionAllBtn) return;
     const bool masters = dm && dm->sf && dm->sf->mastersOnly();
-    QSignalBlocker a(versionMastersBtn), b(versionAllBtn);
-    versionMastersBtn->setChecked(masters);
-    versionAllBtn->setChecked(!masters);
+    const QList<QPair<QToolButton *, QToolButton *>> pairs{
+        {versionMastersBtn, versionAllBtn},                 // Module dock
+        {titleVersionMastersBtn, titleVersionAllBtn},       // title bar (macOS)
+    };
+    for (const auto &p : pairs) {
+        if (!p.first || !p.second) continue;
+        QSignalBlocker a(p.first), b(p.second);
+        p.first->setChecked(masters);
+        p.second->setChecked(!masters);
+    }
 }
 
 /* ---------------------------------------------------------------------------------
