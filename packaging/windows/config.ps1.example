@@ -8,10 +8,11 @@
 #   Copy-Item config.ps1.example config.ps1
 # --------------------------------------------------------------------
 
-# Qt install path - INFORMATIONAL ONLY. deploy.ps1 does not read this; the build
-# selects Qt via the QT_DIR environment variable (CMakePresets CMAKE_PREFIX_PATH)
-# or the VS/Qt Creator kit, and windeployqt runs as a CMake POST_BUILD step that
-# tracks the linked Qt. Kept here for reference / future use.
+# Qt install path. The build selects Qt via the QT_DIR environment variable
+# (CMakePresets CMAKE_PREFIX_PATH) or the VS/Qt Creator kit; deploy.ps1's Build
+# sets QT_DIR from this value only when the environment variable is unset (e.g.
+# an unattended -Steps run over SSH). windeployqt runs as a CMake POST_BUILD step
+# and tracks the linked Qt.
 $QtDir = "C:\Qt\6.9.2\msvc2022_64"
 
 # Inno Setup compiler (iscc.exe).

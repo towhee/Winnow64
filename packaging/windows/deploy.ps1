@@ -17,6 +17,14 @@
   Usage (from a Developer PowerShell for VS 2022, x64):
     powershell -ExecutionPolicy Bypass -File .\deploy.ps1     # interactive menu
 
+  Unattended (e.g. over SSH from Quark to the Windows VM; any PowerShell):
+    powershell -ExecutionPolicy Bypass -File .\deploy.ps1 -Steps 0,1,2,3,V
+  runs the given menu keys in order with no prompts and exits non-zero at the
+  first failure. Interactive steps (5, G, N, D) are refused in this mode. Build
+  loads the VS x64 environment itself when cl.exe is not on PATH (on an ARM64
+  host that is the arm64-hosted x64 cross compiler), and takes QT_DIR from
+  $QtDir in config.ps1 when the environment variable is unset.
+
   Requirements (see ..\README.md for one-time setup):
     * Visual Studio 2022 (Desktop C++), Qt 6 (MSVC), CMake + Ninja/VS generator
     * Inno Setup 6 (iscc.exe) for the installer
@@ -24,6 +32,8 @@
     * GitHub CLI (gh.exe, `gh auth login` once) for Publish to GitHub Release
     * (optional) a code-signing certificate + Windows SDK signtool.exe
 #>
+
+param([string[]]$Steps)
 
 # NOTE: like deploy.command this is an interactive menu, so a failed step must
 # report and return to the menu rather than kill the shell. Steps THROW on
@@ -157,11 +167,33 @@ function Show-Diff {
     return $true
 }
 
+# Load the VS x64 build environment into this session (cl, link, rc, the
+# bundled cmake + ninja). Targets x64 always; the host tools follow the
+# machine, so the ARM64 Windows VM gets the arm64-hosted x64 cross compiler.
+function Enter-VsDevShell {
+    $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+    if (-not (Test-Path $vswhere)) { throw "vswhere.exe not found; install Visual Studio 2022 (C++ tools)." }
+    $vs = & $vswhere -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+    if (-not $vs) { throw "No Visual Studio 2022 with the x64 C++ tools found." }
+    # VS 2022's Launch-VsDevShell only knows x86/amd64 hosts, so run vcvarsall
+    # (which has arm64_amd64) in cmd and import the environment it leaves.
+    $vcvarsArch = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64_amd64' } else { 'amd64' }
+    $vcvars = Join-Path $vs "VC\Auxiliary\Build\vcvarsall.bat"
+    $envLines = & cmd.exe /c "`"$vcvars`" $vcvarsArch >nul && set"
+    if ($LASTEXITCODE -ne 0) { throw "vcvarsall $vcvarsArch failed" }
+    foreach ($line in $envLines) {
+        $i = $line.IndexOf('=')
+        if ($i -gt 0) { [Environment]::SetEnvironmentVariable($line.Substring(0, $i), $line.Substring($i + 1), 'Process') }
+    }
+    if (-not (Get-Command cl -ErrorAction SilentlyContinue)) { throw "vcvarsall ran but cl.exe is still not on PATH." }
+    Write-Host "   OK  VS x64 environment loaded ($vcvarsArch)" -ForegroundColor Green
+}
+
 # --- 0) Build (CMake) ------------------------------------------------
 function Build {
-    if (-not (Get-Command cl -ErrorAction SilentlyContinue)) {
-        throw "cl.exe (MSVC) not on PATH. Launch from a Developer PowerShell for VS 2022 (x64)."
-    }
+    if (-not (Get-Command cl -ErrorAction SilentlyContinue)) { Enter-VsDevShell }
+    if (-not $env:QT_DIR -and $QtDir) { $env:QT_DIR = $QtDir }
+    if (-not $env:QT_DIR) { throw "QT_DIR is not set (environment or `$QtDir in config.ps1)." }
     $cache = Join-Path $BuildDir "CMakeCache.txt"
     # Respect whatever generator the build dir is already configured with - Qt
     # Creator typically uses the Visual Studio generator, deploy.ps1's own fresh
@@ -679,6 +711,36 @@ function Print-Config {
     Write-Host "WEB_BASE_URL       = $WebBaseUrl"
     Write-Host "GITHUB_REPO        = $GitHubRepo"
     Write-Host "VERSION (built)    = $(if ($script:Version) {$script:Version} else {'<not built>'})"
+}
+
+# --- Unattended: run -Steps in order, no prompts ---------------------
+if ($Steps) {
+    # "-Steps 0,1,2" arrives as an array; "-Steps 0123" or "0,1,2" as one string.
+    $keys = @($Steps | ForEach-Object { $_ -split '[,\s]+' } | Where-Object { $_ })
+    if ($keys.Count -eq 1 -and $keys[0].Length -gt 1) { $keys = $keys[0].ToCharArray() | ForEach-Object { "$_" } }
+    foreach ($k in $keys) {
+        Write-Host ""
+        Write-Host "=== Step $k ===" -ForegroundColor Cyan
+        try {
+            switch ($k.ToUpper()) {
+                "0" { Build }
+                "1" { Sign-Binaries }
+                "2" { Build-Installer }
+                "3" { Archive }
+                "4" { Upload }
+                "V" { Verify }
+                "A" { Full-Pipeline }
+                "P" { Print-Config }
+                default { throw "Step '$k' is interactive or unknown; run it from the menu." }
+            }
+        } catch {
+            Write-Host "X Step $k failed: $($_.Exception.Message)" -ForegroundColor Red
+            exit 1
+        }
+    }
+    Write-Host ""
+    Write-Host "OK  Steps complete: $($keys -join ',')" -ForegroundColor Green
+    exit 0
 }
 
 # --- Menu -------------------------------------------------------------

@@ -173,6 +173,22 @@ config file exists, and on macOS the keychain is unlocked (Developer ID cert +
 Publishing to winnow.ca (promote, mac `7` / Windows `5`) is a separate, manual step. It
 is still needed for copies of Winnow older than 3.0.
 
+### All platforms from Quark: "Build release" / "Publish release"
+
+`packaging/release.sh` runs a whole release from one Mac, with Windows built on the
+UTM Windows VM (`ssh winvm`) and Linux on the UTM Linux VM:
+
+| Say | Claude runs | Result |
+|---|---|---|
+| **"Build release"** | `release.sh prepare <label>` (if the label is new), then `release.sh build` | every platform built, packaged and tested from one commit into `out/release/<label>/`; nothing published |
+| **"Publish release"** | `release.sh publish` (shows the plan), then `release.sh publish --yes` after your `yes` | one GitHub release with every file, public, links and digests checked |
+
+You write `packaging/changes/<label>.md` first; its name is the new label. The
+platform scripts have unattended modes for this: `deploy.command --steps 0,1,2,3,4,V`
+and `deploy.ps1 -Steps 0,1,2,3,V` (no prompts, non-zero exit on failure), and
+`packaging/windows/smoketest.ps1` tests the installer. Linux is built and tested but
+not packaged yet. Full checklist: WinnowShared/Deployment.txt section 1.
+
 ---
 
 ## Running a deployment (manually)

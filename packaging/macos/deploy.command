@@ -13,6 +13,7 @@
 #   chmod +x deploy.command
 #   ./deploy.command           # interactive menu
 #   WINNOW_ARCH=x86_64 ./deploy.command   # Intel build (see "Architecture" below)
+#   ./deploy.command --steps 0,1,2,3,4,V  # unattended: run these keys, no prompts
 # Or double-click in Finder.
 #
 # Requirements (see ../README.md for one-time setup):
@@ -835,6 +836,39 @@ function print_config() {
     echo "GITHUB_REPO        = $GITHUB_REPO"
     [[ -d "$RELEASE_APP_PATH" ]] && { resolve_version "$RELEASE_APP_PATH"; echo "VERSION (built)    = $WINNOW_VERSION"; }
 }
+
+# --- Unattended: --steps runs menu keys in order, no prompts ----------
+# e.g. deploy.command --steps 0,1,2,3,4,V  (used by packaging/release.sh). Exits
+# non-zero at the first failed step. Steps that prompt (7, G, N, D) are refused.
+# --release-notes <label> prints the rendered GitHub notes for that version.
+if [[ "$1" == "--release-notes" ]]; then
+    [[ -n "$2" ]] || { echo "❌ --release-notes needs a version label" >&2; exit 2; }
+    WINNOW_VERSION="$2"
+    release_notes "v$2"
+    exit $?
+fi
+if [[ "$1" == "--steps" ]]; then
+    [[ -n "$2" ]] || { echo "❌ --steps needs a list, e.g. --steps 0,1,2,3,4,V"; exit 2; }
+    for step in ${(s:,:)2}; do
+        echo ""
+        echo "=== Step $step ($WINNOW_ARCH) ==="
+        case "$step" in
+            0) build ;;
+            1) stage ;;
+            2) sign ;;
+            3) notarize ;;
+            4) disk_image ;;
+            5) archive ;;
+            6) upload ;;
+            v|V) verify ;;
+            p|P) print_config ;;
+            *) echo "❌ Step '$step' is interactive or unknown; run it from the menu."; false ;;
+        esac || { echo "❌ Step $step failed ($WINNOW_ARCH)."; exit 1; }
+    done
+    echo ""
+    echo "✅ Steps complete ($WINNOW_ARCH): $2"
+    exit 0
+fi
 
 # --- Menu -------------------------------------------------------------
 while true; do

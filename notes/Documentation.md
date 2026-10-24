@@ -1022,6 +1022,8 @@ The selected-option look: the dock reads "Library | Folders" at the left (Librar
 
 The workflows stay centred on the window: the dock body is a three-column QGridLayout whose outer columns have equal stretch, so the empty right column is as wide as the left one that holds Library | Folders.
 
+The window's minimum width follows the dock: MW::styleWorkflowSwitcher sets it to the dock's minimumSizeHint width (Library | Folders, the modes and Masters | Versions at their least) plus 125 px, so a font size change moves it too.
+
 #### 2.2.5 The Module Dock in the Title Bar (macOS, Shelved)
 
 On macOS the Module dock's buttons also sit in the window's title bar, replacing the title text (which used to show the file path): Library | Folders at the left after the window buttons, Browse | Develop | Keywords | Map | Embellish | Slide Show centred on the window, and Masters | Versions at the right. SHELVED 2026-10-24: built and tried, then switched off by the user's decision, with the code kept for a revisit. `isModesInTitleBar` in Utilities/titlebar.cpp (false) makes TitleBarStrip::isSupported return false, so MW::createTitleModeBar builds nothing, every title-bar button pointer stays null and the syncs skip them; the title shows its text again. To revisit, set it true (and `isColorMacTitleBars` too, since the strip sits on a title bar in the Winnow colour). The Module dock is unchanged and is where the modes are.

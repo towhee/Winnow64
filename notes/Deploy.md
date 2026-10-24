@@ -42,6 +42,12 @@ pipeline, the config options and the gotchas, see `packaging/README.md`.
 > - **Before you say it:** commit and push, and unlock the keychain (macOS).
 > - The phrases do **not** update winnow.ca; that is a separate manual step
 >   ([7.2](#72-winnowca-server-legacy)).
+>
+> **From Quark for every platform at once:** write `packaging/changes/<label>.md`, say
+> **"Build release"** (Claude runs `packaging/release.sh build`: both DMGs on Quark,
+> the installer on the Windows VM, the Linux build on the Linux VM, all tested), then
+> **"Publish release"** (`release.sh publish`, one plan, one `yes`). See
+> `packaging/README.md` → *All platforms from Quark*.
 
 A release has three files, all built from the same commit and attached to one GitHub
 Release tagged `v<version>`:
@@ -258,6 +264,10 @@ and `WINNOW_UPDATE_AS_VERSION`. The commands are in `packaging/README.md` → *I
 | `P` | Print config |
 | `Q` | Quit |
 
+Unattended: `deploy.command --steps 0,1,2,3,4,V` runs those keys with no prompts and
+exits non-zero at the first failure (the prompting keys `7`, `G`, `N`, `D` are
+refused). `deploy.command --release-notes <label>` prints the rendered release notes.
+
 ### 9.2 Windows deploy.ps1
 
 | Key | Step |
@@ -274,6 +284,10 @@ and `WINNOW_UPDATE_AS_VERSION`. The commands are in `packaging/README.md` → *I
 | `D` | Promote dry run |
 | `A` | Full pipeline (`0`–`3` + verify, no publish) |
 | `P` | Print config |
+
+Unattended: `deploy.ps1 -Steps 0,1,2,3,V`, from any PowerShell (e.g. over SSH). Build
+loads the VS x64 environment itself when `cl.exe` is not on PATH, and takes `QT_DIR`
+from `$QtDir` in `config.ps1` when the variable is unset.
 
 ## 10 Troubleshooting
 

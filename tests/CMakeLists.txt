@@ -835,8 +835,9 @@ endif()
 
 # -----------------------------------------------------------------------------
 # Windows: let every test find its DLLs and Qt plugins. Windows has no rpath, and the
-# app's deploy step (windeployqt + third-party DLLs) fills only build/<preset>/app/<cfg>,
-# with the plugins the APP needs -- not Qt6Test, and not the offscreen platform the
+# app's deploy step (windeployqt + third-party DLLs) fills only the Winnow.exe folder
+# (build/<preset>/app; app/<cfg> under a multi-config generator), with the plugins the APP
+# needs -- not Qt6Test, and not the offscreen platform the
 # headless tests ask for. So rather than copying runtimes beside each test, point the
 # tests at Qt's own bin/ and plugins/, and at the app dir for OpenCV, libheif, etc.
 # -----------------------------------------------------------------------------
@@ -846,7 +847,7 @@ if(WIN32 AND CMAKE_VERSION VERSION_GREATER_EQUAL 3.22)
     get_filename_component(_qtPlugins "${_qtBin}/../plugins" ABSOLUTE)
     get_directory_property(_winnowTests TESTS)
     set_property(TEST ${_winnowTests} APPEND PROPERTY ENVIRONMENT_MODIFICATION
-        "PATH=path_list_prepend:${CMAKE_BINARY_DIR}/app/$<CONFIG>"
+        "PATH=path_list_prepend:$<TARGET_FILE_DIR:Winnow>"
         "PATH=path_list_prepend:${_qtBin}"
         "QT_PLUGIN_PATH=set:${_qtPlugins}")
 endif()
