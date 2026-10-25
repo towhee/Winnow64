@@ -1,0 +1,7 @@
+- Add blur effect.
+- Add lens blur.
+- Add pattern effects.
+- Fix corrupted thumbnail rotation.
+- Add support for Linux platform.
+- Tweak keyword edge cases.
+- Prevent Filters 'blanking' during refresh.

@@ -23,7 +23,7 @@ project(Winnow VERSION 3.0 LANGUAGES C CXX)
 # PROJECT_VERSION stays in the fields Apple and Windows require to be numeric
 # (CFBundleShortVersionString, rc FILEVERSION). Leave the label empty for a plain
 # release and it falls back to PROJECT_VERSION.
-set(WINNOW_VERSION_LABEL "3_beta3")
+set(WINNOW_VERSION_LABEL "3_beta4")
 if(NOT WINNOW_VERSION_LABEL)
     set(WINNOW_VERSION_LABEL "${PROJECT_VERSION}")
 endif()
