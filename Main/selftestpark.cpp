@@ -53,7 +53,9 @@ bool MW::selfTestCatalogueFolder(const QString &folder)
     CatalogScopeEntry e;
     e.path = catalogScopeNormalize(folder);
     catalogScope = CatalogScope{e};
-    const int files = QDir(folder).entryList(QDir::Files).size();
+    int files = 0;      // dot files are never catalogued (catalogCandidateName)
+    for (const QString &name : QDir(folder).entryList(QDir::Files))
+        if (!name.startsWith(QLatin1Char('.'))) ++files;
     if (Catalog::instance().count() < files) startCatalogScan();
     return waitFor([files]{ return Catalog::instance().count() >= files; }, 30000);
 }

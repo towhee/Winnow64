@@ -3678,6 +3678,7 @@ void MW::handleStartupArgs(const QString &args)
         // add the recently modified incoming files to pathList
         for (int i = 0; i < dir.entryInfoList().size(); ++i) {
             info = dir.entryInfoList().at(i);
+            if (info.fileName().startsWith('.')) continue;   // see DataModel::addFolder
             // only add files just modified
             if (info.lastModified() >= t || doThemAll) {
                 pathList << info.filePath();
@@ -4494,6 +4495,7 @@ int countImagesOnDisk(const QString &folder, bool recurse, const QSet<QString> &
     for (const QString &f : folders) {
         const QStringList names = QDir(f).entryList(QDir::Files, QDir::NoSort);
         for (const QString &name : names) {
+            if (name.startsWith(QLatin1Char('.'))) continue;   // see DataModel::addFolder
             const int dot = name.lastIndexOf('.');
             if (dot < 0) continue;
             if (exts.contains(name.mid(dot + 1).toLower())) ++n;

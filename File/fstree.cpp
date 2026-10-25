@@ -194,6 +194,7 @@ int ImageCounter::computeImageCount(const QString &path)
         while (it.hasNext()) {
             it.next();
             if (!it.fileInfo().size()) continue;
+            if (it.fileName().startsWith('.')) continue;   // see DataModel::addFolder
             QString fileName = it.fileName().toLower();
             int dotIndex = fileName.lastIndexOf('.');
             if (dotIndex == -1) {
@@ -229,6 +230,7 @@ int ImageCounter::computeImageCount(const QString &path)
         while (it.hasNext()) {
             it.next();
             if (!it.fileInfo().size()) continue;
+            if (it.fileName().startsWith('.')) continue;   // see DataModel::addFolder
             count++;
         }
     }

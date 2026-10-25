@@ -54,6 +54,7 @@ QStringList catalogScopeFolders(const CatalogScope &scope,
 
 bool catalogCandidateName(const QString &name, const QSet<QString> &exts)
 {
+    if (name.startsWith(QLatin1Char('.'))) return false;
     const int dot = name.lastIndexOf('.');
     if (dot < 0) return false;
     return exts.contains(name.mid(dot + 1).toLower());

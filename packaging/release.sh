@@ -176,9 +176,13 @@ function winps() {
 
 function job_windows() {
     echo "=== sync ${COMMIT:0:8} -> $WIN_HOST:$WIN_REPO ==="
-    ssh "${SSH_OPTS[@]}" "$WIN_HOST" "New-Item -ItemType Directory -Force $WIN_REPO | Out-Null" || return 1
+    ssh "${SSH_OPTS[@]}" "$WIN_HOST" "New-Item -ItemType Directory -Force $WIN_REPO\\out | Out-Null" || return 1
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
         | ssh "${SSH_OPTS[@]}" "$WIN_HOST" "tar -xf - -C $WIN_REPO" || return 1
+    # tar -x never deletes: drop AppleDouble files and list anything else not in the commit
+    git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" > "$RDIR/logs/manifest.txt"
+    scp "${SSH_OPTS[@]}" -q "$RDIR/logs/manifest.txt" "$WIN_HOST:$WIN_REPO/out/manifest.txt" || return 1
+    winps "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\prune.ps1 -Manifest out\\manifest.txt" || return 1
     echo "=== deploy.ps1 -Steps 0,1,2,3,V ==="
     winps "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\deploy.ps1 -Steps 0,1,2,3,V" || return 1
     local setup; setup=$(asset_name windows "$LABEL")
@@ -201,6 +205,16 @@ function job_linux() {
     ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "mkdir -p $LINUX_REPO" || return 1
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
         | ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "tar -xf - -C $LINUX_REPO" || return 1
+    # Same tidy as packaging/windows/prune.ps1: tar -x never deletes, so AppleDouble files
+    # go and anything else not in the commit (outside build/ and out/) is listed.
+    git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" \
+        | ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "cd $LINUX_REPO && export LC_ALL=C && \
+            m=\$(mktemp) && sort > \$m && skip='( -path ./build -o -path ./out ) -prune -o' && \
+            n=\$(find . \$skip -type f -name '._*' -print -exec rm -f {} + | wc -l); \
+            [ \$n -gt 0 ] && echo \"Removed \$n AppleDouble (._*) files\"; \
+            st=\$(find . \$skip -type f -print | sed 's|^\\./||' | sort | comm -13 \$m -); \
+            [ -n \"\$st\" ] && { echo \"WARNING: \$(echo \"\$st\" | wc -l) file(s) in the tree are not in the commit:\"; \
+                echo \"\$st\" | head -20 | sed 's/^/   /'; }; rm -f \$m; true" || return 1
     echo "=== linux-release build ==="
     ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "cd $LINUX_REPO && cmake --preset linux-release >/dev/null \
         && cmake --build --preset linux-release" || return 1

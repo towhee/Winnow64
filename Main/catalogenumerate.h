@@ -35,8 +35,9 @@ QStringList catalogScopeFolders(const CatalogScope &scope,
                                 const std::function<bool()> &keepGoing = {},
                                 bool *aborted = nullptr);
 
-/* The scanner's file rule, by NAME: a supported extension. Size is the caller's business
-   (the scanner skips zero-byte files, and a names-only count cannot know). */
+/* The scanner's file rule, by NAME: a supported extension, and not a dot file (see
+   DataModel::addFolder). Size is the caller's business (the scanner skips zero-byte files,
+   and a names-only count cannot know). */
 bool catalogCandidateName(const QString &name, const QSet<QString> &exts);
 
 /* How many candidate files the scope holds, from names alone -- no stat. The number the

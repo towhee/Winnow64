@@ -198,6 +198,9 @@ DataModel::DataModel(QObject *parent,
         connect(sf, sig, this, [this]{ scheduleProxySnapshotRebuild(); });
     }
     connect(sf, &QAbstractItemModel::modelReset,   this, [this]{ scheduleProxySnapshotRebuild(); });
+    /*  A reset (clear, park, restore) leaves nothing for a queued repaint to name: the rows
+        are new, and every view repaints the whole model on modelReset anyway. */
+    connect(this, &QAbstractItemModel::modelAboutToBeReset, this, [this]{ pendingEmitRows.clear(); });
     connect(sf, &QAbstractItemModel::layoutChanged, this, [this]{
         scheduleProxySnapshotRebuild();
         /*  A REORDER INVALIDATES THE EVICTION DELTA. clearIconsOutsideChunkRange walks
@@ -1046,6 +1049,7 @@ bool DataModel::insertRows(int row, int count, const QModelIndex &parent)
     beginInsertRows(QModelIndex(), row, row + count - 1);
     rowStore.insertRows(row, count);
     scratchStore.insertRows(row, count);
+    splicePendingEmitRows(row, 0, count);
     endInsertRows();
     return true;
 }
@@ -1088,6 +1092,7 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
     beginRemoveRows(QModelIndex(), row, row + count - 1);
     rowStore.removeRows(row, count);
     scratchStore.removeRows(row, count);
+    splicePendingEmitRows(row, count, 0);
     /*  The issue lists are keyed by row, so they shift with everything else. */
     if (!mIssueLists.isEmpty()) {
         QHash<int, QVariant> next;
@@ -2395,6 +2400,11 @@ void DataModel::addFolder(const QString &folderPath)
     QList<QFileInfo> folderFileInfoList;
     folderFileInfoList.reserve(names.size());
     for (const QString &name : names) {
+        /*  DOT FILES ARE NEVER IMAGES. macOS and Linux leave them out of QDir::Files
+            already; Windows hides by attribute, not by name, so there "._IMG_1.jpg" -- the
+            AppleDouble companion a Mac writes beside every file on an exFAT/FAT card or
+            drive -- arrived as an image that cannot be decoded. */
+        if (name.startsWith(QLatin1Char('.'))) continue;
         const int dot = name.lastIndexOf('.');
         if (dot < 0) continue;
         if (supportedExtSet.contains(name.mid(dot + 1).toLower()))
@@ -4670,6 +4680,24 @@ void DataModel::scheduleVisibleEmit(int dmRow)
     QTimer::singleShot(kVisibleEmitDeferMs, this, [this]{ flushVisibleEmits(); });
 }
 
+void DataModel::splicePendingEmitRows(int row, int removed, int inserted)
+{
+/*
+    Keep the queued repaints on the rows they were queued for. pendingEmitRows holds DM
+    row numbers and is flushed up to kVisibleEmitDeferMs later; an insert or removal in
+    between moves every later row, so without this the flush repaints a neighbour and
+    leaves the changed row blank. A removed row has nothing left to repaint.
+*/
+    if (pendingEmitRows.isEmpty()) return;
+    QSet<int> next;
+    next.reserve(pendingEmitRows.size());
+    for (const int r : std::as_const(pendingEmitRows)) {
+        if (r < row) next.insert(r);
+        else if (r >= row + removed) next.insert(r - removed + inserted);
+    }
+    pendingEmitRows.swap(next);
+}
+
 void DataModel::flushVisibleEmits()
 {
 /*
@@ -4689,8 +4717,16 @@ void DataModel::flushVisibleEmits()
 
     if (pendingEmitRows.isEmpty()) return;
 
-    QList<int> rows(pendingEmitRows.cbegin(), pendingEmitRows.cend());
+    /*  IN RANGE, OR NOT AT ALL. A reset (clear, park, restore) empties the set, and
+        insert/remove splice it, but a row past the end would make index() invalid and
+        emit a dataChanged no view can use; QAbstractItemModelTester aborts on it. */
+    const int nRows = rowCount();
+    QList<int> rows;
+    rows.reserve(pendingEmitRows.size());
+    for (const int r : std::as_const(pendingEmitRows))
+        if (r < nRows) rows.append(r);
     pendingEmitRows.clear();
+    if (rows.isEmpty()) return;
     std::sort(rows.begin(), rows.end());
 
     /*  THE EMISSION ITSELF IS THE LAST UNMEASURED THING ON THIS THREAD (G::isPerfProbe).
@@ -6705,6 +6741,7 @@ bool DataModel::sourceModified(QStringList &added, QStringList &removed, QString
         d.setNameFilters(*fileFilters);
         d.setFilter(QDir::Files);
         foreach(QFileInfo info, d.entryInfoList()) {
+            if (info.fileName().startsWith('.')) continue;   // see addFolder
             QString fPath = info.filePath();
             srcImageFiles.insert(fPath);
             // in datamodel?

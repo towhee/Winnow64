@@ -676,6 +676,7 @@ public:
     void scheduleVisibleEmit(int dmRow);
 private:
     void flushVisibleEmits();
+    void splicePendingEmitRows(int row, int removed, int inserted);
     QSet<int> pendingEmitRows;
     bool pendingEmitScheduled = false;
     /*  The deferral for a visible-row repaint. NOT zero -- see scheduleVisibleEmit. */

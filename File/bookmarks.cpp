@@ -238,6 +238,7 @@ int BookMarks::diskCount(const QString &path)
     const QFileInfoList list = dir->entryInfoList();
     for (const QFileInfo &info : list) {
         if (!info.size()) continue;
+        if (info.fileName().startsWith('.')) continue;   // see DataModel::addFolder
         if (combineRawJpg && metadata->hasJpg.contains(info.suffix().toLower())) {
             const QString jpgPath = info.path() + "/" + info.baseName() + ".jpg";
             if (list.contains(QFileInfo(jpgPath))) continue;

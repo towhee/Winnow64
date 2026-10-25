@@ -126,6 +126,7 @@ private slots:
     void agxDesaturatesHighlightsWithoutHueMarch();
     void filmicHueKeepsNeutralsAndHue();
     void outputBytesAreUnchanged();
+    void output16WithinRounding();
 
 private:
     /* Renders `img` and compares every byte with the reference. Returns the worst
@@ -593,11 +594,12 @@ void TestOutputTransform::agxDesaturatesHighlightsWithoutHueMarch()
     It earned its place: a film-look LUT stage was built on top of this file and then
     removed again, and these hashes are what proved the no-look path was byte-identical
     before, during and after. Re-capture them ONLY for a deliberate pixel change, and
-    follow the rule in notes/Documentation.txt ("Changing an existing op's math") --
+    follow the rule in notes/Documentation.md ("Changing an Existing Op's Math") --
     capture from the CURRENT build first, confirm they pass, then refactor.
 
-    Covers both paths deliberately: sRGB is the fused 1-D-table path, P3 and Adobe RGB
-    take the split matrix path, and the 16-bit twin is packed separately.
+    Covers both 8-bit paths deliberately: sRGB is the fused 1-D-table path, P3 and Adobe
+    RGB take the split matrix path. The 16-bit twin cannot be hashed; see
+    output16WithinRounding.
 */
 static quint64 hashImage(const QImage &q, int bytesPerPixel)
 {
@@ -618,7 +620,6 @@ void TestOutputTransform::outputBytesAreUnchanged()
         OutputTransform::ViewTransform view;
         bool scene;
         float vMax;
-        bool deep;
         quint64 want;
     };
     /*
@@ -635,38 +636,87 @@ void TestOutputTransform::outputBytesAreUnchanged()
     */
     const Case cases[] = {
         {"sRGB/None/display",  OutputTransform::Space::sRGB,
-         OutputTransform::ViewTransform::None,   false, 1.0f, false,
+         OutputTransform::ViewTransform::None,   false, 1.0f,
          0xdd34c2eff5da0abfULL},
         {"sRGB/Filmic/scene",  OutputTransform::Space::sRGB,
-         OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f,
          0x90890a4dd1bd752fULL},
         {"sRGB/AgX/scene",     OutputTransform::Space::sRGB,
-         OutputTransform::ViewTransform::AgX,    true,  4.0f, false,
+         OutputTransform::ViewTransform::AgX,    true,  4.0f,
          0x1fc31ce2190d435dULL},
         {"P3/Filmic/scene",    OutputTransform::Space::DisplayP3,
-         OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f,
          0xfdb1febbebe46621ULL},
         {"Adobe/Filmic/scene", OutputTransform::Space::AdobeRGB,
-         OutputTransform::ViewTransform::Filmic, true,  4.0f, false,
+         OutputTransform::ViewTransform::Filmic, true,  4.0f,
          0xa20f1fe37a348028ULL},
-        {"sRGB16/Filmic/scene",OutputTransform::Space::sRGB,
-         OutputTransform::ViewTransform::Filmic, true,  4.0f, true,
-         0x6ebb5a62d8f864d6ULL},
     };
     for (const Case &c : cases) {
         const WorkingImage img = makeRamp(97, 53, c.vMax, c.scene);
         OutputTransform t;
         QImage q;
-        const bool ok = c.deep ? t.ToImage16(img, q, c.space, c.view)
-                               : t.ToImage(img, q, c.space, c.view);
-        QVERIFY2(ok, c.name);
-        const quint64 got = hashImage(q, c.deep ? 8 : 3);
+        QVERIFY2(t.ToImage(img, q, c.space, c.view), c.name);
+        const quint64 got = hashImage(q, 3);
         QVERIFY2(got == c.want,
                  qPrintable(QString("%1: output moved (0x%2, expected 0x%3)")
                                 .arg(c.name)
                                 .arg(got, 16, 16, QLatin1Char('0'))
                                 .arg(c.want, 16, 16, QLatin1Char('0'))));
     }
+}
+
+/*
+    THE 16-BIT TWIN'S REGRESSION GATE: every value against a stored reference, to within
+    one step in 65,535.
+
+    It was a hash alongside the 8-bit ones until the first Windows build. ToImage16 runs
+    the exact per-pixel maths (pow, exp, matrices) with no table in between, so its last
+    bit belongs to the compiler: clang on arm64 fuses multiply-adds, MSVC on x64 calls a
+    different libm. Measured 2026-10-25: 20 of 15,423 values one step apart, none further.
+    The 8-bit paths quantise those differences away, which is why their hashes hold on
+    every platform. A real change to the maths moves values by far more than one step.
+
+    The reference is fixtures/outputtransform/srgb16_filmic_scene.png (16-bit RGB),
+    captured on macOS arm64. To re-capture it after a DELIBERATE pixel change, run this
+    test with WINNOW_OT_WRITE_REFERENCE=<path to the png> and commit the file; the same
+    rule as the hashes applies (notes/Documentation.md, "Changing an Existing Op's Math").
+*/
+void TestOutputTransform::output16WithinRounding()
+{
+    const WorkingImage img = makeRamp(97, 53, 4.0f, /*sceneReferred*/true);
+    OutputTransform t;
+    QImage q;
+    QVERIFY(t.ToImage16(img, q, OutputTransform::Space::sRGB,
+                        OutputTransform::ViewTransform::Filmic));
+
+    const QString capture = qEnvironmentVariable("WINNOW_OT_WRITE_REFERENCE");
+    if (!capture.isEmpty()) {
+        QVERIFY2(q.save(capture, "PNG"), qPrintable(capture));
+        QSKIP("reference written; re-run without WINNOW_OT_WRITE_REFERENCE");
+    }
+
+    const QString refPath =
+        QFINDTESTDATA("../fixtures/outputtransform/srgb16_filmic_scene.png");
+    QVERIFY2(!refPath.isEmpty(), "reference image not found");
+    const QImage ref = QImage(refPath).convertToFormat(QImage::Format_RGBX64);
+    QCOMPARE(ref.size(), q.size());
+
+    int worst = 0, moved = 0;
+    for (int y = 0; y < q.height(); ++y) {
+        const quint16 *a = reinterpret_cast<const quint16 *>(q.constScanLine(y));
+        const quint16 *b = reinterpret_cast<const quint16 *>(ref.constScanLine(y));
+        for (int x = 0; x < q.width(); ++x)
+            for (int c = 0; c < 3; ++c) {
+                const int d = std::abs(int(a[x * 4 + c]) - int(b[x * 4 + c]));
+                if (d) ++moved;
+                worst = std::max(worst, d);
+            }
+    }
+    // Zero on the platform the reference came from; reported so a refactor there sees it.
+    qInfo("sRGB16/Filmic/scene: %d of %d values differ from the reference, worst %d",
+          moved, q.width() * q.height() * 3, worst);
+    QVERIFY2(worst <= 1, qPrintable(QString("sRGB16/Filmic/scene: output moved, worst %1 "
+                                            "steps").arg(worst)));
 }
 
 QTEST_MAIN(TestOutputTransform)
