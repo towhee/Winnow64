@@ -180,6 +180,12 @@ static int runDumpWorking(int argc, char *argv[], const QString &raw, const QStr
 
 int main(int argc, char *argv[])
 {
+    /* SET, NOT DERIVED. Every settings, cache and model path is keyed on the application
+       name, which Qt otherwise takes from the executable -- "Winnow" on all three
+       platforms until the Linux AppImage, whose launcher execs the binary as
+       "AppRun.wrapped" and put everything under that name instead. */
+    QCoreApplication::setApplicationName("Winnow");
+
     if (argc >= 4 && QString::fromLocal8Bit(argv[1]) == "--dumpworking")
         return runDumpWorking(argc, argv, QString::fromLocal8Bit(argv[2]),
                               QString::fromLocal8Bit(argv[3]),

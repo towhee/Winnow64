@@ -17,8 +17,9 @@
 # Platforms:
 #   mac      this Mac   deploy.command --steps 0,1,2,3,4,V      Winnow<label>.dmg
 #   intel    this Mac   WINNOW_ARCH=x86_64 ... (same steps)       Winnow<label>_Intel.dmg
-#   windows  WIN_HOST   deploy.ps1 -Steps 0,1,2,3,V + smoketest   WinnowSetup-<label>.exe
-#   linux    LINUX_HOST linux-release build + ctest (packaging not built yet)
+#   windows      WIN_HOST       deploy.ps1 -Steps 0,1,2,3,V + smoketest   WinnowSetup-<label>.exe
+#   linux-arm64  LINUX_HOST     build + appimage.sh + ctest     Winnow-<label>-aarch64.AppImage
+#   linux-x64    LINUX_X64_HOST (same; an emulated x86_64 VM)   Winnow-<label>-x86_64.AppImage
 #
 # Every platform builds the SAME commit: the remote trees are refreshed with
 # `git archive <commit> | tar -x`, so the commit must be clean (no uncommitted
@@ -27,7 +28,12 @@
 # Per-machine overrides (env or packaging/macos/config.sh):
 #   WIN_HOST (winvm)  WIN_REPO (Winnow64, relative to the remote home)
 #   LINUX_HOST (roryhill@192.168.64.3)  LINUX_REPO (Winnow64)
-#   RELEASE_PLATFORMS ("mac intel windows linux")
+#   LINUX_X64_HOST (roryhill@192.168.64.6)  LINUX_X64_REPO (/data/Winnow64)
+#   LINUX_CLEAN_HOST (roryhill@192.168.64.8, the Linux-test VM: a duplicate of Linux-clean;
+#   the arm64 AppImage is self-tested there too. No x86_64 clean VM exists yet.)
+#   APPIMAGE_TOOLS_SRC (~/UTMShare/appimage-tools: the pinned AppImage tools, copied to
+#   each Linux VM's ~/appimage-tools before packaging)
+#   RELEASE_PLATFORMS ("mac intel windows linux-arm64 linux-x64")
 # --------------------------------------------------------------------
 
 SCRIPT_DIR="${0:A:h}"                       # packaging
@@ -39,8 +45,12 @@ MAC_DEPLOY="$SCRIPT_DIR/macos/deploy.command"
 : ${WIN_REPO:=Winnow64}
 : ${LINUX_HOST:=roryhill@192.168.64.3}
 : ${LINUX_REPO:=Winnow64}
+: ${LINUX_X64_HOST:=roryhill@192.168.64.6}
+: ${LINUX_X64_REPO:=/data/Winnow64}
+: ${LINUX_CLEAN_HOST=roryhill@192.168.64.8}      # Linux-test; empty = no clean-system test
+: ${APPIMAGE_TOOLS_SRC:=$HOME/UTMShare/appimage-tools}   # pinned; see appimage.sh
 : ${GITHUB_REPO:=towhee/Winnow64}
-: ${RELEASE_PLATFORMS:="mac intel windows linux"}
+: ${RELEASE_PLATFORMS:="mac intel windows linux-arm64 linux-x64"}
 SSH_OPTS=(-o LogLevel=ERROR -o ConnectTimeout=10 -o BatchMode=yes)
 
 function die() { echo "❌ $*" >&2; exit 1; }
@@ -61,7 +71,8 @@ function asset_name() {
         mac)     echo "Winnow$2.dmg" ;;
         intel)   echo "Winnow$2_Intel.dmg" ;;
         windows) echo "WinnowSetup-$2.exe" ;;
-        linux)   echo "" ;;                    # no Linux package yet
+        linux-arm64) echo "Winnow-$2-aarch64.AppImage" ;;
+        linux-x64)   echo "Winnow-$2-x86_64.AppImage" ;;
     esac
 }
 
@@ -115,7 +126,9 @@ function preflight() {
             || die "notary profile ${NOTARY_KEYCHAIN_PROFILE:-AC_APIKEY} does not answer — unlock the keychain."
     fi
     has_platform windows && ensure_vm Windows "$WIN_HOST"
-    has_platform linux   && ensure_vm Linux "$LINUX_HOST"
+    has_platform linux-arm64 && ensure_vm Linux "$LINUX_HOST"
+    has_platform linux-x64   && ensure_vm Linux-x64 "$LINUX_X64_HOST"
+    has_platform linux-arm64 && [[ -n "$LINUX_CLEAN_HOST" ]] && ensure_vm Linux-test "$LINUX_CLEAN_HOST"
     echo "✅ Pre-flight: $LABEL at ${COMMIT:0:8}"
 }
 
@@ -200,29 +213,57 @@ function job_windows() {
     (( failed )) && return 2 || return 0
 }
 
+# One Linux build VM: $1 host, $2 repo dir on it, $3 asset name, $4 optional clean test
+# host. Builds linux-release, packages and self-tests the AppImage
+# (packaging/linux/appimage.sh), self-tests it on the clean host, then runs ctest.
 function job_linux() {
-    echo "=== sync ${COMMIT:0:8} -> $LINUX_HOST:$LINUX_REPO ==="
-    ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "mkdir -p $LINUX_REPO" || return 1
+    local host="$1" repo="$2" asset="$3"
+    echo "=== sync ${COMMIT:0:8} -> $host:$repo ==="
+    ssh "${SSH_OPTS[@]}" "$host" "mkdir -p $repo" || return 1
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
-        | ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "tar -xf - -C $LINUX_REPO" || return 1
+        | ssh "${SSH_OPTS[@]}" "$host" "tar -xf - -C $repo" || return 1
     # Same tidy as packaging/windows/prune.ps1: tar -x never deletes, so AppleDouble files
     # go and anything else not in the commit (outside build/ and out/) is listed.
     git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" \
-        | ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "cd $LINUX_REPO && export LC_ALL=C && \
+        | ssh "${SSH_OPTS[@]}" "$host" "cd $repo && export LC_ALL=C && \
             m=\$(mktemp) && sort > \$m && skip='( -path ./build -o -path ./out ) -prune -o' && \
             n=\$(find . \$skip -type f -name '._*' -print -exec rm -f {} + | wc -l); \
             [ \$n -gt 0 ] && echo \"Removed \$n AppleDouble (._*) files\"; \
             st=\$(find . \$skip -type f -print | sed 's|^\\./||' | sort | comm -13 \$m -); \
             [ -n \"\$st\" ] && { echo \"WARNING: \$(echo \"\$st\" | wc -l) file(s) in the tree are not in the commit:\"; \
                 echo \"\$st\" | head -20 | sed 's/^/   /'; }; rm -f \$m; true" || return 1
+    local arch="${${asset:r}##*-}"                   # aarch64 | x86_64
+    ssh "${SSH_OPTS[@]}" "$host" "mkdir -p appimage-tools" || return 1
+    scp "${SSH_OPTS[@]}" -q "$APPIMAGE_TOOLS_SRC"/*-$arch(|.AppImage) "$host:appimage-tools/" \
+        || { echo "❌ AppImage tools for $arch missing from $APPIMAGE_TOOLS_SRC"; return 1; }
     echo "=== linux-release build ==="
-    ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "cd $LINUX_REPO && cmake --preset linux-release >/dev/null \
+    # ccache when the VM has it: git archive stamps every file with the commit time, so
+    # without it each release recompiles the whole tree (hours on the emulated x86_64 VM).
+    ssh "${SSH_OPTS[@]}" "$host" "cd $repo && cmake --preset linux-release \
+        \$(command -v ccache >/dev/null && echo -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+            -DCMAKE_CXX_COMPILER_LAUNCHER=ccache) >/dev/null \
         && cmake --build --preset linux-release" || return 1
-    echo "ℹ️  Linux packaging is not built yet: build and tests only, no file to publish."
-    local failed=0
+    local failed=0 rc
+    ssh "${SSH_OPTS[@]}" "$host" "cd $repo && packaging/linux/appimage.sh linux-release"; rc=$?
+    (( rc == 0 || rc == 2 )) || return 1
+    (( rc == 2 )) && failed=1
+    scp "${SSH_OPTS[@]}" -q "$host:$repo/out/$asset" "$RDIR/" || return 1
+    # $4: a clean system of this architecture (a Linux-clean duplicate: no build deps), where
+    # the AppImage must start with only what a stock desktop has. It is what found
+    # libOpenGL.so.0 missing; the build VM, with every -dev package installed, cannot.
+    if [[ -n "$4" ]]; then
+        echo "=== selftest on the clean system $4 ==="
+        ssh "${SSH_OPTS[@]}" "$4" "mkdir -p winnow-test/fx" \
+            && scp "${SSH_OPTS[@]}" -q "$RDIR/$asset" "$4:winnow-test/" \
+            && scp "${SSH_OPTS[@]}" -q "$REPO_ROOT"/tests/fixtures/images/* "$4:winnow-test/fx/" \
+            && ssh "${SSH_OPTS[@]}" "$4" "chmod +x winnow-test/$asset && QT_QPA_PLATFORM=offscreen \
+                timeout 300 winnow-test/$asset --selftest \$HOME/winnow-test/fx" \
+            && echo "✅ clean-system selftest passed" \
+            || { echo "❌ clean-system selftest failed"; failed=1; }
+    fi
     echo "=== ctest (linux-release) ==="
-    ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "cd $LINUX_REPO && ctest --test-dir build/linux-release $CTEST_UNIT_ARGS" || failed=1
-    ssh "${SSH_OPTS[@]}" "$LINUX_HOST" "cd $LINUX_REPO && ctest --test-dir build/linux-release $CTEST_SMOKE_ARGS" || failed=1
+    ssh "${SSH_OPTS[@]}" "$host" "cd $repo && ctest --test-dir build/linux-release $CTEST_UNIT_ARGS" || failed=1
+    ssh "${SSH_OPTS[@]}" "$host" "cd $repo && ctest --test-dir build/linux-release $CTEST_SMOKE_ARGS" || failed=1
     (( failed )) && return 2 || return 0
 }
 
@@ -232,7 +273,7 @@ function build_all() {
     preflight
     RDIR=$(release_dir "$LABEL")
     mkdir -p "$RDIR/logs" || die "cannot create $RDIR"
-    rm -f "$RDIR"/*.(dmg|exe)(N) "$RDIR"/SHA256SUMS(N) "$RDIR"/RESULTS(N)
+    rm -f "$RDIR"/*.(dmg|exe|AppImage)(N) "$RDIR"/SHA256SUMS(N) "$RDIR"/RESULTS(N)
     echo "$COMMIT" > "$RDIR/COMMIT"
 
     typeset -A pids
@@ -243,7 +284,11 @@ function build_all() {
             mac)     ( job_mac arm64 )  > "$RDIR/logs/mac.log" 2>&1 & ;;
             intel)   ( job_mac x86_64 ) > "$RDIR/logs/intel.log" 2>&1 & ;;
             windows) ( job_windows )    > "$RDIR/logs/windows.log" 2>&1 & ;;
-            linux)   ( job_linux )      > "$RDIR/logs/linux.log" 2>&1 & ;;
+            linux-arm64) ( job_linux "$LINUX_HOST" "$LINUX_REPO" "$(asset_name $p "$LABEL")" \
+                               "$LINUX_CLEAN_HOST" ) \
+                             > "$RDIR/logs/$p.log" 2>&1 & ;;
+            linux-x64)   ( job_linux "$LINUX_X64_HOST" "$LINUX_X64_REPO" "$(asset_name $p "$LABEL")" ) \
+                             > "$RDIR/logs/$p.log" 2>&1 & ;;
             *) die "unknown platform $p" ;;
         esac
         pid=$!; pids[$p]=$pid             # zsh: pids[$p]=$! would store the text "$!"
@@ -262,7 +307,7 @@ function build_all() {
         echo "$p ${RESULT[$p]}" >> "$RDIR/RESULTS"
     done
 
-    local built=("$RDIR"/*.(dmg|exe)(N:t))
+    local built=("$RDIR"/*.(dmg|exe|AppImage)(N:t))
     (cd "$RDIR" && : > SHA256SUMS && (( ${#built} )) && shasum -a 256 $built > SHA256SUMS)
     report "$RDIR"
     local f; for f in ${(v)RESULT}; do [[ $f == PASS ]] || return 1; done
@@ -274,7 +319,7 @@ function report() {
     local dir="$1"
     echo ""
     echo "================ Release $LABEL (${COMMIT:0:8}) ================"
-    printf "%-8s %-13s %-30s %6s  %s\n" PLATFORM RESULT FILE SIZE SHA256
+    printf "%-12s %-13s %-32s %6s  %s\n" PLATFORM RESULT FILE SIZE SHA256
     local p name size sum
     for p in ${=RELEASE_PLATFORMS}; do
         name=$(asset_name $p "$LABEL")
@@ -283,7 +328,7 @@ function report() {
             size=$(du -h "$dir/$name" | cut -f1)
             sum=$(grep " $name\$" "$dir/SHA256SUMS" | cut -c1-16)
         fi
-        printf "%-8s %-13s %-30s %6s  %s\n" $p "${RESULT[$p]:-?}" "${name:-(none yet)}" "$size" "$sum"
+        printf "%-12s %-13s %-32s %6s  %s\n" $p "${RESULT[$p]:-?}" "${name:-(none)}" "$size" "$sum"
     done
     echo "Files: out/release/$LABEL/   Logs: out/release/$LABEL/logs/"
 }
@@ -304,7 +349,7 @@ function publish() {
     # Upload order matters: arm64 first, because updaters older than the _Intel
     # match take the first .dmg on the release.
     local files=() p name
-    for p in mac intel windows linux; do
+    for p in mac intel windows linux-x64 linux-arm64; do
         has_platform $p || continue
         name=$(asset_name $p "$LABEL")
         [[ -n "$name" ]] || continue

@@ -109,6 +109,13 @@ void TstAppUpdate::macAssetMatchesArchitecture()
     QVERIFY(!AppUpdate::isPlatformAsset("Winnow3.1.dmg", true));
     QVERIFY(!AppUpdate::isPlatformAsset("WinnowSetup-3.1.exe", true));
 
+    QVERIFY( AppUpdate::isLinuxAsset("Winnow-3.1-x86_64.AppImage", true));
+    QVERIFY(!AppUpdate::isLinuxAsset("Winnow-3.1-aarch64.AppImage", true));
+    QVERIFY( AppUpdate::isLinuxAsset("Winnow-3.1-aarch64.AppImage", false));
+    QVERIFY(!AppUpdate::isLinuxAsset("Winnow-3.1-x86_64.AppImage", false));
+    QVERIFY(!AppUpdate::isLinuxAsset("Winnow3.1.dmg", true));
+    QVERIFY(!AppUpdate::isLinuxAsset("Winnow-3.1-x86_64.AppImage.zsync", true));
+
 #if defined(Q_OS_MAC)
     const QByteArray json = R"({ "tag_name": "v3.1", "draft": false, "prerelease": false,
         "assets": [

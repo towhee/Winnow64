@@ -268,6 +268,8 @@ inline QVector<Node> hierarchy(const QStringList &folders, const QStringList &an
     }
 
     QCollator collator;
+    // the C locale bypasses ICU and ignores numeric mode (LANG=C on minimal Linux)
+    if (collator.locale().language() == QLocale::C) collator.setLocale(QLocale::English);
     collator.setNumericMode(true);
     collator.setCaseSensitivity(Qt::CaseInsensitive);
     QHash<QString, QString> labelByPath;

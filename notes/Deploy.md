@@ -45,18 +45,23 @@ pipeline, the config options and the gotchas, see `packaging/README.md`.
 >
 > **From Quark for every platform at once:** write `packaging/changes/<label>.md`, say
 > **"Build release"** (Claude runs `packaging/release.sh build`: both DMGs on Quark,
-> the installer on the Windows VM, the Linux build on the Linux VM, all tested), then
+> the installer on the Windows VM, an AppImage on each Linux VM, all tested), then
 > **"Publish release"** (`release.sh publish`, one plan, one `yes`). See
 > `packaging/README.md` → *All platforms from Quark*.
 
-A release has three files, all built from the same commit and attached to one GitHub
+A release has five files, all built from the same commit and attached to one GitHub
 Release tagged `v<version>`:
 
 | Platform | Built on | File |
 |---|---|---|
 | macOS Apple Silicon | a Mac | `Winnow<version>.dmg` |
 | macOS Intel | an Apple Silicon Mac (cross-compiled) | `Winnow<version>_Intel.dmg` |
-| Windows | the Windows PC | `WinnowSetup-<version>.exe` |
+| Windows | the Windows PC (or the Windows VM on Quark) | `WinnowSetup-<version>.exe` |
+| Linux x86_64 | the emulated x86_64 Linux VM on Quark | `Winnow-<version>-x86_64.AppImage` |
+| Linux ARM64 | the ARM64 Linux VM on Quark | `Winnow-<version>-aarch64.AppImage` |
+
+The Linux files are built only by `packaging/release.sh` (there is no per-platform menu
+for them); see `packaging/README.md` → *Linux AppImage*.
 
 Everything is driven by two interactive menu scripts in the repo:
 

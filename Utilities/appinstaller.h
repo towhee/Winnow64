@@ -14,7 +14,8 @@
       prepare()        WORKER THREAD.  macOS: mount the DMG, verify the new bundle's
                        code signature (Winnow's identifier + our Developer ID team),
                        copy it beside the running bundle as a hidden staging bundle,
-                       unmount.  Windows: nothing to do.
+                       unmount.  Windows: nothing to do.  Linux: copy the AppImage
+                       beside the running one and make it executable.
       launchFinisher() GUI THREAD.  Starts a detached helper that waits for THIS
                        process to exit, puts the new version in place and relaunches
                        it.  The caller then closes the main window.
@@ -28,6 +29,11 @@
     Windows helper: the Inno Setup installer itself, run /SILENT with /WAITPID=<pid>
     (it waits for Winnow to exit) and /RELAUNCH=1 (its [Run] entry restarts Winnow as
     the original, non-elevated user).  See packaging/windows/winnow.iss.
+
+    Linux helper: a /bin/sh script, like macOS. The update is the new AppImage, staged
+    beside the running one (APPIMAGE) as a hidden file; after Winnow exits it takes the
+    old file's path and is relaunched, and the old file goes to the Trash (or is kept as
+    <name>.previous). Logs to <cache>/Update/install.log.
 
     If the user declines the quit (unsaved picks, a background ingest), the helper keeps
     waiting and the update is installed whenever Winnow does quit.
@@ -43,6 +49,7 @@ QString updateDir();
     (the user installs by hand).  macOS: the bundle must be in an Applications folder
     the user can write to, and not run from a disk image or App Translocation.
     Windows: Winnow must have been installed by the Inno Setup installer.
+    Linux: Winnow must be running as an AppImage the user can replace.
 */
 bool canInstallInPlace(QString *reason = nullptr);
 

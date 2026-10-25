@@ -3445,6 +3445,12 @@ void MW::downloadUpdate(const QString &assetUrl, qint64 size, const QByteArray &
             /* `open` mounts the DMG and opens its Finder window in the foreground,
                so it appears on top of the Winnow window. */
             QProcess::startDetached("/usr/bin/open", QStringList() << destPath);
+        #elif defined(Q_OS_LINUX)
+            /* An AppImage is the program itself: make it runnable and show its folder,
+               since opening the file would hand it to whatever views binaries. */
+            QFile::setPermissions(destPath, QFile::permissions(destPath) | QFile::ExeOwner
+                                            | QFile::ExeGroup | QFile::ExeOther);
+            QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(destPath).absolutePath()));
         #else
             /* Launch the downloaded Inno Setup installer. */
             QDesktopServices::openUrl(QUrl::fromLocalFile(destPath));

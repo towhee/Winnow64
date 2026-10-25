@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Winnow
+GenericName=Photo Browser
+Comment=Fast image browsing, culling, developing and focus stacking
+Exec=Winnow %F
+Icon=winnow
+Terminal=false
+Categories=Graphics;Photography;Viewer;
+MimeType=image/jpeg;image/png;image/tiff;image/heif;image/heic;image/avif;image/webp;image/jxl;image/x-adobe-dng;image/x-canon-cr2;image/x-canon-cr3;image/x-nikon-nef;image/x-sony-arw;image/x-fuji-raf;image/x-olympus-orf;image/x-panasonic-rw2;image/x-pentax-pef;
+Keywords=photo;image;raw;cull;develop;focus stacking;
+StartupWMClass=Winnow

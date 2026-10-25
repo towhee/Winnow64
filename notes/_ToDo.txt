@@ -2,7 +2,10 @@ WHAT'S NEW
 - Kaleidoscope effect
 
 BUGS / TO DO
-- Review virtual machines for building, packaging and deploying to multiple platforms.
+- library_snapshot on the Mac: it failed in the first run but passed this time. That makes it an intermittent, timing-dependent bug rather than a Windows-only one. Twice it has
+    failed on Windows and once on the Mac.
+- Delete rejected shortcut
+- Add cropped dimensions to Metadata panel
 - Figure out mask refine
 - Review develop presets
 - Review FX (F3...) shortcuts

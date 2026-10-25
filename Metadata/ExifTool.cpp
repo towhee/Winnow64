@@ -17,10 +17,11 @@ ExifTool::ExifTool()
     exifToolPath = macOSDir + "/exiftool_wrapper";
     #endif
     #ifdef Q_OS_LINUX
-    // distro exiftool (libimage-exiftool-perl), else a bundled copy beside the exe
-    exifToolPath = QStandardPaths::findExecutable("exiftool");
-    if (exifToolPath.isEmpty())
-        exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+    /* The copy bundled beside the exe (the AppImage's, the same ExifTool the Mac ships),
+       else the distro's (libimage-exiftool-perl) for a build-tree run. */
+    exifToolPath = qApp->applicationDirPath() + "/ExifTool/exiftool";
+    if (!QFileInfo::exists(exifToolPath))
+        exifToolPath = QStandardPaths::findExecutable("exiftool");
     #endif
     // confirm exifToolPath exists
     QFileInfo etInfo(exifToolPath);

@@ -14,7 +14,8 @@
 
     Releases are GitHub Releases on GITHUB_REPO.  The deploy scripts (menu G) tag each
     release "v<WINNOW_VERSION>" (e.g. "v3_beta", "v3.1") and attach one asset per
-    platform: Winnow<ver>.dmg (macOS) and WinnowSetup-<ver>.exe (Windows).  The update
+    platform: Winnow<ver>.dmg (macOS), WinnowSetup-<ver>.exe (Windows) and
+    Winnow-<ver>-<arch>.AppImage (Linux, arch = x86_64 or aarch64).  The update
     check reads https://api.github.com/repos/<GITHUB_REPO>/releases/latest, which skips
     drafts and pre-releases -- so a release is offered to users the moment it is
     published as a full release, and never before.
@@ -95,6 +96,16 @@ inline bool isPlatformAsset(const QString &name, bool intelMac)
     return name.contains("_Intel", Qt::CaseInsensitive) == intelMac;
 }
 
+/* Linux ships one AppImage per architecture, Winnow-<ver>-x86_64.AppImage and
+   Winnow-<ver>-aarch64.AppImage (packaging/linux/appimage.sh); each build takes only its
+   own. */
+inline bool isLinuxAsset(const QString &name, bool x86_64)
+{
+    if (!name.endsWith(".AppImage", Qt::CaseInsensitive)) return false;
+    return name.endsWith(x86_64 ? "-x86_64.AppImage" : "-aarch64.AppImage",
+                         Qt::CaseInsensitive);
+}
+
 inline bool isPlatformAsset(const QString &name)
 {
 #if defined(Q_OS_MAC) && defined(Q_PROCESSOR_X86_64)
@@ -104,6 +115,10 @@ inline bool isPlatformAsset(const QString &name)
 #elif defined(Q_OS_WIN)
     return name.startsWith("WinnowSetup", Qt::CaseInsensitive)
         && name.endsWith(".exe", Qt::CaseInsensitive);
+#elif defined(Q_OS_LINUX) && defined(Q_PROCESSOR_X86_64)
+    return isLinuxAsset(name, true);
+#elif defined(Q_OS_LINUX) && defined(Q_PROCESSOR_ARM_64)
+    return isLinuxAsset(name, false);
 #else
     Q_UNUSED(name)
     return false;

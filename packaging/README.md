@@ -176,7 +176,8 @@ is still needed for copies of Winnow older than 3.0.
 ### All platforms from Quark: "Build release" / "Publish release"
 
 `packaging/release.sh` runs a whole release from one Mac, with Windows built on the
-UTM Windows VM (`ssh winvm`) and Linux on the UTM Linux VM:
+UTM Windows VM (`ssh winvm`) and Linux on two UTM Linux VMs (ARM64 "Linux" and the
+emulated x86_64 "Linux-x64"):
 
 | Say | Claude runs | Result |
 |---|---|---|
@@ -186,8 +187,21 @@ UTM Windows VM (`ssh winvm`) and Linux on the UTM Linux VM:
 You write `packaging/changes/<label>.md` first; its name is the new label. The
 platform scripts have unattended modes for this: `deploy.command --steps 0,1,2,3,4,V`
 and `deploy.ps1 -Steps 0,1,2,3,V` (no prompts, non-zero exit on failure), and
-`packaging/windows/smoketest.ps1` tests the installer. Linux is built and tested but
-not packaged yet. Full checklist: WinnowShared/Deployment.txt section 1.
+`packaging/windows/smoketest.ps1` tests the installer. Linux is packaged as an AppImage
+per architecture by `packaging/linux/appimage.sh`, which also self-tests the finished
+AppImage (offscreen and on a headless Wayland compositor). Full checklist:
+WinnowShared/Deployment.txt section 1.
+
+### Linux AppImage
+
+```sh
+packaging/linux/appimage.sh            # on a Linux build VM, after building linux-release
+```
+Produces `out/Winnow-<label>-<arch>.AppImage` (arch = `x86_64` or `aarch64`). The tools
+(linuxdeploy, its Qt plugin, appimagetool and the AppImage runtime) are pinned releases
+kept in `~/UTMShare/appimage-tools` on Quark and checked against
+`packaging/linux/tools.sha256`; `release.sh` copies them to each VM. Details:
+`notes/Documentation.md` §2.13.4.
 
 ---
 

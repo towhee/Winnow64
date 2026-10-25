@@ -55,7 +55,8 @@
     - [2.13.1 Building on Linux](#2131-building-on-linux)
     - [2.13.2 What Linux Uses Where macOS and Windows Differ](#2132-what-linux-uses-where-macos-and-windows-differ)
     - [2.13.3 Guarding Platform Code](#2133-guarding-platform-code)
-    - [2.13.4 Not Yet Done on Linux](#2134-not-yet-done-on-linux)
+    - [2.13.4 Packaging (AppImage)](#2134-packaging-appimage)
+    - [2.13.5 Not Yet Done on Linux](#2135-not-yet-done-on-linux)
   - [2.14 Investigations and Fixes](#214-investigations-and-fixes)
     - [2.14.1 Two Aborts From Holding What the Model Threw Away](#2141-two-aborts-from-holding-what-the-model-threw-away)
       - [2.14.1.1 A Proxy Index Does Not Survive a Filter Change](#21411-a-proxy-index-does-not-survive-a-filter-change)
@@ -868,6 +869,7 @@
   - [21.3 Installing](#213-installing)
     - [21.3.1 macOS](#2131-macos)
     - [21.3.2 Windows](#2132-windows)
+    - [21.3.3 Linux](#2133-linux)
 - [22 Diagnostics and Probes](#22-diagnostics-and-probes)
   - [22.1 Probe Switches](#221-probe-switches)
     - [22.1.1 The Row Trail Has No Switch](#2211-the-row-trail-has-no-switch)
@@ -1427,7 +1429,7 @@ Several paths push dock visibility back from the actions and would silently undo
 
 ### 2.13 Platforms (macOS, Windows, Linux)
 
-Winnow builds and runs on macOS, Windows and Linux. macOS and Windows are the shipped platforms; Linux builds and runs, and passes the whole test suite; it is not packaged yet (see [2.13.4 Not Yet Done on Linux](#2134-not-yet-done-on-linux)). Platform code is guarded with `Q_OS_MAC`, `Q_OS_WIN` and `Q_OS_LINUX`; the native helpers live in `Utilities/mac.mm`, `Utilities/win.cpp` and `Utilities/linux.cpp`.
+Winnow builds and runs on macOS, Windows and Linux. All three ship: macOS as DMGs, Windows as an installer, Linux as an AppImage for x86_64 and ARM64 (see [2.13.4 Packaging (AppImage)](#2134-packaging-appimage) and [2.13.5 Not Yet Done on Linux](#2135-not-yet-done-on-linux)). Platform code is guarded with `Q_OS_MAC`, `Q_OS_WIN` and `Q_OS_LINUX`; the native helpers live in `Utilities/mac.mm`, `Utilities/win.cpp` and `Utilities/linux.cpp`.
 
 #### 2.13.1 Building on Linux
 
@@ -1479,9 +1481,21 @@ ctest --test-dir build/linux-debug --output-on-failure -j4
 - A non-void function must return on every platform. With every return inside Mac and Windows blocks, Linux fell off the end of `WidgetCSS::checkBox` and the app trapped at startup; GCC and clang both warn (`-Wreturn-type`), so treat that warning as an error.
 - Linux filenames are case-sensitive. Every `#include` and every CMake source path must match the file's case in git exactly; macOS and Windows forgive a mismatch, so it only shows up on Linux. The first Linux build found 46 (for example `ImageFormats/Tiff/` for `ImageFormats/TIFF/`, `HoverDelegate.h` for `hoverdelegate.h`).
 
-#### 2.13.4 Not Yet Done on Linux
+#### 2.13.4 Packaging (AppImage)
 
-- Packaging and installation (AppImage or .deb), and the auto-updater.
+Linux ships as one AppImage per architecture, `Winnow-<label>-x86_64.AppImage` and `Winnow-<label>-aarch64.AppImage`: a single executable file that mounts itself and runs, with nothing installed. `packaging/linux/appimage.sh` builds it from `build/linux-release` on a Linux build VM, and `packaging/release.sh` runs it on both (the ARM64 "Linux" VM and the emulated x86_64 "Linux-x64" VM; see WinnowShared/Deployment.txt section 1).
+
+- What goes in: Winnow, the Winnet master, the bundled models, and `ReleaseExtras/ExifTool` (the same ExifTool 12.40 Perl distribution the Mac ships) under `usr/bin`; licenses/ under `usr/share/licenses/winnow`. linuxdeploy (with its Qt plugin) adds every library and Qt plugin those need, except the base system ones an AppImage takes from the host (glibc, libGL, X11/Wayland client libraries, fontconfig and so on), and the copyright file of the Ubuntu package behind each one. Platform plugins: xcb, wayland, and offscreen (for the headless self-test). Two things linuxdeploy gets wrong and appimage.sh fixes: the Wayland shell-integration, decoration (Winnow's bradient title bar) and graphics-integration plugin folders are copied by hand, because linuxdeploy-plugin-qt recognises only the pre-6.10 Wayland plugin names; and libOpenGL.so.0 is bundled explicitly, because linuxdeploy assumes every host has it while a stock Ubuntu desktop does not (libopengl0) and Ubuntu's Qt6Gui links it, so the AppImage would not start on a clean system.
+- The tools are PINNED releases (linuxdeploy 1-alpha-20251107-1, linuxdeploy-plugin-qt 1-alpha-20250213-1, appimagetool 1.9.1, type2-runtime 20251108), kept outside git in ~/UTMShare/appimage-tools on Quark and checked against `packaging/linux/tools.sha256`. The runtime is passed to appimagetool, so a build never touches the network.
+- Compatibility: an AppImage needs the glibc it was built against, or newer. Built on Ubuntu 26.04 it needs glibc 2.43, so it does not run on Ubuntu 24.04 or older; building on an older base would widen that, but that base's Qt is too old for Winnow, so it would mean Qt from the Qt installer and OpenCV built from source.
+- Size: \~165 MB. Most of it is Ubuntu's OpenCV, whose imgcodecs module links GDAL (and through it HDF5, NetCDF, MySQL, PostgreSQL and more), which Winnow never uses; an OpenCV built with only the codecs Winnow needs would remove \~100 MB.
+- The application name is SET in main() (`QCoreApplication::setApplicationName("Winnow")`), not derived: linuxdeploy's AppRun execs the binary as `AppRun.wrapped`, and every settings, cache and model path would otherwise have been keyed on that name.
+- ExifTool: Linux uses the copy beside the executable when there is one (the AppImage), else the distro's `exiftool` (a build-tree run). It needs Perl, which most distributions include.
+- Updates: AppUpdate::isLinuxAsset picks the AppImage for this architecture. AppInstaller installs in place when Winnow is running as an AppImage (`APPIMAGE` is set) in a folder the user can write: the new file is staged beside the old one, and after Winnow exits a shell script renames the old one to `<name>.previous`, moves the new one to the old path (so launchers keep working), moves the old one to the Trash with `gio trash` (or leaves it as `.previous`), and relaunches. Logs to `<cache>/Update/install.log`. A copy not running as an AppImage downloads the new AppImage, makes it executable and opens its folder.
+- Test: appimage.sh runs the finished AppImage's `--selftest` headless (offscreen), through FUSE as a user would run it; it catches a missing library or plugin, which the build tree's ctest cannot. The clean-system test runs on a throwaway duplicate of the Linux-clean VM (no build dependencies; Ubuntu desktop + openssh-server): the AppImage's --selftest offscreen and on the live GNOME Wayland session, and the bundled ExifTool against the system Perl. It is what found the libOpenGL gap.
+
+#### 2.13.5 Not Yet Done on Linux
+
 - Share (the Share menu item exists only on macOS and Windows).
 - The display colour profile: Linux renders to sRGB.
 - At the root of the Folders panel, Fedora-style `/run/media` is not listed (it is under `/run`, which is hidden).
@@ -10211,7 +10225,7 @@ AppUpdate::parseLatestRelease reads:
 
 - tag_name "v&lt;WINNOW_VERSION>" (e.g. "v3_beta", "v3.1"): the offered version, leading "v" dropped.
 - html_url: the "release notes" link in the dialog.
-- The asset for this platform, by name (\*.dmg on macOS, WinnowSetup\*.exe on Windows): browser_download_url, size, and digest ("sha256:&lt;hex>", which GitHub computes for every uploaded asset).
+- The asset for this platform, by name (\*.dmg on macOS, WinnowSetup\*.exe on Windows, Winnow-\*-&lt;arch>.AppImage on Linux, chosen by AppUpdate::isLinuxAsset): browser_download_url, size, and digest ("sha256:&lt;hex>", which GitHub computes for every uploaded asset).
 
 A release with no asset for this platform is NOT an error: one machine runs menu G first and the other attaches its file later, so in between the check stays quiet (silent) or says "released, but not yet for this computer" (loud).
 
@@ -10241,7 +10255,7 @@ MW::downloadUpdate streams the asset (GitHub redirects the download URL to its C
 AppInstaller::canInstallInPlace decides where it goes and what happens next:
 
 - In place (the normal case): &lt;CacheLocation>/Update, then MW::installUpdate.
-- Not in place: the Downloads folder, then opened (macOS mounts the DMG, Windows runs the installer) for the user to install by hand; the dialog says why. On macOS, Winnow must be a .app inside a folder named Applications that the user can write to, and not running from a disk image or from App Translocation. On Windows, unins000.exe must sit beside Winnow.exe (installed by our Inno Setup installer). So a development build from Qt Creator never replaces itself.
+- Not in place: the Downloads folder, then opened (macOS mounts the DMG, Windows runs the installer, Linux makes the AppImage executable and opens its folder) for the user to install by hand; the dialog says why. On macOS, Winnow must be a .app inside a folder named Applications that the user can write to, and not running from a disk image or from App Translocation. On Windows, unins000.exe must sit beside Winnow.exe (installed by our Inno Setup installer). On Linux, Winnow must be running as an AppImage (the runtime sets APPIMAGE to its path) whose file and folder the user can write. So a development build from Qt Creator never replaces itself.
 
 ### 21.3 Installing
 
@@ -10261,6 +10275,12 @@ The relaunched copy inherits Winnow's environment (`open` and the Windows instal
 - finisher: the downloaded Inno Setup installer itself, started with /SILENT /SUPPRESSMSGBOXES /NORESTART /WAITPID=&lt;pid> /RELAUNCH=1. winnow.iss's InitializeSetup waits on that pid (OpenProcess + WaitForSingleObject) before installing, and a [Run] entry with Check: ShouldRelaunch restarts Winnow as the original, non-elevated user after the silent install. UAC asks for elevation as the installer starts (it installs to Program Files).
 - Integrity is the SHA-256 digest check; there is no Authenticode check, because release signing is optional.
 - Untested as of 2026-10-17.
+
+#### 21.3.3 Linux
+
+- prepare: copy the downloaded AppImage BESIDE the running one (the APPIMAGE path) as `.Winnow-update.AppImage` and make it executable. Beside it, so the swap is a rename on one file system.
+- finisher: a /bin/sh script, like macOS (&lt;cache>/Update/install.sh, logging to install.log). It waits for Winnow's pid to exit, renames the old AppImage to `<name>.previous`, moves the new one to the OLD path (so a launcher, a desktop entry or a habit keeps working; the file name may still say the old version), then moves `.previous` to the Trash with `gio trash`, or leaves it if gio is missing. Nothing is deleted. If either move fails, the old file is put back and relaunched. The relaunch unsets APPIMAGE, APPDIR, ARGV0, OWD, LD_LIBRARY_PATH and QT_PLUGIN_PATH, which the old AppImage's runtime set and which would point the new one at a directory that is no longer mounted.
+- Untested in-app as of 2026-10-25.
 
 ## 22 Diagnostics and Probes
 

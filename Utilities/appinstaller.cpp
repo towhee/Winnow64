@@ -257,6 +257,121 @@ bool launchFinisher(const QString &installerPath, QString &error)
     return true;
 }
 
+#elif defined(Q_OS_LINUX)
+
+/* The AppImage this process was started from. The AppImage runtime sets APPIMAGE to its
+   absolute path; a build-tree or distro-installed Winnow has none. */
+static QString runningAppImage()
+{
+    return qEnvironmentVariable("APPIMAGE");
+}
+
+/* Set by prepare() for launchFinisher(), which runs after it on the GUI thread. */
+static QString stagedAppImage;      // <dir of the running AppImage>/.Winnow-update.AppImage
+
+bool canInstallInPlace(QString *reason)
+{
+    auto no = [reason](const QString &why) { if (reason) *reason = why; return false; };
+
+    const QString image = runningAppImage();
+    if (image.isEmpty() || !QFileInfo::exists(image))
+        return no("Winnow is not running as an AppImage.");
+    const QFileInfo imageInfo(image);
+    const QFileInfo dirInfo(imageInfo.absolutePath());
+    if (!dirInfo.isWritable() || !imageInfo.isWritable())
+        return no("You do not have permission to change " + dirInfo.absoluteFilePath() + ".");
+    return true;
+}
+
+bool prepare(const QString &installerPath, QString &error)
+{
+    /* Staged BESIDE the running AppImage, so the finisher's swap is a rename on one file
+       system rather than a copy that could be cut short. The download has already been
+       checked against the release's SHA-256. */
+    stagedAppImage.clear();
+    const QString staged =
+        QDir(QFileInfo(runningAppImage()).absolutePath()).filePath(".Winnow-update.AppImage");
+    QFile::remove(staged);
+    if (!QFile::copy(installerPath, staged)) {
+        error = "Could not copy the update to " + QFileInfo(staged).absolutePath() + ".";
+        return false;
+    }
+    QFile::setPermissions(staged, QFile::permissions(staged) | QFile::ExeOwner
+                                  | QFile::ExeGroup | QFile::ExeOther);
+    stagedAppImage = staged;
+    return true;
+}
+
+/*
+    Args: $1 pid to wait for, $2 staged AppImage, $3 running (old) AppImage, $4 download.
+    The new version takes the old one's path, so a launcher or desktop entry pointing at
+    it keeps working. The old one goes to the Trash (gio), else is kept as <name>.previous:
+    nothing is deleted. The relaunch drops the variables the old AppImage's runtime set,
+    which would otherwise point the new one at an unmounted directory.
+*/
+static const char *kFinisherScript = R"SH(#!/bin/sh
+pid="$1"; staged="$2"; old="$3"; download="$4"
+echo "=== $(date) install $staged over $old"
+while kill -0 "$pid" 2>/dev/null; do sleep 0.5; done
+
+launch() {
+    env -u APPIMAGE -u APPDIR -u ARGV0 -u OWD -u LD_LIBRARY_PATH -u QT_PLUGIN_PATH \
+        setsid "$1" >/dev/null 2>&1 &
+}
+
+aside="$old.previous"
+if ! mv -f "$old" "$aside"; then
+    echo "FAILED: could not move $old aside"
+    rm -f "$staged"
+    launch "$old"
+    exit 1
+fi
+if ! mv "$staged" "$old"; then
+    echo "FAILED: could not move the new version into place"
+    mv "$aside" "$old"
+    launch "$old"
+    exit 1
+fi
+if command -v gio >/dev/null 2>&1 && gio trash "$aside" 2>/dev/null; then
+    echo "previous version moved to the Trash"
+else
+    echo "kept the previous version at $aside"
+fi
+
+echo "installed; launching"
+launch "$old"
+rm -f "$download"
+exit 0
+)SH";
+
+bool launchFinisher(const QString &installerPath, QString &error)
+{
+    if (stagedAppImage.isEmpty()) {
+        error = "The update was not prepared.";
+        return false;
+    }
+    const QString scriptPath = QDir(updateDir()).filePath("install.sh");
+    QFile f(scriptPath);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        error = "Could not write " + scriptPath;
+        return false;
+    }
+    f.write(kFinisherScript);
+    f.close();
+
+    clearTestEnvironment();
+    const QString log = QDir(updateDir()).filePath("install.log");
+    const QString cmd = QString("/bin/sh \"$0\" \"$@\" >>\"%1\" 2>&1").arg(log);
+    const QStringList args = {"-c", cmd, scriptPath,
+                              QString::number(QCoreApplication::applicationPid()),
+                              stagedAppImage, runningAppImage(), installerPath};
+    if (!QProcess::startDetached("/bin/sh", args)) {
+        error = "Could not start the update installer.";
+        return false;
+    }
+    return true;
+}
+
 #else
 
 bool canInstallInPlace(QString *reason)
