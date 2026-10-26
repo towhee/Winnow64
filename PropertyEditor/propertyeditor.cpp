@@ -473,6 +473,31 @@ void PropertyEditor::clearItemInfo(ItemInfo &i)
     i.parIdx = QModelIndex();
 }
 
+void PropertyEditor::recolorText(const QColor &from, const QColor &to)
+{
+/*
+    The user changed the text shade (MW::setTextShade). Items built with the old default
+    text colour (clearItem) carry it in UR_Color, which an editor reads when it is created,
+    so swap it for the new one. Custom item colours are left alone. The editors already
+    showing have the colour in their stylesheets, which MW::setTextShade sweeps.
+*/
+    if (G::isLogger) G::log("PropertyEditor::recolorText");
+    if (propertyDelegate->headerColor == from) propertyDelegate->headerColor = to;
+    std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+        for (int r = 0; r < model->rowCount(parent); ++r) {
+            for (int c = 0; c < model->columnCount(parent); ++c) {
+                const QModelIndex idx = model->index(r, c, parent);
+                const QString clr = idx.data(UR_Color).toString();
+                if (!clr.isEmpty() && QColor(clr) == from)
+                    model->setData(idx, to.name(), UR_Color);
+            }
+            walk(model->index(r, 0, parent));
+        }
+    };
+    walk(QModelIndex());
+    viewport()->update();
+}
+
 void PropertyEditor::setItemEnabled(QString name, bool state)
 {
     if (G::isLogger) G::log("PropertyEditor::setItemEnabled");

@@ -22,6 +22,8 @@ public:
     QRect versionBadgeRect(const QRect &optionRect, const QString &text) const;
     bool versionsBadgeHit(const QModelIndex &sfIdx, const QRect &optionRect,
                           const QPoint &pos) const;
+    // label and video text colour (MW::setTextShade)
+    void setTextColor(const QColor &c) { labelTextColor = c; videoTextColor = c; }
     IconViewDelegate(QObject *parent,
                      bool &isRatingBadgeVisible,
                      bool &isIconNumberVisible,

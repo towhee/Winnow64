@@ -105,6 +105,7 @@ public:
     void diagnosticProperties(QModelIndex parent);
 
     QMap<QString, QModelIndex> sourceIdx;
+    void recolorText(const QColor &from, const QColor &to);
 
 protected:
     void toggleBranch(const QModelIndex &capIdx);

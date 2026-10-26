@@ -1538,6 +1538,7 @@ private slots:
     void updateClassification();
     void refreshFolders();
     void setFontSize(int fontPixelSize);
+    void setTextShade(int shade);
     void setBackgroundShade(int shade);
     void setInfoFontSize();
     void setClassificationBadgeImageDiam(int d);

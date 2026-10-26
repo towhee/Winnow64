@@ -531,6 +531,11 @@ void Preferences::itemChange(QModelIndex idx)
         if (mw->preferencesDlg) mw->preferencesDlg->resizeForFontChange();
     }
 
+    if (source == "globalTextShade") {
+        mw->setTextShade(155 + v.toInt());
+        setStyleSheet(G::css);
+    }
+
     if (source == "globalBackgroundShade") {
         mw->setBackgroundShade(v.toInt());
         setStyleSheet(G::css);
@@ -1014,6 +1019,23 @@ void Preferences::addUserInterface()
     i.hasValue = false;
     i.captionIsEditable = false;
     i.delegateType = DT_None;
+    addItem(i);
+
+    // Application text luminousity
+    i.name = "globalTextShade";
+    i.parentName = "UserInterfaceHeader";
+    i.captionText = "Application text luminousity";
+    i.tooltip = "Change the text shade throughout the application.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.defaultValue = 35;                // G::textShade 190
+    i.value = G::textShade - 155;
+    i.key = "globalTextShade";
+    i.delegateType = DT_Slider;
+    i.type = "int";
+    i.min = 0;
+    i.max = 100;
+    i.fixedWidth = 50;
     addItem(i);
 
     // Application background luminousity

@@ -9246,6 +9246,70 @@ void MW::setFontSize(int fontPixelSize)
         if (w) styleShortcutsWindow(w);
 }
 
+void MW::setTextShade(int shade)
+{
+    if (G::isLogger) G::log("MW::setTextShade");
+    const QColor from = G::textColor;
+    G::textShade = shade;
+    // restyle with the new text shade (WidgetCSS::styleGlobals derives G::textColor)
+    setBackgroundShade(G::backgroundShade);
+    const QColor to = G::textColor;
+    if (to == from) return;
+
+    /* STRAGGLERS: widgets that copied the text colour when they were built, which the app
+       stylesheet rebuild above does not reach. Swap the old colour for the new one in
+       widget stylesheets (Develop labels, property editors, the segmented options ...),
+       in tree and table item foregrounds (Filters, Catalog keywords) and in property
+       editor item data, then refresh the delegates that cache it. A colour is matched by
+       value, so a different element that happens to share the exact text grey changes
+       too; the greys derived from the background stay below the text range. */
+    const QString fromName = from.name();
+    const QString toName = to.name();
+    for (QWidget *w : QApplication::allWidgets()) {
+        const QString ss = w->styleSheet();
+        if (w != this && ss.contains(fromName, Qt::CaseInsensitive)) {
+            QString css = ss;
+            w->setStyleSheet(css.replace(fromName, toName, Qt::CaseInsensitive));
+        }
+        if (auto *pe = qobject_cast<PropertyEditor*>(w)) {
+            pe->recolorText(from, to);
+            continue;
+        }
+        /* QTreeWidget and QTableWidget own their items; a foreground write is an
+           itemChanged, which Filters and CatalogView act on, so signals are blocked and
+           the viewport repainted instead. */
+        auto *view = qobject_cast<QAbstractItemView*>(w);
+        if (!view || !(qobject_cast<QTreeWidget*>(w) || qobject_cast<QTableWidget*>(w)))
+            continue;
+        QAbstractItemModel *m = view->model();
+        const QSignalBlocker block(view);
+        std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
+            for (int r = 0; r < m->rowCount(parent); ++r) {
+                for (int c = 0; c < m->columnCount(parent); ++c) {
+                    const QModelIndex idx = m->index(r, c, parent);
+                    const QVariant v = idx.data(Qt::ForegroundRole);
+                    if (v.isValid() && v.value<QBrush>().color() == from)
+                        m->setData(idx, QBrush(to), Qt::ForegroundRole);
+                }
+                walk(m->index(r, 0, parent));
+            }
+        };
+        walk(QModelIndex());
+        view->viewport()->update();
+    }
+    thumbView->iconViewDelegate->setTextColor(to);
+    gridView->iconViewDelegate->setTextColor(to);
+    thumbView->viewport()->update();
+    gridView->viewport()->update();
+    if (G::useInfoView) {
+        infoView->enable(infoView->isEnabled());                     // its delegate's pen
+        infoView->viewport()->update();
+    }
+    filters->setSearchDefaultTextColor();
+    // views that paint with G::textColor directly (Presets, History, ShowHideBar ...)
+    for (QWidget *w : QApplication::topLevelWidgets()) w->update();
+}
+
 void MW::setBackgroundShade(int shade)
 {
     if (G::isLogger) G::log("MW::setBackgroundShade");

@@ -177,9 +177,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
         so the placeholder text must stay in that list. */
     enterSearchString = "Enter search query";
     ignoreSearchStrings << "" << enterSearchString << enterSearchString.toLower();
-    int c = G::textShade + 15;
-    int d = G::textShade - 15;
-    searchDefaultTextColor = QColor(c,d,c);
+    setSearchDefaultTextColor();
     searchDefaultTextFont = font();
     searchDefaultTextFont.setItalic(true);
 
@@ -678,6 +676,22 @@ void Filters::setCategoryBackground(QTreeWidgetItem *cat)
     cat->setBackground(0, categoryBackground);
     cat->setBackground(2, categoryBackground);
     cat->setBackground(3, categoryBackground);
+}
+
+void Filters::setSearchDefaultTextColor()
+{
+/*
+    The tint of the "Enter search query" prompt, derived from G::textShade. Called at
+    construction and when the user changes the text shade in preferences, which recolours
+    the prompt if it is showing.
+*/
+    const QColor was = searchDefaultTextColor;
+    const int c = G::textShade + 15;
+    const int d = G::textShade - 15;
+    searchDefaultTextColor = QColor(c,d,c);
+    // the first call (constructor) runs before searchTrue exists: was is invalid then
+    if (was.isValid() && searchTrue->foreground(0).color() == was)
+        searchTrue->setForeground(0, searchDefaultTextColor);
 }
 
 void Filters::setCategoryBackground()

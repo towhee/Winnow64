@@ -84,6 +84,7 @@ void MW::writeSettings()
     settings->setValue("maxIconSize", G::maxIconSize);
 
     // appearance
+    settings->setValue("textShade", G::textShade);
     settings->setValue("backgroundShade", G::backgroundShade);
     settings->setValue("fontSize", G::strFontSize);
     settings->setValue("classificationBadgeInImageDiameter", classificationBadgeInImageDiameter);
@@ -418,6 +419,7 @@ bool MW::loadSettings()
         ignoreAddThumbnailsDlg = false;
 
         // appearance
+        G::textShade = 190;
         G::backgroundShade = 50;
         G::backgroundColor = QColor(G::backgroundShade,G::backgroundShade,G::backgroundShade);
         G::strFontSize = "12";
@@ -565,6 +567,10 @@ bool MW::loadSettings()
     lastFileIfCrash = settings->value("lastFileSelection").toString();
 
     // appearance
+    if (settings->contains("textShade")) {
+        G::textShade = settings->value("textShade").toInt();
+        if (G::textShade < 155 || G::textShade > 255) G::textShade = 190;
+    }
     if (settings->contains("backgroundShade")) {
         G::backgroundShade = settings->value("backgroundShade").toInt();
         if (G::backgroundShade < 20) G::backgroundShade = 50;

@@ -9,7 +9,7 @@ void WidgetCSS::styleGlobals()
     /* ---------------------------------------------------------------------------------
        TEXT AND HEADER COLOURS
        --------------------------------------------------------------------------------- */
-    G::textShade = 190;                         // text default luminousity
+    // G::textShade is the user's "Application text luminousity" (settings)
     G::textColor = shade(G::textShade);
     G::disabledColor = shade(bg + 40);
     G::header1Color = QColor(108,193,232);      // #6cc1e8  dock titles

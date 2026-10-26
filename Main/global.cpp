@@ -136,7 +136,7 @@ qreal ptToPx;                       // font points to pixels conversion factor
 
 /*  Application colours and UI style values. ALL are ASSIGNED in WidgetCSS::styleGlobals
     (Main/widgetcss.cpp) -- the one place to experiment with the app's look. */
-int textShade;
+int textShade = 190;                // app text luminousity (settings), 155 + pref value
 int backgroundShade;                // app background luminousity (settings)
 QColor textColor;
 QColor backgroundColor;             // from backgroundShade (settings / MW)

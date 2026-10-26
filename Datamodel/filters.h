@@ -271,6 +271,7 @@ public:
     void updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground();      // re-reads G::headerGradientTop/Bottom
     void setCategoryBackground(QTreeWidgetItem *cat);
+    void setSearchDefaultTextColor();  // from G::textShade (MW::setTextShade)
     void setSearchNewFolder();
     void setCategoryFilterStatus(QTreeWidgetItem *item);
     bool isPredefinedNonZeroCount(QString itemName);
