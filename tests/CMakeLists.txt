@@ -302,6 +302,37 @@ winnow_add_unit_test(tst_renderstack unit/tst_renderstack.cpp
     ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp)
 target_link_libraries(tst_renderstack PRIVATE winnow_test_develop)
 
+# tst_autotone drives the Basic panel's Auto through the real render closure (it
+# measures proxies rendered by WorkingImageCache::render), so it links like tst_renderstack.
+# tst_displaycolor pins the sRGB -> display conversion of the Develop loupe
+# (Utilities/displaycolor.cpp): a no-op without a wide-gamut profile, desaturating with
+# one, identical across every pixel layout. Profiles are synthesised with lcms itself.
+file(GLOB WINNOW_LCMS_SOURCES ${CMAKE_SOURCE_DIR}/Lcms2/*.c)
+winnow_add_unit_test(tst_displaycolor unit/tst_displaycolor.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/displaycolor.cpp
+    ${WINNOW_LCMS_SOURCES})
+winnow_test_link_opencv(tst_displaycolor PRIVATE opencv_core)
+
+# tst_inputtransform pins the non-raw Develop input: a file is read through its EMBEDDED
+# profile (Adobe RGB keeps its gamut), unusable profiles fall back to sRGB.
+winnow_add_unit_test(tst_inputtransform unit/tst_inputtransform.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/inputtransform.cpp
+    ${WINNOW_LCMS_SOURCES})
+target_link_libraries(tst_inputtransform PRIVATE winnow_test_color)
+winnow_test_link_opencv(tst_inputtransform PRIVATE opencv_core)
+
+# tst_icc pins ICC::transform, on every decoded image's path: the cached fast kernel and
+# the lcms fallback both reproduce a fresh lcms transform; sRGB displays cost nothing.
+winnow_add_unit_test(tst_icc unit/tst_icc.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/icc.cpp
+    ${WINNOW_LCMS_SOURCES})
+winnow_test_link_opencv(tst_icc PRIVATE opencv_core)
+
+winnow_add_unit_test(tst_autotone unit/tst_autotone.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/autotone.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp)
+target_link_libraries(tst_autotone PRIVATE winnow_test_develop)
+
 # tst_inputprofile guards Develop's stage 0 -- the camera-native -> working-space
 # conversion that RawColor stopped doing. Its central assertion is that the transform
 # folded into PointCoeffs::preMat equals applying the stages one at a time, since the

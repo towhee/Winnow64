@@ -12,6 +12,7 @@
 #include <QLocale>
 #include "Utilities/fileops.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/displaycolor.h"
 #include "Utilities/titlebar.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
@@ -657,6 +658,18 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
        navigation that keeps the image-cache/decoder threads reading dm->sf. */
     const bool recurse = qEnvironmentVariableIntValue("WINNOW_SELFTEST_RECURSE") == 1;
     const int navMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV_MS");
+
+    /*  WINNOW_COLOR_MANAGE=0|1 forces colour management off/on, to A/B ICC::transform's
+        cost on a riffle (--ingestprobe). Applied HERE, after start-up, because the
+        workspace restore sets G::colorManage after the settings are read. The line below
+        records what the A/B actually compared: with no display profile the transform is
+        a no-op and "on" and "off" are the same run. */
+    if (!qEnvironmentVariable("WINNOW_COLOR_MANAGE").isNull())
+        toggleColorManage(qEnvironmentVariableIntValue("WINNOW_COLOR_MANAGE") == 1 ? Tog::on
+                                                                                 : Tog::off);
+    fprintf(stderr, "SELFTEST: colorManage=%d display=\"%s\" sRGB->display path=%d\n",
+            int(G::colorManage), qPrintable(G::winOutProfilePath),
+            int(ICC::pathFor(QByteArray())));
 
     /*  WINNOW_SELFTEST_DEVPREVIEWS=1 TURNS THE BACKGROUND PREVIEW BUILDER ON, which is
         otherwise a preference and therefore unreachable from a headless run (test mode
@@ -7841,6 +7854,10 @@ QImage MW::devPreview(const QString &fPath)
     Keyed on the recipe currently in effect (which during the write debounce may be ahead
     of the sidecar), so the pixels always match what the user last saw. A miss is normal
     and costs nothing -- the caller falls back to the embedded camera JPG.
+
+    FOR THE SCREEN: every caller paints it on the loupe as the Develop placeholder, so it
+    comes back display-converted, matching the render that replaces it
+    (Utilities/displaycolor.h). Read DevPreviewCache directly for the sRGB pixels.
 */
     if (G::isLogger) G::log("MW::devPreview");
     if (fPath.isEmpty() || !developProperties) return QImage();
@@ -7854,7 +7871,7 @@ QImage MW::devPreview(const QString &fPath)
 
     QImage im;
     if (!im.loadFromData(jpg, "JPG") || im.isNull()) return QImage();
-    return im;
+    return DisplayColor::ToDisplay(im);
 }
 
 QByteArray MW::developRecipeKey(const QString &fPath)
@@ -9665,6 +9682,27 @@ void MW::getDisplayProfile()
     G::winOutProfilePath = Mac::getDisplayProfileURL();
     ICC::setOutProfile();
     #endif
+    /* Linux has no display profile lookup: winOutProfilePath stays empty, Winnow assumes
+       an sRGB display and DisplayColor stays inactive. */
+    refreshDisplayColor();
+}
+
+void MW::refreshDisplayColor()
+{
+/*
+    Rebuild the sRGB -> display transform the Develop loupe uses
+    (Utilities/displaycolor.h) after the display profile or G::colorManage changed,
+    refresh the Develop alert that warns when colour management is off on a wide-gamut
+    display, and re-render an open Develop image so the loupe does not keep pixels
+    converted for the old display.
+*/
+    if (G::isLogger) G::log("MW::refreshDisplayColor");
+    DisplayColor::Rebuild();
+    updateDevelopSelectionWarning();    // the "colour management is off" alert row
+    /* Also runs at start-up (getDisplayProfile), before Develop's timers exist. */
+    if (!developProxyRenderTimer || !developFullResTimer) return;
+    if (G::operationMode == G::OperationMode::Develop && currentDevelopEditsVisible())
+        developParamsChange();
 }
 
 double MW::macActualDevicePixelRatio(QPoint loc, QScreen *screen)
@@ -13936,20 +13974,28 @@ void MW::renderDevelopPreview(bool fullRes)
        50MP RAW. The completion re-renders; until then the loupe keeps showing the current image.
        developWorkTriedPath guards a display-referred format (no scene-linear result possible): after
        one async attempt we fall through and render the display-referred fallback below, not loop. */
-    if (wantRaw && (!work || !work->sceneReferred) && developWorkTriedPath != fPath) {
+    /* A display-referred file (JPG/TIFF/HEIC, raw in preview mode) with nothing cached
+       -- an image that was decoded in Preview mode, or evicted -- takes the same async
+       decode: its WorkingImage must come from the file's own pixels
+       (ImageDecoder::buildWork), NOT from the image cache, whose copy colorManage() has
+       converted for the display. Read as sRGB, those numbers were converted for the
+       display a second time on the way out (DisplayColor). */
+    const bool needDecode = wantRaw ? (!work || !work->sceneReferred) : !work;
+    if (needDecode && developWorkTriedPath != fPath) {
         ensureDevelopWork(fPath);
         return;
     }
     if (!work) {
-        /* Non-raw (JPG/TIFF/HEIC), or the raw re-decode failed: build the pre-develop WorkingImage
-           from the decoded display image. Correct for display-referred files; a last resort for raw. */
-        /*  One locked lookup: contains() then imCache.value() left the hash unguarded
-            between the two while the ImageCache thread trims it.  See ImageCacheData::get. */
+        /* The decode was tried and produced nothing for this file. Last resort: the image
+           cache's copy, which is the file's own pixels only while colour management is
+           off -- otherwise it is in display space and there is nothing correct to show.
+           One locked lookup: see ImageCacheData::get. */
+        if (G::colorManage) return;
         QImage src;
         if (!icd->get(fPath, src) || src.isNull()) return;   // not decoded yet
         auto built = std::make_shared<WorkingImage>();
         InputTransform input;
-        if (!input.FromImage(src, *built)) return;
+        if (!input.FromImage(src, *built, dm->imMetadata(fPath).iccBuf)) return;
         WorkingImageCache::instance().put(fPath, built);
         work = built;
     }
@@ -14165,11 +14211,15 @@ void MW::renderDevelopPreview(bool fullRes)
                                            &displaySize,
                                            wantTime ? &ms : nullptr, baseKey,
                                            roiJob.wanted ? &roiJob : nullptr);
-        const QImage roiOut = roiJob.out;
+        /* The loupe and the 1:1 patch get display-converted COPIES; out stays sRGB for
+           developFrame and the scopes. On the worker, so a drag tick's GUI turn does
+           not pay for it. See Utilities/displaycolor.h. */
+        const QImage shown = DisplayColor::ToDisplay(out);
+        const QImage roiOut = DisplayColor::ToDisplay(roiJob.out);
         const qint64 tRender = wt.restart();
         const Geometry appliedGeom = mj.geometry;
         const QSize orientedSize(fw, fh);
-        QMetaObject::invokeMethod(this, [this, out, displaySize, fPath, fullRes, reqGen,
+        QMetaObject::invokeMethod(this, [this, out, shown, displaySize, fPath, fullRes, reqGen,
                                          geomGen, rt, ms, tProxyCap, tRender, wantTime,
                                          proxySrc, appliedGeom, orientedSize, faithful,
                                          recipe, roiOut] {
@@ -14201,7 +14251,7 @@ void MW::renderDevelopPreview(bool fullRes)
                    stale pairing would draw them in the wrong place for one tick. */
                 if (!cameraUp) {
                     imageView->setDevelopGeometry(appliedGeom, orientedSize);
-                    imageView->setDevelopPreview(out, displaySize);
+                    imageView->setDevelopPreview(shown, displaySize);
                 }
                 /* Keep the frame: the sharpening mask preview is derived from the pixels
                    on screen, so it must be rebuilt from each one -- a Masking drag with
@@ -14612,6 +14662,8 @@ void MW::renderDevelopFullResAsync()
         const QImage out = developCompositeStack(*lensSrc, mj, degrees, /*fullRes*/true, 0, 0,
                                                  fPath, probe ? &rt : nullptr);
         const qint64 ms = probe ? t.elapsed() : 0;
+        /* The loupe's display-converted copy; out stays sRGB (devPreview, scopes). */
+        const QImage shown = DisplayColor::ToDisplay(out);
 
         /* Cheap pixel-change verification (developVerifyMaxAbs): at a small fixed size,
            render the CLEAN base with identity params (the un-developed original) vs the
@@ -14659,8 +14711,9 @@ void MW::renderDevelopFullResAsync()
         const bool vGeometryActive = !mj.geometry.isIdentity();
 
         const Geometry appliedGeom = mj.geometry;
-        QMetaObject::invokeMethod(this, [this, out, fPath, gen, ms, rt, faithful, recipe,
-                                         vMaxAbs, vMeanAbs, vRecipeIdentity, vGeometryActive,
+        QMetaObject::invokeMethod(this, [this, out, shown, fPath, gen, ms, rt, faithful,
+                                         recipe, vMaxAbs, vMeanAbs, vRecipeIdentity,
+                                         vGeometryActive,
                                          appliedGeom]() {
             if (G::isReportDevelopTime)
                 qDebug().noquote() << "[DevTime] full(async)" << out.width() << "x" << out.height()
@@ -14693,7 +14746,7 @@ void MW::renderDevelopFullResAsync()
                 developVerifyGeometryActive = vGeometryActive;
                 developVerifyPath = fPath;
             }
-            onDevelopFullResReady(out, fPath, gen, faithful, recipe, appliedGeom);
+            onDevelopFullResReady(out, shown, fPath, gen, faithful, recipe, appliedGeom);
         });
     });
 }
@@ -14902,7 +14955,8 @@ Geometry MW::developRenderGeometry() const
     return g;
 }
 
-void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
+void MW::onDevelopFullResReady(const QImage &out, const QImage &shown,
+                               const QString &fPath, quint64 gen,
                                bool faithful, const QByteArray &recipe,
                                const Geometry &appliedGeom)
 {
@@ -14940,7 +14994,7 @@ void MW::onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 
         /* Not while the Opt+"\" camera preview is latched over this image. */
         if (!(developCameraShown && developCameraPath == fPath)) {
             pushDevelopGeometryToView();
-            imageView->setDevelopPreview(out);
+            imageView->setDevelopPreview(shown);
         }
         updateDevelopScopes(out);
         developFullFrame = out;
@@ -15380,6 +15434,7 @@ void MW::ensureDevelopWork(const QString &fPath)
 
     developRenderPool->start([this, fPath, m, gen, showDemosaic, render]() mutable {
         ImageDecoder dec(0, dm, metadata);
+        dec.buildWork = true;   // a display-referred WorkingImage, from the file's pixels
         std::function<void(int, int)> prog;
         if (showDemosaic) {
             QMetaObject::invokeMethod(this, [this]() {
@@ -15398,12 +15453,15 @@ void MW::ensureDevelopWork(const QString &fPath)
             developWorkInFlight.clear();
             updateDevelopRenderingHint();
             if (!dm || fPath != dm->currentKey) return;   // navigated away; drop it
-            /* Success (scene-linear work now cached) -> clear the marker so a future eviction can
-               re-decode. Otherwise (display-referred format, e.g. lossless ARW) -> mark it so the
-               re-render below uses the display fallback instead of looping the async decode. */
+            /* Success (the work Develop wanted is now cached: scene-linear for a raw in
+               raw mode, display-referred otherwise) -> clear the marker so a future
+               eviction can re-decode. Otherwise (e.g. a lossless ARW with no
+               scene-linear decode) -> mark it so the re-render below uses the fallback
+               instead of looping the decode. */
             auto w = WorkingImageCache::instance().get(fPath, rawRenderFor(fPath).tag());
-            if (w && w->sceneReferred) developWorkTriedPath.clear();
-            else                        developWorkTriedPath = fPath;
+            const bool wantRaw = isFileRaw(fPath) && G::useRaw;
+            if (w && (w->sceneReferred || !wantRaw)) developWorkTriedPath.clear();
+            else                                     developWorkTriedPath = fPath;
             renderDevelopPreview(false);                       // render the proxy (scene-linear or fallback)
             if (gen == developParamsGen)                       // no newer edit arrived; settle a crisp one
                 developFullResTimer->start(kDevelopSettleMs);
@@ -15422,9 +15480,11 @@ void MW::ensureWorkingImageNow(const QString &fPath)
     ready to sample yet" on every freshly opened JPEG.
 
     Display-referred (JPG/TIFF/HEIC, or raw in preview mode): built HERE, synchronously,
-    from the already-decoded image, so DevelopProperties::ensureWorkingImage can use it on
-    return. That is one InputTransform pass over the full image -- the same cost the first
-    slider move pays -- and it runs only on an explicit click.
+    so DevelopProperties::ensureWorkingImage can use it on return -- by an independent
+    decode of the FILE (ImageDecoder::buildWork), not from the image cache, whose copy
+    colorManage() has converted for the display (see InputTransform). A JPEG decode plus
+    one InputTransform pass, on an explicit click only. In practice the Develop browse
+    decode has usually cached it already (ImageDecoder::applyDevelop).
 
     Raw needing the SCENE-LINEAR image: that is a decode, so hand off to the async
     ensureDevelopWork and let the caller report "not ready". In practice raw already has
@@ -15441,13 +15501,14 @@ void MW::ensureWorkingImageNow(const QString &fPath)
     }
     if (work && work->isValid()) return;
 
-    // One locked lookup -- see ImageCacheData::get.
-    QImage src;
-    if (!icd->get(fPath, src) || src.isNull()) return;   // not decoded yet
-    auto built = std::make_shared<WorkingImage>();
-    InputTransform input;
-    if (!input.FromImage(src, *built)) return;
-    WorkingImageCache::instance().put(fPath, built);
+    ImageMetadata m = dm->imMetadata(fPath);
+    if (m.fPath.isEmpty()) m.fPath = fPath;
+    if (m.ext.isEmpty()) m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
+    const RawRender::Choice render = rawRenderFor(fPath);
+    ImageDecoder dec(0, dm, metadata);
+    dec.buildWork = true;               // caches the WorkingImage as a side effect
+    QImage img;
+    dec.decodeIndependent(img, metadata, m, nullptr, &render);
 }
 
 /* Cheap, size-agnostic pixel-difference between two QImages: sample both on a normalised
@@ -16397,6 +16458,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         if (!work) {
             ImageDecoder dec(0, dm, metadata);
             dec.forceSensorDecode = sensorRaw;
+            /* An identity recipe still renders from a WorkingImage here, and it has to be
+               built from the file's pixels: img below has been through colorManage(). */
+            dec.buildWork = true;
             QImage img;
             dec.decodeIndependent(img, metadata, m, nullptr, &render);
             work = WorkingImageCache::instance().get(fPath, render.tag());
@@ -16414,8 +16478,10 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                 return;
             }
             if (!work && !img.isNull()) {
-                /* Display-referred format (or the raw decode failed): build the working
-                   image from the decoded 8-bit image, as renderDevelopPreview does. */
+                /* Last resort -- the decoder could not build one (buildWork above
+                   normally does). img has been through colorManage(), so it is the
+                   file's own pixels only when no conversion applied (sRGB file, sRGB
+                   display). */
                 auto built = std::make_shared<WorkingImage>();
                 InputTransform input;
                 if (input.FromImage(img, *built)) {

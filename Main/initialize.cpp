@@ -8,6 +8,7 @@
 #endif
 #include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/displaycolor.h"
 #include "Utilities/titlebar.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/keywordsuggester.h"
@@ -4322,6 +4323,18 @@ void MW::updateDevelopSelectionWarning()
         alerts << qMakePair(AlertWarning,
                             QString("Read-only volume - edits cannot be saved."));
 
+    /*  WARNING: colour management is off on a wide-gamut display, so every colour the
+        user is judging is shown oversaturated (sRGB numbers stretched to the panel's
+        gamut) -- reds most of all, which is how it surfaced (skin read far redder than
+        in Lightroom). The edits themselves are unaffected; what is wrong is the screen.
+        The icon is the status bar's own "off" button, the one to click. */
+    if (!G::colorManage && DisplayColor::DisplayDiffersFromSrgb())
+        alerts << qMakePair(AlertWarning,
+                            QString("Color management is off: this wide-gamut display shows "
+                                    "colors oversaturated. Turn it on with "
+                                    "<img src=\":/images/icon16/norainbow1.png\" "
+                                    "width=\"12\" height=\"12\"> in the status bar."));
+
     /* SHOW STOPPER: the panel is greyed for a video (syncDevelopPanelEnabled) and
        nothing can be edited -- Develop does not apply at all. */
     if (currentIsVideo()) {
@@ -4384,6 +4397,7 @@ void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
         }
         else {
             row = new QLabel(developAlertRows);
+            row->setTextFormat(Qt::RichText);       // an alert may show an icon inline
             row->setAlignment(Qt::AlignCenter);
             row->setWordWrap(true);
             developAlertRowsLayout->addWidget(row);

@@ -90,6 +90,12 @@ public:
        an export, devPreview, Embellish export or focus stack run outside Develop got
        the embedded preview. Set by MW::developPixelSource. */
     bool forceSensorDecode = false;
+    /* Independent decodes only: cache the display-referred WorkingImage (JPEG/TIFF/HEIC,
+       or a raw's embedded preview) even when the recipe is identity. Develop needs it for
+       an unedited image, and it must be built HERE, from the file's own pixels before
+       colorManage() -- never from a colour-managed image-cache copy (InputTransform).
+       Set by MW::ensureDevelopWork, MW::ensureWorkingImageNow and developPixelSource. */
+    bool buildWork = false;
 
     enum Status {
         Undefined,
@@ -182,6 +188,7 @@ private:
     void rotate();
     void applyDevelop();
     void colorManage();
+    QByteArray sourceIcc() const;
     bool idle = true;
     QAtomicInt abort {0};
     DataModel *dm;

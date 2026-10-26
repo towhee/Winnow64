@@ -774,6 +774,10 @@ void MW::toggleColorManage(Tog n)
 
     updateStatusBar();  // updates btn image and tooltip
 
+    /* The Develop loupe converts its own renders; the image cache rebuild below only
+       covers what ImageDecoder decodes. */
+    refreshDisplayColor();
+
     if (dm->rowCount() == 0) return;
 
     /* Repaint the thumbnails' cache badges. This was a refreshViewsOnCacheChange call

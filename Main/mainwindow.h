@@ -1191,8 +1191,11 @@ private slots:
        avoid trying to develop a video. */
     bool currentIsVideo() const;
     /* GUI-thread completion for a background full-res render: apply the image if its params/image
-       are still current, otherwise discard, then re-arm if newer params arrived while it ran. */
-    void onDevelopFullResReady(const QImage &out, const QString &fPath, quint64 gen,
+       are still current, otherwise discard, then re-arm if newer params arrived while it ran.
+       out is the sRGB frame (kept, scoped); shown is its display-converted copy (the
+       loupe). */
+    void onDevelopFullResReady(const QImage &out, const QImage &shown,
+                               const QString &fPath, quint64 gen,
                                bool faithful, const QByteArray &recipe,
                                const Geometry &appliedGeom);
     /* The geometry a render started now would apply (stored, crop suppressed while the
@@ -1547,6 +1550,7 @@ private slots:
     void setPrefPage(int page);
     void setDisplayResolution();
     void getDisplayProfile();
+    void refreshDisplayColor();
     void updateDisplayResolution();
     void setCombineRawJpg();
     void nextSlide();

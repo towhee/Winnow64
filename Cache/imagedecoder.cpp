@@ -1049,19 +1049,28 @@ void ImageDecoder::applyDevelop()
     /* Preview mode shows the as-shot image WITHOUT the saved develop recipe (fast review). Only the
        browse/loupe decode is gated on mode; independent decodes (focus stack) still develop. */
     if (!isIndependent && G::operationMode != G::OperationMode::Develop) return;
-    if (developApplied || editParams.isIdentity() || image.isNull()) return;
+    if (developApplied || image.isNull()) return;
 
-    /* Reuse the pre-develop WorkingImage if a prior decode cached it (skips InputTransform);
-       otherwise build it once from the decoded QImage and cache it for next time. The cached
-       image is scene-LINEAR (post-InputTransform), matching what the RAW path stores. */
+    /* Develop wants the WorkingImage even for an identity recipe (the first slider tick,
+       the WB dropper), and this is the ONLY place it can be built correctly: image is the
+       file's own pixels, before colorManage() converts them for the display. The browse
+       decode builds it whenever it runs in Develop; an independent decode when asked. */
+    const bool identity = editParams.isIdentity();
+    if (identity && isIndependent && !buildWork) return;
+
+    /* Reuse the pre-develop WorkingImage if a prior decode cached it (skips
+       InputTransform); otherwise build it once from the decoded QImage, through the
+       file's embedded profile, and cache it for next time. The cached image is
+       scene-LINEAR (post-InputTransform), matching what the RAW path stores. */
     auto work = WorkingImageCache::instance().get(fPath, renderChoice().tag());
     if (!work) {
         auto built = std::make_shared<WorkingImage>();
         InputTransform input;
-        if (!input.FromImage(image, *built)) return;
+        if (!input.FromImage(image, *built, sourceIcc())) return;
         WorkingImageCache::instance().put(fPath, built);
         work = built;
     }
+    if (identity) return;       // the decoded pixels ARE the image; colorManage as usual
 
     /* Re-render through Develop + OutputTransform. render() copies the cached image (Develop
        mutates in place) and leaves the cache entry pristine for the next slider value. */
@@ -1106,13 +1115,22 @@ void ImageDecoder::colorManage()
        EMBEDDED PREVIEW deliberately does not set the flag: that image really is in the
        file's own space and does need the profile. */
     QByteArray iccBuf;
-    if (!developApplied) {
-        iccBuf = isIndependent
-            ? indMeta.iccBuf
-            : haveGeoMeta ? geoMeta.iccBuf
-                      : dmVal(G::ICCBufColumn).toByteArray();
-    }
+    if (!developApplied) iccBuf = sourceIcc();
     ICC::transform(iccBuf, image);
+}
+
+QByteArray ImageDecoder::sourceIcc() const
+{
+/*
+    The embedded profile the decoded pixels are encoded in (empty = sRGB): what
+    colorManage() converts FROM, and what InputTransform reads them through, so Browse
+    and Develop agree on what the file's numbers mean. Formats outside
+    Metadata::iccFormats are treated as sRGB by both.
+*/
+    if (!metadata || !metadata->iccFormats.contains(ext)) return QByteArray();
+    return isIndependent ? indMeta.iccBuf
+                         : haveGeoMeta ? geoMeta.iccBuf
+                                       : dmVal(G::ICCBufColumn).toByteArray();
 }
 
 bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetadata &m,

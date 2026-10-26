@@ -578,6 +578,7 @@
       - [11.42.2.2 Mask Drag (2026-08)](#114222-mask-drag-2026-08)
       - [11.42.2.3 Adjustment Drag (2026-08)](#114223-adjustment-drag-2026-08)
       - [11.42.2.4 A Stale Fold-Cache Slot](#114224-a-stale-fold-cache-slot)
+  - [11.43 Auto Tone](#1143-auto-tone)
 - [12 Previews](#12-previews)
   - [12.1 Original and Developed Previews](#121-original-and-developed-previews)
   - [12.2 Which Picture Is Shown](#122-which-picture-is-shown)
@@ -663,6 +664,10 @@
     - [14.4.5 File Naming: One Token Parser, One Template Editor](#1445-file-naming-one-token-parser-one-template-editor)
 - [15 Colour Management](#15-colour-management)
   - [15.1 HEIC and the colr Box](#151-heic-and-the-colr-box)
+  - [15.2 Display Colour Management of Rendered Frames](#152-display-colour-management-of-rendered-frames)
+    - [15.2.1 Non-Raw Develop Input Reads the File's Own Pixels Through Its Profile](#1521-non-raw-develop-input-reads-the-files-own-pixels-through-its-profile)
+    - [15.2.2 The "Color Management Is Off" Alert](#1522-the-color-management-is-off-alert)
+  - [15.3 The Display Transform Cache and Fast Kernel](#153-the-display-transform-cache-and-fast-kernel)
 - [16 Keywords](#16-keywords)
   - [16.1 Reading Keywords (dc:subject and lr:hierarchicalSubject)](#161-reading-keywords-dcsubject-and-lrhierarchicalsubject)
     - [16.1.1 Three Columns](#1611-three-columns)
@@ -7385,6 +7390,25 @@ Lesson: the plan going in was to bound the develop pass and the blend to the mas
 
 Found by the TSan driver on its first run, a real crash. buildMaskBuffer picked foldSlot while holding g_maskFoldMutex during the LOOKUP, then re-acquired the mutex to store. Between the two the cache could be cleared (maskFoldCacheClear() from the GUI thread's ensureRangeRef, the key cap, or another render), leaving entries[] shorter than foldSlot: QVector::operator[] out of range, a SEGV. foldSlot is now a HINT, re-validated against the vector under the store lock. An index chosen under one lock acquisition means nothing under the next.
 
+### 11.43 Auto Tone
+
+Basic's "Tone [Auto]" row, directly above Exposure (Lightroom's position), sets Exposure, Contrast, Highlights, Shadows, Whites, Blacks, Vibrance and Saturation in one click. Solver: Develop/autotone.h/.cpp (AutoTone::Solve). UI: DevelopProperties::addAutoToneRow / autoTone. Test: tests/unit/tst_autotone.cpp.
+
+Lightroom's own Auto is a trained network (Adobe Sensei, since Classic 7.1). This is the heuristic equivalent: measure the picture, set each slider from a rule, in the order a person would.
+
+- MEASURED THROUGH THE REAL PIPELINE. Every measurement is taken off a 360 px proxy rendered by WorkingImageCache::render, the same develop + view transform + sRGB transfer the loupe uses, and the luma is the histogram scope's BT.709 integer luma. So slider nonlinearity, the view transform's shoulder, the profile, WB and presence are accounted for without modelling any of them. A solve is \~30 proxy renders.
+- The proxy gets its OWN StatSampleSlot, pre-filled with the FULL frame's StatSample and LocalSample. Shared, its Apply would fill the slot's LocalSample from 360 px and every later render of the image would inherit the coarse one.
+- The eight sliders are zeroed before measuring, so Auto gives the same answer however they were left. Everything else in the params is kept and rendered with.
+- Order, each step measured on the render the previous steps produced:
+  1. Exposure, by bisection: the centre-weighted log-average display-linear luminance (the "key") moves kKeyStrength (0.65) of the way to middle grey, in stops. The pull is halved when brightening a frame that already has a real bright end (p98 > 0.80) or darkening one with a real dark end (p2 < 0.06), the signature of a deliberately low-key or high-key scene.
+  2. Contrast: proportional to the shortfall of display-luma std. dev. against 0.22.
+  3. Highlights (negative) and Shadows (positive): proportional to the fraction of the frame above 0.80 / below 0.15.
+  4. Whites then Blacks, by bisection: the 99.5th luma percentile lands at 0.97, the 0.2th at 0.015 (Lightroom's Shift+double-click auto-clip). Last, because they set the end points. Asymmetric ranges (Whites -40..+60) so a blown sun cannot drag the whole top down.
+  5. Vibrance / Saturation: mean CIELAB C* of the mid-tones (10 < L* < 95) against 26, mostly through Vibrance. The positive push fades out as the p98 chroma nears the gamut edge, and the whole push fades in from monochrome (C* 3 -> 8): a ramp, not a cutoff, so a near-grey frame cannot jump from 0 to the full push.
+- GLOBAL ONLY. On a mask scope the button is greyed with "Global scope only" beside it. Masks are not rendered and geometry is not applied: the measurement is of the uncropped frame.
+- One history entry ("Auto tone"). Multi-image editing propagates the CURRENT image's values to the rest of the selection like any Global edit; it does not solve each image separately (Lightroom does).
+- CALIBRATION. All tuning constants are at the top of autotone.cpp and are first guesses. Lightroom writes its Auto results into the XMP (crs:Exposure2012, crs:Contrast2012, ...), so a folder auto-toned in Lightroom is a free labelled set; fit the constants with the LR calibration loop (headless dump + developrender + lrcompare.py). The tests pin behaviour (direction, ordering, continuity, slider independence), not numbers, so recalibration does not break them.
+
 ## 12 Previews
 
 ### 12.1 Original and Developed Previews
@@ -8099,7 +8123,7 @@ The template editor is likewise the one editor (Dialogs/tokendlg.h). File naming
 
 ## 15 Colour Management
 
-Embedded profiles in browsed images. The Develop pipeline's own colour architecture (input profile, working space, view transforms) is under [11 Develop](#11-develop) and [11.6 Camera Profiles (DCP)](#116-camera-profiles-dcp).
+Embedded profiles in browsed images, and the conversion of everything Winnow puts on screen to the display's profile. The Develop pipeline's own colour architecture (input profile, working space, view transforms) is under [11 Develop](#11-develop) and [11.6 Camera Profiles (DCP)](#116-camera-profiles-dcp).
 
 ### 15.1 HEIC and the colr Box
 
@@ -8115,6 +8139,70 @@ Two forms, per ISO 23008-12:
 SDR only, deliberately: PQ (transfer 16) and HLG (18) are HDR and need tone mapping to an SDR display. Treating their code values as SDR would be far worse than the status quo, so they fall through untouched (still assumed sRGB) and remain separate work.
 
 The chain from here is generic: Heic::colrBox fills m->iccBuf, DataModel writes it to G::ICCBufColumn, and ImageDecoder::colorManage reads it back (gated on Metadata::iccFormats, which the missing "heic" / "hif" entries had defeated). (An unrelated quirk: "hif" is listed in noMetadataFormats, but that list only feeds a display string in Views/infostring.cpp and does not gate parsing.)
+
+### 15.2 Display Colour Management of Rendered Frames
+
+Two routes put pixels on screen, and both must end in the display's profile when G::colorManage is on. Decoded images go through ImageDecoder::colorManage (lcms, source = the file's embedded profile, null = sRGB, destination = ICC::hOutProfile, the display profile from MW::getDisplayProfile). Frames Winnow RENDERS ITSELF in Develop are sRGB (OutputTransform) and go through DisplayColor::ToDisplay (Utilities/displaycolor.h).
+
+Until 2026-10-26 the second route did not exist: the live Develop loupe showed sRGB numbers unconverted. On a wide-gamut display (a MacBook's P3 panel, a BenQ SW320) every saturated colour was stretched, reds most visibly. It surfaced as "Winnow shows more rosacea than Lightroom" with the SAME Adobe Standard profile in both: measured on the face in a side-by-side screenshot, Winnow showed a\* 15.0 / C\* 19.5 / hue 38.8 deg against Lightroom's 11.9 / 16.7 / 42.4, and the same Winnow pixels interpreted as sRGB gave 11.9 / 16.1 / 41.3, a match. The same bug also meant an unedited image changed colour on the first slider tick, since Browse (converted) handed over to a render (unconverted).
+
+What is converted, all through DisplayColor::ToDisplay:
+
+- The proxy render (renderDevelopPreview's worker) and the full-resolution settle render (renderDevelopFullResAsync's worker, passed to onDevelopFullResReady as `shown`).
+- The Detail panel's 1:1 patch, rendered with the proxy tick.
+- The developed-preview placeholder MW::devPreview() returns, which the loupe shows while a raw decodes. It is display-converted for that reason; read DevPreviewCache directly for sRGB pixels.
+
+What is NOT converted, deliberately: the rendered frame itself. developFrame / developFullFrame stay sRGB, because they are also the developed-preview JPEG (an sRGB file), the scopes' input and the sharpening preview's source. That is why the conversion is at the display boundary rather than rendering straight into the display's space with OutputTransform::Space: a P3 render would have put P3 numbers into sRGB-tagged developed previews. Paths that were already converted are not converted again: the Opt+"\\" camera preview (Pixmap::load colour-manages), Browse compare's Developed picture (ICC::transform at the call), and endCompare's restored pixmap.
+
+How it works:
+
+- DisplayColor::Rebuild builds lcms sRGB -> display transforms ONCE per display (one per pixel layout the render paths produce: RGB888, BGRA, RGBA and their premultiplied forms), with the same intent as ICC::transform (perceptual), so Browse and Develop agree. It runs from MW::refreshDisplayColor, which getDisplayProfile (start-up, screen change) and toggleColorManage call; it also re-renders an open Develop image so the loupe does not keep pixels converted for the old display.
+- ToDisplay applies the transform in 64-row strips with cv::parallel_for_ (cmsFLAGS_NOCACHE, so one transform is safe on many threads; cmsFLAGS_COPY_ALPHA, since source and destination are different buffers). Measured 2026-10-26 on Quark: 35 ms single-threaded, \~2.6 ms on 16 threads for a 6 MP proxy; 3 ms to build a transform. It runs on the render workers, not the GUI thread.
+- Inactive, returning its input with no copy, when colour management is off, no display profile is known (Linux has no lookup, so Winnow assumes an sRGB display there), or the display is effectively sRGB (a 16-colour probe within one level).
+
+Tested by tst_displaycolor: no-op cases, a synthesised Display P3 profile desaturating red and skin while leaving greys alone, every layout (odd-width RGB888 padding, premultiplied, 16-bit fallback) agreeing within one level across many strips, and alpha carried.
+
+#### 15.2.1 Non-Raw Develop Input Reads the File's Own Pixels Through Its Profile
+
+The display fix exposed an input bug. A display-referred file's WorkingImage (JPEG/TIFF/HEIC, or a raw's embedded preview) was built in four places, two of which (MW::renderDevelopPreview's fallback and MW::ensureWorkingImageNow) read the IMAGE CACHE's copy. With colour management on, ImageDecoder::colorManage has already converted that copy to the DISPLAY profile; InputTransform read those numbers as sRGB, and DisplayColor then converted them for the display a second time (an unedited JPEG went desaturated on the first slider tick on a wide-gamut screen). Before DisplayColor the two mistakes cancelled on screen but not in exports. Separately, InputTransform assumed sRGB for every file, so an Adobe RGB or P3 JPEG was developed as though its numbers were sRGB, whichever way the toggle was set, and the working-image cache (keyed by path) kept whichever reading was built first.
+
+Now:
+
+- ImageDecoder is the ONLY builder, in applyDevelop, from the file's own decoded pixels BEFORE colorManage(). The browse decode builds it in Develop mode even for an identity recipe; an independent decode builds it when asked (ImageDecoder::buildWork), which MW::ensureDevelopWork, MW::ensureWorkingImageNow (a synchronous decode, on the WB dropper click) and developPixelSource set.
+- MW::renderDevelopPreview sends a display-referred image with nothing cached through the same async ensureDevelopWork a raw takes. Its image-cache fallback remains only for a decode that produced nothing, and only while colour management is off (the one case the cached copy is the file's own pixels).
+- InputTransform::FromImage takes the file's embedded profile (ImageDecoder::sourceIcc, the same choice colorManage makes; empty = sRGB, the unchanged fast path). With a profile, lcms converts 8-bit RGB straight to the linear working space as unbounded float (relative colorimetric, strip-parallel), so a wide-gamut file keeps its gamut; the synthetic camera is then the working space itself (xyzToCam = XYZ -> working, camToWorking = identity), which composes to the same XYZ -> working chain, so as-shot still resolves to D65. A non-RGB or unreadable profile falls back to sRGB.
+- Tested by tst_inputtransform: an embedded sRGB profile matches the default path (within 2e-3 over a 37 x 300 random image, odd width, many strips); full Adobe RGB green lands on the analytic Adobe -> working column; a grey profile and garbage bytes fall back to sRGB exactly; as-shot temperature and tint match the sRGB path.
+
+#### 15.2.2 The "Color Management Is Off" Alert
+
+With colour management off, Browse and Develop are equally unconverted, so they agree with each other, but on a wide-gamut display everything is shown oversaturated: the condition behind the original "more rosacea than Lightroom" report. The Develop dock's alert rows (MW::updateDevelopSelectionWarning, amber = warning) say so when G::colorManage is off and DisplayColor::DisplayDiffersFromSrgb(), showing the status bar's own "off" icon (norainbow1.png) inline, the button to click. The image's own encoding is deliberately NOT part of the condition: after 15.2.1 Develop reads every file through its profile whatever the toggle says, so the toggle only ever affects the screen.
+
+- DisplayDiffersFromSrgb is the same identity probe that decides whether ToDisplay converts, but it is computed whenever a display profile exists, independent of the toggle (pinned by tst_displaycolor::wideGamutIsReportedEvenWhenOff). It is never true on Linux (no profile lookup) or on an sRGB display.
+- MW::refreshDisplayColor refreshes the alerts on every display change and toggle. The alert rows are now rich text (QLabel::setTextFormat) so an alert can carry an icon.
+
+### 15.3 The Display Transform Cache and Fast Kernel
+
+The colour management toggle exists for riffling: every image the ImageCache decodes passes through ICC::transform, and turning it off made a fast review faster. Measured 2026-10-26 on Quark (Utilities/icc.cpp, BenQ SW320 / Dell SE3223Q / MacBook profiles), the old implementation cost more than the decode itself: a new lcms transform per image (\~3 ms) and one single-threaded pass, 298 ms on an A1 raw's 50 MP embedded preview against 197 ms for Qt to decode it.
+
+Rebuilt:
+
+- Transforms are CACHED per source profile (keyed by the ICC bytes; empty = sRGB), cleared by setOutProfile. shared_ptr entries, so an image mid-transform keeps its transform when the display changes. A null result (no display profile, unreadable source) is cached too, so a bad profile is not retried, and warned about, per image. Linux has no display profile lookup, so it is a silent no-op there (it used to issue a warning per image).
+- A transform the display already matches (an sRGB file on an sRGB display, within one level on a probe of saturated colours, a skin tone and a grey ramp) is an IDENTITY and returns immediately.
+- A matrix/TRC source and display (every display profile on Quark, and every camera-embedded RGB profile seen) run a folded lookup kernel: each channel's decode curve is multiplied into its matrix column in one fixed-point table, so a pixel is nine integer lookups, six adds, three clamps and three lookups in a 4096-entry encode table. 130 ms single-threaded on the 50 MP preview (lcms: 296), max one level from lcms, identical on the BenQ profile. A profile with a CLUT in the direction used stays on the cached lcms transform, as does any kernel that disagrees with lcms by more than one level on the probe.
+- Both run in 64-row parallel strips (cv::parallel_for_); cmsFLAGS_NOCACHE because one transform runs on many threads.
+- ICC::pathFor reports which path a source profile takes (None / Identity / Fast / Lcms); --selftest prints it with the display profile, so an A/B states what it compared.
+- Tested by tst_icc against a fresh lcms transform: fast path for untagged and embedded Adobe RGB sources within one level; a synthesised CLUT source falls back to lcms exactly; sRGB display and missing profile are no-ops; alpha kept; RGB888 input converted.
+
+Riffle measurement: --ingestprobe --selftest over 114 A1 / A1 II raws (2026-06-17_Esquimalt Lagoon, 50 MP embedded previews, release build), three runs each, WINNOW_COLOR_MANAGE forcing the toggle (applied in runSelfTest, after the workspace restore that otherwise resets it). "Never shown" = selected images the loupe had not shown before the next selection arrived.
+
+| Pace | Old, on | New, on | Off |
+| --- | --- | --- | --- |
+| 100 ms (10/s) | 144-157 of \~160 never shown | all from cache (2-5 never shown) | all from cache (2-3) |
+| 80 ms (12.5/s) | 164-175 never shown | 6-19 never shown | 3-16 |
+| 60 ms (16.7/s) | 185-187 never shown | 40-45 never shown, misses shown at p50 50 ms | 6-8, p50 38 ms |
+| 40 ms (25/s) | - | \~228 never shown | \~228 |
+
+So the old implementation could not riffle 50 MP previews at ten a second with colour management on, which is why the toggle mattered. Now on and off are the same up to \~12 images a second; at \~17 a second colour management still adds \~12 ms to a \~38 ms miss and loses \~35 more images; at 25 a second nothing keeps up, so the limit there is not colour. The toggle stays, as a performance option for the fastest riffles; the default (on) and the Develop alert ([15.2.2](#1522-the-color-management-is-off-alert)) are unchanged.
 
 ## 16 Keywords
 

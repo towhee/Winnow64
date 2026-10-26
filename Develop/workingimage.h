@@ -62,11 +62,13 @@ struct StatSampleSlot {
       RAW      xyzToCam is the model's XYZ->camera matrix, asShotMul the as-shot
                multipliers RawColor applied, camToWorking the camera->linear-sRGB
                matrix it applied after.
-      NON-RAW  a synthetic "camera" whose response IS linear sRGB: asShotMul = 1,
-               camToWorking = identity, xyzToCam = XYZ->linear sRGB. A display-referred
-               file is already balanced to its own white point, which for sRGB is
-               D65 -- so the same maths resolves its as-shot temperature to ~6500 K
-               and the sliders behave uniformly.
+      NON-RAW  a synthetic "camera", asShotMul = 1 (InputTransform). No embedded
+               profile: its response IS linear sRGB (xyzToCam = XYZ->linear sRGB,
+               camToWorking = sRGB->working). An embedded profile: the pixels arrive
+               already in the working space, so the camera IS it (xyzToCam =
+               XYZ->working, camToWorking = identity). Either way a display-referred
+               file is balanced to its own white, D65 -- so the same maths resolves
+               its as-shot temperature to ~6500 K and the sliders behave uniformly.
 
     asShotK / asShotTint are the temperature and tint the as-shot rendering
     corresponds to, solved once at decode (WhiteBalance::solve). They are what the

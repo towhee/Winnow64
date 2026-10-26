@@ -21,6 +21,7 @@
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
 #include "Develop/whitebalance.h"
+#include "Develop/autotone.h"
 #include "Develop/lensdb.h"
 #include "Utilities/inference/inferencesession.h"   // Lens Blur: can the depth model run
 #include "Develop/calibrate.h"
@@ -4793,6 +4794,113 @@ void DevelopProperties::setWbPreset(int preset)
     emit paramsChanged();
 }
 
+void DevelopProperties::addAutoToneRow(QModelIndex parIdx)
+{
+/*
+    "Tone   [Auto]" directly above Exposure, where Lightroom puts it. Same DT_None +
+    setIndexWidget idiom as the WB row. Built per scope by buildTree, so the scope is
+    known here: on a mask scope the button is greyed with the reason beside it, because
+    Auto measures the whole frame and writes the Global sliders' meaning, which a mask's
+    relative sliders do not share.
+*/
+    if (G::isLogger) G::log("DevelopProperties::addAutoToneRow");
+
+    clearItemInfo(i);
+    i.name = "autoTone";
+    i.parIdx = parIdx;
+    i.parentName = "BasicHeader";
+    i.captionText = "Tone";
+    i.tooltip = "Auto sets Exposure, Contrast, Highlights, Shadows, Whites, Blacks,\n"
+                "Vibrance and Saturation from the image.";
+    i.isIndent = true;
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.key = "autoTone";
+    i.delegateType = DT_None;       // the value cell is ours
+    addItem(i);
+    const QModelIndex valIdx = findValueIndex("autoTone");
+    if (!valIdx.isValid()) return;
+
+    const bool global = (activeScopeIndex == 0);
+    QPushButton *btn = new QPushButton("Auto");
+    /* The app stylesheet's QPushButton min-width (100px) would become an explicit
+       minimum and widen the dock; size to the word instead. */
+    btn->setStyleSheet("QPushButton { min-width: 0; padding: 1px 14px; }");
+    btn->setToolTip(i.tooltip);
+    btn->setEnabled(global && !currentImagePath.isEmpty());
+    connect(btn, &QPushButton::clicked, this, &DevelopProperties::autoTone);
+
+    QWidget *cell = new QWidget;
+    cell->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *hb = new QHBoxLayout(cell);
+    hb->setContentsMargins(0, 0, 10, 0);
+    hb->setSpacing(8);
+    hb->addWidget(btn);
+    if (!global) {
+        QLabel *why = new QLabel("Global scope only");
+        why->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
+        hb->addWidget(why);
+    }
+    hb->addStretch(1);
+    setIndexWidget(valIdx, cell);
+}
+
+void DevelopProperties::autoTone()
+{
+    if (G::isLogger) G::log("DevelopProperties::autoTone");
+    if (currentImagePath.isEmpty() || activeScopeIndex != 0) return;
+    noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
+
+    auto work = ensureWorkingImage();
+    if (!work) {
+        if (G::popup)
+            G::popup->showPopup("Auto tone: the image is still loading. Try again in "
+                                "a moment.", 2000);
+        return;
+    }
+
+    EditParams &p = activeParams();
+    AutoTone::Result r;
+    QElapsedTimer t;
+    t.start();
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    const bool ok = AutoTone::Solve(*work, p, r);
+    QApplication::restoreOverrideCursor();
+    if (G::isLogger)
+        G::log("DevelopProperties::autoTone", QString("%1 renders, %2 ms")
+                                                  .arg(r.renders).arg(t.elapsed()));
+    if (!ok) {
+        if (G::popup)
+            G::popup->showPopup("Auto tone could not render this image.", 2000);
+        return;
+    }
+
+    p.exposure   = r.exposure;
+    p.contrast   = r.contrast;
+    p.highlights = r.highlights;
+    p.shadows    = r.shadows;
+    p.whites     = r.whites;
+    p.blacks     = r.blacks;
+    p.vibrance   = r.vibrance;
+    p.saturation = r.saturation;
+
+    const bool wasPopulating = isPopulating;
+    isPopulating = true;                             // setSliderReal must not echo back
+    setSliderReal("exposure",   p.exposure);
+    setSliderReal("contrast",   p.contrast);
+    setSliderReal("highlights", p.highlights);
+    setSliderReal("shadows",    p.shadows);
+    setSliderReal("whites",     p.whites);
+    setSliderReal("blacks",     p.blacks);
+    setSliderReal("vibrance",   p.vibrance);
+    setSliderReal("saturation", p.saturation);
+    isPopulating = wasPopulating;
+    refreshCurveRow();          // the parametric curve draws the same four tone values
+
+    noteEdit("Auto tone");
+    emit paramsChanged();
+}
+
 void DevelopProperties::resetWbAxisToAsShot(bool isTemp)
 {
 /*
@@ -4935,7 +5043,8 @@ void DevelopProperties::addBasic()
     addSlider("tint",       "Tint",       "White balance tint (green/magenta).", parIdx, "BasicHeader", -150, 150, 0,   G::lightgreen, G::lightmagenta);
     addGroupDivider(parIdx, "BasicHeader", "WBDevider");
 
-    addSlider("exposure",   "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, G::darkgray, G::lightgray);
+    addAutoToneRow(parIdx);
+    addSlider("exposure",  "Exposure",   "Overall exposure in stops (EV).",     parIdx, "BasicHeader", -500, 500, 100, G::darkgray, G::lightgray);
     addSlider("contrast",   "Contrast",   "Global contrast.",                    parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("highlights", "Highlights", "Recover or lift the highlights.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addSlider("shadows",    "Shadows",    "Recover or deepen the shadows.",      parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);

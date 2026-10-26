@@ -1020,6 +1020,12 @@ private:
     void addWhiteBalanceRow(QModelIndex parIdx);
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
     void refreshWbRow();               // sync the combo + Temp/Tint display
+    /* ---- Tone: Auto row (Basic, above Exposure) -----------------------------------
+       Lightroom's Auto: one click solves Exposure..Saturation for the current image
+       (Develop/autotone.h). Global scope only -- on a mask scope the button is disabled
+       with the reason beside it. */
+    void addAutoToneRow(QModelIndex parIdx);
+    void autoTone();
     /* The as-shot Kelvin the row was last resolved against, or -1 for "no valid cam yet".
        Keyed on the VALUE rather than a seen/not-seen flag so that a re-characterisation
        of the same image also refreshes -- switching the Demosaic combo clears

@@ -2,14 +2,17 @@ WHAT'S NEW
 - Kaleidoscope effect
 
 BUGS / TO DO
-- library_snapshot on the Mac: it failed in the first run but passed this time. That makes it an intermittent, timing-dependent bug rather than a Windows-only one. Twice it has
-    failed on Windows and once on the Mac.
+- library_snapshot on the Mac: it failed in the first run but passed this time. That
+  makes it an intermittent, timing-dependent bug rather than a Windows-only one. Twice it
+  has failed on Windows and once on the Mac.
+- When you're ready to calibrate, auto-tone a folder in Lightroom and the XMP files will
+  hold its answers (crs:Exposure2012, etc.). I can fit the constants to them with the
+  existing lrcompare.py loop.
 - Make a shortcut for 'Delete rejected'
 - Add cropped dimensions to Metadata panel
 - Figure out mask refine
 - Review develop presets
 - Review FX (F3...) shortcuts
-- Fix expand decoration alignment in preferences.
 - Panos
 - Add all help items to the main menu Help.
 - Set catalog location

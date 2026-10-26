@@ -148,6 +148,7 @@ set(WINNOW_SOURCES
     Develop/inputtransform.cpp
     Develop/outputtransform.cpp
     Develop/whitebalance.cpp
+    Develop/autotone.cpp
     Develop/workingimagecache.cpp
     Develop/rawrender.cpp
     Develop/rawrender.h
@@ -442,6 +443,7 @@ set(WINNOW_SOURCES
     Utilities/skypredictor.cpp
     Utilities/depthpredictor.cpp
     Utilities/foldercompressor.cpp
+    Utilities/displaycolor.cpp
     Utilities/htmlwindow.cpp
     Utilities/icc.cpp
     Utilities/ingestprobe.cpp
@@ -551,6 +553,7 @@ set(WINNOW_HEADERS
     Develop/outputtransform.h
     Develop/rangemask.h
     Develop/whitebalance.h
+    Develop/autotone.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
     Develop/Properties/huesatwheel.h
@@ -757,6 +760,7 @@ set(WINNOW_HEADERS
     Utilities/skypredictor.h
     Utilities/depthpredictor.h
     Utilities/foldercompressor.h
+    Utilities/displaycolor.h
     Utilities/htmlwindow.h
     Utilities/icc.h
     Utilities/ingestprobe.h
