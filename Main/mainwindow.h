@@ -470,7 +470,6 @@ public:
      */
     WorkspaceData mwd;  // hold the persistent start values from QSettings
 
-    int folderMaxWidth = 600;       // not in preferences or QSetting
 
     // general
     int lastPrefPage;
@@ -2277,7 +2276,7 @@ private:
     QToolButton *titleVersionAllBtn = nullptr;
     DockWidget *metadataDock;
     DockWidget *thumbDock;
-    DockWidget *propertiesDock;
+    DockWidget *propertiesDock = nullptr;
     DockWidget *embelDock;
     DockWidget *developDock;
     /* Develop edit history. Tabbed with developDock and shown/hidden with it (the two are
@@ -2460,6 +2459,16 @@ private:
         Previous / Next current. */
     QList<QPushButton*> filterNavBackBtns;
     QList<QPushButton*> filterNavForwardBtns;
+    QList<QPushButton*> filterNavClearBtns;
+    void sizeFilterNavButtons();
+    /*  dock -> its copy of the row, built lazily. Only the lowest dock in each area
+        holding a Browse panel shows its copy -- placeFilterNavBars. */
+    QHash<DockWidget*, QWidget*> filterNavBars;
+    bool filterNavReady = false;            // createFilterNavBars has run
+    bool filterNavPlacementPending = false;
+    QWidget *addFilterNavBar(DockWidget *dock);
+    void scheduleFilterNavBarPlacement();
+    void placeFilterNavBars();
     void createFilterNavBars();
     DockTitleBar *catalogTitleBar;
     DockTitleBar *keywordsTitleBar = nullptr;

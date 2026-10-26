@@ -208,8 +208,9 @@ void versionValuesFromRow(DataModel *dm, int dmRow, ImageVersion &v)
 {
     v.rating = dm->index(dmRow, G::RatingColumn).data().toString().toInt();
     v.label = dm->index(dmRow, G::LabelColumn).data().toString();
-    const QString pick = dm->index(dmRow, G::PickColumn).data().toString();
-    v.pick = (pick == "Unpicked") ? QString() : pick;      // "" is unpicked
+    /*  The pick is session-only (DataModel::fillVersionRow), so it is never saved:
+        written empty, which also clears one an older build left in the record. */
+    v.pick.clear();
 }
 
 QImage jpgImage(const QByteArray &jpg)
@@ -548,7 +549,7 @@ void MW::setVersionAsMaster()
 void MW::writeVersionValues(const QStringList &versionKeys)
 {
 /*
-    A version row's rating, label or pick changed in the model (DataModel::
+    A version row's rating or label changed in the model (DataModel::
     noteVersionValueWrite catches every writer). Persist the row's current values to the
     version's record in the master's sidecar -- never to the image file, whatever
     "Permit image file modification" says: they are Winnow's, like the recipe.

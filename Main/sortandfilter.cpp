@@ -635,7 +635,7 @@ void MW::syncFilterHistoryButtons()
         ? tr("Next filter state (%1 later)")
               .arg(filterHistory.size() - 1 - filterHistoryPos)
         : tr("Next filter state: none later");
-    // one Previous / Next pair per Browse panel (createFilterNavBars)
+    // one Previous / Next pair per copy of the row (addFilterNavBar)
     for (QPushButton *b : std::as_const(filterNavBackBtns)) {
         b->setEnabled(back);
         b->setToolTip(backTip);
@@ -678,59 +678,163 @@ static QIcon filterNavArrowIcon(bool forward, int size)
 void MW::createFilterNavBars()
 {
 /*
-    A PanelButtonBar pinned to the bottom of each Browse panel in the left group
-    (Filters, Bookmarks, Collections, Queries): Previous, Clear filters, Clear picks,
-    Next. The group
-    is a QDockWidget tab set, and Qt offers nowhere to put a widget under a tab set that
-    is not itself a dock -- so each panel carries its own copy, and whichever tab is
-    raised shows the row in the same place.
+    The Previous / Clear filters / Clear picks / Next row: ONE per dock area holding a
+    Browse panel (Filters, Bookmarks, Collections, Queries), pinned to the VERY BOTTOM of
+    that area whichever dock happens to be lowest there -- a Browse panel or not.
 
-    The row goes in the dock's FrameLineBox (DockWidget::widget()), under the content,
-    so a panel whose content is a bare view (Bookmarks) needs no wrapper.
+    Qt offers nowhere to put a widget under a dock area, so the row is a PanelButtonBar
+    inside a dock: the lowest one. Copies are built LAZILY by placeFilterNavBars (via
+    addFilterNavBar) the first time a dock needs one, and only the copy in the lowest
+    dock is shown. The FILTER NAV BAR branch of MW::eventFilter re-places it whenever a
+    dock moves, resizes, shows or hides.
 
     Previous / Next are Back / Forward through the filter history -- the only control
     for it since the Filters title bar's own arrows were removed. syncFilterHistoryButtons
     sets their enabled state and tooltips. Clear filters follows clearAllFiltersAction;
     Clear picks follows clearPicksAction (enabled only while something is picked).
+
+    Called from the end of createFilterActions, after createDocks, because the Clear
+    buttons follow actions.
 */
     if (G::isLogger) G::log("MW::createFilterNavBars");
+    filterNavReady = true;
+    scheduleFilterNavBarPlacement();
+}
+
+QWidget *MW::addFilterNavBar(DockWidget *dock)
+{
+/*
+    Build one copy of the row at the bottom of dock's FrameLineBox (DockWidget::widget()),
+    under the content. Returns the bar, or nullptr if the dock cannot take one.
+*/
+    if (G::isLogger) G::log("MW::addFilterNavBar");
+    if (!dock || !dock->widget()) return nullptr;
     const int arrowSize = 22;
-    const QIcon backIcon = filterNavArrowIcon(false, arrowSize);
-    const QIcon forwardIcon = filterNavArrowIcon(true, arrowSize);
 
-    for (DockWidget *dock : {filterDock, favDock, collectionsDock, queriesDock}) {
-        if (!dock || !dock->widget()) continue;
+    QPushButton *backBtn = new QPushButton;
+    backBtn->setIcon(filterNavArrowIcon(false, arrowSize));
+    backBtn->setIconSize(QSize(arrowSize, arrowSize));
+    connect(backBtn, &QPushButton::clicked, this, &MW::filterHistoryBack);
 
-        QPushButton *backBtn = new QPushButton;
-        backBtn->setIcon(backIcon);
-        backBtn->setIconSize(QSize(arrowSize, arrowSize));
-        connect(backBtn, &QPushButton::clicked, this, &MW::filterHistoryBack);
+    QPushButton *clearBtn =
+        PanelButtonBar::MakeButton(clearAllFiltersAction, tr("Clear filters"));
 
-        QPushButton *clearBtn =
-            PanelButtonBar::MakeButton(clearAllFiltersAction, tr("Clear filters"));
+    QPushButton *clearPicksBtn =
+        PanelButtonBar::MakeButton(clearPicksAction, tr("Clear picks"));
 
-        QPushButton *clearPicksBtn =
-            PanelButtonBar::MakeButton(clearPicksAction, tr("Clear picks"));
+    QPushButton *forwardBtn = new QPushButton;
+    forwardBtn->setIcon(filterNavArrowIcon(true, arrowSize));
+    forwardBtn->setIconSize(QSize(arrowSize, arrowSize));
+    connect(forwardBtn, &QPushButton::clicked, this, &MW::filterHistoryForward);
 
-        QPushButton *forwardBtn = new QPushButton;
-        forwardBtn->setIcon(forwardIcon);
-        forwardBtn->setIconSize(QSize(arrowSize, arrowSize));
-        connect(forwardBtn, &QPushButton::clicked, this, &MW::filterHistoryForward);
-
-        if (!PanelButtonBar::Add(dock->widget(),
-                                 QList<QAbstractButton*>{backBtn, clearBtn,
-                                                         clearPicksBtn, forwardBtn},
-                                 PanelButtonBar::Bottom)) {
-            delete backBtn;
-            delete clearBtn;
-            delete clearPicksBtn;
-            delete forwardBtn;
-            continue;
-        }
-        filterNavBackBtns << backBtn;
-        filterNavForwardBtns << forwardBtn;
+    QWidget *bar = PanelButtonBar::Add(dock->widget(),
+                                       QList<QAbstractButton*>{backBtn, clearBtn,
+                                                               clearPicksBtn, forwardBtn},
+                                       PanelButtonBar::Bottom);
+    if (!bar) {
+        delete backBtn;
+        delete clearBtn;
+        delete clearPicksBtn;
+        delete forwardBtn;
+        return nullptr;
     }
+    filterNavBackBtns << backBtn;
+    filterNavForwardBtns << forwardBtn;
+    filterNavClearBtns << clearBtn << clearPicksBtn;
+    filterNavBars.insert(dock, bar);
+    sizeFilterNavButtons();
     syncFilterHistoryButtons();
+    return bar;
+}
+
+void MW::scheduleFilterNavBarPlacement()
+{
+/*
+    Coalesces the Move / Resize / Show / Hide bursts a dock drag or tab switch produces
+    into one placeFilterNavBars, run after Qt has settled the dock layout.
+*/
+    if (!filterNavReady || filterNavPlacementPending) return;
+    filterNavPlacementPending = true;
+    QTimer::singleShot(0, this, [this]() {
+        filterNavPlacementPending = false;
+        placeFilterNavBars();
+    });
+}
+
+void MW::placeFilterNavBars()
+{
+/*
+    Show the row in exactly one dock per dock area that holds a visible Browse panel:
+    the visible, docked, uncollapsed dock lowest on screen in that area (largest
+    geometry().bottom()), whatever it is. A collapsed dock is passed over -- its body,
+    which holds the row, is folded away. A floating Browse panel is alone and keeps its
+    own row. Every other copy is hidden.
+
+    The Module dock (the workflow switcher strip) and the Preferences dock never take
+    the row.
+*/
+    if (G::isLogger) G::log("MW::placeFilterNavBars");
+    const QList<DockWidget*> browse{filterDock, favDock, collectionsDock, queriesDock};
+
+    QSet<int> areas;                            // areas holding a visible Browse panel
+    QList<DockWidget*> floating;
+    for (DockWidget *d : browse) {
+        if (!d || !d->isVisible()) continue;
+        if (d->isFloating()) floating << d;
+        else areas.insert(dockWidgetArea(d));
+    }
+
+    QHash<int, DockWidget*> lowest;             // area -> lowest dock in it
+    const QList<DockWidget*> docks = findChildren<DockWidget*>(Qt::FindDirectChildrenOnly);
+    for (DockWidget *d : docks) {
+        if (d == moduleDock || d == propertiesDock) continue;
+        if (!d->isVisible() || d->isFloating() || d->isCollapsed()) continue;
+        const int area = dockWidgetArea(d);
+        if (!areas.contains(area)) continue;
+        DockWidget *cur = lowest.value(area, nullptr);
+        if (!cur || d->geometry().bottom() > cur->geometry().bottom()) lowest[area] = d;
+    }
+
+    QSet<DockWidget*> keep(floating.begin(), floating.end());
+    for (DockWidget *d : std::as_const(lowest)) keep.insert(d);
+    for (DockWidget *d : std::as_const(keep)) {
+        if (!filterNavBars.contains(d)) addFilterNavBar(d);
+    }
+
+    for (auto it = filterNavBars.cbegin(); it != filterNavBars.cend(); ++it) {
+        if (!it.value()) continue;
+        const bool show = keep.contains(it.key());
+        if (it.value()->isVisible() != show) it.value()->setVisible(show);
+    }
+}
+
+void MW::sizeFilterNavButtons()
+{
+/*
+    Narrowing the dock shares the row equally among the four buttons until the Clear
+    buttons are down to their text, then only the arrows give up width, down to their
+    icon. The row's minimum is then the dock's minimum width.
+
+    The floors MUST go in each button's own stylesheet. PanelButtonBar::Add gives every
+    button "min-width: 0" (to defeat the app's 100px), and QStyleSheetStyle turns that
+    into an explicit minimumWidth on polish -- 12px, the padding and border -- which
+    overrides both a size policy and a setMinimumWidth made earlier. Measured in a
+    standalone test: with that sheet the layout split a 235px row 51/52/51/51 and clipped
+    the Clear text. CSS min-width is the CONTENT width (padding and border are added).
+
+    The Clear floor is the text width in the current font, so MW::setFontSize calls this
+    again.
+*/
+    if (G::isLogger) G::log("MW::sizeFilterNavButtons");
+    const int arrowSize = 22;
+    const QString arrowSheet = QString("QPushButton { min-width: %1px; }").arg(arrowSize + 4);
+    for (QPushButton *btn : filterNavBackBtns + filterNavForwardBtns)
+        if (btn) btn->setStyleSheet(arrowSheet);
+    for (QPushButton *btn : std::as_const(filterNavClearBtns)) {
+        if (!btn) continue;
+        const int textW = btn->fontMetrics().horizontalAdvance(btn->text()) + 2;
+        btn->setStyleSheet(QString("QPushButton { min-width: %1px; }").arg(textW));
+    }
 }
 
 void MW::quickFilter()

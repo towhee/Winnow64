@@ -196,8 +196,9 @@ void MW::selfTestModelMutation(const QString &folder)
             fail("versions appear", "v1 has not got its name");
         if (dm->index(r1, G::RatingColumn).data().toString() != "4"
             || dm->index(r1, G::LabelColumn).data().toString() != "Red"
-            || dm->index(r1, G::PickColumn).data().toString() != "Picked")
-            fail("versions appear", "v1 has not got its own rating, label and pick");
+            || dm->index(r1, G::PickColumn).data().toString() != "Unpicked")
+            fail("versions appear", "v1 has not got its own rating and label, or its "
+                                    "saved pick came back (picks are session-only)");
         if (dm->index(r2, G::RatingColumn).data().toString() != "")
             fail("versions appear", "v2 should be unrated");
         if (dm->index(mr, G::RatingColumn).data().toString() != masterRating)
@@ -298,9 +299,10 @@ void MW::selfTestModelMutation(const QString &folder)
     if (dm->currentKey != m2)
         fail("set as master", "the selection did not follow the edit to the master");
 
-    /*  V9  A version's rating, label and pick are its OWN: set through the model (the
-            path every writer takes -- keys, menus, undo, recovery) they land in its
-            record, and the master's rating and file are untouched. */
+    /*  V9  A version's rating and label are its OWN: set through the model (the path
+            every writer takes -- keys, menus, undo, recovery) they land in its record,
+            and the master's rating and file are untouched. Its pick is its own too, but
+            session-only: never in the record. */
     {
         const int vr = dm->rowFromKey(m2v1), mr = dm->rowFromKey(m2);
         const QString masterRatingBefore = dm->index(mr, G::RatingColumn).data().toString();
@@ -315,7 +317,8 @@ void MW::selfTestModelMutation(const QString &folder)
         emit setValDm(vr, G::PickColumn, "Rejected", dm->instance, "selftest", Qt::EditRole);
         check("version values", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
         const ImageVersion rec = Versions::readVersion(m2, 1);
-        if (rec.rating != 3 || rec.label != "Green" || rec.pick != "Rejected")
+        // the pick is session-only: never written to the record
+        if (rec.rating != 3 || rec.label != "Green" || !rec.pick.isEmpty())
             fail("version values", QString("record holds %1 / %2 / %3")
                                        .arg(rec.rating).arg(rec.label, rec.pick));
         if (dm->index(mr, G::RatingColumn).data().toString() != masterRatingBefore)

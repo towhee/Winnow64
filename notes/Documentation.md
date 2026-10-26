@@ -29,6 +29,7 @@
   - [2.4 Dock Window State (Versioning)](#24-dock-window-state-versioning)
     - [2.4.1 Migration, Not Rejection](#241-migration-not-rejection)
     - [2.4.2 Keep the Fallback Layout Sane](#242-keep-the-fallback-layout-sane)
+    - [2.4.3 Panel Content Has No Maximum Width](#243-panel-content-has-no-maximum-width)
   - [2.5 Responsive Dock Tab Titles (Text or Glyph)](#25-responsive-dock-tab-titles-text-or-glyph)
     - [2.5.1 Measuring the Threshold](#251-measuring-the-threshold)
     - [2.5.2 When It Re-evaluates](#252-when-it-re-evaluates)
@@ -633,7 +634,7 @@
   - [13.5 Develop per Version](#135-develop-per-version)
   - [13.6 The Operations](#136-the-operations)
   - [13.7 Per-Version and Shared Fields](#137-per-version-and-shared-fields)
-    - [13.7.1 Rating, Label and Pick Are the Version's](#1371-rating-label-and-pick-are-the-versions)
+    - [13.7.1 Rating and Label Are the Version's](#1371-rating-and-label-are-the-versions)
     - [13.7.2 Shared Fields Are the File's](#1372-shared-fields-are-the-files)
   - [13.8 File Operations With Versions](#138-file-operations-with-versions)
   - [13.9 Versions in the Catalog](#139-versions-in-the-catalog)
@@ -1213,6 +1214,10 @@ Do NOT tabify a dock in one area with a dock in another area (e.g. the left-area
 
 developDock (added with the raw editor) was the first dock to trip the zombie-tab-bar flicker. The saved state predated it AND, once saved during a flicker, the corrupt state perpetuated itself across launches until the version bump discarded it.
 
+#### 2.4.3 Panel Content Has No Maximum Width
+
+Do not cap a docked panel's content width (2026-10-25). Filters, Bookmarks, Folders (FSTree, LibTree) and Metadata (InfoView) used to carry setMaximumWidth(folderMaxWidth = 600), meant to stop a docked panel "eating the window". It never did that: the cap is on the content, not the dock area, so the area still dragged wider and those panels stopped at 600 px with a blank strip beside them, while Collections and Queries (uncapped) filled it. A floating Folders panel had already been exempted for the same reason. The cap and folderMaxWidth are gone; the user's dock-area width is the only limit.
+
 ### 2.5 Responsive Dock Tab Titles (Text or Glyph)
 
 When several docks are tabbed together in a narrow area, their text titles ("Folders", "Bookmarks", ...) may not all fit. MW::updateDockTabGraphics (gated by G::useDockTitleGraphic) measures the width the text titles need against the width of the visible dock. If they fit, the tabs show text; otherwise EVERY tab in the group switches to a small white glyph. The glyph is a QLabel centred over each tab, because QMainWindow does not paint a dock's windowIcon on tabs and macOS paints the tab natively.
@@ -1677,7 +1682,7 @@ MW::okToDiscardPicks(action, proceedLabel) (`Main/mainwindow.cpp`) is the guard.
 - MW::loadCatalogScope, when the request is not an append. A replacing result set clears the model as thoroughly as a folder change does; an append keeps every loaded row, and therefore every pick, so it never asks.
 - MW::closeEvent, ahead of every teardown step including the "Closing Winnow ..." message. Everything below that point is one-way, so an answer taken later could not be honoured; a refusal is event->ignore() and the session carries on untouched. The background-ingest wait just below it is not a case this catches: MW::ingest marks those rows "Ingested" as soon as the copy starts, so there is nothing left to warn about.
 
-DataModel::pickCount counts the UNFILTERED model, like isAnyPick: a pick hidden by the current filter is still a pick, and still lost.
+DataModel::pickCount counts the UNFILTERED model, like isAnyPick: a pick hidden by the current filter is still a pick, and still lost. Version rows included: their picks are session-only too.
 
 #### 3.5.1 The Dialog
 
@@ -7872,12 +7877,13 @@ Export: ImageExporter names a version from its source file plus its name (IMG_1-
 
 ### 13.7 Per-Version and Shared Fields
 
-#### 13.7.1 Rating, Label and Pick Are the Version's
+#### 13.7.1 Rating and Label Are the Version's
 
-They live in the version's record, Winnow-private, always in winnow:Versions whatever "Permit image file modification" says; the master's stay in xmp:Rating / xmp:Label. Thirteen places write those three columns (the menus and keys, the mouse-over pick, pick undo, crash-log recovery, Ingest's mark) and all of them go through DataModel::setValDm / setValSf, so that is where a version row is caught:
+They live in the version's record, Winnow-private, always in winnow:Versions whatever "Permit image file modification" says; the master's stay in xmp:Rating / xmp:Label. Every writer of those columns goes through DataModel::setValDm / setValSf, so that is where a version row is caught:
 
 - DataModel::noteVersionValueWrite queues the row's KEY (not its row number, which can move) and posts one versionValuesEdited per event-loop turn.
-- MW::writeVersionValues writes the row's current rating, label and pick to the record (Versions::update) and brings the captured summary in line (noteVersionValues), so a refill keeps them.
+- MW::writeVersionValues writes the row's current rating and label to the record (Versions::update) and brings the captured summary in line (noteVersionValues), so a refill keeps them.
+- THE PICK IS SESSION-ONLY (2026-10-25), a version's like every row's ([17.9.1 Picks Are Session-Only](#1791-picks-are-session-only)). It used to be saved in the record, so a picked version came back on every launch, and Clear picks or an unpick only lasted until the next one. Now noteVersionValueWrite ignores the pick column, versionValuesFromRow writes the record's pick EMPTY (clearing one an older build left there), DataModel::fillVersionRow ignores the record's pick (a fresh row starts Unpicked; a refill keeps the pick made this session), and readLibrarySnapshot unpicks version rows too. The "pick" key stays in the record format (a published format: never removed), just unused.
 - The two writers that ALSO write the file (MW::setRating and MW::setColorClass / setColorClassForRow) skip writeXMP for a version row.
 - Pinned by model_mutation "version values", which also checks the master's rating and xmp:Rating are untouched.
 
@@ -8990,8 +8996,8 @@ Pick is deliberately NOT written back. It is a Winnow concept kept in the pick l
 
 - DataModel::catalogRowFor commits pick = false.
 - DataModel::addFileDataForRow starts every row Unpicked, catalog-backed or not.
-- A library-snapshot restore (DataModel::readLibrarySnapshot) unpicks every non-version row.
-- The exception is a version row, whose pick lives in the master's sidecar (Metadata/versions.h).
+- A library-snapshot restore (DataModel::readLibrarySnapshot) unpicks every row.
+- Version rows included (2026-10-25): DataModel::fillVersionRow ignores the pick a version record may hold from an older build, and nothing writes one any more ([13.7.1 Rating and Label Are the Version's](#1371-rating-and-label-are-the-versions)).
 
 The bug this replaced (2026-10-08): the catalog used to store the pick at commit and a catalog fill restored it, but an unpick writes no sidecar, so Catalog::commit's stamp check skipped the row and the index kept saying Picked. The pick came back on every launch, and so did the "picks not ingested" warning at quit. Index schema 21 is the data repair: it sets image.pick = 0 on every row. The column stays (the schema is additive only) and is never read for a model row.
 
@@ -9911,12 +9917,14 @@ Back and forward through filter states (2026-10-06), like a browser's history. P
 - Stepping: MW::stepFilterHistory applies an entry through the path a folder change's restore uses (Filters::setStateToRestore, Filters::restore(keepMissing false), one filterChange). filterHistoryStepping stops that filterChange (and the nested one restore triggers when the search text changes) from recording. A step is REFUSED, with a popup, while a load runs or a restore is pending (restoreFiltersPending): filterChange would apply nothing, and setStateToRestore would overwrite the states the pending restore is waiting for.
 - Scope of a history: MW::reset clears it, so it covers one loaded set (a folder, a recursive tree, the Library): another set's checks mostly name values not in this one. Session categories (Filter on..., Map pin) are not in persistableState, so changing only one of them records nothing, and a step leaves them as they are.
 
-The same controls under every Browse panel (2026-10-13). A PanelButtonBar ([11.37.2 The Copy / Paste Button Row](#11372-the-copy--paste-button-row)) is pinned to the bottom of the Filters, Bookmarks, Collections and Queries panels: Previous, Clear filters, Clear picks (2026-10-25), Next. Those four are one tab group in the left area, and Qt has nowhere to put a widget UNDER a QDockWidget tab group, so each panel carries its own copy and whichever tab is raised shows the row in the same place.
+The same controls at the bottom of the Browse panels (2026-10-13; reworked 2026-10-25). A PanelButtonBar ([11.37.2 The Copy / Paste Button Row](#11372-the-copy--paste-button-row)) holding Previous, Clear filters, Clear picks, Next sits at the VERY BOTTOM of each dock area that holds a visible Browse panel (Filters, Bookmarks, Collections, Queries), whichever dock is lowest there, Browse panel or not. Qt has nowhere to put a widget under a dock area, so the row lives inside the lowest dock.
 
-- MW::createFilterNavBars builds them, called from the end of createFilterActions (createDocks runs before createActions, and the Clear button follows clearAllFiltersAction via PanelButtonBar::MakeButton). The row goes in each dock's FrameLineBox (DockWidget::widget()), after the content, so a dock whose content is a bare view needs no wrapper.
+- MW::createFilterNavBars (called from the end of createFilterActions, because the Clear buttons follow actions) only arms the placement. MW::placeFilterNavBars finds the areas holding a visible docked Browse panel, picks the visible, docked, UNCOLLAPSED dock lowest on screen in each (largest geometry().bottom(); a collapsed dock's body, which holds the row, is folded away), and shows the row there. A floating Browse panel keeps its own row. Every other copy is hidden. The Module dock and the Preferences dock never take it.
+- Copies are built LAZILY by MW::addFilterNavBar, the first time a dock needs one, into its FrameLineBox (DockWidget::widget()) after the content; MW::filterNavBars maps dock -> copy.
+- The FILTER NAV BAR branch of MW::eventFilter (a qApp filter) calls scheduleFilterNavBarPlacement on any Move / Resize / Show / Hide of a DockWidget child of MW; that coalesces each burst into one queued placeFilterNavBars after Qt settles the layout. Hiding or showing a copy can move the docks again, which re-runs placement once and settles on the same answer.
 - Previous / Next call filterHistoryBack / filterHistoryForward; syncFilterHistoryButtons sets the enabled state and tooltips of every copy (MW::filterNavBackBtns / filterNavForwardBtns). They REPLACED the Filters title bar's own arrows, so the filter history has one control, reachable from every panel in the group. The arrows are drawn as a vector at 22 px (filterNavArrowIcon in Main/sortandfilter.cpp) from the old bitmap's outline.
+- Width: all four buttons share the row equally until the two Clear buttons reach their text width; below that only the arrows shrink, down to their icon (22 px + padding). The row's minimum is then the dock's minimum width. MW::sizeFilterNavButtons sets the floors in each button's OWN stylesheet (min-width = content width, padding and border added): PanelButtonBar::Add's "min-width: 0" becomes an explicit 12 px minimumWidth when the stylesheet polishes, which overrode both size policies and setMinimumWidth (measured in a standalone test: a 235 px row split 51/52/51/51 and clipped the Clear text). The Clear floor is a text width, so MW::setFontSize calls it again (queued, after the app sheet repolish).
 - Clear picks follows clearPicksAction (also Ingest > Clear all picks), which MW::updatePickDependentActions enables only while something is picked. MW::clearPicks (Main/pick.cpp) unpicks every Picked row in the UNFILTERED model, so picks hidden by the current filter go too; rejects are kept. The whole set goes onto the pick history as one multiple-select group, so Ingest > Recover prior pick state brings it back, and each entry leaves the crash-recovery pick log. It then runs togglePick's refresh tail (updateCategory, filterChange or lift the proxy suspension). DataModel::clearPicks is NOT used: it walks proxy row numbers as model rows and bypasses the pick history and log.
-- To give another panel in the group the row, add its dock to the list in createFilterNavBars.
 
 ### 18.8 Rebuild Filters Is an Escape Hatch
 

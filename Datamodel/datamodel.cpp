@@ -1745,7 +1745,7 @@ QStringList DataModel::versionRowKeys() const
 void DataModel::noteVersionValueWrite(const QModelIndex &dmIdx)
 {
 /*
-    EVERY rating, label and pick edit reaches the model through setValDm / setValSf --
+    EVERY rating and label edit reaches the model through setValDm / setValSf --
     the menu and keys, the mouse-over pick, undo, crash recovery, Ingest's mark. On a
     VERSION row the value belongs in its record in the master's sidecar, not in the file
     (Metadata/versions.h), so this is where it is caught: once, for all of them, rather
@@ -1754,7 +1754,8 @@ void DataModel::noteVersionValueWrite(const QModelIndex &dmIdx)
 */
     if (mVersionRowCount == 0) return;
     const int col = dmIdx.column();
-    if (col != G::RatingColumn && col != G::LabelColumn && col != G::PickColumn) return;
+    // not the pick: session-only, like every row's (fillVersionRow)
+    if (col != G::RatingColumn && col != G::LabelColumn) return;
     const QString key = index(dmIdx.row(), G::PathColumn).data(G::KeyRole).toString();
     if (!VersionKey::isVersion(key)) return;
     pendingVersionValueKeys.insert(key);
@@ -1902,7 +1903,7 @@ bool DataModel::fillVersionRow(int row)
 /*
     A version row's values: its master's metadata -- the same photograph, so the same
     camera, dimensions, keywords, title and decode geometry -- with the version's own
-    name, rating, label, pick and develop state laid over it. Written through
+    name, rating, label and develop state laid over it (the pick is session-only). Written through
     addMetadataForItem so a version row is filled by exactly the code that fills every
     other row, and reads back the same way.
 */
@@ -1936,7 +1937,12 @@ bool DataModel::fillVersionRow(int row)
 
     const QSignalBlocker b(this);
     setData(index(row, G::PathColumn), v.name, G::VersionNameRole);
-    setData(index(row, G::PickColumn), v.pick.isEmpty() ? QString("Unpicked") : v.pick);
+    /*  PICKS ARE SESSION-ONLY, a version's like any other row's (2026-10-25). The
+        record's pick, which older builds saved, is ignored: a fresh row starts Unpicked,
+        and a REFILL (a master re-read, MW::reconcileVersionRows) keeps the pick made
+        this session. */
+    if (index(row, G::PickColumn).data().toString().isEmpty())
+        setData(index(row, G::PickColumn), QString("Unpicked"));
     emit dataChanged(index(row, 0), index(row, columnCount() - 1));
     return true;
 }

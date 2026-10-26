@@ -321,7 +321,6 @@ void MW::createFilterView()
     */
     filters = new Filters(this);
     filters->setObjectName("Filters");
-    filters->setMaximumWidth(folderMaxWidth);
     filters->applyCss(G::css);      // G::panelFontSize, same as Folders
 
     /* Not using SIGNAL(itemChanged(QTreeWidgetItem*,int) because it triggers
@@ -1176,7 +1175,6 @@ void MW::createInfoView()
     if (G::isLogger) G::log("MW::createInfoView");
 
     infoView = new InfoView(this, dm, metadata, thumbView, filters, buildFilters);
-    infoView->setMaximumWidth(folderMaxWidth);
     infoView->enable(false);
 
     if (isSettings) {
@@ -1303,7 +1301,6 @@ void MW::createEmbel()
     if (G::isLogger) G::log("MW::createFSTree");
     // loadSettings has not run yet (dependencies, but QSettings has been opened
     fsTree = new FSTree(this, dm, metadata, this);
-    fsTree->setMaximumWidth(folderMaxWidth);
     fsTree->setShowImageCount(true);
     fsTree->applyCss(G::css);       // G::panelFontSize, same as Filters
     fsTree->combineRawJpg = combineRawJpg;
@@ -1395,7 +1392,6 @@ void MW::createBookmarks()
     }
     // qDebug() << "END CREATE BOOKMARKS)";
 
-    bookmarks->setMaximumWidth(folderMaxWidth);
 
     // this works for touchpad tap
     // triggers MW::bookmarkClicked > fsTree sync > MW::folderSelectionChange
@@ -1716,20 +1712,6 @@ void MW::createFolderDock()
     libTree = new LibTree("(99999", 10);
     libTree->setParent(this);
     libTree->hide();
-    /*  THE TREE LOSES ITS WIDTH CAP WHEN THE PANEL FLOATS (LibTree keeps in step, so
-        it is right if it is ever shown again). fsTree is capped at folderMaxWidth (MW::createFSTree) so a docked panel dragged
-        wide cannot eat the window. A FLOATING panel is a window the user sized
-        deliberately, and a tree that stops at the cap inside it is the panel refusing the
-        space it was given: folder names elide while a blank strip sits to their right,
-        and the counts strand mid-panel. A dock restored FLOATING gets this too:
-        QMainWindow::restoreState floats it after it was built docked, so
-        topLevelChanged fires. */
-    libTree->setMaximumWidth(folderMaxWidth);
-    connect(folderDock, &QDockWidget::topLevelChanged, this, [this](bool floating) {
-        const int cap = floating ? QWIDGETSIZE_MAX : folderMaxWidth;
-        fsTree->setMaximumWidth(cap);
-        libTree->setMaximumWidth(cap);
-    });
     connect(libTree, &LibTree::folderFilterRequested,
             this, &MW::applyLibraryFolderFilter);
     connect(libTree, &LibTree::revealInFoldersRequested, this, [this](const QString &p) {

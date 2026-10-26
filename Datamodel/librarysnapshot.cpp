@@ -166,11 +166,10 @@ DataModel::readLibrarySnapshot(const QString &file, LibrarySnapshotMeta &meta, Q
 
     /*  PICKS ARE SESSION-ONLY (DataModel::addFileDataForRow starts every row Unpicked),
         and the row store carries them -- a quit through the "picks not ingested" warning
-        would otherwise bring them back. A VERSION row keeps its pick: that one lives in
-        the master's sidecar, and a fresh fill restores it too. */
+        would otherwise bring them back. VERSION rows too (2026-10-25): their pick is
+        session-only as well (DataModel::fillVersionRow). */
     if (p->rows.pickedCount() > 0) {
         for (auto it = p->fPathRow.cbegin(); it != p->fPathRow.cend(); ++it) {
-            if (VersionKey::isVersion(it.key())) continue;
             if (p->rows.value(it.value(), G::PickColumn).toString() == "Picked")
                 p->rows.setValue(it.value(), G::PickColumn, Qt::EditRole, "Unpicked");
         }
