@@ -4,7 +4,8 @@ WHAT'S NEW
 BUGS / TO DO
 - library_snapshot on the Mac: it failed in the first run but passed this time. That makes it an intermittent, timing-dependent bug rather than a Windows-only one. Twice it has
     failed on Windows and once on the Mac.
-- Delete rejected shortcut
+- Clear picks
+- Make a shortcut for 'Delete rejected'
 - Add cropped dimensions to Metadata panel
 - Figure out mask refine
 - Review develop presets

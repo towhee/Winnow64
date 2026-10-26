@@ -12126,6 +12126,8 @@ QImage developCompositeStack(const WorkingImage &src,
                    existing key is unchanged. */
                 if (L.opacity < 1.0f)
                     maskKeys[i] += "#op" + QByteArray::number(double(L.opacity), 'g', 6);
+                /* Invert flips the cached buffer too; keyed the same way. */
+                if (L.inverted) maskKeys[i] += "#inv";
                 paramsKeys[i] = QJsonDocument(EditStack::paramsToJson(L.params))
                                     .toJson(QJsonDocument::Compact);
                 /* Visualize Range is not in the sidecar JSON (it is view state), but it
@@ -12180,8 +12182,11 @@ QImage developCompositeStack(const WorkingImage &src,
                                         refineGuide.empty() ? nullptr : &refineGuide);
                     probeAiMaskBuffer("render", fPath, L.components, built,
                                       src.width, src.height, refsReady);
-                    /* The mask's Opacity: the whole coverage, scaled. Downstream (the
-                       blend, the kaleidoscope, "Hide global image") all read it. */
+                    /* The mask's Invert, then its Opacity: the whole coverage, flipped
+                       and scaled. Downstream (the blend, the kaleidoscope, "Hide global
+                       image") all read it. */
+                    if (L.inverted)
+                        for (float &v : built) v = 1.0f - v;
                     if (L.opacity < 1.0f) {
                         const float op = std::clamp(L.opacity, 0.0f, 1.0f);
                         for (float &v : built) v *= op;
@@ -13496,7 +13501,7 @@ void MW::updateMaskOverlayTint()
         buildRefineGuide(*developProxy, veilRefineGuide);
 
     MaskBuildStats tintStats;
-    const std::vector<float> buf =
+    std::vector<float> buf =
         buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
                         G::isReportDevelopTime ? &tintStats : nullptr,
                         edgeScale, developProperties->activeScopeMaskEdge(),
@@ -13504,6 +13509,10 @@ void MW::updateMaskOverlayTint()
                         veilGuide.empty() ? nullptr : &veilGuide,
                         veilRefineGuide.empty() ? nullptr : &veilRefineGuide);
     probeAiMaskBuffer("veil", fPath, masks, buf, bw, bh, true);
+    /* The mask-level Invert changes the mask's SHAPE, so unlike Opacity the veil shows
+       it -- flipped after the probe, which checks what the model produced. */
+    if (developProperties->activeScopeMaskInverted())
+        for (float &v : buf) v = 1.0f - v;
 
     /* THE FOCUS SUBMASK'S OWN COVERAGE, if one is open. Its own footprint, not its
        signed contribution: op forced to Add so a Subtract submask still rasterizes as

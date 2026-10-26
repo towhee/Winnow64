@@ -86,6 +86,12 @@ struct EditScope {
        reaches. A scope with no mask (whole image) has no coverage to scale and ignores
        it. Always written (it predates the control, as a reserved key). */
     float      opacity = 1.0f;
+    /* Invert the WHOLE mask (the Mask band's "Invert", under Opacity): the folded
+       coverage after Edge, Halo and Feather becomes 1 - coverage, before Opacity scales
+       it. Distinct from MaskComponent::inverted, which flips one submask before it is
+       folded. Ignored by a scope with no mask. Sidecar key "invert", written only when
+       true. */
+    bool       inverted = false;
     bool       enabled = true;
     int        combine = int(MaskCombine::Union);   // how this scope's masks combine
     QVector<MaskComponent> components;       // empty (Global scope) = whole image
@@ -570,6 +576,7 @@ struct EditStack {
             lo["name"]    = l.name;
             lo["mask"]    = l.mask;
             lo["opacity"] = l.opacity;
+            if (l.inverted) lo["invert"] = true;
             lo["enabled"] = l.enabled;
             lo["combine"] = l.combine;
             lo["maskEdge"] = l.maskEdge;
@@ -676,6 +683,7 @@ struct EditStack {
             l.name    = lo.value("name").toString(l.name);
             l.mask    = lo.value("mask").toString(l.mask);
             l.opacity = static_cast<float>(lo.value("opacity").toDouble(l.opacity));
+            l.inverted = lo.value("invert").toBool(l.inverted);
             l.enabled = lo.value("enabled").toBool(l.enabled);
             l.combine = lo.value("combine").toInt(l.combine);
             l.maskEdge = static_cast<float>(lo.value("maskEdge").toDouble(l.maskEdge));

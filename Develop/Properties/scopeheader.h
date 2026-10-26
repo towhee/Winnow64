@@ -104,6 +104,7 @@ public:
 signals:
     void scopeSelected(const QString &name);    // user picked a different scope
     void renameRequested();                      // menu: rename the selected scope
+    void duplicateRequested();                   // menu: copy of the scope
     void resetScopeRequested();                  // menu: reset the scope to identity
     void removeScopeRequested();                 // menu: remove the selected scope
     void addScopeRequested();                    // [+] / menu: add a new scope

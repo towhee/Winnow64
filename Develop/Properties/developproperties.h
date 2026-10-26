@@ -74,6 +74,7 @@ public:
             float                  maskHalo = 0; // halo suppression on the FOLDED mask
             float                  maskFeather = 0; // blur of the FOLDED mask, 0..100
             float                  opacity = 1;  // scales the FOLDED mask (EditScope)
+            bool                   inverted = false; // FOLDED mask -> 1 - mask, pre-opacity
         };
         EditParams     global;                  // scope 0 params (whole image)
         QVector<Scope> scopes;                  // masks, in order, enabled only
@@ -183,6 +184,9 @@ public:
     /* The active scope's mask-level Feather, so the loupe veil softens the composited
        mask exactly as the render does. 0 on Global and with no image. */
     float activeScopeMaskFeather() const;
+    /* The active scope's mask-level Invert, so the loupe veil shows the inverted mask
+       the render composites. false on Global and with no image. */
+    bool activeScopeMaskInverted() const;
     /* Index into activeScopeComponents() of the tool whose settings are expanded (the one
        the user clicked in the scope panel), or -1. MW tints this component in its own
        colour so the user can see the selected tool's share of the mask. */
@@ -597,6 +601,7 @@ public slots:
     /* ---- ScopeHeader widget handlers (the scope dropdown + buttons above the tree) ---- */
     void onScopeSelected(const QString &name);    // dropdown picked a different scope
     void renameActiveScope();                     // [R] rename (dialog); Global cannot be renamed
+    void duplicateActiveScope();                  // menu: copy the mask, "<name> duplicate"
     void resetActiveScope();                      // header reset: scope back to defaults
     /* Menu "Reset all edits": wipe the WHOLE recipe -- every scope and mask, the
        crop/warp geometry and the spot heals -- then clear the history and the sidecar

@@ -219,13 +219,13 @@ void MaskEditor::showTool(const MaskComponent &m, bool firstSubmask, int effecti
 }
 
 /*
-    The MASK-level rows: Feather, Edge, Halo and Opacity, applied to the mask every submask
-    folds into. They
+    The MASK-level rows: Feather, Edge, Halo, Opacity and Invert, applied to the mask every
+    submask folds into. They
     are NOT part of showTool's per-tool rows because they must survive with no submask
     selected -- that block hides, this one does not.
 */
 void MaskEditor::showMaskLevel(float featherVal, float edgeVal, float haloVal,
-                               bool haloUseful, float opacityVal)
+                               bool haloUseful, float opacityVal, bool invertedVal)
 {
     isPopulating = true;
     wheel = nullptr;
@@ -260,6 +260,12 @@ void MaskEditor::showMaskLevel(float featherVal, float edgeVal, float haloVal,
               "How strongly this mask's adjustments apply, everywhere it reaches.",
               0, 100);
     setSliderReal("scopeOpacity", int(opacityVal * 100.0f + 0.5f));
+
+    /* The whole folded mask, flipped (EditScope::inverted) -- unlike each submask's own
+       Invert, which flips that submask before it is folded in. */
+    addCheckbox("scopeInvert", "Invert",
+                "Apply this mask's adjustments everywhere the mask does NOT reach.");
+    setCheckboxValue("scopeInvert", invertedVal);
     isPopulating = false;
     /* No slack under the last row: the rule below it (SubmaskList::setTopRule) is spaced like
        the tree's group dividers, and the default 6px would push it further away. */

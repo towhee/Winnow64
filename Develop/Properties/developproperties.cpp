@@ -540,6 +540,8 @@ void DevelopProperties::bindScopeHeader(ScopeHeader *header)
 
     connect(scopeHeader, &ScopeHeader::scopeSelected,       this, &DevelopProperties::onScopeSelected);
     connect(scopeHeader, &ScopeHeader::renameRequested,     this, &DevelopProperties::renameActiveScope);
+    connect(scopeHeader, &ScopeHeader::duplicateRequested,  this,
+            &DevelopProperties::duplicateActiveScope);
     connect(scopeHeader, &ScopeHeader::resetScopeRequested, this, &DevelopProperties::resetActiveScope);
     connect(scopeHeader, &ScopeHeader::removeScopeRequested,this, &DevelopProperties::deleteScope);
     connect(scopeHeader, &ScopeHeader::addScopeRequested,   this, &DevelopProperties::newScope);
@@ -1024,7 +1026,7 @@ void DevelopProperties::syncMaskPanel()
     if (MaskEditor *ed = maskPanel->levelEditor()) {
         ed->setCaptionWidth(maskPanelCaptionWidth());
         ed->showMaskLevel(scope->maskFeather, scope->maskEdge, scope->maskHalo,
-                          maskHasRealEdge(*scope), scope->opacity);
+                          maskHasRealEdge(*scope), scope->opacity, scope->inverted);
     }
     maskPanel->showMaskLevel(!scope->components.isEmpty());
     /* The settings only make sense with a submask open; an empty mask shows nothing
@@ -1224,6 +1226,7 @@ static QString maskSettingLabel(const QString &key)
     if (key == "scopeMaskFeather") return "Mask feather";
     if (key == "scopeHalo")        return "Mask halo";
     if (key == "scopeOpacity")     return "Mask opacity";
+    if (key == "scopeInvert")      return "Invert mask";
     if (key == "maskInvert")       return "Invert";
     if (key == "maskSize")         return "Brush size";
     if (key == "maskBeamWidth")    return "Beam width";
@@ -1457,6 +1460,7 @@ void DevelopProperties::onMaskLevelSetting(const QString &key, const QVariant &v
     else if (key == "scopeHalo")        l->maskHalo = v.toFloat();
     else if (key == "scopeOpacity")
         l->opacity = float(qBound(0.0, v.toDouble(), 100.0) / 100.0);
+    else if (key == "scopeInvert")      l->inverted = v.toBool();
     else return;
     noteEdit(maskSettingLabel(key), historyValueText(QModelIndex(), v), "mask/" + key);
     emit paramsChanged();
@@ -2086,6 +2090,44 @@ void DevelopProperties::renameActiveScope()
     s.scopes[activeScopeIndex].name = uniqueScopeName(entered);
     noteEdit("Rename mask", s.scopes[activeScopeIndex].name);
     refreshScopeList();
+}
+
+void DevelopProperties::duplicateActiveScope()
+{
+/*
+    Scope menu "Duplicate <mask>": a copy of the active mask scope -- submasks, mask-level
+    settings, Invert and adjustments -- named "<mask> duplicate" and made the active
+    scope.
+
+    APPENDED, not inserted after the original: diffLinkedScopes matches an unlinked scope
+    to its last-commit state BY POSITION, so an insert would shift every later scope onto
+    another's baseline and propagate phantom edits to the rest of the selection.
+*/
+    if (G::isLogger) G::log("DevelopProperties::duplicateActiveScope");
+    if (currentImagePath.isEmpty()) return;
+    if (activeScopeIndex <= 0) {
+        if (G::popup) G::popup->showPopup("Global cannot be duplicated.");
+        return;
+    }
+    /* A pending submask belongs in the original, so the copy carries it too. */
+    flushMaskAutoCommit();
+
+    EditStack &s = stackCache[currentImagePath];
+    if (activeScopeIndex >= s.scopes.size()) return;
+
+    EditScope l = s.scopes.at(activeScopeIndex);
+    l.name = uniqueScopeName(l.name + " duplicate");
+    /* The multi-image link names ONE mask across the selection; a second scope carrying
+       it would be found as that mask's counterpart too. */
+    l.link.clear();
+    s.scopes.append(l);
+    activeScopeIndex = s.scopes.size() - 1;
+    noteScopeEdit(l.name, "Duplicate mask");
+
+    selectedMaskIndex = -1;
+    refreshScopeList();
+    buildTree();
+    emit paramsChanged();                    // the copy applies its adjustments again
 }
 
 void DevelopProperties::resetActiveScope()
@@ -2722,6 +2764,16 @@ float DevelopProperties::activeScopeMaskFeather() const
     const EditStack &s = it.value();
     if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size()) return 0.0f;
     return s.scopes[activeScopeIndex].maskFeather;
+}
+
+bool DevelopProperties::activeScopeMaskInverted() const
+{
+    if (currentImagePath.isEmpty()) return false;
+    auto it = stackCache.constFind(currentImagePath);
+    if (it == stackCache.constEnd()) return false;
+    const EditStack &s = it.value();
+    if (activeScopeIndex <= 0 || activeScopeIndex >= s.scopes.size()) return false;
+    return s.scopes[activeScopeIndex].inverted;
 }
 
 
@@ -8807,6 +8859,7 @@ DevelopProperties::buildStackJob(const EditStack &s, bool useGeometry, bool useS
         lj.maskHalo = l.maskHalo;
         lj.maskFeather = l.maskFeather;
         lj.opacity = l.opacity;
+        lj.inverted = l.inverted;
         for (const MaskComponent &m : l.components) {
             if (!m.enabled) continue;
             /* Content-derived AI masks (Select Subject/Sky/Background) carry NO paramsJson -- their
@@ -10864,7 +10917,7 @@ bool sameScopeState(const EditScope &a, const EditScope &b)
     return a.combine == b.combine && a.maskEdge == b.maskEdge &&
            a.maskHalo == b.maskHalo && a.maskFeather == b.maskFeather &&
            a.enabled == b.enabled &&
-           a.opacity == b.opacity &&
+           a.opacity == b.opacity && a.inverted == b.inverted &&
            a.showScope == b.showScope && a.showBasic == b.showBasic &&
            a.showCurves == b.showCurves && a.showColor == b.showColor &&
            a.showCalibrate == b.showCalibrate && a.showColorGrade == b.showColorGrade &&
@@ -10880,6 +10933,7 @@ void copyScopeState(const EditScope &src, EditScope &dst)
     dst.maskHalo = src.maskHalo; dst.enabled = src.enabled;
     dst.maskFeather = src.maskFeather;
     dst.opacity = src.opacity;
+    dst.inverted = src.inverted;
     dst.showScope = src.showScope;           dst.showBasic = src.showBasic;
     dst.showCurves = src.showCurves;         dst.showColor = src.showColor;
     dst.showCalibrate = src.showCalibrate;   dst.showColorGrade = src.showColorGrade;

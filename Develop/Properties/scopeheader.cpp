@@ -369,7 +369,7 @@ void ScopeHeader::showScopeMenu()
        actions and the panel-wide ones ("Reset all edits"). Read the choice as an int code
        while the menu is alive, then fire everything on the next tick (a select refills
        the combo this menu hangs off -- must not happen inside its own click handler). */
-    enum { AddMask = 1, Reset, Remove, Rename, NewScope };
+    enum { AddMask = 1, Reset, Remove, Rename, NewScope, Duplicate };
     const int index = activeIndex;
     const QString name = names.value(index);
     const bool isGlobal = (index == 0);
@@ -388,6 +388,7 @@ void ScopeHeader::showScopeMenu()
         menu.addSeparator();
         menu.addAction(tr("Reset %1").arg(name))->setData(Reset);
         menu.addAction(tr("Rename %1").arg(name))->setData(Rename);
+        menu.addAction(tr("Duplicate %1").arg(name))->setData(Duplicate);
         menu.addSeparator();
         menu.addAction(tr("Delete %1").arg(name))->setData(Remove);
     }
@@ -428,6 +429,7 @@ void ScopeHeader::showScopeMenu()
             case Reset:    emit resetScopeRequested();  break;
             case Remove:   emit removeScopeRequested();  break;
             case Rename:   emit renameRequested();      break;
+            case Duplicate: emit duplicateRequested();  break;
             case NewScope: emit addScopeRequested();    break;
         }
     });
