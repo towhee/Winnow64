@@ -18047,7 +18047,7 @@ void MW::updatePickDependentActions()
     if (G::isLogger) G::log("MW::updatePickDependentActions");
     bool isAnyPick = dm->isAnyPick();
     const QString reason = "no images are picked";
-    for (QAction *a : {ingestAction, nextPickAction, prevPickAction}) {
+    for (QAction *a : {ingestAction, nextPickAction, prevPickAction, clearPicksAction}) {
         a->setEnabled(isAnyPick);
         a->setProperty("disabledReason", reason);
     }

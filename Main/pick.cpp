@@ -83,6 +83,62 @@ void MW::togglePickUnlessRejected()
     updateClassification();
 }
 
+void MW::clearPicks()
+{
+/*
+    Unpick every picked image in the datamodel -- the UNFILTERED model, like isAnyPick
+    and pickCount, so a pick hidden by the current filter is cleared too. Rejects are left
+    alone. The change goes onto the pick history stack as one multiple-select group, so
+    "Recover prior pick state" restores the whole set, and the crash-recovery pick log
+    drops each entry.
+
+    Triggered by clearPicksAction (Ingest menu and the Clear picks button under the
+    Browse panels), which updatePickDependentActions enables only while something is
+    picked.
+*/
+    if (G::isLogger) G::log("MW::clearPicks");
+    int remaining = dm->pickCount();
+    if (remaining == 0) return;
+
+    // collect first: setting the pick can change the proxy while we walk
+    QList<int> rows;
+    const int n = dm->rowCount();
+    for (int dmRow = 0; dmRow < n && remaining > 0; ++dmRow) {
+        if (dm->index(dmRow, G::PickColumn).data(Qt::EditRole).toString() == "Picked") {
+            rows.append(dmRow);
+            --remaining;
+        }
+    }
+
+    if (rows.count() > 1) pushPick("Begin multiple select");
+    for (int dmRow : rows) {
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
+        pushPick(fPath, "Picked");
+        emit setValDm(dmRow, G::PickColumn, "Unpicked", dm->instance, "MW::clearPicks",
+                      Qt::EditRole);
+        updatePickLog(fPath, "Unpicked");
+    }
+    if (rows.count() > 1) pushPick("End multiple select");
+
+    // same refresh tail as togglePick (see the suspension comment there)
+    bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
+                                 picksBeingFiltered);
+    if (picksBeingFiltered) {
+        filterChange("MW::clearPicks");
+    }
+    else {
+        dm->sf->suspend(false, "MW::clearPicks: no filter change");
+        thumbView->refreshIcons("MW::clearPicks");
+        gridView->refreshIcons("MW::clearPicks");
+    }
+
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
+    updateStatus(true, "", "MW::clearPicks");
+    updateClassification();
+}
+
 void MW::togglePickMouseOverItem(QModelIndex idx)
 {
 /*

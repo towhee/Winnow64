@@ -1528,6 +1528,7 @@ private slots:
     void togglePick();
     void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
+    void clearPicks();
     int pickLogCount();
     void recoverPickLog();
     void clearPickLog();
@@ -1840,6 +1841,7 @@ private:
     QAction *pickAction;                // shortcut "`" or "P"
     QAction *pickMouseOverAction;       // shortcut mouse forward/back buttons
     QAction *popPickHistoryAction;
+    QAction *clearPicksAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
     QAction *rotateLeftAction;
@@ -2452,7 +2454,7 @@ private:
     void clearFilterHistory();
     void stepFilterHistory(int delta);
     void syncFilterHistoryButtons();
-    /*  The Previous / Clear filters / Next row pinned to the bottom of the Filters,
+    /*  The Previous / Clear filters / Clear picks / Next row pinned to the bottom of the Filters,
         Bookmarks, Collections and Queries panels -- one row per panel, so whichever tab
         of the group is raised shows it. syncFilterHistoryButtons keeps every copy of
         Previous / Next current. */

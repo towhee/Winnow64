@@ -517,6 +517,15 @@ void MW::createEditActions()
     addAction(popPickHistoryAction);
     connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
 
+    clearPicksAction = new QAction(tr("Clear all picks"), this);
+    clearPicksAction->setObjectName("clearPicks");
+    clearPicksAction->setShortcutVisibleInContextMenu(true);
+    clearPicksAction->setToolTip(tr("Unpick every picked image, including picks hidden by "
+                                    "the filters. Rejects are kept. Undo with "
+                                    "Ingest > Recover prior pick state."));
+    addAction(clearPicksAction);
+    connect(clearPicksAction, &QAction::triggered, this, &MW::clearPicks);
+
     // //
     // QString moveFilesToWhatever;
     // QString moveFolderToWhatever;
@@ -1005,7 +1014,7 @@ void MW::createFilterActions()
     setFilterGroups();  // arrange the categories, sync the title bar button, save
     connect(filterGroupsAction, &QAction::triggered, this, &MW::setFilterGroups);
 
-    /* Previous / Clear filters / Next under the Browse panels. Here, not in
+    /* Previous / Clear filters / Clear picks / Next under the Browse panels. Here, not in
        createFilterDock(), because createDocks() runs before createActions() and the
        Clear button follows clearAllFiltersAction. */
     createFilterNavBars();
@@ -2639,6 +2648,7 @@ void MW::createIngestMenu()
     ingestMenu->addAction(pickUnlessRejectedAction);
     //    editMenu->addAction(filterPickAction);
     ingestMenu->addAction(popPickHistoryAction);
+    ingestMenu->addAction(clearPicksAction);
     ingestMenu->addSeparator();
     ingestMenu->addAction(ingestAction);
     ingestHistoryFoldersMenu = ingestMenu->addMenu(tr("Ingest History"));

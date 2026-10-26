@@ -679,7 +679,8 @@ void MW::createFilterNavBars()
 {
 /*
     A PanelButtonBar pinned to the bottom of each Browse panel in the left group
-    (Filters, Bookmarks, Collections, Queries): Previous, Clear filters, Next. The group
+    (Filters, Bookmarks, Collections, Queries): Previous, Clear filters, Clear picks,
+    Next. The group
     is a QDockWidget tab set, and Qt offers nowhere to put a widget under a tab set that
     is not itself a dock -- so each panel carries its own copy, and whichever tab is
     raised shows the row in the same place.
@@ -689,7 +690,8 @@ void MW::createFilterNavBars()
 
     Previous / Next are Back / Forward through the filter history -- the only control
     for it since the Filters title bar's own arrows were removed. syncFilterHistoryButtons
-    sets their enabled state and tooltips. Clear filters follows clearAllFiltersAction.
+    sets their enabled state and tooltips. Clear filters follows clearAllFiltersAction;
+    Clear picks follows clearPicksAction (enabled only while something is picked).
 */
     if (G::isLogger) G::log("MW::createFilterNavBars");
     const int arrowSize = 22;
@@ -707,16 +709,21 @@ void MW::createFilterNavBars()
         QPushButton *clearBtn =
             PanelButtonBar::MakeButton(clearAllFiltersAction, tr("Clear filters"));
 
+        QPushButton *clearPicksBtn =
+            PanelButtonBar::MakeButton(clearPicksAction, tr("Clear picks"));
+
         QPushButton *forwardBtn = new QPushButton;
         forwardBtn->setIcon(forwardIcon);
         forwardBtn->setIconSize(QSize(arrowSize, arrowSize));
         connect(forwardBtn, &QPushButton::clicked, this, &MW::filterHistoryForward);
 
         if (!PanelButtonBar::Add(dock->widget(),
-                                 QList<QAbstractButton*>{backBtn, clearBtn, forwardBtn},
+                                 QList<QAbstractButton*>{backBtn, clearBtn,
+                                                         clearPicksBtn, forwardBtn},
                                  PanelButtonBar::Bottom)) {
             delete backBtn;
             delete clearBtn;
+            delete clearPicksBtn;
             delete forwardBtn;
             continue;
         }
