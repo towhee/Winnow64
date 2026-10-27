@@ -43,9 +43,11 @@
 <p>If you select 'Raw' then you can select how to demosaic (convert raw data into pixels).  If you choose Winnow to demosaic, then you can also run noise reduction on the raw data, which is much better than running noise reduction later in the develop pipeline when the pixels are already 'baked'.</p>
 
 <h2>Export</h2>
-<p>Press <b>X</b> (or Develop &gt; Export Developed Image) to write the selected images out with their develop settings applied.  Every selected image is exported with <b>its own recipe</b> &mdash; masks, spot heals and crop included &mdash; not the recipe of the image you happen to be looking at.</p>
+<p>Press <b>X</b> (or Develop &gt; Export Images) to write the selected images out with their develop settings applied.  Every selected image is exported with <b>its own recipe</b> &mdash; masks, spot heals and crop included &mdash; not the recipe of the image you happen to be looking at.</p>
 
 <p>The export dialog covers where the files go (a subfolder of the source folder, or any folder you choose), what they are called (a filename template plus a suffix, and what to do when the name already exists), the format, and the size.</p>
+
+<p><b>Source</b> chooses what is written: <b>Developed</b> (your edits applied) or <b>Camera preview</b>, the JPEG the camera embedded in a raw file, exactly as the camera rendered it.  Camera preview is for raw files only; any other image in the selection is exported developed.</p>
 
 <p>Beyond JPEG, PNG and BMP you can write <b>TIFF</b> &mdash; at 8 or <b>16 bits</b> per channel, which is worth using when the image will be edited further &mdash; and, on macOS, HEIC.  Turn on <b>Copy metadata from the original</b> to carry the camera, lens, date and copyright across; it costs about a fifth of a second per image.</p>
 

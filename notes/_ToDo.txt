@@ -14,14 +14,11 @@ WHAT'S NEW
 
 BUGS / TO DO
 - Rethink thumbnail badges
-- library_snapshot on the Mac: it failed in the first run but passed this time. That
-  makes it an intermittent, timing-dependent bug rather than a Windows-only one. Twice it
-  has failed on Windows and once on the Mac.
-- When you're ready to calibrate, auto-tone a folder in Lightroom and the XMP files will
+- Fine tune auto tone with LR examples.
+  When you're ready to calibrate, auto-tone a folder in Lightroom and the XMP files will
   hold its answers (crs:Exposure2012, etc.). I can fit the constants to them with the
   existing lrcompare.py loop.
 - Make export available everywhere, with source camera/develop option.
-- Fine tune auto tone with LR examples.
 - Make sharpening stronger.
 - Apply default preset to raw files when developed ??  Examine develop pipeline.
 - Add isVersion to Queries lookup

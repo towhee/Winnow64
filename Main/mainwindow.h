@@ -1771,6 +1771,10 @@ private:
     void setEmbelExportLock(bool locked);
     void previewPixelSource(const QString &fPath,
                             std::function<void(bool, const QImage &)> done);
+    /* The Develop export's source (dialog and Export with preset): the develop render,
+       or a raw's embedded preview when the active settings ask for CameraPreview. */
+    void developExportPixelSource(const QString &fPath,
+                                  std::function<void(bool, const QImage &)> done);
     void onExportFinished(const ImageExporter::Result &result, bool addToFolderView);
 
     QMenuBar *thumbsMenuBar;

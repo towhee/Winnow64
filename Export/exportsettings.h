@@ -113,6 +113,15 @@ inline QByteArray writerFormat(const QString &key)
 } // namespace ExportFormats
 
 struct ExportSettings {
+    /* ---- Source ----
+       Which pixels a Develop export writes. CameraPreview is the raw file's embedded
+       JPEG (the camera's own rendering, through the same decode as File > Save Preview
+       as) and applies to RAW files only: a non-raw image has no camera preview to take,
+       so it exports developed either way. The numbers are PUBLISHED (settings key
+       "source"). */
+    enum Source { Developed = 0, CameraPreview = 1 };
+    Source  source = Developed;
+
     /* ---- Destination ----
        The numbers are PUBLISHED (settings key "dest"): SourceFolder is appended as 2
        rather than inserted at the top where it reads in the dialog, because renumbering

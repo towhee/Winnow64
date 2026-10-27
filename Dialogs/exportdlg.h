@@ -10,12 +10,13 @@ class ImageExporter;
 /*
     The one export dialog. It collects an ExportSettings and hands it back; it does not
     export anything itself -- ImageExporter does that -- and it knows nothing about where
-    the pixels come from. That is what lets the same dialog serve Develop's "Export
-    Developed Image" and File > "Save Preview as", which differ only in the pixel source
-    the caller pairs with the settings.
+    the pixels come from. That is what lets the same dialog serve "Export Images" and
+    File > "Save Preview as", which differ only in the pixel source the caller pairs with
+    the settings.
 
     LAYOUT: a preset bar across the top (combo + New / Update / Rename / Delete), then one
-    column of grouped sections -- Destination, File naming, Format, Image sizing -- and a
+    column of grouped sections -- Source (Develop only), Destination, File naming,
+    Format, Image sizing -- and a
     progress row above the buttons. Hand-built rather than a .ui file, following the
     newest dialogs (SaveDevelopPresetDlg): the form is generated from the format table and
     reacts to it, which a static .ui cannot express.
@@ -119,6 +120,12 @@ private:
     QPushButton *presetUpdateBtn = nullptr;
     QPushButton *presetRenameBtn = nullptr;
     QPushButton *presetDeleteBtn = nullptr;
+
+    /* Source (Mode::Develop only). sourceNoteLab is the inline reason when the choice
+       does not reach every image: no raw in the export, or some that are not raw. */
+    QRadioButton *developedRadio = nullptr;
+    QRadioButton *cameraPreviewRadio = nullptr;
+    QLabel       *sourceNoteLab = nullptr;
 
     /* Scope */
     QLabel       *countLab = nullptr;

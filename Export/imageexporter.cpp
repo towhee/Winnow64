@@ -29,6 +29,15 @@ ImageExporter::ImageExporter(DataModel *dm, Metadata *metadata, QObject *parent)
 
 ImageExporter::~ImageExporter() {}
 
+bool ImageExporter::isRaw(const QString &fPath) const
+{
+    /* Metadata::hasJpg is Winnow's raw list: the formats whose preview is an embedded
+       JPEG. */
+    if (!metadata) return false;
+    const QString ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
+    return metadata->hasJpg.contains(ext);
+}
+
 void ImageExporter::setPixelSource(PixelSource source)
 {
     pixelSource = std::move(source);

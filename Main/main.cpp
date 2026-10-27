@@ -17,6 +17,7 @@
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/rawcolor.h"
 #include "Metadata/metadata.h"
+#include "Utilities/screenfit.h"
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #include <QAccessibleWidget>
@@ -512,6 +513,9 @@ int main(int argc, char *argv[])
     auto startupClock = std::make_shared<QElapsedTimer>();
     startupClock->start();
     const bool startupTimeline = qEnvironmentVariableIntValue("WINNOW_STARTUP_TIMELINE") == 1;
+
+    // every window opens inside the usable screen area (not under the taskbar)
+    ScreenFit::install();
 
     MW mw(args);
     if (startupTimeline) {

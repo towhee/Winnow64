@@ -100,6 +100,10 @@ public:
     bool willTouchLoadedFolder(const QStringList &srcPaths,
                                const ExportSettings &settings) const;
 
+    /* True when fPath (a row key: a version resolves to its source file) is a raw file
+       -- the files ExportSettings::CameraPreview applies to. */
+    bool isRaw(const QString &fPath) const;
+
 public slots:
     /* Stop after the image currently in flight. Safe to call when not running. */
     void abort();

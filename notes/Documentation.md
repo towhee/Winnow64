@@ -651,6 +651,7 @@
     - [14.2.2 Every Caller Gets the Sensor Image, in Any Mode](#1422-every-caller-gets-the-sensor-image-in-any-mode)
     - [14.2.3 Embellish Export](#1423-embellish-export)
     - [14.2.4 The Focus Stacker](#1424-the-focus-stacker)
+    - [14.2.5 Source: Developed or Camera Preview](#1425-source-developed-or-camera-preview)
   - [14.3 Output](#143-output)
     - [14.3.1 Formats](#1431-formats)
     - [14.3.2 Destination](#1432-destination)
@@ -1169,6 +1170,7 @@ WorkspaceData::isGeometryIncluded (QSettings key "isGeometryIncluded"). A worksp
 - When the flag is off, MW::invokeWorkspace skips restoreGeometry / showMaximized and the fullscreen-on-another-screen dance, and restores only w.state (the dock layout) plus the visibility, view and process settings. The window itself, including its maximised or fullscreen state, is left alone.
 - The flag is a user preference, NOT part of the layout, so MW::snapshotWorkspace does not write it; it survives "Update to current layout".
 - A workspace saved before the flag existed reads as TRUE (the original behaviour), and a new workspace starts TRUE.
+- A restored window geometry is fitted to the usable screen area (ScreenFit::fit, see 2.13.2), so a workspace saved on a larger monitor does not put the window under the taskbar.
 
 The Workspace menu flags a workspace that restores the window position and size with " \*" (MW::workspaceMenuName). Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text; name matching there would silently do nothing. The positional match also keeps the workflow branches safe: QMenu::triggered fires for submenu items too, so every Default and User override action reaches invokeWorkspaceFromAction, is not found in workspaceActions, and is ignored.
 
@@ -1489,6 +1491,7 @@ ctest --test-dir build/linux-debug --output-on-failure -j4
 - Style metrics: Linux draws with Qt's own style, as Windows does, so it takes the Windows values for the dock title-bar height, the checkbox CSS, the tooltip palette, the status glyph width and the Info panel's first column.
 - Title bar: on Wayland (Ubuntu's default session) Qt draws the title bar itself, and its default Adwaita decoration has fixed colours (white, or #2e2e32 when the desktop prefers dark). `main` switches to Qt's bradient decoration (`Linux::useBradientDecoration`, which sets QT_WAYLAND_DECORATION unless the user already has), because bradient paints with the application palette. `Linux::setTitleBarColor` then sets the palette's Window colour to the Winnow background. One call covers every window and dialog. Under X11 the window manager draws the title bar and this has no effect.
 - Title bar on all platforms (2026-10-24; macOS SHELVED the same day: `isColorMacTitleBars` in Utilities/titlebar.cpp is false, so macOS shows the system title bar while Windows and Linux keep the Winnow colour): `TitleBar::setColor` (Utilities/titlebar.h), called from `MW::createAppStyle` and `MW::setBackgroundShade`, is the one entry point. On Linux it calls `Linux::setTitleBarColor`. On Windows and macOS the colour belongs to each native window, so it recolours the open windows and installs an application event filter that colours every titled window as it is shown (popups, tooltips and frameless windows are skipped): `Win::setTitleBarColor` sets DWMWA_CAPTION_COLOR (Windows 11 only), `Mac::setTitleBarColor` makes the NSWindow title bar transparent over a window background in the Winnow colour (the transparency must also be set as Qt::NoTitleBarBackgroundHint on the QWindow: Qt 6.9+ recomputes titlebarAppearsTransparent from that flag whenever it applies window flags, so the NSWindow property alone was undone on show) and picks the dark or light appearance from its lightness so the title text stays readable. The older per-dialog `Win::setTitleBarColor` calls are now redundant but harmless.
+- Windows stay clear of the taskbar on all platforms (2026-10-27): `ScreenFit` (Utilities/screenfit.h), installed in `main` before MW is built, is an application event filter that fits every titled window as it is shown, and again once the show has settled (MW::showEvent restores the main window's geometry inside the show). Qt itself does not: a restored geometry saved on a larger or differently scaled screen, a dialog taller than a small or high-scaling screen (1080p at 150% leaves about 690 logical pixels), or a dialog centred on a parent already under the taskbar opened with its bottom edge, and its buttons, under the Windows taskbar. A window wholly on usable area (QScreen::availableGeometry of any screen, so a window spanning two monitors is left alone) is not touched; otherwise it is shrunk to its screen's usable area (never below its minimum size) and moved inside it, title bar first. Maximised, full screen and minimised windows, popups, tooltips, splash screens and frameless windows are skipped, and so is the offscreen platform (headless tests). MW::invokeWorkspace calls `ScreenFit::fit` after restoring a workspace's geometry, and MW::centreWindowOnPrimaryScreen sizes the first-run window from the available geometry, not the full screen. A dialog that has not been placed yet is NOT fitted on the first pass: QDialog centres itself on its parent in QDialog::showEvent, which runs after the application filter and only while WA_Moved is clear, so fitting it at its default spot (under the macOS menu bar) moved it, set WA_Moved and cancelled the centring, and every dialog opened in the top-left corner. The deferred pass fits it once it is centred.
 - Winnets: the master is `Winnet` beside the executable and links the system Qt, so no Qt runtime is staged into the Winnets folder.
 
 #### 2.13.3 Guarding Platform Code
@@ -3603,7 +3606,7 @@ M   Tweak Mask                  developAddToMaskAction   (Preview: unbound)
 O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
 S   Spot removal tool           developSpotAction        (Preview: Slideshow)
 W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
-X   Export developed images     developExportAction      (Preview: Reject)
+X   Export images               developExportAction      (Preview: Reject)
 H   History panel               historyDockVisibleAction (Preview: unbound)
 P   History panel, Presets open presetsDockVisibleAction (Preview: Pick)
 \   Before / After              developBeforeAfterAction (Browse: compare the current image)
@@ -7989,7 +7992,7 @@ The model_mutation self-test (Main/selftestmutation.cpp) writes versions into a 
 
 ## 14 Export
 
-Getting developed images out. X in Develop mode exports the SELECTED images with each image's own develop recipe applied. The same export is File > Export Developed Images... and the thumbnail context-menu item of that name (exportDevelopedAction): enabled in BOTH modes and keyless, since X means Reject outside Develop and developExportAction is greyed there. It works outside Develop because the export renders each image's stored recipe (stackJobFor), not the live session.
+Getting developed images out. X in Develop mode exports the SELECTED images with each image's own develop recipe applied. The same export is File > Export Images... and the thumbnail context-menu item of that name (exportDevelopedAction): enabled in BOTH modes and keyless, since X means Reject outside Develop and developExportAction is greyed there. It works outside Develop because the export renders each image's stored recipe (stackJobFor), not the live session.
 
 Everything about writing an image out of Winnow lives in one place; the only thing that varies between callers is where the pixels come from.
 
@@ -8065,6 +8068,15 @@ The stacker reads only files (2026-10-05). FS::prepareSources (FocusStack/fs.cpp
 A raw must render from the SENSOR. The stacker calls developPixelSource with requireSensor = true: for a raw with a sensor decoder (RawFormat::HasSensorDecoder), a base that is not sceneReferred after the decode is a FAILURE, not a reason to build from the embedded preview. Found on an OM-1 stack started in the Library that came out 3200x2400 (the ORF's embedded preview): a half-long-edge guard let a preview-built cache entry through, since an Olympus preview is 62% of the sensor, not under half. The exporter leaves requireSensor off and keeps the preview as a last resort. With G::FSLog on, developPixelSource logs each base's size, sceneReferred and decodedHere, and prepareSources logs each written slice's size and depth.
 
 Threading: the stacker waits for the render on ITS OWN worker thread (FS::developDecoder: a std::promise completed by the render's GUI-thread callback, polled every 100 ms against the abort flag), not through a BlockingQueuedConnection, which would park the GUI thread the render's own staging needs. The abort poll is what keeps Esc and quit (closeEvent aborts, then waits on fsThread) from hanging on a render in flight. Like metaSnapshot, the metadata and EXIF rotation are captured on the GUI thread before the stack starts and handed to developPixelSource (its mSnap / degreesSnap parameters), so the user can leave the folder while it runs; the recipe itself comes from the sidecar via stackJobFor. Memory: the aligned slices are held until fusion, so a 16-bit BGR slice costs 6 bytes/pixel against the 4 of the old 8-bit BGRA decode.
+
+#### 14.2.5 Source: Developed or Camera Preview
+
+Added 2026-10-27. The Export Images dialog has a Source section directly under Preset with two radios: Developed (the default) and Camera preview. Camera preview writes a raw file's EMBEDDED JPEG, the camera's own rendering with no develop recipe, through the same decode as File > Save Preview as (MW::previewPixelSource -> Pixmap::load). It applies to raw files only (ImageExporter::isRaw, i.e. Metadata::hasJpg on the source file of a version key): a non-raw image has no camera preview, so it is developed whatever the setting says.
+
+- The choice is ExportSettings::source (published preset key "source": Developed = 0, CameraPreview = 1), so presets and Develop > Export with preset carry it. Both Develop entry points use MW::developExportPixelSource, which picks per image.
+- Save Preview as (Mode::Preview) has no Source section and leaves the stored value untouched.
+- The dialog counts the raws in the export (the scope radios change it): with none, Camera preview is greyed with an inline reason beside it (its checked state is kept, like Insert exported images); with a mixed selection and Camera preview chosen, the note says how many will be developed.
+- The embedded preview is 8-bit and display-referred: ImageExporter::save converts it to the chosen output space by its tag, and a 16-bit format just holds 8-bit data.
 
 ### 14.3 Output
 

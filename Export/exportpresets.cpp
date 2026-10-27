@@ -51,6 +51,9 @@ static ExportSettings readGroup(QSettings *setting, const QString &group)
     if (!setting) return s;
     setting->beginGroup(group);
 
+    s.source          = ExportSettings::Source(
+                            setting->value("source", int(s.source)).toInt());
+
     s.dest            = ExportSettings::Dest(
                             setting->value("dest", int(s.dest)).toInt());
     s.subfolderName   = setting->value("subfolderName", s.subfolderName).toString();
@@ -81,6 +84,7 @@ static ExportSettings readGroup(QSettings *setting, const QString &group)
     /* Clamp what a hand-edited or corrupt QSettings could otherwise make nonsensical.
        These are user-writable files; a bad quality or a zero long edge must not reach
        QImageWriter or the scaler. */
+    if (s.source != ExportSettings::CameraPreview) s.source = ExportSettings::Developed;
     s.bitDepth        = (s.bitDepth == 16) ? 16 : 8;
     s.quality         = qBound(1, s.quality, 100);
     s.tiffCompression = (s.tiffCompression == 0) ? 0 : 1;
@@ -95,6 +99,8 @@ static void writeGroup(QSettings *setting, const QString &group, const ExportSet
     setting->beginGroup(group);
 
     setting->setValue("version", ExportPresets::kVersion);
+
+    setting->setValue("source", int(s.source));
 
     setting->setValue("dest", int(s.dest));
     setting->setValue("subfolderName", s.subfolderName);

@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Utilities/panelprobe.h"
 #include "Utilities/titlebar.h"
+#include "Utilities/screenfit.h"
 
 /*  *******************************************************************************************
 
@@ -299,6 +300,8 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         // second restoreState req'd for going from docked to floating docks
         restoreGeometry(w.geometry);
         restoreState(w.state);
+        // saved on another (larger) screen: keep it clear of the taskbar
+        ScreenFit::fit(this);
     }
     else {
         /* Maximised workspace.  restoreGeometry's maximised handling is
@@ -621,7 +624,8 @@ void MW::centreWindowOnPrimaryScreen()
     window before the Source layout is applied.  See MW::showEvent.
 */
     if (G::isLogger) G::log("MW::centreWindowOnPrimaryScreen");
-    QRect desktop = QGuiApplication::screens().first()->geometry();
+    // usable area: the taskbar / Dock / menu bar excluded
+    QRect desktop = QGuiApplication::screens().first()->availableGeometry();
     resize(static_cast<int>(0.75 * desktop.width()),
            static_cast<int>(0.75 * desktop.height()));
     setGeometry(QStyle::alignedRect(Qt::LeftToRight, Qt::AlignCenter, size(), desktop));

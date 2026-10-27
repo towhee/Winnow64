@@ -114,8 +114,7 @@ ExportDlg::ExportDlg(ImageExporter *exporter,
       filenameTemplates(filenameTemplates),
       mode(mode)
 {
-    setWindowTitle(mode == Mode::Develop ? tr("Export Developed Images")
-                                         : tr("Export Images"));
+    setWindowTitle(tr("Export Images"));
     setModal(true);
 
     current = presets ? presets->readLast() : ExportSettings();
@@ -248,6 +247,42 @@ void ExportDlg::buildUi()
     presetNewBtn->setToolTip(tr("Save these settings as a new named export preset"));
     presetRenameBtn->setToolTip(tr("Rename the selected preset"));
     presetDeleteBtn->setToolTip(tr("Delete the selected preset"));
+
+    /* ---- Source ----
+       Which pixels go out: the develop render, or a raw's embedded camera preview. Only
+       a Develop export has the choice -- Save Preview as already IS the preview. The
+       radios start on the field column like the Size group (see there for why a
+       stand-in widget holds column 0 open); its width is only known once the captions
+       below have been measured, so the alignment pass sets it. */
+    QWidget *sourceCapCol = nullptr;
+    QGridLayout *sourceGrid = nullptr;
+    if (mode == Mode::Develop) {
+        QVBoxLayout *sourceLay = addSection(lay, tr("Source"));
+        developedRadio = new QRadioButton(tr("Developed"), this);
+        developedRadio->setToolTip(tr("Export each image with its develop settings "
+                                      "applied"));
+        cameraPreviewRadio = new QRadioButton(tr("Camera preview"), this);
+        cameraPreviewRadio->setToolTip(tr("Export a raw file's embedded preview: the "
+                                          "camera's own JPEG rendering, without develop "
+                                          "settings.\nRaw files only; other images "
+                                          "export developed."));
+        sourceNoteLab = new QLabel(this);
+        sourceNoteLab->setStyleSheet("QLabel { color:" + G::disabledColor.name() + "; }");
+        QHBoxLayout *sourceRow = new QHBoxLayout;
+        sourceRow->addWidget(developedRadio);
+        sourceRow->addWidget(cameraPreviewRadio);
+        sourceRow->addSpacing(12);
+        sourceRow->addWidget(sourceNoteLab);
+        sourceRow->addStretch(1);
+        sourceCapCol = new QWidget(this);
+        sourceGrid = new QGridLayout;
+        sourceGrid->setContentsMargins(0, 0, 0, 0);
+        sourceGrid->setColumnStretch(0, 0);
+        sourceGrid->setColumnStretch(1, 1);
+        sourceGrid->addWidget(sourceCapCol, 0, 0);
+        sourceGrid->addLayout(sourceRow, 0, 1);
+        sourceLay->addLayout(sourceGrid);
+    }
 
     /* ---- Destination ---- */
     QVBoxLayout *destLay = addSection(lay, tr("Destination"));
@@ -600,6 +635,11 @@ void ExportDlg::buildUi()
     sizeGrid->addLayout(size, 0, 1);
     sizeGrid->addWidget(dontEnlargeChk, 1, 1);
     sizeLay->addLayout(sizeGrid);
+    if (sourceGrid) {                    // the Source group, on the same geometry
+        sourceCapCol->setFixedWidth(capW0);
+        sourceGrid->setHorizontalSpacing(colGap);
+        sourceGrid->setColumnMinimumWidth(0, capW0);
+    }
 
     /* ---- Scope ----
        What gets exported, not how, so it sits outside the settings group boxes -- last,
@@ -685,6 +725,9 @@ void ExportDlg::buildUi()
                             skipRadio, fullSizeRadio, longEdgeRadio, percentRadio,
                             allSelectedRadio, currentOnlyRadio})
         connect(r, &QRadioButton::toggled, this, onEdited);
+    if (mode == Mode::Develop)
+        for (QRadioButton *r : {developedRadio, cameraPreviewRadio})
+            connect(r, &QRadioButton::toggled, this, onEdited);
     for (QLineEdit *e : {subfolderEdit, folderEdit, suffixEdit})
         connect(e, &QLineEdit::textChanged, this, onEdited);
     for (QCheckBox *c : {addToViewChk, copyMetadataChk, embedThumbChk, dontEnlargeChk})
@@ -737,6 +780,11 @@ void ExportDlg::settingsToUi()
 {
     populating = true;
 
+    if (mode == Mode::Develop) {
+        developedRadio->setChecked(current.source == ExportSettings::Developed);
+        cameraPreviewRadio->setChecked(current.source == ExportSettings::CameraPreview);
+    }
+
     sourceFolderRadio->setChecked(current.dest == ExportSettings::SourceFolder);
     subfolderRadio->setChecked(current.dest == ExportSettings::SubfolderOfSource);
     folderRadio->setChecked(current.dest == ExportSettings::ChosenFolder);
@@ -779,6 +827,12 @@ void ExportDlg::settingsToUi()
 
 void ExportDlg::uiToSettings()
 {
+    /* Preview mode has no Source group: whatever was stored is carried through
+       untouched, so a Save Preview as never rewrites the Develop export's choice. */
+    if (mode == Mode::Develop)
+        current.source = cameraPreviewRadio->isChecked() ? ExportSettings::CameraPreview
+                                                         : ExportSettings::Developed;
+
     current.dest = sourceFolderRadio->isChecked() ? ExportSettings::SourceFolder
                  : subfolderRadio->isChecked()    ? ExportSettings::SubfolderOfSource
                                                   : ExportSettings::ChosenFolder;
@@ -835,6 +889,28 @@ void ExportDlg::updateEnabledStates()
     /* No re-measure needed: every one of these shares a row with Type or Space, which
        never hide, so hiding them cannot change the form's height. */
     spaceCombo->setEnabled(spaceCombo->count() > 1);
+
+    /* Camera preview means something only for a raw. With none in the export it is
+       greyed, the CHECKED state left alone like addToViewChk's below, and the note says
+       why; with some, the note says how many will be developed regardless. Counted on
+       targetPaths because the scope radios change what is exported. */
+    if (mode == Mode::Develop) {
+        const QStringList targets = targetPaths();
+        int raws = 0;
+        if (exporter)
+            for (const QString &p : targets)
+                if (exporter->isRaw(p)) ++raws;
+        cameraPreviewRadio->setEnabled(raws > 0);
+        QString note;
+        if (raws == 0)
+            note = targets.count() == 1 ? tr("Camera preview is for raw files only")
+                                        : tr("No raw files: camera preview is for raw "
+                                             "files only");
+        else if (current.source == ExportSettings::CameraPreview && raws < targets.count())
+            note = tr("%1 of %2 are not raw and will be developed")
+                       .arg(targets.count() - raws).arg(targets.count());
+        sourceNoteLab->setText(note);
+    }
 
     subfolderEdit->setEnabled(subfolderRadio->isChecked());
     folderEdit->setEnabled(folderRadio->isChecked());

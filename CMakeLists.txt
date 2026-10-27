@@ -461,6 +461,7 @@ set(WINNOW_SOURCES
     Utilities/stresstest.cpp
     Utilities/tokenfilename.cpp
     Utilities/titlebar.cpp
+    Utilities/screenfit.cpp
     Utilities/usbutil.cpp
     Utilities/appinstaller.cpp
     Utilities/volumeinfo.cpp
@@ -774,6 +775,7 @@ set(WINNOW_HEADERS
     Utilities/performance.h
     Utilities/popup.h
     Utilities/titlebar.h
+    Utilities/screenfit.h
     Utilities/progress.h
     Utilities/renamefile.h
     Utilities/reportdialog.h

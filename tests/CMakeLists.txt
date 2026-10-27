@@ -157,6 +157,9 @@ winnow_add_unit_test(tst_appupdate unit/tst_appupdate.cpp)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
 # tst_geo tests Utilities/geo.* (the Map module's pure math: no network, no widgets).
 winnow_add_unit_test(tst_geo unit/tst_geo.cpp ${CMAKE_SOURCE_DIR}/Utilities/geo.cpp)
+# tst_screenfit tests Utilities/screenfit.* (windows kept inside the usable screen area,
+# clear of the Windows taskbar). Widgets on the offscreen platform.
+winnow_add_unit_test(tst_screenfit unit/tst_screenfit.cpp ${CMAKE_SOURCE_DIR}/Utilities/screenfit.cpp)
 # tst_colorgrade tests Develop/colorgrade.h (header-only: no OpenCV / develop.cpp needed).
 winnow_add_unit_test(tst_colorgrade unit/tst_colorgrade.cpp)
 # tst_calibrate tests Develop/calibrate.h (header-only, same as colorgrade).

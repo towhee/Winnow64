@@ -16831,6 +16831,23 @@ void MW::previewPixelSource(const QString &fPath,
     done(ok && !image.isNull(), image);
 }
 
+void MW::developExportPixelSource(const QString &fPath,
+                                  std::function<void(bool, const QImage &)> done)
+{
+/*
+    Source > Camera Preview in the export dialog: a raw goes out as the camera's own
+    rendering, its embedded JPEG, through the Save Preview as decode. ImageExporter::save
+    converts it to the chosen output space by its tag. Anything that is not a raw has no
+    camera preview, so it is developed whatever the setting says.
+*/
+    const ExportSettings &es = imageExporter->activeSettings();
+    if (es.source == ExportSettings::CameraPreview && imageExporter->isRaw(fPath)) {
+        previewPixelSource(fPath, done);
+        return;
+    }
+    developPixelSource(fPath, es.wants16Bit(), ImageExporter::renderSpace(es.space), done);
+}
+
 void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderView)
 {
 /*
@@ -16881,9 +16898,7 @@ void MW::developExport()
 
     imageExporter->setPixelSource(
         [this](const QString &fPath, ImageExporter::Done done) {
-            const ExportSettings &es = imageExporter->activeSettings();
-            developPixelSource(fPath, es.wants16Bit(),
-                               ImageExporter::renderSpace(es.space), done);
+            developExportPixelSource(fPath, done);
         });
 
     ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
@@ -16923,9 +16938,7 @@ void MW::developExportWithPreset(const QString &presetName)
 
     imageExporter->setPixelSource(
         [this](const QString &fPath, ImageExporter::Done done) {
-            const ExportSettings &es = imageExporter->activeSettings();
-            developPixelSource(fPath, es.wants16Bit(),
-                               ImageExporter::renderSpace(es.space), done);
+            developExportPixelSource(fPath, done);
         });
 
     G::popup->setProgressVisible(true);

@@ -173,7 +173,7 @@ void MW::createFileActions()
        outside Develop mode and labelled "X", which is Reject there; this one has no key
        and stays enabled, since the export renders each image's STORED recipe
        (stackJobFor) and does not need the Develop session. */
-    exportDevelopedAction = new QAction(tr("Export Developed Images..."), this);
+    exportDevelopedAction = new QAction(tr("Export Images..."), this);
     exportDevelopedAction->setObjectName("exportDeveloped");
     exportDevelopedAction->setShortcutVisibleInContextMenu(true);
     addAction(exportDevelopedAction);
@@ -1291,7 +1291,7 @@ void MW::createUtilActions()
     connect(developBeforeAfterAction, &QAction::triggered,
             this, &MW::toggleDevelopBeforeAfter);
 
-    developExportAction = new QAction(tr("Export Developed Image\tX"), this);
+    developExportAction = new QAction(tr("Export Images\tX"), this);
     developExportAction->setObjectName("developExport");
     developExportAction->setShortcutVisibleInContextMenu(true);
     addAction(developExportAction);
