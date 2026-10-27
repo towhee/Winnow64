@@ -70,6 +70,7 @@ private slots:
     void subtreeCountRespectsTheSeparator();
     void versionNineFileRebuildsPathKeyedKeywords();
     void migrationStoresCaptureAsTheWallClock();
+    void schema28RereadsOnlyBlankAndUncalibrated();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
     void existingKeywordLinksToItsOwnRow();
@@ -261,7 +262,7 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         26 added NO table -- the tenth data repair: IFD::readIFD read a little-endian
         SHORT with its padding, so rows with an impossible orientation or JPEG/TIFF ISO
         have their stamp and thumb row cleared to be re-read. */
-    QCOMPARE(CacheDb::schemaVersion(), 26);
+    QCOMPARE(CacheDb::schemaVersion(), 28);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -611,6 +612,7 @@ void tst_catalog::searchRowsReturnsWhatFetchFreshWouldHave()
     a.developed = true;
     a.devPreviewKey = "abc123";
     a.shootingInfo = "1/1250 sec at f/5.6, ISO 800";
+    a.colorSpace = 2;                       // Adobe RGB, schema 27
     a.captured = QDateTime::fromSecsSinceEpoch(1600000000);
     QCOMPARE(cat.commit({a}), 1);
 
@@ -646,6 +648,8 @@ void tst_catalog::searchRowsReturnsWhatFetchFreshWouldHave()
     QCOMPARE(r.height, f.height);
     QCOMPARE(r.gpsCoord, f.gpsCoord);
     QCOMPARE(r.orientation, f.orientation);
+    QCOMPARE(r.colorSpace, f.colorSpace);
+    QCOMPARE(r.colorSpace, 2);
     QCOMPARE(r.exposureComp, f.exposureComp);
     QCOMPARE(r.developed, f.developed);
     QCOMPARE(r.devPreviewKey, f.devPreviewKey);
@@ -1494,6 +1498,53 @@ void tst_catalog::versionNineFileRebuildsPathKeyedKeywords()
 
     /* Point the shared database back at the sandbox -- see the note in the version 3
        case for why this cannot be left to DevPreviewCache::setCacheDir. */
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
+void tst_catalog::schema28RereadsOnlyBlankAndUncalibrated()
+{
+/*
+    Schema 28 resolves "Uncalibrated" (Metadata/colorspaces.h), so only the rows whose
+    colour space it can change -- blank (0) and Uncalibrated (9) -- go stale; an sRGB or
+    Adobe RGB row keeps its stamp and is not re-read.
+*/
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+
+    QVector<CatalogRow> rows;
+    const QList<int> spaces{0, 1, 2, 9};
+    for (int cs : spaces) {
+        CatalogRow r = rowFor(QString("cs%1.arw").arg(cs));
+        r.colorSpace = cs;
+        rows << r;
+    }
+    QCOMPARE(cat.commit(rows), 4);
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("PRAGMA user_version = 27"));
+    }
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(cat.isAvailable(), "a version 27 file must migrate, not be moved aside");
+
+    QSqlDatabase db = CacheDb::instance().db();
+    QSqlQuery q(db);
+    QVERIFY(q.exec("SELECT colorspace, srcmtime FROM image ORDER BY colorspace"));
+    QHash<int, qint64> stamp;
+    while (q.next()) stamp.insert(q.value(0).toInt(), q.value(1).toLongLong());
+    QCOMPARE(stamp.size(), 4);
+    QCOMPARE(stamp.value(0), qint64(-1));
+    QCOMPARE(stamp.value(9), qint64(-1));
+    QVERIFY(stamp.value(1) != -1);
+    QVERIFY(stamp.value(2) != -1);
+    q.finish();
     CacheDb::instance().closeThisThread();
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
 }

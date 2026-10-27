@@ -183,15 +183,6 @@ void MW::updateStatusBar()
         includeSidecarsToggleBtn->setToolTip("Include sidecars when dragging is Off.  Click to toggle on/off");
     }
 
-    if (G::colorManage) {
-        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/rainbow1.png"));
-        colorManageToggleBtn->setToolTip("Color Manage is On.  Click to toggle on/off");
-    }
-    else {
-        colorManageToggleBtn->setIcon(QIcon(":/images/icon16/norainbow1.png"));
-        colorManageToggleBtn->setToolTip("Color Manage is Off.  Click to toggle on/off");
-    }
-
     if (panFocusToggleAction->isChecked()) {
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
         panToFocusToggleBtn->setToolTip(
@@ -278,7 +269,6 @@ int MW::availableSpaceForProgressBar()
     int s = statusBar()->layout()->spacing();
     if (statusBarSpacer1->isVisible()) w += s + statusBarSpacer1->width();
     if (modifyImagesBtn->isVisible()) w += s + modifyImagesBtn->width();
-    if (colorManageToggleBtn->isVisible()) w += s + colorManageToggleBtn->width();
     if (panToFocusToggleBtn->isVisible()) w += s + panToFocusToggleBtn->width();
     if (reverseSortBtn->isVisible()) w += s + reverseSortBtn->width();
     if (useRawBtn->isVisible()) w += s + useRawBtn->width();
@@ -588,7 +578,6 @@ void MW::enableStatusBarBtns()
 {
     if (G::isLogger) G::log("MW::enableStatusBarBtns");
     bool enable = dm->rowCount() > 0 && G::allMetadataAttempted;
-    // colorManageToggleBtn->setEnabled(enable);
     // reverseSortBtn->setEnabled(enable);
 }
 
@@ -705,9 +694,7 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
 void MW::toggleModifyImagesClick()
 {
 /*
-    This is called by connect signals from the menu action and the color manage button.  The
-    call is redirected to toggleColorManage, which has a parameter which is not supported
-    by the action and button signals.
+    This is called by connect signals from the modify images button.
 */
     if (G::isLogger) G::log("MW::toggleModifyImagesClick");
     G::modifySourceFiles = !G::modifySourceFiles;
@@ -729,8 +716,8 @@ void MW::toggleIncludeSidecarsClick()
 {
 /*
     This is called by connect signals from the menu action and the include sidecars
-    button. The call is redirected to toggleColorManage, which has a parameter which is
-    not supported by the action and button signals.
+    button. The call is redirected to toggleIncludeSidecars, which has a parameter which
+    is not supported by the action and button signals.
 */
     if (G::isLogger) G::log("MW::toggleIncludeSidecarsClick");
     toggleIncludeSidecars(Tog::toggle);
@@ -738,60 +725,13 @@ void MW::toggleIncludeSidecarsClick()
 
 void MW::toggleIncludeSidecars(Tog n)
 {
-/*
-    The image cache is rebuilt to show the color manage option.
-*/
-    if (G::isLogger) G::log("MW::toggleColorManage");
+    if (G::isLogger) G::log("MW::toggleIncludeSidecars");
     if (n == Tog::toggle) G::includeSidecars = !G::includeSidecars;
     if (n == Tog::off) G::includeSidecars = false;
     if (n == Tog::on) G::includeSidecars = true;
     includeSidecarsAction->setChecked(G::includeSidecars);
 
     updateStatusBar();  // updates btn image and tooltip
-}
-
-void MW::toggleColorManageClick()
-{
-    /*
-    This is called by connect signals from the menu action and the color manage button.  The
-    call is redirected to toggleColorManage, which has a parameter which is not supported
-    by the action and button signals.
-*/
-    if (G::isLogger) G::log("MW::toggleColorManageClick");
-    toggleColorManage(Tog::toggle);
-}
-
-void MW::toggleColorManage(Tog n)
-{
-    /*
-    The image cache is rebuilt to show the color manage option.
-*/
-    if (G::isLogger) G::log("MW::toggleColorManage");
-    if (n == Tog::toggle) G::colorManage = !G::colorManage;
-    if (n == Tog::off) G::colorManage = false;
-    if (n == Tog::on) G::colorManage = true;
-    colorManageAction->setChecked(G::colorManage);
-
-    updateStatusBar();  // updates btn image and tooltip
-
-    /* The Develop loupe converts its own renders; the image cache rebuild below only
-       covers what ImageDecoder decodes. */
-    refreshDisplayColor();
-
-    if (dm->rowCount() == 0) return;
-
-    /* Repaint the thumbnails' cache badges. This was a refreshViewsOnCacheChange call
-       per SOURCE row, which only repaints that row's cell -- 155k calls (and warnings,
-       for every filtered-out row) in a filtered Library. The rebuilt image cache
-       updates each row's cached flag as it goes. */
-    thumbView->viewport()->update();
-    gridView->viewport()->update();
-
-    // // let ImageView know that the image changed
-    imageView->currentImageHasChanged = true;
-
-    // reload image cache
-    emit imageCacheColorManageChange();
 }
 
 void MW::refreshDevelopThumbs()

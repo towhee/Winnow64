@@ -874,6 +874,12 @@ const Entry *findEntry(const QString &model)
             bestLen = l;
         }
     }
+    /* The table follows dcraw, which drops Fujifilm's "FinePix" ("Fujifilm S5Pro"); the
+       canonical key keeps the camera's own name ("Fujifilm FinePix S5Pro"). Without the
+       retry a FinePix raw had no matrix and an as-shot tint pinned at +150. */
+    static const QString finePix = QStringLiteral("Fujifilm FinePix ");
+    if (!best && needle.startsWith(finePix, Qt::CaseInsensitive))
+        return findEntry(QStringLiteral("Fujifilm ") + needle.mid(finePix.size()));
     return best;
 }
 

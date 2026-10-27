@@ -5,7 +5,6 @@
 #include <opencv2/core/utility.hpp>     // parallel_for_
 #include <QFile>
 #include <QMutex>
-#include <atomic>
 #include <memory>
 
 namespace
@@ -30,7 +29,6 @@ struct State
 
 QMutex stateMutex;
 std::shared_ptr<const State> state;     // null = inactive
-std::atomic<bool> displayDiffers{false};
 
 std::shared_ptr<const State> current()
 {
@@ -68,11 +66,7 @@ void Rebuild()
 {
     if (G::isLogger) G::log("DisplayColor::Rebuild", G::winOutProfilePath);
 
-    /* Built whenever there IS a display profile, even with colour management off: the
-       identity probe is also what DisplayDiffersFromSrgb reports. Only the active state
-       depends on the toggle. */
     std::shared_ptr<const State> next;
-    bool differs = false;
     if (!G::winOutProfilePath.isEmpty()) {
         cmsHPROFILE in = cmsCreate_sRGBProfile();
         cmsHPROFILE out = cmsOpenProfileFromFile(
@@ -94,24 +88,16 @@ void Rebuild()
             if (!s->complete())
                 G::issue("Warning", "Could not build the display colour transform.",
                          "DisplayColor::Rebuild", -1, G::winOutProfilePath);
-            else if (!isIdentity(s->bgra)) {
-                differs = true;
-                if (G::colorManage) next = s;
-            }
+            else if (!isIdentity(s->bgra))
+                next = s;
         }
         /* A transform keeps what it needs; the profiles can go now. */
         if (in) cmsCloseProfile(in);
         if (out) cmsCloseProfile(out);
     }
 
-    displayDiffers = differs;
     QMutexLocker lock(&stateMutex);
     state = next;
-}
-
-bool DisplayDiffersFromSrgb()
-{
-    return displayDiffers;
 }
 
 bool IsActive()

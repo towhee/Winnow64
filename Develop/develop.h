@@ -30,8 +30,11 @@ public:
     Develop() = default;
 
     /* Per-stage wall-clock timings for one Apply(), filled when a non-null pointer is passed.
-       A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use. */
-    struct StageTimings { qint64 profileMs = 0; qint64 denoiseMs = 0;
+       A latency probe only (Develop preview [DevTime] logging); pass nullptr in normal use.
+       setupMs is everything before the first stage -- the statistics sample's own
+       develop, the local sample and the stage-0 conversion -- so the buckets sum to the
+       whole Apply. */
+    struct StageTimings { qint64 setupMs = 0; qint64 profileMs = 0; qint64 denoiseMs = 0;
                           qint64 pointMs = 0; qint64 textureMs = 0;
                           qint64 clarityMs = 0; qint64 dehazeMs = 0;
                           qint64 vignetteMs = 0; qint64 sharpenMs = 0;

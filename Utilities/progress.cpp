@@ -507,6 +507,12 @@ void Progress::updateProgress(int id, int item, int items, QColor color)
     int pxWidth = itemWidth + 1;
 
     if (r.fill == Fill::FromStart) {
+        /* The bar SHOWS item of items, so the empty remainder is repainted first. A
+           queue that grows while it runs (the devPreview builder, the Auto-settings
+           batch) is first reported as 0 of 1 -- a full bar -- and painting only the
+           done part afterwards never took that back: the row read "finished" for the
+           whole run (seen 2026-10-27 on a 48-image Auto tone batch). */
+        pnt.fillRect(r.bar.rect(), getGradient(bgColor, r.barHeight));
         // fill from the start of the bar up to (and including) the current item
         QRect doneRect(0, 0, pxStart + pxWidth, r.barHeight);
         pnt.fillRect(doneRect, color);

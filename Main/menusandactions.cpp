@@ -293,13 +293,6 @@ void MW::createFileActions()
     addAction(refreshBookmarkAction);
     connect(refreshBookmarkAction, &QAction::triggered, this, &MW::refreshBookmarks);
 
-    colorManageAction = new QAction(tr("Color manage"), this);
-    colorManageAction->setObjectName("colorManage");
-    colorManageAction->setShortcutVisibleInContextMenu(true);
-    colorManageAction->setCheckable(true);
-    colorManageAction->setChecked(G::colorManage);
-    addAction(colorManageAction);
-    connect(colorManageAction, &QAction::triggered, this, &MW::toggleColorManageClick);
 
     includeSidecarsAction = new QAction(tr("Include sidecars"), this);
     includeSidecarsAction->setObjectName("includeSidecars");
@@ -2620,7 +2613,6 @@ void MW::createFileMenu()
     // fileMenu->addAction(eraseUsbAction);
 
     fileMenu->addSeparator();
-    fileMenu->addAction(colorManageAction);
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(showAllVersionsAction);
     fileMenu->addAction(includeSidecarsAction);

@@ -331,8 +331,9 @@ void MW::newVersion()
            instead of decoding. Same recipe, same hash. */
         if (!v.develop.isEmpty()) {
             const QByteArray hash = Metadata::devPreviewKey(v.develop, key).toLatin1();
-            const QByteArray jpg = DevPreviewCache::instance().get(key, hash);
-            if (!jpg.isEmpty()) DevPreviewCache::instance().put(newKey, hash, jpg);
+            bool reduced = false;
+            const QByteArray jpg = DevPreviewCache::instance().get(key, hash, &reduced);
+            if (!jpg.isEmpty()) DevPreviewCache::instance().put(newKey, hash, jpg, reduced);
         }
 
         for (qint64 cid : inCollections.value(key))

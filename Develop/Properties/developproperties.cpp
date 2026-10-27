@@ -2941,7 +2941,7 @@ const QVector<EffectDef> &effectDefs()
         {"Vignette",     {"vignetteExposure", "vignetteFeather"}, false},
         {"Grain",        {"grainAmount", "grainSize", "grainRoughness"}, false},
         /* Per scope: a mask scope folds only its masked pixels (see EditParams). */
-        {"Kaleidoscope", {"kaleidoType", "KaleidoTypeSpacer", "kaleidoSegments",
+        {"Patterns",     {"kaleidoType", "KaleidoTypeSpacer", "kaleidoSegments",
                           "kaleidoSides", "kaleidoVertex", "kaleidoRadius",
                           "kaleidoCopies", "kaleidoWrap", "kaleidoInsideOut",
                           "kaleidoStrands", "kaleidoNest", "kaleidoReverse",
@@ -2976,7 +2976,7 @@ bool effectEdited(const EditStack &s, int scopeIdx, int e)
     return false;
 }
 
-/* Effects > Kaleidoscope's types, in EditParams::kaleidoType order, and the rows only
+/* Effects > Patterns' types, in EditParams::kaleidoType order, and the rows only
    that type shows (applyKaleidoTypeRows hides the other types'; Angle / Source / Zoom /
    Opacity are common). Segments, Sides, Copies and Strands all write kaleidoSegments
    (the last three as 2 x the count), and Inside out / Reverse both write kaleidoInvert. */
@@ -4850,6 +4850,8 @@ void DevelopProperties::autoTone()
     if (G::isLogger) G::log("DevelopProperties::autoTone");
     if (currentImagePath.isEmpty() || activeScopeIndex != 0) return;
     noteNonMaskInteraction();   // not a mask edit: the veil gets out of the way
+    /* Whatever the sliders had queued for the selection belongs BEFORE this step. */
+    flushPropagation();
 
     auto work = ensureWorkingImage();
     if (!work) {
@@ -4859,30 +4861,23 @@ void DevelopProperties::autoTone()
         return;
     }
 
+    /* The same solve a preset's "Auto tone" runs on each image it lands on, so the
+       button and the preset cannot drift apart. It writes the eight fields only on
+       success. */
     EditParams &p = activeParams();
-    AutoTone::Result r;
     QElapsedTimer t;
     t.start();
     QApplication::setOverrideCursor(Qt::WaitCursor);
-    const bool ok = AutoTone::Solve(*work, p, r);
+    const AutoTone::AutosResult r = AutoTone::ApplyPresetAutos(*work, false, true, p);
     QApplication::restoreOverrideCursor();
     if (G::isLogger)
         G::log("DevelopProperties::autoTone", QString("%1 renders, %2 ms")
                                                   .arg(r.renders).arg(t.elapsed()));
-    if (!ok) {
+    if (!r.ok()) {
         if (G::popup)
             G::popup->showPopup("Auto tone could not render this image.", 2000);
         return;
     }
-
-    p.exposure   = r.exposure;
-    p.contrast   = r.contrast;
-    p.highlights = r.highlights;
-    p.shadows    = r.shadows;
-    p.whites     = r.whites;
-    p.blacks     = r.blacks;
-    p.vibrance   = r.vibrance;
-    p.saturation = r.saturation;
 
     const bool wasPopulating = isPopulating;
     isPopulating = true;                             // setSliderReal must not echo back
@@ -4897,7 +4892,26 @@ void DevelopProperties::autoTone()
     isPopulating = wasPopulating;
     refreshCurveRow();          // the parametric curve draws the same four tone values
 
-    noteEdit("Auto tone");
+    /*
+        MULTI-IMAGE: SOLVED PER IMAGE (Lightroom's behaviour), not copied. The ordinary
+        propagation would hand every other selected image THIS image's eight numbers,
+        which is only right for a set shot under identical light. So the field copy is
+        suspended and the rest of the selection goes through the same path as a preset
+        holding nothing but "Auto tone": propagatePreset records a linked "Global: Auto
+        tone" step on each target and queues it for the background batch, whose result
+        replaces that step (presetAutoQueue -- see "Preset Auto settings" in the header).
+    */
+    DevelopPreset autoOnly;
+    autoOnly.globals.insert(DevelopPreset::kAutoTone, true);
+    const QString autoKey = presetAutoMergeKey(++nextPresetAutoId);
+    propagateSuspended = true;
+    noteEdit("Auto tone", QString(), autoKey);
+    propagateSuspended = false;
+    /* Set only when a batch was queued (the start is a tick later, in runNext). */
+    if (propagatePreset(autoOnly, "Auto tone", autoKey) > 0) presetAutoCurrentInline = true;
+    /* Hold the sidecar write while the batch runs (see applyPresetObject). */
+    if ((presetAutoInFlight || !presetAutoQueue.isEmpty()) && debounceWriteTimer)
+        debounceWriteTimer->stop();
     emit paramsChanged();
 }
 
@@ -7064,7 +7078,7 @@ void DevelopProperties::addEffects()
 {
     if (G::isLogger) G::log("DevelopProperties::addEffects");
     addHeader("EffectsHeader", "???", "Effects",
-              "Vignette, grain and kaleidoscope.\n"
+              "Vignette, grain, blur and patterns.\n"
               "Choose an effect from the list.", PV_Effects);
     QModelIndex parIdx = capIdx;
 
@@ -7240,7 +7254,7 @@ void DevelopProperties::addEffects()
                 p.kaleidoVertex = std::max(p.kaleidoVertex,
                     EditParams::kaleidoMinVertex(p.kaleidoSegments / 2));
             }
-            noteEdit("Kaleidoscope type", kaleidoTypeDefs().value(idx).label,
+            noteEdit("Patterns type", kaleidoTypeDefs().value(idx).label,
                      historyScopeLabel() + "/kaleidoType");
             applyKaleidoTypeRows();
             syncKaleidoSliders();
@@ -7339,7 +7353,7 @@ void DevelopProperties::addEffects()
                 EditParams &p = activeParams();
                 if (p.kaleidoGroup == idx) return;
                 p.kaleidoGroup = idx;
-                noteEdit("Kaleidoscope pattern", wallpaperGroupLabels().value(idx),
+                noteEdit("Patterns pattern", wallpaperGroupLabels().value(idx),
                          historyScopeLabel() + "/kaleidoGroup");
                 emit paramsChanged();
             });
@@ -7732,7 +7746,7 @@ void DevelopProperties::setKaleidoHandles(double x, double y, double angleDeg)
     p.kaleidoY = fy;
     p.kaleidoAngle = fa;
     /* One row per drag, whichever handle: the centre and the spoke are one control. */
-    noteEdit("Kaleidoscope", QString::number(qRound(fa)) + QChar(0x00B0),
+    noteEdit("Patterns", QString::number(qRound(fa)) + QChar(0x00B0),
              historyScopeLabel() + "/kaleidoHandles");
     syncKaleidoSliders();           // the Angle slider follows the spoke
     emit paramsChanged();
@@ -7772,7 +7786,7 @@ void DevelopProperties::syncKaleidoSliders()
     }
     isPopulating = wasPop;
     applyKaleidoTypeRows();
-    updateSectionHeaderCaptions();   // the Effects " *" and the list's Kaleidoscope " *"
+    updateSectionHeaderCaptions();   // the Effects " *" and the list's Patterns " *"
 }
 
 void DevelopProperties::addLens()
@@ -8610,7 +8624,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
                 isPopulating = false;
             }
             p.kaleidoSegments = n;
-            noteEdit(n >= 2 ? "Kaleidoscope" : "Kaleidoscope off",
+            noteEdit(n >= 2 ? "Patterns" : "Patterns off",
                      n >= 2 ? QString::number(n) : QString(),
                      historyScopeLabel() + "/kaleidoSegments");
         }
@@ -8626,7 +8640,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
             if (n != raw) setSliderReal("kaleidoSides", n);
             setSliderReal("kaleidoVertex", p.kaleidoVertex);
             isPopulating = false;
-            noteEdit(n ? "Kaleidoscope" : "Kaleidoscope off",
+            noteEdit(n ? "Patterns" : "Patterns off",
                      n ? QString::number(n) + " sides" : QString(),
                      historyScopeLabel() + "/kaleidoSegments");
         }
@@ -8635,7 +8649,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
             const int n = std::max(0, qRound(v.toDouble()));
             p.kaleidoSegments = 2 * n;
             const bool copies = source == "kaleidoCopies";
-            noteEdit(n ? "Kaleidoscope" : "Kaleidoscope off",
+            noteEdit(n ? "Patterns" : "Patterns off",
                      n ? QString::number(n) + (copies ? " copies" : " strands") : QString(),
                      historyScopeLabel() + "/kaleidoSegments");
         }
@@ -8647,7 +8661,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
                 p.kaleidoSegments = std::max(p.kaleidoSegments, 2);
                 p.kaleidoTile = float(std::clamp(raw, 2, 100) / 100.0);
             }
-            noteEdit(raw > 0 ? "Kaleidoscope tile" : "Kaleidoscope off",
+            noteEdit(raw > 0 ? "Patterns tile" : "Patterns off",
                      raw > 0 ? historyValueText(idx, v) : QString(),
                      historyScopeLabel() + "/kaleidoTile");
         }
@@ -8659,7 +8673,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
                 p.kaleidoSegments = std::max(p.kaleidoSegments, 2);
                 p.kaleidoFlute = float(std::clamp(raw, 1, 25) / 100.0);
             }
-            noteEdit(raw > 0 ? "Fluted glass width" : "Kaleidoscope off",
+            noteEdit(raw > 0 ? "Fluted glass width" : "Patterns off",
                      raw > 0 ? historyValueText(idx, v) : QString(),
                      historyScopeLabel() + "/kaleidoFlute");
         }
@@ -8675,19 +8689,19 @@ void DevelopProperties::itemChange(QModelIndex idx)
         }
         else if (source == "kaleidoNest") {
             p.kaleidoNest = float(qBound(5.0, v.toDouble(), 80.0) / 100.0);
-            noteEdit("Kaleidoscope inner size", historyValueText(idx, v),
+            noteEdit("Patterns inner size", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoNest");
         }
         else if (source == "kaleidoWrap") {
             p.kaleidoWrap = v.toBool() ? 1 : 0;
-            noteEdit(p.kaleidoWrap ? "Kaleidoscope panorama wrap on"
-                                   : "Kaleidoscope panorama wrap off",
+            noteEdit(p.kaleidoWrap ? "Patterns panorama wrap on"
+                                   : "Patterns panorama wrap off",
                      QString(), historyScopeLabel() + "/kaleidoWrap");
         }
         else if (source == "kaleidoInsideOut" || source == "kaleidoReverse") {
             p.kaleidoInvert = v.toBool() ? 1 : 0;
             const QString what = source == "kaleidoReverse" ? "reverse" : "inside out";
-            noteEdit("Kaleidoscope " + what + (p.kaleidoInvert ? " on" : " off"),
+            noteEdit("Patterns " + what + (p.kaleidoInvert ? " on" : " off"),
                      QString(), historyScopeLabel() + "/kaleidoInvert");
         }
         else if (source == "kaleidoVertex") {
@@ -8699,32 +8713,32 @@ void DevelopProperties::itemChange(QModelIndex idx)
                 isPopulating = false;
             }
             p.kaleidoVertex = q;
-            noteEdit("Kaleidoscope per corner", QString::number(q),
+            noteEdit("Patterns per corner", QString::number(q),
                      historyScopeLabel() + "/kaleidoVertex");
         }
         else if (source == "kaleidoRadius") {
             p.kaleidoRadius = float(qBound(25.0, v.toDouble(), 400.0) / 100.0);
-            noteEdit("Kaleidoscope disk", historyValueText(idx, v),
+            noteEdit("Patterns disk", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoRadius");
         }
         else if (source == "kaleidoAngle") {
             p.kaleidoAngle = v.toFloat();
-            noteEdit("Kaleidoscope angle", historyValueText(idx, v),
+            noteEdit("Patterns angle", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoAngle");
         }
         else if (source == "kaleidoOpacity") {
             p.kaleidoOpacity = float(qBound(0.0, v.toDouble(), 100.0) / 100.0);
-            noteEdit("Kaleidoscope opacity", historyValueText(idx, v),
+            noteEdit("Patterns opacity", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoOpacity");
         }
         else if (source == "kaleidoZoom") {
             p.kaleidoZoom = float(qBound(25.0, v.toDouble(), 800.0) / 100.0);
-            noteEdit("Kaleidoscope zoom", historyValueText(idx, v),
+            noteEdit("Patterns zoom", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoZoom");
         }
         else {
             p.kaleidoSource = v.toFloat();
-            noteEdit("Kaleidoscope source", historyValueText(idx, v),
+            noteEdit("Patterns source", historyValueText(idx, v),
                      historyScopeLabel() + "/kaleidoSource");
         }
         updateSectionHeaderCaptions();
@@ -9552,7 +9566,7 @@ const PresetLeafDef kDetailLeaves[] = {
 const PresetLeafDef kEffectsLeaves[] = {
     {"vignette", "Vignette"},
     {"grain",    "Grain"},
-    {"kaleido",  "Kaleidoscope"},
+    {"kaleido",  "Patterns"},
     {"blur",     "Blur"},
 };
 /* A mask scope's Lens Blur refine. Global's Lens Blur itself (like the rest of the Lens
@@ -9870,6 +9884,9 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         preset.globals.insert("warp", q.join(','));
     }
     if (gk.contains("spots")) preset.spots = s.spots;
+    const QSet<QString> ak = selected.value("Auto settings");
+    for (const char *k : {DevelopPreset::kAutoWhiteBalance, DevelopPreset::kAutoTone})
+        if (ak.contains(QLatin1String(k))) preset.globals.insert(k, true);
 
     /* The adjustments, from the chosen scope. */
     if (srcScope >= 0 && srcScope < s.scopes.size()) {
@@ -9929,6 +9946,26 @@ QVector<PresetGroup> DevelopProperties::buildChecklistGroups(const EditStack &s)
     gg.leaves.append({"warp", "Warp", s.geometry.hasWarp});
     gg.leaves.append({"spots", "Spots", !s.spots.isEmpty()});
     groups.append(gg);
+
+    /* Auto settings: COMMANDS, not values (DevelopPreset::autoWhiteBalance / autoTone).
+       Each image the preset lands on is solved from its own pixels, always on scope 0.
+       Per image like Global settings, so the Scope combo leaves them alone. Auto white
+       balance is pre-checked when this image's WB row says Auto -- that is the intent
+       worth saving, not the Kelvin it happened to solve to. Auto tone leaves no such
+       trace in the recipe, so it starts unchecked. */
+    PresetGroup ag;
+    ag.title = "Auto settings";
+    ag.checkable = false;
+    ag.showAllNone = false;
+    ag.leaves.append({DevelopPreset::kAutoWhiteBalance, "Auto white balance",
+        base.wbPreset == int(WhiteBalance::Preset::Auto),
+        "Solve the white balance of each image the preset is applied to, instead of "
+        "copying this image's Temp and Tint. Overrides White balance in Basic."});
+    ag.leaves.append({DevelopPreset::kAutoTone, "Auto tone", false,
+        "Run Auto tone on each image the preset is applied to: Exposure, Contrast, "
+        "Highlights, Shadows, Whites, Blacks, Vibrance and Saturation are solved per "
+        "image, overriding those in Basic."});
+    groups.append(ag);
 
     /* One group per Develop section. The leaves are the same in every scope, so the
        dialog switches scopes by re-checking them from changedPerScope. */
@@ -10055,7 +10092,9 @@ EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack 
                 RawRender::apply(s.scopes[0].params, c);
             }
         }
-        else if (k != "appleRawVersion") {  // read with demosaicEngine above
+        /* appleRawVersion is read with demosaicEngine above. The Auto settings are
+           commands, run after the merge (solvePresetAutosNow / the batch). */
+        else if (k != "appleRawVersion" && !DevelopPreset::isAutoKey(k)) {
             DevelopPresets::assignParam(k, it.value(), s.scopes[0].params);
         }
     }
@@ -10104,7 +10143,11 @@ void DevelopProperties::previewPreset(const QString &name)
     /* NOT previewed: the raw decode engine. Switching it forces a full raw re-decode,
        which a passing cursor must never trigger -- it is applied on click only. */
     clearBeforeAfterLatch();            // this hover is now the override, not Before
-    previewStack = mergePreset(presets->read(name), s, targetScopeIndex(s));
+    const DevelopPreset preset = presets->read(name);
+    previewStack = mergePreset(preset, s, targetScopeIndex(s));
+    /* Auto settings are previewed only from a base already in memory: a passing cursor
+       must not decode. On a miss the preview shows the preset's literal values. */
+    if (preset.hasAutos()) solvePresetAutosNow(preset, previewStack, /*build*/false);
     previewActive = true;
     emit historyPreviewChanged();       // proxy render only, no full-res settle
 }
@@ -10178,6 +10221,21 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
     EditStack s = stackCache.value(currentImagePath);
     s = mergePreset(preset, s, targetScopeIndex(s));
     stackCache[currentImagePath] = s;
+    /* Auto settings on THIS image: solved inline when its base is in memory (or can be
+       built on the spot), so the one history step below holds the solved values.
+       Otherwise -- a raw not decoded yet -- it joins the batch once the step exists, and
+       the step's mergeKey lets the late result replace it rather than add a second.
+       stackCache already holds the merge: ensureWorkingImage reads the renderer the
+       preset may just have switched. */
+    QString autoKey;
+    PresetAutoJob currentJob;
+    bool currentAutoPending = false;
+    if (preset.hasAutos()) {
+        autoKey = presetAutoMergeKey(++nextPresetAutoId);
+        currentJob.expect = s.scopes.first().params;
+        currentAutoPending = !solvePresetAutosNow(preset, s, /*build*/true);
+        stackCache[currentImagePath] = s;
+    }
     if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = 0;
 
     refreshScopeList();
@@ -10190,10 +10248,29 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
        propagateSuspended: the other selected images get the WHOLE preset object below,
        not the scope-0 field diff this commit would otherwise queue. */
     propagateSuspended = true;
-    noteScopeEdit(historyScopeLabel(), label);
+    noteScopeEdit(historyScopeLabel(), label, QString(), autoKey);
     propagateSuspended = false;
 
-    const int nImages = 1 + propagatePreset(preset, label);
+    quint64 syncId = 0;
+    const int nImages = 1 + propagatePreset(preset, label, autoKey, &syncId);
+    if (preset.hasAutos() && !currentAutoPending && nImages > 1)
+        presetAutoCurrentInline = true;
+    if (currentAutoPending) {
+        currentJob.path = currentImagePath;
+        currentJob.wb = preset.autoWhiteBalance();
+        currentJob.tone = preset.autoTone();
+        currentJob.scopeLabel = historyScopeLabel();
+        currentJob.label = label;
+        currentJob.mergeKey = autoKey;
+        currentJob.syncId = syncId;
+        queuePresetAuto(currentJob, /*front*/true);   // the image on screen goes first
+    }
+    /* Hold the sidecar write while the batch runs. Every image it touches is already
+       dirty, so nothing is at risk, but a flush now would write the UNSOLVED recipes and
+       hand each to the devPreview builder -- a full render per image, thrown away the
+       moment its Auto result lands. The last result restarts the timer. */
+    if ((presetAutoInFlight || !presetAutoQueue.isEmpty()) && debounceWriteTimer)
+        debounceWriteTimer->stop();
 
     /* The renderer landed in each image's recipe (mergePreset), so the render below
        decodes with it -- the base is filed per renderer. The stored token is matched
@@ -10333,6 +10410,7 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
 
     for (auto it = preset.globals.begin(); it != preset.globals.end(); ++it) {
         const QString &k = it.key();
+        if (DevelopPreset::isAutoKey(k)) continue;  // a command: no value to refill
         if (k == "demosaicEngine") {
             it.value() = QString(RawRender::resolve(s.scopes.first().params).apple
                                      ? "apple" : "winnow");
@@ -11290,7 +11368,8 @@ void DevelopProperties::flushPropagation()
         debounceWriteTimer->start(kDebounceWriteMs);
 }
 
-int DevelopProperties::propagatePreset(const DevelopPreset &preset, const QString &label)
+int DevelopProperties::propagatePreset(const DevelopPreset &preset, const QString &label,
+                                       const QString &autoKey, quint64 *syncIdOut)
 {
 /*
     Paste Settings / Apply Preset onto the OTHER selected images. Unlike an adjustment
@@ -11308,6 +11387,7 @@ int DevelopProperties::propagatePreset(const DevelopPreset &preset, const QStrin
        seeded first if it had no history, and the current image's step -- recorded by the
        caller just before this -- carries the same syncId. */
     const quint64 syncId = ++nextSyncId;
+    if (syncIdOut) *syncIdOut = syncId;
     if (history) history->stampTop(currentImagePath, syncId);
     for (const QString &p : targets) {
         EditStack &t = stackFor(p);
@@ -11315,12 +11395,244 @@ int DevelopProperties::propagatePreset(const DevelopPreset &preset, const QStrin
         t = mergePreset(preset, t, 0);
         dirty.insert(p);
         if (history)
-            history->record(p, "Global", label, QString(), QString(), t, syncId);
+            history->record(p, "Global", label, QString(), autoKey, t, syncId);
+        /* Auto settings: solved from THIS image's pixels by the batch, which needs a
+           decode -- so the step above holds the literal merge until the result lands
+           and replaces it (same mergeKey). */
+        if (preset.hasAutos()) {
+            PresetAutoJob job;
+            job.path = p;
+            job.expect = t.scopes.first().params;
+            job.wb = preset.autoWhiteBalance();
+            job.tone = preset.autoTone();
+            job.scopeLabel = "Global";
+            job.label = label;
+            job.mergeKey = autoKey;
+            job.syncId = syncId;
+            queuePresetAuto(job);
+        }
     }
     if (history) history->seed(currentImagePath, stackCache.value(currentImagePath));
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
     return targets.count();
+}
+
+/* ---- Preset Auto settings ----------------------------------------------------------
+   See "Preset Auto settings" in the header. */
+
+std::shared_ptr<const WorkingImage> DevelopProperties::cachedBaseFor(const QString &fPath,
+                                                                  const EditStack &s) const
+{
+/*
+    fPath's pre-develop base for recipe s, from WorkingImageCache only -- nothing is
+    decoded or built. Null on a miss, and also when Develop wants a raw's SCENE-LINEAR
+    image and all the cache holds is its embedded-preview stand-in: Auto solved on the
+    preview would land on an image rendered from the sensor (the same acceptance rule as
+    MW::ensureWorkingImageNow).
+*/
+    if (fPath.isEmpty()) return nullptr;
+    const RawRender::Choice rc = s.scopes.isEmpty() ? RawRender::defaultChoice()
+                                                    : RawRender::resolve(s.scopes.first().params);
+    auto w = WorkingImageCache::instance().get(fPath, rc.tag());
+    if (!w || !w->isValid()) return nullptr;
+    const bool wantRaw = mw && mw->isFileRaw(fPath) && G::useRaw;
+    if (wantRaw && !w->sceneReferred) return nullptr;
+    return w;
+}
+
+bool DevelopProperties::solvePresetAutosNow(const DevelopPreset &preset, EditStack &s,
+                                            bool build)
+{
+/*
+    The inline route: run preset's Auto settings on scope 0 of s (the current image's
+    merged stack). build false is the hover preview -- a cache hit or nothing. build true
+    is the click, which may also build a display-referred base on the spot
+    (ensureWorkingImage); a raw that still needs decoding returns false and goes to the
+    batch. A step that RAN but could not solve (no neutral reference, an unusable frame)
+    still returns true: the batch would get the same answer from the same pixels.
+*/
+    if (s.scopes.isEmpty() || currentImagePath.isEmpty()) return false;
+    const bool wb = preset.autoWhiteBalance();
+    const bool tone = preset.autoTone();
+    EditParams &p = s.scopes.first().params;
+
+    const bool memoHit = autoMemo.valid && autoMemo.path == currentImagePath &&
+                         autoMemo.wb == wb && autoMemo.tone == tone && autoMemo.in == p;
+    bool ok = autoMemo.ok;
+    if (memoHit) {
+        p = autoMemo.out;
+    }
+    else {
+        auto work = cachedBaseFor(currentImagePath, s);
+        if (!work && build) {
+            work = ensureWorkingImage();
+            /* ensureWorkingImage hands back whatever it has, a raw's preview stand-in
+               included (it has just started the scene-linear decode); re-apply the
+               acceptance rule. */
+            if (work && mw && mw->isFileRaw(currentImagePath) && G::useRaw &&
+                !work->sceneReferred)
+                work.reset();
+        }
+        if (!work) return false;
+
+        const EditParams in = p;
+        QElapsedTimer t;
+        t.start();
+        if (build) QApplication::setOverrideCursor(Qt::WaitCursor);
+        const AutoTone::AutosResult r = AutoTone::ApplyPresetAutos(*work, wb, tone, p);
+        if (build) QApplication::restoreOverrideCursor();
+        if (G::isLogger)
+            G::log("DevelopProperties::solvePresetAutosNow",
+                   QString("%1 renders, %2 ms").arg(r.renders).arg(t.elapsed()));
+        ok = r.ok();
+        autoMemo.valid = true;
+        autoMemo.path = currentImagePath;
+        autoMemo.in = in;
+        autoMemo.out = p;
+        autoMemo.wb = wb;
+        autoMemo.tone = tone;
+        autoMemo.ok = ok;
+    }
+    /* Said on the click only: a hover that cannot solve just previews the literal
+       values. */
+    if (!ok && build && G::popup)
+        G::popup->showPopup("The preset's Auto settings could not be solved for this "
+                            "image, so its own values were kept.", 2500);
+    return true;
+}
+
+void DevelopProperties::queuePresetAuto(const PresetAutoJob &job, bool front)
+{
+    if (front) presetAutoQueue.prepend(job);
+    else       presetAutoQueue.append(job);
+    ++presetAutoTotal;
+    emit presetAutoProgress(presetAutoDone, presetAutoTotal, QString());
+    /* Started a tick late: applyPresetObject queues the targets before it knows the
+       current image's job, and that one must go first. */
+    if (!presetAutoInFlight)
+        QTimer::singleShot(0, this, &DevelopProperties::runNextPresetAuto);
+}
+
+void DevelopProperties::runNextPresetAuto()
+{
+/*
+    Solve the next queued image. ONE AT A TIME: autoSolver decodes on developRenderPool,
+    and a selection of raws decoded at once is exactly the memory overrun the raw-decoder
+    budget exists to prevent. The callback re-enters here.
+*/
+    if (presetAutoInFlight) return;
+    if (presetAutoQueue.isEmpty()) {
+        if (presetAutoTotal == 0) return;               // a stale singleShot
+        /* The batch is over: say what happened when it was more than the one image on
+           screen, or when anything did not get its Auto values. */
+        const int total = presetAutoTotal;
+        const int failed = presetAutoFailed, skipped = presetAutoSkipped;
+        presetAutoDone = presetAutoTotal = presetAutoFailed = presetAutoSkipped = 0;
+        emit presetAutoProgress(0, 0, QString());
+        if (G::isDevelopDebounceWrite && debounceWriteTimer)
+            debounceWriteTimer->start(kDebounceWriteMs);
+        if (G::popup && (total > 1 || failed || skipped)) {
+            QString msg = QString("Auto settings solved for %1 of %2 images.")
+                              .arg(total - skipped).arg(total);
+            if (failed)
+                msg += QString("<br>%1 could not be fully solved; what failed kept the "
+                               "preset's own values.").arg(failed);
+            if (skipped)
+                msg += QString("<br>%1 changed before their turn came and were left as "
+                               "they were.").arg(skipped);
+            G::popup->showPopup(msg, 3000);
+        }
+        return;
+    }
+
+    const PresetAutoJob job = presetAutoQueue.takeFirst();
+    /* The batch's FIRST image: say what is happening, now. The status-bar row alone is
+       not enough -- it sits empty until the first image is solved, which on a raw is a
+       full decode (and may wait behind the settle render of the image on screen). This
+       popup also replaces "Applied preset ... to N images", which said nothing about the
+       work still to come. */
+    if (presetAutoDone == 0) {
+        const bool inlineCurrent = presetAutoCurrentInline;
+        presetAutoCurrentInline = false;
+        if (G::popup) {
+            const int n = presetAutoTotal;
+            const QString what = job.wb && job.tone ? "Auto tone and white balance"
+                               : job.wb             ? "Auto white balance"
+                                                    : "Auto tone";
+            const QString imgs = QString::number(n) + (n == 1 ? " image" : " images");
+            G::popup->showPopup(
+                what + (inlineCurrent ? ": this image is done; solving the other " + imgs
+                                      : ": solving " + imgs) +
+                " in the background, one at a time.<br>Each thumbnail updates as its "
+                "image is done; progress is in the status bar (Auto Settings).", 4000);
+        }
+    }
+    emit presetAutoProgress(presetAutoDone, presetAutoTotal,
+                            QFileInfo(job.path).fileName());
+    if (!autoSolver) {                                  // no host (tests, headless)
+        onPresetAutoSolved(job, false, job.expect);
+        QTimer::singleShot(0, this, &DevelopProperties::runNextPresetAuto);
+        return;
+    }
+    presetAutoInFlight = true;
+    autoSolver(job.path, job.expect, job.wb, job.tone,
+               [this, job](bool ok, const EditParams &solved) {
+                   presetAutoInFlight = false;
+                   onPresetAutoSolved(job, ok, solved);
+                   runNextPresetAuto();
+               });
+}
+
+void DevelopProperties::onPresetAutoSolved(const PresetAutoJob &job, bool ok,
+                                           const EditParams &solved)
+{
+/*
+    One batch result, back on the GUI thread. It lands only if nothing has happened to
+    the image since the preset did: its scope-0 params are still the ones the solve
+    started from, AND the preset's history step is still the one in force. The second
+    test matters when the preset held nothing but Auto settings -- then the step before
+    it has the same params, and a revert to it would otherwise be overwritten (and its
+    redo truncated) by a result that belongs to the step the user just left.
+*/
+    ++presetAutoDone;
+    emit presetAutoProgress(presetAutoDone, presetAutoTotal, QString());
+
+    EditStack &t = stackFor(job.path);
+    bool current = t.scopes.first().params == job.expect;
+    if (current && history) {
+        const int pos = history->pos(job.path);
+        const HistoryEntry *e = history->at(job.path, pos);
+        current = e && pos == history->count(job.path) - 1 && e->mergeKey == job.mergeKey;
+    }
+    if (!current) {
+        ++presetAutoSkipped;
+        return;
+    }
+    if (!ok) ++presetAutoFailed;
+    if (solved != job.expect) {             // else nothing solved: the merge stands
+        t.scopes.first().params = solved;
+        EditStack::sanitize(t);
+        dirty.insert(job.path);
+        if (history)
+            history->record(job.path, job.scopeLabel, job.label, QString(), job.mergeKey,
+                            t, job.syncId);
+    }
+
+    if (job.path == currentImagePath) {
+        if (solved == job.expect) return;
+        isRestoringHistory = true;      // our own write, not an edit
+        buildTree();
+        isRestoringHistory = false;
+        emit paramsChanged();
+        return;
+    }
+    /* Write THIS image now, so its thumbnail is rebuilt while the batch carries on (the
+       flush hands it to the devPreview builder) and the user sees the selection change
+       image by image instead of all at once minutes later. Its recipe is final, so the
+       render is not wasted -- the reason the batch holds the debounced flush is the
+       UNSOLVED recipes of the images still queued. */
+    if (dirty.contains(job.path)) flushImage(job.path);
 }
 
 void DevelopProperties::populateSlidersFromStack()

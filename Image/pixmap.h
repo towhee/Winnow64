@@ -28,7 +28,7 @@ public:
        arbitrary files (e.g. FindDuplicatesDlg target images). Video is handled by the
        caller via FrameDecoder. Absorbed from the former AutonomousImage class.
 
-       colorManage is opt-in (and still gated by the global G::colorManage): leave it off
+       colorManage is opt-in: leave it off
        for comparison thumbnails so they stay apples-to-apples with the datamodel's non
        colour-managed icons; turn it on for previews shown to the user.
     */

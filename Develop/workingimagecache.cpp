@@ -4,6 +4,7 @@
 #include "Develop/outputtransform.h"
 #include "Develop/cameraprofilestore.h"
 #include "Develop/cameraprofile.h"
+#include "Develop/areashrink.h"
 #include <QImage>
 #include <QElapsedTimer>
 #include <QtConcurrent>
@@ -33,6 +34,23 @@ namespace {
     built-in matrix. That is deliberate and it is not silent: the panel resolves the same
     name and shows the reason.
 */
+/* Fold one Apply's stage split into a render's [DevTime] buckets. ADDS, so the stack
+   path can call it for the base and every scope's layer. */
+void addStageTimings(WorkingImageCache::RenderTimings &r, const Develop::StageTimings &s)
+{
+    r.setupMs    += s.setupMs;
+    r.profileMs  += s.profileMs;
+    r.denoiseMs  += s.denoiseMs;
+    r.pointMs    += s.pointMs;
+    r.textureMs  += s.textureMs;
+    r.clarityMs  += s.clarityMs;
+    r.dehazeMs   += s.dehazeMs;
+    r.vignetteMs += s.vignetteMs;
+    r.sharpenMs  += s.sharpenMs;
+    r.blurMs     += s.blurMs;
+    r.grainMs    += s.grainMs;
+}
+
 void attachProfile(WorkingImage &img, const EditParams &p)
 {
     img.cam.profile.reset();
@@ -285,16 +303,7 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     develop.Apply(developed, edit, timings ? &stage : nullptr);
     if (timings) {
         timings->developMs = t.restart();
-        timings->profileMs = stage.profileMs;
-        timings->denoiseMs = stage.denoiseMs;
-        timings->pointMs   = stage.pointMs;
-        timings->textureMs = stage.textureMs;
-        timings->clarityMs = stage.clarityMs;
-        timings->dehazeMs  = stage.dehazeMs;
-        timings->vignetteMs = stage.vignetteMs;
-        timings->sharpenMs = stage.sharpenMs;
-        timings->grainMs = stage.grainMs;
-        timings->blurMs = stage.blurMs;
+        addStageTimings(*timings, stage);
     }
     const bool ok = toImage(developed, out);
     if (timings) timings->toImageMs = t.restart();
@@ -393,8 +402,13 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
            working space whatever the base params say, or OutputTransform renders sensor
            data (a green cast, since CameraNative has no conversion matrix). For an
            already-converted image the call costs a tag test. */
-        develop.Apply(acc, base, nullptr);
-        if (timings) timings->stackApplyMs += sub.restart();
+        Develop::StageTimings stage;
+        develop.Apply(acc, base, timings ? &stage : nullptr);
+        if (timings) {
+            timings->baseApplyMs = sub.restart();
+            timings->stackApplyMs += timings->baseApplyMs;
+            addStageTimings(*timings, stage);
+        }
     }
     if (timings) {
         timings->resumeStart  = resumed ? int(resume->start) : -1;
@@ -462,8 +476,12 @@ bool WorkingImageCache::renderStack(const WorkingImage &work, const EditParams &
             else {
                 assignReusing(layBuf, acc);
                 if (timings) timings->stackCopyMs += sub.restart();
-                develop.Apply(layBuf, L.params, nullptr);
-                if (timings) timings->stackApplyMs += sub.restart();
+                Develop::StageTimings stage;
+                develop.Apply(layBuf, L.params, timings ? &stage : nullptr);
+                if (timings) {
+                    timings->stackApplyMs += sub.restart();
+                    addStageTimings(*timings, stage);
+                }
                 layP = &layBuf;
             }
         }
@@ -588,6 +606,6 @@ WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLo
     }
     dst.rgb.resize(static_cast<size_t>(dw) * static_cast<size_t>(dh) * 3);
     cv::Mat dstMat(dh, dw, CV_32FC3, dst.rgb.data());
-    cv::resize(srcMat, dstMat, cv::Size(dw, dh), 0, 0, cv::INTER_AREA);
+    AreaShrink(srcMat, dstMat, cv::Size(dw, dh));   // staged: see areashrink.h
     return dst;
 }

@@ -85,6 +85,9 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
         ifdData.tagValue = tagValue;
 
         ifdDataHash.insert(tagId, ifdData);
+        if (tagId == 40961 && tagCount == 1) exifColorSpace = int(tagValue);  // ColorSpace
+        if (tagId == 40965) interopOffset = tagValue;                         // Interop IFD
+        if (tagId == 50970 && tagCount == 1) dngPreviewColorSpace = int(tagValue);  // DNG
 
         if (p.report) {
             (p.hash->contains(tagId)) ? tagDescription = p.hash->value(tagId)
@@ -210,6 +213,9 @@ quint32 IFD::readIFD_B(MetadataParameters &p, bool isBigEnd)
         ifdData.tagValue = tagValue;
 
         ifdDataHash.insert(tagId, ifdData);
+        if (tagId == 40961 && tagCount == 1) exifColorSpace = int(tagValue);  // ColorSpace
+        if (tagId == 40965) interopOffset = tagValue;                         // Interop IFD
+        if (tagId == 50970 && tagCount == 1) dngPreviewColorSpace = int(tagValue);  // DNG
 
         if (p.report) {
             (p.hash->contains(tagId)) ? tagDescription = p.hash->value(tagId)
@@ -318,3 +324,23 @@ QList<quint32> IFD::getSubIfdOffsets_B(QFile &file, quint32 subIFDaddr, int coun
     return offsets;
 }
 
+
+QByteArray IFD::readInteropIndex(QFile &file, qint64 ifdPos, bool isBigEnd)
+{
+    const qint64 back = file.pos();
+    QByteArray index;
+    if (ifdPos > 0 && file.seek(ifdPos)) {
+        const int n = Utilities::get16(file.read(2), isBigEnd);
+        for (int i = 0; i < n && i < 64; ++i) {
+            const QByteArray e = file.read(12);
+            if (e.size() < 12) break;
+            if (Utilities::get16(e.left(2), isBigEnd) != 1) continue;   // InteropIndex
+            index = e.mid(8, 4);                    // ASCII, count 4: held inline
+            const int nul = index.indexOf('\0');
+            if (nul >= 0) index.truncate(nul);
+            break;
+        }
+    }
+    file.seek(back);
+    return index;
+}

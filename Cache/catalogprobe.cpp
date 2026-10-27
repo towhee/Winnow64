@@ -247,6 +247,7 @@ int run(const QString &pathFilter)
         if (r.developed != f.developed) bad << "developed";
         if (r.devPreviewKey != f.devPreviewKey) bad << "devPreviewKey";
         if (r.shootingInfo != f.shootingInfo)   bad << "shootingInfo";
+        if (r.colorSpace != f.colorSpace)       bad << "colorSpace";
         /*  Keyword ORDER is not part of the contract -- fetchFresh reads them one image
             at a time and searchRows reads them all in one join, so the two arrive in
             different orders for the same image. The SET is the fact. */

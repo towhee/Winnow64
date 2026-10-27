@@ -66,6 +66,9 @@ private slots:
     void greyFrameGetsNoColourPush();
     void colourPushIsContinuous();
     void independentOfCurrentSliders();
+    void presetAutoToneMatchesSolve();
+    void presetAutoWbNeedsCameraColour();
+    void benchmarkFullFrame();
 };
 
 void TstAutoTone::percentilesInterpolate()
@@ -153,6 +156,83 @@ void TstAutoTone::independentOfCurrentSliders()
     QCOMPARE(a.whites, b.whites);
     QCOMPARE(a.blacks, b.blacks);
     QCOMPARE(a.vibrance, b.vibrance);
+}
+
+/* A preset's "Auto tone" (ApplyPresetAutos) is the button's solve, written over
+   whatever tone values the preset's literal merge left -- so a preset carrying both
+   ends up with the solved ones. */
+void TstAutoTone::presetAutoToneMatchesSolve()
+{
+    const WorkingImage img = makeScene(0.3f);
+    const AutoTone::Result r = solve(img);
+    EditParams p;
+    p.exposure = 2.0f;                  // a literal value the preset also carried
+    p.whites = -40.0f;
+    p.texture = 25.0f;                  // not Auto's: must survive
+    const AutoTone::AutosResult res = AutoTone::ApplyPresetAutos(img, false, true, p);
+    QVERIFY(res.ok());
+    QCOMPARE(p.exposure, r.exposure);
+    QCOMPARE(p.contrast, r.contrast);
+    QCOMPARE(p.highlights, r.highlights);
+    QCOMPARE(p.shadows, r.shadows);
+    QCOMPARE(p.whites, r.whites);
+    QCOMPARE(p.blacks, r.blacks);
+    QCOMPARE(p.vibrance, r.vibrance);
+    QCOMPARE(p.saturation, r.saturation);
+    QCOMPARE(p.texture, 25.0f);
+}
+
+/* Auto white balance solves through the camera characterisation; without one (this
+   synthetic frame has none) it must fail CLEANLY: WB left as merged, reported, and Auto
+   tone still run. */
+void TstAutoTone::presetAutoWbNeedsCameraColour()
+{
+    const WorkingImage img = makeScene(0.3f);
+    EditParams p;
+    p.temp = 5200.0f;
+    p.tint = 7.0f;
+    const AutoTone::AutosResult res = AutoTone::ApplyPresetAutos(img, true, true, p);
+    QVERIFY(!res.wbOk);
+    QVERIFY(res.toneOk);
+    QVERIFY(!res.ok());
+    QCOMPARE(p.temp, 5200.0f);
+    QCOMPARE(p.tint, 7.0f);
+    QVERIFY(p.exposure > 0.0f);         // the dark frame was still brightened
+}
+
+/* NOT a test: the solve's stage timings on a 50 MP frame (8672 x 5784, a Sony ILCE-1M2
+   raw), for choosing where to optimise. Skipped unless WINNOW_BENCH=1, so ctest stays
+   fast. */
+void TstAutoTone::benchmarkFullFrame()
+{
+    if (qEnvironmentVariableIntValue("WINNOW_BENCH") != 1)
+        QSKIP("benchmark: set WINNOW_BENCH=1");
+    const int w = 8672, h = 5784;
+    WorkingImage img;
+    img.width = w;
+    img.height = h;
+    img.sceneReferred = false;
+    img.rgb.resize(size_t(w) * h * 3);
+    for (int y = 0; y < h; ++y)
+        for (int x = 0; x < w; ++x) {
+            const float u = float(x) / (w - 1), v = float(y) / (h - 1);
+            const float t = 0.5f + 0.5f * std::sin(6.0f * u + 3.0f * v);
+            const float L = 0.3f * (0.02f + 0.88f * t * t);
+            const size_t j = (size_t(y) * w + x) * 3;
+            img.rgb[j + 0] = L * (1.0f + 0.25f * (u - 0.5f));
+            img.rgb[j + 1] = L;
+            img.rgb[j + 2] = L * (1.0f + 0.25f * (v - 0.5f));
+        }
+    for (int run = 0; run < 3; ++run) {
+        img.statSlot = std::make_shared<StatSampleSlot>();   // a fresh base each run
+        QElapsedTimer t;
+        t.start();
+        AutoTone::Result r;
+        QVERIFY(AutoTone::Solve(img, EditParams(), r));
+        qInfo("  run %d: total %lld ms = proxy %d + statSample %d + localSample %d + "
+              "%d renders %d ms", run, t.elapsed(), r.proxyMs, r.sampleMs, r.localMs,
+              r.renders, r.rendersMs);
+    }
 }
 
 QTEST_GUILESS_MAIN(TstAutoTone)

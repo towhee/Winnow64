@@ -218,6 +218,7 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     row.versions = m.versions;          // schema 17: the sidecar's versions (virtual copies)
     row.devPreviewKey = m.devPreviewKey;
     row.shootingInfo = m.shootingInfo;
+    row.colorSpace = m.colorSpace;          // schema 27
     /* The prefix-expanded PATHS, exactly as DataModel::catalogRows supplies them -- the
        scanner and the opportunistic capture must index the same image the same way, or a
        folder would be catalogued differently depending on which of them saw it first. */

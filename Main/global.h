@@ -911,7 +911,6 @@ Q_NAMESPACE
     extern bool isProcessingExportedImages;
     extern bool isEmbellish;
     extern bool includeSidecars;
-    extern bool colorManage;
     extern bool modifySourceFiles;
     extern bool backupBeforeModifying;
     extern bool autoAddMissingThumbnails;

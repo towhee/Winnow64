@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Metadata/colorspaces.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Datamodel/variantless.h"
@@ -1177,6 +1178,13 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         RowStore::covers(idx.column(), role) &&
         rowStore.contains(idx.row()))
     {
+        /*  THE ONE COLUMN WHOSE TWO ROLES DIFFER. ICCSpace holds a colour space ID
+            (Metadata/colorspaces.h); EditRole returns it -- the catalog, imMetadata and
+            the query evaluator read that -- and DisplayRole its name, which is what the
+            table view, sorting and "Filter on..." show. 0 (nothing known) is blank. */
+        if (idx.column() == G::ICCSpaceColumn && role == Qt::DisplayRole)
+            return ColorSpaces::name(rowStore.value(idx.row(), idx.column(),
+                                                    Qt::EditRole).toInt());
         return rowStore.value(idx.row(), idx.column(), role);
     }
 
@@ -3567,6 +3575,7 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
         sidecar that lists them. */
     r.versions = versionMasters.value(key).versions;
     r.shootingInfo = index(row, G::ShootingInfoColumn).data().toString();
+    r.colorSpace = index(row, G::ICCSpaceColumn).data(Qt::EditRole).toInt();
     /*  The LITERAL dc:subject list, kept apart from the flat vocabulary below --
         only this one may ever be written back to a file. */
     r.keywordsLiteral = index(row, G::KeywordsColumn).data().toStringList();
@@ -3807,10 +3816,10 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.iccSegmentOffset = index(row, G::ICCSegmentOffsetColumn).data().toUInt();
     m.iccSegmentLength = index(row, G::ICCSegmentLengthColumn).data().toUInt();
     m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
-    /* ICCSpaceColumn, not ICCSegmentOffsetColumn -- reading the offset here returned the
-       segment's file position as the colour space NAME. Silent: iccSpace is only ever
-       displayed or logged, so it read as a stray number rather than as a failure. */
-    m.iccSpace = index(row, G::ICCSpaceColumn).data().toString();
+    /* ICCSpaceColumn, not ICCSegmentOffsetColumn (that slip once returned the segment's
+       file position as the colour space). EditRole: the ID, not the name DisplayRole
+       gives. */
+    m.colorSpace = index(row, G::ICCSpaceColumn).data(Qt::EditRole).toInt();
 
     m.searchStr = index(row, G::SearchTextColumn).data().toString();
     m.compare = index(row, G::CompareColumn).data().toBool();
@@ -4405,8 +4414,10 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         setData(index(row, G::ICCSegmentOffsetColumn), m.iccSegmentOffset);
         setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
         setData(index(row, G::ICCBufColumn), m.iccBuf);
-        setData(index(row, G::ICCSpaceColumn), m.iccSpace);
     }
+    /*  OUTSIDE the block above: the colour space is a fact about the image that the
+        catalog stores (schema 27), so a row hydrated from the index has it too. */
+    setData(index(row, G::ICCSpaceColumn), m.colorSpace);
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
     setData(index(row, G::OrientationColumn), m.orientation);
     setData(index(row, G::RotationDegreesColumn), m.rotationDegrees);

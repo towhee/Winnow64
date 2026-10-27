@@ -22,6 +22,7 @@ private slots:
     void readIFD_bigEndian();
     void readIFD_littleEndian();
     void readIFD_shortIgnoresPadding();
+    void interopIndexAndPointer();
 
 private:
     // Build one 12-byte IFD entry. value4 must be exactly 4 bytes.
@@ -144,4 +145,43 @@ void TstIfd::readIFD_shortIgnoresPadding()
 }
 
 QTEST_GUILESS_MAIN(TstIfd)
+void TstIfd::interopIndexAndPointer()
+{
+    /*  The Interop IFD's index "R03" marks an Adobe RGB file (Metadata/colorspaces.h).
+        readInteropIndex reads it straight from the file -- both byte orders, the ASCII
+        held inline -- and leaves the file where it was, because a parser is usually
+        mid-walk when it asks. readIFD records the 0xA005 pointer as it passes. */
+    for (bool bigEnd : {true, false}) {
+        QByteArray bytes(8, 'x');                               // junk before the IFD
+        bytes += Utilities::put16(2, bigEnd);
+        bytes += entry(2, 7, 4, QByteArray("0100", 4), bigEnd); // InteropVersion
+        bytes += entry(1, 2, 4, QByteArray("R03\0", 4), bigEnd); // InteropIndex
+        bytes += Utilities::put32(0, bigEnd);
+
+        MetadataParameters p;
+        QTemporaryFile tmp;
+        QVERIFY(loadIntoFile(p, tmp, bytes));
+        p.file.seek(3);
+        QCOMPARE(IFD::readInteropIndex(p.file, 8, bigEnd), QByteArray("R03"));
+        QCOMPARE(p.file.pos(), qint64(3));
+        QVERIFY(IFD::readInteropIndex(p.file, 0, bigEnd).isEmpty());
+
+        /* An EXIF IFD carrying ColorSpace = Uncalibrated and the Interop pointer. */
+        QByteArray exif(4, 'x');
+        exif += Utilities::put16(2, bigEnd);
+        exif += entry(40961, 3, 1, bigEnd ? QByteArray("\xff\xff\0\0", 4)
+                                          : QByteArray("\xff\xff\0\0", 4), bigEnd);
+        exif += entry(40965, 4, 1, Utilities::put32(1234, bigEnd), bigEnd);
+        exif += Utilities::put32(0, bigEnd);
+        MetadataParameters q;
+        QTemporaryFile tmp2;
+        QVERIFY(loadIntoFile(q, tmp2, exif));
+        q.offset = 4;
+        IFD ifd;
+        ifd.readIFD(q, bigEnd);
+        QCOMPARE(ifd.exifColorSpace, 0xFFFF);
+        QCOMPARE(ifd.interopOffset, quint32(1234));
+    }
+}
+
 #include "tst_ifd.moc"

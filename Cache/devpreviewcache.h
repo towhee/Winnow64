@@ -160,14 +160,30 @@ public:
 
     /* Store the developed preview for fPath, rendered from the recipe whose base64 blob
        hashes to blobHash. Replaces any existing entry for fPath. A miss on either
-       argument, or a failed disk write, is silently ignored -- this is a cache. */
-    void put(const QString &fPath, const QByteArray &blobHash, const QByteArray &jpg);
+       argument, or a failed disk write, is silently ignored -- this is a cache.
+
+       REDUCED (2026-10-27): a preview deliberately written below the size preference
+       (an Auto-settings batch writes ~2560 px to keep the batch fast). It is stored
+       under blobHash + kReducedSuffix in the same column (no schema change), so it is
+       NOT current to contains(): every path that replaces a missing preview -- the
+       Develop flush / topUpDevPreviews when the image is viewed, a background build --
+       replaces it with a full one. get() still SERVES it, so the loupe shows the
+       developed picture meanwhile instead of decoding the raw. */
+    static constexpr const char *kReducedSuffix = "~r";
+    void put(const QString &fPath, const QByteArray &blobHash, const QByteArray &jpg,
+             bool reduced = false);
 
     /* The cached JPEG for fPath, or an empty QByteArray on a miss or a recipe mismatch.
+       A reduced entry for the same recipe is a hit (reduced, when given, says which).
        A hit is marked most-recently-used. */
-    QByteArray get(const QString &fPath, const QByteArray &blobHash);
+    QByteArray get(const QString &fPath, const QByteArray &blobHash,
+                   bool *reduced = nullptr);
 
-    bool contains(const QString &fPath, const QByteArray &blobHash) const;
+    /* A CURRENT preview: the recipe matches and it is full size. acceptReduced also
+       counts a reduced one -- for "is there a developed picture to show?", not for
+       "does this need building?". */
+    bool contains(const QString &fPath, const QByteArray &blobHash,
+                  bool acceptReduced = false) const;
 
     /* Full path of the payload file holding fPath's preview, or "" when the index has no
        row for it. DIAGNOSTIC ONLY -- it answers "which JPEG in the cache folder is this

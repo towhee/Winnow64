@@ -165,6 +165,7 @@ inline void fill(ImageMetadata &m, const CatalogRow &r, const QDateTime &modifie
         unconditionally was tried and moved the mismatch from a HEIC to an iPhone
         JPG. See the schema 7 note in cachedb.cpp. */
     m.shootingInfo = r.shootingInfo;
+    m.colorSpace = r.colorSpace;            // schema 27; Metadata/colorspaces.h
 
     m.metaStatus = G::MetaLoaded;
 }

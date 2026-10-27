@@ -360,7 +360,7 @@ enum DngTag {
     TileByteCounts = 325, NewSubfileType = 254, CFAPatternTag = 33422,
     LinearizationTable = 50712,
     BlackLevel = 50714, WhiteLevel = 50717, ColorMatrix1 = 50721, ColorMatrix2 = 50722,
-    AsShotNeutral = 50728, NoiseProfile = 51041
+    AsShotNeutral = 50728, AsShotWhiteXY = 50729, NoiseProfile = 51041
 };
 const int PHOTO_CFA = 32803;
 
@@ -614,6 +614,24 @@ bool DngRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo 
             info.camMul[1] = float(1.0 / n[1]);
             info.camMul[2] = float(1.0 / n[2]);
             info.camMul[3] = float(1.0 / n[1]);
+        }
+    } else if (ifd0.contains(AsShotWhiteXY) && info.hasColorMatrix) {
+        /* The DNG spec's other as-shot form: a white chromaticity instead of a camera
+           neutral. Lightroom's merged Linear Raw DNGs (pano/HDR) write only this, and
+           without it they read the matrix neutral. neutral = ColorMatrix * XYZ(white). */
+        const QVector<double> xy = r.reals(ifd0[AsShotWhiteXY]);
+        if (xy.size() >= 2 && xy[0] > 0 && xy[1] > 0 && xy[0] + xy[1] < 1) {
+            const double xyz[3] = { xy[0] / xy[1], 1.0, (1.0 - xy[0] - xy[1]) / xy[1] };
+            double n[3];
+            for (int i = 0; i < 3; ++i)
+                n[i] = info.xyzToCam[i][0] * xyz[0] + info.xyzToCam[i][1] * xyz[1] +
+                       info.xyzToCam[i][2] * xyz[2];
+            if (n[0] > 0 && n[1] > 0 && n[2] > 0) {
+                info.camMul[0] = float(n[1] / n[0]);
+                info.camMul[1] = 1.0f;
+                info.camMul[2] = float(n[1] / n[2]);
+                info.camMul[3] = 1.0f;
+            }
         }
     }
     return true;

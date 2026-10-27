@@ -1,4 +1,5 @@
 #include "heic.h"
+#include "Metadata/colorspaces.h"
 #include "Main/global.h"
 #include <QColorSpace>
 
@@ -994,11 +995,11 @@ bool Heic::colrBox(quint32 &offset, quint32 &length)
         const quint32 profLen = length - 12;
         if (profLen > 0) {
             const QByteArray profile = file->read(profLen);
-            /* The ICC header's data colour space is at byte 16, and the profile
-               description we report is not worth parsing -- record the box form. */
+            /* Classified like any embedded profile (Metadata/colorspaces.h); an sRGB
+               one is not carried, as in the JPEG reader. */
             if (!profile.isEmpty()) {
-                m->iccBuf = profile;
-                m->iccSpace = colrType;
+                m->colorSpace = ColorSpaces::fromIcc(profile);
+                if (m->colorSpace != ColorSpaces::sRGB) m->iccBuf = profile;
             }
         }
     }
@@ -1009,10 +1010,10 @@ bool Heic::colrBox(quint32 &offset, quint32 &length)
         /* 1 = BT.709 (sRGB primaries), 11 = DCI-P3, 12 = Display P3 (P3-D65),
            9 = BT.2020. Transfer 1 = BT.709, 13 = sRGB; 16 = PQ and 18 = HLG are HDR. */
         const bool sdrTransfer = (transfer == 1 || transfer == 13);
+        m->colorSpace = ColorSpaces::fromNclx(primaries);
         if (sdrTransfer && (primaries == 12 || primaries == 11)) {
             const QColorSpace p3(QColorSpace::DisplayP3);
             m->iccBuf = p3.iccProfile();
-            m->iccSpace = "P3";
         }
         /* primaries 1 (sRGB) needs nothing stored; HDR transfers are left alone. */
     }

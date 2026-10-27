@@ -248,7 +248,7 @@ bool DevPreviewCache::volumeMounted(const QString &volRoot)
    --------------------------------------------------------------------------------- */
 
 void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
-                          const QByteArray &jpg)
+                          const QByteArray &jpg, bool reduced)
 {
 /*
     THE PAYLOAD IS WRITTEN WITHOUT THE MUTEX HELD. At full sensor resolution this is a
@@ -327,7 +327,8 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
     q.addBindValue(fPath);
     q.addBindValue(key);
     q.addBindValue(QFileInfo(srcFile).absolutePath());
-    q.addBindValue(QString::fromLatin1(blobHash));
+    /* A reduced preview is marked in the hash itself: see kReducedSuffix. */
+    q.addBindValue(QString::fromLatin1(reduced ? blobHash + kReducedSuffix : blobHash));
     q.addBindValue(qint64(jpg.size()));
     q.addBindValue(nowSecs());
     q.addBindValue(volumeRootOf(srcFile));
@@ -345,7 +346,8 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
     evictLocked(db);
 }
 
-QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash)
+QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash,
+                                bool *reduced)
 {
 /*
     THE PAYLOAD IS READ WITHOUT THE MUTEX HELD, for the reason put() writes without it: at
@@ -371,7 +373,10 @@ QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash
         q.prepare("SELECT id, hash, srcsize, srcmtime FROM devpreview WHERE pathkey = ?");
         q.addBindValue(key);
         if (!q.exec() || !q.next()) return QByteArray();
-        if (q.value(1).toString().toLatin1() != blobHash) return QByteArray();
+        const QByteArray stored = q.value(1).toString().toLatin1();
+        const bool isReduced = stored == blobHash + kReducedSuffix;
+        if (stored != blobHash && !isReduced) return QByteArray();
+        if (reduced) *reduced = isReduced;
 
         /* Is the file at this path still the image this preview depicts? The recipe hash
            cannot answer that -- a preset gives a whole folder the same hash -- so the
@@ -415,7 +420,8 @@ QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash
     return jpg;
 }
 
-bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash) const
+bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash,
+                               bool acceptReduced) const
 {
     QMutexLocker lk(&mutex);
     QSqlDatabase db = const_cast<DevPreviewCache *>(this)->dbLocked();
@@ -425,9 +431,12 @@ bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash)
     q.prepare("SELECT hash, srcsize, srcmtime FROM devpreview WHERE pathkey = ?");
     q.addBindValue(cachePathKey(fPath));
     if (!q.exec() || !q.next()) return false;
-    if (q.value(0).toString().toLatin1() != blobHash) return false;
+    const QByteArray stored = q.value(0).toString().toLatin1();
+    if (stored != blobHash &&
+        !(acceptReduced && stored == blobHash + kReducedSuffix)) return false;
     /* Same source-identity check as get(), minus the repair -- contains() is const, and a
-       caller asking "is there one?" must get the same answer get() would give. */
+       caller asking "is there one?" must get the same answer get() would give. (The one
+       deliberate difference: a REDUCED entry counts only with acceptReduced.) */
     return !SrcStamp::of(fPath).contradicts(q.value(1).toLongLong(),
                                             q.value(2).toLongLong());
 }

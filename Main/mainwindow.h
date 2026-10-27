@@ -361,7 +361,6 @@ public:
         bool isImageInfoVisible;
         bool isEmbelDisplay;
         // Processes
-        bool isColorManage;
         int sortColumn;
         bool isReverseSort;
     };
@@ -1058,6 +1057,12 @@ public slots:
 private slots:
     void focusChange(QWidget *previous, QWidget *current);
     void resetFocus();
+    /* STARTUP FOCUS: when Winnow opens, the thumbnail strip or the grid gets the keyboard
+       focus the moment it becomes visible, so the arrow keys move through the images
+       straight away. Armed from launch; disarmed once a view holds the focus AND the
+       app has been activated (activation runs resetFocus, which would otherwise take it
+       back to the window). See focusStartupView. */
+    void focusStartupView();   // flags: startupViewFocusArmed (private: below)
     void onSpotEditBegin();
     void manageModels();
     void checkForUpdate(bool silent = false);
@@ -1409,8 +1414,6 @@ private slots:
     void toggleIncludeSidecars(Tog n = toggle);
     void toggleModifyImagesClick();
     void toggleModifyImages();
-    void toggleColorManageClick();
-    void toggleColorManage(Tog n = toggle);
     void toggleUseRawClick();
     void toggleUseRaw(Tog n = toggle);
     void togglePanToFocusClick();
@@ -1715,7 +1718,53 @@ private:
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap = nullptr, int degreesSnap = -1,
-                            bool requireSensor = false);
+                            bool requireSensor = false, int maxEdge = 0);
+    /* developPixelSource's pieces, shared with the preset Auto-settings batch:
+       developWantsSensor decides (GUI thread) whether the render starts from the sensor
+       decode; developBaseFor fetches or decodes that base (WORKER thread). */
+    bool developWantsSensor(const ImageMetadata &m, bool requireSensor) const;
+    bool developBaseFor(const QString &fPath, ImageMetadata &m,
+                        const RawRender::Choice &render, bool sensorRaw,
+                        bool requireSensor, std::shared_ptr<const WorkingImage> &work,
+                        bool &decodedHere);
+    /* DevelopProperties' AutoSolver: decode + solve one image of a preset's Auto
+       settings off the GUI thread (see developproperties.h). */
+    void developPresetAutoSolve(const QString &fPath, const EditParams &base, bool wb,
+                                bool tone, DevelopProperties::AutoSolveDone done);
+    /* DECODE REUSE (see developPresetAutoSolve): the batch image whose decoded base is
+       being held in WorkingImageCache for its devPreview render, the next solve held
+       back until that render is done, and a generation for the safety timeout. */
+    /* STARTUP FOCUS state (see focusStartupView). Data, so it lives here and not beside
+       the slot: a data member under "slots:" is an AUTOMOC parse error. */
+    bool startupViewFocusArmed = true;
+    bool startupAppActivated = false;
+    /* HELD THUMBNAILS. A multi-image edit target's flush has no preview to write, so its
+       grid icon used to be CLEARED (the camera thumbnail reloaded) and then replaced by
+       the developed one when the background build landed: every thumbnail changed twice,
+       flashing back to the undeveloped look in between. When a build follows, the old
+       icon is now HELD until the new one replaces it (devPreviewUpdated). A held path
+       is still cleared the old way if its build will not come: dropped before or by the
+       cache-check hop, finished without a store, or the run ended
+       (releaseHeldDevelopIcons). devPreviewHopPaths = sync candidates in that hop. */
+    QSet<QString> devPreviewIconHeld;
+    QSet<QString> devPreviewHopPaths;
+    void clearDevelopIconNow(const QString &fPath);
+    void releaseHeldDevelopIcons();
+    QString presetAutoThumbPath;
+    /* Between a solve's result landing and the hold starting: the image whose flush may
+       ask for its devPreview (buildDevPreviews sets Requested), and whether that request
+       is still in the builder's cache-check hop (startDevPreviewBuild clears Hop). */
+    QString presetAutoThumbCandidate;
+    bool presetAutoThumbRequested = false;
+    bool presetAutoThumbHop = false;
+    std::function<void()> presetAutoDeferred;
+    quint64 presetAutoThumbGen = 0;
+    void releasePresetAutoThumb();
+    /* The long edge an Auto batch image's devPreview is RENDERED at, when the size
+       preference is larger (DevPreviewCache "REDUCED"): the full-resolution render and
+       its JPEG were ~0.9 s of every ~2.2 s image on a 50 MP raw. Upgraded to full size
+       when the image is viewed in Develop or a build runs. */
+    static constexpr int kAutoBatchPreviewEdge = 2560;
     void setEmbelPixelSource(EmbelExport *embelExport, const QStringList &paths);
     EmbelExport *beginEmbelExport();
     void endEmbelExport();
@@ -1794,7 +1843,6 @@ private:
     QAction *ejectActionFromContextMenu;
     QAction *eraseUsbAction;
     QAction *eraseUsbActionFromContextMenu;
-    QAction *colorManageAction;
     QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
     QAction *showAllVersionsAction = nullptr;
@@ -2209,7 +2257,6 @@ private:
     QLabel *statusLabel;
     BarBtn *reverseSortBtn;
     BarBtn *includeSidecarsToggleBtn;
-    BarBtn *colorManageToggleBtn;
     BarBtn *useRawBtn;
     /* Status-bar chip naming the picture on the loupe, and its menu (Show Edits, the
        compares, help). Amber while edits are hidden. See MW::syncPictureChip. */
@@ -2236,6 +2283,8 @@ private:
     int progressRawDenoiseRow = -1;
     int progressDemosaicRow = -1;
     int progressDevPreviewRow = -1;
+    /* A Develop preset's Auto settings being solved across the selection. */
+    int progressPresetAutoRow = -1;
     /* Background catalog scan over the user's designated roots. */
     int progressCatalogRow = -1;
     /* Loading a catalog (Library) result into the model -- the status-bar companion to
@@ -2412,7 +2461,7 @@ private:
         on the GUI thread. Calls devPreviewBuildStepDone() on every path out -- including
         the early returns -- so it always advances the build exactly once. */
     void devPreviewStore(const QString &fPath, const QImage &full,
-                         const QString &expectKey);
+                         const QString &expectKey, bool reduced = false);
     void devPreviewBuildFinish(const QString &reason = QString());
     void updateDevPreviewBuildProgress();
     QStringList devPreviewBuildQueue;

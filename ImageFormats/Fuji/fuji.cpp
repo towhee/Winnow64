@@ -538,6 +538,40 @@ bool FujiRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo
             p = s + len;
         }
 
+        /* WB_GRBLevels (0xF00E, LONG[3] G,R,B) in the FujiIFD -- the little TIFF that
+           prefixes the CFA block at cfaOff (see UnpackCfa's level read). It is the
+           camera's own as-shot record, so it beats both fallbacks below. Without it the
+           0xC000 scan landed on a near-miss triple: X-T2 B 579 vs 596, X-T50 557/570. */
+        quint32 ifdG = 0, ifdR = 0, ifdB = 0;
+        if (file.seek(qint64(cfaOff))) {
+            const QByteArray t = file.read(64 * 1024);
+            const qint64 tn = t.size();
+            const uchar *td = reinterpret_cast<const uchar *>(t.constData());
+            auto le16 = [&](qint64 o) -> quint32 {
+                return (o >= 0 && o + 1 < tn) ? quint32(td[o] | (td[o + 1] << 8)) : 0; };
+            auto le32 = [&](qint64 o) -> quint32 {
+                return (o >= 0 && o + 3 < tn)
+                    ? quint32(td[o] | (td[o + 1] << 8) | (td[o + 2] << 16) |
+                              (quint32(td[o + 3]) << 24))
+                    : 0; };
+            if (tn >= 8 && td[0] == 'I' && td[1] == 'I') {
+                const qint64 ifd0 = le32(4);
+                quint32 fsub = 0;
+                for (quint32 i = 0, c = le16(ifd0); i < c && i < 64; ++i) {
+                    const qint64 e = ifd0 + 2 + qint64(i) * 12;
+                    if (le16(e) == 0xf000) { fsub = le32(e + 8); break; }
+                }
+                for (quint32 i = 0, c = fsub ? le16(fsub) : 0; i < c && i < 256; ++i) {
+                    const qint64 e = qint64(fsub) + 2 + qint64(i) * 12;
+                    if (le16(e) == 0xf00e && le32(e + 4) >= 3) {
+                        const qint64 vp = le32(e + 8);
+                        ifdG = le32(vp); ifdR = le32(vp + 4); ifdB = le32(vp + 8);
+                        break;
+                    }
+                }
+            }
+        }
+
         /* Newer bodies drop 0x2FF0 and bury the WB in the 0xC000 blob, which also
            holds the canned presets (daylight, tungsten, ...) that look just like a WB
            triple, so a plain first-match scan can land on, say, the tungsten preset
@@ -546,7 +580,10 @@ bool FujiRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo
            bodies (matches libraw within ~1% on GFX/X-T2/X-T50 without the per-model
            offset table libraw carries). G is the green reference (smallest of the
            three; ~128..1024). */
-        if (wbR && wbG && wbB) {
+        if (ifdG && ifdR && ifdB) {
+            info.camMul[0] = float(ifdR); info.camMul[1] = float(ifdG);
+            info.camMul[2] = float(ifdB); info.camMul[3] = float(ifdG);
+        } else if (wbR && wbG && wbB) {
             info.camMul[0] = float(wbR); info.camMul[1] = float(wbG);
             info.camMul[2] = float(wbB); info.camMul[3] = float(wbG);
         } else if (c000Off && c000Len >= 18) {

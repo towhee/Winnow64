@@ -300,6 +300,16 @@ public:
         std::function<bool(const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg)>;
     void setDevPreviewProvider(DevPreviewProvider provider);
 
+    /* Preset AUTO SETTINGS for an image whose pre-develop base is not in memory (see the
+       "Preset Auto settings" block in the private section). MW supplies it: decode fPath
+       off the GUI thread, run AutoTone::ApplyPresetAutos on `base` (its merged scope-0
+       params) and call done ON THE GUI THREAD -- ok false when the image could not be
+       decoded or a requested step could not run, solved holding whatever did. */
+    using AutoSolveDone = std::function<void(bool ok, const EditParams &solved)>;
+    using AutoSolver = std::function<void(const QString &fPath, const EditParams &base,
+                                          bool wb, bool tone, AutoSolveDone done)>;
+    void setAutoSolver(AutoSolver solver) { autoSolver = std::move(solver); }
+
     /* ---- Multi-image editing (edits apply to the whole selection) -------------------
        When more than one image is selected, a Global adjustment made on the current
        image is copied to every other selected image (Lightroom's Auto Sync). See the
@@ -853,6 +863,10 @@ signals:
        a display-referred file, or by starting the async scene-linear decode for raw --
        see ensureWorkingImage(). */
     void workingImageNeeded(const QString &fPath);
+    /* The preset Auto-settings batch advanced: done of total images solved, `now` the
+       file being solved (empty between images). total 0 = the batch is over (MW clears
+       its status-bar row). */
+    void presetAutoProgress(int done, int total, const QString &now);
     /* Spot tool armed/disarmed: drives the action-row spot button's on/off icon. */
     void spotActiveChanged(bool active);
     /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
@@ -1501,8 +1515,68 @@ private:
                           const QString &mergeKey,
                           const QHash<QString, ScopeSync> &scopeChanges);
     void syncPropagateBase();                  // adopt the current stack as the diff base
-    /* Whole-object merge into the other selected images; returns how many it wrote. */
-    int  propagatePreset(const DevelopPreset &preset, const QString &label);
+    /* Whole-object merge into the other selected images; returns how many it wrote.
+       A preset with Auto settings also queues each target for presetAutoQueue. */
+    int  propagatePreset(const DevelopPreset &preset, const QString &label,
+                         const QString &autoKey = QString(), quint64 *syncIdOut = nullptr);
+
+    /* ---- Preset Auto settings (DevelopPreset::autoWhiteBalance / autoTone) ----------
+       A preset's Auto settings are solved PER IMAGE, from its own pixels, after the
+       preset's literal values are merged (mergePreset stays pure and instant: it only
+       copies values). Two routes:
+
+         now     the current image, when its pre-develop base is already in memory (or
+                 a display-referred file, which ensureWorkingImage builds on the spot):
+                 solved inline, so the preset is still ONE history step with the final
+                 values. Hover preview takes this route too, cache hits only.
+         batch   every other selected image, and the current one when its raw is not
+                 decoded yet: presetAutoQueue, solved ONE AT A TIME by autoSolver (MW's
+                 decode + solve on developRenderPool), with a status-bar row.
+
+       A batch result lands only if the image's scope-0 params are still exactly what
+       the solve started from (job.expect): an image edited, reverted or re-preset in
+       the meantime keeps what the user did and is counted as skipped. It is recorded
+       under the job's mergeKey, so it REPLACES the preset's own history step when that
+       is still the top one ("Global: Preset: Warm" ends up holding the solved values).
+
+       autoMemo remembers the last inline solve, so hovering a preset and then clicking
+       it solves once. */
+    struct PresetAutoJob {
+        QString    path;
+        EditParams expect;          // scope-0 params the solve starts from
+        bool       wb = false;
+        bool       tone = false;
+        QString    scopeLabel;      // the preset step's history labels
+        QString    label;
+        QString    mergeKey;
+        quint64    syncId = 0;
+    };
+    /* Run the preset's Auto settings on scope 0 of s for the current image, using only a
+       base already in memory (build = false: a cache hit or nothing) or also building a
+       display-referred one (build = true, the click path). False = not solved here. */
+    bool solvePresetAutosNow(const DevelopPreset &preset, EditStack &s, bool build);
+    std::shared_ptr<const WorkingImage> cachedBaseFor(const QString &fPath,
+                                                      const EditStack &s) const;
+    void queuePresetAuto(const PresetAutoJob &job, bool front = false);
+    void runNextPresetAuto();
+    void onPresetAutoSolved(const PresetAutoJob &job, bool ok, const EditParams &solved);
+    QString presetAutoMergeKey(quint64 syncId) const
+        { return QStringLiteral("presetAutos:%1").arg(syncId); }
+    AutoSolver autoSolver;
+    QList<PresetAutoJob> presetAutoQueue;
+    bool presetAutoInFlight = false;
+    int  presetAutoDone = 0, presetAutoTotal = 0;
+    int  presetAutoFailed = 0, presetAutoSkipped = 0;
+    quint64 nextPresetAutoId = 0;     // mergeKey for a preset whose syncId is 0 (one image)
+    /* The image on screen was solved inline just before this batch was queued, so the
+       batch (and its count) is the OTHER images; the start popup and log say so. */
+    bool presetAutoCurrentInline = false;
+    struct AutoMemo {
+        bool       valid = false;
+        QString    path;
+        EditParams in, out;
+        bool       wb = false, tone = false, ok = false;
+    } autoMemo;
     QStringList otherSelectedPaths() const;    // selected images minus the current one
     /* One image's share of resetAllEdits: identity stack + history dropped + sidecar
        cleared. No dock work, so it serves the current image and the others alike. */

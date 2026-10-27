@@ -35,6 +35,7 @@ private slots:
     void theRestOfTheDatamodel();
     void monthIsANumber();
     void filterValuesSurviveText();
+    void colorSpaceIsAnIndexedEnum();
 
 private:
     using Row = QHash<int, QVariant>;
@@ -46,6 +47,45 @@ private:
     }
     static Row words(const QString &s) { return Row{{G::SearchTextColumn, s}}; }
 };
+
+void tst_queryexpr::colorSpaceIsAnIndexedEnum()
+{
+    /*  The column holds a ColorSpaces::Id (Metadata/colorspaces.h); queries are written
+        with NAMES. "-colorspace:sRGB" is the review "everything not sRGB" -- it admits
+        the unknown (0) rows too, which is what that review wants to see. */
+    const Row srgb{{G::ICCSpaceColumn, 1}};
+    const Row adobe{{G::ICCSpaceColumn, 2}};
+    const Row p3{{G::ICCSpaceColumn, 3}};
+    const Row unknown{{G::ICCSpaceColumn, 0}};
+
+    QVERIFY(hit("colorspace:sRGB", srgb));
+    QVERIFY(!hit("colorspace:sRGB", adobe));
+    QVERIFY(hit("colorspace:srgb", srgb));                  // case-insensitive
+    QVERIFY(hit("colorspace:\"Display P3\"", p3));
+    QVERIFY(hit("colorspace:\"Adobe RGB\",\"Display P3\"", adobe));
+
+    QVERIFY(!hit("-colorspace:sRGB", srgb));
+    QVERIFY(hit("-colorspace:sRGB", adobe));
+    QVERIFY(hit("-colorspace:sRGB", unknown));
+
+    QVERIFY(hit("-colorspace:*", unknown));                 // nothing known
+    QVERIFY(!hit("-colorspace:*", srgb));
+    QVERIFY(hit("colorspace:*", p3));
+
+    /*  A Filters category's items carry the ID (Filters::filterValueFor); saved as a
+        query they must become names, and 0 the empty rule. */
+    const Query::Field &cs = *Query::field("colorspace");
+    QVERIFY(cs.indexed);
+    Query::Expr e;
+    e.root.kids << Query::matchValues(cs, {"3"}, false);
+    QVERIFY(e.toText().contains("Display P3"));
+    QVERIFY(hit(e.toText(), p3));
+    QVERIFY(!hit(e.toText(), adobe));
+    Query::Expr blank;
+    blank.root.kids << Query::matchValues(cs, {"0"}, false);
+    QVERIFY(hit(blank.toText(), unknown));
+    QVERIFY(!hit(blank.toText(), srgb));
+}
 
 void tst_queryexpr::cleanup()
 {

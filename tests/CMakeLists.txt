@@ -328,6 +328,13 @@ winnow_add_unit_test(tst_icc unit/tst_icc.cpp
     ${WINNOW_LCMS_SOURCES})
 winnow_test_link_opencv(tst_icc PRIVATE opencv_core)
 
+# tst_colorspaces pins the colour space lookup table (Metadata/colorspaces.h): published
+# ids, profiles identified by colorants (synthetic and macOS's own), sRGB needing its
+# curve, and the EXIF / HEIC nclx fallbacks.
+winnow_add_unit_test(tst_colorspaces unit/tst_colorspaces.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/colorspaces.cpp
+    ${WINNOW_LCMS_SOURCES})
+
 winnow_add_unit_test(tst_autotone unit/tst_autotone.cpp
     ${CMAKE_SOURCE_DIR}/Develop/autotone.cpp
     ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp)
@@ -428,6 +435,8 @@ target_link_libraries(tst_cameraprofile PRIVATE winnow_test_color)
 # the test -- nothing here decodes a pixel.
 winnow_add_unit_test(tst_heicboxes unit/tst_heicboxes.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Heic/heic.cpp
+    ${CMAKE_SOURCE_DIR}/Metadata/colorspaces.cpp
+    ${WINNOW_LCMS_SOURCES}
     ${CMAKE_SOURCE_DIR}/Metadata/ifd.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/exif.cpp
     ${CMAKE_SOURCE_DIR}/Metadata/gps.cpp

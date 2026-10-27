@@ -101,7 +101,11 @@ public:
        normal use. */
     struct RenderTimings {
         qint64 copyMs = 0; qint64 developMs = 0; qint64 toImageMs = 0;
-        /* Develop sub-stages (subset of developMs). */
+        /* Develop sub-stages (subset of developMs). On the stack path they are SUMMED
+           over every Apply of the render -- the base and each scope's layer -- and
+           baseApplyMs is the base's share of stackApplyMs, so a Global drag can be told
+           from the scopes re-developing above it. */
+        qint64 setupMs = 0; qint64 baseApplyMs = 0;
         qint64 profileMs = 0; qint64 denoiseMs = 0; qint64 pointMs = 0;
         qint64 textureMs = 0; qint64 clarityMs = 0;
         qint64 dehazeMs = 0; qint64 vignetteMs = 0; qint64 sharpenMs = 0; qint64 grainMs = 0;

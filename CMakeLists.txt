@@ -406,6 +406,7 @@ set(WINNOW_SOURCES
     Main/workspaces.cpp
 
     # Metadata
+    Metadata/colorspaces.cpp
     Metadata/exif.cpp
     Metadata/ExifTool.cpp
     Metadata/gps.cpp
@@ -554,6 +555,7 @@ set(WINNOW_HEADERS
     Develop/rangemask.h
     Develop/whitebalance.h
     Develop/autotone.h
+    Develop/areashrink.h
     Develop/workingimage.h
     Develop/Properties/developproperties.h
     Develop/Properties/huesatwheel.h
@@ -717,6 +719,7 @@ set(WINNOW_HEADERS
     Main/qtsingleapplication.h
     Main/widgetcss.h
 
+    Metadata/colorspaces.h
     Metadata/exif.h
     Metadata/ExifTool.h
     Metadata/gps.h

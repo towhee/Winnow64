@@ -30,6 +30,7 @@
         Develop Presets/<name>/Global/<key> = the per-IMAGE settings
         Develop Presets/<name>/Edits/<key>  = the captured scope's EditParams values
         Develop Presets/<name>/Global/spots = array of FillSpot paramsJson
+        Develop Presets/<name>/Global/autoWhiteBalance, autoTone = true when ticked
 
     CATEGORIES. The panel groups presets under user-named header categories, in a
     user-chosen order (drag to reorder). That organisation lives under its OWN root,
@@ -77,6 +78,18 @@ struct DevelopPreset {
     /* Nothing was ticked. Applying it is a no-op, so the callers use this to say
        "nothing copied yet" rather than silently pasting nothing. */
     bool isEmpty() const { return globals.isEmpty() && params.isEmpty() && spots.isEmpty(); }
+
+    /* AUTO SETTINGS (added 2026-10-27): two Global keys that are COMMANDS rather than
+       values -- applying the preset runs Auto white balance / Auto tone on each image it
+       lands on (AutoTone::ApplyPresetAutos). Stored as bool true; absent = off, so every
+       older preset reads as having neither. */
+    static constexpr const char *kAutoWhiteBalance = "autoWhiteBalance";
+    static constexpr const char *kAutoTone         = "autoTone";
+    bool autoWhiteBalance() const { return globals.value(kAutoWhiteBalance).toBool(); }
+    bool autoTone() const         { return globals.value(kAutoTone).toBool(); }
+    bool hasAutos() const         { return autoWhiteBalance() || autoTone(); }
+    static bool isAutoKey(const QString &k)
+        { return k == QLatin1String(kAutoWhiteBalance) || k == QLatin1String(kAutoTone); }
 };
 
 /* One header category of the Presets panel, in display order. */

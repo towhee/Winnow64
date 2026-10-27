@@ -352,12 +352,13 @@ bool ExifTool::replaceEmbeddedImages(const QString &thumbSrc, const QString &pre
     return false;
 }
 
-int ExifTool::copyAll(QString src, QString dst)
+int ExifTool::copyAll(QString src, QString dst, const QStringList &extra)
 {
     QStringList args;
     args << "-TagsFromFile";
     args << src;
     args << "-all:all";
+    args << extra;
     args << dst;
     args << "-overwrite_original";
     // qDebug() << "ExifTool::copyAll" << src << dst;

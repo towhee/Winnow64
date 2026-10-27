@@ -962,9 +962,19 @@ QString FS::save(QString fuseFolderPath)
     // Copy metadata from first source using your existing logic
     msg = "Copy metadata using ExifTool from " + lastSrc;
     if (G::FSLog) G::log(srcFun, msg);
+    /* The fused image is written untagged (OpenCV embeds no profile), so its metadata
+       has to say what space its pixels are in. Slices rendered through Develop are
+       sRGB (the Develop render frame) whatever the source was: a raw's EXIF ColorSpace
+       is usually "Uncalibrated" (Adobe RGB previews) and is overridden. Slices stacked
+       from their own files keep the source's space, so its profile is copied too --
+       -all:all leaves ICC_Profile out ("unsafe"), which stamped every such stack sRGB. */
+    const bool developed = developDecoder && developPaths.contains(inputPaths.last());
+    const QStringList colorArgs = developed
+        ? QStringList{"-ExifIFD:ColorSpace#=1", "-InteropIFD:InteropIndex=R98"}
+        : QStringList{"-icc_profile"};
     ExifTool et;
     et.setOverWrite(true);
-    et.copyAll(lastSrc, fusedPath);
+    et.copyAll(lastSrc, fusedPath, colorArgs);
     // qDebug() << srcFun << "et.copyAll" << inputPaths.last() << fusedPath;
     // et.copyAllTags(inputPaths.last(), fusedPath);
     et.close();

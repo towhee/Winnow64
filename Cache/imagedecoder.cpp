@@ -234,7 +234,7 @@ void ImageDecoder::decode(int row, int instance)
             if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
             if (!abort.loadAcquire()) applyDevelop();
         }
-        if (G::colorManage && !abort.loadAcquire()) colorManage();
+        if (!abort.loadAcquire()) colorManage();     // always on (2026-10-26)
         if (image.isNull()) status = Status::Failed;
     }
     else {

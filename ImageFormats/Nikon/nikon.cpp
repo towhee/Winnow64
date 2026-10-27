@@ -1,4 +1,5 @@
 #include "nikon.h"
+#include "Metadata/colorspaces.h"
 #include "Metadata/xmpapply.h"
 #include "Main/global.h"
 #include "Metadata/iptc.h"      // req'd to report embedded jpeg
@@ -959,6 +960,12 @@ bool Nikon::parse(MetadataParameters &p,
         m.cameraSN = u.getString(p.file, ifd->ifdDataHash.value(29).tagValue + makerOffsetBase,
                                        ifd->ifdDataHash.value(29).tagCount);
         m.shutterCount = ifd->ifdDataHash.value(167).tagValue;
+        /* The camera's colour space SETTING, MakerNote 0x001E (1 = sRGB, 2 = Adobe RGB,
+           the EXIF codes). Nikon writes no EXIF ColorSpace, so without this every NEF
+           was blank; it is what the embedded previews were encoded in. An embedded
+           profile, if one turns up, still decides (Metadata/colorspaces.h). */
+        if (ifd->ifdDataHash.contains(0x001E))
+            m.colorSpace = ColorSpaces::fromExif(int(ifd->ifdDataHash.value(0x001E).tagValue));
         uint lensType = 0;
         lensType = ifd->ifdDataHash.value(131).tagValue;
 
@@ -1417,10 +1424,6 @@ bool NikonRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInf
     } else if (mn.contains(0x97)) {
         const QByteArray cb = mr.bytes(mn[0x97]);
         const bool be = mr.big();
-        auto s16 = [&](int o) -> int {
-            const uchar a = uchar(cb[o]), b = uchar(cb[o + 1]);
-            return be ? ((a << 8) | b) : ((b << 8) | a);
-        };
         /* Per dcraw: the 4 ASCII version bytes select the offset and the file order of the four
            levels. iR/iG1/iB/iG2 are their indices within the 4-short run at that offset. */
         int off = -1, iR = 0, iG1 = 1, iB = 2, iG2 = 3;
@@ -1430,9 +1433,43 @@ bool NikonRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInf
             else if (ver == "0102" && cb.size() >= 18) { off = 10; iR=0; iG1=1; iG2=2; iB=3; }
             else if (ver == "0103" && cb.size() >= 28) { off = 20; iR=0; iG1=1; iB=2; iG2=3; }
         }
+        /* "0200".."0216" are ENCRYPTED (dcraw's buf97 path): the key is the serial and
+           the shutter count, as for LensData, and the run's offset and order come from
+           dcraw's per-version index string. Every body that writes 0x0C skips all this;
+           the D50 ("0205") does not, and rendered on the matrix neutral without it. */
+        QByteArray plain;
+        if (off < 0 && cb.size() >= 4 && cb.left(2) == "02") {
+            bool okVer = false;
+            const int v = cb.left(4).toInt(&okVer) - 200;
+            static const char idx[] = "66666>666;6A;:;55";
+            if (okVer && v >= 0 && v <= 16 && mn.contains(0xA7)) {
+                const int i = idx[v] - '0';
+                /* The keystream starts at block byte 4 for 0205 and 284 for the rest;
+                   nikonDecrypt starts it at its own byte 4, so shift the block. */
+                const int base = v == 5 ? 0 : 280;
+                if (cb.size() >= base + 4 + (i & -2) + 8) {
+                    const QString sn = mn.contains(0x1D) ? mr.ascii(mn[0x1D]).trimmed()
+                                                         : QString();
+                    bool snIsNumber = false;
+                    uint32_t serial = sn.toUInt(&snIsNumber);
+                    if (!snIsNumber) serial = model.trimmed().endsWith("D50") ? 0x22 : 0x60;
+                    plain = Nikon::nikonDecrypt(cb.mid(base), mr.scalar(mn[0xA7]), serial);
+                    off = 4 + (i & -2);
+                    /* File order R, G1, G2, B; (i & 1) swaps R/G1 and G2/B (dcraw's
+                       c ^ (c >> 1) ^ (i & 1)). */
+                    if (i & 1) { iR = 1; iG1 = 0; iG2 = 3; iB = 2; }
+                    else       { iR = 0; iG1 = 1; iG2 = 2; iB = 3; }
+                }
+            }
+        }
+        const QByteArray &src = plain.isEmpty() ? cb : plain;
+        auto w16 = [&](int o) -> int {
+            const uchar a = uchar(src[o]), b = uchar(src[o + 1]);
+            return be ? ((a << 8) | b) : ((b << 8) | a);
+        };
         if (off >= 0) {
-            const int R = s16(off + 2*iR), G1 = s16(off + 2*iG1),
-                      B = s16(off + 2*iB), G2 = s16(off + 2*iG2);
+            const int R = w16(off + 2*iR), G1 = w16(off + 2*iG1),
+                      B = w16(off + 2*iB), G2 = w16(off + 2*iG2);
             if (R > 0 && G1 > 0 && B > 0) {
                 info.camMul[0] = float(R);  info.camMul[1] = float(G1);
                 info.camMul[2] = float(B);  info.camMul[3] = float(G2 > 0 ? G2 : G1);

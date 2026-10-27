@@ -1,4 +1,5 @@
 #include "canon.h"
+#include "Metadata/colorspaces.h"
 #include "Metadata/xmpapply.h"
 #include "Main/global.h"
 #include "ImageFormats/Raw/tiffwalk.h"
@@ -267,6 +268,11 @@ bool Canon::parse(MetadataParameters &p,
         p.offset = makerOffset;
         p.hash = &canonMakerHash;
         ifd->readIFD(p);
+        /* The camera's colour space setting, MakerNote 0x00B4 (1 = sRGB, 2 = Adobe RGB,
+           the EXIF codes). Canon writes EXIF Uncalibrated and InteropIndex "R98" in Adobe
+           RGB mode, so this is the only place a CR2 says it (Metadata/colorspaces.h). */
+        if (ifd->ifdDataHash.contains(0x00B4))
+            m.colorSpace = ColorSpaces::fromExif(int(ifd->ifdDataHash.value(0x00B4).tagValue));
     }
 
     // read GPSIFD
@@ -463,6 +469,55 @@ bool CanonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 }
 
 /*
+    Where Canon ColorData (MakerNote 0x4001, int16 entries) keeps WB_RGGBLevelsAsShot.
+    The record's LENGTH selects the layout version, and with it the offset of the as-shot
+    quad -- ExifTool Canon.pm's ColorData1..11 tables, in int16 ENTRIES. (dcraw's table
+    is in BYTES: its 68 and 142 are entries 34 and 71, which an earlier port took as
+    entries and so read the wrong quad on the 1D Mark II and the PowerShot/EOS M bodies.)
+
+    Every CR3 body uses a layout newer than ColorData8, and all of them used to fall to
+    the 63 default, which lands on zeros: M50 (1820) is 71, R5/R6 (3656) is 85, R6 II
+    (3778) is 105. A length not in the table is PROBED instead, so the next body still
+    reads: the as-shot quad is always followed by ColorTempAsShot, so the first candidate
+    with equal greens and a plausible Kelvin after it is taken.
+*/
+int CanonAsShotIndex(const QVector<quint32> &cd)
+{
+    const int n = cd.size();
+    auto quadOk = [&](int o) {
+        return o >= 0 && o + 3 < n && cd[o] > 0 && cd[o] < 32768 && cd[o + 1] > 0 &&
+               cd[o + 1] < 32768 && cd[o + 3] > 0 && cd[o + 3] < 32768;
+    };
+    int o = -1;
+    switch (n) {
+    case 582:                                   // ColorData1: 20D, 350D
+        o = 0x19; break;
+    case 653:                                   // ColorData2: 1D/1Ds Mark II
+        o = 0x22; break;
+    case 796:                                   // ColorData3: 1D Mark IIN, 5D, 30D, 400D
+    case 674: case 692: case 702: case 1227:    // ColorData4: 40D, 1D III, 50D, 7D...
+    case 1250: case 1251: case 1337: case 1338: case 1346:
+    case 1273: case 1275:                       // ColorData6: 600D, 1200D
+    case 1312: case 1313: case 1316: case 1506: // ColorData7: 1DX, 5D III, 6D, 7D II...
+    case 1353: case 1560: case 1592: case 1602: // ColorData8: 5DS, 80D, 1DX II, 5D IV
+        o = 0x3f; break;
+    case 5120:                                  // ColorData5: PowerShot, EOS M3/M5/M6
+    case 1816: case 1820: case 1824:            // ColorData9: M50, EOS R, RP
+        o = 0x47; break;
+    case 2024: case 3656:                       // ColorData10: 1DX III, R5, R6
+        o = 0x55; break;
+    case 3778: case 3973:                       // ColorData11: R6 II, R7, R10, R3
+        o = 0x69; break;
+    default:
+        for (const int c : {0x69, 0x55, 0x47, 0x3f}) {
+            if (quadOk(c) && c + 4 < n && cd[c + 1] == cd[c + 2] &&
+                cd[c + 4] >= 1500 && cd[c + 4] <= 20000) { o = c; break; }
+        }
+    }
+    return quadOk(o) ? o : -1;
+}
+
+/*
     CR2 colour without a decode: Canon ColorData (MakerNote 0x4001) for the as-shot
     WB_RGGBLevels, plus the per-model XYZ->camera matrix. Split out of UnpackCfa so the
     Apple Core Image engine can characterise the image too -- see
@@ -489,14 +544,12 @@ bool CanonRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInf
     Ifd mn; QList<quint32> ms; quint32 mnn = 0;
     if (!r.readIfd(r.ifdPointer(exif[0x927C]), mn, ms, mnn)) return info.hasColorMatrix;
 
-    /* ColorData -> WB_RGGBLevelsAsShot. The record's LENGTH selects the layout version,
-       and with it the offset of the as-shot quad (dcraw's table). File order is
-       R, G1, G2, B; RawSensorInfo::camMul is (R, G1, B, G2). */
+    /* ColorData -> WB_RGGBLevelsAsShot (CanonAsShotIndex). File order is R, G1, G2, B;
+       RawSensorInfo::camMul is (R, G1, B, G2). */
     if (mn.contains(0x4001)) {
         const QVector<quint32> cd = r.u32s(mn[0x4001]);
-        const int n = cd.size();
-        const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
-        if (o + 3 < n && cd[o] > 0 && cd[o + 1] > 0 && cd[o + 3] > 0) {
+        const int o = CanonAsShotIndex(cd);
+        if (o >= 0) {
             info.camMul[0] = float(cd[o]);      info.camMul[1] = float(cd[o + 1]);
             info.camMul[2] = float(cd[o + 3]);  info.camMul[3] = float(cd[o + 2]);
         }

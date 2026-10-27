@@ -29,14 +29,22 @@ private:
 };
 
 /*
-    Sensor unpack for Canon CR2 (the per-format override of RawFormat). Self-contained: walks the
-    CR2's TIFF IFDs (via TiffWalk), decodes the lossless-JPEG raw in the last IFD, reassembles the
-    Canon vertical SLICES (tag 0xC640) into the full sensor mosaic, crops to the active area from
-    the Canon makernote SensorInfo (0xE0), and reads the as-shot white balance from ColorData
-    (0x4001). The colour matrix comes from the shared per-model table (cameramatrix.cpp).
+    Index, in int16 entries, of WB_RGGBLevelsAsShot inside Canon ColorData (MakerNote
+    0x4001), or -1 if the record is unrecognised. One table for CR2 AND CR3 -- see
+    canon.cpp.
+*/
+int CanonAsShotIndex(const QVector<quint32> &colorData);
 
-    Handles the common lossless-JPEG CR2 (Compression 6). CR3 is a different container -- see
-    CanonCR3. See notes/Documentation.txt "RAW DECODING".
+/*
+    Sensor unpack for Canon CR2 (the per-format override of RawFormat). Self-contained:
+    walks the CR2's TIFF IFDs (via TiffWalk), decodes the lossless-JPEG raw in the last
+    IFD, reassembles the Canon vertical SLICES (tag 0xC640) into the full sensor mosaic,
+    crops to the active area from the Canon makernote SensorInfo (0xE0), and reads the
+    as-shot white balance from ColorData (0x4001). The colour matrix comes from the
+    shared per-model table (cameramatrix.cpp).
+
+    Handles the common lossless-JPEG CR2 (Compression 6). CR3 is a different container --
+    see CanonCR3. See notes/Documentation.txt "RAW DECODING".
 */
 class CanonRaw : public RawFormat
 {
@@ -51,11 +59,12 @@ protected:
 /*
     Sensor unpack for Canon CR3 (the per-format override of RawFormat for the CRX codec).
     Self-contained: walks the CR3's ISO-BMFF box tree for the full-resolution CRAW track,
-    decodes the CRX lossless bitstream (adaptive Golomb-Rice + MED + T.87 run mode) into its
-    four Bayer planes, interleaves them into the RGGB mosaic, crops to the IAD1 active area,
-    self-calibrates black from the masked border, and reads the as-shot white balance from
-    the CMT3 makernote ColorData (0x4001). Only level-0 single-tile CRAW is handled (current
-    full-frame bodies). Implemented in crx.cpp. See CanonCR3 for CR3 metadata parsing.
+    decodes the CRX lossless bitstream (adaptive Golomb-Rice + MED + T.87 run mode) into
+    its four Bayer planes, interleaves them into the RGGB mosaic, crops to the IAD1 active
+    area, self-calibrates black from the masked border, and reads the as-shot white
+    balance from the ColorData (0x4001) in the CTMD track's makernote. Only level-0
+    single-tile CRAW is handled (current full-frame bodies). Implemented in crx.cpp. See
+    CanonCR3 for CR3 metadata parsing.
 */
 class CanonCR3Raw : public RawFormat
 {

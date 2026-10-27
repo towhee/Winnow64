@@ -1,4 +1,5 @@
 #include "Datamodel/filters.h"
+#include "Metadata/colorspaces.h"
 #include <QLocale>
 #include "Utilities/foldertree.h"
 #include "Cache/catalog.h"
@@ -3970,6 +3971,13 @@ QVariant Filters::filterValueFor(const QTreeWidgetItem *category, const QString 
     two sites that build items.
 */
     if (category == availability) return Catalog::availabilityCode(label);
+    /*  A "Filter on..." category over the colour space shows names and the column holds
+        IDs (Metadata/colorspaces.h); blank is 0. Text, because a session category
+        compares as text (FilterCategory::compareAsText). */
+    if (category && category->data(0, SessionRole).toBool()
+        && category->data(0, G::ColumnRole).toInt() == G::ICCSpaceColumn)
+        return QString::number(label.isEmpty() ? 0
+                                               : int(ColorSpaces::names().indexOf(label)) + 1);
     return label;
 }
 

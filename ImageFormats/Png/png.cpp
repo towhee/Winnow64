@@ -1,4 +1,5 @@
 #include "png.h"
+#include "Metadata/colorspaces.h"
 #include <QtEndian>
 #include <QBuffer>
 #include <QTimeZone>
@@ -386,6 +387,12 @@ bool PNG::parse(MetadataParameters &p,
             exifChunkLength = size;
             p.file.seek(dataStart + size + 4);
         }
+        else if (typeStr == "sRGB") {
+            /* The sRGB chunk: the image IS sRGB (a rendering intent byte follows). An
+               iCCP chunk, if present, is not allowed alongside it by the spec. */
+            m.colorSpace = ColorSpaces::sRGB;
+            p.file.seek(dataStart + size + 4);
+        }
         else if (typeStr == "iCCP") {
             // profile-name\0 compression-method(1) compressed-profile
             QByteArray data = p.file.read(size);
@@ -394,14 +401,10 @@ bool PNG::parse(MetadataParameters &p,
                 QByteArray compressed = data.mid(nul + 2);
                 QByteArray icc = zlibInflate(compressed);
                 if (!icc.isEmpty()) {
-                    m.iccBuf = icc;
                     m.iccSegmentLength = static_cast<quint32>(icc.size());
-                    // ICC profile header: bytes 16..19 are the color space signature.
-                    if (icc.size() >= 20) m.iccSpace = QString::fromLatin1(icc.mid(16, 4)).trimmed();
-                    if (m.iccSpace == "sRGB") {
-                        // Match Jpeg behaviour: don't carry the buffer when it's sRGB.
-                        m.iccBuf.clear();
-                    }
+                    // Match Jpeg behaviour: don't carry the buffer when it's sRGB.
+                    m.colorSpace = ColorSpaces::fromIcc(icc);
+                    if (m.colorSpace != ColorSpaces::sRGB) m.iccBuf = icc;
                 }
             }
             p.file.seek(dataStart + size + 4);

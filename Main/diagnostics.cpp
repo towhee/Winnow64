@@ -145,7 +145,6 @@ void MW::reportWorkspaceState()
              << "\nisTableDisplay" << w.isTableDisplay
              << "\nisCompareDisplay" << w.isCompareDisplay
              // << "\nisEmbelDisplay" << w.isEmbelDisplay
-             << "\nisColorManage" << ws.isColorManage
                 ;
 }
 
@@ -298,7 +297,8 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isProcessingExportedImages = " << G::s(G::isProcessingExportedImages);
     rpt << "\n" << "G::isEmbellish = " << G::s(G::isEmbellish);
     rpt << "\n" << "G::includeSidecars = " << G::s(G::includeSidecars);
-    rpt << "\n" << "G::colorManage = " << G::s(G::colorManage);
+    rpt << "\n" << "colour management = always on, sRGB->display path "
+        << int(ICC::pathFor(QByteArray())) << " (0 none, 1 identity, 2 fast, 3 lcms)";
     rpt << "\n" << "G::combineRawJpg = " << G::s(G::combineRawJpg);
     rpt << "\n" << "combineRawJpg = " << G::s(combineRawJpg);
     rpt << "\n" << "G::modifySourceFiles = " << G::s(G::modifySourceFiles);

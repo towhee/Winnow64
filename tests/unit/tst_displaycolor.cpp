@@ -9,7 +9,8 @@
 /*
     DisplayColor converts the sRGB frames Winnow renders itself (the Develop loupe) for a
     wide-gamut display. These pin the three things the loupe depends on: it is a no-op
-    (the SAME image, no copy) whenever there is nothing to convert; on a wide-gamut
+    (the SAME image, no copy) whenever there is nothing to convert (no display profile,
+    or an sRGB one -- colour management is always on, so there is no "off" case); on a wide-gamut
     display saturated colours come back less saturated, which is the whole fix; and every
     pixel layout the render paths produce converts identically, alpha and row padding
     included, across the parallel strips.
@@ -30,9 +31,8 @@ private:
         return path;
     }
 
-    void use(bool manage, const QString &path)
+    void use(const QString &path)
     {
-        G::colorManage = manage;
         G::winOutProfilePath = path;
         DisplayColor::Rebuild();
     }
@@ -61,37 +61,15 @@ private slots:
         srgbPath = saveProfile(cmsCreate_sRGBProfile(), dir.filePath("srgb.icc"));
     }
 
-    void inactiveWhenColorManagementOff()
-    {
-        use(false, p3Path);
-        QVERIFY(!DisplayColor::IsActive());
-        const QImage im = filled(8, 8, QImage::Format_RGB32, qRgb(255, 0, 0));
-        QCOMPARE(DisplayColor::ToDisplay(im).cacheKey(), im.cacheKey());
-    }
-
-    void wideGamutIsReportedEvenWhenOff()
-    {
-        /* What the Develop alert row keys on: the display differs from sRGB, and colour
-           management is off so nothing corrects it. */
-        use(false, p3Path);
-        QVERIFY(DisplayColor::DisplayDiffersFromSrgb());
-        use(true, p3Path);
-        QVERIFY(DisplayColor::DisplayDiffersFromSrgb());
-        use(false, srgbPath);
-        QVERIFY(!DisplayColor::DisplayDiffersFromSrgb());
-        use(false, QString());
-        QVERIFY(!DisplayColor::DisplayDiffersFromSrgb());
-    }
-
     void inactiveWithoutAProfile()
     {
-        use(true, QString());           // Linux: no display profile lookup
+        use(QString());           // Linux: no display profile lookup
         QVERIFY(!DisplayColor::IsActive());
     }
 
     void inactiveForAnSrgbDisplay()
     {
-        use(true, srgbPath);
+        use(srgbPath);
         QVERIFY(!DisplayColor::IsActive());
         const QImage im = filled(8, 8, QImage::Format_RGB888, qRgb(200, 120, 90));
         QCOMPARE(DisplayColor::ToDisplay(im).cacheKey(), im.cacheKey());
@@ -99,7 +77,7 @@ private slots:
 
     void wideGamutDesaturates()
     {
-        use(true, p3Path);
+        use(p3Path);
         QVERIFY(DisplayColor::IsActive());
 
         /* sRGB red sits well inside P3: about (234, 51, 35) there. */
@@ -126,7 +104,7 @@ private slots:
 
     void everyLayoutConvertsAlike()
     {
-        use(true, p3Path);
+        use(p3Path);
         /* Odd width: RGB888 rows are padded to 4 bytes, so a stride slip shows. Tall
            enough for many 64-row strips, so the parallel split is exercised. */
         const int W = 37, H = 333;
@@ -160,7 +138,7 @@ private slots:
 
     void alphaIsCarried()
     {
-        use(true, p3Path);
+        use(p3Path);
         QImage im(5, 5, QImage::Format_ARGB32);
         im.fill(QColor(200, 100, 50, 77));
         const QImage out = DisplayColor::ToDisplay(im);

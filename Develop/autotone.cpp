@@ -1,7 +1,9 @@
 #include "Develop/autotone.h"
 #include "Develop/develop.h"
 #include "Develop/workingimagecache.h"
+#include "Develop/whitebalance.h"
 
+#include <QElapsedTimer>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -212,10 +214,15 @@ bool Solve(const WorkingImage &work, const EditParams &base, Result &out)
         from what the loupe draws. Taking them from `work` is what the loupe render does
         anyway, so it fills nothing the next render would not have.
     */
+    QElapsedTimer stage;
+    stage.start();
     WorkingImage proxy = WorkingImageCache::downscaled(work, kProxyLong);
+    out.proxyMs = int(stage.restart());
     auto slot = std::make_shared<StatSampleSlot>();
     slot->sample = Develop::StatSample(work);
+    out.sampleMs = int(stage.restart());
     slot->local  = Develop::LocalSample(work);
+    out.localMs = int(stage.restart());
     proxy.statSlot = slot;
 
     WorkingImage scratch;
@@ -292,6 +299,7 @@ bool Solve(const WorkingImage &work, const EditParams &base, Result &out)
         p.saturation = std::round(sat * colour);
     }
 
+    out.rendersMs  = int(stage.elapsed());
     out.exposure   = p.exposure;
     out.contrast   = p.contrast;
     out.highlights = p.highlights;
@@ -301,6 +309,37 @@ bool Solve(const WorkingImage &work, const EditParams &base, Result &out)
     out.vibrance   = p.vibrance;
     out.saturation = p.saturation;
     return true;
+}
+
+AutosResult ApplyPresetAutos(const WorkingImage &work, bool wb, bool tone, EditParams &p)
+{
+    AutosResult res;
+    if (wb) {
+        float k = 0.0f, t = 0.0f;
+        res.wbOk = WhiteBalance::autoWhiteBalance(work, k, t);
+        if (res.wbOk) {
+            p.temp = k;
+            p.tint = t;
+            p.wbPreset = int(WhiteBalance::Preset::Auto);
+        }
+    }
+    if (tone) {
+        Result r;
+        res.toneOk = Solve(work, p, r);
+        res.renders = r.renders;
+        res.tone = r;
+        if (res.toneOk) {
+            p.exposure   = r.exposure;
+            p.contrast   = r.contrast;
+            p.highlights = r.highlights;
+            p.shadows    = r.shadows;
+            p.whites     = r.whites;
+            p.blacks     = r.blacks;
+            p.vibrance   = r.vibrance;
+            p.saturation = r.saturation;
+        }
+    }
+    return res;
 }
 
 } // namespace AutoTone

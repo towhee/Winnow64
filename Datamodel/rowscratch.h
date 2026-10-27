@@ -43,10 +43,11 @@
     in the items. Getting this wrong would not have shown up as a crash -- it
     would have shown up as an offset of 0 being treated as a real offset.
 
-    INTERNING, for the two fields that would otherwise dominate. iccBuf is a
-    real ICC profile, commonly 500 bytes to 4 KB, and a shoot shares ONE of
-    them; iccSpace is a handful of distinct strings across a whole library.
-    Both are held once and referenced by a qint32. decoderErrMsg is not
+    INTERNING, for the field that would otherwise dominate. iccBuf is a real ICC
+    profile, commonly 500 bytes to 4 KB, and a shoot shares ONE of them, so it is
+    held once and referenced by a qint32. (ICCSpace was interned here too until it
+    became a persisted colour space id in ImageRow; the string interner remains for
+    the next text field that needs it.) decoderErrMsg is not
     interned: it is written only on a failure and can embed a row number, so
     interning it would grow a table that is never trimmed in exchange for
     nothing.
@@ -116,7 +117,6 @@ struct RowScratch
     QString decoderErrMsg;
 
     qint32 iccBufId = -1;              // BlobInterner
-    qint32 iccSpaceId = -1;            // Interner
 
     quint32 offsetFull = 0, lengthFull = 0;
     quint32 offsetThumb = 0, lengthThumb = 0;

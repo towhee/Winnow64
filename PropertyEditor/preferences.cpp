@@ -170,15 +170,6 @@ void Preferences::itemChange(QModelIndex idx)
         G::loadOnlyVisibleIcons = v.toBool();
     }
 
-    if (source == "disableColorCorrection") {
-        // checkbox is "disable", so colour management is the inverse
-        bool disable = v.toBool();
-        // only toggle (which rebuilds the image cache) if the state actually changes
-        if (G::colorManage == disable)
-            mw->toggleColorManage(disable ? MW::off : MW::on);
-        mw->settings->setValue("colorManage", G::colorManage);
-    }
-
     if (source == "hideCachingProgressBars") {
         /* Single gate for ImageCache + MetaRead progress. Checkbox is "hide", so
            G::showCacheProgress is the inverse. ImageCache and MetaRead read
@@ -865,19 +856,8 @@ void Preferences::addGeneral()
     i.type = "bool";
     addItem(i);
 
-    // Color management
-    i.name = "disableColorCorrection";
-    i.parentName = "GeneralHeader";
-    i.captionText = "Disable color correction";
-    i.tooltip = "Disabled color correction is faster.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.value = !G::colorManage;
-    i.key = "disableColorCorrection";
-    i.delegateType = DT_Checkbox;
-    i.type = "bool";
-    addItem(i);
-
+    /* Color management was a "Disable color correction" checkbox here; it is always on
+       now (2026-10-26, notes/Documentation.md 15.2.2). */
 }
 
 void Preferences::addModify()

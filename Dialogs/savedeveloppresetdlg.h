@@ -36,6 +36,7 @@ struct PresetLeaf {
     QString key;                // stable id; also the caller's QSettings write key
     QString label;              // UI text
     bool    changed = false;    // pre-check: only used by the non-scope groups
+    QString tip;                // tooltip; empty = none
 };
 
 struct PresetGroup {

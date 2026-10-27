@@ -78,7 +78,7 @@ const char *kRowColumns =
     " i.orientation, i.exposurecomp, i.focusx, i.focusy, i.email, i.url,"
     " i.orig_rating, i.orig_label, i.orig_creator, i.orig_title,"
     " i.orig_copyright, i.orig_email, i.orig_url, i.developed, i.devpreviewkey,"
-    " i.keywordpaths, i.shootinginfo, i.keywords_literal";
+    " i.keywordpaths, i.shootinginfo, i.keywords_literal, i.colorspace";
 
 /*
     One row of kRowColumns into a CatalogRow, keywords excluded -- they are a join and
@@ -140,6 +140,7 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
     r.shootingInfo = q.value(41).toString();
     const QString kl = q.value(42).toString();
     if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
+    r.colorSpace = q.value(43).toInt();             // schema 27
     return q.value(0).toLongLong();
 }
 
@@ -530,7 +531,9 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 /* schema 7 */
                 " keywordpaths = ?, shootinginfo = ?, keywords_literal = ?,"
                 /* schema 20 */
-                " change_seq = ?"
+                " change_seq = ?,"
+                /* schema 27 */
+                " colorspace = ?"
                 " , unreadable = 0"
               " WHERE id = ?");
 
@@ -544,10 +547,10 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " orientation, exposurecomp, focusx, focusy, email, url,"
                 " orig_rating, orig_label, orig_creator, orig_title,"
                 " orig_copyright, orig_email, orig_url, developed, devpreviewkey,"
-                " keywordpaths, shootinginfo, keywords_literal, change_seq)"
+                " keywordpaths, shootinginfo, keywords_literal, change_seq, colorspace)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1,"
                 " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
-                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     /*  THE CHANGE SEQUENCE (schema 20): every row this transaction writes is stamped
         with the next value, and the counter advances only if something was written. */
@@ -635,6 +638,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(text(r.shootingInfo));
         w.addBindValue(text(r.keywordsLiteral.join('\n')));
         w.addBindValue(seq);
+        w.addBindValue(r.colorSpace);               // schema 27
         if (id) w.addBindValue(id);
 
         if (!w.exec()) {

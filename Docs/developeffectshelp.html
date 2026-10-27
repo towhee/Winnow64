@@ -19,7 +19,7 @@ detail sharpening puts back.</p>
 <h2>Choosing an effect</h2>
 <p>The list at the top of the panel picks the effect to work on, and only that effect's
 sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b>,
-<b>Blur</b> or <b>Kaleidoscope</b>.</p>
+<b>Blur</b> or <b>Patterns</b>.</p>
 
 <p>Every effect is always applied, whichever one is showing: the list only chooses which
 sliders you see.  An effect marked <b>*</b> in the list has been changed, so you can tell
@@ -29,7 +29,7 @@ the last effect you chose.</p>
 <p>The <b>eye</b> and <b>reset</b> at the right end of the list's row act on the effect
 that is showing, and nothing else.  The eye hides that one effect without losing its
 settings, so you can compare with and without it; the reset puts its sliders back to
-their defaults (for the kaleidoscope, that turns it off).  The eye on the Effects header
+their defaults (for Patterns, that turns it off).  The eye on the Effects header
 still hides all of them at once.</p>
 
 <h2>Vignette</h2>
@@ -60,7 +60,7 @@ sprinkle; high clumps it, which reads as a faster, older stock.</li>
 <p>Grain is also a practical tool, not only a look: a little of it hides banding in smooth
 skies and disguises the plastic texture that heavy noise reduction leaves behind.</p>
 
-<h2>Kaleidoscope</h2>
+<h2>Patterns</h2>
 <p>Mirrors the picture around a centre point, the way a kaleidoscope does: the frame is
 divided into wedges, and each one shows the same slice of the photo, every other wedge
 reflected so the seams always meet as mirror images.</p>
@@ -70,11 +70,11 @@ mirrors only what the mask covers: everything outside the mask is treated as tra
 and the mirrored result is laid over the photo.  Mask a flower, and the flower is repeated
 around the centre over the unchanged picture.  Only masked content inside the slice being
 mirrored shows up, so if nothing appears, turn <b>Source</b> or <b>Angle</b>, or move the
-centre, until the slice takes in your subject.  Each scope has its own kaleidoscope, and a
+centre, until the slice takes in your subject.  Each scope has its own pattern, and a
 mask scope's adjustments come with it: brighten the flower in that scope and the
 reflections are bright too.</p>
 
-<p><b>Type</b> picks the kind of kaleidoscope.  <b>Mirror</b> is the wedges described
+<p><b>Type</b> picks the kind of pattern.  <b>Mirror</b> is the wedges described
 here.  <b>Hyperbolic</b> tiles a disk with polygons that get smaller and smaller toward
 its rim without ever reaching it, as in M.&nbsp;C.&nbsp;Escher's <i>Circle Limit</i>
 prints.  <b>Polar</b> wraps the whole photo round the centre, a &ldquo;tiny
@@ -90,7 +90,7 @@ in shower doors and shop fronts.</p>
 mirror across one line.</li>
 <li><b>Sides</b> (Hyperbolic) is the number of sides of each polygon: 3 for triangles,
 4 for squares, and so on.  <b>0</b> is off.  The middle polygon is exactly a Mirror
-kaleidoscope with twice as many segments; every polygon around it is its mirror image.</li>
+pattern with twice as many segments; every polygon around it is its mirror image.</li>
 <li><b>Per corner</b> (Hyperbolic) is how many polygons meet at each corner.  Fewer sides
 need more polygons at a corner for the pattern to curve: triangles need at least 7,
 squares 5, and anything larger 4.  If you go below that, it moves back up.</li>
@@ -134,20 +134,20 @@ pattern, so the design stays put while its content changes.</li>
 middle of the slice twice as large, so a small detail near the centre fills the pattern.
 Below 100 takes in more of the photo, reaching further out from the centre.</li>
 <li><b>Opacity</b> blends the pattern with the photo underneath: 100 is the full
-kaleidoscope, lower values let the unmirrored picture show through.  On a mask, it fades
+pattern, lower values let the unmirrored picture show through.  On a mask, it fades
 the mirrored copies laid over the photo.</li>
 </ul>
 
-<p>While Kaleidoscope is the effect showing and it is on for the selected scope, its
+<p>While Patterns is the effect showing and it is on for the selected scope, its
 handles are on the image:
 drag the white <b>centre</b>, or click anywhere on the image to move the centre there, and
 drag the yellow <b>spoke</b> to turn the mirror lines (hold <b>Shift</b> to snap to 15
 degree steps).  The faint dashed lines are the seams between the wedges; with
 Hyperbolic, a dashed circle marks the disk's rim, and with Polar the planet's edge.  Choose another
-effect, or fold the Effects panel away, and the handles go &mdash; the kaleidoscope
+effect, or fold the Effects panel away, and the handles go &mdash; the pattern
 itself stays.  Hold <b>Space</b> to pan the image while they are up.</p>
 
-<p>The kaleidoscope works on the <i>cropped</i> picture, so the crop decides what gets
+<p>Patterns works on the <i>cropped</i> picture, so the crop decides what gets
 mirrored: crop to a detail first.  While the Transform panel is open, and while a mask or
 the spot brush is on the image, the picture is shown un-mirrored so what you draw lands
 where you see it.</p>
@@ -194,7 +194,7 @@ Roughness 50, both Amounts 0).</li>
 ten.</li>
 <li>The section's <b>[&#8942;]</b> menu has <b>Show Effects changes</b> (a before / after
 that keeps your values) and <b>Reset Effects</b>.</li>
-<li><b>Reset Effects</b> turns the kaleidoscope off too, and the eye hides it.</li>
+<li><b>Reset Effects</b> turns Patterns off too, and the eye hides it.</li>
 <li>The header reads <b>Effects *</b> when anything in the panel is off its default,
 and the list marks which effect it is.</li>
 </ul>
@@ -205,7 +205,7 @@ panel), then grain last of all &mdash; grain belongs on top of the finished pict
 underneath a vignette that would modulate it, and not under a sharpener that would crisp
 it up.</p>
 
-<p>The kaleidoscope runs after all of that, and after the crop, straighten and
+<p>Patterns runs after all of that, and after the crop, straighten and
 perspective in the Transform panel: it folds the finished, cropped picture.</p>
 
 <h2>What is saved</h2>

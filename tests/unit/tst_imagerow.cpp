@@ -87,7 +87,9 @@ void tst_imagerow::coversOnlyValueRoles()
         G::PermissionsColumn, G::ReadWriteColumn, G::SidecarColumn,
         G::OrientationOffsetColumn, G::RotationDegreesColumn,
         G::ShootingInfoColumn, G::ErrColumn, G::DevelopColumn,
-        G::DevPreviewKeyColumn
+        G::DevPreviewKeyColumn,
+        // moved here from the scratch store: a persisted colour space id
+        G::ICCSpaceColumn
     };
     for (int c : held) {
         QVERIFY2(RowStore::covers(c, Qt::EditRole),
@@ -242,6 +244,7 @@ void tst_imagerow::numericColumnsComeBackNumeric()
     s.setValue(0, G::OrientationColumn, Qt::EditRole, int(6));
     s.setValue(0, G::PermissionsColumn, Qt::EditRole, uint(0x6666));
     s.setValue(0, G::FocusXColumn, Qt::EditRole, float(0.5f));
+    s.setValue(0, G::ICCSpaceColumn, Qt::EditRole, int(3));     // Display P3
 
     /*  ExposureTimeItemDelegate guards "value == 0" before computing 1/value.
         A QString holding "0.004" is not equal to 0, so it walks past the guard
@@ -254,6 +257,10 @@ void tst_imagerow::numericColumnsComeBackNumeric()
     QVERIFY(s.value(0, G::PermissionsColumn).typeId()  != QMetaType::QString);
     QCOMPARE(s.value(0, G::PermissionsColumn).toUInt(), 0x6666u);
     QCOMPARE(s.value(0, G::FocusXColumn).toFloat(), 0.5f);
+    /*  The colour space is an ID; the NAME is DataModel::data's DisplayRole, not the
+        store's (Metadata/colorspaces.h). */
+    QCOMPARE(s.value(0, G::ICCSpaceColumn).toInt(), 3);
+    QVERIFY(s.value(0, G::ICCSpaceColumn).typeId() != QMetaType::QString);
 
     /*  And the reverse, which the shadow check also caught twice: Rating and
         MPix LOOK numeric and are held as TEXT. An unrated image has an EMPTY

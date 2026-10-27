@@ -14,6 +14,7 @@
 #include "Develop/sharpen.h"
 #include "Develop/localcontrast.h"
 #include "Develop/artblur.h"
+#include "Develop/areashrink.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QElapsedTimer>
@@ -942,6 +943,8 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     if (!img.isValid()) return false;
     lastHiWeight = -1.0f;
     lastCoeffs.reset();
+    QElapsedTimer probe;
+    if (t) probe.start();
 
     /*
         THE FRAME'S STATISTICS SAMPLE GOES FIRST, through this same Apply with the same
@@ -1005,11 +1008,10 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
         img.cam.profile.reset();
         img.look.reset();
         handOnSample();
+        if (t) t->setupMs = probe.elapsed();
         return true;
     }
-
-    QElapsedTimer probe;
-    if (t) probe.start();
+    if (t) t->setupMs = probe.restart();
 
     /* Stage 0.5: finish the input profile before anything is adjusted on top of it. */
     ApplyProfileTables(img, p);
@@ -1101,8 +1103,9 @@ std::shared_ptr<const WorkingImage> Develop::StatSample(const WorkingImage &img)
     const cv::Mat src(img.height, img.width, CV_32FC3, const_cast<float *>(img.rgb.data()));
     cv::Mat dst(s->height, s->width, CV_32FC3, s->rgb.data());
     /* INTER_AREA: each sample is the MEAN of the pixels it covers, which is what keeps a
-       statistic over it close to the same statistic over the full frame. */
-    cv::resize(src, dst, dst.size(), 0, 0, cv::INTER_AREA);
+       statistic over it close to the same statistic over the full frame. Staged
+       (areashrink.h): direct, this x68 shrink of a 50 MP frame took 177 ms. */
+    AreaShrink(src, dst, dst.size());
     copyMetadata(*s, img);
     s->statSlot.reset();
     s->statSample = true;
@@ -1127,7 +1130,7 @@ std::shared_ptr<const WorkingImage> Develop::LocalSample(const WorkingImage &img
     s->rgb.resize(size_t(s->width) * size_t(s->height) * 3);
     const cv::Mat src(img.height, img.width, CV_32FC3, const_cast<float *>(img.rgb.data()));
     cv::Mat dst(s->height, s->width, CV_32FC3, s->rgb.data());
-    cv::resize(src, dst, dst.size(), 0, 0, cv::INTER_AREA);
+    AreaShrink(src, dst, dst.size());                   // staged: see areashrink.h
     copyMetadata(*s, img);
     s->statSlot.reset();
     s->statSample = true;                               // never developed into a sample

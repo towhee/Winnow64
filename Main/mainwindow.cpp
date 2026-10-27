@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Develop/autotone.h"
 #include "Image/stalethumb.h"
 #include "Develop/workingdump.h"
 #include "Utilities/versionkey.h"
@@ -13,6 +14,7 @@
 #include "Utilities/fileops.h"
 #include "Utilities/panelprobe.h"
 #include "Utilities/displaycolor.h"
+#include "Metadata/colorspaces.h"
 #include "Utilities/titlebar.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
@@ -659,17 +661,10 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     const bool recurse = qEnvironmentVariableIntValue("WINNOW_SELFTEST_RECURSE") == 1;
     const int navMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV_MS");
 
-    /*  WINNOW_COLOR_MANAGE=0|1 forces colour management off/on, to A/B ICC::transform's
-        cost on a riffle (--ingestprobe). Applied HERE, after start-up, because the
-        workspace restore sets G::colorManage after the settings are read. The line below
-        records what the A/B actually compared: with no display profile the transform is
-        a no-op and "on" and "off" are the same run. */
-    if (!qEnvironmentVariable("WINNOW_COLOR_MANAGE").isNull())
-        toggleColorManage(qEnvironmentVariableIntValue("WINNOW_COLOR_MANAGE") == 1 ? Tog::on
-                                                                                 : Tog::off);
-    fprintf(stderr, "SELFTEST: colorManage=%d display=\"%s\" sRGB->display path=%d\n",
-            int(G::colorManage), qPrintable(G::winOutProfilePath),
-            int(ICC::pathFor(QByteArray())));
+    /* What colour management does on this machine: the display profile, and the path an
+       sRGB image takes to it (ICC::Path -- 0 none, 1 identity, 2 fast, 3 lcms). */
+    fprintf(stderr, "SELFTEST: display=\"%s\" sRGB->display path=%d\n",
+            qPrintable(G::winOutProfilePath), int(ICC::pathFor(QByteArray())));
 
     /*  WINNOW_SELFTEST_DEVPREVIEWS=1 TURNS THE BACKGROUND PREVIEW BUILDER ON, which is
         otherwise a preference and therefore unreachable from a headless run (test mode
@@ -1187,24 +1182,29 @@ void MW::runMetaTest(const QString &filePath)
     const bool ok = metadata->loadImageMetadata(fi, 0, 0, true, true, false, false,
                                                 "MW::runMetaTest");
     const ImageMetadata &m = metadata->m;
-    fprintf(stderr, "METATEST: ok=%d make=[%s] model=[%s] w=%d h=%d\n",
+    fprintf(stderr, "METATEST: ok=%d make=[%s] model=[%s] w=%d h=%d colorspace=%d [%s]\n",
             ok ? 1 : 0,
             m.make.toLocal8Bit().constData(),
             m.model.toLocal8Bit().constData(),
-            m.width, m.height);
+            m.width, m.height,
+            m.colorSpace, qPrintable(ColorSpaces::name(m.colorSpace)));
     fflush(stderr);
 
     // Expected make/model substrings are supplied by the test (env), so this code
     // stays generic and the fixture's identity lives in the test registration.
     const QByteArray expMake  = qgetenv("WINNOW_METATEST_MAKE");
     const QByteArray expModel = qgetenv("WINNOW_METATEST_MODEL");
+    // the colour space NAME (Metadata/colorspaces.h), e.g. "Adobe RGB"
+    const QByteArray expSpace = qgetenv("WINNOW_METATEST_COLORSPACE");
     const bool pass = ok
         && m.width > 0 && m.height > 0
         && !m.make.isEmpty() && !m.model.isEmpty()
         && (expMake.isEmpty()
             || m.make.contains(QString::fromLocal8Bit(expMake), Qt::CaseInsensitive))
         && (expModel.isEmpty()
-            || m.model.contains(QString::fromLocal8Bit(expModel), Qt::CaseInsensitive));
+            || m.model.contains(QString::fromLocal8Bit(expModel), Qt::CaseInsensitive))
+        && (expSpace.isEmpty()
+            || ColorSpaces::name(m.colorSpace) == QString::fromLocal8Bit(expSpace));
     std::_Exit(pass ? 0 : 2);
 }
 
@@ -2145,6 +2145,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             }
         }
     }
+
+    /* STARTUP FOCUS: a view becoming visible while Winnow opens takes the focus.
+       Queued, so it lands after the show (and any layout it triggers) completes. */
+    if (startupViewFocusArmed && event->type() == QEvent::Show &&
+        (obj == thumbView || obj == gridView))
+        QTimer::singleShot(0, this, &MW::focusStartupView);
 
     /* FILTER NAV BAR: any dock moved, resized, shown or hidden may change which dock is
        lowest in its area, and so which carries the Previous / Clear / Next row
@@ -3169,6 +3175,24 @@ void MW::resetFocus()
     setFocus();
 }
 
+void MW::focusStartupView()
+{
+/*
+    Give the visible image view the keyboard focus while Winnow opens (see
+    startupViewFocusArmed). The grid wins when both are on screen: it is the main view,
+    the thumbnail strip beside the loupe is the secondary one. Called when either view
+    is shown, and again after the activation's resetFocus, whichever comes last.
+*/
+    if (!startupViewFocusArmed) return;
+    QWidget *view = (gridView && gridView->isVisible())   ? static_cast<QWidget *>(gridView)
+                  : (thumbView && thumbView->isVisible()) ? static_cast<QWidget *>(thumbView)
+                                                          : nullptr;
+    if (!view) return;
+    if (G::isLogger) G::log("MW::focusStartupView", view->objectName());
+    view->setFocus(Qt::OtherFocusReason);
+    if (startupAppActivated) startupViewFocusArmed = false;
+}
+
 void MW::ingestFinished()
 {
     if (G::isLogger) G::log("MW::ingestFinished");
@@ -3194,6 +3218,12 @@ void MW::appStateChange(Qt::ApplicationState state)
     before and make it visible again.
 */
     if (G::isLogger) G::log("MW::appStateChange");
+    /* Startup: the first activation's resetFocus takes the focus to the window, so the
+       visible view takes it back (after resetFocus below, hence queued). */
+    if (startupViewFocusArmed && state == Qt::ApplicationActive) {
+        startupAppActivated = true;
+        QTimer::singleShot(0, this, &MW::focusStartupView);
+    }
     if (!zoomDlg) return;
     if (state == Qt::ApplicationActive)
     {
@@ -7941,8 +7971,48 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
        re-reads, which outside Develop mode now means loading the new devPreview. */
     if (icd) icd->remove(fPath);
 
-    if (!thumb.isNull()) dm->setDevelopIcon(dmRow, thumb);
-    else dm->clearDevelopIcon(dmRow);
+    /* A multi-image edit target (the usual null-thumb case): its preview is rendered
+       properly in the background, so the grid shows the edit. The builder renders these
+       -- and only these -- while Develop is open. */
+    const bool buildFollows = thumb.isNull() && !blob.isEmpty() && fPath != dm->currentKey
+                              && G::operationMode == G::OperationMode::Develop;
+    if (!thumb.isNull()) {
+        devPreviewIconHeld.remove(fPath);
+        dm->setDevelopIcon(dmRow, thumb);
+        const int sfRow = dm->proxyRowFromKey(fPath);
+        if (sfRow >= 0) {
+            if (thumbView && thumbView->iconViewDelegate)
+                thumbView->iconViewDelegate->clearCacheItem(sfRow);
+            if (gridView && gridView->iconViewDelegate)
+                gridView->iconViewDelegate->clearCacheItem(sfRow);
+        }
+    }
+    /* HOLD the icon on screen until the build replaces it (see devPreviewIconHeld):
+       clearing it here flashed the camera thumbnail for the length of the render. */
+    else if (buildFollows) devPreviewIconHeld.insert(fPath);
+    else clearDevelopIconNow(fPath);
+
+    if (buildFollows)
+        buildDevPreviews(QStringList(fPath), "sync");
+    /* Reset to no recipe: flushImage dropped the preview, and the DEFAULT render that
+       replaces it (a raw's, a version's included) is otherwise only built by the next
+       folder-load sweep -- until then Browse shows the camera JPEG, not the default
+       renderer. The builder skips non-raws and anything already cached. */
+    else if (blob.isEmpty())
+        buildDevPreviews(QStringList(fPath), "flush");
+}
+
+void MW::clearDevelopIconNow(const QString &fPath)
+{
+/*
+    Forget fPath's grid thumbnail: its recipe changed and no picture of the new one is
+    coming (see devPreviewUpdated). The loader then re-reads the camera thumbnail.
+*/
+    if (!dm) return;
+    devPreviewIconHeld.remove(fPath);
+    const int dmRow = dm->rowFromKey(fPath);
+    if (dmRow < 0) return;                  // gone: another folder now
+    dm->clearDevelopIcon(dmRow);
 
     const int sfRow = dm->proxyRowFromKey(fPath);
     if (sfRow >= 0) {
@@ -7956,23 +8026,25 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
        needs MetaRead told that a loaded icon was discarded, or in the default brute-force
        icon chunk it refuses to re-read the row and the thumbnail just disappears. See
        MetaRead::invalidateLoadedIcons and MW::setPreviewSource. */
-    if (thumb.isNull()) {
-        QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
-        reloadIconChunk();
-    }
+    QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
+    reloadIconChunk();
+}
 
-    /* A multi-image edit target (the usual null-thumb case): render its preview properly,
-       in the background, so the grid shows the edit instead of the camera thumbnail. The
-       builder renders these -- and only these -- while Develop is open. */
-    if (thumb.isNull() && !blob.isEmpty() && fPath != dm->currentKey
-        && G::operationMode == G::OperationMode::Develop)
-        buildDevPreviews(QStringList(fPath), "sync");
-    /* Reset to no recipe: flushImage dropped the preview, and the DEFAULT render that
-       replaces it (a raw's, a version's included) is otherwise only built by the next
-       folder-load sweep -- until then Browse shows the camera JPEG, not the default
-       renderer. The builder skips non-raws and anything already cached. */
-    else if (blob.isEmpty())
-        buildDevPreviews(QStringList(fPath), "flush");
+void MW::releaseHeldDevelopIcons()
+{
+/*
+    A held thumbnail (devPreviewIconHeld) whose build is no longer coming -- not queued,
+    not rendering, not in the cache-check hop -- is cleared the old way, so a stale
+    picture never outlives its recipe.
+*/
+    if (devPreviewIconHeld.isEmpty()) return;
+    const QStringList held(devPreviewIconHeld.cbegin(), devPreviewIconHeld.cend());
+    for (const QString &p : held) {
+        if (devPreviewBuildQueue.contains(p) || p == devPreviewBuildCurrent ||
+            devPreviewHopPaths.contains(p))
+            continue;
+        clearDevelopIconNow(p);
+    }
 }
 
 void MW::updateCatalogForRow(int dmRow)
@@ -9691,14 +9763,11 @@ void MW::refreshDisplayColor()
 {
 /*
     Rebuild the sRGB -> display transform the Develop loupe uses
-    (Utilities/displaycolor.h) after the display profile or G::colorManage changed,
-    refresh the Develop alert that warns when colour management is off on a wide-gamut
-    display, and re-render an open Develop image so the loupe does not keep pixels
-    converted for the old display.
+    (Utilities/displaycolor.h) after the display profile changed, and re-render an open
+    Develop image so the loupe does not keep pixels converted for the old display.
 */
     if (G::isLogger) G::log("MW::refreshDisplayColor");
     DisplayColor::Rebuild();
-    updateDevelopSelectionWarning();    // the "colour management is off" alert row
     /* Also runs at start-up (getDisplayProfile), before Develop's timers exist. */
     if (!developProxyRenderTimer || !developFullResTimer) return;
     if (G::operationMode == G::OperationMode::Develop && currentDevelopEditsVisible())
@@ -13986,18 +14055,10 @@ void MW::renderDevelopPreview(bool fullRes)
         return;
     }
     if (!work) {
-        /* The decode was tried and produced nothing for this file. Last resort: the image
-           cache's copy, which is the file's own pixels only while colour management is
-           off -- otherwise it is in display space and there is nothing correct to show.
-           One locked lookup: see ImageCacheData::get. */
-        if (G::colorManage) return;
-        QImage src;
-        if (!icd->get(fPath, src) || src.isNull()) return;   // not decoded yet
-        auto built = std::make_shared<WorkingImage>();
-        InputTransform input;
-        if (!input.FromImage(src, *built, dm->imMetadata(fPath).iccBuf)) return;
-        WorkingImageCache::instance().put(fPath, built);
-        work = built;
+        /* The decode was tried and produced nothing for this file. There is no fallback:
+           the image cache's copy has been converted for the display (colour management
+           is always on), so it is not the file's pixels and would be developed wrong. */
+        return;
     }
 
     /* The dock pointed itself at this image at SELECTION (fileSelectionChange), a second
@@ -14298,6 +14359,18 @@ void MW::renderDevelopPreview(bool fullRes)
                                    << " OTHER" << (rt.developMs - rt.stackCopyMs
                                                    - rt.stackApplyMs - rt.stackBlendMs
                                                    - rt.stackFreeMs) << "]"
+                                   << " stages=[base" << rt.baseApplyMs
+                                   << " setup" << rt.setupMs
+                                   << " profile" << rt.profileMs
+                                   << " denoise" << rt.denoiseMs
+                                   << " point" << rt.pointMs
+                                   << " texture" << rt.textureMs
+                                   << " clarity" << rt.clarityMs
+                                   << " dehaze" << rt.dehazeMs
+                                   << " vignette" << rt.vignetteMs
+                                   << " sharpen" << rt.sharpenMs
+                                   << " blur" << rt.blurMs
+                                   << " grain" << rt.grainMs << "]"
                                    << " outFree" << rt.outFreeMs
                                    << " resume" << rt.resumeStart
                                    << "/" << rt.stackScopes
@@ -14731,7 +14804,9 @@ void MW::renderDevelopFullResAsync()
                                    << " outFree" << rt.outFreeMs
                                    << " toImage" << rt.toImageMs
                                    << " orient+scale" << rt.orientScaleMs << ")ms"
-                                   << " develop=[profile" << rt.profileMs
+                                   << " stages=[base" << rt.baseApplyMs
+                                   << " setup" << rt.setupMs
+                                   << " profile" << rt.profileMs
                                    << " denoise" << rt.denoiseMs << " point" << rt.pointMs
                                    << " texture" << rt.textureMs << " clarity" << rt.clarityMs
                                    << " dehaze" << rt.dehazeMs
@@ -15966,7 +16041,8 @@ void MW::toggleBrowseCompare()
     const QString key = ImageDecoder::devPreviewKeyFor(baseKey, fPath,
                                                        VersionKey::sourceOf(fPath), ext);
     const bool hasDev = !key.isEmpty()
-                        && DevPreviewCache::instance().contains(fPath, key.toLatin1());
+                        && DevPreviewCache::instance().contains(fPath, key.toLatin1(),
+                                                                /*acceptReduced*/true);
     const bool showingDev = hasDev && G::previewSource == G::PreviewSource::Developed;
 
     QImage other;
@@ -16001,7 +16077,7 @@ void MW::toggleBrowseCompare()
         }
         /* A devPreview is sRGB (OutputTransform); bring it to the display the way
            ImageDecoder::colorManage does for a served devPreview: empty profile = sRGB. */
-        if (G::colorManage && metadata->iccFormats.contains(ext)) {
+        if (metadata->iccFormats.contains(ext)) {
             if (other.format() != QImage::Format_ARGB32
                 && other.format() != QImage::Format_RGB32)
                 other = other.convertToFormat(QImage::Format_ARGB32);
@@ -16344,11 +16420,209 @@ static void dumpWorkingForCalibration(const WorkingImage &src, const EditParams 
         qWarning() << "dumpWorkingForCalibration: cannot write" << path;
 }
 
+bool MW::developWantsSensor(const ImageMetadata &m, bool requireSensor) const
+{
+/*
+    Should a render of this image start from the SENSOR decode? EVERY caller wants the
+    sensor image, whatever mode the user is in. G::useRaw follows the operation mode --
+    MW::setOperationMode turns it off in Preview -- so gating on it alone rendered
+    exports, devPreviews, Embellish exports and focus stacks from the embedded preview
+    whenever they ran outside Develop. useRaw off IN Develop is different: that is the
+    deliberate "Edit: Embedded Preview" choice, and the render honours it (except
+    requireSensor, which never takes a preview). GUI thread (reads the mode).
+*/
+    const bool previewChosen = !G::useRaw &&
+                               G::operationMode == G::OperationMode::Develop;
+    return (requireSensor || !previewChosen) && RawFormat::HasSensorDecoder(m.ext);
+}
+
+bool MW::developBaseFor(const QString &fPath, ImageMetadata &m,
+                        const RawRender::Choice &render, bool sensorRaw,
+                        bool requireSensor, std::shared_ptr<const WorkingImage> &work,
+                        bool &decodedHere)
+{
+/*
+    The pre-develop WorkingImage a full render of fPath starts from: the cached one when
+    it is the right kind, else a fresh independent decode (which caches it as a side
+    effect). WORKER THREAD -- the decode is seconds on a large raw. Shared by
+    developPixelSource (export, devPreviews, focus stacking) and developPresetAutoSolve
+    (a Develop preset's Auto settings), so both see the same pixels. False when no base
+    could be had, or when requireSensor refused a preview fallback. m is not const
+    because the decode fills it in, and developPixelSource reads it afterwards.
+*/
+    decodedHere = false;
+    work = WorkingImageCache::instance().get(fPath, render.tag());
+    /* A cached base is only usable here if it IS the sensor image. The cache is keyed
+       by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
+       typically 1024 px), so reusing it would render this image's export -- or its
+       devPreview, the thing the loupe shows at 100% -- from a thumbnail.
+
+       sceneReferred is the exact test: only the sensor decode sets it. The size test
+       that came before it (preview long edge < half the sensor's) is kept as a
+       backstop, but on its own it MISSED an Olympus: an OM-1's embedded preview is
+       3200 px against a 5184 px sensor, 62% rather than under half, so a focus stack
+       started in the Library was rendered from previews. */
+    if (work && sensorRaw && !work->sceneReferred) work.reset();
+    if (work && sensorRaw && m.rawInfo.isRaw && m.rawInfo.width > 0) {
+        const int sensorEdge = qMax(m.rawInfo.width, m.rawInfo.height);
+        if (qMax(work->width, work->height) * 2 < sensorEdge) work.reset();
+    }
+    if (!work) {
+        ImageDecoder dec(0, dm, metadata);
+        dec.forceSensorDecode = sensorRaw;
+        /* An identity recipe still renders from a WorkingImage here, and it has to be
+           built from the file's pixels: img below has been through colorManage(). */
+        dec.buildWork = true;
+        QImage img;
+        dec.decodeIndependent(img, metadata, m, nullptr, &render);
+        work = WorkingImageCache::instance().get(fPath, render.tag());
+        decodedHere = true;
+        /* The sensor decode failed and decodeIndependent fell back to the embedded
+           preview. requireSensor callers want a failure, not a preview-sized
+           render. */
+        if (requireSensor && sensorRaw && (!work || !work->sceneReferred)) {
+            const QString msg = "Raw sensor decode failed; not using the embedded "
+                                "preview. " + fPath;
+            qWarning().noquote() << "MW::developPixelSource" << msg;
+            if (G::FSLog) G::log("MW::developPixelSource", msg);
+            if (fPath != dm->currentKey) WorkingImageCache::instance().remove(fPath);
+            work.reset();
+            return false;
+        }
+        if (!work && !img.isNull()) {
+            /* Last resort -- the decoder could not build one (buildWork above
+               normally does). img has been through colorManage(), so it is the
+               file's own pixels only when no conversion applied (sRGB file, sRGB
+               display). */
+            auto built = std::make_shared<WorkingImage>();
+            InputTransform input;
+            if (input.FromImage(img, *built)) {
+                WorkingImageCache::instance().put(fPath, built);
+                work = built;
+            }
+        }
+    }
+    return work != nullptr;
+}
+
+void MW::developPresetAutoSolve(const QString &fPath, const EditParams &base, bool wb,
+                                bool tone, DevelopProperties::AutoSolveDone done)
+{
+/*
+    DevelopProperties' AutoSolver: one image of a Develop preset's Auto-settings batch
+    (see "Preset Auto settings" in developproperties.h). The base comes from the same
+    developBaseFor the exporter uses, the solve is AutoTone::ApplyPresetAutos -- the
+    same call the current image makes inline -- and both run on developRenderPool, so
+    the batch keeps to one in-flight decode. done runs on the GUI thread.
+
+    DECODE REUSE. Each solved image is flushed at once, which hands it to the devPreview
+    builder -- and that render needs the SAME decoded base. Left alone the order was
+    solve k, solve k+1, render k: the builder's request reaches developRenderPool after
+    the next solve (it hops through a cache check first), so k's base was gone and its
+    thumbnail decoded the raw a second time (measured: ~0.9 s of every ~2.2 s image on a
+    50 MP ARW). So the base a solve decoded is KEPT (presetAutoThumbPath) and the next
+    solve is HELD (presetAutoDeferred) until the builder has rendered that image; then
+    the base is dropped (releasePresetAutoThumb). Peak memory is unchanged: the image on
+    screen (pinned) plus one target, as before -- the hold is what stops a second target
+    being decoded while the first is still needed. A timeout releases the hold should
+    the builder never take the image (Develop left mid-batch, a key it skips).
+*/
+    if (G::isLogger) G::log("MW::developPresetAutoSolve", fPath);
+    if (fPath.isEmpty() || !dm) { done(false, base); return; }
+
+    auto start = [this, fPath, base, wb, tone, done]() {
+        /* GUI thread: the datamodel reads and the mode-dependent sensor choice. */
+        ImageMetadata m = dm->imMetadata(fPath);
+        if (m.fPath.isEmpty()) m.fPath = fPath;
+        if (m.ext.isEmpty())
+            m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
+        const bool sensorRaw = developWantsSensor(m, /*requireSensor*/false);
+        const RawRender::Choice render = RawRender::resolve(base);
+
+        developRenderPool->start([this, fPath, m, base, wb, tone, sensorRaw, render,
+                                  done]() mutable {
+            std::shared_ptr<const WorkingImage> work;
+            bool decodedHere = false;
+            EditParams solved = base;
+            bool ok = false;
+            if (developBaseFor(fPath, m, render, sensorRaw, /*requireSensor*/false, work,
+                               decodedHere))
+                ok = AutoTone::ApplyPresetAutos(*work, wb, tone, solved).ok();
+            work.reset();
+            QMetaObject::invokeMethod(this, [this, fPath, decodedHere, done, ok, solved]() {
+                /* Keep the base for this image's devPreview render -- but only when
+                   that render is really coming. done() lands the result and flushes the
+                   image, and the flush asks for a "sync" devPreview build only when the
+                   result landed (not skipped), we are in Develop, and it is not the
+                   image on screen (whose previews come from the live render).
+                   buildDevPreviews reports such a request through
+                   presetAutoThumbRequested. done() also asks for the NEXT solve, which
+                   is held when the request was made (see the check below). */
+                const bool decodedTarget = decodedHere && fPath != dm->currentKey;
+                if (decodedTarget) {
+                    presetAutoThumbCandidate = fPath;
+                    presetAutoThumbRequested = false;
+                }
+                done(ok, solved);
+                if (!decodedTarget) return;
+                const bool requested = presetAutoThumbRequested;
+                presetAutoThumbCandidate.clear();
+                presetAutoThumbRequested = false;
+                if (!requested) {
+                    WorkingImageCache::instance().remove(fPath);
+                    /* A solve held on a request that was never made cannot happen (the
+                       hold needs requested), but never strand one. */
+                    if (presetAutoDeferred && presetAutoThumbPath.isEmpty()) {
+                        auto start = std::move(presetAutoDeferred);
+                        presetAutoDeferred = nullptr;
+                        start();
+                    }
+                    return;
+                }
+                presetAutoThumbPath = fPath;
+                presetAutoThumbHop = true;
+                const quint64 gen = ++presetAutoThumbGen;
+                QTimer::singleShot(5000, this, [this, gen]() {
+                    if (gen == presetAutoThumbGen) releasePresetAutoThumb();
+                });
+            });
+        });
+    };
+
+    /* The previous image's base is held (or about to be) for its devPreview: start
+       after that render. */
+    if (!presetAutoThumbPath.isEmpty() ||
+        (!presetAutoThumbCandidate.isEmpty() && presetAutoThumbRequested)) {
+        presetAutoDeferred = start;
+        return;
+    }
+    start();
+}
+
+void MW::releasePresetAutoThumb()
+{
+/*
+    The held batch image's devPreview is done (or will not come): drop its base, which
+    nothing else needs, and start the solve that was waiting for it.
+*/
+    if (presetAutoThumbPath.isEmpty()) return;
+    if (presetAutoThumbPath != dm->currentKey)
+        WorkingImageCache::instance().remove(presetAutoThumbPath);
+    presetAutoThumbPath.clear();
+    presetAutoThumbHop = false;
+    ++presetAutoThumbGen;                       // retire the pending timeout
+    if (presetAutoDeferred) {
+        auto start = std::move(presetAutoDeferred);
+        presetAutoDeferred = nullptr;
+        start();
+    }
+}
+
 void MW::developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap, int degreesSnap,
-                            bool requireSensor)
+                            bool requireSensor, int maxEdge)
 {
 /*
     Render one image's FULL develop recipe for the exporter.
@@ -16362,6 +16636,12 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
 
     Unlike the preview path this uses stackJobFor(fPath): every image gets its OWN stored
     recipe, which is the whole point of a batch export.
+
+    maxEdge > 0 renders at that long edge instead of full resolution (the Auto batch's
+    REDUCED devPreview): the lens-corrected base is downscaled just before the composite,
+    which renders masks, spots and geometry at whatever size it is given, as the
+    interactive proxy does. The downscale shares the full frame's statistics slot, so the
+    tone is the full render's.
 
     requireSensor (the focus stacker): a raw with a sensor decoder must be rendered from
     the SENSOR image. If the decode fails, done(false) is called instead of quietly
@@ -16387,18 +16667,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     const LensDb::Shot lensShot = lensShotFromMetadata(m);   // the lens profile's lookup
     if (m.ext.isEmpty()) m.ext = QFileInfo(VersionKey::sourceOf(fPath)).suffix().toLower();
     /* A raw that Winnow decodes from the sensor: only that decode marks a base
-       sceneReferred, so any other base under this path is a preview stand-in.
-
-       EVERY caller wants the sensor image, whatever mode the user is in. G::useRaw
-       follows the operation mode -- MW::setOperationMode turns it off in Preview -- so
-       gating on it alone rendered exports, devPreviews, Embellish exports and focus
-       stacks from the embedded preview whenever they ran outside Develop. useRaw off IN
-       Develop is different: that is the deliberate "Edit: Embedded Preview" choice, and
-       the render honours it (except requireSensor, which never takes a preview). */
-    const bool previewChosen = !G::useRaw &&
-                               G::operationMode == G::OperationMode::Develop;
-    const bool sensorRaw = (requireSensor || !previewChosen) &&
-                           RawFormat::HasSensorDecoder(m.ext);
+       sceneReferred, so any other base under this path is a preview stand-in. Which
+       callers want it, and why mode alone cannot decide: developWantsSensor. */
+    const bool sensorRaw = developWantsSensor(m, requireSensor);
 
     /* "Denoise raw" is a property of the BASE, applied before the composite. The
        interactive path gets there through developRawDenoisedBase / ensureRawDenoise, and
@@ -16433,64 +16704,15 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
        rendered from its master's Winnow base. */
     const RawRender::Choice render = RawRender::resolve(mj.global);
 
-    /* Step 1 (worker): make sure the scene-linear WorkingImage exists. decodeIndependent
-       caches it as a side effect, so an image already visited is a cache hit. */
+    /* Step 1 (worker): make sure the scene-linear WorkingImage exists (developBaseFor).
+       decodeIndependent caches it as a side effect, so an image already visited is a
+       cache hit. */
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, degreesSnap, sensorRaw, requireSensor,
-                              lensShot, render, done]() mutable {
-        auto work = WorkingImageCache::instance().get(fPath, render.tag());
-        /* A cached base is only usable here if it IS the sensor image. The cache is keyed
-           by path alone and Preview mode fills it from the embedded JPEG (a DNG's is
-           typically 1024 px), so reusing it would render this image's export -- or its
-           devPreview, the thing the loupe shows at 100% -- from a thumbnail.
-
-           sceneReferred is the exact test: only the sensor decode sets it. The size test
-           that came before it (preview long edge < half the sensor's) is kept as a
-           backstop, but on its own it MISSED an Olympus: an OM-1's embedded preview is
-           3200 px against a 5184 px sensor, 62% rather than under half, so a focus stack
-           started in the Library was rendered from previews. */
-        if (work && sensorRaw && !work->sceneReferred) work.reset();
-        if (work && sensorRaw && m.rawInfo.isRaw && m.rawInfo.width > 0) {
-            const int sensorEdge = qMax(m.rawInfo.width, m.rawInfo.height);
-            if (qMax(work->width, work->height) * 2 < sensorEdge) work.reset();
-        }
+                              lensShot, render, maxEdge, done]() mutable {
+        std::shared_ptr<const WorkingImage> work;
         bool decodedHere = false;
-        if (!work) {
-            ImageDecoder dec(0, dm, metadata);
-            dec.forceSensorDecode = sensorRaw;
-            /* An identity recipe still renders from a WorkingImage here, and it has to be
-               built from the file's pixels: img below has been through colorManage(). */
-            dec.buildWork = true;
-            QImage img;
-            dec.decodeIndependent(img, metadata, m, nullptr, &render);
-            work = WorkingImageCache::instance().get(fPath, render.tag());
-            decodedHere = true;
-            /* The sensor decode failed and decodeIndependent fell back to the embedded
-               preview. requireSensor callers want a failure, not a preview-sized
-               render. */
-            if (requireSensor && sensorRaw && (!work || !work->sceneReferred)) {
-                const QString msg = "Raw sensor decode failed; not using the embedded "
-                                    "preview. " + fPath;
-                qWarning().noquote() << "MW::developPixelSource" << msg;
-                if (G::FSLog) G::log("MW::developPixelSource", msg);
-                if (fPath != dm->currentKey) WorkingImageCache::instance().remove(fPath);
-                QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
-                return;
-            }
-            if (!work && !img.isNull()) {
-                /* Last resort -- the decoder could not build one (buildWork above
-                   normally does). img has been through colorManage(), so it is the
-                   file's own pixels only when no conversion applied (sRGB file, sRGB
-                   display). */
-                auto built = std::make_shared<WorkingImage>();
-                InputTransform input;
-                if (input.FromImage(img, *built)) {
-                    WorkingImageCache::instance().put(fPath, built);
-                    work = built;
-                }
-            }
-        }
-        if (!work) {
+        if (!developBaseFor(fPath, m, render, sensorRaw, requireSensor, work, decodedHere)) {
             QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
             return;
         }
@@ -16539,7 +16761,8 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
            concurrently with the live session's use of the same path-keyed caches. */
         QMetaObject::invokeMethod(this, [this, fPath, work, src, mj, depth, space, outSpace,
-                                         decodedHere, degreesSnap, lensShot, done]() {
+                                         decodedHere, degreesSnap, lensShot, maxEdge,
+                                         done]() {
             const int degrees = !work->sceneReferred ? 0
                               : degreesSnap >= 0     ? degreesSnap
                                                      : developOrientationDegrees(*work, fPath);
@@ -16562,9 +16785,13 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                "Denoise raw" is set, else the clean one. work is kept alive alongside it
                because the mask fields registered above are keyed to those pixels. */
             developRenderPool->start([this, fPath, work, src, mj, degrees, depth, space,
-                                      outSpace, decodedHere, lensShot, done]() {
-                const std::shared_ptr<const WorkingImage> lensSrc =
+                                      outSpace, decodedHere, lensShot, maxEdge,
+                                      done]() {
+                std::shared_ptr<const WorkingImage> lensSrc =
                     lensCorrectedSource(fPath, src, mj.global, src.get(), lensShot);
+                if (maxEdge > 0 && std::max(lensSrc->width, lensSrc->height) > maxEdge)
+                    lensSrc = std::make_shared<const WorkingImage>(
+                        WorkingImageCache::downscaled(*lensSrc, maxEdge));
                 dumpWorkingForCalibration(*lensSrc, mj.global, degrees, fPath);
                 QImage out = developCompositeStack(*lensSrc, mj, degrees,
                                                    /*fullRes*/true, 0, 0, fPath,

@@ -1,4 +1,5 @@
 #include "jpeg.h"
+#include "Metadata/colorspaces.h"
 #include "Metadata/xmpapply.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
@@ -387,18 +388,25 @@ bool Jpeg::parse(MetadataParameters &p,
     m.lens = u.getString(p.file, ifd->ifdDataHash.value(42036).tagValue + startOffset,
                      ifd->ifdDataHash.value(42036).tagCount);
 
-    /* Read embedded ICC. The default color space is sRGB. If there is an embedded icc profile
-    and it is sRGB then no point in saving the byte array of the profile since we already have
-    it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
-    if (segmentHash.contains("ICC")/* && G::colorManage*/) {
+    /* Read embedded ICC and classify it (Metadata/colorspaces.h). The default color space
+    is sRGB: an sRGB profile's bytes are not kept, since a null iccBuf already means sRGB
+    and the copy would sit on every row of the datamodel. */
+    if (segmentHash.contains("ICC")) {
         if (m.iccSegmentOffset && m.iccSegmentLength) {
-            m.iccSpace = u.getString(p.file, m.iccSegmentOffset + 52, 4);
-            if (m.iccSpace != "sRGB") {
-                p.file.seek(m.iccSegmentOffset);
-                m.iccBuf = p.file.read(m.iccSegmentLength);
-            }
+            p.file.seek(m.iccSegmentOffset);
+            const QByteArray icc = p.file.read(m.iccSegmentLength);
+            m.colorSpace = ColorSpaces::fromIcc(icc);
+            if (m.colorSpace != ColorSpaces::sRGB) m.iccBuf = icc;
         }
     }
+    /* No profile: InteropIndex "R03" is the DCF marker for an Adobe RGB file, written
+       beside EXIF ColorSpace = Uncalibrated (Sony, Nikon). Read before GPS, which
+       reuses the IFD hash. "R98" is NOT trusted as sRGB: Canon writes it in Adobe RGB
+       mode too, and the EXIF tag (Metadata::readMetadata) decides that case. */
+    if (m.colorSpace == ColorSpaces::None && ifd->interopOffset
+        && IFD::readInteropIndex(p.file, qint64(ifd->interopOffset) + startOffset,
+                                 isBigEnd) == "R03")
+        m.colorSpace = ColorSpaces::AdobeRGB;
 
     // read GPS
     if (offsetGPS) {

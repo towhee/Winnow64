@@ -45,7 +45,7 @@ void tst_rowscratch::coversTheScratchColumnsAndOnlyOnValueRoles()
         G::ifd0OffsetColumn, G::ifdOffsetsColumn,
         G::XmpSegmentOffsetColumn, G::XmpSegmentLengthColumn, G::IsXMPColumn,
         G::ICCSegmentOffsetColumn, G::ICCSegmentLengthColumn,
-        G::ICCBufColumn, G::ICCSpaceColumn,
+        G::ICCBufColumn,
         G::CacheSizeColumn, G::IsCachingColumn, G::IsCachedColumn,
         G::AttemptsColumn, G::DecoderIdColumn,
         G::DecoderReturnStatusColumn, G::DecoderErrMsgColumn,
@@ -54,6 +54,10 @@ void tst_rowscratch::coversTheScratchColumnsAndOnlyOnValueRoles()
         G::NSThumbColumn, G::NSImageColumn,
         G::LoadMsecPerMpColumn, G::RawRenderColumn
     };
+    /*  ICCSpace LEFT the scratch store (2026-10-26): it is a persisted colour space id
+        in ImageRow now (Metadata/colorspaces.h), and a column held by both stores would
+        be answered by whichever DataModel::data asks first. */
+    QVERIFY(!ScratchStore::covers(G::ICCSpaceColumn, Qt::EditRole));
     for (int c : scratch) {
         QVERIFY2(ScratchStore::covers(c, Qt::EditRole),
                  qPrintable(QString("column %1 not covered at EditRole").arg(c)));
@@ -141,7 +145,6 @@ void tst_rowscratch::valuesRoundTripWithTheirType()
     s.setValue(r, G::samplesPerPixelColumn,     int(3));
     s.setValue(r, G::isBigEndianColumn,         true);
     s.setValue(r, G::IsXMPColumn,               false);
-    s.setValue(r, G::ICCSpaceColumn,            QString("sRGB IEC61966-2.1"));
     s.setValue(r, G::CacheSizeColumn,           float(24.5f));
     s.setValue(r, G::AttemptsColumn,            int(2));
     s.setValue(r, G::DecoderIdColumn,           int(-1));
@@ -153,7 +156,6 @@ void tst_rowscratch::valuesRoundTripWithTheirType()
     QCOMPARE(s.value(r, G::samplesPerPixelColumn).toInt(), 3);
     QCOMPARE(s.value(r, G::isBigEndianColumn).toBool(), true);
     QCOMPARE(s.value(r, G::IsXMPColumn).toBool(), false);
-    QCOMPARE(s.value(r, G::ICCSpaceColumn).toString(), QString("sRGB IEC61966-2.1"));
     QCOMPARE(s.value(r, G::CacheSizeColumn).toFloat(), 24.5f);
     QCOMPARE(s.value(r, G::AttemptsColumn).toInt(), 2);
     QCOMPARE(s.value(r, G::DecoderIdColumn).toInt(), -1);
@@ -167,7 +169,6 @@ void tst_rowscratch::valuesRoundTripWithTheirType()
     QVERIFY(s.value(r, G::CacheSizeColumn).typeId()     != QMetaType::QString);
     QCOMPARE(s.value(r, G::isBigEndianColumn).typeId(),   int(QMetaType::Bool));
     QCOMPARE(s.value(r, G::DecoderErrMsgColumn).typeId(), int(QMetaType::QString));
-    QCOMPARE(s.value(r, G::ICCSpaceColumn).typeId(),      int(QMetaType::QString));
 
     // Rewriting a field replaces it rather than accumulating.
     s.setValue(r, G::AttemptsColumn, int(0));
@@ -223,7 +224,6 @@ void tst_rowscratch::clearEmptiesEverything()
 {
     ScratchStore s;
     s.setValue(0, G::ICCBufColumn, QByteArray(64, 'x'));
-    s.setValue(0, G::ICCSpaceColumn, QString("Adobe RGB (1998)"));
     QCOMPARE(s.count(), 1);
 
     s.clear();

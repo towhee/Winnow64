@@ -20,7 +20,7 @@
          non-top-line K adapted from a look-ahead-adjusted code.
       3. Interleave the 4 planes row-major into the RGGB mosaic, crop to the active area.
       4. Self-calibrate per-channel black from the masked border; white/matrix/WB from the
-         bit depth, the per-model table, and the CMT3 makernote ColorData.
+         bit depth, the per-model table, and the CTMD-track makernote ColorData.
 
     Single-tile only (tileW/tileH == fW/fH), which is what current full-frame bodies write;
     a multi-tile CRAW returns false and the caller falls back to the embedded preview.
@@ -407,9 +407,93 @@ bool CanonCR3Raw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     return true;
 }
 
+namespace {
+
+/* The moov box, read on its own: it sits at the front of a CR3 and is small, so the colour
+   read never pulls a 50 MB file into memory the way UnpackCfa's readAll does. */
+bool readMoov(QFile &file, Bytes &moov)
+{
+    const qint64 fileSize = file.size();
+    qint64 o = 0;
+    while (o + 8 <= fileSize) {
+        if (!file.seek(o)) return false;
+        const QByteArray h = file.read(16);
+        if (h.size() < 8) return false;
+        const uint8_t *b = reinterpret_cast<const uint8_t *>(h.constData());
+        uint64_t size = u32(b);
+        qint64 hdr = 8;
+        if (size == 1) { if (h.size() < 16) return false; size = u64(b + 8); hdr = 16; }
+        else if (size == 0) size = uint64_t(fileSize - o);
+        if (size < uint64_t(hdr)) return false;
+        if (tagEq(b + 4, "moov")) {
+            if (size > (64u << 20) || o + qint64(size) > fileSize) return false;
+            if (!file.seek(o)) return false;
+            const QByteArray all = file.read(qint64(size));
+            if (all.size() != qint64(size)) return false;
+            moov.assign(reinterpret_cast<const uint8_t *>(all.constData()),
+                        reinterpret_cast<const uint8_t *>(all.constData()) + all.size());
+            return true;
+        }
+        o += qint64(size);
+    }
+    return false;
+}
+
+/* The first sample of the CTMD (timed metadata) track: its file offset and length. */
+bool ctmdSample(const Bytes &d, uint64_t &off, uint32_t &len)
+{
+    bool found = false;
+    forEachBox(d, 0, d.size(), [&](size_t, const char *ty, size_t mb, size_t me) {
+        if (std::memcmp(ty, "moov", 4)) return;
+        forEachBox(d, mb, me, [&](size_t, const char *ty1, size_t tb, size_t te) {
+            if (found || std::memcmp(ty1, "trak", 4)) return;
+            forEachBox(d, tb, te, [&](size_t, const char *ty2, size_t ab, size_t ae) {
+                if (std::memcmp(ty2, "mdia", 4)) return;
+                forEachBox(d, ab, ae, [&](size_t, const char *ty3, size_t ib, size_t ie) {
+                    if (std::memcmp(ty3, "minf", 4)) return;
+                    forEachBox(d, ib, ie, [&](size_t, const char *ty4, size_t sb, size_t se) {
+                        if (std::memcmp(ty4, "stbl", 4)) return;
+                        bool isCtmd = false; uint64_t o = 0; uint32_t l = 0;
+                        forEachBox(d, sb, se, [&](size_t, const char *t, size_t xb, size_t xe) {
+                            if (!std::memcmp(t, "stsd", 4)) {
+                                if (xb + 16 <= xe && tagEq(&d[xb + 12], "CTMD")) isCtmd = true;
+                            } else if (!std::memcmp(t, "co64", 4)) {
+                                if (xb + 16 <= xe && u32(&d[xb + 4]) >= 1) o = u64(&d[xb + 8]);
+                            } else if (!std::memcmp(t, "stco", 4)) {
+                                if (xb + 12 <= xe && u32(&d[xb + 4]) >= 1) o = u32(&d[xb + 8]);
+                            } else if (!std::memcmp(t, "stsz", 4) && xb + 12 <= xe) {
+                                const uint32_t ss = u32(&d[xb + 4]);
+                                l = ss ? ss : (u32(&d[xb + 8]) >= 1 && xb + 16 <= xe
+                                               ? u32(&d[xb + 12]) : 0);
+                            }
+                        });
+                        if (isCtmd && o && l) { off = o; len = l; found = true; }
+                    });
+                });
+            });
+        });
+    });
+    return found;
+}
+
+inline uint16_t le16(const uint8_t *b) { return uint16_t(b[0] | (b[1] << 8)); }
+inline uint32_t le32(const uint8_t *b) {
+    return uint32_t(b[0]) | (uint32_t(b[1]) << 8) | (uint32_t(b[2]) << 16) |
+           (uint32_t(b[3]) << 24);
+}
+
+} // namespace
+
 /*
-    CR3 colour without a decode: the Canon makernote lives in the CMT3 box, whose payload
-    is a plain embedded TIFF, so ColorData (0x4001) is read exactly as it is from a CR2.
+    CR3 colour without a decode. Unlike a CR2, a CR3's ColorData (0x4001) is NOT in the
+    CMT3 makernote at the front of the file: CMT3 carries the camera settings, and the
+    colour record rides in the CTMD timed-metadata track, which is written after the
+    image data. Its sample is a run of little-endian records { u32 size, u16 type, 6
+    bytes }; type 8 holds sub-records { u32 size, u32 tag } and its 0x927C sub-record is
+    a plain embedded TIFF makernote whose IFD has 0x4001. (LibRaw reads it from the same
+    place.) Looking in CMT3 found nothing on every body, so every CR3 rendered on the
+    matrix-derived neutral and the WB row read "As Shot 6500 / 10".
+
     Split out of UnpackCfa for the Apple Core Image engine -- see
     RawFormat::ReadAsShotColor.
 */
@@ -418,28 +502,46 @@ bool CanonCR3Raw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensor
     info.hasColorMatrix = xyzToCamForModel(m.model, info.xyzToCam);
 
     if (!file.isOpen() && !file.open(QIODevice::ReadOnly)) return info.hasColorMatrix;
-    if (!file.seek(0)) return info.hasColorMatrix;
 
-    /* The makernote sits near the front of the file (moov/uuid), so a bounded read finds
-       CMT3 without pulling a 50 MB CR3 into memory the way UnpackCfa's readAll does. */
-    const QByteArray head = file.read(1 << 20);
-    const int t = head.indexOf(QByteArray("CMT3", 4));
-    if (t < 4) return info.hasColorMatrix;
+    Bytes moov;
+    uint64_t sOff = 0; uint32_t sLen = 0;
+    if (!readMoov(file, moov) || !ctmdSample(moov, sOff, sLen)) return info.hasColorMatrix;
+    if (sLen > (16u << 20) || sOff + sLen > uint64_t(file.size()) || sOff > 0xffffffffu)
+        return info.hasColorMatrix;
+    if (!file.seek(qint64(sOff))) return info.hasColorMatrix;
+    const QByteArray sample = file.read(qint64(sLen));
+    const uint8_t *d = reinterpret_cast<const uint8_t *>(sample.constData());
+    const size_t n = size_t(sample.size());
+
+    /* Find the type-8 record's makernote. */
+    quint32 mnTiff = 0;
+    for (size_t o = 0; o + 12 <= n && !mnTiff; ) {
+        const uint32_t recSize = le32(&d[o]);
+        if (recSize < 12 || o + recSize > n) break;
+        if (le16(&d[o + 4]) == 8) {
+            for (size_t p = o + 12; p + 8 <= o + recSize; ) {
+                const uint32_t subSize = le32(&d[p]);
+                if (subSize < 8 || p + subSize > o + recSize) break;
+                if (le32(&d[p + 4]) == 0x927C) { mnTiff = quint32(sOff + p + 8); break; }
+                p += subSize;
+            }
+        }
+        o += recSize;
+    }
+    if (!mnTiff) return info.hasColorMatrix;
 
     using namespace TiffWalk;
     Reader r;
-    /* TIFF embedded at the box payload. */
-    if (!r.init(&file, quint32(t + 4))) return info.hasColorMatrix;
+    if (!r.init(&file, mnTiff)) return info.hasColorMatrix;
     Ifd mn; QList<quint32> subs; quint32 next = 0;
     if (!r.readIfd(r.firstIfd(), mn, subs, next) || !mn.contains(0x4001))
         return info.hasColorMatrix;
 
-    /* ColorData -> WB_RGGBLevelsAsShot; the record length selects the layout version.
-       File order R, G1, G2, B; RawSensorInfo::camMul is (R, G1, B, G2). */
+    /* ColorData -> WB_RGGBLevelsAsShot (CanonAsShotIndex, shared with CR2). File order
+       R, G1, G2, B; RawSensorInfo::camMul is (R, G1, B, G2). */
     const QVector<quint32> cd = r.u32s(mn[0x4001]);
-    const int n = cd.size();
-    const int o = n == 582 ? 25 : n == 653 ? 24 : n == 5120 ? 142 : 63;
-    if (o + 3 < n && cd[o] > 0 && cd[o + 1] > 0 && cd[o + 3] > 0) {
+    const int o = CanonAsShotIndex(cd);
+    if (o >= 0) {
         info.camMul[0] = float(cd[o]);      info.camMul[1] = float(cd[o + 1]);
         info.camMul[2] = float(cd[o + 3]);  info.camMul[3] = float(cd[o + 2]);
     }

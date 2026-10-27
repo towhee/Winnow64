@@ -78,6 +78,11 @@ struct Field
     /*  One of the REST OF THE DATAMODEL's user-facing columns, listed after the main
         fields (and a separator) in the builder. */
     bool extra = false;
+    /*  An Enum whose column holds an INDEX into values (1 = values[0]; anything else is
+        empty) rather than the value itself -- the colour space (Metadata/colorspaces.h).
+        The evaluator reads EditRole, so it sees the id; queries are written and saved by
+        name, so a renumbered table could never silently change what one means. */
+    bool indexed = false;
 };
 
 /*  The registry, in builder order: the main fields, then the extras (Field::extra),

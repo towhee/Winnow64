@@ -15,6 +15,7 @@
 #include "ImageFormats/Raw/decoderrevision.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Metadata/versions.h"
+#include "Metadata/colorspaces.h"
 #include "Develop/editstack.h"
 #include "Develop/Transform/croptransform.h"
 #include "Metadata/xmpembed.h"
@@ -454,7 +455,8 @@ void Metadata::reportMetadata()
     p.rpt << G::sj("xmpSegmentLength", n) << G::s(m.xmpSegmentLength) << "\n";
     p.rpt << G::sj("iccSegmentOffset", n) << G::s(m.iccSegmentOffset) << "\n";
     p.rpt << G::sj("iccSegmentLength", n) << G::s(m.iccSegmentLength) << "\n";
-    p.rpt << G::sj("iccSpace", n) << G::s(m.iccSpace) << "\n";
+    p.rpt << G::sj("colorSpace", n) << G::s(m.colorSpace) << " "
+          << ColorSpaces::name(m.colorSpace) << "\n";
     p.rpt << "\n";
     p.rpt << G::sj("searchStr", n) << G::s(m.searchStr) << "\n";
 
@@ -1811,6 +1813,7 @@ void Metadata::clearMetadata()
     m.iccSegmentOffset = 0;
     m.iccSegmentLength = 0;
     m.iccBuf.clear();
+    m.colorSpace = 0;
     m.isEmbeddedThumbMissing = false;
     m.compare = false;
     m.width = 0;
@@ -2061,6 +2064,9 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
     if (p.file.open(QIODevice::ReadOnly)) {
         if (jpeg == nullptr) jpeg = new Jpeg;
         if (ifd == nullptr) ifd = new IFD;
+        ifd->exifColorSpace = -1;       // per image; see the fallback after the parse
+        ifd->interopOffset = 0;
+        ifd->dngPreviewColorSpace = -1;
         if (exif == nullptr) exif = new Exif;
         if (gps == nullptr) gps = new GPS;
         // Magic-byte sniffing overrides the extension when content disagrees with the name.
@@ -2089,6 +2095,27 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
         if (ext == "png")  parsed = parsePNG();
+        /*  THE COLOUR SPACE. A parser that found an embedded profile (or a HEIC nclx
+            box) has already set it; otherwise the EXIF ColorSpace tag, which IFD
+            records whichever parser walked the EXIF directory -- 13 formats, one place.
+            For a raw that is the camera's setting, i.e. what its embedded previews were
+            encoded in. See Metadata/colorspaces.h. */
+        /*  A DNG states its previews' space outright (PreviewColorSpace), and it can
+            disagree with EXIF: a Lightroom panorama carries EXIF Uncalibrated from its
+            source frames and an sRGB preview. */
+        if (m.colorSpace == ColorSpaces::None)
+            m.colorSpace = ColorSpaces::fromDngPreview(ifd->dngPreviewColorSpace);
+        if (m.colorSpace == ColorSpaces::None)
+            m.colorSpace = ColorSpaces::fromExif(ifd->exifColorSpace);
+        /*  UNCALIBRATED IS ADOBE RGB, for a raw. EXIF has one real value, 1 = sRGB;
+            0xFFFF only says "not sRGB", and a camera writes it when it is set to Adobe
+            RGB -- the only other space a camera offers. Where the file states it
+            outright (InteropIndex R03, the Canon / Nikon MakerNote) the parser has
+            already said so; this covers the rest (Olympus OM-1 says nothing else).
+            Not applied to JPEGs and TIFFs: an edited file can be Uncalibrated for
+            other reasons, and stays so unless it carries R03. */
+        if (m.colorSpace == ColorSpaces::Uncalibrated && hasJpg.contains(ext))
+            m.colorSpace = ColorSpaces::AdobeRGB;
         p.file.close();
         //QFile(path).setPermissions(oldPermissions);
         if (p.file.isOpen()) {

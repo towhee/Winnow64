@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 26;
+constexpr int kSchemaVersion = 28;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1741,6 +1741,50 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec(QString("DELETE FROM thumb WHERE pathkey IN"
                             " (SELECT pathkey FROM image WHERE %1)").arg(damaged))
             || !q.exec(QString("UPDATE image SET srcmtime = 0 WHERE %1").arg(damaged))) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 27) {
+    /*
+        THE COLOUR SPACE, as an ID into the lookup table in Metadata/colorspaces.h
+        (0 = nothing known, 1 = sRGB, 2 = Adobe RGB, ...; the ids are published).
+
+        Stored because it is a fact about the image a person filters on ("everything not
+        sRGB"), and a Library row hydrated from this index never reads the file: the
+        datamodel's old ICCSpace column was decode scratch, left unset for exactly
+        those rows, so it was blank across a whole library.
+
+        Every existing row is now incomplete while claiming to be current, so the stamps
+        are cleared as schemas 6 and 7 did: the next scan or folder visit re-reads each
+        image once and fills the column.
+    */
+        /*  RE-RUNNABLE, like every block from 16 on (the migration tests rewind
+            user_version on a current file; SQLite has no ADD COLUMN IF NOT EXISTS). */
+        bool has = false;
+        if (q.exec("PRAGMA table_info(image)"))
+            while (q.next()) if (q.value(1).toString() == "colorspace") has = true;
+        if ((!has && !q.exec("ALTER TABLE image ADD COLUMN colorspace INTEGER"
+                             " NOT NULL DEFAULT 0"))
+            || !q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 28) {
+    /*
+        A DATA REPAIR: "Uncalibrated" resolved (Metadata/colorspaces.h). EXIF's 0xFFFF only
+        says "not sRGB"; a camera writes it in Adobe RGB mode and states the space
+        elsewhere, now read: InteropIndex R03, the Canon MakerNote (0x00B4), and a raw
+        that says nothing more is Adobe RGB; a DNG's PreviewColorSpace decides before
+        EXIF. Only rows that can change are re-read -- blank (0), Uncalibrated (9) and
+        every DNG; a measured library had about 31,600 of 156,382. Their stamps are
+        cleared so the next scan or folder visit re-reads them. Re-runnable.
+    */
+        if (!q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
+                    " WHERE colorspace IN (0, 9) OR lower(ext) = 'dng'")) {
             db.rollback();
             return false;
         }

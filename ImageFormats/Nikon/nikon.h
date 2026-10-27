@@ -23,8 +23,10 @@ public:
                Exif *exif,
                Jpeg *jpeg,
                GPS *gps);
+    /* Nikon makernote decryption (LensData, ColorBalance); bytes 0-3 stay plain. Static
+       so NikonRaw::ReadAsShotColor can decrypt the WB block without a parser. */
+    static QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
 private:
-    QByteArray nikonDecrypt(QByteArray bData, uint32_t count, uint32_t serial);
     QHash<quint32, QString> nikonMakerHash;
     QHash<QString, QString> nikonLensHash;
     Utilities u;

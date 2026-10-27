@@ -174,7 +174,7 @@ public:
     quint32 iccSegmentOffset = 0;
     quint32 iccSegmentLength = 0;
     QByteArray iccBuf;
-    QString iccSpace;
+    int colorSpace = 0;                     // ColorSpaces::Id (Metadata/colorspaces.h)
     QString parseSource;
     QString parseFailure;
     enum Parse {

@@ -1,4 +1,5 @@
 #include "tiff.h"
+#include "Metadata/colorspaces.h"
 #include "Metadata/xmpapply.h"
 #include "Metadata/metareport.h"
 
@@ -480,11 +481,13 @@ bool Tiff::parse(MetadataParameters &p,
     and it is sRGB then no point in saving the byte array of the profile since we already have
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
     if (m.iccSegmentOffset && m.iccSegmentLength) {
-        m.iccSpace = u.getString(p.file, m.iccSegmentOffset + 16, 4);
-        if (m.iccSpace != "sRGB") {
-            p.file.seek(m.iccSegmentOffset);
-            m.iccBuf = p.file.read(m.iccSegmentLength);
-        }
+        /* Classified (Metadata/colorspaces.h). Byte 16 was read here as the space, but
+           that is the DATA colour space signature -- "RGB " for every RGB profile, never
+           "sRGB" -- so every TIFF carried its profile and reported "RGB". */
+        p.file.seek(m.iccSegmentOffset);
+        const QByteArray icc = p.file.read(m.iccSegmentLength);
+        m.colorSpace = ColorSpaces::fromIcc(icc);
+        if (m.colorSpace != ColorSpaces::sRGB) m.iccBuf = icc;
     }
 
     // GPSIFD: *******************************************************************

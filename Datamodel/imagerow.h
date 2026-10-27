@@ -190,6 +190,7 @@ struct ImageRow
     quint32 orientationOffset = 0;
     qint32  orientation = 0;           // int; see addMetadataForItem
     qint32  rotationDegrees = 0;
+    qint32  colorSpace = 0;            // ColorSpaces::Id (Metadata/colorspaces.h)
     float   focusX = -1.0f, focusY = -1.0f;
     double  iconAspectRatio = 0.0;     // qreal in the model; set only when an icon lands
 

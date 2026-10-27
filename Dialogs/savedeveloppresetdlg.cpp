@@ -82,6 +82,7 @@ SaveDevelopPresetDlg::SaveDevelopPresetDlg(const QVector<PresetGroup> &groups,
         for (const PresetLeaf &leaf : g.leaves) {
             QTreeWidgetItem *li = new QTreeWidgetItem(gi);
             li->setText(0, leaf.label);
+            if (!leaf.tip.isEmpty()) li->setToolTip(0, leaf.tip);
             li->setFlags((li->flags() | Qt::ItemIsUserCheckable) & ~Qt::ItemIsAutoTristate);
             li->setCheckState(0, leaf.changed ? Qt::Checked : Qt::Unchecked);
             li->setData(0, KeyRole, leaf.key);

@@ -15,6 +15,7 @@
 #include "Develop/develop.h"
 #include "Develop/workingdump.h"
 #include "ImageFormats/Raw/rawformat.h"
+#include "ImageFormats/Raw/rawcolor.h"
 #include "Metadata/metadata.h"
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
@@ -178,6 +179,56 @@ static int runDumpWorking(int argc, char *argv[], const QString &raw, const QStr
     return 0;
 }
 
+/*
+    Winnow --dumpwb <raw> [<raw> ...]
+
+    HEADLESS AS-SHOT WHITE BALANCE AUDIT: for each raw, read the colour characterisation
+    exactly as the decoders do (RawFormat::ReadAsShotColor, seeded from the parse-time
+    rawInfo) and print the model, the as-shot multipliers and the Kelvin/tint the WB row
+    would show. No decode, no window, runs beside an open Winnow. "neutral" in the output
+    means the file gave no multipliers and the matrix neutral was used -- the 6500 K tell.
+    Compare the R/G and B/G columns against ExifTool's WB levels. Returns 0.
+*/
+static int runDumpWb(int argc, char *argv[])
+{
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QApplication app(argc, argv);
+    G::isAutomatedRun = true;
+    for (int a = 2; a < argc; ++a) {
+        const QString raw = QString::fromLocal8Bit(argv[a]);
+        const QFileInfo info(raw);
+        Metadata metadata;
+        if (!info.exists() ||
+            !metadata.loadImageMetadata(info, -1, 0, true, true, false, false,
+                                        "dumpwb", /*isRemote*/true)) {
+            std::fprintf(stdout, "%s\tno metadata\n", qPrintable(raw));
+            continue;
+        }
+        const ImageMetadata m = metadata.m;
+        std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(info.suffix().toLower());
+        QFile file(raw);
+        if (!rawFormat || !file.open(QIODevice::ReadOnly)) {
+            std::fprintf(stdout, "%s\t%s\tno raw decoder\n", qPrintable(raw),
+                         qPrintable(m.model));
+            continue;
+        }
+        RawSensorInfo ci = m.rawInfo;
+        const bool read = rawFormat->ReadAsShotColor(file, m, ci);
+        file.close();
+        CameraColor cam;
+        RawColor::Characterise(ci.xyzToCam, ci.camMul, cam);
+        const float *c = ci.camMul;
+        const bool neutral = c[0] == c[1] && c[1] == c[2];
+        std::fprintf(stdout, "%s\t%s\tread=%d matrix=%d\tmul %.1f %.1f %.1f %.1f\t"
+                     "R/G %.4f B/G %.4f\t%s\t%.0f K\ttint %.1f\n",
+                     qPrintable(raw), qPrintable(m.model), read, ci.hasColorMatrix,
+                     c[0], c[1], c[2], c[3], c[1] > 0 ? c[0] / c[1] : 0.0,
+                     c[1] > 0 ? c[2] / c[1] : 0.0, neutral ? "neutral" : "as-shot",
+                     cam.asShotK, cam.asShotTint);
+    }
+    return 0;
+}
+
 int main(int argc, char *argv[])
 {
     /* SET, NOT DERIVED. Every settings, cache and model path is keyed on the application
@@ -190,6 +241,8 @@ int main(int argc, char *argv[])
         return runDumpWorking(argc, argv, QString::fromLocal8Bit(argv[2]),
                               QString::fromLocal8Bit(argv[3]),
                               argc >= 5 && QString::fromLocal8Bit(argv[4]) == "engine=apple");
+    if (argc >= 3 && QString::fromLocal8Bit(argv[1]) == "--dumpwb")
+        return runDumpWb(argc, argv);
 
 #ifdef Q_OS_LINUX
     Linux::useBradientDecoration();         // title bar in the Winnow background

@@ -37,6 +37,7 @@ enum Field {
     F_RotationDegrees, F_ShootingInfo, F_Err, F_Develop, F_DevPreviewKey,
     F_Search, F_Ingested, F_Availability, F_FolderPath,
     F_CroppedDimensions, F_CroppedAspectRatio,
+    F_ColorSpace,
     /* column 0's custom roles -- not values */
     F_IconRect, F_DupHideRaw, F_DupIsJpg, F_DupRawType, F_DupOtherIdx,
     F_VersionCount, F_VersionName,
@@ -114,6 +115,10 @@ int fieldBit(int column, int role)
     case G::CroppedDimensionsColumn:    return F_CroppedDimensions;
     case G::CroppedAspectRatioColumn:   return F_CroppedAspectRatio;
     case G::OrientationColumn:          return F_Orientation;
+    /*  A ColorSpaces::Id (Metadata/colorspaces.h). Held here, not in the scratch store
+        with the rest of the ICC columns, because it is a fact ABOUT the image that the
+        catalog persists and a search filters on, not decode bookkeeping. */
+    case G::ICCSpaceColumn:             return F_ColorSpace;
     case G::RotationColumn:             return F_Rotation;
     case G::EmailColumn:                return F_Email;
     case G::UrlColumn:                  return F_Url;
@@ -280,6 +285,7 @@ QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
     case G::CroppedDimensionsColumn:  return mStrings.value(r.croppedDimensionsId);
     case G::CroppedAspectRatioColumn: return mStrings.value(r.croppedAspectRatioId);
     case G::OrientationColumn:     return r.orientation;
+    case G::ICCSpaceColumn:        return int(r.colorSpace);
     case G::RotationColumn:        return mStrings.value(r.rotationId);
     case G::EmailColumn:           return mStrings.value(r.emailId);
     case G::UrlColumn:             return mStrings.value(r.urlId);
@@ -410,6 +416,7 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::CroppedDimensionsColumn:  r.croppedDimensionsId = mStrings.id(v.toString()); break;
     case G::CroppedAspectRatioColumn: r.croppedAspectRatioId = mStrings.id(v.toString()); break;
     case G::OrientationColumn:     r.orientation = v.toInt(); break;
+    case G::ICCSpaceColumn:        r.colorSpace = v.toInt(); break;
     case G::RotationColumn:        r.rotationId = mStrings.id(v.toString()); break;
     case G::EmailColumn:           r.emailId = mStrings.id(v.toString()); break;
     case G::UrlColumn:             r.urlId = mStrings.id(v.toString()); break;
@@ -483,7 +490,7 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     X(croppedDimensionsId) X(croppedAspectRatioId) \
     X(_ratingId) X(_labelId) X(_creatorId) X(_titleId) X(_copyrightId) X(_emailId) \
     X(_urlId) \
-    X(permissions) X(orientationOffset) X(orientation) X(rotationDegrees) \
+    X(permissions) X(orientationOffset) X(orientation) X(rotationDegrees) X(colorSpace) \
     X(focusX) X(focusY) X(iconAspectRatio) X(iconRect) \
     X(dupRawTypeId) X(dupOtherIdx) X(dupHideRaw) X(dupIsJpg) \
     X(versionCount) X(versionNameId) X(availability) \
@@ -493,7 +500,7 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
 
 namespace {
 constexpr quint32 kRowMagic = 0x57524f57;      // "WROW"
-constexpr quint32 kRowFormat = 1;
+constexpr quint32 kRowFormat = 2;      // 2: colorSpace (2026-10-26)
 }
 /*  macOS only, where Winnow is developed: the guard is for the developer adding a field,
     and another compiler's layout need not match this number. Every platform still

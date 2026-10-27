@@ -28,7 +28,7 @@ enum ScratchBit : quint32 {
     B_IccSegmentOffset    = 1u << 13,
     B_IccSegmentLength    = 1u << 14,
     B_IccBuf              = 1u << 15,
-    B_IccSpace            = 1u << 16,
+    /* bit 16 was ICCSpace, now a persisted ImageRow field (Metadata/colorspaces.h) */
     B_CacheSize           = 1u << 17,
     B_IsCaching           = 1u << 18,
     B_IsCached            = 1u << 19,
@@ -64,7 +64,6 @@ quint32 bitFor(int column)
     case G::ICCSegmentOffsetColumn:      return B_IccSegmentOffset;
     case G::ICCSegmentLengthColumn:      return B_IccSegmentLength;
     case G::ICCBufColumn:                return B_IccBuf;
-    case G::ICCSpaceColumn:              return B_IccSpace;
     case G::CacheSizeColumn:             return B_CacheSize;
     case G::IsCachingColumn:             return B_IsCaching;
     case G::IsCachedColumn:              return B_IsCached;
@@ -130,7 +129,6 @@ QVariant ScratchStore::value(int row, int column) const
     case G::ICCSegmentOffsetColumn:      return s.iccSegmentOffset;
     case G::ICCSegmentLengthColumn:      return s.iccSegmentLength;
     case G::ICCBufColumn:                return mBlobs.value(s.iccBufId);
-    case G::ICCSpaceColumn:              return mStrings.value(s.iccSpaceId);
     case G::CacheSizeColumn:             return s.cacheSizeMB;
     case G::IsCachingColumn:             return s.isCaching;
     case G::IsCachedColumn:              return s.isCached;
@@ -180,7 +178,6 @@ void ScratchStore::setValue(int row, int column, const QVariant &v)
     case G::ICCSegmentOffsetColumn:      s.iccSegmentOffset = v.toUInt(); break;
     case G::ICCSegmentLengthColumn:      s.iccSegmentLength = v.toUInt(); break;
     case G::ICCBufColumn:                s.iccBufId = mBlobs.id(v.toByteArray()); break;
-    case G::ICCSpaceColumn:              s.iccSpaceId = mStrings.id(v.toString()); break;
     case G::CacheSizeColumn:             s.cacheSizeMB = v.toFloat(); break;
     case G::IsCachingColumn:             s.isCaching = v.toBool(); break;
     case G::IsCachedColumn:              s.isCached = v.toBool(); break;

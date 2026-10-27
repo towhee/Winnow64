@@ -172,6 +172,8 @@ struct CatalogRow
     /*  Composed by the metadata read, and only when it succeeded -- see the
         schema 7 note in cachedb.cpp for why it is stored rather than rebuilt. */
     QString shootingInfo;
+    /*  schema 27: a ColorSpaces::Id (Metadata/colorspaces.h); 0 = nothing known. */
+    int colorSpace = 0;
 
     QStringList keywords;
     /*  dc:subject AS THE FILE SPELLED IT -- not the flattened vocabulary

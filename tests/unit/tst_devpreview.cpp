@@ -47,6 +47,7 @@ private slots:
     void capEvictsAndPrefersDemoted();
     void lruEvictsLeastRecentlyUsedAtFullSize();
     void containsAgreesWithGet();
+    void reducedEntryIsServedButNotCurrent();
     void sweepDemotesMissingSource();
     void sweepSkipsUnmountedVolume();
     void demotedRowSurvivesTheGracePeriod();
@@ -282,6 +283,39 @@ void tst_devpreview::containsAgreesWithGet()
     // a different recipe is a miss for both, not just for get()
     QVERIFY(!c.contains(p, "recipe2"));
     QVERIFY(c.get(p, "recipe2").isEmpty());
+}
+
+void tst_devpreview::reducedEntryIsServedButNotCurrent()
+{
+/*
+    A REDUCED preview (an Auto-settings batch writes 2560 px when the size preference is
+    larger) must be SHOWN -- get() serves it, so the loupe has the developed picture --
+    but must NOT be CURRENT to contains(), or nothing would ever replace it with a full
+    one: staleness is keyed on the recipe, which says nothing about size. It is still
+    tied to its recipe, and a full put for the same recipe replaces it.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("reduced.arw");
+    const QByteArray small = jpg(0x52, 4);
+
+    c.put(p, "recipe1", small, /*reduced*/true);
+    bool reduced = false;
+    QCOMPARE(c.get(p, "recipe1", &reduced), small);
+    QVERIFY(reduced);
+    QVERIFY(!c.contains(p, "recipe1"));                          // needs building
+    QVERIFY(c.contains(p, "recipe1", /*acceptReduced*/true));    // but has a picture
+
+    // still keyed to its recipe
+    QVERIFY(c.get(p, "recipe2").isEmpty());
+    QVERIFY(!c.contains(p, "recipe2", /*acceptReduced*/true));
+
+    // a full render for the same recipe replaces it and is current
+    const QByteArray full = jpg(0x46, 8);
+    c.put(p, "recipe1", full);
+    QCOMPARE(c.get(p, "recipe1", &reduced), full);
+    QVERIFY(!reduced);
+    QVERIFY(c.contains(p, "recipe1"));
+    QCOMPARE(c.count(), 1);
 }
 
 void tst_devpreview::sweepDemotesMissingSource()

@@ -268,7 +268,7 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 
     // color manage if available
     // ICCTime.start();
-    if (G::colorManage && metadata->iccFormats.contains(ext)) {
+    if (metadata->iccFormats.contains(ext)) {
         QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
         ICC::transform(ba, image);
     }
@@ -477,9 +477,11 @@ bool Pixmap::loadIndependent(QString &fPath, QImage &image, int longSide, QStrin
         if (metadata->rotateFormats.contains(ext))
             applyOrientation(image, m->orientation, m->rotationDegrees);
 
-        // optional colour management (opt-in and gated by the global switch)
-        if (colorManage && G::colorManage && metadata->iccFormats.contains(ext)
-            && !m->iccBuf.isEmpty()) {
+        /* Optional colour management (opt-in per call). An EMPTY iccBuf is sRGB and is
+           converted too -- it used to be skipped, so an sRGB image shown this way (the
+           Develop camera preview) was never converted for a wide-gamut display;
+           ICC::transform returns at once when the display is sRGB. */
+        if (colorManage && metadata->iccFormats.contains(ext)) {
             /* ICC::transform assumes 4 bytes/pixel (TYPE_BGRA_8); convert first so
                lcms2's packer does not walk past a narrower buffer. */
             if (image.format() != QImage::Format_ARGB32 &&

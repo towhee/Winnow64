@@ -74,11 +74,6 @@ void MW::initialize()
     includeSidecarsToggleBtn->setToolTip(msg);
     connect(includeSidecarsToggleBtn, &BarBtn::clicked, this, &MW::toggleIncludeSidecarsClick);
 
-    colorManageToggleBtn = new BarBtn();
-    msg = "Toggle \"Color Manage\" on/off.";
-    // colorManageToggleBtn->setToolTip(msg);
-    connect(colorManageToggleBtn, &BarBtn::clicked, this, &MW::toggleColorManageClick);
-
     panToFocusToggleBtn = new BarBtn();
     msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut B";
     panToFocusToggleBtn->setToolTip(msg);
@@ -1515,6 +1510,12 @@ void MW::createStatusBar()
     progressDevPreviewRow = progress->addRow("DevPreview", 2, QColor("#8f7fd1"),
                                              Progress::Fill::FromStart);
     progress->setRowText(progressDevPreviewRow, "Dev Previews");
+    /* Auto tone / Auto white balance being solved across the selection (the Basic Auto
+       button, or a preset / paste carrying Auto settings): a decode per image, seconds
+       each on raws. Amber: unclaimed above. */
+    progressPresetAutoRow = progress->addRow("PresetAuto", 2, QColor("#c9a23a"),
+                                             Progress::Fill::FromStart);
+    progress->setRowText(progressPresetAutoRow, "Auto Settings");
     /* The background catalog scan over the user's designated roots. Minutes to hours of
        reading the user is not waiting on, so it reports here beside the other background
        work rather than under a popup. Teal: unclaimed by the rows above. */
@@ -1647,7 +1648,6 @@ void MW::createStatusBar()
     statusBarSpacer1->setPixmap(QPixmap(1,5));
     statusBar()->addWidget(statusBarSpacer1);
     statusBar()->addWidget(modifyImagesBtn);
-    statusBar()->addWidget(colorManageToggleBtn);
     statusBar()->addWidget(includeSidecarsToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
     /* useRawBtn removed from the status bar: raw-vs-preview decode is now owned by the Operation
@@ -2616,6 +2616,33 @@ void MW::createDevelopDock()
 
             return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
         });
+
+    /* A Develop preset's Auto settings, for images whose base is not in memory: decode
+       and solve off the GUI thread, one image at a time (DevelopProperties queues). */
+    developProperties->setAutoSolver(
+        [this](const QString &fPath, const EditParams &base, bool wb, bool tone,
+               DevelopProperties::AutoSolveDone done) {
+            developPresetAutoSolve(fPath, base, wb, tone, std::move(done));
+        });
+    connect(developProperties, &DevelopProperties::presetAutoProgress,
+            this, [this](int done, int total, const QString &now) {
+                if (!progress) return;
+                /* While the batch runs, the devPreview builder is fed ONE thumbnail per
+                   solved image, so its row counts a string of one- and two-image runs
+                   (0 of 1 = full, 1 of 2 = half, cleared, again) and jumps about. This
+                   row already covers that work ("each thumbnail updates as its image is
+                   done"), so the builder's row is gated off until the batch ends. */
+                progress->setRowEnabled(progressDevPreviewRow, total <= 0);
+                if (total <= 0) { progress->clearProgress(progressPresetAutoRow); return; }
+                progress->showRow(progressPresetAutoRow, true);
+                progress->updateProgress(progressPresetAutoRow, done, total);
+                /* The count lives in the tooltip, not the label (setRowText rebuilds every
+                   row's bar -- see Progress::setRowToolTip). */
+                QString tip = QString("Auto settings: %1 of %2 images solved").arg(done)
+                                  .arg(total);
+                if (!now.isEmpty()) tip += "\nNow solving " + now;
+                progress->setRowToolTip(progressPresetAutoRow, tip);
+            });
 
     connect(developProperties, &DevelopProperties::devPreviewUpdated,
             this, &MW::devPreviewUpdated);
@@ -4322,18 +4349,6 @@ void MW::updateDevelopSelectionWarning()
     if (!currentImageFolderIsWritable())
         alerts << qMakePair(AlertWarning,
                             QString("Read-only volume - edits cannot be saved."));
-
-    /*  WARNING: colour management is off on a wide-gamut display, so every colour the
-        user is judging is shown oversaturated (sRGB numbers stretched to the panel's
-        gamut) -- reds most of all, which is how it surfaced (skin read far redder than
-        in Lightroom). The edits themselves are unaffected; what is wrong is the screen.
-        The icon is the status bar's own "off" button, the one to click. */
-    if (!G::colorManage && DisplayColor::DisplayDiffersFromSrgb())
-        alerts << qMakePair(AlertWarning,
-                            QString("Color management is off: this wide-gamut display shows "
-                                    "colors oversaturated. Turn it on with "
-                                    "<img src=\":/images/icon16/norainbow1.png\" "
-                                    "width=\"12\" height=\"12\"> in the status bar."));
 
     /* SHOW STOPPER: the panel is greyed for a video (syncDevelopPanelEnabled) and
        nothing can be edited -- Develop does not apply at all. */

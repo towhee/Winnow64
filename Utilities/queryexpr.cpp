@@ -1,4 +1,5 @@
 #include "Utilities/queryexpr.h"
+#include "Metadata/colorspaces.h"
 #include "Main/global.h"
 
 #include <QJsonArray>
@@ -143,6 +144,9 @@ const QVector<Field> &fields()
         add("url", "Url", G::UrlColumn, Type::Text);
         add("keywordtext", "Keywords as written", G::KeywordsColumn, Type::List, {},
             "exactly as in the file (dc:subject)");
+        add("colorspace", "Color space", G::ICCSpaceColumn, Type::Enum,
+            ColorSpaces::names());
+        v.last().indexed = true;
         for (int i = firstExtra; i < v.size(); ++i) v[i].extra = true;
         std::sort(v.begin() + firstExtra, v.end(), [](const Field &a, const Field &b) {
             return a.label.compare(b.label, Qt::CaseInsensitive) < 0;
@@ -239,7 +243,14 @@ Node matchValues(const Field &f, const QStringList &values, bool exclude)
     QList<Node> rules;
     QStringList listed;                 // an enum's or a list's non-blank values
     for (const QString &raw : values) {
-        const QString v = raw.trimmed();
+        QString v = raw.trimmed();
+        /*  An indexed field's category items carry the ID the column holds (Filters::
+            filterValueFor); the query is written with the NAME. 0 is blank. */
+        if (f.indexed) {
+            bool ok = false;
+            const int id = v.toInt(&ok);
+            if (ok) v = (id >= 1 && id <= f.values.size()) ? f.values.at(id - 1) : QString();
+        }
         if (f.type == Type::Enum || f.type == Type::List) {
             if (v.isEmpty()) rules << Node::rule(f.key, Op::Empty, {});
             else if (!listed.contains(v)) listed << v;
@@ -764,7 +775,14 @@ bool ruleMatches(const Node &n, const std::function<QVariant(int)> &valueFor)
         }
     }
     case Type::Enum: {
-        const QString s = canon(data.toString());
+        QString s;
+        if (f->indexed) {
+            const int i = data.toInt();
+            if (i >= 1 && i <= f->values.size()) s = canon(f->values.at(i - 1));
+        }
+        else {
+            s = canon(data.toString());
+        }
         if (n.op == Op::Empty)    return s.isEmpty();       // no label
         if (n.op == Op::NotEmpty) return !s.isEmpty();
         const bool hit = n.prepValues.contains(s);

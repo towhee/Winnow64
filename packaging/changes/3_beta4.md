@@ -1,7 +1,12 @@
 - Add blur effect.
 - Add lens blur.
 - Add pattern effects.
+- Add clear picks.
+- Develop presets and Copy/Paste Settings can carry Auto tone and Auto white balance, solved per image.
+- Add Auto to develop basic adjustments.
+- User adjust app text brightness.
 - Fix corrupted thumbnail rotation.
+- Fix incorrect WB for some files, including CR3.
 - Add support for Linux platform.
 - Tweak keyword edge cases.
 - Prevent Filters 'blanking' during refresh.

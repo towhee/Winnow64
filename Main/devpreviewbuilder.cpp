@@ -110,21 +110,38 @@ void MW::buildDevPreviews(const QStringList &paths, const QString &src)
         if (src == "menu" && G::popup)
             G::popup->showPopup("Every image already has a current developed preview.",
                                 2000);
+        releaseHeldDevelopIcons();      // a held thumbnail whose build was not queued
         return;
     }
+    QStringList hopPaths;
+    for (const auto &c : candidates) hopPaths << c.first;
+    for (const QString &p : std::as_const(hopPaths)) devPreviewHopPaths.insert(p);
 
     /* Guard the hand-back: a folder change while this pass runs makes every path in it
        irrelevant, and MW::stop has already cleared the queue by then. */
+    /* The Auto-settings batch holds its image's decoded base for this build (see
+       MW::developPresetAutoSolve): tell it the request is real. */
+    if (sync && !presetAutoThumbCandidate.isEmpty())
+        for (const auto &c : candidates)
+            if (c.first == presetAutoThumbCandidate) presetAutoThumbRequested = true;
+
     const int instance = dm->instance.load();
-    QThreadPool::globalInstance()->start([this, candidates, src, instance]() {
+    QThreadPool::globalInstance()->start([this, candidates, src, instance, hopPaths]() {
         QStringList need;
+        bool stopped = false;
         for (const auto &c : candidates) {
-            if (G::stop) return;
+            /* Hand back even when stopping (nothing is started), so the hop set is
+               emptied and a held thumbnail is released. */
+            if (G::stop) { stopped = true; break; }
             if (!DevPreviewCache::instance().contains(c.first, c.second.toLatin1()))
                 need << c.first;
         }
-        QMetaObject::invokeMethod(this, [this, need, src, instance]() {
-            startDevPreviewBuild(need, src, instance);
+        QMetaObject::invokeMethod(this, [this, need, src, instance, hopPaths, stopped]() {
+            for (const QString &p : hopPaths) devPreviewHopPaths.remove(p);
+            if (!stopped) startDevPreviewBuild(need, src, instance);
+            /* Anything the cache check dropped (already current, folder changed) will
+               not be built: stop holding its thumbnail. */
+            releaseHeldDevelopIcons();
         });
     });
 }
@@ -136,6 +153,16 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
     that the worker just produced.
 */
     if (G::isLogger) G::log("MW::startDevPreviewBuild", src);
+    /* The Auto batch's held image came back from the cache check: if it is not to be
+       built after all (already current, or the folder changed), stop holding for it.
+       Assumes the batch's sync request is the one in the hop, which it is while a
+       batch runs -- it is the only thing flushing targets. */
+    if (presetAutoThumbHop && src == "sync") {
+        presetAutoThumbHop = false;
+        const bool gone = !dm || dm->instance.load() != instance;
+        if (gone || !paths.contains(presetAutoThumbPath))
+            releasePresetAutoThumb();
+    }
     if (!dm || dm->instance.load() != instance) return;   // different folder now
 
     if (paths.isEmpty()) {
@@ -273,15 +300,21 @@ void MW::devPreviewBuildNext()
     updateDevPreviewBuildProgress();
 
     /* 8-bit sRGB: a devPreview is a JPEG for the screen, not an export master. */
+    /* An Auto-settings batch image (its decoded base held for this render): render it
+       REDUCED, unless the size preference is already that small. See
+       kAutoBatchPreviewEdge and DevPreviewCache "REDUCED". */
+    const int cap = G::devPreviewMaxEdge;
+    const bool reduced = fPath == presetAutoThumbPath &&
+                         (cap == G::kDevPreviewSizeFull || cap > kAutoBatchPreviewEdge);
     developPixelSource(fPath, /*want16Bit*/false, OutputTransform::Space::sRGB,
-        [this, fPath, expectKey](bool ok, const QImage &out) {
+        [this, fPath, expectKey, reduced](bool ok, const QImage &out) {
             /*  devPreviewStore OWNS THE ADVANCE now. It encodes on a pool thread, so it
                 returns long before the step is finished and the counters cannot be
                 bumped here -- doing so would start the next render while this one was
                 still encoding, which is the one thing the queue exists to prevent. */
-            if (ok && !out.isNull()) devPreviewStore(fPath, out, expectKey);
+            if (ok && !out.isNull()) devPreviewStore(fPath, out, expectKey, reduced);
             else devPreviewBuildStepDone();
-        });
+        }, nullptr, -1, /*requireSensor*/false, reduced ? kAutoBatchPreviewEdge : 0);
 }
 
 void MW::devPreviewBuildStepDone()
@@ -291,7 +324,16 @@ void MW::devPreviewBuildStepDone()
     start the next. The single place the build advances.
 */
     ++devPreviewBuildDone;
+    const QString finished = devPreviewBuildCurrent;
     devPreviewBuildCurrent.clear();
+    /* An Auto-settings batch image whose decoded base was held for THIS render (see
+       developPresetAutoSolve): drop it and let the batch's next solve start. Before
+       devPreviewBuildNext, so the solve is queued ahead of the builder's next render. */
+    if (!finished.isEmpty() && finished == presetAutoThumbPath)
+        releasePresetAutoThumb();
+    /* A held thumbnail whose render ended without a store (dropped by a key check,
+       failed): clear it the old way. A stored one was already replaced. */
+    releaseHeldDevelopIcons();
     devPreviewBuildNext();
 }
 
@@ -308,7 +350,7 @@ struct DevPreviewEncoded
 }  // namespace
 
 void MW::devPreviewStore(const QString &fPath, const QImage &full,
-                         const QString &expectKey)
+                         const QString &expectKey, bool reduced)
 {
 /*
     Write the freshly rendered full-resolution image to the preview cache, and -- for an
@@ -374,7 +416,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
 
     auto *watcher = new QFutureWatcher<DevPreviewEncoded>(this);
     connect(watcher, &QFutureWatcher<DevPreviewEncoded>::finished, this,
-            [this, watcher, fPath, key, blob, edited, expectKey]
+            [this, watcher, fPath, key, blob, edited, expectKey, reduced]
     {
         watcher->deleteLater();
         const DevPreviewEncoded r = watcher->result();
@@ -397,7 +439,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
             && developProperties->sidecarRecipeRewritable(fPath))
             Metadata::writeDevelopSidecar(fPath, blob, r.thumbJpg.toBase64());
         if (!r.previewJpg.isEmpty())
-            DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg);
+            DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg, reduced);
 
         if (edited) {
             /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */
@@ -485,9 +527,17 @@ void MW::devPreviewBuildFinish(const QString &reason)
     const int done = devPreviewBuildDone;
     const bool wasRunning = devPreviewBuildTotal > 0;
 
+    /* The run is ending with the Auto batch's held image still queued or in flight:
+       its render will not come, so do not hold the batch for it. */
+    if (!presetAutoThumbPath.isEmpty() &&
+        (devPreviewBuildQueue.contains(presetAutoThumbPath) ||
+         devPreviewBuildCurrent == presetAutoThumbPath))
+        releasePresetAutoThumb();
+
     devPreviewBuildQueue.clear();
     devPreviewBuildCurrent.clear();
     devPreviewBuildSyncPaths.clear();
+    releaseHeldDevelopIcons();          // nothing queued is coming now
     devPreviewBuildTotal = 0;
     devPreviewBuildDone = 0;
     devPreviewBuildCancelled = false;

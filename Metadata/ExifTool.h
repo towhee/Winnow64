@@ -28,7 +28,10 @@ public:
     bool replaceEmbeddedImages(const QString &thumbSrc, const QString &previewSrc,
                                const QString &dst, QString &err);
     void writeOrientation(QString src, QString orientation);
-    int copyAll(QString src, QString dst);
+    /* -TagsFromFile src -all:all dst, waiting for ExifTool. extra goes into the SAME
+       command, before dst: a tag named there ("-icc_profile") is copied too, and an
+       assignment ("-ExifIFD:ColorSpace#=1") overrides the copied value. */
+    int copyAll(QString src, QString dst, const QStringList &extra = {});
     int copyAll(const QStringList &src, QStringList &dst);
     void stayOpen();
     void setOverWrite(bool overWrite);

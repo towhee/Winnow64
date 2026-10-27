@@ -1,4 +1,5 @@
 #include "buildfilters.h"
+#include "Metadata/colorspaces.h"
 #include "Utilities/versionkey.h"
 
 /*
@@ -523,8 +524,12 @@ QVector<BuildFilters::Sink> BuildFilters::sinks(const FilterSnapshot &snap) cons
     "1.5", "9" before "10"). Padding the whole string, as ISO does, would put "1.5"
     before "1.25". The predicate compares both sides trimmed
     (FilterCategory::compareAsText), so the padding never affects a match. */
-static QString sessionValueText(const QVariant &value)
+static QString sessionValueText(const QVariant &value, int column)
 {
+    /*  The colour space column holds an ID; its category shows the NAME, and
+        Filters::filterValueFor maps the checked name back to the ID the predicate
+        compares (as Availability does with its codes). Metadata/colorspaces.h. */
+    if (column == G::ICCSpaceColumn) return ColorSpaces::name(value.toInt());
     QString v = value.toString().trimmed();
     bool isNumber = false;
     v.toDouble(&isNumber);
@@ -661,7 +666,8 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
             the store pass. */
         r.extra.resize(nExtra);
         for (int i = 0; i < nExtra; ++i)
-            if (extraCell.at(i) >= 0) r.extra[i] = sessionValueText(val[extraCell.at(i)]);
+            if (extraCell.at(i) >= 0)
+                r.extra[i] = sessionValueText(val[extraCell.at(i)], snap.extraColumns.at(i));
     };
 
     constexpr int kChunk = FilterValues::kChunk;
@@ -710,7 +716,8 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
             FilterSnapshotRow &r = (*build[row / kChunk])[row % kChunk];
             for (int i : std::as_const(offStore))
                 r.extra[i] = sessionValueText(
-                    dm->index(row, snap.extraColumns.at(i)).data(Qt::DisplayRole));
+                    dm->index(row, snap.extraColumns.at(i)).data(Qt::DisplayRole),
+                    snap.extraColumns.at(i));
         }
         values->chunks.reserve(nChunks);
         for (const auto &c : build) values->chunks.append(c);

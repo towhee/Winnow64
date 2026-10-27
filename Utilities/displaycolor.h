@@ -23,25 +23,19 @@
     transforms are built ONCE per display (Rebuild) rather than per image, and applied
     in parallel strips: ~3-5 ms for a 6 MP proxy on 16 threads (measured 2026-10-26).
 
-    Inactive -- ToDisplay returns its input untouched, no copy -- when colour management
-    is off, no display profile is known (Linux has none), or the display is effectively
-    sRGB.
+    Inactive -- ToDisplay returns its input untouched, no copy -- when no display profile
+    is known (Linux has none) or the display is effectively sRGB. Colour management is
+    always on (2026-10-26); there is no toggle.
 */
 namespace DisplayColor
 {
-    /* GUI thread: re-read the display profile and G::colorManage. Call after
-       ICC::setOutProfile and when colour management is toggled. */
+    /* GUI thread: re-read the display profile. Call after ICC::setOutProfile. */
     void Rebuild();
 
     /* Thread-safe. srgb converted for the current display, or srgb itself. */
     QImage ToDisplay(const QImage &srgb);
 
     bool IsActive();
-
-    /* The display profile is not effectively sRGB (a wide-gamut panel), whether or not
-       colour management is on. With it off, everything on screen is oversaturated --
-       the Develop dock's alert row says so (MW::updateDevelopSelectionWarning). */
-    bool DisplayDiffersFromSrgb();
 }
 
 #endif // DISPLAYCOLOR_H

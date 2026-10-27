@@ -258,11 +258,11 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     gridView->rejustify();
     gridView->setThumbParameters();
     // ImageView: see the Info overlay note above -- w.isImageInfoVisible is not applied.
-    // Processes
-    if (w.isColorManage != G::colorManage) {
-        if (w.isColorManage) toggleColorManage(Tog::on);
-        else toggleColorManage(Tog::off);
-    }
+    /*  COLOUR MANAGEMENT IS NOT PART OF A LAYOUT (removed 2026-10-26). It belongs to the
+        screen, not the workflow, and the shipped defaults.json carried false for every
+        workspace, so switching to Develop or Library silently turned it off -- the
+        oversaturated Develop loupe of notes/Documentation.md 15.2.2. Settings files from
+        older builds still hold isColorManage; it is ignored. */
     /*  THE SORT IS NOT PART OF A LAYOUT.  w.sortColumn / w.isReverseSort are still
         snapshotted and serialised (the QSettings and defaults.json shape is unchanged)
         but never applied -- the same decision as the Info overlay above.  Applying them
@@ -432,7 +432,6 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isImageInfoVisible = infoVisibleAction->isChecked();
 
     // Processes
-    wsd.isColorManage = G::colorManage;
     wsd.sortColumn = sortColumn;
     wsd.isReverseSort = sortReverseAction->isChecked();
 }
@@ -852,7 +851,6 @@ QString MW::reportWorkspaces()
             << "\n  showShootingInfo          " << G::s(ws.isImageInfoVisible)
             // << "\n  isEmbelDisplay            " << G::s(ws.isEmbelDisplay)
             << "\nProcesses:"
-            << "\n  isColorManage             " << G::s(ws.isColorManage)
             << "\n  sortColumn                " << G::s(ws.sortColumn)
             << "\n  isReverseSort             " << G::s(ws.isReverseSort)
             << "\n"
@@ -925,7 +923,6 @@ void MW::reportWorkspace(WorkspaceData &ws, QString src)
         << "\nisTableDisplay" << ws.isTableDisplay
         << "\nisCompareDisplay" << ws.isCompareDisplay
         << "\nisEmbelDisplay" << ws.isEmbelDisplay
-        << "\nisColorManage" << ws.isColorManage
         << "\nsortColumn" << ws.sortColumn
         << "\nisReverseSort" << ws.isReverseSort
         //*/
@@ -1006,7 +1003,6 @@ QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
     // ImageView
     m["isImageInfoVisible"] = wsd.isImageInfoVisible;
     // Processes
-    m["isColorManage"] = wsd.isColorManage;
     m["sortColumn"] = wsd.sortColumn;
     m["isReverseSort"] = wsd.isReverseSort;
     return m;
@@ -1088,7 +1084,6 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     wsd.isImageInfoVisible = m.value("isImageInfoVisible").toBool();
 
     // Processes
-    wsd.isColorManage = m.value("isColorManage").toBool();
     wsd.sortColumn = m.value("sortColumn").toInt();
     /* Sanitize a persisted sortColumn that is out of range (e.g. saved by a build with a
        different column layout; G::TotalColumns is one past the last real column). Left
