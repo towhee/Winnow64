@@ -1080,79 +1080,46 @@
        </property>
        <item>
         <property name="text">
-         <string>Folders Panel</string>
-        </property>
-        <property name="text">
-         <string>F3</string>
-        </property>
-        <property name="text">
-         <string>Toggles visibility</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Favourites Panel</string>
-        </property>
-        <property name="text">
-         <string>F4</string>
-        </property>
-        <property name="text">
-         <string>Toggles visibility</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Filters Panel</string>
+         <string>Top Panel (Module)</string>
         </property>
         <property name="text">
          <string>F5</string>
         </property>
         <property name="text">
-         <string>Toggles visibility</string>
+         <string>Hides / shows, as the top triangle does</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Metadata Panel</string>
+         <string>Bottom Panel (Thumbnails)</string>
         </property>
         <property name="text">
          <string>F6</string>
         </property>
         <property name="text">
-         <string>Toggles visibility</string>
+         <string>Hides / shows, as the bottom triangle does</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Thumbnails Panel</string>
+         <string>Left Panels</string>
         </property>
         <property name="text">
          <string>F7</string>
         </property>
         <property name="text">
-         <string>Toggles visibility</string>
+         <string>Hides / shows all, as the left triangle does</string>
         </property>
        </item>
        <item>
         <property name="text">
-         <string>Embellish Panel</string>
+         <string>Right Panels</string>
         </property>
         <property name="text">
          <string>F8</string>
         </property>
         <property name="text">
-         <string>Toggles visibility</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Develop Panel</string>
-        </property>
-        <property name="text">
-         <string>F9</string>
-        </property>
-        <property name="text">
-         <string>Toggles visibility</string>
+         <string>Hides / shows all, as the right triangle does</string>
         </property>
        </item>
        <item>

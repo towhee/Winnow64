@@ -2027,7 +2027,7 @@ void MW::createWindowActions()
        saved presets, each in its own section). The dock only
        exists alongside the Develop dock, so the key is Develop mode local: it carries no
        QKeySequence and loadDevelopShortcuts owns it, with the tab in the text rendering
-       the hint. The other panel toggles are global F-keys (F3-F9). */
+       the hint. The other panel toggles have no key; F5-F8 hide/show a whole side. */
     historyDockVisibleAction = new QAction(tr("History Panel\tH"), this);
     historyDockVisibleAction->setObjectName("toggleHistoryDock");
     historyDockVisibleAction->setShortcutVisibleInContextMenu(true);
@@ -2049,6 +2049,26 @@ void MW::createWindowActions()
     else presetsDockVisibleAction->setChecked(false);
     addAction(presetsDockVisibleAction);
     connect(presetsDockVisibleAction, &QAction::triggered, this, &MW::showPresetsDock);
+
+    /* F5-F8, Lightroom's keys: hide/show every panel on one side of the window. The
+       same thing as clicking that side's ShowHideBar triangle (MW::toggleDockArea), so
+       not checkable -- the collapsed state lives in areaCollapsed, not in an action. */
+    auto sideAction = [this](QAction *&a, const QString &text, const char *name,
+                             Qt::DockWidgetArea area) {
+        a = new QAction(text, this);
+        a->setObjectName(name);
+        a->setShortcutVisibleInContextMenu(true);
+        addAction(a);
+        connect(a, &QAction::triggered, this, [this, area]{ toggleDockAreaFromKey(area); });
+    };
+    sideAction(toggleTopPanelsAction,    tr("Hide/Show Top Panel"),
+               "toggleTopPanels",    Qt::TopDockWidgetArea);
+    sideAction(toggleBottomPanelsAction, tr("Hide/Show Bottom Panel"),
+               "toggleBottomPanels", Qt::BottomDockWidgetArea);
+    sideAction(toggleLeftPanelsAction,   tr("Hide/Show Left Panels"),
+               "toggleLeftPanels",   Qt::LeftDockWidgetArea);
+    sideAction(toggleRightPanelsAction,  tr("Hide/Show Right Panels"),
+               "toggleRightPanels",  Qt::RightDockWidgetArea);
 
     /* "R" toggles the Develop Transform (crop + perspective) panel. From Browse
        (Preview) it enters Develop first and opens the panel (toggleDevelopTransform).
@@ -3120,6 +3140,11 @@ void MW::createWindowMenu()
     windowMenu->addAction(historyDockVisibleAction);
     windowMenu->addAction(presetsDockVisibleAction);
     windowMenu->addSeparator();
+    windowMenu->addAction(toggleTopPanelsAction);
+    windowMenu->addAction(toggleBottomPanelsAction);
+    windowMenu->addAction(toggleLeftPanelsAction);
+    windowMenu->addAction(toggleRightPanelsAction);
+    windowMenu->addSeparator();
     //    windowMenu->addAction(windowTitleBarVisibleAction);
     #ifdef Q_OS_WIN
     //windowMenu->addAction(menuBarVisibleAction);
@@ -3929,6 +3954,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
     //    actionKeys[windowTitleBarVisibleAction->objectName()] = windowTitleBarVisibleAction;
     //actionKeys[menuBarVisibleAction->objectName()] = menuBarVisibleAction;
     actionKeys[statusBarVisibleAction->objectName()] = statusBarVisibleAction;
+    actionKeys[toggleTopPanelsAction->objectName()] = toggleTopPanelsAction;
+    actionKeys[toggleBottomPanelsAction->objectName()] = toggleBottomPanelsAction;
+    actionKeys[toggleLeftPanelsAction->objectName()] = toggleLeftPanelsAction;
+    actionKeys[toggleRightPanelsAction->objectName()] = toggleRightPanelsAction;
     //    actionKeys[toggleIconsListAction->objectName()] = toggleIconsListAction;
     //    actionKeys[allDocksLockAction->objectName()] = allDocksLockAction;
 
@@ -4133,13 +4162,12 @@ void MW::loadShortcuts(bool defaultShortcuts)
         newWorkspaceAction->setShortcut(QKeySequence("W"));
         manageWorkspaceAction->setShortcut(QKeySequence("Ctrl+W"));
 
-        folderDockVisibleAction->setShortcut(QKeySequence("F3"));
-        favDockVisibleAction->setShortcut(QKeySequence("F4"));
-        filterDockVisibleAction->setShortcut(QKeySequence("F5"));
-        metadataDockVisibleAction->setShortcut(QKeySequence("F6"));
-        thumbDockVisibleAction->setShortcut(QKeySequence("F7"));
-        embelDockVisibleAction->setShortcut(QKeySequence("F8"));
-        developDockVisibleAction->setShortcut(QKeySequence("F9"));
+        /* Lightroom's panel keys. The individual panels have no F-key any more (they
+           were F3-F9); they are reached from the Window menu and their tabs. */
+        toggleTopPanelsAction->setShortcut(QKeySequence("F5"));
+        toggleBottomPanelsAction->setShortcut(QKeySequence("F6"));
+        toggleLeftPanelsAction->setShortcut(QKeySequence("F7"));
+        toggleRightPanelsAction->setShortcut(QKeySequence("F8"));
         statusBarVisibleAction->setShortcut(QKeySequence("F10"));
 
         // Help
@@ -4156,9 +4184,25 @@ void MW::loadShortcuts(bool defaultShortcuts)
         settings->remove(catalogDockVisibleAction->objectName());
     }
 
+    /*  RETIRED KEYS. F3-F9 toggled individual panels until F5-F8 became Lightroom's
+        hide/show-a-side keys. A saved profile would load them back onto the panel
+        actions, where F5-F8 would then be ambiguous with the side actions, so they are
+        cleared from the actions and the settings, once. */
+    for (QAction *a : {folderDockVisibleAction, favDockVisibleAction,
+                       filterDockVisibleAction, metadataDockVisibleAction,
+                       thumbDockVisibleAction, embelDockVisibleAction,
+                       developDockVisibleAction}) {
+        if (!a) continue;
+        static const QStringList retired = {"F3", "F4", "F5", "F6", "F7", "F8", "F9"};
+        if (!retired.contains(a->shortcut().toString())) continue;
+        a->setShortcut(QKeySequence());
+        settings->remove(a->objectName());
+    }
+
     settings->endGroup();
 
     loadDevelopShortcuts();
+    updateShowHideBarTips();
 }
 
 void MW::loadDevelopShortcuts()

@@ -875,24 +875,25 @@ bool MW::isDockTabified(QDockWidget *dock)
 
 QString MW::dockTabToolTip(const QString &tabText)
 {
-    auto tip = [](const QString &title, const QString &shortcut) {
+    /* The panels have no F-keys of their own (F5-F8 hide/show a whole side, as in
+       Lightroom), so each tip names where the panel is toggled: the Window menu. */
+    auto tip = [](const QString &title, const QString &menuItem) {
         // Title in the dock-title blue (mirrors WidgetCSS "DockTitleBar > QLabel").
         // <nobr> stops Qt from word-wrapping the rich-text tooltip.
         return QString(
-            "<nobr><span style=\"color:#6CC1E8;\">%1</span>: shortcut %2.</nobr>"
-        ).arg(title, shortcut);
+            "<nobr><span style=\"color:#6CC1E8;\">%1</span>: Window > %2.</nobr>"
+        ).arg(title, menuItem);
     };
 
-    if (tabText == folderDockTabText)   return tip(folderDockTabText,   "F3");
-    if (tabText == favDockTabText)      return tip(favDockTabText,      "F4");
+    if (tabText == folderDockTabText)   return tip(folderDockTabText, "Folders Panel");
+    if (tabText == favDockTabText)      return tip(favDockTabText,    "Bookmarks Panel");
     if (tabText == filterDockTabText) {
         /* One panel, two scopes, ONE search key: F2 searches whichever scope is current
-           (Folders = what is loaded, Catalog = everything indexed). F5 still raises the
-           panel itself. */
+           (Folders = what is loaded, Catalog = everything indexed). */
         if (G::useFilterPanel)
             return QString("<nobr><span style=\"color:#6CC1E8;\">Filters</span>: "
-                           "shortcut F5. F2 searches the current scope.</nobr>");
-        return tip(filterDockTabText, "F5");
+                           "F2 searches the current scope.</nobr>");
+        return tip(filterDockTabText, "Filters Panel");
     }
     /* Catalog searches the INDEX (every image seen), where Filters searches the
        datamodel (what is loaded). Not reached with G::useFilterPanel -- there is no
@@ -900,10 +901,8 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText)
         return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
                        "Window > Catalog Panel.</nobr>").arg(catalogDockTabText);
-    /*  Keywords has NO SHORTCUT, deliberately: F3-F9 are taken by the other docks and
-        F10-F12 are spoken for, and inventing a modifier chord for a panel that is off by
-        default would be a key nobody finds. It is reached from Window > Keywords Panel,
-        which is also where the user discovers it exists. */
+    /*  Keywords has NO SHORTCUT, like every other panel: it is reached from
+        Window > Keywords Panel, which is also where the user discovers it exists. */
     if (!keywordsDockTabText.isEmpty() && tabText == keywordsDockTabText)
         return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
                        "Window > Keywords Panel.</nobr>").arg(keywordsDockTabText);
@@ -920,13 +919,13 @@ QString MW::dockTabToolTip(const QString &tabText)
         return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
                        "Window > Places Panel. Areas drawn on the map.</nobr>")
             .arg(placesDockTabText);
-    if (tabText == metadataDockTabText) return tip(metadataDockTabText, "F6");
-    if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "F7");
-    if (tabText == embelDockTabText)    return tip(embelDockTabText,    "F8");
-    if (tabText == developDockTabText)  return tip(developDockTabText,   "F9");
+    if (tabText == metadataDockTabText) return tip(metadataDockTabText, "Metadata Panel");
+    if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "Thumbnails Panel");
+    if (tabText == embelDockTabText)    return tip(embelDockTabText,    "Embellish Panel");
+    if (tabText == developDockTabText)  return tip(developDockTabText,  "Develop Panel");
     /* History is Develop-only, so its keys are Develop mode local ("H" for the panel,
-       "P" for its Presets section, dispatched by the arbiter) rather than F-keys like the
-       docks above -- the tab is only ever seen in Develop mode, where H and P work. */
+       "P" for its Presets section, dispatched by the arbiter) -- the tab is only ever
+       seen in Develop mode, where H and P work. */
     if (tabText == historyDockTabText)
         return QString("<nobr><b>%1</b> panel &nbsp;(H, or P for presets)</nobr>")
                .arg(historyDockTabText);
@@ -979,22 +978,22 @@ void MW::createShowHideBars()
 */
     if (G::isLogger) G::log("MW::createShowHideBars");
 
+    /* Tooltips are set by updateShowHideBarTips once the F5-F8 actions exist. */
     struct Spec { ShowHideBar::Edge edge; Qt::DockWidgetArea area; Qt::ToolBarArea tbArea;
-                  const char *objName; ShowHideBar **bar; QToolBar **tb; const char *tip; };
+                  const char *objName; ShowHideBar **bar; QToolBar **tb; };
     const Spec specs[] = {
         {ShowHideBar::Left,   Qt::LeftDockWidgetArea,   Qt::LeftToolBarArea,
-         "LeftShowHideBar",   &leftBar,   &leftBarDock,   "Hide or show the panels on the left"},
+         "LeftShowHideBar",   &leftBar,   &leftBarDock},
         {ShowHideBar::Right,  Qt::RightDockWidgetArea,  Qt::RightToolBarArea,
-         "RightShowHideBar",  &rightBar,  &rightBarDock,  "Hide or show the panels on the right"},
+         "RightShowHideBar",  &rightBar,  &rightBarDock},
         {ShowHideBar::Bottom, Qt::BottomDockWidgetArea, Qt::BottomToolBarArea,
-         "BottomShowHideBar", &bottomBar, &bottomBarDock, "Hide or show the thumbnails"},
+         "BottomShowHideBar", &bottomBar, &bottomBarDock},
         {ShowHideBar::Top,    Qt::TopDockWidgetArea,    Qt::TopToolBarArea,
-         "TopShowHideBar",    &topBar,    &topBarDock,    "Hide or show the Module panel"},
+         "TopShowHideBar",    &topBar,    &topBarDock},
     };
 
     for (const Spec &sp : specs) {
         ShowHideBar *bar = new ShowHideBar(sp.edge, this);
-        bar->setToolTip(sp.tip);
         QToolBar *tb = new QToolBar(this);
         tb->setObjectName(sp.objName);
         /* Everything that makes a toolbar look and behave like a toolbar, off: no drag
@@ -1019,7 +1018,7 @@ void MW::createShowHideBars()
         *sp.tb = tb;
     }
 
-    /* A panel opening or closing by any other route -- F3-F9, the View menu, a workspace
+    /* A panel opening or closing by any other route -- the Window menu, a workspace
        -- changes whether its side has anything to hide, so the bars re-evaluate. Wired
        to the real panels only; the bars' own docks would recurse. */
     for (QDockWidget *d : findChildren<QDockWidget*>()) {
@@ -1091,7 +1090,7 @@ void MW::toggleDockArea(Qt::DockWidgetArea area)
     A bar was clicked: collapse its side, or restore exactly what was there.
 
     The ...DockVisibleAction checked states are deliberately NOT touched. They are the
-    user's own per-panel preference, set from the View menu and F3-F9, and a bar that
+    user's own per-panel preference, set from the Window menu, and a bar that
     rewrote them could not tell a panel the user closed on purpose from one it hid
     itself -- reopening would resurrect the lot. Instead the visible set is remembered in
     areaCollapsed and put back verbatim.
@@ -1104,7 +1103,7 @@ void MW::toggleDockArea(Qt::DockWidgetArea area)
 
     TAB GROUPS ARE THE SUBTLE PART, and the first version got it wrong in a way that was
     visible immediately. In a tabified group only the CURRENT tab is un-hidden; the ones
-    behind it are isHidden() exactly as a panel the user closed with F3 is. Collapsing on
+    behind it are isHidden() exactly as a panel the user closed is. Collapsing on
     "not hidden" therefore hid only the front tab -- Qt promoted one of its siblings to
     the front, the group shrank to what those siblings wanted, and expanding brought the
     original back as a BACK tab at the wrong width. So:
@@ -1331,7 +1330,8 @@ void MW::syncShowHideBars()
 
     The first clause is what keeps a collapsed side recoverable. Without it, collapsing
     would empty the area, the bar would judge itself pointless and vanish, and the only
-    route back would be the F-keys -- the bar could hide panels but never show them.
+    route back would be the Window menu -- the bar could hide panels but never show
+    them.
 */
     if (!leftBarDock || !rightBarDock || !bottomBarDock || !topBarDock) return;
 
@@ -1355,6 +1355,47 @@ void MW::syncShowHideBars()
                 if (!d->isHidden()) { hasPanel = true; break; }
         e.bar->setExpanded(!collapsed);
         e.tb->setVisible(hasPanel && !isFullScreen());
+    }
+}
+
+void MW::toggleDockAreaFromKey(Qt::DockWidgetArea area)
+{
+/*
+    F5-F8 (Lightroom's keys): the same as clicking that side's bar. A click can only
+    happen while the bar is on screen, ie while the side is collapsed or has a panel to
+    hide; a key can arrive any time, and toggling an empty side would record an empty
+    collapse and put a pointless bar on screen. So an empty side ignores the key.
+    Fullscreen hides the bars but the keys still work, as in Lightroom.
+*/
+    if (G::isLogger) G::log("MW::toggleDockAreaFromKey");
+    if (!areaCollapsed.contains(area)) {
+        bool hasPanel = false;
+        for (DockWidget *d : docksInArea(area))
+            if (!d->isHidden()) { hasPanel = true; break; }
+        if (!hasPanel) return;
+    }
+    toggleDockArea(area);
+}
+
+void MW::updateShowHideBarTips()
+{
+/*
+    Each bar's tooltip names what it hides and the key that does the same (F5-F8 by
+    default). Called after loadShortcuts, so it reads the live binding.
+*/
+    struct Tip { ShowHideBar *bar; QAction *action; const char *what; };
+    const Tip tips[] = {
+        {leftBar,   toggleLeftPanelsAction,   "Hide or show the panels on the left"},
+        {rightBar,  toggleRightPanelsAction,  "Hide or show the panels on the right"},
+        {bottomBar, toggleBottomPanelsAction, "Hide or show the thumbnails"},
+        {topBar,    toggleTopPanelsAction,    "Hide or show the Module panel"},
+    };
+    for (const Tip &t : tips) {
+        if (!t.bar) continue;
+        const QString key = t.action
+            ? t.action->shortcut().toString(QKeySequence::NativeText) : QString();
+        if (key.isEmpty()) t.bar->setToolTip(t.what);
+        else t.bar->setToolTip(QString("<nobr>%1: shortcut %2.</nobr>").arg(t.what, key));
     }
 }
 

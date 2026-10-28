@@ -49,9 +49,10 @@
   - [2.11 Licenses and Third-Party Notices](#211-licenses-and-third-party-notices)
   - [2.12 Show/Hide Bars](#212-showhide-bars)
     - [2.12.1 They Are Toolbars, Not Docks](#2121-they-are-toolbars-not-docks)
-    - [2.12.2 Collapse Is Not the F-Keys](#2122-collapse-is-not-the-f-keys)
+    - [2.12.2 Collapse Is Not the Panel Toggles](#2122-collapse-is-not-the-panel-toggles)
     - [2.12.3 When a Bar Shows](#2123-when-a-bar-shows)
     - [2.12.4 Persisted for the Session and in Every Workspace](#2124-persisted-for-the-session-and-in-every-workspace)
+    - [2.12.5 F5-F8 (Lightroom's Panel Keys)](#2125-f5-f8-lightrooms-panel-keys)
   - [2.13 Platforms (macOS, Windows, Linux)](#213-platforms-macos-windows-linux)
     - [2.13.1 Building on Linux](#2131-building-on-linux)
     - [2.13.2 What Linux Uses Where macOS and Windows Differ](#2132-what-linux-uses-where-macos-and-windows-differ)
@@ -1409,11 +1410,12 @@ GPL compatibility: GPL-3.0 accepts Apache-2.0, LGPL, MIT, BSD, zlib, IJG and the
 
 ### 2.12 Show/Hide Bars
 
-Main/showhidebar.h/.cpp + MW::createShowHideBars / placeShowHideBars / toggleDockArea / syncShowHideBars (Main/dockwidget.cpp), 2026-09-21. A thin strip on the left, right, bottom and (since v8) top rim of the window, each carrying ONE SOLID TRIANGLE that collapses or restores every panel on that side: Lightroom's panel bars. Clearing the panels away from the photo used to mean pressing several of F3-F9 and then pressing them all again.
+Main/showhidebar.h/.cpp + MW::createShowHideBars / placeShowHideBars / toggleDockArea / syncShowHideBars (Main/dockwidget.cpp), 2026-09-21. A thin strip on the left, right, bottom and (since v8) top rim of the window, each carrying ONE SOLID TRIANGLE that collapses or restores every panel on that side: Lightroom's panel bars. Clearing the panels away from the photo used to mean pressing several of F3-F9 and then pressing them all again; since 2026-10-28 the panels have no F-keys of their own and F5-F8 drive the bars instead (see 2.12.5).
 
 - The triangle points where the panels are about to GO (left bar: left-pointing while they are up, right-pointing once down), so it reads as an instruction rather than a label for which edge it is.
 - Painted with QPainter / QPolygonF, not an icon: six orientations from one widget, crisp at any DPI, a flip is a repaint (the arrow PNGs in winnow.qrc are two-direction chevrons). ToneRegionSlider paints its handles the same way. Filled with G::backgroundColor so the strip reads as part of the frame.
 - The WHOLE BAR is the click target (14 px is small enough to hit without also finding the triangle).
+- The tooltip names the side's shortcut ("Hide or show the panels on the left: shortcut F7."), set by MW::updateShowHideBarTips from the live action binding at the end of loadShortcuts.
 
 #### 2.12.1 They Are Toolbars, Not Docks
 
@@ -1423,12 +1425,12 @@ Toolbars also keep the bars out of MW::docksInArea(), which filters with qobject
 
 placeShowHideBars re-issues addToolBar UNCONDITIONALLY after every path that lays docks out (restoreWindowState, builtInDefaultWorkspace, invokeWorkspace, and so the workflow workspaces). addToolBar on an area that already holds the bar is a move, not a duplicate; the bars cannot be moved by the user, so re-asserting means the feature does not depend on saved state being correct. winnowStateVersion went 6 -> 7 for them: saveState covers toolbars as well as docks, so a v6 blob has no record of them and Qt hides anything it cannot find in a restored state.
 
-#### 2.12.2 Collapse Is Not the F-Keys
+#### 2.12.2 Collapse Is Not the Panel Toggles
 
 toggleDockArea records which panels in the area the user WANTS, which one was the front tab, and the area's extent; hides them; and puts all three back.
 
 - The ...DockVisibleAction checked states are deliberately never WRITTEN: they are the user's own per-panel preference, and a bar that rewrote them could not tell a panel closed on purpose from one it hid itself.
-- What the user wants is the visible-action's checked state, not isHidden(). In a tabified group only the CURRENT tab is un-hidden; the ones behind it are isHidden() exactly as a panel closed with F3 is, so collapsing on "not hidden" hid only the front tab: Qt promoted a sibling, the group shrank, and expanding brought the original back as a BACK tab at the wrong width. MW::dockVisibleAction(QDockWidget\*) is the dock -> action map; the actions are read, never written.
+- What the user wants is the visible-action's checked state, not isHidden(). In a tabified group only the CURRENT tab is un-hidden; the ones behind it are isHidden() exactly as a panel closed from the Window menu is, so collapsing on "not hidden" hid only the front tab: Qt promoted a sibling, the group shrank, and expanding brought the original back as a BACK tab at the wrong width. MW::dockVisibleAction(QDockWidget\*) is the dock -> action map; the actions are read, never written.
 - Which tab was front is recorded separately (CollapsedDock::wasCurrentTab) and raise()d again on the way back, because showing the members in list order leaves the LAST one raised. The test is isSelectedDockTab() (a non-empty visible region, true of exactly the one on top), NOT !isHidden(): a back tab is only hidden once Qt has built the tab bar, so on a freshly RESTORED layout every member reports not-hidden and "the front tab" came out as whichever was last in findChildren order. That only shows on a group the user has not clicked in since launch. The restore loop takes the FIRST match.
 - The map is updated BEFORE the docks, both ways round: every setVisible fires visibilityChanged -> syncShowHideBars, and a sync that ran while the map disagreed with the docks would judge the area empty and flicker the bar.
 - Both the size and the tab go back DEFERRED, in one singleShot(0) after the layout has taken the re-shown docks into account. Inline, resizeDocks is overwritten by the settling pass, and raise() by Qt's and MW's own tab bookkeeping (scheduleDockTabUpdate, restoreDockTabSelection); an inline raise() was measured landing on Bookmarks instead of the panel. resizeDocks is passed ONE representative dock (it applies a tabbed group's size through any member). The size matters as much as the set: showing a dock again does not restore its extent, so a panel dragged to a particular width came back at another, which reads as the bar having damaged the layout.
@@ -1447,6 +1449,12 @@ Several paths push dock visibility back from the actions and would silently undo
 - toggleDockArea's collapse half is MW::collapseDockArea(area, front, extent), which hides and records the WANTED docks (action checked) whether they are showing or already hidden; toggleDockArea measures front + extent and calls it, and MW::applyAreaCollapse(area, saved) calls it with the saved ones (or toggles, to expand a side the saved state has expanded).
 - MW::invokeWorkspace applies w.areaCollapse LAST, after restoreState, placeShowHideBars and restoreDockTabSelection.
 - At startup MW::applySessionAreaCollapse runs at the end of showEvent, and again in MW::startLibraryWhenExposed after chooseSource applies the Library layout, so the SESSION'S collapse wins over the startup layout's. (It used to be session-only and every workspace apply dropped it, which also lost it across a restart for a session left in the Library.)
+
+#### 2.12.5 F5-F8 (Lightroom's Panel Keys)
+
+2026-10-28. F5 = top (Module), F6 = bottom (Thumbnails), F7 = left, F8 = right: exactly Lightroom's assignment. Each is a Window-menu action (toggleTopPanelsAction / toggleBottomPanelsAction / toggleLeftPanelsAction / toggleRightPanelsAction, created in MW::createWindowActions) that calls MW::toggleDockAreaFromKey, which is toggleDockArea guarded against an EMPTY side: a click can only happen while the bar is on screen, but a key can arrive any time, and toggling a side with nothing to hide would record an empty collapse and put a pointless bar on screen. The keys work in full screen even though the bars are hidden there.
+
+The individual panel toggles (Folders, Bookmarks, Filters, Metadata, Thumbnails, Embellish, Develop) lost their F3-F9 keys to make room; they are reached from the Window menu and their tabs, and the dock tab tooltips (MW::dockTabToolTip) now name the Window menu item instead of a key. loadShortcuts clears a saved F3-F9 from those actions and from the Shortcuts settings group once (the same RETIRED KEYS pattern as Shift+F2). Help/shortcutsform.ui lists the four side keys in place of the seven panel keys.
 
 ### 2.13 Platforms (macOS, Windows, Linux)
 
@@ -5289,7 +5297,7 @@ The [DevTime] fields, for reference: proxy / full / full(async), dims, proxyBuil
 
 ### 11.13 The Develop Dock
 
-The Develop panel is a dock (View > Develop Editor Panel, F9), built like the Embellish dock: MW::createDevelopDock() in initialize.cpp wraps a DevelopProperties widget (Develop/Properties/), a PropertyEditor subclass mirroring EmbelProperties. It tabs with the Embellish and History docks in the right dock area, and its visible / collapsed state persists like the other docks (settings isDevelopDockVisible + DevelopDock, plus WorkspaceData::isDevelopDockVisible).
+The Develop panel is a dock (Window > Develop Panel), built like the Embellish dock: MW::createDevelopDock() in initialize.cpp wraps a DevelopProperties widget (Develop/Properties/), a PropertyEditor subclass mirroring EmbelProperties. It tabs with the Embellish and History docks in the right dock area, and its visible / collapsed state persists like the other docks (settings isDevelopDockVisible + DevelopDock, plus WorkspaceData::isDevelopDockVisible).
 
 #### 11.13.1 The Action Row
 
@@ -7201,7 +7209,7 @@ The bar carries the usual panel separator (G::panelBorderHeight in G::panelSepar
 
 #### 11.37.3 Showing the Dock
 
-The dock is tabbed with the Develop dock in the right area and shown / hidden with it; the two are one tool. Develop is always raised as the front tab of the group (History is shown first, then Develop, then raised), so History is reached by clicking its tab, or with H (View > History Panel). H is a Develop MODE LOCAL key (developShortcuts / developShortcutIntercept), not a QKeySequence, since the dock is Develop-only; the F-key series the other docks use ran out at F10 (F11 is taken by macOS). Like F3-F9 it shows / raises rather than toggles. In FULL SCREEN it is independent of the group: Preferences > Full screen defaults > "Show history panel" (fullScreenDocks.isHistory, persisted as isFullScreenHistory), one toggle for both sections.
+The dock is tabbed with the Develop dock in the right area and shown / hidden with it; the two are one tool. Develop is always raised as the front tab of the group (History is shown first, then Develop, then raised), so History is reached by clicking its tab, or with H (View > History Panel). H is a Develop MODE LOCAL key (developShortcuts / developShortcutIntercept), not a QKeySequence, since the dock is Develop-only (the other docks have no keys since F5-F8 became the side hide/show keys, 2.12.5). It shows / raises rather than toggles. In FULL SCREEN it is independent of the group: Preferences > Full screen defaults > "Show history panel" (fullScreenDocks.isHistory, persisted as isFullScreenHistory), one toggle for both sections.
 
 - Startup: Winnow always opens in Preview mode, so MW::showEvent hides the Develop tool after restoreState() through closeDevelopDock(), which takes the History panel with it and unchecks both dock actions. Hiding developDock alone was not enough: restoreState() re-shows every dock the last session had visible, so quitting from Develop reopened with History on screen, visible but disabled.
 - Gotcha (cost an afternoon): a TABIFIED dock keeps isVisible() == true even when a sibling tab is selected; that is why isSelectedDockTab tests the visible REGION. developDockVisibilityChange used to raise() developDock on any visibilityChanged where isVisible() was true, which yanked Develop back to the front the moment a sibling tab was clicked, so the History tab appeared dead. It now raises only when Develop really is the front tab. Any future dock tabbed with Develop needs the same care.
@@ -8445,7 +8453,7 @@ Views/keywordtree.h, Views/keywordtags.cpp. Two zones by design: the TAG ZONE on
 
 - Each zone carries a header band ("Selected image tags" / "Selected images tags", tracking the count, and "Keyword list"), drawn by Utilities/gradientheader.h. The tag zone sits ABOVE the tree because it is what the user reads on every selection change; the Find field travels with the tree, so a search box never appears to be searching the tags.
 - The split between the zones persists: the two sit in a vertical QSplitter (MW::createKeywordsDock), its state written to "KeywordsDockSplitter" on every splitterMoved (not at quit, so a crash or a Dock/logout quit cannot lose it) and restored over the default 120/420 split.
-- The dock ships OFF, like the Catalog panel: the left group is already four tabs deep. Window > Keywords Panel turns it on. It has NO SHORTCUT (F3-F9 are taken by the other docks and F10-F12 are spoken for). Adding it bumped winnowStateVersion 4 -> 5 with a MW::placeDocksAddedSince row, and followed the full dock checklist, glyph included (images/icon16/keywords_white.png, a luggage tag).
+- The dock ships OFF, like the Catalog panel: the left group is already four tabs deep. Window > Keywords Panel turns it on. It has NO SHORTCUT (no panel has one since F5-F8 became the side hide/show keys, 2.12.5). Adding it bumped winnowStateVersion 4 -> 5 with a MW::placeDocksAddedSince row, and followed the full dock checklist, glyph included (images/icon16/keywords_white.png, a luggage tag).
 - Entering the Keywords workflow focuses the Keywords filters: switching to Keywords (K, the status-bar switcher, a workspace menu, all via MW::invokeWorkflowLayout) or launching into it calls MW::focusKeywordsFilters, which a tick later runs Filters::focusKeywordsCategory (collapse every category, expand Keywords and its group heading, scroll it to the TOP). A launch also sets focusKeywordsFiltersAfterBuild, so MW::filterBuildCompleted does it once more when the first build fills the category.
 
 #### 16.5.1 The Keyword List (Tree)

@@ -2133,6 +2133,12 @@ private:
     /* "P": opens the History panel with its Presets SECTION expanded. Checked mirrors
        that section, not a dock of its own (there is no Presets dock any more). */
     QAction *presetsDockVisibleAction = nullptr;   // "P": develop-mode local (arbiter)
+    /* F5-F8, as in Lightroom: hide/show every panel on one side of the window, exactly
+       as clicking that side's ShowHideBar triangle does (MW::toggleDockArea). */
+    QAction *toggleTopPanelsAction = nullptr;      // F5
+    QAction *toggleBottomPanelsAction = nullptr;   // F6
+    QAction *toggleLeftPanelsAction = nullptr;     // F7
+    QAction *toggleRightPanelsAction = nullptr;    // F8
     QAction *developTransformAction;    // "R": toggle the Develop Transform (crop) panel
     QAction *toggleMaskOverlayAction;   // "O": hide/show the scope's mask overlay tint
 //    QAction *windowTitleBarVisibleAction;
@@ -2383,7 +2389,7 @@ private:
        collapsed, re-applied with resizeDocks on the way back. */
     QHash<Qt::DockWidgetArea, int> areaCollapsedExtent;
     /* The checkable action that says whether the user wants this panel at all -- the
-       F3-F9 / View menu state. It is what distinguishes a panel the user CLOSED from one
+       Window menu state. It is what distinguishes a panel the user CLOSED from one
        that is merely the back tab of a group: both are isHidden(), and collapsing has to
        bring back the second and leave the first alone. */
     QAction *dockVisibleAction(QDockWidget *dock) const;
@@ -2393,6 +2399,9 @@ private:
     /* Hide the wanted docks in `area` and record them, `front` naming the front tabs. */
     void collapseDockArea(Qt::DockWidgetArea area, const QStringList &front, int extent);
     void syncShowHideBars();                 // triangles + which bars are on screen
+    /* A side-toggle key (F5-F8): toggleDockArea, unless the side has nothing to hide. */
+    void toggleDockAreaFromKey(Qt::DockWidgetArea area);
+    void updateShowHideBarTips();            // tooltips name each bar's shortcut
     /* ---- Saving the collapse (session + workspaces) ----
        The four sides in AreaCollapse array order, each with the stem of its saved keys
        ("Left" -> isLeftAreaCollapsed, leftAreaExtent, leftAreaFront). */
