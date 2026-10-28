@@ -2082,6 +2082,7 @@ void MW::styleWorkflowSwitcher()
     const QColor separatorColor  = QColor(m,m,m);    // the " | " between module names
     const QString moduleCss =
         "QToolButton:!checked:enabled { color:" + unselectedColor.name() + "; }"
+        "QToolButton:!checked:enabled:hover { color:white; }"   // hover highlight
         "QLabel { color:" + separatorColor.name() + "; }";
 
     /* Not bold, in either row: at the Module dock's size the yellow alone is enough. */
