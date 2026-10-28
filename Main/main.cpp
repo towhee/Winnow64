@@ -12,7 +12,9 @@
 #include <cstdlib>
 #include <cstdio>
 #include <memory>
+#include <QImageReader>
 #include "Develop/develop.h"
+#include "Develop/inputtransform.h"
 #include "Develop/workingdump.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/rawcolor.h"
@@ -117,7 +119,7 @@ static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list 
 }
 
 /*
-    Winnow --dumpworking <raw> <out.wkg> [engine=apple]
+    Winnow --dumpworking <image> <out.wkg> [engine=apple]
 
     HEADLESS CALIBRATION DUMP: decode one raw's sensor image with the in-house decoder
     (the same decodeRawWorking path the export's denoise base uses; engine=apple takes
@@ -127,7 +129,8 @@ static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list 
     beside an open Winnow -- it
     branches before the single-instance check. With tests/unit/developrender this closes
     the calibration loop without the UI: dump once per raw, render any recipe, compare
-    against Lightroom. Returns 0 on success.
+    against Lightroom. A JPEG / HEIC / TIFF is dumped as the display-referred image
+    Develop builds from it. Returns 0 on success.
 */
 static int runDumpWorking(int argc, char *argv[], const QString &raw, const QString &out,
                           bool appleEngine)
@@ -149,10 +152,32 @@ static int runDumpWorking(int argc, char *argv[], const QString &raw, const QStr
         return 1;
     }
     const ImageMetadata m = metadata.m;
+    const QString ext = info.suffix().toLower();
 
-    std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(info.suffix().toLower());
+    std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext);
+    if (!rawFormat) {
+        /* Not a raw: the JPEG / HEIC / TIFF Develop works on, built as ImageDecoder::
+           applyDevelop builds it -- the decoded, ROTATED pixels through the file's
+           embedded profile (sourceIcc) -- so the orientation is already applied. */
+        QImageReader reader(raw);
+        reader.setAutoTransform(true);
+        const QImage decoded = reader.read();
+        WorkingImage w;
+        const QByteArray icc = metadata.iccFormats.contains(ext) ? m.iccBuf : QByteArray();
+        if (decoded.isNull() || !InputTransform().FromImage(decoded, w, icc)) {
+            std::fprintf(stderr, "dumpworking: cannot decode %s\n", qPrintable(raw));
+            return 1;
+        }
+        if (!WorkingDump::write(w, 0, out)) {
+            std::fprintf(stderr, "dumpworking: cannot write %s\n", qPrintable(out));
+            return 1;
+        }
+        std::fprintf(stdout, "dumpworking: %s -> %s (%dx%d, display-referred)\n",
+                     qPrintable(raw), qPrintable(out), w.width, w.height);
+        return 0;
+    }
     QFile file(raw);
-    if (!rawFormat || !file.open(QIODevice::ReadOnly)) {
+    if (!file.open(QIODevice::ReadOnly)) {
         std::fprintf(stderr, "dumpworking: no raw decoder for %s\n", qPrintable(raw));
         return 1;
     }

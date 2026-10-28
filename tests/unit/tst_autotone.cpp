@@ -1,10 +1,12 @@
 /*
     AutoTone -- the Basic panel's one-click Auto (Develop/autotone.h).
 
-    The tuning is heuristic and will be calibrated against Lightroom, so these tests pin
+    The constants are fitted to Lightroom's Auto and will be refitted, so these tests pin
     BEHAVIOUR rather than numbers: a dark frame is brightened, a bright one darkened, a
-    flat one gains contrast and full clip points, a grey frame gets no colour push, and
-    the answer does not depend on where the tone sliders were left.
+    flat one gains contrast and full clip points, a frame that stays dark gets more
+    Shadows lift, a raw a stronger Highlights pull than a JPEG, the colour push does not
+    depend on the colour content (Lightroom's does not), and the answer does not depend
+    on where the tone sliders were left.
 */
 
 #include <QtTest>
@@ -63,8 +65,9 @@ private slots:
     void brightFrameIsDarkened();
     void exposureOrdersWithGain();
     void flatFrameGetsContrastAndClipPoints();
-    void greyFrameGetsNoColourPush();
-    void colourPushIsContinuous();
+    void colourPushIgnoresContent();
+    void darkFrameGetsMoreShadowLift();
+    void rawGetsStrongerHighlightPull();
     void independentOfCurrentSliders();
     void presetAutoToneMatchesSolve();
     void presetAutoWbNeedsCameraColour();
@@ -78,7 +81,7 @@ void TstAutoTone::percentilesInterpolate()
         uchar *p = img.scanLine(0) + x * 3;
         p[0] = p[1] = p[2] = uchar(x);
     }
-    const AutoTone::Stats s = AutoTone::Measure(img, false);
+    const AutoTone::Stats s = AutoTone::Measure(img);
     QCOMPARE(s.total, 256.0);
     QVERIFY(std::abs(s.percentile(0.5) - 0.5f) < 0.01f);
     QVERIFY(s.percentile(0.25) < s.percentile(0.26));    // continuous, not stepped by 0
@@ -117,24 +120,37 @@ void TstAutoTone::flatFrameGetsContrastAndClipPoints()
     QVERIFY(r.blacks < 0.0f);                           // and the bottom to black
 }
 
-void TstAutoTone::greyFrameGetsNoColourPush()
+void TstAutoTone::colourPushIgnoresContent()
 {
-    const AutoTone::Result r = solve(makeScene(0.4f, 0.0f));
-    QCOMPARE(r.vibrance, 0.0f);
-    QCOMPARE(r.saturation, 0.0f);
+    /* Lightroom's Auto gives Vibrance ~+15 and Saturation ~0 to a grey frame and a
+       saturated one alike. */
+    const AutoTone::Result grey = solve(makeScene(0.4f, 0.0f));
+    const AutoTone::Result vivid = solve(makeScene(0.4f, 0.6f));
+    QVERIFY(grey.vibrance > 0.0f);
+    QCOMPARE(grey.vibrance, vivid.vibrance);
+    QCOMPARE(grey.saturation, 0.0f);
+    QCOMPARE(vivid.saturation, 0.0f);
 }
 
-void TstAutoTone::colourPushIsContinuous()
+void TstAutoTone::darkFrameGetsMoreShadowLift()
 {
-    /* Chroma stepped finely across the monochrome threshold: Vibrance must ramp, never
-       jump by more than a few units between neighbours. */
-    float prev = solve(makeScene(0.4f, 0.0f)).vibrance;
-    for (float c = 0.05f; c <= 0.61f; c += 0.05f) {
-        const float v = solve(makeScene(0.4f, c)).vibrance;
-        QVERIFY2(std::abs(v - prev) <= 8.0f, qPrintable(QString("%1 -> %2 at chroma %3")
-                                                        .arg(prev).arg(v).arg(c)));
-        prev = v;
-    }
+    /* Exposure only partly corrects a very dark frame; what is still dark afterwards
+       gets more Shadows and a lighter Blacks than a well-lit frame. */
+    const AutoTone::Result dark = solve(makeScene(0.03f));
+    const AutoTone::Result lit = solve(makeScene(1.0f, 0.25f, 0.45f, 1.0f));
+    QVERIFY(dark.shadows > lit.shadows);
+    QVERIFY(dark.blacks > lit.blacks);
+}
+
+void TstAutoTone::rawGetsStrongerHighlightPull()
+{
+    /* A JPEG already carries its camera's highlight roll-off. */
+    WorkingImage raw = makeScene(0.4f);
+    raw.sceneReferred = true;
+    const AutoTone::Result r = solve(raw);
+    const AutoTone::Result j = solve(makeScene(0.4f));
+    QVERIFY(r.highlights < j.highlights);
+    QVERIFY(j.highlights < 0.0f);
 }
 
 void TstAutoTone::independentOfCurrentSliders()

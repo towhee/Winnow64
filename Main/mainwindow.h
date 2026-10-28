@@ -357,6 +357,11 @@ public:
         int labelFontSizeGrid;
         bool showThumbLabelsGrid;
         QString labelChoice;
+        /* RUNTIME ONLY, never serialised: set on the copy MW::invokeWorkflowLayout
+           applies.  A workflow layout does not own the grid thumbnail size (see
+           MW::invokeWorkspace), and the flag travels with ws so re-applying the current
+           layout (leaving full screen, Reset Layout) skips it too. */
+        bool isWorkflowLayout = false;
         // ImageView
         bool isImageInfoVisible;
         bool isEmbelDisplay;

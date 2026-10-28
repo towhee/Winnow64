@@ -100,6 +100,8 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     /* The named develop presets (the Presets dock's model). Unlike history these ARE
        persistent -- they live in QSettings under "Develop Presets". */
     presets = new DevelopPresets(setting, this);
+    /* The Raw panel's "Apply:" preset, merged into untouched raws (maybeApplyRawPreset). */
+    rawApplyPreset = setting->value("Develop/rawApplyPreset").toString();
     /* The mask-tool chooser, popped when a new mask is created (newScope). */
     /* The Scope list (in the ScopeHeader widget) shows the CURRENT IMAGE's scopes --
        Global plus one row per mask (per-image EditStack), not app-global QSettings
@@ -467,6 +469,7 @@ void DevelopProperties::updateDenoiseRunState(bool denoised)
        saved choice (syncRawPanel -> RawPanel::setRunOnImage). */
     /* Lab UI: the RawPanel owns the checkbox/sliders (the tree row is absent). */
     if (rawPanel) rawPanel->setDenoiseRunState(denoised);
+    if (denoised) scheduleRawPreset();  // the raw preset was waiting for this base
     if (!denoiseRunCheck) return;      // denoise section absent (Apple engine / non-raw)
     {
         QSignalBlocker block(denoiseRunCheck);
@@ -489,6 +492,8 @@ void DevelopProperties::updateDenoiseAvailability()
     QString reason;
     const bool ok = !mw || mw->rawDenoiseAvailable(currentImagePath, &reason);
     rawPanel->setDenoiseAvailable(ok, reason);
+    /* A denoise that cannot run is not coming: the raw preset stops waiting for it. */
+    if (!ok) scheduleRawPreset();
     /* Legacy tree rows: no room for a reason line, so just make them inert. */
     if (denoiseRunCheck && !ok) {
         QSignalBlocker block(denoiseRunCheck);
@@ -593,6 +598,11 @@ void DevelopProperties::bindRawPanel(RawPanel *panel)
         setting->setValue("Develop/autoRunDenoise", on);
         emit autoRunDenoiseToggled(on);
     });
+    connect(rawPanel, &RawPanel::applyPresetChanged, this, &DevelopProperties::setRawApplyPreset);
+    /* The "Apply:" list follows the Presets panel: save, rename, delete, reorder. */
+    if (presets)
+        connect(presets, &DevelopPresets::changed, this, &DevelopProperties::refreshRawApplyPresets);
+    refreshRawApplyPresets();
     connect(rawPanel, &RawPanel::denoiseLumaChanged,   this, [this](int v){ setGlobalDenoise(true,  v); });
     connect(rawPanel, &RawPanel::denoiseChromaChanged, this, [this](int v){ setGlobalDenoise(false, v); });
     connect(rawPanel, &RawPanel::tipsRequested, this, &DevelopProperties::rawHelp);
@@ -797,6 +807,178 @@ void DevelopProperties::setRawRenderer(const RawRender::Choice &c)
     QTimer::singleShot(0, this, [this]{ buildTree(); });
     emit rawRendererChanged();
     emit paramsChanged();
+}
+
+/* ---- Raw preset (the Raw panel's "Apply:"; see developproperties.h) ---------------- */
+
+void DevelopProperties::refreshRawApplyPresets()
+{
+    if (!rawPanel || !presets) return;
+    /* The Presets panel's order: categories top to bottom, each in its own order. */
+    QStringList names;
+    for (const PresetCategory &c : presets->layout()) names += c.presets;
+    rawPanel->setApplyPresets(names, rawApplyPreset);
+}
+
+void DevelopProperties::setRawApplyPreset(const QString &name)
+{
+    if (G::isLogger) G::log("DevelopProperties::setRawApplyPreset", name);
+    rawApplyPreset = name;
+    setting->setValue("Develop/rawApplyPreset", name);
+    refreshRawApplyPresets();
+    /* Choosing a preset while an untouched raw is on screen applies it there too -- the
+       user is looking at the image the choice is about. */
+    if (rawPresetEligible(currentImagePath)) {
+        rawPresetPending = currentImagePath;
+        scheduleRawPreset();
+    }
+}
+
+bool DevelopProperties::rawPresetEligible(const QString &fPath) const
+{
+    if (fPath.isEmpty() || rawApplyPreset.isEmpty()) return false;
+    if (!presets || !presets->contains(rawApplyPreset)) return false;
+    if (!mw || !mw->isFileRaw(fPath)) return false;
+    /* No edits yet: an identity recipe AND nothing in History past "Original" -- an
+       image the user reset to its original on purpose has steps, and stays reset. */
+    if (!stackCache.value(fPath).isIdentity()) return false;
+    if (history && history->count(fPath) > 1) return false;
+    return true;
+}
+
+void DevelopProperties::scheduleRawPreset()
+{
+    if (rawPresetPending.isEmpty()) return;
+    QTimer::singleShot(0, this, &DevelopProperties::maybeApplyRawPreset);
+}
+
+void DevelopProperties::maybeApplyRawPreset()
+{
+/*
+    Merge the raw preset into the current image once the pipeline ahead of it has run:
+    the raw render (a scene-linear base in WorkingImageCache), then the raw denoise when
+    this image will get one. Each wait just returns; the next hook re-tries. Anything
+    that makes the image ineligible on the way (the user edited it first, the preset
+    went) disarms it for this visit.
+*/
+    const QString fPath = currentImagePath;
+    if (rawPresetPending.isEmpty() || rawPresetPending != fPath) return;
+    if (!rawPresetEligible(fPath)) {
+        rawPresetPending.clear();
+        return;
+    }
+    /* Editing the Embedded Preview: there is no raw render to follow. Stay armed, so
+       switching the Edit source to Raw applies it. */
+    if (!G::useRaw) return;
+    /* The raw render. */
+    const EditStack s = stackCache.value(fPath);
+    if (!cachedBaseFor(fPath, s)) return;
+    /* The raw denoise, when it is coming: wanted, on the Winnow engine (PMRID needs the
+       mosaic), able to run here, and at a non-zero amount (MW::ensureRawDenoise bails on
+       zero amounts, so waiting for it then would wait forever). */
+    const EditParams g = s.scopes.isEmpty() ? EditParams() : s.scopes.first().params;
+    const bool denoiseComing =
+        g.wantsDenoiseRaw(G::autoRunDenoise) && !currentRawRender().apple &&
+        mw->rawDenoiseAvailable(fPath) &&
+        (g.denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
+         g.denoiseChromaOr(G::denoiseChromaDefault) > 0.0f);
+    if (denoiseComing && !mw->rawDenoiseReadyForCurrent()) return;
+
+    rawPresetPending.clear();
+    /* No merging under an open mask tool or the spot brush: they index into the stack. A
+       raw with no edits has neither unless the user opened one before the render landed
+       -- and that is an edit in progress, so leave the image alone. */
+    if (maskPanelOpen || spotMode) return;
+    applyRawPreset(presets->read(rawApplyPreset));
+}
+
+void DevelopProperties::applyRawPreset(const DevelopPreset &preset)
+{
+/*
+    The merge itself: applyPresetObject's path, cut down to the image on screen. Into the
+    Global scope (an untouched image has no other), solving any Auto settings on the
+    base the render is using -- the denoised one when there is one. One history step,
+    never propagated: the raw preset is per image by definition, and every other selected
+    raw gets its own when it is opened.
+*/
+    const QString fPath = currentImagePath;
+    if (G::isLogger) G::log("DevelopProperties::applyRawPreset", preset.name);
+    if (fPath.isEmpty() || preset.isEmpty()) return;
+    const QString label = "Raw preset: " + preset.name;
+
+    /* The preset may hold slider moves the selection had queued before the merge; land
+       them first, as applyPresetObject does. */
+    flushPropagation();
+    previewActive = false;
+    previewStack = EditStack();
+    clearBeforeAfterLatch();
+
+    isRestoringHistory = true;
+    EditStack s = stackCache.value(fPath);
+    const RawRender::Choice rendererBefore = rawRenderFor(fPath);
+    const EditParams globalBefore = s.scopes.isEmpty() ? EditParams()
+                                                       : s.scopes.first().params;
+    s = mergePreset(preset, s, 0);
+    const bool rendererChanged = RawRender::resolve(s.scopes.first().params) != rendererBefore;
+
+    /* Auto settings, on the base the render is starting from. A preset that switches the
+       renderer needs the OTHER renderer's base, which is not decoded yet: that goes to
+       the batch, which decodes it. */
+    QString autoKey;
+    bool autoPending = false;
+    PresetAutoJob job;
+    if (preset.hasAutos()) {
+        autoKey = presetAutoMergeKey(++nextPresetAutoId);
+        job.expect = s.scopes.first().params;
+        std::shared_ptr<const WorkingImage> base;
+        if (!rendererChanged) {
+            base = cachedBaseFor(fPath, stackCache.value(fPath));
+            if (base) base = mw->developRawDenoisedBase(fPath, globalBefore, base);
+        }
+        if (base) {
+            QApplication::setOverrideCursor(Qt::WaitCursor);
+            const AutoTone::AutosResult r =
+                AutoTone::ApplyPresetAutos(*base, preset.autoWhiteBalance(),
+                                           preset.autoTone(), s.scopes.first().params);
+            QApplication::restoreOverrideCursor();
+            if (!r.ok() && G::popup)
+                G::popup->showPopup("The raw preset's Auto settings could not be solved "
+                                    "for this image, so its own values were kept.", 2500);
+        }
+        else autoPending = true;
+    }
+    stackCache[fPath] = s;
+    if (activeScopeIndex >= s.scopes.size()) activeScopeIndex = 0;
+
+    refreshScopeList();
+    buildTree();                        // repopulates the sliders from the new stack
+    isRestoringHistory = false;
+
+    /* One step, on this image only. The diff base then moves to the merged state, or the
+       next slider edit would carry the whole preset to the rest of a selection. */
+    propagateSuspended = true;
+    noteScopeEdit("Global", label, QString(), autoKey);
+    propagateSuspended = false;
+    syncPropagateBase();
+
+    if (autoPending) {
+        job.path = fPath;
+        job.wb = preset.autoWhiteBalance();
+        job.tone = preset.autoTone();
+        job.scopeLabel = "Global";
+        job.label = label;
+        job.mergeKey = autoKey;
+        queuePresetAuto(job, /*front*/true);
+        /* Hold the sidecar write for the solved values (see applyPresetObject). */
+        if (debounceWriteTimer) debounceWriteTimer->stop();
+    }
+    if (rendererChanged) {
+        reflectEngine();
+        QTimer::singleShot(0, this, [this]{ buildTree(); });
+        emit rawRendererChanged();
+    }
+    syncRawPanel();                     // the preset may set the raw denoise
+    emit paramsChanged();               // full render + settled full-res
 }
 
 void DevelopProperties::syncAppleDecoderVersions()
@@ -4959,6 +5141,9 @@ void DevelopProperties::resetWbAxisToAsShot(bool isTemp)
 void DevelopProperties::onWorkingImageReady(const QString &fPath)
 {
     if (fPath.isEmpty() || fPath != currentImagePath) return;
+    /* The raw render has landed: the raw preset may be able to go (deferred -- this is
+       called from inside MW's render). */
+    if (rawPresetPending == fPath) scheduleRawPreset();
     const CameraColor cam = currentCam();
     if (!cam.valid) return;                      // decode has not landed yet
     if (cam.asShotK == wbRowAsShotK) return;     // already showing this characterisation
@@ -9184,6 +9369,9 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        steps taken earlier in this session. */
     if (history) history->seed(fPath, s);
     if (historyView) historyView->setImage(fPath);
+    /* An untouched raw gets the Raw panel's "Apply:" preset once its render lands. */
+    rawPresetPending = rawPresetEligible(fPath) ? fPath : QString();
+    scheduleRawPreset();           // its base may already be cached (a return visit)
 
     refreshScopeList();
     buildTree();                   // Global active: Core rows + Basic/Color/Effects
@@ -10488,13 +10676,20 @@ void DevelopProperties::renamePreset(const QString &from, const QString &to)
 {
     if (G::isLogger) G::log("DevelopProperties::renamePreset", from);
     if (!presets) return;
-    if (!presets->rename(from, to) && G::popup)
-        G::popup->showPopup("A preset named \"" + to + "\" already exists.");
+    const bool wasRawPreset = from == rawApplyPreset;
+    if (!presets->rename(from, to)) {
+        if (G::popup) G::popup->showPopup("A preset named \"" + to + "\" already exists.");
+        return;
+    }
+    /* The Raw panel's "Apply:" follows the preset to its new name. */
+    if (wasRawPreset) setRawApplyPreset(to);
 }
 
 void DevelopProperties::deletePreset(const QString &name)
 {
     if (G::isLogger) G::log("DevelopProperties::deletePreset", name);
+    /* Before remove(): its changed() rebuilds the "Apply:" list from the setting. */
+    if (name == rawApplyPreset) setRawApplyPreset(QString());
     if (presets) presets->remove(name);
 }
 

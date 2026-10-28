@@ -232,3 +232,24 @@ target differing only in the control under test. Lightroom applies lens distorti
 correction, so the renders are registered to its exports by homography plus a smooth
 optical flow (cached per pair). The dump format is documented in
 `Develop/workingdump.h`.
+
+### Auto tone against Lightroom's Auto
+
+`--dumpworking` also takes a JPEG / HEIC / TIFF (dumped as the display-referred image
+Develop builds from it), and `developrender` can run the Basic panel's Auto:
+
+```sh
+# Solve, print the eight values, render with them (long= shrinks only the output):
+build/mac-debug/tests/developrender <in.wkg> <out.tif> autotone long=1200
+build/mac-debug/tests/developrender <in.wkg> - autotone      # values only, no render
+
+# Score every LR export in ~/Pictures/_LRref/Autotone (auto-toned in Lightroom):
+python3 tests/calibration/autotonecompare.py [--only NAME ...] [--exclude NAME ...]
+```
+
+The labels are read from each export's own XMP (`crs:Exposure2012` ...), and the original
+is found by Spotlight from `crs:RawFileName`. Besides the slider table it compares whole-
+frame tone statistics (luma percentiles, spread, mid-tone chroma) of three renders
+against the export: Winnow neutral, Winnow Auto, and Winnow with Lightroom's values. The
+last splits the error into what the sliders MEAN and what the solver DECIDED; only the
+second is Auto tone's to fix. Cache: `~/Pictures/_LRref/.autotone_cache`.

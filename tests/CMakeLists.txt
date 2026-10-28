@@ -369,7 +369,10 @@ target_link_libraries(tonecurvedump PRIVATE winnow_test_develop)
 # developrender is a CALIBRATION TOOL like tonecurvedump: it renders a calibration dump
 # (a .wkg a Develop export writes when WINNOW_DUMP_WORKING is set) through Develop::Apply
 # with any params, for fitting tone operators against Lightroom. Built, not run by ctest.
-add_executable(developrender unit/developrender.cpp)
+# It also runs the Basic panel's Auto tone (autotone), hence tst_autotone's two sources.
+add_executable(developrender unit/developrender.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/autotone.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/workingimagecache.cpp)
 target_link_libraries(developrender PRIVATE winnow_test_develop)
 
 # tst_toneregions is the characterization gate for the Basic panel's four tone controls

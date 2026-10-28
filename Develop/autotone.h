@@ -10,42 +10,36 @@
     Highlights, Shadows, Whites, Blacks, Vibrance and Saturation from the image itself.
 
     Lightroom's own Auto is a trained network (Adobe Sensei, since Classic 7.1). This is
-    the HEURISTIC equivalent: measure the picture, set each slider from a rule, in the
-    order a person would. Every measurement is taken from a small proxy rendered through
-    the REAL pipeline (WorkingImageCache::render, the same develop + view transform +
-    transfer the loupe uses), so the sliders' nonlinearity, the view transform's shoulder
-    and whatever else the image already carries (profile, WB, Texture, Dehaze...) are all
-    accounted for without modelling any of them. A proxy render is a few milliseconds, so
-    the solver can afford to search rather than predict.
+    a small rule set FITTED TO IT: Lightroom writes its Auto results into the XMP
+    (crs:Exposure2012 ...), so its answers are free training labels, and
+    tests/calibration/autotonecompare.py scores the solver against them. Both
+    measurements are taken from a small proxy rendered through the REAL pipeline
+    (WorkingImageCache::render, the same develop + view transform + transfer the loupe
+    uses), so slider nonlinearity, the view transform's shoulder and whatever else the
+    image already carries (profile, WB, Texture, Dehaze...) are accounted for without
+    modelling any of them.
 
-    THE ORDER, each step measured on the render the previous steps produced:
+    TWO STEPS, the second measured on the render the first produced:
 
-      1. Exposure    bisection: the frame's log-average display-linear luminance (its
-                     "key", centre-weighted) moves kKeyStrength of the way, in stops,
-                     toward middle grey. Partial on purpose -- a full correction greys
-                     out every low-key and high-key scene. The pull is halved again when
-                     the frame already has a real bright end (brightening) or a real
-                     dark end (darkening), the signature of a deliberately dark / bright
-                     scene rather than a mis-exposed one.
-      2. Contrast    rule: the spread (std. dev.) of display luma against kSdTarget.
-      3. Highlights  rule: proportional to the fraction of the frame above kHiThresh.
-         Shadows     rule: proportional to the fraction below kLoThresh.
-      4. Whites      bisection: the kWhitePct luma percentile lands at kWhiteTarget.
-         Blacks      bisection: the kBlackPct luma percentile lands at kBlackTarget.
-                     Last, because they set the end points and everything above moves
-                     them. This is Lightroom's Shift+double-click auto-clip.
-      5. Vibrance /  rule: mean CIELAB chroma of the mid-tones against kChromaTarget,
-         Saturation  mostly through Vibrance; capped when the frame is already near the
-                     gamut edge, zero for a monochrome frame.
+      1. Exposure    from the untouched render: a COMPRESSED pull of the frame's key
+                     (centre-weighted log-average display-linear luminance) toward middle
+                     grey -- tanh, so a frame 6 stops dark gets ~+1.9 EV as in
+                     Lightroom -- plus a term moving the 99th luma percentile toward
+                     ~0.87 (Lightroom watches the top end).
+      2. The rest    Lightroom's near-fixed base recipe, shaped by how much of the
+                     exposed frame is still dark: Contrast +6; Highlights -65 for a raw,
+                     -39 for a JPEG; Shadows, Whites and Blacks from the dark fraction
+                     (and Whites from the p1..p99 range); Vibrance +15 / +13;
+                     Saturation 0.
 
-    The tone sliders and Vibrance / Saturation are reset before measuring, so Auto gives
-    the same answer however the sliders were left. Everything else in `base` (profile,
-    tone mapping, white balance, presence, effects) is kept and rendered with.
+    WHY near-fixed: Lightroom's Auto is. Over 36 images it set Highlights ~-60, Shadows
+    ~+40, Blacks ~-20, Contrast +5..+7 and Vibrance ~+15 almost whatever the picture,
+    and "always Lightroom's median" beat every content rule the first version had
+    (fraction above 0.8, mean chroma, luma spread, clip-point bisection).
 
-    All the tuning lives in the constants at the top of autotone.cpp. They are first
-    guesses meant to be calibrated against Lightroom's Auto with the LR calibration loop
-    (headless dump + developrender + lrcompare.py): Lightroom writes its Auto results into
-    the XMP (crs:Exposure2012 ...), so its answers are free training labels.
+    The eight sliders are reset before measuring, so Auto gives the same answer however
+    they were left. Everything else in `base` is kept and rendered with. All the tuning
+    lives in the constants at the top of autotone.cpp.
 
     Global only: Auto measures the whole frame through scope 0. Masks are not rendered.
     Geometry is not applied either -- the measurement is of the uncropped frame.
@@ -77,8 +71,6 @@ struct Stats {
     float  key       = 0.0f;    // centre-weighted log-average display-LINEAR luminance
     float  mean      = 0.0f;    // display luma, 0..1
     float  sd        = 0.0f;    // display luma std. dev., 0..1
-    float  meanChroma = 0.0f;   // CIELAB C* over the mid-tones (only when asked for)
-    float  highChroma = 0.0f;   // its 98th percentile
 
     /* Display luma (0..1) below which a fraction q of the frame lies, interpolated
        within a bin so bisection sees a continuous target. */
@@ -88,9 +80,8 @@ struct Stats {
     float fractionBelow(float v) const;
 };
 
-/* Measure a rendered 8-bit image (Format_RGB888, as WorkingImageCache::render makes it).
-   withChroma adds the CIELAB pass, which only the last step needs. */
-Stats Measure(const QImage &img, bool withChroma);
+/* Measure a rendered 8-bit image (Format_RGB888, as WorkingImageCache::render makes it). */
+Stats Measure(const QImage &img);
 
 /* Solve the Auto values for the pre-develop image `work` (the WorkingImageCache entry)
    rendered with `base`. False when the image is unusable or a render fails. */

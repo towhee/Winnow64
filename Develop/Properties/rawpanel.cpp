@@ -162,18 +162,19 @@ void RawPanel::buildUi()
     rb->setSpacing(4);
     bl->addWidget(rawBlock);
 
-    /* "Render using": its rule and row, hidden together when there is only one choice
-       (off macOS: Winnow alone) -- see rebuildEngineCombo. */
+    /* Rule between the Edit row and the "Render using" / "Apply:" rows. Inside rawBlock
+       so it hides with the block on Embedded Preview rather than dangling under the
+       Edit row. */
+    rb->addWidget(makeGroupRule(rawBlock));
+
+    /* "Render using": hidden when there is only one choice (off macOS: Winnow alone) --
+       see rebuildEngineCombo. */
     engineBlock = new QWidget(rawBlock);
     engineBlock->setAttribute(Qt::WA_TranslucentBackground);
     QVBoxLayout *eb = new QVBoxLayout(engineBlock);
     eb->setContentsMargins(0, 0, 0, 0);
     eb->setSpacing(4);
     rb->addWidget(engineBlock);
-
-    /* Rule between the Edit row and "Render using". Inside rawBlock so it hides with
-       the block on Embedded Preview rather than dangling under the Edit row. */
-    eb->addWidget(makeGroupRule(engineBlock));
 
     /* Demosaic engine. */
     QWidget *demRow = new QWidget(engineBlock);
@@ -205,6 +206,33 @@ void RawPanel::buildUi()
     dl->addWidget(demLbl);
     dl->addWidget(engineCombo, 1);
     eb->addWidget(demRow);
+
+    /* "Apply:" -- a develop preset merged into every raw that has no edits yet, once its
+       raw render (and raw denoise, when it gets one) has landed. An APP-WIDE choice, not
+       this image's: DevelopProperties::maybeApplyRawPreset does the merge. */
+    QWidget *applyRow = new QWidget(rawBlock);
+    applyRow->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *al = new QHBoxLayout(applyRow);
+    al->setContentsMargins(10, 0, 10, 0);
+    al->setSpacing(6);
+    QLabel *applyLbl = new QLabel(tr("Apply:"), applyRow);
+    applyLbl->setStyleSheet(capCss);
+    presetCombo = new QComboBox(applyRow);
+    presetCombo->setToolTip("A develop preset applied to each raw you open in Develop "
+                            "that has no edits yet, after it is rendered (and denoised, "
+                            "when it is). Applies to every raw, not just this one; images "
+                            "you have already edited are left alone.");
+    setApplyPresets(QStringList(), QString());
+    connect(presetCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+        emit applyPresetChanged(presetCombo->itemData(idx).toString());
+    });
+    al->addWidget(applyLbl);
+    al->addWidget(presetCombo, 1);
+    rb->addWidget(applyRow);
+    /* One caption column, so the two combos line up. */
+    const int capW = qMax(demLbl->sizeHint().width(), applyLbl->sizeHint().width());
+    demLbl->setFixedWidth(capW);
+    applyLbl->setFixedWidth(capW);
 
     /* Apple block: shown only while an Apple decoder renders -- the counterpart of the
        Winnow-only denoise block below. A rule, then "View cameras supported". */
@@ -465,6 +493,17 @@ void RawPanel::setEngine(bool apple)
     /* PMRID denoise needs the CFA mosaic -> only meaningful on the Winnow engine. */
     if (denoiseBlock) denoiseBlock->setVisible(!apple);
     if (appleBlock) appleBlock->setVisible(apple);
+}
+
+void RawPanel::setApplyPresets(const QStringList &names, const QString &current)
+{
+    if (!presetCombo) return;
+    QSignalBlocker b(presetCombo);
+    presetCombo->clear();
+    presetCombo->addItem(tr("No preset"), QString());
+    for (const QString &n : names) presetCombo->addItem(n, n);
+    const int at = current.isEmpty() ? 0 : presetCombo->findData(current);
+    presetCombo->setCurrentIndex(at >= 0 ? at : 0);
 }
 
 void RawPanel::setDenoiseRunState(bool denoised)

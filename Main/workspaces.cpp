@@ -60,6 +60,9 @@ void MW::newWorkspace()
         /* A new workspace owns the window position and size, the behaviour before it was
            optional.  Manage Workspaces turns it off. */
         (*workspaces)[n].isGeometryIncluded = true;
+        /* Copied from ws, which may be a workflow layout: a named workspace owns its
+           grid size (see MW::invokeWorkspace). */
+        (*workspaces)[n].isWorkflowLayout = false;
         // sync menu items
         workspaceActions.at(n)->setText(workspaceMenuName(workspaces->at(n)));
         workspaceActions.at(n)->setObjectName("workspace" + QString::number(n));
@@ -250,12 +253,20 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     thumbView->rejustify();
     thumbView->setThumbParameters();
      // GridView
-    gridView->iconWidth = w.thumbWidthGrid;
-    gridView->iconHeight = w.thumbHeightGrid;
+    /*  THE GRID THUMBNAIL SIZE IS NOT PART OF A WORKFLOW LAYOUT (2026-10-27).  It is a
+        user preference, persisted in QSettings "thumbWidthGrid" (MW::writeSettings),
+        but every workflow layout carries one too and Browse's is re-applied at startup
+        (MW::showEvent), so the shipped Library layout's 125 replaced the saved size on
+        every launch, and again on every return from Develop or another workflow.  A
+        NAMED workspace still applies it: the user saved that size on purpose. */
+    if (!w.isWorkflowLayout) {
+        gridView->iconWidth = w.thumbWidthGrid;
+        gridView->iconHeight = w.thumbHeightGrid;
+        gridView->assignedIconWidth = gridView->iconWidth;
+    }
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
     gridView->labelChoice = w.labelChoice;
-    gridView->assignedIconWidth = gridView->iconWidth;
     gridView->rejustify();
     gridView->setThumbParameters();
     // ImageView: see the Info overlay note above -- w.isImageInfoVisible is not applied.
@@ -673,16 +684,14 @@ void MW::builtInDefaultWorkspace()
     thumbView->showIconLabels = false;
     thumbView->showZoomFrame = true;
 
-//    gridView->iconPadding = 0;
-    gridView->iconWidth = 160;
-    gridView->iconHeight = 160;
+    /* No grid thumbnail size: this is a workflow layout, and those leave the user's
+       size alone (see MW::invokeWorkspace). */
     gridView->labelFontSize = 10;
     gridView->showIconLabels = true;
 
     /* assignedIconWidth must track iconWidth so rejustify() honors these defaults instead
        of justifying from the previous reference width. */
     thumbView->assignedIconWidth = thumbView->iconWidth;
-    gridView->assignedIconWidth = gridView->iconWidth;
 
     thumbView->setWrapping(false);
     thumbView->setThumbParameters();
@@ -1079,6 +1088,7 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     wsd.thumbSpacingGrid = m.value("thumbSpacingGrid").toInt();
     wsd.thumbPaddingGrid = m.value("thumbPaddingGrid").toInt();
     wsd.thumbWidthGrid = m.value("thumbWidthGrid").toInt();
+    wsd.isWorkflowLayout = false;   // runtime only; the reuse of ws must not carry it
     wsd.thumbHeightGrid = m.value("thumbHeightGrid").toInt();
     wsd.labelFontSizeGrid = m.value("labelFontSizeGrid").toInt();
     wsd.showThumbLabelsGrid = m.value("showThumbLabelsGrid").toBool();
@@ -1458,8 +1468,11 @@ void MW::invokeWorkflowLayout(int wf, int lay)
 */
     if (wf < 0 || wf >= WfCount || lay < 0 || lay >= WsCount) return;
     if (lay < isWorkflowOverride.count() && isWorkflowOverride.at(lay)
-        && hasWorkflowOverride(lay))
-        invokeWorkspace(workflowUserWs.at(lay));
+        && hasWorkflowOverride(lay)) {
+        WorkspaceData layout = workflowUserWs.at(lay);
+        layout.isWorkflowLayout = true;         // no grid size: see invokeWorkspace
+        invokeWorkspace(layout);
+    }
     else
         invokeWorkflowDefault(lay);
     if (wf == WfSource) browseLayoutApplied = lay;
@@ -1491,7 +1504,9 @@ void MW::invokeWorkflowDefault(int wf)
     if (wf < 0 || wf >= WsCount) return;
 
     if (wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf)) {
-        invokeWorkspace(workflowDefaultWs.at(wf));
+        WorkspaceData layout = workflowDefaultWs.at(wf);
+        layout.isWorkflowLayout = true;         // no grid size: see invokeWorkspace
+        invokeWorkspace(layout);
         return;
     }
     builtInDefaultWorkspace();

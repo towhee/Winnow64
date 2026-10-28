@@ -7,63 +7,58 @@
 #include <algorithm>
 #include <cmath>
 #include <vector>
-#include <opencv2/imgproc.hpp>
 
 namespace AutoTone {
 
 namespace {
 
-/* ---- Tuning (first guesses; calibrate against Lightroom's Auto) -------------------- */
+/* ---- Tuning: fitted to Lightroom's Auto (tests/calibration/autotonecompare.py) ------
+
+   Least squares on 36 Lightroom Auto results (2026-10-28), each feature measured on the
+   render the step sees. Lightroom's Auto is close to a FIXED base recipe -- Highlights
+   about -60, Shadows +40, Blacks -20, Contrast +6, Vibrance +15 on almost every image --
+   adjusted per image through Exposure, Whites and a little extra Shadows lift for a dark
+   frame. "Always Lightroom's median" beat every content rule the first version had. */
 
 constexpr int   kProxyLong     = 360;     // proxy long edge: ~86k px, a few ms a render
 
-/* Exposure */
+/* Exposure = kKeyGain * tanh(stops / kKeySoft) + kTopGain * (kTopTarget - p99), where
+   stops = log2(middle grey / key). The tanh is why a frame 6 stops dark gets about +1.9,
+   not +6; the p99 term is Lightroom watching the top end, which is what lets a hazy
+   high-key frame with no highlights be BRIGHTENED although its key is above grey. */
 constexpr float kKeyTarget     = 0.18f;   // middle grey, display-linear
-constexpr float kKeyStrength   = 0.65f;   // fraction of the way there, in stops
-constexpr float kRealBright    = 0.80f;   // p98 luma above this = a real bright end
-constexpr float kRealDark      = 0.06f;   // p2 below this = a real dark end
-constexpr float kKeyRestraint  = 0.5f;    // strength multiplier when either applies
+constexpr float kKeyGain       = 0.727f;
+constexpr float kKeySoft       = 2.5f;    // stops
+constexpr float kTopGain       = 2.09f;
+constexpr float kTopTarget     = 0.866f;  // display luma
 constexpr float kExposureMin   = -3.0f;
 constexpr float kExposureMax   =  3.0f;
-constexpr int   kExposureIters = 10;      // 6 EV / 2^10 = 0.006 EV
 
-/* Contrast */
-constexpr float kSdTarget      = 0.22f;   // display-luma std. dev. of a "full" picture
-constexpr float kSdGain        = 150.0f;  // slider units per unit of sd shortfall
-constexpr float kContrastMin   = -25.0f;
-constexpr float kContrastMax   =  30.0f;
+/* Contrast: Lightroom's Auto is +5..+7 on every image. */
+constexpr float kContrast      = 6.0f;
 
-/* Highlights / Shadows */
-constexpr float kHiThresh      = 0.80f;   // display luma
-constexpr float kHiGain        = 300.0f;  // slider units per unit of frame fraction
-constexpr float kHiMax         = 70.0f;
-constexpr float kLoThresh      = 0.15f;
-constexpr float kLoGain        = 220.0f;
-constexpr float kLoMax         = 60.0f;
+/* Highlights: a fixed pull, smaller for a display-referred file (a JPEG already carries
+   its camera's highlight roll-off). */
+constexpr float kHighlightsRaw     = -65.0f;
+constexpr float kHighlightsDisplay = -39.0f;
 
-/* Whites / Blacks (clip points) */
-constexpr double kWhitePct     = 0.995;
-constexpr float  kWhiteTarget  = 0.97f;   // ~247 of 255
-constexpr float  kWhitesMin    = -40.0f;  // a blown sun must not drag the whole top down
-constexpr float  kWhitesMax    =  60.0f;
-constexpr double kBlackPct     = 0.002;
-constexpr float  kBlackTarget  = 0.015f;  // ~4 of 255
-constexpr float  kBlacksMin    = -60.0f;
-constexpr float  kBlacksMax    =  30.0f;
-constexpr int    kClipIters    = 8;       // 100 units / 2^8 = 0.4 of a slider step
+/* Shadows / Whites / Blacks: base + gain * the fraction of the frame below kDarkThresh
+   (after Exposure), Whites also falling with the frame's p1..p99 range. A frame that is
+   still largely dark gets more Shadows lift, less Whites and a lighter Blacks. */
+constexpr float kDarkThresh    = 0.15f;   // display luma
+constexpr float kShadowsBase   = 36.0f;
+constexpr float kShadowsDark   = 44.0f;
+constexpr float kWhitesBase    = 48.0f;
+constexpr float kWhitesDark    = -51.0f;
+constexpr float kWhitesRange   = -33.0f;
+constexpr float kBlacksBase    = -24.0f;
+constexpr float kBlacksDark    = 27.0f;
 
-/* Vibrance / Saturation */
-constexpr float kChromaTarget  = 26.0f;   // mean CIELAB C* of the mid-tones
-constexpr float kMonoChroma    = 3.0f;    // mean C* at or below this: monochrome, no push
-constexpr float kColourChroma  = 8.0f;    // ... fading in to the full push by this
-constexpr float kGamutChroma   = 75.0f;   // p98 C* above this is near the gamut edge
-constexpr float kGamutFade     = 20.0f;   // ... and the positive push is gone by +this
-constexpr float kVibGain       = 1.5f;
-constexpr float kVibMin        = -10.0f;
-constexpr float kVibMax        =  25.0f;
-constexpr float kSatGain       = 0.4f;
-constexpr float kSatMin        = -5.0f;
-constexpr float kSatMax        =  10.0f;
+/* Vibrance / Saturation: Lightroom's Auto is Vibrance ~+15 (a little less on a JPEG)
+   and Saturation ~0 whatever the colour content, monochrome frames included. */
+constexpr float kVibranceRaw     = 15.0f;
+constexpr float kVibranceDisplay = 13.0f;
+constexpr float kSaturation      = 0.0f;
 
 /* ------------------------------------------------------------------------------------ */
 
@@ -79,19 +74,6 @@ const float *srgbToLinear()
         return t;
     }();
     return lut.data();
-}
-
-/* Increasing f: the x in [lo,hi] where f(x) crosses target. Ends at whichever bound the
-   target lies beyond when it is not bracketed, which is the clamp we want. */
-template <class F>
-float bisect(float lo, float hi, float target, int iters, F f)
-{
-    for (int i = 0; i < iters; ++i) {
-        const float mid = 0.5f * (lo + hi);
-        if (f(mid) < target) lo = mid;
-        else                 hi = mid;
-    }
-    return 0.5f * (lo + hi);
 }
 
 float roundTo(float v, float step) { return std::round(v / step) * step; }
@@ -132,7 +114,7 @@ float Stats::fractionBelow(float v) const
     return float(n / total);
 }
 
-Stats Measure(const QImage &src, bool withChroma)
+Stats Measure(const QImage &src)
 {
     Stats s;
     const QImage img = src.format() == QImage::Format_RGB888
@@ -171,33 +153,6 @@ Stats Measure(const QImage &src, bool withChroma)
     s.sd = float(std::sqrt(std::max(0.0, sum2 / s.total - double(s.mean) * s.mean)));
     s.key = float(std::exp(logSum / wSum));
 
-    if (withChroma) {
-        cv::Mat rgb8(H, W, CV_8UC3, const_cast<uchar *>(img.constBits()),
-                     size_t(img.bytesPerLine()));
-        cv::Mat rgbF, lab;
-        rgb8.convertTo(rgbF, CV_32FC3, 1.0 / 255.0);
-        cv::cvtColor(rgbF, lab, cv::COLOR_RGB2Lab);     // float: L 0..100, a/b signed
-        std::vector<float> c;
-        c.reserve(size_t(W) * H);
-        for (int y = 0; y < H; ++y) {
-            const float *p = lab.ptr<float>(y);
-            for (int x = 0; x < W; ++x) {
-                const float L = p[x*3+0];
-                /* Mid-tones only: chroma collapses toward black and white whatever the
-                   saturation, so those pixels would read as "muted" and over-push. */
-                if (L > 10.0f && L < 95.0f)
-                    c.push_back(std::hypot(p[x*3+1], p[x*3+2]));
-            }
-        }
-        if (!c.empty()) {
-            double cs = 0.0;
-            for (float v : c) cs += v;
-            s.meanChroma = float(cs / c.size());
-            const size_t k = std::min(c.size() - 1, size_t(0.98 * c.size()));
-            std::nth_element(c.begin(), c.begin() + k, c.end());
-            s.highChroma = c[k];
-        }
-    }
     return s;
 }
 
@@ -227,7 +182,7 @@ bool Solve(const WorkingImage &work, const EditParams &base, Result &out)
 
     WorkingImage scratch;
     bool ok = true;
-    auto measure = [&](const EditParams &p, bool chroma) -> Stats {
+    auto measure = [&](const EditParams &p) -> Stats {
         QImage img;
         ++out.renders;
         if (!WorkingImageCache::render(proxy, p, img, nullptr,
@@ -236,68 +191,35 @@ bool Solve(const WorkingImage &work, const EditParams &base, Result &out)
             ok = false;
             return Stats();
         }
-        return Measure(img, chroma);
+        return Measure(img);
     };
 
     EditParams p = base;
     p.exposure = p.contrast = p.highlights = p.shadows = p.whites = p.blacks = 0.0f;
     p.vibrance = p.saturation = 0.0f;
 
-    /* 1. Exposure -- move the key part of the way to middle grey. */
-    const Stats s0 = measure(p, false);
+    /* 1. Exposure -- from the key and the top end of the untouched render. */
+    const Stats s0 = measure(p);
     if (!ok || s0.key <= 0.0f) return false;
-    float strength = kKeyStrength;
-    const bool brighten = s0.key < kKeyTarget;
-    if (brighten && s0.percentile(0.98) > kRealBright) strength *= kKeyRestraint;
-    if (!brighten && s0.percentile(0.02) < kRealDark)  strength *= kKeyRestraint;
-    const float keyGoal = float(std::exp(std::log(s0.key) +
-                                         strength * (std::log(kKeyTarget) - std::log(s0.key))));
-    p.exposure = roundTo(bisect(kExposureMin, kExposureMax, keyGoal, kExposureIters,
-                                [&](float e) { p.exposure = e; return measure(p, false).key; }),
-                         0.01f);
-    if (!ok) return false;
+    const float stops = std::log2(kKeyTarget / s0.key);
+    p.exposure = roundTo(std::clamp(kKeyGain * std::tanh(stops / kKeySoft) +
+                                        kTopGain * (kTopTarget - s0.percentile(0.99)),
+                                    kExposureMin, kExposureMax), 0.01f);
 
-    /* 2. Contrast -- from the spread at the new exposure. */
-    const Stats s1 = measure(p, false);
-    p.contrast = std::round(std::clamp(kSdGain * (kSdTarget - s1.sd),
-                                       kContrastMin, kContrastMax));
-
-    /* 3. Highlights / Shadows -- from how much of the frame sits at each end. */
-    const Stats s2 = measure(p, false);
-    p.highlights = -std::round(std::clamp(kHiGain * s2.fractionAbove(kHiThresh),
-                                          0.0f, kHiMax));
-    p.shadows = std::round(std::clamp(kLoGain * s2.fractionBelow(kLoThresh),
-                                      0.0f, kLoMax));
+    /* 2. The rest -- Lightroom's base recipe, shaped by how dark the exposed frame
+       still is. */
+    const Stats s1 = measure(p);
     if (!ok) return false;
-
-    /* 4. Whites then Blacks -- set the clip points last. */
-    p.whites = std::round(bisect(kWhitesMin, kWhitesMax, kWhiteTarget, kClipIters,
-                                 [&](float v) { p.whites = v;
-                                                return measure(p, false).percentile(kWhitePct); }));
-    p.blacks = std::round(bisect(kBlacksMin, kBlacksMax, kBlackTarget, kClipIters,
-                                 [&](float v) { p.blacks = v;
-                                                return measure(p, false).percentile(kBlackPct); }));
-    if (!ok) return false;
-
-    /* 5. Vibrance / Saturation -- from the finished tone. */
-    const Stats s3 = measure(p, true);
-    if (!ok) return false;
-    {
-        const float gap = kChromaTarget - s3.meanChroma;
-        float vib = std::clamp(kVibGain * gap, kVibMin, kVibMax);
-        float sat = std::clamp(kSatGain * gap, kSatMin, kSatMax);
-        /* A positive push fades out toward the gamut edge, and the whole push fades in
-           from monochrome -- a ramp, not a cutoff, so a near-grey frame does not jump
-           from nothing to the full push across one threshold. */
-        const float room = std::clamp(1.0f - (s3.highChroma - kGamutChroma) / kGamutFade,
-                                      0.0f, 1.0f);
-        if (vib > 0.0f) vib *= room;
-        if (sat > 0.0f) sat *= room;
-        const float colour = std::clamp((s3.meanChroma - kMonoChroma) /
-                                        (kColourChroma - kMonoChroma), 0.0f, 1.0f);
-        p.vibrance = std::round(vib * colour);
-        p.saturation = std::round(sat * colour);
-    }
+    const float dark = s1.fractionBelow(kDarkThresh);
+    const float range = s1.percentile(0.99) - s1.percentile(0.01);
+    p.contrast   = kContrast;
+    p.highlights = work.sceneReferred ? kHighlightsRaw : kHighlightsDisplay;
+    p.shadows    = std::round(std::clamp(kShadowsBase + kShadowsDark * dark, 0.0f, 100.0f));
+    p.whites     = std::round(std::clamp(kWhitesBase + kWhitesDark * dark +
+                                             kWhitesRange * range, -100.0f, 100.0f));
+    p.blacks     = std::round(std::clamp(kBlacksBase + kBlacksDark * dark, -100.0f, 0.0f));
+    p.vibrance   = work.sceneReferred ? kVibranceRaw : kVibranceDisplay;
+    p.saturation = kSaturation;
 
     out.rendersMs  = int(stage.elapsed());
     out.exposure   = p.exposure;

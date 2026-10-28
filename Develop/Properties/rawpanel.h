@@ -19,7 +19,8 @@ class PanelEditor;
 
         | Raw                               [?] |
         | Edit: (o) Raw  ( ) Embedded Preview   |
-        | Demosaic   [ Winnow            v ]     |   <- Demosaic/Denoise hidden unless Raw
+        | Render using [ Winnow          v ]    |   <- everything below hidden unless Raw
+        | Apply:       [ No preset       v ]    |   <- preset merged into untouched raws
         | Noise Reduction:                      |   <- Denoise block hidden on Apple
         |   Auto run [ ]   Run on this image [ ] |   <- "Run on..." only while Auto off
         |   <reason>                            |   <- only when denoise cannot run
@@ -57,6 +58,9 @@ public:
        setDenoiseRunState will not show the amounts while it is false. */
     void setDenoiseAvailable(bool available, const QString &reason = QString());
     void setAutoRun(bool on);                     // also shows/hides "Run on this image"
+    /* The "Apply:" list: "No preset", then `names` in the Presets panel's order, with
+       `current` selected ("No preset" when empty or no longer a preset). Silent. */
+    void setApplyPresets(const QStringList &names, const QString &current);
     void setDenoiseValues(int luma0to100, int chroma0to100);
     void setCaptionWidth(int w);                  // align denoise sliders to the tree
     /* Collapse state, so the panel can take part in the tree's Solo / Expand-all /
@@ -73,6 +77,7 @@ signals:
     void appleVersionChanged(int pin);            // an Apple entry: 0 = newest, else N
     void denoiseRunToggled(bool on);              // "Run on this image" (run / clear)
     void autoRunToggled(bool on);                 // "Auto run" checkbox
+    void applyPresetChanged(const QString &name); // "Apply:" preset; empty = No preset
     void denoiseLumaChanged(int value0to100);
     void denoiseChromaChanged(int value0to100);
 
@@ -99,8 +104,9 @@ private:
     QRadioButton *rawRadio     = nullptr;
     QRadioButton *prevRadio    = nullptr;
     QWidget      *rawBlock     = nullptr;         // Demosaic + Denoise (Embedded hides)
-    QWidget      *engineBlock  = nullptr;         // rule + "Render using" row
+    QWidget      *engineBlock  = nullptr;         // the "Render using" row
     QComboBox    *engineCombo  = nullptr;
+    QComboBox    *presetCombo  = nullptr;         // "Apply:"
     QList<int>    appleVersions;                  // this image's, newest first
     int           appleUsed    = 0;               // the version its choice picks
     bool          engineApple  = true;

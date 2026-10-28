@@ -1847,6 +1847,34 @@ private:
     void setDenoiseRawFlag(bool on);
     /* "Render using" on the current image, into its recipe (Global scope). */
     void setRawRenderer(const RawRender::Choice &c);
+
+    /*
+        RAW PRESET -- the Raw panel's "Apply:" (Lightroom's raw defaults). An APP-WIDE
+        choice (QSettings "Develop/rawApplyPreset", empty = No preset): the named develop
+        preset is merged into every raw opened in Develop that has NO edits yet -- an
+        identity recipe and no History beyond "Original" -- so an image the user has
+        touched, or reset on purpose, is never rewritten.
+
+        Sequenced AFTER THE RAW RENDER and, when the image gets one, the RAW DENOISE:
+        setCurrentImage arms rawPresetPending, and maybeApplyRawPreset (re-tried from
+        onWorkingImageReady, updateDenoiseRunState and updateDenoiseAvailability) waits
+        until the scene-linear base is in memory and any denoise this image will run has
+        finished, then merges. The preset's Auto settings are solved on that same
+        (denoised) base. The merge is ONE history step ("Raw preset: <name>") on this
+        image only -- never propagated across a multi-image selection -- and dirties
+        the sidecar, so it is written like any other edit.
+
+        Only the image on screen in Develop gets it: export and devPreviews of a raw never
+        opened in Develop render its recipe as it is.
+    */
+    QString rawApplyPreset;           // the preset name, empty = No preset
+    QString rawPresetPending;         // the current image, while it awaits the merge
+    void refreshRawApplyPresets();    // the Raw panel's "Apply:" list
+    void setRawApplyPreset(const QString &name);
+    bool rawPresetEligible(const QString &fPath) const;
+    void scheduleRawPreset();         // maybeApplyRawPreset on the next event loop turn
+    void maybeApplyRawPreset();
+    void applyRawPreset(const DevelopPreset &preset);
     /* "Denoise" run/state checkbox in the Core (raw) section. MW calls
        updateDenoiseRunState to reflect completion: checked + "Denoised" when a denoised
        base is ready for the current image, else unchecked + "Denoise". QPointer --
