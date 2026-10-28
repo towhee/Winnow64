@@ -27,6 +27,9 @@ ScopesView::ScopesView(QWidget *parent) : QWidget(parent)
     histogram = new HistogramView(this);
     vectorscope = new VectorscopeView(this);
     tone = new ToneRegionSlider(this);
+    tone->setToolTip("Split the tonal range into blacks | shadows | highlights | whites. "
+                     "These are the same handles as under the Curves panel's "
+                     "parametric curve.");
 
     /* Left column: histogram with the tone-region slider tucked directly under it (sharing the
        same x-axis); vectorscope on the right. */
