@@ -549,6 +549,8 @@ set(WINNOW_HEADERS
     Develop/colorspace.h
     Develop/tonecurve.h
     Develop/editparams.h
+    Develop/developschema.h
+    Develop/developrevision.h
     Develop/inputtransform.h
     Develop/beammask.h
     Develop/maskfalloff.h

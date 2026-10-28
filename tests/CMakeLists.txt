@@ -212,6 +212,12 @@ target_link_libraries(tst_localcontrast PRIVATE winnow_test_develop)
 # fail -- it silently stores nothing.
 winnow_add_unit_test(tst_presetparams unit/tst_presetparams.cpp
     ${CMAKE_SOURCE_DIR}/Develop/Presets/developpresets.cpp)
+# tst_developschema tests the develop settings schema version and its migration chain
+# (Develop/developschema.h, header-only) through BOTH read paths: the sidecar
+# (EditStack::fromJson / fromBase64) and presets (DevelopPresets::migrate), with an
+# injected test chain since no released step exists yet.
+winnow_add_unit_test(tst_developschema unit/tst_developschema.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/Presets/developpresets.cpp)
 
 # tst_maskfalloff tests Develop/maskfalloff.h + the brush dab that rides it (both
 # header-only: no OpenCV / develop.cpp needed).

@@ -565,11 +565,14 @@
     - [11.39.1 Changing an Existing Op's Math](#11391-changing-an-existing-ops-math)
     - [11.39.2 A Whole New Section](#11392-a-whole-new-section)
     - [11.39.3 Maskable or Global-Only?](#11393-maskable-or-global-only)
-  - [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)
-    - [11.40.1 Presets Are the Exposure Point](#11401-presets-are-the-exposure-point)
-    - [11.40.2 The Migration Hook](#11402-the-migration-hook)
-    - [11.40.3 History Is No Longer Immune](#11403-history-is-no-longer-immune)
-    - [11.40.4 Retired Sidecar Key: "cameraProfileLook"](#11404-retired-sidecar-key-cameraprofilelook)
+  - [11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift)
+    - [11.40.1 The Model: Auto-Migrate on Load](#11401-the-model-auto-migrate-on-load)
+    - [11.40.2 Adding a Migration Step](#11402-adding-a-migration-step)
+    - [11.40.3 Cache Invalidation: the Develop Revision](#11403-cache-invalidation-the-develop-revision)
+    - [11.40.4 What the User Sees](#11404-what-the-user-sees)
+    - [11.40.5 Presets](#11405-presets)
+    - [11.40.6 History](#11406-history)
+    - [11.40.7 Retired Sidecar Key: "cameraProfileLook"](#11407-retired-sidecar-key-cameraprofilelook)
   - [11.41 Corrupted or Changed Develop Settings](#1141-corrupted-or-changed-develop-settings)
     - [11.41.1 What Is Validated](#11411-what-is-validated)
     - [11.41.2 When to Notify (and When Not To)](#11412-when-to-notify-and-when-not-to)
@@ -4476,7 +4479,7 @@ The fix reads the LensData version and its offset (see [10.5.6.1 Nikon Lens Name
 
 Lightroom-style non-destructive adjustments (denoise, white balance, exposure, contrast, highlights, shadows, whites, blacks, texture, dehaze ...). They apply to ALL image types (JPEG / TIFF / HEIC / raw), so they are a shared stage AFTER decode and BEFORE the display tone / gamma / ICC transform, not part of RawFormat. Adjustments run on a FLOAT LINEAR working buffer, because exposure, tone and dehaze need headroom.
 
-Adding or changing an adjustment touches about twelve files; follow [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist). Preset and sidecar keys are a published format: add freely, never rename or rescale in place (see [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)).
+Adding or changing an adjustment touches about twelve files; follow [11.39 Adding or Changing a Develop Adjustment (Checklist)](#1139-adding-or-changing-a-develop-adjustment-checklist). Preset and sidecar keys are a published format: add freely; to rename, rescale or retune one, add a migration step (see [11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift)).
 
 ### 11.1 The Pipeline
 
@@ -5399,7 +5402,7 @@ Per-image develop state is an EditStack (Develop/editstack.h) stored in the imag
 - An all-identity stack is never persisted, so empty scopes added to an unedited image are not written. Exception: a scope that has any mask component counts as non-identity, so masks survive navigation.
 - The dock reflects the CURRENT IMAGE's EditStack. setCurrentImage(fPath) flushes the previous image, then loads and caches this image's stack and pushes its params into the editors (populateSlidersFromStack, guarded by isPopulating so the programmatic setValue -> itemChanged does not re-mark dirty). itemChange writes into the current image's active-scope params, marks it dirty, drives the live preview, and arms the debounced write. editParams() returns the ACTIVE scope's params.
 - The sidecar is written only where source files may be modified or a sidecar is allowed (see [9.4 Writing Metadata Into Image Files](#94-writing-metadata-into-image-files)), and every edit is also a History row (see [11.37 Develop History](#1137-develop-history)).
-- Schema drift and recovery are in [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift) and [11.41 Corrupted or Changed Develop Settings](#1141-corrupted-or-changed-develop-settings).
+- Schema drift and recovery are in [11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift) and [11.41 Corrupted or Changed Develop Settings](#1141-corrupted-or-changed-develop-settings).
 
 #### 11.14.1 When State Is Read and Written
 
@@ -5678,7 +5681,7 @@ The mask-level pass runs AFTER the prefix snapshot, never before: the prefix is 
 
 Refine was built, tested and REJECTED (2026-08-24), recorded because it is the obvious thing to reach for again: instead of fading the adjustment, MOVE the alpha (guided-filter the folded mask against the picture, SegRefine::guidedFilterGray, then pinch about 0.5 to kill the residual fringe). It passed its displacement tests (a boundary 6 px out pulled to within 2 px, monotonic in the slider, preview matching render across a 0.4 proxy), and IN THE LOUPE IT BLURRED THE HALO RATHER THAN REMOVING IT. A guided filter reconstructs the alpha as a local linear function of the guide, and a wide window over a soft, low-contrast boundary (fur, hair, foliage, exactly where masks miss) has no sharp answer to converge on, so it returns a smooth ramp. Damping never has to decide where the edge IS, only that one is near. The unit tests' synthetic step edge is precisely the case Refine was good at, which is why they passed and a photograph caught it. Do not re-add the guided-filter path without a real picture it beats damping on.
 
-Retired sidecar key: both algorithms shipped briefly behind a method combo, so sidecars written on 2026-08-24 may carry "maskHaloMode" (0 = Refine, 1 = Damp, 2 = Both). It is no longer read or written, but the NAME must never be reused (see [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)). A maskHalo value dialled in while Refine was selected now renders as damping, a one-off break confined to that day's test images.
+Retired sidecar key: both algorithms shipped briefly behind a method combo, so sidecars written on 2026-08-24 may carry "maskHaloMode" (0 = Refine, 1 = Damp, 2 = Both). It is no longer read or written, but the NAME must never be reused (see [11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift)). A maskHalo value dialled in while Refine was selected now renders as damping, a one-off break confined to that day's test images.
 
 ##### 11.15.12.3 Feather
 
@@ -7069,7 +7072,7 @@ Develop Presets/<name>/Global/spots = a QSettings array of FillSpot paramsJson
 - Geometry is stored as crop ("x,y,w,h"), straighten and warp ("q0..q7").
 - Writing a preset first clears any prior group of the same name (overwrite).
 - "Edits" was called "Global edits" in the first, save-only build, when a preset could only come from the Global scope; read() still accepts that name, and ignores the per-scope "Mask N" groups that build also wrote.
-- Preset keys are a published format: see [11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift).
+- Preset keys are a published format: see [11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift).
 
 #### 11.34.7 Shortcuts
 
@@ -7298,12 +7301,13 @@ A new slider, or a change to an existing one, is NOT a one-file edit: the value 
 11. History: FREE for a normal slider (the generic tree-edit handler calls noteEdit with the caption and value, and noteEdit snapshots the whole EditStack). NOT free for a custom editor (the colour wheel, the WB row, the tone-region slider): those need their own noteEdit(action, value, mergeKey) call, and the mergeKey is what collapses a drag into one history row instead of forty.
 12. This document: the op under [11.11 The Adjustments](#1111-the-adjustments) (and [11.1.1 Operation Order](#1111-operation-order) if it adds a stage), the slider in [11.11.4 The Panel Sections and Their Ranges](#11114-the-panel-sections-and-their-ranges), and any leaf folding under [11.34.5 The Save Dialog](#11345-the-save-dialog).
 13. The in-app help: the section's page, Docs/develop&lt;section>help.html (e.g. developeffectshelp.html, which carries Vignette and Grain).
+14. Versioning: a NEW key needs nothing. Changing an existing key's name, scale, meaning or default needs a schema step (DevelopSchema::kVersion + releasedSteps(), [11.40.2](#11402-adding-a-migration-step)); changing an op's pixels needs a DevelopRevision bump ([11.40.3](#11403-cache-invalidation-the-develop-revision)).
 
-Preset keys are a published format: add freely, never rename or rescale in place ([11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)).
+Preset and sidecar keys are a published format: add freely; to rename, rescale or retune one, bump the schema version and add a migration step ([11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift)).
 
 #### 11.39.1 Changing an Existing Op's Math
 
-A different job from adding a slider, and a riskier one: the ops shape recipes users have already saved, so a "harmless" rewrite silently re-renders their pictures. tests/unit/tst_localcontrast.cpp is the worked example: capture golden values from the CURRENT build FIRST, confirm they pass before touching anything, then refactor and require them still to pass. Mutation-check the gate too (a 0.1% change in any tuning constant should fail it); a characterisation test whose goldens match its own inputs proves nothing.
+A different job from adding a slider, and a riskier one: the ops shape recipes users have already saved, so a "harmless" rewrite silently re-renders their pictures. A rewrite that changes pixels must bump DevelopRevision::kEdited (so cached previews rebuild) and, if existing recipes should keep their look, ship a schema step that converts their values ([11.40.2](#11402-adding-a-migration-step)). tests/unit/tst_localcontrast.cpp is the worked example: capture golden values from the CURRENT build FIRST, confirm they pass before touching anything, then refactor and require them still to pass. Mutation-check the gate too (a 0.1% change in any tuning constant should fail it); a characterisation test whose goldens match its own inputs proves nothing.
 
 #### 11.39.2 A Whole New Section
 
@@ -7322,42 +7326,79 @@ A new section (rather than a slider in an existing one) adds a fixed set of book
 
 A per-scope adjustment belongs to a Group and is edited on whichever scope is active. A Global-only one (denoiseLuma / denoiseChroma, the tone splits, the lens corrections) belongs to NO Group (or to Group::Lens, shown only on Global), cannot be previewed or reset per mask scope, and must be read from scopes[0] in buildPreset() and written to scopes[0] in mergePreset() whatever scope is active.
 
-### 11.40 Stale Presets and History (Schema Drift)
+### 11.40 Develop Settings Versions (Schema Drift)
 
-What happens to a user's saved presets and their History when an adjustment is later renamed, rescaled or removed. The two behave quite differently.
+What happens to a user's saved recipes (sidecars, History, presets, the copy / paste clipboard) when an adjustment is later renamed, rescaled, retuned or removed. Since 2026-10-28 the answer is a single schema version and an ordered chain of migration steps, applied on load.
 
-#### 11.40.1 Presets Are the Exposure Point
+#### 11.40.1 The Model: Auto-Migrate on Load
 
-They live in QSettings indefinitely, key by key, and are applied by assigning the stored value straight into an EditParams field. Three ways a key goes stale, in increasing order of harm:
+Only the newest develop maths exists in the code. When a build changes what a stored value means, it bumps the schema version and ships ONE migration step that rewrites old values so the old look is reproduced (or approximated) under the new meaning. A recipe stamped with an older version runs through every newer step, in order, before any value reaches EditParams. There is no per-image "update" button and no legacy render path (Lightroom's Process Version model was considered and declined: it keeps every superseded op alive forever).
+
+Develop/developschema.h (header-only, Qt Core) holds it all:
+
+- DevelopSchema::kVersion: the ONE version for every store. EditStack::kVersion and DevelopPresets::kVersion are aliases of it, so a step written once serves sidecars and presets alike. This works because both stores already use the EditStack JSON field names ([11.39](#1139-adding-or-changing-a-develop-adjustment-checklist) items 7-9).
+- releasedSteps(): the ordered, append-only chain. A Step carries `to`, a date, a user-facing `summary`, and up to two functions: `params(QJsonObject&, bool partial)` for one EditParams JSON object, and `stack(QJsonObject&)` for the stack root (geometry, fill, mask components).
+- migrateStack / migrateParams run the chain; summariesSince(from) gives the user-facing lines.
+
+Where it runs:
+
+- Sidecar and History: EditStack::fromJson migrates the incoming object before parsing a single value, and records the runtime-only EditStack::migratedFrom (0 = read as current; never persisted). History snapshots are EditStack JSON read through fromJson, so they migrate too. toJson always stamps the current version.
+- Presets and the clipboard: DevelopPresets::read calls migrate(), which runs the same steps on p.params and p.globals as PARTIAL recipes and writes back only the keys a step changed (QSettings hands values back as strings; a full JSON round trip would retype every untouched one).
+- A recipe stamped NEWER than this build is passed through untouched and reported as before ([11.41.1](#11411-what-is-validated)).
+
+The per-scope "version" inside every params object (EditParams::version) is NOT the schema version. It is frozen at 1: dropping the key would change every recipe hash and rebuild every devPreview. Never branch on it.
+
+#### 11.40.2 Adding a Migration Step
+
+When a change to an existing setting is needed:
+
+1. Bump DevelopSchema::kVersion and append one Step to releasedSteps() with `to` = the new version, today's date and a summary written for a photographer ("Shadows recalibrated; your values were converted to keep their look"). It is shown in the Develop panel's alert row tooltip and the diagnostics report.
+2. Write the step against RAW JSON: it runs before paramsFromJson, so an ABSENT key still means "the old default". A changed default is a migration: when `partial` is false, write the old default into a recipe that lacks the key. When `partial` is true (a preset), never insert a key: an absent preset key means "don't touch".
+3. If the op's PIXELS changed, bump DevelopRevision::kEdited too (and kIdentity if an unedited image renders differently): see [11.40.3](#11403-cache-invalidation-the-develop-revision).
+4. Add the change to Docs/developversionshelp.html under Changes.
+5. For a retuned op, capture goldens from the OLD build first ([11.39.1](#11391-changing-an-existing-ops-math)), then require the migrated values under the new maths to land within tolerance.
+
+RULES: steps are append-only; never edit or delete a released step (a sidecar written three versions ago still depends on it). Never reuse a retired key name ([11.40.7](#11407-retired-sidecar-key-cameraprofilelook), and "maskHaloMode"). ADDING a key still needs no step: paramsFromJson defaults it, and a preset simply lacks it.
+
+tests/unit/tst_developschema pins the machinery with an injected test chain (DevelopSchema::testSteps) while no real step exists, and checks that the released chain is consecutive, that kVersion equals its last `to`, and that every step has a summary.
+
+#### 11.40.3 Cache Invalidation: the Develop Revision
+
+Values and pixels are separate concerns. The schema version says what stored values MEAN; Develop/developrevision.h says what pixels the pipeline makes from them. A pure rename bumps the schema only (same pixels, no rebuild). A retuned op bumps the revision, usually with a schema step as well.
+
+DevelopRevision::kEdited / kIdentity fold into every devPreview and developed-thumbnail key at the point of use (Metadata::renderKey), exactly as RawDecoder::revision does for a sensor decoder: edited keys take kEdited, default-render keys (the "R" prefix) take kIdentity. 0 = never bumped and adds no key part, so every key that existed before the header is unchanged. A bump makes the old previews miss; they are rebuilt lazily. Bump kIdentity only when an unedited image renders differently: it rebuilds every default-render preview.
+
+#### 11.40.4 What the User Sees
+
+Following [11.41.2](#11412-when-to-notify-and-when-not-to): tell the user when they would otherwise notice the change themselves, never with a popup per image.
+
+- Develop alert row (INFO, plain panel text, below the action row): "Settings updated for this version of Winnow - What changed  Dismiss", shown while the CURRENT image's recipe was migrated on load this session (DevelopProperties::migrationNoteFor). Its tooltip lists the step summaries; "What changed" opens Docs/developversionshelp.html; "Dismiss" hides it for that image for the session. Built by MW::updateDevelopSelectionWarning, links routed to MW::developAlertLink.
+- Once per session, the first migrated recipe read raises a warnOnce popup ("migratedSettings"): "Some images were developed in an older version of Winnow. Their develop settings were updated automatically to keep their look."
+- The Develop diagnostics report prints "Settings version: N (this build M), migrated from K" and the summaries.
+- Presets migrate silently; a preset's stamp is refreshed when it is next saved or renamed.
+
+A migrated stack is NOT treated like a repaired one ([11.41.3](#11413-a-damaged-or-repaired-sidecar-is-never-rewritten-behind-the-user)): the preview writers may rewrite its sidecar on a view. Migration keeps the look, and blocking the write would leave the image on a stale grid thumbnail whenever the step came with a revision bump. The sidecar is then stamped current; an older build reading it reports "written by a newer version".
+
+#### 11.40.5 Presets
+
+They live in QSettings indefinitely, key by key, and are applied by assigning the stored value straight into an EditParams field. Without a step, the three ways a key goes stale are, in increasing order of harm:
 
 - REMOVED key: harmless. read() returns it and mergePreset() hands it to assignParam(), an if / else-if chain with no final else, so an unknown key is silently ignored. The preset applies minus that one setting.
-- RENAMED key: silent data loss. The same mechanism as removed: the user's preset quietly stops carrying that adjustment, with no warning and nothing in the UI to show it happened.
-- RESCALED or REDEFINED key: silent CORRUPTION, the case that actually matters. assignParam writes the stored float straight into the field, so if a 0..1 field becomes 0..100 (or an EV becomes a percentage, or the op's maths is retuned), every old preset applies a wildly wrong value and reads to the user as broken.
+- RENAMED key: silent data loss by the same mechanism, unless a step renames it.
+- RESCALED or REDEFINED key: silent CORRUPTION unless a step converts it: assignParam writes the stored float straight into the field.
 
-THE RULE: treat a preset key as a published format. ADD keys freely (an absent key is a no-op both in a preset, where childKeys() reports only what was written, and in a sidecar, where paramsFromJson defaults it). NEVER rename or rescale one in place.
+Presets written before the stamp existed have no version key and read back as 1, which is correct by definition, so the default in read() must stay 1 forever.
 
-#### 11.40.2 The Migration Hook
+Export presets have the same exposure and their own contract (Export/exportpresets.h): add keys freely, and when a key genuinely must change meaning, bump its kVersion and convert in its migrate(). They are not on the develop schema: an ExportSettings is not an EditStack.
 
-For when a change is genuinely unavoidable. Every preset carries a schema stamp: DevelopPresets::write() stores `version = kVersion` at the preset root (beside sourceScope, so it never lands in the Global/Edits key sweeps), and read() calls migrate() before returning, i.e. before any value reaches assignParam. To change an existing key, bump kVersion and append ONE ordered step to migrate():
+#### 11.40.6 History
 
-```
-if (p.version < N) { ...rewrite the affected keys in p.params / p.globals...; }
-```
+History persists in index.db ([11.37.5 Persisted in the Local Index](#11375-persisted-in-the-local-index)), so a snapshot can be written by an older build. Every snapshot is EditStack JSON read back through EditStack::fromJson, so it migrates exactly like a sidecar. Two drifts remain, both cosmetic:
 
-so an old preset falls through every intervening step in turn. A preset stamped NEWER than kVersion (a downgraded build) is passed through untouched: assignParam already ignores keys it does not recognise, which degrades better than guessing backwards.
-
-Presets written before the stamp existed have no version key and read back as 1, which is correct by definition (v1 is the schema they were written against), so the default in read() must stay 1 forever. They are NOT rewritten on startup: they get their stamp the next time that preset is saved or renamed, and until then behave identically. Sidecars have the same hook available via EditParams::version, which is persisted and round-tripped but not yet branched on.
-
-Export presets have the same exposure and the same contract (Export/exportpresets.h): they live in QSettings indefinitely and are applied by assigning stored values into an ExportSettings, so add keys freely and never rename or rescale one in place. They are less fragile in one respect: read() starts from a default-constructed ExportSettings and overwrites field by field, so a key added after a preset was saved keeps its struct default instead of reading back as 0. When a key genuinely must change meaning, bump kVersion and convert in migrate(), which runs inside read() before any value reaches the struct.
-
-#### 11.40.3 History Is No Longer Immune
-
-Since 2026-09-30 history persists in index.db ([11.37.5 Persisted in the Local Index](#11375-persisted-in-the-local-index)), so a snapshot CAN be written by an older build. It is safe for the same reason a sidecar is: every snapshot is EditStack JSON read back through EditStack::fromJson, the sidecar's own forward-tolerant path, so a stale snapshot gets exactly the treatment a stale sidecar gets, and the "never rename or rescale in place" rule protects both. Two drifts remain, both cosmetic:
-
-- An entry's action label is the slider caption FROZEN as a string at record time, so a renamed caption leaves older rows reading the old name, now across launches.
+- An entry's action label is the slider caption FROZEN as a string at record time, so a renamed caption leaves older rows reading the old name, across launches.
 - A history whose stamp no longer matches the sidecar is set aside, never migrated.
 
-#### 11.40.4 Retired Sidecar Key: "cameraProfileLook"
+#### 11.40.7 Retired Sidecar Key: "cameraProfileLook"
 
 The camera-profile feature shipped for one day (2026-09-13) with a Look checkbox on the Profile row, storing 0 or 1 under that key. It was removed on 2026-09-14 in favour of applying a profile WHOLE and offering its bare characterisation as a separate "Camera Base" entry. paramsFromJson ignores the key, so an image edited during that day with the look switched OFF now renders WITH its look. Not migrated, deliberately: the key can only appear in that day's test images, and a migration would have to reach the profile store from the sidecar loader. The NAME must never be reused for anything else.
 
@@ -8189,7 +8230,7 @@ The preset bar is ONE row: the combo and New / Update / Rename / Delete, with th
 
 #### 14.4.4 Export Presets Are Complete
 
-Unlike develop presets. A develop preset is partial on purpose (an absent key means "don't touch that adjustment"); an export preset is a whole ExportSettings INCLUDING the destination, which is what lets Develop > Export with preset > &lt;name> run with no dialog at all. An absent key falls back to the ExportSettings default, so an old preset survives a new field. The same versioning contract as develop presets applies: add keys freely, never rename or rescale one in place ([11.40 Stale Presets and History (Schema Drift)](#1140-stale-presets-and-history-schema-drift)).
+Unlike develop presets. A develop preset is partial on purpose (an absent key means "don't touch that adjustment"); an export preset is a whole ExportSettings INCLUDING the destination, which is what lets Develop > Export with preset > &lt;name> run with no dialog at all. An absent key falls back to the ExportSettings default, so an old preset survives a new field. The same versioning contract as develop presets applies: add keys freely, never rename or rescale one in place ([11.40 Develop Settings Versions (Schema Drift)](#1140-develop-settings-versions-schema-drift)).
 
 #### 14.4.5 File Naming: One Token Parser, One Template Editor
 

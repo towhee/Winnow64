@@ -1,6 +1,7 @@
 #include "Develop/Presets/developpresets.h"
 #include "Main/global.h"
 
+#include <QJsonObject>
 #include <QSet>
 
 /*
@@ -81,23 +82,36 @@ DevelopPreset DevelopPresets::readGroup(const char *root, const QString &name) c
     setting->endGroup();                // name
     setting->endGroup();                // root
 
-    /* Convert anything older than kVersion BEFORE the values reach assignParam. */
-    if (p.version != kVersion) migrate(p);
+    /* Convert anything older than the current schema BEFORE the values reach
+       assignParam. */
+    if (p.version < DevelopSchema::current()) migrate(p);
     return p;
 }
 
 void DevelopPresets::migrate(DevelopPreset &p)
 {
-    /* No conversions yet -- kVersion is still 1, so every stored preset is current and
-       this only normalises the stamp. Each future bump appends one ordered step:
-
-           if (p.version < 2) { ...rewrite the affected keys in p.params / p.globals...; }
-
-       written so a v1 preset falls through every step in turn. A preset from a NEWER
-       build than this one (version > kVersion) is left alone: assignParam already
-       ignores keys it does not know, which degrades better than guessing backwards. */
-    if (p.version > kVersion) return;
-    p.version = kVersion;
+    /* The steps live in Develop/developschema.h, shared with the sidecar. Both hashes
+       hold EditStack JSON field names -> raw values, so they round-trip through a
+       QJsonObject. A preset from a NEWER build (version > current) is left alone:
+       assignParam already ignores keys it does not know, which degrades better than
+       guessing backwards. */
+    const int cur = DevelopSchema::current();
+    if (p.version >= cur) return;
+    /* Only keys a step actually changed are written back: QSettings hands values back
+       as strings, and a full JSON round trip would retype every untouched one. */
+    auto run = [&p](QVariantHash &h) {
+        QJsonObject o = QJsonObject::fromVariantHash(h);
+        const QJsonObject before = o;
+        DevelopSchema::migrateParams(o, p.version, true);
+        for (const QString &k : before.keys())
+            if (!o.contains(k)) h.remove(k);
+        for (auto it = o.constBegin(); it != o.constEnd(); ++it)
+            if (!before.contains(it.key()) || before.value(it.key()) != it.value())
+                h.insert(it.key(), it.value().toVariant());
+    };
+    run(p.params);
+    run(p.globals);
+    p.version = cur;
 }
 
 void DevelopPresets::write(const DevelopPreset &p, const QString &category)
@@ -133,8 +147,8 @@ void DevelopPresets::writeGroup(const char *root, const DevelopPreset &p)
     setting->beginGroup(p.name);
     setting->remove("");                // overwrite: clear any prior contents
     /* Always stamp the CURRENT schema, whatever version p arrived as: what is about to
-       be written is by definition kVersion-shaped (read() has already migrated). */
-    setting->setValue("version", kVersion);
+       be written is by definition current-shaped (read() has already migrated). */
+    setting->setValue("version", DevelopSchema::current());
     if (!p.sourceScope.isEmpty()) setting->setValue("sourceScope", p.sourceScope);
     if (!p.sourceImage.isEmpty()) setting->setValue("sourceImage", p.sourceImage);
 

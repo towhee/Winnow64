@@ -11211,6 +11211,13 @@ EditStack &DevelopProperties::stackFor(const QString &fPath)
         reportStackIssues(fPath, int(st), issues);
         if (!issues.isEmpty()) repairedStacks.insert(fPath);
         else repairedStacks.remove(fPath);
+        /* Migrated from an older schema: the look is kept, so this is news, not a
+           problem -- once per session, and the Develop alert row says it per image. */
+        if (stackCache.value(fPath).migratedFrom > 0)
+            warnOnce("migratedSettings",
+                     "Some images were developed in an older version of Winnow.\n"
+                     "Their develop settings were updated automatically to keep their "
+                     "look.");
     }
     EditStack &s = stackCache[fPath];
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());
@@ -11931,7 +11938,45 @@ QString DevelopProperties::diagnostics()
     QTextStream rs(&rpt);
     rs << "Develop scopes: " << scopeList.join(", ") << "\n";
     rs << "Current scope: " << currentScopeNames().value(activeScopeIndex) << "\n";
+    if (stackCache.contains(currentImagePath)) {
+        const EditStack &s = stackCache[currentImagePath];
+        rs << "Settings version: " << s.version << " (this build "
+           << DevelopSchema::current() << ")";
+        if (s.migratedFrom > 0) rs << ", migrated from " << s.migratedFrom;
+        rs << "\n";
+        if (s.migratedFrom > 0)
+            for (const QString &line : DevelopSchema::summariesSince(s.migratedFrom))
+                rs << "  " << line << "\n";
+    }
     return rpt;
+}
+
+int DevelopProperties::migrationNoteFor(const QString &fPath) const
+{
+    if (fPath.isEmpty() || migrationNoteDismissed.contains(fPath)) return 0;
+    const auto it = stackCache.constFind(fPath);
+    return it == stackCache.constEnd() ? 0 : it->migratedFrom;
+}
+
+void DevelopProperties::dismissMigrationNote(const QString &fPath)
+{
+    if (!fPath.isEmpty()) migrationNoteDismissed.insert(fPath);
+}
+
+QStringList DevelopProperties::migrationSummariesFor(const QString &fPath) const
+{
+    const auto it = stackCache.constFind(fPath);
+    if (it == stackCache.constEnd() || it->migratedFrom <= 0) return QStringList();
+    return DevelopSchema::summariesSince(it->migratedFrom);
+}
+
+void DevelopProperties::versionsHelp()
+{
+    if (G::isLogger) G::log("DevelopProperties::versionsHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Develop Settings Versions",
+                   ":/Docs/developversionshelp.html",
+                   QSize(700, 600), r, window());
 }
 
 /* Each band's own help page, opened from the "<section> help" item at the foot of its

@@ -8,6 +8,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include "Develop/editparams.h"
+#include "Develop/developschema.h"
 
 /*
     Per-image Develop edit state, persisted in the image's XMP sidecar (winnow:Develop).
@@ -256,12 +257,18 @@ struct FillSpot {
 };
 
 struct EditStack {
-    /* Sidecar format version this build WRITES. Bump only when the JSON shape changes in
-       a way older builds cannot read; a stack stamped higher than this was written by a
-       newer Winnow and is reported to the user on load (see fromBase64). */
-    static constexpr int kVersion = 1;
+    /* Schema version this build reads and writes: the shared develop schema
+       (Develop/developschema.h). A stack stamped lower is migrated in fromJson; one
+       stamped higher was written by a newer Winnow and is reported on load (fromBase64).
+       The per-scope EditParams::version is NOT this: it is frozen at 1 (see there). */
+    static constexpr int kVersion = DevelopSchema::kVersion;
 
-    int                 version = 1;
+    int                 version = DevelopSchema::current();
+    /* Runtime only, never persisted: the schema version this stack was migrated FROM
+       when it was read, 0 when it was read as current. Drives the Develop panel's
+       "Settings updated" note. A stack written back is current, so this does not
+       survive a save + reload. */
+    int                 migratedFrom = 0;
     QVector<EditScope>  scopes;
     Geometry            geometry;       // crop/straighten/warp, applied last
     QVector<FillSpot>   spots;          // per-image spot heals (applied before geometry)
@@ -617,7 +624,9 @@ struct EditStack {
             arr.append(lo);
         }
         QJsonObject o;
-        o["version"] = version;
+        /* Always the CURRENT schema: whatever version the stack was read as, fromJson
+           has already migrated it, so it is current-shaped. */
+        o["version"] = DevelopSchema::current();
         o["scopes"]  = arr;      // wire key kept: sidecars written before the rename
         if (!geometry.isIdentity() || !geometry.show) o["geometry"] = geometryToJson(geometry);
         if (!spots.isEmpty()) {
@@ -664,9 +673,13 @@ struct EditStack {
         return g;
     }
 
-    static EditStack fromJson(const QJsonObject &o) {
+    static EditStack fromJson(const QJsonObject &in) {
         EditStack s;
-        s.version = o.value("version").toInt(s.version);
+        /* Bring an older recipe up to the current schema BEFORE any value is parsed,
+           so every step sees raw JSON (absent keys still absent). An absent stamp is 1. */
+        QJsonObject o = in;
+        s.migratedFrom = DevelopSchema::migrateStack(o);
+        s.version = o.value("version").toInt(1);
         if (o.contains("geometry")) s.geometry = geometryFromJson(o.value("geometry").toObject());
         const QJsonArray sarr = o.value("fill").toArray();
         for (const QJsonValue &sv : sarr) {
@@ -1047,11 +1060,11 @@ struct EditStack {
             return EditStack();
         }
         EditStack s = fromJson(doc.object());
-        if (s.version > kVersion && issues)
+        if (s.version > DevelopSchema::current() && issues)
             issues->append(QStringLiteral("Written by a newer version of Winnow "
                                           "(format %1, this build reads %2) -- unknown "
                                           "settings were ignored")
-                           .arg(s.version).arg(kVersion));
+                           .arg(s.version).arg(DevelopSchema::current()));
         sanitize(s, issues);
         report(Status::Ok);
         return s;

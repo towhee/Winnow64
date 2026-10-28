@@ -13,6 +13,7 @@
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "ImageFormats/Raw/decoderrevision.h"
+#include "Develop/developrevision.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Metadata/versions.h"
 #include "Metadata/colorspaces.h"
@@ -777,8 +778,11 @@ QString Metadata::renderKey(const QString &baseKey, const QString &fPath)
     if (baseKey.isEmpty()) return baseKey;
     const QString src = VersionKey::isVersion(fPath) ? VersionKey::sourceOf(fPath) : fPath;
     const int rev = RawDecoder::revision(QFileInfo(src).suffix());
-    if (rev == 0) return baseKey;
-    const QString d = baseKey + QString("|decoder=%1").arg(rev);
+    /* The develop maths revision (Develop/developrevision.h) folds in the same way: a
+       retuned op misses the previews it rendered. Empty while never bumped. */
+    const QString dev = DevelopRevision::keyPart(baseKey);
+    if (rev == 0 && dev.isEmpty()) return baseKey;
+    const QString d = baseKey + (rev ? QString("|decoder=%1").arg(rev) : QString()) + dev;
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return baseKey.startsWith('R') ? "R" + QString::fromLatin1(h.toHex().left(11))
                                    : QString::fromLatin1(h.toHex().left(12));

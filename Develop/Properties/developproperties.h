@@ -296,6 +296,17 @@ public:
     bool sidecarRecipeRewritable(const QString &fPath) const
         { return !repairedStacks.contains(fPath); }
 
+    /* Settings migration (Develop/developschema.h): the schema version fPath's recipe
+       was migrated FROM when it was read this session, or 0 when it was current, not
+       read yet, or the user dismissed the note. MW shows the Develop alert row
+       "Settings updated for this version of Winnow" from it. A migrated stack is NOT
+       held back from preview writes the way a repaired one is: migration keeps the look,
+       and blocking the write would strand the image on a stale grid thumbnail. */
+    int  migrationNoteFor(const QString &fPath) const;
+    void dismissMigrationNote(const QString &fPath);
+    /* The user-facing change lines for fPath's migration (empty when none). */
+    QStringList migrationSummariesFor(const QString &fPath) const;
+
     using DevPreviewProvider =
         std::function<bool(const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg)>;
     void setDevPreviewProvider(DevPreviewProvider provider);
@@ -632,6 +643,7 @@ public slots:
     void submasksHelp();                          // Mask band help (the submasks page)
     void rawHelp();                               // Raw panel help ([?] and its context menu)
     void transformHelp();                         // Transform panel help ([?] and its context menu)
+    void versionsHelp();                          // "What changed" on the settings-updated alert
 
     /* ---- Develop presets (the Presets dock) --------------------------------------
        saveDevelopPreset snapshots the current image's develop state into a named preset:
@@ -1631,6 +1643,8 @@ private:
     /* Paths whose sidecar recipe was repaired on load (see sidecarRecipeRewritable).
        Cleared by flushImage, the one write the user asked for. */
     QSet<QString> repairedStacks;
+    /* Paths whose "Settings updated" alert the user dismissed this session. */
+    QSet<QString> migrationNoteDismissed;
 
     /* ---- Edit history (the History dock) ------------------------------------------
        noteEdit() is the SINGLE commit point for every develop action: it marks the

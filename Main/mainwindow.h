@@ -2852,13 +2852,21 @@ private:
                       and invisible. AMBER -- proceed, but know what you are doing.
        Show stoppers sort above warnings, so severity reads from position as well as
        colour (which colour-blind users may not get). */
-    enum DevelopAlert { AlertWarning, AlertShowStopper };
+    /* Severity, least first (rows sort most severe to the top). AlertInfo is news, not
+       a problem: the "Settings updated" row for a migrated recipe. */
+    enum DevelopAlert { AlertInfo, AlertWarning, AlertShowStopper };
     QWidget *developAlertRows = nullptr;
     QVBoxLayout *developAlertRowsLayout = nullptr;
     QList<QLabel *> developAlertLabels;      // pooled rows, surplus hidden not deleted
     void updateDevelopSelectionWarning();
     /* Fill the alert rows, one message per row, most severe first. Empty = hide. */
     void setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts);
+    /* Tooltip for the AlertInfo row (the migration's change lines), set by
+       updateDevelopSelectionWarning; pooled rows of other severities get none. */
+    QString developAlertInfoTip;
+    /* A link in an alert row: "changes" opens the versions help, "dismiss" hides the
+       current image's settings-updated row. */
+    void developAlertLink(const QString &link);
     /* Develop Transform (crop + perspective) panel: a control strip below the scopes
        and above the property tree. Toggled by a button on the Develop action row and
        the "R" shortcut; visibility persists (Develop/transformVisible). */

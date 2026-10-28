@@ -4377,7 +4377,34 @@ void MW::updateDevelopSelectionWarning()
                                 QString("Multiple images will have edits applied."));
     }
 
+    /* INFO: the current image's recipe was written by an older Winnow and its settings
+       were migrated on load (Develop/developschema.h). Not a problem -- the look is
+       kept -- but the user may notice a slider sitting at a different number. */
+    developAlertInfoTip.clear();
+    if (developProperties && !currentIsVideo()) {
+        const QString cur = developProperties->currentPath();
+        if (developProperties->migrationNoteFor(cur) > 0) {
+            developAlertInfoTip =
+                developProperties->migrationSummariesFor(cur).join("\n");
+            alerts << qMakePair(AlertInfo,
+                                QString("Settings updated for this version of Winnow"
+                                        " - <a href=\"changes\">What changed</a>"
+                                        " &nbsp; <a href=\"dismiss\">Dismiss</a>"));
+        }
+    }
+
     setDevelopAlerts(alerts);
+}
+
+void MW::developAlertLink(const QString &link)
+{
+    if (G::isLogger) G::log("MW::developAlertLink", link);
+    if (!developProperties) return;
+    if (link == "changes") developProperties->versionsHelp();
+    else if (link == "dismiss") {
+        developProperties->dismissMigrationNote(developProperties->currentPath());
+        updateDevelopSelectionWarning();
+    }
 }
 
 void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
@@ -4386,8 +4413,9 @@ void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
     Fill the alert rows below the Develop action row: one row per alert, coloured text on
     the panel background (no fill -- the panel stays one surface). RED = show stopper
     (Develop cannot run on this selection), AMBER = warning (it runs, but on more than the
-    visible image). Show stoppers are sorted to the top, so severity reads from position
-    as well as colour. An empty list hides the whole block.
+    visible image), plain text = info (news, e.g. settings migrated on load; it may carry
+    links, routed to developAlertLink). Show stoppers are sorted to the top, so severity
+    reads from position as well as colour. An empty list hides the whole block.
 
     Rows are pooled: labels are reused and the surplus hidden, so a selection change does
     not churn widgets. The colour therefore has to be re-applied to every reused row -- a
@@ -4415,14 +4443,21 @@ void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
             row->setTextFormat(Qt::RichText);       // an alert may show an icon inline
             row->setAlignment(Qt::AlignCenter);
             row->setWordWrap(true);
+            /* Links ("What changed", "Dismiss") are handled here, never opened as URLs. */
+            row->setOpenExternalLinks(false);
+            connect(row, &QLabel::linkActivated, this, &MW::developAlertLink);
             developAlertRowsLayout->addWidget(row);
             developAlertLabels << row;
         }
-        // red = show stopper, amber = warning
-        const QString colour = ordered.at(i).first == AlertShowStopper
-                                   ? "#FF4040" : "#FFB340";
-        row->setStyleSheet("QLabel { color: " + colour +
-                           "; font-weight: bold; background: transparent; }");
+        // red = show stopper, amber = warning, plain panel text = info
+        const DevelopAlert sev = ordered.at(i).first;
+        const QString colour = sev == AlertShowStopper ? "#FF4040"
+                             : sev == AlertWarning     ? "#FFB340"
+                                                       : G::textColor.name();
+        row->setStyleSheet("QLabel { color: " + colour + "; font-weight: " +
+                           (sev == AlertInfo ? "normal" : "bold") +
+                           "; background: transparent; }");
+        row->setToolTip(sev == AlertInfo ? developAlertInfoTip : QString());
         row->setText(ordered.at(i).second);
         row->setVisible(true);
     }

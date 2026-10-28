@@ -156,10 +156,16 @@ public:
        without harm (the same forward tolerance as EditStack::paramsFromJson). */
     static void assignParam(const QString &key, const QVariant &v, EditParams &p);
 
-    /* Current preset schema version, written by write() and checked by read(). Bump ONLY
-       when an existing key changes meaning, scale or name -- never for a new key, which
-       old presets simply lack. Every bump needs a matching step in migrate(). */
-    static constexpr int kVersion = 1;
+    /* Preset schema version: the shared develop schema (Develop/developschema.h), the
+       same number sidecars carry, so one migration step serves both. Written by write()
+       and checked by read(). */
+    static constexpr int kVersion = DevelopSchema::kVersion;
+
+    /* Bring a preset read from disk up to the current schema, in place, then stamp
+       p.version. Runs DevelopSchema's steps on p.params and p.globals as PARTIAL
+       recipes (a step never inserts a key a preset did not hold). Public for
+       tst_developschema. */
+    static void migrate(DevelopPreset &p);
 
 signals:
     void changed();                               // any write / rename / remove
@@ -177,12 +183,6 @@ private:
        when a preset could only come from the Global scope; read() still accepts it. */
     static constexpr const char *kEdits       = "Edits";
     static constexpr const char *kEditsLegacy = "Global edits";
-
-    /* Bring a preset read from disk up to kVersion, in place, then stamp p.version.
-       No-op while kVersion is 1: nothing has changed meaning yet. Each future bump adds
-       one `if (p.version < N) { ...convert p.params / p.globals...; }` step, in order,
-       so a v1 preset migrates through every intervening version. */
-    static void migrate(DevelopPreset &p);
 
     /* The store, parameterised by root: presets and the clipboard are the same object in
        the same layout, differing only in where they live and who may enumerate them. */

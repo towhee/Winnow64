@@ -573,6 +573,10 @@ struct EditParams {
     float blurSize    = 0.5f;
     float blurFeather = 0.5f;
 
+    /* FROZEN at 1, written into every scope's params. It is NOT the schema version:
+       that is the stack-level EditStack::version (Develop/developschema.h). Kept only
+       because dropping the key would change every recipe hash and rebuild every
+       devPreview. Never branch on it. */
     int version = 1;
 
     /* Adjustment groups, matching the Develop panel's section headers (Basic / Color / Effects).
