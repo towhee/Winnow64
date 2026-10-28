@@ -2648,7 +2648,7 @@ private:
     QToolButton *sourceFoldersBtn = nullptr;
     QToolButton *sourceLibraryBtn = nullptr;
     QLabel *sourceSeparator = nullptr;       // the " | " between Library and Folders
-    QToolButton *versionMastersBtn = nullptr;   // Masters | Versions, right of the dock
+    QToolButton *versionMastersBtn = nullptr;   // Masters | All, right of the dock
     QToolButton *versionAllBtn = nullptr;
 
     /*  COLLECTIONS AND QUERIES (Main/mwcollections.cpp, Views/collectiontree.h,
@@ -3625,9 +3625,9 @@ private:
     void setVersionsExpanded(const QString &masterKey, bool expanded);
     void toggleVersionsExpanded(const QString &key);
     void setShowAllVersions(bool show);
-    /*  The Module dock's Masters | Versions pair. Masters is the outermost scope:
+    /*  The Module dock's Masters | All pair. Masters is the outermost scope:
         SortFilter::mastersOnly hides every version row, under any filter (persisted
-        as "versionMastersOnly"). Versions lifts it and shows every row. A badge click
+        as "versionMastersOnly"). All lifts it and shows every row. A badge click
         or Show All Versions under Masters lifts it too; syncVersionModeButtons pushes
         the state back to the buttons. */
     void setVersionMastersOnly(bool on);

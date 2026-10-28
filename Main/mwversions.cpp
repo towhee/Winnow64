@@ -176,7 +176,7 @@ void MW::setVersionMastersOnly(bool on)
 void MW::syncVersionModeButtons()
 {
 /*
-    Masters | Versions, in the Module dock and the title bar, say what
+    Masters | All, in the Module dock and the title bar, say what
     SortFilter::mastersOnly holds. Signals blocked: the
     buttons act on clicked, and this is not one.
 */

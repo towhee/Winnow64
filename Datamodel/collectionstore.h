@@ -129,7 +129,8 @@ public:
         adding what is already there, or removing what is not, counts nothing. */
     int addMembers(qint64 id, const QStringList &paths);
     int removeMembers(qint64 id, const QStringList &paths);
-    /*  Images DIRECTLY in each collection of the kind -- the number the tree shows. */
+    /*  Distinct images in each collection of the kind OR ANY COLLECTION INSIDE IT -- the
+        number the tree shows, and what a click on the collection shows. */
     QHash<qint64, int> memberCounts(Kind kind);
     /*  The distinct member paths of these nodes. */
     QStringList memberPaths(const QVector<qint64> &ids);
@@ -138,8 +139,10 @@ public:
     QVector<qint64> collectionsOf(const QString &key);
 
     /*  EVERY MEMBERSHIP OF THIS KIND, as image key (Cache/pathkey.h) -> the ids, as
-        text, of the nodes it is DIRECTLY in. What G::CollectionsColumn is built from
-        (MW::refreshCollectionMembership). One statement. */
+        text, of the nodes it is in, directly OR THROUGH A CHILD: an image in B, inside
+        A, carries both ids, so filtering on A shows B's images too. What
+        G::CollectionsColumn is built from (MW::refreshCollectionMembership). One
+        statement. */
     QHash<QString, QStringList> membershipByKey(Kind kind);
 
     /*  FileOps notifications: a file Winnow moved or deleted. */

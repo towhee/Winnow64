@@ -3587,9 +3587,9 @@ QWidget *MW::buildVersionPair(QWidget *parent, QToolButton *&mastersBtn,
                               QToolButton *&allBtn)
 {
 /*
-    MASTERS | VERSIONS: the outermost scope on the rows. An image with no versions is
-    its own master, so Masters shows every image once -- no version row under any
-    filter (SortFilter::mastersOnly) -- and Versions shows every row. The same pattern
+    MASTERS | ALL: the outermost scope on the rows. An image with no versions is its own
+    master, so Masters shows every image once -- no version row under any filter
+    (SortFilter::mastersOnly) -- and All shows every row, versions included. The same pattern
     as Library | Folders: the buttons are a view of the proxy's state, pushed back to
     every pair by MW::syncVersionModeButtons, so the menu item and a badge click (which
     both lift Masters) flip them too.
@@ -3601,7 +3601,7 @@ QWidget *MW::buildVersionPair(QWidget *parent, QToolButton *&mastersBtn,
     mastersBtn = new QToolButton;
     allBtn = new QToolButton;
     mastersBtn->setText(tr("Masters"));
-    allBtn->setText(tr("Versions"));
+    allBtn->setText(tr("All"));
     mastersBtn->setToolTip(tr(
         "Show only master images, one per file.  An image with no versions is its own "
         "master."));
@@ -3631,7 +3631,7 @@ void MW::createModuleDock()
 {
 /*
     THE MODULE DOCK: Library | Folders at the left and Browse | Develop | Keywords |
-    Map | Embellish | Slide Show centred and Masters | Versions at the right, across the
+    Map | Embellish | Slide Show centred and Masters | All at the right, across the
     top of the window -- the source and the workflow settings of the UI model (see "THE
     UI MODEL" in workspaces.cpp). It replaces the status-bar switcher, which is still
     built but hidden.
@@ -3705,7 +3705,7 @@ void MW::createTitleModeBar()
 {
 /*
     THE MODULE DOCK IN THE TITLE BAR: Library | Folders at the left (after the window
-    buttons), Browse | Develop | ... | Slide Show centred and Masters | Versions at the
+    buttons), Browse | Develop | ... | Slide Show centred and Masters | All at the
     right, where the file path used to be. The title text is hidden; the
     title string is still kept up to date (MW::updateWindowTitle) for the Window menu,
     Mission Control and the Dock.

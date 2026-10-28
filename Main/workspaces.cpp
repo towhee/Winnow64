@@ -2106,7 +2106,7 @@ void MW::styleWorkflowSwitcher()
     moduleDock->setFixedHeight(moduleDock->widget()->sizeHint().height());
 
     /* THE WINDOW'S MINIMUM WIDTH: the Module dock's (Library | Folders, the modes and
-       Masters | Versions at their least) plus 125 px of slack, so the three groups never
+       Masters | All at their least) plus 125 px of slack, so the three groups never
        crowd. Here, so a font size change moves it too. */
     setMinimumWidth(moduleDock->widget()->minimumSizeHint().width() + 125);
 }

@@ -21,6 +21,15 @@ qint64 nowSecs() { return QDateTime::currentSecsSinceEpoch(); }
     0 in memory. */
 QVariant parentBind(qint64 parent) { return parent > 0 ? QVariant(parent) : QVariant(); }
 
+/*  up(node, anc): every node of one kind (bound ?) paired with itself and each of its
+    ancestors. A member of a child is thereby a member of every collection above it. */
+const char *kAncestorsCte =
+    "WITH RECURSIVE up(node, anc) AS ("
+    " SELECT id, id FROM node WHERE kind = ?"
+    " UNION ALL"
+    " SELECT up.node, n.parent FROM up JOIN node n ON n.id = up.anc"
+    " WHERE n.parent > 0) ";
+
 }  // namespace
 
 CollectionStore &CollectionStore::instance()
@@ -383,8 +392,9 @@ QHash<qint64, int> CollectionStore::memberCounts(Kind kind)
     QSqlDatabase d = db();
     if (!d.isOpen()) return out;
     QSqlQuery q(d);
-    q.prepare("SELECT m.node, COUNT(*) FROM member m JOIN node n ON n.id = m.node"
-              " WHERE n.kind = ? GROUP BY m.node");
+    q.prepare(QString(kAncestorsCte) +
+              "SELECT up.anc, COUNT(DISTINCT m.pathkey) FROM member m"
+              " JOIN up ON up.node = m.node GROUP BY up.anc");
     q.addBindValue(static_cast<int>(kind));
     if (!q.exec()) return out;
     while (q.next()) out.insert(q.value(0).toLongLong(), q.value(1).toInt());
@@ -432,8 +442,9 @@ QHash<QString, QStringList> CollectionStore::membershipByKey(Kind kind)
     QSqlDatabase d = db();
     if (!d.isOpen()) return out;
     QSqlQuery q(d);
-    q.prepare("SELECT m.pathkey, m.node FROM member m JOIN node n ON n.id = m.node"
-              " WHERE n.kind = ?");
+    q.prepare(QString(kAncestorsCte) +
+              "SELECT DISTINCT m.pathkey, up.anc FROM member m"
+              " JOIN up ON up.node = m.node");
     q.addBindValue(static_cast<int>(kind));
     if (!q.exec()) return out;
     while (q.next()) out[q.value(0).toString()] << q.value(1).toString();

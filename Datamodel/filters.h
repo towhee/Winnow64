@@ -184,8 +184,8 @@ public:
         node's id, as text; nested like Folders; saved and restored by id.
 
         COLLECTIONS filter on G::CollectionsColumn, the ids of the collections a row is
-        DIRECTLY in -- so a checked parent matches its own images, not its
-        sub-collections' (the Collections panel's Opt+click checks those too).
+        in, directly or through a sub-collection -- so a checked parent matches its own
+        images AND every sub-collection's.
         QUERIES carry their query TEXT in QueryTextRole and are evaluated live per row
         (SortFilter::compileFilters -> FilterCategory::includeExprs); a parent Query is
         only an organiser -- it matches by its own query, which may be empty.

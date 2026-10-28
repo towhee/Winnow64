@@ -634,7 +634,7 @@
     - [13.4.1 Collapse](#1341-collapse)
     - [13.4.2 Sorting](#1342-sorting)
     - [13.4.3 The Badges](#1343-the-badges)
-    - [13.4.4 Masters | Versions](#1344-masters--versions)
+    - [13.4.4 Masters | All](#1344-masters--all)
   - [13.5 Develop per Version](#135-develop-per-version)
   - [13.6 The Operations](#136-the-operations)
   - [13.7 Per-Version and Shared Fields](#137-per-version-and-shared-fields)
@@ -1037,11 +1037,11 @@ The selected-option look: the dock reads "Library | Folders" at the left (Librar
 
 The workflows stay centred on the window: the dock body is a three-column QGridLayout whose outer columns have equal stretch, so the empty right column is as wide as the left one that holds Library | Folders.
 
-The window's minimum width follows the dock: MW::styleWorkflowSwitcher sets it to the dock's minimumSizeHint width (Library | Folders, the modes and Masters | Versions at their least) plus 125 px, so a font size change moves it too.
+The window's minimum width follows the dock: MW::styleWorkflowSwitcher sets it to the dock's minimumSizeHint width (Library | Folders, the modes and Masters | All at their least) plus 125 px, so a font size change moves it too.
 
 #### 2.2.5 The Module Dock in the Title Bar (macOS, Shelved)
 
-On macOS the Module dock's buttons also sit in the window's title bar, replacing the title text (which used to show the file path): Library | Folders at the left after the window buttons, Browse | Develop | Keywords | Map | Embellish | Slide Show centred on the window, and Masters | Versions at the right. SHELVED 2026-10-24: built and tried, then switched off by the user's decision, with the code kept for a revisit. `isModesInTitleBar` in Utilities/titlebar.cpp (false) makes TitleBarStrip::isSupported return false, so MW::createTitleModeBar builds nothing, every title-bar button pointer stays null and the syncs skip them; the title shows its text again. To revisit, set it true (and `isColorMacTitleBars` too, since the strip sits on a title bar in the Winnow colour). The Module dock is unchanged and is where the modes are.
+On macOS the Module dock's buttons also sit in the window's title bar, replacing the title text (which used to show the file path): Library | Folders at the left after the window buttons, Browse | Develop | Keywords | Map | Embellish | Slide Show centred on the window, and Masters | All at the right. SHELVED 2026-10-24: built and tried, then switched off by the user's decision, with the code kept for a revisit. `isModesInTitleBar` in Utilities/titlebar.cpp (false) makes TitleBarStrip::isSupported return false, so MW::createTitleModeBar builds nothing, every title-bar button pointer stays null and the syncs skip them; the title shows its text again. To revisit, set it true (and `isColorMacTitleBars` too, since the strip sits on a title bar in the Winnow colour). The Module dock is unchanged and is where the modes are.
 
 - MW::createTitleModeBar builds a TitleBarStrip (Utilities/titlebar.h) on the main window. Its three pieces come from the same builders as the dock's: MW::buildSourcePair, MW::buildWorkflowButtons and MW::buildVersionPair. Each copy is kept in step with the dock's: MW::syncSourceButtons (called by MW::setScope and MW::chooseSource), MW::syncWorkflowSwitcher and MW::syncVersionModeButtons light both, MW::syncWorkflowButtonEnabled enables both, and MW::styleWorkflowSwitcher styles both (1.5x G::fontSize, the dock's colours, no vertical padding).
 - TitleBarStrip places the three pieces by hand: left starts after the close/minimise/zoom buttons (Mac::titleBarButtonsRight), centre is centred on the window and right ends at the right edge. The centre gives way rather than overlap on a narrow window. If the text is taller than the system title bar, the strip grows and sets the window's top contents margin to match, so the panels move down with it.
@@ -2489,6 +2489,8 @@ Key files: Main/setandupdate.cpp (setCombineRawJpg), Main/status.cpp (updateStat
 #### 4.12.1 The Pairing Roles
 
 DataModel::rawJpgPairing records the pairing on COLUMN 0 of both halves: the raw row gets G::DupHideRawRole, the jpg row gets G::DupIsJpgRole plus G::DupRawTypeRole ("NEF", "ORF"), and BOTH get G::DupOtherIdxRole pointing at the other.
+
+A PAIR IS THE SAME FOLDER AND THE SAME BASE NAME (2026-10-28). rawJpgPairing takes a stem, folder + "/" + base name, and both paths compare stems: the bulk-load tracker (prevRawStem) and the after-load insert, which finds candidates by name prefix in G::NameColumn and keeps only those whose key has the same stem. Matching on the base name alone was harmless in one folder but not in the Library, where many folders share one model: Legacy Marsh's _DSC8284.NEF paired with JPG/_DSC8284.jpg in a subfolder, and combine raw+jpg then hid the NEF, so a collection showed 9 in its counts and 8 thumbnails. (The insert path also compared the base name with the whole file name, so it never paired anything.)
 
 Read them through DataModel::isDupJpg / isDupHiddenRaw / dupOtherRow / dupRawType, never through data(G::Dup...Role) directly. The roles live on column 0 alone, so reading one off any other column, or off the proxy, returns an INVALID QVariant, which reads as "not a pair" rather than as an error. That had already happened twice: MW::setTagValue tested the role on the tag's own column, so tag edits never propagated to the hidden raw file; and MW::setColorClass looked the paired row up through dm->sf when the row it held was a DATAMODEL row, and a hidden raw is filtered OUT of the proxy, so the colour-class log named a different image. The accessors range-check as well, which is why they return -1 or false rather than an index.
 
@@ -7925,13 +7927,13 @@ A master with versions shows a count and an arrow ("2 ▸" / "2 ▾") in amber t
 
 File > Show All Versions (also in the thumbnail context menu, persisted as "showAllVersions") opens every group; clicking one badge while it is on turns it off and leaves that group open.
 
-#### 13.4.4 Masters | Versions
+#### 13.4.4 Masters | All
 
-The Module dock's MASTERS | VERSIONS pair (right side, mirroring Library | Folders on the left; added 2026-10-14).
+The Module dock's MASTERS | ALL pair (right side, mirroring Library | Folders on the left; added 2026-10-14; the second button was "Versions" until 2026-10-28).
 
 - MASTERS is the outermost scope: SortFilter::mastersOnly (persisted "versionMastersOnly") rejects every version row in acceptsRow, above the load test and the user's filters (like the raw+jpg hide), so no version appears under any filter, open group or Show All Versions. versionsExpanded() answers false under it (badge arrow, self-test, rescue pass), and BuildFilters folds version rows into FilterSnapshotRow::hiddenRaw so the unfiltered counts leave them out too (cache keyed on cachedValuesMastersOnly). An image with no versions is its own master.
-- VERSIONS lifts it and turns Show All Versions on (every row).
-- Things that lift Masters (MW::setVersionMastersOnly(false) or inline): Versions, checking Show All Versions, a badge click (opens just that group), and New Version (opens just the new groups, or the new row would be hidden).
+- ALL lifts it and turns Show All Versions on (every row).
+- Things that lift Masters (MW::setVersionMastersOnly(false) or inline): All, checking Show All Versions, a badge click (opens just that group), and New Version (opens just the new groups, or the new row would be hidden).
 - Toggling Masters re-filters AND recounts (filterChange alone refreshes only the filtered side). MW::syncVersionModeButtons pushes the state to the buttons.
 
 ### 13.5 Develop per Version
@@ -8999,12 +9001,12 @@ The Folders panel's (FSTree), as asked: click = filter to this collection; Opt+c
 - A click CLEARS EVERY OTHER FILTER FIRST (2026-09-30, user decision): all Filters categories, the search text and the pick / rating / colour actions are cleared, as Clear All does, and then the category is set, in one filterChange (MW::applySetFilter). A click means "show me this collection", not "narrow what I am looking at". Cmd+click off the last checked collection is Cancel.
 - The tree acts on the RELEASE, not the press, so pressing on a row to drag it does not filter first. Return / Space act on the current row; F2 renames. NoSelection: what is selected is what the category includes.
 - A click during a load is refused with a popup: the load's build clears the category's checks when it lands, so the click would be swept away unseen.
-- DIRECT membership: checking a parent collection in the Filters panel matches the images directly in it, not its children's. The Collections panel's Opt+click is what adds every collection inside.
+- A PARENT HOLDS ITS CHILDREN'S IMAGES (2026-10-28, changed from direct membership): clicking a parent collection, in the Collections panel or the Filters panel, shows the images directly in it AND every image in the collections inside it, at any depth. The counts, in both panels, are the distinct images so reached. Opt+click still checks every collection inside as well, which now shows the same images. A collection:"Name" query rule matches the same way.
 - CANCEL clears the Collections category (includes and excludes) and nothing else. It is the title bar's reset button (disabled, with the reason in its tooltip, while no collection is filtering; MW::syncCollectionsCancel) and the context menu's last item (MW::cancelCollectionFilter).
 
 #### 17.5.4 The Column and the Category
 
-The category filters on G::CollectionsColumn: the ids, as text, of the collections a row is DIRECTLY in. It is NOT in the row store (collections change without the row changing, and they are the user's, not the image's), so DataModel::data answers it from a side table, row KEY -> ids (DataModel::setCollectionMembership, under a read-write lock; G::KeyRole, so a version is its own row). MW::refreshCollectionMembership builds that table in two statements whatever the Library's size: CollectionStore::membershipByKey (pathkey -> ids) and Catalog::pathsForKeys (pathkey -> image.path, one json_each statement per page). image.path is the exact string every Library row was loaded with, so a filter pass is one hash lookup per row. It is rebuilt on every membership change (CollectionStore::membersChanged: adds, removes, and FileOps moves and deletes), and a refilter follows when a collection is filtering, so an image removed from the collection being looked at leaves the grid at once.
+The category filters on G::CollectionsColumn: the ids, as text, of the collections a row is in, directly or through a sub-collection (CollectionStore::membershipByKey expands each membership to the node's ancestors with a recursive CTE; memberCounts counts distinct images the same way; tst_collections::membershipIncludesChildrenAndIsPerKind). It is NOT in the row store (collections change without the row changing, and they are the user's, not the image's), so DataModel::data answers it from a side table, row KEY -> ids (DataModel::setCollectionMembership, under a read-write lock; G::KeyRole, so a version is its own row). MW::refreshCollectionMembership builds that table in two statements whatever the Library's size: CollectionStore::membershipByKey (pathkey -> ids) and Catalog::pathsForKeys (pathkey -> image.path, one json_each statement per page). image.path is the exact string every Library row was loaded with, so a filter pass is one hash lookup per row. It is rebuilt on every membership change (CollectionStore::membersChanged: adds, removes, and FileOps moves and deletes) and every change to the collection tree (nodesChanged: a re-parent or delete changes what a parent holds), and a refilter follows when a collection is filtering, so an image removed from the collection being looked at leaves the grid at once.
 
 The category is MW's, not BuildFilters'. Every other category is built from the loaded rows; this one's items are the user's collections, which exist whether or not anything loaded is in them.
 

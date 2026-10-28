@@ -192,7 +192,11 @@ void MW::createCollectionsDock()
     CollectionStore &store = CollectionStore::instance();
     connect(&store, &CollectionStore::nodesChanged, this, [this](Kind k) {
         if (k == Kind::Place) return;          // Main/mwplaces.cpp has its own
-        if (k == Kind::Collection) refreshCollectionNodes();
+        if (k == Kind::Collection) {
+            refreshCollectionNodes();
+            // a parent holds its children's images: a re-parent or delete changes that
+            refreshCollectionMembership();
+        }
         else refreshQueryNodes();
         updateCollectionsAvailability();
     });
@@ -375,7 +379,8 @@ void MW::refreshCollectionMembership()
 {
 /*
     Rebuild G::CollectionsColumn's side table: row key -> ids of the collections the
-    image (or version) is directly in.
+    image (or version) is in, directly or through a child collection
+    (CollectionStore::membershipByKey), so a parent shows every image beneath it.
 
     KEYED BY THE KEY A LIBRARY ROW WAS LOADED WITH. The store keys members on the
     normalised pathkey; the catalog maps each key back to image.path, which is the

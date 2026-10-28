@@ -704,7 +704,7 @@ void DataModel::clearDataModel()
 
     // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
     prevRawSuffix = "";
-    prevRawBaseName = "";
+    prevRawStem = "";
     prevRawRow = -1;
     // reset the memory-used estimate and its sampling accumulators
     bytesUsed = 0;
@@ -3239,15 +3239,21 @@ QString DataModel::dupRawType(int dmRow) const
     return index(dmRow, G::PathColumn).data(G::DupRawTypeRole).toString();
 }
 
-void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseName)
+void DataModel::rawJpgPairing(int row, const QString &ext, const QString &stem)
 {
+/*
+    SAME FOLDER, SAME BASE NAME. The stem carries the folder, so a jpg pairs only with
+    the raw beside it. Matching on the base name alone let a Library (many folders in
+    one model) pair a raw with a same-named export in a subfolder (Legacy Marsh
+    _DSC8284.NEF with JPG/_DSC8284.jpg), and combine raw+jpg then hid the raw.
+*/
     bool isRaw = metadata->hasJpg.contains(ext);
     bool isJpg = (ext == "jpg" || ext == "jpeg");
 
     // Only update the fast sequential trackers during the initial bulk folder load
     if (isRaw && loadingModel) {
         prevRawSuffix = ext;
-        prevRawBaseName = baseName;
+        prevRawStem = stem;
         prevRawRow = row;
     }
 
@@ -3257,7 +3263,7 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
 
         // --- PATH A: BULK LOAD (Fast Sequential Check) ---
         if (loadingModel) {
-            if (isJpg && prevRawRow >= 0 && baseName == prevRawBaseName) {
+            if (isJpg && prevRawRow >= 0 && stem == prevRawStem) {
                 QModelIndex prevRawIdx = index(prevRawRow, 0);
                 setData(prevRawIdx, true, G::DupHideRawRole);
                 setData(prevRawIdx, row, G::DupOtherIdxRole);
@@ -3272,9 +3278,22 @@ void DataModel::rawJpgPairing(int row, const QString &ext, const QString &baseNa
             }
         }
 
-        // --- PATH B: ISOLATED INSERT AFTER LOAD (Targeted Search) ---
+        /* --- PATH B: ISOLATED INSERT AFTER LOAD (Targeted Search) ---
+           NameColumn holds the file NAME, so the candidates are the names that start
+           with the base name and a dot; each is then held to the same stem (it used to
+           match the bare base name exactly, which no file name equals). */
         else {
-            QModelIndexList matches = match(index(0, G::NameColumn), Qt::DisplayRole, baseName, 2, Qt::MatchExactly);
+            const QString baseName = stem.mid(stem.lastIndexOf('/') + 1);
+            QModelIndexList candidates =
+                match(index(0, G::NameColumn), Qt::DisplayRole, baseName + ".", -1,
+                      Qt::MatchStartsWith | Qt::MatchCaseSensitive);
+            QModelIndexList matches;
+            for (const QModelIndex &idx : candidates) {
+                const QFileInfo other(
+                    index(idx.row(), G::PathColumn).data(G::KeyRole).toString());
+                if (other.absolutePath() + "/" + other.completeBaseName() == stem)
+                    matches << idx;
+            }
 
             for (const QModelIndex &idx : matches) {
                 if (idx.row() == row) continue;
@@ -3459,7 +3478,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
 
     /*  A version belongs to its own file and is never half of a raw+jpg pair: pairing
         it would hide it, or its master, behind the other file. */
-    if (!isVersion) rawJpgPairing(row, ext, baseName);
+    if (!isVersion) rawJpgPairing(row, ext, fileInfo.absolutePath() + "/" + baseName);
 
     // emit one compact notification (only if you need the view to refresh now)
     emit dataChanged(index(row, 0), index(row, columnCount()-1));

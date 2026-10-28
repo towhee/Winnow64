@@ -43,7 +43,7 @@ private slots:
     void moveReordersAndRenumbersSiblings();
     void removeTakesTheSubtreeAndItsMembers();
     void membershipIsIdempotentAndCounted();
-    void membershipIsDirectAndPerKind();
+    void membershipIncludesChildrenAndIsPerKind();
     void queriesKeepTheirDefinitionAndDuplicate();
     void placesAreTheirOwnKind();
     void aMoveFollowsTheImage();
@@ -216,28 +216,47 @@ void tst_collections::membershipIsIdempotentAndCounted()
     QCOMPARE(s.addMembers(q, {img("1.nef")}), 0);
 }
 
-void tst_collections::membershipIsDirectAndPerKind()
+void tst_collections::membershipIncludesChildrenAndIsPerKind()
 {
-    /*  DIRECT membership only: the Filters category's parent item matches its own
-        images, and the Collections panel's Opt+click is what adds the children. An image
-        in two collections carries both ids. */
+    /*  A parent holds its children's images: an image in B, inside A, carries both ids,
+        so the Filters category's parent item matches it, and A's count includes it
+        (counted once, however many sub-collections hold it). An image in two
+        collections carries both ids. */
     CollectionStore &s = CollectionStore::instance();
     const qint64 a = s.create(Kind::Collection, 0, "A");
     const qint64 b = s.create(Kind::Collection, a, "B");
+    const qint64 bb = s.create(Kind::Collection, b, "BB");
     const qint64 c = s.create(Kind::Collection, 0, "C");
     s.addMembers(a, {img("1.nef")});
     s.addMembers(b, {img("2.nef")});
+    s.addMembers(bb, {img("2.nef"), img("3.nef")});
     s.addMembers(c, {img("1.nef")});
 
+    auto sorted = [](QStringList l) { l.sort(); return l; };
+    auto ids = [](std::initializer_list<qint64> l) {
+        QStringList out;
+        for (qint64 id : l) out << QString::number(id);
+        out.sort();
+        return out;
+    };
     const QHash<QString, QStringList> m = s.membershipByKey(Kind::Collection);
-    QCOMPARE(m.size(), 2);
-    QStringList one = m.value(cachePathKey(img("1.nef")));
-    one.sort();
-    QStringList want{QString::number(a), QString::number(c)};
-    want.sort();
-    QCOMPARE(one, want);
-    QCOMPARE(m.value(cachePathKey(img("2.nef"))), QStringList{QString::number(b)});
+    QCOMPARE(m.size(), 3);
+    QCOMPARE(sorted(m.value(cachePathKey(img("1.nef")))), ids({a, c}));
+    QCOMPARE(sorted(m.value(cachePathKey(img("2.nef")))), ids({a, b, bb}));
+    QCOMPARE(sorted(m.value(cachePathKey(img("3.nef")))), ids({a, b, bb}));
     QVERIFY(s.membershipByKey(Kind::Query).isEmpty());
+
+    const QHash<qint64, int> n = s.memberCounts(Kind::Collection);
+    QCOMPARE(n.value(a), 3);
+    QCOMPARE(n.value(b), 2);
+    QCOMPARE(n.value(bb), 2);
+    QCOMPARE(n.value(c), 1);
+
+    // a re-parent carries the images with it
+    QVERIFY(s.reparent(b, c));
+    QCOMPARE(sorted(s.membershipByKey(Kind::Collection).value(cachePathKey(img("3.nef")))),
+             ids({b, bb, c}));
+    QCOMPARE(s.memberCounts(Kind::Collection).value(a), 1);
 }
 
 void tst_collections::placesAreTheirOwnKind()

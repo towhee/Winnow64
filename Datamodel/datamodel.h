@@ -115,7 +115,7 @@ public:
     QStringList expandedVersions() const { return mExpandedVersions.values(); }
     /*  MASTERS ONLY hides every version row outright -- filter or not, group open or
         not -- and BuildFilters leaves them out of the unfiltered counts too. The
-        Module dock's Masters | Versions (MW::setVersionMastersOnly). */
+        Module dock's Masters | All (MW::setVersionMastersOnly). */
     void setMastersOnly(bool on) { mMastersOnly = on; }
     bool mastersOnly() const { return mMastersOnly; }
 
@@ -265,13 +265,15 @@ public:
     RowStore rowStore;
 
     /*  COLLECTION MEMBERSHIP, for G::CollectionsColumn: row key (a path, or a version's
-        path + "/#v" + id) -> the ids (as text) of the collections it is directly in. Not in the row store -- see the
+        path + "/#v" + id) -> the ids (as text) of the collections it is in, directly or through a child
+        collection. Not in the row store -- see the
         column's note in global.h. Replaced whole by MW::refreshCollectionMembership
         whenever a membership changes; read by data() under the lock, so a reader on
         another thread never sees it half-swapped. */
     void setCollectionMembership(const QHash<QString, QStringList> &byPath);
     bool hasCollectionMembership() const;
-    /*  The row keys DIRECTLY in any of these collections (ids as text). */
+    /*  The row keys in any of these collections, directly or through a child
+        collection (ids as text). */
     QStringList keysInCollections(const QStringList &ids) const;
     mutable QReadWriteLock collectionLock;
     QHash<QString, QStringList> collectionIdsByPath;
@@ -1019,7 +1021,7 @@ private:
     QMutex queueMutex;
 
     QString prevRawSuffix = "";
-    QString prevRawBaseName = "";
+    QString prevRawStem = "";       // folder + "/" + base name of the last raw loaded
     int prevRawRow = -1;
 
     enum ErrorType {
@@ -1119,7 +1121,9 @@ public:
     void addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow *cat = nullptr,
                            const QString &key = QString());
     // void rawPlusJpg();
-    void rawJpgPairing(int row, const QString &ext, const QString &baseName);
+    /*  stem = the file's folder + "/" + its base name: a raw and a jpg pair only when
+        they are the same picture in the SAME folder. */
+    void rawJpgPairing(int row, const QString &ext, const QString &stem);
     double aspectRatio(int w, int h, int orientation);
     void processErr(Error e);
 
