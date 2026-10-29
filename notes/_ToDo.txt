@@ -13,15 +13,15 @@ WHAT'S NEW
 - Prevent Filters 'blanking' during refresh.
 
 BUGS / TO DO
+- Catalog management: move, copy, join, select
 - Rethink thumbnail badges
-- Apply default preset to raw files when developed ??  Examine develop pipeline.
 - Add isVersion to Queries lookup
 - Search for images with an Effect.
 - Make a shortcut for 'Delete rejected'
 - Add cropped dimensions to Metadata panel
 - Figure out mask refine
 - Review develop presets
-- Review FX (F3...) shortcuts
+- Revisit the color sampler
 - Panos
 - Add all help items to the main menu Help.
 - Set catalog location
