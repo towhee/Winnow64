@@ -234,7 +234,7 @@ function job_linux() {
                 echo \"\$st\" | head -20 | sed 's/^/   /'; }; rm -f \$m; true" || return 1
     local arch="${${asset:r}##*-}"                   # aarch64 | x86_64
     ssh "${SSH_OPTS[@]}" "$host" "mkdir -p appimage-tools" || return 1
-    scp "${SSH_OPTS[@]}" -q "$APPIMAGE_TOOLS_SRC"/*-$arch(|.AppImage) "$host:appimage-tools/" \
+    scp "${SSH_OPTS[@]}" -q "$APPIMAGE_TOOLS_SRC"/*-$arch(|.AppImage) "${host}:appimage-tools/" \
         || { echo "❌ AppImage tools for $arch missing from $APPIMAGE_TOOLS_SRC"; return 1; }
     echo "=== linux-release build ==="
     # ccache when the VM has it: git archive stamps every file with the commit time, so
