@@ -190,8 +190,13 @@ function winps() {
 function job_windows() {
     echo "=== sync ${COMMIT:0:8} -> $WIN_HOST:$WIN_REPO ==="
     ssh "${SSH_OPTS[@]}" "$WIN_HOST" "New-Item -ItemType Directory -Force $WIN_REPO\\out | Out-Null" || return 1
+    # Extract into a staging folder and copy only the changed files, so ninja rebuilds
+    # what changed rather than the whole tree (packaging/windows/syncstage.ps1).
+    local stage="$WIN_REPO.stage"
+    ssh "${SSH_OPTS[@]}" "$WIN_HOST" "if (Test-Path $stage) { Remove-Item -Recurse -Force $stage }; New-Item -ItemType Directory -Force $stage | Out-Null" || return 1
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
-        | ssh "${SSH_OPTS[@]}" "$WIN_HOST" "tar -xf - -C $WIN_REPO" || return 1
+        | ssh "${SSH_OPTS[@]}" "$WIN_HOST" "tar -xf - -C $stage" || return 1
+    ssh "${SSH_OPTS[@]}" "$WIN_HOST" "powershell -NoProfile -ExecutionPolicy Bypass -File $stage\\packaging\\windows\\syncstage.ps1 -Stage $stage -Repo $WIN_REPO; exit \$LASTEXITCODE" || return 1
     # tar -x never deletes: drop AppleDouble files and list anything else not in the commit
     git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" > "$RDIR/logs/manifest.txt"
     scp "${SSH_OPTS[@]}" -q "$RDIR/logs/manifest.txt" "$WIN_HOST:$WIN_REPO/out/manifest.txt" || return 1
@@ -228,9 +233,16 @@ function job_linux() {
     (( skew < -60 || skew > 60 )) && { echo "❌ $host clock is ${skew}s off this Mac"; return 1; }
     echo "clock skew ${skew}s"
     echo "=== sync ${COMMIT:0:8} -> $host:$repo ==="
-    ssh "${SSH_OPTS[@]}" "$host" "mkdir -p $repo" || return 1
+    # Extract into a staging folder and copy only the files whose contents changed:
+    # untarring straight into the tree stamped every file with the commit time, so ninja
+    # rebuilt the whole tree each release. rsync -c compares checksums, and without -t a
+    # copied file gets the current time, newer than its old objects.
+    local stage="$repo.stage"
+    ssh "${SSH_OPTS[@]}" "$host" "mkdir -p $repo && rm -rf $stage && mkdir -p $stage" || return 1
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
-        | ssh "${SSH_OPTS[@]}" "$host" "tar -xf - -C $repo" || return 1
+        | ssh "${SSH_OPTS[@]}" "$host" "tar -xf - -C $stage" || return 1
+    ssh "${SSH_OPTS[@]}" "$host" "out=\$(rsync -rlpc --itemize-changes $stage/ $repo/) || exit 1; \
+        echo \"Synced: \$(printf '%s\n' \"\$out\" | grep -c '^>f') file(s) changed\"" || return 1
     # Same tidy as packaging/windows/prune.ps1: tar -x never deletes, so AppleDouble files
     # go and anything else not in the commit (outside build/ and out/) is listed.
     git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" \
@@ -246,8 +258,8 @@ function job_linux() {
     scp "${SSH_OPTS[@]}" -q "$APPIMAGE_TOOLS_SRC"/*-$arch(|.AppImage) "${host}:appimage-tools/" \
         || { echo "❌ AppImage tools for $arch missing from $APPIMAGE_TOOLS_SRC"; return 1; }
     echo "=== linux-release build ==="
-    # ccache when the VM has it: git archive stamps every file with the commit time, so
-    # without it each release recompiles the whole tree (hours on the emulated x86_64 VM).
+    # ccache when the VM has it: the staged sync keeps ninja incremental, and ccache
+    # covers what it still recompiles (a changed header, a fresh build dir).
     ssh "${SSH_OPTS[@]}" "$host" "cd $repo && cmake --preset linux-release \
         \$(command -v ccache >/dev/null && echo -DCMAKE_C_COMPILER_LAUNCHER=ccache \
             -DCMAKE_CXX_COMPILER_LAUNCHER=ccache) >/dev/null \

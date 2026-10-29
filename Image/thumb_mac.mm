@@ -130,6 +130,52 @@ bool macImageIOThumbnail(const QString &fPath, int maxPixelSize, QImage &out)
 }
 
 /*
+    Decode the largest EMBEDDED preview only, never the primary image.
+
+    Used for DNG 1.7 files whose previews are JPEG XL (Lightroom pano/HDR merges): the
+    only JPEG in them is a 256 px IFD0 thumbnail. Without
+    kCGImageSourceCreateThumbnailFromImageIfAbsent ImageIO returns the embedded preview
+    (~0.2 s for a 120 MP pano) or fails; with it, a missing preview would mean a full
+    raw render (~13 s) that also ignores the merge's crop.
+*/
+bool macImageIOEmbeddedPreview(const QString &fPath, QImage &out)
+{
+    CFURLRef url = makeFileUrl(fPath);
+    if (!url) return false;
+
+    CGImageSourceRef src = CGImageSourceCreateWithURL(url, nullptr);
+    CFRelease(url);
+    if (!src) return false;
+
+    int maxPixelSize = 65535;
+    CFNumberRef maxSize = CFNumberCreate(
+        kCFAllocatorDefault, kCFNumberIntType, &maxPixelSize);
+
+    const void *keys[] = {
+        kCGImageSourceCreateThumbnailWithTransform,
+        kCGImageSourceShouldCacheImmediately,
+        kCGImageSourceThumbnailMaxPixelSize
+    };
+    const void *vals[] = {
+        kCFBooleanFalse,    // do NOT apply EXIF transform — caller does it
+        kCFBooleanTrue,
+        maxSize
+    };
+    CFDictionaryRef opts = CFDictionaryCreate(
+        kCFAllocatorDefault, keys, vals, 3,
+        &kCFTypeDictionaryKeyCallBacks,
+        &kCFTypeDictionaryValueCallBacks);
+
+    CGImageRef cg = CGImageSourceCreateThumbnailAtIndex(src, 0, opts);
+
+    CFRelease(opts);
+    CFRelease(maxSize);
+    CFRelease(src);
+
+    return renderCGImageToQImage(cg, out);
+}
+
+/*
     Decode the full-resolution primary image.
 
     Used by ImageDecoder for the full image cache. Faster than

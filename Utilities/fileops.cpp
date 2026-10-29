@@ -17,6 +17,7 @@
 #include <QMutex>
 #include <QMutexLocker>
 #include <QSqlDatabase>
+#include <QThread>
 
 std::function<void()> FileOps::flushHook;
 std::function<bool(const QString &)> FileOps::trashHook;
@@ -157,6 +158,31 @@ QStringList companionsFrom(const FolderIndex &index, const QFileInfo &info)
     return result;
 }
 
+/* WINDOWS WILL NOT RENAME OR TRASH AN OPEN FILE. A decoder or metadata reader that
+   still has the image open (or antivirus, or Explorer making a thumbnail) holds it for
+   a moment, and the operation fails outright; macOS and Linux allow it. So on Windows a
+   failure is retried for about a second while the file is still there. Measured: the
+   model_mutation self-test's rename of the image it had just re-read failed in 2 of the
+   5 runs that reached it on the Windows VM (2026-10-29). */
+bool retryWhileHeld(const QString &path, const std::function<bool()> &op)
+{
+    if (op()) return true;
+#ifdef Q_OS_WIN
+    for (int i = 0; i < 10 && QFile::exists(path); ++i) {
+        QThread::msleep(100);
+        if (op()) return true;
+    }
+#else
+    Q_UNUSED(path)
+#endif
+    return false;
+}
+
+bool renameFile(const QString &from, const QString &to)
+{
+    return retryWhileHeld(from, [&] { return QFile::rename(from, to); });
+}
+
 }  // namespace
 
 bool FileOps::usesFullNameSidecar(const QString &fPath)
@@ -216,7 +242,7 @@ QString FileOps::prepareSidecarForWrite(const QString &fPath)
        writers refuse one, and a copy or rename here would launder it. */
     if (QFileInfo(existing).isSymLink()) return path;
     const bool alone = claimFor(QFileInfo(fPath)).images <= 1;
-    const bool ok = alone ? QFile::rename(existing, path) : QFile::copy(existing, path);
+    const bool ok = alone ? renameFile(existing, path) : QFile::copy(existing, path);
     if (!ok) {
         G::issue("Warning", "Could not carry the old sidecar to its new name.",
                  "FileOps::prepareSidecarForWrite", -1, existing);
@@ -302,7 +328,7 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
     const auto sidecars = companions(srcPath);
 
     if (QFile::exists(dstPath)) QFile::remove(dstPath);
-    if (!QFile::rename(srcPath, dstPath)) {
+    if (!renameFile(srcPath, dstPath)) {
         QString msg = "Failed to move file.";
         G::issue("Warning", msg, "FileOps::moveFile", -1, srcPath);
         return false;
@@ -311,7 +337,7 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
     for (const QString &s : sidecars) {
         const QString dst = companionDest(s, srcPath, dstPath);
         if (QFile::exists(dst)) QFile::remove(dst);
-        if (!QFile::rename(s, dst)) {
+        if (!renameFile(s, dst)) {
             QString msg = "Moved the image but failed to move its sidecar.";
             G::issue("Warning", msg, "FileOps::moveFile", -1, s);
         }
@@ -335,7 +361,7 @@ void FileOps::setTrashHook(std::function<bool(const QString &)> hook)
 bool FileOps::moveOneToTrash(const QString &path)
 {
     if (trashHook) return trashHook(path);
-    return QFile::moveToTrash(path);
+    return retryWhileHeld(path, [&] { return QFile::moveToTrash(path); });
 }
 
 FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,

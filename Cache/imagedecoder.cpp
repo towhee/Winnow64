@@ -4,6 +4,7 @@
 #include "Cache/devpreviewcache.h"
 #include "Main/global.h"
 #include "ImageFormats/Raw/rawformat.h"
+#include "ImageFormats/Dng/dng.h"
 #include "Develop/develop.h"
 #include "Develop/inputtransform.h"
 #include "Develop/outputtransform.h"
@@ -13,6 +14,8 @@
 #ifdef Q_OS_MAC
 // Defined in Image/thumb_mac.mm — fast HEIC primary-image decode via ImageIO.
 bool macImageIOImage(const QString &fPath, QImage &out);
+// Defined in Image/thumb_mac.mm — largest embedded preview only (no raw render).
+bool macImageIOEmbeddedPreview(const QString &fPath, QImage &out);
 #endif
 
 /*
@@ -563,9 +566,23 @@ bool ImageDecoder::load()
        G::useRaw says (MW::developPixelSource: export, devPreview builder, Embellish
        export, focus stack). useRaw tracks the operation mode, so it is off in Preview,
        and "a deliberate user choice" above is only true of it inside Develop. */
-    const bool wantSensor = isIndependent
+    /* A DNG whose only JPEG is a thumbnail (RawFormat::PreviewTooSmall) is decoded from
+       the sensor data in every mode: Lightroom's JPEG XL pano/HDR merges carry a 256 px
+       JPEG and nothing larger that Qt can read, and a Linear Raw decode is fast (no
+       demosaic). ImageCache::willUseSensorDecode applies the same rule. */
+    bool previewTooSmall = false;
+    if (ext == "dng") {
+        const int pw = isIndependent ? int(indMeta.widthOrigPreview)
+                     : haveGeoMeta   ? int(geoMeta.widthOrigPreview)
+                                     : dmVal(G::WidthOrigPreviewColumn).toInt();
+        const int ph = isIndependent ? int(indMeta.heightOrigPreview)
+                     : haveGeoMeta   ? int(geoMeta.heightOrigPreview)
+                                     : dmVal(G::HeightOrigPreviewColumn).toInt();
+        previewTooSmall = RawFormat::PreviewTooSmall(ext, pw, ph);
+    }
+    const bool wantSensor = previewTooSmall || (isIndependent
         ? (G::useRaw || forceSensorDecode)
-        : (G::operationMode == G::OperationMode::Develop && G::useRaw);
+        : (G::operationMode == G::OperationMode::Develop && G::useRaw));
     if (wantSensor) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
             /* Reuse an already-decoded clean base (e.g. one MW::ensureRawDenoise
@@ -750,6 +767,21 @@ bool ImageDecoder::load()
                 status = Status::Invalid;
                 return false;
             }
+        }
+
+        /*  A DNG 1.7 whose previews are JPEG XL (Lightroom pano/HDR merges) has only a
+            256 px IFD0 JPEG, which DNG::parse falls back to. Normally the sensor decode
+            above has already shown the full image; this is for when it could not (no
+            sensor decoder for the format variant, e.g. floating-point HDR). Decode the
+            largest JPEG XL preview with libjxl, or on a Mac built without it, ImageIO;
+            keep it if it is larger. */
+        if (ext == "dng" && qMax(image.width(), image.height()) < 1024) {
+            QImage preview;
+            bool ok = imFile.isOpen() && DngRaw::ReadJxlPreview(imFile, preview);
+            #ifdef Q_OS_MAC
+            if (!ok) ok = macImageIOEmbeddedPreview(fPath, preview);
+            #endif
+            if (ok && preview.width() > image.width()) image = preview;
         }
     }
 

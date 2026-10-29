@@ -698,9 +698,11 @@ if(TARGET Winnow)
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
     )
     set_tests_properties(model_mutation PROPERTIES
-        # 120 s: the mutation steps start at half of this and must finish before the
+        # 200 s: the mutation steps start at half of this and must finish before the
         # generic self-test's own timer fires at the whole of it (MW::runSelfTest).
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MUTATION=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=120000"
+        # The steps take ~65 s on the Windows VM (timed 2026-10-29), so 120 s (60 s
+        # for the steps) failed there intermittently.
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MUTATION=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=200000"
         PASS_REGULAR_EXPRESSION "SELFTEST: MUTATION PASS"
         FAIL_REGULAR_EXPRESSION "MUTATION FAIL|MODELINTEGRITY|ROWLOSS"
         LABELS "smoke"

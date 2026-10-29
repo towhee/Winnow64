@@ -93,6 +93,18 @@ void DetailPreview::mouseReleaseEvent(QMouseEvent *event)
     event->accept();
 }
 
+void DetailPreview::showEvent(QShowEvent *event)
+{
+    QWidget::showEvent(event);
+    emit shownChanged();
+}
+
+void DetailPreview::hideEvent(QHideEvent *event)
+{
+    QWidget::hideEvent(event);
+    emit shownChanged();
+}
+
 void DetailPreview::mouseDoubleClickEvent(QMouseEvent *event)
 {
     event->accept();                     // swallow: an unhandled one floats the dock

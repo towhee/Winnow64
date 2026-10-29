@@ -44,6 +44,14 @@ public:
        (see rawformat.cpp), so the two can never drift out of sync. */
     static bool HasSensorDecoder(const QString &ext);
 
+    /* A DNG whose largest embedded JPEG is only a thumbnail (longest edge under 1024 px,
+       e.g. a Lightroom JPEG XL pano/HDR merge, whose real previews are JPEG XL). Such a
+       file is decoded from the sensor data even in Preview mode -- the alternative is a
+       256 px loupe. One definition for ImageDecoder (the decision) and ImageCache (the
+       memory governor's concurrency cap). previewW/H are the WidthOrigPreview /
+       HeightOrigPreview columns; 0 (unknown) is false. */
+    static bool PreviewTooSmall(const QString &ext, int previewW, int previewH);
+
     /* Full sensor decode: file -> demosaiced, colour-managed display QImage. When edit is
        non-null and non-identity, develop adjustments are applied in the linear working space
        (before the output transform). abort (when non-null) is polled between stages and inside
@@ -139,6 +147,22 @@ protected:
     /* THE override point. Read the vendor bitstream described by m and produce a
        normalised CFA mosaic in raw (width/height/pattern/levels/matrix). */
     virtual bool UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw) = 0;
+
+    /*
+        The other source shape: an image that is ALREADY DEMOSAICED but still scene-linear
+        camera RGB -- a DNG "Linear Raw" (Photometric 34892), which is what Lightroom's
+        pano/HDR merges and "Linear DNG" conversions write. Decode() asks this first;
+        NotLinear (the default, and every CFA file) takes the UnpackCfa path. Ok fills
+        raw's geometry and colour (width/height/camMul/xyzToCam; cfa stays EMPTY) and rgb
+        with W*H*3 floats, black-subtracted and normalised to 0..1, ready for
+        RawColor::ToCameraNative -- demosaic and PMRID (a mosaic denoiser) do not apply.
+        Failed sets errMsg.
+    */
+    enum class LinearResult { NotLinear, Ok, Failed };
+    virtual LinearResult UnpackLinear(QFile &file, const ImageMetadata &m, RawImage &raw,
+                                      std::vector<float> &rgb, const QAtomicInt *abort)
+    { Q_UNUSED(file) Q_UNUSED(m) Q_UNUSED(raw) Q_UNUSED(rgb) Q_UNUSED(abort)
+      return LinearResult::NotLinear; }
 
     /* Shared pre-demosaic step: per-2x2-position black subtraction + clip. */
     static void SubtractBlack(RawImage &raw);

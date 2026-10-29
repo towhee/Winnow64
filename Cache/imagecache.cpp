@@ -2378,13 +2378,22 @@ bool ImageCache::willUseSensorDecode(int sfRow) const
 /*
     True when a decode of sfRow will take the memory-heavy full-sensor RAW path: Decode Raw
     is on AND the file extension has a sensor decoder. With Decode Raw off, RAW files use the
-    embedded JPG (cheap), so this returns false and the concurrency cap does not apply.
+    embedded JPG (cheap), so this returns false and the concurrency cap does not apply --
+    except a DNG whose only JPEG is a thumbnail (RawFormat::PreviewTooSmall), which
+    ImageDecoder::load decodes from the sensor data regardless.
 */
-    if (!G::useRaw) return false;
-    if (sfRow < 0 || sfRow >= rowCountSf()) return false;
-    const QString fPath = pathAt(sfRow);
+    auto snap = dm->proxySnapshot();
+    if (!snap || sfRow < 0 || sfRow >= snap->rowCount()) return false;
+    const QString fPath = snap->path(sfRow);
     const QString ext = QFileInfo(fPath).suffix().toLower();
-    return RawFormat::HasSensorDecoder(ext);
+    if (G::useRaw) return RawFormat::HasSensorDecoder(ext);
+    if (ext != "dng") return false;
+    /* dm->index, not dm->sf: RowStore reads are locked (see ImageDecoder::dmVal). */
+    const int dmRow = snap->dmRow(sfRow);
+    if (dmRow < 0 || dmRow >= dm->rowCount()) return false;
+    return RawFormat::PreviewTooSmall(
+        ext, dm->index(dmRow, G::WidthOrigPreviewColumn).data().toInt(),
+        dm->index(dmRow, G::HeightOrigPreviewColumn).data().toInt());
 }
 
 int ImageCache::rawDecodeLimit(int sfRow) const

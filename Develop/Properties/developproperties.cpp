@@ -4599,7 +4599,8 @@ void DevelopProperties::addPreviewRow(QModelIndex parIdx, const QString &parentN
     tgt->setIcon(detailTargetIcon(false));
     tgt->setIconSize(QSize(16, 16));
     tgt->setToolTip("Choose the area to show: click here, then click the photo.\n"
-                    "You can also drag inside the preview.");
+                    "You can also drag inside the preview.\n"
+                    "Click here again to remove the target from the photo.");
     tgt->setEnabled(!currentImagePath.isEmpty());
     tgt->setActive(detailPickActive);
     tgt->setIcon(detailTargetIcon(detailPickActive));
@@ -4616,6 +4617,10 @@ void DevelopProperties::addPreviewRow(QModelIndex parIdx, const QString &parentN
     dp->setFixedSize(side, side);
     preview = dp;
     connect(dp, &DetailPreview::pointNudged, this, &DevelopProperties::nudgeDetailPoint);
+    /* QUEUED: inside a hide/show event isVisible() may not have settled yet, and a
+       collapse hides the whole row at once -- detailPreviewWanted is read after. */
+    connect(dp, &DetailPreview::shownChanged, this, &DevelopProperties::detailRoiNeeded,
+            Qt::QueuedConnection);
     hb->addStretch(1);
     hb->addWidget(dp, 0, Qt::AlignTop);
     hb->addStretch(1);
@@ -4698,6 +4703,15 @@ void DevelopProperties::toggleDetailPick()
     /* Arming needs an image to pick on -- the button is disabled without one, and this
        keeps any other caller (a shortcut later) from arming a tool that can only fail. */
     if (!detailPickActive && currentImagePath.isEmpty()) return;
+    /* A three-step cycle: arm -> pick (auto-disarms, the target marks the point) ->
+       click again to REMOVE the target and put the preview back to its prompt. Without
+       this the marker could only be dismissed by changing image. */
+    if (!detailPickActive && detailPtSet) {
+        clearDetailPoint();             // emits detailRoiNeeded -> clears the marker
+        setDetailRoiImage(QImage());
+        setDetailMessage(tr("Pick a location in the image"));
+        return;
+    }
     setDetailPickActive(!detailPickActive);
 }
 

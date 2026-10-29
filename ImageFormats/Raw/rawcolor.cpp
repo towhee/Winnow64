@@ -39,6 +39,14 @@ bool RawColor::ToCameraNative(const RawImage &raw,
                               const std::vector<float> &rgb,
                               WorkingImage &out)
 {
+    std::vector<float> copy = rgb;
+    return ToCameraNative(raw, std::move(copy), out);
+}
+
+bool RawColor::ToCameraNative(const RawImage &raw,
+                              std::vector<float> &&rgb,
+                              WorkingImage &out)
+{
     const int W = raw.width;
     const int H = raw.height;
     if (W <= 0 || H <= 0) return false;
@@ -71,7 +79,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
         Out-of-gamut values now survive to the output stage, which is the only place that
         knows what gamut it is rendering into.
     */
-    out.rgb = rgb;
+    out.rgb = std::move(rgb);
     return true;
 }
 

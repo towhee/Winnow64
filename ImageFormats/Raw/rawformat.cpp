@@ -69,6 +69,12 @@ bool RawFormat::HasSensorDecoder(const QString &ext)
     return rawFactories().contains(ext);
 }
 
+bool RawFormat::PreviewTooSmall(const QString &ext, int previewW, int previewH)
+{
+    const int longEdge = qMax(previewW, previewH);
+    return ext == "dng" && longEdge > 0 && longEdge < 1024;
+}
+
 /* Last denoise-decode timing snapshot (see rawformat.h). */
 static std::mutex g_denoiseTimingMutex;
 static RawFormat::DenoiseTiming g_lastDenoiseTiming;
@@ -202,6 +208,36 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         /* else: aerr is a soft failure -- fall through to the in-house engine. */
     }
 #endif
+
+    /*
+        LINEAR RAW (UnpackLinear): already-demosaiced camera RGB, e.g. a Lightroom
+        pano/HDR merge DNG. It goes straight to the camera-native base -- no
+        SubtractBlack, demosaic or PMRID, all of which need a mosaic. Asked BEFORE the
+        PMRID claim below, so such a file never claims (or waits on) a denoised base
+        nobody can make. Setting decoded hands the rest of the function the same state
+        the Apple engine leaves.
+    */
+    if (!decoded) {
+        RawImage linRaw;
+        std::vector<float> linRgb;
+        const LinearResult linear = UnpackLinear(file, m, linRaw, linRgb, abort);
+        if (linear == LinearResult::Failed) {
+            if (errMsg.isEmpty()) errMsg = "Linear Raw unpack failed.";
+            return false;
+        }
+        if (aborted()) { errMsg = "Aborted"; return false; }
+        if (linear == LinearResult::Ok) {
+            dt.unpackMs = lap();
+            RawColor color;
+            if (!color.ToCameraNative(linRaw, std::move(linRgb), *work)) {
+                errMsg = "Colour conversion failed.";
+                return false;
+            }
+            work->cam.cameraModel = m.model;
+            work->rawRenderTag = choice.tag();
+            decoded = true;
+        }
+    }
 
     /*
         SHARED PMRID BASE (PmridCache). Every decode that needs the full-strength denoised

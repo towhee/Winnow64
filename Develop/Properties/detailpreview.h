@@ -55,8 +55,14 @@ signals:
     /* The user dragged inside the preview: move the sample point by this many IMAGE
        pixels (oriented frame). Emitted live during the drag. */
     void pointNudged(int dx, int dy);
+    /* The widget was shown or hidden (its section expanded or collapsed, the dock
+       opened or closed). The loupe's target marker is drawn only while a preview is on
+       screen, so the panel re-evaluates it -- see MW::onDetailRoiNeeded. */
+    void shownChanged();
 
 protected:
+    void showEvent(QShowEvent *) override;
+    void hideEvent(QHideEvent *) override;
     void paintEvent(QPaintEvent *) override;
     void mousePressEvent(QMouseEvent *) override;
     void mouseMoveEvent(QMouseEvent *) override;

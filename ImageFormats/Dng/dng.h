@@ -33,7 +33,11 @@ private:
 
     Handles UNCOMPRESSED (Compression 1) and LOSSLESS-JPEG (Compression 7) DNG, in either strip
     or tile layout. Other compressions return false -> ImageDecoder falls back to the embedded
-    preview. See notes/Documentation.txt "RAW DECODING".
+    preview. See notes/Documentation.md "Adobe DNG".
+
+    A Linear Raw DNG (already demosaiced; Lightroom pano/HDR merges) is read by
+    UnpackLinear instead, which also handles JPEG XL (Compression 52546, DNG 1.7) via
+    libjxl.
 */
 class DngRaw : public RawFormat
 {
@@ -41,8 +45,13 @@ public:
     /* Matrix + as-shot multipliers with no sensor unpack -- see RawFormat. */
     bool ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info) override;
 
+    /* The largest JPEG XL RGB preview as 8-bit RGB (see dng.cpp). */
+    static bool ReadJxlPreview(QFile &file, QImage &image);
+
 protected:
     bool UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw) override;
+    LinearResult UnpackLinear(QFile &file, const ImageMetadata &m, RawImage &raw,
+                              std::vector<float> &rgb, const QAtomicInt *abort) override;
 };
 
 #endif // DNG_H

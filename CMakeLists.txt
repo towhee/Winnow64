@@ -257,6 +257,7 @@ set(WINNOW_SOURCES
     ImageFormats/Canon/crxcodec.cpp
     ImageFormats/Dcp/dcp.cpp
     ImageFormats/Dng/dng.cpp
+    ImageFormats/Dng/dngjxl.cpp
     ImageFormats/Fuji/fuji.cpp
     ImageFormats/Fuji/fujicompressed.cpp
     ImageFormats/Heic/heic.cpp
@@ -666,6 +667,7 @@ set(WINNOW_HEADERS
     ImageFormats/Canon/canoncr3.h
     ImageFormats/Dcp/dcp.h
     ImageFormats/Dng/dng.h
+    ImageFormats/Dng/dngjxl.h
     ImageFormats/Fuji/fuji.h
     ImageFormats/Fuji/fujicompressed.h
     ImageFormats/Heic/heic.h
@@ -1112,6 +1114,39 @@ if(APPLE)
     find_package(ZLIB REQUIRED)
     target_link_libraries(Winnow PRIVATE ZLIB::ZLIB)
 
+    # libjxl: JPEG XL tiles in DNG 1.7 (Lightroom pano/HDR merges). Optional -- without
+    # it those DNGs show their embedded preview via ImageIO. Homebrew `jpeg-xl`, or a
+    # static libjxl.a (+ brotli, hwy) in WINNOW_MAC_DEPS_PREFIX for the Intel build.
+    if(WINNOW_MAC_DEPS_PREFIX)
+        find_path(JXL_INCLUDE_DIR jxl/decode.h
+            PATHS ${WINNOW_MAC_DEPS_PREFIX}/include NO_DEFAULT_PATH)
+        find_library(JXL_LIB NAMES libjxl.a
+            PATHS ${WINNOW_MAC_DEPS_PREFIX}/lib NO_DEFAULT_PATH)
+        set(_jxl_extra_libs)
+        foreach(_l jxl_cms hwy brotlidec brotlicommon)
+            find_library(_jxl_dep_${_l} NAMES lib${_l}.a
+                PATHS ${WINNOW_MAC_DEPS_PREFIX}/lib NO_DEFAULT_PATH)
+            if(_jxl_dep_${_l})
+                list(APPEND _jxl_extra_libs ${_jxl_dep_${_l}})
+            endif()
+        endforeach()
+    else()
+        find_path(JXL_INCLUDE_DIR jxl/decode.h
+            PATHS ${HOMEBREW_PREFIX}/opt/jpeg-xl/include NO_DEFAULT_PATH)
+        find_library(JXL_LIB jxl
+            PATHS ${HOMEBREW_PREFIX}/opt/jpeg-xl/lib NO_DEFAULT_PATH)
+        set(_jxl_extra_libs)
+    endif()
+    if(JXL_INCLUDE_DIR AND JXL_LIB)
+        target_link_libraries(Winnow PRIVATE ${JXL_LIB} ${_jxl_extra_libs})
+        target_include_directories(Winnow PRIVATE ${JXL_INCLUDE_DIR})
+        target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_JXL)
+        message(STATUS "libjxl enabled (macOS): ${JXL_LIB}")
+    else()
+        message(WARNING "libjxl not found (brew install jpeg-xl): JPEG XL DNGs will "
+                        "show their embedded preview only.")
+    endif()
+
     # ONNX Runtime (Homebrew `onnxruntime`, built with the CoreML EP -> ANE). The
     # CoreML provider header ships in the same include dir. Opt-in via WINNOW_ENABLE_ORT.
     if(WINNOW_ENABLE_ORT)
@@ -1315,6 +1350,19 @@ if(WIN32)
         ${LIB_DIR}/libtiff/include
     )
 
+    # libjxl (JPEG XL tiles in DNG 1.7). The upstream release build (jxl-x64-windows.zip,
+    # dynamic: the static one uses the static CRT), vendored under Lib/libjxl -- one
+    # Release import lib for both configs, a C ABI like tiff/zlib. DLLs deployed below.
+    if(EXISTS ${LIB_DIR}/libjxl/lib/jxl.lib)
+        target_link_libraries(Winnow PRIVATE ${LIB_DIR}/libjxl/lib/jxl.lib)
+        target_include_directories(Winnow PRIVATE ${LIB_DIR}/libjxl/include)
+        target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_JXL)
+        message(STATUS "libjxl enabled (Windows): ${LIB_DIR}/libjxl")
+    else()
+        message(WARNING "Lib/libjxl missing: JPEG XL DNGs will show their embedded "
+                        "JPEG only.")
+    endif()
+
     # ONNX Runtime (vendored DirectML build under Lib/onnxruntime/windows). Opt-in via
     # WINNOW_ENABLE_ORT. Runtime DLLs (onnxruntime.dll, DirectML.dll,
     # onnxruntime_providers_shared.dll) are deployed next to Winnow.exe below.
@@ -1410,6 +1458,19 @@ if(WIN32)
         COMMENT "Deploying third-party runtime DLLs"
         VERBATIM)
 
+    if(EXISTS ${LIB_DIR}/libjxl/lib/jxl.lib)
+        add_custom_command(TARGET Winnow POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${LIB_DIR}/libjxl/bin/jxl.dll"
+                "${LIB_DIR}/libjxl/bin/jxl_cms.dll"
+                "${LIB_DIR}/libjxl/bin/brotlidec.dll"
+                "${LIB_DIR}/libjxl/bin/brotlienc.dll"
+                "${LIB_DIR}/libjxl/bin/brotlicommon.dll"
+                "${_winnow_out}"
+            COMMENT "Deploying libjxl DLLs"
+            VERBATIM)
+    endif()
+
     # ONNX Runtime DirectML runtime DLLs (only when the runtime is enabled + vendored).
     if(WINNOW_ENABLE_ORT AND EXISTS ${LIB_DIR}/onnxruntime/windows/lib/onnxruntime.dll)
         add_custom_command(TARGET Winnow POST_BUILD
@@ -1464,7 +1525,7 @@ endif()
 # =============================================================================
 # Linux dependencies (distro packages; developed on Ubuntu 26.04 arm64)
 #   apt: qt6-base-dev qt6-multimedia-dev qt6-svg-dev libopencv-dev libtiff-dev
-#        zlib1g-dev libonnxruntime-dev (only with WINNOW_ENABLE_ORT) libimage-exiftool-perl
+#        zlib1g-dev libjxl-dev pkg-config libonnxruntime-dev (only with WINNOW_ENABLE_ORT) libimage-exiftool-perl
 #   As on Windows, libtiff backs Tiff (tiff.cpp); the Mac-only LibTiff/jpegturbo
 #   fast-path sources are not compiled.
 #   Like Windows, the exe lands in <build>/app with its bundled models beside it,
@@ -1481,6 +1542,21 @@ if(UNIX AND NOT APPLE)
     find_package(ZLIB REQUIRED)
     find_package(TIFF REQUIRED)
     target_link_libraries(Winnow PRIVATE ZLIB::ZLIB TIFF::TIFF)
+
+    # libjxl (apt libjxl-dev): JPEG XL tiles in DNG 1.7. Optional, as on the other
+    # platforms -- without it those DNGs show their embedded JPEG only.
+    find_package(PkgConfig QUIET)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(JXL QUIET IMPORTED_TARGET libjxl)
+    endif()
+    if(JXL_FOUND)
+        target_link_libraries(Winnow PRIVATE PkgConfig::JXL)
+        target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_JXL)
+        message(STATUS "libjxl enabled (Linux): ${JXL_VERSION}")
+    else()
+        message(WARNING "libjxl not found (apt install libjxl-dev): JPEG XL DNGs will "
+                        "show their embedded JPEG only.")
+    endif()
 
     if(WINNOW_ENABLE_ORT)
         find_package(onnxruntime CONFIG)

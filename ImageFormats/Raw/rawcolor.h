@@ -35,6 +35,11 @@ public:
     bool ToCameraNative(const RawImage &raw,
                    const std::vector<float> &rgb,
                    WorkingImage &out);
+    /* The same, taking rgb's buffer instead of copying it (a 120 MP Linear Raw DNG is
+       1.5 GB of floats). */
+    bool ToCameraNative(const RawImage &raw,
+                   std::vector<float> &&rgb,
+                   WorkingImage &out);
 
     /*
         Just the CHARACTERISATION half of ToCameraNative: given a model's XYZ->camera

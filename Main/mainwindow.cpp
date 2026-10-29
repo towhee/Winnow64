@@ -14897,8 +14897,11 @@ void MW::onDetailRoiNeeded()
 */
     if (G::isLogger) G::log("MW::onDetailRoiNeeded");
     if (!developProperties) return;
+    /* The target marker belongs to the 1:1 preview: drawn only while a point is set AND
+       a preview (Detail, or Effects > Blur) is on screen. Collapsing the section hides
+       it; reopening brings it back at the same point (DetailPreview::shownChanged). */
     if (imageView) {
-        if (developProperties->detailHasPoint())
+        if (developProperties->detailPreviewWanted())
             imageView->setDetailPoint(developProperties->detailPoint());
         else imageView->clearDetailPoint();
     }

@@ -39,6 +39,12 @@ from the upstream project linked below, or on request from the Winnow author.
   LGPL-3.0-or-later: [LGPL-3.0](licenses/LGPL-3.0.txt).
 - **[libde265](https://github.com/strukturag/libde265)** (Windows). HEVC decoding for
   HEIF. LGPL-3.0-or-later: [LGPL-3.0](licenses/LGPL-3.0.txt).
+- **[libjxl](https://github.com/libjxl/libjxl)**. JPEG XL decoding (DNG 1.7).
+  BSD-3-Clause: [libjxl](licenses/libjxl.txt). It includes or links
+  **[Brotli](https://github.com/google/brotli)** (MIT: [brotli](licenses/brotli.txt)),
+  **[Highway](https://github.com/google/highway)**
+  (Apache-2.0: [Apache-2.0](licenses/Apache-2.0.txt)) and, on Windows,
+  **[skcms](https://skia.googlesource.com/skcms/)** (BSD-3-Clause: [skcms](licenses/skcms.txt)).
 - **[LibRaw](https://www.libraw.org/)**. The Fujifilm compressed RAF and Canon CR3
   decoders are ported from LibRaw into `ImageFormats/Fuji/fujicompressed.cpp` and
   `ImageFormats/Canon/crxcodec.cpp`. LGPL-2.1 or CDDL-1.0, used under LGPL-2.1:
