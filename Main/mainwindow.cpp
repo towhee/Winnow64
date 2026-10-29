@@ -7949,6 +7949,10 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     const int orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
     Metadata::developCropFactors(blob, w, h, orientation, cropFx, cropFy);
     dm->setCroppedGeometry(dmRow, w, h, orientation, cropFx, cropFy);
+    if (fPath == dm->currentKey) {
+        if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
+        updateStatus(true, "", "MW::devPreviewUpdated");    // Cropped: WxH
+    }
     /*  A "Filter on..." category over a cropped column lists VALUES, and the new crop
         may be one it has not got: refill it, as a rating edit refills Ratings. */
     for (QTreeWidgetItem *cat : filters->sessionCategories()) {

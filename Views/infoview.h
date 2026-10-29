@@ -67,6 +67,7 @@ public:
         ModifiedRow,
         DimensionsRow,
         PreviewDimensionsRow,
+        CroppedDimensionsRow,
         MegaPixelsRow,
         fileInfoRowsEnd // insert additional items before this
     };

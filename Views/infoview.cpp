@@ -384,6 +384,7 @@ void InfoView::setupOk()
     ok->setData(ok->index(ModifiedRow, 0, fileInfoIdx), "Modified");
     ok->setData(ok->index(DimensionsRow, 0, fileInfoIdx), "Dimensions");
     ok->setData(ok->index(PreviewDimensionsRow, 0, fileInfoIdx), "Preview dim");
+    ok->setData(ok->index(CroppedDimensionsRow, 0, fileInfoIdx), "Cropped dim");
     ok->setData(ok->index(MegaPixelsRow, 0, fileInfoIdx), "Megapixels");
     ok->setData(ok->index(ModelRow, 0, imageInfoIdx), "Model");
     ok->setData(ok->index(LensRow, 0, imageInfoIdx), "Lens");
@@ -607,6 +608,13 @@ void InfoView::updateInfo(const int &row)
     s = dm->sf->index(row, G::WidthOrigPreviewColumn).data().toString() + "x" +
         dm->sf->index(row, G::HeightOrigPreviewColumn).data().toString();
     ok->setData(ok->index(PreviewDimensionsRow, 1, fileInfoIdx), s);
+    /* After the develop geometry (crop/straighten/perspective). An undeveloped image
+       is uncropped, so it reports the file's dimensions. */
+    if (dm->sf->index(row, G::DevelopColumn).data().toBool())
+        s = dm->sf->index(row, G::CroppedDimensionsColumn).data().toString();
+    else
+        s = dm->sf->index(row, G::DimensionsColumn).data().toString();
+    ok->setData(ok->index(CroppedDimensionsRow, 1, fileInfoIdx), s);
     s = dm->sf->index(row, G::MegaPixelsColumn).data().toString();
     ok->setData(ok->index(MegaPixelsRow, 1, fileInfoIdx), s);
     s = dm->sf->index(row, G::CameraModelColumn).data().toString();

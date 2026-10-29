@@ -105,7 +105,11 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
             /* Which picture is shown: the picture chip right after this text
                (syncPictureChip, below), which is also its control. */
             // Raw rendering
-            base += spacer + getRawRendered();
+            const QString raw = getRawRendered();
+            if (!raw.isEmpty()) base += spacer + raw;
+            // Cropped dimensions
+            const QString cropped = getCroppedDimensions();
+            if (!cropped.isEmpty()) base += spacer + "Cropped: " + cropped;
         }
 
         QString preBase = "";
@@ -382,6 +386,22 @@ QString MW::getRawRendered()
         return "RAW";
     }
     return "";
+}
+
+QString MW::getCroppedDimensions()
+{
+/*
+    The current image's dimensions after its develop geometry (crop, straighten,
+    perspective). An undeveloped image is uncropped, so it reports the file's dimensions,
+    as the Metadata panel's "Cropped dim" row does. Kept current after a crop by
+    MW::devPreviewUpdated.
+*/
+    if (G::isLogger) G::log("MW::getCroppedDimensions");
+    if (!dm || !dm->sf || dm->currentSfRow < 0) return "";
+    const int row = dm->currentSfRow;
+    if (dm->sf->index(row, G::DevelopColumn).data().toBool())
+        return dm->sf->index(row, G::CroppedDimensionsColumn).data().toString();
+    return dm->sf->index(row, G::DimensionsColumn).data().toString();
 }
 
 QString MW::getPictureShown()

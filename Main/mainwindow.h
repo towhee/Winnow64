@@ -3711,6 +3711,8 @@ private:
     int pickedSfInstance = -1;
     int pickedSfRows = -1;
     QString getRawRendered();
+    // the current image's size after its develop crop; the file's size if undeveloped
+    QString getCroppedDimensions();
     /* Which picture of the current image is on screen: "Preview" (the camera's embedded
        preview), "Original" (the file itself, or Develop's Before) or "Developed". */
     QString getPictureShown();
