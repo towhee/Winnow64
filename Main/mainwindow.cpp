@@ -5247,13 +5247,10 @@ void MW::refreshStaleRows(const QStringList &paths)
         /*  The full-size decode was made from a file that has since changed. */
         if (icd) icd->remove(fPath);
 
-        const int sfRow = dm->proxyRowFromKey(fPath);
-        if (sfRow >= 0) {
-            if (thumbView && thumbView->iconViewDelegate)
-                thumbView->iconViewDelegate->clearCacheItem(sfRow);
-            if (gridView && gridView->iconViewDelegate)
-                gridView->iconViewDelegate->clearCacheItem(sfRow);
-        }
+        if (thumbView && thumbView->iconViewDelegate)
+            thumbView->iconViewDelegate->clearCacheItem(fPath);
+        if (gridView && gridView->iconViewDelegate)
+            gridView->iconViewDelegate->clearCacheItem(fPath);
 
         staleRecommit.insert(fPath);
         ++cleared;
@@ -7979,13 +7976,10 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     if (!thumb.isNull()) {
         devPreviewIconHeld.remove(fPath);
         dm->setDevelopIcon(dmRow, thumb);
-        const int sfRow = dm->proxyRowFromKey(fPath);
-        if (sfRow >= 0) {
-            if (thumbView && thumbView->iconViewDelegate)
-                thumbView->iconViewDelegate->clearCacheItem(sfRow);
-            if (gridView && gridView->iconViewDelegate)
-                gridView->iconViewDelegate->clearCacheItem(sfRow);
-        }
+        if (thumbView && thumbView->iconViewDelegate)
+            thumbView->iconViewDelegate->clearCacheItem(fPath);
+        if (gridView && gridView->iconViewDelegate)
+            gridView->iconViewDelegate->clearCacheItem(fPath);
     }
     /* HOLD the icon on screen until the build replaces it (see devPreviewIconHeld):
        clearing it here flashed the camera thumbnail for the length of the render. */
@@ -8014,13 +8008,10 @@ void MW::clearDevelopIconNow(const QString &fPath)
     if (dmRow < 0) return;                  // gone: another folder now
     dm->clearDevelopIcon(dmRow);
 
-    const int sfRow = dm->proxyRowFromKey(fPath);
-    if (sfRow >= 0) {
-        if (thumbView && thumbView->iconViewDelegate)
-            thumbView->iconViewDelegate->clearCacheItem(sfRow);
-        if (gridView && gridView->iconViewDelegate)
-            gridView->iconViewDelegate->clearCacheItem(sfRow);
-    }
+    if (thumbView && thumbView->iconViewDelegate)
+        thumbView->iconViewDelegate->clearCacheItem(fPath);
+    if (gridView && gridView->iconViewDelegate)
+        gridView->iconViewDelegate->clearCacheItem(fPath);
 
     /* The cleared row needs the loader to run again to get its camera thumb back -- and it
        needs MetaRead told that a loaded icon was discarded, or in the default brute-force

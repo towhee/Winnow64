@@ -26,6 +26,7 @@
 #include <functional>
 #include <QPainter>
 #include <QStyledItemDelegate>
+#include <QTextDocument>
 
 /*
     See keywordtree.h for what this is and what it deliberately does not do.
@@ -336,6 +337,42 @@ void KeywordTree::applyFilter(const QModelIndex &parent, const QString &needle)
             tidiness, and a filter that silently collapsed branches would lose it. */
         if (childShown) setExpanded(idx, true);
     }
+}
+
+void KeywordTree::paintEvent(QPaintEvent *event)
+{
+    QTreeView::paintEvent(event);
+    if (!vocab || vocab->rowCount() > 0) return;
+
+    /*  A NEW USER'S EMPTY LIST EXPLAINS ITSELF. A blank tree gives no hint that this is
+        where the list is built, or that it is a hierarchy, so the hint says both and
+        shows the smallest list that makes the point: the same name in two branches. */
+    const QString dim = G::disabledColor.name();
+    const QString text = palette().color(QPalette::Text).name();
+    auto row = [](int depth, const QString &name) {
+        return QString("<div style='margin-left:%1px'>%2</div>").arg(depth * 14).arg(name);
+    };
+    const QString html = QString(
+        "<div style='color:%1'>"
+        "<p style='color:%2'><b>Build your keyword list here.</b></p>"
+        "<p>Right-click and choose <i>New keyword...</i> to start, then <i>New keyword "
+        "inside...</i> to nest one keyword in another. For example:</p>"
+        "<div style='color:%2'>%3%4%5%6%7%8</div>"
+        "<p>Or right-click to import a Lightroom keyword list, or build one from the "
+        "keywords your images already carry.</p>"
+        "</div>")
+        .arg(dim, text,
+             row(0, tr("People")), row(1, tr("Family")), row(2, tr("Sue")),
+             row(0, tr("Event")), row(1, tr("Birthday")), row(2, tr("Sue")));
+
+    QTextDocument doc;
+    doc.setDefaultFont(font());
+    doc.setHtml(html);
+    const int margin = 8;
+    doc.setTextWidth(qMax(50, viewport()->width() - 2 * margin));
+    QPainter p(viewport());
+    p.translate(margin, margin);
+    doc.drawContents(&p);
 }
 
 void KeywordTree::contextMenuEvent(QContextMenuEvent *event)

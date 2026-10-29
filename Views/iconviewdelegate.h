@@ -50,12 +50,19 @@ public:
     int getCellHeightFromThumbHeight(int height);
     QPoint blackBorderOffset(const QModelIndex &sfIdx) const;
     void resetFirstLastVisible();
-    void clearCacheItem(int sfRow) { iconCache.remove(sfRow); }
+    void clearCacheItem(const QString &key) { iconCache.remove(key); }
     void clearAllCache() { iconCache.clear(); }
     QString diagnostics();
 
-    // The key is the model proxy row
-    mutable QCache<int, QPixmap> iconCache;     // item pixmap (source icon or thumb)
+    /*  THE SCALED THUMBNAIL IS KEYED BY IMAGE (the row key, G::KeyRole), NOT BY PROXY ROW.
+        It was keyed by row, so any reorder that did not also flush it -- a late metadata
+        read moving a row under a dynamic sort or filter, a version row inserted -- left
+        each cell painting the pixmap of the image that used to be at that position: the
+        thumbnail said one image and a click on it loaded another. iconKey is the source
+        QIcon's cacheKey, so an icon replaced under the same key re-renders on its own. */
+    struct CachedIcon { QPixmap pm; qint64 iconKey = 0; };
+    mutable QCache<QString, CachedIcon> iconCache;
+    // The key is the model proxy row: geometry only, rewritten on every paint
     mutable QCache<int, QRect> thumbRectCache;  // thumb rect (w/o black border)
     int maxCacheSize = 10000;
 

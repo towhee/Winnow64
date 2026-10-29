@@ -356,7 +356,7 @@ void IconView::refreshIcon(QModelIndex idx, QString src)
 
     /*  This row's entry only: the icon itself may have changed (a rotation), but the
         other 43,000 pixmaps in the cache have not. */
-    iconViewDelegate->clearCacheItem(idx.row());
+    iconViewDelegate->clearCacheItem(dm->sf->index(idx.row(), 0).data(G::KeyRole).toString());
 
     if (!isCellVisible(idx.row())) return;
 

@@ -5283,7 +5283,7 @@ void ImageView::rotateImage(int degrees)
     // Invalidate the IconViewDelegate cache for this specific image
     if (thumbView) {
         // You'll need to call the clear method on the delegate
-        thumbView->iconViewDelegate->clearCacheItem(dm->currentSfRow);
+        thumbView->iconViewDelegate->clearCacheItem(dm->currentKey);
         // Then tell the view to redraw that specific thumb
         thumbView->refreshIcon(dm->currentSfIdx, "ImageView::rotateImage");
     }

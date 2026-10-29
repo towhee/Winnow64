@@ -86,6 +86,8 @@ signals:
     void tagFiled(const QString &tagPath, const QString &newPath);
 
 protected:
+    /*  An empty list paints how to start one, with a tiny example, in the blank tree. */
+    void paintEvent(QPaintEvent *event) override;
     void contextMenuEvent(QContextMenuEvent *event) override;
     void keyPressEvent(QKeyEvent *event) override;
     /*  Drag and drop, all at the VIEW rather than in the model. Two different things can

@@ -740,15 +740,18 @@ textRect         = a rectangle below itemRect
 
     // --- THUMBNAIL ---
 
-    // Check if we already have the scaled pixmap for this row
-    QPixmap *cachedPm = iconCache.object(sfRow);
+    /*  The scaled pixmap is cached per IMAGE and checked against the icon it was made
+        from -- see iconCache in iconviewdelegate.h for the row-keyed defect it replaced. */
+    const QString rowKey = index.model()->index(sfRow, 0).data(G::KeyRole).toString();
+    const QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
+    const qint64 iconKey = icon.cacheKey();
+    CachedIcon *cached = rowKey.isEmpty() ? nullptr : iconCache.object(rowKey);
     QPixmap pm;
 
-    if (cachedPm) {
-        pm = *cachedPm;
+    if (cached && cached->iconKey == iconKey) {
+        pm = cached->pm;
     } else {
         // Expensive retrieve and scale the datamodel icon pixmap to fit in thumbRect
-        QIcon icon = qvariant_cast<QIcon>(index.data(Qt::DecorationRole));
         QSize maxSize = icon.actualSize(QSize(G::maxIconSize, G::maxIconSize));
         pm = icon.pixmap(maxSize);
 
@@ -763,8 +766,8 @@ textRect         = a rectangle below itemRect
                 pm = pm.scaled(itemSize, Qt::KeepAspectRatio, Qt::SmoothTransformation);
             }
 
-            // Insert into cache so we don't do this again for this row
-            iconCache.insert(sfRow, new QPixmap(pm));
+            // Insert into cache so we don't do this again for this image
+            if (!rowKey.isEmpty()) iconCache.insert(rowKey, new CachedIcon{pm, iconKey});
         }
     }
 

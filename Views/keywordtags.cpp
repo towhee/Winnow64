@@ -287,11 +287,13 @@ KeywordTags::KeywordTags(KeywordVocab *vocab, QWidget *parent)
     suggestFlow = new FlowLayout(suggestArea, 2, 4, 3);
     suggestArea->setLayout(suggestFlow);
     outer->addWidget(suggestArea);
+    /*  ENABLED, with the grey set on the text: a disabled QLabel takes no mouse events,
+        so its "Audit keywords..." link highlighted but never fired linkActivated. */
     suggestStatus = new QLabel(this);
-    suggestStatus->setEnabled(false);
     suggestStatus->setWordWrap(true);
     suggestStatus->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Preferred);
     suggestStatus->setTextFormat(Qt::RichText);
+    suggestStatus->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
     connect(suggestStatus, &QLabel::linkActivated, this, [this] { emit auditRequested(); });
     outer->addWidget(suggestStatus);
 
@@ -531,11 +533,22 @@ void KeywordTags::setSuggestions(const QVector<VisualAudit::Suggestion> &suggest
         chip->onDismiss = [this](const QString &p) { emit suggestionDismissed(p); };
         suggestFlow->addWidget(chip);
     }
-    /*  The audit link is offered in the status whatever it says: it is how the visual
-        half is learned the first time and re-learned once the keywords have moved on. */
-    suggestStatus->setText(status.isEmpty() ? QString()
-        : status.toHtmlEscaped() + QString("  <a href='audit'>%1</a>").arg(tr("Audit "
-                                                                            "keywords...")));
+    /*  The status names "Audit keywords" whatever it says, and that name IS the link:
+        it is how the visual half is learned the first time and re-learned once the
+        keywords have moved on. Appended if a translation drops the name. */
+    if (status.isEmpty()) { suggestStatus->clear(); return; }
+    const QString name = tr("Audit keywords");
+    // Colour set on the anchor: it would otherwise inherit the span's grey
+    const QString link = QString("<a href='audit' style='color:%1; "
+                                 "text-decoration:none'>%2</a>")
+                             .arg(suggestStatus->palette().color(QPalette::Link).name(),
+                                  name.toHtmlEscaped());
+    QString html = status.toHtmlEscaped();
+    const int at = html.indexOf(name.toHtmlEscaped());
+    if (at >= 0) html.replace(at, name.toHtmlEscaped().size(), link);
+    else html += " " + link;
+    suggestStatus->setText(QString("<span style='color:%1'>%2</span>")
+                               .arg(G::disabledColor.name(), html));
 }
 
 void KeywordTags::setSelection(const QMap<QString, int> &counts, int selectionSize)
