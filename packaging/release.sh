@@ -218,6 +218,15 @@ function job_windows() {
 # (packaging/linux/appimage.sh), self-tests it on the clean host, then runs ctest.
 function job_linux() {
     local host="$1" repo="$2" asset="$3"
+    # An emulated VM's clock drifts (80 min slow after a suspend), and chrony only
+    # slews it, so ninja sees a manifest "still dirty" forever. Step it first; this
+    # needs passwordless sudo for chronyc on the VM.
+    echo "=== clock ==="
+    ssh "${SSH_OPTS[@]}" "$host" "sudo -n chronyc -a makestep >/dev/null" \
+        || echo "⚠️  could not step the clock on $host (sudo/chrony)"
+    local skew=$(( $(ssh "${SSH_OPTS[@]}" "$host" "date +%s") - $(date +%s) ))
+    (( skew < -60 || skew > 60 )) && { echo "❌ $host clock is ${skew}s off this Mac"; return 1; }
+    echo "clock skew ${skew}s"
     echo "=== sync ${COMMIT:0:8} -> $host:$repo ==="
     ssh "${SSH_OPTS[@]}" "$host" "mkdir -p $repo" || return 1
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
