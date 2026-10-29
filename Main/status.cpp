@@ -393,10 +393,15 @@ QString MW::getCroppedDimensions()
 /*
     The current image's dimensions after its develop geometry (crop, straighten,
     perspective). An undeveloped image is uncropped, so it reports the file's dimensions,
-    as the Metadata panel's "Cropped dim" row does. Kept current after a crop by
-    MW::devPreviewUpdated.
+    as the Metadata panel's "Cropped dim" row does. While the crop tool is open it is the
+    frame being dragged (ImageView::cropChanged -> updateStatus); once the crop is saved,
+    MW::devPreviewUpdated refreshes it from the recipe.
 */
     if (G::isLogger) G::log("MW::getCroppedDimensions");
+    if (imageView) {
+        const QSize px = imageView->cropLivePixelSize();
+        if (!px.isEmpty()) return QString::number(px.width()) + "x" + QString::number(px.height());
+    }
     if (!dm || !dm->sf || dm->currentSfRow < 0) return "";
     const int row = dm->currentSfRow;
     if (dm->sf->index(row, G::DevelopColumn).data().toBool())

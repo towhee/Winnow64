@@ -1116,6 +1116,16 @@ void MW::createImageView()
 
     connect(imageView, &ImageView::togglePick, this, &MW::togglePick);
     connect(imageView, &ImageView::updateStatus, this, &MW::updateStatus);
+    /* Live "Cropped: WxH" in the status bar while a crop frame is dragged. cropChanged
+       fires on every mouse move, so coalesce to one status refresh per ~30 ms. */
+    connect(imageView, &ImageView::cropChanged, this, [this](double, double, double, double) {
+        if (cropStatusPending) return;
+        cropStatusPending = true;
+        QTimer::singleShot(30, this, [this] {
+            cropStatusPending = false;
+            updateStatus(true, "", "ImageView::cropChanged");
+        });
+    });
     connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::panTo);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);

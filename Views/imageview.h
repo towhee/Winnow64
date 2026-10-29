@@ -401,6 +401,8 @@ public slots:
        inscribed rectangle (the suggested crop, normalized in the warped canvas), or an invalid rect
        on a degenerate quad. */
     bool   cropIsWarp() const { return cropWarp; }
+    // the crop's full-res output size while the crop tool is open, else empty (status bar)
+    QSize  cropLivePixelSize() const { return cropActive() ? cropPixelSize() : QSize(); }
     void   cropQuad(double q[8]) const;
     QRectF computeRectifyCrop() const;
 

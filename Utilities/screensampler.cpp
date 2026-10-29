@@ -82,7 +82,9 @@ protected:
     }
     void keyPressEvent(QKeyEvent *e) override
     {
-        if (e->key() == Qt::Key_Escape) sampler->close();     // Esc quits the sampler
+        // Esc or Return ends the sampler
+        if (e->key() == Qt::Key_Escape || e->key() == Qt::Key_Return
+            || e->key() == Qt::Key_Enter) sampler->close();
         else QWidget::keyPressEvent(e);
     }
 
@@ -193,18 +195,21 @@ ScreenSampler::ScreenSampler(QWidget *parent)
     table->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
     table->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
     table->setToolTip("R G B in percent; H in degrees, S and L in percent.\n"
-                      "Copy puts the table on the clipboard as text.  Esc closes the "
-                      "sampler.");
+                      "Copy puts the table on the clipboard as text.  Esc or Return "
+                      "closes the sampler.");
 
-    /* Esc closes the sampler. A window shortcut, so it works wherever focus sits in
-       this window. */
-    QShortcut *escSc = new QShortcut(QKeySequence(Qt::Key_Escape), this);
-    escSc->setContext(Qt::WindowShortcut);
-    connect(escSc, &QShortcut::activated, this, &QWidget::close);
+    /* Esc or Return closes the sampler. Window shortcuts, so they work wherever focus
+       sits in this window. */
+    for (int key : {int(Qt::Key_Escape), int(Qt::Key_Return), int(Qt::Key_Enter)}) {
+        QShortcut *sc = new QShortcut(QKeySequence(key), this);
+        sc->setContext(Qt::WindowShortcut);
+        connect(sc, &QShortcut::activated, this, &QWidget::close);
+    }
 
     sampleBtn = new QPushButton("Sample");
-    sampleBtn->setToolTip("Pick a point anywhere on screen.  Right-click cancels the "
-                          "pick; Esc closes the sampler.");
+    sampleBtn->setToolTip("Pick points anywhere on screen, one sample per click.  "
+                          "Right-click stops picking; Esc or Return closes the "
+                          "sampler.");
     connect(sampleBtn, &QPushButton::clicked, this, &ScreenSampler::arm);
     QPushButton *copyBtn = new QPushButton("Copy");
     copyBtn->setToolTip("Copy the table to the clipboard as tab-separated text");
@@ -315,7 +320,18 @@ void ScreenSampler::arm()
         overlays.append(o);
         o->show();
     }
-    /* Keys (Esc) go to the overlay under the cursor. */
+    focusOverlay();
+    armed = true;
+    sampleBtn->setEnabled(false);
+    status->setText("Click anywhere to sample a 5x5 average; each click adds a sample.  "
+                    "Right-click stops, Esc or Return closes the sampler.");
+    emit armedChanged(true);
+    aim(QCursor::pos());
+}
+
+void ScreenSampler::focusOverlay()
+{
+    /* Keys (Esc, Return) go to the overlay under the cursor. */
     if (QScreen *here = QGuiApplication::screenAt(QCursor::pos()))
         for (const QPointer<QWidget> &o : overlays)
             if (o && o->geometry() == here->geometry()) {
@@ -323,12 +339,6 @@ void ScreenSampler::arm()
                 o->activateWindow();
                 o->setFocus();
             }
-    armed = true;
-    sampleBtn->setEnabled(false);
-    status->setText("Click anywhere to sample a 5x5 average.  Right-click cancels, "
-                    "Esc closes the sampler.");
-    emit armedChanged(true);
-    aim(QCursor::pos());
 }
 
 void ScreenSampler::disarm()
@@ -358,23 +368,27 @@ void ScreenSampler::aim(QPoint globalPos)
 
 void ScreenSampler::pick(QPoint globalPos)
 {
-    /* Close the overlay and the magnifier BEFORE the grab -- the overlay tints what it
-       covers -- and give the window server a moment to take them off screen. */
+    /* Hide the overlay and the magnifier BEFORE the grab -- the overlay tints what it
+       covers -- and give the window server a moment to take them off screen. The
+       sampler stays armed: takeSample puts them back for the next click. */
     pendingPos = globalPos;
-    disarm();
+    aimTimer->stop();
+    loupe->hide();
+    for (const QPointer<QWidget> &o : overlays) if (o) o->hide();
     QTimer::singleShot(80, this, &ScreenSampler::takeSample);
 }
 
 void ScreenSampler::takeSample()
 {
     float rgb[3];
-    if (!sampleAt(pendingPos, rgb)) {
-        status->setText("Could not read the screen there.");
-        return;
-    }
-    addSample(rgb);
+    if (sampleAt(pendingPos, rgb)) addSample(rgb);
+    else status->setText("Could not read the screen there.");
     show();
-    raise();
+    /* Still armed (not stopped while the overlay was down): resume aiming. */
+    if (!armed) return;
+    for (const QPointer<QWidget> &o : overlays) if (o) o->show();
+    focusOverlay();
+    aim(QCursor::pos());
 }
 
 void ScreenSampler::toTableValues(const float rgb[3], float out[6])
@@ -415,7 +429,28 @@ void ScreenSampler::addSample(const float rgb[3])
         table->setItem(row, k + 1, it);
     }
     table->scrollToBottom();
-    status->setText(QString("Sample %1 taken.").arg(sampleCount));
+
+    /* Every reading also goes straight to the clipboard, in Copy's format (header plus
+       this one row), so a single sample can be pasted without opening the table. */
+    QApplication::clipboard()->setText(headerText() + '\n' + rowText(row) + '\n');
+    status->setText(QString("Sample %1 taken and copied to the clipboard.")
+                        .arg(sampleCount));
+}
+
+QString ScreenSampler::headerText() const
+{
+    QStringList head;
+    for (int c = 0; c < table->columnCount(); ++c)
+        head << table->horizontalHeaderItem(c)->text();
+    return head.join('\t');
+}
+
+QString ScreenSampler::rowText(int row) const
+{
+    QStringList cells;
+    for (int c = 0; c < table->columnCount(); ++c)
+        cells << (table->item(row, c) ? table->item(row, c)->text() : QString());
+    return cells.join('\t');
 }
 
 void ScreenSampler::copyTable()
@@ -423,16 +458,8 @@ void ScreenSampler::copyTable()
     /* Tab-separated, header first: pastes as columns into a spreadsheet and lines up
        in a plain-text note. */
     QStringList lines;
-    QStringList head;
-    for (int c = 0; c < table->columnCount(); ++c)
-        head << table->horizontalHeaderItem(c)->text();
-    lines << head.join('\t');
-    for (int r = 0; r < table->rowCount(); ++r) {
-        QStringList cells;
-        for (int c = 0; c < table->columnCount(); ++c)
-            cells << (table->item(r, c) ? table->item(r, c)->text() : QString());
-        lines << cells.join('\t');
-    }
+    lines << headerText();
+    for (int r = 0; r < table->rowCount(); ++r) lines << rowText(r);
     QApplication::clipboard()->setText(lines.join('\n') + '\n');
     status->setText(QString("Copied %1 sample%2 to the clipboard.")
                         .arg(table->rowCount()).arg(table->rowCount() == 1 ? "" : "s"));

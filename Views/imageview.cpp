@@ -2025,6 +2025,8 @@ void ImageView::endCropEdit()
     centerOn(pmItem);
     setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
     viewport()->update();            // clear the overlay; the view transform is untouched
+    // drop the live "Cropped: WxH" (a cancel leaves no saved crop to refresh it)
+    emit updateStatus(true, "", "ImageView::endCropEdit");
 }
 
 void ImageView::beginLevel()

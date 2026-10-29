@@ -20,9 +20,11 @@ class SamplerLoupe;
     WHAT IT IS FOR: comparing renders across apps. Sample a spot in Lightroom's window,
     then the same spot in Winnow's, and the two readings sit side by side in the
     table (RGB as percentages, HSL as degrees and percentages; the Copy button
-    puts it on the clipboard as tab-separated text, Esc closes the sampler). The in-image droppers (Color Range,
-    white balance) read Winnow's own pixels; this one reads what the DISPLAY shows,
-    whoever drew it.
+    puts it on the clipboard as tab-separated text -- each new sample is also copied
+    on its own as it is taken). Once armed, every click adds a sample; right-click
+    stops picking, and Esc or Return closes the sampler. The in-image droppers
+    (Color Range, white balance) read Winnow's own pixels; this one reads what the
+    DISPLAY shows, whoever drew it.
 
     HOW IT AIMS. A click on another app's window would go to that app, so while armed a
     near-invisible overlay (alpha 1/255 -- macOS passes clicks through fully transparent
@@ -77,9 +79,12 @@ private:
     friend class SamplerOverlay;
     void aim(QPoint globalPos);         // overlay: cursor moved
     void pick(QPoint globalPos);        // overlay: left click
-    void takeSample();                  // after the overlay has gone
+    void takeSample();                  // after the overlay has gone; then re-shows it
+    void focusOverlay();                // keys go to the overlay under the cursor
     void addSample(const float rgb[3]);
     void copyTable();
+    QString headerText() const;         // the table's column titles, tab-separated
+    QString rowText(int row) const;     // one sample's cells, tab-separated
     bool havePermission(bool request);
     void showPermissionReason(bool show);
 
