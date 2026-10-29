@@ -75,7 +75,7 @@ void MW::initialize()
     connect(includeSidecarsToggleBtn, &BarBtn::clicked, this, &MW::toggleIncludeSidecarsClick);
 
     panToFocusToggleBtn = new BarBtn();
-    msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut B";
+    msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut Shift+Z";
     panToFocusToggleBtn->setToolTip(msg);
     connect(panToFocusToggleBtn, &BarBtn::clicked, this, [this]() { panFocusToggleAction->trigger(); });
 

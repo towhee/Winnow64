@@ -68,6 +68,16 @@ public:
     void syncFromFilter(const QVector<qint64> &ids);
     QVector<qint64> checkedIds() const { return checkedSet; }
     QString nameOf(qint64 id) const;
+    /*  The tree path, "Trips / 2024 / Iceland", for menus that show a collection away
+        from the tree. */
+    QString pathOf(qint64 id) const;
+
+    /*  THE TARGET COLLECTION (Lightroom's): where Edit > Add to Target Collection (B)
+        sends the selection. Collections only; 0 = none. Shown in bold, with a tooltip.
+        Kept here because the tree is what shows it; MW persists it. A deleted target is
+        cleared on the next reload (targetChanged(0)). setTargetId emits nothing. */
+    qint64 targetId() const { return target; }
+    void setTargetId(qint64 id);
 
     /*  Add a node under parent (0 = top level) and put its name in edit. A QUERY is not
         made here -- it needs a query -- so a Queries tree asks MW to open the Query
@@ -96,6 +106,9 @@ signals:
     /*  Clear the collection filter: the whole Library, with every other filter kept. */
     void cancelRequested();
     void expansionChanged();
+    /*  The user chose (or cleared, 0) the target collection from the context menu, or
+        it was deleted. */
+    void targetChanged(qint64 id);
 
 protected:
     void mousePressEvent(QMouseEvent *event) override;
@@ -143,10 +156,12 @@ private:
     QString countMetric;
     int countMargin;
     QIcon nodeIcon;
+    QIcon targetIcon;                   // nodeIcon, lighter: the target collection
 
     QVector<qint64> checkedSet;            // the last state MW pushed
     QHash<qint64, int> pushedCounts;        // a Queries tree's counts (setCounts)
     QSet<qint64> expanded;              // kept across rebuilds
+    qint64 target = 0;                  // the target collection (setTargetId)
     qint64 rangeAnchorId = 0;           // where a Shift+click range starts
 
     // press -> drag or click

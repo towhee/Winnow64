@@ -787,6 +787,7 @@ void MW::updateLibraryOnlyActions()
         : why);
     manageCatalogAction->setEnabled(true);
     manageCatalogAction->setToolTip(tr("Choose the folders that make up the Library."));
+    updateTargetCollectionActions();
 }
 
 void MW::setCatalogScopeWhole(QString src)

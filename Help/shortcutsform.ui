@@ -414,6 +414,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Add to Target Collection</string>
+        </property>
+        <property name="text">
+         <string>B</string>
+        </property>
+        <property name="text">
+         <string>Library only. Removes them if all are already in it</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Pick unless rejected</string>
         </property>
         <property name="text">
@@ -1056,7 +1067,7 @@
          <string>Pan to Camera Focus Point</string>
         </property>
         <property name="text">
-         <string>B</string>
+         <string>Shift + Z</string>
         </property>
         <property name="text">
          <string>Toggles</string>

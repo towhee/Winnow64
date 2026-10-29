@@ -13,14 +13,9 @@ WHAT'S NEW
 - Prevent Filters 'blanking' during refresh.
 
 BUGS / TO DO
-- Add versioning to develop settings
-- Collection parents do not show all child collection images
+- Set target collection
 - Rethink thumbnail badges
 - Create a contact sheet.
-- Fine tune auto tone with LR examples.
-  When you're ready to calibrate, auto-tone a folder in Lightroom and the XMP files will
-  hold its answers (crs:Exposure2012, etc.). I can fit the constants to them with the
-  existing lrcompare.py loop.
 - Make target collection
 - Apply default preset to raw files when developed ??  Examine develop pipeline.
 - Add isVersion to Queries lookup

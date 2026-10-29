@@ -658,6 +658,15 @@ void MW::createEditActions()
     addAction(label5Action);
     connect(label5Action, &QAction::triggered, this, &MW::setColorClass);
 
+    /* Lightroom's B: the selection into (or, all in it already, out of) the target
+       collection. Text, tooltip and enabled state from updateTargetCollectionActions. */
+    addToTargetCollectionAction = new QAction(tr("Add to Target Collection"), this);
+    addToTargetCollectionAction->setObjectName("addToTargetCollection");
+    addToTargetCollectionAction->setShortcutVisibleInContextMenu(true);
+    addAction(addToTargetCollectionAction);
+    connect(addToTargetCollectionAction, &QAction::triggered,
+            this, &MW::toggleSelectionInTargetCollection);
+
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
     rotateRightAction->setShortcutVisibleInContextMenu(true);
@@ -2554,6 +2563,7 @@ void MW::createMenus()
     createFileMenu();
     createIngestMenu();
     createEditMenu();
+    updateTargetCollectionActions();    // the menu's half exists only now
     createGoMenu();
     createFilterMenu();
     createSortMenu();
@@ -2716,6 +2726,13 @@ void MW::createEditMenu()
     labelsMenu->addAction(label3Action);
     labelsMenu->addAction(label4Action);
     labelsMenu->addAction(label5Action);
+    editMenu->addSeparator();
+    editMenu->addAction(addToTargetCollectionAction);
+    /* Filled each time it opens (fillTargetCollectionMenu): the collections, the target
+       checked. The other way in is the Collections panel's context menu. */
+    targetCollectionMenu = editMenu->addMenu(tr("Set target collection"));
+    targetCollectionMenu->setToolTipsVisible(true);
+    connect(targetCollectionMenu, &QMenu::aboutToShow, this, &MW::fillTargetCollectionMenu);
     editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
@@ -3430,6 +3447,8 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(ratingGroupAct);
     thumbViewActions->append(labelGroupAct);
+    /* Lightroom's B. Disabled with the reason in Folders (updateTargetCollectionActions). */
+    thumbViewActions->append(addToTargetCollectionAction);
 
     thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);
@@ -4150,7 +4169,10 @@ void MW::loadShortcuts(bool defaultShortcuts)
         zoomOutAction->setShortcut(QKeySequence("-"));
         //        zoomToggleAction->setShortcut(QKeySequence("Space"));
         zoomToggleAction->setShortcut(Qt::Key_Space);
-        panFocusToggleAction->setShortcut(QKeySequence("B"));
+        /* B was pan-to-focus until it became Lightroom's Add to Target Collection
+           (2026-10-29); pan-to-focus moved beside Z, Zoom To. */
+        panFocusToggleAction->setShortcut(QKeySequence("Shift+Z"));
+        addToTargetCollectionAction->setShortcut(QKeySequence("B"));
 
 
         //        thumbsFitAction->setShortcut(QKeySequence("Alt+]"));

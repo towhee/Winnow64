@@ -751,6 +751,7 @@
     - [17.5.7 Identity Is the Path](#1757-identity-is-the-path)
     - [17.5.8 The Store Is Not index.db](#1758-the-store-is-not-indexdb)
     - [17.5.9 One Widget for Both Kinds](#1759-one-widget-for-both-kinds)
+    - [17.5.10 The Target Collection](#17510-the-target-collection)
   - [17.6 Queries and the Query Builder](#176-queries-and-the-query-builder)
     - [17.6.1 One Grammar, Three Places](#1761-one-grammar-three-places)
     - [17.6.2 The Fields and How Each Type Compares](#1762-the-fields-and-how-each-type-compares)
@@ -9103,6 +9104,15 @@ It was collections.db until the keyword vocabulary joined it. The vocabulary had
 CollectionTree is constructed with a Kind; a Queries tree refuses thumbnail drops, hides Add / Remove, and sends New and Edit to the Query Builder. Both panels are built by MW::buildLibrarySetDock, and the Filters functions take the category as a parameter (Filters::setSetNodes / setSetCounts / setFilterState / setSetFilter / setLibrarySetsAvailable).
 
 Registered as a dock in every place the dock checklist names: collections_white.png (a stack of photographs), graphicFor / dockFor, dockForTabText, dockTextNames, dockTabToolTip (no F-key, as Keywords), dockVisibleAction, placeDocksAddedSince (v9, tabbed with favDock), winnowStateVersion 9, workspaces (isCollectionsDockVisible; absent = off), full screen (Preferences "Show collections"), collapse state, diagnostics.
+
+#### 17.5.10 The Target Collection
+
+Lightroom's target collection (2026-10-29). One collection is the TARGET; Edit > Add to Target Collection (B) adds the selected images to it, and when EVERY selected image is directly in it already it takes them out instead, with the popup "Image removed from target collection." ("%n images removed ..." for several). A mixed selection adds the missing ones through MW::addPathsToCollection, so its rules and its "Added n image(s)" popup apply. It acts on the selected rows' keys, so a version is added or removed alone (17.5.6).
+
+- Chosen from the Collections panel's context menu (Set as Target Collection, checkable; choosing it on the target clears it) or Edit > Set target collection, a submenu of every collection in tree order (a depth-first walk: CollectionStore::nodes lists parents before children but not depth-first, so indenting its order put children under the wrong parent), indented by depth, filled on aboutToShow (MW::fillTargetCollectionMenu). Add to Target Collection is also on the thumbnail context menu (createThumbViewContextMenu).
+- The id lives in CollectionTree (targetId / setTargetId; the row is drawn bold, its glyph magenta, kTargetCollectionColor (a lighter violet was too subtle), with a tooltip) and is persisted by MW in settings "TargetCollection" (MW::setTargetCollection). A deleted target is dropped at the tree's next reload (CollectionTree::targetChanged(0)); one deleted between sessions is not restored.
+- MW::updateTargetCollectionActions: in Folders both items are disabled with the Library-only tooltip. In the Library with no target, Add to Target Collection stays ENABLED and B shows a popup saying there is no target and where to choose one (user decision 2026-10-29: a key that silently does nothing reads as broken). The item's text names the target by its tree path, so what B does can be read from the menu. Refreshed on scope change (updateLibraryOnlyActions), on any collection tree change, and when the target changes.
+- THE KEY. B was Toggle Pan to Predicted Focus; it went to the target collection for Lightroom parity and pan-to-focus moved to Shift+Z, beside Z (Zoom To). There is no saved-shortcuts migration to make: nothing writes the "Shortcuts" settings group, so loadShortcuts always applies the defaults.
 
 ### 17.6 Queries and the Query Builder
 

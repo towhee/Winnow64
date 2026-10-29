@@ -2087,6 +2087,8 @@ private:
     QAction *zoomToggleAction;
     QActionGroup *zoomGroupAction;
     QAction *panFocusToggleAction;
+    QAction *addToTargetCollectionAction = nullptr;
+    QMenu *targetCollectionMenu = nullptr;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
     QAction *sortReverseAction;
@@ -2721,6 +2723,16 @@ private:
         Panel, File > Manage Catalog...) in the Library, and disable them with the reason
         in their tooltips in Folders. */
     void updateLibraryOnlyActions();
+    /*  THE TARGET COLLECTION (Lightroom's), Main/mwcollections.cpp. The id lives in
+        CollectionTree (it shows it) and in settings "TargetCollection".
+        toggleSelectionInTargetCollection adds the selection, or removes it when every
+        selected image is in it already. updateTargetCollectionActions names the
+        target in Edit > Add to Target Collection and disables it, with the reason, in
+        Folders or with no target. */
+    void toggleSelectionInTargetCollection();
+    void setTargetCollection(qint64 id);
+    void fillTargetCollectionMenu();
+    void updateTargetCollectionActions();
     void showCollectionsDock();
     void closeCollectionsDock();
     void createQueriesDock();

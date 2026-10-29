@@ -6,6 +6,8 @@
 
 #include <QInputDialog>
 
+#include <functional>
+
 /*
     COLLECTIONS AND QUERIES -- the Library's user-made sets, Lightroom's collections and
     smart collections.
@@ -184,6 +186,13 @@ void MW::createCollectionsDock()
             this, &MW::addSelectionToCollection);
     connect(collectionTree, &CollectionTree::removeSelectionRequested,
             this, &MW::removeSelectionFromCollection);
+    connect(collectionTree, &CollectionTree::targetChanged,
+            this, &MW::setTargetCollection);
+    /*  The target from last session, unless it has been deleted since (the tree was
+        built above, so pathOf knows). */
+    const qint64 target = settings->value("TargetCollection").toLongLong();
+    if (target && !collectionTree->pathOf(target).isEmpty())
+        collectionTree->setTargetId(target);
 
     /*  The store drives the Filters categories' items, the membership side table behind
         G::CollectionsColumn, the name resolver for collection:"Name", and the hints.
@@ -199,6 +208,8 @@ void MW::createCollectionsDock()
         }
         else refreshQueryNodes();
         updateCollectionsAvailability();
+        // the target's name may have changed (the tree has reloaded by now)
+        if (k == Kind::Collection) updateTargetCollectionActions();
     });
     connect(&store, &CollectionStore::membersChanged,
             this, &MW::refreshCollectionMembership);
@@ -232,6 +243,7 @@ void MW::createCollectionsDock()
     refreshCollectionMembership();
     syncSetCancel(Kind::Collection);
     updateCollectionsAvailability();
+    updateTargetCollectionActions();
 }
 
 void MW::createQueriesDock()
@@ -855,4 +867,129 @@ void MW::removeSelectionFromCollection(qint64 id)
     if (G::popup)
         G::popup->showPopup(tr("Removed %n image(s) from \"%1\".", "", removed).arg(name),
                             2000);
+}
+
+static QString noTargetCollectionText()
+{
+    return QObject::tr("There is no target collection. Choose one from Edit > Set target "
+                       "collection, or right-click a collection in the Collections panel "
+                       "and choose Set as Target Collection.");
+}
+
+void MW::setTargetCollection(qint64 id)
+{
+    if (G::isLogger) G::log("MW::setTargetCollection", QString::number(id));
+    if (collectionTree && collectionTree->targetId() != id) collectionTree->setTargetId(id);
+    settings->setValue("TargetCollection", id);
+    updateTargetCollectionActions();
+}
+
+void MW::fillTargetCollectionMenu()
+{
+/*
+    Edit > Target Collection: every collection, indented by depth, the target checked;
+    choosing the checked one clears it. Built on aboutToShow, so it is never stale.
+*/
+    if (!targetCollectionMenu) return;
+    targetCollectionMenu->clear();
+    CollectionStore &store = CollectionStore::instance();
+    const qint64 target = collectionTree ? collectionTree->targetId() : 0;
+    /*  TREE ORDER, so each child sits under its own parent: nodes() lists parents before
+        children but not depth-first, so walk it as a tree (siblings keep its order). */
+    QHash<qint64, QVector<CollectionStore::Node>> children;
+    for (const CollectionStore::Node &n : store.nodes(Kind::Collection))
+        children[n.parent] << n;
+    std::function<void(qint64, int)> addLevel = [&](qint64 parent, int depth) {
+        for (const CollectionStore::Node &n : children.value(parent)) {
+            QAction *a = targetCollectionMenu->addAction(QString(depth * 4, ' ') + n.name);
+            a->setCheckable(true);
+            a->setChecked(n.id == target);
+            const qint64 id = n.id;
+            connect(a, &QAction::triggered, this, [this, id](bool on) {
+                setTargetCollection(on ? id : 0);
+            });
+            addLevel(n.id, depth + 1);
+        }
+    };
+    addLevel(0, 0);
+    if (targetCollectionMenu->isEmpty()) {
+        QAction *none = targetCollectionMenu->addAction(tr("No collections yet"));
+        none->setEnabled(false);
+        none->setToolTip(tr("Make one in the Collections panel (Window > Collections "
+                            "Panel)."));
+    }
+}
+
+void MW::updateTargetCollectionActions()
+{
+/*
+    Library only (as the Collections panel is): disabled in Folders with the reason. With
+    no target it stays enabled and says so in a popup. The item names the target, so
+    what B will do is readable from the menu.
+*/
+    if (!addToTargetCollectionAction || !targetCollectionMenu) return;
+    const bool library = G::scope == G::Scope::Catalog;
+    const qint64 target = collectionTree ? collectionTree->targetId() : 0;
+    const QString name = target && collectionTree ? collectionTree->pathOf(target)
+                                                  : QString();
+
+    targetCollectionMenu->setEnabled(library);
+    targetCollectionMenu->menuAction()->setToolTip(library
+        ? tr("Choose where Add to Target Collection sends the selection.")
+        : tr("Library only: choose Library at the top left of the window."));
+
+    addToTargetCollectionAction->setText(name.isEmpty()
+        ? tr("Add to Target Collection")
+        : tr("Add to Target Collection \"%1\"").arg(name));
+    /*  Enabled in the Library even with no target, so B answers with a popup saying
+        so (user decision 2026-10-29) rather than doing nothing. */
+    addToTargetCollectionAction->setEnabled(library);
+    if (!library)
+        addToTargetCollectionAction->setToolTip(
+            tr("Library only: choose Library at the top left of the window."));
+    else if (!target)
+        addToTargetCollectionAction->setToolTip(noTargetCollectionText());
+    else
+        addToTargetCollectionAction->setToolTip(
+            tr("Add the selected images to \"%1\", or take them out if they are all in "
+               "it already.").arg(name));
+}
+
+void MW::toggleSelectionInTargetCollection()
+{
+/*
+    LIGHTROOM'S B. Adds the selected images to the target collection; when EVERY selected
+    image is directly in it already, takes them out instead, so B pressed twice is
+    undone. A mixed selection adds the ones missing (addPathsToCollection, which also
+    skips sidecars and files not in the Library).
+*/
+    if (G::isLogger) G::log("MW::toggleSelectionInTargetCollection");
+    if (G::scope != G::Scope::Catalog || !collectionTree) return;
+    const qint64 id = collectionTree->targetId();
+    if (!id) {
+        if (G::popup) G::popup->showPopup(noTargetCollectionText(), 4000);
+        return;
+    }
+    const QStringList keys = selectedKeys(dm);
+    if (keys.isEmpty()) {
+        if (G::popup) G::popup->showPopup(tr("Select some thumbnails first."), 2000);
+        return;
+    }
+
+    CollectionStore &store = CollectionStore::instance();
+    bool allIn = true;
+    for (const QString &k : keys) {
+        if (!store.collectionsOf(k).contains(id)) { allIn = false; break; }
+    }
+    if (!allIn) {
+        addPathsToCollection(id, keys);
+        return;
+    }
+
+    // membersChanged -> refreshCollectionMembership: the column, counts and a refilter
+    const int removed = store.removeMembers(id, keys);
+    if (G::popup && removed)
+        G::popup->showPopup(removed == 1
+            ? tr("Image removed from target collection.")
+            : tr("%n images removed from target collection.", "", removed), 2000);
 }

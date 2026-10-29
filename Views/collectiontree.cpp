@@ -34,6 +34,9 @@ const char *kNodeMime = "application/x-winnow-collection-node";
     images, the other describes them. */
 const QColor kCollectionColor(160, 130, 210);
 const QColor kQueryColor(222, 150, 70);
+/*  The target collection's glyph: a saturated magenta, kin to the violet but plainly
+    not it, so the target is found at a glance (a lighter violet was too subtle). */
+const QColor kTargetCollectionColor(240, 80, 200);
 
 QIcon tinted(const QString &resource, const QColor &c)
 {
@@ -91,6 +94,9 @@ CollectionTree::CollectionTree(CollectionStore::Kind kind, const QString &countM
     nodeIcon = kind == CollectionStore::Kind::Query
         ? tinted(":/images/icon16/queries_white.png", kQueryColor)
         : tinted(":/images/icon16/collections_white.png", kCollectionColor);
+    if (kind == CollectionStore::Kind::Collection)
+        targetIcon = tinted(":/images/icon16/collections_white.png",
+                            kTargetCollectionColor);
 
     setColumnCount(2);
     setHeaderHidden(true);
@@ -186,6 +192,35 @@ QString CollectionTree::nameOf(qint64 id) const
     return item ? item->text(0) : QString();
 }
 
+QString CollectionTree::pathOf(qint64 id) const
+{
+    QStringList names;
+    for (const QTreeWidgetItem *i = itemFor(id); i; i = i->parent()) names.prepend(i->text(0));
+    return names.join(" / ");
+}
+
+void CollectionTree::setTargetId(qint64 id)
+{
+    if (nodeKind != CollectionStore::Kind::Collection) return;
+    target = id;
+    reloading = true;
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        const bool isTarget = target && idOf(*it) == target;
+        QFont f = (*it)->font(0);
+        f.setBold(isTarget);
+        (*it)->setFont(0, f);
+        (*it)->setIcon(0, isTarget ? targetIcon : nodeIcon);
+        (*it)->setToolTip(0, isTarget
+            ? tr("The target collection: Edit > Add to Target Collection (%1) adds the "
+                 "selected images to it, or takes them out if they are all in it already.")
+                  .arg(QKeySequence("B").toString(QKeySequence::NativeText))
+            : QString());
+        ++it;
+    }
+    reloading = false;
+}
+
 void CollectionTree::reload()
 {
     if (G::isLogger) G::log("CollectionTree::reload");
@@ -225,6 +260,12 @@ void CollectionTree::reload()
     QVector<qint64> keep;
     for (qint64 id : checkedSet) if (byId.contains(id)) keep << id;
     syncFromFilter(keep);
+    // ... nor the target (MW hears so, to forget it)
+    if (target && !byId.contains(target)) {
+        setTargetId(0);
+        emit targetChanged(0);
+    }
+    else setTargetId(target);
     resizeColumns();
     if (verticalScrollBar()) verticalScrollBar()->setValue(scroll);
 }
@@ -554,6 +595,18 @@ void CollectionTree::contextMenuEvent(QContextMenuEvent *event)
             : tr("Click this collection first, then select the images to remove."));
         connect(remove, &QAction::triggered, this,
                 [this, id] { emit removeSelectionRequested(id); });
+
+        /*  TARGET COLLECTION: checked on the current target, where it clears it. */
+        QAction *tgt = menu.addAction(tr("Set as Target Collection"));
+        tgt->setCheckable(true);
+        tgt->setChecked(id == target);
+        tgt->setToolTip(tr("Edit > Add to Target Collection (%1) then adds the selected "
+                           "images here, or takes them out if they are all here already.")
+                            .arg(QKeySequence("B").toString(QKeySequence::NativeText)));
+        connect(tgt, &QAction::triggered, this, [this, id](bool on) {
+            setTargetId(on ? id : 0);
+            emit targetChanged(target);
+        });
     }
 
     if (item) {
