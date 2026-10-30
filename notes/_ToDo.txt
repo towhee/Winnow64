@@ -15,7 +15,11 @@ WHAT'S NEW
 BUGS / TO DO
 - /Users/roryhill/Temp/Photos_to_be_curated/2026/202606/2026-06-10_Victoria/2026-07-01_0082.heic
   crop warp not working properly
+- Videos starting at final frame.
 - Space bar not start/stopping video play
+- Save pick status between sessions
+- Arrow navigation in develop when no slider has the focus
+- Add (apply) Previous to Develop
 - Catalog management: move, copy, join, select
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup
