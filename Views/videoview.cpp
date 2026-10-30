@@ -30,10 +30,16 @@ VideoView::VideoView(QWidget *parent, IconView *thumbView, Selection *sel) : QWi
     playPauseBtn = new QToolButton;
     playPauseBtn->setIcon(QIcon(":/images/icon16/media_play.png"));
     playPauseBtn->setToolTip("Play/Pause.  Keyboard shortcut: Space Key");
+    /* No focus for the controls: switching the central stack to the VideoTab moves the
+       focus to the page's first tab-focusable child, and a focused slider eats Left/Right
+       (MW::eventFilter also skips navigation while a QAbstractSlider has the focus), so
+       the arrow keys stopped changing images. Space is handled by MW::keyReleaseEvent. */
+    playPauseBtn->setFocusPolicy(Qt::NoFocus);
     connect(playPauseBtn, &QToolButton::pressed, this, &VideoView::playOrPause);
 
     scrub = new QSlider(Qt::Horizontal, this);
     scrub->setRange(0, 1000);
+    scrub->setFocusPolicy(Qt::NoFocus);
     connect(scrub, &QSlider::sliderMoved, this, &VideoView::scrubMoved);
     connect(scrub, &QSlider::sliderPressed, this, &VideoView::scrubPressed);
 
@@ -65,7 +71,16 @@ void VideoView::load(QString fPath)
     if (G::isLogger || G::isFlowLogger || isDebug)
         G::log("VideoView::load", fPath);
     video->load(fPath);
-    play();
+    /* Show the first frame by going Stopped -> Paused, never play() then pause().
+       QMediaPlayer::setSource stops the player and is a no-op for the clip already
+       loaded (e.g. back to a video after a photo), and the FFmpeg PlaybackEngine only
+       forces a frame step on a Stopped -> Paused transition. play() + pause() went
+       Stopped -> Playing -> Paused within microseconds, so whether a frame reached the
+       sink was a race and the loupe was intermittently blank. A clip still loading
+       queues the pause and applies it once loaded, the same transition. */
+    position = 0;
+    scrub->setValue(0);
+    updatePositionLabel();
     pause();
 }
 
