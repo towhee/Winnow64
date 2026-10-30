@@ -4198,6 +4198,32 @@ void MW::refreshLibraryAfterCatalogChange()
     }
 }
 
+void MW::catalogCreatedFilesThenRefreshLibrary()
+{
+/*
+    Called by MW::generateFocusStack when a stack run in the Library finishes. FS has
+    already reported each fused file (FileOps::onCreated), but that batch waits half a
+    second and its refresh only follows when it indexed something. Here the batch goes
+    to the scanner now, and the Library is refreshed once it is committed, so the stacks
+    are searchable and the Filter panel's result includes them the moment the stack ends.
+
+    A BARRIER, NOT A SIGNAL. filesIndexed carries no id, so it cannot say which call it
+    answers. The scanner runs its queued calls in order on its own thread, so a functor
+    queued behind indexFiles runs only after that (and any earlier) indexing is done.
+*/
+    if (G::isLogger) G::log("MW::catalogCreatedFilesThenRefreshLibrary");
+    flushCatalogCreatedFiles();
+    if (!catalogScanner || !Catalog::instance().isAvailable()) return;
+    QPointer<MW> self(this);
+    QMetaObject::invokeMethod(catalogScanner, [self]() {
+        if (!self) return;
+        QMetaObject::invokeMethod(self, [self]() {
+            if (self && G::scope == G::Scope::Catalog)
+                self->refreshLibraryAfterCatalogChange();
+        }, Qt::QueuedConnection);
+    }, Qt::QueuedConnection);
+}
+
 void MW::promptForCatalogScope()
 {
 /*

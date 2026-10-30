@@ -106,6 +106,7 @@ private slots:
     void storageUsageMeasuresTheIndex();
     void aLockedIndexIsLeftInPlace();
     void anUnreadableIndexIsStillMovedAside();
+    void aNewerIndexIsLeftInPlace();
 
 private:
     QString imagePath(const QString &name) const;
@@ -3047,6 +3048,60 @@ void tst_catalog::anUnreadableIndexIsStillMovedAside()
 
     CacheDb::instance().closeThisThread();
     CacheDb::instance().setPath(prev);
+}
+
+void tst_catalog::aNewerIndexIsLeftInPlace()
+{
+/*
+    AN OLDER WINNOW MUST NOT DESTROY A NEWER INDEX. v3_beta3 (schema 23) opened an index
+    a schema 28 build had written, counted it unusable and moved it aside: a full rescan
+    of 155,000 images and the loss of every thumbnail, History snapshot and keyword-audit
+    vector in it. A newer file is now left exactly where it is, like userdata.db, and
+    this build runs without an index.
+*/
+    const QString prev = CacheDb::instance().path();
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+
+    const QString maker = "tst_catalog_newer_maker";
+    {
+        QSqlDatabase h = QSqlDatabase::addDatabase("QSQLITE", maker);
+        h.setDatabaseName(dbPath);
+        QVERIFY(h.open());
+        QSqlQuery q(h);
+        QVERIFY(q.exec("CREATE TABLE mine (x INTEGER)"));
+        QVERIFY(q.exec("INSERT INTO mine VALUES (42)"));
+        QVERIFY(q.exec(QString("PRAGMA user_version = %1")
+                       .arg(CacheDb::schemaVersion() + 1)));
+        h.close();
+    }
+    QSqlDatabase::removeDatabase(maker);
+
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(!CacheDb::instance().db().isOpen(), "a newer index must not be used");
+    QVERIFY(CacheDb::instance().isNewerThanThisBuild());
+    QVERIFY2(!CacheDb::instance().db().isOpen(), "and must not be retried into a new one");
+    QVERIFY2(QDir(dir.path()).entryList({"*.corrupt.*"}, QDir::Files).isEmpty(),
+             "a newer index must not be moved aside");
+
+    const QString checker = "tst_catalog_newer_checker";
+    {
+        QSqlDatabase h = QSqlDatabase::addDatabase("QSQLITE", checker);
+        h.setDatabaseName(dbPath);
+        QVERIFY(h.open());
+        QSqlQuery q(h);
+        QVERIFY(q.exec("PRAGMA user_version") && q.next());
+        QCOMPARE(q.value(0).toInt(), CacheDb::schemaVersion() + 1);
+        QVERIFY2(q.exec("SELECT x FROM mine") && q.next(), "the same file, untouched");
+        QCOMPARE(q.value(0).toInt(), 42);
+        h.close();
+    }
+    QSqlDatabase::removeDatabase(checker);
+
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(prev);
+    QVERIFY(!CacheDb::instance().isNewerThanThisBuild());
 }
 
 QTEST_MAIN(tst_catalog)

@@ -123,13 +123,19 @@ void moveAside(const QString &dbPath)
     (the open and the probe), and callers ask for a connection constantly, so after a
     lock db() answers "no index" at once until this passes. Guarded by CacheDb::mutex. */
 qint64 gLockedUntilMs = 0;
+
+/*  The index file found to be from a NEWER Winnow (FileState::Newer), so every later
+    db() call answers "no index" at once instead of re-probing. Keyed by path, so a
+    setPath to another file is tried normally. Guarded by CacheDb::mutex. */
+QString gNewerIndexPath;
 constexpr qint64 kLockedBackoffMs = 30000;
 
 /*  What a failed open says about the FILE, as opposed to about this moment. */
 enum class FileState {
     Busy,       // another connection or process holds a lock: the file is fine
     Readable,   // opens and reads, at a schema this build can migrate
-    Unusable    // cannot be read, is not a database, or is from a newer Winnow
+    Newer,      // a healthy index from a NEWER Winnow: never moved aside (see db())
+    Unusable    // cannot be read or is not a database
 };
 
 bool isBusyError(const QSqlError &e)
@@ -175,7 +181,7 @@ FileState probeFile(const QString &dbPath)
             }
             else {
                 state = q.value(0).toInt() <= kSchemaVersion ? FileState::Readable
-                                                             : FileState::Unusable;
+                                                             : FileState::Newer;
             }
             q.finish();
             d.close();
@@ -199,6 +205,12 @@ CacheDb &CacheDb::instance()
 int CacheDb::schemaVersion()
 {
     return kSchemaVersion;
+}
+
+bool CacheDb::isNewerThanThisBuild() const
+{
+    QMutexLocker lk(&mutex);
+    return !gNewerIndexPath.isEmpty() && gNewerIndexPath == dbPath;
 }
 
 void CacheDb::setPath(const QString &p)
@@ -315,6 +327,7 @@ QSqlDatabase CacheDb::db()
     QMutexLocker lk(&mutex);
     if (p != dbPath) p = dbPath;    // setPath landed while we were unlocked
     if (QDateTime::currentMSecsSinceEpoch() < gLockedUntilMs) return QSqlDatabase();
+    if (!gNewerIndexPath.isEmpty() && p == gNewerIndexPath) return QSqlDatabase();
 
     const QString name = QString("winnow_cache_%1_%2")
                              .arg(wantGen)
@@ -356,6 +369,22 @@ QSqlDatabase CacheDb::db()
                 G::issue("Warning", "The local index database is locked by another "
                          "process; it was left in place. " + err, "CacheDb::db", -1, p);
                 gLockedUntilMs = QDateTime::currentMSecsSinceEpoch() + kLockedBackoffMs;
+                return QSqlDatabase();
+            }
+            if (state == FileState::Newer) {
+                /*  A NEWER INDEX IS LEFT ALONE, exactly as UserDb leaves a newer
+                    userdata.db. It used to count as Unusable and be moved aside, so
+                    opening an older Winnow after a newer one (v3_beta3, schema 23, after
+                    a schema 28 build) discarded a healthy index: a full catalog rescan,
+                    every thumbnail, the History snapshots and the keyword-audit vectors
+                    -- and the devPreview orphan sweep then deleted every payload the
+                    fresh index did not claim. This build runs without an index instead;
+                    the newer Winnow finds it intact. */
+                G::issue("Warning", "The local index database was written by a newer "
+                         "version of Winnow, so this version leaves it untouched and "
+                         "runs without the Library, thumbnail cache and develop "
+                         "previews.", "CacheDb::db", -1, p);
+                gNewerIndexPath = p;
                 return QSqlDatabase();
             }
             if (state == FileState::Readable && !retriedInPlace) {

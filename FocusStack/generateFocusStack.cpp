@@ -426,6 +426,9 @@ void MW::generateFocusStack(const QStringList paths,
             if (fusedPaths.isEmpty()) return;
             if (isLocal) {
                 insertFiles(fusedPaths);
+                /* In the Library, catalog the stacks and refresh the Filter panel
+                   now. See MW::catalogCreatedFilesThenRefreshLibrary. */
+                if (G::scope == G::Scope::Catalog) catalogCreatedFilesThenRefreshLibrary();
             } else {
                 folderAndFileSelectionChange(fusedPaths.first(), "FS::threadFinished");
             }

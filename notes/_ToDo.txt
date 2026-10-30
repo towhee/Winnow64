@@ -13,6 +13,9 @@ WHAT'S NEW
 - Prevent Filters 'blanking' during refresh.
 
 BUGS / TO DO
+- /Users/roryhill/Temp/Photos_to_be_curated/2026/202606/2026-06-10_Victoria/2026-07-01_0082.heic
+  crop warp not working properly
+- Space bar not start/stopping video play
 - Catalog management: move, copy, join, select
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup

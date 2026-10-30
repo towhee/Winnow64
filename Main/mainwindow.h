@@ -878,6 +878,9 @@ public slots:
        re-query, LibTree counts and the Manage Catalog status. The same redraw a
        finished scan does. */
     void refreshLibraryAfterCatalogChange();
+    /* Index the created files still waiting on the batch NOW, then refresh the Library
+       once the scanner has committed them. A focus stack run in the Library. */
+    void catalogCreatedFilesThenRefreshLibrary();
     /*  Ask the user to define a scope, ONCE, the first time browsing would have
         catalogued something and the table is empty. Returns true if it was shown. */
     void promptForCatalogScope();

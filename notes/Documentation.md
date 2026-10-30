@@ -614,7 +614,7 @@
     - [12.6.4 A Monitor or Display-Scale Change](#1264-a-monitor-or-display-scale-change)
   - [12.7 The devPreview Index](#127-the-devpreview-index)
     - [12.7.1 Design](#1271-design)
-    - [12.7.2 A Locked Index Is Left in Place; Only a Broken One Is Moved Aside](#1272-a-locked-index-is-left-in-place-only-a-broken-one-is-moved-aside)
+    - [12.7.2 A Locked or Newer Index Is Left in Place; Only a Broken One Is Moved Aside](#1272-a-locked-or-newer-index-is-left-in-place-only-a-broken-one-is-moved-aside)
     - [12.7.3 The Index Is Opened Lazily, and That Is the Only Load Path](#1273-the-index-is-opened-lazily-and-that-is-the-only-load-path)
     - [12.7.4 Every Mutation Is Committed When It Happens](#1274-every-mutation-is-committed-when-it-happens)
     - [12.7.5 Identity: The Recipe Hash Is Not Enough](#1275-identity-the-recipe-hash-is-not-enough)
@@ -7775,14 +7775,15 @@ That last point is why it is called CacheDb and not "the preview database" (Cach
 - WAL, and synchronous=NORMAL: a preview read on a decoder thread never blocks the write on the GUI thread. Full fsync-per-commit durability would buy nothing here (the worst a lost commit costs is a re-render) at a price paid on every develop flush. MW::closeEvent and the startup sweep still call save(), which folds the write-ahead log back into the database.
 - Existing caches were carried over: the first open of a database with no rows imports any index.json beside it and renames it index.json.migrated (renamed, not deleted, so a bad import is recoverable). Without that, every upgrading user's cache would have read as empty and reconcile() would have deleted every payload (tst_devpreview::legacyJsonIndexIsImported).
 
-#### 12.7.2 A Locked Index Is Left in Place; Only a Broken One Is Moved Aside
+#### 12.7.2 A Locked or Newer Index Is Left in Place; Only a Broken One Is Moved Aside
 
 CacheDb::db() used to move the file aside (.corrupt) and start a new one on ANY failure to open or migrate, and "database is locked" was one of them, made likelier because busy_timeout was the LAST pragma, so journal_mode = WAL took its lock with no timeout at all. Several Winnow processes on one profile (the parallel smoke tests do exactly that) could discard a healthy index; it surfaced as a one-off catalog_capture failure in a parallel ctest run (2026-10-03). Now:
 
 - busy_timeout is set first.
 - A failed open is followed by probeFile on a fresh connection. SQLITE_BUSY / SQLITE_LOCKED (and their extended codes) mean LOCKED: the file is left alone, the issue is logged, and db() answers "no index" for 30 s before trying again (each try waits out the timeout twice, and callers ask constantly).
 - A file that reads at a schema this build can migrate is retried once in place.
-- Anything else (not a database, unreadable, a newer schema, or a readable file that fails again) is moved aside as before (index.db.corrupt.&lt;timestamp>, with its WAL sidecars) and recreated, because the alternative is a user who can never cache anything again. If SQLite is unavailable altogether, every get simply misses.
+- A NEWER schema (user_version above kSchemaVersion: the index was written by a newer Winnow) is left exactly where it is, like userdata.db, and this build runs without an index for the session (CacheDb::isNewerThanThisBuild; File > Open Library greys out with that reason). It used to count as unusable and be moved aside. On 2026-10-29 that cost a real library everything: opening v3_beta3 (schema 23) after a schema 28 dev build moved a 2.6 GB index aside, so v3_beta4 found an empty catalog and asked for a 155,000-image rescan. Thumbnails fell from 163k to 4.5k, History snapshots from 204 to 11 and keyword-audit vectors from 102k to 303, and the devPreview reconcile then deleted ~52k payloads the fresh table did not claim. Releases up to v3_beta4 still have the old policy, so running one of them after a newer build will still do this. tst_catalog::aNewerIndexIsLeftInPlace.
+- Anything else (not a database, unreadable, or a readable file that fails again) is moved aside as before (index.db.corrupt.&lt;timestamp>, with its WAL sidecars) and recreated, because the alternative is a user who can never cache anything again. If SQLite is unavailable altogether, every get simply misses.
 - tst_catalog::aLockedIndexIsLeftInPlace holds an EXCLUSIVE lock in rollback-journal mode across the call (\~10 s, both timeouts) and checks the same file opens once the lock goes; anUnreadableIndexIsStillMovedAside pins the other half. userdata.db never moves its file aside at all, and also sets busy_timeout first.
 
 A corrupt index is not recoverable by scanning, and does not need to be: the id in a filename says nothing about which image it belonged to, so an unreferenced &lt;id>.jpg is dead weight.
@@ -9737,6 +9738,8 @@ Every producer calls it once the file is COMPLETE (metadata copied, sidecar writ
 - Focus stack results (FS, where G::fsFusedPaths is recorded) and the mean stack (Stack::mean).
 - Utilities::backup: a backup inside the scope is an image in the scope.
 - FileOps::onCopied and FileOps::onMoved call it for their destination, so copy / paste, drag-copy onto a folder or bookmark, rename and moves are covered without their callers doing anything. A move whose row Catalog::onMoved already carried costs one stat and no parse: its stamps still match.
+
+A focus stack run in the Library does not wait for the batch (2026-10-29). When the stack finishes, MW::generateFocusStack inserts the results, then calls MW::catalogCreatedFilesThenRefreshLibrary. That function sends the pending batch to the scanner straight away and queues a functor on the scanner thread behind it. The functor is a barrier: the scanner runs queued calls in order, so it runs only after the stacks are committed. It then calls MW::refreshLibraryAfterCatalogChange, which re-runs the Filter panel query, refreshes the LibTree counts and updates the Manage Catalog status. A barrier is used rather than filesIndexed because that signal carries no id, so it cannot say which call it answers, and it only triggers a refresh when it indexed something.
 
 Deliberately NOT reported: focus-stack intermediates and debug dumps, and the transient embellish thumbnails. They are working files, not results (if they land inside the scope a scan will still find them; that is a question about where they are written).
 

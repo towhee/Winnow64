@@ -556,8 +556,11 @@ void MW::updateLibraryTree()
             promising a search of images that are not there. The command still works --
             it opens Manage Catalog, which is where an empty catalog is filled -- so
             disabling it would close the only door to the fix. */
+        const bool newer = !open && CacheDb::instance().isNewerThanThisBuild();
         openCatalogAction->setToolTip(
-            !open ? tr("The Library is unavailable: its database could not be opened.")
+            newer ? tr("The Library is unavailable: its database was written by a newer "
+                       "version of Winnow, and this version leaves it untouched.")
+            : !open ? tr("The Library is unavailable: its database could not be opened.")
             : n == 0 ? tr("Nothing is catalogued yet. Opens Manage Catalog, where you "
                           "choose which folders Winnow indexes.")
                      : tr("Browse every image in the Library."));
@@ -565,7 +568,8 @@ void MW::updateLibraryTree()
             Disabled Shortcut Feedback path can say why. Set here rather than there
             because this depends on the catalog, not on the selection. */
         openCatalogAction->setProperty("disabledReason",
-            QString("the local index database could not be opened"));
+            newer ? QString("the local index database is from a newer version of Winnow")
+                  : QString("the local index database could not be opened"));
     }
 }
 

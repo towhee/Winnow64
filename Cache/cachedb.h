@@ -93,6 +93,11 @@ public:
     /* The schema version this build writes (PRAGMA user_version). */
     static int schemaVersion();
 
+    /* True when the index file was written by a NEWER Winnow (its schema is above
+       schemaVersion()): it is left untouched and this build runs without an index.
+       The UI uses it to say why the Library is unavailable. */
+    bool isNewerThanThisBuild() const;
+
     /*  WHAT THE LOCAL INDEX COSTS IN DISK SPACE, by tenant -- shown in Manage Catalog so
         a user adding 100,000 images can see what that is doing to their drive.
 
