@@ -238,6 +238,7 @@ bool FS::prepareSources()
 
     sourcePaths.clear();
     cv::Size renderedSize;
+    QFileInfo firstInfo;
 
     for (int slice = 0; slice < grpSlices; ++slice) {
         if (abortRequested()) return false;
@@ -263,14 +264,24 @@ bool FS::prepareSources()
             return false;
         }
 
-        if (renderedSize.empty()) renderedSize = bgr.size();
+        if (renderedSize.empty()) {
+            renderedSize = bgr.size();
+            firstInfo = srcInfo;
+        }
         else if (bgr.size() != renderedSize) {
-            const QString msg = QString("Developed slices differ in size (%1x%2 vs %3x%4 "
-                                        "for %5); check for a different crop. "
-                                        "Focus stack aborted.")
-                                    .arg(renderedSize.width).arg(renderedSize.height)
-                                    .arg(bgr.cols).arg(bgr.rows)
-                                    .arg(srcInfo.fileName());
+            const QString sizes = QString("%1 is %2x%3, %4 is %5x%6")
+                                      .arg(firstInfo.fileName())
+                                      .arg(renderedSize.width).arg(renderedSize.height)
+                                      .arg(srcInfo.fileName())
+                                      .arg(bgr.cols).arg(bgr.rows);
+            const bool mixedTypes = firstInfo.suffix().compare(srcInfo.suffix(),
+                                                    Qt::CaseInsensitive) != 0;
+            const QString msg = mixedTypes
+                ? "Focus stack aborted: the selection mixes file types of different "
+                  "sizes (" + sizes + "). Every slice must be the same size, so stack "
+                  "either the raw files or the JPEGs, not both."
+                : "Focus stack aborted: the slices are different sizes (" + sizes +
+                  "). Check for a different crop on one of them.";
             status(msg);
             G::issue("Error", msg, srcFun, -1, path);
             return false;
