@@ -552,6 +552,9 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     else if (key == "blurY")               p.blurY               = f;
     else if (key == "blurSize")            p.blurSize            = f;
     else if (key == "blurFeather")         p.blurFeather         = f;
+    else if (key == "ortonOpacity")        p.ortonOpacity        = f;
+    else if (key == "ortonSize")           p.ortonSize           = f;
+    else if (key == "ortonBrightness")     p.ortonBrightness     = f;
     /* Global-only (always scope 0), listed here so one function covers every raw key. */
     else if (key == "denoiseLuma")         p.denoiseLuma         = f;
     else if (key == "denoiseChroma")       p.denoiseChroma       = f;

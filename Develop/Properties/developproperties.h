@@ -1325,7 +1325,8 @@ private:
            *detailEyeBtn = nullptr, *pointColorEyeBtn = nullptr,
            *colorPanelEyeBtn = nullptr;
     /* The Effects dropdown row's own [eye] [reset], acting on the SHOWN effect only
-       (EditScope::showVignette / showGrain / showKaleido; resetEffect). */
+       (EditScope::showVignette / showGrain / showKaleido / showBlur / showOrton;
+       resetEffect). */
     BarBtn *effectEyeBtn = nullptr;
     bool *effectShowFlag(EditScope *l, int effect);   // that effect's eye on a scope
     void toggleEffectShown();

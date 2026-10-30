@@ -1059,7 +1059,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     if (t) t->sharpenMs = probe.restart();
 
     /* After Sharpen (which would otherwise fight it), before Grain (which belongs on
-       top of the finished picture, blurred or not). */
+       top of the finished picture, blurred or not). Orton first, so an artistic blur
+       blurs the softened picture; both are timed as blurMs. */
+    Orton(img, p);
     Blur(img, p);
     if (t) t->blurMs = probe.restart();
 
@@ -1793,6 +1795,23 @@ void Develop::Blur(WorkingImage &img, const EditParams &p)
     }
     cv::Mat view(h, w, CV_32FC3, img.rgb.data());
     ArtBlur::apply(view, s, f);
+}
+
+void Develop::Orton(WorkingImage &img, const EditParams &p)
+{
+    if (p.ortonOpacity <= 0.0f) return;
+    const int w = img.width, h = img.height;
+    if (w < 2 || h < 2 || img.rgb.size() < size_t(w) * size_t(h) * 3) return;
+    ArtBlur::OrtonSettings s;
+    s.opacity    = p.ortonOpacity;
+    s.size       = p.ortonSize;
+    s.brightness = p.ortonBrightness;
+    ArtBlur::Frame f;
+    if (img.frameW > 0 && img.frameH > 0) {
+        f.fx = img.frameX; f.fy = img.frameY; f.fw = img.frameW; f.fh = img.frameH;
+    }
+    cv::Mat view(h, w, CV_32FC3, img.rgb.data());
+    ArtBlur::applyOrton(view, s, f);
 }
 
 void Develop::Grain(WorkingImage &img, const EditParams &p)

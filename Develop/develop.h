@@ -204,6 +204,11 @@ private:
        the settle render and the Detail 1:1 patch agree. No-op when blurAmount is 0. */
     void Blur(WorkingImage &img, const EditParams &p);
 
+    /* Spatial op (after Sharpen, before Blur): Effects > Orton -- a blurred, brightened
+       copy laid back over the picture at an opacity (ArtBlur::applyOrton). Frame-relative
+       like Blur. No-op when ortonOpacity is 0. */
+    void Orton(WorkingImage &img, const EditParams &p);
+
     /* Precomputed once per Apply(); the fused point pass reads only these. active == false
        means no implemented point op would change a pixel, so the pass is skipped entirely. */
     struct PointCoeffs {

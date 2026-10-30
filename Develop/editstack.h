@@ -147,6 +147,7 @@ struct EditScope {
     bool showGrain      = true;
     bool showKaleido    = true;
     bool showBlur       = true;
+    bool showOrton      = true;
     /* GLOBAL scope only: "Hide global image" (the scope bar's menu). The picture is cut
        out to the mask scopes -- only the pixels their masks cover show (folded with any
        kaleidoscope), everything else is transparent -- in the loupe and in every export,
@@ -192,6 +193,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     }
     if (!l.showKaleido) p.kaleidoSegments = def.kaleidoSegments;   // off, settings kept
     if (!l.showBlur)    p.blurAmount = def.blurAmount;             // likewise
+    if (!l.showOrton)   p.ortonOpacity = def.ortonOpacity;
     if (!l.showLens) {
         EditParams::resetGroup(p, EditParams::Group::Lens);
         /* An explicit removeCA / lensProfile previews as OFF; the reset's unset would
@@ -295,7 +297,7 @@ struct EditStack {
                               !l.showPointColor ||
                               !l.showDetail || !l.showEffects || !l.showLens ||
                               !l.showVignette || !l.showGrain || !l.showKaleido ||
-                              !l.showBlur ||
+                              !l.showBlur || !l.showOrton ||
                               l.hideImage))
                 return false;
         return true;
@@ -455,6 +457,12 @@ struct EditStack {
             o["blurSize"]    = p.blurSize;
             o["blurFeather"] = p.blurFeather;
         }
+        /* Orton: likewise only when on. */
+        if (p.ortonOpacity != 0.0f) {
+            o["ortonOpacity"]    = p.ortonOpacity;
+            o["ortonSize"]       = p.ortonSize;
+            o["ortonBrightness"] = p.ortonBrightness;
+        }
         o["version"]         = p.version;
         return o;
     }
@@ -572,6 +580,9 @@ struct EditStack {
         p.blurY           = static_cast<float>(o.value("blurY").toDouble(p.blurY));
         p.blurSize        = static_cast<float>(o.value("blurSize").toDouble(p.blurSize));
         p.blurFeather     = static_cast<float>(o.value("blurFeather").toDouble(p.blurFeather));
+        p.ortonOpacity    = static_cast<float>(o.value("ortonOpacity").toDouble(p.ortonOpacity));
+        p.ortonSize       = static_cast<float>(o.value("ortonSize").toDouble(p.ortonSize));
+        p.ortonBrightness = static_cast<float>(o.value("ortonBrightness").toDouble(p.ortonBrightness));
         p.version         = o.value("version").toInt(p.version);
         return p;
     }
@@ -606,6 +617,7 @@ struct EditStack {
             if (!l.showGrain)      lo["showGrain"]      = false;
             if (!l.showKaleido)    lo["showKaleido"]    = false;
             if (!l.showBlur)       lo["showBlur"]       = false;
+            if (!l.showOrton)      lo["showOrton"]      = false;
             if (l.hideImage)       lo["hideImage"]      = true;
             QJsonArray marr;
             for (const MaskComponent &m : l.components) {
@@ -722,6 +734,7 @@ struct EditStack {
             l.showGrain = lo.value("showGrain").toBool(l.showGrain);
             l.showKaleido = lo.value("showKaleido").toBool(l.showKaleido);
             l.showBlur = lo.value("showBlur").toBool(l.showBlur);
+            l.showOrton = lo.value("showOrton").toBool(l.showOrton);
             l.hideImage = lo.value("hideImage").toBool(l.hideImage);
             const QJsonArray marr = lo.value("masks").toArray();
             for (const QJsonValue &mv : marr) {
@@ -972,6 +985,9 @@ struct EditStack {
         if (clampF(p.blurY,       0.0f, 1.0f, def.blurY)) ++fixed;
         if (clampF(p.blurSize,    0.0f, 1.0f, def.blurSize)) ++fixed;
         if (clampF(p.blurFeather, 0.0f, 1.0f, def.blurFeather)) ++fixed;
+        if (clampF(p.ortonOpacity,    0.0f, 1.0f, 0.0f)) ++fixed;
+        if (clampF(p.ortonSize,       0.0f, 1.0f, def.ortonSize)) ++fixed;
+        if (clampF(p.ortonBrightness, 0.0f, 2.0f, 0.0f)) ++fixed;
 
         if (fixed && issues)
             issues->append(QStringLiteral("%1: %2 adjustment%3 out of range")

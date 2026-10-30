@@ -19,7 +19,7 @@ detail sharpening puts back.</p>
 <h2>Choosing an effect</h2>
 <p>The list at the top of the panel picks the effect to work on, and only that effect's
 sliders are shown below it.  Choose <b>Vignette</b>, <b>Grain</b>,
-<b>Blur</b> or <b>Patterns</b>.</p>
+<b>Blur</b>, <b>Orton</b> or <b>Patterns</b>.</p>
 
 <p>Every effect is always applied, whichever one is showing: the list only chooses which
 sliders you see.  An effect marked <b>*</b> in the list has been changed, so you can tell
@@ -173,9 +173,10 @@ the exposure.  The centre stays sharp.</li>
 makes a scene look like a miniature.  <b>Angle</b> turns the band, <b>Size</b> is its
 width and <b>Feather</b> how gradually the blur arrives.  On the image the solid lines are
 the band's edges and the dashed lines where the blur is full.</li>
-<li><b>Glow</b> &mdash; a soft bloom laid over the photo (the Orton look): dreamy light
-while the detail underneath stays.  <b>Size</b> is how far the glow spreads.  It only
-ever brightens.</li>
+<li><b>Glow</b> &mdash; a soft bloom laid over the photo: light spills into the darker
+areas around it while the detail underneath stays.  <b>Size</b> is how far the glow
+spreads.  It only ever brightens, so highlights stay crisp.  For a soft-focus, dreamy
+look, use <b>Orton</b> instead.</li>
 </ul>
 
 <p>The square at the top of Blur is the same <b>1:1</b> view the Detail panel has: a live
@@ -186,10 +187,34 @@ part, or drag inside the square.  The point is shared with the Detail panel.</p>
 on the loupe and in an export.  Grain is added after it, so grain stays crisp on top of a
 blur.</p>
 
+<h2>Orton</h2>
+<p>The Orton effect, after the photographer Michael Orton, who sandwiched a sharp slide
+with an out-of-focus copy of the same scene.  Winnow lays a blurred copy of the picture
+back over it: the sharp picture shows through a soft, glowing one.</p>
+
+<ul>
+<li><b>Opacity</b> &mdash; how strongly the soft copy shows.  0 is off; 100 is the soft
+copy alone.  Most pictures want 20 to 50.</li>
+<li><b>Size</b> &mdash; how soft the copy is, the radius of its blur.</li>
+<li><b>Brightness</b> &mdash; brightens the soft copy before it is laid over the photo
+(in stops, up to 2).  Orton's original slides were over-exposed, which is what gives the
+look its light, airy glow.  At 0 the picture keeps its overall brightness.</li>
+</ul>
+
+<p><b>Orton or Glow?</b>  Both lay a blurred copy over the photo; they differ in how it
+is laid on.  Glow (a Blur type) only ever <i>brightens</i>: light spreads into the
+shadows, but bright detail stays sharp and nothing gets darker.  Orton <i>blends</i> the
+copy in, so it softens everything, highlights included: small bright details spread and
+dim, dark areas lift, and the whole picture takes on a soft-focus look.  Orton is its own
+effect, not a Blur type, so it can be combined with any blur, including Glow.</p>
+
+<p>Like the other effects, Orton is per scope: on a mask it softens just the masked
+part.</p>
+
 <h2>Working with the sliders</h2>
 <ul>
 <li><b>Double-click</b> a slider returns it to its default (Feather 50, Size 25,
-Roughness 50, both Amounts 0).</li>
+Roughness 50, both Amounts 0; for Orton, Size 50 and Opacity and Brightness 0).</li>
 <li>Click a slider and the <b>arrow keys</b> nudge one unit, <b>Page Up / Page Down</b>
 ten.</li>
 <li>The section's <b>[&#8942;]</b> menu has <b>Show Effects changes</b> (a before / after
@@ -205,13 +230,16 @@ panel), then grain last of all &mdash; grain belongs on top of the finished pict
 underneath a vignette that would modulate it, and not under a sharpener that would crisp
 it up.</p>
 
+<p>Orton and Blur run after sharpening and before grain, Orton first, so a blur blurs
+the softened picture and grain stays crisp on top of both.</p>
+
 <p>Patterns runs after all of that, and after the crop, straighten and
 perspective in the Transform panel: it folds the finished, cropped picture.</p>
 
 <h2>What is saved</h2>
 <p>Every value is part of the develop recipe, stored in the sidecar, and travels with
-presets, Copy / Paste Settings, History and multi-image editing.  All three are stored
-per scope, so each mask can have its own.</p>
+presets, Copy / Paste Settings, History and multi-image editing.  Every effect is
+stored per scope, so each mask can have its own.</p>
 
 </body>
 </html>

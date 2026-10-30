@@ -485,6 +485,9 @@ QString MW::developDiagnostics()
             << "   angle = " << G::s(p.blurAngle)
             << "   centre = " << G::s(p.blurX) << ", " << G::s(p.blurY)
             << "   size = " << G::s(p.blurSize) << "   feather = " << G::s(p.blurFeather);
+        rpt << "\n" << indent << "ortonOpacity = " << G::s(p.ortonOpacity)
+            << "   size = " << G::s(p.ortonSize)
+            << "   brightness = " << G::s(p.ortonBrightness);
         rpt << "\n" << indent << "lensBlurAmount = " << G::s(p.lensBlurAmount)
             << "   focus = " << G::s(p.lensBlurFocus)
             << "   range = " << G::s(p.lensBlurRange)

@@ -289,8 +289,9 @@ inline void apply(cv::Mat &img, const Settings &s, const Frame &frame = Frame())
         return;
     }
     case Glow: {
-        /* Orton-style: a blurred copy laid back over the photo, lighten-style -- the
-           glow only ever brightens, so detail survives under it. */
+        /* A blurred copy laid back over the photo, lighten-style -- the glow only ever
+           brightens, so detail survives under it (Effects > Orton, applyOrton, is the
+           normal-blend soft focus). */
         const double sig = (kGlowSigmaMin + std::clamp(double(s.size), 0.0, 1.0)
                                           * (kGlowSigmaMax - kGlowSigmaMin)) * L;
         cv::Mat b;
@@ -308,6 +309,65 @@ inline void apply(cv::Mat &img, const Settings &s, const Frame &frame = Frame())
         return;
     }
     }
+}
+
+/*
+    Effects > Orton: the Orton effect, a SEPARATE effect from the blurs above (its own
+    EditParams ortonOpacity / ortonSize / ortonBrightness and its own eye), so it stacks
+    with any of them. A copy of the picture is Gaussian-blurred, optionally brightened,
+    and laid back over the picture at an opacity -- a NORMAL blend:
+
+        out = in + opacity * (2^brightness * blur(in) - in)
+
+    Unlike Glow's lighten blend (which only ever brightens, so highlights stay crisp),
+    the normal blend softens everything, highlights included: bright detail spreads and
+    dims, dark detail lifts, the sharp picture shows through the soft one. Brightness
+    lifts the blurred copy first, the classic over-exposed slide of Michael Orton's
+    sandwich. Scene-linear, like the blurs; Size is a fraction of the frame's long edge,
+    so the proxy, the settle render and the Detail patch agree.
+*/
+constexpr double kOrtonSigmaMin    = 0.002;   // blur radius at size 0
+constexpr double kOrtonSigmaMax    = 0.04;    // ... and at size 1
+constexpr double kOrtonEvMax       = 2.0;     // brightness of the copy, EV
+
+struct OrtonSettings {
+    float opacity    = 0.0f;   // 0..1
+    float size       = 0.5f;   // 0..1
+    float brightness = 0.0f;   // EV, 0..kOrtonEvMax
+    bool on() const { return opacity > 0.0f; }
+};
+
+inline double ortonSigma(double size, double longEdge)
+{
+    return (kOrtonSigmaMin + std::clamp(size, 0.0, 1.0)
+                           * (kOrtonSigmaMax - kOrtonSigmaMin)) * longEdge;
+}
+
+/* Pixels of context Orton needs beyond a patch (see reach). */
+inline int ortonReach(const OrtonSettings &s, int fw, int fh)
+{
+    if (!s.on() || fw <= 0 || fh <= 0) return 0;
+    return int(std::ceil(3.0 * ortonSigma(s.size, std::max(fw, fh))));
+}
+
+/* Orton img (CV_32FC3, scene-linear) in place. */
+inline void applyOrton(cv::Mat &img, const OrtonSettings &s, const Frame &frame = Frame())
+{
+    if (!s.on() || img.empty() || img.type() != CV_32FC3) return;
+    double fx, fy, fw, fh;
+    detail::resolveFrame(img, frame, fx, fy, fw, fh);
+    cv::Mat b;
+    detail::gaussian(img, b, ortonSigma(s.size, std::max(fw, fh)));
+    const float o = std::clamp(s.opacity, 0.0f, 1.0f);
+    const float gain = float(std::exp2(std::clamp(double(s.brightness), 0.0, kOrtonEvMax)));
+    cv::parallel_for_(cv::Range(0, img.rows), [&](const cv::Range &rr) {
+        for (int y = rr.start; y < rr.end; ++y) {
+            cv::Vec3f *p = img.ptr<cv::Vec3f>(y);
+            const cv::Vec3f *q = b.ptr<cv::Vec3f>(y);
+            for (int x = 0; x < img.cols; ++x)
+                p[x] += o * (gain * q[x] - p[x]);
+        }
+    });
 }
 
 }  // namespace ArtBlur

@@ -480,9 +480,10 @@ winnow_add_unit_test(tst_editrotate unit/tst_editrotate.cpp)
 winnow_add_unit_test(tst_kaleidoscope unit/tst_kaleidoscope.cpp
     ${CMAKE_SOURCE_DIR}/Develop/Transform/croptransform.cpp)
 winnow_test_link_opencv(tst_kaleidoscope PRIVATE opencv_core opencv_imgproc)
-# tst_artblur tests Effects > Blur's kernels (header-only Develop/artblur.h): what each
-# artistic blur keeps and smears, resolution independence (proxy vs full), a padded
-# Detail patch matching the full frame, and the timings for the record.
+# tst_artblur tests Effects > Blur's and Effects > Orton's kernels (header-only
+# Develop/artblur.h): what each artistic blur keeps and smears, Orton's normal blend,
+# resolution independence (proxy vs full), a padded Detail patch matching the full frame,
+# and the timings for the record.
 winnow_add_unit_test(tst_artblur unit/tst_artblur.cpp)
 winnow_test_link_opencv(tst_artblur PRIVATE opencv_core opencv_imgproc)
 # tst_lensblur tests Lens > Lens Blur (header-only Develop/lensblur.h): an in-focus

@@ -10,7 +10,9 @@
     Zoom leave the centre alone and blur rings vs. spokes respectively, Tilt-shift keeps
     its band sharp, Glow never darkens -- plus the two properties the render depends on:
     a proxy-sized render matches a full one (resolution independence) and a padded
-    Detail patch matches the same window of the full frame.
+    Detail patch matches the same window of the full frame. Effects > Orton
+    (applyOrton) is pinned here too: a NORMAL blend toward the soft copy, so unlike Glow
+    it darkens bright detail, and Brightness lifts the copy.
 */
 
 namespace {
@@ -74,6 +76,8 @@ private slots:
     void zoomKeepsRingsBlursSpokes();
     void tiltShiftKeepsTheBand();
     void glowNeverDarkens();
+    void ortonBlendsTowardTheSoftCopy();
+    void ortonPatchJsonAndEye();
     void proxyMatchesFullRes();
     void paddedPatchMatchesFullFrame();
     void reachCoversTheBlur();
@@ -181,6 +185,96 @@ void TestArtBlur::glowNeverDarkens()
     cv::minMaxLoc(diff.reshape(1), &lo, &hi);
     QVERIFY(lo >= -1e-6);
     QVERIFY(hi > 0.1);                                      // and it does glow
+}
+
+void TestArtBlur::ortonBlendsTowardTheSoftCopy()
+{
+    cv::Mat c = checker(150, 150, 3), ref = c.clone();
+    OrtonSettings s;
+    applyOrton(c, s);                                       // opacity 0: off
+    QVERIFY(cv::norm(c, ref, cv::NORM_INF) == 0.0);
+
+    /* Opacity 1, no lift: the picture IS the soft copy -- mean kept, checker flattened,
+       and (unlike Glow) the white cells darken. */
+    s.opacity = 1.0f;
+    s.size = 0.5f;
+    applyOrton(c, s);
+    QVERIFY(qAbs(cv::mean(c)[0] - cv::mean(ref)[0]) < 0.01);
+    QVERIFY(spread(c, cv::Rect(60, 60, 30, 30)) < 0.05f);
+    cv::Mat diff = c - ref;
+    double lo, hi;
+    cv::minMaxLoc(diff.reshape(1), &lo, &hi);
+    QVERIFY(lo < -0.4);
+
+    /* Half opacity: halfway between the photo and the soft copy. */
+    cv::Mat h = ref.clone();
+    s.opacity = 0.5f;
+    applyOrton(h, s);
+    cv::Mat mid = (ref + c) * 0.5f;
+    QVERIFY(cv::norm(h, mid, cv::NORM_INF) < 1e-4);
+
+    /* Brightness lifts the copy by 2^EV: +1 EV at full opacity doubles a flat field. */
+    cv::Mat f = flat(80, 60, 0.2f);
+    s.opacity = 1.0f;
+    s.brightness = 1.0f;
+    applyOrton(f, s);
+    QVERIFY(cv::norm(f, flat(80, 60, 0.4f), cv::NORM_INF) < 1e-4);
+}
+
+void TestArtBlur::ortonPatchJsonAndEye()
+{
+    /* A padded Detail patch matches the same window of the whole frame. */
+    cv::Mat full(300, 400, CV_32FC3);
+    cv::randu(full, cv::Scalar::all(0), cv::Scalar::all(1));
+    cv::GaussianBlur(full, full, cv::Size(0, 0), 1.5);
+    OrtonSettings o;
+    o.opacity = 0.7f; o.size = 0.6f; o.brightness = 0.5f;
+    cv::Mat whole = full.clone();
+    applyOrton(whole, o);
+    const cv::Rect win(150, 100, 60, 60);
+    const int pad = ortonReach(o, full.cols, full.rows) + 4;
+    const cv::Rect padded = cv::Rect(win.x - pad, win.y - pad, win.width + 2 * pad,
+                                     win.height + 2 * pad) & cv::Rect(0, 0, 400, 300);
+    cv::Mat patch = full(padded).clone();
+    Frame f;
+    f.fx = padded.x; f.fy = padded.y; f.fw = full.cols; f.fh = full.rows;
+    applyOrton(patch, o, f);
+    const cv::Mat got = patch(cv::Rect(win.x - padded.x, win.y - padded.y,
+                                       win.width, win.height));
+    QVERIFY(cv::norm(got, whole(win), cv::NORM_INF) < 0.03);
+
+    /* Off: nothing written. On: round trips; Reset Effects and the eye take it. */
+    QVERIFY(!EditStack::paramsToJson(EditParams()).contains("ortonOpacity"));
+    EditParams p;
+    p.ortonOpacity = 0.4f; p.ortonSize = 0.3f; p.ortonBrightness = 1.25f;
+    QVERIFY(!p.isIdentity());
+    const EditParams b = EditStack::paramsFromJson(EditStack::paramsToJson(p));
+    QCOMPARE(b.ortonOpacity, 0.4f);
+    QCOMPARE(b.ortonSize, 0.3f);
+    QCOMPARE(b.ortonBrightness, 1.25f);
+    EditParams r = p;
+    EditParams::resetGroup(r, EditParams::Group::Effects);
+    QCOMPARE(r.ortonOpacity, 0.0f);
+    EditScope l;
+    l.params = p;
+    l.showOrton = false;
+    QCOMPARE(effectiveScopeParams(l).ortonOpacity, 0.0f);
+    QCOMPARE(effectiveScopeParams(l).ortonSize, 0.3f);
+    EditStack hidden;
+    EditScope hs;
+    hs.showOrton = false;
+    hidden.scopes.append(hs);
+    QVERIFY(!hidden.isIdentity());                          // a shut eye is state
+    QVERIFY(!EditStack::fromJson(hidden.toJson()).scopes.at(0).showOrton);
+    /* Out of range is repaired. */
+    EditStack s;
+    EditScope sc;
+    sc.params.ortonOpacity = 2.0f;
+    sc.params.ortonBrightness = 5.0f;
+    s.scopes.append(sc);
+    EditStack::sanitize(s);
+    QCOMPARE(s.scopes[0].params.ortonOpacity, 1.0f);
+    QCOMPARE(s.scopes[0].params.ortonBrightness, 2.0f);
 }
 
 void TestArtBlur::proxyMatchesFullRes()
@@ -319,6 +413,13 @@ void TestArtBlur::timing()
             qInfo("%s: %lld ms at %.1f MP", names[t], et.elapsed(),
                   sz.area() / 1.0e6);
         }
+        cv::Mat m = base.clone();
+        OrtonSettings o;
+        o.opacity = 0.5f;
+        QElapsedTimer et;
+        et.start();
+        applyOrton(m, o);
+        qInfo("Orton: %lld ms at %.1f MP", et.elapsed(), sz.area() / 1.0e6);
     }
 }
 

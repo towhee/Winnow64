@@ -10251,14 +10251,15 @@ namespace {
    to pay is skipped. The caller then tells ImageView what size the result stands for. */
 /* The params a MASK REFERENCE (range ref, AI guides) is developed with: the Global
    look, minus what must never reach a model or a threshold -- Point Color's Visualize
-   Range (a greyed VIEW of the loupe) and Effects > Blur (Select Subject on a blurred
-   frame finds a blurred subject; a range mask would threshold smeared tones). Also the
-   range ref's cache key, so dragging a blur never rebuilds it. */
+   Range (a greyed VIEW of the loupe) and Effects > Blur / Orton (Select Subject on a
+   blurred frame finds a blurred subject; a range mask would threshold smeared tones).
+   Also the range ref's cache key, so dragging a blur never rebuilds it. */
 static EditParams guideParams(const EditParams &base)
 {
     EditParams p = base;
     p.pointColorVisualize = -1;
     p.blurAmount = 0.0f;
+    p.ortonOpacity = 0.0f;
     return p;
 }
 
@@ -11807,16 +11808,17 @@ static void blursToSource(DevelopProperties::StackRenderJob &job, int degrees)
         if (L.params.blurAmount > 0.0f) EditRotate::turnBlur(L.params, back);
 }
 
-/* Pixels of context the job's blurs need around a Detail patch (the widest of them),
-   in the SOURCE frame fw x fh. */
+/* Pixels of context the job's blurs (Effects > Blur and Orton) need around a Detail
+   patch (the widest of them), in the SOURCE frame fw x fh. */
 static int jobBlurReach(const DevelopProperties::StackRenderJob &job, int fw, int fh)
 {
     auto one = [fw, fh](const EditParams &p) {
-        if (p.blurAmount <= 0.0f) return 0;
         ArtBlur::Settings s;
         s.type = p.blurType; s.amount = p.blurAmount; s.angle = p.blurAngle;
         s.x = p.blurX; s.y = p.blurY; s.size = p.blurSize; s.feather = p.blurFeather;
-        return ArtBlur::reach(s, fw, fh);
+        ArtBlur::OrtonSettings o;
+        o.opacity = p.ortonOpacity; o.size = p.ortonSize;
+        return std::max(ArtBlur::reach(s, fw, fh), ArtBlur::ortonReach(o, fw, fh));
     };
     int r = one(job.global);
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)

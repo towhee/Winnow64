@@ -2325,7 +2325,7 @@ void DevelopProperties::resetActiveScope()
     l->showScope = l->showBasic = l->showCurves = l->showColor = l->showCalibrate =
         l->showColorGrade = l->showPointColor = l->showDetail = l->showEffects =
         l->showLens = l->showVignette = l->showGrain = l->showKaleido =
-        l->showBlur = true;
+        l->showBlur = l->showOrton = true;
     l->hideImage = false;
     noteEdit("Reset all");
     buildTree();                 // repopulate the sliders at their defaults + the eyes
@@ -3116,7 +3116,8 @@ namespace {
    one shows. applyEffectsChoice hides every other entry's rows. */
 struct EffectDef { const char *label; QStringList rows; bool globalOnly; };
 /* Indexed by effect id (effectsChoice, the combo items' data). */
-enum EffectId { EffectVignette = 0, EffectGrain = 1, EffectKaleido = 2, EffectBlur = 3 };
+enum EffectId { EffectVignette = 0, EffectGrain = 1, EffectKaleido = 2, EffectBlur = 3,
+                EffectOrton = 4 };
 const QVector<EffectDef> &effectDefs()
 {
     static const QVector<EffectDef> defs = {
@@ -3134,6 +3135,8 @@ const QVector<EffectDef> &effectDefs()
         {"Blur",         {"BlurPreviewTopSpacer", "blurPreview", "BlurPreviewSpacer",
                           "blurType", "blurAmount", "blurAngle", "blurSize",
                           "blurFeather"}, false},
+        /* A blurred copy over the picture (ArtBlur::applyOrton); stacks with Blur. */
+        {"Orton",        {"ortonOpacity", "ortonSize", "ortonBrightness"}, false},
     };
     return defs;
 }
@@ -3154,6 +3157,9 @@ bool effectEdited(const EditStack &s, int scopeIdx, int e)
         return p.hasKaleido();
     case EffectBlur:
         return p.blurAmount > 0.0f;
+    case EffectOrton:
+        return p.ortonOpacity != def.ortonOpacity || p.ortonSize != def.ortonSize ||
+               p.ortonBrightness != def.ortonBrightness;
     }
     return false;
 }
@@ -7311,7 +7317,7 @@ void DevelopProperties::addEffects()
            ("Develop/effectsChoice") and each item's data remember, so reordering the
            list must never renumber the effects. */
         static const int kListOrder[] = {EffectVignette, EffectGrain, EffectBlur,
-                                         EffectKaleido};
+                                         EffectOrton, EffectKaleido};
         for (int e : kListOrder)
             if (e < defs.size() && (!defs.at(e).globalOnly || activeScopeIndex == 0))
                 combo->addItem(defs.at(e).label, e);
@@ -7641,7 +7647,7 @@ void DevelopProperties::addEffects()
         combo->setToolTip("Gaussian: an even soft blur.  Motion: a streak along the Angle.\n"
                           "Spin: round the centre.  Zoom: out from the centre.\n"
                           "Tilt-shift: a sharp band, blurred above and below.\n"
-                          "Glow: a soft bloom over the photo (Orton).");
+                          "Glow: a soft bloom that only brightens (for soft focus, see Orton).");
         connect(combo, &QComboBox::currentIndexChanged, this, [this](int idx){
             if (idx < 0 || currentImagePath.isEmpty()) return;
             EditParams &p = activeParams();
@@ -7672,6 +7678,21 @@ void DevelopProperties::addEffects()
     addSlider("blurFeather", "Feather",
               "Tilt-shift: how gradually the blur comes in beside the band.",
               parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+
+    /* Orton: a Gaussian-blurred copy of the picture, lifted by Brightness, laid back
+       over it at Opacity (Develop::Orton, ArtBlur::applyOrton). Its own effect, so it
+       stacks with a Blur. Opacity / Size 0..100 on the panel, 0..1 stored; Brightness
+       is EV (0.00..2.00, divisor 100, like Vignette's Amount). */
+    addSlider("ortonOpacity", "Opacity",
+              "How strongly the soft copy shows over the photo (0 = off).",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 0);
+    addSlider("ortonSize", "Size",
+              "How soft the copy is: the radius of its blur.",
+              parIdx, "EffectsHeader", 0, 100, 0, G::darkgray, G::lightgray, 50);
+    addSlider("ortonBrightness", "Brightness",
+              "Brighten the soft copy before it is laid over the photo (EV),\n"
+              "the over-exposed slide of the classic Orton sandwich.",
+              parIdx, "EffectsHeader", 0, 200, 100, G::darkgray, G::lightgray, 0);
 
     addGroupDivider(parIdx, "EffectsHeader", "EndDivider");
 
@@ -7750,6 +7771,7 @@ bool *DevelopProperties::effectShowFlag(EditScope *l, int effect)
     case EffectGrain:    return &l->showGrain;
     case EffectKaleido:  return &l->showKaleido;
     case EffectBlur:     return &l->showBlur;
+    case EffectOrton:    return &l->showOrton;
     }
     return nullptr;
 }
@@ -7815,6 +7837,11 @@ void DevelopProperties::resetEffect()
             p.blurY       = def.blurY;
             p.blurSize    = def.blurSize;
             p.blurFeather = def.blurFeather;
+        }
+        else if (e == EffectOrton) {
+            p.ortonOpacity    = def.ortonOpacity;
+            p.ortonSize       = def.ortonSize;
+            p.ortonBrightness = def.ortonBrightness;
         }
         else if (e == EffectVignette) {
             p.vignetteExposure = def.vignetteExposure;
@@ -9006,6 +9033,8 @@ void DevelopProperties::itemChange(QModelIndex idx)
             {"grainRoughness", "Grain roughness"},
             {"blurAmount", "Blur"}, {"blurAngle", "Blur angle"},
             {"blurSize", "Blur size"}, {"blurFeather", "Blur feather"},
+            {"ortonOpacity", "Orton"}, {"ortonSize", "Orton size"},
+            {"ortonBrightness", "Orton brightness"},
             /* Lens Blur's rows are a bare "Amount" / "Focus" under the Blur radio. */
             {"lensBlurAmount", "Lens blur"}, {"lensBlurFocus", "Lens blur focus"},
             {"lensBlurRange", "Lens blur focal range"},
@@ -9082,6 +9111,9 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     else if (key == "blurAngle")          p.blurAngle          = f;            // degrees
     else if (key == "blurSize")           p.blurSize           = f / 100.0f;
     else if (key == "blurFeather")        p.blurFeather        = f / 100.0f;
+    else if (key == "ortonOpacity")       p.ortonOpacity       = f / 100.0f;   // "Orton"
+    else if (key == "ortonSize")          p.ortonSize          = f / 100.0f;
+    else if (key == "ortonBrightness")    p.ortonBrightness    = f;            // EV
 }
 
 EditParams DevelopProperties::editParams()
@@ -9770,6 +9802,7 @@ const PresetLeafDef kEffectsLeaves[] = {
     {"grain",    "Grain"},
     {"kaleido",  "Patterns"},
     {"blur",     "Blur"},
+    {"orton",    "Orton"},
 };
 /* A mask scope's Lens Blur refine. Global's Lens Blur itself (like the rest of the Lens
    section) is a per-image "Global settings" leaf, not a scope one. */
@@ -9852,6 +9885,7 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "grain")        return p.grainAmount      != def.grainAmount;
     if (key == "kaleido")      return p.hasKaleido();
     if (key == "blur")         return p.blurAmount != def.blurAmount;
+    if (key == "orton")        return p.ortonOpacity != def.ortonOpacity;
     if (key == "lensRefine")   return p.lensBlurRefine != def.lensBlurRefine;
     return false;
 }
@@ -10002,6 +10036,12 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("blurY", p.blurY);
         out.insert("blurSize", p.blurSize);
         out.insert("blurFeather", p.blurFeather);
+    }
+    if (lk.contains("orton")) {
+        /* All three, even when off, as Blur. */
+        out.insert("ortonOpacity", p.ortonOpacity);
+        out.insert("ortonSize", p.ortonSize);
+        out.insert("ortonBrightness", p.ortonBrightness);
     }
     if (lk.contains("lensRefine")) out.insert("lensBlurRefine", p.lensBlurRefine);
     if (lk.contains("pointColors"))
@@ -10646,7 +10686,8 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
             it.value() = 1.0;
         }
         else if (k == "lensManualMidpoint" || k == "kaleidoX" || k == "kaleidoY" ||
-                 k == "blurX" || k == "blurY" || k == "blurSize" || k == "blurFeather") {
+                 k == "blurX" || k == "blurY" || k == "blurSize" || k == "blurFeather" ||
+                 k == "ortonSize") {
             it.value() = 0.5;
         }
         else if (k == "kaleidoZoom" || k == "kaleidoOpacity" || k == "kaleidoRadius") {
@@ -11049,6 +11090,9 @@ const FloatField kFloatFields[] = {
     {"blurY",               &EditParams::blurY},
     {"blurSize",            &EditParams::blurSize},
     {"blurFeather",         &EditParams::blurFeather},
+    {"ortonOpacity",        &EditParams::ortonOpacity},
+    {"ortonSize",           &EditParams::ortonSize},
+    {"ortonBrightness",     &EditParams::ortonBrightness},
     {"defringePurple",      &EditParams::defringePurple},
     {"defringeGreen",       &EditParams::defringeGreen},
     {"lensDistortion",      &EditParams::lensDistortion},
@@ -11327,7 +11371,8 @@ bool sameScopeState(const EditScope &a, const EditScope &b)
            a.showPointColor == b.showPointColor && a.showDetail == b.showDetail &&
            a.showEffects == b.showEffects && a.showLens == b.showLens &&
            a.showVignette == b.showVignette && a.showGrain == b.showGrain &&
-           a.showKaleido == b.showKaleido && a.showBlur == b.showBlur;
+           a.showKaleido == b.showKaleido && a.showBlur == b.showBlur &&
+           a.showOrton == b.showOrton;
 }
 
 void copyScopeState(const EditScope &src, EditScope &dst)
@@ -11345,6 +11390,7 @@ void copyScopeState(const EditScope &src, EditScope &dst)
     dst.showVignette = src.showVignette;     dst.showGrain = src.showGrain;
     dst.showKaleido = src.showKaleido;
     dst.showBlur = src.showBlur;
+    dst.showOrton = src.showOrton;
 }
 
 int scopeIndexForLink(const EditStack &s, const QString &link)
@@ -11897,6 +11943,9 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("blurAngle",          p.blurAngle);
     setSliderReal("blurSize",           p.blurSize           * 100.0);
     setSliderReal("blurFeather",        p.blurFeather        * 100.0);
+    setSliderReal("ortonOpacity",       p.ortonOpacity       * 100.0);   // "Orton"
+    setSliderReal("ortonSize",          p.ortonSize          * 100.0);
+    setSliderReal("ortonBrightness",    p.ortonBrightness);             // EV
     setSliderReal("lensBlurRefine",     p.lensBlurRefine     * 100.0);   // a mask's Lens
     if (blurTypeCombo) {
         QSignalBlocker b(blurTypeCombo);

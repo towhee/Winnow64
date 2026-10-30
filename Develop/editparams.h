@@ -573,6 +573,16 @@ struct EditParams {
     float blurSize    = 0.5f;
     float blurFeather = 0.5f;
 
+    /* Orton (Effects, a SPATIAL Develop op after Sharpen, before Blur -- Develop::Orton,
+       ArtBlur::applyOrton). A Gaussian-blurred copy of the picture, lifted by
+       ortonBrightness (EV, 0..2), laid back over it at ortonOpacity (0..1, the only
+       field in isIdentity) with a normal blend; ortonSize (0..1) is the blur radius, a
+       fraction of the long edge. Its own effect, separate from Blur > Glow (a lighten
+       blend), so the two stack. */
+    float ortonOpacity    = 0.0f;
+    float ortonSize       = 0.5f;
+    float ortonBrightness = 0.0f;
+
     /* FROZEN at 1, written into every scope's params. It is NOT the schema version:
        that is the stack-level EditStack::version (Develop/developschema.h). Kept only
        because dropping the key would change every recipe hash and rebuild every
@@ -696,6 +706,9 @@ struct EditParams {
             p.blurY = def.blurY;
             p.blurSize = def.blurSize;
             p.blurFeather = def.blurFeather;
+            p.ortonOpacity = def.ortonOpacity;               // "Orton"
+            p.ortonSize = def.ortonSize;
+            p.ortonBrightness = def.ortonBrightness;
             break;
         case Group::Lens:
             p.lensProfile = def.lensProfile;
@@ -765,7 +778,7 @@ struct EditParams {
                localDenoiseLuma == 0.0f && localDenoiseChroma == 0.0f &&
                sharpenAmount == 0.0f &&
                vignetteExposure == 0.0f && grainAmount == 0.0f &&
-               kaleidoSegments < 2 && blurAmount == 0.0f &&
+               kaleidoSegments < 2 && blurAmount == 0.0f && ortonOpacity == 0.0f &&
                curvesAreIdentity() &&
                /* A sample with no shift moves no pixel, but it IS the user's work: count
                   it, or the sidecar is never written and the sample is gone on return. */
