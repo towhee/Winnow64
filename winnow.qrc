@@ -157,6 +157,8 @@
         <file>images/icon16/graphic.png</file>
         <file>images/icon16/histogram.png</file>
         <file>images/icon16/histogram_rgb.png</file>
+        <file>images/icon16/newmask.png</file>
+        <file>images/icon16/newmask_yellow.png</file>
         <file>images/icon16/colorwheel.png</file>
         <file>images/icon16/morevertthin.png</file>
         <file>images/icon16/delta.png</file>
@@ -183,6 +185,7 @@
         <file>Docs/images/EmbelCoordSystem.png</file>
         <file>Docs/embelcoordsystem.html</file>
         <file>images/icon16/lightning.png</file>
+        <file>images/icon16/lightning_white.png</file>
         <file>images/icon16/lightning1.png</file>
         <file>images/icon24/histogram_rgb.png</file>
         <file>images/icon24/histogram.png</file>
@@ -190,6 +193,9 @@
         <file>images/icon24/spot.png</file>
         <file>images/icon24/colorwheel.png</file>
         <file>images/icon24/lightning.png</file>
+        <file>images/icon24/lightning_white.png</file>
+        <file>images/icon24/newmask.png</file>
+        <file>images/icon24/newmask_yellow.png</file>
         <file>images/icon16/tile.png</file>
         <file>images/video.png</file>
         <file>images/icon16/rainbow.png</file>

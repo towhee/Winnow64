@@ -3253,11 +3253,12 @@ void MW::createDevelopDock()
     const int devActSide = 24;
     const QString devActIcons = devActSide == 24 ? ":/images/icon24/" : ":/images/icon16/";
 
-    /* show/hide the histogram + vectorscope scopes strip. The only coloured glyph in the
-       row; histogram.png is the white alternative (Documentation.md 11.13.1). */
+    /* show/hide the histogram + vectorscope scopes strip. White like the rest of the row
+       (2026-10-31); histogram_rgb.png is the coloured alternative (Documentation.md
+       11.13.1). */
     developScopesBtn = new BarBtn();
     developScopesBtn->setSide(devActSide);
-    developScopesBtn->setIcon(devActIcons + "histogram_rgb.png", G::iconOpacity);
+    developScopesBtn->setIcon(devActIcons + "histogram.png", G::iconOpacity);
     developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.\n"
                                  "Right-click the scopes to choose which are shown.");
     developScopesBtn->setActive(developScopesVisible);
@@ -3273,6 +3274,18 @@ void MW::createDevelopDock()
     developTransformBtn->setActive(developTransformVisible);
     connect(developTransformBtn, &BarBtn::clicked, this, &MW::toggleDevelopTransform);
     developActionLayout->addWidget(developTransformBtn);
+    developActionLayout->addSpacing(10);
+
+    /* New mask: the Scope header's [+] (DevelopProperties::newScope: name dialog, then
+       the mask-tool chooser), one click from the top of the panel. newmask_yellow.png is
+       the coloured alternative (Documentation.md 11.13.1). */
+    BarBtn *developNewMaskBtn = new BarBtn();
+    developNewMaskBtn->setSide(devActSide);
+    developNewMaskBtn->setIcon(devActIcons + "newmask.png", G::iconOpacity);
+    developNewMaskBtn->setToolTip("New mask: add a masked scope and choose its mask tool");
+    connect(developNewMaskBtn, &BarBtn::clicked, developProperties,
+            &DevelopProperties::newScope);
+    developActionLayout->addWidget(developNewMaskBtn);
     developActionLayout->addSpacing(10);
 
     /* Spot-removal tool (regenerative fill): brush over a blemish to heal it; heals are
@@ -3356,10 +3369,11 @@ void MW::createDevelopDock()
         developPresetBtn->hide();
     }
 
-    /* Export the developed image. STUB for now (MW::developExport is not built yet). */
+    /* Export the developed image. STUB for now (MW::developExport is not built yet).
+       lightning_white.png is the orange lightning.png recoloured white for the row. */
     BarBtn *developExportBtn = new BarBtn();
     developExportBtn->setSide(devActSide);
-    developExportBtn->setIcon(devActIcons + "lightning.png", G::iconOpacity);
+    developExportBtn->setIcon(devActIcons + "lightning_white.png", G::iconOpacity);
     developExportBtn->setToolTip("Export the developed image  (X)");
     connect(developExportBtn, &BarBtn::clicked, this, &MW::developExport);
     developActionLayout->addWidget(developExportBtn);
