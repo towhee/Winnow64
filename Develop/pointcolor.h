@@ -2,12 +2,13 @@
 #define POINTCOLOR_H
 
 /*
-    POINT COLOR -- Lightroom's Color Mixer > Point Color, without the Mixer half.
+    POINT COLOR -- Lightroom's Color Mixer > Point Color (the Mixer half is
+    Develop/colormixer.h, the Color panel's Mix mode).
 
     The user samples a colour from the image with the eyedropper (up to kMaxPts of them)
     and, for each sample, shifts the hue, saturation and luminance of every pixel that
-    is CLOSE to it. Unlike the 8-band HSL mixer that Winnow deliberately does not have
-    (see the "Color Mix cancelled" decision), a point is a 3-D target -- hue AND
+    is CLOSE to it. Unlike the 8-band HSL mixer (colormixer.h), which selects by hue
+    alone, a point is a 3-D target -- hue AND
     saturation AND lightness -- so "this skin" can be moved without moving "that
     orange wall" of the same hue.
 

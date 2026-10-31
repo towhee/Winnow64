@@ -104,6 +104,10 @@ public:
     /*  Colour the title text; an invalid colour goes back to the stylesheet's. The
         Filters dock lights its title while anything is filtering. */
     void setTitleColor(const QColor &color);
+    /*  A second, centred line under the title row; the bar grows by its height. Created
+        on first use, so other title bars keep their single row. The History dock shows
+        the current image's exposure here ("f/8, 1/50 sec, ISO 800"). */
+    void setSubtitle(const QString &text);
     QSize sizeHint() const override;
 protected:
     void paintEvent(QPaintEvent *event) override;
@@ -112,7 +116,10 @@ protected:
     void mousePressEvent(QMouseEvent *event) override;
 private:
     QLabel *titleLabel;
+    QLabel *subtitleLabel = nullptr;    // see setSubtitle
+    QVBoxLayout *rows;                  // title row, then the optional subtitle
     bool bottomBorder = true;           // see setBottomBorderVisible
+    int subtitleHeight() const;
 
 };
 

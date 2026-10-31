@@ -1613,6 +1613,9 @@ private slots:
     void closeEmbelDock();
     void closeDevelopDock();
     void closeHistoryDock();
+    /* The History dock title bar's second row: the current image's exposure, "f/8,
+       1/50 sec, ISO 800". row -1 (or no image) blanks it. */
+    void updateExposureSubtitle(int row);
     void closeFolderDock();
     void closeFavDock();
     void closeFilterDock();

@@ -10,6 +10,7 @@ class QLabel;
 class QMenu;
 class QVBoxLayout;
 class QComboBox;
+class QLineEdit;
 class BarBtn;
 
 /*
@@ -40,6 +41,8 @@ class BarBtn;
     widget is never deleted inside its own signal handler):
       - Arrow / label click -> editsCollapseToggled(on)  (folds the details away)
       - Combo pick   -> scopeSelected(name)          (makes it the active scope)
+      - Combo typing -> renameToRequested(name)      (a MASK scope's combo is editable:
+                        Enter / focus-out renames it, Escape reverts; Global's is not)
       - [+]          -> addScopeRequested            (new mask)
       - [eye]        -> scopeEnabledToggled(i, on)   (EditScope::enabled)
       - [:]          -> the active scope's actions, plus the panel-wide "Reset all edits"
@@ -104,6 +107,7 @@ public:
 signals:
     void scopeSelected(const QString &name);    // user picked a different scope
     void renameRequested();                      // menu: rename the selected scope
+    void renameToRequested(const QString &name); // combo text edit: rename the active scope
     void duplicateRequested();                   // menu: copy of the scope
     void resetScopeRequested();                  // menu: reset the scope to identity
     void removeScopeRequested();                 // menu: remove the selected scope
@@ -136,6 +140,8 @@ private:
     void toggleActiveEnabled();               // the bar's eye: flip EditScope::enabled
     static void setEyeIcon(BarBtn *b, bool shown);      // eye.png / eye_off.png
     void selectScopeDeferred(const QString &name);      // emit scopeSelected next tick
+    void hookScopeEdit();                     // wire the editable combo's line edit
+    void commitScopeEdit();                   // Enter / focus-out: emit renameToRequested
 
     /* The whole scope control on one line -- "Scope [Global v] [+] [eye] [:]". It stands
        in for a panel header band, so paintEvent draws the property-header gradient
@@ -145,6 +151,12 @@ private:
     QLabel      *barLabel        = nullptr;   // "Scope" -- a click toggles the arrow
     QLabel      *barCountLabel   = nullptr;   // ": n" scope count, Global included
     QComboBox   *scopeCombo      = nullptr;
+    /* The combo's line edit while a MASK scope is active (QComboBox owns it and deletes it
+       when setEditable(false) runs for Global), and whether the user has typed into it
+       since the last refill -- a refill or a popup pick sets the text too, and must not
+       read back as a rename. */
+    QLineEdit   *hookedEdit      = nullptr;
+    bool         scopeEditPending = false;
     BarBtn      *barAddBtn       = nullptr;   // [+] new mask
     BarBtn      *barEyeBtn       = nullptr;
     BarBtn      *barMenuBtn      = nullptr;

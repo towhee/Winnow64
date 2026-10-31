@@ -138,6 +138,7 @@ struct EditScope {
     bool showCalibrate  = true;
     bool showColorGrade = true;
     bool showPointColor = true;
+    bool showMixer      = true;     // the Color panel's Mix mode (Color Mixer)
     bool showDetail     = true;
     bool showEffects    = true;
     bool showLens       = true;     // Global only: the Lens section
@@ -166,6 +167,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
         EditParams::resetGroup(p, EditParams::Group::Calibrate);
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
         EditParams::resetGroup(p, EditParams::Group::PointColor);
+        EditParams::resetGroup(p, EditParams::Group::Mixer);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
         EditParams::resetGroup(p, EditParams::Group::Lens);
@@ -179,6 +181,7 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
     if (!l.showCalibrate)  EditParams::resetGroup(p, EditParams::Group::Calibrate);
     if (!l.showColorGrade) EditParams::resetGroup(p, EditParams::Group::ColorGrade);
     if (!l.showPointColor) EditParams::resetGroup(p, EditParams::Group::PointColor);
+    if (!l.showMixer)      EditParams::resetGroup(p, EditParams::Group::Mixer);
     if (!l.showDetail)     EditParams::resetGroup(p, EditParams::Group::Detail);
     if (!l.showEffects)    EditParams::resetGroup(p, EditParams::Group::Effects);
     const EditParams def;
@@ -294,7 +297,7 @@ struct EditStack {
                               !l.showScope || !l.showBasic || !l.showCurves ||
                               !l.showColor ||
                               !l.showCalibrate || !l.showColorGrade ||
-                              !l.showPointColor ||
+                              !l.showPointColor || !l.showMixer ||
                               !l.showDetail || !l.showEffects || !l.showLens ||
                               !l.showVignette || !l.showGrain || !l.showKaleido ||
                               !l.showBlur || !l.showOrton ||
@@ -356,6 +359,11 @@ struct EditStack {
         /* Written only when set, so sidecars (and the recipe keys hashed from them)
            written before Shadows Tint existed are unchanged. */
         if (p.calShadowTint != 0.0f) o["calShadowTint"] = p.calShadowTint;
+        /* Color Mixer: each of the 24 written only when set, for the same reason. */
+        for (int k = 0; k < ColorMixer::kKinds; ++k)
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (p.*EditParams::mixerMember(k, b) != 0.0f)
+                    o[ColorMixer::key(k, b)] = p.*EditParams::mixerMember(k, b);
         /* Consumed by OutputTransform, not Develop -- but it must be HERE, because this
            function is both the sidecar format AND the per-scope render-cache key
            (MW::developCompositeStack). A field the pipeline reads but this omits renders
@@ -504,6 +512,11 @@ struct EditStack {
         p.calBlueHue      = static_cast<float>(o.value("calBlueHue").toDouble(p.calBlueHue));
         p.calBlueSat      = static_cast<float>(o.value("calBlueSat").toDouble(p.calBlueSat));
         p.calShadowTint   = static_cast<float>(o.value("calShadowTint").toDouble(p.calShadowTint));
+        for (int k = 0; k < ColorMixer::kKinds; ++k)
+            for (int b = 0; b < ColorMixer::kBands; ++b) {
+                float &f = p.*EditParams::mixerMember(k, b);
+                f = static_cast<float>(o.value(ColorMixer::key(k, b)).toDouble(f));
+            }
         p.viewTransform   = o.value("viewTransform").toInt(p.viewTransform);
         p.cameraProfile   = o.value("cameraProfile").toString(p.cameraProfile);
         p.gradeShadowHue  = static_cast<float>(o.value("gradeShadowHue").toDouble(p.gradeShadowHue));
@@ -610,6 +623,7 @@ struct EditStack {
             if (!l.showCalibrate)  lo["showCalibrate"]  = false;
             if (!l.showColorGrade) lo["showColorGrade"] = false;
             if (!l.showPointColor) lo["showPointColor"] = false;
+            if (!l.showMixer)      lo["showMixer"]      = false;
             if (!l.showDetail)     lo["showDetail"]     = false;
             if (!l.showEffects)    lo["showEffects"]    = false;
             if (!l.showLens)       lo["showLens"]       = false;
@@ -727,6 +741,7 @@ struct EditStack {
             l.showColorGrade = lo.value("showColorMix").toBool(l.showColorGrade);
             l.showColorGrade = lo.value("showColorGrade").toBool(l.showColorGrade);
             l.showPointColor = lo.value("showPointColor").toBool(l.showPointColor);
+            l.showMixer = lo.value("showMixer").toBool(l.showMixer);
             l.showDetail = lo.value("showDetail").toBool(l.showDetail);
             l.showEffects = lo.value("showEffects").toBool(l.showEffects);
             l.showLens = lo.value("showLens").toBool(l.showLens);
@@ -864,6 +879,10 @@ struct EditStack {
         if (clampF(p.calBlueHue,  -100.0f, 100.0f, def.calBlueHue))  ++fixed;
         if (clampF(p.calBlueSat,  -100.0f, 100.0f, def.calBlueSat))  ++fixed;
         if (clampF(p.calShadowTint, -100.0f, 100.0f, def.calShadowTint)) ++fixed;
+        /* Color Mixer: 24 plain -100..100 slider values. */
+        for (int k = 0; k < ColorMixer::kKinds; ++k)
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (clampF(p.*EditParams::mixerMember(k, b), -100.0f, 100.0f, 0.0f)) ++fixed;
         /* An UNKNOWN value falls back to the default rather than failing: a sidecar
            written by a later build that added a transform must still open here, showing
            the default look, not refuse to load. */

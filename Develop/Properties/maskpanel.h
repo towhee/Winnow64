@@ -104,7 +104,7 @@ public:
        submasks: there is no mask to grow or shrink, so the controls would be no-ops with
        nothing to explain them. The Mask BAND itself always shows -- its [+] is how the
        first submask gets made. */
-    void showMaskLevel(bool show);
+    void showMaskLevel(bool show);   // also enables [-] [n]: they need a submask
     /* The mask's submasks. DevelopProperties pushes rows in and binds its signals. */
     SubmaskList *list() const { return submaskList; }
     /* THE overlay-colour palette. Static because the Mask band's tint swatch
@@ -121,8 +121,10 @@ signals:
     /* Mask band [:] last item, as on every band in the dock: the submasks help page
        (Edge and Halo are documented there). */
     void helpRequested();
-    /* Mask band [+] (and its [:] "Add submask"): append a submask. */
-    void addSubmaskRequested();
+    /* Mask band [+] [-] [n] (and its [:] "Add submask"): append a submask that combines
+       with the mask by op (MaskOp: Add / Subtract / Intersect). DevelopProperties pops
+       the mask tools menu for it. */
+    void addSubmaskRequested(int op);
     /* The Mask band's arrow folded (true) or unfolded the mask. A fold hides the
        submask rows, so DevelopProperties closes the open submask with them. */
     void maskFoldedChanged(bool folded);
@@ -150,6 +152,7 @@ private:
     void buildMaskLevel(QVBoxLayout *outer);   // the "Mask" band + its Edge/Halo rows
     void syncAttrVisible();                // attrShown, mask not folded
     void syncLevelVisible();               // levelShown, and the band's own collapse
+    void syncOpButtons();                  // [-] [n] enabled + tooltip <- levelShown
     bool maskFolded() const;               // the "Mask" band's arrow is closed
     void toggleLevelCollapsed();
     void updateLevelCollapseIcon();
@@ -161,6 +164,8 @@ private:
     BarBtn      *levelCollapseBtn = nullptr;
     QLabel      *levelTitle  = nullptr;
     BarBtn      *levelAddBtn  = nullptr;   // band [+]: add a submask
+    BarBtn      *levelSubtractBtn  = nullptr;   // band [-]: subtract a submask
+    BarBtn      *levelIntersectBtn = nullptr;   // band [n]: intersect a submask
     BarBtn      *levelMenuBtn = nullptr;   // band [:]: add / show-hide all / reset / help
     QHBoxLayout *levelBandLayout = nullptr;   // so setTintButton can insert into it
     int          levelTintSlot   = -1;        // where the tint swatch goes

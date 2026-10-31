@@ -10,7 +10,6 @@
 #include "Develop/Properties/rawpanel.h"
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
-#include "Develop/Properties/submaskdialog.h"
 #include "Develop/Transform/transformpanel.h"
 #include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
@@ -198,7 +197,14 @@ void DevelopProperties::initialize()
 
     setSolo(setting->value("Develop/isSolo", false).toBool());
     combinedColorPanel = setting->value("Develop/combinedColorPanel", true).toBool();
-    colorPanelMode = qBound(0, setting->value("Develop/colorPanelMode", 0).toInt(), 2);
+    /* "colorPanelMode" counted Tone / Hue / RGB; Mix took index 2 on 2026-10-31, so the
+       old key's RGB (2) reads as 3 and the new key stores from then on. */
+    {
+        int m = setting->value("Develop/colorPanelMode", 0).toInt();
+        if (m == 2) m = 3;
+        colorPanelMode = qBound(0, setting->value("Develop/colorPanelMode4", m).toInt(), 3);
+    }
+    mixerKindMode = qBound(0, setting->value("Develop/mixerKindMode", 3).toInt(), 3);
     lensPanelMode = qBound(0, setting->value("Develop/lensPanelMode", 0).toInt(), 2);
     effectsChoice = qBound(0, setting->value("Develop/effectsChoice", 0).toInt(), 3);
     setIndentation(10);
@@ -334,6 +340,13 @@ void DevelopProperties::resizeEvent(QResizeEvent *event)
    Scopes (the Scope list: Global + one entry per mask)
    --------------------------------------------------------------------------------- */
 
+/* "Global" names scope 0 and nothing else: a mask called Global (in any case) would read
+   in the combo, the History and the sidecar as the whole-image scope. */
+static bool isReservedScopeName(const QString &name)
+{
+    return name.trimmed().compare("Global", Qt::CaseInsensitive) == 0;
+}
+
 QString DevelopProperties::uniqueScopeName(const QString &name) const
 {
     const QStringList names = currentScopeNames();
@@ -362,6 +375,7 @@ void DevelopProperties::buildTree()
     const bool exColor   = expandedOr("ColorHeader",   sectionExpanded("ColorHeader",   false));
     const bool exPointColor = expandedOr("PointColorHeader",
                                          sectionExpanded("PointColorHeader", false));
+    const bool exMixer = expandedOr("MixerHeader", sectionExpanded("MixerHeader", false));
     const bool exColorPanel = expandedOr("ColorPanelHeader",
                                          sectionExpanded("ColorPanelHeader", false));
     const bool exDetail  = expandedOr("DetailHeader",  sectionExpanded("DetailHeader",  false));
@@ -377,7 +391,7 @@ void DevelopProperties::buildTree()
     btns.clear();
     basicEyeBtn = curvesEyeBtn = colorEyeBtn = calibrateEyeBtn = colorGradeEyeBtn =
         detailEyeBtn = effectsEyeBtn = lensEyeBtn = pointColorEyeBtn = colorPanelEyeBtn =
-        effectEyeBtn = nullptr;
+        mixerEyeBtn = effectEyeBtn = nullptr;
     if (model->rowCount() > 0) {
         close(QModelIndex());
         model->removeRows(0, model->rowCount());
@@ -396,10 +410,11 @@ void DevelopProperties::buildTree()
     addBasic();
     addCurves();        // Lightroom's order: the tone curve sits directly under Basic
     if (combinedColorPanel) {
-        addColorPanel();    // Tone / Hue / RGB in one section
+        addColorPanel();    // Tone / Hue / Mix / RGB in one section
     }
     else {
         addColor();
+        addMixer();         // pipeline order: the mixer runs before Point Color
         addPointColor();    // directly under Color, as the user asked
         addCalibrate();
         addColorGrade();
@@ -424,6 +439,7 @@ void DevelopProperties::buildTree()
     setExpandOn("CurvesHeader",  exCurves);
     setExpandOn("ColorHeader",   exColor);
     setExpandOn("PointColorHeader", exPointColor);
+    setExpandOn("MixerHeader", exMixer);
     setExpandOn("ColorPanelHeader", exColorPanel);
     setExpandOn("DetailHeader",  exDetail);
     setExpandOn("EffectsHeader", exEffects);
@@ -452,6 +468,7 @@ void DevelopProperties::persistSectionExpanded(const QModelIndex &idx, bool expa
     const QString name = idx.data(UR_Name).toString();
     if (name == "BasicHeader" || name == "ColorHeader" || name == "DetailHeader" ||
         name == "EffectsHeader" || name == "PointColorHeader" ||
+        name == "MixerHeader" ||
         name == "ColorPanelHeader" || name == "LensHeader")
         setting->setValue("Develop/SectionExpanded/" + name, expanded);
 }
@@ -546,12 +563,13 @@ void DevelopProperties::bindScopeHeader(ScopeHeader *header)
 
     connect(scopeHeader, &ScopeHeader::scopeSelected,       this, &DevelopProperties::onScopeSelected);
     connect(scopeHeader, &ScopeHeader::renameRequested,     this, &DevelopProperties::renameActiveScope);
+    connect(scopeHeader, &ScopeHeader::renameToRequested,   this, &DevelopProperties::renameActiveScopeTo);
     connect(scopeHeader, &ScopeHeader::duplicateRequested,  this,
             &DevelopProperties::duplicateActiveScope);
     connect(scopeHeader, &ScopeHeader::resetScopeRequested, this, &DevelopProperties::resetActiveScope);
     connect(scopeHeader, &ScopeHeader::removeScopeRequested,this, &DevelopProperties::deleteScope);
     connect(scopeHeader, &ScopeHeader::addScopeRequested,   this, &DevelopProperties::newScope);
-    connect(scopeHeader, &ScopeHeader::addMaskRequested,    this, &DevelopProperties::showMaskMenu);
+    connect(scopeHeader, &ScopeHeader::addMaskRequested,    this, [this]{ showMaskMenu(); });
     connect(scopeHeader, &ScopeHeader::resetAllEditsRequested, this, &DevelopProperties::resetAllEdits);
     connect(scopeHeader, &ScopeHeader::hideGlobalImageToggled,
             this, &DevelopProperties::setGlobalImageHidden);
@@ -1733,7 +1751,6 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     scope->components.append(m);
     selectedMaskIndex = scope->components.size() - 1;
     pendingIdx = selectedMaskIndex;
-    pendingPristine = m;                 // baseline for pendingMaskIsUntouched
     /* The op the user picked in the dialog is what the veil, the render and the canvas
        chip preview from the first instant -- and what a modifier, once released, falls
        back to (chosenMaskOp, read by latchMaskOp and setPendingMaskOp). */
@@ -1876,8 +1893,8 @@ void DevelopProperties::latchMaskOp()
     and the ADD is what got committed -- "the subtract brush does nothing".
 
     Reversible by the same gesture that set it: paint (or drag) again with nothing held
-    and the latch falls back to chosenMaskOp -- what the user picked in SubmaskDialog,
-    NOT to Add. The dialog is where the op is decided now; a modifier is the shortcut
+    and the latch falls back to chosenMaskOp -- the op the submask was added with
+    ([+] [-] [n]), NOT to Add. That button is where the op is decided now; a modifier is the shortcut
     that overrides it, so letting go of the shortcut has to return to the decision, not
     overwrite it. A modifier PRESS alone still previews momentarily, so peeking at the
     outcome without committing to it works as before.
@@ -1993,10 +2010,10 @@ void DevelopProperties::autoCommitPendingMask()
     if (G::isLogger) G::log("DevelopProperties::autoCommitPendingMask");
     EditScope *scope = activeScope();
     if (!scope || pendingIdx < 0 || pendingIdx >= scope->components.size()) return;
-    /* Picked a tool and never used it: committing would leave a submask that covers no
-       pixels sitting in the list. Leave it pending -- the next edit re-arms the timer,
-       and leaving drops it (flushMaskAutoCommit). */
-    if (pendingMaskIsUntouched(scope->components.at(pendingIdx))) return;
+    /* An unpainted Brush/Object or unsampled Color Range: committing would leave a
+       submask that covers no pixels sitting in the list. Leave it pending -- the next
+       edit re-arms the timer, and leaving drops it (flushMaskAutoCommit). */
+    if (pendingMaskCoversNothing(scope->components.at(pendingIdx))) return;
     commitPendingMask(/*keepVeil=*/true);
 }
 
@@ -2009,13 +2026,13 @@ void DevelopProperties::flushMaskAutoCommit()
     This replaces the old "Commit submask?" dialog. That dialog existed because a pending
     submask was invisible state about to be thrown away, and only the user could say
     whether it mattered. With the commit automatic there is no third answer to ask for:
-    anything the user built is kept, anything they never touched was never a submask.
+    anything that covers pixels is kept, anything that covers none was never a submask.
 */
     maskCommitTimer->stop();
     EditScope *scope = activeScope();
     if (pendingIdx < 0) return;
     if (!scope || pendingIdx >= scope->components.size()) { cancelMaskTool(); return; }
-    if (pendingMaskIsUntouched(scope->components.at(pendingIdx))) { cancelMaskTool(); return; }
+    if (pendingMaskCoversNothing(scope->components.at(pendingIdx))) { cancelMaskTool(); return; }
     commitPendingMask(/*keepVeil=*/true);
 }
 
@@ -2026,42 +2043,29 @@ void DevelopProperties::finishSubmaskEditing()
     closeSubmaskEditing();
 }
 
-bool DevelopProperties::pendingMaskIsUntouched(const MaskComponent &m) const
+bool DevelopProperties::pendingMaskCoversNothing(const MaskComponent &m) const
 {
 /*
-    "Nothing to lose": true when committing this pending submask would achieve nothing,
-    so the leave-the-scope prompt is pure noise. Two ways that happens:
+    True when committing this pending submask would achieve nothing because it COVERS
+    NOTHING: Brush and Object start with an empty stroke list and Color Range with no
+    samples -- picking the tool alone paints no pixels, and neither does dragging the
+    brush-size slider around. Every other tool's default IS a mask (a gradient or beam
+    lands centred, the range tools open on a band, the AI tools are the model's cutout),
+    so it is kept even if the user never touched it.
 
-      1. It COVERS NOTHING. Brush and Object start with an empty stroke list and Color
-         Range with no samples -- picking the tool alone paints no pixels, and neither
-         does dragging the brush-size slider around. (The other tools' defaults ARE a
-         mask: a gradient lands centred, the range tools open on a band.)
-      2. It was NEVER TOUCHED -- still byte-identical to what beginMaskTool built. That
-         is what catches the centred-gradient case: a real mask, but not one the user
-         made, so there is no work to protect.
-
-    Anything that misses both tests just means the prompt appears -- the safe direction.
+    There used to be a second test, "never touched" (still byte-identical to what
+    beginMaskTool built), that dropped a centred gradient as "not one the user made". It
+    went with the tools menu (2026-10-31): picking a tool IS making the mask, and the test
+    silently discarded a fresh Beam the moment anything flushed it -- renaming the scope,
+    folding the Mask band. It had already needed a carve-out for the one-click AI masks
+    (a fresh Sky flushed away by the next Add, 2026-10-07) for the same reason.
 */
     const QJsonObject o = QJsonDocument::fromJson(m.paramsJson.toUtf8()).object();
     if (isStrokeTool(m.tool))
         return o.value("strokes").toArray().isEmpty();
     if (m.tool == int(MaskTool::ColorRange))
         return o.value("samples").toArray().isEmpty();
-    /* ONE-CLICK masks: for Subject / Sky / Background, choosing the tool IS the whole
-       edit -- the model draws the mask -- so "still as created" is not "never made".
-       Test 2 used to call a fresh Sky submask untouched: the settle timer never
-       committed it, and the next Add Submask flushed it away ("Cancel submask",
-       2026-10-07), leaving the scope empty and the Refine Brush greyed for want of a
-       mask to refine. */
-    if (m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
-        m.tool == int(MaskTool::Background))
-        return false;
-
-    return m.tool     == pendingPristine.tool
-        && m.inverted == pendingPristine.inverted
-        && m.feather  == pendingPristine.feather
-        && m.edge     == pendingPristine.edge
-        && m.paramsJson == pendingPristine.paramsJson;
+    return false;
 }
 
 void DevelopProperties::cancelMaskTool()
@@ -2266,7 +2270,35 @@ void DevelopProperties::renameActiveScope()
     bool ok = false;
     const QString entered = QInputDialog::getText(this, "Rename mask", "Mask name:",
                                                   QLineEdit::Normal, oldName, &ok).trimmed();
-    if (!ok || entered.isEmpty() || entered == oldName) return;
+    if (!ok) return;
+    renameActiveScopeTo(entered);
+}
+
+void DevelopProperties::renameActiveScopeTo(const QString &name)
+{
+/*
+    Rename the active MASK scope: the [:] "Rename" dialog, and the Edits bar combo, which
+    is editable in place for any scope but Global. "Global" is refused (any case), since
+    it names scope 0.
+*/
+    if (G::isLogger) G::log("DevelopProperties::renameActiveScopeTo", name);
+    if (currentImagePath.isEmpty()) return;
+    if (activeScopeIndex == 0) {
+        if (G::popup) G::popup->showPopup("Global cannot be renamed.");
+        return;
+    }
+    EditStack &s = stackCache[currentImagePath];
+    if (activeScopeIndex >= s.scopes.size()) return;
+
+    const QString entered = name.trimmed();
+    const QString oldName = s.scopes[activeScopeIndex].name;
+    if (entered.isEmpty() || entered == oldName) return;
+    if (isReservedScopeName(entered)) {
+        if (G::popup) G::popup->showPopup("A mask cannot be named Global: that name is "
+                                          "reserved for the whole-image scope.");
+        refreshScopeList();                  // put the old name back in the combo
+        return;
+    }
 
     /* uniqueScopeName still sees this scope's own OLD name, so it only suffixes on a clash with a
        DIFFERENT scope. */
@@ -2323,7 +2355,8 @@ void DevelopProperties::resetActiveScope()
        the mask geometry, which defines WHERE the scope applies). */
     l->params = EditParams();
     l->showScope = l->showBasic = l->showCurves = l->showColor = l->showCalibrate =
-        l->showColorGrade = l->showPointColor = l->showDetail = l->showEffects =
+        l->showColorGrade = l->showPointColor = l->showMixer = l->showDetail =
+        l->showEffects =
         l->showLens = l->showVignette = l->showGrain = l->showKaleido =
         l->showBlur = l->showOrton = true;
     l->hideImage = false;
@@ -2609,6 +2642,15 @@ void DevelopProperties::newScope()
 {
     if (G::isLogger) G::log("DevelopProperties::newScope");
     if (currentImagePath.isEmpty()) return;
+
+    /* The tool first: a new mask exists to carry a masked adjustment, so it is made only
+       once there is something to mask with -- dismissing the menu creates nothing. No
+       name is asked: it is "Mask n" (the first above Global is "Mask 1", since Global is
+       index 0 and the new scope's index equals the pre-append size), renamed in place by
+       typing over it in the Edits bar combo. */
+    const int tool = chooseMaskTool(true);
+    if (tool < 0) return;
+
     /* Adding a scope switches to it, so it leaves any pending submask behind on the
        current scope just as picking one does -- land it first. */
     flushMaskAutoCommit();
@@ -2617,44 +2659,20 @@ void DevelopProperties::newScope()
     if (s.scopes.isEmpty()) s.scopes.append(EditScope());     // ensure a base scope exists
     s.scopes[0].name = "Global";                    // index 0 is always the Global scope
 
-    /* Prompt for the name, defaulting to "Scope n" (the first above Global is "Scope 1", since Global is
-       index 0 and the new scope's index equals the pre-append size). Pop the dialog near the cursor
-       (the [+] button just clicked) rather than screen-centre, so the flow stays where the user is
-       looking, clamped to the screen. */
-    const QString def = uniqueScopeName("Mask " + QString::number(s.scopes.size()));
-    QInputDialog dlg(this);
-    dlg.setWindowTitle("New mask");
-    dlg.setLabelText("Mask name:");
-    dlg.setTextEchoMode(QLineEdit::Normal);
-    dlg.setTextValue(def);
-    dlg.adjustSize();
-    const QPoint cur = QCursor::pos();
-    QPoint tl(cur.x() - dlg.width() / 2, cur.y() - 20);
-    if (QScreen *scr = QGuiApplication::screenAt(cur)) {
-        const QRect a = scr->availableGeometry();
-        tl.setX(qBound(a.left(), tl.x(), a.right()  - dlg.width()));
-        tl.setY(qBound(a.top(),  tl.y(), a.bottom() - dlg.height()));
-    }
-    dlg.move(tl);
-    if (dlg.exec() != QDialog::Accepted) return;
-    const QString entered = dlg.textValue().trimmed();
-
     EditScope l;
-    l.name = uniqueScopeName(entered.isEmpty() ? def : entered);
+    l.name = uniqueScopeName("Mask " + QString::number(s.scopes.size()));
     s.scopes.append(l);
     activeScopeIndex = s.scopes.size() - 1;                   // edit the new scope
     noteScopeEdit(l.name, "New mask scope");
 
-    /* New scope is identity, so the rendered result is unchanged; just refresh the header
-       combo and rebuild the tree for it. The stack only persists once a scope actually
-       changes a pixel. */
+    /* New scope is identity, so the rendered result is unchanged; refresh the header
+       combo and rebuild the tree for it, then begin the chosen tool on it. */
     selectedMaskIndex = -1;
     refreshScopeList();
     buildTree();
-
-    /* A new scope's whole point is to apply a masked adjustment, so the next step is choosing a mask
-       tool -- pop that menu straight away (near the cursor). Escape just leaves an empty scope. */
-    showMaskMenu();
+    onMaskToolChosen(tool, int(MaskOp::Add));
+    // a submask just created by request: show the overlay so the user sees it build
+    emit maskOverlayShowRequested();
 }
 
 void DevelopProperties::deleteScope()
@@ -2985,6 +3003,7 @@ EditParams::Group DevelopProperties::paramsGroup(int group)
     case PV_Calibrate:  return EditParams::Group::Calibrate;
     case PV_ColorGrade: return EditParams::Group::ColorGrade;
     case PV_PointColor: return EditParams::Group::PointColor;
+    case PV_Mixer:      return EditParams::Group::Mixer;
     case PV_Detail:     return EditParams::Group::Detail;
     case PV_Effects:    return EditParams::Group::Effects;
     case PV_Lens:       return EditParams::Group::Lens;
@@ -3001,6 +3020,7 @@ QString DevelopProperties::groupLabel(int group)
     case PV_Calibrate:  return "Calibrate";
     case PV_ColorGrade: return "Color Grade";
     case PV_PointColor: return "Point Color";
+    case PV_Mixer:      return "Color Mixer";
     case PV_ColorPanel: return "Color";
     case PV_Detail:     return "Detail";
     case PV_Effects:    return "Effects";
@@ -3020,7 +3040,8 @@ bool *DevelopProperties::previewFlag(EditScope *l, int group)
     case PV_Calibrate:  return &l->showCalibrate;
     case PV_ColorGrade: return &l->showColorGrade;
     case PV_PointColor: return &l->showPointColor;
-    case PV_ColorPanel: return nullptr;     // three flags: see togglePreviewSection
+    case PV_Mixer:      return &l->showMixer;
+    case PV_ColorPanel: return nullptr;     // four flags: see togglePreviewSection
     case PV_Detail:     return &l->showDetail;
     case PV_Effects:    return &l->showEffects;
     case PV_Lens:       return &l->showLens;
@@ -3055,7 +3076,7 @@ void DevelopProperties::showSectionMenu(int group)
        section's changes. */
     QMenu menu(this);
     /* The combined Color panel resets the mode on show first, then all three. */
-    static const char *kModeName[] = {"Tone", "Hue", "RGB"};
+    static const char *kModeName[] = {"Tone", "Hue", "Mix", "RGB"};
     QAction *aResetMode = nullptr;
     if (group == PV_ColorPanel) {
         aResetMode = menu.addAction(tr("Reset %1").arg(kModeName[colorPanelMode]));
@@ -3068,14 +3089,14 @@ void DevelopProperties::showSectionMenu(int group)
         aResetLensMode = menu.addAction(tr("Reset %1").arg(kLensModeName[lensPanelMode]));
         aResetLensMode->setEnabled(!currentImagePath.isEmpty());
     }
-    QAction *aReset = menu.addAction(group == PV_ColorPanel ? tr("Reset Tone, Hue and RGB")
+    QAction *aReset = menu.addAction(group == PV_ColorPanel ? tr("Reset Tone, Hue, Mix and RGB")
                                                             : tr("Reset %1").arg(label));
     aReset->setEnabled(!currentImagePath.isEmpty());
     /* The layout switch, while the combined panel awaits sign-off: offered on every
        colour section so either layout leads back to the other. */
     QAction *aLayout = nullptr;
     if (group == PV_ColorPanel || group == PV_Color || group == PV_PointColor ||
-        group == PV_Calibrate || group == PV_ColorGrade) {
+        group == PV_Mixer || group == PV_Calibrate || group == PV_ColorGrade) {
         menu.addSeparator();
         aLayout = menu.addAction(combinedColorPanel ? tr("Use Separate Color Panels")
                                                     : tr("Use Combined Color Panel"));
@@ -3230,8 +3251,10 @@ void DevelopProperties::refreshPreviewButtons()
     set(calibrateEyeBtn,  l ? l->showCalibrate  : true);
     set(colorGradeEyeBtn, l ? l->showColorGrade : true);
     set(pointColorEyeBtn, l ? l->showPointColor : true);
-    /* The combined panel's eye is open only while all three of its groups show. */
-    set(colorPanelEyeBtn, l ? (l->showColorGrade && l->showPointColor && l->showCalibrate)
+    set(mixerEyeBtn,      l ? l->showMixer      : true);
+    /* The combined panel's eye is open only while all four of its groups show. */
+    set(colorPanelEyeBtn, l ? (l->showColorGrade && l->showPointColor && l->showMixer &&
+                               l->showCalibrate)
                             : true);
     set(detailEyeBtn,   l ? l->showDetail   : true);
     set(effectsEyeBtn,  l ? l->showEffects  : true);
@@ -3255,10 +3278,11 @@ void DevelopProperties::togglePreviewSection(int group)
     if (G::isLogger) G::log("DevelopProperties::togglePreviewSection");
     EditScope *l = activeScope();
     if (group == PV_ColorPanel) {
-        /* One eye for three groups: any showing -> hide all, else show all. */
+        /* One eye for four groups: any showing -> hide all, else show all. */
         if (!l) return;
-        const bool show = !(l->showColorGrade && l->showPointColor && l->showCalibrate);
-        l->showColorGrade = l->showPointColor = l->showCalibrate = show;
+        const bool show = !(l->showColorGrade && l->showPointColor && l->showMixer &&
+                            l->showCalibrate);
+        l->showColorGrade = l->showPointColor = l->showMixer = l->showCalibrate = show;
         noteEdit((show ? "Show " : "Hide ") + groupLabel(group));
         refreshPreviewButtons();
         emit paramsChanged();
@@ -3284,6 +3308,7 @@ void DevelopProperties::resetSection(int group)
         EditParams::resetGroup(p, EditParams::Group::Calibrate);
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
         EditParams::resetGroup(p, EditParams::Group::PointColor);
+        EditParams::resetGroup(p, EditParams::Group::Mixer);
         EditParams::resetGroup(p, EditParams::Group::Detail);
         EditParams::resetGroup(p, EditParams::Group::Effects);
         EditParams::resetGroup(p, EditParams::Group::Lens);
@@ -3291,6 +3316,7 @@ void DevelopProperties::resetSection(int group)
     else if (group == PV_ColorPanel) {
         EditParams::resetGroup(p, EditParams::Group::ColorGrade);
         EditParams::resetGroup(p, EditParams::Group::PointColor);
+        EditParams::resetGroup(p, EditParams::Group::Mixer);
         EditParams::resetGroup(p, EditParams::Group::Calibrate);
     }
     else {
@@ -3365,6 +3391,7 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         else if (name == "CalibrateHeader")  group = PV_Calibrate;
         else if (name == "ColorGradeHeader") group = PV_ColorGrade;
         else if (name == "PointColorHeader") group = PV_PointColor;
+        else if (name == "MixerHeader")      group = PV_Mixer;
         else if (name == "ColorPanelHeader") group = PV_ColorPanel;
         else if (name == "DetailHeader")     group = PV_Detail;
         else if (name == "EffectsHeader")    group = PV_Effects;
@@ -3544,20 +3571,68 @@ void DevelopProperties::onSectionExpanded(const QModelIndex &idx)
     soloCollapseOthers(SoloOwner::Section, name);
 }
 
-/*
-    Adding a submask asks TWO questions, and this asks them together: what the submask
-    does to the mask (Add / Subtract / Intersect) and what kind of submask it is.
-
-    It used to be a bare pop-up menu of tool names, with the op left to a modifier held
-    at some later instant -- undiscoverable (nothing said Opt subtracts until you were
-    already painting) and easy to lose (release the key at the wrong moment and the
-    subtract you drew became an add). SubmaskDialog puts the op in words beside the type,
-    and the modifiers stay as the shortcut: holding one still overrides the chosen op
-    while shaping (latchMaskOp), and releasing it falls back to what was chosen here
-    rather than to Add.
-*/
-void DevelopProperties::showMaskMenu()
+int DevelopProperties::chooseMaskTool(bool firstMask)
 {
+/*
+    The mask tools menu, popped at the cursor: what KIND of submask to add. The op is not
+    asked here -- it is the button that raised the menu ([+] [-] [n] on the Mask band, or
+    Add for New mask and M), so the menu is a single question. Returns the MaskTool, or
+    -1 when the menu is dismissed.
+
+    Grouped by separators in the order the tools answer different questions: draw it,
+    pick it by content, let a model find it, refine what is there. A list rather than an
+    enum range: tools are APPENDED to MaskTool (it is serialized), so a group's members
+    need not be contiguous -- the Segmenter sits with the Automatic ones.
+*/
+    QMenu menu(this);
+    menu.setToolTipsVisible(true);
+    const QVector<QVector<int>> groups = {
+        {int(MaskTool::LinearGradient), int(MaskTool::RadialGradient),
+         int(MaskTool::Beam), int(MaskTool::Brush)},
+        {int(MaskTool::ColorRange), int(MaskTool::LuminanceRange)},
+        {int(MaskTool::Subject), int(MaskTool::Sky), int(MaskTool::Background),
+         int(MaskTool::Depth), int(MaskTool::Object), int(MaskTool::Segmenter)},
+        {int(MaskTool::RefineBrush)}};
+    for (int g = 0; g < groups.size(); ++g) {
+        if (g) menu.addSeparator();
+        for (int t : groups.at(g)) {
+            // "Linear Gradient Mask" -> "Linear Gradient": every entry here is a mask
+            QString name = maskToolName(t);
+            if (name.endsWith(" Mask")) name.chop(5);
+            QAction *a = menu.addAction(name);
+            a->setData(t);
+            /* The Segmenter's way of working -- point and click, nothing to draw -- is
+               not guessable from its name. */
+            if (t == int(MaskTool::Segmenter))
+                a->setToolTip("Finds the objects in the photo. Move the pointer over the "
+                              "image to see each one, and click to add or remove it.");
+            /* The Refine Brush re-mattes the mask ABOVE it, so as the first submask it
+               has nothing to work on. Greyed with the reason, not hidden: the user
+               should learn the tool exists and what it needs. */
+            if (t == int(MaskTool::RefineBrush)) {
+                a->setToolTip(firstMask
+                    ? "Refines the mask above it -- add another submask first, then "
+                      "refine it."
+                    : "Paint a region to re-fit the mask above it to the picture: add "
+                      "what it missed, remove what it wrongly took, or fix a haloed edge.");
+                a->setEnabled(!firstMask);
+            }
+        }
+    }
+    QAction *chosen = menu.exec(QCursor::pos());
+    return chosen ? chosen->data().toInt() : -1;
+}
+
+void DevelopProperties::showMaskMenu(int op)
+{
+/*
+    Add a submask to the active mask scope: pop the mask tools menu and begin the chosen
+    tool, combining with the mask by op. The op is decided by what raised the menu (the
+    Mask band's [+] [-] [n]; New mask, M and the menus add), and the modifiers stay as the
+    shortcut: holding one still overrides it while shaping (latchMaskOp), and releasing it
+    falls back to the op chosen here (chosenMaskOp) rather than to Add. An empty mask has
+    nothing to subtract from or intersect with, so beginMaskTool forces Add there.
+*/
     if (G::isLogger) G::log("DevelopProperties::showMaskMenu");
     EditScope *scope = activeScope();
     if (!scope || activeScopeIndex == 0) {
@@ -3567,8 +3642,8 @@ void DevelopProperties::showMaskMenu()
         return;
     }
 
-    int op = int(MaskOp::Add), tool = -1;
-    if (!SubmaskDialog::choose(this, scope->components.isEmpty(), op, tool)) return;
+    const int tool = chooseMaskTool(scope->components.isEmpty());
+    if (tool < 0) return;
     onMaskToolChosen(tool, op);
     // a submask just created by request: show the overlay so the user sees it build
     emit maskOverlayShowRequested();
@@ -4013,10 +4088,14 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
         return;
     }
     scope->components[selectedMaskIndex].paramsJson = incoming;
-    /* A Beam's width handle is the panel's Width slider: keep the slider under it. */
-    if (scope->components[selectedMaskIndex].tool == int(MaskTool::Beam))
-        syncMaskSlider("maskBeamWidth", 200.0 * QJsonDocument::fromJson(incoming.toUtf8())
-                           .object().value("width").toDouble(BeamMask::kDefaultWidth));
+    /* A Beam's width and taper handles are the panel's Width and Taper sliders: keep
+       the sliders under them. */
+    if (scope->components[selectedMaskIndex].tool == int(MaskTool::Beam)) {
+        const QJsonObject o = QJsonDocument::fromJson(incoming.toUtf8()).object();
+        syncMaskSlider("maskBeamWidth",
+                       200.0 * o.value("width").toDouble(BeamMask::kDefaultWidth));
+        syncMaskSlider("maskBeamTaper", o.value("taper").toDouble(0.0));
+    }
     /* One entry per tool being shaped, not per drag tick / per brush stroke. */
     noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex].tool),
              QString(), QString("mask/geom/%1").arg(selectedMaskIndex));
@@ -4273,6 +4352,7 @@ void DevelopProperties::addHeader(const QString &name, const QString &parent,
         else if (previewGroup == PV_Calibrate)  calibrateEyeBtn  = eye;
         else if (previewGroup == PV_ColorGrade) colorGradeEyeBtn = eye;
         else if (previewGroup == PV_PointColor) pointColorEyeBtn = eye;
+        else if (previewGroup == PV_Mixer)      mixerEyeBtn      = eye;
         else if (previewGroup == PV_ColorPanel) colorPanelEyeBtn = eye;
         else if (previewGroup == PV_Detail)   detailEyeBtn   = eye;
         else if (previewGroup == PV_Effects)  effectsEyeBtn  = eye;
@@ -5541,7 +5621,8 @@ void DevelopProperties::updateEditorGeometries()
     };
     centre(curveEditor);
     centre(curveSplitsRow);
-    centre(colorPanelModesRow);   // the Tone / Hue / RGB radios
+    centre(colorPanelModesRow);   // the Tone / Hue / Mix / RGB radios
+    centre(mixerKindRow);         // Mix's Hue / Saturation / Luminance / All radios
     centre(lensPanelModesRow);    // the Profile / Fringe / Blur radios
     /* This is also where an expand / collapse / scroll of the Edits tree lands, which is
        exactly what moves the plot on and off screen. */
@@ -6621,7 +6702,8 @@ int DevelopProperties::colorPanelModeGroup() const
 {
     switch (colorPanelMode) {
     case 1:  return PV_PointColor;
-    case 2:  return PV_Calibrate;
+    case 2:  return PV_Mixer;
+    case 3:  return PV_Calibrate;
     default: return PV_ColorGrade;
     }
 }
@@ -6709,21 +6791,24 @@ void DevelopProperties::addColorPanel()
 {
     if (G::isLogger) G::log("DevelopProperties::addColorPanel");
     addHeader("ColorPanelHeader", "???", "Color",
-              "Colour: Tone (grading by tonal range), Hue (adjust sampled colours) and "
-              "RGB (re-point the primaries).", PV_ColorPanel);
+              "Colour: Tone (grading by tonal range), Hue (adjust sampled colours), "
+              "Mix (adjust eight hue bands) and RGB (re-point the primaries).",
+              PV_ColorPanel);
     QModelIndex parIdx = capIdx;
 
     addModeRadioRow(parIdx, "ColorPanelHeader", "colorPanelModes",
-                    {"Tone", "Hue", "RGB"},
+                    {"Tone", "Hue", "Mix", "RGB"},
                     {"Grade by tonal range: tint the shadows, midtones, highlights or the "
                      "whole image.",
                      "Sample colours in the image and shift their hue, saturation and "
                      "luminance.",
-                     "Adjust the base red, green and blue colours."},
+                     "Shift the hue, saturation and luminance of eight colour ranges "
+                     "(reds, oranges, ... magentas).",
+                     "Adjust the base red, green and blue colours.  Also called 'Calibration'"},
                     colorPanelMode, colorPanelModesRow, colorPanelRadios,
                     [this](int id) {
         colorPanelMode = id;
-        setting->setValue("Develop/colorPanelMode", id);
+        setting->setValue("Develop/colorPanelMode4", id);
         /* The eyedropper belongs to Hue: leaving it puts the dropper away. */
         if (id != 1) cancelPointColorPick();
     });
@@ -6731,8 +6816,103 @@ void DevelopProperties::addColorPanel()
 
     switch (colorPanelMode) {
     case 1:  addPointColorBody(parIdx, "ColorPanelHeader"); break;
-    case 2:  addCalibrateBody(parIdx, "ColorPanelHeader");  break;
+    case 2:  addMixerBody(parIdx, "ColorPanelHeader");      break;
+    case 3:  addCalibrateBody(parIdx, "ColorPanelHeader");  break;
     default: addColorGradeBody(parIdx, "ColorPanelHeader"); break;
+    }
+}
+
+/* --------------------------------------------------------------------------------------
+   Color Mixer (the Color panel's Mix mode)
+
+   Lightroom's Color Mixer > Mixer with Adjust: HSL. Eight hue bands, each with a Hue,
+   Saturation and Luminance slider, shown as three groups of eight; the Hue /
+   Saturation / Luminance / All radios pick which group shows. Plain sliders keyed by
+   their EditParams field names ("mixRedHue"), so applyKeyToParams and the generic
+   history path carry them. Grooves as Lightroom draws them: Hue runs from the
+   neighbouring band below to the one above, Saturation from grey to the band, and
+   Luminance from dark to light. Maths in Develop/colormixer.h.
+   ------------------------------------------------------------------------------------ */
+
+void DevelopProperties::addMixer()
+{
+    if (G::isLogger) G::log("DevelopProperties::addMixer");
+    addHeader("MixerHeader", "???", "Color Mixer",
+              "Shift the hue, saturation and luminance of eight colour ranges.", PV_Mixer);
+    QModelIndex parIdx = capIdx;
+    addMixerBody(parIdx, "MixerHeader");
+}
+
+/* The section's rows under `parent` -- its own header, or the combined Color
+   panel's (addColorPanel). */
+void DevelopProperties::addMixerBody(const QModelIndex &parIdx, const QString &parent)
+{
+    addModeRadioRow(parIdx, parent, "mixerKinds",
+                    {"Hue", "Saturation", "Luminance", "All"},
+                    {"Shift each colour range's hue toward its neighbours.",
+                     "Saturate or desaturate each colour range.",
+                     "Brighten or darken each colour range.",
+                     "Show the hue, saturation and luminance sliders together."},
+                    mixerKindMode, mixerKindRow, mixerKindRadios,
+                    [this](int id) {
+        mixerKindMode = id;
+        setting->setValue("Develop/mixerKindMode", id);
+    });
+    addGroupDivider(parIdx, parent, "MixerKindsDivider");
+
+    /* The band colours the grooves are drawn from, in ColorMixer's band order. */
+    static const char *kBandColor[ColorMixer::kBands] = {
+        "#e0403a", "#e8892f", "#e0d040", "#4fb040",
+        "#3fc0c0", "#3a6ae0", "#8a4ad0", "#d040b0"};
+    static const char *kPlural[ColorMixer::kBands] = {
+        "reds", "oranges", "yellows", "greens", "aquas", "blues", "purples", "magentas"};
+    static const char *kKindTitle[ColorMixer::kKinds] = {"Hue", "Saturation", "Luminance"};
+    const bool all = mixerKindMode == 3;
+
+    for (int k = 0; k < ColorMixer::kKinds; ++k) {
+        if (!all && k != mixerKindMode) continue;
+        /* In All, each group is titled (the radios no longer say which is which). */
+        if (all) {
+            clearItemInfo(i);
+            i.name = QString("mixerTitle") + ColorMixer::kindName(k);
+            i.parIdx = parIdx;
+            i.parentName = parent;
+            i.captionText = kKindTitle[k];
+            i.isIndent = true;
+            i.hasValue = false;
+            i.captionIsEditable = false;
+            addItem(i);
+        }
+        for (int b = 0; b < ColorMixer::kBands; ++b) {
+            const QString band = ColorMixer::bandName(b);
+            const QString plural = kPlural[b];
+            const QColor c(kBandColor[b]);
+            QString c0, c1, tip;
+            switch (k) {
+            case ColorMixer::Hue: {
+                const int lo = (b + ColorMixer::kBands - 1) % ColorMixer::kBands;
+                const int hi = (b + 1) % ColorMixer::kBands;
+                c0 = kBandColor[lo];
+                c1 = kBandColor[hi];
+                tip = QString("Shift the %1 toward %2 (left) or %3 (right).")
+                          .arg(plural, kPlural[lo], kPlural[hi]);
+                break;
+            }
+            case ColorMixer::Sat:
+                c0 = G::darkgray;
+                c1 = c.name();
+                tip = QString("Desaturate (left) or saturate (right) the %1.").arg(plural);
+                break;
+            default:
+                c0 = c.darker(300).name();
+                c1 = c.lighter(150).name();
+                tip = QString("Darken (left) or brighten (right) the %1.").arg(plural);
+                break;
+            }
+            addSlider(ColorMixer::key(k, b), band, tip, parIdx, parent, -100, 100, 0,
+                      c0, c1);
+        }
+        addGroupDivider(parIdx, parent, QString("MixerDivider") + ColorMixer::kindName(k));
     }
 }
 
@@ -8579,6 +8759,7 @@ void DevelopProperties::updateSectionHeaderCaptions()
         {"DetailHeader",     "Detail",      PV_Detail},
         {"EffectsHeader",    "Effects",     PV_Effects},
         {"LensHeader",       "Lens",        PV_Lens},
+        {"MixerHeader",      "Color Mixer", PV_Mixer},
     };
     const EditStack s = stackCache.value(currentImagePath);
     const bool haveParams = !currentImagePath.isEmpty() && !s.scopes.isEmpty();
@@ -8590,9 +8771,10 @@ void DevelopProperties::updateSectionHeaderCaptions()
         bool edited = false;
         if (haveParams) {
             const EditParams &sp = s.scopes.at(scopeIdx).params;
-            if (h.group == PV_ColorPanel)      // the combined panel: any of its three
+            if (h.group == PV_ColorPanel)      // the combined panel: any of its four
                 edited = !EditParams::groupIsDefault(sp, EditParams::Group::ColorGrade) ||
                          !EditParams::groupIsDefault(sp, EditParams::Group::PointColor) ||
+                         !EditParams::groupIsDefault(sp, EditParams::Group::Mixer) ||
                          !EditParams::groupIsDefault(sp, EditParams::Group::Calibrate);
             else
                 edited = !EditParams::groupIsDefault(sp, paramsGroup(h.group));
@@ -8605,18 +8787,36 @@ void DevelopProperties::updateSectionHeaderCaptions()
     }
 
     /* The combined Color panel's mode radios get the same " *" per group (Tone =
-       ColorGrade, Hue = PointColor, RGB = Calibrate), so an edit in a mode that isn't
-       showing is still visible. setText only on a flip: the row re-centres on resize. */
-    static const char *kModeLabel[] = {"Tone", "Hue", "RGB"};
+       ColorGrade, Hue = PointColor, Mix = Mixer, RGB = Calibrate), so an edit in a mode
+       that isn't showing is still visible. setText only on a flip: the row re-centres
+       on resize. */
+    static const char *kModeLabel[] = {"Tone", "Hue", "Mix", "RGB"};
     static const EditParams::Group kModeGroup[] = {EditParams::Group::ColorGrade,
                                                    EditParams::Group::PointColor,
+                                                   EditParams::Group::Mixer,
                                                    EditParams::Group::Calibrate};
-    for (int m = 0; m < 3; ++m) {
+    for (int m = 0; m < 4; ++m) {
         QRadioButton *r = colorPanelRadios[m];
         if (!r) continue;
         const bool edited = haveParams &&
             !EditParams::groupIsDefault(s.scopes.at(scopeIdx).params, kModeGroup[m]);
         const QString text = edited ? QString(kModeLabel[m]) + " *" : QString(kModeLabel[m]);
+        if (r->text() != text) r->setText(text);
+    }
+
+    /* Mix's Hue / Saturation / Luminance radios likewise, by their 8 sliders ("All"
+       never stars: the section's own marks already say it). */
+    static const char *kMixerKindLabel[] = {"Hue", "Saturation", "Luminance"};
+    for (int m = 0; m < ColorMixer::kKinds; ++m) {
+        QRadioButton *r = mixerKindRadios[m];
+        if (!r) continue;
+        bool edited = false;
+        if (haveParams)
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (s.scopes.at(scopeIdx).params.*EditParams::mixerMember(m, b) != 0.0f)
+                    edited = true;
+        const QString text = edited ? QString(kMixerKindLabel[m]) + " *"
+                                    : QString(kMixerKindLabel[m]);
         if (r->text() != text) r->setText(text);
     }
 
@@ -9042,8 +9242,20 @@ void DevelopProperties::itemChange(QModelIndex idx)
             {"lensBlurAmount", "Lens blur"}, {"lensBlurFocus", "Lens blur focus"},
             {"lensBlurRange", "Lens blur focal range"},
             {"lensBlurBoost", "Lens blur boost"}, {"lensBlurRefine", "Lens blur refine"}};
-        const QString action = kCalHistory.value(source, kEffectsHistory.value(source,
-                                                 idx.siblingAtColumn(0).data().toString()));
+        /* The Color Mixer's rows are a bare band name ("Red") under a Hue / Saturation /
+           Luminance group: History names both. */
+        static const QHash<QString, QString> kMixerHistory = []{
+            static const char *kKind[] = {"hue", "saturation", "luminance"};
+            QHash<QString, QString> h;
+            for (int k = 0; k < ColorMixer::kKinds; ++k)
+                for (int b = 0; b < ColorMixer::kBands; ++b)
+                    h.insert(ColorMixer::key(k, b), QString("Mix %1 %2")
+                             .arg(QString(ColorMixer::bandName(b)).toLower(), kKind[k]));
+            return h;
+        }();
+        const QString action = kCalHistory.value(source, kMixerHistory.value(source,
+                                   kEffectsHistory.value(source,
+                                       idx.siblingAtColumn(0).data().toString())));
         noteEdit(action, historyValueText(idx, v), historyScopeLabel() + "/" + source);
         emit paramsChanged();
         /* A blur slider can switch the blur's canvas handles on or off, or move the
@@ -9064,6 +9276,15 @@ void DevelopProperties::applyKeyToParams(const QString &key, const QVariant &v, 
     /* Slider EditRole carries the real (div-scaled) value, e.g. exposure in EV, or 0..100 for the
        denoise sliders. Map the dock key onto the matching EditParams field. */
     const float f = v.toFloat();
+    /* Color Mixer (the Color panel's Mix mode): keys ARE the field names, stored raw. */
+    if (key.startsWith(QLatin1String("mix"))) {
+        for (int k = 0; k < ColorMixer::kKinds; ++k)
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (key == ColorMixer::key(k, b)) {
+                    p.*EditParams::mixerMember(k, b) = f;
+                    return;
+                }
+    }
     if      (key == "temp")       p.temp       = f;
     /* Calibrate (the Color panel's RGB mode): keys ARE the field names, stored raw. */
     else if (key == "calShadowTint") p.calShadowTint = f;
@@ -9793,6 +10014,12 @@ const PresetLeafDef kColorLeaves[] = {
 const PresetLeafDef kPointColorLeaves[] = {
     {"pointColors", "Point colors"},
 };
+/* Three leaves, one per slider group, as the panel shows them. */
+const PresetLeafDef kMixerLeaves[] = {
+    {"mixHue", "Hue"},
+    {"mixSat", "Saturation"},
+    {"mixLum", "Luminance"},
+};
 const PresetLeafDef kCalibrateLeaves[] = {
     {"calShadowTint", "Shadows tint"},
     {"calRed",   "Red primary"},
@@ -9834,6 +10061,7 @@ const PresetSectionDef kSections[] = {
     {"Basic",     kBasicLeaves,    int(sizeof(kBasicLeaves)    / sizeof(PresetLeafDef))},
     {"Curves",    kCurvesLeaves,   int(sizeof(kCurvesLeaves)   / sizeof(PresetLeafDef))},
     {"Color",     kColorLeaves,    int(sizeof(kColorLeaves)    / sizeof(PresetLeafDef))},
+    {"Color Mixer", kMixerLeaves, int(sizeof(kMixerLeaves) / sizeof(PresetLeafDef))},
     {"Point Color", kPointColorLeaves,
                   int(sizeof(kPointColorLeaves) / sizeof(PresetLeafDef))},
     {"Calibrate", kCalibrateLeaves, int(sizeof(kCalibrateLeaves) / sizeof(PresetLeafDef))},
@@ -9874,6 +10102,12 @@ bool leafChanged(const QString &key, const EditParams &p)
     if (key == "luminance")    return p.luminance  != def.luminance;
     if (key == "vibrance")     return p.vibrance   != def.vibrance;
     if (key == "pointColors")  return p.pointColorN > 0;
+    for (int k = 0; k < ColorMixer::kKinds; ++k)
+        if (key == QLatin1String("mix") + QLatin1String(ColorMixer::kindName(k))) {
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (p.*EditParams::mixerMember(k, b) != 0.0f) return true;
+            return false;
+        }
     if (key == "calShadowTint") return p.calShadowTint != def.calShadowTint;
     if (key == "calRed")       return p.calRedHue   != def.calRedHue ||
                                       p.calRedSat   != def.calRedSat;
@@ -9963,6 +10197,10 @@ void DevelopProperties::collectScopeLeaves(const EditParams &p, const QSet<QStri
         out.insert("curveChannels", ToneCurve::encode(t.curveN, t.curveX, t.curveY));
     }
     if (lk.contains("calShadowTint")) out.insert("calShadowTint", p.calShadowTint);
+    for (int k = 0; k < ColorMixer::kKinds; ++k)
+        if (lk.contains(QLatin1String("mix") + QLatin1String(ColorMixer::kindName(k))))
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                out.insert(ColorMixer::key(k, b), p.*EditParams::mixerMember(k, b));
     if (lk.contains("calRed")) {
         out.insert("calRedHue", p.calRedHue);
         out.insert("calRedSat", p.calRedSat);
@@ -11191,6 +11429,30 @@ const FloatField kFloatFields[] = {
     {"calBlueHue",          &EditParams::calBlueHue},
     {"calBlueSat",          &EditParams::calBlueSat},
     {"calShadowTint",       &EditParams::calShadowTint},
+    {"mixRedHue",           &EditParams::mixRedHue},
+    {"mixRedSat",           &EditParams::mixRedSat},
+    {"mixRedLum",           &EditParams::mixRedLum},
+    {"mixOrangeHue",        &EditParams::mixOrangeHue},
+    {"mixOrangeSat",        &EditParams::mixOrangeSat},
+    {"mixOrangeLum",        &EditParams::mixOrangeLum},
+    {"mixYellowHue",        &EditParams::mixYellowHue},
+    {"mixYellowSat",        &EditParams::mixYellowSat},
+    {"mixYellowLum",        &EditParams::mixYellowLum},
+    {"mixGreenHue",         &EditParams::mixGreenHue},
+    {"mixGreenSat",         &EditParams::mixGreenSat},
+    {"mixGreenLum",         &EditParams::mixGreenLum},
+    {"mixAquaHue",          &EditParams::mixAquaHue},
+    {"mixAquaSat",          &EditParams::mixAquaSat},
+    {"mixAquaLum",          &EditParams::mixAquaLum},
+    {"mixBlueHue",          &EditParams::mixBlueHue},
+    {"mixBlueSat",          &EditParams::mixBlueSat},
+    {"mixBlueLum",          &EditParams::mixBlueLum},
+    {"mixPurpleHue",        &EditParams::mixPurpleHue},
+    {"mixPurpleSat",        &EditParams::mixPurpleSat},
+    {"mixPurpleLum",        &EditParams::mixPurpleLum},
+    {"mixMagentaHue",       &EditParams::mixMagentaHue},
+    {"mixMagentaSat",       &EditParams::mixMagentaSat},
+    {"mixMagentaLum",       &EditParams::mixMagentaLum},
     {"gradeShadowHue",      &EditParams::gradeShadowHue},
     {"gradeShadowSat",      &EditParams::gradeShadowSat},
     {"gradeShadowLum",      &EditParams::gradeShadowLum},
@@ -11514,7 +11776,8 @@ bool sameScopeState(const EditScope &a, const EditScope &b)
            a.showScope == b.showScope && a.showBasic == b.showBasic &&
            a.showCurves == b.showCurves && a.showColor == b.showColor &&
            a.showCalibrate == b.showCalibrate && a.showColorGrade == b.showColorGrade &&
-           a.showPointColor == b.showPointColor && a.showDetail == b.showDetail &&
+           a.showPointColor == b.showPointColor && a.showMixer == b.showMixer &&
+           a.showDetail == b.showDetail &&
            a.showEffects == b.showEffects && a.showLens == b.showLens &&
            a.showVignette == b.showVignette && a.showGrain == b.showGrain &&
            a.showKaleido == b.showKaleido && a.showBlur == b.showBlur &&
@@ -11532,6 +11795,7 @@ void copyScopeState(const EditScope &src, EditScope &dst)
     dst.showCurves = src.showCurves;         dst.showColor = src.showColor;
     dst.showCalibrate = src.showCalibrate;   dst.showColorGrade = src.showColorGrade;
     dst.showPointColor = src.showPointColor; dst.showDetail = src.showDetail;
+    dst.showMixer = src.showMixer;
     dst.showEffects = src.showEffects;       dst.showLens = src.showLens;
     dst.showVignette = src.showVignette;     dst.showGrain = src.showGrain;
     dst.showKaleido = src.showKaleido;
@@ -12112,6 +12376,9 @@ void DevelopProperties::populateSlidersFromStack()
     setSliderReal("calGreenSat",   p.calGreenSat);
     setSliderReal("calBlueHue",    p.calBlueHue);
     setSliderReal("calBlueSat",    p.calBlueSat);
+    for (int k = 0; k < ColorMixer::kKinds; ++k)     // Color Mixer (Mix)
+        for (int b = 0; b < ColorMixer::kBands; ++b)
+            setSliderReal(ColorMixer::key(k, b), p.*EditParams::mixerMember(k, b));
     refreshColorGradeRow();           // push grade values into the wheel + Lum slider
     refreshPointColorRow();           // points -> swatches/field + the selected sliders
     isPopulating = false;
@@ -12203,6 +12470,7 @@ void DevelopProperties::sectionHelp(int group)
     case PV_Calibrate:  doc = "developcalibratehelp";  break;
     case PV_ColorGrade: doc = "developcolorgradehelp"; break;
     case PV_PointColor: doc = "developpointcolorhelp"; break;
+    case PV_Mixer:      doc = "developcolormixerhelp"; break;
     case PV_ColorPanel: sectionHelp(colorPanelModeGroup()); return;   // the shown mode
     case PV_Detail:     doc = "developdetailhelp";     break;
     case PV_Effects:    doc = "developeffectshelp";    break;

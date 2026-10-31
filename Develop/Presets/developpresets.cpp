@@ -472,6 +472,15 @@ void DevelopPresets::assignParam(const QString &key, const QVariant &v, EditPara
     }
 
     const float f = v.toFloat();
+    /* Color Mixer: "mix<Band><Kind>", raw like every other slider here. */
+    if (key.startsWith(QLatin1String("mix"))) {
+        for (int k = 0; k < ColorMixer::kKinds; ++k)
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (key == ColorMixer::key(k, b)) {
+                    p.*EditParams::mixerMember(k, b) = f;
+                    return;
+                }
+    }
     if      (key == "temp")                p.temp                = f;
     else if (key == "tint")                p.tint                = f;
     else if (key == "wbPreset")            p.wbPreset            = v.toInt();

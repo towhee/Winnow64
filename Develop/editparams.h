@@ -4,6 +4,7 @@
 #include <QString>
 #include "Develop/tonecurve.h"
 #include "Develop/pointcolor.h"
+#include "Develop/colormixer.h"
 
 /*
     Parametric, non-destructive develop adjustments (Lightroom-style). One versioned
@@ -79,6 +80,24 @@ struct EditParams {
         return true;
     }
 
+    /* The Color Mixer field for (ColorMixer::Kind, band), as a member pointer -- the
+       one place the 24 names are listed, so every loop (sidecar, presets, panel)
+       walks the same table. */
+    static float EditParams::*mixerMember(int kind, int band) {
+        static constexpr float EditParams::*k[ColorMixer::kKinds][ColorMixer::kBands] = {
+            {&EditParams::mixRedHue, &EditParams::mixOrangeHue, &EditParams::mixYellowHue, &EditParams::mixGreenHue, &EditParams::mixAquaHue, &EditParams::mixBlueHue, &EditParams::mixPurpleHue, &EditParams::mixMagentaHue},
+            {&EditParams::mixRedSat, &EditParams::mixOrangeSat, &EditParams::mixYellowSat, &EditParams::mixGreenSat, &EditParams::mixAquaSat, &EditParams::mixBlueSat, &EditParams::mixPurpleSat, &EditParams::mixMagentaSat},
+            {&EditParams::mixRedLum, &EditParams::mixOrangeLum, &EditParams::mixYellowLum, &EditParams::mixGreenLum, &EditParams::mixAquaLum, &EditParams::mixBlueLum, &EditParams::mixPurpleLum, &EditParams::mixMagentaLum}};
+        return k[kind][band];
+    }
+    /* True when all 24 mixer sliders are at 0. */
+    bool mixerIsIdentity() const {
+        for (int k = 0; k < ColorMixer::kKinds; ++k)
+            for (int b = 0; b < ColorMixer::kBands; ++b)
+                if (this->*mixerMember(k, b) != 0.0f) return false;
+        return true;
+    }
+
     /* Presence -- three local-contrast controls at three radii, all -100..100, all stored
        RAW (no divisor: the panel writes the slider value straight through).
 
@@ -126,6 +145,21 @@ struct EditParams {
        only, luma-preserving, in the same linear slot as the primaries -- Lightroom's
        Calibration > Shadows > Tint. Math in Develop/calibrate.h (shadowTintGains). */
     float calShadowTint = 0.0f;
+
+    /* Color Mixer (the Color panel's Mix mode) -- Lightroom's 8-band HSL mixer. Per band
+       a Hue, Saturation and Luminance slider, -100..100 stored raw, 0 = no change. The
+       pixel's OKLab hue picks a blend of its two neighbouring bands; maths in
+       Develop/colormixer.h. Named scalars (not arrays) so each rides kFloatFields and
+       a multi-image edit propagates only the slider that moved; mixerMember() indexes
+       them for the loops. Identity = all 24 zero. */
+    float mixRedHue = 0.0f, mixRedSat = 0.0f, mixRedLum = 0.0f;
+    float mixOrangeHue = 0.0f, mixOrangeSat = 0.0f, mixOrangeLum = 0.0f;
+    float mixYellowHue = 0.0f, mixYellowSat = 0.0f, mixYellowLum = 0.0f;
+    float mixGreenHue = 0.0f, mixGreenSat = 0.0f, mixGreenLum = 0.0f;
+    float mixAquaHue = 0.0f, mixAquaSat = 0.0f, mixAquaLum = 0.0f;
+    float mixBlueHue = 0.0f, mixBlueSat = 0.0f, mixBlueLum = 0.0f;
+    float mixPurpleHue = 0.0f, mixPurpleSat = 0.0f, mixPurpleLum = 0.0f;
+    float mixMagentaHue = 0.0f, mixMagentaSat = 0.0f, mixMagentaLum = 0.0f;
 
     /* The VIEW TRANSFORM (the first row of the Basic panel) -- how scene-linear data is
        mapped to a displayable range. An OutputTransform::ViewTransform cast to int:
@@ -611,7 +645,7 @@ struct EditParams {
        sections). A mask scope never sets them, except lensBlurRefine -- the one row its
        own Lens section shows. */
     enum class Group { Basic, Curves, Color, Calibrate, ColorGrade, Detail, Effects,
-                       PointColor, Lens };
+                       PointColor, Lens, Mixer };
 
     /* Force one group's fields back to their identity defaults, in place. The defaults come from a
        fresh EditParams{} so the non-zero tone-split defaults (0.25/0.50/0.75) restore correctly.
@@ -654,6 +688,11 @@ struct EditParams {
             p.calGreenHue = def.calGreenHue; p.calGreenSat = def.calGreenSat;
             p.calBlueHue = def.calBlueHue;   p.calBlueSat = def.calBlueSat;
             p.calShadowTint = def.calShadowTint;
+            break;
+        case Group::Mixer:
+            for (int k = 0; k < ColorMixer::kKinds; ++k)
+                for (int b = 0; b < ColorMixer::kBands; ++b)
+                    p.*mixerMember(k, b) = 0.0f;
             break;
         case Group::ColorGrade:
             p.gradeShadowHue = def.gradeShadowHue; p.gradeShadowSat = def.gradeShadowSat;
@@ -757,6 +796,7 @@ struct EditParams {
                calRedHue == 0.0f && calRedSat == 0.0f &&
                calGreenHue == 0.0f && calGreenSat == 0.0f &&
                calBlueHue == 0.0f && calBlueSat == 0.0f && calShadowTint == 0.0f &&
+               mixerIsIdentity() &&
                /* Against the DEFAULT, not against zero: the default view transform is
                   Filmic, not the identity None, so a literal 0 here would read every
                   untouched raw as edited (and every raw explicitly set to None as

@@ -73,11 +73,11 @@ public:
 
     /* Display name of a MaskOp, shared with the on-canvas op chip's wording. */
     static QString opName(int op);
-    /* The one character a row's op chip shows (+ / - / n). Public because SubmaskDialog
-       labels its op choices with it: the glyph picked there is the glyph the submask's
-       row wears afterwards, so the two cannot drift. */
+    /* The one character a row's op chip shows (+ / - / n). */
     static QString opGlyph(int op);
-    /* The row's op button icon: +, - or an arch for Intersect, drawn like new.png. */
+    /* The row's op button icon: +, - or an arch for Intersect, drawn like new.png. The
+       Mask band's [+] [-] [n] wear it too, so the op a submask was added with is the
+       glyph its row shows afterwards. */
     static QIcon opIcon(int op);
 
     /* Control-group separator above the rows (G::groupSeparator*), set by MaskPanel

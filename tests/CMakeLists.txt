@@ -167,6 +167,9 @@ winnow_add_unit_test(tst_calibrate unit/tst_calibrate.cpp)
 # tst_pointcolor tests Develop/pointcolor.h + its EditParams / sidecar plumbing
 # (header-only; Qt Core for the shared string encoding and the JSON round trip).
 winnow_add_unit_test(tst_pointcolor unit/tst_pointcolor.cpp)
+# tst_colormixer tests Develop/colormixer.h (the Color panel's Mix mode) + its EditParams
+# / sidecar plumbing (header-only, Qt Core).
+winnow_add_unit_test(tst_colormixer unit/tst_colormixer.cpp)
 # tst_tonecurve tests Develop/tonecurve.h (header-only; needs Qt Core only, for the
 # QString encoding the sidecar and presets share).
 winnow_add_unit_test(tst_tonecurve unit/tst_tonecurve.cpp)

@@ -4,6 +4,8 @@
 
 #include <QComboBox>
 #include <QLabel>
+#include <QLineEdit>
+#include <QKeyEvent>
 #include <QMenu>
 #include <QAction>
 #include <QHBoxLayout>
@@ -111,14 +113,24 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     scopeCombo = new QComboBox(scopeBar);
     scopeCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     scopeCombo->setToolTip("The scope the settings below belong to:\n"
-                           "Global, or one of this image's masks");
+                           "Global, or one of this image's masks.\n"
+                           "Type over a mask's name to rename it (Enter to keep,\n"
+                           "Esc to cancel). Global cannot be renamed.");
     /* The scope name (Global, Subject, Mask 1 ...) is yellow so the thing the panel below
        is editing reads apart from the section headers and slider captions under it. Only
        the text colour is set: every other QComboBox property still comes from
        WidgetCSS::comboBox(), and the disabled rule is repeated here because a widget's
        own stylesheet outranks the application one. */
     scopeCombo->setStyleSheet("QComboBox { color: " + kScopeTextColor.name() + "; }"
-                              "QComboBox:disabled { color: " + G::disabledColor.name() + "; }");
+                              "QComboBox:disabled { color: " + G::disabledColor.name() + "; }"
+                              /* The rename line edit of a mask scope (see hookScopeEdit)
+                                 draws as the combo's own text, not as a field inside it. */
+                              "QComboBox QLineEdit { color: " + kScopeTextColor.name() + ";"
+                              " background: transparent; border: none; padding: 0px; }");
+    /* Typing renames the active scope; it never adds an item (and the Return-key insert
+       is the only thing NoInsert turns off). */
+    scopeCombo->setInsertPolicy(QComboBox::NoInsert);
+    scopeCombo->installEventFilter(this);    // the rename edit's Enter / Esc
     /* A floor wide enough for the longest scope name the combo realistically shows
        ("Subject" / "Mask 10") plus its arrow: the combo has the bar's only stretch, so
        without this it is the part that gives when the dock narrows, and it would shrink
@@ -129,6 +141,7 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     /* activated (not currentIndexChanged): only a USER pick selects a scope. The refill
        in updateScopeBar is blocked as well, but activated never fires for it anyway. */
     connect(scopeCombo, QOverload<int>::of(&QComboBox::activated), this, [this](int idx){
+        scopeEditPending = false;            // a pick abandons a half-typed rename
         selectScopeDeferred(names.value(idx));
     });
 
@@ -228,6 +241,30 @@ bool ScopeHeader::eventFilter(QObject *obj, QEvent *event)
 {
     /* A click on the "Scope" caption folds the details, like a band click in every other
        Develop panel. */
+    /* The rename edit's Enter and Esc are handled HERE, on the COMBO, and consumed. The
+       combo keeps the keyboard focus (its line edit is only a focus proxy) and forwards
+       keys by calling lineEdit->event() directly, which bypasses any filter on the line
+       edit. Unconsumed, QLineEdit emits editingFinished on Return and then IGNORES the
+       key, so it would carry on up the parent chain as an unhandled Return. Esc puts
+       the scope's name back. */
+    if (obj == scopeCombo && hookedEdit && scopeCombo->isEditable()
+        && (event->type() == QEvent::KeyPress || event->type() == QEvent::ShortcutOverride)) {
+        const int k = static_cast<QKeyEvent*>(event)->key();
+        if (G::isEnterKey(k) || k == Qt::Key_Escape) {
+            event->accept();
+            if (event->type() == QEvent::KeyPress) {
+                if (k == Qt::Key_Escape) {
+                    scopeEditPending = false;
+                    hookedEdit->setText(names.value(activeIndex));
+                }
+                else commitScopeEdit();
+                /* Either key ENDS the edit, so the caret leaves the field: left in it,
+                   a committed rename looks like a keypress that did nothing. */
+                scopeCombo->clearFocus();
+            }
+            return true;
+        }
+    }
     if ((obj == barLabel || obj == barCountLabel)
         && event->type() == QEvent::MouseButtonPress) {
         QMouseEvent *me = static_cast<QMouseEvent*>(event);
@@ -245,8 +282,53 @@ void ScopeHeader::updateScopeBar()
     scopeCombo->clear();
     scopeCombo->addItems(names);
     scopeCombo->setCurrentIndex(activeIndex);
+    /* A MASK scope's name is edited in place; Global's never is. setEditable(false)
+       deletes the line edit, so it is re-hooked whenever a new one appears. */
+    scopeEditPending = false;
+    scopeCombo->setEditable(activeIndex != 0);
+    hookScopeEdit();
+    if (scopeCombo->lineEdit()) scopeCombo->lineEdit()->setText(names.value(activeIndex));
     if (barCountLabel) barCountLabel->setText(": " + QString::number(names.size()));
     setEyeIcon(barEyeBtn, enabledStates.value(activeIndex, true));
+}
+
+void ScopeHeader::hookScopeEdit()
+{
+/*
+    Wire the editable combo's line edit, once per line edit (QComboBox makes a new one each
+    time setEditable(true) follows setEditable(false), i.e. on every switch away from
+    Global).
+
+    QComboBox's own editingFinished handler is DISCONNECTED: when the typed text matches
+    another item ("Mask 1" typed over Mask 2) it selects that item and emits activated,
+    turning a rename into a scope switch. With it gone, activated comes only from a real
+    pick in the popup (or the wheel / arrow keys), and editingFinished means "rename".
+    The completer goes too: it would auto-complete the typing into another scope's name.
+*/
+    QLineEdit *le = scopeCombo ? scopeCombo->lineEdit() : nullptr;
+    if (le == hookedEdit) return;
+    hookedEdit = le;
+    if (!le) return;
+    scopeCombo->setCompleter(nullptr);
+    disconnect(le, &QLineEdit::editingFinished, scopeCombo, nullptr);
+    connect(le, &QLineEdit::textEdited, this, [this]{ scopeEditPending = true; });
+    connect(le, &QLineEdit::editingFinished, this, &ScopeHeader::commitScopeEdit);
+}
+
+void ScopeHeader::commitScopeEdit()
+{
+    /* Enter or focus-out on the rename edit. Only a USER edit counts (refills and popup
+       picks set the text too). The owner validates the name ("Global" is reserved) and
+       refreshes; the combo is put back first so a refused name does not stay on show.
+       Deferred: the refresh can delete the line edit this signal came from. */
+    if (!scopeEditPending || !hookedEdit) return;
+    scopeEditPending = false;
+    const QString entered = hookedEdit->text().trimmed();
+    QTimer::singleShot(0, this, [this, entered]{
+        updateScopeBar();
+        if (!entered.isEmpty() && entered != names.value(activeIndex))
+            emit renameToRequested(entered);
+    });
 }
 
 void ScopeHeader::paintEvent(QPaintEvent *)

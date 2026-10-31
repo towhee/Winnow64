@@ -420,6 +420,23 @@ void MW::closeHistoryDock()
     historyDock->setVisible(false);
     historyDockVisibleAction->setChecked(false);
 }
+void MW::updateExposureSubtitle(int row)
+{
+    if (!historyTitleBar) return;
+    QStringList parts;
+    if (row >= 0 && row < dm->sf->rowCount()) {
+        /* Same text as the Metadata panel's rows, except a whole f-number drops the ".0"
+           (f/8, f/5.6). Missing values are left out rather than shown blank. */
+        QString f = InfoView::apertureText(dm->sf->index(row, G::ApertureColumn).data());
+        if (f.endsWith(".0")) f.chop(2);
+        const QString t = InfoView::shutterText(dm->sf->index(row, G::ShutterspeedColumn).data());
+        const QString iso = InfoView::isoText(dm->sf->index(row, G::ISOColumn).data());
+        if (!f.isEmpty()) parts << f;
+        if (!t.isEmpty()) parts << t;
+        if (!iso.isEmpty()) parts << "ISO " + iso;
+    }
+    historyTitleBar->setSubtitle(parts.join(", "));
+}
 void MW::closeFolderDock()
 {
     folderDock->setVisible(false);

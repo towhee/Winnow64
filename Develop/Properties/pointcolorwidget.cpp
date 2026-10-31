@@ -300,7 +300,7 @@ void PointColorWidget::paintEvent(QPaintEvent *)
         p.setPen(text);
         p.drawText(f.united(s).adjusted(12, 0, -12, 0), Qt::AlignCenter | Qt::TextWordWrap,
                    tr("Click the eyedropper, then click a colour in the image to "
-                      "adjust it."));
+                      "adjust it.  You can select multiple colours."));
         return;
     }
 

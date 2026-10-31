@@ -1837,7 +1837,7 @@ void ImageView::hideMaskTint()
 void ImageView::showMaskTint()
 {
     /* Un-hide the tint. The overlay starts hidden and is shown by an explicit toggle
-       (toggleMaskTint) or here, when a new submask is chosen in SubmaskDialog
+       (toggleMaskTint) or here, when a new submask is chosen in the mask tools menu
        (DevelopProperties::maskOverlayShowRequested). The scope-selection auto-show
        (maskTintShowRequested) has been disconnected since 2026-10-07. */
     if (!maskTintHidden) return;
@@ -3060,10 +3060,12 @@ int ImageView::maskHitTest(QPoint vp) const
         return -1;
     }
 
-    if (maskIsBeam()) {                 // 0/1 spine ends, 3/4 width, 2 move
-        QPointF h[5];
+    if (maskIsBeam()) {                 // 0/1 ends, 5/6 taper knobs, 3/4 width, 2 move
+        QPointF h[7];
         maskBeamHandles(h);
-        for (int i : {0, 1, 3, 4, 2})
+        /* The taper knobs before the width handles they hang off (44 px apart, so the
+           pick circles never overlap); the spine ends first as always. */
+        for (int i : {0, 1, 5, 6, 3, 4, 2})
             if (QLineF(p, h[i]).length() <= rHandle) return i;
         const QPointF d = h[1] - h[0];
         const double len2 = d.x()*d.x() + d.y()*d.y();
@@ -3581,7 +3583,7 @@ void ImageView::setMaskBeamShape(const QString &paramsJson)
     viewport()->update();           // the tint key changed: drawBeamMask rebuilds it
 }
 
-void ImageView::maskBeamHandles(QPointF h[5]) const
+void ImageView::maskBeamHandles(QPointF h[7]) const
 {
     const QSizeF fr = maskNormFrameSize();
     const double fw = fr.width() > 0 ? fr.width() : 1.0;
@@ -3599,6 +3601,79 @@ void ImageView::maskBeamHandles(QPointF h[5]) const
     const QPointF off(nrm.x() * hw / fw, nrm.y() * hw / fh);
     h[3] = maskNormToViewport(c + off);
     h[4] = maskNormToViewport(c - off);
+
+    /* Taper knobs: a stem from each width handle pointing OUTWARD, square to its edge,
+       ending in a knob -- the Radial's rotate stub. At Taper 0 it continues the line from
+       the spine through the width handle; turning the knob tilts the edge about the
+       width handle and the stem stays square to it, so the stem's lean IS the taper.
+       (Not along the edge: a stem there lies on top of the edge line and cannot be seen.)
+       The width is linear along the spine (Develop/beammask.h): w(s) = hw + slope s,
+       slope = -k hw / (len/2), k = taper / 100. The edge's direction comes from that
+       linear formula unclamped, so the stem is defined even past the apex. A fixed,
+       generous on-screen length keeps the knob clear of the width handle and gives the
+       turn some leverage at any zoom. */
+    const double kStem = 44.0;
+    const double halfLen = len / 2.0;
+    const double slope = (halfLen > 1e-9)
+        ? -qBound(-100.0, maskBeamTaper, 100.0) / 100.0 * hw / halfLen : 0.0;
+    const QPointF u = (len > 1e-9) ? QPointF(dx / len, dy / len) : QPointF(0, 1);
+    const double step = std::max(1.0, halfLen * 0.5);
+    for (int side : {1, -1}) {
+        const QPointF wh = h[side > 0 ? 3 : 4];
+        const double off = side * (hw + slope * step);
+        const QPointF q = c + QPointF((u.x() * step + nrm.x() * off) / fw,
+                                      (u.y() * step + nrm.y() * off) / fh);
+        QPointF dir = maskNormToViewport(q) - wh;             // along the edge, on screen
+        const double dl = std::hypot(dir.x(), dir.y());
+        dir = (dl > 1e-6) ? dir / dl : QPointF(1, 0);
+        /* Square to the edge, on the side AWAY from the spine (the centre handle). */
+        QPointF out(-dir.y(), dir.x());
+        const QPointF away = wh - h[2];
+        if (out.x() * away.x() + out.y() * away.y() < 0.0) out = -out;
+        h[side > 0 ? 5 : 6] = wh + out * kStem;
+    }
+}
+
+bool ImageView::maskBeamSpineCoords(QPointF n, double &s, double &d, double &hw,
+                                    double &halfLen) const
+{
+    const QSizeF fr = maskNormFrameSize();
+    if (fr.isEmpty()) return false;
+    const double fw = fr.width(), fh = fr.height();
+    const QPointF c = (maskP1 + maskP2) / 2.0;
+    const double dx = (maskP2.x() - maskP1.x()) * fw, dy = (maskP2.y() - maskP1.y()) * fh;
+    const double len = std::hypot(dx, dy);
+    if (len <= 1e-9) return false;
+    const double px = (n.x() - c.x()) * fw, py = (n.y() - c.y()) * fh;
+    s  = ( px * dx + py * dy) / len;            // along u   = (dx, dy) / len
+    d  = (-px * dy + py * dx) / len;            // along nrm = (-dy, dx) / len
+    hw = maskBeamWidth * std::min(fw, fh);
+    halfLen = len / 2.0;
+    return true;
+}
+
+void ImageView::maskBeamDragTaper(int handle, QPointF n)
+{
+/*
+    A taper knob turns ITS edge about its width handle, which stays put -- so the centre
+    width (Width) is untouched and only the edge's slope, i.e. the taper, changes; the
+    other edge mirrors it. In spine coordinates the + edge runs at angle atan(slope) and
+    the - edge at atan(-slope), so a side's edge angle a gives slope = side * tan(a).
+
+    RELATIVE: the edge turns by however far the cursor has turned about the width handle
+    since the press (maskTaperGrabAngle / maskTaperEdgeAngle), so an off-centre grab
+    does not jump. The slope is limited to what Taper +-100 allows: the edges meeting
+    exactly at a spine end.
+*/
+    double s = 0, d = 0, hw = 0, halfLen = 0;
+    if (!maskBeamSpineCoords(n, s, d, hw, halfLen) || halfLen <= 1e-9 || hw <= 1e-9) return;
+    const double side = (handle == 5) ? 1.0 : -1.0;
+    const double grab = std::atan2(d - side * hw, s);
+    const double turn = std::remainder(grab - maskTaperGrabAngle, 6.283185307179586);
+    const double a = qBound(-1.5, maskTaperEdgeAngle + turn, 1.5);   // under 90 deg
+    const double maxSlope = hw / halfLen;
+    const double slope = qBound(-maxSlope, side * std::tan(a), maxSlope);
+    maskBeamTaper = qBound(-100.0, -slope * halfLen / hw * 100.0, 100.0);
 }
 
 void ImageView::maskBeamDragEnd(int handle, QPointF n)
@@ -3679,15 +3754,19 @@ void ImageView::drawBeamMask(QPainter *painter, const QRectF &br, bool drawTint)
         maskDrawSpaceImage(painter, maskBeamTint);
     }
 
-    /* 2) The two edges (where coverage is ~half, t = 1), the spine between its handles,
-       and the handles -- viewport coords, so they keep a constant on-screen size. The
-       edges run across the whole frame, stopping where a taper brings them together. */
+    /* 2) The two edges, the spine between its handles, and the handles -- viewport
+       coords, so they keep a constant on-screen size. The edges run across the whole
+       frame, stopping where a taper brings them together. Drawn the Radial gradient's way
+       (drawRadialMask): a SOLID pair at the nominal boundary (t = 1, through the width
+       handles) and, while there is any feather, a DASHED pair at the half-coverage
+       distance (MaskFalloff::Shape::h), which is what Shift + wheel visibly moves. With
+       feather 0 the two coincide, so only the solid pair is drawn. */
     const QSizeF fr = maskNormFrameSize();
     if (fr.isEmpty()) return;
     const double fw = fr.width(), fh = fr.height();
     const BeamMask::Shape b = BeamMask::make(maskP1, maskP2, maskBeamWidth, maskBeamTaper,
                                              fw, fh);
-    QPointF h[5];
+    QPointF h[7];
     maskBeamHandles(h);
 
     painter->save();
@@ -3703,17 +3782,29 @@ void ImageView::drawBeamMask(QPainter *painter, const QRectF &br, bool drawTint)
         double sLo = -S, sHi = S;
         if (b.slope < 0.0) sHi = std::min(sHi, -b.hw / b.slope);    // apex toward p2
         if (b.slope > 0.0) sLo = std::max(sLo, -b.hw / b.slope);    // apex toward p1
-        auto edgePt = [&](double s, double side) {
-            const double off = side * std::max(0.0, b.hw + b.slope * s);
+        /* k scales the local half-width: 1 = the boundary, h = half coverage. */
+        auto edgePt = [&](double s, double side, double k) {
+            const double off = side * k * std::max(0.0, b.hw + b.slope * s);
             return maskNormToViewport(QPointF((b.cx + b.ux * s - b.uy * off) / fw,
                                               (b.cy + b.uy * s + b.ux * off) / fh));
         };
         QPen edgePen(QColor(255, 255, 255, 210)); edgePen.setWidthF(1.4);
-        edgePen.setStyle(Qt::DashLine);
         painter->setPen(edgePen);
         painter->setBrush(Qt::NoBrush);
         for (double side : {1.0, -1.0})
-            painter->drawLine(edgePt(sLo, side), edgePt(sHi, side));
+            painter->drawLine(edgePt(sLo, side, 1.0), edgePt(sHi, side, 1.0));
+
+        const double featherK = MaskFalloff::shapeFor(maskFeather).h;
+        if (maskFeather > 0.0 && featherK < 0.999) {
+            QPen featherPen(QColor(255, 255, 255, 150));
+            featherPen.setWidthF(1.1);
+            featherPen.setStyle(Qt::DashLine);
+            featherPen.setDashPattern({5.0, 4.0});
+            painter->setPen(featherPen);
+            for (double side : {1.0, -1.0})
+                painter->drawLine(edgePt(sLo, side, featherK),
+                                  edgePt(sHi, side, featherK));
+        }
     }
 
     QPen spinePen(QColor(255, 255, 255, 210)); spinePen.setWidthF(1.4);
@@ -3728,8 +3819,15 @@ void ImageView::drawBeamMask(QPainter *painter, const QRectF &br, bool drawTint)
     handle(h[2], 4.5, QColor(255,255,255,235));                 // centre (move)
     handle(h[0], 5.5, QColor(120,200,255,235));                 // spine ends (turn)
     handle(h[1], 5.5, QColor(120,200,255,235));
+    /* Taper stems first, so the width handles they hang off draw over the joint. The
+       knob is the Radial's rotate knob: a stub that turns something. */
+    painter->setPen(spinePen);
+    painter->drawLine(h[3], h[5]);
+    painter->drawLine(h[4], h[6]);
     handle(h[3], 4.5, QColor(255,220,120,235));                 // width
     handle(h[4], 4.5, QColor(255,220,120,235));
+    handle(h[5], 5.0, QColor(120,255,160,235));                 // taper (turn the edge)
+    handle(h[6], 5.0, QColor(120,255,160,235));
     painter->restore();
 }
 
@@ -4008,9 +4106,10 @@ void ImageView::scaleBrushSize(double factor)
 
 void ImageView::adjustMaskFeather(double delta)
 {
-    /* Shift + wheel over a Linear/Radial gradient or the Brush. The gradient overlay ramp
-       redraws from maskFeather at once; the brush uses it for the NEXT stroke (and its
-       cursor's inner half-coverage ring). The dock persists it and re-composites. */
+    /* Shift + wheel over a Linear/Radial/Beam gradient or the Brush. The gradient
+       overlay ramp (and the Radial / Beam dashed half-coverage line) redraws from
+       maskFeather at once; the brush uses it for the NEXT stroke (and its cursor's inner
+       half-coverage ring). The dock persists it and re-composites. */
     const double f = qBound(0.0, maskFeather + delta, 100.0);
     if (f == maskFeather) return;
     maskFeather = f;
@@ -5631,8 +5730,8 @@ void ImageView::wheelEvent(QWheelEvent *event)
     Preview: mouse wheel / trackpad scroll = next/previous image.
     Develop: wheel / two-finger scroll = zoom the image under the cursor. While a Spot or
     Brush/Object tool is armed the wheel resizes that tool instead, and Shift + wheel over
-    a Linear/Radial gradient or Brush mask changes its feather; hold Space to zoom
-    (spacePanOverride bypasses both).
+    a Linear/Radial/Beam gradient or Brush mask changes its feather; hold Space to
+    zoom (spacePanOverride bypasses both).
 */
     if (G::isLogger)
         qDebug() << "ImageView::wheelEvent";
@@ -5648,8 +5747,8 @@ void ImageView::wheelEvent(QWheelEvent *event)
         return;
     }
 
-    /* Shift + two-finger drag (or wheel) over a Linear/Radial gradient or the Brush:
-       change the FEATHER instead of zooming / resizing. Space held bypasses it. */
+    /* Shift + two-finger drag (or wheel) over a Linear/Radial/Beam gradient or the
+       Brush: change the FEATHER instead of zooming / resizing. Space held bypasses it. */
     if (!spacePanOverride && maskEditMode &&
         (event->modifiers() & Qt::ShiftModifier) &&
         (maskTool == 0 || maskTool == 1 || maskIsBeam() || maskIsBrush())) {
@@ -6301,6 +6400,17 @@ void ImageView::mousePressEvent(QMouseEvent *event)
                     maskAyPxAnchor = maskRy * fr.height();
                 }
             }
+            else if (maskIsBeam() && (h == 5 || h == 6)) {   // beam taper knob: anchor
+                double sp = 0, d = 0, hw = 0, halfLen = 0;
+                if (maskBeamSpineCoords(maskViewportToNorm(event->pos()), sp, d, hw, halfLen)
+                    && halfLen > 1e-9) {
+                    const double side = (h == 5) ? 1.0 : -1.0;
+                    const double slope =
+                        -qBound(-100.0, maskBeamTaper, 100.0) / 100.0 * hw / halfLen;
+                    maskTaperGrabAngle = std::atan2(d - side * hw, sp);
+                    maskTaperEdgeAngle = std::atan(side * slope);
+                }
+            }
             else if (h == 2) {                  // linear move: anchor the whole line
                 maskMoveAnchorN = maskViewportToNorm(event->pos());
                 maskP1Anchor = maskP1;
@@ -6604,6 +6714,7 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             const QPointF n = maskViewportToNorm(event->pos());
             if (maskDrag == 0 || maskDrag == 1) maskBeamDragEnd(maskDrag, n);
             else if (maskDrag == 3 || maskDrag == 4) maskBeamDragWidth(n);
+            else if (maskDrag == 5 || maskDrag == 6) maskBeamDragTaper(maskDrag, n);
             else {                                          // translate
                 const QPointF d = n - maskMoveAnchorN;
                 maskP1 = maskP1Anchor + d;

@@ -840,6 +840,10 @@ private:
     int     maskDrag     = -1;          // active handle (per tool, see maskHitTest); -1 none
     QPointF maskMoveAnchorN;            // image-norm cursor at move start
     QPointF maskP1Anchor, maskP2Anchor; // linear endpoints at move start
+    /* Beam taper knob drag: the cursor's angle about the width handle and the edge's
+       angle, both at press (spine coords). The drag adds the cursor's turn to the
+       edge's, so grabbing the knob off-centre does not jump the taper. */
+    double  maskTaperGrabAngle = 0, maskTaperEdgeAngle = 0;
     QPointF maskCAnchor;                // radial centre at move start
     double  maskAngleAnchor = 0;        // radial angle at rotate start
     /* Radial semi-axes at resize start, in FRAME PIXELS (not normalized): a Shift-drag
@@ -903,10 +907,17 @@ private:
     void    drawBeamMask(QPainter *p, const QRectF &br, bool drawTint = true);    // Beam overlay
     void    beamEnsureTint();
     /* Beam handles in viewport px: 0 p1 end, 1 p2 end, 2 centre, 3/4 the width handles
-       either side of the centre. */
-    void    maskBeamHandles(QPointF h[5]) const;
+       either side of the centre (+ / - side), 5/6 the taper knobs at the end of a short
+       stem running along the edge from width handle 3 / 4. */
+    void    maskBeamHandles(QPointF h[7]) const;
     void    maskBeamDragEnd(int handle, QPointF n);     // rotate + lengthen about the centre
     void    maskBeamDragWidth(QPointF n);               // width from the spine to n
+    void    maskBeamDragTaper(int handle, QPointF n);   // turn an edge about its width handle
+    /* n in the spine's own frame-px coordinates: s along the spine from the centre
+       (toward p2), d across it along the + normal; plus the centre half-width and half
+       the spine length. False when the spine has no length. */
+    bool    maskBeamSpineCoords(QPointF n, double &s, double &d, double &hw,
+                                double &halfLen) const;
     void    drawBrushMask(QPainter *p, const QRectF &br, bool drawTint = true);   // overlay for the Brush tool
     void    drawObjectMask(QPainter *p, const QRectF &br, bool drawTint = true);
     /* Object Mask perimeter-paint helpers (reuse brush buffers; amber/green closure). */

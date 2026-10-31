@@ -260,7 +260,12 @@ QSize DockTitleBar::sizeHint() const
 #else
     int h = style()->pixelMetric(QStyle::PM_TitleBarHeight) * 1.6;
 #endif
-    return QSize(width(), h);
+    return QSize(width(), h + subtitleHeight());
+}
+
+int DockTitleBar::subtitleHeight() const
+{
+    return subtitleLabel ? subtitleLabel->fontMetrics().height() + 6 : 0;
 }
 
 DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : QWidget()
@@ -273,7 +278,12 @@ DockTitleBar::DockTitleBar(const QString &title, QHBoxLayout *titleBarLayout) : 
                        FrameLineBox::sideInset(sides, Qt::TopEdge),
                        FrameLineBox::sideInset(sides, Qt::RightEdge), 0);
     setStyle();
-    setLayout(titleBarLayout);
+    /* The caller's row is nested in a vertical layout so setSubtitle can add a second
+       line beneath it. */
+    rows = new QVBoxLayout(this);
+    rows->setContentsMargins(0, 0, 0, 0);
+    rows->setSpacing(0);
+    rows->addLayout(titleBarLayout);
     titleLabel = new QLabel(this);
     titleLabel->setTextFormat(Qt::RichText);
     setTitle(title);
@@ -288,6 +298,23 @@ void DockTitleBar::setTitle(QString title)
 {
     titleLabel->setText(title);
     //titleLabel->setPixmap(QPixmap(":/images/icon16/anchor.png"));
+}
+
+void DockTitleBar::setSubtitle(const QString &text)
+{
+    if (!subtitleLabel) {
+        subtitleLabel = new QLabel(this);
+        subtitleLabel->setTextFormat(Qt::PlainText);
+        subtitleLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
+        /* Plain text colour, not the title blue that WidgetCSS gives DockTitleBar's
+           QLabels; no left padding, so it centres on the bar. */
+        subtitleLabel->setStyleSheet("QLabel { color: " + G::textColor.name() + ";"
+                                     " padding-left: 0px; }");
+        subtitleLabel->setFixedHeight(subtitleHeight());
+        rows->addWidget(subtitleLabel);
+        updateGeometry();
+    }
+    subtitleLabel->setText(text);
 }
 
 void DockTitleBar::setTitleColor(const QColor &color)

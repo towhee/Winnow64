@@ -1991,7 +1991,9 @@ bool MW::developShortcutIntercept(QEvent *event)
        guard would otherwise swallow Esc first. Yields to the WB dropper and Transform,
        whose own Esc handlers run below. Escape owns no global QAction, so only KeyPress
        arrives. */
+    /* Not while typing: Esc in a text field (the scope rename) cancels the typing. */
     if (e->key() == Qt::Key_Escape && !e->isAutoRepeat() && !isOverride && developProperties
+        && !isTextEntryWidget(fw)
         && !developProperties->isWbDropperActive() && !developCropEditing
         && !developProperties->isPointColorPickActive()
         && developProperties->escapeMaskTool()) {
@@ -2416,9 +2418,12 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                panel's own sliders (Size/Feather/Flow), which is exactly when Return
                must still finish it. Same reasoning as the Esc-collapses-a-mask rule in
                developShortcutIntercept, likewise checked BEFORE the editor bail.
-               Only a text field keeps Return. */
+               Only a text field keeps Return -- isTextEntryWidget, not a QLineEdit cast:
+               an editable QComboBox (the Edits bar's scope rename) keeps the focus
+               itself, its line edit being only a focus proxy, and the cast let Return
+               through to land -- and, if untouched, DISCARD -- the pending submask. */
             else if (G::isEnterKey(k) && !e->isAutoRepeat()
-                     && !qobject_cast<QLineEdit *>(QApplication::focusWidget())) {
+                     && !isTextEntryWidget(QApplication::focusWidget())) {
                 event->accept();       // frees the key on the override pass
                 if (event->type() == QEvent::KeyPress)
                     developProperties->finishSubmaskEditing();  // resolves the op itself
@@ -3136,7 +3141,7 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
            for a dialog's keystrokes (the ShortcutOverride guard above already handed those
            to the focused widget). */
         QWidget *fw = QApplication::focusWidget();
-        bool isTextEntry = qobject_cast<QLineEdit *>(fw) ||
+        bool isTextEntry = isTextEntryWidget(fw) ||       // incl. an editable QComboBox
                            qobject_cast<QTextEdit *>(fw) ||
                            qobject_cast<QPlainTextEdit *>(fw);
         bool inDialog = fw && qobject_cast<QDialog *>(fw->window());
@@ -6486,6 +6491,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
 
     // update the metadata panel
     if (G::useInfoView) infoView->updateInfo(dm->currentSfRow);
+    updateExposureSubtitle(dm->currentSfRow);
     probe.mark("infoView");
 
     // initialize the thumbDock if just opened app
@@ -6959,6 +6965,7 @@ bool MW::reset(QString src)
         infoView->clearInfo();
         updateDisplayResolution();
     }
+    updateExposureSubtitle(-1);
     isDragDrop = false;
 
     fsTree->setEnabled(true);
@@ -7206,6 +7213,7 @@ void MW::nullFiltration()
     updateStatus(false, msg, "MW::nullFiltration");
     setCentralMessage(msg);
     infoView->clearInfo();
+    updateExposureSubtitle(-1);
     imageView->clear();
     if (scopesView) scopesView->clear();
     progress->reset();

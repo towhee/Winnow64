@@ -2003,7 +2003,19 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
             c.pc[c.pcN++] = PointColor::makeCoef(p.pointColor[i]);
         }
         c.pcActive = c.pcN > 0;
-        if (c.pcActive) {
+        /* Color Mixer: the 24 sliders baked into per-hue tables (colormixer.h). */
+        {
+            float mh[ColorMixer::kBands], ms[ColorMixer::kBands], ml[ColorMixer::kBands];
+            for (int b = 0; b < ColorMixer::kBands; ++b) {
+                mh[b] = p.*EditParams::mixerMember(ColorMixer::Hue, b);
+                ms[b] = p.*EditParams::mixerMember(ColorMixer::Sat, b);
+                ml[b] = p.*EditParams::mixerMember(ColorMixer::Lum, b);
+            }
+            c.mixActive = !ColorMixer::isIdentity(mh, ms, ml);
+            if (c.mixActive)
+                ColorMixer::buildTables(mh, ms, ml, c.mixRot, c.mixSat, c.mixLum);
+        }
+        if (c.pcActive || c.mixActive) {
             PointColor::workingToLms(c.pcToLms);
             PointColor::lmsToWorking(c.pcFromLms);
         }
@@ -2023,7 +2035,7 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
                 for (int k = 0; k < 3; ++k) c.gradePush[i][k] = push[k];
             }
         }
-        if (c.gradeActive || c.pcActive) {
+        if (c.gradeActive || c.pcActive || c.mixActive) {
             /* Scene n -> display-linear v through the view transform (the chain ToImage
                runs: DisplayPosition, then undo its sRGB transfer), and the inverse by a
                monotone walk of the same samples. Where the view clips (v flat at 1) the
@@ -2401,7 +2413,8 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
 
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
-               c.hslActive || c.gradeActive || c.pcActive || c.preMatActive ||
+               c.hslActive || c.gradeActive || c.pcActive || c.mixActive ||
+               c.preMatActive ||
                c.calShadowTint != 0.0f;
     return coeffs;
 }
@@ -2442,6 +2455,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const bool doHsl  = c.hslActive;
     const bool doGrade = c.gradeActive;
     const bool doPoint = c.pcActive;
+    const bool doMix = c.mixActive;
 
     /* Fused front matrix (input profile + gains + calibrate), local like the rest. */
     const float pm0 = c.preMat[0], pm1 = c.preMat[1], pm2 = c.preMat[2];
@@ -2491,6 +2505,8 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const int pcN = c.pcN;
     const int pcVis = c.pcVisualize;
     const float *pcTo = c.pcToLms, *pcFrom = c.pcFromLms;
+    /* Color Mixer: pointers again (see gPush). */
+    const float *mxRot = c.mixRot, *mxSat = c.mixSat, *mxLum = c.mixLum;
 
     /* Perceptual tone curve via the precomputed LUT (contrast + tone regions, see
        buildPointCoeffs). The table is indexed by the perceptual value s = (v/white)^(1/gamma)
@@ -2704,10 +2720,12 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                     px[1] = (g < 0.0f) ? 0.0f : g;
                     px[2] = (b < 0.0f) ? 0.0f : b;
                 }
-                if (doPoint) {
-                    /* Display-linear (through the view), OKLab, the summed weighted
-                       change of every point, and the CHANGE back to scene-linear -- the
-                       Color Grade route, see PointCoeffs::pcActive. */
+                if (doMix || doPoint) {
+                    /* Display-linear (through the view), OKLab, the Color Mixer's
+                       per-hue change, then the summed weighted change of every point
+                       (measured on the MIXED colour, as a sample off the display would
+                       be), and the CHANGE back to scene-linear -- the Color Grade route,
+                       see PointCoeffs::pcActive / mixActive. */
                     float n[3], v[3];
                     for (int k = 0; k < 3; ++k) {
                         n[k] = px[k] * invWhite;
@@ -2716,11 +2734,11 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                     }
                     float lab[3];
                     PointColor::toLab(pcTo, v, lab);
+                    bool any = doMix && ColorMixer::adjust(mxRot, mxSat, mxLum, lab);
                     const float C = std::sqrt(lab[1] * lab[1] + lab[2] * lab[2]);
                     const float hh = std::atan2(lab[2], lab[1]);
                     float d[3] = {0.0f, 0.0f, 0.0f};
                     float wVis = 0.0f;
-                    bool any = false;
                     for (int i = 0; i < pcN; ++i) {
                         float di[3] = {0.0f, 0.0f, 0.0f};
                         const float wi = PointColor::accumulate(pcK[i], lab, C, hh, di);

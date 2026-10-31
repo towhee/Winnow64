@@ -1,5 +1,8 @@
 WHAT'S NEW
 - Add PanelButtonBar 'Last' below Develop Editor
+- Add (apply) Previous to Develop
+- Refine Develop UI
+- Add Mix to develop color
 
 BUGS / TO DO
 - /Users/roryhill/Temp/Photos_to_be_curated/2026/202606/2026-06-10_Victoria/2026-07-01_0082.heic
@@ -8,15 +11,15 @@ BUGS / TO DO
 - Space bar not start/stopping video play
 - Save pick status between sessions
 - Tweak transform behavior
+- Beam mask tool: Show dashed theather zone same as radial gradient, Add shift mouse wheel feather adjustment
 - Arrow navigation in develop when no slider has the focus
-- Add (apply) Previous to Develop
 - Change histogram button to look like a histogram.
 - Catalog management: move, copy, join, select
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup
+- Add Embellish to scope edits after Effects
 - Search for images with an Effect.
 - Make a shortcut for 'Delete rejected'
-- Add cropped dimensions to Metadata panel
 - Figure out mask refine
 - Review develop presets
 - Revisit the color sampler
@@ -35,7 +38,6 @@ BUGS / TO DO
 - One possible colour problem in Embellish export, not checked: after writing the file it
   still copies the source file's colour profile into it. The new render is sRGB, so a
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
-- Convert Embellish to a version
 - Can we cache raw denoise? What does LR do?
 - If a file has both flat keywords and nested, only use the nested ones unless there is a
   flat keyword without a matching nested one.

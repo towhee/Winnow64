@@ -317,6 +317,15 @@ private:
         float gradeDec[kGradeTfN] = {};         // e -> e^2.2
         float gradePush[kGradeWN][3] = {};      // by sqrt(Y): summed encoded push
 
+        /* Color Mixer (Develop/colormixer.h), the Color panel's Mix mode: applied after
+           HSL and BEFORE Point Color, in the same OKLab of the display-linear value (it
+           shares gradeFwd / gradeInv and pcToLms / pcFromLms, built when any of the three
+           is active). Per pixel the OKLab hue reads the three baked tables. */
+        bool  mixActive = false;
+        float mixRot[ColorMixer::kHueN] = {};
+        float mixSat[ColorMixer::kHueN] = {};
+        float mixLum[ColorMixer::kHueN] = {};
+
         /* Point Color (Develop/pointcolor.h), applied after HSL and BEFORE Color Grade
            on the same display axis: it reuses gradeFwd / gradeInv, which are built when
            either is active. Per pixel: display-linear -> OKLab (pcToLms folds the

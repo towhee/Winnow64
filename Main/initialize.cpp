@@ -2851,7 +2851,7 @@ void MW::createDevelopDock()
        tint (maskTintShowRequested -> ImageView::showMaskTint) and it got in the way. The
        overlay is now shown only by an explicit toggle; the signal and showMaskTint are
        kept so the auto-show rules can be re-wired here once they are decided. */
-    /* The one auto-show: a new submask chosen in SubmaskDialog turns the overlay on. */
+    /* The one auto-show: a new submask chosen in the mask tools menu turns the overlay on. */
     connect(developProperties, &DevelopProperties::maskOverlayShowRequested,
             imageView, &ImageView::showMaskTint);
     /* Scope menu "Show mask overlay" <-> ImageView's tint state (also flipped by "O"). */
@@ -3484,6 +3484,9 @@ void MW::createHistoryDock()
         Develop dock's tab already claims "Develop" -- same split as that dock, whose title
         bar reads "Develop Editor". */
     historyTitleBar = new DockTitleBar("Develop", historyTitleLayout);
+    /* Second row: the current image's exposure (MW::updateExposureSubtitle). Created
+       now, empty, so the bar is its full height before the first image is selected. */
+    historyTitleBar->setSubtitle("");
     historyDock->setTitleBarWidget(historyTitleBar);
     historyTitleBar->setToolTip(dockTabToolTip(historyDockTabText));
 

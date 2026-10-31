@@ -1,5 +1,6 @@
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
+#include "Develop/editstack.h"          // MaskOp
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
 
@@ -217,16 +218,26 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     /* No band eye here: the Edits bar's eye already shows/hides the whole mask, Edge and
        Halo reshape the mask rather than contributing to it, and hiding every submask at
        once is in this band's menu (Show / Hide all submasks). */
-    /* [+] adds a submask -- the primary action, so it is on the band rather than only in
-       the menu. It sat on the old Submasks band; it lives here since that band went,
-       left of the overlay swatch, directly below the scope bar's own [+]. */
-    levelAddBtn = new BarBtn();
-    levelAddBtn->setToolTip("Add a submask to this mask (M)");
-    levelAddBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);
-    levelAddBtn->setIconSize(QSize(16, 16));
-    connect(levelAddBtn, &BarBtn::clicked, this, [this]{
-        QTimer::singleShot(0, this, [this]{ emit addSubmaskRequested(); });
-    });
+    /* [+] [-] [n] add a submask that adds to, cuts out of or intersects the mask -- the
+       primary actions, so they are on the band rather than only in the menu. Each pops
+       the mask tools menu; the button is the op, so the menu only asks for the tool.
+       Their glyphs are SubmaskList::opIcon, the same ones the submask rows wear, so the
+       op picked here is recognisable on the row afterwards. [-] and [n] need a mask to
+       act on: showMaskLevel enables them once there is a submask. */
+    auto opBtn = [this](int op) {
+        BarBtn *b = new BarBtn();
+        b->setIcon(SubmaskList::opIcon(op));
+        b->setIconSize(QSize(16, 16));
+        connect(b, &BarBtn::clicked, this, [this, op]{
+            QTimer::singleShot(0, this, [this, op]{ emit addSubmaskRequested(op); });
+        });
+        return b;
+    };
+    levelAddBtn       = opBtn(int(MaskOp::Add));
+    levelAddBtn->setToolTip("Add to this mask: pick a mask tool (M)");
+    levelSubtractBtn  = opBtn(int(MaskOp::Subtract));
+    levelIntersectBtn = opBtn(int(MaskOp::Intersect));
+    syncOpButtons();
 
     levelMenuBtn = new BarBtn();
     levelMenuBtn->setToolTip("Mask actions (add, show or hide all submasks, reset Edge "
@@ -240,6 +251,10 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
     hb->addWidget(levelTitle);
     hb->addStretch(1);
     hb->addWidget(levelAddBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(levelSubtractBtn);
+    hb->addSpacing(G::headerBtnGap);
+    hb->addWidget(levelIntersectBtn);
     hb->addSpacing(G::headerBtnGap);
     /* The overlay tint swatch is inserted HERE by setTintButton, ahead of the band's
        [:]. See setTintButton for why it lives on this band. */
@@ -355,7 +370,7 @@ void MaskPanel::showLevelMenu()
     /* Deferred: the handler rebuilds this panel's rows from under the click, exactly as
        SubmaskList's menu does. */
     if (chosen == aAdd)
-        QTimer::singleShot(0, this, [this]{ emit addSubmaskRequested(); });
+        QTimer::singleShot(0, this, [this]{ emit addSubmaskRequested(int(MaskOp::Add)); });
     else if (chosen == aShowAll || chosen == aHideAll)
         submaskList->setAllEnabled(chosen == aShowAll);      // defers itself
     else if (chosen == aReset)
@@ -409,6 +424,24 @@ void MaskPanel::showMaskLevel(bool show)
 {
     levelShown = show;
     syncLevelVisible();
+    syncOpButtons();
+}
+
+void MaskPanel::syncOpButtons()
+{
+    /* Subtract and Intersect combine with the mask so far, so an empty mask has nothing
+       for them to act on. Disabled with the reason in the tooltip rather than hidden:
+       the user should see the two ops exist and learn what unlocks them. */
+    if (!levelSubtractBtn || !levelIntersectBtn) return;
+    levelSubtractBtn->setEnabled(levelShown);
+    levelIntersectBtn->setEnabled(levelShown);
+    const QString need = levelShown ? QString()
+                       : QString("\n(Add a submask first: there is no mask yet to ");
+    levelSubtractBtn->setToolTip("Subtract from this mask: pick a mask tool" +
+                                 (levelShown ? QString() : need + "cut from.)"));
+    levelIntersectBtn->setToolTip("Intersect with this mask: pick a mask tool -- only "
+                                  "where the two overlap survives" +
+                                  (levelShown ? QString() : need + "overlap.)"));
 }
 
 void MaskPanel::syncLevelVisible()

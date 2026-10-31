@@ -105,7 +105,7 @@ public:
 
     /* ---- TEST HOOK, no production caller ----
        Build a scope carrying `submasks` committed brush submasks plus one pending, on the
-       current image. The UI route to this is newScope() -> showMaskMenu() -> beginMaskTool,
+       current image. The UI route to this is newScope() -> chooseMaskTool() -> beginMaskTool,
        and both of those are MODAL (a name dialog and a popup menu), so a headless driver
        cannot use them. MW::runDevelopStressTest calls this to exercise the Develop render
        path under ThreadSanitizer (tests/tsan/run_tsan_develop.sh) -- the proxy render runs
@@ -494,7 +494,7 @@ public:
     void commitPendingMask(bool keepVeil = false);
     /* Land the pending submask NOW instead of waiting out the settle timer: called by
        anything that leaves the scope or the image it belongs to. Commits it if there is
-       anything worth keeping, drops it silently if not (pendingMaskIsUntouched). No
+       anything worth keeping, drops it silently if not (pendingMaskCoversNothing). No
        prompt -- committing is automatic, so there is no third answer to ask for. */
     void flushMaskAutoCommit();
     /* Return: the user says they are done with the open submask. Lands it if it is still
@@ -506,10 +506,10 @@ public:
        end re-arms it. Driven by ImageView::maskStrokeStateChanged via MW. */
     void setMaskStrokeActive(bool painting);
     /* True when committing the pending submask would achieve nothing -- it covers no
-       pixels (an unpainted Brush/Object, an unsampled Color Range) or is still exactly
-       what beginMaskTool built. The settle timer and flushMaskAutoCommit drop those
-       instead of committing them, so a tool picked and then ignored leaves nothing. */
-    bool pendingMaskIsUntouched(const MaskComponent &m) const;
+       pixels (an unpainted Brush/Object, an unsampled Color Range). The settle timer
+       and flushMaskAutoCommit drop those instead of committing them. Any other picked
+       tool is a real mask and is kept, touched or not. */
+    bool pendingMaskCoversNothing(const MaskComponent &m) const;
 
     /* Enable/disable the WHOLE Develop panel so it "looks" disabled, not just the dock
        frame. Greys the property tree (caption text, which the delegate paints from the
@@ -622,15 +622,18 @@ public slots:
     /* ---- ScopeHeader widget handlers (the scope dropdown + buttons above the tree) ---- */
     void onScopeSelected(const QString &name);    // dropdown picked a different scope
     void renameActiveScope();                     // [R] rename (dialog); Global cannot be renamed
+    void renameActiveScopeTo(const QString &name);  // rename in place (the combo's own edit)
     void duplicateActiveScope();                  // menu: copy the mask, "<name> duplicate"
     void resetActiveScope();                      // header reset: scope back to defaults
     /* Menu "Reset all edits": wipe the WHOLE recipe -- every scope and mask, the
        crop/warp geometry and the spot heals -- then clear the history and the sidecar
        record, for EVERY selected image. Destructive and confirmed. */
     void resetAllEdits();
-    void newScope();                              // [+] add a scope (name dialog, default "Scope n")
+    void newScope();                              // [+] tools menu, then a "Mask n" scope
     void deleteScope();                           // [-] remove the selected scope (not Global)
-    void showMaskMenu();                          // pop SubmaskDialog (op + type) and begin one
+    /* Pop the mask tools menu and begin the chosen tool, combining with the mask by op
+       (MaskOp; the Mask band's [+] [-] [n] pass theirs, everything else adds). */
+    void showMaskMenu(int op = int(MaskOp::Add));
     void onScopePreviewToggled(bool shown);       // [E] show/ignore the whole scope
     void onScopeEnabledToggled(int index, bool on); // the scope bar's show/hide eye
     void setTreeCollapsed(bool collapsed);        // > hide/show this tree (the scope's items)
@@ -926,7 +929,7 @@ signals:
     void maskTintShowRequested();
     /* The scope menu's "Show mask overlay" row was clicked -> MW flips the tint. */
     void maskOverlayToggleRequested();
-    /* A new submask was chosen in SubmaskDialog -> ImageView shows the tint. Separate
+    /* A new submask was chosen in the mask tools menu -> ImageView shows the tint. Separate
        from maskTintShowRequested (the disconnected auto-show) so it is the one rule. */
     void maskOverlayShowRequested();
     /* Rebuild the overlay tint ALONE (previewed op changed, overlay colour changed).
@@ -985,23 +988,31 @@ private:
     void addCalibrate();
     void addColorGrade();
     void addPointColor();
+    void addMixer();
     /* The section bodies, so each can sit under its own header (the separate layout) or
        under the combined Color panel's. */
     void addColorGradeBody(const QModelIndex &parIdx, const QString &parent);
     void addPointColorBody(const QModelIndex &parIdx, const QString &parent);
     void addCalibrateBody(const QModelIndex &parIdx, const QString &parent);
+    /* Color Mixer (Mix): Lightroom's Mixer > HSL. Its own Hue / Saturation / Luminance /
+       All radios pick which of the three 8-slider groups show (mixerKindMode, QSettings
+       "Develop/mixerKindMode", 3 = All); like the panel modes, a switch rebuilds. */
+    void addMixerBody(const QModelIndex &parIdx, const QString &parent);
+    int  mixerKindMode = 3;                // 0 Hue, 1 Saturation, 2 Luminance, 3 All
+    QPointer<QWidget> mixerKindRow;        // the radios' row, centred in the panel
+    QPointer<QRadioButton> mixerKindRadios[4];   // " *" on an edited group
     /* ---- The combined Color panel (2026-10-12, pending sign-off) -------------------
-       ONE "Color" section whose Tone / Hue / RGB radio buttons show the Color Grade,
-       Point Color or Calibrate rows -- only the selected body is built, and a switch
+       ONE "Color" section whose Tone / Hue / Mix / RGB radio buttons show the Color
+       Grade, Point Color, Color Mixer or Calibrate rows -- only the selected body is built, and a switch
        rebuilds the tree. combinedColorPanel picks this layout or the separate sections
        (QSettings "Develop/combinedColorPanel"); the separate one is the fallback until
        the user signs off, then goes. Its header is PV_ColorPanel, which stands for all
-       three groups (eye, Reset, the edited star). */
+       four groups (eye, Reset, the edited star). */
     void addColorPanel();
     bool combinedColorPanel = true;
-    int  colorPanelMode = 0;               // 0 Tone, 1 Hue, 2 RGB
+    int  colorPanelMode = 0;               // 0 Tone, 1 Hue, 2 Mix, 3 RGB
     QPointer<QWidget> colorPanelModesRow;  // the radios' row, centred in the panel
-    QPointer<QRadioButton> colorPanelRadios[3];  // Tone/Hue/RGB, " *" when edited
+    QPointer<QRadioButton> colorPanelRadios[4];  // Tone/Hue/Mix/RGB, " *" when edited
     int  colorPanelModeGroup() const;      // the PV_* the selected mode shows
     /* A panel's centred mode radios + their gaps (the Color and Lens panels). */
     void addModeRadioRow(const QModelIndex &parIdx, const QString &parent,
@@ -1190,7 +1201,7 @@ private:
        table, so this array must be at least as long as that table -- grow both together.
        Lets updateSectionHeaderCaptions skip the model search when nothing flipped -- it
        runs on every params change. */
-    int hdrStar[10] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+    int hdrStar[11] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
 
     /* ---- Curves (tone curve) ----------------------------------------------------------
        An embedded index widget like the wheels, re-created on every tree rebuild. The
@@ -1324,7 +1335,7 @@ private:
     enum PreviewGroup { PV_Scope = -1, PV_Basic = 0, PV_Color = 1,
                         PV_ColorGrade = 2, PV_Effects = 3, PV_Calibrate = 4,
                         PV_Curves = 5, PV_Detail = 6, PV_PointColor = 7,
-                        PV_ColorPanel = 8, PV_Lens = 9 };
+                        PV_ColorPanel = 8, PV_Lens = 9, PV_Mixer = 10 };
     BarBtn *makeEyeBtn(const QString &tooltip, int group);   // queue an eye toggle into `btns`
     /* The section header's trailing menu button (the vertical ellipsis), built right after
        its eye so every header in the dock ends with the same pair -- eye, then menu. It
@@ -1345,7 +1356,7 @@ private:
            *colorEyeBtn = nullptr, *colorGradeEyeBtn = nullptr,
            *calibrateEyeBtn = nullptr, *effectsEyeBtn = nullptr, *lensEyeBtn = nullptr,
            *detailEyeBtn = nullptr, *pointColorEyeBtn = nullptr,
-           *colorPanelEyeBtn = nullptr;
+           *colorPanelEyeBtn = nullptr, *mixerEyeBtn = nullptr;
     /* The Effects dropdown row's own [eye] [reset], acting on the SHOWN effect only
        (EditScope::showVignette / showGrain / showKaleido / showBlur / showOrton;
        resetEffect). */
@@ -1725,7 +1736,7 @@ private:
 
     /* Mask UI state. selectedMaskIndex is the component shown in the shared Mask Tool panel (-1 =
        none). isRebuildingMasks guards the tree-selection handler while we add/remove mask rows.
-       Adding one pops SubmaskDialog (op + type) rather than a menu. UR_MaskIndex tags a
+       Adding one pops the mask tools menu (chooseMaskTool); the op is the button used. UR_MaskIndex tags a
        mask row's caption with its component index so selection can find it. */
     int selectedMaskIndex = -1;
     bool isRebuildingMasks = false;
@@ -1747,14 +1758,10 @@ private:
     int  pendingOp = 0;                       // op the overlay + render preview
     int  latchedMaskOp = 0;                   // op the last shaping action set (survives
                                               // the key release; see latchMaskOp)
-    /* What the user picked in SubmaskDialog when this submask was added. The RESTING op:
-       a held modifier overrides it while shaping, and releasing the modifier comes back
-       here rather than to Add, because the dialog is where the op was decided. */
+    /* The op this submask was added with ([+] [-] [n]). The RESTING op: a held modifier
+       overrides it while shaping, and releasing the modifier comes back here rather than
+       to Add, because the button is where the op was decided. */
     int  chosenMaskOp = 0;
-    /* The pending submask AS BUILT by beginMaskTool, before the user touched it. The
-       baseline pendingMaskIsUntouched compares against, so leaving a scope with a tool
-       that was picked and then ignored asks nothing. */
-    MaskComponent pendingPristine;
     bool maskPanelOpen = false;
     /* Keep the combined-mask (red) overlay showing after a tool is committed/finished
        (the panel closes but the result stays visible + 'O'-toggleable). Cleared on scope/
@@ -1770,12 +1777,15 @@ private:
     bool maskVeilEngagedNow = false;
     void syncMaskVeilEngagement();       // emit show/hide iff engagement flipped
     /* Append a new pending submask of this tool, combining with the mask by `op`. The
-       op arrives from SubmaskDialog rather than from a held modifier, and is forced to
+       op arrives from the button that raised the tools menu, not a held modifier, and is forced to
        Add on an empty mask. It is NOT written into the component here -- the component
        carries Add until the submask lands -- it seeds pendingOp/latchedMaskOp/
        chosenMaskOp, which the veil, the render and the canvas chip preview. */
     void beginMaskTool(int tool, int op = int(MaskOp::Add));
     void onMaskToolChosen(int tool, int op = int(MaskOp::Add));  // -> beginMaskTool
+    /* The mask tools menu at the cursor, grouped by separators; the MaskTool picked, or
+       -1. firstMask greys the Refine Brush (it needs a mask above it). */
+    int chooseMaskTool(bool firstMask);
     void cancelMaskTool();                   // [x]/Esc: discard the pending submask
     MaskComponent *editingMaskComp();        // the tool being built, or null
 

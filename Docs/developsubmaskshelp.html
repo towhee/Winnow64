@@ -22,9 +22,12 @@ are combined into the one mask the scope applies.</p>
 them; both can be moved, rotated and re-shaped afterwards.</li>
 <li><b>Beam Gradient</b> &mdash; a band across the photo, strongest along its centre line
 and fading out the same way on both sides.  Drag the centre to move it, an end handle to
-turn it, and a side handle to set its width.  Its <b>Taper</b> slider narrows the beam
-toward one end (positive) or the other (negative); at 100 the edges meet in a point at
-that end's handle, like a shaft of light.</li>
+turn it, and a side handle to set its width.  The green knob on the stem sticking out from each
+side handle tapers it: swing it round to tilt the edges, narrowing the beam toward one end
+and widening it toward the other (the <b>Taper</b> slider does the same).  Fully tilted,
+the edges meet in a point at that end's handle, like a shaft of light.  The solid lines are its edges; the dashed
+lines inside them mark where the fade reaches half strength.  Hold <b>Shift</b> and scroll
+to change the feather, as on the Radial Gradient.</li>
 <li><b>Brush</b> &mdash; paint the selection by hand; Opt/Alt erases.</li>
 <li><b>Color Range</b> and <b>Luminance Range</b> &mdash; content-based: sample a colour
 or set a band of tones and the selection follows the picture, not a shape.</li>
@@ -42,20 +45,21 @@ union of everything selected.</li>
 </ul>
 
 <h2>Adding one</h2>
-<p><b>[+]</b> on the <b>Mask</b> band (or <b>M</b>, or <b>Add submask</b> in the band's
-<b>[&#8942;]</b> menu) opens the <b>Add submask</b> dialog, which asks the two questions
-together &mdash; what the submask does to the mask, and what kind of submask it is.</p>
+<p>The <b>Mask</b> band has three buttons, one for each thing a submask can do to the
+mask.  Each opens a menu of mask tools; pick one to add it.</p>
 
 <ul>
-<li><b>+ Add</b>: the new area joins the mask.</li>
-<li><b>- Subtract</b>: the new area is cut out of it.</li>
-<li><b>&#8745; Intersect</b>: only where the new area and the mask overlap survives.</li>
+<li><b>[+] Add</b>: the new area joins the mask.  <b>M</b>, and <b>Add submask</b> in the
+band's <b>[&#8942;]</b> menu, do the same.</li>
+<li><b>[-] Subtract</b>: the new area is cut out of it.</li>
+<li><b>[&#8745;] Intersect</b>: only where the new area and the mask overlap
+survives.</li>
 </ul>
 
-<p>The first submask in an empty mask has nothing to combine with, so only Add is offered
-there.  Below that, pick the type: <b>Drawn</b> (gradients and the brush), <b>Content</b>
-(colour and luminance ranges) or <b>Automatic</b> (subject, sky, background, depth,
-object).  Double-click a type to add it in one gesture.</p>
+<p>The tools are grouped: drawn (gradients, beam and the brush), by content (colour and
+luminance ranges), automatic (subject, sky, background, depth, object, segmenter) and the
+Refine Brush.  An empty mask has nothing to subtract from or intersect with, so
+<b>[-]</b> and <b>[&#8745;]</b> stay greyed until it has its first submask.</p>
 
 <p>Then define the submask on the picture.  <b>There is nothing to press afterwards</b>:
 two seconds after your last edit it folds itself into the mask and the chip top-left of
@@ -67,7 +71,7 @@ to imagine it.</p>
 <p>The old keyboard shortcut still works if you prefer it: hold <b>Opt/Alt</b> while you
 paint or drag to override the chosen op with Subtract, <b>Shift+Opt/Alt</b> for Intersect.
 The override sticks once you shape with it held, and letting the key go returns to the op
-you picked in the dialog.  Once the submask has landed its op is changed on its own row
+of the button you added it with.  Once the submask has landed its op is changed on its own row
 instead, and changing your mind about the whole thing is <b>[&#8942;]</b> &rarr;
 <b>Delete</b> on the row (or Cmd+Z / the History panel).</p>
 

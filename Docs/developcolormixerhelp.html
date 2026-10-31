@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Color Mixer</h1>
+
+<h2>What it does</h2>
+<p>The Color Mixer adjusts colour by <b>hue range</b>.  It works on eight ranges: Red,
+Orange, Yellow, Green, Aqua, Blue, Purple and Magenta.  Each range has its own Hue,
+Saturation and Luminance slider.  This is Lightroom's Color Mixer with Adjust set to
+HSL.</p>
+
+<p>A slider moves every pixel of that hue, whatever its brightness.  Bluer skies, a
+calmer orange skin tone or darker green foliage are each one slider.</p>
+
+<p>Greys and near-greys are left alone, because their hue is mostly noise.</p>
+
+<h2>The controls</h2>
+<p>In the combined Color panel this is the <b>Mix</b> mode.  The <b>Hue</b>,
+<b>Saturation</b>, <b>Luminance</b> and <b>All</b> buttons choose which sliders are
+shown.  All shows the three groups of eight together.</p>
+
+<p>Every slider runs from &minus;100 to +100, with 0 meaning no change.  Double-click a
+slider to return it to 0.</p>
+
+<p><b>Hue</b> shifts a range toward its neighbours.  The slider's colours show the
+direction: Red moves toward Magenta (left) or Orange (right).</p>
+
+<p><b>Saturation</b> makes a range more or less colourful.  At &minus;100 the range
+becomes grey.</p>
+
+<p><b>Luminance</b> darkens (left) or brightens (right) a range.</p>
+
+<p>A button whose group has edits is marked with a <b>*</b>, so you can see changes in a
+group that is not showing.</p>
+
+<p>The section's <b>[&#8942;]</b> menu has <b>Reset</b>, and its eye is a before/after
+that keeps your values.</p>
+
+<h2>How the ranges blend</h2>
+<p>A colour between two range centres takes a smooth blend of both ranges' sliders, so
+there is no hard edge between them.  Moving all eight sliders in a group by the same
+amount changes every colour by that amount.</p>
+
+<h2>Mix, Hue and Color Range masks</h2>
+<p><b>Mix</b> selects by hue only: all the blues, light or dark, pale or vivid.</p>
+
+<p><b>Hue</b> (Point Color) selects one sampled colour by hue, saturation and lightness
+together.  Use it when Mix would also move something else of the same hue.</p>
+
+<p>A <b>Color Range</b> mask selects colours too, and can then apply any adjustment, not
+just hue, saturation and luminance.</p>
+
+<h2>Where it sits in the pipeline</h2>
+<p>The mixer runs after the tone curve and the Color panel's global Hue and Saturation.
+It runs before Point Color, so a Point Color sample sees the mixed colour.</p>
+
+<p>The work is done on the colours as displayed, in a perceptual colour space (OKLab).
+This keeps a range's change even across it.</p>
+
+<p>The strengths are first estimates and have not yet been matched to Lightroom's.</p>
+
+</body>
+</html>

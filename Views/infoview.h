@@ -31,6 +31,12 @@ public:
     InfoView(QWidget *parent, DataModel *dm, Metadata *metadata, IconView *thumbView,
              Filters *filters, BuildFilters *buildFilters);
     void updateInfo(const int &row);
+    /* Exposure as the Shutter speed / Aperture / ISO rows show it ("1/50 sec", "f/8",
+       "800"); empty when the value is missing. Shared with the History dock title bar
+       (MW::updateExposureSubtitle). */
+    static QString shutterText(const QVariant &value);
+    static QString apertureText(const QVariant &value);
+    static QString isoText(const QVariant &value);
     /* The Tags header says where an edit to the current image is saved -- see the
        definition. Called by updateInfo and when the permission is toggled. */
     void updateSaveNote();
