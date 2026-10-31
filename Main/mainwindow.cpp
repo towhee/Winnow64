@@ -16375,6 +16375,55 @@ void MW::developPasteSettings()
     developProperties->pasteDevelopSettings();
 }
 
+void MW::developLastGlobal()
+{
+/*
+    Develop dock "Last global": the last edited image's Global settings and per-image
+    items onto the selection, one history step per image. Mask scopes stay put.
+*/
+    if (G::isLogger) G::log("MW::developLastGlobal");
+    if (!developProperties) return;
+    developProperties->applyLastGlobal();
+}
+
+void MW::developLastWhole()
+{
+/*
+    Develop dock "Last + masks": the last edited image's whole recipe, mask scopes
+    included, onto the selection (Lightroom's Previous).
+*/
+    if (G::isLogger) G::log("MW::developLastWhole");
+    if (!developProperties) return;
+    developProperties->applyLastWhole();
+}
+
+void MW::syncDevelopLastActions()
+{
+    if (!developLastGlobalAction || !developLastWholeAction) return;
+    const bool inDevelop = G::operationMode == G::OperationMode::Develop;
+    const QString src = developProperties ? developProperties->lastEditSource() : QString();
+    const bool on = inDevelop && !src.isEmpty();
+    /* Disabled with a reason rather than a popup after the click: the tooltip says
+       where the settings would come from, or why there is nowhere to take them from.
+       PanelButtonBar::MakeButton copies both onto the buttons on QAction::changed. */
+    const QString name = QFileInfo(src).fileName();
+    QString globalTip, wholeTip;
+    if (!inDevelop) {
+        globalTip = wholeTip = tr("Available in Develop mode");
+    }
+    else if (src.isEmpty()) {
+        globalTip = wholeTip = tr("No other image has been edited yet this session");
+    }
+    else {
+        globalTip = tr("Apply the global settings of %1 to the selection").arg(name);
+        wholeTip = tr("Apply all settings and masks of %1 to the selection").arg(name);
+    }
+    developLastGlobalAction->setEnabled(on);
+    developLastGlobalAction->setToolTip(globalTip);
+    developLastWholeAction->setEnabled(on);
+    developLastWholeAction->setToolTip(wholeTip);
+}
+
 void MW::developAddToMask()
 {
 /*

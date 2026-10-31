@@ -1385,6 +1385,25 @@ void MW::createUtilActions()
     addAction(developPasteSettingsAction);
     connect(developPasteSettingsAction, &QAction::triggered, this, &MW::developPasteSettings);
 
+    /* Last global / Last + masks (Lightroom's Previous): the last edited image's settings
+       onto the selection in one click, without the Copy checklist. No shortcut -- Cmd+Opt+V,
+       Lightroom's key for it, is Paste here. Gated on Develop mode AND an earlier edited
+       image (syncDevelopLastActions), so they start disabled. */
+    developLastGlobalAction = new QAction(tr("Apply Last Global Settings"), this);
+    developLastGlobalAction->setObjectName("developLastGlobal");
+    developLastGlobalAction->setEnabled(false);
+    addAction(developLastGlobalAction);
+    connect(developLastGlobalAction, &QAction::triggered, this, &MW::developLastGlobal);
+
+    developLastWholeAction = new QAction(tr("Apply Last Settings + Masks"), this);
+    developLastWholeAction->setObjectName("developLastWhole");
+    developLastWholeAction->setEnabled(false);
+    addAction(developLastWholeAction);
+    connect(developLastWholeAction, &QAction::triggered, this, &MW::developLastWhole);
+    if (developProperties)
+        connect(developProperties, &DevelopProperties::lastEditSourceChanged,
+                this, &MW::syncDevelopLastActions);
+
     /* Copy / Paste as a button row pinned to the bottom of the Develop panel (the History
        + Presets dock): the two actions most used while carrying a look from one image to
        the next, put where the History and Presets lists they work with already are, and
@@ -1398,6 +1417,17 @@ void MW::createUtilActions()
         PanelButtonBar::Add(historyPanel, QList<QAbstractButton*>{
                 PanelButtonBar::MakeButton(developCopySettingsAction,  tr("Copy")),
                 PanelButtonBar::MakeButton(developPasteSettingsAction, tr("Paste"))
+            }, PanelButtonBar::Bottom);
+    }
+
+    /* The same kind of row at the bottom of the Develop editor dock, for the two Last
+       actions. developDock's widget is the container (action row + scroll area, the
+       scroll stretched), so the appended row lands on the bottom edge. Built here for
+       the same reason as the row above: the dock exists, the actions did not. */
+    if (developDock && developDock->widget()) {
+        PanelButtonBar::Add(developDock->widget(), QList<QAbstractButton*>{
+                PanelButtonBar::MakeButton(developLastGlobalAction, tr("Last global")),
+                PanelButtonBar::MakeButton(developLastWholeAction,  tr("Last + masks"))
             }, PanelButtonBar::Bottom);
     }
 
@@ -2958,6 +2988,8 @@ void MW::createDevelopMenu()
     developMenu->addSeparator();
     developMenu->addAction(developCopySettingsAction);
     developMenu->addAction(developPasteSettingsAction);
+    developMenu->addAction(developLastGlobalAction);
+    developMenu->addAction(developLastWholeAction);
     developMenu->addAction(developSavePresetAction);
     /* Grey the mode-local items outside Develop mode: their keys belong to other actions
        there, so an enabled item would advertise a shortcut that does something else. */
@@ -4305,6 +4337,7 @@ void MW::syncDevelopMenuEnabled()
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);
+    syncDevelopLastActions();           // mode-local too, plus a source to take from
 
     /* The Export with preset submenu is Develop-local for the same reason, but it is a
        QMenu (no action of its own), and it is meaningless with no saved presets. */

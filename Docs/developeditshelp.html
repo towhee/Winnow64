@@ -83,6 +83,15 @@ scope.</li>
 mechanism as a preset, unnamed.</li>
 </ul>
 
+<p><b>Last global</b> (bottom of the Develop panel) applies the Global settings of the
+last image you edited &mdash; plus its crop, level, warp, spots and lens settings &mdash;
+to the selected images.  Masks are not copied.</p>
+<p><b>Last + masks</b> applies the last edited image's whole recipe, masks included.
+Subject, Sky and Background masks are redrawn for each image; brush, gradient and object
+masks land where they were on the source image.</p>
+<p>Both are one undoable History step per image.  Hover a button to see which image the
+settings come from.</p>
+
 <h2>What is saved</h2>
 <p>The whole scope list &mdash; names, enabled flags, every scope's values and every
 mask's submasks &mdash; is the develop recipe, written to the image's sidecar.  The

@@ -9334,6 +9334,9 @@ void DevelopProperties::forgetImage(const QString &key)
     stackCache.remove(key);
     if (history) history->forget(key);
     if (key == toppedUpPath) toppedUpPath.clear();
+    if (key == lastEditedPath) lastEditedPath.clear();
+    if (key == priorEditedPath) priorEditedPath.clear();
+    emit lastEditSourceChanged();
     if (key != currentImagePath) return;
     /* Reload in place: clear the current path so setCurrentImage does not return early
        (and has nothing of the old recipe to flush), then load the new one. */
@@ -9393,6 +9396,7 @@ void DevelopProperties::setCurrentImage(const QString &fPath)
        onWorkingImageReady re-resolves it when the decode lands. */
     wbRowAsShotK = -1.0f;
     currentImagePath = fPath;
+    emit lastEditSourceChanged();       // which of the two slots is "other" may flip
     if (fPath.isEmpty()) {
         if (historyView) historyView->setImage(QString());
         return;
@@ -9478,6 +9482,14 @@ void DevelopProperties::noteScopeEdit(const QString &scope, const QString &actio
     if (history && !isPopulating && !isRestoringHistory && !action.isEmpty()) {
         history->record(currentImagePath, scope, action, value, mergeKey,
                         stackCache.value(currentImagePath));
+    }
+    /* The source for Last global / Last + masks: the image of the latest real edit,
+       and the distinct one before it (lastEditSource picks the one not on screen). */
+    if (!isPopulating && !isRestoringHistory && !action.isEmpty() &&
+        currentImagePath != lastEditedPath) {
+        priorEditedPath = lastEditedPath;
+        lastEditedPath = currentImagePath;
+        emit lastEditSourceChanged();
     }
     /* Multi-image editing: whatever this commit changed in the GLOBAL scope is queued
        for the other selected images. Hooked here rather than at each edit site so it
@@ -10416,30 +10428,10 @@ void DevelopProperties::applyPreset(const QString &name)
                             QString::number(n) + " images.");
 }
 
-int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QString &label,
-                                         const QString &source)
+void DevelopProperties::retireForStackReplace()
 {
-/*
-    Merge a preset-shaped object into the current image for real. Shared by applyPreset
-    (a named preset from the Presets dock) and pasteDevelopSettings (the unnamed develop
-    clipboard) -- the two differ only in where the object came from and how the history
-    step and any warning are worded.
-
-    With more than one image selected it lands on the whole selection: the current image
-    here, every other selected image via propagatePreset. Returns how many images were
-    written.
-*/
-    /* Whatever the sliders had queued for the selection belongs BEFORE this preset. */
+    /* Whatever the sliders had queued for the selection belongs BEFORE the new state. */
     flushPropagation();
-    /* A preset stamped newer than this build's schema may hold keys whose MEANING has
-       since changed; DevelopPresets::migrate passes it through untouched and assignParam
-       drops what it does not know, so it still applies -- just not necessarily in full.
-       Warned here rather than in read(), which also runs on hover-preview. */
-    if (preset.version > DevelopPresets::kVersion)
-        warnOnce("newerPreset",
-                 source + " was saved by a newer version of Winnow.\n"
-                 "Settings this version does not understand were skipped.");
-
     /* A half-built mask tool indexes into the scope we are about to rewrite, so retire it
        first (the same teardown applyHistoryEntry does). */
     if (maskPanelOpen) {
@@ -10458,6 +10450,31 @@ int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QStr
     previewActive = false;              // the previewed state is about to become real
     previewStack = EditStack();
     clearBeforeAfterLatch();            // committing a state is not comparing two
+}
+
+int DevelopProperties::applyPresetObject(const DevelopPreset &preset, const QString &label,
+                                         const QString &source)
+{
+/*
+    Merge a preset-shaped object into the current image for real. Shared by applyPreset
+    (a named preset from the Presets dock) and pasteDevelopSettings (the unnamed develop
+    clipboard) -- the two differ only in where the object came from and how the history
+    step and any warning are worded.
+
+    With more than one image selected it lands on the whole selection: the current image
+    here, every other selected image via propagatePreset. Returns how many images were
+    written.
+*/
+    /* A preset stamped newer than this build's schema may hold keys whose MEANING has
+       since changed; DevelopPresets::migrate passes it through untouched and assignParam
+       drops what it does not know, so it still applies -- just not necessarily in full.
+       Warned here rather than in read(), which also runs on hover-preview. */
+    if (preset.version > DevelopPresets::kVersion)
+        warnOnce("newerPreset",
+                 source + " was saved by a newer version of Winnow.\n"
+                 "Settings this version does not understand were skipped.");
+
+    retireForStackReplace();
 
     isRestoringHistory = true;          // suppress recording while the panel repopulates
     EditStack s = stackCache.value(currentImagePath);
@@ -10623,6 +10640,132 @@ bool DevelopProperties::hasCopiedSettings() const
 QString DevelopProperties::copiedSettingsSource() const
 {
     return presets ? presets->readClipboard().sourceImage : QString();
+}
+
+/* ---- Last edited image (Lightroom's Previous) ------------------------------------- */
+
+QString DevelopProperties::lastEditSource() const
+{
+    const QString src = (lastEditedPath != currentImagePath) ? lastEditedPath
+                                                             : priorEditedPath;
+    if (src.isEmpty() || src == currentImagePath) return QString();
+    /* Edited this session, so its stack is cached (only forgetImage drops one, and it
+       clears the slot too). A reset back to identity has nothing to carry. */
+    if (stackCache.value(src).isIdentity()) return QString();
+    return src;
+}
+
+void DevelopProperties::applyLastGlobal()
+{
+/*
+    "Last global": Paste Settings from the last edited image with every checklist item
+    ticked, no dialog. The adjustments come from its Global scope and land on Global
+    here; the per-image items (crop, level, warp, spots, lens, raw NR, tone splits) go
+    with them, exactly as a paste would carry them. Mask scopes stay per image.
+*/
+    if (G::isLogger) G::log("DevelopProperties::applyLastGlobal");
+    const QString src = lastEditSource();
+    if (src.isEmpty() || currentImagePath.isEmpty()) return;   // the action is greyed
+    const EditStack s = stackCache.value(src);
+    const QString srcName = QFileInfo(src).fileName();
+
+    /* Every leaf, except the Auto commands (the values they solved to travel instead)
+       and, from a non-raw source, the raw-only rows: a JPEG's "Winnow" renderer must not
+       overwrite the engine a raw target was set to. */
+    const bool srcIsRaw = mw && mw->isFileRaw(src);
+    QHash<QString, QSet<QString>> selected;
+    for (const PresetGroup &g : buildChecklistGroups(s)) {
+        if (g.title == "Auto settings") continue;
+        QSet<QString> &keys = selected[g.title];
+        for (const PresetLeaf &leaf : g.leaves) {
+            if (!srcIsRaw && (leaf.key == "demosaic" || leaf.key == "rawNoise")) continue;
+            keys.insert(leaf.key);
+        }
+    }
+    DevelopPreset buf = buildPreset("last", 0, selected, s);
+    buf.sourceImage = srcName;          // buildPreset names the CURRENT image
+    buf.sourceScope = QStringLiteral("Global");
+
+    activeScopeIndex = 0;               // Global in, Global out
+    const int n = applyPresetObject(buf, "Last global settings", srcName);
+    if (G::popup) {
+        const QString onto = n > 1 ? " onto " + QString::number(n) + " images" : QString();
+        G::popup->showPopup("Applied global settings from " + srcName + onto + ".");
+    }
+}
+
+void DevelopProperties::applyLastWhole()
+{
+/*
+    "Last + masks": the target's whole recipe becomes the last edited image's -- every
+    scope, its masks, the geometry and spots -- on the current image and every other
+    selected one. The same shape as applyPresetObject, with a replace where it merges.
+    Linked AI scopes keep their link, so they remain one scope across the images, and
+    each image's model redraws Subject / Sky / Background from its own pixels.
+*/
+    if (G::isLogger) G::log("DevelopProperties::applyLastWhole");
+    const QString src = lastEditSource();
+    if (src.isEmpty() || currentImagePath.isEmpty()) return;   // the action is greyed
+    const EditStack srcStack = stackCache.value(src);
+    const QString srcName = QFileInfo(src).fileName();
+
+    retireForStackReplace();
+
+    const EditStack before = stackCache.value(currentImagePath);
+    const RawRender::Choice engineBefore = before.scopes.isEmpty()
+        ? RawRender::defaultChoice() : RawRender::resolve(before.scopes.first().params);
+
+    isRestoringHistory = true;          // suppress recording while the panel repopulates
+    stackCache[currentImagePath] = srcStack;
+    activeScopeIndex = 0;
+    refreshScopeList();
+    buildTree();
+    if (spotMode) emitSpotPins();
+    isRestoringHistory = false;
+
+    /* ONE history step; whole-image, so no scope prefix (as crop and spots). The other
+       selected images get the whole stack below, not the scope-0 diff this commit would
+       otherwise queue. */
+    const QString label = "Last settings + masks";
+    propagateSuspended = true;
+    noteScopeEdit(QString(), label);
+    propagateSuspended = false;
+
+    /* The other selected images, linked like propagatePreset's batch. */
+    int n = 1;
+    const QStringList targets = otherSelectedPaths();
+    if (!targets.isEmpty()) {
+        const quint64 syncId = ++nextSyncId;
+        if (history) history->stampTop(currentImagePath, syncId);
+        for (const QString &p : targets) {
+            if (p == src) continue;     // already holds this recipe
+            EditStack &t = stackFor(p);
+            if (history) history->seed(p, t);
+            t = srcStack;
+            dirty.insert(p);
+            if (history) history->record(p, QString(), label, QString(), QString(), t, syncId);
+            ++n;
+        }
+        if (history) history->seed(currentImagePath, stackCache.value(currentImagePath));
+        if (G::isDevelopDebounceWrite && debounceWriteTimer)
+            debounceWriteTimer->start(kDebounceWriteMs);
+    }
+
+    /* The renderer is part of the recipe: a switch needs the same housekeeping as a
+       preset that changes it (see applyPresetObject). */
+    const RawRender::Choice engineAfter = srcStack.scopes.isEmpty()
+        ? RawRender::defaultChoice() : RawRender::resolve(srcStack.scopes.first().params);
+    if (engineAfter != engineBefore) {
+        reflectEngine();
+        QTimer::singleShot(0, this, [this]{ buildTree(); });
+        emit rawRendererChanged();
+    }
+
+    emit paramsChanged();               // full render + settled full-res
+    if (G::popup) {
+        const QString onto = n > 1 ? " onto " + QString::number(n) + " images" : QString();
+        G::popup->showPopup("Applied all settings and masks from " + srcName + onto + ".");
+    }
 }
 
 void DevelopProperties::updatePresetFromCurrent(const QString &name)

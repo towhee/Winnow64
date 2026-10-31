@@ -545,6 +545,7 @@
   - [11.35 Copy and Paste Develop Settings](#1135-copy-and-paste-develop-settings)
     - [11.35.1 The Buffer](#11351-the-buffer)
     - [11.35.2 UI](#11352-ui)
+    - [11.35.3 Last Global / Last + Masks](#11353-last-global--last--masks)
   - [11.36 Multi-Image Editing](#1136-multi-image-editing)
     - [11.36.1 The Rules](#11361-the-rules)
     - [11.36.2 AI Mask Scopes Travel](#11362-ai-mask-scopes-travel)
@@ -7153,6 +7154,15 @@ The buffer is SESSION SCOPED, unlike Lightroom's: the DevelopPresets constructor
 Gotcha: Paste is NOT disabled on an empty clipboard. syncDevelopMenuEnabled runs on aboutToShow, and a disabled QAction's shortcut does not fire, so greying it there would leave Cmd+Opt+V dead until the menu happened to be opened again after a copy. The slot reports "No develop settings have been copied yet" instead.
 
 Paste lands on the WHOLE selection ([11.36 Multi-Image Editing](#1136-multi-image-editing)). Paste is the whole-object path: every other selected image gets the same mergePreset onto its scope 0, so the copied crop, straighten, warp and spot heals travel with it exactly as on the current image. The confirmation says how many images were written ("Pasted develop settings from IMG_1234.NEF onto 12 images"), since silence about a bulk overwrite is how a user loses forty recipes.
+
+#### 11.35.3 Last Global / Last + Masks
+
+Lightroom's Previous, as a PanelButtonBar row at the bottom of the Develop editor dock (2026-10-31): two buttons that apply the last edited image's settings to the current selection in one click, without the Copy checklist ([11.37.2 The Copy / Paste Button Row](#11372-the-copy--paste-button-row) for the bar itself). No shortcut: Cmd+Opt+V, Lightroom's key for it, is Paste here. Both are also in the Develop menu, after Paste.
+
+- SOURCE. DevelopProperties::noteScopeEdit, under the same real-edit guard as the History record (not isPopulating / isRestoringHistory, a non-empty action), keeps lastEditedPath (image of the latest edit) and priorEditedPath (the distinct one before it). lastEditSource() is whichever is not the current image, empty when neither is or its cached stack is identity. Hooked in noteScopeEdit so every edit path counts. Applying makes the current image the latest edit, so moving on and clicking again chains the look forward, as Lightroom's does. forgetImage clears a matching slot. Session scoped, like the clipboard.
+- LAST GLOBAL (applyLastGlobal). Paste with every checklist item ticked: buildChecklistGroups(source) supplies the leaves, minus Auto settings (commands; the values they solved to travel instead) and, from a non-raw source, demosaic + rawNoise, so a JPEG's renderer never overwrites a raw target's engine. buildPreset from scope 0, then applyPresetObject onto Global (activeScopeIndex = 0). Every preset rule holds: masks stay per image, spots append.
+- LAST + MASKS (applyLastWhole). The target's WHOLE EditStack becomes the source's: every scope, mask, the geometry and spots. Same shape as applyPresetObject (shared teardown retireForStackReplace; repopulate under isRestoringHistory; one noteScopeEdit with propagation suspended; the other selected images get the stack under one syncId like propagatePreset; engine-switch housekeeping when scope 0's RawRender choice changes). Linked AI scopes keep their link and are redrawn from each image's pixels; brush, gradient and object masks land where they were placed on the source.
+- STATE. MW::syncDevelopLastActions, on DevelopProperties::lastEditSourceChanged (edit on a new image, image switch, forgetImage) and from syncDevelopMenuEnabled: enabled in Develop with a source; the tooltip names the source or says why there is none (disable with a reason, no popup). MakeButton carries enabled + tooltip onto the buttons.
 
 ### 11.36 Multi-Image Editing
 

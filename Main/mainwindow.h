@@ -1360,6 +1360,10 @@ private slots:
        and merge them onto another image (Lightroom's Copy / Paste Settings). */
     void developCopySettings();
     void developPasteSettings();
+    /* The Develop dock's bottom row: apply the last edited image's Global settings, or
+       its whole recipe with masks, to the selection (Lightroom's Previous). */
+    void developLastGlobal();
+    void developLastWhole();
     /* Enter/exit the crop editor: enter shows the full frame + overlay (geometry suppressed); exit
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
@@ -2029,6 +2033,8 @@ private:
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
     QAction *developCopySettingsAction = nullptr;  // Cmd+Opt+C (real, mode-gated)
     QAction *developPasteSettingsAction = nullptr; // Cmd+Opt+V (real, mode-gated)
+    QAction *developLastGlobalAction = nullptr;    // no key; mode + source gated
+    QAction *developLastWholeAction = nullptr;     // no key; mode + source gated
     /* Title-bar toggle buttons that carry the blue "active" border while their panel /
        tool is on (kept in sync from the toggle handlers). */
     BarBtn *developScopesBtn = nullptr;
@@ -3622,6 +3628,9 @@ private:
     /* Grey the Develop menu's mode-local items outside Develop mode (aboutToShow). */
     void syncDeveloperTestMenu();
     void syncDevelopMenuEnabled();
+    /* Last global / Last + masks: enabled in Develop with an earlier edited image to
+       take from; the tooltip names it, or says why there is none. */
+    void syncDevelopLastActions();
     void startLog();
     void closeLog();
     void clearLog();

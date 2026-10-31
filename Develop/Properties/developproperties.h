@@ -686,6 +686,25 @@ public slots:
     bool hasCopiedSettings() const;
     QString copiedSettingsSource() const;   // file name copied from, or empty
 
+    /* ---- Last edited image (Lightroom's Previous) ----------------------------------
+       The Develop dock's bottom row applies the most recently edited OTHER image's
+       settings to the current selection, without the Copy checklist. The source is
+       tracked in noteScopeEdit, so every edit path counts: lastEditedPath is the image
+       of the latest real edit, priorEditedPath the distinct one before it, and
+       lastEditSource() is whichever of the two is not the current image (empty if
+       neither, or if its recipe is identity). Session scoped, like the clipboard.
+
+       applyLastGlobal: Paste with every checklist item ticked -- the Global scope plus
+       the per-image items (crop, level, warp, spots, lens, raw NR), through the same
+       applyPresetObject. Mask scopes stay per image, the preset rule.
+       applyLastWhole: the target's WHOLE EditStack becomes the source's, mask scopes
+       included. Linked AI scopes keep their link, and each image's model redraws them
+       from its own pixels; brush, gradient and object masks land where they were placed
+       on the source. Both are one history step per image and reach the selection. */
+    void applyLastGlobal();
+    void applyLastWhole();
+    QString lastEditSource() const;
+
     /* ---- White balance (Basic panel, above Temp) ---------------------------------
        The dropper: ImageView reports the normalized point the user clicked, and
        onWbSampled reads that pixel out of the pre-develop WorkingImage and solves the
@@ -827,6 +846,9 @@ signals:
        choice is already in the recipe and paramsChanged follows, whose render decodes
        with it; MW only does the engine-specific housekeeping (PMRID warm-up). */
     void rawRendererChanged();
+    /* lastEditSource() may have changed (an edit on a new image, an image switch, a
+       forgotten recipe): MW re-gates the Last global / Last + masks actions. */
+    void lastEditSourceChanged();
     /* Global raw-denoise (PMRID) run mode. autoRunDenoiseToggled: the "auto run denoise"
        checkbox flipped -- MW gates its automatic PMRID runs on it.
        runRawDenoiseRequested: the "Run Denoise" button was clicked -- run now regardless
@@ -1413,6 +1435,10 @@ private:
        confirmation can say so. */
     int  applyPresetObject(const DevelopPreset &preset, const QString &label,
                            const QString &source);
+    /* The teardown before the current image's stack is rewritten wholesale (a preset,
+       a paste, Last + masks): land queued propagation, retire a half-built or re-opened
+       mask tool and drop any preview / Before override. */
+    void retireForStackReplace();
 
     QString uniqueScopeName(const QString &name) const;  // unique within this image
 
@@ -1591,6 +1617,7 @@ private:
         bool       wb = false, tone = false, ok = false;
     } autoMemo;
     QStringList otherSelectedPaths() const;    // selected images minus the current one
+    QString lastEditedPath, priorEditedPath;   // see lastEditSource()
     /* One image's share of resetAllEdits: identity stack + history dropped + sidecar
        cleared. No dock work, so it serves the current image and the others alike. */
     void resetImageEdits(const QString &fPath);

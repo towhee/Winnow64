@@ -1,16 +1,5 @@
 WHAT'S NEW
-- Add support for Linux platform.
-- Add blur effect.
-- Add lens blur.
-- Add pattern effects.
-- Add clear picks.
-- Develop presets and Copy/Paste Settings can carry Auto tone and Auto white balance, solved per image.
-- Add Auto to develop basic adjustments.
-- User adjust app text brightness.
-- Fix corrupted thumbnail rotation from several older image editors.
-- WB for some files, including CR3, was being read incorrectly.
-- Tweak keyword edge cases.
-- Prevent Filters 'blanking' during refresh.
+- Add PanelButtonBar 'Last' below Develop Editor
 
 BUGS / TO DO
 - /Users/roryhill/Temp/Photos_to_be_curated/2026/202606/2026-06-10_Victoria/2026-07-01_0082.heic
@@ -20,6 +9,7 @@ BUGS / TO DO
 - Save pick status between sessions
 - Arrow navigation in develop when no slider has the focus
 - Add (apply) Previous to Develop
+- Change histogram button to look like a histogram.
 - Catalog management: move, copy, join, select
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup
