@@ -407,7 +407,8 @@ void MW::generateFocusStack(const QStringList paths,
     // Finished
     // --------------------------------------------------------------------
 
-    connect(fs, &FS::finished, this, [=, this](bool success, bool aborted) {
+    connect(fs, &FS::finished, this, [=, this](bool success, bool aborted,
+                                              const QString &failReason) {
         QString msg;
 
         // clear progress (Progress hides its container if no other row is live)
@@ -446,12 +447,13 @@ void MW::generateFocusStack(const QStringList paths,
                 updateStatus(false, msg);
                 G::popup->showPopup(msg, 5000);
             } else {
-                // Failure
-                msg = "Focus stacking failed.";
+                /* Failure. FS::fail already logged its reason as an issue; show it
+                   here, since FS's own status messages are silenced. */
+                msg = failReason.isEmpty() ? "Focus stacking failed." : failReason;
                 if (G::FSLog) G::log(srcFun, msg);
                 updateStatus(false, msg);
                 G::popup->showPopup(msg, 5000);
-                G::issue("Error", msg, "MW::generateFocusStack");
+                if (failReason.isEmpty()) G::issue("Error", msg, "MW::generateFocusStack");
             }
             return;
         }

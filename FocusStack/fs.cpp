@@ -159,6 +159,18 @@ void FS::status(const QString &msg)
     if (useUpdateStatus) emit updateStatus(false, statusMsg, "");
 }
 
+void FS::fail(const QString &msg, const QString &src, const QString &path)
+{
+/*
+    Report a failure that ends the run. status() is normally silent (useUpdateStatus),
+    so the first reason is kept and sent with finished() for MW to show in the status
+    bar and popup. Later failures only reach the issue log.
+*/
+    status(msg);
+    if (failReason.isEmpty()) failReason = msg;
+    G::issue("Error", msg, src, -1, path);
+}
+
 bool FS::prepareFolders()
 {
 /*
@@ -194,13 +206,14 @@ bool FS::prepareFolders()
 */
     if (grpFolderPath.isEmpty())
     {
-        status("Project root not set");
+        fail("Focus stack aborted: project root not set.", "FS::prepareFolders");
         return false;
     }
 
     QDir dir;
     if (!dir.mkpath(grpFolderPath)) {
-        status("Cannot create project root");
+        fail("Focus stack aborted: cannot create " + grpFolderPath + ".",
+             "FS::prepareFolders");
         return false;
     }
 
@@ -259,8 +272,7 @@ bool FS::prepareSources()
             const QString msg = "Could not develop " + srcInfo.fileName() +
                                 ". A raw must decode from its sensor data. "
                                 "Focus stack aborted.";
-            status(msg);
-            G::issue("Error", msg, srcFun, -1, path);
+            fail(msg, srcFun, path);
             return false;
         }
 
@@ -277,13 +289,9 @@ bool FS::prepareSources()
             const bool mixedTypes = firstInfo.suffix().compare(srcInfo.suffix(),
                                                     Qt::CaseInsensitive) != 0;
             const QString msg = mixedTypes
-                ? "Focus stack aborted: the selection mixes file types of different "
-                  "sizes (" + sizes + "). Every slice must be the same size, so stack "
-                  "either the raw files or the JPEGs, not both."
-                : "Focus stack aborted: the slices are different sizes (" + sizes +
-                  "). Check for a different crop on one of them.";
-            status(msg);
-            G::issue("Error", msg, srcFun, -1, path);
+                ? "Focus stack aborted: mixed file types."
+                : "Focus stack aborted: different slice sizes.";
+            fail(msg, srcFun, path);
             return false;
         }
 
@@ -300,8 +308,7 @@ bool FS::prepareSources()
         if (!written) {
             const QString msg = "Could not write the developed slice " + dst +
                                 ". Focus stack aborted.";
-            status(msg);
-            G::issue("Error", msg, srcFun, -1, path);
+            fail(msg, srcFun, path);
             return false;
         }
 
@@ -444,6 +451,7 @@ void FS::run()
     if (G::FSLog) G::log(srcFun, o.method);
 
     G::fsFusedPaths.clear();
+    failReason.clear();
 
     t.start();
     initializeProgress();
@@ -505,7 +513,7 @@ void FS::run()
 
     bool aborted = abortRequested();
     bool success = !aborted && !failed;
-    emit finished(success, aborted);
+    emit finished(success, aborted, failReason);
 }
 
 bool FS::runDMap()
@@ -567,10 +575,8 @@ bool FS::runDMap()
             currImage = FSLoader::load(sourcePaths.at(slice).toStdString());
         } catch (const std::exception &e) {
             QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
-            status(msg);
             qWarning() << "FS Error:" << msg;
-            G::issue("Error", msg, "FS::runDMap",
-                     -1, inputPaths.at(slice));
+            fail(msg, "FS::runDMap", inputPaths.at(slice));
 
             // Clean up threads on load failure
             for (auto &f : futures) f.waitForFinished();
@@ -588,9 +594,8 @@ bool FS::runDMap()
         }
         if (currImage.color.empty() || currImage.gray.empty()) {
             QString msg = QString("Aborting: Empty image for slice %1.").arg(slice);
-            status(msg);
             qWarning() << "FS Error:" << msg;
-            G::issue("Error", msg, "FS::runDMap", -1, inputPaths.at(slice));
+            fail(msg, "FS::runDMap", inputPaths.at(slice));
             for (auto &f : futures) f.waitForFinished();
             return false;
         }
@@ -619,10 +624,8 @@ bool FS::runDMap()
                                   currGlobal, nullptr, nullptr,
                                   aopt, &abort, statusCb, progressCb)) {
                 if (!abortRequested()) {
-                    G::issue("Error",
-                             QString("ECC alignment failed for slice %1").arg(slice),
-                             "FS::runDMap",
-                             -1, inputPaths.at(slice));
+                    fail(QString("ECC alignment failed for slice %1").arg(slice),
+                         "FS::runDMap", inputPaths.at(slice));
                 }
                 // Wait for existing background threads before aborting
                 for (auto &f : futures) f.waitForFinished();
@@ -742,9 +745,7 @@ bool FS::runDMap()
         );
 
     if (!success && !abortRequested()) {
-        G::issue("Error",
-                 "DMap streamFinish failed — fusion did not complete",
-                 "FS::runDMap");
+        fail("DMap streamFinish failed — fusion did not complete", "FS::runDMap");
     }
 
     // Diagnostic check for focus map range
@@ -819,8 +820,7 @@ bool FS::runPMax()
             currImage = FSLoader::load(sourcePaths.at(slice).toStdString());
         } catch (const std::exception &e) {
             QString msg = QString("Aborting: Failed to load slice %1. %2").arg(slice).arg(e.what());
-            status(msg);
-            G::issue("Error", msg, "FS::runPMax", -1, inputPaths.at(slice));
+            fail(msg, "FS::runPMax", inputPaths.at(slice));
             for (auto &f : futures) f.waitForFinished();
             return false;
         }
@@ -844,10 +844,8 @@ bool FS::runPMax()
                                   currGlobal, nullptr, nullptr,
                                   aopt, &abort, statusCb, progressCb)) {
                 if (!abortRequested()) {
-                    G::issue("Error",
-                             QString("ECC alignment failed for slice %1").arg(slice),
-                             "FS::runPMax",
-                             -1, inputPaths.at(slice));
+                    fail(QString("ECC alignment failed for slice %1").arg(slice),
+                         "FS::runPMax", inputPaths.at(slice));
                 }
                 return false;
             }
@@ -919,9 +917,7 @@ bool FS::runPMax()
         );
 
     if (!success && !abortRequested()) {
-        G::issue("Error",
-                 "PMax streamFinish failed — fusion did not complete",
-                 "FS::runPMax");
+        fail("PMax streamFinish failed — fusion did not complete", "FS::runPMax");
     }
 
     incrementProgress();

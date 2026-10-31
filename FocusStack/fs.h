@@ -84,7 +84,7 @@ public:
 signals:
     void updateStatus(bool isError, const QString &message, const QString &src);
     void progress(int current, int total);
-    void finished(bool success, bool aborted);
+    void finished(bool success, bool aborted, const QString &failReason);
 
 protected:
     bool abortRequested() const { return abort.load(std::memory_order_relaxed); }
@@ -114,6 +114,8 @@ private:
 
     // helpers for UI
     void status(const QString &msg);
+    void fail(const QString &msg, const QString &src, const QString &path = "");
+    QString failReason;         // first fail() this run; sent with finished()
 
     QString srcFolderPath;   // original source for input images (parent if lightroom)
     QString inputFolderPath; //
