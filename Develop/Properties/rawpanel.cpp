@@ -137,9 +137,13 @@ void RawPanel::buildUi()
     rawRadio  = new QRadioButton(tr("Raw"), editRow);
     prevRadio = new QRadioButton(tr("Embedded Preview"), editRow);
     /* Transparent like the captions beside them: an opaque control would slab the panel's
-       lifted background. */
+       lifted background. The app-wide checked colour (cadetblue, WidgetCSS::radioButton)
+       is overridden to plain caption text: the indicator already shows the choice. */
     for (QRadioButton *r : {rawRadio, prevRadio})
-        r->setStyleSheet("QRadioButton { background: transparent; }");
+        r->setStyleSheet("QRadioButton { background: transparent; color: "
+                         + G::textColor.name() + "; }"
+                         "QRadioButton:disabled { color: "
+                         + G::disabledColor.name() + "; }");
     QButtonGroup *grp = new QButtonGroup(editRow);
     grp->setExclusive(true);
     grp->addButton(rawRadio);

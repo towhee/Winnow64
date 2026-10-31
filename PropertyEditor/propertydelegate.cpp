@@ -388,6 +388,10 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
 
     bool isSelected = option.state.testFlag(QStyle::State_Selected);
     bool isExpanded = (option.state & QStyle::State_Open) > 0;
+    /* The view itself (or an ancestor, e.g. the Raw panel's PanelEditor while a canvas
+       tool greys the Develop panel) is disabled: grey every caption, whatever the row's
+       own UR_isEnabled role says. */
+    const bool viewDisabled = !option.state.testFlag(QStyle::State_Enabled);
     bool hasChildren = index.model()->hasChildren(index.model()->index(index.row(),0,index.parent()));
 
     /*
@@ -538,7 +542,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            role is actually set: trees that never set it (Preferences, Embellish) must
            keep their normal colour, and an unset QVariant is false. */
         const QVariant capEnabledV = capIndex.data(UR_isEnabled);
-        if (capEnabledV.isValid() && !capEnabledV.toBool()) capPen = disPen;
+        if (viewDisabled || (capEnabledV.isValid() && !capEnabledV.toBool()))
+            capPen = disPen;
 
         /* Header band fill: the gradient (a -> b) every header row asks for with
            UR_isBackgroundGradient -- the Preferences categories, the Embellish tree and
@@ -693,7 +698,8 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             }
 //            if (isSelected) painter->setPen(selPen);
             // disabled?
-            if (index.data(UR_isEnabled).toBool() == false) painter->setPen(disPen);
+            if (viewDisabled || index.data(UR_isEnabled).toBool() == false)
+                painter->setPen(disPen);
             /* Flash feedback: blend the caption toward white while UR_FlashLevel > 0
                (DevelopProperties animates it to 0 on a slider-row caption click). */
             const qreal flash = index.data(UR_FlashLevel).toReal();
