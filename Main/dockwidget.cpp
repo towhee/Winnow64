@@ -91,14 +91,23 @@ BarBtn::BarBtn(/*QWidget *parent*/) : QToolButton()
 
 QSize BarBtn::sizeHint() const
 {
-    return QSize(16,16);
+    return QSize(side, side);
+}
+
+void BarBtn::setSide(int px)
+{
+    side = px;
+    setIconSize(QSize(px, px));
+    updateGeometry();
 }
 
 // subclass to set opacity of icon on toolbutton
 void BarBtn::setIcon(QString path, double opacity)
 {
     QPixmap pm(path);
+    if (pm.width() > side) pm.setDevicePixelRatio(qreal(pm.width()) / side);
     QImage image(pm.size(), QImage::Format_ARGB32_Premultiplied);
+    image.setDevicePixelRatio(pm.devicePixelRatio());
     image.fill(Qt::transparent);
     QPainter p(&image);
     p.setOpacity(opacity);

@@ -47,6 +47,9 @@ public:
     QString type;           // ie "effect"
     void setIcon(QString path, double opacity);
     void setIcon(const QIcon &icon);
+    /* Button + icon side in logical px (default 16). A png larger than this is taken as
+       a high-dpi rendering (e.g. icon24/ ships 48 px glyphs for a 24 px button). */
+    void setSide(int px);
     /* Show/clear a blue "active" border, e.g. when the panel this button toggles is
        visible (mirrors a conventional checked toolbutton). */
     void setActive(bool on);
@@ -57,6 +60,7 @@ protected:
 
 private:
     QColor btnHover;
+    int side = 16;
 };
 
 //-------------------------------------------------------------------------------------------

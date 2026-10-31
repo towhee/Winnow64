@@ -52,7 +52,7 @@ public:
 
     /* The pipette glyph, drawn, not a resource. Public: the WB dropper and MW's screen
        sampler button (the Develop action row) share it. */
-    static QIcon dropperIcon(bool armed);
+    static QIcon dropperIcon(bool armed, int size = 16);
 
     QStringList scopeList;      // this image's scopes: "Global", then each mask
 

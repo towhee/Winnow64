@@ -4423,7 +4423,7 @@ std::shared_ptr<const WorkingImage> DevelopProperties::ensureWorkingImage()
     return (work && work->isValid()) ? work : nullptr;
 }
 
-QIcon DevelopProperties::dropperIcon(bool armed)
+QIcon DevelopProperties::dropperIcon(bool armed, int size)
 {
 /*
     Drawn rather than shipped as a resource: one small glyph is not worth a png, a qrc
@@ -4437,15 +4437,18 @@ QIcon DevelopProperties::dropperIcon(bool armed)
 
     NOTE the painter works in LOGICAL coordinates: setDevicePixelRatio already accounts
     for retina, so an extra p.scale(dpr) would double-scale and throw all but a corner
-    fragment off the pixmap (which is exactly what it did the first time).
+    fragment off the pixmap (which is exactly what it did the first time). SIZE is the
+    logical side; the glyph is designed on a 16 grid and scaled to it (logical scale,
+    not dpr).
 */
     const qreal dpr = 2.0;
-    const int S = 16;
+    const int S = size;
     QPixmap pm(int(S * dpr), int(S * dpr));
     pm.setDevicePixelRatio(dpr);
     pm.fill(Qt::transparent);
     QPainter p(&pm);
     p.setRenderHint(QPainter::Antialiasing, true);
+    p.scale(S / 16.0, S / 16.0);
     /* Idle sits at G::iconOpacity like every other Develop tool button, so the row does
        not have one conspicuously brighter glyph in it. The ARMED ghost is drawn at full
        opacity in the accent colour instead: dimming it as well would leave the empty

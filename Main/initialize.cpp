@@ -3248,9 +3248,16 @@ void MW::createDevelopDock()
     developDock->setTitleBarWidget(developTitleBar);
     developTitleBar->setToolTip(dockTabToolTip(developDockTabText));
 
-    // show/hide the histogram + vectorscope scopes strip
+    /* Action-row button size: 24 (2026-10-31) uses images/icon24/ (48 px glyphs, drawn
+       2x for retina). The original images/icon16/ set is kept: set 16 to revert. */
+    const int devActSide = 24;
+    const QString devActIcons = devActSide == 24 ? ":/images/icon24/" : ":/images/icon16/";
+
+    /* show/hide the histogram + vectorscope scopes strip. The only coloured glyph in the
+       row; histogram.png is the white alternative (Documentation.md 11.13.1). */
     developScopesBtn = new BarBtn();
-    developScopesBtn->setIcon(":/images/icon16/graphic.png", G::iconOpacity);
+    developScopesBtn->setSide(devActSide);
+    developScopesBtn->setIcon(devActIcons + "histogram_rgb.png", G::iconOpacity);
     developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.\n"
                                  "Right-click the scopes to choose which are shown.");
     developScopesBtn->setActive(developScopesVisible);
@@ -3260,7 +3267,8 @@ void MW::createDevelopDock()
 
     // show/hide the Transform (crop + perspective) panel
     developTransformBtn = new BarBtn();
-    developTransformBtn->setIcon(":/images/icon16/rectangle.png", G::iconOpacity);
+    developTransformBtn->setSide(devActSide);
+    developTransformBtn->setIcon(devActIcons + "rectangle.png", G::iconOpacity);
     developTransformBtn->setToolTip("Show or hide the Transform (crop) panel  (R)");
     developTransformBtn->setActive(developTransformVisible);
     connect(developTransformBtn, &BarBtn::clicked, this, &MW::toggleDevelopTransform);
@@ -3271,12 +3279,13 @@ void MW::createDevelopDock()
        recorded in the pinned "Fill" scope. DevelopProperties owns the armed state and
        drives the icon back via spotActiveChanged (full opacity armed, dimmed off). */
     developSpotBtn = new BarBtn();
-    developSpotBtn->setIcon(":/images/icon16/spot.png", G::iconOpacity);
+    developSpotBtn->setSide(devActSide);
+    developSpotBtn->setIcon(devActIcons + "spot.png", G::iconOpacity);
     developSpotBtn->setToolTip("Spot removal: click a blemish to heal it  (S)");
     connect(developSpotBtn, &BarBtn::clicked, this, &MW::toggleDevelopReplace);
     connect(developProperties, &DevelopProperties::spotActiveChanged, developSpotBtn,
-            [this](bool active){
-        developSpotBtn->setIcon(":/images/icon16/spot.png", active ? 1.0 : G::iconOpacity);
+            [this, devActIcons](bool active){
+        developSpotBtn->setIcon(devActIcons + "spot.png", active ? 1.0 : G::iconOpacity);
         developSpotBtn->setActive(active);
     });
     developActionLayout->addWidget(developSpotBtn);
@@ -3286,7 +3295,8 @@ void MW::createDevelopDock()
        window included -- into a readout with a recent list, for comparing renders across
        apps. The WB dropper's pipette glyph, ghosted while armed like that dropper. */
     developSamplerBtn = new BarBtn();
-    developSamplerBtn->setIcon(DevelopProperties::dropperIcon(false));
+    developSamplerBtn->setSide(devActSide);
+    developSamplerBtn->setIcon(DevelopProperties::dropperIcon(false, devActSide));
     developSamplerBtn->setToolTip("Read the colour of any point on screen, even in "
                                   "another app.");
     connect(developSamplerBtn, &BarBtn::clicked, this, &MW::toggleScreenSampler);
@@ -3329,7 +3339,8 @@ void MW::createDevelopDock()
        and like them it carries the blue active border while its panel is the front tab
        (driven from the History panel's presetsExpandedChanged). */
     developPresetBtn = new BarBtn();
-    developPresetBtn->setIcon(":/images/icon16/colorwheel.png", G::iconOpacity);
+    developPresetBtn->setSide(devActSide);
+    developPresetBtn->setIcon(devActIcons + "colorwheel.png", G::iconOpacity);
     developPresetBtn->setToolTip("Develop presets: apply a saved preset  (P)");
     connect(developPresetBtn, &BarBtn::clicked, this, &MW::showPresetsDock);
     /* HIDDEN (2026-09-26): the Presets dock stays reachable via P and the View menu. The
@@ -3347,7 +3358,8 @@ void MW::createDevelopDock()
 
     /* Export the developed image. STUB for now (MW::developExport is not built yet). */
     BarBtn *developExportBtn = new BarBtn();
-    developExportBtn->setIcon(":/images/icon16/lightning.png", G::iconOpacity);
+    developExportBtn->setSide(devActSide);
+    developExportBtn->setIcon(devActIcons + "lightning.png", G::iconOpacity);
     developExportBtn->setToolTip("Export the developed image  (X)");
     connect(developExportBtn, &BarBtn::clicked, this, &MW::developExport);
     developActionLayout->addWidget(developExportBtn);

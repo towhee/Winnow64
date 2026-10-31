@@ -15945,7 +15945,8 @@ void MW::toggleScreenSampler()
         screenSampler = new ScreenSampler(this);
         connect(screenSampler, &ScreenSampler::armedChanged, this, [this](bool armed) {
             if (!developSamplerBtn) return;
-            developSamplerBtn->setIcon(DevelopProperties::dropperIcon(armed));
+            developSamplerBtn->setIcon(DevelopProperties::dropperIcon(
+                armed, developSamplerBtn->iconSize().width()));
             developSamplerBtn->setActive(armed);
         });
     }
