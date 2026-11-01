@@ -279,6 +279,7 @@ void FilterPanel::runSearch(bool force)
         arrive; see searchGen for how a superseded search is dropped. */
     const int limit = resultLimit();
     const quint64 gen = ++searchGen;
+
     forcePending = forcePending || force;
     QPointer<FilterPanel> self(this);
     QThreadPool::globalInstance()->start([self, q, limit, gen] {
@@ -317,14 +318,24 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
     const bool changed = paths != resultPathList;
     /*  WHAT MOVED, for an unasked re-run over a result the model already holds. Only
         uncapped: a capped result is the newest N, so a delta there would not be what the
-        index holds. */
+        index holds.
+
+        ADDED IS WHAT THE MODEL LACKS, not what the last result lacked. The two drift: a
+        file deleted and then exported again under the same name (or any path that left
+        the model without the result being re-run) stays in resultPathList, so the next
+        result looked UNCHANGED and the export was never spliced in -- the index held it,
+        the query returned it, and the Library never showed it. So the splice no longer
+        requires the path list to have changed, and asks the model directly. Not while a
+        load is filling the model: every unread row would look missing. */
     QStringList added, removed;
-    const bool canSplice = !force && changed && resultLoaded && resultLimit() == 0
-                           && results.size() <= autoLoadMax();
+    const bool askModel = isLoaded && !G::isLoadRunning;
+    const bool canSplice = !force && (changed || askModel) && resultLoaded
+                           && resultLimit() == 0 && results.size() <= autoLoadMax();
     if (canSplice) {
         const QSet<QString> before(resultPathList.cbegin(), resultPathList.cend());
         const QSet<QString> after(paths.cbegin(), paths.cend());
-        for (const QString &p : paths) if (!before.contains(p)) added << p;
+        for (const QString &p : paths)
+            if (askModel ? !isLoaded(p) : !before.contains(p)) added << p;
         for (const QString &p : std::as_const(resultPathList))
             if (!after.contains(p)) removed << p;
     }

@@ -2,6 +2,7 @@
 #define FILTERPANEL_H
 
 #include <QLabel>
+#include <functional>
 #include <QStringList>
 #include <QWidget>
 
@@ -105,6 +106,10 @@ public:
 
     Scope scope() const { return currentScope; }
     void setScope(Scope scope);
+    /* Is this path a row of the loaded model? Set by MW (DataModel::rowFromKey). An
+       unasked re-run splices in what the model is MISSING, not just what is new since
+       the last result -- see applySearchResult. */
+    void setLoadedTest(std::function<bool(const QString &)> test) { isLoaded = std::move(test); }
     /*  THE PARKED LIBRARY (MW::setScope). parkResults keeps the result paths across a
         visit to Folders scope, which otherwise clears them; resumeParkedOnEntry makes the
         next entry to Catalog scope put them back and re-run the search UNFORCED, so the
@@ -235,6 +240,7 @@ private:
     /* Above this many added + removed paths a delta is a reload after all: the splice
        reads each added file synchronously on the GUI thread (MW::applyModelChange). */
     static constexpr int kMaxSpliceDelta = 200;
+    std::function<bool(const QString &)> isLoaded;
     bool searchPending() const { return searchGen != appliedGen; }
     void applySearchResult(quint64 gen, const QVector<CatalogRow> &rows, int total,
                            const QStringList &paths, const CatalogQuery &q, qint64 queryMs,

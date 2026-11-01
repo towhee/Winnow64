@@ -4195,7 +4195,11 @@ void MW::refreshLibraryAfterCatalogChange()
        folder counts follow. */
     if (catalogView && catalogDock && catalogDock->isVisible())
         catalogView->refresh();
-    if (filterPanel && filterDock->isVisible()) filterPanel->refresh();
+    /* In the Library the re-query is what brings new files into the loaded set, so it
+       runs whether or not the Filters dock is showing -- otherwise an export from Develop
+       (Filters hidden) stayed out of the Library until the dock was next opened. */
+    if (filterPanel && (filterDock->isVisible() || G::scope == G::Scope::Catalog))
+        filterPanel->refresh();
     updateLibraryTree();
     if (catalogRootsDlg) {
         catalogRootsDlg->setCatalogStatus(catalogStatusText());
@@ -17031,6 +17035,32 @@ void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderV
     if (G::popup) G::popup->showPopup(msg, 2500);
 
     if (result.written.isEmpty()) return;
+
+    /*
+        THE LIBRARY: THE CATALOG DECIDES. What the Library has loaded is a query over the
+        index, so an export joins it by being catalogued and matching the query -- not by
+        landing in a folder that happens to hold loaded rows. The folder path below did
+        the wrong thing here: Insert bypassed the query, and the rescan re-listed every
+        loaded folder (one per distinct folder in the whole Library) and took in whatever
+        it found on disk, catalogued or not. An export into a folder the Library had no
+        rows from (a new "Developed" subfolder) was only reached by the catalog's own
+        half-second batch, and its refresh waited for the Filters dock to be showing.
+
+        So the written files go to the scanner NOW, and the Library re-queries once they
+        are committed (the barrier in catalogCreatedFilesThenRefreshLibrary). A file the
+        scope table admits joins the loaded set through applyCatalogDelta ->
+        applyModelChange, which saves, rebuilds and restores the filters, so the current
+        filter is applied to it. One outside the scope is not catalogued and stays out.
+        Each path was already reported through FileOps::onCreated; adding them here as
+        well only means this flush need not wait for those queued reports to arrive.
+    */
+    if (G::scope == G::Scope::Catalog) {
+        catalogCreatedPending << result.written;
+        catalogCreatedFilesThenRefreshLibrary();
+        fsTree->updateCount();
+        bookmarks->updateCount();
+        return;
+    }
 
     bool loadedFolderTouched = false;
     for (const QString &folder : result.folders)

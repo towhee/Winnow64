@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 28;
+constexpr int kSchemaVersion = 29;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1814,6 +1814,27 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
                     " WHERE colorspace IN (0, 9) OR lower(ext) = 'dng'")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 29) {
+    /*
+        A CACHE REPAIR: thumbnails are now converted to sRGB from the file's embedded
+        profile (Thumb::sourceColorSpace), the same conversion the loupe makes. Every
+        thumbnail cached before this holds a wide-gamut file's pixels unconverted -- an
+        Adobe RGB export showed about a quarter less saturated in the grid. Those rows
+        are dropped so the next view rebuilds them; a thumbnail is a cache, so nothing
+        is lost.
+
+        Only what the catalog knows to be NEITHER sRGB NOR profile-less: 0 (unknown) and
+        9 (Uncalibrated, no profile) convert the same as before. Thumbnails of images
+        outside the catalog are not reached; they correct when the file changes or the
+        thumbnail cache is cleared. Re-runnable.
+    */
+        if (!q.exec("DELETE FROM thumb WHERE pathkey IN"
+                    " (SELECT pathkey FROM image WHERE colorspace NOT IN (0, 1, 9))")) {
             db.rollback();
             return false;
         }

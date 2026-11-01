@@ -13,9 +13,10 @@ public:
     /* -TagsFromFile src -all:all dst. excludeIcc adds --icc_profile:all, for a dst whose
        pixels are NOT in the source's colour space: the caller has already embedded the
        right profile and must not have the source's copied over it. upright sets
-       Orientation = 1 IN THE SAME WRITE, for a dst whose pixels are already rotated. */
+       Orientation = 1 IN THE SAME WRITE, for a dst whose pixels are already rotated.
+       extra goes into the same command, before dst, as in copyAll. */
     void copyAllTags(QString src, QString dst, bool excludeIcc = false,
-                     bool upright = false);
+                     bool upright = false, const QStringList &extra = {});
     void copyICC(QString src, QString dst);
     QString readTag(QString fPath, QString tag);
     void writeTitle(QString dst, QString val);

@@ -155,7 +155,8 @@ int ExifTool::close()
     return process.exitCode();
 }
 
-void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc, bool upright)
+void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc, bool upright,
+                           const QStringList &extra)
 {
     if (!ensureRunning("ExifTool::copyAllTags")) return;
     QByteArray args;
@@ -170,10 +171,11 @@ void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc, bool uprig
        MakerNote ExifTool cannot fully parse (OM System raws: "MakerNotes tag 0x2010 IFD
        format not handled" is a minor error, and minor errors block a rewrite). */
     if (upright) args += "-orientation#=1\n";
+    for (const QString &a : extra) args += a.toUtf8() + "\n";
     if (isOverWrite) args += "-overwrite_original\n";
     args += dst.toUtf8() + "\n";
     args += "-execute\n";
-    process.write(args);    
+    process.write(args);
 }
 
 void ExifTool::copyICC(QString src, QString dst)

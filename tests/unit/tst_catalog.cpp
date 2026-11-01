@@ -71,6 +71,7 @@ private slots:
     void versionNineFileRebuildsPathKeyedKeywords();
     void migrationStoresCaptureAsTheWallClock();
     void schema28RereadsOnlyBlankAndUncalibrated();
+    void schema29DropsWideGamutThumbs();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
     void existingKeywordLinksToItsOwnRow();
@@ -262,8 +263,10 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         stale, remembered until repaired because a cache hit never looks again; version
         26 added NO table -- the tenth data repair: IFD::readIFD read a little-endian
         SHORT with its padding, so rows with an impossible orientation or JPEG/TIFF ISO
-        have their stamp and thumb row cleared to be re-read. */
-    QCOMPARE(CacheDb::schemaVersion(), 28);
+        have their stamp and thumb row cleared to be re-read. Version 29 adds no table
+        either: it drops the cached thumbnails of wide-gamut images, which are now
+        converted to sRGB (schema29DropsWideGamutThumbs). */
+    QCOMPARE(CacheDb::schemaVersion(), 29);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1545,6 +1548,59 @@ void tst_catalog::schema28RereadsOnlyBlankAndUncalibrated()
     QCOMPARE(stamp.value(9), qint64(-1));
     QVERIFY(stamp.value(1) != -1);
     QVERIFY(stamp.value(2) != -1);
+    q.finish();
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
+void tst_catalog::schema29DropsWideGamutThumbs()
+{
+/*
+    Schema 29: thumbnails are now converted to sRGB from the file's profile, so the
+    cached thumbnail of every image the catalog knows to be wide-gamut (Adobe RGB here)
+    is dropped to be rebuilt. sRGB (1), unknown (0) and Uncalibrated (9) convert as
+    before, so theirs are kept.
+*/
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+
+    QVector<CatalogRow> rows;
+    const QList<int> spaces{0, 1, 2, 9};
+    for (int cs : spaces) {
+        CatalogRow r = rowFor(QString("cs%1.jpg").arg(cs));
+        r.colorSpace = cs;
+        rows << r;
+    }
+    QCOMPARE(cat.commit(rows), 4);
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        for (const CatalogRow &r : std::as_const(rows)) {
+            q.prepare("INSERT INTO thumb (pathkey, path, folder, jpg) VALUES (?, ?, ?, ?)");
+            q.addBindValue(cachePathKey(r.path));
+            q.addBindValue(r.path);
+            q.addBindValue(r.folder);
+            q.addBindValue(QByteArray("x"));
+            QVERIFY(q.exec());
+        }
+        QVERIFY(q.exec("PRAGMA user_version = 28"));
+    }
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(cat.isAvailable(), "a version 28 file must migrate, not be moved aside");
+
+    QSqlDatabase db = CacheDb::instance().db();
+    QSqlQuery q(db);
+    QVERIFY(q.exec("SELECT path FROM thumb"));
+    QStringList kept;
+    while (q.next()) kept << QFileInfo(q.value(0).toString()).fileName();
+    kept.sort();
+    QCOMPARE(kept, QStringList({"cs0.jpg", "cs1.jpg", "cs9.jpg"}));
     q.finish();
     CacheDb::instance().closeThisThread();
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));

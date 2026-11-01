@@ -443,6 +443,7 @@ Thumb::Status Thumb::loadFromHeic(QString &fPath, QImage &image)
     // decodes at the requested size. Either is far cheaper than a full
     // QImage::load() + scaled() of the primary image.
     if (macImageIOThumbnail(fPath, G::maxIconSize, image) && !image.isNull()) {
+        decodeConverted = true;             // ImageIO converted it (sourceColorSpace)
         return Status::Success;
     }
     #endif
@@ -480,8 +481,10 @@ Thumb::Status Thumb::loadFromImageIO(QString &fPath, QImage &image)
     if (abort) return Status::Fail;
 
     #ifdef Q_OS_MAC
-    if (macImageIOThumbnail(fPath, G::maxIconSize, image) && !image.isNull())
+    if (macImageIOThumbnail(fPath, G::maxIconSize, image) && !image.isNull()) {
+        decodeConverted = true;             // ImageIO converted it (sourceColorSpace)
         return Status::Success;
+    }
     return Status::Fail;
     #else
     Q_UNUSED(fPath)
@@ -507,6 +510,44 @@ void Thumb::presetOffset(uint offset, uint length)
     offsetThumb = offset;
     lengthThumb = length;
     isPresetOffset = true;
+}
+
+QColorSpace Thumb::sourceColorSpace(const QImage &image, const QString &fPath,
+                                    const QString &ext, const ImageMetadata &m) const
+{
+/*
+    What a thumbnail's decoded pixels are encoded in, for loadThumb to convert to sRGB.
+    Invalid = nothing to do (sRGB already, or the decoder converted them).
+
+    THE SAME RULE AS THE LOUPE (ImageDecoder::colorManage / sourceIcc): the file's
+    embedded profile, for formats in Metadata::iccFormats, otherwise sRGB. A profile-less
+    file is NOT converted by its colour-space id, because the loupe does not do that
+    either and the two must agree.
+
+      1. A decoder that tagged the image (Qt's JPEG / PNG / TIFF readers read the
+         embedded profile) has said what it is.
+      2. Otherwise the pixels are the file's own -- its embedded thumbnail, Winnow's TIFF
+         reader, libheif -- and are in the FILE's space: m.iccBuf, but only when m is
+         THIS file's. On an icon-only read Reader::readIcon hands over whatever m it
+         last had, which can be the previous row's. Then the model row, found by path
+         (RowStore reads are locked, so this is safe on a Reader thread).
+*/
+    if (decodeConverted) return QColorSpace();
+    if (image.colorSpace().isValid())
+        return image.colorSpace() == QColorSpace(QColorSpace::SRgb) ? QColorSpace()
+                                                                     : image.colorSpace();
+    if (!metadata || !metadata->iccFormats.contains(ext)) return QColorSpace();
+
+    QByteArray icc;
+    if (m.fPath == fPath) icc = m.iccBuf;
+    else if (dm) {
+        const int row = dm->rowFromKey(fPath);
+        if (row >= 0) icc = dm->index(row, G::ICCBufColumn).data().toByteArray();
+    }
+    if (icc.isEmpty()) return QColorSpace();
+    const QColorSpace cs = QColorSpace::fromIccProfile(icc);
+    if (!cs.isValid() || cs == QColorSpace(QColorSpace::SRgb)) return QColorSpace();
+    return cs;
 }
 
 bool Thumb::loadDevThumb(QString &fPath, QImage &image)
@@ -708,6 +749,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
                 ;
 
     Status status = Status::None;
+    decodeConverted = false;
     int attempts = 0;
     int maxAttempts = 10;
 
@@ -837,11 +879,24 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
     QFile(fPath).setPermissions(oldPermissions);
 
     if (status == Status::Success) {
+        /* Read before scaling: the source space is the decoded image's tag, if any. */
+        const QColorSpace srcSpace = sourceColorSpace(image, fPath, ext, m);
         {
             ScopedIconNs _t(G::probeIconScaleNs, G::isPerfProbe);
             // scale to max icon size
             image = image.scaled(thumbMax, Qt::KeepAspectRatio);
             image.convertTo(QImage::Format_RGB32);
+        }
+        /* THUMBNAILS ARE sRGB, like the developed thumbnails in the sidecars and the
+           devPreviews. A wide-gamut file's pixels used to go into the icon (and into
+           ThumbCache) as they were, so an Adobe RGB export showed about a quarter less
+           saturated in the grid than in the loupe, which converts through the same
+           embedded profile (ImageDecoder::colorManage). Converted after the scale, so
+           it costs a 256 px image. */
+        if (srcSpace.isValid()) {
+            image.setColorSpace(srcSpace);
+            image.convertToColorSpace(QColorSpace::SRgb);
+            image.setColorSpace(QColorSpace());     // the cache stores untagged sRGB
         }
 
         // rotate if there is orientation metadata

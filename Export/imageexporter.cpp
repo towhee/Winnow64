@@ -366,8 +366,32 @@ void ImageExporter::copySourceMetadata(const QString &srcPath, const QString &ds
        render, everything else comes from the rotated decode), so the source's Orientation
        must not come along: a portrait raw exported as a portrait TIFF still tagged 8 is
        rotated a second time by any reader that honours the tag. */
+    /*
+        The source's EMBEDDED IMAGES must not come along either. -all:all copies IFD1,
+        which is the camera's ThumbnailImage: a raw's as-shot 160x120 picture, not the
+        developed one, and not even the export's aspect ratio. Winnow (and most viewers)
+        build the icon from that thumbnail, so an export with a brightened develop showed
+        the dark as-shot thumb. Embed Thumbnail writes a correct one below.
+
+        EXIF ColorSpace is copied too, and the source's (a raw says sRGB) contradicts
+        the profile save() embedded. It is set to what the pixels are: 1 for sRGB,
+        0xFFFF (Uncalibrated) otherwise, with the DCF InteropIndex R03 for Adobe RGB.
+    */
+    QStringList extra = {"--IFD1:all", "--ThumbnailImage", "--PreviewImage",
+                         "--JpgFromRaw", "--OtherImage"};
+    switch (s.space) {
+    case OutputSpace::sRGB:
+        extra << "-ExifIFD:ColorSpace#=1" << "-InteropIndex=R98";
+        break;
+    case OutputSpace::AdobeRGB:
+        extra << "-ExifIFD:ColorSpace#=65535" << "-InteropIndex=R03";
+        break;
+    case OutputSpace::DisplayP3:
+        extra << "-ExifIFD:ColorSpace#=65535" << "-InteropIndex=";
+        break;
+    }
     if (s.copyMetadata)
-        et.copyAllTags(srcPath, dstPath, /*excludeIcc*/ true, /*upright*/ true);
+        et.copyAllTags(srcPath, dstPath, /*excludeIcc*/ true, /*upright*/ true, extra);
     if (s.embedThumbnail && !img.isNull()) {
         /* addThumb needs a thumbnail FILE; write one beside the export and remove it
            again, as EmbelExport does. */

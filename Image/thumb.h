@@ -83,6 +83,13 @@ private:
                               QSize knownFull = QSize());
     void loadFromVideo(QString &fPath, int dmRow);
     void checkOrientation(QImage &image, int orientation, int rotationDegrees);
+    /* The colour space a thumbnail's decoded pixels are in, or an invalid one when they
+       are sRGB already or were converted by the decoder. See the .cpp. */
+    QColorSpace sourceColorSpace(const QImage &image, const QString &fPath,
+                                 const QString &ext, const ImageMetadata &m) const;
+    /* Set by a loader whose platform framework already colour-converted the pixels
+       (macOS ImageIO draws into a device-RGB context). Reset per loadThumb. */
+    bool decodeConverted = false;
 
     // status flags
     bool isPresetOffset = false;

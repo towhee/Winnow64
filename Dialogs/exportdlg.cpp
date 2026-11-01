@@ -921,14 +921,19 @@ void ExportDlg::updateEnabledStates()
        insert-in-place vs a folder rescan. The CHECKED state is left alone while disabled:
        it is the destination that made it irrelevant, and pointing at a loaded folder
        again should restore the user's choice rather than silently having cleared it. */
-    const bool destLoaded =
+    /* In the Library an export inside the catalog scope always joins the loaded set
+       (MW::onExportFinished), so there is no insert-or-rescan choice to make. */
+    const bool library = G::scope == G::Scope::Catalog;
+    const bool destLoaded = !library &&
         exporter && exporter->willTouchLoadedFolder(targetPaths(), current);
     addToViewChk->setEnabled(destLoaded);
     addToViewChk->setToolTip(
-        destLoaded ? tr("Show the exported files right away, keeping your place.\n"
-                        "Unticked, the folder is reloaded instead.")
-                   : tr("The destination folder is not open in Winnow, so there is nothing "
-                        "to insert into"));
+        library ? tr("In the Library, exported images inside the catalog scope are always "
+                     "added and the current filter is applied to them")
+        : destLoaded ? tr("Show the exported files right away, keeping your place.\n"
+                          "Unticked, the folder is reloaded instead.")
+                     : tr("The destination folder is not open in Winnow, so there is "
+                          "nothing to insert into"));
 
     longEdgeSpin->setEnabled(longEdgeRadio->isChecked());
     percentSpin->setEnabled(percentRadio->isChecked());

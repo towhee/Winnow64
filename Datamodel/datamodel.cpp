@@ -3718,10 +3718,17 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.fName = index(row, G::NameColumn).data().toString();
     m.type = index(row, G::TypeColumn).data().toString();
     /* ImageDecoder::load() selects the in-house RAW decoder off m.ext in independent
-       mode; keep it populated (from the same TypeColumn cache mode uses) so
-       decodeIndependent takes the raw path instead of falling back to the display-
-       referred embedded JPG. */
-    m.ext = m.type;
+       mode; keep it populated so decodeIndependent takes the raw path instead of
+       falling back to the display-referred embedded JPG.
+
+       FROM THE FILE, LOWER-CASE -- never from TypeColumn. That column is the DISPLAY
+       type: upper-case ("ARW") and, for a combined pair, "JPG+ARW". Every consumer of
+       m.ext (RawFormat::HasSensorDecoder / Create, the format tables) keys on the
+       lower-case suffix, so "ARW" found no sensor decoder and MW::developWantsSensor
+       said no: an export decoded fresh (nothing cached from a Develop session) was
+       developed from the camera's embedded JPEG -- 8640x5760 instead of 8672x5784, the
+       recipe applied to an already-rendered picture. */
+    m.ext = QFileInfo(m.fPath).suffix().toLower();
     m.size = index(row, G::ByteSizeColumn).data().toInt();
     m.video = index(row, G::VideoColumn).data().toInt();
     m.sidecar = index(row, G::SidecarColumn).data().toInt();
