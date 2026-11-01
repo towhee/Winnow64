@@ -3,10 +3,12 @@
 #include "Utilities/versionkey.h"
 
 #include <QColorSpace>
+#include <QDebug>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
 #include <QImageWriter>
+#include <QPointer>
 #include <QTimer>
 
 #include "Datamodel/datamodel.h"
@@ -18,16 +20,25 @@
 
 /*
     See imageexporter.h. The batch is a chain, not a loop: startNext() asks the pixel
-    source for one image and returns, and onImageReady() saves it and queues the next
-    through the event loop. That single structural choice is what keeps the GUI alive and
-    abort responsive across a long raw export -- there is no point in the batch where the
-    exporter is holding the thread for more than one image's save.
+    source for one image and returns, onImageReady() hands the encode and metadata copy
+    to the worker, and onImageSaved() records the result and queues the next image
+    through the event loop. That structural choice is what keeps the GUI alive and abort
+    responsive across a long raw export -- the exporter never holds the GUI thread for
+    any of an image's seconds-long steps.
 */
 
 ImageExporter::ImageExporter(DataModel *dm, Metadata *metadata, QObject *parent)
-    : QObject(parent), dm(dm), metadata(metadata) {}
+    : QObject(parent), dm(dm), metadata(metadata)
+{
+    savePool.setMaxThreadCount(1);
+}
 
-ImageExporter::~ImageExporter() {}
+ImageExporter::~ImageExporter()
+{
+    /* A save in flight posts its result back to this object; let it land (it is
+       discarded with the object) rather than run against a half-destroyed one. */
+    savePool.waitForDone();
+}
 
 bool ImageExporter::isRaw(const QString &fPath) const
 {
@@ -38,32 +49,37 @@ bool ImageExporter::isRaw(const QString &fPath) const
     return metadata->hasJpg.contains(ext);
 }
 
-void ImageExporter::setPixelSource(PixelSource source)
-{
-    pixelSource = std::move(source);
-}
-
-void ImageExporter::run(const QStringList &srcPaths, const ExportSettings &settings)
+void ImageExporter::run(const QStringList &srcPaths, const ExportSettings &settings,
+                        PixelSource source)
 {
     if (G::isLogger) G::log("ImageExporter::run");
-    if (running) return;                     // one batch at a time
-    if (!pixelSource) {
+    if (!source) {
         G::issue("Warning", "No pixel source set.", "ImageExporter::run");
         return;
     }
+    Batch batch{srcPaths, settings, std::move(source)};
+    if (running) {                           // one batch at a time: wait behind it
+        queue.append(std::move(batch));
+        return;
+    }
+    start(std::move(batch));
+}
 
-    s = settings;
-    paths = srcPaths;
+void ImageExporter::start(Batch batch)
+{
+    s = batch.settings;
+    paths = batch.paths;
+    pixelSource = std::move(batch.source);
     index = 0;
     aborting = false;
     result = Result();
-
-    if (paths.isEmpty()) {
-        emit finished(result);
-        return;
-    }
+    result.settings = s;
 
     running = true;
+    if (paths.isEmpty()) {
+        finish();
+        return;
+    }
     emit progress(0, paths.count());
     startNext();
 }
@@ -71,6 +87,7 @@ void ImageExporter::run(const QStringList &srcPaths, const ExportSettings &setti
 void ImageExporter::abort()
 {
     if (!running) return;
+    queue.clear();                           // Esc means stop exporting, not skip ahead
     aborting = true;                         // the in-flight image still completes
 }
 
@@ -88,13 +105,13 @@ void ImageExporter::startNext()
         const QString dst = previewDestination(fPath, s, index + 1);
         if (!dst.isEmpty() && QFile::exists(dst)) {
             result.skipped << dst;
-            ++index;
-            emit progress(index, paths.count());
-            QTimer::singleShot(0, this, [this]() { startNext(); });
+            advance();
             return;
         }
     }
 
+    emit stage(index, paths.count(), Stage::Render, fPath);
+    renderTimer.start();
     pixelSource(fPath, [this](bool ok, const QImage &img) {
         /* `done` may arrive on a worker thread; get back onto ours first. */
         QMetaObject::invokeMethod(this, [this, ok, img]() { onImageReady(ok, img); });
@@ -105,41 +122,86 @@ void ImageExporter::onImageReady(bool ok, const QImage &img)
 {
     if (!running) return;                    // finished/aborted while the render ran
     const QString fPath = paths.at(index);
+    const qint64 renderMs = renderTimer.elapsed();
 
     if (!ok || img.isNull()) {
         result.failed << fPath;
         G::issue("Warning", "Could not render " + fPath, "ImageExporter::onImageReady");
+        advance();
+        return;
+    }
+
+    const QString folder = destinationFolder(fPath, s, /*create*/true);
+    if (folder.isEmpty()) {
+        result.failed << fPath;
+        G::issue("Warning", "Could not create the export folder for " + fPath,
+                 "ImageExporter::onImageReady");
+        advance();
+        return;
+    }
+    QString dst = folder + "/" + destinationBaseName(fPath, s, index + 1) + "." +
+                  s.extension();
+    /* Overwrite writes over it; UniqueName appends _1, _2 ... (the same helper every
+       other Winnow write path uses). Skip was handled in startNext(). Resolved HERE,
+       before the save is handed off, so the name is fixed on this thread. */
+    if (s.exists != ExportSettings::Overwrite && QFile::exists(dst))
+        Utilities::uniqueFilePath(dst);
+
+    /* The encode and the ExifTool round trip go to the worker: on a 50 MP image they are
+       seconds the GUI used to be frozen for. The stage signals are queued back here so
+       the status bar can say which one is running. */
+    const ExportSettings settings = s;
+    const QString src = VersionKey::sourceOf(fPath);       // the file, for its tags
+    const int i = index;
+    const int total = paths.count();
+    QPointer<ImageExporter> self(this);
+    emit stage(i, total, Stage::Save, fPath);
+    savePool.start([self, img, dst, src, settings, folder, fPath, i, total, renderMs]() {
+        Saved saved;
+        saved.dst = dst;
+        QElapsedTimer t;
+        t.start();
+        const QImage out = resized(img, settings);
+        saved.ok = save(out, dst, settings);
+        saved.saveMs = t.restart();
+        if (saved.ok && (settings.copyMetadata || settings.embedThumbnail)) {
+            if (self)
+                QMetaObject::invokeMethod(self, [self, i, total, fPath]() {
+                    if (self) emit self->stage(i, total, Stage::Metadata, fPath);
+                });
+            copySourceMetadata(src, dst, out, settings);
+            saved.metaMs = t.elapsed();
+        }
+        if (reportTime)
+            qDebug().noquote() << QString("[ExportTime] %1  render %2 ms  save %3 ms  "
+                                          "metadata %4 ms  (%5x%6)")
+                                      .arg(QFileInfo(fPath).fileName())
+                                      .arg(renderMs).arg(saved.saveMs).arg(saved.metaMs)
+                                      .arg(out.width()).arg(out.height());
+        if (self)
+            QMetaObject::invokeMethod(self, [self, saved, folder]() {
+                if (self) self->onImageSaved(saved, folder);
+            });
+    });
+}
+
+void ImageExporter::onImageSaved(const Saved &saved, const QString &folder)
+{
+    if (!running) return;
+    if (saved.ok) {
+        result.written << saved.dst;
+        FileOps::onCreated({saved.dst});
+        if (!result.folders.contains(folder)) result.folders << folder;
     }
     else {
-        const QString folder = destinationFolder(fPath, s, /*create*/true);
-        if (folder.isEmpty()) {
-            result.failed << fPath;
-            G::issue("Warning", "Could not create the export folder for " + fPath,
-                     "ImageExporter::onImageReady");
-        }
-        else {
-            QString dst = folder + "/" +
-                          destinationBaseName(fPath, s, index + 1) + "." + s.extension();
-            /* Overwrite writes over it; UniqueName appends _1, _2 ... (the same helper
-               every other Winnow write path uses). Skip was handled in startNext(). */
-            if (s.exists != ExportSettings::Overwrite && QFile::exists(dst))
-                Utilities::uniqueFilePath(dst);
-
-            const QImage out = resized(img);
-            if (save(out, dst)) {
-                if (s.copyMetadata || s.embedThumbnail)
-                    copySourceMetadata(VersionKey::sourceOf(fPath), dst, out);   // the file
-                result.written << dst;
-                FileOps::onCreated({dst});
-                if (!result.folders.contains(folder)) result.folders << folder;
-            }
-            else {
-                result.failed << fPath;
-                G::issue("Warning", "Could not save " + dst, "ImageExporter::onImageReady");
-            }
-        }
+        result.failed << paths.at(index);
+        G::issue("Warning", "Could not save " + saved.dst, "ImageExporter::onImageSaved");
     }
+    advance();
+}
 
+void ImageExporter::advance()
+{
     ++index;
     emit progress(index, paths.count());
     QTimer::singleShot(0, this, [this]() { startNext(); });
@@ -147,10 +209,20 @@ void ImageExporter::onImageReady(bool ok, const QImage &img)
 
 void ImageExporter::finish()
 {
-    running = false;
     result.aborted = aborting;
     aborting = false;
+    /* Not running while finished() is handled, so the handler can tell "all done" (clear
+       the status row) from "a queued batch follows". The next queued batch starts from
+       the event loop after it -- unless the handler started one itself. */
+    running = false;
     emit finished(result);
+    if (!running && !queue.isEmpty()) {
+        Batch next = queue.takeFirst();
+        QTimer::singleShot(0, this, [this, next]() mutable {
+            if (running) { queue.prepend(std::move(next)); return; }
+            start(std::move(next));
+        });
+    }
 }
 
 QString ImageExporter::destinationFolder(const QString &fPath,
@@ -256,26 +328,30 @@ bool ImageExporter::willTouchLoadedFolder(const QStringList &srcPaths,
     return false;
 }
 
-QImage ImageExporter::resized(const QImage &src) const
+QSize ImageExporter::OutputSize(const QSize &src, const ExportSettings &settings)
 {
-    if (s.sizing == ExportSettings::FullSize || src.isNull()) return src;
+    if (settings.sizing == ExportSettings::FullSize || src.isEmpty()) return src;
 
     const int longEdge = qMax(src.width(), src.height());
     double factor = 1.0;
-    if (s.sizing == ExportSettings::LongEdge) {
-        if (longEdge <= 0) return src;
-        factor = double(s.longEdgePx) / double(longEdge);
-    }
-    else {
-        factor = double(s.percent) / 100.0;
-    }
-    if (s.dontEnlarge && factor > 1.0) return src;
+    if (settings.sizing == ExportSettings::LongEdge)
+        factor = double(settings.longEdgePx) / double(longEdge);
+    else
+        factor = double(settings.percent) / 100.0;
+    if (settings.dontEnlarge && factor > 1.0) return src;
     if (qFuzzyCompare(factor, 1.0)) return src;
 
-    const int w = qMax(1, int(src.width() * factor + 0.5));
-    const int h = qMax(1, int(src.height() * factor + 0.5));
+    return QSize(qMax(1, int(src.width() * factor + 0.5)),
+                 qMax(1, int(src.height() * factor + 0.5)));
+}
+
+QImage ImageExporter::resized(const QImage &src, const ExportSettings &settings)
+{
+    if (src.isNull()) return src;
+    const QSize size = OutputSize(src.size(), settings);
+    if (size == src.size()) return src;
     /* Smooth is the right filter for a downscale and this is not an interactive path. */
-    return src.scaled(w, h, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    return src.scaled(size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 }
 
 OutputTransform::Space ImageExporter::renderSpace(OutputSpace space)
@@ -288,7 +364,8 @@ OutputTransform::Space ImageExporter::renderSpace(OutputSpace space)
     return OutputTransform::Space::sRGB;
 }
 
-bool ImageExporter::save(const QImage &img, const QString &dstPath) const
+bool ImageExporter::save(const QImage &img, const QString &dstPath,
+                         const ExportSettings &s)
 {
     if (img.isNull()) return false;
 
@@ -340,7 +417,7 @@ bool ImageExporter::save(const QImage &img, const QString &dstPath) const
 }
 
 void ImageExporter::copySourceMetadata(const QString &srcPath, const QString &dstPath,
-                                       const QImage &img)
+                                       const QImage &img, const ExportSettings &s)
 {
 /*
     Copy the source's tags onto the exported file, and optionally embed a thumbnail --
@@ -356,10 +433,10 @@ void ImageExporter::copySourceMetadata(const QString &srcPath, const QString &ds
     icc_profile rather than relying on -all:all's block-tag behaviour.
 
     ExifTool is a per-file process round trip, so this is the slowest step per image after
-    the render itself; it is behind a checkbox for that reason.
+    the render itself; it is behind a checkbox for that reason. WORKER THREAD (savePool):
+    the ExifTool object, and the QProcess inside it, are created and finished here, and
+    only blocking waits are used, so no event loop is needed on this thread.
 */
-    if (G::isLogger) G::log("ImageExporter::copySourceMetadata");
-
     ExifTool et;
     et.setOverWrite(true);
     /* Every pixel source hands over UPRIGHT pixels (a raw is rotated in the develop

@@ -1542,6 +1542,13 @@ void MW::createStatusBar()
     progressCatalogLoadRow = progress->addRow("CatalogLoad", 2, QColor("#6a8fd0"),
                                               Progress::Fill::FromStart);
     progress->setRowText(progressCatalogLoadRow, "Loading");
+    /* An export run: the Export dialog closes as soon as Export is pressed, and the
+       render / save / metadata of each image, then the catalog update, report here.
+       What is happening, and "Esc to stop", is the tooltip (MW::onExportStage). Green:
+       unclaimed by the rows above. */
+    progressExportRow = progress->addRow("Export", 2, QColor("#5fae5f"),
+                                         Progress::Fill::FromStart);
+    progress->setRowText(progressExportRow, "Exporting");
     connect(dm, &DataModel::catalogFillProgress, this, [this](int done, int total) {
         if (!progress) return;
         if (total <= 0) {
@@ -2568,6 +2575,14 @@ void MW::createDevelopDock()
                re-renders asynchronously, and every frame on hand was rendered with the
                crop suppressed, so a version looked uncropped back in Browse. */
             if (!haveFull && !haveProxy) {
+                // TEMP: which test refused the frame (thumbnail fell back to camera)
+                qDebug() << "[DevPreview] declined" << fPath
+                         << "full" << (fPath == developFullFramePath)
+                         << !developFullFrame.isNull() << developFullFrameFaithful
+                         << (developFullFrameRecipe == recipe)
+                         << "proxy" << (fPath == developFramePath)
+                         << !developFrame.isNull() << developFrameFaithful
+                         << (developFrameRecipe == recipe);
                 queueBuild();
                 return false;
             }

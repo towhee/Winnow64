@@ -935,7 +935,7 @@
          <string>Esc</string>
         </property>
         <property name="text">
-         <string>Preview mode only, and only when Esc has nothing else to cancel (loading, slideshow, full screen ...)</string>
+         <string>Preview mode only, and only when Esc has nothing else to cancel (loading, an export, slideshow, full screen ...)</string>
         </property>
        </item>
        <item>

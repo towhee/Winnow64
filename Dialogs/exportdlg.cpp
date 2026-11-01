@@ -153,9 +153,9 @@ void ExportDlg::fitToContents()
     row keeps the same gap below it (to the footer rule) as above it. It also tracks what
     actually varies -- the mode, the font size, and what G::css adds to the controls.
 
-    Which is why it is recomputed rather than set once in the constructor: setBusy adds and
-    removes the progress bar. (Changing FORMAT does not change the height -- every control
-    the format hides shares a row with one it cannot hide.) The height constraint has to be
+    Which is why it is recomputed rather than set once in the constructor: the mode decides
+    which sections exist. (Changing FORMAT does not change the height -- every control the
+    format hides shares a row with one it cannot hide.) The height constraint has to be
     released before measuring, or the layout hands back the height already in force instead
     of the one the contents now want.
 */
@@ -665,7 +665,7 @@ void ExportDlg::buildUi()
 
     lay->addStretch(1);
 
-    /* ---- Footer: progress + buttons ----
+    /* ---- Footer: buttons ----
        Closed off from the settings above by its own rule, so the action row reads as the
        end of the dialog rather than as a continuation of the scope row. IngestDlg does the
        same (its full-width Line above the Cancel / OK pair). The group boxes already close
@@ -675,17 +675,12 @@ void ExportDlg::buildUi()
     lay->addSpacing(6);
 
     QHBoxLayout *foot = new QHBoxLayout;
-    progressBar = new QProgressBar(this);
-    progressBar->setVisible(false);
-    statusLab = new QLabel(this);
     exportBtn = new QPushButton(tr("Export"), this);
     exportBtn->setDefault(true);
     closeBtn  = new QPushButton(tr("Cancel"), this);
     /* Export keeps its focus (it is the default button); Cancel does not need it. */
     sizeButton(exportBtn, /*noFocus*/false);
     sizeButton(closeBtn);
-    foot->addWidget(progressBar, 1);
-    foot->addWidget(statusLab);
     foot->addStretch(1);
     foot->addWidget(closeBtn);
     foot->addWidget(exportBtn);
@@ -740,30 +735,6 @@ void ExportDlg::buildUi()
         qualityLab->setText(QString::number(v));
         onEdited();
     });
-
-    /* Progress from the batch. */
-    if (exporter) {
-        connect(exporter, &ImageExporter::progress, this, [this](int done, int total) {
-            progressBar->setMaximum(total);
-            progressBar->setValue(done);
-            statusLab->setText(tr("%1 of %2").arg(done).arg(total));
-        });
-        connect(exporter, &ImageExporter::finished, this,
-                [this](const ImageExporter::Result &r) {
-            setBusy(false);
-            QString msg;
-            if (r.aborted) msg = tr("Export cancelled after %1.").arg(r.written.count());
-            else msg = tr("Exported %1.").arg(r.written.count());
-            if (!r.skipped.isEmpty()) msg += tr(" %1 skipped.").arg(r.skipped.count());
-            if (!r.failed.isEmpty())  msg += tr(" %1 failed.").arg(r.failed.count());
-            statusLab->setText(msg);
-            /* A clean run has nothing more to say: close. Anything unusual stays open so
-               the count is readable -- unless the user already asked to leave (they hit
-               Esc or the window close, which stopped the run instead of closing). */
-            if (closeWhenDone) { QDialog::reject(); return; }
-            if (!r.aborted && r.failed.isEmpty() && r.skipped.isEmpty()) accept();
-        });
-    }
 }
 
 void ExportDlg::loadFormats()
@@ -1017,10 +988,6 @@ void ExportDlg::onSelectFolder()
 
 void ExportDlg::onExportClicked()
 {
-    if (running) {                       // the button is "Cancel" mid-batch
-        if (exporter) exporter->abort();
-        return;
-    }
     uiToSettings();
 
     if (current.dest == ExportSettings::ChosenFolder && current.folderPath.isEmpty()) {
@@ -1061,48 +1028,7 @@ void ExportDlg::onExportClicked()
         }
     }
 
-    setBusy(true);
-    exporter->run(targets, current);
-}
-
-void ExportDlg::reject()
-{
-    if (running) {                       // Esc / Cancel mid-batch means Stop
-        closeWhenDone = true;            // the user asked to leave: honour it on finish
-        if (exporter) exporter->abort();
-        return;
-    }
-    QDialog::reject();
-}
-
-void ExportDlg::closeEvent(QCloseEvent *event)
-{
-    if (running) {
-        closeWhenDone = true;
-        if (exporter) exporter->abort();
-        event->ignore();                 // close once the run reports finished
-        return;
-    }
-    QDialog::closeEvent(event);
-}
-
-void ExportDlg::setBusy(bool busy)
-{
-    running = busy;
-    progressBar->setVisible(busy);
-    exportBtn->setText(busy ? tr("Stop") : tr("Export"));
-    closeBtn->setEnabled(!busy);
-    /* Freeze the settings while a batch is running -- they were captured at Export and
-       changing them mid-run would show something the output does not match. */
-    for (QWidget *w : findChildren<QWidget*>()) {
-        if (w == exportBtn || w == progressBar || w == statusLab) continue;
-        if (qobject_cast<QLabel*>(w)) continue;
-        w->setEnabled(!busy);
-    }
-    if (!busy) updateEnabledStates();
-    /* The progress bar joining or leaving the footer row can change what the form needs,
-       and a fixed-size dialog cannot absorb that by itself. */
-    fitToContents();
+    accept();                            // the caller runs it; progress in the status bar
 }
 
 QString ExportDlg::selectedPreset() const

@@ -16,14 +16,15 @@ class ImageExporter;
 
     LAYOUT: a preset bar across the top (combo + New / Update / Rename / Delete), then one
     column of grouped sections -- Source (Develop only), Destination, File naming,
-    Format, Image sizing -- and a
-    progress row above the buttons. Hand-built rather than a .ui file, following the
+    Format, Image sizing -- and the buttons. Hand-built rather than a .ui file, following the
     newest dialogs (SaveDevelopPresetDlg): the form is generated from the format table and
     reacts to it, which a static .ui cannot express.
 
-    The dialog STAYS OPEN while the batch runs, showing its progress bar, with Export
-    turning into Cancel. The no-dialog quick export (Develop > Export with preset) drives
-    the same ImageExporter with no dialog at all, reporting through G::popup instead.
+    The dialog CLOSES when Export is pressed: it accepts, and the caller hands targetPaths()
+    and settings() to ImageExporter, whose progress shows in the status bar's "Export" row
+    (Esc stops it). A batch is seconds per raw, and a modal dialog sitting over the window
+    for its length blocked everything else for no reason. The no-dialog quick export
+    (Develop > Export with preset) reports through the same row.
 
     Mode::Preview hides the rows that only mean something for a develop render (bit depth,
     colour space), so "Save Preview as" is not offering settings its pixel source cannot
@@ -36,7 +37,8 @@ class ExportDlg : public QDialog
 public:
     enum class Mode { Develop, Preview };
 
-    /* exporter is borrowed, not owned: the dialog drives it and shows its progress.
+    /* exporter is borrowed, not owned: the dialog asks it about names and destinations
+       but never runs it.
        imageCount / firstPath drive the header line and the live example name. */
     ExportDlg(ImageExporter *exporter,
               ExportPresets *presets,
@@ -48,19 +50,11 @@ public:
 
     /* The settings as last shown -- the caller persists them as the "last used" slot. */
     ExportSettings settings() const { return current; }
-
-public slots:
-    /* Esc / Cancel. While a batch is running this STOPS it instead of closing: the
-       exporter outlives the dialog, so letting the dialog go mid-run would leave the
-       batch writing files with nothing reporting the result. The dialog closes itself
-       when the run reports finished. */
-    void reject() override;
-
-protected:
-    void closeEvent(QCloseEvent *event) override;   // window close: same rule as reject()
+    /* The paths to export: the whole selection, or just the current image. */
+    QStringList targetPaths() const;
 
 private slots:
-    void onExportClicked();          // start the batch, or cancel one in flight
+    void onExportClicked();          // validate, then accept: the caller runs the export
     void onSelectFolder();
     void onPresetChosen(int index);
     void onPresetNew();
@@ -93,9 +87,6 @@ private:
        shown instead -- see presetDirty. */
     void setPresetDirty(bool dirty);
     QString selectedPreset() const;  // "" when the combo is on "(none)"
-    void setBusy(bool busy);         // controls disabled + Export becomes Cancel
-    /* The paths this run will export: the whole selection, or just the current image. */
-    QStringList targetPaths() const;
 
     ImageExporter *exporter;
     ExportPresets *presets;
@@ -108,8 +99,6 @@ private:
 
     ExportSettings current;
     bool           populating = false;   // suppress control signals while loading
-    bool           running = false;
-    bool           closeWhenDone = false; // Esc/close arrived mid-batch; leave on finish
 
     /* Preset bar. presetDirty = the settings have been edited away from the selected
        preset; presetStateLab shows that, since the combo still names the preset. */
@@ -174,8 +163,6 @@ private:
     QCheckBox    *dontEnlargeChk = nullptr;
 
     /* Footer */
-    QProgressBar *progressBar = nullptr;
-    QLabel       *statusLab = nullptr;
     QPushButton  *exportBtn = nullptr;
     QPushButton  *closeBtn = nullptr;
 };

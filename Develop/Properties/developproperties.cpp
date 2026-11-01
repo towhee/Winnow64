@@ -2247,9 +2247,10 @@ void DevelopProperties::onSpotSourceMoved(int index, QPointF offset)
     emit paramsChanged();                   // re-heal from the new source
 }
 
-void DevelopProperties::adoptSpotSources(const QString &fPath)
+bool DevelopProperties::adoptSpotSources(const QString &fPath)
 {
-    if (fPath.isEmpty() || fPath != currentImagePath || !stackCache.contains(fPath)) return;
+    if (fPath.isEmpty() || fPath != currentImagePath || !stackCache.contains(fPath))
+        return false;
     EditStack &s = stackCache[fPath];
     bool changed = false;
     for (FillSpot &sp : s.spots) {
@@ -2260,7 +2261,7 @@ void DevelopProperties::adoptSpotSources(const QString &fPath)
         sp.paramsJson = FillSpotGeom::withSource(sp.paramsJson, off.x(), off.y());
         changed = true;
     }
-    if (!changed) return;
+    if (!changed) return false;
     /* Persist like an edit, without a History step: the heal on screen is the same one,
        only now its source is written down. A revert to the step before still works --
        with no "src" the engine re-picks the same pinned source. */
@@ -2268,6 +2269,7 @@ void DevelopProperties::adoptSpotSources(const QString &fPath)
     if (G::isDevelopDebounceWrite && debounceWriteTimer)
         debounceWriteTimer->start(kDebounceWriteMs);
     emitSpotPins();
+    return true;
 }
 
 void DevelopProperties::emitSpotPins()

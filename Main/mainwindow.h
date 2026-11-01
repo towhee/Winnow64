@@ -1528,6 +1528,8 @@ private slots:
        Captured when a develop render is launched and compared when its frame is about to
        be cached as a preview -- see developFrameRecipe. */
     QByteArray developRecipeKey(const QString &fPath);
+    /* adoptSpotSources, then re-key the retained frames to the adopted recipe. */
+    void adoptDevelopSpotSources(const QString &fPath);
     void thumbHasScrolled();
     void gridHasScrolled();
     void tableHasScrolled();
@@ -1737,7 +1739,8 @@ private:
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap = nullptr, int degreesSnap = -1,
-                            bool requireSensor = false, int maxEdge = 0);
+                            bool requireSensor = false, int maxEdge = 0,
+                            bool reportTime = false);
     /* developPixelSource's pieces, shared with the preset Auto-settings batch:
        developWantsSensor decides (GUI thread) whether the render starts from the sensor
        decode; developBaseFor fetches or decodes that base (WORKER thread). */
@@ -1794,7 +1797,20 @@ private:
        or a raw's embedded preview when the active settings ask for CameraPreview. */
     void developExportPixelSource(const QString &fPath,
                                   std::function<void(bool, const QImage &)> done);
-    void onExportFinished(const ImageExporter::Result &result, bool addToFolderView);
+    /* The Developed export served from the image's devPreview when that picture can
+       honestly be the export (sRGB, 8-bit, big enough, no quality claim it cannot meet).
+       False = not eligible, render instead; true = it has taken the image. */
+    bool exportFromDevPreview(const QString &fPath, const ExportSettings &es,
+                              std::function<void(bool, const QImage &)> done);
+    /* The status-bar "Export" row: ImageExporter::stage drives it; endExportProgress
+       clears it once the catalog / folder update after the batch is done. */
+    void onExportStage(int index, int total, ImageExporter::Stage stage,
+                       const QString &fPath);
+    void endExportProgress();
+    void onExportFinished(const ImageExporter::Result &result);
+    /* catalogCreatedFilesThenRefreshLibrary with a completion, run on the GUI thread
+       after the Library re-query (a plain method: the slot cannot take a std::function). */
+    void catalogCreatedFilesThen(std::function<void()> after);
 
     QMenuBar *thumbsMenuBar;
     QMenu *fileMenu;
@@ -2323,6 +2339,8 @@ private:
     /* Loading a catalog (Library) result into the model -- the status-bar companion to
        the central "x of y images loading" message. */
     int progressCatalogLoadRow = -1;
+    /* An export run (ImageExporter): the dialog closes on Export and reports here. */
+    int progressExportRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;

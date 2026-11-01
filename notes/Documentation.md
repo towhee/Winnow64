@@ -653,12 +653,15 @@
   - [14.1 One Engine](#141-one-engine)
     - [14.1.1 The Pixel Source Is Asynchronous](#1411-the-pixel-source-is-asynchronous)
     - [14.1.2 Per-Image Recipes](#1412-per-image-recipes)
+    - [14.1.3 No Dialog Waits: The Status-Bar Export Row (2026-11-01)](#1413-no-dialog-waits-the-status-bar-export-row-2026-11-01)
+    - [14.1.4 Timing Probe: [ExportTime]](#1414-timing-probe-exporttime)
   - [14.2 The Pixel Sources and Their Callers](#142-the-pixel-sources-and-their-callers)
     - [14.2.1 Raw Denoise Is Part of the Base](#1421-raw-denoise-is-part-of-the-base)
     - [14.2.2 Every Caller Gets the Sensor Image, in Any Mode](#1422-every-caller-gets-the-sensor-image-in-any-mode)
     - [14.2.3 Embellish Export](#1423-embellish-export)
     - [14.2.4 The Focus Stacker](#1424-the-focus-stacker)
     - [14.2.5 Source: Developed or Camera Preview](#1425-source-developed-or-camera-preview)
+    - [14.2.6 Served From the devPreview (2026-11-01)](#1426-served-from-the-devpreview-2026-11-01)
   - [14.3 Output](#143-output)
     - [14.3.1 Formats](#1431-formats)
     - [14.3.2 Destination](#1432-destination)
@@ -679,6 +682,7 @@
     - [15.2.2 Colour Management Is Always On](#1522-colour-management-is-always-on-the-alert-and-the-toggle-removed)
   - [15.3 The Display Transform Cache and Fast Kernel](#153-the-display-transform-cache-and-fast-kernel)
   - [15.4 The Colour Space Column](#154-the-colour-space-column)
+  - [15.5 Thumbnails Are Converted to sRGB](#155-thumbnails-are-converted-to-srgb)
 - [16 Keywords](#16-keywords)
   - [16.1 Reading Keywords (dc:subject and lr:hierarchicalSubject)](#161-reading-keywords-dcsubject-and-lrhierarchicalsubject)
     - [16.1.1 Three Columns](#1611-three-columns)
@@ -6152,7 +6156,7 @@ Utilities/inference/lamafill.\* (LamaFill::apply), used when G::useLamaSpotFill 
 - I/O: image [1x3x512x512] RGB in [0,1] + mask [1x1x512x512] where 1 = inpaint; output [1x3x512x512] RGB in [0,255] (verified by probe). (MI-GAN packs [keep-0.5, im\*keep] instead.)
 - The lama.onnx export MUST be the fixed-shape (1x3x512x512) + Einsum("ij,jk->ik") -> MatMul rewrite, which cut CoreML partitions 405 -> 76; a raw dynamic-batch export is far slower. The Windows deploy copy is not added (matching MI-GAN).
 - Luminance match (applyFillCorrection, G::spotFillCorrectMode): large fills leave a low-frequency "patch" offset against a smooth surround, since the alpha composite feathers only the SEAM. Modes: 0 none; 1 Poisson (cv::seamlessClone NORMAL_CLONE, boundary-gradient match; no-op if the hole is empty or touches a frame edge), the DEFAULT, because the model path serves Object fills and clone fallbacks, which must keep the model's content; 2 membrane transfer, INERT for this lama.onnx (probe-verified 2026-07-16: the export composites the input over the keep region IN-GRAPH, so orig == model outside the hole and any correction anchored on their difference is dead); 3 pure harmonic (discard the model; only right for smooth surfaces). The surround is reconstructed by pushPull(), a Gaussian-pyramid push-pull (Gortler et al.) that fills the hole with a smooth harmonic membrane (it replaced a single-Gaussian normalised convolution that collapsed to a flat average deep in a large hole).
-- Grain match (applyGrainMatch, G::spotFillGrain, default on; model path only, since clone heals carry real grain): the residual "patch" on smooth walls is NOT luminance (level corrections land within \~1/255) but MISSING sensor grain (a harmonic fill measured at 0.17x the surround's grain). Synthetic RNG noise measured WRONG in character (white, lag-1 autocorrelation \~0.05 vs the real grain's \~0.38; channel-independent \~0.04 vs \~0.92, so chroma confetti), so the grain is QUILTED: random high-frequency residual (sigma-4 highpass) blocks from the tile's kept surround, screened to near-median energy so structure is never copied, overlap-blended across the hole with random flips. Per channel the amplitude tops the fill's grain up to the surround's in quadrature; it falls back to channel- and spatially-correlated synthetic noise when the surround has too few clean blocks (a fixed RNG seed either way, so re-renders do not shimmer). Diagnosed instrument-first (the A/B outputs measured in Python) after level-only fixes kept failing.
+- Grain match (applyGrainMatch, G::spotFillGrain, default on; model path only, since clone heals carry real grain): the residual "patch" on smooth walls is NOT luminance (level corrections land within \~1/255) but MISSING sensor grain (a harmonic fill measured at 0.17x the surround's grain). Synthetic RNG noise measured WRONG in character (white, lag-1 autocorrelation \~0.05 vs the real grain's \~0.38; channel-independent \~0.04 vs \~0.92, so chroma confetti), so the grain is QUILTED: random high-frequency residual (sigma-4 highpass) blocks from the tile's kept surround, screened to the QUIETEST blocks (0.5-1.25x the 25th-percentile energy: the tile's noise floor) so structure is never copied, overlap-blended across the hole with random flips. Per channel the amplitude, measured over those same screened blocks, tops the fill's grain up to the surround's in quadrature. A near-median screen with the amplitude measured over the whole keep region failed on a large Object fill (2026-11-01, a leash beside a dog over bokeh): the 3480px tile was \~40% fur, so the median sat inside the fur, the quilt pasted hair fragments across the bokeh and the grain came out \~1.5x the real surround's; lab-verified on the stored stroke, the fixed screen matched the surround within 0.02 levels per channel with no copied structure; it falls back to channel- and spatially-correlated synthetic noise when the surround has too few clean blocks (a fixed RNG seed either way, so re-renders do not shimmer). Diagnosed instrument-first (the A/B outputs measured in Python) after level-only fixes kept failing.
 
 #### 11.18.6 What Was Tried
 
@@ -7755,6 +7759,8 @@ Declining makes flushImage DROP the old devPreview, so if nothing replaced it th
 #### 12.4.7 Visiting Writes Previews Too
 
 - A byproduct of rendering, not only of editing: flushImage runs only for DIRTY images, so an image whose recipe came from an earlier session and which the user merely VISITS never reaches it. DevelopProperties::topUpDevPreviews closes that gap: on leaving an image, leaving Develop or quitting, if a faithful frame exists and no preview matches the recipe in force, it caches one. The frame was rendered anyway, so this never causes a decode or a render.
+- The full-res settle render also tops up (2026-11-01). MW::onDevelopFullResReady calls topUpDevPreviews when the retained frame is faithful and the image is not dirty. Without it, a flush that found no faithful frame of the current recipe (seen on an Object-fill image; the suspected cause is the 2 s debounce flush firing before a slow settle render landed, and the TEMP "[DevPreview] declined" qDebug in the flush provider reports which test refused) CLEARED both tiers, and the grid showed the camera thumbnail (undeveloped, object still there) for the rest of the Develop session, because the "flush" build is deferred until Develop is left. A dirty image is skipped: its flush is still to come and will use the frame. Meanwhile MW::devPreviewUpdated KEEPS the previous developed icon for the current image in Develop when the flush had no frame (it used to clear it, flashing the camera thumbnail); the settle top-up, or the deferred build on leaving Develop, replaces it.
+- Heal / Clone source adoption re-keys the frames (2026-11-01). DevelopProperties::adoptSpotSources writes the engine's auto-picked source into the spot after a render lands, which changes the recipe hash, so the retained frames carried the pre-adoption recipe and every flush of a Heal / Clone edit was declined. MW::adoptDevelopSpotSources wraps it: a frame keyed to the recipe just replaced is re-keyed to the adopted one (same pixels; the source is only written down). In onDevelopFullResReady it now runs AFTER the frame is retained.
 - Re-entry is free: flushAll runs before EVERY file operation (FileOps::flushPendingEdits), so a multi-image paste or ingest would call topUpDevPreviews once per file. It remembers the last (path, recipe) it brought up to date and returns immediately for a repeat.
 - Cleared, not left behind: when flushImage cannot obtain a preview for a new recipe it CLEARS both tiers. A preview that no longer matches its recipe would show a picture the user has already changed; the camera thumbnail is at least honest.
 
@@ -8168,7 +8174,32 @@ using Done = std::function<void(bool ok, const QImage &img)>;
 using PixelSource = std::function<void(const QString &fPath, Done done)>;
 ```
 
-because one full-resolution raw render is \~1 s and a synchronous batch would freeze the GUI for minutes. The batch is a CHAIN, not a loop: startNext() asks the source for one image and returns; onImageReady() saves it and queues the next through the event loop. That is what keeps progress painting and Cancel responsive throughout.
+because one full-resolution raw render is \~1 s and a synchronous batch would freeze the GUI for minutes. The batch is a CHAIN, not a loop: startNext() asks the source for one image and returns; onImageReady() hands the resize, the encode and the ExifTool copy to the exporter's own one-thread pool (savePool); onImageSaved() records the result and queues the next image through the event loop. That is what keeps progress painting and Esc responsive throughout.
+
+The save used to run on the GUI thread. On a 50 MP raw a quality-100 JPEG encode plus the ExifTool rewrite of that file is seconds, and the app was frozen for them at the end of every image. save(), resized() and copySourceMetadata() are now static and take the batch's ExportSettings as an argument, so nothing they touch belongs to the exporter. ExifTool's QProcess is created and finished on the worker and only blocking waits are used, so the worker needs no event loop. The destination name, including the unique-name walk, is fixed on the GUI thread before the hand-off.
+
+#### 14.1.3 No Dialog Waits: The Status-Bar Export Row (2026-11-01)
+
+Export closes the dialog at once. ExportDlg only collects settings: onExportClicked validates them and accepts, and the caller passes targetPaths() and settings() to ImageExporter::run. The dialog used to stay open over the window for the whole batch, with Export turned into Stop. All three entry points report the same way: Develop export, File > Save Preview as, and Develop > Export with preset, which used a G::popup progress bar before.
+
+- The row: MW::progressExportRow, labelled "Exporting". ImageExporter::stage(index, total, Stage) drives it from MW::onExportStage. Each image is kStages cells (Render, Save, Metadata), and one more cell at the end is the catalog or folder update, so a single-image export still moves. What is happening is the row's tooltip ("Exporting 1 of 3: rendering IMG.arw", the queued count, "Esc to stop"). It is not the label, because a changing label rebuilds every row's bar (see Progress::setRowToolTip).
+- After the batch: MW::onExportFinished leaves the row on its last cell, with the tooltip "updating the catalog" or "updating the folder view", until that work is done. In the Library that means after the catalog index and re-query, through MW::catalogCreatedFilesThen, whose completion runs after the refresh barrier. It used to run with nothing on screen. MW::endExportProgress clears the row unless a queued batch has started.
+- Esc stops the run: MW::keyReleaseEvent calls ImageExporter::abort(), which finishes the image in flight and drops the queued batches.
+- Queue: run() while a batch is active QUEUES behind it, since the dialog can now be reopened mid-run. finish() clears running BEFORE emitting finished(), so the handler can tell "all done" from "another batch follows". Result carries its batch's ExportSettings, so the handler never reads activeSettings() for the wrong batch.
+- The connections (stage, finished) are made ONCE, when prepareExport creates the exporter, not per call.
+
+#### 14.1.4 Timing Probe: [ExportTime]
+
+ImageExporter::reportTime is a static flag in imageexporter.h, kept out of Main/global.h so flipping it does not rebuild the app. When it is on, each image prints:
+
+```
+[ExportTime] X.arw  decode N ms (decoded|cached)  denoise N ms  masks N ms  composite N ms  (WxH)
+[ExportTime] X.arw  devPreview USED|declined (WxH[, reduced]) N ms
+[ExportTime] X.arw  render N ms  save N ms  metadata N ms  (WxH)
+[ExportTime] catalog update N ms        (or: folder update)
+```
+
+The first line comes from developPixelSource (its reportTime argument, passed only by the export), the second from the devPreview shortcut, and the rest from the exporter and MW::onExportFinished. "masks" is the GUI-thread prerequisite step, timed from when that step starts so the wait in the event queue is not counted.
 
 #### 14.1.2 Per-Image Recipes
 
@@ -8224,6 +8255,17 @@ Added 2026-10-27. The Export Images dialog has a Source section directly under P
 - The dialog counts the raws in the export (the scope radios change it): with none, Camera preview is greyed with an inline reason beside it (its checked state is kept, like Insert exported images); with a mixed selection and Camera preview chosen, the note says how many will be developed.
 - The embedded preview is 8-bit and display-referred: ImageExporter::save converts it to the chosen output space by its tag, and a 16-bit format just holds 8-bit data.
 
+#### 14.2.6 Served From the devPreview (2026-11-01)
+
+A Developed export of an EDITED image is taken from its devPreview instead of a new render (MW::exportFromDevPreview) when that picture can honestly BE the export. A devPreview is an 8-bit sRGB JPEG at G::devPreviewQuality (90). It is usually full size, but it can be capped (G::devPreviewMaxEdge) or REDUCED (an Auto batch, \~2560 px). So all of the following must hold:
+
+- sRGB and 8-bit. A wider space would hold only sRGB colours, clipped before the conversion, and 16 bits would be padding.
+- The recipe hash matches (DevPreviewCache::contains with the image's own key). Unedited images always render: the hash is what proves the preview depicts what the render would produce.
+- Big enough. Full size and Percent need a FULL-size preview: not reduced, written under the Full preference, and at least half the sensor's long edge (a heavy crop fails this and just renders). Long edge needs a preview at least that long. The JPEG header is read on a worker (QImageReader::size) before anything is decoded.
+- Honest quality. The export must either DOWNSCALE (the resample removes the JPEG block structure), or be lossy at a quality no higher than G::devPreviewQuality. A full-size quality-100 JPEG, or any TIFF or PNG, would claim fidelity its pixels do not have, so those render.
+
+The cheap checks run on the GUI thread; the cache read, the size test and the decode run on the global pool. If the preview turns out unusable there, the worker hops back to the GUI thread and calls developPixelSource, so `done` is still called exactly once. The image is tagged sRGB. Pixels from a devPreview are already oriented, cropped and developed, as they are for the loupe.
+
 ### 14.3 Output
 
 #### 14.3.1 Formats
@@ -8272,7 +8314,7 @@ Wide-gamut output at 8 bits can band in smooth gradients; the dialog's tooltip s
 
 #### 14.4.1 Fixed Size and Layout
 
-The dialog is not resizable: ExportDlg::fitToContents pins it to the design width (kDialogWidth, 820) and to whatever height the layout asks for. The fields are sized to their content rather than their grid column (template 290, suffix 165, Type and Space 130, since they hold "Display P3", Depth and Compression 100), so a wider window would show nothing more and a taller one would pool space under the last section. fitToContents re-runs only when setBusy adds or removes the progress bar: changing FORMAT never changes the height.
+The dialog is not resizable: ExportDlg::fitToContents pins it to the design width (kDialogWidth, 820) and to whatever height the layout asks for. The fields are sized to their content rather than their grid column (template 290, suffix 165, Type and Space 130, since they hold "Display P3", Depth and Compression 100), so a wider window would show nothing more and a taller one would pool space under the last section. There is no progress row in the dialog any more ([14.1.3](#1413-no-dialog-waits-the-status-bar-export-row-2026-11-01)); changing FORMAT never changes the height.
 
 - Every hideable control shares a row with one that never hides (Depth and Quality with Type, Compression with Space), so no row can empty out and leave a gap, and the group is the same height for every format. Both caption COLUMNS keep the width measured at build time, so nothing shifts sideways as the format changes.
 - Quality sits on the Type row in the same cells as Depth, because no format has both: quality belongs to the lossy formats (JPEG, HEIC), depth to the lossless ones (PNG, TIFF). The slider gets the width Depth's combo would have wasted (it runs through the slack column, with its value at the right edge). A 16-bit lossy format would draw them on top of each other and need its own row back.
@@ -8446,6 +8488,20 @@ Where it lives:
 - --metatest prints `colorspace=<id> [<name>]` and checks WINNOW_METATEST_COLORSPACE if set.
 
 Verified against exiftool on 62 real files (_ThumbTest on Yukon, _test1, the calibration raws): every ARW, CR2, CR3, ORF, RAF, RW2, NEF, PNG, TIFF, HEIC and JPEG agrees, including iPhone HEIC/JPEG as Display P3 (the profile beats EXIF's Uncalibrated), Adobe RGB and ProPhoto TIFFs, Adobe RGB NEFs (MakerNote) and Uncalibrated CR2/ORF. The misses are two Nikon-origin DNGs (the gap above) and a file whose extension Winnow does not parse. Tests: tst_colorspaces (ids, colorants incl. macOS's own profiles, the sRGB curve rule, EXIF/nclx), tst_queryexpr::colorSpaceIsAnIndexedEnum, tst_catalog (round trip, schema 27), tst_imagerow, tst_rowscratch.
+
+### 15.5 Thumbnails Are Converted to sRGB
+
+Added 2026-11-01. Thumbnails had NO colour management. Image/thumb.cpp put a wide-gamut file's pixels into the icon, and into ThumbCache, exactly as decoded. The loupe converts the same file through its embedded profile (ImageDecoder::colorManage), so the two disagreed. Found on an Adobe RGB export of a Sony A1 II raw. The exported pixels matched the developed preview to within 1 unit of CIELAB L* and C*, and the two loupe panes were identical on screen. The thumbnail measured C* 7.9 on the subject against 10.6 for the source's developed thumbnail, which is what the file's Adobe RGB values give when read as sRGB.
+
+Thumb::loadThumb now converts to sRGB after the scale (so it works on a 256 px image), using Thumb::sourceColorSpace and the SAME RULE AS THE LOUPE. The source profile is the file's embedded profile, for formats in Metadata::iccFormats; otherwise the pixels are taken as sRGB. A profile-less file is not converted by its colour space id, because the loupe does not do that either.
+
+1. A decode Qt tagged (its JPEG, PNG and TIFF readers read the embedded profile) says what it is.
+2. Otherwise the pixels are the file's own (its embedded EXIF thumbnail, Winnow's TIFF reader, libheif on Windows), so they are in the file's space. That is m.iccBuf, but ONLY when m.fPath is this file: on an icon-only read, Reader::readIcon hands over whatever m it last had, which can be the previous row's. Failing that, the model row's G::ICCBufColumn, found by path (RowStore reads are locked).
+3. Never for the macOS ImageIO loaders (loadFromHeic's fast path, loadFromImageIO). They draw into a CoreGraphics device-RGB context, which has already converted; Thumb::decodeConverted records it.
+
+The stored thumbnail is untagged sRGB, the same as the developed thumbnails in sidecars and the devPreviews. Display conversion of icons, sRGB to the monitor, is a separate question and is not done.
+
+Schema 29 (Cache/cachedb.cpp) drops the cached thumbnail of every catalogued image whose colour space is known and neither sRGB nor profile-less (colorspace NOT IN 0, 1, 9), so it is rebuilt converted the next time it is viewed. Thumbnails of images outside the catalog are not reached: they correct when the file changes or the thumbnail cache is cleared. Pinned by tst_catalog::schema29DropsWideGamutThumbs.
 
 ## 16 Keywords
 

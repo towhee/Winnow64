@@ -1810,6 +1810,11 @@ void MW::keyReleaseEvent(QKeyEvent *event)
         else if (embelExporter) emit abortEmbelExport();
         // abort color analysis
         else if (G::isRunningColorAnalysis) emit abortHueReport();
+        // stop exporting (the dialog closed on Export; the run is in the status bar)
+        else if (imageExporter && imageExporter->isRunning()) {
+            imageExporter->abort();
+            G::popup->showPopup("Stopping the export after the current image", 1500);
+        }
         // abort focus stacking
         else if (fsPipeline) emit abortFocusStack();
         // exit full screen mode
@@ -4221,14 +4226,28 @@ void MW::catalogCreatedFilesThenRefreshLibrary()
     queued behind indexFiles runs only after that (and any earlier) indexing is done.
 */
     if (G::isLogger) G::log("MW::catalogCreatedFilesThenRefreshLibrary");
+    catalogCreatedFilesThen({});
+}
+
+void MW::catalogCreatedFilesThen(std::function<void()> after)
+{
+/*
+    catalogCreatedFilesThenRefreshLibrary's body, with `after` run on the GUI thread once
+    the Library has been refreshed (or straight away when there is no catalog to wait
+    for) -- the export's status-bar row stays up until then.
+*/
     flushCatalogCreatedFiles();
-    if (!catalogScanner || !Catalog::instance().isAvailable()) return;
+    if (!catalogScanner || !Catalog::instance().isAvailable()) {
+        if (after) after();
+        return;
+    }
     QPointer<MW> self(this);
-    QMetaObject::invokeMethod(catalogScanner, [self]() {
+    QMetaObject::invokeMethod(catalogScanner, [self, after]() {
         if (!self) return;
-        QMetaObject::invokeMethod(self, [self]() {
-            if (self && G::scope == G::Scope::Catalog)
-                self->refreshLibraryAfterCatalogChange();
+        QMetaObject::invokeMethod(self, [self, after]() {
+            if (!self) return;
+            if (G::scope == G::Scope::Catalog) self->refreshLibraryAfterCatalogChange();
+            if (after) after();
         }, Qt::QueuedConnection);
     }, Qt::QueuedConnection);
 }
@@ -7953,6 +7972,26 @@ QByteArray MW::developRecipeKey(const QString &fPath)
     return Metadata::devPreviewKey(blob).toLatin1();
 }
 
+void MW::adoptDevelopSpotSources(const QString &fPath)
+{
+/*
+    Writing an auto-picked Heal / Clone source into the spot changes the recipe AFTER the
+    render that picked it landed, so the retained frames carried the pre-adoption recipe
+    and the devPreview provider declined them: every flush of a Heal / Clone edit cleared
+    the thumbnail. The pixels are the same heal (the source is only written down), so a
+    frame keyed to the recipe just replaced is re-keyed to the adopted one. A frame of an
+    older recipe is left alone -- it still depicts something else.
+*/
+    if (fPath.isEmpty() || !developProperties) return;
+    const QByteArray before = developRecipeKey(fPath);
+    if (!developProperties->adoptSpotSources(fPath) || before.isEmpty()) return;
+    const QByteArray after = developRecipeKey(fPath);
+    if (developFramePath == fPath && developFrameRecipe == before)
+        developFrameRecipe = after;
+    if (developFullFramePath == fPath && developFullFrameRecipe == before)
+        developFullFrameRecipe = after;
+}
+
 void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
 {
 /*
@@ -8015,7 +8054,19 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
        -- and only these -- while Develop is open. */
     const bool buildFollows = thumb.isNull() && !blob.isEmpty() && fPath != dm->currentKey
                               && G::operationMode == G::OperationMode::Develop;
-    if (!thumb.isNull()) {
+    /* The image being edited, flushed before its settle render landed: that render tops
+       the previews up (onDevelopFullResReady -> topUpDevPreviews) and replaces the icon.
+       Keep the previous DEVELOPED thumbnail meanwhile -- clearing it flashed the camera
+       thumbnail, a picture further from the edit than the one it replaced. Should no
+       faithful render come (a preview eye off, or the flush is the image being left),
+       leaving Develop builds the deferred preview and replaces it then. */
+    const bool settleFollows = thumb.isNull() && !blob.isEmpty()
+                               && fPath == dm->currentKey
+                               && G::operationMode == G::OperationMode::Develop;
+    if (settleFollows) {
+        // keep the icon on screen
+    }
+    else if (!thumb.isNull()) {
         devPreviewIconHeld.remove(fPath);
         dm->setDevelopIcon(dmRow, thumb);
         if (thumbView && thumbView->iconViewDelegate)
@@ -14366,7 +14417,7 @@ void MW::renderDevelopPreview(bool fullRes)
                 if (wantTime) msScopes = pv.elapsed();
                 /* A Heal / Clone stroke healed from a source the engine chose: write it
                    into the spot so its source pin appears. */
-                developProperties->adoptSpotSources(fPath);
+                adoptDevelopSpotSources(fPath);
             }
             if (developProxyPending) {
                 developProxyPending = false;
@@ -15096,8 +15147,6 @@ void MW::onDevelopFullResReady(const QImage &out, const QImage &shown,
     updateDevelopRenderingHint();
 
     const bool currentImage = (fPath == dm->currentKey);
-    /* A Heal / Clone source the engine chose (see the proxy completion). */
-    if (currentImage && developProperties) developProperties->adoptSpotSources(fPath);
     /* gen alone is not enough: crop / warp / level commits re-render WITHOUT bumping
        developParamsGen. A settle render launched while the crop tool was open (crop
        suppressed) and landing after the commit passed the gen test and painted the
@@ -15119,6 +15168,20 @@ void MW::onDevelopFullResReady(const QImage &out, const QImage &shown,
         developFullFramePath = fPath;
         developFullFrameFaithful = faithful;
         developFullFrameRecipe = recipe;
+    }
+    /* A Heal / Clone source the engine chose (see the proxy completion). After the
+       frame is retained, so it is re-keyed to the adopted recipe. */
+    if (currentImage && developProperties) adoptDevelopSpotSources(fPath);
+    if (!out.isNull() && currentImage && gen == developParamsGen && geomCurrent) {
+        /* Keep the thumbnail and devPreview in step with the picture. The flush (debounce
+           or navigate) writes them from whatever faithful frame is on hand, and when it
+           has none -- an Object fill's settle render can outlast the 2 s debounce -- it
+           CLEARS them, so the grid fell back to the camera thumbnail (undeveloped,
+           object still there) for the rest of the Develop session. Now the frame for
+           that recipe has landed, write them. A dirty image is skipped: its flush is
+           still to come and will use this frame. No-op when both tiers are current. */
+        if (faithful && !developProperties->isDirty(fPath))
+            developProperties->topUpDevPreviews(fPath);
     }
 
     if (currentImage && (gen != developParamsGen || !geomCurrent))
@@ -16561,7 +16624,13 @@ bool MW::prepareExport(QStringList &targets)
     }
 
     if (!exportPresets) exportPresets = new ExportPresets(settings, this);
-    if (!imageExporter) imageExporter = new ImageExporter(dm, metadata, this);
+    if (!imageExporter) {
+        imageExporter = new ImageExporter(dm, metadata, this);
+        /* Once, for every entry point: no dialog waits on the run any more, so the
+           status-bar row and the completion are the exporter's, not the caller's. */
+        connect(imageExporter, &ImageExporter::stage, this, &MW::onExportStage);
+        connect(imageExporter, &ImageExporter::finished, this, &MW::onExportFinished);
+    }
     return true;
 }
 
@@ -16787,7 +16856,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap, int degreesSnap,
-                            bool requireSensor, int maxEdge)
+                            bool requireSensor, int maxEdge, bool reportTime)
 {
 /*
     Render one image's FULL develop recipe for the exporter.
@@ -16813,8 +16882,16 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     building the base from the embedded preview -- a stack of previews comes out at the
     preview's size (3200x2400 for an OM-1, whose sensor is 5184x3888) with nothing to say
     why. The exporter leaves it off and keeps the preview as a last resort.
+
+    reportTime prints one [ExportTime] line with the time each step took, so a slow
+    export can be pinned on the decode, the denoise, the masks or the composite.
 */
     if (G::isLogger) G::log("MW::developPixelSource");
+
+    /* [ExportTime]: the steps hop threads, so the timings travel with them. */
+    struct StepTimes { QElapsedTimer t; qint64 decode = 0, denoise = 0, masks = 0; };
+    auto times = std::make_shared<StepTimes>();
+    times->t.start();
 
     if (fPath.isEmpty() || !developProperties) { done(false, QImage()); return; }
 
@@ -16874,13 +16951,15 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
        cache hit. */
     developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, degreesSnap, sensorRaw, requireSensor,
-                              lensShot, render, maxEdge, done]() mutable {
+                              lensShot, render, maxEdge, done, times,
+                              reportTime]() mutable {
         std::shared_ptr<const WorkingImage> work;
         bool decodedHere = false;
         if (!developBaseFor(fPath, m, render, sensorRaw, requireSensor, work, decodedHere)) {
             QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
             return;
         }
+        times->decode = times->t.restart();
         if (G::FSLog) {
             G::log("MW::developPixelSource",
                    QString("base %1x%2 sceneReferred=%3 decodedHere=%4 %5")
@@ -16923,11 +17002,14 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             }
         }
 
+        times->denoise = times->t.restart();
+
         /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
            concurrently with the live session's use of the same path-keyed caches. */
         QMetaObject::invokeMethod(this, [this, fPath, work, src, mj, depth, space, outSpace,
                                          decodedHere, degreesSnap, lensShot, maxEdge,
-                                         done]() {
+                                         done, times, reportTime, wantDenoise]() {
+            times->t.restart();          // the hop's queue wait is not the masks' cost
             const int degrees = !work->sceneReferred ? 0
                               : degreesSnap >= 0     ? degreesSnap
                                                      : developOrientationDegrees(*work, fPath);
@@ -16949,9 +17031,11 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             /* Step 3 (worker): the composite itself. src is the raw-denoised base when
                "Denoise raw" is set, else the clean one. work is kept alive alongside it
                because the mask fields registered above are keyed to those pixels. */
+            times->masks = times->t.restart();
             developRenderPool->start([this, fPath, work, src, mj, degrees, depth, space,
                                       outSpace, decodedHere, lensShot, maxEdge,
-                                      done]() {
+                                      done, times, reportTime, wantDenoise]() {
+                times->t.restart();
                 std::shared_ptr<const WorkingImage> lensSrc =
                     lensCorrectedSource(fPath, src, mj.global, src.get(), lensShot);
                 if (maxEdge > 0 && std::max(lensSrc->width, lensSrc->height) > maxEdge)
@@ -16970,6 +17054,18 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                    byte-budgeted and this walks every selected image). */
                 if (decodedHere && fPath != dm->currentKey)
                     WorkingImageCache::instance().remove(fPath);
+                if (reportTime)
+                    qDebug().noquote()
+                        << QString("[ExportTime] %1  decode %2 ms (%3)  denoise %4 ms%5  "
+                                   "masks %6 ms  composite %7 ms  (%8x%9)")
+                               .arg(QFileInfo(fPath).fileName())
+                               .arg(times->decode)
+                               .arg(decodedHere ? "decoded" : "cached")
+                               .arg(times->denoise)
+                               .arg(wantDenoise ? "" : " (off)")
+                               .arg(times->masks)
+                               .arg(times->t.elapsed())
+                               .arg(out.width()).arg(out.height());
                 QMetaObject::invokeMethod(this, [done, out]() {
                     done(!out.isNull(), out);
                 });
@@ -17010,21 +17106,163 @@ void MW::developExportPixelSource(const QString &fPath,
         previewPixelSource(fPath, done);
         return;
     }
-    developPixelSource(fPath, es.wants16Bit(), ImageExporter::renderSpace(es.space), done);
+    if (exportFromDevPreview(fPath, es, done)) return;
+    developPixelSource(fPath, es.wants16Bit(), ImageExporter::renderSpace(es.space), done,
+                       nullptr, -1, false, 0, ImageExporter::reportTime);
 }
 
-void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderView)
+bool MW::exportFromDevPreview(const QString &fPath, const ExportSettings &es,
+                              std::function<void(bool, const QImage &)> done)
+{
+/*
+    Serve a Developed export from the image's devPreview instead of rendering the recipe
+    again, when that picture can honestly BE the export. Returns false (and does nothing)
+    when it cannot be known up front; returns true when it has taken the image, in which
+    case `done` is called exactly once -- from the devPreview, or, when the JPEG turns out
+    too small, from developPixelSource after all.
+
+    WHAT A devPreview IS decides the rules: an 8-bit sRGB JPEG at G::devPreviewQuality,
+    usually at full size but possibly capped (G::devPreviewMaxEdge) or REDUCED (~2560 px,
+    an Auto batch). So:
+
+      sRGB, 8-bit       -- a wider space would only hold sRGB colours (gamut clipped
+                           before the conversion), and 16 bits would be padding.
+      big enough        -- full size needs a full-size preview; a long edge needs one
+                           at least that long; a percentage needs the full size to take
+                           it of.
+      honest quality    -- the pixels have been through one JPEG at the preview quality.
+                           Fine when the export DOWNSCALES (the resample wipes the block
+                           structure), or when it is lossy at no more than that quality.
+                           A full-size q100 JPEG or a TIFF from them would claim a
+                           fidelity it does not have, so those render.
+
+    Only for an EDITED image: the recipe hash is what proves the preview depicts what
+    the render would produce, and an unedited image's export is the default render.
+*/
+    if (es.wants16Bit() || es.space != OutputSpace::sRGB) return false;
+    if (!developProperties) return false;
+    const QString blob = developProperties->developBlobFor(fPath);
+    if (blob.isEmpty()) return false;
+    const QByteArray key = Metadata::devPreviewKey(blob, fPath).toLatin1();
+    if (!DevPreviewCache::instance().contains(fPath, key, /*acceptReduced*/true))
+        return false;
+
+    /* Whether a non-reduced entry is FULL size: written under the Full preference (the
+       only setting that writes the retained full frame) and not a heavy crop's worth
+       short of the sensor. Conservative -- a wrong "no" only costs the render. */
+    const ImageMetadata m = dm->imMetadata(fPath);
+    const int sensorLong = qMax(m.width, m.height);
+    const bool fullPref = G::devPreviewMaxEdge == 0;
+    const ExportFormat fmt = ExportFormats::find(es.format);
+    const bool qualityOk = fmt.hasQuality && es.quality <= G::devPreviewQuality;
+
+    QPointer<MW> self(this);
+    QThreadPool::globalInstance()->start([self, fPath, key, es, sensorLong, fullPref,
+                                          qualityOk, done]() {
+        QElapsedTimer t;
+        t.start();
+        bool reduced = false;
+        const QByteArray jpg = DevPreviewCache::instance().get(fPath, key, &reduced);
+        QSize p;
+        if (!jpg.isEmpty()) {
+            QBuffer buf;
+            buf.setData(jpg);
+            buf.open(QIODevice::ReadOnly);
+            p = QImageReader(&buf, "JPG").size();
+        }
+        const int pLong = qMax(p.width(), p.height());
+        const bool isFull = !reduced && fullPref && pLong > 0 && pLong * 2 >= sensorLong;
+
+        bool ok = false;
+        QSize out;
+        if (pLong > 0) {
+            if (isFull) {
+                ok = true;
+                out = ImageExporter::OutputSize(p, es);
+            }
+            else if (es.sizing == ExportSettings::LongEdge && pLong >= es.longEdgePx) {
+                ok = true;
+                out = ImageExporter::OutputSize(p, es);
+            }
+        }
+        if (ok) ok = qMax(out.width(), out.height()) < pLong || qualityOk;
+
+        QImage img;
+        if (ok) {
+            ok = img.loadFromData(jpg, "JPG") && !img.isNull();
+            if (ok) img.setColorSpace(QColorSpace::SRgb);
+        }
+        if (ImageExporter::reportTime)
+            qDebug().noquote() << QString("[ExportTime] %1  devPreview %2 (%3x%4%5) %6 ms")
+                                      .arg(QFileInfo(fPath).fileName())
+                                      .arg(ok ? "USED" : "declined")
+                                      .arg(p.width()).arg(p.height())
+                                      .arg(reduced ? ", reduced" : "")
+                                      .arg(t.elapsed());
+        if (ok) { done(true, img); return; }
+
+        /* Not usable after all: render, from the GUI thread where developPixelSource
+           must start. */
+        if (!self) { done(false, QImage()); return; }
+        QMetaObject::invokeMethod(self, [self, fPath, es, done]() {
+            if (!self) { done(false, QImage()); return; }
+            self->developPixelSource(fPath, es.wants16Bit(),
+                                     ImageExporter::renderSpace(es.space), done,
+                                     nullptr, -1, false, 0, ImageExporter::reportTime);
+        });
+    });
+    return true;
+}
+
+void MW::onExportStage(int index, int total, ImageExporter::Stage stage,
+                       const QString &fPath)
+{
+/*
+    The status-bar "Export" row. Each image is kStages cells (render, save, metadata) and
+    one more at the end is the catalog / folder update, so even a one-image export moves.
+    The row's label is fixed (see Progress::setRowToolTip for why); what is happening is
+    its tooltip.
+*/
+    if (!progress) return;
+    static const char *verbs[] = {"rendering", "saving", "writing metadata to"};
+    QString tip = QString("Exporting %1 of %2: %3 %4")
+                      .arg(index + 1).arg(total).arg(verbs[int(stage)])
+                      .arg(QFileInfo(VersionKey::sourceOf(fPath)).fileName());
+    const int queued = imageExporter ? imageExporter->queuedBatches() : 0;
+    if (queued > 0)
+        tip += QString("\n%1 more export%2 queued").arg(queued).arg(queued == 1 ? "" : "s");
+    tip += "\nEsc to stop";
+    progress->setRowToolTip(progressExportRow, tip);
+    progress->updateProgress(progressExportRow,
+                             index * ImageExporter::kStages + int(stage),
+                             total * ImageExporter::kStages + 1);
+}
+
+void MW::endExportProgress()
+{
+    /* A queued batch has started meanwhile: the row is its now. */
+    if (imageExporter && imageExporter->isRunning()) return;
+    if (!progress) return;
+    progress->clearProgress(progressExportRow);
+    progress->setRowToolTip(progressExportRow, QString());
+}
+
+void MW::onExportFinished(const ImageExporter::Result &result)
 {
 /*
     Report the outcome, and surface the new files if they landed in a folder that is
     currently loaded -- otherwise an export into the folder you are looking at appears to
     have done nothing until a manual refresh.
+
+    The status-bar row stays up, on its last cell, until that is done: in the Library it
+    is a catalog index and a re-query, which can take seconds and used to happen with
+    nothing on screen at all.
 */
     if (G::isLogger) G::log("MW::onExportFinished");
 
     QString msg;
     if (result.aborted)
-        msg = "Export cancelled -- " + QString::number(result.written.count()) + " written";
+        msg = "Export stopped -- " + QString::number(result.written.count()) + " written";
     else
         msg = "Exported " + QString::number(result.written.count()) + " image" +
               (result.written.count() == 1 ? "" : "s");
@@ -17034,7 +17272,25 @@ void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderV
         msg += ", " + QString::number(result.failed.count()) + " failed";
     if (G::popup) G::popup->showPopup(msg, 2500);
 
-    if (result.written.isEmpty()) return;
+    if (result.written.isEmpty()) { endExportProgress(); return; }
+
+    const int images = result.written.count() + result.skipped.count() +
+                       result.failed.count();
+    if (progress) {
+        progress->setRowToolTip(progressExportRow,
+                                G::scope == G::Scope::Catalog
+                                    ? "Exported: updating the catalog"
+                                    : "Exported: updating the folder view");
+        progress->updateProgress(progressExportRow, images * ImageExporter::kStages,
+                                 images * ImageExporter::kStages + 1);
+        progress->repaint();             // the Library refresh below is synchronous
+    }
+    QElapsedTimer t;
+    t.start();
+    auto report = [t](const char *what) {
+        if (ImageExporter::reportTime)
+            qDebug().noquote() << QString("[ExportTime] %1 %2 ms").arg(what).arg(t.elapsed());
+    };
 
     /*
         THE LIBRARY: THE CATALOG DECIDES. What the Library has loaded is a query over the
@@ -17047,18 +17303,21 @@ void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderV
         half-second batch, and its refresh waited for the Filters dock to be showing.
 
         So the written files go to the scanner NOW, and the Library re-queries once they
-        are committed (the barrier in catalogCreatedFilesThenRefreshLibrary). A file the
-        scope table admits joins the loaded set through applyCatalogDelta ->
-        applyModelChange, which saves, rebuilds and restores the filters, so the current
-        filter is applied to it. One outside the scope is not catalogued and stays out.
-        Each path was already reported through FileOps::onCreated; adding them here as
-        well only means this flush need not wait for those queued reports to arrive.
+        are committed (the barrier in catalogCreatedFilesThen). A file the scope table
+        admits joins the loaded set through applyCatalogDelta -> applyModelChange, which
+        saves, rebuilds and restores the filters, so the current filter is applied to
+        it. One outside the scope is not catalogued and stays out. Each path was already
+        reported through FileOps::onCreated; adding them here as well only means this
+        flush need not wait for those queued reports to arrive.
     */
     if (G::scope == G::Scope::Catalog) {
         catalogCreatedPending << result.written;
-        catalogCreatedFilesThenRefreshLibrary();
-        fsTree->updateCount();
-        bookmarks->updateCount();
+        catalogCreatedFilesThen([this, report]() {
+            fsTree->updateCount();
+            bookmarks->updateCount();
+            report("catalog update");
+            endExportProgress();
+        });
         return;
     }
 
@@ -17067,40 +17326,36 @@ void MW::onExportFinished(const ImageExporter::Result &result, bool addToFolderV
         if (dm && dm->isFolderLoaded(folder)) loadedFolderTouched = true;
 
     if (loadedFolderTouched) {
-        if (addToFolderView) insertFiles(result.written);
+        if (result.settings.addToFolderView) insertFiles(result.written);
         else refresh();
     }
     fsTree->updateCount();
     bookmarks->updateCount();
+    report("folder update");
+    endExportProgress();
 }
 
 void MW::developExport()
 {
 /*
     "X" (Develop mode): export the selected images with their develop recipes applied.
-    Opens the shared export dialog with the DEVELOP pixel source; the dialog collects the
-    settings and drives ImageExporter, which stays alive after the dialog closes only long
-    enough to finish (the dialog stays open for the duration).
+    Opens the shared export dialog; it collects the settings and closes on Export, and the
+    run goes to ImageExporter with the DEVELOP pixel source, reporting in the status bar.
 */
     if (G::isLogger) G::log("MW::developExport");
 
     QStringList targets;
     if (!prepareExport(targets)) return;
 
-    imageExporter->setPixelSource(
+    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
+                  filenameTemplates, ExportDlg::Mode::Develop, this);
+    const bool go = dlg.exec() == QDialog::Accepted;
+    if (exportPresets) exportPresets->writeLast(dlg.settings());
+    if (!go) return;
+    imageExporter->run(dlg.targetPaths(), dlg.settings(),
         [this](const QString &fPath, ImageExporter::Done done) {
             developExportPixelSource(fPath, done);
         });
-
-    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
-                  filenameTemplates, ExportDlg::Mode::Develop, this);
-    QMetaObject::Connection c = connect(imageExporter, &ImageExporter::finished, this,
-        [this](const ImageExporter::Result &r) {
-            onExportFinished(r, imageExporter->activeSettings().addToFolderView);
-        });
-    dlg.exec();
-    disconnect(c);
-    if (exportPresets) exportPresets->writeLast(dlg.settings());
 }
 
 void MW::developExportWithPreset(const QString &presetName)
@@ -17108,7 +17363,7 @@ void MW::developExportWithPreset(const QString &presetName)
 /*
     Develop > Export with preset > <name>: run a saved export preset over the selection
     with NO dialog. An export preset is complete (it carries its destination), so there is
-    nothing left to ask -- progress and the result go through G::popup instead.
+    nothing left to ask -- progress goes to the status bar like any other export.
 */
     if (G::isLogger) G::log("MW::developExportWithPreset");
 
@@ -17127,30 +17382,10 @@ void MW::developExportWithPreset(const QString &presetName)
         return;
     }
 
-    imageExporter->setPixelSource(
+    imageExporter->run(targets, s,
         [this](const QString &fPath, ImageExporter::Done done) {
             developExportPixelSource(fPath, done);
         });
-
-    G::popup->setProgressVisible(true);
-    G::popup->setProgressMax(targets.count());
-    G::popup->showPopup("Exporting " + QString::number(targets.count()) +
-                        " images with \"" + presetName + "\"", 0, true, 1);
-
-    /* Single-shot connections: the exporter outlives this call, so both are dropped in
-       the finished handler (which needs its own handle, hence the shared holder). */
-    auto conns = std::make_shared<QVector<QMetaObject::Connection>>();
-    conns->append(connect(imageExporter, &ImageExporter::progress, this,
-        [](int done, int) { if (G::popup) G::popup->setProgress(done); }));
-    conns->append(connect(imageExporter, &ImageExporter::finished, this,
-        [this, conns](const ImageExporter::Result &r) {
-            if (G::popup) { G::popup->setProgressVisible(false); G::popup->reset(); }
-            const bool addToView = imageExporter->activeSettings().addToFolderView;
-            for (const QMetaObject::Connection &c : *conns) disconnect(c);
-            onExportFinished(r, addToView);
-        }));
-
-    imageExporter->run(targets, s);
 }
 
 void MW::buildDevelopExportPresetMenu()

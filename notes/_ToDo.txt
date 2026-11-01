@@ -5,6 +5,8 @@ WHAT'S NEW
 - Add Mix to develop color
 
 BUGS / TO DO
+- In compare view, the thumbnail selection should match the compare grid re selected vs
+  most selected.
 - /Users/roryhill/Temp/Photos_to_be_curated/2026/202606/2026-06-10_Victoria/2026-07-01_0082.heic
   crop warp not working properly
 - Videos starting at final frame.
@@ -13,7 +15,6 @@ BUGS / TO DO
 - Tweak transform behavior
 - Beam mask tool: Show dashed theather zone same as radial gradient, Add shift mouse wheel feather adjustment
 - Arrow navigation in develop when no slider has the focus
-- Change histogram button to look like a histogram.
 - Catalog management: move, copy, join, select
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup

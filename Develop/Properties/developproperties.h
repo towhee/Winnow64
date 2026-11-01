@@ -250,6 +250,7 @@ public:
        were rendered in the old one. See Develop/editrotate.h. */
     void rotateImageEdits(const QString &fPath, int degrees);
     void flushAll();                        // write every dirty stack (quit/pre-op)
+    bool isDirty(const QString &fPath) const { return dirty.contains(fPath); }
 
     /* Bring BOTH preview tiers up to date for fPath when the render has already produced
        a faithful frame. Costs a JPEG encode of pixels that were rendered anyway -- it
@@ -615,8 +616,9 @@ public slots:
     void onSpotSourceMoved(int index, QPointF offset);
     /* A render of fPath landed: give each Heal / Clone spot that has no source yet the
        one the engine chose (LamaFill::autoSource), so its source pin can be shown and
-       moved. Not a History step -- the heal on screen is unchanged. */
-    void adoptSpotSources(const QString &fPath);
+       moved. Not a History step -- the heal on screen is unchanged. Returns true when
+       a source was written (the recipe changed). */
+    bool adoptSpotSources(const QString &fPath);
     bool isSpotActive() const { return spotMode; }   // for the action-row spot button
     /* Replace panel preview eye: false renders WITHOUT the spot heals (non-destructive
        bypass, like the Transform eye); the spots stay in the stack. Session-wide. */

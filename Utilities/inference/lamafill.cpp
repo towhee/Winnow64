@@ -296,26 +296,18 @@ void applyGrainMatch(cv::Mat &fill, const cv::Mat &orig, const cv::Mat &hard)
     const cv::Mat res = orig - origLow;                  // quilting source
     const cv::Mat fres = fill - fillLow;
 
-    /* Per-channel amplitude: top the fill's grain up to the surround's in quadrature. */
     std::vector<cv::Mat> rc, fc;
     cv::split(res, rc);
     cv::split(fres, fc);
-    double amp[3];
-    bool need = false;
-    for (int c = 0; c < 3; ++c) {
-        cv::Scalar m, sSur, sFill;
-        cv::meanStdDev(rc[c], m, sSur,  keepMask);
-        cv::meanStdDev(fc[c], m, sFill, holeMask);
-        amp[c] = std::sqrt(std::max(0.0, sSur[0]*sSur[0] - sFill[0]*sFill[0]));
-        if (amp[c] > 1e-3) need = true;
-    }
-    if (!need) return;
 
     cv::RNG rng(0x5EED5EED);                             // fixed -> stable re-renders
 
     /* Source candidates: BxB residual blocks fully inside the kept surround (O(1) block
-       test via an integral image), screened to near-median energy so real structure
-       (edges, objects in the tile) is never copied into the hole as grain. */
+       test via an integral image), screened to the QUIETEST blocks -- the tile's noise
+       floor -- so real structure (fur, edges, objects in the tile) is never copied into
+       the hole as grain. A near-median screen failed on a large Object fill: the 3480px
+       tile was ~40% dog fur, the median sat inside the fur, and the quilt pasted hair
+       fragments across a smooth bokeh background (2026-11-01, 0004.arw lab). */
     cv::Mat keep01, integ;
     keepMask.convertTo(keep01, CV_8U, 1.0 / 255.0);
     cv::integral(keep01, integ, CV_32S);
@@ -344,13 +336,36 @@ void applyGrainMatch(cv::Mat &fill, const cv::Mat &orig, const cv::Mat &hard)
             rms[i] = s[0];
         }
         std::vector<double> sorted = rms;
-        std::nth_element(sorted.begin(), sorted.begin() + sorted.size() / 2, sorted.end());
-        const double med = sorted[sorted.size() / 2];
+        std::nth_element(sorted.begin(), sorted.begin() + sorted.size() / 4, sorted.end());
+        const double p25 = sorted[sorted.size() / 4];
         std::vector<cv::Point> screened;
         for (size_t i = 0; i < cand.size(); ++i)
-            if (rms[i] > 0.4 * med && rms[i] < 2.5 * med) screened.push_back(cand[i]);
+            if (rms[i] > 0.5 * p25 && rms[i] < 1.25 * p25) screened.push_back(cand[i]);
         if (int(screened.size()) >= 4) cand = screened;  // else keep the unscreened set
     }
+
+    /* Grain source = the screened blocks (or the whole kept surround when too few blocks
+       to quilt). The target amplitude is measured over that SAME source: measured over
+       the whole keep region, fur and edges inflated it ~1.5x above the real grain. */
+    cv::Mat srcMask;
+    if (B > 0) {
+        srcMask = cv::Mat::zeros(t, t, CV_8U);
+        for (const cv::Point &p : cand) srcMask(cv::Rect(p.x, p.y, B, B)).setTo(255);
+    } else {
+        srcMask = keepMask;
+    }
+
+    /* Per-channel amplitude: top the fill's grain up to the surround's in quadrature. */
+    double amp[3];
+    bool need = false;
+    for (int c = 0; c < 3; ++c) {
+        cv::Scalar m, sSur, sFill;
+        cv::meanStdDev(rc[c], m, sSur,  srcMask);
+        cv::meanStdDev(fc[c], m, sFill, holeMask);
+        amp[c] = std::sqrt(std::max(0.0, sSur[0]*sSur[0] - sFill[0]*sFill[0]));
+        if (amp[c] > 1e-3) need = true;
+    }
+    if (!need) return;
 
     cv::Mat grainCh[3];
     if (B > 0) {

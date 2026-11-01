@@ -292,20 +292,15 @@ void MW::saveAsFile()
     QStringList targets;
     if (!prepareExport(targets)) return;
 
-    imageExporter->setPixelSource(
+    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
+                  filenameTemplates, ExportDlg::Mode::Preview, this);
+    const bool go = dlg.exec() == QDialog::Accepted;
+    if (exportPresets) exportPresets->writeLast(dlg.settings());
+    if (!go) return;
+    imageExporter->run(dlg.targetPaths(), dlg.settings(),
         [this](const QString &fPath, ImageExporter::Done done) {
             previewPixelSource(fPath, done);
         });
-
-    ExportDlg dlg(imageExporter, exportPresets, targets, dm->currentKey,
-                  filenameTemplates, ExportDlg::Mode::Preview, this);
-    QMetaObject::Connection c = connect(imageExporter, &ImageExporter::finished, this,
-        [this](const ImageExporter::Result &r) {
-            onExportFinished(r, imageExporter->activeSettings().addToFolderView);
-        });
-    dlg.exec();
-    disconnect(c);
-    if (exportPresets) exportPresets->writeLast(dlg.settings());
 }
 
 void MW::applyModelChange(const QStringList &added, const QStringList &removed,
