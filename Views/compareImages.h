@@ -35,6 +35,7 @@ public:
     void updateClassification(bool isPick, QString rating, QString colorClass,
                               bool isRatingBadgeVisible, QModelIndex idx);
     void test();
+    QModelIndexList indexes() const;    // images in the grid, in grid order
 
 protected:
     void resizeEvent(QResizeEvent *event);
@@ -44,6 +45,7 @@ public slots:
     void updateToggleZoom(qreal toggleZoomValue);
 
     QModelIndex go(QString key);
+    void goTo(QModelIndex sfIdx);
     void zoomOut();
     void zoomIn();
     void zoomToFit();

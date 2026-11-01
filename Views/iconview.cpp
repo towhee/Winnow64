@@ -2328,8 +2328,12 @@ void IconView::startDrag(Qt::DropActions)
        folder moved the wrong files. Like the Finder, the pressed thumb becomes the
        selection first. */
     const QModelIndex pressIdx = indexAt(mousePressPos);
-    if (pressIdx.isValid() && !selectionModel()->isRowSelected(pressIdx.row()))
+    if (pressIdx.isValid() && !selectionModel()->isRowSelected(pressIdx.row())) {
+        /* A frozen selection (Compare) cannot become the pressed thumb, and dragging the
+           selection instead would carry files the user did not press. */
+        if (m2->sel->isFrozen()) return;
         m2->sel->select(pressIdx, Qt::NoModifier, "IconView::startDrag");
+    }
 
     QModelIndexList selection = selectionModel()->selectedRows();
     if (selection.isEmpty()) {

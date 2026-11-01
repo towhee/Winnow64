@@ -689,9 +689,9 @@ void CompareView::select()
     emit sync(fPath, false, "CompareView::select");
     emit updateInfo(sfRow);
 
-    thumbView->setSelectionMode(QAbstractItemView::SingleSelection);
-    thumbView->setCurrentIndex(sfIdx);
-    thumbView->setSelectionMode(QAbstractItemView::NoSelection);
+    /* Move the current index only. The thumbnail selection must stay the set of images
+       in the compare grid; a view setCurrentIndex would ClearAndSelect it down to one. */
+    dm->selectionModel->setCurrentIndex(sfIdx, QItemSelectionModel::NoUpdate);
 
     this->setStyleSheet("QGraphicsView  {"
                         "margin:1; "

@@ -236,6 +236,7 @@
     - [7.5.6 Selection Keys Are Ignored in Develop Mode](#756-selection-keys-are-ignored-in-develop-mode)
     - [7.5.7 The View Keys Are the Way Out of Develop Mode](#757-the-view-keys-are-the-way-out-of-develop-mode)
     - [7.5.8 Discoverability](#758-discoverability)
+  - [7.6 Compare View Freezes the Selection](#76-compare-view-freezes-the-selection)
 - [8 Map and Geotagging](#8-map-and-geotagging)
   - [8.1 The Map Module](#81-the-map-module)
     - [8.1.1 Why Not Google, Apple or Qt Location](#811-why-not-google-apple-or-qt-location)
@@ -3715,6 +3716,18 @@ syncDevelopMenuEnabled must run on the MODE CHANGE, not only on the menu's about
 Save Develop Preset (Cmd+Shift+N) is the exception: a modified combo owned by no other action, so it is a normal QAction with a real QKeySequence, kept Develop-only by its enabled state (setOperationMode enables it only in Develop; syncDevelopMenuEnabled greys it in Preview). See [11.34 Develop Presets](#1134-develop-presets).
 
 Develop > Export with preset is a QMenu rebuilt on aboutToShow from the export preset store (MW::buildDevelopExportPresetMenu), as embelExportMenu is rebuilt from the embellish templates. It has no action and no shortcut; syncDevelopMenuEnabled disables the MENU outside Develop and when no export preset has been saved. See [14 Export](#14-export).
+
+### 7.6 Compare View Freezes the Selection
+
+In Compare the thumbnail selection is the set of images in the compare grid. Only the current (yellow) image may change, and only to another image in the grid; nothing can add, remove or replace a selected image. MW::compareDisplay calls Selection::freeze(compareImages->indexes()) after the grid loads. That sets the selection to exactly the grid images (more than 16 selected are trimmed to the 16 compared) and records their keys. Loupe / Grid / Table display, MW::reset and MW::folderAndFileSelectionChange call Selection::unfreeze.
+
+While frozen:
+
+- Selection::setCurrentIndex refuses an image outside the grid, never clears the selection, and emits frozenCurrentChange, which CompareImages::goTo uses to move the grid's highlight. Selection::select (every click and navigation key ends up here) goes through it with clearSelection false, so modifiers are ignored.
+- toggleSelect, selectRows, all, invert and clear return without doing anything.
+- Bare Left / Right in MW::eventFilter call keyRight / keyLeft, which step through the grid (CompareImages::go), instead of sel->next / prev, which would step through the thumbnails. Home / End go to the first / last grid image.
+- IconView::startDrag will not drag from an unselected thumbnail. Making it the selection would break the freeze, and dragging the selection instead would carry files the user did not press (a plain drag is a MOVE).
+- CompareView::select (hovering over a grid cell) moves only the current index, with QItemSelectionModel::NoUpdate. A view's setCurrentIndex would ClearAndSelect the selection down to one image.
 
 ## 8 Map and Geotagging
 

@@ -94,6 +94,15 @@ void Selection::setCurrentIndex(QModelIndex sfIdx, bool clearSelection)
              << "clearSelection = =" << clearSelection
                 ; //*/
 
+    /* Frozen: the current index may only move to one of the frozen images, and the
+       selection is never cleared. */
+    if (isFrozen()) {
+        if (!isFrozenMember(sfIdx)) return;
+        clearSelection = false;
+        sm->setCurrentIndex(sfIdx, QItemSelectionModel::NoUpdate);
+        emit frozenCurrentChange(sfIdx);
+    }
+
     updateCurrentIndex(sfIdx);
 
     if (clearSelection) {
@@ -174,6 +183,12 @@ void Selection::select(QModelIndex sfIdx, Qt::KeyboardModifiers modifiers, QStri
         // G::popUp->reset();
     }
 
+    // frozen: modifiers cannot add to or remove from the selection, only move current
+    if (isFrozen()) {
+        setCurrentIndex(sfIdx, false);
+        return;
+    }
+
     if (Utilities::modifiers(modifiers, Qt::ControlModifier)) {
         toggleSelect(sfIdx);
         // if is selected set as new shiftAnchorIndex
@@ -233,6 +248,7 @@ void Selection::okToSelect(bool isOk)
 void Selection::toggleSelect(QModelIndex sfIdx)
 {
     if (G::isLogger || isDebug) G::log("Selection::toggleSelect");
+    if (isFrozen()) return;
 
     // current index is always selected
     if (sfIdx == dm->currentSfIdx) {
@@ -269,6 +285,7 @@ void Selection::selectRows(const QList<int> &sfRows, bool add)
     are then added. With `add` the rows join the selection and the current image stays.
 */
     if (G::isLogger || isDebug) G::log("Selection::selectRows");
+    if (isFrozen()) return;
     QList<int> rows;
     const int n = dm->sf->rowCount();
     for (int r : sfRows) if (r >= 0 && r < n) rows.append(r);
@@ -442,6 +459,7 @@ void Selection::prevPick(Qt::KeyboardModifiers modifiers)
 void Selection::all()
 {
     if (G::isLogger || isDebug) G::log("Selection::all");
+    if (isFrozen()) return;
     QItemSelection selection;
     QModelIndex first = dm->sf->index(0, 0);
     QModelIndex last = dm->sf->index(dm->sf->rowCount() - 1, 0);
@@ -482,6 +500,7 @@ QModelIndex Selection::nearestSelectedIndex(int sfRow)
 void Selection::invert()
 {
     if (G::isLogger || isDebug) G::log("Selection::invert");
+    if (isFrozen()) return;
 
     QItemSelection all;
     QModelIndex firstIndex = dm->sf->index(0, 0);
@@ -491,6 +510,40 @@ void Selection::invert()
     QModelIndex idx = nearestSelectedIndex(dm->currentSfRow);
     bool clearSelection = false;
     setCurrentIndex(idx, clearSelection);
+}
+
+void Selection::freeze(const QModelIndexList &sfRows)
+{
+/*
+    Compare view holds the selection to the images in its grid: thumbnail clicks and
+    navigation keys may move the current (yellow) image among them, nothing may add,
+    remove or replace one. The selection is set to exactly sfRows first, which drops any
+    selected images beyond the grid limit so the thumbnails match the grid.
+
+    Cleared by unfreeze() when the view mode changes or the folder is reset.
+*/
+    if (G::isLogger || isDebug) G::log("Selection::freeze");
+    frozenKeys.clear();
+    QItemSelection selection;
+    for (const QModelIndex &idx : sfRows) {
+        QModelIndex sfIdx = dm->sf->index(idx.row(), 0);
+        frozenKeys.insert(sfIdx.data(G::KeyRole).toString());
+        selection.select(sfIdx, sfIdx);
+    }
+    sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+}
+
+void Selection::unfreeze()
+{
+    if (G::isLogger || isDebug) G::log("Selection::unfreeze");
+    frozenKeys.clear();
+}
+
+bool Selection::isFrozenMember(const QModelIndex &sfIdx) const
+{
+    if (!sfIdx.isValid()) return false;
+    QString key = dm->sf->index(sfIdx.row(), 0).data(G::KeyRole).toString();
+    return frozenKeys.contains(key);
 }
 
 bool Selection::isSelected(int sfRow)
@@ -571,6 +624,7 @@ void Selection::chkForDeselection(int sfRow)
 
 void Selection::clear()
 {
+    if (isFrozen()) return;
     sm->select(dm->currentDmIdx, QItemSelectionModel::ClearAndSelect);
 }
 

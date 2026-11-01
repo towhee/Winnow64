@@ -50,7 +50,7 @@ void MW::keyRight(/*Qt::KeyboardModifiers modifier*/)
         sel->next(qApp->keyboardModifiers());
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Right"), Qt::NoModifier, "MW::keyRight");
+        sel->setCurrentIndex(compareImages->go("Right"), /*clearSelection*/ false);
     }
 }
 
@@ -61,7 +61,7 @@ void MW::keyLeft()
         G::log("MW::keyLeft", "ROW: " + QString::number(dm->currentSfRow));
     }
     if (G::mode == "Compare") {
-        sel->select(compareImages->go("Left"), Qt::NoModifier, "MW::keyLeft");
+        sel->setCurrentIndex(compareImages->go("Left"), /*clearSelection*/ false);
     }
     if (G::mode == "Loupe" || G::mode == "Table" || G::mode == "Grid") {
         sel->prev(qApp->keyboardModifiers());
@@ -110,8 +110,9 @@ void MW::keyHome()
     // qDebug() << "\nKEY HOME\n";
     if (G::isLogger) G::log("MW::keyHome");
     if (G::isInitializing) return;
-    if (G::mode == "Compare") compareImages->go("Home");
-    sel->first(qApp->keyboardModifiers());
+    if (G::mode == "Compare")
+        sel->setCurrentIndex(compareImages->go("Home"), /*clearSelection*/ false);
+    else sel->first(qApp->keyboardModifiers());
 }
 
 void MW::keyEnd()
@@ -122,7 +123,8 @@ void MW::keyEnd()
     // qDebug() << "\nKEY END\n";
     if (G::isLogger || G::isFlowLogger) G::log("MW::keyEnd");
     if (G::isInitializing) return;
-    if (G::mode == "Compare") compareImages->go("End");
+    if (G::mode == "Compare")
+        sel->setCurrentIndex(compareImages->go("End"), /*clearSelection*/ false);
     else sel->last(qApp->keyboardModifiers());
 }
 

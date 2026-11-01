@@ -43,6 +43,13 @@ public:
     //void report();
     QString diagnostics();
 
+    /*  FROZEN (Compare view). The selection is held to the compared images and only the
+        current index may move, and only onto one of them. See Selection::freeze. */
+    void freeze(const QModelIndexList &sfRows);
+    void unfreeze();
+    bool isFrozen() const { return !frozenKeys.isEmpty(); }
+    bool isFrozenMember(const QModelIndex &sfIdx) const;
+
     QModelIndexList selectedRows;
     QModelIndexList selectedIndexes;
     QModelIndexList dmSelectedRows;
@@ -59,6 +66,8 @@ signals:
     void updateStatus(bool, QString, QString);
     void updateCurrent(QModelIndex sfIdx, int instance);
     void updateMissingThumbnails();
+    // current moved while frozen (thumb click, nav key): the compare grid follows
+    void frozenCurrentChange(QModelIndex sfIdx);
 
 public slots:
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected);
@@ -105,6 +114,8 @@ private:
     QModelIndex shiftIdx(int row) const;
 
     bool ok;
+    // fPath keys, not rows or indexes, for the reason given above shiftAnchorRow
+    QSet<QString> frozenKeys;
 
     bool isDebug;
 };

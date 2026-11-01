@@ -1160,6 +1160,8 @@ void MW::createCompareView()
 
     connect(compareImages, &CompareImages::updateStatus, this, &MW::updateStatus);
     connect(compareImages, &CompareImages::togglePick, this, &MW::togglePick);
+    // a thumbnail click moves the current image while the selection is frozen
+    connect(sel, &Selection::frozenCurrentChange, compareImages, &CompareImages::goTo);
 }
 
 void MW::createInfoString()

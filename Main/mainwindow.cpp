@@ -2523,13 +2523,16 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                    focus -- developShortcutIntercept (above) consumes the others. */
 
                 // faster than using menu shortcuts
+                // Compare steps through its grid, not the thumbnails (keyRight/keyLeft)
                 if (e->key() == Qt::Key_Right && !editorHasFocus) {
                     if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Right");
-                    sel->next(e->modifiers());
+                    if (G::mode == "Compare") keyRight();
+                    else sel->next(e->modifiers());
                 }
                 if (e->key() == Qt::Key_Left && !editorHasFocus) {
                     if (G::isLogger || G::isFlowLogger) G::log("MW::eventFilter Key_Left");
-                    sel->prev(e->modifiers());
+                    if (G::mode == "Compare") keyLeft();
+                    else sel->prev(e->modifiers());
                 }
                 // if (e->key() == Qt::Key_Up) sel->up(e->modifiers());
                 // if (e->key() == Qt::Key_Down) sel->down(e->modifiers());
@@ -6596,6 +6599,7 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
     if (centralLayout->currentIndex() == CompareTab) {
         centralLayout->setCurrentIndex(LoupeTab);
     }
+    sel->unfreeze();
 
     // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
@@ -7029,6 +7033,7 @@ bool MW::reset(QString src)
     if (G::isSlideShow && !G::isStressTest) slideShow();
 
     // if previously in compare mode switch to loupe mode
+    sel->unfreeze();
     if (asCompareAction->isChecked()) {
         asCompareAction->setChecked(false);
         asLoupeAction->setChecked(true);

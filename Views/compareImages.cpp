@@ -161,7 +161,9 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
 
     loadGrid();
 
-    thumbView->setCurrentIndex(imList->at(0)->imageIndex);
+    // current index only, keep the selection that defines the compare grid
+    dm->selectionModel->setCurrentIndex(imList->at(0)->imageIndex,
+                                        QItemSelectionModel::NoUpdate);
     go("Home");
 
     return true;
@@ -341,6 +343,28 @@ int CompareImages::current()
         }
     }
     return -1;
+}
+
+QModelIndexList CompareImages::indexes() const
+{
+    QModelIndexList list;
+    for (int i = 0; i < imList->count(); ++i) list.append(imList->at(i)->imageIndex);
+    return list;
+}
+
+void CompareImages::goTo(QModelIndex sfIdx)
+{
+/*
+    Make the grid image for sfIdx the selected (current) one. Called when the current
+    index moves outside the grid, such as a click on one of the compared thumbnails.
+    No-op when it is already current or is not in the grid.
+*/
+    if (G::isLogger) G::log("CompareImages::goTo", QString::number(sfIdx.row()));
+    for (int i = 0; i < imList->count(); ++i) {
+        if (imList->at(i)->imageIndex.row() != sfIdx.row()) continue;
+        if (i != current()) imList->at(i)->select();
+        return;
+    }
 }
 
 QModelIndex CompareImages::go(QString key)

@@ -78,6 +78,7 @@ void MW::loupeDisplay(const QString src)
        dm->scrollToIcon; using the captured value keeps the new view's scroll in sync. */
     int scrollAnchor = dm->scrollToIcon;
     G::mode = "Loupe";
+    sel->unfreeze();
     filterDock->setEnabled(true);
     filters->enable();
     thumbDockVisibleAction->setEnabled(true);
@@ -195,6 +196,7 @@ void MW::gridDisplay()
     int scrollAnchor = dm->scrollToIcon;
     endBrowseCompare();     // a loupe-only compare does not outlive the loupe
     G::mode = "Grid";
+    sel->unfreeze();
     filterDock->setEnabled(true);
     filters->enable();
     thumbDockVisibleAction->setEnabled(false);
@@ -315,6 +317,7 @@ void MW::tableDisplay()
     int scrollAnchor = dm->scrollToIcon;
     endBrowseCompare();     // a loupe-only compare does not outlive the loupe
     G::mode = "Table";
+    sel->unfreeze();
     filterDock->setEnabled(true);
     filters->enable();
     thumbDockVisibleAction->setEnabled(true);
@@ -467,12 +470,15 @@ void MW::compareDisplay()
 
     endBrowseCompare();     // a loupe-only compare does not outlive the loupe
     G::mode = "Compare";
+    sel->unfreeze();
     // centralLayout->setCurrentIndex clears selectionModel
     sel->save("MW::compareDisplay");
     centralLayout->setCurrentIndex(CompareTab);
     sel->recover("MW::compareDisplay");
     prevCentralView = CompareTab;
     compareImages->load(centralWidget->size(), isRatingBadgeVisible, dm->selectionModel);
+    // hold the thumbnail selection to the compared images (see Selection::freeze)
+    sel->freeze(compareImages->indexes());
 
     // restore thumbdock to previous state (unless the show/hide bar has it collapsed)
     if (!isDockAreaCollapsed(Qt::BottomDockWidgetArea)) {
