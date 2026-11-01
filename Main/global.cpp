@@ -17,7 +17,7 @@ namespace G
 {
 
 // Rory version (expanded cache pref, focus stack pref, update default workspace)
-bool isRory = false;
+bool isRory = true;
 
 QSettings *settings;
 
@@ -85,13 +85,6 @@ bool useDWCollapse = false;         // master switch for dock collapse/expand/so
 bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
 bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -> MI-GAN
-/* Fill/Object replace modes. Shelved 2026-07-17 (Winnow scope = spot cleanup only; see
-   Documentation.txt "WHAT WAS TRIED"): true shows the ReplacePanel whenever the replace
-   tool is armed and offers its Fill/Object modes; false hides the panel and arms Spot
-   mode only. Stays FALSE until Fill and Object are actually implemented -- the panel is
-   only a mode picker for them, so on its own it offers a choice with nothing behind it.
-   Briefly flipped true on 2026-09-18 to look at the panel, and turned back off. */
-bool useReplaceFillModes = false;
 bool useFilterPanel = true;
 /* Brush/Object "erase from this stroke" (Opt while painting removes from the stroke)
    CANCELLED 2026-08-08. It existed because the developed effect only appeared on stroke

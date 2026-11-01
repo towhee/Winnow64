@@ -264,6 +264,7 @@
         <file>Docs/developrawhelp.html</file>
         <file>Docs/develophistoryhelp.html</file>
         <file>Docs/developtransformhelp.html</file>
+        <file>Docs/developspothelp.html</file>
         <file>images/icon16/ellipsis_vertical.png</file>
         <file>Workspaces/defaults.json</file>
     </qresource>

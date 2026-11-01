@@ -2755,6 +2755,8 @@ void MW::createDevelopDock()
             imageView, &ImageView::setSpotPins);
     connect(imageView, &ImageView::spotRemoveRequested,
             developProperties, &DevelopProperties::onSpotRemoveRequested);
+    connect(imageView, &ImageView::spotSourceMoved,
+            developProperties, &DevelopProperties::onSpotSourceMoved);
     /* White-balance dropper: arm/disarm the ImageView pick mode; a click comes back as a
        normalized point for the dock to solve into a Kelvin/tint. */
     connect(developProperties, &DevelopProperties::wbDropperBegin,
@@ -3093,54 +3095,17 @@ void MW::createDevelopDock()
             setDevelopTransformMode(transformPanel->mode());
         }
     });
-    /* Fill Replace (spot/fill/object heal) strip below the Transform panel, above the
-       scope header. ALWAYS starts hidden: a visible panel means the replace tool is
-       armed, which should never be the case before the user asks (spot button or "F"). */
-    replacePanel = new ReplacePanel(developContainer, settings);
-    replacePanel->setVisible(false);
-    developContainerLayout->addWidget(replacePanel);
-    /* Panel visibility tracks the armed state (DevelopProperties owns it): arming shows
-       the panel and pushes the current mode to the loupe capture; Escape/spot-button
-       disarm hides it through the same signal. */
+    /* Spot Removal has no panel: the action-row Spot menu (MW::showDevelopSpotMenu)
+       chooses the tool, shows/hides the repairs and opens the help. Arming pushes the
+       current tool to the loupe capture. */
+    developSpotMode = qBound(int(FillSpotGeom::Spot),
+                             settings->value("Develop/Replace/mode",
+                                             int(FillSpotGeom::Spot)).toInt(),
+                             int(FillSpotGeom::Clone));
     connect(developProperties, &DevelopProperties::spotActiveChanged, this, [this](bool active){
-        if (!replacePanel) return;
-        /* Fill/Object modes shelved (G::useReplaceFillModes): the panel stays hidden
-           and arming always captures in Spot mode -- spot cleanup only. */
-        replacePanel->setVisible(active && G::useReplaceFillModes);
-        if (active) {
-            if (imageView) imageView->setSpotReplaceMode(
-                G::useReplaceFillModes ? replacePanel->mode() : int(ReplacePanel::SpotMode));
-            replacePanel->setPreviewShown(developProperties->isSpotsShown());
-            if (developDock) { developDock->setVisible(true); developDock->raise(); }
-        }
-        else if (!developProperties->isSpotsShown()) {
-            /* Never leave the heals silently bypassed with the eye out of reach. */
-            developProperties->setSpotsShown(true);
-            replacePanel->setPreviewShown(true);
-            developParamsChange();
-        }
-    });
-    /* Mode row picked in the panel -> capture behaviour + stored kind. (The loupe's S/F/O
-       mode keys were retired when S became the Develop mode spot-tool toggle; the panel's
-       own S/F/O still work while it has focus, and it is only shown when the Fill/Object
-       modes are un-shelved.) */
-    connect(replacePanel, &ReplacePanel::modeChanged, this, [this](int mode){
-        if (imageView) imageView->setSpotReplaceMode(mode);
-    });
-    /* Preview eye: render with/without every committed heal (non-destructive bypass). */
-    connect(replacePanel, &ReplacePanel::previewToggled, this, [this](bool shown){
-        if (!developProperties) return;
-        developProperties->setSpotsShown(shown);
-        developParamsChange();
-    });
-    connect(replacePanel, &ReplacePanel::tipsRequested, this, [this]{
-        if (G::popup) G::popup->showPopup(
-            "<b>Fill Replace</b><br>"
-            "Spot: click a blemish to heal it with cloned surroundings.<br>"
-            "Fill: paint the area to replace (Opt/Alt erases), then Enter fills it "
-            "with cloned surroundings; Esc clears the paint.<br>"
-            "Object: brush over an object to remove it with a regenerative fill.<br><br>"
-            "[ and ] resize the brush. Click a pin to remove a heal. Esc exits.", 6000);
+        if (!active) return;
+        if (imageView) imageView->setSpotReplaceMode(developSpotMode);
+        if (developDock) { developDock->setVisible(true); developDock->raise(); }
     });
 
     /* The scope combo + scope-action buttons live in a gradient header band ABOVE the
@@ -3195,9 +3160,8 @@ void MW::createDevelopDock()
     /* Right-click menu for the WHOLE dock, not just the property tree: the container sees
        every context-menu click its children let through (only the tree and the scopes
        strip answer their own) and DevelopProperties builds the menu for the band the click
-       landed in. Transform and Replace are passed so their reset / tips can be offered
-       from their own panels. */
-    developProperties->bindPanelContextMenu(developContainer, transformPanel, replacePanel);
+       landed in. Transform is passed so its reset can be offered from its own panel. */
+    developProperties->bindPanelContextMenu(developContainer, transformPanel);
     /* The tone-region slider under the histogram drives the active scope's tone-split params. */
     developProperties->bindToneSlider(scopesView->toneRegionSlider());
 
@@ -3288,14 +3252,15 @@ void MW::createDevelopDock()
     developActionLayout->addWidget(developNewMaskBtn);
     developActionLayout->addSpacing(10);
 
-    /* Spot-removal tool (regenerative fill): brush over a blemish to heal it; heals are
-       recorded in the pinned "Fill" scope. DevelopProperties owns the armed state and
-       drives the icon back via spotActiveChanged (full opacity armed, dimmed off). */
+    /* Spot removal: a click pops the spot-tool menu (Spot, Heal, Clone, Fill, Object,
+       Help -- MW::showDevelopSpotMenu), as New mask pops the mask tools. Heals are
+       recorded in EditStack::spots. DevelopProperties owns the armed state and drives
+       the icon back via spotActiveChanged (full opacity armed, dimmed off). */
     developSpotBtn = new BarBtn();
     developSpotBtn->setSide(devActSide);
     developSpotBtn->setIcon(devActIcons + "spot.png", G::iconOpacity);
-    developSpotBtn->setToolTip("Spot removal: click a blemish to heal it  (S)");
-    connect(developSpotBtn, &BarBtn::clicked, this, &MW::toggleDevelopReplace);
+    developSpotBtn->setToolTip("Spot removal: choose Spot, Heal, Clone, Fill or Object  (S)");
+    connect(developSpotBtn, &BarBtn::clicked, this, &MW::showDevelopSpotMenu);
     connect(developProperties, &DevelopProperties::spotActiveChanged, developSpotBtn,
             [this, devActIcons](bool active){
         developSpotBtn->setIcon(devActIcons + "spot.png", active ? 1.0 : G::iconOpacity);
@@ -4066,15 +4031,14 @@ void MW::setDevelopPanelEnabled(bool visible, bool usable)
     const bool editsLive = live && !developTransformVisible;
     if (developProperties) developProperties->setPanelEnabled(editsLive);
     if (developActionRow) developActionRow->setEnabled(live);
-    /* Transform and Fill Replace are SIBLINGS of the property panel inside the dock (they
-       are pinned strips, not part of the tree), so setPanelEnabled does not reach them --
-       they have to be greyed here or a video selection leaves a live crop/heal strip over
-       a dead panel. They are usually hidden anyway, but a panel left open from the
-       previous still stays on screen when the selection moves to a video.
+    /* Transform is a SIBLING of the property panel inside the dock (a pinned strip, not
+       part of the tree), so setPanelEnabled does not reach it -- it has to be greyed here
+       or a video selection leaves a live crop strip over a dead panel. It is usually
+       hidden anyway, but a panel left open from the previous still stays on screen when
+       the selection moves to a video.
        Everything in the dock is greyed this way EXCEPT developAlertRows, which must stay
        readable precisely when the rest is disabled -- it says why. */
     if (transformPanel) transformPanel->setEnabled(live);
-    if (replacePanel) replacePanel->setEnabled(live);
     /* The History panel is part of the Develop tool: it comes and goes with it. Show it
        FIRST -- showing a tabified dock makes it the front tab, so Develop must be shown
        last (and raised) or the group would open on the History tab. */

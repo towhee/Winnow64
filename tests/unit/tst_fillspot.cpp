@@ -67,6 +67,7 @@ private slots:
     void clipsAtFrameEdge();
     void storageIsLocal();
     void eraseEverythingIsEmpty();
+    void kindsAndSourceRoundTrip();
 };
 
 void TstFillSpot::spotMatchesFullFrame()
@@ -113,6 +114,26 @@ void TstFillSpot::eraseEverythingIsEmpty()
     Coverage c;
     rasterize(parse(toJson(50.0, Fill, s)), 400, 300, c);
     QVERIFY(c.empty());
+}
+
+/* Every kind survives its name round trip (the JSON stores the name, and Heal / Clone
+   were appended to Kind), and withSource adds "src" without disturbing the stroke. */
+void TstFillSpot::kindsAndSourceRoundTrip()
+{
+    for (int k : {Spot, Fill, Object, Heal, Clone})
+        QCOMPARE(parse(toJson(0.04, 40.0, {0.2, 0.3, 0.4, 0.5}, k)).kind, k);
+    QCOMPARE(parse("{\"pts\":[0.5,0.5]}").kind, int(Fill));      // legacy: no kind
+
+    const QString heal = toJson(0.04, 40.0, {0.2, 0.3, 0.4, 0.5}, Heal);
+    QVERIFY(!parse(heal).hasSrc);
+    const Parsed p = parse(withSource(heal, 0.125, -0.25));
+    QVERIFY(p.hasSrc);
+    QCOMPARE(p.srcDx, 0.125);
+    QCOMPARE(p.srcDy, -0.25);
+    QCOMPARE(p.kind, int(Heal));
+    QCOMPARE(p.pts.size(), size_t(4));
+    QVERIFY(usesSource(Heal) && usesSource(Clone) && !usesSource(Spot));
+    QVERIFY(isPaintArea(Fill) && isPaintArea(Object) && !isPaintArea(Heal));
 }
 
 QTEST_GUILESS_MAIN(TstFillSpot)

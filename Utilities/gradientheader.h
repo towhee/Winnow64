@@ -14,8 +14,8 @@
     A titled gradient band -- the app's section header, as a widget a panel can just add
     to a layout.
 
-    The Develop panels each paint this band themselves (ReplacePanel, TransformPanel,
-    MaskPanel, SubmaskList, ScopeHeader) because each also hangs its own eye / menu /
+    The Develop panels each paint this band themselves (TransformPanel, MaskPanel,
+    SubmaskList, ScopeHeader) because each also hangs its own eye / menu /
     button row off it. A panel that wants nothing but the title has no reason to carry a
     fourth copy of the gradient, so it uses this.
 

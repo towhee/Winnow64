@@ -3,11 +3,15 @@
 
 #include <QImage>
 #include <QVector>
+#include <QPointF>
 #include "Develop/editstack.h"        // FillSpot
 
 /*
     The Fill Replace heal engine. Each FillSpot's paramsJson "kind" (Develop/fillspot.h,
     set by the Replace panel mode) picks how it heals:
+      heal / clone: ONE source offset for the whole stroke -- the stored "src", or one
+                    searched for like a spot's and reported through autoSource(). Heal
+                    Poisson-blends it, Clone copies it as it is (feathered edge).
       spot / fill : exemplar CLONE heal -- the best-matching nearby source patch is
                     template-matched, Poisson-blended over the hole and feathered by the
                     brush alpha (Lightroom heal-brush algorithm; real texture at every
@@ -38,6 +42,11 @@ bool isAvailable();
    empty disables pinning. Returns true if anything was applied. */
 bool apply(QImage &img, const QVector<FillSpot> &spots,
            const QString &cachePath = QString());
+
+/* The source a Heal/Clone spot (paramsJson without "src") was healed from by a render
+   of cachePath, as a normalized offset (dx of the width, dy of the height). False until
+   such a render has run. Thread-safe; read on the GUI thread after a render lands. */
+bool autoSource(const QString &cachePath, const QString &paramsJson, QPointF &offset);
 
 } // namespace LamaFill
 

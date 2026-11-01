@@ -113,6 +113,22 @@ void pinOffset(const QString &key, const QPoint &d)
     gOffsetCache.insert(key, d);
 }
 
+/*
+    The source each Heal/Clone spot was healed from when the engine chose it itself (no
+    "src" in its paramsJson yet), keyed by image path + the spot's paramsJson, as a
+    normalized offset. DevelopProperties reads it back on the GUI thread after the render
+    (LamaFill::autoSource) and writes it into the spot, so the source pin shows where the
+    pixels came from and can be dragged. Normalized, so a proxy render's choice is valid
+    at full resolution.
+*/
+std::mutex gAutoSourceMutex;
+QHash<QString, QPointF> gAutoSource;
+
+QString autoSourceKey(const QString &cachePath, const QString &paramsJson)
+{
+    return cachePath + '|' + paramsJson;
+}
+
 InferenceSession *SharedSession()
 {
 /*
@@ -429,10 +445,17 @@ void applyGrainMatch(cv::Mat &fill, const cv::Mat &orig, const cv::Mat &hard)
     or every candidate would copy part of the blemish) -- the caller then falls back to
     the model path. Coarse-to-fine: match at reduced resolution (hole ~<=48px), refine
     +-q px at full res.
+
+    Heal / Clone spots pass `forced`: the user's (or an earlier render's) source offset in
+    px, used as given with no search or validity test -- the source is the user's call.
+    `poisson` false copies the source as it is (Clone) instead of seamlessClone. `used`
+    receives the offset actually applied.
 */
 bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
                   int bx0, int by0, int bx1, int by1, const ChunkWin &win = {},
-                  const QString &offsetKey = QString())
+                  const QString &offsetKey = QString(),
+                  const cv::Point *forced = nullptr, bool poisson = true,
+                  cv::Point *used = nullptr)
 {
     const int W = full.cols, H = full.rows;
     const int bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
@@ -440,7 +463,11 @@ bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
     /* Pinned source from an earlier render of this exact spot/chunk/size? */
     cv::Point pinned;
     bool havePinned = false, pinnedNoSource = false;
-    if (lookupPinnedOffset(offsetKey, pinned, pinnedNoSource)) {
+    if (forced) {
+        pinned = *forced;
+        havePinned = true;
+    }
+    else if (lookupPinnedOffset(offsetKey, pinned, pinnedNoSource)) {
         if (pinnedNoSource) return false;               // known failing chunk
         havePinned = true;
     }
@@ -486,6 +513,10 @@ bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
     cv::Point d;                                         // best source offset, full-res
     if (havePinned) {
         d = pinned;
+        /* A forced (user) offset may point past the frame edge: keep the source rect
+           in-frame, as the search does for its own candidates. */
+        d.x = std::clamp(d.x, -C.x, W - C.width - C.x);
+        d.y = std::clamp(d.y, -C.y, H - C.height - C.y);
     } else {
     const cv::Mat tmpl = full(C);
     /* The match ring must ignore the WHOLE blemish (unwindowed coverage), not just this
@@ -602,7 +633,23 @@ bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
        and can NEVER reconstruct a local brightness maximum, so any membrane-based
        low-freq dims the bokeh blobs a stroke crosses -- the visible "dark sausage";
        Poisson keeps the source's own blobs and only tilts them to fit the boundary. */
+    if (used) *used = d;
     cv::Mat src = full(cv::Rect(C.x + d.x, C.y + d.y, C.width, C.height)).clone();
+    if (!poisson) {
+        /* Clone: the source pixels exactly, feathered in by the engine ramp. */
+        cv::Mat out = full(C);
+        for (int y = 0; y < C.height; ++y) {
+            cv::Vec3b *o = out.ptr<cv::Vec3b>(y);
+            const cv::Vec3b *sp = src.ptr<cv::Vec3b>(y);
+            const float *a = alpha.ptr<float>(y);
+            for (int x = 0; x < C.width; ++x) {
+                const float aa = std::clamp(a[x], 0.0f, 1.0f);
+                for (int c = 0; c < 3; ++c)
+                    o[x][c] = cv::saturate_cast<uchar>(o[x][c] * (1.0f - aa) + sp[x][c] * aa);
+            }
+        }
+        return true;
+    }
     cv::Mat dst = full(C).clone();
     cv::Mat mask = hard8;
     cv::Point center(mb.x + mb.width / 2, mb.y + mb.height / 2);
@@ -646,8 +693,10 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
     const int cx = (bx0 + bx1) / 2, cy = (by0 + by1) / 2;
     const int half = std::max(bx1 - bx0, by1 - by0) / 2;
 
-    /* Square context tile ~= 4x the spot, capped to the image, clamped in-bounds. */
-    int t = std::min({W, H, std::max(16, half * 4)});
+    /* Square context tile ~= 4x the spot, capped to the image, clamped in-bounds. Never
+       smaller than the net: a small hole then runs at NATIVE resolution with more
+       context, instead of being upscaled into the net and blurred back down. */
+    int t = std::min({W, H, std::max(kNet, half * 4)});
     int tx0 = std::clamp(cx - t / 2, 0, W - t);
     int ty0 = std::clamp(cy - t / 2, 0, H - t);
     const cv::Rect roi(tx0, ty0, t, t);
@@ -766,6 +815,15 @@ bool isAvailable()
     return s && s->IsLoaded();
 }
 
+bool autoSource(const QString &cachePath, const QString &paramsJson, QPointF &offset)
+{
+    std::lock_guard<std::mutex> lock(gAutoSourceMutex);
+    const auto it = gAutoSource.constFind(autoSourceKey(cachePath, paramsJson));
+    if (it == gAutoSource.constEnd()) return false;
+    offset = *it;
+    return true;
+}
+
 bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath)
 {
     if (img.isNull()) return false;
@@ -806,7 +864,6 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
            object leaves no clean source to clone). A large/long painted region heals
            in brush-scale CHUNKS, each cloning from its own local source (see ChunkWin);
            chunks run in scan order, so later chunks blend over earlier heals. */
-        const bool wantClone = p.kind != FillSpotGeom::Object;
         bool done = false;
         /* Pinned-offset key: engine version + image path + render size + this spot's
            geometry (see lookupPinnedOffset -- keeps heal geometry stable across
@@ -814,7 +871,32 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
         const QString spotKey = cachePath.isEmpty() ? QString()
             : QString("v2|%1|%2x%3|%4").arg(cachePath).arg(W).arg(H)
                   .arg(qHash(sp.paramsJson));
-        if (wantClone) {
+        /* Heal / Clone: ONE source for the whole stroke, so it can be shown and moved
+           (Lightroom's heal/clone brush). The stored "src" is used as given; without one
+           the engine searches as for a spot and records what it chose (autoSource). No
+           source found -> the Fill path below (chunked, nothing to show). */
+        if (FillSpotGeom::usesSource(p.kind)) {
+            const bool poisson = p.kind == FillSpotGeom::Heal;
+            cv::Point used;
+            if (p.hasSrc) {
+                const cv::Point forced(int(std::lround(p.srcDx * W)),
+                                       int(std::lround(p.srcDy * H)));
+                done = cloneHealOne(full, cov, bx0, by0, bx1, by1, {}, QString(),
+                                    &forced, poisson, &used);
+            } else {
+                done = cloneHealOne(full, cov, bx0, by0, bx1, by1, {},
+                                    spotKey.isEmpty() ? QString() : spotKey + "|s",
+                                    nullptr, poisson, &used);
+                if (done && !cachePath.isEmpty()) {
+                    std::lock_guard<std::mutex> lock(gAutoSourceMutex);
+                    if (gAutoSource.size() > 1024) gAutoSource.clear();   // simple bound
+                    gAutoSource.insert(autoSourceKey(cachePath, sp.paramsJson),
+                                       QPointF(double(used.x) / W, double(used.y) / H));
+                }
+            }
+        }
+        const bool wantClone = p.kind != FillSpotGeom::Object;
+        if (!done && wantClone) {
             /* Chunk size from the painted THICKNESS (max inscribed radius), like the
                feather -- NOT the brush diameter: a big brush previously made 640px
                chunks whose interiors sit far from any boundary, and nothing matches a

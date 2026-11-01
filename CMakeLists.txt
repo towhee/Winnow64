@@ -172,7 +172,6 @@ set(WINNOW_SOURCES
     Develop/Scopes/scopesview.cpp
     Develop/Transform/transformpanel.cpp
     Develop/Transform/croptransform.cpp
-    Develop/Replace/replacepanel.cpp
     Develop/History/historypanel.cpp
     Develop/History/historystore.cpp
     Develop/History/historyview.cpp
@@ -582,7 +581,6 @@ set(WINNOW_HEADERS
     Develop/Scopes/scopesview.h
     Develop/Transform/transformpanel.h
     Develop/Transform/croptransform.h
-    Develop/Replace/replacepanel.h
     Develop/History/develophistory.h
     Develop/History/historyentry.h
     Develop/History/historystore.h

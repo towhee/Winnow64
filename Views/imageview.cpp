@@ -984,6 +984,8 @@ void ImageView::beginSpotEdit()
     spotStrokeErase = false;
     spotCursorOn = false;
     spotHoverPin = -1;
+    spotHoverSource = -1;
+    spotSourceDrag = -1;
     setCursor(Qt::BlankCursor);         // the brush-size circle IS the cursor
     viewport()->update();
 }
@@ -999,6 +1001,9 @@ void ImageView::endSpotEdit()
     spotPending.clear();                // uncommitted Fill paint is discarded
     spotStrokeErase = false;
     spotPins.clear();
+    spotSources.clear();
+    spotHoverSource = -1;
+    spotSourceDrag = -1;
     unsetCursor();
     viewport()->update();
     syncUnfoldedFrameNeed();
@@ -1428,7 +1433,7 @@ void ImageView::drawRenderingHint(QPainter &p)
 
 void ImageView::setSpotReplaceMode(int mode)
 {
-    spotReplaceMode = qBound(0, mode, 2);
+    spotReplaceMode = qBound(0, mode, int(FillSpotGeom::Clone));
     spotPainting = false;               // a mode switch cancels any stroke in progress
     spotStrokePts.clear();
     spotPending.clear();                // and discards uncommitted Fill paint
@@ -1436,10 +1441,34 @@ void ImageView::setSpotReplaceMode(int mode)
     if (spotEditMode) viewport()->update();
 }
 
-void ImageView::setSpotPins(const QVector<QPointF> &pins)
+void ImageView::setSpotPins(const QStringList &spotParams)
 {
-    spotPins = pins;
+    spotPins.clear();
+    spotSources.clear();
+    for (const QString &json : spotParams) {
+        const FillSpotGeom::Parsed p = FillSpotGeom::parse(json);
+        double cx = 0.5, cy = 0.5;
+        if (p.valid()) FillSpotGeom::centroid(p, cx, cy);   // add-coverage centroid
+        spotPins.append(QPointF(cx, cy));
+        SpotSourceInfo info;
+        if (FillSpotGeom::usesSource(p.kind) && p.hasSrc) {
+            info.hasSource = true;
+            info.offset = QPointF(p.srcDx, p.srcDy);
+            if (!p.strokes.empty()) {
+                for (const FillSpotGeom::Stroke &st : p.strokes)
+                    info.strokes.append({st.sizeFrac, st.erase,
+                                         QVector<double>(st.pts.begin(), st.pts.end())});
+            }
+            else {
+                info.strokes.append({p.sizeFrac, false,
+                                     QVector<double>(p.pts.begin(), p.pts.end())});
+            }
+        }
+        spotSources.append(info);
+    }
     spotHoverPin = -1;                  // indices may have shifted (e.g. after a remove)
+    spotHoverSource = -1;
+    if (spotSourceDrag >= spotPins.size()) spotSourceDrag = -1;
     if (spotEditMode) viewport()->update();
 }
 
@@ -1448,6 +1477,25 @@ int ImageView::spotPinHitTest(QPoint vp) const
 {
     for (int i = 0; i < spotPins.size(); ++i)
         if (QLineF(QPointF(vp), maskNormToViewport(spotPins[i])).length() <= 9.0) return i;
+    return -1;
+}
+
+/* Where spot i's source pin sits (normalized): its centroid moved by the source offset. */
+QPointF ImageView::spotSourcePoint(int i) const
+{
+    if (i < 0 || i >= spotPins.size() || i >= spotSources.size()) return QPointF();
+    return spotPins[i] + spotSources[i].offset;
+}
+
+/* Index of the Heal / Clone source pin under vp, or -1. Tested before the spot pins, so
+   a source sitting on another spot's pin is still grabbable. */
+int ImageView::spotSourceHitTest(QPoint vp) const
+{
+    for (int i = 0; i < spotSources.size(); ++i) {
+        if (!spotSources[i].hasSource) continue;
+        if (QLineF(QPointF(vp), maskNormToViewport(spotSourcePoint(i))).length() <= 9.0)
+            return i;
+    }
     return -1;
 }
 
@@ -1551,6 +1599,67 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
 
     QPen halo(QColor(0, 0, 0, 160)); halo.setWidthF(3.0); halo.setCosmetic(true);
 
+    /* Stroke widths are a fraction of the MASK frame's long edge (spots, like masks, are
+       stored pre-geometry), measured here in displayed px. Viewport px per image px is
+       measured over a long baseline: mapFromScene returns integer QPoints, so a 1px
+       baseline rounds to ~0 at fit zoom and collapsed the painted width to a hairline. */
+    const double imgLong = maskNormLongEdgeItemPx();
+    const double scale = !pmItem ? 1.0 :
+        QLineF(mapFromScene(pmItem->mapToScene(QPointF(0, 0))),
+               mapFromScene(pmItem->mapToScene(QPointF(1000, 0)))).length() / 1000.0;
+
+    /* Heal / Clone sources: a ring where the pixels come from, joined to its spot pin by a
+       dashed line. Hovering either pin, or dragging the source, also outlines the spot's
+       painted area at both ends so the source can be lined up. */
+    auto footprint = [&](const SpotSourceInfo &info, QPointF shift) {
+        QPainterPath area;
+        for (const SpotPendingStroke &st : info.strokes) {
+            if (st.erase || st.pts.size() < 2) continue;
+            const double wVp = std::max(2.0, st.size * imgLong * scale);
+            QPainterPath line;
+            line.moveTo(maskNormToViewport(QPointF(st.pts[0], st.pts[1]) + shift));
+            for (int k = 2; k + 1 < st.pts.size(); k += 2)
+                line.lineTo(maskNormToViewport(QPointF(st.pts[k], st.pts[k + 1]) + shift));
+            if (st.pts.size() == 2) {
+                area.addEllipse(line.currentPosition(), wVp / 2.0, wVp / 2.0);
+                continue;
+            }
+            QPainterPathStroker stroker;
+            stroker.setWidth(wVp);
+            stroker.setCapStyle(Qt::RoundCap);
+            stroker.setJoinStyle(Qt::RoundJoin);
+            area = area.united(stroker.createStroke(line));
+        }
+        return area;
+    };
+    for (int i = 0; i < spotSources.size() && i < spotPins.size(); ++i) {
+        const SpotSourceInfo &info = spotSources[i];
+        if (!info.hasSource) continue;
+        const QPointF tgt = maskNormToViewport(spotPins[i]);
+        const QPointF src = maskNormToViewport(spotSourcePoint(i));
+        const bool hot = i == spotHoverPin || i == spotHoverSource || i == spotSourceDrag;
+        if (hot && !info.strokes.isEmpty()) {
+            QPen white(QColor(255, 255, 255, 230), 1.2); white.setCosmetic(true);
+            for (const QPointF &shift : {QPointF(0, 0), info.offset}) {
+                const QPainterPath area = footprint(info, shift);
+                painter->setPen(halo);
+                painter->drawPath(area);
+                painter->setPen(white);
+                painter->drawPath(area);
+            }
+        }
+        painter->setPen(halo);
+        painter->drawLine(src, tgt);
+        QPen dash(QColor(255, 255, 255, hot ? 230 : 170), 1.2, Qt::DashLine);
+        dash.setCosmetic(true);
+        painter->setPen(dash);
+        painter->drawLine(src, tgt);
+        painter->setPen(halo);
+        painter->drawEllipse(src, 5.0, 5.0);
+        painter->setPen(QPen(QColor(255, 255, 255, 240), hot ? 1.8 : 1.4));
+        painter->drawEllipse(src, 5.0, 5.0);
+    }
+
     for (int i = 0; i < spotPins.size(); ++i) {         // committed pins
         const QPointF v = maskNormToViewport(spotPins[i]);
         const bool hot = (i == spotHoverPin);           // cursor over it -> delete hint
@@ -1568,22 +1677,15 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
         }
     }
 
-    /* Fill mode: the pending painted area (accumulated strokes + the one being drawn)
-       as a teal tint at true brush width; erase strokes punch holes (CompositionMode
-       Clear), so the tint shows the area Enter will fill (edges hard here; the render
-       feathers them). Painted into an ARGB layer first so overlapping strokes don't
-       double the opacity. */
+    /* Fill / Object: the pending painted area (accumulated strokes + the one being
+       drawn) as a teal tint at true brush width; erase strokes punch holes
+       (CompositionMode Clear), so the tint shows the area Enter will fill (edges hard
+       here; the render feathers them). Heal / Clone: the stroke being drawn, the same
+       way. Painted into an ARGB layer first so overlapping strokes don't double the
+       opacity. */
     const bool livePaint = spotPainting && spotStrokePts.size() >= 2;
-    if (spotReplaceMode == 1 && (!spotPending.isEmpty() || livePaint) && br.width() > 0) {
-        /* Stroke widths are a fraction of the MASK frame's long edge (spots, like masks,
-           are stored pre-geometry), measured here in displayed px. */
-        const double imgLong = maskNormLongEdgeItemPx();
-        /* Viewport px per image px, measured over a long baseline: mapFromScene returns
-           integer QPoints, so a 1px baseline rounds to ~0 at fit zoom and collapsed the
-           painted width to a hairline. */
-        const double scale =
-            QLineF(mapFromScene(pmItem->mapToScene(QPointF(0, 0))),
-                   mapFromScene(pmItem->mapToScene(QPointF(1000, 0)))).length() / 1000.0;
+    if (spotReplaceMode != FillSpotGeom::Spot && (!spotPending.isEmpty() || livePaint)
+        && br.width() > 0) {
         QImage layer(viewport()->size(), QImage::Format_ARGB32_Premultiplied);
         layer.fill(Qt::transparent);
         QPainter lp(&layer);
@@ -1617,17 +1719,8 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
         lp.end();
         painter->drawImage(0, 0, layer);
     }
-    else if (spotPainting && spotStrokePts.size() >= 4) {   // Object: live stroke path
-        QPolygonF poly;
-        for (int i = 0; i + 1 < spotStrokePts.size(); i += 2)
-            poly << maskNormToViewport(QPointF(spotStrokePts[i], spotStrokePts[i + 1]));
-        QPen sp(QColor(255, 120, 120, 190)); sp.setWidthF(2.0); sp.setCosmetic(true);
-        painter->setPen(sp);
-        painter->drawPolyline(poly);
-    }
 
     if (spotCursorOn && br.width() > 0) {               // brush-size circle
-        const double imgLong = maskNormLongEdgeItemPx();
         const double rImg = (qBound(0.0, spotBrushSize, 100.0) / 200.0) * imgLong;
         const QPointF cImg = pmItem->mapFromScene(mapToScene(spotCursorVp));
         const QPointF cVp(spotCursorVp);
@@ -6010,8 +6103,8 @@ void ImageView::keyPressEvent(QKeyEvent *event){
             spotBrushSize = qMax(spotSizeMin(), spotBrushSize - 1); viewport()->update(); return; }
         if (event->key() == Qt::Key_BracketRight) {
             spotBrushSize = qMin(100.0, spotBrushSize + 1); viewport()->update(); return; }
-        /* Fill mode: Enter commits the pending painted area as ONE FillSpot; Escape
-           clears the pending paint first, then a second Escape exits the tool. */
+        /* Fill / Object: Enter commits the pending painted area as ONE FillSpot;
+           Escape clears the pending paint first, then a second Escape exits the tool. */
         if (G::isEnterKey(event) && !spotPainting && !spotPending.isEmpty()) {
             std::vector<FillSpotGeom::Stroke> strokes;
             strokes.reserve(spotPending.size());
@@ -6024,7 +6117,8 @@ void ImageView::keyPressEvent(QKeyEvent *event){
             }
             spotPending.clear();
             viewport()->update();
-            emit spotStrokeCommitted(FillSpotGeom::toJson(spotFeather, 1, strokes));
+            emit spotStrokeCommitted(FillSpotGeom::toJson(spotFeather, spotReplaceMode,
+                                                          strokes));
             return;
         }
         if (event->key() == Qt::Key_Escape) {
@@ -6170,14 +6264,24 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    /* Spot removal: click a pin to delete that spot, else start a new stroke. In Fill
-       mode Opt/Alt starts an ERASE stroke (subtracts from the painted area). Skipped
-       while Space is held (spacePanOverride) so the loupe zoom/pan gesture runs. */
+    /* Spot removal: grab a Heal / Clone source pin to move it, click a spot pin to
+       delete that spot, else start a new stroke. In Fill / Object Opt/Alt starts an
+       ERASE stroke (subtracts from the painted area). Skipped while Space is held
+       (spacePanOverride) so the loupe zoom/pan gesture runs. */
     if (!spacePanOverride && spotEditMode && event->button() == Qt::LeftButton) {
+        const int src = spotSourceHitTest(event->pos());
+        if (src >= 0) {
+            spotSourceDrag = src;
+            spotSourceGrab = maskViewportToNorm(event->pos()) - spotSourcePoint(src);
+            setCursor(Qt::ClosedHandCursor);
+            viewport()->update();
+            return;
+        }
         const int pin = spotPinHitTest(event->pos());
         if (pin >= 0) { emit spotRemoveRequested(pin); return; }
         spotPainting = true;
-        spotStrokeErase = spotReplaceMode == 1 && (event->modifiers() & Qt::AltModifier);
+        spotStrokeErase = FillSpotGeom::isPaintArea(spotReplaceMode)
+                          && (event->modifiers() & Qt::AltModifier);
         spotCursorVp = event->pos();
         spotCursorOn = true;
         const QPointF n = maskViewportToNorm(event->pos());
@@ -6552,22 +6656,34 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
        the move so the canvas never pans in spot mode. */
     if (!spacePanOverride && spotEditMode) {
         spotCursorVp = event->pos();
+        if (spotSourceDrag >= 0 && spotSourceDrag < spotSources.size()) {
+            /* Moving a Heal / Clone source: the offset follows the pointer live (the
+               outlines show the new source area); the heal re-renders on release. */
+            const QPointF at = maskViewportToNorm(event->pos()) - spotSourceGrab;
+            spotSources[spotSourceDrag].offset = at - spotPins[spotSourceDrag];
+            viewport()->update();
+            return;
+        }
         if (spotPainting) {
             /* Spot mode is a single click -- no dragging, the stroke stays the press
-               point. Fill/Object extend the stroke with the drag. */
-            if (spotReplaceMode != 0) {
+               point. The other modes extend the stroke with the drag. */
+            if (spotReplaceMode != FillSpotGeom::Spot) {
                 const QPointF n = maskViewportToNorm(event->pos());
                 spotStrokePts << n.x() << n.y();
             }
             spotCursorOn = true;
             spotHoverPin = -1;
         } else {
-            /* Over a committed pin -> show a click-to-delete cursor and hide the brush
-               circle; the pin itself turns red with an X (drawSpotOverlay). */
-            spotHoverPin = spotPinHitTest(event->pos());
+            /* Over a source pin -> an open hand (drag to move the source). Over a
+               committed pin -> a click-to-delete cursor; the pin turns red with an X
+               (drawSpotOverlay). Either hides the brush circle. */
+            spotHoverSource = spotSourceHitTest(event->pos());
+            spotHoverPin = spotHoverSource >= 0 ? -1 : spotPinHitTest(event->pos());
             const bool overPin = spotHoverPin >= 0;
-            setCursor(overPin ? Qt::PointingHandCursor : Qt::BlankCursor);
-            spotCursorOn = !overPin;
+            setCursor(spotHoverSource >= 0 ? Qt::OpenHandCursor
+                      : overPin            ? Qt::PointingHandCursor
+                                           : Qt::BlankCursor);
+            spotCursorOn = !overPin && spotHoverSource < 0;
         }
         viewport()->update();
         return;
@@ -6870,15 +6986,26 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     const bool swallowClickZoom = suppressClickZoom;
     suppressClickZoom = false;
 
-    /* Spot removal, stroke finished. Spot (bare click) / Object (drag): commit as one
-       FillSpot immediately. Fill: ACCUMULATE into the pending painted area (with this
-       stroke's brush size + erase flag) -- Enter commits, Escape clears (see
+    /* A Heal / Clone source drag finished: hand the dock the new offset (it records the
+       edit and re-renders the heal from there). */
+    if (spotEditMode && spotSourceDrag >= 0) {
+        const int i = spotSourceDrag;
+        spotSourceDrag = -1;
+        setCursor(Qt::OpenHandCursor);
+        if (i < spotSources.size()) emit spotSourceMoved(i, spotSources[i].offset);
+        viewport()->update();
+        return;
+    }
+
+    /* Spot removal, stroke finished. Spot (bare click) / Heal / Clone (drag): commit as
+       one FillSpot immediately. Fill / Object: ACCUMULATE into the pending painted area
+       (with this stroke's brush size + erase flag) -- Enter commits, Escape clears (see
        keyPressEvent); the dock then appends the FillSpot and re-renders (the replace
        engine heals it, see lamafill.cpp). */
     if (!spacePanOverride && spotEditMode && spotPainting) {
         spotPainting = false;
         if (spotStrokePts.size() >= 2) {
-            if (spotReplaceMode == 1) {
+            if (FillSpotGeom::isPaintArea(spotReplaceMode)) {
                 SpotPendingStroke st;
                 st.size  = spotBrushSize / 100.0;
                 st.erase = spotStrokeErase;

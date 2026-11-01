@@ -20,30 +20,52 @@
     paramsJson schema (opaque in EditStack::FillSpot):
       { "size": <double diameter / long edge, 0..1>,
         "feather": <double 0..100>,
-        "kind": "spot" | "fill" | "object",   // Replace panel mode; engine choice
+        "kind": "spot" | "heal" | "clone" | "fill" | "object",  // Replace tool mode
         "pts": [x0,y0, x1,y1, ...],           // single stroke, output-normalized 0..1
         "strokes": [ { "size": <double>, "erase": <bool>,
-                       "pts": [x0,y0, ...] }, ... ] }
+                       "pts": [x0,y0, ...] }, ... ],
+        "src": [dx, dy] }                     // heal/clone source offset, normalized
 
-    Two geometry forms: "pts" is one brush stroke (Spot click / Object drag, and legacy
-    spots); "strokes" is a PAINTED AREA (Fill mode) -- an ordered list of strokes, each
-    with its own brush size and an erase flag (Opt/Alt while painting), composited in
-    order: add = max, erase = multiply by (1 - alpha). When both are present "strokes"
-    wins.
+    Two geometry forms: "pts" is one brush stroke (Spot click, Heal / Clone drag, and
+    legacy spots); "strokes" is a PAINTED AREA (Fill and Object) -- an ordered list of
+    strokes, each with its own brush size and an erase flag (Opt/Alt while painting),
+    composited in order: add = max, erase = multiply by (1 - alpha). When both are
+    present "strokes" wins.
 
-    kind decides the heal engine (lamafill.cpp): "spot"/"fill" heal by exemplar CLONE
-    (real neighbouring texture) with the model as fallback; "object" is a regenerative
-    model fill (an object leaves no clean source to clone). Absent in legacy spots ->
-    "fill".
+    kind decides the heal engine (lamafill.cpp):
+      spot   : click; exemplar heal from an automatically chosen nearby source.
+      heal   : brushed stroke; ONE source offset for the whole stroke ("src"), Poisson
+               blended -- texture from the source, tone from the surround.
+      clone  : as heal, but the source pixels are copied as they are (feathered edge,
+               no Poisson), for when the tone must come across too.
+      fill   : painted area; chunked exemplar heal, each chunk from its own local
+               source, the model as fallback.
+      object : painted area; regenerative model fill (an object leaves no clean source).
+    "src" is the source offset (dx as a fraction of the frame width, dy of the height)
+    from the stroke's centroid. Heal/Clone store it once the engine has chosen one
+    (DevelopProperties::adoptSpotSources) and when the user drags the source pin; absent
+    means "choose automatically". Absent kind in legacy spots -> "fill".
 */
 namespace FillSpotGeom {
 
-enum Kind { Spot = 0, Fill = 1, Object = 2 };
+/* Values are the Replace panel / ImageView mode ids; Heal and Clone were appended. */
+enum Kind { Spot = 0, Fill = 1, Object = 2, Heal = 3, Clone = 4 };
 
 inline const char *kindName(int k)
 {
-    return k == Spot ? "spot" : k == Object ? "object" : "fill";
+    switch (k) {
+    case Spot:   return "spot";
+    case Object: return "object";
+    case Heal:   return "heal";
+    case Clone:  return "clone";
+    default:     return "fill";
+    }
 }
+
+/* Fill and Object accumulate a painted area (Enter commits); the rest commit a stroke. */
+inline bool isPaintArea(int k) { return k == Fill || k == Object; }
+/* Heal and Clone have one user-movable source. */
+inline bool usesSource(int k) { return k == Heal || k == Clone; }
 
 struct Stroke {
     double sizeFrac = 0.04;     // this stroke's brush diameter / long edge
@@ -57,6 +79,9 @@ struct Parsed {
     int    kind       = Fill;   // Kind; legacy spots parse as Fill
     std::vector<double> pts;    // single-stroke form: flat x,y 0..1
     std::vector<Stroke> strokes;// painted-area form (takes precedence when non-empty)
+    bool   hasSrc     = false;  // heal/clone: "src" present
+    double srcDx      = 0.0;    // source offset, fraction of the frame width
+    double srcDy      = 0.0;    // source offset, fraction of the frame height
     bool valid() const {
         for (const Stroke &s : strokes)
             if (!s.erase && s.pts.size() >= 2) return true;
@@ -71,7 +96,14 @@ inline Parsed parse(const QString &paramsJson)
     p.sizeFrac   = o.value("size").toDouble(p.sizeFrac);
     p.featherPct = o.value("feather").toDouble(p.featherPct);
     const QString k = o.value("kind").toString();
-    p.kind = (k == "spot") ? Spot : (k == "object") ? Object : Fill;
+    p.kind = (k == "spot")  ? Spot  : (k == "object") ? Object
+           : (k == "heal")  ? Heal  : (k == "clone")  ? Clone : Fill;
+    const QJsonArray src = o.value("src").toArray();
+    if (src.size() == 2) {
+        p.hasSrc = true;
+        p.srcDx = src.at(0).toDouble();
+        p.srcDy = src.at(1).toDouble();
+    }
     const QJsonArray a = o.value("pts").toArray();
     p.pts.reserve(a.size());
     for (const QJsonValue &v : a) p.pts.push_back(v.toDouble());
@@ -111,6 +143,15 @@ inline QString toJson(double featherPct, int kind, const std::vector<Stroke> &st
     }
     QJsonObject o;
     o["feather"] = featherPct; o["kind"] = kindName(kind); o["strokes"] = sa;
+    return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
+}
+
+/* paramsJson with its heal/clone source offset set (normalized, see "src"); every other
+   key is kept as it is. */
+inline QString withSource(const QString &paramsJson, double dx, double dy)
+{
+    QJsonObject o = QJsonDocument::fromJson(paramsJson.toUtf8()).object();
+    o["src"] = QJsonArray{dx, dy};
     return QString::fromUtf8(QJsonDocument(o).toJson(QJsonDocument::Compact));
 }
 

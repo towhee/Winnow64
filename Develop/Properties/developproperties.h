@@ -24,7 +24,6 @@ class ScopeHeader;
 class RawPanel;
 class MaskPanel;
 class TransformPanel;
-class ReplacePanel;
 class HistoryView;
 class PresetsView;
 class QVariantAnimation;
@@ -361,10 +360,9 @@ public:
     /* Right-click ANYWHERE in the Develop dock, not just in this tree. The dock container
        is watched for the ContextMenu events its children let through (only the scopes
        strip and this tree answer their own), and the menu is built for the section the
-       click landed in -- see showPanelContextMenu. Transform and Replace are bound here
-       because their reset/tips live on those panels; both may be null. */
-    void bindPanelContextMenu(QWidget *container, TransformPanel *transform,
-                              ReplacePanel *replace);
+       click landed in -- see showPanelContextMenu. Transform is bound here because its
+       reset lives on that panel; it may be null. */
+    void bindPanelContextMenu(QWidget *container, TransformPanel *transform);
 
     /* Size the tree to its CONTENT instead of scrolling internally: it is a detail of the
        scope bar (ScopeHeader::EditsDetail) and the dock's own QScrollArea does the
@@ -613,6 +611,12 @@ public slots:
     void onSpotToolToggled(bool active);
     void onSpotStrokeCommitted(const QString &paramsJson);
     void onSpotRemoveRequested(int index);      // a pin was clicked -> drop that spot
+    /* A Heal / Clone source pin was dragged to a new normalized offset. */
+    void onSpotSourceMoved(int index, QPointF offset);
+    /* A render of fPath landed: give each Heal / Clone spot that has no source yet the
+       one the engine chose (LamaFill::autoSource), so its source pin can be shown and
+       moved. Not a History step -- the heal on screen is unchanged. */
+    void adoptSpotSources(const QString &fPath);
     bool isSpotActive() const { return spotMode; }   // for the action-row spot button
     /* Replace panel preview eye: false renders WITHOUT the spot heals (non-destructive
        bypass, like the Transform eye); the spots stay in the stack. Session-wide. */
@@ -646,6 +650,7 @@ public slots:
     void submasksHelp();                          // Mask band help (the submasks page)
     void rawHelp();                               // Raw panel help ([?] and its context menu)
     void transformHelp();                         // Transform panel help ([?] and its context menu)
+    void spotHelp();                              // Spot tools help (the Spot menu's Help)
     void versionsHelp();                          // "What changed" on the settings-updated alert
 
     /* ---- Develop presets (the Presets dock) --------------------------------------
@@ -906,8 +911,8 @@ signals:
     void presetAutoProgress(int done, int total, const QString &now);
     /* Spot tool armed/disarmed: drives the action-row spot button's on/off icon. */
     void spotActiveChanged(bool active);
-    /* The current image's spot centres (normalized), for ImageView's on-canvas pins. */
-    void spotPinsChanged(const QVector<QPointF> &pins);
+    /* The current image's spots (paramsJson, stack order), for ImageView's pins. */
+    void spotPinsChanged(const QStringList &spotParams);
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
     /* Rotation slider -> ImageView turns the Linear Gradient, which persists the new
        geometry through maskGeometryChanged (setActiveMaskParams owns history + render). */
@@ -1373,7 +1378,7 @@ private:
     /* Which Develop dock section a right-click came from. The menu carries only what that
        section can do (its reset, its help), plus the panel-wide copy/paste/preset items. */
     enum PanelSection { SectionEdits, SectionScopeBar, SectionMask, SectionRaw,
-                        SectionTransform, SectionReplace, SectionOther };
+                        SectionTransform, SectionOther };
     PanelSection sectionAt(QWidget *w);         // walk up from the clicked widget
     /* Build + run the dock's context menu. treeIdx is valid only for SectionEdits (the
        row the click landed on, so a section header can offer its own Reset). */
@@ -1381,7 +1386,6 @@ private:
                               const QModelIndex &treeIdx = QModelIndex());
     QWidget *panelContainer = nullptr;      // the dock's container, watched for right-clicks
     TransformPanel *transformPanel = nullptr;
-    ReplacePanel *replacePanel = nullptr;
 
     /* Expand all / Collapse all, extended to drive the Scope row (its collapse arrow
        lives in the ScopeHeader band, not the tree). onSectionExpanded folds the Scope
@@ -1839,8 +1843,7 @@ private:
     void onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit);
     bool spotMode = false;              // regenerative spot-fill brushing is armed
     bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed
-    QVector<QPointF> spotPinCenters() const;   // current image's spot centres (norm)
-    void emitSpotPins();                       // push spotPinCenters() to ImageView
+    void emitSpotPins();                       // push the current image's spots to ImageView
     ScopeHeader *scopeHeader = nullptr;     // scope combo + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;

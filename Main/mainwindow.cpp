@@ -1961,7 +1961,7 @@ bool MW::developShortcutIntercept(QEvent *event)
     Everything else falls through and behaves exactly as it does in Preview mode. Returns
     true when the key has been consumed.
 
-    Both event types are handled, in the two-step ReplacePanel::eventFilter established:
+    Both event types are handled, in the two-step idiom TransformPanel::eventFilter uses:
     accept the ShortcutOverride (which is what frees the key from the global QAction --
     Qt sends it before the shortcut system runs), then act on the KeyPress that follows.
     Doing the work on the KeyPress rather than the override matters twice over. It is the
@@ -14360,6 +14360,9 @@ void MW::renderDevelopPreview(bool fullRes)
                 if (wantTime) msPreview = pv.restart();
                 updateDevelopScopes(out, /*verifyVsPreview*/fullRes);
                 if (wantTime) msScopes = pv.elapsed();
+                /* A Heal / Clone stroke healed from a source the engine chose: write it
+                   into the spot so its source pin appears. */
+                developProperties->adoptSpotSources(fPath);
             }
             if (developProxyPending) {
                 developProxyPending = false;
@@ -15089,6 +15092,8 @@ void MW::onDevelopFullResReady(const QImage &out, const QImage &shown,
     updateDevelopRenderingHint();
 
     const bool currentImage = (fPath == dm->currentKey);
+    /* A Heal / Clone source the engine chose (see the proxy completion). */
+    if (currentImage && developProperties) developProperties->adoptSpotSources(fPath);
     /* gen alone is not enough: crop / warp / level commits re-render WITHOUT bumping
        developParamsGen. A settle render launched while the crop tool was open (crop
        suppressed) and landing after the commit passed the gen test and painted the
@@ -15917,10 +15922,10 @@ void MW::toggleDevelopTransform()
 void MW::toggleDevelopReplace()
 {
 /*
-    Action-row spot button (also "S" in Develop mode): arm/disarm the Fill
-    Replace (spot/fill/object heal) tool. DevelopProperties owns the armed state; the
-    ReplacePanel's visibility tracks it via spotActiveChanged (see createDevelopDock), so
-    Escape on the loupe closes the panel through the same path.
+    "S" in Develop mode (and the Spot menu): arm/disarm the spot tool in developSpotMode.
+    DevelopProperties owns the armed state and reports it via spotActiveChanged (the
+    action-row button icon, and the loupe capture mode -- see createDevelopDock), so
+    Escape on the loupe disarms through the same path.
 
     Transform and Spot are MUTUALLY EXCLUSIVE (both drive the loupe), so arming Spot
     closes an open Transform session. toggleDevelopTransform is re-used rather than
@@ -15929,7 +15934,7 @@ void MW::toggleDevelopReplace()
 */
     if (G::isLogger) G::log("MW::toggleDevelopReplace");
     if (G::operationMode != G::OperationMode::Develop) {
-        if (G::popup) G::popup->showPopup("Fill Replace is only available in Develop Mode, "
+        if (G::popup) G::popup->showPopup("Spot Removal is only available in Develop Mode, "
                                           "which can be set in the status bar or the shortcut \"D\".",
                                           3000);
         return;
@@ -15938,6 +15943,78 @@ void MW::toggleDevelopReplace()
     const bool arming = !developProperties->isSpotActive();
     if (arming && developTransformVisible) toggleDevelopTransform();
     developProperties->onSpotToolToggled(arming);
+}
+
+void MW::showDevelopSpotMenu()
+{
+/*
+    The action-row Spot button pops the spot tools, as New mask pops the mask tools: what
+    KIND of repair to make. Choosing one arms the tool in that mode (or switches mode when
+    it is already armed); the armed tool carries the check, and choosing it again -- or
+    Turn off, or Esc on the image -- turns the tool off. There is no Spot panel: this menu
+    also carries the one view setting (Show repairs, the old panel eye) and the help.
+*/
+    if (G::isLogger) G::log("MW::showDevelopSpotMenu");
+    if (G::operationMode != G::OperationMode::Develop) {
+        toggleDevelopReplace();             // explains Develop mode, arms nothing
+        return;
+    }
+    if (!developProperties) return;
+    const bool armed = developProperties->isSpotActive();
+
+    struct Item { int mode; const char *name; const char *tip; };
+    const Item items[] = {
+        {FillSpotGeom::Spot, "Spot",
+         "Click a blemish: it is healed from a nearby source picked for you."},
+        {FillSpotGeom::Heal, "Heal",
+         "Brush over a flaw: a source area's texture is blended into the surrounding "
+         "tone. Drag the source pin to choose another source."},
+        {FillSpotGeom::Clone, "Clone",
+         "Brush over an area to cover it with an exact copy of a source area. Drag the "
+         "source pin to choose another source."},
+        {FillSpotGeom::Fill, "Fill",
+         "Paint over something thin or scattered -- a wire, a twig, a leash -- then press "
+         "Enter to fill it from its surroundings."},
+        {FillSpotGeom::Object, "Object",
+         "Paint over an object, then press Enter to remove it with a regenerative (AI) "
+         "fill."},
+    };
+    QMenu menu(this);
+    menu.setToolTipsVisible(true);
+    for (const Item &it : items) {
+        QAction *a = menu.addAction(tr(it.name));
+        a->setData(it.mode);
+        a->setCheckable(true);
+        const bool on = armed && it.mode == developSpotMode;
+        a->setChecked(on);
+        a->setToolTip(on ? tr("In use -- choose it again to turn the tool off.")
+                         : tr(it.tip));
+    }
+    menu.addSeparator();
+    /* The non-destructive bypass: render with or without every repair, to compare. */
+    QAction *aShow = menu.addAction(tr("Show repairs"));
+    aShow->setCheckable(true);
+    aShow->setChecked(developProperties->isSpotsShown());
+    aShow->setToolTip(tr("Uncheck to see the photo without any of its repairs."));
+    QAction *aOff = nullptr;
+    if (armed) aOff = menu.addAction(tr("Turn off spot tool\tEsc"));
+    QAction *aHelp = menu.addAction(tr("Help"));
+    QAction *chosen = menu.exec(QCursor::pos());
+    if (!chosen) return;
+    if (chosen == aHelp) { developProperties->spotHelp(); return; }
+    if (chosen == aOff)  { toggleDevelopReplace(); return; }
+    if (chosen == aShow) {
+        developProperties->setSpotsShown(aShow->isChecked());
+        developParamsChange();
+        return;
+    }
+
+    const int mode = chosen->data().toInt();
+    if (armed && mode == developSpotMode) { toggleDevelopReplace(); return; }
+    developSpotMode = mode;
+    settings->setValue("Develop/Replace/mode", mode);
+    if (imageView) imageView->setSpotReplaceMode(mode);
+    if (!armed) toggleDevelopReplace();
 }
 
 void MW::toggleScreenSampler()

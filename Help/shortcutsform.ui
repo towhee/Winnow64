@@ -1470,7 +1470,7 @@
          <string>S</string>
         </property>
         <property name="text">
-         <string>Toggles the spot-removal tool</string>
+         <string>Toggles the spot-removal tool (in the last tool used: Spot, Heal, Clone, Fill or Object)</string>
         </property>
        </item>
        <item>

@@ -246,11 +246,13 @@ public slots:
        calls rather than a null-point sentinel: (0,0) is a legitimate pick. */
     void setDetailPoint(QPointF n);
     void clearDetailPoint();
-    /* Replace-panel mode (FillSpotGeom::Kind): Spot = click only (no drag), Fill/Object
-       = drag a brush stroke. The committed paramsJson carries it as "kind". */
+    /* Replace-panel mode (FillSpotGeom::Kind): Spot = click only (no drag); Heal /
+       Clone = drag one stroke; Fill / Object = paint an area, Enter commits. The
+       committed paramsJson carries it as "kind". */
     void setSpotReplaceMode(int mode);
-    /* The dock pushes the current image's spot centres (normalized) to draw the pins. */
-    void setSpotPins(const QVector<QPointF> &pins);
+    /* The dock pushes the current image's spots (FillSpot paramsJson, in stack order):
+       a pin at each centroid, plus a draggable source pin for Heal / Clone. */
+    void setSpotPins(const QStringList &spotParams);
     /* The whole-mask mask (all Add/Subtract tools composited) as a red coverage tint, shown under
        the active tool's handles while any mask tool is expanded. MW builds it (buildMaskBuffer);
        clear when no tool is expanded. */
@@ -525,6 +527,9 @@ signals:
     /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
     void spotRemoveRequested(int index);
     void spotToolExited();
+    /* A Heal / Clone source pin was dragged: the new source offset from the spot's
+       centroid, normalized (dx of the width, dy of the height). */
+    void spotSourceMoved(int index, QPointF offset);
 
 private slots:
     void wheelStopped();
@@ -702,7 +707,7 @@ private:
        tools that disarm on the press (the WB dropper), so developToolActive() is already
        false when the release arrives. Consumed at the top of mouseReleaseEvent. */
     bool    suppressClickZoom = false;
-    int     spotReplaceMode = 0;        // FillSpotGeom::Kind: 0 spot, 1 fill, 2 object
+    int     spotReplaceMode = 0;        // FillSpotGeom::Kind: spot fill object heal clone
     double  spotBrushSize = 8.0;        // diameter as % of the long edge ([ ] resize)
     double  spotFeather   = 40.0;       // 0..100, composite edge softness
     QVector<double> spotStrokePts;      // in-progress stroke, flat normalized x,y
@@ -716,8 +721,23 @@ private:
     QPoint  spotCursorVp;               // cursor pos for the brush-size circle
     bool    spotCursorOn  = false;
     QVector<QPointF> spotPins;          // committed spot centres (normalized)
+    /* Heal / Clone spots: where the pixels come from. hasSource false for the other
+       kinds, and for a heal whose source the engine has not reported yet. strokes is
+       the spot's geometry, drawn as outlines at the target and the source while the
+       spot is hovered or its source dragged. */
+    struct SpotSourceInfo {
+        bool hasSource = false;
+        QPointF offset;                 // normalized source offset (dx of W, dy of H)
+        QVector<SpotPendingStroke> strokes;
+    };
+    QVector<SpotSourceInfo> spotSources;    // parallel to spotPins
     int     spotHoverPin = -1;          // pin under the cursor (delete hint), -1 none
+    int     spotHoverSource = -1;       // source pin under the cursor, -1 none
+    int     spotSourceDrag = -1;        // source pin being dragged, -1 none
+    QPointF spotSourceGrab;             // drag: pointer minus source pin, normalized
     int     spotPinHitTest(QPoint vp) const;            // pin under vp (-1 none)
+    int     spotSourceHitTest(QPoint vp) const;         // source pin under vp (-1 none)
+    QPointF spotSourcePoint(int i) const;               // source pin, normalized
     double  spotSizeMin() const;                        // min size % == 3px diameter
     /* True while a Develop tool (crop / mask / spot) owns the canvas: the default loupe
        click-to-zoom / pan / pick is suppressed so a tool click can't leak to it. */

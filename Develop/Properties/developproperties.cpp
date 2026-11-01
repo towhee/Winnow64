@@ -11,11 +11,11 @@
 #include "Develop/Properties/maskpanel.h"
 #include "Develop/Properties/maskeditor.h"
 #include "Develop/Transform/transformpanel.h"
-#include "Develop/Replace/replacepanel.h"
 #include "Develop/History/historyview.h"
 #include "Develop/History/historystore.h"
 #include "Develop/Presets/presetsview.h"
 #include "Develop/fillspot.h"
+#include "Utilities/inference/lamafill.h"   // autoSource: a Heal / Clone spot's chosen source
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include "Develop/Scopes/toneregionslider.h"
@@ -2234,25 +2234,49 @@ void DevelopProperties::onSpotRemoveRequested(int index)
     emit paramsChanged();                   // re-render without the removed spot
 }
 
-/* Centre (centroid of the stroke points) of each spot, in output-normalized coords, for
-   the pins. Order matches EditStack::spots so a pin index maps to a spot. */
-QVector<QPointF> DevelopProperties::spotPinCenters() const
+void DevelopProperties::onSpotSourceMoved(int index, QPointF offset)
 {
-    QVector<QPointF> centers;
-    if (currentImagePath.isEmpty()) return centers;
-    const EditStack s = stackCache.value(currentImagePath);
-    for (const FillSpot &sp : s.spots) {
+    if (G::isLogger) G::log("DevelopProperties::onSpotSourceMoved");
+    if (currentImagePath.isEmpty()) return;
+    EditStack &s = stackCache[currentImagePath];
+    if (index < 0 || index >= s.spots.size()) return;
+    FillSpot &sp = s.spots[index];
+    sp.paramsJson = FillSpotGeom::withSource(sp.paramsJson, offset.x(), offset.y());
+    noteScopeEdit(QString(), "Move heal source");
+    emitSpotPins();
+    emit paramsChanged();                   // re-heal from the new source
+}
+
+void DevelopProperties::adoptSpotSources(const QString &fPath)
+{
+    if (fPath.isEmpty() || fPath != currentImagePath || !stackCache.contains(fPath)) return;
+    EditStack &s = stackCache[fPath];
+    bool changed = false;
+    for (FillSpot &sp : s.spots) {
         const FillSpotGeom::Parsed p = FillSpotGeom::parse(sp.paramsJson);
-        double cx = 0.5, cy = 0.5;
-        if (p.valid()) FillSpotGeom::centroid(p, cx, cy);   // add-coverage centroid
-        centers.append(QPointF(cx, cy));
+        if (!FillSpotGeom::usesSource(p.kind) || p.hasSrc) continue;
+        QPointF off;
+        if (!LamaFill::autoSource(fPath, sp.paramsJson, off)) continue;
+        sp.paramsJson = FillSpotGeom::withSource(sp.paramsJson, off.x(), off.y());
+        changed = true;
     }
-    return centers;
+    if (!changed) return;
+    /* Persist like an edit, without a History step: the heal on screen is the same one,
+       only now its source is written down. A revert to the step before still works --
+       with no "src" the engine re-picks the same pinned source. */
+    dirty.insert(fPath);
+    if (G::isDevelopDebounceWrite && debounceWriteTimer)
+        debounceWriteTimer->start(kDebounceWriteMs);
+    emitSpotPins();
 }
 
 void DevelopProperties::emitSpotPins()
 {
-    emit spotPinsChanged(spotPinCenters());
+    QStringList params;
+    if (!currentImagePath.isEmpty())
+        for (const FillSpot &sp : stackCache.value(currentImagePath).spots)
+            params.append(sp.paramsJson);
+    emit spotPinsChanged(params);
 }
 
 void DevelopProperties::renameActiveScope()
@@ -3327,16 +3351,14 @@ void DevelopProperties::resetSection(int group)
     emit paramsChanged();
 }
 
-void DevelopProperties::bindPanelContextMenu(QWidget *container, TransformPanel *transform,
-                                             ReplacePanel *replace)
+void DevelopProperties::bindPanelContextMenu(QWidget *container, TransformPanel *transform)
 {
     if (G::isLogger) G::log("DevelopProperties::bindPanelContextMenu");
     panelContainer = container;
     transformPanel = transform;
-    replacePanel = replace;
     if (panelContainer) panelContainer->installEventFilter(this);
     /* The Transform panel's [?] had no handler; it opens the same page its context menu
-       does. (The Raw panel's [?] is wired in bindRawPanel, the Replace panel's in MW.) */
+       does. (The Raw panel's [?] is wired in bindRawPanel.) */
     if (transformPanel)
         connect(transformPanel, &TransformPanel::tipsRequested,
                 this, &DevelopProperties::transformHelp, Qt::UniqueConnection);
@@ -3357,7 +3379,6 @@ DevelopProperties::PanelSection DevelopProperties::sectionAt(QWidget *w)
         if (scopeHeader && w == scopeHeader)       return SectionScopeBar;
         if (rawPanel && w == rawPanel)             return SectionRaw;
         if (transformPanel && w == transformPanel) return SectionTransform;
-        if (replacePanel && w == replacePanel)     return SectionReplace;
         if (w == panelContainer) break;      // reached the dock: the action row or a gap
     }
     return SectionOther;
@@ -3419,15 +3440,11 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         menu.addSeparator();
     }
 
-    /* -------- Transform / Replace: their header buttons, reachable by right-click -------- */
-    QAction *aResetTransform = nullptr, *aReplaceTips = nullptr;
+    /* -------- Transform: its header button, reachable by right-click -------- */
+    QAction *aResetTransform = nullptr;
     if (section == SectionTransform && transformPanel) {
         aResetTransform = menu.addAction(tr("Reset crop, straighten and perspective"));
         aResetTransform->setEnabled(haveImage);
-        menu.addSeparator();
-    }
-    if (section == SectionReplace && replacePanel) {
-        aReplaceTips = menu.addAction(tr("Fill Replace tips"));
         menu.addSeparator();
     }
 
@@ -3490,13 +3507,10 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         QTimer::singleShot(0, this, [this]{ resetActiveScope(); });
     else if (chosen == aResetAll)
         QTimer::singleShot(0, this, [this]{ resetAllEdits(); });
-    /* The Transform reset and the Replace tips belong to those panels: emit their own
-       signals so the handler MW already wires up does the work -- identical to clicking
-       the panel's [R] / [?] button. */
+    /* The Transform reset belongs to that panel: emit its own signal so the handler MW
+       already wires up does the work -- identical to clicking the panel's [R] button. */
     else if (chosen == aResetTransform)
         QTimer::singleShot(0, transformPanel, [this]{ emit transformPanel->resetRequested(); });
-    else if (chosen == aReplaceTips)
-        QTimer::singleShot(0, replacePanel, [this]{ emit replacePanel->tipsRequested(); });
     else if (chosen == aExpandAll)     setAllSectionsExpanded(true);
     else if (chosen == aCollapseAll)   setAllSectionsExpanded(false);
     else if (chosen == aCopySettings)  copyDevelopSettings();
@@ -12507,6 +12521,15 @@ void DevelopProperties::rawHelp()
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
     new HtmlWindow("Winnow - Raw",
                    ":/Docs/developrawhelp.html",
+                   QSize(700, 600), r, window());
+}
+
+void DevelopProperties::spotHelp()
+{
+    if (G::isLogger) G::log("DevelopProperties::spotHelp");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Spot Removal",
+                   ":/Docs/developspothelp.html",
                    QSize(700, 600), r, window());
 }
 
