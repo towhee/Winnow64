@@ -8,6 +8,7 @@
 
 //#include "ui_helpingest.h"
 #include "Utilities/utilities.h"
+#include "Utilities/collapsiblesections.h"
 #include "Dialogs/ingesterrors.h"
 #include "Dialogs/editlistdlg.h"
 #include "File/ingest.h"
@@ -149,6 +150,21 @@ public:
     int fileCount;
     float fileMB;
 
+private:
+    /* COLLAPSIBLE SECTIONS (Utilities/collapsiblesections.h), collapsed by default so a
+       small screen still shows the Ingest button. The .ui places every widget by hand,
+       so buildSections stacks the group boxes in a layout (a closed one takes its space
+       with it), gathers the option checkboxes into a Settings box, and moves the footer
+       (sizes, drive space, progress, Cancel / Ingest) out of the scroll area below it. */
+    CollapsibleSections *sections = nullptr;
+    QGroupBox *settingsBox = nullptr;
+    QWidget *footer = nullptr;
+    void buildSections();
+    QString sectionSummary(const QString &key) const;
+    /* Queued, so it reads the labels after the slot that changed them has run. */
+    void scheduleSummaries();
+    /* Height = the open sections, capped at the screen; the sections scroll beyond it. */
+    void fitToContents();
 
 private slots:
     void updateFolderPaths();

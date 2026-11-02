@@ -129,21 +129,17 @@ ExportDlg::ExportDlg(ImageExporter *exporter,
        lost by applying it first. */
     setStyleSheet(G::css);
 
+    /* COLLAPSED BY DEFAULT (CollapsibleSections::restore): a first open shows every
+       section closed, because on a small screen the expanded form runs off the bottom
+       -- with the Expand All / Collapse All buttons under it. After that each section
+       opens as the user last left it. */
+    sections = new CollapsibleSections(this, "ExportDlg/collapsed");
+    sections->onChanged = [this]() {
+        syncSectionButtons();
+        fitToContents();
+    };
     buildUi();
-    /* COLLAPSED BY DEFAULT. A first open shows every section closed, because on a small
-       screen the expanded form runs off the bottom -- with the Expand All / Collapse All
-       buttons under it. After that each section opens as the user last left it. A
-       closed title cell is as wide as the longest title, so the summaries form a
-       column. */
-    int closedW = 0;
-    for (int i = 0; i < sections.size(); ++i) {
-        const bool collapsed = !G::settings ||
-            G::settings->value("ExportDlg/collapsed/" + sections.at(i).key, true).toBool();
-        setSectionOpen(i, !collapsed, /*save*/false);
-        sections.at(i).closedBtn->ensurePolished();
-        closedW = qMax(closedW, sections.at(i).closedBtn->sizeHint().width());
-    }
-    for (const Section &s : std::as_const(sections)) s.titleCell->setFixedWidth(closedW);
+    sections->restore();
     syncSectionButtons();
     reloadPresetCombo();
     settingsToUi();
@@ -238,166 +234,21 @@ QVBoxLayout *ExportDlg::addSection(QVBoxLayout *lay, const QString &title,
     lay->addWidget(gb);
     if (key.isEmpty()) return inner;
 
-    /* COLLAPSIBLE. The box's title becomes clickable (eventFilter); the body keeps an
-       arrow cursor of its own, because the box shows a pointing hand over its title and
-       a child without a cursor would inherit it -- the box gets no Leave when the mouse
-       moves on into a child, so the hand would stick over the controls. */
-    Section s;
-    s.key = key;
-    s.title = title;
-    s.box = gb;
-    gb->setMouseTracking(true);
-    gb->installEventFilter(this);
-    body->setCursor(Qt::ArrowCursor);
-
-    /* The closed form: chevron + title (the box's title size) and the summary, flush
-       with the box's left edge -- the dialog's left margin, where the scope row's count
-       also starts. */
-    s.closedRow = new QWidget(this);
-    QHBoxLayout *row = new QHBoxLayout(s.closedRow);
-    row->setContentsMargins(0, 2, 10, 2);
-    s.closedBtn = new QToolButton(s.closedRow);
-    s.closedBtn->setFont(tf);
-    s.closedBtn->setAutoRaise(true);
-    s.closedBtn->setStyleSheet("QToolButton { border: none; padding: 0px; }");
-    s.closedBtn->setCursor(Qt::PointingHandCursor);
-    s.closedBtn->setToolTip(tr("Click to expand"));
-    s.summaryLab = new QLabel(s.closedRow);
-    s.summaryLab->setStyleSheet("QLabel { color:" + G::disabledColor.name() + "; }");
-    /* The button keeps its own width (a QToolButton centres its text, whatever the
-       sheet says) and sits at the left of a cell the constructor widens to the longest
-       title, so every title starts at the same x and the summaries form a column. */
-    s.titleCell = new QWidget(s.closedRow);
-    QHBoxLayout *cell = new QHBoxLayout(s.titleCell);
-    cell->setContentsMargins(0, 0, 0, 0);
-    cell->addWidget(s.closedBtn);
-    cell->addStretch(1);
-    row->addWidget(s.titleCell);
-    row->addSpacing(12);
-    row->addWidget(s.summaryLab, 1);
-    s.closedRow->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(s.closedRow, &QWidget::customContextMenuRequested, this,
-            [this, w = s.closedRow](const QPoint &p) { sectionMenu(w->mapToGlobal(p)); });
-    lay->addWidget(s.closedRow);
-    s.closedRow->hide();
-
-    const int i = int(sections.size());
-    connect(s.closedBtn, &QToolButton::clicked, this, [this, i]() { setSectionOpen(i, true); });
-    sections.append(s);
+    sections->add(gb, lay, key, [this, key]() { return summaryOf(key); });
     return inner;
 }
 
 void ExportDlg::syncSectionButtons()
 {
     if (!expandAllBtn || !collapseAllBtn) return;
-    bool anyOpen = false, anyClosed = false;
-    for (const Section &s : std::as_const(sections)) (s.open ? anyOpen : anyClosed) = true;
+    const bool anyOpen = sections->anyOpen();
+    const bool anyClosed = sections->anyClosed();
     expandAllBtn->setEnabled(anyClosed);
     collapseAllBtn->setEnabled(anyOpen);
     expandAllBtn->setToolTip(anyClosed ? tr("Open every section")
                                        : tr("Every section is already open"));
     collapseAllBtn->setToolTip(anyOpen ? tr("Close every section to a one-line summary")
                                        : tr("Every section is already closed"));
-}
-
-bool ExportDlg::onBoxTitle(QGroupBox *box, const QPoint &pos)
-{
-/*
-    The band above the first control, as far right as the title text runs. Not the
-    style's SC_GroupBoxLabel rect: widgetcss raises the title with relative offsets
-    (top: -halfFontSize), which the stylesheet style may or may not report, while the
-    band is just the box's own top margin (addSection's topGap).
-*/
-    if (!box->layout()) return false;
-    const QFontMetrics fm(box->font());
-    return pos.y() < box->layout()->contentsMargins().top()
-        && pos.x() < fm.horizontalAdvance(box->title()) + 2 * fm.height();
-}
-
-bool ExportDlg::eventFilter(QObject *obj, QEvent *event)
-{
-    for (int i = 0; i < sections.size(); ++i) {
-        QGroupBox *gb = sections.at(i).box;
-        if (obj != gb) continue;
-        switch (event->type()) {
-        case QEvent::MouseMove: {
-            const QPoint p = static_cast<QMouseEvent *>(event)->position().toPoint();
-            if (onBoxTitle(gb, p)) gb->setCursor(Qt::PointingHandCursor);
-            else gb->unsetCursor();
-            break;
-        }
-        case QEvent::Leave:
-            gb->unsetCursor();
-            break;
-        case QEvent::MouseButtonRelease: {
-            auto *me = static_cast<QMouseEvent *>(event);
-            if (me->button() == Qt::LeftButton && onBoxTitle(gb, me->position().toPoint())) {
-                setSectionOpen(i, false);
-                return true;
-            }
-            break;
-        }
-        case QEvent::ContextMenu: {
-            auto *ce = static_cast<QContextMenuEvent *>(event);
-            if (onBoxTitle(gb, ce->pos())) {
-                sectionMenu(ce->globalPos());
-                return true;
-            }
-            break;
-        }
-        case QEvent::ToolTip: {
-            auto *he = static_cast<QHelpEvent *>(event);
-            if (onBoxTitle(gb, he->pos()))
-                QToolTip::showText(he->globalPos(), tr("Click to collapse"), gb);
-            else
-                QToolTip::hideText();
-            return true;
-        }
-        default:
-            break;
-        }
-        break;
-    }
-    return QDialog::eventFilter(obj, event);
-}
-
-void ExportDlg::setSectionOpen(int i, bool open, bool save)
-{
-/*
-    save == false is the constructor restoring the remembered state: nothing to write,
-    and the constructor fits the dialog itself once everything is built.
-*/
-    if (i < 0 || i >= sections.size()) return;
-    Section &s = sections[i];
-    s.open = open;
-    /* The chevrons as code points (U+25BE open, U+25B8 closed), not literals: a
-       non-ASCII narrow literal depends on the compiler's execution charset. */
-    s.box->setTitle(QString(QChar(0x25BE)) + " " + s.title);
-    s.closedBtn->setText(QString(QChar(0x25B8)) + " " + s.title);
-    s.box->setVisible(open);
-    s.closedRow->setVisible(!open);
-    syncSectionButtons();
-    if (!save) return;
-    if (G::settings) G::settings->setValue("ExportDlg/collapsed/" + s.key, !open);
-    fitToContents();
-}
-
-void ExportDlg::setAllSectionsOpen(bool open)
-{
-    for (int i = 0; i < sections.size(); ++i)
-        setSectionOpen(i, open, /*save*/false);
-    if (G::settings)
-        for (const Section &s : std::as_const(sections))
-            G::settings->setValue("ExportDlg/collapsed/" + s.key, !open);
-    fitToContents();
-}
-
-void ExportDlg::sectionMenu(const QPoint &globalPos)
-{
-    QMenu menu(this);
-    menu.addAction(tr("Expand all"), this, [this]() { setAllSectionsOpen(true); });
-    menu.addAction(tr("Collapse all"), this, [this]() { setAllSectionsOpen(false); });
-    menu.exec(globalPos);
 }
 
 QString ExportDlg::summaryOf(const QString &key) const
@@ -462,12 +313,6 @@ QString ExportDlg::summaryOf(const QString &key) const
         return sz;
     }
     return QString();
-}
-
-void ExportDlg::updateSummaries()
-{
-    for (const Section &s : std::as_const(sections))
-        s.summaryLab->setText(summaryOf(s.key));
 }
 
 void ExportDlg::buildUi()
@@ -1010,9 +855,9 @@ void ExportDlg::buildUi()
     collapseAllBtn = new QPushButton(tr("Collapse All"), this);
     sizeButton(expandAllBtn);
     sizeButton(collapseAllBtn);
-    connect(expandAllBtn, &QPushButton::clicked, this, [this]() { setAllSectionsOpen(true); });
+    connect(expandAllBtn, &QPushButton::clicked, this, [this]() { sections->setAllOpen(true); });
     connect(collapseAllBtn, &QPushButton::clicked, this,
-            [this]() { setAllSectionsOpen(false); });
+            [this]() { sections->setAllOpen(false); });
     foot->addWidget(expandAllBtn);
     foot->addWidget(collapseAllBtn);
     foot->addStretch(1);
@@ -1331,7 +1176,7 @@ void ExportDlg::updateExample()
 {
     /* Every edit comes through here, so the closed sections' summaries are kept current
        here too. */
-    updateSummaries();
+    sections->updateSummaries();
     if (!exporter) return;
     const QStringList targets = targetPaths();
     if (targets.isEmpty()) { exampleLab->clear(); return; }
@@ -1488,7 +1333,7 @@ void ExportDlg::setPresetDirty(bool dirty)
         hasSel ? (dirty ? tr("Overwrite \"%1\" with these settings").arg(selectedPreset())
                         : tr("These settings already match \"%1\"").arg(selectedPreset()))
                : tr("Select a preset to update, or use New"));
-    updateSummaries();                       // the closed Preset row says "modified"
+    sections->updateSummaries();                       // the closed Preset row says "modified"
 }
 
 void ExportDlg::reloadPresetCombo(const QString &select)
@@ -1522,10 +1367,11 @@ void ExportDlg::onPresetChosen(int index)
     setPresetDirty(false);                 // the form now IS the preset
     /* A preset with a template opens Embellish, so what the template decides is not
        hidden in a closed section. Not remembered: the user's own choice is. */
-    if (!current.embellish.isEmpty())
-        for (int i = 0; i < sections.size(); ++i)
-            if (sections.at(i).key == "Embellish" && !sections.at(i).open)
-                setSectionOpen(i, true, /*save*/false);
+    if (!current.embellish.isEmpty()) {
+        const int e = sections->indexOf("Embellish");
+        if (!sections->isOpen(e)) sections->setOpen(e, true, /*save*/false);
+        syncSectionButtons();
+    }
     fitToContents();                       // its Embellish note may differ
 }
 

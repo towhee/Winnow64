@@ -104,6 +104,7 @@ IngestDlg::IngestDlg(QWidget *parent,
     this->css = css;
 
     ui->setupUi(this);
+    buildSections();
 
     ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
 
@@ -202,9 +203,170 @@ IngestDlg::IngestDlg(QWidget *parent,
 
     updateFolderPaths();
 
+    /* Every summary control is set by now. Collapsed by default (see buildSections). */
+    sections->restore();
+    fitToContents();
+
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
+}
+
+void IngestDlg::buildSections()
+{
+/*
+    The .ui places every widget at fixed coordinates in scrollAreaWidgetContents, with no
+    layouts, so a closed section could not give its space back. This stacks the three
+    group boxes and a new Settings box in a QVBoxLayout. The boxes keep their hand-placed
+    contents and their .ui height. The checkboxes that floated under the boxes are
+    gathered into Settings, and the footer (file count, drive space, progress bar,
+    Cancel / Ingest) moves out of the scroll area to sit below it, at the offsets it had,
+    so it is never scrolled away.
+
+    The on_..._stateChanged slots survive the reparenting: setupUi connected them by
+    name already.
+*/
+    QWidget *content = ui->scrollAreaWidgetContents;
+
+    /* ---- Footer ---- */
+    constexpr int kFooterTop = 795;              // just above the .ui's separator line
+    footer = new QWidget(this);
+    int footerH = 0;
+    for (QWidget *w : std::initializer_list<QWidget *>{
+             ui->line, ui->statsLabel, ui->label, ui->drive, ui->drive_2, ui->gbsLabel,
+             ui->progressBar, ui->layoutWidget}) {
+        const QRect g = w->geometry();
+        const bool hidden = w->isHidden();
+        w->setParent(footer);
+        w->move(g.x(), g.y() - kFooterTop);
+        w->setVisible(!hidden);
+        footerH = qMax(footerH, g.bottom() + 1 - kFooterTop);
+    }
+    footer->setFixedHeight(footerH + 6);
+    footer->setMinimumWidth(content->width());
+    ui->verticalLayout_2->addWidget(footer);
+
+    /* ---- Settings ---- the two columns they had under the boxes. */
+    settingsBox = new QGroupBox(tr("Settings"), content);
+    QGridLayout *grid = new QGridLayout(settingsBox);
+    const int titleH = settingsBox->fontMetrics().height();
+    grid->setContentsMargins(10, titleH + 12, 10, 10);
+    grid->addWidget(ui->backupChk,             0, 0);
+    grid->addWidget(ui->openIngestFolderChk,   0, 1);
+    grid->addWidget(ui->integrityChk,          1, 0);
+    grid->addWidget(ui->ejectChk,              1, 1);
+    grid->addWidget(ui->combinedIncludeJpgChk, 2, 0);
+    grid->addWidget(ui->backgroundIngestChk,   3, 0);
+    grid->addWidget(ui->beepChk,               3, 1);
+
+    /* ---- The stack ----
+       The .ui gives the content a 860 x 854 minimum, the size of the old hand-placed
+       form; kept, it would force scroll bars on any shorter (collapsed) form. The
+       layout's own minimum replaces it. The bottom margin is the gap between the last
+       section and the footer's separator line. */
+    content->setMinimumSize(0, 0);
+    QVBoxLayout *v = new QVBoxLayout(content);
+    v->setContentsMargins(10, 0, content->width() - 841, 18);
+    v->setSpacing(12);
+    for (QGroupBox *b : {ui->ingestToGroupBox, ui->filenameGroupBox, ui->seqGroupBox}) {
+        b->setFixedHeight(b->height());          // contents placed by hand: the .ui's
+        b->setMinimumWidth(b->width());
+        v->addWidget(b);
+    }
+    v->addWidget(settingsBox);
+    v->addStretch(1);
+
+    sections = new CollapsibleSections(this, "IngestDlg/collapsed");
+    for (const auto &[box, key] : std::initializer_list<std::pair<QGroupBox *, QString>>{
+             {ui->ingestToGroupBox, "Destination"}, {ui->filenameGroupBox, "Naming"},
+             {ui->seqGroupBox, "Example"}, {settingsBox, "Settings"}})
+        sections->add(box, v, key, [this, k = key]() { return sectionSummary(k); });
+    sections->onChanged = [this]() { fitToContents(); };
+
+    /* Changes that do not pass through updateFolderPaths / buildFileNameSequence. */
+    for (QAbstractButton *b : std::initializer_list<QAbstractButton *>{
+             ui->autoRadio, ui->manualRadio, ui->backupChk, ui->openIngestFolderChk,
+             ui->integrityChk, ui->ejectChk, ui->combinedIncludeJpgChk,
+             ui->backgroundIngestChk, ui->beepChk})
+        connect(b, &QAbstractButton::toggled, this, [this]() { scheduleSummaries(); });
+}
+
+QString IngestDlg::sectionSummary(const QString &key) const
+{
+    const QString sep = QString(" ") + QChar(0x00B7) + " ";    // a middle dot
+    const bool autoDest = ui->autoRadio->isChecked();
+    if (key == "Destination") {
+        QString d = (autoDest ? ui->folderLabel : ui->manualFolderLabel)->text();
+        if (ui->backupChk->isChecked())
+            d += sep + tr("backup to %1")
+                           .arg((autoDest ? ui->folderLabel_2 : ui->manualFolderLabel_2)
+                                    ->text());
+        return d;
+    }
+    if (key == "Naming")
+        return ui->filenameTemplatesCB->currentText() + sep +
+               tr("start %1").arg(ui->spinBoxStartNumber->value());
+    if (key == "Example")
+        return ui->folderPathLabel->text();
+    if (key == "Settings") {
+        QStringList on;
+        if (ui->backupChk->isChecked()) on << tr("Backup");
+        if (ui->integrityChk->isChecked()) on << tr("Integrity check");
+        if (ui->combinedIncludeJpgChk->isEnabled() && ui->combinedIncludeJpgChk->isChecked())
+            on << tr("Raw+JPG copies JPG");
+        if (ui->backgroundIngestChk->isChecked()) on << tr("Background");
+        if (ui->beepChk->isEnabled() && ui->beepChk->isChecked()) on << tr("Beep");
+        if (ui->openIngestFolderChk->isEnabled() && ui->openIngestFolderChk->isChecked())
+            on << tr("Open folder after");
+        if (ui->ejectChk->isEnabled() && ui->ejectChk->isChecked()) on << tr("Eject");
+        return on.isEmpty() ? tr("None") : on.join(sep);
+    }
+    return QString();
+}
+
+void IngestDlg::scheduleSummaries()
+{
+    if (!sections) return;
+    QTimer::singleShot(0, this, [this]() { sections->updateSummaries(); });
+}
+
+void IngestDlg::fitToContents()
+{
+/*
+    The scroll area is made exactly as tall as the open sections, so it shows no bar and
+    the dialog fits them. Only when that is taller than the screen's usable height (less
+    an allowance for the title bar, which the dialog's height does not include) is the
+    scroll area shortened by the excess, keeping the footer -- and the Ingest button --
+    on screen.
+*/
+    QWidget *content = ui->scrollAreaWidgetContents;
+    content->layout()->activate();
+    const QSize contentSize = content->sizeHint();
+    setMinimumHeight(0);
+    setMaximumHeight(QWIDGETSIZE_MAX);
+    /* NO SCROLL BARS while the form fits, as in ExportDlg: the scroll area is exactly
+       the content's size, so its bars are switched off rather than left to appear for
+       a pixel of rounding. Wide enough for the content too, so there is never a
+       horizontal bar. */
+    ui->scrollArea->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    ui->scrollArea->setMinimumSize(contentSize.width(), 0);
+    ui->scrollArea->setFixedHeight(contentSize.height());
+    layout()->activate();
+    int h = sizeHint().height();
+
+    constexpr int kFrameAllowance = 40;
+    const QScreen *scr = screen();
+    const int avail = scr ? scr->availableGeometry().height() - kFrameAllowance : h;
+    if (h > avail) {
+        /* Taller than the screen: only now do the sections scroll. */
+        ui->scrollArea->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+        ui->scrollArea->setFixedHeight(qMax(120, contentSize.height() - (h - avail)));
+        layout()->activate();
+        h = sizeHint().height();
+    }
+    setFixedHeight(h);
+    if (width() < sizeHint().width()) resize(sizeHint().width(), h);
 }
 
 IngestDlg::~IngestDlg()
@@ -796,6 +958,7 @@ QString IngestDlg::parseTokenString(QFileInfo info, QString tokenString)
 void IngestDlg::updateFolderPaths()
 {
     if (G::isLogger) G::log("IngestDlg::updateFolderPaths");
+    scheduleSummaries();                         // the destination folder changes here
     QStorageInfo d;
 
     // Auto folders
@@ -877,6 +1040,7 @@ void IngestDlg::buildFileNameSequence()
     If the backup location tab is chosen then the backup location paths are shown.
 */
     if (G::isLogger) G::log("IngestDlg::buildFileNameSequence");
+    scheduleSummaries();                         // the example path changes here
     if (isInitializing) return;
     // build filename from tokenString
     QString key = ui->filenameTemplatesCB->currentText();

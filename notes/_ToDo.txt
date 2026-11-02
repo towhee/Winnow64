@@ -10,6 +10,7 @@ BUGS / TO DO
 - Space bar not start/stopping video play
 - Arrow navigation in develop when no slider has the focus
 - Catalog management: move, copy, join, select
+- Find duplicates (expand/collapse) and library use.
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup
 - Search for images with an Effect.
