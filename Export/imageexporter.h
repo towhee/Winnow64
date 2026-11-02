@@ -32,7 +32,7 @@ class Metadata;
 
         Develop    -- developCompositeStack: the full recipe, masks, spots and geometry
         Plain      -- the browse decode, for File > Save Preview as
-        Embellish  -- (later) the embellish scene render
+        Embellish  -- MW::embellishedPixelSource wraps either one in the template
 
     ASYNCHRONOUS BY CONTRACT. A single full-resolution raw render is ~1s, so a synchronous
     batch would freeze the GUI for minutes. The PixelSource is therefore handed a

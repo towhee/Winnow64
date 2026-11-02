@@ -284,6 +284,42 @@ void ExportDlg::buildUi()
         sourceLay->addLayout(sourceGrid);
     }
 
+    /* ---- Embellish ----
+       Compose each image into an Embellish template (borders, texts, graphics) on its
+       way out, from whatever the Source gives. On the field column like Source. The
+       template sizes the image; its own Export settings are the default output, and the
+       rows they decide are greyed with the reason in embelNoteLab. */
+    QVBoxLayout *embelLay = addSection(lay, tr("Embellish"));
+    embelCombo = new QComboBox(this);
+    embelCombo->addItem(tr("None"), QString());
+    const QStringList embelTemplates = presets ? presets->embellishTemplates()
+                                               : QStringList();
+    for (const QString &t : embelTemplates) embelCombo->addItem(t, t);
+    embelCombo->setFixedWidth(kTemplateWidth);
+    embelCombo->setToolTip(tr("Embellish each exported image with this template.\n"
+                              "Templates are made in the Embellish editor."));
+    embelUseOutputChk = new QCheckBox(tr("Use the template's export settings"), this);
+    embelUseOutputChk->setToolTip(tr("Take the file type, quality, destination, suffix "
+                                     "and metadata\nfrom the template's Export settings "
+                                     "in the Embellish editor"));
+    embelNoteLab = new QLabel(this);
+    embelNoteLab->setStyleSheet("QLabel { color:" + G::disabledColor.name() + "; }");
+    embelNoteLab->setWordWrap(true);
+    QHBoxLayout *embelRow = new QHBoxLayout;
+    embelRow->addWidget(embelCombo);
+    embelRow->addSpacing(12);
+    embelRow->addWidget(embelUseOutputChk);
+    embelRow->addStretch(1);
+    QWidget *embelCapCol = new QWidget(this);
+    QGridLayout *embelGrid = new QGridLayout;
+    embelGrid->setContentsMargins(0, 0, 0, 0);
+    embelGrid->setColumnStretch(0, 0);
+    embelGrid->setColumnStretch(1, 1);
+    embelGrid->addWidget(embelCapCol, 0, 0, 2, 1);
+    embelGrid->addLayout(embelRow, 0, 1);
+    embelGrid->addWidget(embelNoteLab, 1, 1);
+    embelLay->addLayout(embelGrid);
+
     /* ---- Destination ---- */
     QVBoxLayout *destLay = addSection(lay, tr("Destination"));
     QGridLayout *dest = new QGridLayout;
@@ -640,6 +676,9 @@ void ExportDlg::buildUi()
         sourceGrid->setHorizontalSpacing(colGap);
         sourceGrid->setColumnMinimumWidth(0, capW0);
     }
+    embelCapCol->setFixedWidth(capW0);   // and the Embellish group
+    embelGrid->setHorizontalSpacing(colGap);
+    embelGrid->setColumnMinimumWidth(0, capW0);
 
     /* ---- Scope ----
        What gets exported, not how, so it sits outside the settings group boxes -- last,
@@ -735,6 +774,29 @@ void ExportDlg::buildUi()
         qualityLab->setText(QString::number(v));
         onEdited();
     });
+    connect(embelCombo, &QComboBox::currentIndexChanged, this,
+            &ExportDlg::onEmbellishEdited);
+    connect(embelUseOutputChk, &QCheckBox::toggled, this, &ExportDlg::onEmbellishEdited);
+}
+
+ExportSettings ExportDlg::shown() const
+{
+    return presets ? presets->effective(current) : current;
+}
+
+void ExportDlg::onEmbellishEdited()
+{
+/*
+    The template or its checkbox changes which rows show the user's own values and which
+    the template's, so the whole form is re-shown, not just re-read.
+*/
+    if (populating) return;
+    uiToSettings();
+    settingsToUi();
+    updateEnabledStates();
+    updateExample();
+    setPresetDirty(true);
+    fitToContents();                     // the note below the template comes and goes
 }
 
 void ExportDlg::loadFormats()
@@ -750,94 +812,118 @@ void ExportDlg::loadFormats()
 void ExportDlg::settingsToUi()
 {
     populating = true;
+    /* The rows show what will be exported, so with an Embellish template the template's
+       values; `current` keeps the user's own underneath (see uiToSettings). */
+    /* A remembered template deleted since in the editor reads as None, and is None. */
+    int eIdx = embelCombo->findData(current.embellish);
+    if (eIdx < 0) { current.embellish.clear(); eIdx = 0; }
+    const ExportSettings v = shown();
+
+    embelCombo->setCurrentIndex(eIdx);
+    embelUseOutputChk->setChecked(current.embellishUseTemplateOutput);
 
     if (mode == Mode::Develop) {
-        developedRadio->setChecked(current.source == ExportSettings::Developed);
-        cameraPreviewRadio->setChecked(current.source == ExportSettings::CameraPreview);
+        developedRadio->setChecked(v.source == ExportSettings::Developed);
+        cameraPreviewRadio->setChecked(v.source == ExportSettings::CameraPreview);
     }
 
-    sourceFolderRadio->setChecked(current.dest == ExportSettings::SourceFolder);
-    subfolderRadio->setChecked(current.dest == ExportSettings::SubfolderOfSource);
-    folderRadio->setChecked(current.dest == ExportSettings::ChosenFolder);
-    subfolderEdit->setText(current.subfolderName);
-    folderEdit->setText(current.folderPath);
-    addToViewChk->setChecked(current.addToFolderView);
+    sourceFolderRadio->setChecked(v.dest == ExportSettings::SourceFolder);
+    subfolderRadio->setChecked(v.dest == ExportSettings::SubfolderOfSource);
+    folderRadio->setChecked(v.dest == ExportSettings::ChosenFolder);
+    subfolderEdit->setText(v.subfolderName);
+    folderEdit->setText(v.folderPath);
+    addToViewChk->setChecked(v.addToFolderView);
 
     /* The template combo stores the token string as item data. A stored template that no
        longer exists -- deleted since the preset was saved -- and the empty one that older
        settings used for "no template" both fall back to whichever template keeps the
        original name, and failing that to the first one there is. */
-    int tIdx = templateCombo->findData(current.tokenTemplate);
+    int tIdx = templateCombo->findData(v.tokenTemplate);
     if (tIdx < 0) tIdx = templateCombo->findData(QString("{ORIGINAL FILENAME}"));
     templateCombo->setCurrentIndex(qMax(0, tIdx));
-    suffixEdit->setText(current.suffix);
-    overwriteRadio->setChecked(current.exists == ExportSettings::Overwrite);
-    uniqueRadio->setChecked(current.exists == ExportSettings::UniqueName);
-    skipRadio->setChecked(current.exists == ExportSettings::Skip);
+    suffixEdit->setText(v.suffix);
+    overwriteRadio->setChecked(v.exists == ExportSettings::Overwrite);
+    uniqueRadio->setChecked(v.exists == ExportSettings::UniqueName);
+    skipRadio->setChecked(v.exists == ExportSettings::Skip);
 
-    int fIdx = typeCombo->findData(current.format);
+    int fIdx = typeCombo->findData(v.format);
     if (fIdx < 0) fIdx = 0;                       // stored format not writable here
     typeCombo->setCurrentIndex(fIdx);
-    depthCombo->setCurrentIndex(current.bitDepth == 16 ? 1 : 0);
-    spaceCombo->setCurrentIndex(qMax(0, spaceCombo->findData(int(current.space))));
-    compressionCombo->setCurrentIndex(current.tiffCompression == 0 ? 1 : 0);
-    qualitySlider->setValue(current.quality);
-    qualityLab->setText(QString::number(current.quality));
-    copyMetadataChk->setChecked(current.copyMetadata);
-    embedThumbChk->setChecked(current.embedThumbnail);
+    depthCombo->setCurrentIndex(v.bitDepth == 16 ? 1 : 0);
+    spaceCombo->setCurrentIndex(qMax(0, spaceCombo->findData(int(v.space))));
+    compressionCombo->setCurrentIndex(v.tiffCompression == 0 ? 1 : 0);
+    qualitySlider->setValue(v.quality);
+    qualityLab->setText(QString::number(v.quality));
+    copyMetadataChk->setChecked(v.copyMetadata);
+    embedThumbChk->setChecked(v.embedThumbnail);
 
-    fullSizeRadio->setChecked(current.sizing == ExportSettings::FullSize);
-    longEdgeRadio->setChecked(current.sizing == ExportSettings::LongEdge);
-    percentRadio->setChecked(current.sizing == ExportSettings::Percent);
-    longEdgeSpin->setValue(current.longEdgePx);
-    percentSpin->setValue(current.percent);
-    dontEnlargeChk->setChecked(current.dontEnlarge);
+    fullSizeRadio->setChecked(v.sizing == ExportSettings::FullSize);
+    longEdgeRadio->setChecked(v.sizing == ExportSettings::LongEdge);
+    percentRadio->setChecked(v.sizing == ExportSettings::Percent);
+    longEdgeSpin->setValue(v.longEdgePx);
+    percentSpin->setValue(v.percent);
+    dontEnlargeChk->setChecked(v.dontEnlarge);
 
     populating = false;
 }
 
 void ExportDlg::uiToSettings()
 {
+    /* Rows showing the Embellish template's values (settingsToUi) are not the user's, so
+       they are not read back: `current` keeps the user's own for when the template is
+       cleared. Decided on the template in force when they were shown, and the Embellish
+       controls are read LAST, so a change of template takes effect on the next show. */
+    const bool embel   = !current.embellish.isEmpty();
+    const bool tmplOut = embel && current.embellishUseTemplateOutput;
+
     /* Preview mode has no Source group: whatever was stored is carried through
        untouched, so a Save Preview as never rewrites the Develop export's choice. */
     if (mode == Mode::Develop)
         current.source = cameraPreviewRadio->isChecked() ? ExportSettings::CameraPreview
                                                          : ExportSettings::Developed;
-
-    current.dest = sourceFolderRadio->isChecked() ? ExportSettings::SourceFolder
-                 : subfolderRadio->isChecked()    ? ExportSettings::SubfolderOfSource
-                                                  : ExportSettings::ChosenFolder;
-    current.subfolderName = subfolderEdit->text();
-    current.folderPath = folderEdit->text();
     current.addToFolderView = addToViewChk->isChecked();
-
-    /* Empty when there are no templates at all (every one deleted in the editor), which
-       the engine already reads as "keep the original base name". */
-    current.tokenTemplate = templateCombo->currentData().toString();
-    current.suffix = suffixEdit->text();
-    current.exists = overwriteRadio->isChecked() ? ExportSettings::Overwrite
-                   : skipRadio->isChecked()      ? ExportSettings::Skip
-                                                 : ExportSettings::UniqueName;
-
-    current.format = typeCombo->currentData().toString();
-    current.bitDepth = depthCombo->currentData().toInt();
-    current.space = OutputSpace(spaceCombo->currentData().toInt());
     current.tiffCompression = compressionCombo->currentData().toInt();
-    current.quality = qualitySlider->value();
-    current.copyMetadata = copyMetadataChk->isChecked();
-    current.embedThumbnail = embedThumbChk->isChecked();
 
-    current.sizing = longEdgeRadio->isChecked() ? ExportSettings::LongEdge
-                   : percentRadio->isChecked()  ? ExportSettings::Percent
-                                                : ExportSettings::FullSize;
-    current.longEdgePx = longEdgeSpin->value();
-    current.percent = percentSpin->value();
-    current.dontEnlarge = dontEnlargeChk->isChecked();
+    if (!tmplOut) {
+        current.dest = sourceFolderRadio->isChecked() ? ExportSettings::SourceFolder
+                     : subfolderRadio->isChecked()    ? ExportSettings::SubfolderOfSource
+                                                      : ExportSettings::ChosenFolder;
+        current.subfolderName = subfolderEdit->text();
+        current.folderPath = folderEdit->text();
+
+        /* Empty when there are no templates at all (every one deleted in the editor),
+           which the engine already reads as "keep the original base name". */
+        current.tokenTemplate = templateCombo->currentData().toString();
+        current.suffix = suffixEdit->text();
+        current.exists = overwriteRadio->isChecked() ? ExportSettings::Overwrite
+                       : skipRadio->isChecked()      ? ExportSettings::Skip
+                                                     : ExportSettings::UniqueName;
+
+        current.format = typeCombo->currentData().toString();
+        current.quality = qualitySlider->value();
+        current.copyMetadata = copyMetadataChk->isChecked();
+        current.embedThumbnail = embedThumbChk->isChecked();
+    }
+
+    if (!embel) {
+        current.bitDepth = depthCombo->currentData().toInt();
+        current.space = OutputSpace(spaceCombo->currentData().toInt());
+        current.sizing = longEdgeRadio->isChecked() ? ExportSettings::LongEdge
+                       : percentRadio->isChecked()  ? ExportSettings::Percent
+                                                    : ExportSettings::FullSize;
+        current.longEdgePx = longEdgeSpin->value();
+        current.percent = percentSpin->value();
+        current.dontEnlarge = dontEnlargeChk->isChecked();
+    }
+
+    current.embellish = embelCombo->currentData().toString();
+    current.embellishUseTemplateOutput = embelUseOutputChk->isChecked();
 }
 
 void ExportDlg::updateEnabledStates()
 {
-    const ExportFormat f = ExportFormats::find(current.format);
+    const ExportSettings v = shown();
+    const ExportFormat f = ExportFormats::find(v.format);
 
     /* Only what the format can actually do is SHOWN -- caption and control both. A greyed
        row still reads as something that could be switched on, and a format that simply
@@ -896,7 +982,7 @@ void ExportDlg::updateEnabledStates()
        (MW::onExportFinished), so there is no insert-or-rescan choice to make. */
     const bool library = G::scope == G::Scope::Catalog;
     const bool destLoaded = !library &&
-        exporter && exporter->willTouchLoadedFolder(targetPaths(), current);
+        exporter && exporter->willTouchLoadedFolder(targetPaths(), v);
     addToViewChk->setEnabled(destLoaded);
     addToViewChk->setToolTip(
         library ? tr("In the Library, exported images inside the catalog scope are always "
@@ -909,6 +995,41 @@ void ExportDlg::updateEnabledStates()
     longEdgeSpin->setEnabled(longEdgeRadio->isChecked());
     percentSpin->setEnabled(percentRadio->isChecked());
     dontEnlargeChk->setEnabled(current.sizing != ExportSettings::FullSize);
+
+    /* Embellish: the template sizes the image and Embel draws 8-bit sRGB, so those rows
+       are greyed whenever a template is chosen; with "Use the template's export
+       settings" so are the rows its Export section decides. The rows show the template's
+       values (settingsToUi) and embelNoteLab says why they cannot be changed. */
+    const bool embel   = !current.embellish.isEmpty();
+    const bool tmplOut = embel && current.embellishUseTemplateOutput;
+    embelUseOutputChk->setEnabled(embel);
+    /* Nothing above enables these three, so they are set either way; the rest keep the
+       state given above unless a template overrides it. */
+    for (QWidget *w : std::initializer_list<QWidget *>{
+             depthCombo, fullSizeRadio, longEdgeRadio, percentRadio})
+        w->setEnabled(!embel);
+    for (QWidget *w : std::initializer_list<QWidget *>{
+             spaceCombo, longEdgeSpin, percentSpin, dontEnlargeChk})
+        if (embel) w->setEnabled(false);
+    for (QWidget *w : std::initializer_list<QWidget *>{
+             sourceFolderRadio, subfolderRadio, folderRadio, subfolderEdit, folderEdit,
+             selectFolderBtn, templateCombo, templateEditorBtn, suffixEdit,
+             overwriteRadio, uniqueRadio, skipRadio, typeCombo, qualitySlider,
+             copyMetadataChk, embedThumbChk})
+        w->setEnabled(!tmplOut && (w != subfolderEdit || subfolderRadio->isChecked())
+                      && (w != folderEdit || folderRadio->isChecked())
+                      && (w != selectFolderBtn || folderRadio->isChecked()));
+    if (!embel)
+        embelNoteLab->clear();
+    else if (tmplOut)
+        embelNoteLab->setText(tr("Size, bit depth and colour space are set by the "
+                                 "template, and so are the destination, name, file type "
+                                 "and metadata (its Export settings in the Embellish "
+                                 "editor)."));
+    else
+        embelNoteLab->setText(tr("Size, bit depth and colour space are set by the "
+                                 "template."));
+    embelNoteLab->setVisible(embel);
 }
 
 void ExportDlg::updateExample()
@@ -916,7 +1037,7 @@ void ExportDlg::updateExample()
     if (!exporter) return;
     const QStringList targets = targetPaths();
     if (targets.isEmpty()) { exampleLab->clear(); return; }
-    const QString dst = exporter->previewDestination(targets.first(), current);
+    const QString dst = exporter->previewDestination(targets.first(), shown());
     exampleLab->setText(tr("Example: %1").arg(QFileInfo(dst).fileName()));
 }
 
@@ -990,9 +1111,19 @@ void ExportDlg::onExportClicked()
 {
     uiToSettings();
 
-    if (current.dest == ExportSettings::ChosenFolder && current.folderPath.isEmpty()) {
+    const ExportSettings v = shown();
+    const bool tmplOut = !current.embellish.isEmpty() && current.embellishUseTemplateOutput;
+    const bool noFolder = v.dest == ExportSettings::ChosenFolder
+                              ? v.folderPath.isEmpty()
+                              : tmplOut && v.dest == ExportSettings::SubfolderOfSource
+                                    && v.subfolderName.isEmpty();
+    if (noFolder) {
         QMessageBox::warning(this, tr("Export"),
-                             tr("Please choose a destination folder."));
+            tmplOut
+                ? tr("The Embellish template \"%1\" has no export folder. Set one in "
+                     "the Embellish editor, or turn off \"Use the template's export "
+                     "settings\".").arg(current.embellish)
+                : tr("Please choose a destination folder."));
         return;
     }
     const QStringList targets = targetPaths();
@@ -1008,10 +1139,10 @@ void ExportDlg::onExportClicked()
        "Folder" at the source folder; the Source folder option puts it one click away, so
        it is worth a confirmation. Only Overwrite actually destroys anything: Unique name
        and Skip already handle the collision. */
-    if (current.exists == ExportSettings::Overwrite) {
+    if (v.exists == ExportSettings::Overwrite) {
         int clashes = 0;
         for (const QString &src : targets) {
-            const QString dst = exporter->previewDestination(src, current);
+            const QString dst = exporter->previewDestination(src, v);
             if (QFileInfo(dst).absoluteFilePath() == QFileInfo(src).absoluteFilePath())
                 ++clashes;
         }
@@ -1090,6 +1221,7 @@ void ExportDlg::onPresetChosen(int index)
     updateEnabledStates();
     updateExample();
     setPresetDirty(false);                 // the form now IS the preset
+    fitToContents();                       // its Embellish note may differ
 }
 
 void ExportDlg::onPresetNew()

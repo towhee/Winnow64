@@ -79,6 +79,7 @@ class TitleBarStrip;
 #include "Develop/Properties/rawpanel.h"          // lab UI raw-decode strip
 #include "Develop/Properties/maskpanel.h"         // lab UI mask-editing strip
 #include "Embellish/embelexport.h"
+#include "Embellish/embelcompose.h"
 #include "Embellish/embel.h"
 #include "Export/imageexporter.h"
 #include "Export/exportpresets.h"
@@ -1777,6 +1778,17 @@ private:
     EmbelExport *beginEmbelExport();
     void endEmbelExport();
     void setEmbelExportLock(bool locked);
+    /* EMBELLISH IN THE EXPORT ENGINE. runExport is every ImageExporter entry point: it
+       runs ExportPresets::effective(settings), and with an Embellish template it wraps
+       the source in embellishedPixelSource, which composes each image (EmbelCompose, on
+       the GUI thread) with that template made current. The template current before the
+       first embellished batch is restored, and the editor unlocked, by
+       endEmbellishExport once the exporter is idle with nothing queued. */
+    void runExport(const QStringList &targets, const ExportSettings &settings,
+                   ImageExporter::PixelSource source);
+    ImageExporter::PixelSource embellishedPixelSource(ImageExporter::PixelSource inner,
+                                                      const QString &templateName);
+    void endEmbellishExport();
     void previewPixelSource(const QString &fPath,
                             std::function<void(bool, const QImage &)> done);
     /* The Develop export's source (dialog and Export with preset): the develop render,
@@ -2848,6 +2860,11 @@ private:
     /* The Embellish export in progress, else null.  One at a time; it locks the
        Embellish editor and menu until it finishes (see MW::beginEmbelExport). */
     EmbelExport *embelExporter = nullptr;
+    /* An ImageExporter batch with an Embellish template is running or queued (see
+       MW::runExport). It excludes an EmbelExport, as each sets the current template. */
+    bool embellishExporting = false;
+    QString embellishRestoreTemplate;
+    EmbelCompose *embelCompose = nullptr;
     EmbelProperties *embelProperties;
     DevelopProperties *developProperties = nullptr;
     /* Live Develop scopes (histogram + vectorscope) shown above the property tree in the

@@ -297,7 +297,7 @@ void MW::saveAsFile()
     const bool go = dlg.exec() == QDialog::Accepted;
     if (exportPresets) exportPresets->writeLast(dlg.settings());
     if (!go) return;
-    imageExporter->run(dlg.targetPaths(), dlg.settings(),
+    runExport(dlg.targetPaths(), dlg.settings(),
         [this](const QString &fPath, ImageExporter::Done done) {
             previewPixelSource(fPath, done);
         });

@@ -3885,8 +3885,9 @@ void MW::enableSelectionDependentMenus()
 
 //    // Embellish menu
     //embelExportMenu->setEnabled(enable);
-    setMenuEnabled(embelExportMenu, dmHasRows && !embelExporter,
-                   embelExporter ? "an Embellish export is running" : needFolder);
+    const bool embelBusy = embelExporter || embellishExporting;
+    setMenuEnabled(embelExportMenu, dmHasRows && !embelBusy,
+                   embelBusy ? "an Embellish export is running" : needFolder);
     gate(embelNewTemplateAction, dmHasRows, needFolder);
     gate(embelReadTemplateAction, dmHasRows, needFolder);
     gate(embelSaveTemplateAction, dmHasRows, needFolder);

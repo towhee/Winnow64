@@ -12,7 +12,7 @@
 
     ExportSettings is deliberately source-agnostic. It says nothing about WHERE the pixels
     come from -- ImageExporter takes that as a callback -- so the same settings drive a
-    Develop export, a plain "Save Preview as" and (later) an Embellish export. That is the
+    Develop export, a plain "Save Preview as" and an embellished one (the embellish field). That is the
     point of the struct: Winnow grew three export loops with three overlapping and
     incompatible sets of options, and this is the one set.
 
@@ -157,6 +157,17 @@ struct ExportSettings {
     int     longEdgePx = 3000;
     int     percent = 50;
     bool    dontEnlarge = true;            // never scale a small image UP to the target
+
+    /* ---- Embellish ----
+       The Embellish template to compose each image into (borders, texts, graphics),
+       empty for none. The template's fit sets the size, and Embel draws 8-bit sRGB, so
+       an embellished export ignores sizing, bitDepth and space (see
+       ExportPresets::effective). embellishUseTemplateOutput takes the destination,
+       naming and format from the template's own Export section instead of from this
+       struct -- what a remote (winnet) embellish has always used. Published keys
+       "embellish" and "embellishUseTemplateOutput". */
+    QString embellish;
+    bool    embellishUseTemplateOutput = true;
 
     /* True when the chosen format can actually deliver the chosen depth. */
     bool wants16Bit() const

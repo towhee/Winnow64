@@ -15,8 +15,8 @@ class ImageExporter;
     the settings.
 
     LAYOUT: a preset bar across the top (combo + New / Update / Rename / Delete), then one
-    column of grouped sections -- Source (Develop only), Destination, File naming,
-    Format, Image sizing -- and the buttons. Hand-built rather than a .ui file, following the
+    column of grouped sections -- Source (Develop only), Embellish, Destination, File
+    naming, Format, Image sizing -- and the buttons. Hand-built rather than a .ui file, following the
     newest dialogs (SaveDevelopPresetDlg): the form is generated from the format table and
     reacts to it, which a static .ui cannot express.
 
@@ -87,6 +87,11 @@ private:
        shown instead -- see presetDirty. */
     void setPresetDirty(bool dirty);
     QString selectedPreset() const;  // "" when the combo is on "(none)"
+    /* What `current` exports with: ExportPresets::effective, so with an Embellish
+       template the rows the template decides show the template's values. `current`
+       keeps the user's own, which come back when the template is cleared. */
+    ExportSettings shown() const;
+    void onEmbellishEdited();
 
     ImageExporter *exporter;
     ExportPresets *presets;
@@ -115,6 +120,12 @@ private:
     QRadioButton *developedRadio = nullptr;
     QRadioButton *cameraPreviewRadio = nullptr;
     QLabel       *sourceNoteLab = nullptr;
+
+    /* Embellish. embelNoteLab is the inline reason the rows the template decides are
+       greyed. */
+    QComboBox    *embelCombo = nullptr;
+    QCheckBox    *embelUseOutputChk = nullptr;
+    QLabel       *embelNoteLab = nullptr;
 
     /* Scope */
     QLabel       *countLab = nullptr;

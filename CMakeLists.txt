@@ -212,6 +212,7 @@ set(WINNOW_SOURCES
     Effects/graphicseffect.cpp
     Effects/graphicsitemeventfilter.cpp
     Embellish/embel.cpp
+    Embellish/embelcompose.cpp
     Embellish/embelexport.cpp
     Embellish/Properties/embelproperties.cpp
 
@@ -626,6 +627,7 @@ set(WINNOW_HEADERS
     Effects/REF_imageblitz_effects.h
 
     Embellish/embel.h
+    Embellish/embelcompose.h
     Embellish/embelexport.h
     Embellish/Properties/embelproperties.h
 

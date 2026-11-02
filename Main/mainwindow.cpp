@@ -3795,6 +3795,16 @@ void MW::handleStartupArgs(const QString &args)
             }, Qt::SingleShotConnection);
             return;
         }
+        /* Likewise behind an embellished Export Images run (MW::runExport): both make
+           their template current. onExportFinished, connected first, has ended it by
+           the time this runs if nothing was queued behind it; if something was, this
+           waits again. */
+        if (embellishExporting && imageExporter) {
+            connect(imageExporter, &ImageExporter::finished, this, [this, args]() {
+                QTimer::singleShot(0, this, [this, args]() { handleStartupArgs(args); });
+            }, Qt::SingleShotConnection);
+            return;
+        }
         EmbelExport *embelExport = beginEmbelExport();
         if (!embelExport) return;
         connect(embelExport, &EmbelExport::finished, this,
@@ -17233,6 +17243,12 @@ void MW::onExportFinished(const ImageExporter::Result &result)
 */
     if (G::isLogger) G::log("MW::onExportFinished");
 
+    /* The last batch, embellished or not: an abort drops the queued batches without a
+       finished() of their own, so the end is "idle and nothing queued", not a count. */
+    if (embellishExporting && imageExporter && !imageExporter->isRunning()
+        && imageExporter->queuedBatches() == 0)
+        endEmbellishExport();
+
     QString msg;
     if (result.aborted)
         msg = "Export stopped -- " + QString::number(result.written.count()) + " written";
@@ -17326,7 +17342,7 @@ void MW::developExport()
     const bool go = dlg.exec() == QDialog::Accepted;
     if (exportPresets) exportPresets->writeLast(dlg.settings());
     if (!go) return;
-    imageExporter->run(dlg.targetPaths(), dlg.settings(),
+    runExport(dlg.targetPaths(), dlg.settings(),
         [this](const QString &fPath, ImageExporter::Done done) {
             developExportPixelSource(fPath, done);
         });
@@ -17349,17 +17365,102 @@ void MW::developExportWithPreset(const QString &presetName)
     }
 
     const ExportSettings s = exportPresets->read(presetName);
-    if (s.dest == ExportSettings::ChosenFolder && s.folderPath.isEmpty()) {
+    /* An Embellish template's own folder is runExport's to report. */
+    const bool tmplOut = !s.embellish.isEmpty() && s.embellishUseTemplateOutput;
+    if (!tmplOut && s.dest == ExportSettings::ChosenFolder && s.folderPath.isEmpty()) {
         if (G::popup)
             G::popup->showPopup("The export preset \"" + presetName +
                                 "\" has no destination folder.", 2500);
         return;
     }
 
-    imageExporter->run(targets, s,
+    runExport(targets, s,
         [this](const QString &fPath, ImageExporter::Done done) {
             developExportPixelSource(fPath, done);
         });
+}
+
+void MW::runExport(const QStringList &targets, const ExportSettings &settings,
+                   ImageExporter::PixelSource source)
+{
+/*
+    Every ImageExporter run goes through here, so a preset, the dialog and Save Preview
+    as all export what ExportPresets::effective says: with an Embellish template, the
+    template's size and (when asked) its own output settings.
+*/
+    if (G::isLogger) G::log("MW::runExport");
+    if (!imageExporter) return;
+    const ExportSettings s = exportPresets ? exportPresets->effective(settings) : settings;
+
+    if (!s.embellish.isEmpty()) {
+        /* EmbelExport and this both make their template the editor's current one. */
+        if (embelExporter) {
+            G::popup->showPopup("An Embellish export is running. Export again when it "
+                                "has finished.", 2500);
+            return;
+        }
+        if (!embelProperties->templateList.contains(s.embellish)) {
+            G::popup->showPopup("The Embellish template \"" + s.embellish +
+                                "\" no longer exists.", 2500);
+            return;
+        }
+        /* EmbelExport::isValidExportFolder's test, on the template's Export settings. */
+        if (s.embellishUseTemplateOutput &&
+            (s.dest == ExportSettings::ChosenFolder ? s.folderPath.isEmpty()
+                                                    : s.subfolderName.isEmpty())) {
+            G::popup->showPopup("The Embellish template \"" + s.embellish +
+                                "\" has no export folder. Set one in the Embellish "
+                                "editor.", 3000);
+            return;
+        }
+        if (!embellishExporting) {
+            embellishExporting = true;
+            embellishRestoreTemplate = embelProperties->templateName;
+            setEmbelExportLock(true);
+        }
+        source = embellishedPixelSource(std::move(source), s.embellish);
+    }
+    imageExporter->run(targets, s, std::move(source));
+}
+
+ImageExporter::PixelSource MW::embellishedPixelSource(ImageExporter::PixelSource inner,
+                                                      const QString &templateName)
+{
+/*
+    The inner source's pixels, embellished. `done` from the inner source may arrive on a
+    worker thread; the compose is a QGraphicsScene render, so it hops to the GUI thread.
+    The template is made current per image rather than once per run, because a queued
+    batch may want a different one than the batch before it.
+*/
+    return [this, inner, templateName](const QString &fPath, ImageExporter::Done done) {
+        inner(fPath, [this, templateName, fPath, done](bool ok, const QImage &img) {
+            QMetaObject::invokeMethod(this, [this, templateName, fPath, done, ok, img]() {
+                if (!ok || img.isNull()) { done(false, QImage()); return; }
+                /* A queued batch's template may have been deleted since it was run. */
+                if (!embelProperties->templateList.contains(templateName)) {
+                    done(false, QImage());
+                    return;
+                }
+                if (embelProperties->templateName != templateName)
+                    embelProperties->setCurrentTemplate(templateName);
+                if (!embelCompose)
+                    embelCompose = new EmbelCompose(embelProperties, dm, icd);
+                const QImage out = embelCompose->compose(img, fPath);
+                done(!out.isNull(), out);
+            }, Qt::QueuedConnection);
+        });
+    };
+}
+
+void MW::endEmbellishExport()
+{
+    if (G::isLogger) G::log("MW::endEmbellishExport");
+    embellishExporting = false;
+    delete embelCompose;
+    embelCompose = nullptr;
+    if (embelProperties->templateName != embellishRestoreTemplate)
+        embelProperties->setCurrentTemplate(embellishRestoreTemplate);
+    setEmbelExportLock(false);
 }
 
 void MW::buildDevelopExportPresetMenu()
@@ -17879,6 +17980,10 @@ EmbelExport *MW::beginEmbelExport()
 */
     if (G::isLogger) G::log("MW::beginEmbelExport");
     if (embelExporter) return nullptr;
+    if (embellishExporting) {               // MW::runExport holds the template
+        G::popup->showPopup("An Embellish export is running.", 2000);
+        return nullptr;
+    }
     embelExporter = new EmbelExport(metadata, dm, icd, embelProperties);
     connect(this, &MW::abortEmbelExport, embelExporter, &EmbelExport::abortEmbelExport);
     connect(embelExporter, &EmbelExport::finished, this, [this]() { endEmbelExport(); });

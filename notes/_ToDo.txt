@@ -11,7 +11,6 @@ BUGS / TO DO
 - Catalog management: move, copy, join, select
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup
-- Add Embellish to scope edits after Effects
 - Search for images with an Effect.
 - Make a shortcut for 'Delete rejected'
 - Figure out mask refine

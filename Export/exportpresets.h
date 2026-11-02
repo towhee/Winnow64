@@ -62,6 +62,16 @@ public:
     ExportSettings readLast() const;
     void           writeLast(const ExportSettings &s);
 
+    /* The Embellish templates (Embel/Templates/<name>), sorted, without the "Do not
+       Embellish" placeholder. */
+    QStringList    embellishTemplates() const;
+    /* What s actually exports with. Unchanged when s.embellish is empty. With a
+       template: full size, 8-bit sRGB (the template's fit sizes the image and Embel
+       draws 8-bit sRGB), and when s.embellishUseTemplateOutput, the destination, name,
+       format, quality and metadata copy from the template's Export section. The dialog
+       shows these values and MW runs them, so the two never disagree. */
+    ExportSettings effective(const ExportSettings &s) const;
+
 signals:
     /* Any change to the NAMED presets (write / rename / remove). The Develop menu's
        "Export with preset" submenu rebuilds on this. */

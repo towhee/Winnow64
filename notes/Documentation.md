@@ -664,6 +664,7 @@
     - [14.2.4 The Focus Stacker](#1424-the-focus-stacker)
     - [14.2.5 Source: Developed or Camera Preview](#1425-source-developed-or-camera-preview)
     - [14.2.6 Served From the devPreview (2026-11-01)](#1426-served-from-the-devpreview-2026-11-01)
+    - [14.2.7 Embellish in Export Images (2026-11-02)](#1427-embellish-in-export-images-2026-11-02)
   - [14.3 Output](#143-output)
     - [14.3.1 Formats](#1431-formats)
     - [14.3.2 Destination](#1432-destination)
@@ -8181,7 +8182,7 @@ Winnow had two unrelated export loops, and neither could do the job:
 - MW::saveAsFile / SaveAsDlg rendered through Pixmap::load (the BROWSE decode), so it applied no develop recipe, embedded no ICC profile and copied no EXIF. Three formats, one quality spin, no naming or resizing.
 - EmbelExport::exportImages had the mature batch (progress, Esc abort, subfolder destination, suffix, overwrite policy, ExifTool tag / ICC / thumbnail copy) but read each file FROM DISK, so it could not see a develop edit either, and its quality was hardcoded at 100.
 
-A third copy was the wrong end state, so Export/ owns the shared engine. SaveAsDlg has been retired onto it (File > Save Preview as opens the same dialog with the plain pixel source and its develop-only rows hidden). EmbelExport's batch is not migrated yet, but its pixels now come from Develop ([14.2.3 Embellish Export](#1423-embellish-export)).
+A third copy was the wrong end state, so Export/ owns the shared engine. SaveAsDlg has been retired onto it (File > Save Preview as opens the same dialog with the plain pixel source and its develop-only rows hidden). EmbelExport's batch is not migrated yet, but its pixels now come from Develop ([14.2.3 Embellish Export](#1423-embellish-export)), and the engine itself can now embellish ([14.2.7 Embellish in Export Images](#1427-embellish-in-export-images-2026-11-02)).
 
 ```
 Export/exportsettings.h      ExportSettings (destination, naming, format, sizing) + the curated format table
@@ -8291,6 +8292,18 @@ A Developed export of an EDITED image is taken from its devPreview instead of a 
 - Honest quality. The export must either DOWNSCALE (the resample removes the JPEG block structure), or be lossy at a quality no higher than G::devPreviewQuality. A full-size quality-100 JPEG, or any TIFF or PNG, would claim fidelity its pixels do not have, so those render.
 
 The cheap checks run on the GUI thread; the cache read, the size test and the decode run on the global pool. If the preview turns out unusable there, the worker hops back to the GUI thread and calls developPixelSource, so `done` is still called exactly once. The image is tagged sRGB. Pixels from a devPreview are already oriented, cropped and developed, as they are for the loupe.
+
+#### 14.2.7 Embellish in Export Images (2026-11-02)
+
+The Export Images dialog has an Embellish section under Source: a template combo (None + the templates in Embel/Templates) and "Use the template's export settings" (on by default). Any pixel source can go out embellished -- Developed, Camera preview, Save Preview as, Develop > Export with preset -- without Develop or a version. This is where Embellish joined the export engine instead of becoming a Develop scope edit, which was considered and rejected: borders grow the canvas under every Develop overlay, the template's fit is in output pixels while a recipe is not, and every consumer of the develop render (thumbnails, devPreviews, the focus stacker) would have inherited it.
+
+- Settings: ExportSettings::embellish (template name, empty = none) and embellishUseTemplateOutput, published preset keys "embellish" and "embellishUseTemplateOutput" (added, so no version bump).
+- ExportPresets::effective(s) is the one statement of what an export runs with. With a template: FullSize, 8-bit, sRGB always (the template's fit sizes the image; Embel draws 8-bit sRGB). With the checkbox on, also the template's Export section read straight from QSettings (Embel/Templates/&lt;name>/Export/...), with EmbelProperties' defaults: fileType -> format (lower case), fileQuality -> quality, saveMethod Subfolder -> SubfolderOfSource + subfolder, else ChosenFolder + folderPath, suffix (default "\_&lt;template>"), overwriteFiles -> Overwrite / UniqueName, copyMetadata -> copyMetadata and embedThumbnail, no filename template.
+- The dialog SHOWS effective() (ExportDlg::shown) but keeps the user's own values in `current`: uiToSettings does not read back the rows the template decides, so clearing the template brings the user's settings back. Those rows are greyed and embelNoteLab says why (no popup). The note changes the form's height, so onEmbellishEdited and onPresetChosen re-run fitToContents.
+- MW::runExport is now every ImageExporter entry point (dialog, preset, Save Preview as). With a template it wraps the source in MW::embellishedPixelSource: the inner pixels hop to the GUI thread and EmbelCompose (Embellish/embelcompose.h, an "Export" Embel on a private scene, the same steps as EmbelExport::compose) renders the composed image, tagged sRGB.
+- The template. Embel reads it from the one EmbelProperties, so the compose makes it current per image (a queued batch may want a different one). The template current before the first embellished batch is restored, and the editor unlocked, by MW::endEmbellishExport when onExportFinished finds the exporter idle with nothing queued -- not by counting batches, because an abort drops queued batches without a finished() of their own. While embellishExporting, the editor and Embellish export menu are greyed (setEmbelExportLock), beginEmbelExport refuses, runExport refuses while an EmbelExport runs, and a remote winnet waits for the exporter's finished() and retries, as it already waited for an EmbelExport.
+- Copy metadata now follows the template's checkbox. EmbelExport ignores it and always copies tags, ICC and a thumbnail; a template left at its default (off) exports without metadata here.
+- Still to do (Phase 2): move MW::exportEmbel, exportEmbelFromAction and the remote winnet onto ImageExporter with the template's output forced, a plain-file source for a winnet's temp files, their deletion after the batch, and the existing completion (open the folder or insertFiles, select the first image); then delete EmbelExport / EmbelWriter. The winnet's command-line contract does not change.
 
 ### 14.3 Output
 

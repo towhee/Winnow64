@@ -79,6 +79,10 @@ static ExportSettings readGroup(QSettings *setting, const QString &group)
     s.percent         = setting->value("percent", s.percent).toInt();
     s.dontEnlarge     = setting->value("dontEnlarge", s.dontEnlarge).toBool();
 
+    s.embellish       = setting->value("embellish", s.embellish).toString();
+    s.embellishUseTemplateOutput = setting->value("embellishUseTemplateOutput",
+                                       s.embellishUseTemplateOutput).toBool();
+
     setting->endGroup();
 
     /* Clamp what a hand-edited or corrupt QSettings could otherwise make nonsensical.
@@ -123,6 +127,9 @@ static void writeGroup(QSettings *setting, const QString &group, const ExportSet
     setting->setValue("longEdgePx", s.longEdgePx);
     setting->setValue("percent", s.percent);
     setting->setValue("dontEnlarge", s.dontEnlarge);
+
+    setting->setValue("embellish", s.embellish);
+    setting->setValue("embellishUseTemplateOutput", s.embellishUseTemplateOutput);
 
     setting->endGroup();
 }
@@ -175,6 +182,52 @@ void ExportPresets::writeLast(const ExportSettings &s)
 {
     /* No presetsChanged(): this slot is not a named preset and is not in the menu. */
     writeGroup(setting, kLast, s);
+}
+
+QStringList ExportPresets::embellishTemplates() const
+{
+    if (!setting) return QStringList();
+    setting->beginGroup("Embel/Templates");
+    QStringList list = setting->childGroups();
+    setting->endGroup();
+    list.removeAll("Do not Embellish");
+    list.sort(Qt::CaseInsensitive);
+    return list;
+}
+
+ExportSettings ExportPresets::effective(const ExportSettings &s) const
+{
+/*
+    The template's Export section is read straight from QSettings, with the same defaults
+    EmbelProperties gives an absent key, so the dialog can show a template that is not
+    the editor's current one.  EmbelExport writes "JPG" / "PNG" / "TIF"; the export
+    engine's keys are the lower-case extensions.
+*/
+    if (s.embellish.isEmpty()) return s;
+    ExportSettings e = s;
+    e.sizing   = ExportSettings::FullSize;
+    e.bitDepth = 8;
+    e.space    = OutputSpace::sRGB;
+    if (!s.embellishUseTemplateOutput || !setting) return e;
+
+    const QString p = "Embel/Templates/" + s.embellish + "/Export/";
+    e.format = setting->value(p + "fileType", "JPG").toString().toLower();
+    e.quality = qBound(1, setting->value(p + "fileQuality", 100).toInt(), 100);
+    if (setting->value(p + "saveMethod", "Subfolder").toString() == "Subfolder") {
+        e.dest = ExportSettings::SubfolderOfSource;
+        e.subfolderName = setting->value(p + "subfolder").toString();
+    }
+    else {
+        e.dest = ExportSettings::ChosenFolder;
+        e.folderPath = setting->value(p + "folderPath").toString();
+    }
+    e.tokenTemplate.clear();                // the original base name, as EmbelExport
+    e.suffix = setting->value(p + "suffix", "_" + s.embellish).toString();
+    e.exists = setting->value(p + "overwriteFiles", false).toBool()
+                   ? ExportSettings::Overwrite : ExportSettings::UniqueName;
+    e.copyMetadata = setting->value(p + "copyMetadata", false).toBool();
+    e.embedThumbnail = e.copyMetadata;
+    return e;
 }
 
 void ExportPresets::migrate(const QString &name, int fromVersion) const
