@@ -130,6 +130,21 @@ ExportDlg::ExportDlg(ImageExporter *exporter,
     setStyleSheet(G::css);
 
     buildUi();
+    /* COLLAPSED BY DEFAULT. A first open shows every section closed, because on a small
+       screen the expanded form runs off the bottom -- with the Expand All / Collapse All
+       buttons under it. After that each section opens as the user last left it. A
+       closed title cell is as wide as the longest title, so the summaries form a
+       column. */
+    int closedW = 0;
+    for (int i = 0; i < sections.size(); ++i) {
+        const bool collapsed = !G::settings ||
+            G::settings->value("ExportDlg/collapsed/" + sections.at(i).key, true).toBool();
+        setSectionOpen(i, !collapsed, /*save*/false);
+        sections.at(i).closedBtn->ensurePolished();
+        closedW = qMax(closedW, sections.at(i).closedBtn->sizeHint().width());
+    }
+    for (const Section &s : std::as_const(sections)) s.titleCell->setFixedWidth(closedW);
+    syncSectionButtons();
     reloadPresetCombo();
     settingsToUi();
     updateEnabledStates();
@@ -158,15 +173,39 @@ void ExportDlg::fitToContents()
     format hides shares a row with one it cannot hide.) The height constraint has to be
     released before measuring, or the layout hands back the height already in force instead
     of the one the contents now want.
+
+    COLLAPSIBLE SECTIONS AND SHORT SCREENS. The sections sit in formScroll, which is made
+    exactly as tall as they want, so it normally shows no scroll bar and the dialog is
+    measured as before. Opening or closing a section re-runs this. Only when the result
+    is taller than the screen's usable height (1080p at 150% is ~690 logical px) is the
+    scroll area shortened by the excess: the sections then scroll and the scope row and
+    the Export button stay on screen. ScreenFit cannot do that for a fixed-height dialog,
+    since it never shrinks a window below its minimum.
 */
     setFixedWidth(kDialogWidth);
     setMinimumHeight(0);
     setMaximumHeight(QWIDGETSIZE_MAX);
+    formBody->layout()->activate();
+    const int bodyH = formBody->sizeHint().height();
+    formScroll->setFixedHeight(bodyH);
     layout()->activate();
-    setFixedHeight(qMax(sizeHint().height(), minimumSizeHint().height()));
+    int h = qMax(sizeHint().height(), minimumSizeHint().height());
+
+    /* The usable height, less an allowance for the window frame and title bar, which
+       the dialog's own height does not include. */
+    constexpr int kFrameAllowance = 40;
+    const QScreen *scr = screen();
+    const int avail = scr ? scr->availableGeometry().height() - kFrameAllowance : h;
+    if (h > avail) {
+        formScroll->setFixedHeight(qMax(120, bodyH - (h - avail)));
+        layout()->activate();
+        h = qMax(sizeHint().height(), minimumSizeHint().height());
+    }
+    setFixedHeight(h);
 }
 
-QVBoxLayout *ExportDlg::addSection(QVBoxLayout *lay, const QString &title)
+QVBoxLayout *ExportDlg::addSection(QVBoxLayout *lay, const QString &title,
+                                   const QString &key)
 {
     /*
         IngestDlg groups its settings in QGroupBoxes whose title font is two points up on
@@ -197,12 +236,259 @@ QVBoxLayout *ExportDlg::addSection(QVBoxLayout *lay, const QString &title)
     outer->addWidget(body);
 
     lay->addWidget(gb);
+    if (key.isEmpty()) return inner;
+
+    /* COLLAPSIBLE. The box's title becomes clickable (eventFilter); the body keeps an
+       arrow cursor of its own, because the box shows a pointing hand over its title and
+       a child without a cursor would inherit it -- the box gets no Leave when the mouse
+       moves on into a child, so the hand would stick over the controls. */
+    Section s;
+    s.key = key;
+    s.title = title;
+    s.box = gb;
+    gb->setMouseTracking(true);
+    gb->installEventFilter(this);
+    body->setCursor(Qt::ArrowCursor);
+
+    /* The closed form: chevron + title (the box's title size) and the summary, flush
+       with the box's left edge -- the dialog's left margin, where the scope row's count
+       also starts. */
+    s.closedRow = new QWidget(this);
+    QHBoxLayout *row = new QHBoxLayout(s.closedRow);
+    row->setContentsMargins(0, 2, 10, 2);
+    s.closedBtn = new QToolButton(s.closedRow);
+    s.closedBtn->setFont(tf);
+    s.closedBtn->setAutoRaise(true);
+    s.closedBtn->setStyleSheet("QToolButton { border: none; padding: 0px; }");
+    s.closedBtn->setCursor(Qt::PointingHandCursor);
+    s.closedBtn->setToolTip(tr("Click to expand"));
+    s.summaryLab = new QLabel(s.closedRow);
+    s.summaryLab->setStyleSheet("QLabel { color:" + G::disabledColor.name() + "; }");
+    /* The button keeps its own width (a QToolButton centres its text, whatever the
+       sheet says) and sits at the left of a cell the constructor widens to the longest
+       title, so every title starts at the same x and the summaries form a column. */
+    s.titleCell = new QWidget(s.closedRow);
+    QHBoxLayout *cell = new QHBoxLayout(s.titleCell);
+    cell->setContentsMargins(0, 0, 0, 0);
+    cell->addWidget(s.closedBtn);
+    cell->addStretch(1);
+    row->addWidget(s.titleCell);
+    row->addSpacing(12);
+    row->addWidget(s.summaryLab, 1);
+    s.closedRow->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(s.closedRow, &QWidget::customContextMenuRequested, this,
+            [this, w = s.closedRow](const QPoint &p) { sectionMenu(w->mapToGlobal(p)); });
+    lay->addWidget(s.closedRow);
+    s.closedRow->hide();
+
+    const int i = int(sections.size());
+    connect(s.closedBtn, &QToolButton::clicked, this, [this, i]() { setSectionOpen(i, true); });
+    sections.append(s);
     return inner;
+}
+
+void ExportDlg::syncSectionButtons()
+{
+    if (!expandAllBtn || !collapseAllBtn) return;
+    bool anyOpen = false, anyClosed = false;
+    for (const Section &s : std::as_const(sections)) (s.open ? anyOpen : anyClosed) = true;
+    expandAllBtn->setEnabled(anyClosed);
+    collapseAllBtn->setEnabled(anyOpen);
+    expandAllBtn->setToolTip(anyClosed ? tr("Open every section")
+                                       : tr("Every section is already open"));
+    collapseAllBtn->setToolTip(anyOpen ? tr("Close every section to a one-line summary")
+                                       : tr("Every section is already closed"));
+}
+
+bool ExportDlg::onBoxTitle(QGroupBox *box, const QPoint &pos)
+{
+/*
+    The band above the first control, as far right as the title text runs. Not the
+    style's SC_GroupBoxLabel rect: widgetcss raises the title with relative offsets
+    (top: -halfFontSize), which the stylesheet style may or may not report, while the
+    band is just the box's own top margin (addSection's topGap).
+*/
+    if (!box->layout()) return false;
+    const QFontMetrics fm(box->font());
+    return pos.y() < box->layout()->contentsMargins().top()
+        && pos.x() < fm.horizontalAdvance(box->title()) + 2 * fm.height();
+}
+
+bool ExportDlg::eventFilter(QObject *obj, QEvent *event)
+{
+    for (int i = 0; i < sections.size(); ++i) {
+        QGroupBox *gb = sections.at(i).box;
+        if (obj != gb) continue;
+        switch (event->type()) {
+        case QEvent::MouseMove: {
+            const QPoint p = static_cast<QMouseEvent *>(event)->position().toPoint();
+            if (onBoxTitle(gb, p)) gb->setCursor(Qt::PointingHandCursor);
+            else gb->unsetCursor();
+            break;
+        }
+        case QEvent::Leave:
+            gb->unsetCursor();
+            break;
+        case QEvent::MouseButtonRelease: {
+            auto *me = static_cast<QMouseEvent *>(event);
+            if (me->button() == Qt::LeftButton && onBoxTitle(gb, me->position().toPoint())) {
+                setSectionOpen(i, false);
+                return true;
+            }
+            break;
+        }
+        case QEvent::ContextMenu: {
+            auto *ce = static_cast<QContextMenuEvent *>(event);
+            if (onBoxTitle(gb, ce->pos())) {
+                sectionMenu(ce->globalPos());
+                return true;
+            }
+            break;
+        }
+        case QEvent::ToolTip: {
+            auto *he = static_cast<QHelpEvent *>(event);
+            if (onBoxTitle(gb, he->pos()))
+                QToolTip::showText(he->globalPos(), tr("Click to collapse"), gb);
+            else
+                QToolTip::hideText();
+            return true;
+        }
+        default:
+            break;
+        }
+        break;
+    }
+    return QDialog::eventFilter(obj, event);
+}
+
+void ExportDlg::setSectionOpen(int i, bool open, bool save)
+{
+/*
+    save == false is the constructor restoring the remembered state: nothing to write,
+    and the constructor fits the dialog itself once everything is built.
+*/
+    if (i < 0 || i >= sections.size()) return;
+    Section &s = sections[i];
+    s.open = open;
+    /* The chevrons as code points (U+25BE open, U+25B8 closed), not literals: a
+       non-ASCII narrow literal depends on the compiler's execution charset. */
+    s.box->setTitle(QString(QChar(0x25BE)) + " " + s.title);
+    s.closedBtn->setText(QString(QChar(0x25B8)) + " " + s.title);
+    s.box->setVisible(open);
+    s.closedRow->setVisible(!open);
+    syncSectionButtons();
+    if (!save) return;
+    if (G::settings) G::settings->setValue("ExportDlg/collapsed/" + s.key, !open);
+    fitToContents();
+}
+
+void ExportDlg::setAllSectionsOpen(bool open)
+{
+    for (int i = 0; i < sections.size(); ++i)
+        setSectionOpen(i, open, /*save*/false);
+    if (G::settings)
+        for (const Section &s : std::as_const(sections))
+            G::settings->setValue("ExportDlg/collapsed/" + s.key, !open);
+    fitToContents();
+}
+
+void ExportDlg::sectionMenu(const QPoint &globalPos)
+{
+    QMenu menu(this);
+    menu.addAction(tr("Expand all"), this, [this]() { setAllSectionsOpen(true); });
+    menu.addAction(tr("Collapse all"), this, [this]() { setAllSectionsOpen(false); });
+    menu.exec(globalPos);
+}
+
+QString ExportDlg::summaryOf(const QString &key) const
+{
+/*
+    What a closed section holds, in a line, from shown(): with an Embellish template the
+    rows it decides say so rather than echo values the user cannot change here.
+*/
+    const ExportSettings v = shown();
+    const bool embel   = !v.embellish.isEmpty();
+    const bool tmplOut = embel && v.embellishUseTemplateOutput;
+    const QString fromTemplate = tr("from template %1").arg(v.embellish);
+    const QString sep = QString(" ") + QChar(0x00B7) + " ";    // a middle dot
+
+    if (key == "Preset") {
+        const QString name = selectedPreset();
+        if (name.isEmpty()) return tr("(none)");
+        return presetDirty ? name + sep + tr("modified") : name;
+    }
+    if (key == "Source")
+        return v.source == ExportSettings::CameraPreview ? tr("Camera preview")
+                                                         : tr("Developed");
+    if (key == "Embellish") {
+        if (!embel) return tr("None");
+        return v.embellish + (tmplOut ? sep + tr("template's export settings") : "");
+    }
+    if (key == "Destination") {
+        QString d = v.dest == ExportSettings::SourceFolder ? tr("Source folder")
+                  : v.dest == ExportSettings::SubfolderOfSource
+                        ? tr("Source subfolder \"%1\"").arg(v.subfolderName)
+                        : v.folderPath;
+        return tmplOut ? d + sep + fromTemplate : d;
+    }
+    if (key == "Name") {
+        const QStringList targets = targetPaths();
+        QString n = exporter && !targets.isEmpty()
+            ? QFileInfo(exporter->previewDestination(targets.first(), v)).fileName()
+            : QString();
+        return tmplOut ? n + sep + fromTemplate : n;
+    }
+    if (key == "Format") {
+        const ExportFormat f = ExportFormats::find(v.format);
+        QStringList parts{f.label};
+        if (f.hasQuality) parts << tr("quality %1").arg(v.quality);
+        if (f.depth16 && mode == Mode::Develop) parts << tr("%1-bit").arg(v.bitDepth);
+        if (spaceCombo) {
+            const int idx = spaceCombo->findData(int(v.space));
+            if (idx >= 0) parts << spaceCombo->itemText(idx);
+        }
+        if (v.copyMetadata) parts << tr("copy metadata");
+        if (tmplOut) parts << fromTemplate;
+        return parts.join(sep);
+    }
+    if (key == "Size") {
+        if (embel) return tr("Set by template %1").arg(v.embellish);
+        QString sz = v.sizing == ExportSettings::LongEdge
+                         ? tr("Long edge %1 px").arg(v.longEdgePx)
+                   : v.sizing == ExportSettings::Percent ? tr("%1 %").arg(v.percent)
+                                                         : tr("Full size");
+        if (v.sizing != ExportSettings::FullSize && v.dontEnlarge)
+            sz += sep + tr("don't enlarge");
+        return sz;
+    }
+    return QString();
+}
+
+void ExportDlg::updateSummaries()
+{
+    for (const Section &s : std::as_const(sections))
+        s.summaryLab->setText(summaryOf(s.key));
 }
 
 void ExportDlg::buildUi()
 {
-    QVBoxLayout *lay = new QVBoxLayout(this);
+    /* The sections scroll; the scope row and the footer below them do not. The scroll
+       area is normally exactly as tall as the sections (fitToContents), so it shows no
+       bar; it scrolls only when even the collapsed form is taller than the screen, so
+       the Export button can never end up off the bottom of it. */
+    QVBoxLayout *outerLay = new QVBoxLayout(this);
+    formScroll = new QScrollArea(this);
+    formScroll->setFrameShape(QFrame::NoFrame);
+    formScroll->setWidgetResizable(true);
+    formScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    formScroll->setStyleSheet("QScrollArea { background: transparent; border: none; }");
+    formScroll->viewport()->setAutoFillBackground(false);
+    formBody = new QWidget;
+    formBody->setAutoFillBackground(false);
+    QVBoxLayout *lay = new QVBoxLayout(formBody);
+    lay->setContentsMargins(0, 0, 0, 0);
+    formScroll->setWidget(formBody);
+    outerLay->addWidget(formScroll);
 
     /* ---- Preset section ---------------------------------------------------------------
        The preset controls act ON the rest of the dialog (they load and store the whole
@@ -210,7 +496,7 @@ void ExportDlg::buildUi()
        every other section -- its title names them, so no inline caption is needed. One
        row: the name and the four actions on it, with the name taking whatever width the
        actions leave. */
-    QVBoxLayout *presetLay = addSection(lay, tr("Preset"));
+    QVBoxLayout *presetLay = addSection(lay, tr("Preset"), "Preset");
 
     QHBoxLayout *presetRow = new QHBoxLayout;
     presetRow->setSpacing(6);        // the four buttons read as one block of actions
@@ -257,7 +543,7 @@ void ExportDlg::buildUi()
     QWidget *sourceCapCol = nullptr;
     QGridLayout *sourceGrid = nullptr;
     if (mode == Mode::Develop) {
-        QVBoxLayout *sourceLay = addSection(lay, tr("Source"));
+        QVBoxLayout *sourceLay = addSection(lay, tr("Source"), "Source");
         developedRadio = new QRadioButton(tr("Developed"), this);
         developedRadio->setToolTip(tr("Export each image with its develop settings "
                                       "applied"));
@@ -289,7 +575,7 @@ void ExportDlg::buildUi()
        way out, from whatever the Source gives. On the field column like Source. The
        template sizes the image; its own Export settings are the default output, and the
        rows they decide are greyed with the reason in embelNoteLab. */
-    QVBoxLayout *embelLay = addSection(lay, tr("Embellish"));
+    QVBoxLayout *embelLay = addSection(lay, tr("Embellish"), "Embellish");
     embelCombo = new QComboBox(this);
     embelCombo->addItem(tr("None"), QString());
     const QStringList embelTemplates = presets ? presets->embellishTemplates()
@@ -321,7 +607,7 @@ void ExportDlg::buildUi()
     embelLay->addLayout(embelGrid);
 
     /* ---- Destination ---- */
-    QVBoxLayout *destLay = addSection(lay, tr("Destination"));
+    QVBoxLayout *destLay = addSection(lay, tr("Destination"), "Destination");
     QGridLayout *dest = new QGridLayout;
     /* Widest to narrowest scope: the source folder itself, a subfolder of it, then
        somewhere else entirely. Only the last two need a field beside them. */
@@ -367,7 +653,7 @@ void ExportDlg::buildUi()
         return l;
     };
 
-    QVBoxLayout *nameLay = addSection(lay, tr("Name"));
+    QVBoxLayout *nameLay = addSection(lay, tr("Name"), "Name");
     QGridLayout *name = new QGridLayout;
     /* Template and Suffix share one row on the Format group's four-column pattern
        (label, field, label, field) -- both name the output file, and neither needs the
@@ -423,7 +709,7 @@ void ExportDlg::buildUi()
     nameLay->addLayout(name);
 
     /* ---- Format ---- */
-    QVBoxLayout *fmtLay = addSection(lay, tr("Format"));
+    QVBoxLayout *fmtLay = addSection(lay, tr("Format"), "Format");
     QGridLayout *fmt = new QGridLayout;
     fmt->addWidget(cap(tr("Type:"), capCol0), 0, 0);
     typeCombo = new QComboBox(this);
@@ -629,7 +915,7 @@ void ExportDlg::buildUi()
     fmt->addLayout(metaRow, 2, 1, 1, 4);
 
     /* ---- Image sizing ---- */
-    QVBoxLayout *sizeLay = addSection(lay, tr("Size"));
+    QVBoxLayout *sizeLay = addSection(lay, tr("Size"), "Size");
     QHBoxLayout *size = new QHBoxLayout;
     fullSizeRadio = new QRadioButton(tr("Full size"), this);
     longEdgeRadio = new QRadioButton(tr("Long edge"), this);
@@ -693,8 +979,8 @@ void ExportDlg::buildUi()
     allSelectedRadio->setChecked(true);
     scopeRow->addWidget(allSelectedRadio);
     scopeRow->addWidget(currentOnlyRadio);
-    lay->addSpacing(6);          // detach the row from the Image sizing box above
-    lay->addLayout(scopeRow);
+    outerLay->addSpacing(6);          // detach the row from the Image sizing box above
+    outerLay->addLayout(scopeRow);
     /* One image selected: the choice is meaningless, so do not offer it. */
     const bool oneOnly = srcPaths.count() < 2;
     allSelectedRadio->setVisible(!oneOnly);
@@ -702,16 +988,16 @@ void ExportDlg::buildUi()
     countLab->setText(oneOnly ? tr("1 image")
                               : tr("%1 selected images").arg(srcPaths.count()));
 
-    lay->addStretch(1);
+    outerLay->addStretch(1);
 
     /* ---- Footer: buttons ----
        Closed off from the settings above by its own rule, so the action row reads as the
        end of the dialog rather than as a continuation of the scope row. IngestDlg does the
        same (its full-width Line above the Cancel / OK pair). The group boxes already close
        themselves, but the rule still separates the settings from the actions. */
-    lay->addSpacing(6);
-    lay->addWidget(separatorLine(this));
-    lay->addSpacing(6);
+    outerLay->addSpacing(6);
+    outerLay->addWidget(separatorLine(this));
+    outerLay->addSpacing(6);
 
     QHBoxLayout *foot = new QHBoxLayout;
     exportBtn = new QPushButton(tr("Export"), this);
@@ -720,10 +1006,19 @@ void ExportDlg::buildUi()
     /* Export keeps its focus (it is the default button); Cancel does not need it. */
     sizeButton(exportBtn, /*noFocus*/false);
     sizeButton(closeBtn);
+    expandAllBtn   = new QPushButton(tr("Expand All"), this);
+    collapseAllBtn = new QPushButton(tr("Collapse All"), this);
+    sizeButton(expandAllBtn);
+    sizeButton(collapseAllBtn);
+    connect(expandAllBtn, &QPushButton::clicked, this, [this]() { setAllSectionsOpen(true); });
+    connect(collapseAllBtn, &QPushButton::clicked, this,
+            [this]() { setAllSectionsOpen(false); });
+    foot->addWidget(expandAllBtn);
+    foot->addWidget(collapseAllBtn);
     foot->addStretch(1);
     foot->addWidget(closeBtn);
     foot->addWidget(exportBtn);
-    lay->addLayout(foot);
+    outerLay->addLayout(foot);
 
     loadFormats();
 
@@ -1034,6 +1329,9 @@ void ExportDlg::updateEnabledStates()
 
 void ExportDlg::updateExample()
 {
+    /* Every edit comes through here, so the closed sections' summaries are kept current
+       here too. */
+    updateSummaries();
     if (!exporter) return;
     const QStringList targets = targetPaths();
     if (targets.isEmpty()) { exampleLab->clear(); return; }
@@ -1190,6 +1488,7 @@ void ExportDlg::setPresetDirty(bool dirty)
         hasSel ? (dirty ? tr("Overwrite \"%1\" with these settings").arg(selectedPreset())
                         : tr("These settings already match \"%1\"").arg(selectedPreset()))
                : tr("Select a preset to update, or use New"));
+    updateSummaries();                       // the closed Preset row says "modified"
 }
 
 void ExportDlg::reloadPresetCombo(const QString &select)
@@ -1221,6 +1520,12 @@ void ExportDlg::onPresetChosen(int index)
     updateEnabledStates();
     updateExample();
     setPresetDirty(false);                 // the form now IS the preset
+    /* A preset with a template opens Embellish, so what the template decides is not
+       hidden in a closed section. Not remembered: the user's own choice is. */
+    if (!current.embellish.isEmpty())
+        for (int i = 0; i < sections.size(); ++i)
+            if (sections.at(i).key == "Embellish" && !sections.at(i).open)
+                setSectionOpen(i, true, /*save*/false);
     fitToContents();                       // its Embellish note may differ
 }
 

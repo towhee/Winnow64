@@ -16,7 +16,9 @@ class ImageExporter;
 
     LAYOUT: a preset bar across the top (combo + New / Update / Rename / Delete), then one
     column of grouped sections -- Source (Develop only), Embellish, Destination, File
-    naming, Format, Image sizing -- and the buttons. Hand-built rather than a .ui file, following the
+    naming, Format, Image sizing -- and the buttons. Every section collapses to a
+    one-line summary (see Section), and the sections scroll when even that is taller
+    than the screen (fitToContents). Hand-built rather than a .ui file, following the
     newest dialogs (SaveDevelopPresetDlg): the form is generated from the format table and
     reacts to it, which a static .ui cannot express.
 
@@ -53,6 +55,10 @@ public:
     /* The paths to export: the whole selection, or just the current image. */
     QStringList targetPaths() const;
 
+protected:
+    /* A click on an open section's title closes it; the cursor shows it can. */
+    bool eventFilter(QObject *obj, QEvent *event) override;
+
 private slots:
     void onExportClicked();          // validate, then accept: the caller runs the export
     void onSelectFolder();
@@ -72,8 +78,39 @@ private:
     void fitToContents();
     /* Add a titled section to `lay` and return the layout its rows go in: a QGroupBox
        with an enlarged title, matching IngestDlg. Callers add their rows to the returned
-       layout and never see the container. */
-    QVBoxLayout *addSection(QVBoxLayout *lay, const QString &title);
+       layout and never see the container. A non-empty key makes it COLLAPSIBLE (see
+       Section); the key names its saved state and its summary. */
+    QVBoxLayout *addSection(QVBoxLayout *lay, const QString &title,
+                            const QString &key = QString());
+    /* A collapsible section. Open, it is the group box with a chevron in its title,
+       which is clickable (eventFilter). Closed, the box is hidden and closedRow stands
+       in: one line with the chevron + title button and a grey summary of the section's
+       settings, so a short screen loses the box, not the information. */
+    struct Section {
+        QString      key;
+        QString      title;
+        QGroupBox   *box = nullptr;
+        QWidget     *closedRow = nullptr;
+        QToolButton *closedBtn = nullptr;
+        QWidget     *titleCell = nullptr;   // closedBtn, left-aligned in a shared width
+        QLabel      *summaryLab = nullptr;
+        bool         open = true;
+    };
+    QVector<Section> sections;
+    /* The sections, in a scroll area that scrolls only when the form is taller than the
+       screen (fitToContents). */
+    QScrollArea *formScroll = nullptr;
+    QWidget     *formBody = nullptr;
+    void setSectionOpen(int i, bool open, bool save = true);
+    void setAllSectionsOpen(bool open);
+    void sectionMenu(const QPoint &globalPos);
+    /* Expand All is greyed when every section is open, Collapse All when none is. */
+    void syncSectionButtons();
+    /* One line per collapsible section, from shown(): what a closed section holds. */
+    void updateSummaries();
+    QString summaryOf(const QString &key) const;
+    /* True when pos (in box coordinates) is on the box's title text. */
+    static bool onBoxTitle(QGroupBox *box, const QPoint &pos);
     void loadFormats();              // fill the type combo from what this build can write
     void settingsToUi();             // push `current` into the controls
     void uiToSettings();             // pull the controls into `current`
@@ -173,7 +210,9 @@ private:
     QSpinBox     *percentSpin = nullptr;
     QCheckBox    *dontEnlargeChk = nullptr;
 
-    /* Footer */
+    /* Footer. Expand All / Collapse All act on every collapsible section. */
+    QPushButton  *expandAllBtn = nullptr;
+    QPushButton  *collapseAllBtn = nullptr;
     QPushButton  *exportBtn = nullptr;
     QPushButton  *closeBtn = nullptr;
 };
