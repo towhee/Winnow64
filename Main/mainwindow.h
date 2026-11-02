@@ -599,12 +599,9 @@ public:
     QString updateSkipVersion;          // version the user chose to skip (suppresses startup dialog)
     bool turnOffEmbellish = true;
     bool deleteWarning = true;
-    /*  Warn before the datamodel is cleared while picks have not been ingested.
-        See MW::okToDiscardPicks. */
+    /*  Remind at close that picks have not been ingested, with the option to clear
+        them. See MW::okToCloseWithPicks. */
     bool pickLossWarning = true;
-    /*  Set while MW::ingest navigates to the ingest destination: those picks have
-        just been copied, so okToDiscardPicks must not ask about them. */
-    bool ignorePickLossWarning = false;
     bool isFirstImageSelected = true;
     bool isLogAllToFileForDebugging = false;
 
@@ -1288,11 +1285,8 @@ private slots:
        geometry stage's INPUT space -- can map onto it. Called with each applied render;
        cheap when nothing changed. */
     void pushDevelopGeometryToView();
-    /* Show/hide the Develop scopes strip (Develop action-row toggle); persists the
-       choice. */
-    void toggleDevelopScopes();
-    /* Apply a scopes-strip visibility, repopulating the scopes when it is shown;
-       persists. */
+    /* Expand/collapse the scopes strip below its "Histogram" header, repopulating the
+       scopes when it is shown; persists. */
     void setDevelopScopesVisible(bool isVisible);
     /* Apply a scopes-strip choice picked from the scopes context menu or the Develop
        menu's Scopes submenu: both scopes / histogram only / vectorscope only / hidden.
@@ -1305,8 +1299,6 @@ private slots:
     void showDevelopScopesMenu(QMenu *menu, QPoint globalPos);
     /* Tick the Scopes submenu item matching the strip's current state (aboutToShow). */
     void syncDevelopScopesMenu();
-    /* The scopes strip's own [X]: hide the strip, keeping its layout; persists. */
-    void closeDevelopScopes();
     /* Show/hide the Develop Transform panel (action-row toggle / "R"); persists. */
     void toggleDevelopTransform();
     /* Arm/disarm the spot tool on the loupe in developSpotMode ("S" in Develop mode,
@@ -1383,12 +1375,10 @@ private slots:
     /* Apply a drawn level line: add deltaDeg to the straighten, auto-fit the crop to the rotation
        wedges, re-render the straightened canvas and restart the crop overlay. */
     void applyDevelopLevel(double deltaDeg);
-    /* Transform panel mode toggle (TransformPanel::Mode): arm the matching ImageView crop tool. */
-    void setDevelopTransformMode(int mode);
-    /* Level field: set the straighten to an absolute angle (typed into the panel). */
+    /* Angle field: set the straighten to an absolute angle (typed into the panel). */
     void setDevelopLevelAngle(double degrees);
-    /* Per-row Transform reset: clear just the crop / straighten / warp (TransformPanel::Mode). */
-    void resetDevelopTransformMode(int mode);
+    /* Per-group Transform reset: clear just the crop / straighten / warp (TransformPanel::Part). */
+    void resetDevelopTransformPart(int part);
     /* Show / hide the kaleidoscope's canvas handles for the current state (see .cpp). */
     void syncDevelopKaleidoOverlay();
     /* Loupe cursor moved to a normalized position over the displayed image: sample that pixel and
@@ -1552,10 +1542,8 @@ private slots:
     void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
     void clearPicks();
-    int pickLogCount();
-    void recoverPickLog();
-    void clearPickLog();
-    void updatePickLog(QString fPath, QString pickStatus);
+    void loadSavedPicks();
+    void restoreSavedPicks();
     void pushPick(QString fPath, QString status = "true");
     void popPick();
     void updatePickFromHistory(QString fPath, QString status);
@@ -1698,11 +1686,9 @@ private slots:
     void collapseAllFolders();
     void updateCollapseFoldersAction();
     void updatePickDependentActions();
-    /*  Ask before an operation that clears the datamodel throws away picks that have not
-        been ingested.  True = go ahead.  ACTION is the gerund phrase naming what is about
-        to happen ("Selecting another folder"); PROCEEDLABEL is the same thing as the
-        button that does it ("Select another folder"). */
-    bool okToDiscardPicks(const QString &action, const QString &proceedLabel);
+    /*  At close, while picks have not been ingested: keep them (they are saved) or clear
+        them all. False = Cancel; clearPicks is set when the user chose to clear them. */
+    bool okToCloseWithPicks(bool &clearPicks);
     bool ownsShortcut(const QKeySequence &seq);
     QAction *disabledActionForShortcut(const QKeySequence &seq);
     QString actionDisabledReason(QAction *a);
@@ -1861,7 +1847,7 @@ private:
     QAction *openUsbAction;
     QAction *revealFileAction;
     QAction *saveAsFileAction;
-    QAction *exportDevelopedAction;     // File + thumb context twin of developExportAction
+    QAction *exportDevelopedAction;     // Cmd/Ctrl+Shift+E: File, Develop + thumb context menus
     QAction *revealFileActionFromContext;
     QAction *createFolderFromContextAction;
     QAction *copyFolderPathFromContextAction;
@@ -2052,7 +2038,6 @@ private:
     QAction *developSpotAction;         // S
     QAction *developWbSamplerAction = nullptr;    // W (Transform owns W while it is up)
     QAction *developBeforeAfterAction = nullptr;  // "\" (global: Original / Developed)
-    QAction *developExportAction;       // X
     QAction *developSavePresetAction = nullptr;   // Cmd+Shift+N (real, mode-gated)
     QAction *developCopySettingsAction = nullptr;  // Cmd+Opt+C (real, mode-gated)
     QAction *developPasteSettingsAction = nullptr; // Cmd+Opt+V (real, mode-gated)
@@ -2060,7 +2045,6 @@ private:
     QAction *developLastWholeAction = nullptr;     // no key; mode + source gated
     /* Title-bar toggle buttons that carry the blue "active" border while their panel /
        tool is on (kept in sync from the toggle handlers). */
-    BarBtn *developScopesBtn = nullptr;
     BarBtn *developTransformBtn = nullptr;
     BarBtn *developSpotBtn = nullptr;
     BarBtn *developSamplerBtn = nullptr;   // Screen Sampler (pipette)
@@ -3374,8 +3358,6 @@ private:
     QString colorClass = "";
     bool isPick;
     bool isReject;
-
-    QFile pickLog;
 
     QString folderDockTabText;
     QString folderDockTabRichText;

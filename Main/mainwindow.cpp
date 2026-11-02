@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Datamodel/savedpicks.h"
 #include "Develop/autotone.h"
 #include "Image/stalethumb.h"
 #include "Develop/workingdump.h"
@@ -594,21 +595,19 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
        on a dialog waiting for an answer. */
     if (settings->value("hasCrashed").toBool() && !isShiftOnOpen
         && !QStandardPaths::isTestModeEnabled()) {
-        int picks = pickLogCount();
+        /*  Not picks: they are written through to userdata.db as they are made
+            (Datamodel/savedpicks.h), so a crash leaves nothing of them to recover. */
         int ratings = ratingLogCount();
         int colors = colorClassLogCount();
-        QString picksRecoverable = " picks recoverable";
-        if (picks == 1) picksRecoverable = " pick recoverable";
         QString ratingsRecoverable = " ratings recoverable";
-        if (picks == 1) ratingsRecoverable = " rating recoverable";
+        if (ratings == 1) ratingsRecoverable = " rating recoverable";
         QString colorsRecoverable = " color labels recoverable";
-        if (picks == 1) colorsRecoverable = " color label recoverable";
-        if (picks || ratings || colors) {
+        if (colors == 1) colorsRecoverable = " color label recoverable";
+        if (ratings || colors) {
             QString msg = "It appears Winnow did not close properly.  Do you want to "
-                          "recover the most recent picks, ratings and color categories?\n";
+                          "recover the most recent ratings and color categories?\n";
             msg += "\nFolder: " + QFileInfo(lastFileIfCrash).dir().path();
             msg += "\n";
-            if (picks) msg += "\n" + QString::number(picks) + picksRecoverable;
             if (ratings) msg += "\n" + QString::number(ratings) + ratingsRecoverable;
             if (colors) msg += "\n" + QString::number(colors) + colorsRecoverable;
             msg += "\n";
@@ -616,7 +615,6 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
                                            QMessageBox::Yes | QMessageBox::No);
             if (ret == QMessageBox::Yes) {
                 folderAndFileSelectionChange(lastFileIfCrash, "lastFileIfCrash");
-                recoverPickLog();
                 recoverRatingLog();
                 recoverColorClassLog();
             }
@@ -1566,18 +1564,23 @@ void MW::closeEvent(QCloseEvent *event)
     }
     quitWhenIngestDone = false;
 
-    /*  AHEAD OF EVERY TEARDOWN STEP, including the "Closing Winnow ..." message: quitting
-        discards the datamodel exactly as a folder change does, and the picks go with it.
-        Everything below this point is one-way, so an answer taken any later could not be
-        honoured.  event->ignore() leaves the session running untouched.
+    /*  AHEAD OF EVERY TEARDOWN STEP, including the "Closing Winnow ..." message: picks
+        not yet ingested are already saved (written through, Datamodel/savedpicks.h), so
+        this is a reminder, and the place to clear them all.  Everything below this point
+        is one-way, so an answer taken any later could not be honoured.  event->ignore()
+        leaves the session running untouched.
 
         A background ingest is NOT a case this catches: MW::ingest marks those rows
         "Ingested" as soon as the copy is commenced, so there is nothing to warn about by
         the time the user can ask to quit. */
-    if (!okToDiscardPicks("Closing Winnow", "Close")) {
+    bool clearSavedPicks = false;
+    if (!okToCloseWithPicks(clearSavedPicks)) {
         event->ignore();
         return;
     }
+    if (clearSavedPicks) SavedPicks::ClearAll();
+    // a pick made in this same event-loop turn is still queued
+    SavedPicks::Flush();
 
     /*  Before any teardown: the filter tree and the sort are still the Library's or the
         folders', and the scope is still the one the user was in -- which is what the
@@ -1646,7 +1649,6 @@ void MW::closeEvent(QCloseEvent *event)
 
     G::issueLog->stop();
 
-    clearPickLog();
     clearRatingLog();
     clearColorClassLog();
 
@@ -2068,9 +2070,9 @@ bool MW::developShortcutIntercept(QEvent *event)
         return true;
     }
 
-    /* 1a. While a Transform (crop/level/warp) is active, its A/F/C/L/W act on the
-       Transform panel and must beat the window-level shortcuts on those keys (A Run
-       Droplet, C Compare ...). This runs before Qt's shortcut system and independent of
+    /* 1a. While a Transform (crop/level/warp) is active, its A/X act on the Transform
+       panel and must beat the window-level shortcuts on those keys (A Run Droplet, X
+       Reject). This runs before Qt's shortcut system and independent of
        which widget holds focus, so it works whether the panel or the crop overlay is
        focused. Text editors (aspect combo, angle field) are already excluded by the
        value-editor guard above, so typing still works. Contextual, so NOT in
@@ -2078,8 +2080,7 @@ bool MW::developShortcutIntercept(QEvent *event)
     if (developCropEditing && transformPanel && G::bareModifiers(e) == Qt::NoModifier
         && !e->isAutoRepeat()) {
         const int k = e->key();
-        if (k == Qt::Key_A || k == Qt::Key_F || k == Qt::Key_C ||
-            k == Qt::Key_L || k == Qt::Key_W) {
+        if (k == Qt::Key_A || k == Qt::Key_X) {
             event->accept();
             if (!isOverride) transformPanel->handleTransformShortcut(k);
             return true;
@@ -2375,6 +2376,27 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                         imageView->setSpacePanOverride(true);
                     else if (event->type() == QEvent::KeyRelease && !e->isAutoRepeat())
                         imageView->setSpacePanOverride(false);
+                    return true;
+                }
+            }
+        }
+    }
+
+    /* DEVELOP MODE: Transform crop tool modifiers. Cmd (Ctrl on Windows/Linux) = Level
+       and Opt (Alt) = Warp, momentary, so the frame style and cursor must follow the key
+       with the mouse stationary -- and the panel usually holds focus, the reason Space is
+       driven from this filter too. Never consumed, except the Alt KeyPress so Windows
+       does not open the menu bar under the crop. */
+    {
+        if (!G::isInitializing && G::operationMode == G::OperationMode::Develop
+            && developCropEditing && imageView
+            && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            const int k = e->key();
+            if ((k == Qt::Key_Alt || k == Qt::Key_Control) && !e->isAutoRepeat()) {
+                imageView->cropSyncModifiers();
+                if (k == Qt::Key_Alt && event->type() == QEvent::KeyPress) {
+                    event->accept();
                     return true;
                 }
             }
@@ -3919,38 +3941,6 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
     - Remove
     - Toggle (applies if recurse = true)
 */
-    /*  BEFORE ANYTHING ELSE, including setScope and the cache resets below: resetDataModel
-        means the rows about to be discarded are the only place the picks exist.  Cancelling
-        has to leave the previous folder untouched, which it only can while nothing has been
-        torn down yet.  FSTree has already moved the tree highlight by the time it emits, so
-        put that back too. */
-    if (resetDataModel &&
-        !okToDiscardPicks("Selecting another folder", "Select another folder")) {
-        /*  THE ANSWER GOES BACK TO FSTree, not just to the caller.  Its emitters move the
-            highlight on both sides of the emit -- mousePressEvent selects before, select()
-            selects after -- so refuseFolderChange both restores what the press already
-            moved and tells the emitter still on the stack to leave it alone.  Without that
-            the tree would highlight a folder the datamodel never loaded.
-
-            Only in the Folders scope is folderList what the tree was showing.  After a
-            catalog load it holds every parent folder of the results -- a hundred of them,
-            none of them selected in the tree, which is why the panel deliberately does
-            not follow a search (see MW::loadCatalogScope).  Clear instead. */
-        fsTree->refuseFolderChange(G::scope == G::Scope::Folders ? dm->folderList
-                                                                 : QStringList());
-        /*  BOOKMARKS IS THE SAME CHOICE IN ANOTHER WIDGET, and Qt highlighted the clicked
-            item before MW::bookmarkClicked ever ran.  BookMarks::select only moves the
-            current item (and clears when the folder is not bookmarked), so it restores
-            without starting anything. */
-        bookmarks->select(G::scope == G::Scope::Folders ? dm->primaryFolderPath()
-                                                        : QString());
-        /*  MW::folderAndFileSelectionChange (Finder double-click, an external app) parks
-            the image to select here before calling fsTree->select.  The load it was
-            waiting for is not happening, and MW::folderChanged consumes this the NEXT
-            time any folder loads -- where it would resolve to row -1. */
-        folderAndFileChangePath = "";
-        return;
-    }
 
     G::t.start();
 
@@ -5061,15 +5051,12 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
     QString fun = "MW::loadCatalogScope";
 
 
-    /*  A replacing result set clears the model exactly as a folder change does (see the
-        header comment), so it loses picks exactly as a folder change does.  Appending
-        keeps every loaded row, and with it every pick, so it never asks. */
-    /*  The whole Library asked for from the Library button (MW::setCatalogScopeWhole)
-        has had its picks question already, and put up its own message. */
+    /*  No picks question: a replacing result set clears the model, but picks are saved
+        as they are made (Datamodel/savedpicks.h) and come back with their rows.  The
+        whole Library asked for from the Library button (MW::setCatalogScopeWhole) has put
+        up its own message. */
     const bool wholeLibrary = pendingWholeLibrary && !req.append;
     pendingWholeLibrary = false;
-    if (!req.append && !wholeLibrary &&
-        !okToDiscardPicks("Loading these search results", "Load search results")) return;
 
     /*  The stall watchdog goes on for a catalog scope, under G::isPerfProbe
         (WINNOW_PERF_PROBE=1). It is cheap -- one callback four times a second, printing
@@ -6603,9 +6590,8 @@ void MW::folderAndFileSelectionChange(QString fPath, QString src)
 
     // handle StartupArgs (embellish call from remote source ie Lightroom)
     if (!fsTree->select(folder)) {
-        /*  A refusal is the user's answer, not a failure: okToDiscardPicks asked whether to
-            discard un-ingested picks and they chose to keep them.  Only a genuine select
-            failure is worth an issue. */
+        /*  A refusal (FSTree::refuseFolderChange) is an answer, not a failure.  Only a
+            genuine select failure is worth an issue. */
         if (fsTree->lastFolderChangeRefused()) return;
         QString msg = "fsTree failed to select folder.";
         G::issue("Warning", msg, "MW::folderAndFileSelectionChange", -1, folder);
@@ -7693,6 +7679,8 @@ void MW::folderChanged(bool aborted)
     // datamodel has rows
     if (dm->rowCount()) {
         infoView->enable(true);  // not setEnabled() because infoView uses a delegate
+        // picks saved at the last close, for any of these rows
+        restoreSavedPicks();
     }
     // else datamodel is empty
     else {
@@ -15816,27 +15804,18 @@ void MW::updateDevelopScopes(const QImage &shown, bool verifyVsPreview)
     if (wantCurve) developProperties->setScopeData(d);
 }
 
-void MW::toggleDevelopScopes()
-{
-/*
-    Develop action-row toggle: show/hide the scopes strip and persist the choice.
-*/
-    if (G::isLogger) G::log("MW::toggleDevelopScopes");
-    setDevelopScopesVisible(!developScopesVisible);
-}
-
 void MW::setDevelopScopesVisible(bool isVisible)
 {
 /*
-    Show/hide the scopes strip and persist the choice. When shown, repopulate from the
+    Expand/collapse the scopes strip below its "Histogram" header (the header itself
+    stays) and persist the choice. When shown, repopulate from the
     image currently displayed -- re-render the developed preview if the image has edits
     (so the scope matches what is on screen), else sample the decoded image
     (updateDevelopScopes no-ops while the strip is hidden, so the data is stale by then).
 */
     if (G::isLogger) G::log("MW::setDevelopScopesVisible");
     developScopesVisible = isVisible;
-    if (scopesView) scopesView->setVisible(developScopesVisible);
-    if (developScopesBtn) developScopesBtn->setActive(developScopesVisible);
+    if (scopesView) scopesView->setExpanded(developScopesVisible);
     settings->setValue("Develop/scopesVisible", developScopesVisible);
     if (developScopesVisible) {
         if (currentDevelopEditsVisible()) {
@@ -15861,7 +15840,7 @@ void MW::setDevelopScopesChoice(int choice)
 
     The single-scope layouts expand to fill the strip. Both the layout and the visibility
     are persisted, so the strip comes back the way it was left in the next session, and
-    the layout is kept while hidden so the action-row button restores the same scopes.
+    the layout is kept while hidden so expanding the header restores the same scopes.
 */
     if (G::isLogger) G::log("MW::setDevelopScopesChoice");
     if (!scopesView) return;
@@ -15921,17 +15900,6 @@ void MW::showDevelopScopesMenu(QMenu *menu, QPoint globalPos)
     menu->addSeparator();
     menu->addAction(developScopesHideAction);
     menu->exec(globalPos);
-}
-
-void MW::closeDevelopScopes()
-{
-/*
-    The scopes strip's own [X] (top right corner): hide the strip, exactly as the Develop
-    action-row button does. The layout is left alone, so "G" or the button brings the
-    strip back showing the same scope(s) it had.
-*/
-    if (G::isLogger) G::log("MW::closeDevelopScopes");
-    setDevelopScopesVisible(false);
 }
 
 void MW::toggleDevelopTransform()
@@ -17343,7 +17311,8 @@ void MW::onExportFinished(const ImageExporter::Result &result)
 void MW::developExport()
 {
 /*
-    "X" (Develop mode): export the selected images with their develop recipes applied.
+    Cmd/Ctrl+Shift+E (exportDevelopedAction, any mode): export the selected images with their
+    develop recipes applied.
     Opens the shared export dialog; it collects the settings and closes on Export, and the
     run goes to ImageExporter with the DEVELOP pixel source, reporting in the status bar.
 */
@@ -17432,8 +17401,7 @@ void MW::enterDevelopCrop()
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                              transformPanel->isAspectFlipped(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
-    transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Level field
-    setDevelopTransformMode(transformPanel->mode());     // arm the panel's current mode's tool
+    transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Angle field
     syncDevelopKaleidoOverlay();     // the crop session owns the canvas: handles off
 }
 
@@ -17515,12 +17483,10 @@ void MW::rectifyDevelopCrop()
     developProperties->setCurrentGeometry(g);
 
     renderDevelopPreview(false);                 // warp kept, crop suppressed -> corrected canvas
-    /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop, and
-       return the panel toggle to Crop so the UI matches the rectangle overlay. */
+    /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop. */
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                              transformPanel->isAspectFlipped(),
                              suggested);
-    transformPanel->setMode(TransformPanel::CropMode);
 }
 
 void MW::applyDevelopLevel(double deltaDeg)
@@ -17558,33 +17524,6 @@ void MW::applyDevelopLevel(double deltaDeg)
                              transformPanel->isAspectFlipped(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     transformPanel->setLevelAngle(g.straighten); // reflect the new angle in the Level field
-}
-
-void MW::setDevelopTransformMode(int mode)
-{
-/*
-    The Transform panel's Crop / Level / Warp toggle changed: arm the matching ImageView tool on the
-    live crop overlay. Crop restarts the rectangle overlay from the stored crop; Level arms the
-    draw-a-level tool; Warp seeds the 4-point quad for corner dragging. Only meaningful while the
-    crop editor is active (the panel is only visible then).
-*/
-    if (G::isLogger) G::log("MW::setDevelopTransformMode");
-    if (!imageView || !developProperties || !developCropEditing) return;
-    switch (mode) {
-    case TransformPanel::CropMode: {
-        const Geometry g = developProperties->currentGeometry();
-        imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
-                                 transformPanel->isAspectFlipped(),
-                                 QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
-        break;
-    }
-    case TransformPanel::LevelMode:
-        imageView->beginLevel();
-        break;
-    case TransformPanel::WarpMode:
-        imageView->beginWarp();
-        break;
-    }
 }
 
 void MW::syncDevelopKaleidoOverlay()
@@ -17647,28 +17586,29 @@ void MW::setDevelopLevelAngle(double degrees)
     applyDevelopLevel(target - g.straighten);
 }
 
-void MW::resetDevelopTransformMode(int mode)
+void MW::resetDevelopTransformPart(int part)
 {
 /*
-    A per-row Transform reset ([R] on a mode line): clear just that mode's contribution to the
-    geometry, leave the others, then re-render and restart the crop overlay on the result.
+    A per-group Transform reset ([R] on the Aspect / Angle / Warp row): clear just that part's
+    contribution to the geometry, leave the others, then re-render and restart the crop overlay
+    on the result.
 */
-    if (G::isLogger) G::log("MW::resetDevelopTransformMode");
+    if (G::isLogger) G::log("MW::resetDevelopTransformPart");
     if (!imageView || !developProperties || !developCropEditing) return;
     Geometry g = developProperties->currentGeometry();
-    switch (mode) {
-    case TransformPanel::CropMode:
+    switch (part) {
+    case TransformPanel::CropPart:
         /* Clear the aspect, the lock AND the flip first, else beginCropEdit below re-fits
            the full frame to whatever constraint is left standing and the reset appears to
            do nothing (or returns a portrait box when the flip was on). */
         transformPanel->resetCropState();
         g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
         break;
-    case TransformPanel::LevelMode:
+    case TransformPanel::LevelPart:
         g.straighten = 0.0;
         transformPanel->setLevelAngle(0.0);
         break;
-    case TransformPanel::WarpMode: {
+    case TransformPanel::WarpPart: {
         g.hasWarp = false;
         const double identity[8] = {0,0, 1,0, 1,1, 0,1};
         for (int k = 0; k < 8; ++k) g.quad[k] = identity[k];
@@ -17682,9 +17622,6 @@ void MW::resetDevelopTransformMode(int mode)
     imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
                              transformPanel->isAspectFlipped(),
                              QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
-    /* beginCropEdit re-arms the crop cursor; restore the row's own tool so resetting the
-       Level/Warp row keeps its cursor instead of dropping back to the crop tool. */
-    setDevelopTransformMode(mode);
 }
 
 void MW::onImageCursorPos(double xFraction, double yFraction)
@@ -18265,18 +18202,26 @@ void MW::ingest()
         // if background ingesting do not jump to the ingest destination folder
         if (gotoIngestFolder && !isBackgroundIngest) {
             if (autoEjectUsb) ejectUsb(ingestSourcePath);
-            /*  This folder change is the ingest finishing, not the user walking away from
-                an un-ingested cull: the rows still say "Picked" only because setIngested
-                below is skipped on this path (the model is about to be replaced anyway).
-                Without this, okToDiscardPicks would warn about the very picks just
-                copied. */
-            ignorePickLossWarning = true;
+            /*  UNSAVE THE COPIED PICKS FIRST.  setIngested is skipped on this path (the
+                model is about to be replaced, and its filter rebuild would race the
+                folder change), so the rows still say "Picked" -- and with picks written
+                through (Datamodel/savedpicks.h) they would stay saved and come back,
+                picked, with their folder. */
+            int remaining = dm->pickCount();
+            const int n = dm->rowCount();
+            for (int dmRow = 0; dmRow < n && remaining > 0; ++dmRow) {
+                if (dm->index(dmRow, G::PickColumn).data(Qt::EditRole).toString()
+                    != "Picked") continue;
+                --remaining;
+                SavedPicks::Set(dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString(),
+                                false);
+            }
+            SavedPicks::Flush();
             fsTree->select(lastIngestLocation);
-            ignorePickLossWarning = false;
             return;
         }
 
-        // set the ingested flags, clear the pick flags and update pickLog
+        // set the ingested flags and clear the pick flags (unsaves the picks)
         setIngested();
 
         updateStatus(true, "", "MW::ingest");
@@ -18801,38 +18746,30 @@ void MW::updatePickDependentActions()
     }
 }
 
-bool MW::okToDiscardPicks(const QString &action, const QString &proceedLabel)
+bool MW::okToCloseWithPicks(bool &clearPicks)
 {
 /*
-    PICKS LIVE ONLY IN THE DATAMODEL.  Throwing the rows away -- a new folder, a catalog
-    result set that replaces rather than appends, or closing the app -- throws the pick
-    flags away with them, so a cull that has not been ingested is lost at that moment.
-    Ask first.
+    A REMINDER, NOT A LOSS.  Picks are written through as they are made (Datamodel/
+    savedpicks.h), so closing keeps them.  But a cull that has not been ingested is easy
+    to forget, and this is where the user can let it go -- "Clear Picks and Close".
 
-    Returns true when it is safe to proceed.  Callers must ask BEFORE they touch the
-    model, the caches, the folder panel or anything else they cannot undo: a "Cancel"
-    answer has to leave the session exactly as it was, still loaded and still picked.
+    The count is EVERY saved pick, not just the loaded rows': the ones in folders not
+    open now are just as un-ingested, and just as cleared by the button.
 
-    TWO BUTTONS, and the first one NAMES THE ACTION rather than answering a question --
-    PROCEEDLABEL is "Select another folder" / "Close" / "Load search results", so the
-    button says what clicking it does without reading back up to the text.  ACTION is the
-    same thing as a gerund, for the sentence.
-
-    Preferences > General > "Warn if picks have not been ingested" turns this off, for
-    picking that is not a prelude to an ingest.
+    THREE BUTTONS: Close (the default -- keeping the picks loses nothing), Clear Picks and
+    Close, and Cancel (also the escape button).  Preferences > General > "Warn if picks
+    have not been ingested" skips the dialog; the picks stay saved.  Test mode skips it:
+    --selftest, --soaktest and --devtest have nobody to answer, and the saved picks are
+    not open there anyway (MW::loadSavedPicks).
 */
-    if (G::isLogger) G::log("MW::okToDiscardPicks", action);
-
+    if (G::isLogger) G::log("MW::okToCloseWithPicks");
+    clearPicks = false;
     if (!pickLossWarning) return true;
-    /*  The picks have just been ingested and MW::ingest is navigating to where it put
-        them -- they are not about to be lost, they are the reason for the move. */
-    if (ignorePickLossWarning) return true;
-    /*  --selftest, --soaktest and --devtest change folders on a timer with nobody to
-        answer a modal dialog.  Same exemption the crash-recovery prompt takes. */
     if (QStandardPaths::isTestModeEnabled()) return true;
 
-    const int picks = dm->pickCount();
+    const int picks = SavedPicks::Count();
     if (picks == 0) return true;
+    const int notLoaded = picks - dm->pickCount();
 
     QMessageBox msgBox(this);
     const int msgBoxWidth = 350;
@@ -18841,25 +18778,32 @@ bool MW::okToDiscardPicks(const QString &action, const QString &proceedLabel)
     msgBox.setText(picks == 1
                    ? QString("1 image is picked and has not been ingested.")
                    : QString("%1 images are picked and have not been ingested.").arg(picks));
-    msgBox.setInformativeText(action + " will discard the picks.");
-    QPushButton *proceedBtn = msgBox.addButton(proceedLabel, QMessageBox::AcceptRole);
+    QString info = picks == 1 ? "It stays picked the next time Winnow opens."
+                              : "They stay picked the next time Winnow opens.";
+    if (notLoaded > 0) {
+        info += notLoaded == 1
+                ? QString("\n\n1 of them is in a folder that is not open now.")
+                : QString("\n\n%1 of them are in folders that are not open now.")
+                      .arg(notLoaded);
+    }
+    msgBox.setInformativeText(info);
+    QPushButton *closeBtn = msgBox.addButton("Close", QMessageBox::AcceptRole);
+    QPushButton *clearBtn = msgBox.addButton("Clear Picks and Close",
+                                             QMessageBox::DestructiveRole);
     QPushButton *cancelBtn = msgBox.addButton(QMessageBox::Cancel);
-    /*  CANCEL IS THE DEFAULT.  Losing a cull cannot be undone -- unlike the delete warning
-        next door, which defaults to Yes because the files land in the trash. */
-    msgBox.setDefaultButton(cancelBtn);
+    msgBox.setDefaultButton(closeBtn);
     msgBox.setEscapeButton(cancelBtn);
     msgBox.setStyleSheet(G::css);
-    /*  Same width padding trick as the delete warning: QMessageBox sizes to the text,
-        and the informative text alone makes a narrow, tall box. */
+    /*  QMessageBox sizes to the text, and the informative text alone makes a narrow,
+        tall box: pad the width, as the delete warning does. */
     QSpacerItem *horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum,
                                                     QSizePolicy::Expanding);
     QGridLayout *layout = static_cast<QGridLayout*>(msgBox.layout());
     layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
     /*  WIDEN THE BUTTONS TO THEIR TEXT.  G::css gives QPushButton 5px of horizontal
-        padding and a min-width, and a min-width is not a fit -- "Select another folder" is
-        far wider than the style's own sizeHint allows for, and it clipped.  Measured after
-        setStyleSheet so the metrics are the styled font's.  Ampersands are mnemonics, not
-        glyphs, so they do not count toward the width. */
+        padding and a min-width, and a min-width is not a fit -- "Clear Picks and Close"
+        clips without this.  Measured after setStyleSheet so the metrics are the styled
+        font's.  Ampersands are mnemonics, not glyphs. */
     for (QAbstractButton *b : msgBox.buttons()) {
         QString plain = b->text();
         plain.remove(QChar('&'));
@@ -18868,17 +18812,11 @@ bool MW::okToDiscardPicks(const QString &action, const QString &proceedLabel)
     }
     msgBox.exec();
 
-    if (msgBox.clickedButton() == proceedBtn) {
-        /*  It is going ahead and MW drives everything that follows -- the same reason the
-            delete warning resets focus after its dialog. */
-        resetFocus();
-        return true;
-    }
-
-    /*  NO resetFocus HERE.  Nothing moved, so the focus belongs where the user left it:
-        FSTree renders its selection greyed rather than highlighted once it loses focus,
-        and the folder that stayed loaded is exactly what the tree has to keep showing. */
-    return false;
+    if (msgBox.clickedButton() == cancelBtn || msgBox.clickedButton() == nullptr)
+        return false;
+    clearPicks = msgBox.clickedButton() == clearBtn;
+    resetFocus();
+    return true;
 }
 
 bool MW::ownsShortcut(const QKeySequence &seq)

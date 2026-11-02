@@ -198,7 +198,7 @@ void MW::selfTestModelMutation(const QString &folder)
             || dm->index(r1, G::LabelColumn).data().toString() != "Red"
             || dm->index(r1, G::PickColumn).data().toString() != "Unpicked")
             fail("versions appear", "v1 has not got its own rating and label, or its "
-                                    "saved pick came back (picks are session-only)");
+                                    "record's pick came back (the record's pick is unused)");
         if (dm->index(r2, G::RatingColumn).data().toString() != "")
             fail("versions appear", "v2 should be unrated");
         if (dm->index(mr, G::RatingColumn).data().toString() != masterRating)
@@ -317,7 +317,7 @@ void MW::selfTestModelMutation(const QString &folder)
         emit setValDm(vr, G::PickColumn, "Rejected", dm->instance, "selftest", Qt::EditRole);
         check("version values", {"sample015.jpg", "sample015.jpg/#v1"}, {}, {});
         const ImageVersion rec = Versions::readVersion(m2, 1);
-        // the pick is session-only: never written to the record
+        // the pick is never written to the record (Datamodel/savedpicks.h holds it)
         if (rec.rating != 3 || rec.label != "Green" || !rec.pick.isEmpty())
             fail("version values", QString("record holds %1 / %2 / %3")
                                        .arg(rec.rating).arg(rec.label, rec.pick));

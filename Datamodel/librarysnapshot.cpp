@@ -164,16 +164,10 @@ DataModel::readLibrarySnapshot(const QString &file, LibrarySnapshotMeta &meta, Q
     if (p->rows.size() == 0 || p->fPathRow.size() > p->rows.size())
         return failed("inconsistent");
 
-    /*  PICKS ARE SESSION-ONLY (DataModel::addFileDataForRow starts every row Unpicked),
-        and the row store carries them -- a quit through the "picks not ingested" warning
-        would otherwise bring them back. VERSION rows too (2026-10-25): their pick is
-        session-only as well (DataModel::fillVersionRow). */
-    if (p->rows.pickedCount() > 0) {
-        for (auto it = p->fPathRow.cbegin(); it != p->fPathRow.cend(); ++it) {
-            if (p->rows.value(it.value(), G::PickColumn).toString() == "Picked")
-                p->rows.setValue(it.value(), G::PickColumn, Qt::EditRole, "Unpicked");
-        }
-    }
+    /*  THE PICKS IN THE SNAPSHOT ARE LEFT AS WRITTEN. The saved picks (Datamodel/
+        savedpicks.h) are the truth, and DataModel::syncSavedPicks makes the restored
+        rows agree with them in both directions once the restore lands -- a pick made or
+        cleared after the snapshot was written wins. */
 
     for (const QString &folder : std::as_const(p->folderList)) p->folderSet.insert(folder);
     p->currentKey = meta.currentKey;

@@ -7,7 +7,8 @@
 #include <QPair>
 
 class QComboBox;
-class QToolButton;
+class QCheckBox;
+class QRadioButton;
 class QLineEdit;
 class QLabel;
 class QButtonGroup;
@@ -27,16 +28,21 @@ class BarBtn;
         - A property-style gradient header ("Transform") with four trailing BarBtns: [?] tips,
           [E] preview eye (show/ignore the whole transform), [R] reset (clear crop/straighten/warp)
           and [X] close (extreme right -- commits the session and hides the panel, same as "R").
-        - A three-way MODE toggle (Crop / Level / Warp -- only one selected at a time; shortcuts
-          C / L / W whenever Transform is active, whether the panel or the crop overlay holds
-          focus) down the left, each row carrying that mode's controls
-          and its own [R] reset (all reset buttons kept vertically aligned):
-            Crop : aspect combo + aspect-lock padlock + flip (F) + reset
-            Level: straighten-angle field                        + reset
-            Warp : perspective hint                              + reset
+        - Three groups, each with its own [R] reset in the last column (aligned):
+            Aspect [combo]                                   reset (crop)
+            Lock   [ ]      A
+            Flip   o Landscape  o Portrait  X
+            Angle  [field]  Cmd modifier                     reset (straighten)
+            Warp            Opt modifier                     reset (perspective)
+                            Space bar to pan
+          The grey tips (keys) share one column so they line up, except Flip's X, which
+          follows the radios.
+          There are no modes: the crop tool is always live on the image, Cmd (Ctrl) held
+          draws a level line and Opt (Alt) held drags warp corners (see ImageView), so the
+          Angle and Warp rows only name the modifier.
 
-    Custom aspects, the last-used aspect, the lock state, the flip (portrait) state and the
-    selected mode persist to QSettings under "Develop/Transform/".
+    Custom aspects, the last-used aspect, the lock state and the flip (portrait) state
+    persist to QSettings under "Develop/Transform/".
 */
 class TransformPanel : public QWidget
 {
@@ -44,8 +50,8 @@ class TransformPanel : public QWidget
 public:
     explicit TransformPanel(QWidget *parent = nullptr, QSettings *settings = nullptr);
 
-    /* Mode toggle. Kept in the model as an int so MW can switch on it without this header. */
-    enum Mode { CropMode = 0, LevelMode = 1, WarpMode = 2 };
+    /* The part of the transform a per-row reset clears (resetPartRequested). */
+    enum Part { CropPart = 0, LevelPart = 1, WarpPart = 2 };
 
     bool    isAspectLocked() const { return aspectLocked; }
     bool    isAspectFlipped() const { return aspectFlipped; }  // portrait orientation
@@ -54,14 +60,11 @@ public:
        "Custom" (whatever ratio the crop frame has now -- ImageView resolves it). */
     double  aspectRatio() const;
     static constexpr double kCustomRatio = -1.0;
-    int     mode() const { return currentMode; }
 
     /* Sync the Preview eye to the current image's stored Geometry::show (no signal emitted). */
     void setPreviewShown(bool shown);
     /* Sync the Level angle field to the current image's stored straighten (no signal emitted). */
     void setLevelAngle(double degrees);
-    /* Select a mode programmatically (no modeChanged emitted). */
-    void setMode(int mode);
     /* Put the crop controls back to their neutral state -- "As shot", unlocked, unflipped
        -- with no signal emitted. Used by the crop reset: a reset means the WHOLE image, so
        every constraint has to go. Leaving the lock or the flip set would re-inscribe the
@@ -80,19 +83,18 @@ signals:
     void aspectChanged(const QString &key, double ratio, bool refit = true);
     void aspectLockToggled(bool locked);
     void aspectFlipToggled(bool flipped);  // flip crop between landscape and portrait
-    void modeChanged(int mode);            // Crop / Level / Warp selected (see Mode)
     void levelAngleEntered(double degrees);// absolute straighten typed into the Level field
     void rectifyRequested();               // apply perspective rectify to the drawn quad
     void tipsRequested();                  // [?] clicked
     void previewToggled(bool shown);       // eye: show (true) or ignore (false) the transform
     void resetRequested();                 // header reset: all transforms to identity
     void closeRequested();                 // header [X]: close panel (commits session)
-    void resetModeRequested(int mode);     // per-row reset: clear just this mode's contribution
+    void resetPartRequested(int part);     // per-row reset: clear just this Part's contribution
 
 public slots:
-    void toggleAspectLock();               // lock button click, or the "A" key (see eventFilter)
-    void toggleAspectFlip();               // flip button click, or the "F" key
-    /* Act on a bare A/F/C/L/W transform shortcut. Called from eventFilter (panel-
+    void toggleAspectLock();               // the "A" key (see eventFilter)
+    void toggleAspectFlip();               // the "X" key
+    /* Act on a bare A/X transform shortcut. Called from eventFilter (panel-
        focused) and, while the crop overlay holds focus, routed here from ImageView
        via MW. Returns true if the key was one of ours and was acted on. */
     bool handleTransformShortcut(int key);
@@ -101,10 +103,7 @@ protected:
     /* Separator rule (G::panelBorderHeight in G::panelSeparatorColor) across the bottom
        edge, so stacked Develop panels read as distinct blocks. */
     void paintEvent(QPaintEvent *event) override;
-    /* Re-render the inline-html mode captions when the panel is enabled/disabled: an
-       inline colour ignores the stylesheet ":disabled" rule (G::restyleAccentLabels). */
-    void changeEvent(QEvent *event) override;
-    /* Single-letter shortcuts (A lock, C Crop, L Level, W Warp) are claimed via
+    /* Single-letter shortcuts (A lock, X flip) are claimed via
        ShortcutOverride so a bare letter acts on the focused panel instead of a
        window-level shortcut. Text editors (the aspect combo, the angle field) are
        deliberately NOT filtered so typing still works. */
@@ -120,7 +119,6 @@ private:
 
 private:
     void buildUi();
-    void selectMode(int mode);             // user-driven mode change (emits modeChanged + persists)
     void populateAspectCombo();            // (re)fill presets + persisted custom aspects
     void addAspectItem(const QString &caption, const QString &key, double ratio);
     void addActionItem(const QString &caption, int action);   // "Add..." / "Edit..." tail items
@@ -134,27 +132,25 @@ private:
        gone), with no aspectChanged emitted. Needed after every populateAspectCombo, which
        clears the combo and with it the selection. */
     void selectAspectKey(const QString &key);
-    void updateLockButton();               // swap the padlock glyph + tooltip for aspectLocked
-    void updateFlipButton();               // reflect aspectFlipped in the flip button
+    void setAspectLocked(bool locked);     // store + persist + announce (checkbox or "A")
+    void setAspectFlipped(bool flipped);   // store + persist + announce (radios or "X")
+    void updateLockButton();               // reflect aspectLocked in the checkbox (no signal)
+    void updateFlipButton();               // reflect aspectFlipped in the radios (no signal)
     void updatePreviewButton();            // set the eye glyph/tooltip from previewShown
     void loadCustomAspects();
     void saveCustomAspects();
 
     QSettings   *setting = nullptr;
 
-    /* Placeholders for the group dividers above the Level and Warp rows: they reserve
+    /* Placeholders for the group dividers above the Angle and Warp rows: they reserve
        the space in the grid and paintEvent draws the G::groupSeparator* line in them,
        so the colour tracks theme changes. */
     QList<QWidget*> rowRules;
 
-    QToolButton *cropModeBtn  = nullptr;
-    QToolButton *levelModeBtn = nullptr;
-    QToolButton *warpModeBtn  = nullptr;
-    QButtonGroup *modeGroup   = nullptr;
-
-    QComboBox   *aspectCombo  = nullptr;
-    QToolButton *lockBtn      = nullptr;
-    BarBtn      *flipBtn      = nullptr;    // swap aspect landscape <-> portrait
+    QComboBox    *aspectCombo    = nullptr;
+    QCheckBox    *lockCheck      = nullptr;
+    QRadioButton *landscapeRadio = nullptr;   // flip: honour the ratio as w/h
+    QRadioButton *portraitRadio  = nullptr;   // flip: honour 1/ratio
     QLineEdit   *angleEdit    = nullptr;
     BarBtn      *tipBtn       = nullptr;
     BarBtn      *previewBtn   = nullptr;    // eye: show/ignore the transform (Geometry::show)
@@ -164,7 +160,6 @@ private:
     bool previewShown = true;              // mirror of the current image's Geometry::show
     bool aspectLocked = false;
     bool aspectFlipped = false;            // true = portrait: honour 1/ratio
-    int  currentMode = CropMode;
     int  lastAspectIndex = 0;              // restore selection after a "custom" cancel
 
     /* Persisted custom aspects: caption ("21 x 9") -> ratio (w/h). */

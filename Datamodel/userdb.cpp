@@ -20,8 +20,9 @@ const char *kOldDbName = "collections.db";
     a new table or column is a new version and a new block in migrate().
       1  node, member (collections, queries, places)
       2  vocab (the keyword vocabulary), imported once from index.db
-      3  audit_verdict, audit_skip (Audit Keywords: findings judged, keywords excluded) */
-constexpr int kSchemaVersion = 3;
+      3  audit_verdict, audit_skip (Audit Keywords: findings judged, keywords excluded)
+      4  saved_pick (picks, written through as they change) */
+constexpr int kSchemaVersion = 4;
 
 }  // namespace
 
@@ -135,7 +136,12 @@ QSqlDatabase UserDb::db()
         one statement. SQLite has them off per connection unless asked. */
     q.exec("PRAGMA foreign_keys = ON");
     q.exec("PRAGMA journal_mode = WAL");
-    q.exec("PRAGMA synchronous = NORMAL");
+    /*  FULL, not NORMAL: in WAL mode NORMAL keeps a commit through an app crash but can
+        lose the last ones to a power loss. Picks are written through as they are made
+        (Datamodel/savedpicks.h) precisely so neither takes them, and everything in this
+        file is small and written at human speed, so the fsync per commit costs nothing
+        anyone waits on. */
+    q.exec("PRAGMA synchronous = FULL");
     if (!migrate(d)) {
         d.close();
         failed = true;
@@ -246,6 +252,16 @@ bool UserDb::migrate(QSqlDatabase &d)
             "CREATE TABLE IF NOT EXISTS audit_skip ("
             "  keyword TEXT PRIMARY KEY,"
             "  display TEXT NOT NULL DEFAULT '')",
+        };
+        if (!runAll(ddl)) { d.rollback(); return false; }
+    }
+    if (version < 4) {
+        /*  PICKS (Datamodel/savedpicks.h). The datamodel row key -- a file path, or a
+            version key -- of every image picked and not yet ingested, written through
+            as each pick changes. */
+        const QStringList ddl = {
+            "CREATE TABLE IF NOT EXISTS saved_pick ("
+            "  key TEXT PRIMARY KEY) WITHOUT ROWID",
         };
         if (!runAll(ddl)) { d.rollback(); return false; }
     }

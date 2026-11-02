@@ -345,6 +345,9 @@ void MW::createDataModel()
     // enable global access to datamodel
     G::setDM(dm);
 
+    // picks saved at the last close, restored as their folders load (MW::restoreSavedPicks)
+    loadSavedPicks();
+
     if (settings->contains("showThumbNailSymbolHelp"))
         dm->showThumbNailSymbolHelp = settings->value("showThumbNailSymbolHelp").toBool();
     else dm->showThumbNailSymbolHelp = true;
@@ -2699,7 +2702,6 @@ void MW::createDevelopDock()
                                  transformPanel->isAspectLocked(),
                                  transformPanel->isAspectFlipped(),
                                  QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
-        setDevelopTransformMode(transformPanel->mode());   // keep Level/Warp armed
     });
     /* Before / After ("\"): the latch can come down without the user pressing the key
        (an edit, a navigation, a mask or spot tool taking the canvas), so the menu item
@@ -2938,7 +2940,7 @@ void MW::createDevelopDock()
 
     /* Dock content = live scopes strip (histogram + vectorscope) pinned above the property tree.
        The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
-       Visibility is user-toggled from the action row above and persisted. */
+       The strip's "Histogram" header collapses / expands it; the state is persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
     /* Which scopes the strip shows (picked from the strip's right-click menu or the
        Develop menu's Scopes submenu: both / histogram / vectorscope). */
@@ -2958,7 +2960,7 @@ void MW::createDevelopDock()
     QVBoxLayout *developContainerLayout = new QVBoxLayout(developContainer);
     developContainerLayout->setContentsMargins(0, 0, 0, 0);
     developContainerLayout->setSpacing(0);
-    /* Action row: the tool buttons (Scopes, Crop, Spot, Preset, Export) live here, in
+    /* Action row: the tool buttons (Crop, Spot, Preset, Export) live here, in
        their own centered row directly below the dock title bar, instead of competing
        with the title text for space in the title bar itself. Only the ? and X buttons
        remain in the title bar. The buttons are created further down (with the rest of
@@ -3000,7 +3002,7 @@ void MW::createDevelopDock()
 
     scopesView = new ScopesView(developContainer);
     scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
-    scopesView->setVisible(developScopesVisible);
+    scopesView->setExpanded(developScopesVisible);
     developContainerLayout->addWidget(scopesView);
     /* Transform (crop + perspective) strip sits directly below the scopes and above the tree.
        ALWAYS starts hidden on launch (its visibility is not restored): a visible panel means the
@@ -3031,16 +3033,14 @@ void MW::createDevelopDock()
     /* Warp mode commit: Enter/Return or a double-click on the traced quad (ImageView overrides those
        keys/clicks while warping) rectifies it. */
     connect(imageView, &ImageView::warpCommitRequested, this, &MW::rectifyDevelopCrop);
-    /* Transform mode toggle (Crop / Level / Warp): arm the matching ImageView tool. */
-    connect(transformPanel, &TransformPanel::modeChanged, this, &MW::setDevelopTransformMode);
     /* A level line drawn on the image adds to the straighten. */
     connect(imageView, &ImageView::levelAngleChanged, this, &MW::applyDevelopLevel);
     /* A free crop drag off the chosen ratio shows "Custom" in the aspect combo. */
     connect(imageView, &ImageView::cropAspectFreed, transformPanel, &TransformPanel::setCustomAspect);
-    /* An angle typed into the Level field sets the straighten directly (absolute). */
+    /* An angle typed into the Angle field sets the straighten directly (absolute). */
     connect(transformPanel, &TransformPanel::levelAngleEntered, this, &MW::setDevelopLevelAngle);
     /* Per-row reset: clear just the crop / straighten / warp contribution. */
-    connect(transformPanel, &TransformPanel::resetModeRequested, this, &MW::resetDevelopTransformMode);
+    connect(transformPanel, &TransformPanel::resetPartRequested, this, &MW::resetDevelopTransformPart);
     /* Kaleidoscope (Effects, per scope): a canvas handle drag writes the ACTIVE scope's
        centre / angle (history merges the drag into one row); the sliders write theirs in
        DevelopProperties::itemChange. Both re-render through paramsChanged. */
@@ -3108,9 +3108,6 @@ void MW::createDevelopDock()
             imageView->beginCropEdit(transformPanel->aspectRatio(),
                                      transformPanel->isAspectLocked(),
                                      transformPanel->isAspectFlipped(), QRectF(0, 0, 1, 1));
-            /* beginCropEdit re-arms the crop cursor; restore the tool for the current row
-               (Level/Warp) so resetting while straightening keeps the level cursor. */
-            setDevelopTransformMode(transformPanel->mode());
         }
     });
     /* Spot Removal has no panel: the action-row Spot menu (MW::showDevelopSpotMenu)
@@ -3198,9 +3195,8 @@ void MW::createDevelopDock()
     scopesView->setVectorscopeSkinLine(settings->value("Develop/vectorscopeSkinLine", false).toBool());
     connect(scopesView, &ScopesView::vectorscopeSkinLineChanged, this,
             [this](bool on){ settings->setValue("Develop/vectorscopeSkinLine", on); });
-    /* The strip's [X] (top right corner): hide the scopes (the action-row button or the
-       Scopes menu brings them back with the same layout). */
-    connect(scopesView, &ScopesView::closeRequested, this, &MW::closeDevelopScopes);
+    /* The strip's "Histogram" header: collapse / expand the scopes (the layout is kept). */
+    connect(scopesView, &ScopesView::expandToggled, this, &MW::setDevelopScopesVisible);
     /* Right-click any scope: the scope's own items (if any) plus the scopes-layout menu. */
     connect(scopesView, &ScopesView::menuRequested, this, &MW::showDevelopScopesMenu);
     developDock->setFloating(false);
@@ -3234,19 +3230,6 @@ void MW::createDevelopDock()
        2x for retina). The original images/icon16/ set is kept: set 16 to revert. */
     const int devActSide = 24;
     const QString devActIcons = devActSide == 24 ? ":/images/icon24/" : ":/images/icon16/";
-
-    /* show/hide the histogram + vectorscope scopes strip. White like the rest of the row
-       (2026-10-31); histogram_rgb.png is the coloured alternative (Documentation.md
-       11.13.1). */
-    developScopesBtn = new BarBtn();
-    developScopesBtn->setSide(devActSide);
-    developScopesBtn->setIcon(devActIcons + "histogram.png", G::iconOpacity);
-    developScopesBtn->setToolTip("Show or hide the histogram and vectorscope.\n"
-                                 "Right-click the scopes to choose which are shown.");
-    developScopesBtn->setActive(developScopesVisible);
-    connect(developScopesBtn, &BarBtn::clicked, this, &MW::toggleDevelopScopes);
-    developActionLayout->addWidget(developScopesBtn);
-    developActionLayout->addSpacing(10);
 
     // show/hide the Transform (crop + perspective) panel
     developTransformBtn = new BarBtn();
@@ -3567,7 +3550,7 @@ QWidget *MW::buildSourcePair(QWidget *parent, QToolButton *&libraryBtn,
     THE BUTTONS DO NOT HOLD THE SCOPE -- G::scope does. A click asks MW::chooseSource
     (setCatalogScopeWhole / showFoldersSource), and MW::syncSourceButtons pushes the
     answer back to every pair, so a folder or bookmark click that changes the scope
-    flips them too, and a refused change (unsaved picks) leaves them where they were.
+    flips them too, and a refused change leaves them where they were.
     clicked, not toggled: the sync sets them with the signals blocked.
 */
     QWidget *box = new QWidget(parent);

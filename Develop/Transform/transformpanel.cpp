@@ -3,7 +3,8 @@
 #include "Main/global.h"
 
 #include <QComboBox>
-#include <QToolButton>
+#include <QCheckBox>
+#include <QRadioButton>
 #include <QButtonGroup>
 #include <QLineEdit>
 #include <QDoubleValidator>
@@ -13,11 +14,6 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPainter>
-#include <QPainterPath>
-#include <QTransform>
-#include <QIcon>
-#include <QPixmap>
-#include <QImage>
 #include <QLinearGradient>
 #include <QInputDialog>
 #include <QDialog>
@@ -30,80 +26,6 @@
 #include <QKeyEvent>
 
 namespace {
-/* Padlock icon for the aspect-lock toggle, painted rather than loaded, so it needs no
-   asset, stays crisp on retina and can be tinted per state. The emoji glyphs it replaces
-   were too small and too low-contrast to read at a glance. Drawn in a nominal 16x16 box:
-   filled body, stroked shackle, punched-out keyhole; the open shackle is hinged on the
-   left leg and swung up to the right. */
-QIcon padlockIcon(bool closed, const QColor &color)
-{
-    const int px = 16;
-    const qreal dpr = 2.0;              // paint at 2x and tag it, so it downsamples
-    QImage img(QSize(px * dpr, px * dpr), QImage::Format_ARGB32_Premultiplied);
-    img.fill(Qt::transparent);
-    img.setDevicePixelRatio(dpr);
-
-    QPainter p(&img);
-    p.setRenderHint(QPainter::Antialiasing, true);
-    p.setPen(Qt::NoPen);
-    p.setBrush(color);
-    p.drawRoundedRect(QRectF(2.5, 7.0, 11.0, 7.5), 1.5, 1.5);
-
-    QPainterPath shackle;
-    shackle.moveTo(5.0, 7.0);
-    shackle.arcTo(QRectF(5.0, 3.0, 6.0, 6.0), 180.0, -180.0);
-    shackle.lineTo(11.0, closed ? 7.0 : 6.0);
-    if (!closed) {
-        /* Swing the whole shackle open about its left leg: the sprung-up tilt is what
-           makes locked and unlocked tell apart at 16px. */
-        QTransform t;
-        t.translate(5.0, 7.0);
-        t.rotate(-32.0);
-        t.translate(-5.0, -7.0);
-        shackle = t.map(shackle);
-    }
-    p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(color, 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    p.drawPath(shackle);
-
-    /* Keyhole: cleared out of the body so it reads at 16px on any background. */
-    p.setCompositionMode(QPainter::CompositionMode_Clear);
-    p.setPen(QPen(Qt::black, 1.8, Qt::SolidLine, Qt::RoundCap));
-    p.drawLine(QPointF(8.0, 9.5), QPointF(8.0, 12.0));
-    p.end();
-
-    return QIcon(QPixmap::fromImage(img));
-}
-
-/* Orientation icon for the aspect-flip toggle, painted for the same reasons as the padlock.
-   Unlike the lock, flip has no "off" state -- both settings are real orientations -- so
-   brightness cannot carry the state and the SHAPE has to: one frame, drawn wide for
-   landscape and tall for portrait, filling a nominal 16x16 box.
-
-   A second, dimmer frame showing the orientation a click WOULD give was tried and dropped:
-   at 16px the two outlines crowd into a blob and neither reads. One frame is unmistakable
-   at a glance, and the tooltip names the click's effect. */
-QIcon flipIcon(bool portrait, const QColor &color)
-{
-    const int px = 16;
-    const qreal dpr = 2.0;              // paint at 2x and tag it, so it downsamples
-    QImage img(QSize(px * dpr, px * dpr), QImage::Format_ARGB32_Premultiplied);
-    img.fill(Qt::transparent);
-    img.setDevicePixelRatio(dpr);
-
-    const QRectF landscape(1.2, 4.0, 13.6, 8.0);
-    const QRectF portraitR(4.0, 1.2,  8.0, 13.6);
-
-    QPainter p(&img);
-    p.setRenderHint(QPainter::Antialiasing, true);
-    p.setBrush(Qt::NoBrush);
-    p.setPen(QPen(color, 1.8, Qt::SolidLine, Qt::RoundCap, Qt::RoundJoin));
-    p.drawRoundedRect(portrait ? portraitR : landscape, 1.2, 1.2);
-    p.end();
-
-    return QIcon(QPixmap::fromImage(img));
-}
-
 /* Parse a free-typed custom aspect ("21 x 9", "21:9", "21/9", "1.85x1") into w and h.
    Returns false if it is not two positive numbers separated by x / : or /. */
 bool parseAspect(const QString &text, double &w, double &h)
@@ -190,119 +112,58 @@ void TransformPanel::buildUi()
     headerRow->addWidget(headerResetBtn);
     headerRow->addWidget(closeBtn);
 
-    /* -------- Mode toggle (Crop / Level / Warp): mutually exclusive, teal-when-selected -------- */
-    const int bs = G::backgroundShade;
-    const QString select = G::selectionColor.name();
-    const QString border  = QColor(bs + 30, bs + 30, bs + 30).name();
-    const QString normalBg = QColor(bs + 8,  bs + 8,  bs + 8).name();
-    const QString hoverBg  = QColor(bs + 18, bs + 18, bs + 18).name();
-    /* The disabled state has to be spelled out here: a per-widget stylesheet overrides
-       the app one, and ":checked" with no ":enabled" qualifier keeps painting the armed
-       mode at full strength on a greyed panel. Disabled = dimmed text, and a checked
-       button keeps a MUTED teal so "which mode is armed" survives greying. */
-    const QString mutedSel = G::dimmed(G::selectionColor).name();
-    const QString dim = G::disabledColor.name();
-    const QString modeQss = QString(
-        "QToolButton{border:1px solid %1; border-radius:3px; padding:2px 6px; background:%2;}"
-        "QToolButton:hover:!checked{background:%3;}"
-        "QToolButton:checked{background-color:%4; border:1px solid %3; color:white;}"
-        "QToolButton:disabled{color:%5;}"
-        "QToolButton:checked:disabled{background-color:%6; border:1px solid %1; color:%5;}")
-        .arg(border, normalBg, hoverBg, select, dim, mutedSel);
-
-    // auto makeModeBtn = [&](const QString &text, const QString &tip) {
-    //     QToolButton *b = new QToolButton(this);
-    //     b->setText(text);
-    //     b->setToolTip(tip);
-    //     b->setCheckable(true);
-    //     b->setStyleSheet(modeQss);
-    //     b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    //     b->setFocusPolicy(Qt::StrongFocus);   // so C/L/W reach the eventFilter after a click
-    //     b->setToolButtonStyle(Qt::ToolButtonTextOnly);
-    //     return b;
-    // };
-
-    auto makeModeBtn = [&](const QString &letter, const QString &rest, const QString &tip) {
-        QToolButton *b = new QToolButton(this);
-        b->setToolTip(tip);
-        b->setCheckable(true);
-        b->setStyleSheet(modeQss);
-        b->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-        b->setFocusPolicy(Qt::StrongFocus);
-
-        /* 1. A QLabel for the caption: the shortcut letter is accented (white, bold) and
-              QToolButton text cannot render rich text. setAccentCaption keeps the halves
-              on the label so changeEvent can re-render them dimmed when disabled. */
-        QLabel *label = new QLabel(b);
-        G::setAccentCaption(label, letter, rest, QColor(Qt::white));
-        label->setAttribute(Qt::WA_TransparentForMouseEvents); // Clicks pass through to the button
-        label->setAlignment(Qt::AlignCenter);
-        label->setStyleSheet("background-color: transparent;");
-
-        // 2. Put the label inside a layout inside the button
-        QHBoxLayout *layout = new QHBoxLayout(b);
-        layout->setContentsMargins(6, 2, 6, 2); // Match your QSS padding
-        layout->addWidget(label);
-        layout->setSizeConstraint(QLayout::SetMinimumSize);
-        layout->setContentsMargins(6, 2, 6, 2);
-        b->setLayout(layout);
-
-        return b;
+    /* Captions: transparent (no slab on the panel fill). The modifier hints are grey -- they
+       name a key, they are not a control. */
+    const QString capCss = G::labelCss(G::textColor);
+    const QString hintCss = G::labelCss(G::disabledColor);
+    auto makeCaption = [&](const QString &text) {
+        QLabel *l = new QLabel(text, this);
+        l->setStyleSheet(capCss);
+        return l;
+    };
+    auto makeHint = [&](const QString &text) {
+        QLabel *l = new QLabel(text, this);
+        l->setStyleSheet(hintCss);
+        return l;
     };
 
-    // 3. Shortcut letter + the rest of the caption; the factory accents the letter.
-    cropModeBtn = makeModeBtn(tr("C"), tr("rop"),
-                              tr("Crop and set an aspect ratio (C)"));
-    levelModeBtn = makeModeBtn(tr("L"), tr("evel"),
-                              tr("Straighten: draw a level line or type an angle (L)"));
-    warpModeBtn = makeModeBtn(tr("W"), tr("arp"),
-                              tr("Perspective correction: drag the corners (W)"));
-
-    // cropModeBtn  = makeModeBtn(tr("Crop"),  tr("Crop and set an aspect ratio (C)"));
-    // levelModeBtn = makeModeBtn(tr("Level"), tr("Straighten: draw a level line or type an angle (L)"));
-    // warpModeBtn  = makeModeBtn(tr("Warp"),  tr("Perspective correction: drag the corners (W)"));
-
-    modeGroup = new QButtonGroup(this);
-    modeGroup->setExclusive(true);
-    modeGroup->addButton(cropModeBtn,  CropMode);
-    modeGroup->addButton(levelModeBtn, LevelMode);
-    modeGroup->addButton(warpModeBtn,  WarpMode);
-    connect(modeGroup, &QButtonGroup::idClicked, this, &TransformPanel::selectMode);
-
-    /* Uniform mode-button width so the whole toggle column lines up. */
-    int modeW = 0;
-    for (QToolButton *b : {cropModeBtn, levelModeBtn, warpModeBtn})
-        modeW = qMax(modeW, b->sizeHint().width());
-    for (QToolButton *b : {cropModeBtn, levelModeBtn, warpModeBtn})
-        b->setFixedWidth(modeW);
-
-    /* -------- Crop row controls: aspect combo + aspect-lock padlock -------- */
-    QLabel *aspectLbl = new QLabel(tr("Aspect"), this);
-    aspectLbl->setStyleSheet(G::labelCss(G::textColor));   // transparent: no slab on the panel fill
+    /* -------- Crop group: aspect combo, lock, flip -------- */
     aspectCombo = new QComboBox(this);
     aspectCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     populateAspectCombo();
     connect(aspectCombo, QOverload<int>::of(&QComboBox::activated),
             this, &TransformPanel::onAspectActivated);
 
-    /* Chrome-free like the other bar buttons: toggling only swaps the padlock symbol
-       (closed and bright vs open and dim), never a border or background. Not checkable
-       for the same reason -- a checked QToolButton would draw a pressed background. */
-    lockBtn = new BarBtn();
-    lockBtn->setIconSize(QSize(16, 16));
-    connect(lockBtn, &QToolButton::clicked, this, &TransformPanel::toggleAspectLock);
+    lockCheck = new QCheckBox(this);
+    lockCheck->setStyleSheet("QCheckBox { background: transparent; }");
+    connect(lockCheck, &QCheckBox::toggled, this, &TransformPanel::setAspectLocked);
 
-    /* Flip the aspect between landscape and portrait (swap w/h); also driven by the "F"
-       key. Chrome-free and NOT checkable, like the padlock: the painted frames carry the
-       orientation, so a checked QToolButton's pressed background would only add noise.
-       updateFlipButton() sets the icon (called from the restore block below). */
-    flipBtn = new BarBtn();
-    flipBtn->setIconSize(QSize(16, 16));
-    connect(flipBtn, &BarBtn::clicked, this, &TransformPanel::toggleAspectFlip);
+    /* Landscape / Portrait: the flip as an explicit choice of orientation. Styled like
+       RawPanel's radios: transparent, and plain caption text when checked (the indicator
+       already shows the choice; the app-wide checked colour would only add noise). */
+    landscapeRadio = new QRadioButton(tr("Landscape"), this);
+    portraitRadio  = new QRadioButton(tr("Portrait"),  this);
+    for (QRadioButton *r : {landscapeRadio, portraitRadio})
+        r->setStyleSheet("QRadioButton { background: transparent; color: "
+                         + G::textColor.name() + "; }"
+                         "QRadioButton:disabled { color: "
+                         + G::disabledColor.name() + "; }");
+    QButtonGroup *flipGroup = new QButtonGroup(this);
+    flipGroup->setExclusive(true);
+    flipGroup->addButton(landscapeRadio);
+    flipGroup->addButton(portraitRadio);
+    /* toggled fires for both halves; the Portrait button's state is the flip. */
+    connect(portraitRadio, &QRadioButton::toggled, this, &TransformPanel::setAspectFlipped);
 
-    /* -------- Level row controls: straighten-angle field -------- */
-    QLabel *angleLbl = new QLabel(tr("Angle"), this);
-    angleLbl->setStyleSheet(G::labelCss(G::textColor));
+    QHBoxLayout *flipRow = new QHBoxLayout;
+    flipRow->setContentsMargins(0, 0, 0, 0);
+    flipRow->setSpacing(12);
+    flipRow->addWidget(landscapeRadio);
+    flipRow->addWidget(portraitRadio);
+    flipRow->addWidget(makeHint(tr("X")));
+    flipRow->addStretch(1);
+
+    /* -------- Straighten group: angle field + the modifier that draws a level line ---- */
     angleEdit = new QLineEdit(this);
     angleEdit->setToolTip(tr("Straighten angle in degrees (-45 to 45)"));
     angleEdit->setPlaceholderText("0.0");
@@ -314,46 +175,47 @@ void TransformPanel::buildUi()
         emit levelAngleEntered(angleEdit->text().toDouble());
     });
 
-    /* -------- Warp row: a hint (no control yet) -------- */
-    QLabel *warpHint = new QLabel(tr("Drag corners"), this);
-    warpHint->setStyleSheet(G::labelCss(G::textColor));
-    // warpHint->setStyleSheet(QString("color: %1;").arg(G::disabledColor.name()));
+    /* The platform's own names for the keys ImageView reads as ControlModifier (Cmd on
+       macOS) and AltModifier (Opt on macOS). */
+#ifdef Q_OS_MAC
+    const QString cmdKey = tr("Cmd"), optKey = tr("Opt");
+#else
+    const QString cmdKey = tr("Ctrl"), optKey = tr("Alt");
+#endif
+    QLabel *levelHint = makeHint(tr("%1 modifier").arg(cmdKey));
+    levelHint->setToolTip(tr("Hold %1 and drag on the image along something that should be "
+                             "level or plumb").arg(cmdKey));
 
-    /* -------- Per-row reset buttons (all in the last column so they align) -------- */
-    auto makeRowReset = [&](int m, const QString &tip) {
+    /* -------- Warp group: only the modifier that drags the corners -------- */
+    QLabel *warpHint = makeHint(tr("%1 modifier").arg(optKey));
+    warpHint->setToolTip(tr("Hold %1 and drag a corner of the crop onto something "
+                            "rectangular; Return or a double-click squares it up").arg(optKey));
+    QLabel *panHint = makeHint(tr("Space bar to pan"));
+    panHint->setToolTip(tr("Hold Space and drag to move the picture under the crop frame"));
+
+    /* -------- Per-group reset buttons (all in the last column so they align) -------- */
+    auto makeRowReset = [&](int part, const QString &tip) {
         BarBtn *b = new BarBtn();
         b->setIcon(":/images/icon16/reset.png", G::iconOpacity);
         b->setToolTip(tip);
-        connect(b, &BarBtn::clicked, this, [this, m]{ emit resetModeRequested(m); });
+        connect(b, &BarBtn::clicked, this, [this, part]{ emit resetPartRequested(part); });
         return b;
     };
-    BarBtn *cropResetBtn  = makeRowReset(CropMode,  tr("Reset the crop to the full frame"));
-    BarBtn *levelResetBtn = makeRowReset(LevelMode, tr("Reset the straighten angle to 0"));
-    BarBtn *warpResetBtn  = makeRowReset(WarpMode,  tr("Reset the perspective correction"));
+    BarBtn *cropResetBtn  = makeRowReset(CropPart,  tr("Reset the crop to the full frame"));
+    BarBtn *levelResetBtn = makeRowReset(LevelPart, tr("Reset the straighten angle to 0"));
+    BarBtn *warpResetBtn  = makeRowReset(WarpPart,  tr("Reset the perspective correction"));
 
-    /* -------- Grid: col0 mode | col1 label | col2 control (stretch) | col3 lock | col4 reset ---- */
+    /* -------- Grid: col0 caption | col1 control | col2 tip (stretch) | col3 reset --------
+       The tips (A, the modifiers, Space) share col2 so they line up down the panel; the
+       aspect combo and the Flip radios span col1-2, and Flip's X tip rides after them. */
     QGridLayout *grid = new QGridLayout;
     grid->setContentsMargins(0, 0, 0, 0);
-    grid->setHorizontalSpacing(6);
+    grid->setHorizontalSpacing(10);
     grid->setVerticalSpacing(4);
     grid->setColumnStretch(2, 1);
 
-    /* Lock + flip share the padlock column so the reset buttons stay aligned in col4. */
-    QHBoxLayout *lockFlipRow = new QHBoxLayout;
-    lockFlipRow->setContentsMargins(0, 0, 0, 0);
-    lockFlipRow->setSpacing(0);
-    lockFlipRow->addWidget(lockBtn);
-    lockFlipRow->addSpacing(10);
-    lockFlipRow->addWidget(flipBtn);
-
-    grid->addWidget(cropModeBtn,  0, 0);
-    grid->addWidget(aspectLbl,    0, 1);
-    grid->addWidget(aspectCombo,  0, 2);
-    grid->addLayout(lockFlipRow,  0, 3);
-    grid->addWidget(cropResetBtn, 0, 4);
-
     /* The control-group divider every Develop panel uses (see
-       DevelopProperties::addGroupDivider) above the Level and Warp rows. The slot is
+       DevelopProperties::addGroupDivider) above the Angle and Warp groups. The slot is
        G::groupSeparatorHeight less the grid's row spacing on either side (the spacing a
        divider row in the property tree takes), plus 12px of extra room above and below
        the line, which paintEvent centres in the slot. */
@@ -365,19 +227,29 @@ void TransformPanel::buildUi()
                                   G::groupSeparatorHeight - 2 * grid->verticalSpacing())
                              + 2 * ruleExtra);
         rowRules.append(rule);
-        grid->addWidget(rule, row, 0, 1, 5);
+        grid->addWidget(rule, row, 0, 1, 4);
     };
 
-    addRule(1);
-    grid->addWidget(levelModeBtn, 2, 0);
-    grid->addWidget(angleLbl,     2, 1);
-    grid->addWidget(angleEdit,    2, 2, Qt::AlignLeft);
-    grid->addWidget(levelResetBtn,2, 4);
+    grid->addWidget(makeCaption(tr("Aspect")), 0, 0);
+    grid->addWidget(aspectCombo,               0, 1, 1, 2);
+    grid->addWidget(cropResetBtn,              0, 3);
+    grid->addWidget(makeCaption(tr("Lock")),   1, 0);
+    grid->addWidget(lockCheck,                 1, 1, Qt::AlignLeft);
+    grid->addWidget(makeHint(tr("A")),         1, 2);
+    grid->addWidget(makeCaption(tr("Flip")),   2, 0);
+    grid->addLayout(flipRow,                   2, 1, 1, 2);
 
     addRule(3);
-    grid->addWidget(warpModeBtn,  4, 0);
-    grid->addWidget(warpHint,     4, 1, 1, 2);
-    grid->addWidget(warpResetBtn, 4, 4);
+    grid->addWidget(makeCaption(tr("Angle")),  4, 0);
+    grid->addWidget(angleEdit,                 4, 1, Qt::AlignLeft);
+    grid->addWidget(levelHint,                 4, 2);
+    grid->addWidget(levelResetBtn,             4, 3);
+
+    addRule(5);
+    grid->addWidget(makeCaption(tr("Warp")),   6, 0);
+    grid->addWidget(warpHint,                  6, 2);
+    grid->addWidget(warpResetBtn,              6, 3);
+    grid->addWidget(panHint,                   7, 2);
 
     /* -------- Assemble -------- */
     /* The bottom margin reserves the panel separator rule drawn in paintEvent. */
@@ -388,12 +260,12 @@ void TransformPanel::buildUi()
     QVBoxLayout *bodyWrap = new QVBoxLayout;
     bodyWrap->setContentsMargins(6, 0, 6, 6);
     bodyWrap->setSpacing(0);
-    bodyWrap->addSpacing(12);       // breathing room above the Crop row
+    bodyWrap->addSpacing(12);       // breathing room above the Aspect row
     bodyWrap->addLayout(grid);
     bodyWrap->addSpacing(12);       // and below the Warp row
     lay->addLayout(bodyWrap);
 
-    /* Restore the persisted lock state, aspect selection and mode. */
+    /* Restore the persisted lock state, flip and aspect selection. */
     aspectLocked = setting && setting->value("Develop/Transform/aspectLocked", false).toBool();
     updateLockButton();
     aspectFlipped = setting && setting->value("Develop/Transform/aspectFlipped", false).toBool();
@@ -409,45 +281,16 @@ void TransformPanel::buildUi()
             }
         }
     }
-    currentMode = setting ? setting->value("Develop/Transform/mode", CropMode).toInt() : CropMode;
-    /* 3 was a short-lived Kaleido mode (now an Effect): anything unknown is Crop. */
-    if (currentMode < CropMode || currentMode > WarpMode) currentMode = CropMode;
-    setMode(currentMode);
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
-    /* Let A/F/C/L/W act on the focused panel (see eventFilter). The aspect combo and the
-       angle field are excluded so their text entry / type-ahead still works. */
+    /* Let A/X act on the focused panel (see eventFilter). The aspect combo and the angle
+       field are excluded so their text entry / type-ahead still works. */
     setFocusPolicy(Qt::StrongFocus);
     installEventFilter(this);
-    QWidget *filtered[] = {cropModeBtn, levelModeBtn, warpModeBtn, lockBtn, flipBtn};
+    QWidget *filtered[] = {lockCheck, landscapeRadio, portraitRadio};
     for (QWidget *w : filtered)
         w->installEventFilter(this);
-}
-
-void TransformPanel::setMode(int mode)
-{
-    currentMode = mode;
-    QToolButton *b = (mode == LevelMode) ? levelModeBtn
-                   : (mode == WarpMode)  ? warpModeBtn
-                                         : cropModeBtn;
-    if (b) {
-        const QSignalBlocker block(b);
-        b->setChecked(true);
-    }
-    /* The aspect controls only make sense in Crop mode; the angle field only in Level mode. */
-    if (aspectCombo) aspectCombo->setEnabled(mode == CropMode);
-    if (lockBtn)     lockBtn->setEnabled(mode == CropMode);
-    if (flipBtn)     flipBtn->setEnabled(mode == CropMode);
-    if (angleEdit)   angleEdit->setEnabled(mode == LevelMode);
-}
-
-void TransformPanel::selectMode(int mode)
-{
-    if (mode == currentMode) { setMode(mode); return; }   // still refresh enabled-states
-    setMode(mode);
-    if (setting) setting->setValue("Develop/Transform/mode", mode);
-    emit modeChanged(mode);
 }
 
 void TransformPanel::resetCropState()
@@ -571,7 +414,7 @@ void TransformPanel::applyAspect(int index, bool refit)
     const double ratio = aspectCombo->itemData(index, RatioRole).toDouble();
     if (setting) setting->setValue("Develop/Transform/aspectKey", key);
 
-    /* A released ratio takes the padlock with it: the lock was holding the aspect that has
+    /* A released ratio takes the lock with it: the lock was holding the aspect that has
        just been deleted, and "As shot" would silently re-point it at the native ratio --
        so the next drag would re-shape a crop the user never asked to change. */
     if (!refit && aspectLocked) {
@@ -763,29 +606,42 @@ bool TransformPanel::deleteCustomAspect(int i, QWidget *parent)
 
 void TransformPanel::toggleAspectLock()
 {
-    aspectLocked = !aspectLocked;
-    updateLockButton();
-    if (setting) setting->setValue("Develop/Transform/aspectLocked", aspectLocked);
-    emit aspectLockToggled(aspectLocked);
+    setAspectLocked(!aspectLocked);
 }
 
 void TransformPanel::toggleAspectFlip()
 {
-    aspectFlipped = !aspectFlipped;
-    updateFlipButton();
+    setAspectFlipped(!aspectFlipped);
+}
+
+void TransformPanel::setAspectLocked(bool locked)
+{
+    if (locked == aspectLocked) return;
+    aspectLocked = locked;
+    updateLockButton();             // the "A" key path: the checkbox follows
+    if (setting) setting->setValue("Develop/Transform/aspectLocked", aspectLocked);
+    emit aspectLockToggled(aspectLocked);
+}
+
+void TransformPanel::setAspectFlipped(bool flipped)
+{
+    if (flipped == aspectFlipped) return;
+    aspectFlipped = flipped;
+    updateFlipButton();             // the "X" key path: the radios follow
     if (setting) setting->setValue("Develop/Transform/aspectFlipped", aspectFlipped);
     emit aspectFlipToggled(aspectFlipped);
 }
 
 void TransformPanel::updateFlipButton()
 {
-    if (!flipBtn) return;
-    /* A wide frame for landscape, a tall one for portrait. White in both states: unlike the
-       padlock, neither orientation is an "off", so dimming one would misread as disabled. */
-    flipBtn->setIcon(flipIcon(aspectFlipped, QColor(Qt::white)));
-    flipBtn->setToolTip(aspectFlipped
-        ? tr("Aspect is PORTRAIT: click to flip it back to landscape (F)")
-        : tr("Aspect is LANDSCAPE: click to flip it to portrait (F)"));
+    if (!landscapeRadio || !portraitRadio) return;
+    const QSignalBlocker b1(landscapeRadio);
+    const QSignalBlocker b2(portraitRadio);
+    (aspectFlipped ? portraitRadio : landscapeRadio)->setChecked(true);
+    const QString tip = tr("Crop orientation: landscape honours the aspect as written, "
+                           "portrait stands it on end (X)");
+    landscapeRadio->setToolTip(tip);
+    portraitRadio->setToolTip(tip);
 }
 
 void TransformPanel::updatePreviewButton()
@@ -812,12 +668,10 @@ void TransformPanel::setLevelAngle(double degrees)
 
 void TransformPanel::updateLockButton()
 {
-    if (!lockBtn) return;
-    /* Closed and bright when locked, open and dim when not: the symbol alone carries
-       the state (no border or background change). */
-    lockBtn->setIcon(padlockIcon(aspectLocked, aspectLocked ? QColor(Qt::white)
-                                                            : QColor(110, 110, 110)));
-    lockBtn->setToolTip(aspectLocked
+    if (!lockCheck) return;
+    const QSignalBlocker block(lockCheck);
+    lockCheck->setChecked(aspectLocked);
+    lockCheck->setToolTip(aspectLocked
         ? tr("Aspect ratio LOCKED: dragging the crop keeps the ratio (A)")
         : tr("Aspect ratio unlocked: dragging the crop is free (A)"));
 }
@@ -845,26 +699,15 @@ void TransformPanel::paintEvent(QPaintEvent *event)
                G::panelSeparatorColor);
 }
 
-void TransformPanel::changeEvent(QEvent *event)
-{
-    QWidget::changeEvent(event);
-    /* The mode captions accent their shortcut letter with INLINE html, which no
-       ":disabled" rule can reach, so re-render them whenever the panel is greyed or
-       re-enabled (Develop greys wholesale on a video selection). */
-    if (event->type() == QEvent::EnabledChange) G::restyleAccentLabels(this);
-}
-
 bool TransformPanel::eventFilter(QObject *watched, QEvent *event)
 {
-    /* Claim a bare A/F/C/L/W before any window-level shortcut can: accept its
+    /* Claim a bare A/X before any window-level shortcut can: accept its
        ShortcutOverride so the following KeyPress is delivered normally, then act. */
     if (event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress) {
         QKeyEvent *ke = static_cast<QKeyEvent *>(event);
         if (ke->modifiers() == Qt::NoModifier) {
             int key = ke->key();
-            const bool ours = (key == Qt::Key_A || key == Qt::Key_C ||
-                               key == Qt::Key_L || key == Qt::Key_W ||
-                               key == Qt::Key_F);
+            const bool ours = (key == Qt::Key_A || key == Qt::Key_X);
             if (ours) {
                 if (event->type() == QEvent::ShortcutOverride) { event->accept(); return true; }
                 handleTransformShortcut(key);
@@ -879,10 +722,7 @@ bool TransformPanel::handleTransformShortcut(int key)
 {
     switch (key) {
     case Qt::Key_A: toggleAspectLock();   return true;
-    case Qt::Key_F: toggleAspectFlip();   return true;
-    case Qt::Key_C: selectMode(CropMode); return true;
-    case Qt::Key_L: selectMode(LevelMode);return true;
-    case Qt::Key_W: selectMode(WarpMode); return true;
+    case Qt::Key_X: toggleAspectFlip();   return true;
     default:        return false;
     }
 }

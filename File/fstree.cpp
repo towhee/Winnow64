@@ -1290,10 +1290,11 @@ bool FSTree::emitFolderSelectionChange(const QString &dPath, G::FolderOp op,
 /*
     Emit folderSelectionChange and report whether MW ACCEPTED it.
 
-    MW::folderSelectionChange refuses a change that would throw away picks which have not
-    been ingested (MW::okToDiscardPicks), and answers by calling refuseFolderChange.  The
+    MW::folderSelectionChange may refuse a change by calling refuseFolderChange.  The
     connection is direct -- same thread, no queue -- so that has already happened by the
-    time emit returns and the answer is simply a flag read.
+    time emit returns and the answer is simply a flag read.  (Nothing refuses today: the
+    one refuser, the un-ingested picks warning, went when picks became saved as they are
+    made, 2026-11-02.  The mechanism is kept for the next one.)
 
     EVERY EMITTER IN THIS CLASS GOES THROUGH HERE, because they move the tree highlight on
     both sides of the emit: mousePressEvent chains to QTreeView (which selects) BEFORE

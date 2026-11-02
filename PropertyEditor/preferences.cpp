@@ -814,9 +814,10 @@ void Preferences::addGeneral()
     // Picks not ingested warning
     i.name = "pickLossWarning";
     i.parentName = "GeneralHeader";
-    i.captionText = "Warn if picks have not been ingested";
-    i.tooltip = "Warn before loading something else or quitting would lose picks\n"
-                "that have not been ingested.\n"
+    i.captionText = "Warn at quit if picks have not been ingested";
+    i.tooltip = "Picks are saved as you make them and stay picked until you unpick\n"
+                "or ingest them.  When quitting with picks, remind me, with the\n"
+                "option to clear them all.\n"
                 "Turn off if you use picks for something other than ingesting.";
     i.hasValue = true;
     i.captionIsEditable = false;

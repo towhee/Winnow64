@@ -4,6 +4,7 @@
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
 #include "Datamodel/collectionstore.h"
+#include "Datamodel/savedpicks.h"
 #include "Develop/History/historystore.h"
 #include "Main/global.h"
 #include "Cache/pathkey.h"
@@ -467,6 +468,8 @@ void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
     /* Collections key on the path as well, and they are the user's own work: an image
        Winnow moves stays in every collection that held it. */
     CollectionStore::instance().onMoved(srcPath, dstPath);
+    /* Picks key on the path as well; a picked image stays picked where it went. */
+    SavedPicks::OnMoved(srcPath, dstPath);
     /* Develop history keys on the path as well; undo steps follow the image. */
     HistoryStore::onMoved(srcPath, dstPath);
     /* A move INTO the catalog scope from outside it is a new image as far as the
@@ -484,6 +487,7 @@ int FileOps::onFolderDeleted(const QString &folder)
     DevPreviewCache::instance().onFolderDeleted(folder);
     ThumbCache::instance().onFolderDeleted(folder);
     CollectionStore::instance().onFolderDeleted(folder);
+    SavedPicks::OnFolderDeleted(folder);
     HistoryStore::onFolderDeleted(folder);
     return Catalog::instance().forgetUnder(folder, /*recurse*/true);
 }
@@ -501,5 +505,6 @@ void FileOps::onDeleted(const QString &fPath)
     ThumbCache::instance().onDeleted(fPath);
     Catalog::instance().onDeleted(fPath);
     CollectionStore::instance().onDeleted(fPath);
+    SavedPicks::OnDeleted(fPath);
     HistoryStore::onDeleted(fPath);
 }

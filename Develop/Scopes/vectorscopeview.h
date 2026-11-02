@@ -14,7 +14,7 @@ class QMenu;
     white balance). setData() copies the VN x VN counts and repaints; clear() blanks it.
 
     The zoom readout ("150%", shown only above 100%) is painted in the bottom right
-    corner. Closing the strip is the ScopesView's [X], not this scope's.
+    corner. Collapsing the strip is the ScopesView's "Histogram" header, not this scope's.
 
     Counts come from the same MW::updateDevelopScopes sample pass that feeds the
     histogram.

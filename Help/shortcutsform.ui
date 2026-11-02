@@ -1412,7 +1412,7 @@
          <string>Flip Aspect Ratio</string>
         </property>
         <property name="text">
-         <string>F</string>
+         <string>X</string>
         </property>
         <property name="text">
          <string>Swaps the crop between landscape and portrait; while Transform is active</string>
@@ -1420,13 +1420,35 @@
        </item>
        <item>
         <property name="text">
-         <string>Transform Mode</string>
+         <string>Transform: Pan Image</string>
         </property>
         <property name="text">
-         <string>C / L / W</string>
+         <string>Space + drag</string>
         </property>
         <property name="text">
-         <string>Select Crop / Level / Warp; while Transform is active</string>
+         <string>Moves the picture under the crop frame</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Transform: Level Line</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + drag</string>
+        </property>
+        <property name="text">
+         <string>Draws a level line; while Transform is active</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Transform: Warp Corner</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + drag corner</string>
+        </property>
+        <property name="text">
+         <string>Pulls the crop into a perspective quad; while Transform is active</string>
         </property>
        </item>
        <item>
@@ -1489,7 +1511,7 @@
          <string>Export</string>
         </property>
         <property name="text">
-         <string>X</string>
+         <string>Cmd/Ctrl + Shift + E</string>
         </property>
         <property name="text">
          <string>Exports the selected images with their develop settings applied</string>

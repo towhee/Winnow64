@@ -33,6 +33,8 @@ set(WINNOW_CORE_TEST_SOURCES
     # ...whose file is UserDb's (userdata.db, the user's own work), shared with the
     # keyword vocabulary.
     ${CMAKE_SOURCE_DIR}/Datamodel/userdb.cpp
+    # Picks carried between sessions (MW::savePicks), the file's smallest tenant.
+    ${CMAKE_SOURCE_DIR}/Datamodel/savedpicks.cpp
     # ...and Develop history (the History dock's undo steps), keyed on the path the same
     # way. Qt Core + Sql only; the entries are header-only EditStack JSON.
     ${CMAKE_SOURCE_DIR}/Develop/History/historystore.cpp

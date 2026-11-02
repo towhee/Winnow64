@@ -191,8 +191,7 @@ void VectorscopeView::drawZoomLabel(QPainter &p)
 {
 /*
     The magnification readout, bottom right corner, shown only when zoomed past the 100%
-    graticule. Drawn on top of the trace (the strip's close button is the ScopesView's,
-    not the scope's -- see ScopesView).
+    graticule. Drawn on top of the trace.
 */
     if (zoom <= 1.0) return;
     p.setPen(QColor(150, 150, 150));

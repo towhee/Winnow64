@@ -2,6 +2,7 @@
 #include "Metadata/colorspaces.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
+#include "Datamodel/savedpicks.h"
 #include "Datamodel/variantless.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
@@ -1442,6 +1443,13 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         const QString oldKey =
             rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString();
         const QString newKey = value.toString();
+        /*  and the pick: a picked row renamed or re-keyed stays picked under its new
+            key. FileOps::onMoved does the same for a rename; Set is idempotent. */
+        if (!oldKey.isEmpty() && oldKey != newKey && SavedPicks::Contains(oldKey)
+            && G::isGuiThread()) {
+            SavedPicks::Set(oldKey, false);
+            SavedPicks::Set(newKey, true);
+        }
         if (!oldKey.isEmpty() && oldKey != newKey && iconStore.contains(oldKey)) {
             const QIcon ic = iconStore.icon(oldKey);
             iconStore.remove(oldKey);
@@ -1469,9 +1477,29 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
         }
     }
 
+    /*  PICKS ARE WRITTEN THROUGH (Datamodel/savedpicks.h). This is the one place a pick
+        changes, so every writer -- toggles, Clear picks, reject, ingest, undo -- reaches
+        the saved picks without knowing about them. Only a crossing of "Picked" counts:
+        a fresh row's first "Unpicked" is not an unpick. The GUI thread only; nothing else
+        picks. NOT in RowStore::setValue: a model clear, a row removal and the snapshot
+        reader change rows without being the user unpicking anything. */
+    const bool isPickWrite = col == G::PickColumn &&
+                             (role == Qt::EditRole || role == Qt::DisplayRole) &&
+                             SavedPicks::IsOpen() && G::isGuiThread() &&
+                             rowStore.contains(idx.row());
+    const bool wasPicked = isPickWrite &&
+        rowStore.value(idx.row(), G::PickColumn, Qt::EditRole).toString() == "Picked";
+
     if (RowStore::covers(col, role)) {
         rowStore.setValue(idx.row(), col, role, value);
         emit dataChanged(idx, idx, { role });
+    }
+
+    if (isPickWrite) {
+        const bool nowPicked = value.toString() == "Picked";
+        if (nowPicked != wasPicked)
+            SavedPicks::Set(rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString(),
+                            nowPicked);
     }
 
     /*  The scratch side table, on the same terms. ScratchStore::covers is the
@@ -1762,7 +1790,7 @@ void DataModel::noteVersionValueWrite(const QModelIndex &dmIdx)
 */
     if (mVersionRowCount == 0) return;
     const int col = dmIdx.column();
-    // not the pick: session-only, like every row's (fillVersionRow)
+    // not the pick: the saved picks hold it, like every row's (Datamodel/savedpicks.h)
     if (col != G::RatingColumn && col != G::LabelColumn) return;
     const QString key = index(dmIdx.row(), G::PathColumn).data(G::KeyRole).toString();
     if (!VersionKey::isVersion(key)) return;
@@ -1911,7 +1939,8 @@ bool DataModel::fillVersionRow(int row)
 /*
     A version row's values: its master's metadata -- the same photograph, so the same
     camera, dimensions, keywords, title and decode geometry -- with the version's own
-    name, rating, label and develop state laid over it (the pick is session-only). Written through
+    name, rating, label and develop state laid over it (the pick is the saved picks',
+    Datamodel/savedpicks.h, applied in addFileDataForRow). Written through
     addMetadataForItem so a version row is filled by exactly the code that fills every
     other row, and reads back the same way.
 */
@@ -1945,10 +1974,9 @@ bool DataModel::fillVersionRow(int row)
 
     const QSignalBlocker b(this);
     setData(index(row, G::PathColumn), v.name, G::VersionNameRole);
-    /*  PICKS ARE SESSION-ONLY, a version's like any other row's (2026-10-25). The
-        record's pick, which older builds saved, is ignored: a fresh row starts Unpicked,
-        and a REFILL (a master re-read, MW::reconcileVersionRows) keeps the pick made
-        this session. */
+    /*  THE RECORD'S PICK IS IGNORED (2026-10-25), a version's like any other row's: the
+        saved picks hold it (Datamodel/savedpicks.h), applied in addFileDataForRow. A
+        REFILL (a master re-read, MW::reconcileVersionRows) keeps the row's pick. */
     if (index(row, G::PickColumn).data().toString().isEmpty())
         setData(index(row, G::PickColumn), QString("Unpicked"));
     emit dataChanged(index(row, 0), index(row, columnCount() - 1));
@@ -3455,12 +3483,16 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
             : fileInfo.lastModified().toString("yyyy-MM-dd hh:mm:ss");
     search += s;
     setData(index(row, G::ModifiedColumn), s);
-    /*  PICKS ARE SESSION-ONLY, so a row always starts Unpicked -- catalog-backed or not.
-        This used to restore image.pick, but nothing kept that column current: an unpick
-        writes no sidecar, so Catalog::commit's stamp check skipped the row and the stale
-        pick came back on every launch, along with the "picks not ingested" warning at
-        quit (MW::okToDiscardPicks), which is the statement that picks do not survive. */
-    setData(index(row, G::PickColumn), "Unpicked");
+    /*  THE PICK COMES FROM THE SAVED PICKS (Datamodel/savedpicks.h), never from the
+        index. The index used to restore image.pick, but nothing kept that column
+        current: an unpick writes no sidecar, so Catalog::commit's stamp check skipped
+        the row and the stale pick came back on every launch. Applied here so a row is
+        right from its first paint -- version rows included, which arrive through here
+        too, also after a load (MW::reconcileVersionRows). The in-memory set is read on
+        the GUI thread only; DataModel::syncSavedPicks covers a fill made elsewhere, and
+        the rows a parked Library brings back. */
+    const bool saved = G::isGuiThread() && SavedPicks::Contains(rowKey);
+    setData(index(row, G::PickColumn), saved ? "Picked" : "Unpicked");
     /*  bool, not the QString "false" this used to be. Ingested had three writers
         disagreeing about the type -- "false" here, true (bool) from the ingest
         pass, "true" (QString) from MW::setIngested -- so the column's type
@@ -3558,7 +3590,7 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
     r.captured = index(row, G::CreatedColumn).data().toDateTime();
     r.rating = index(row, G::RatingColumn).data().toString().toInt();
     r.label = index(row, G::LabelColumn).data().toString();
-    r.pick = false;     // session-only: never indexed (see addFileDataForRow)
+    r.pick = false;     // never indexed: the saved picks hold it (see addFileDataForRow)
     r.title = index(row, G::TitleColumn).data().toString();
     r.creator = index(row, G::CreatorColumn).data().toString();
     r.copyright = index(row, G::CopyrightColumn).data().toString();
@@ -7232,6 +7264,62 @@ bool DataModel::isAnyPick()
 */
     if (G::isLogger) G::log("DataModel::isPick");
     return rowStore.pickedCount() > 0;
+}
+
+int DataModel::syncSavedPicks()
+{
+/*
+    Make every row's pick agree with the saved picks (Datamodel/savedpicks.h), after a
+    fill. Called from MW::folderChanged, which runs once per completed fill -- a folder,
+    a search, the whole Library, a parked Library put back -- ahead of the filter build,
+    so the Picks counts include the result. Returns the number of rows changed.
+
+    BOTH DIRECTIONS. A fresh fill starts every row Unpicked, so only the saved keys need
+    applying. But a parked Library (restoreScope) and a Library snapshot come back with
+    the picks they had when they were put away, and a pick made or cleared since -- in a
+    folder, on the same image -- must win. Step 1 is skipped for a fresh fill
+    (pickedCount() == 0) and stops once every picked row is seen.
+
+    NO dataChanged PER ROW. A per-row dataChanged rebuilds the macOS accessibility array
+    over the whole model (~27 ms each at 43,000 rows), so a restored cull of a thousand
+    would be half a minute. The writes go with signals blocked and ONE dataChanged covers
+    the span of rows touched. SavedPicks::Set sees each one and does nothing: the set is
+    what is being applied.
+*/
+    if (G::isLogger) G::log("DataModel::syncSavedPicks");
+    if (!SavedPicks::IsOpen() || !rowCount()) return 0;
+
+    int first = INT_MAX, last = -1, changed = 0;
+    auto write = [&](int row, const char *pick) {
+        setData(index(row, G::PickColumn), QString(pick));
+        first = qMin(first, row);
+        last = qMax(last, row);
+        ++changed;
+    };
+    {
+        const QSignalBlocker blocker(this);
+        // 1. rows still Picked that are no longer saved
+        int remaining = pickCount();
+        const int n = rowCount();
+        for (int row = 0; row < n && remaining > 0; ++row) {
+            if (rowStore.value(row, G::PickColumn, Qt::EditRole).toString() != "Picked")
+                continue;
+            --remaining;
+            const QString key = rowStore.value(row, G::PathColumn, G::KeyRole).toString();
+            if (!SavedPicks::Contains(key)) write(row, "Unpicked");
+        }
+        // 2. saved keys that are rows here and not Picked
+        for (const QString &key : SavedPicks::Keys()) {
+            const int row = fPathRowValue(key);
+            if (row < 0) continue;
+            if (rowStore.value(row, G::PickColumn, Qt::EditRole).toString() != "Picked")
+                write(row, "Picked");
+        }
+    }
+    if (changed)
+        emit dataChanged(index(first, G::PickColumn), index(last, G::PickColumn),
+                         {Qt::EditRole, Qt::DisplayRole});
+    return changed;
 }
 
 int DataModel::pickCount()

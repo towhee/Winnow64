@@ -828,14 +828,10 @@ void MW::setCatalogScopeWhole(QString src)
         setScope loads nothing if the scope is already the Library, and returns at once
         while initializing.
 
-        THE PICKS QUESTION MOVES HERE, ahead of clearing the view: okToDiscardPicks must
-        be asked before anything that cannot be undone, and a cleared view with the folder
-        still loaded behind it is exactly that. loadCatalogScope then does not ask again. */
+        No picks question: picks are saved as they are made (Datamodel/savedpicks.h), so
+        replacing the folder loses none. pendingWholeLibrary tells loadCatalogScope this
+        message is already up. */
     if (G::scope != G::Scope::Catalog && !G::isInitializing) {
-        if (!okToDiscardPicks("Opening the Library", "Open the Library")) {
-            setScope(G::scope, src + " refused");       // puts the toggle back
-            return;
-        }
         pendingWholeLibrary = true;
         imageView->clear();
         if (scopesView) scopesView->clear();
@@ -856,8 +852,8 @@ void MW::showFoldersSource()
 /*
     The toggle's Folders button. Back to the folder the Folders view had loaded before
     the Library was chosen, through FSTree::select -- the ordinary folder load, with its
-    ordinary guards: un-ingested picks are asked about, and a refusal leaves the Library
-    showing (setScope pushes the toggle back).
+    ordinary guards: a refusal leaves the Library showing (setScope pushes the toggle
+    back).
 
     WITH NOTHING TO GO BACK TO the Folders view comes up empty, waiting for a folder to be
     picked, rather than leaving the Library's rows on screen under a toggle that says
@@ -875,10 +871,6 @@ void MW::showFoldersSource()
         return;
     }
 
-    if (!okToDiscardPicks("Leaving the Library", "Leave the Library")) {
-        setScope(G::scope, "MW::showFoldersSource refused");
-        return;
-    }
     /*  stop() clears the model before setScope runs, so the park decision is made here. */
     prepareLibraryPark("MW::showFoldersSource");
     stop("MW::showFoldersSource");
@@ -1153,9 +1145,7 @@ void MW::restoreParkedLibrary(const QSet<QString> &changed)
     /*  Left again before this ran: it stays parked for the next visit. */
     if (G::scope != G::Scope::Catalog) return;
 
-    const bool wholeLibrary = pendingWholeLibrary;
     pendingWholeLibrary = false;
-    if (!wholeLibrary && !okToDiscardPicks("Opening the Library", "Open the Library")) return;
 
     QElapsedTimer rt;
     rt.start();
@@ -2066,25 +2056,19 @@ void MW::setStatus(QString state)
 void MW::setIngested()
 {
 /*
-    Called after ingest to update the DataModel, filter and the settings piclLog.
-    The pickLog is used to recover the picked/ingested values in the datamodel
-    after a crash recovery.
+    Called after ingest to update the DataModel and the filter.  Picked -> "Ingested"
+    is an unpick as far as the saved picks go (DataModel::setData writes it through,
+    Datamodel/savedpicks.h), so an ingested cull does not come back picked.
 */
     if (G::isLogger) G::log("MW::setIngested");
-    settings->beginGroup("PickLog");
     for (int sfRow = 0; sfRow < dm->sf->rowCount(); ++sfRow) {
-        QString sKey = dm->sf->index(sfRow, 0).data(G::KeyRole).toString();
         if (dm->sf->index(sfRow, G::PickColumn).data().toString() == "Picked") {
             emit setValSf(sfRow, G::IngestedColumn, true, dm->instance,
                           "MW::setIngested", Qt::EditRole);
             emit setValSf(sfRow, G::PickColumn, "Ingested", dm->instance,
                           "MW::setIngested", Qt::EditRole);
-            // update pickLog
-            sKey.replace("/", "🔸");
-                              settings->setValue(sKey, "ingested");
         }
     }
-    settings->endGroup();
 
     // update filter counts
     buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction);

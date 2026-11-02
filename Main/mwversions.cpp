@@ -208,8 +208,8 @@ void versionValuesFromRow(DataModel *dm, int dmRow, ImageVersion &v)
 {
     v.rating = dm->index(dmRow, G::RatingColumn).data().toString().toInt();
     v.label = dm->index(dmRow, G::LabelColumn).data().toString();
-    /*  The pick is session-only (DataModel::fillVersionRow), so it is never saved:
-        written empty, which also clears one an older build left in the record. */
+    /*  The pick is never saved in the record -- the saved picks hold it (Datamodel/
+        savedpicks.h): written empty, which also clears one an older build left. */
     v.pick.clear();
 }
 

@@ -20,6 +20,7 @@
         until schema 2 here, which is how a reset of the index could take it with it.
       o Audit Keywords' verdicts and excluded keywords -- tables audit_verdict and
         audit_skip (Datamodel/keywordauditstore.h), schema 3
+      o picks not yet ingested -- table saved_pick (Datamodel/savedpicks.h), schema 4
 
     SO THIS FILE IS NEVER MOVED ASIDE. One it cannot open, or one written by a newer
     Winnow, leaves its features unavailable -- each panel greys with unavailableReason()

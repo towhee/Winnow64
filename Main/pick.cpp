@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Datamodel/savedpicks.h"
 
 void MW::togglePickUnlessRejected()
 {
@@ -89,8 +90,11 @@ void MW::clearPicks()
     Unpick every picked image in the datamodel -- the UNFILTERED model, like isAnyPick
     and pickCount, so a pick hidden by the current filter is cleared too. Rejects are left
     alone. The change goes onto the pick history stack as one multiple-select group, so
-    "Recover prior pick state" restores the whole set, and the crash-recovery pick log
-    drops each entry.
+    "Recover prior pick state" restores the whole set. DataModel::setData writes each
+    unpick through to the saved picks (Datamodel/savedpicks.h).
+
+    THE LOADED IMAGES ONLY. A saved pick in a folder that is not loaded stays picked;
+    the close dialog's "Clear Picks and Close" is what clears every one.
 
     Triggered by clearPicksAction (Ingest menu and the Clear picks button under the
     Browse panels), which updatePickDependentActions enables only while something is
@@ -116,7 +120,6 @@ void MW::clearPicks()
         pushPick(fPath, "Picked");
         emit setValDm(dmRow, G::PickColumn, "Unpicked", dm->instance, "MW::clearPicks",
                       Qt::EditRole);
-        updatePickLog(fPath, "Unpicked");
     }
     if (rows.count() > 1) pushPick("End multiple select");
 
@@ -137,6 +140,38 @@ void MW::clearPicks()
     updatePickDependentActions();
     updateStatus(true, "", "MW::clearPicks");
     updateClassification();
+}
+
+void MW::loadSavedPicks()
+{
+/*
+    Start the saved picks (Datamodel/savedpicks.h): read them into memory and write
+    through from here on. Once at startup, ahead of the first fill. Skipped under
+    QStandardPaths test mode: --selftest and --soaktest expect every row to start
+    Unpicked, and must not change the user's picks.
+
+    The QSettings "PickLog" group was the crash-recovery copy of the picks; the saved
+    picks replace it, so a leftover one is dropped.
+*/
+    if (G::isLogger) G::log("MW::loadSavedPicks");
+    settings->remove("PickLog");
+    if (QStandardPaths::isTestModeEnabled()) return;
+    SavedPicks::Open();
+}
+
+void MW::restoreSavedPicks()
+{
+/*
+    After a fill: the rows' picks made to agree with the saved picks (DataModel::
+    syncSavedPicks), then everything that reads the pick count brought up to date.
+    Called from MW::folderChanged.
+*/
+    if (G::isLogger) G::log("MW::restoreSavedPicks");
+    if (!dm->syncSavedPicks()) return;
+    thumbView->refreshIcons("MW::restoreSavedPicks");
+    gridView->refreshIcons("MW::restoreSavedPicks");
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
 }
 
 void MW::togglePickMouseOverItem(QModelIndex idx)
@@ -188,9 +223,8 @@ void MW::togglePick()
         - "Picked"
         - "Rejected"
 
-    The settings pickLog (for crash recovery) values:
-        - "picked"      datamodel pick = "picked"
-        - "ingested"    datamodel pick = "false" and datamodel ingested = true
+    DataModel::setData writes every change through to the saved picks (Datamodel/
+    savedpicks.h), so a pick survives a quit, a crash or a power loss.
 
 */
     if (G::isLogger) G::log("MW::togglePick");
@@ -242,7 +276,6 @@ void MW::togglePick()
         // set pick status
         emit setValDm(dmRow, G::PickColumn, pickStatus, dm->instance, "MW::togglePick",
                       Qt::EditRole);
-        updatePickLog(fPath, pickStatus);
     }
     if (n > 1) pushPick("End multiple select");
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model");
@@ -363,78 +396,6 @@ void MW::toggleReject()
     updatePickDependentActions();
     updateStatus(true, "", "MW::toggleReject");
     updateClassification();
-}
-
-int MW::pickLogCount()
-{
-    if (G::isLogger) G::log("MW::pickLogCount");
-    settings->beginGroup("PickLog");
-    int count = settings->allKeys().size();
-    settings->endGroup();
-    return count;
-}
-
-void MW::recoverPickLog()
-{
-    if (G::isLogger) G::log("MW::recoverPickLog");
-    settings->beginGroup("PickLog");
-    QStringList keys = settings->allKeys();
-    for (int i = 0; i < keys.length(); ++i) {
-        QString fPath = keys.at(i);
-        fPath.replace("🔸", "/");
-                            QString pickStatus = settings->value(keys.at(i)).toString();
-        QModelIndex idx = dm->proxyIndexFromKey(fPath);
-        if (idx.isValid()) {
-            int sfRow = idx.row();
-            if (pickStatus == "Picked") {
-                emit setValSf(sfRow, G::PickColumn, "Picked", dm->instance,
-                              "MW::recoverPickLog", Qt::EditRole);
-            }
-            if (pickStatus == "ingested") {
-                emit setValSf(sfRow, G::IngestedColumn, true, dm->instance,
-                              "MW::recoverPickLog", Qt::EditRole);
-            }
-            // qDebug() << "MW::recoverPickLog" << pickStatus << fPath << "updated";
-        }
-        else {
-            // qDebug() << "MW::recoverPickLog" << fPath << "not found";
-        }
-    }
-    settings->endGroup();
-    thumbView->refreshIcons("MW::recoverPickLog");
-    gridView->refreshIcons("MW::recoverPickLog");
-    updatePickDependentActions();
-}
-
-void MW::clearPickLog()
-{
-    if (G::isLogger) G::log("MW::clearPickLog");
-    settings->beginGroup("PickLog");
-    QStringList keys = settings->allKeys();
-    for (int i = 0; i < keys.length(); ++i) {
-        settings->remove(keys.at(i));
-    }
-    settings->endGroup();
-}
-
-void MW::updatePickLog(QString fPath, QString pickStatus)
-/*
-    Called from MW::togglePick
-*/
-{
-    if (G::isLogger) G::log("MW::updatePickLog");
-    settings->beginGroup("PickLog");
-    QString sKey = fPath;
-    sKey.replace("/", "🔸");
-    if (pickStatus == "Picked") {
-//        qDebug() << "MW::updatePickLog" << "adding" << sKey;
-        settings->setValue(sKey, pickStatus);
-    }
-    else {
-//        qDebug() << "MW::updatePickLog" << "removing" << sKey;
-        settings->remove(sKey);
-    }
-    settings->endGroup();
 }
 
 void MW::pushPick(QString fPath, QString status)

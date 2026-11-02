@@ -103,11 +103,11 @@ public:
     QString selectSrc = "";
     QString currentFolderPath();
     QStringList selectedFolderPaths() const;
-    /*  MW::folderSelectionChange REFUSES a change that would discard un-ingested picks,
-        and calls this from inside the (directly connected) signal.  It puts the highlight
-        back on LOADEDFOLDERS -- what the datamodel actually holds -- and records the
-        refusal, so the emitter that is still on the stack leaves the tree alone instead of
-        moving it to a folder that was never loaded.  See MW::okToDiscardPicks. */
+    /*  MW::folderSelectionChange may REFUSE a change, calling this from inside the
+        (directly connected) signal.  It puts the highlight back on LOADEDFOLDERS -- what
+        the datamodel actually holds -- and records the refusal, so the emitter that is
+        still on the stack leaves the tree alone instead of moving it to a folder that was
+        never loaded.  No caller today (see emitFolderSelectionChange). */
     void refuseFolderChange(const QStringList &loadedFolders);
     /*  Put the tree highlight on the folders the datamodel holds, without emitting
         anything.  Public because MW clears the selection when the catalog becomes the

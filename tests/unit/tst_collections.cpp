@@ -11,6 +11,7 @@
 #include "Cache/devpreviewcache.h"
 #include "Cache/pathkey.h"
 #include "Datamodel/collectionstore.h"
+#include "Datamodel/savedpicks.h"
 #include "Datamodel/userdb.h"
 
 /*
@@ -53,6 +54,7 @@ private slots:
     void aNewerFileIsLeftUntouched();
     void anOldCollectionsDbIsRenamedNotLost();
     void theVocabularyIsImportedFromTheIndexOnce();
+    void savedPicksWriteThroughAndFollowFiles();
 
 private:
     using Kind = CollectionStore::Kind;
@@ -557,6 +559,55 @@ void tst_collections::theVocabularyIsImportedFromTheIndexOnce()
         QCOMPARE(q.value(0).toString(), QString("Mine"));
     }
     u.setLegacyIndexPath(noIndexPath());
+}
+
+void tst_collections::savedPicksWriteThroughAndFollowFiles()
+{
+    /*  Written through: a Set reaches the file on the queued Flush (or an explicit one),
+        so reopening -- the next session, or the one after a crash -- sees it. An unpick
+        must reach it too: that is what the index's image.pick never did. */
+    SavedPicks::Open();
+    QVERIFY(SavedPicks::Keys().isEmpty());
+    const QString a = img("a.jpg"), b = img("b.jpg"), bv = img("b.jpg") + "/#v1";
+    SavedPicks::Set(a, true);
+    SavedPicks::Set(b, true);
+    SavedPicks::Set(bv, true);
+    QCOMPARE(SavedPicks::Count(), 3);
+    QCoreApplication::processEvents();          // the queued flush
+    SavedPicks::Set(a, false);
+    SavedPicks::Flush();
+
+    UserDb &u = UserDb::instance();
+    auto reopen = [&] {
+        SavedPicks::Close();
+        u.setPath(QString());
+        u.setPath(dbPath());
+        SavedPicks::Open();
+    };
+    reopen();
+    QCOMPARE(SavedPicks::Keys(), QSet<QString>({b, bv}));
+
+    // a move Winnow makes carries the pick and the version's
+    const QString c = img("c.jpg");
+    SavedPicks::OnMoved(b, c);
+    SavedPicks::Flush();
+    reopen();
+    QCOMPARE(SavedPicks::Keys(), QSet<QString>({c, c + "/#v1"}));
+
+    // a delete takes them; a folder delete takes everything under it
+    SavedPicks::OnDeleted(c);
+    QVERIFY(SavedPicks::Keys().isEmpty());
+    SavedPicks::Set(a, true);
+    SavedPicks::OnFolderDeleted(images.path());
+    QVERIFY(SavedPicks::Keys().isEmpty());
+
+    // Clear Picks and Close
+    SavedPicks::Set(a, true);
+    SavedPicks::Flush();
+    SavedPicks::ClearAll();
+    reopen();
+    QVERIFY(SavedPicks::Keys().isEmpty());
+    SavedPicks::Close();
 }
 
 QTEST_MAIN(tst_collections)

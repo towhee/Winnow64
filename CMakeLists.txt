@@ -392,6 +392,8 @@ set(WINNOW_SOURCES
     Main/keywordauditprobe.h
     Datamodel/keywordauditstore.cpp
     Datamodel/keywordauditstore.h
+    Datamodel/savedpicks.cpp
+    Datamodel/savedpicks.h
     Utilities/visualaudit.cpp
     Utilities/visualaudit.h
     Utilities/screensampler.cpp

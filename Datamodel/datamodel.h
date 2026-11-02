@@ -978,6 +978,9 @@ public:
 
 public slots:
     int rowFromKey(QString key);
+    /*  Rows' picks made to agree with the saved picks after a fill (Datamodel/
+        savedpicks.h). Returns rows changed. MW::folderChanged. */
+    int syncSavedPicks();
     int proxyRowFromKey(QString key, QString src = "");
     QString keyFromProxyRow(int sfRow);
     QString sourcePathFromProxyRow(int sfRow);

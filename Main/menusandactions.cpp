@@ -169,12 +169,14 @@ void MW::createFileActions()
     addAction(saveAsFileAction);
     connect(saveAsFileAction, &QAction::triggered, this, &MW::saveAsFile);
 
-    /* File menu / thumbnail context menu twin of developExportAction. That one is greyed
-       outside Develop mode and labelled "X", which is Reject there; this one has no key
-       and stays enabled, since the export renders each image's STORED recipe
-       (stackJobFor) and does not need the Develop session. */
+    /* Export the selected images with their develop settings applied. ONE action for the
+       File menu, the Develop menu and the thumbnail context menu, enabled in every mode:
+       the export renders each image's STORED recipe (stackJobFor) and does not need the
+       Develop session. Cmd/Ctrl+Shift+E (Lightroom's Export) works everywhere; it was X in
+       Develop until 2026-11-01, but X is Reject in Browse and Flip in a Transform session. */
     exportDevelopedAction = new QAction(tr("Export Images..."), this);
     exportDevelopedAction->setObjectName("exportDeveloped");
+    exportDevelopedAction->setShortcut(QKeySequence("Ctrl+Shift+E"));
     exportDevelopedAction->setShortcutVisibleInContextMenu(true);
     addAction(exportDevelopedAction);
     connect(exportDevelopedAction, &QAction::triggered, this, &MW::developExport);
@@ -513,8 +515,9 @@ void MW::createEditActions()
     clearPicksAction = new QAction(tr("Clear all picks"), this);
     clearPicksAction->setObjectName("clearPicks");
     clearPicksAction->setShortcutVisibleInContextMenu(true);
-    clearPicksAction->setToolTip(tr("Unpick every picked image, including picks hidden by "
-                                    "the filters. Rejects are kept. Undo with "
+    clearPicksAction->setToolTip(tr("Unpick every loaded picked image, including picks "
+                                    "hidden by the filters. Picks in folders not loaded "
+                                    "are kept, and so are rejects. Undo with "
                                     "Ingest > Recover prior pick state."));
     addAction(clearPicksAction);
     connect(clearPicksAction, &QAction::triggered, this, &MW::clearPicks);
@@ -1300,11 +1303,6 @@ void MW::createUtilActions()
     connect(developBeforeAfterAction, &QAction::triggered,
             this, &MW::toggleDevelopBeforeAfter);
 
-    developExportAction = new QAction(tr("Export Images\tX"), this);
-    developExportAction->setObjectName("developExport");
-    developExportAction->setShortcutVisibleInContextMenu(true);
-    addAction(developExportAction);
-    connect(developExportAction, &QAction::triggered, this, &MW::developExport);
 
     /* Build developed previews for images that are not open in Develop -- edits made in an
        earlier session, and multi-image paste targets, which have a recipe but no render and
@@ -1435,7 +1433,7 @@ void MW::createUtilActions()
        menu's Scopes submenu and in the strip's own right-click menu (ScopesView emits
        menuRequested). There is no shortcut: the state is picked, not cycled, so a key
        that stepped blindly through four states was the wrong control (G is Grid view).
-       The action-row button beside the Develop dock title stays the plain show/hide. */
+       The strip's "Histogram" header stays the plain collapse / expand. */
     developScopesGroup = new QActionGroup(this);
     developScopesGroup->setExclusive(true);
     struct { QAction **act; const char *name; QString text; int choice; } scopeItems[] = {
@@ -2965,8 +2963,8 @@ void MW::createDevelopMenu()
     developScopesMenu->addSeparator();
     developScopesMenu->addAction(developScopesHideAction);
     connect(developScopesMenu, &QMenu::aboutToShow, this, &MW::syncDevelopScopesMenu);
-    developMenu->addAction(developExportAction);
-    /* Export with preset: the same batch as developExportAction but with no dialog, one
+    developMenu->addAction(exportDevelopedAction);
+    /* Export with preset: the same batch as exportDevelopedAction but with no dialog, one
        item per saved export preset. Rebuilt from the store on every show, the way
        embelExportMenu is rebuilt from the embellish templates -- a preset saved in the
        export dialog appears here without any other plumbing. */
@@ -4287,10 +4285,7 @@ void MW::loadDevelopShortcuts()
     developShortcuts[Qt::Key_M] = developAddToMaskAction;     // global: unbound
     developShortcuts[Qt::Key_O] = toggleMaskOverlayAction;  // global: Open folder
     developShortcuts[Qt::Key_S] = developSpotAction;        // global: Slideshow
-    /* W is ALSO claimed by an active Transform session for Warp (arbiter rule 1a, which
-       runs before this table), so it reaches the dropper only when no Transform is up. */
     developShortcuts[Qt::Key_W] = developWbSamplerAction;   // global: New Workspace
-    developShortcuts[Qt::Key_X] = developExportAction;      // global: Reject
     /* Lightroom's Before/After key. The only NON-LETTER in this table, which is why the
        arbiter's value-editor guard tests the table rather than the A-Z range -- focus
        sits on a Develop dock slider for most of a session and a slider has no more use
@@ -4333,7 +4328,7 @@ void MW::syncDevelopMenuEnabled()
     const QList<QAction *> modeLocal {
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
         developSpotAction, developWbSamplerAction,
-        developBeforeAfterAction, developExportAction,
+        developBeforeAfterAction,
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };
     for (QAction *a : modeLocal) if (a) a->setEnabled(inDevelop);

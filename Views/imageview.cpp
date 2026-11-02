@@ -1563,11 +1563,13 @@ void ImageView::setSpacePanOverride(bool on)
         /* Suppress the tool's brush/spot cursor circle and show the loupe hand cursor. */
         maskBrushCursorOn = false;
         spotCursorOn = false;
-        setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
+        /* The crop pads the scene so the image can always pan under the frame. */
+        setCursor(isScrollable || cropActive() ? Qt::OpenHandCursor : Qt::ArrowCursor);
     }
     else {
         /* Restore the tool cursor; the next hover in mouseMoveEvent refines it. */
-        if (spotEditMode) setCursor(Qt::BlankCursor);   // brush-size circle is the cursor
+        if (cropActive()) cropUpdateHoverCursor(viewport()->mapFromGlobal(QCursor::pos()));
+        else if (spotEditMode) setCursor(Qt::BlankCursor);   // brush-size circle is the cursor
         else if (isScrollable) setCursor(Qt::OpenHandCursor);
         else setCursor(Qt::ArrowCursor);
     }
@@ -2061,16 +2063,17 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
 
     cropEditMode = true;
     cropWarp = false;                 // always start as a plain rectangle crop
-    cropAltHeld = false;
+    cropAltHeld = cropCmdHeld = false;
     cropLevelMode = cropLevelDragging = false;
     cropDrag = -1;
+    cropDrawStarted = false;
     cropFlipPrevN = cropFlipResultN = QRectF();   // no flip stash into a new session
     /* Give the view room to pan even at fit zoom (so the image can be dragged under the fixed
        frame, with parts moving off the central widget) WITHOUT changing the zoom: only the
        scrollable area grows, not the transform. Restored in endCropEdit. */
     cropSetPanSceneRect();
     cropSyncFrameFromN();             // derive the on-screen frame from cropN (no transform change)
-    setCursor(Qt::ArrowCursor);
+    cropSyncModifiers();              // picks the crop / level / handle cursor under the pointer
     viewport()->update();
     cropEmitChanged();
 }
@@ -2109,9 +2112,10 @@ void ImageView::endCropEdit()
     if (G::isLogger) G::log("ImageView::endCropEdit");
     cropEditMode = false;
     cropWarp = false;
-    cropAltHeld = false;
+    cropAltHeld = cropCmdHeld = false;
     cropLevelMode = cropLevelDragging = false;
     cropDrag = -1;
+    cropDrawStarted = false;
     /* Restore the normal scrollable area and re-centre the (possibly panned) image. Zoom is left
        as the user set it. */
     setSceneRect(scene->itemsBoundingRect());
@@ -2120,28 +2124,6 @@ void ImageView::endCropEdit()
     viewport()->update();            // clear the overlay; the view transform is untouched
     // drop the live "Cropped: WxH" (a cancel leaves no saved crop to refresh it)
     emit updateStatus(true, "", "ImageView::endCropEdit");
-}
-
-void ImageView::beginLevel()
-{
-    if (!cropActive()) return;
-    if (G::isLogger) G::log("ImageView::beginLevel");
-    cropLevelMode = true;
-    cropLevelDragging = false;
-    setCursor(levelCursor);
-    viewport()->update();
-}
-
-void ImageView::beginWarp()
-{
-    if (!cropActive()) return;
-    if (G::isLogger) G::log("ImageView::beginWarp");
-    cropLevelMode = cropLevelDragging = false;
-    if (!cropWarp) cropEnterWarp();     // seed the free quad from the current rectangle
-    cropAltHeld = true;                 // show the "transform" rubber-band style
-    cropSyncFrameFromN();
-    setCursor(Qt::ArrowCursor);
-    viewport()->update();
 }
 
 void ImageView::beginKaleido(QPointF centreN, double angleDeg, int segments,
@@ -2631,10 +2613,47 @@ int ImageView::cropHitTest(QPoint vp) const
         QPointF(f.center().x(), f.top()), QPointF(f.right(), f.center().y()),
         QPointF(f.center().x(), f.bottom()), QPointF(f.left(), f.center().y())
     };
-    for (int i = 0; i < 8; ++i)
+    /* Opt held = the warp tool: only the corners are handles (the side handles are not
+       drawn in the red "transform" style, so they must not be grabbable either). */
+    const int nHandles = cropAltHeld ? 4 : 8;
+    for (int i = 0; i < nHandles; ++i)
         if (QLineF(vp, pts[i]).length() <= g) return i;
     if (f.contains(vp)) return 8;
     return -1;
+}
+
+void ImageView::cropUpdateHoverCursor(QPoint vp)
+{
+/*
+    The crop tool's hover cursor. Cmd (Ctrl) held, or a level line being drawn = the
+    level glyph. Over a handle = resize. Opt (Alt) held off a corner = arrow: the warp tool only
+    drags corners, so there is nothing to start there. Anywhere else = the crop glyph,
+    because a drag there draws a new crop (panning moved to Space).
+*/
+    if (cropLevelMode || cropCmdHeld) { setCursor(levelCursor); return; }
+    const int h = cropHitTest(vp);
+    const int maxHandle = (cropWarp || cropAltHeld) ? 3 : 7;
+    if (h >= 0 && h <= maxHandle) setCursor(Qt::SizeAllCursor);
+    else if (cropAltHeld)         setCursor(Qt::ArrowCursor);
+    else                          setCursor(cropCursor);
+}
+
+void ImageView::cropSyncModifiers()
+{
+    if (!cropActive()) return;
+    /* The key event's own modifiers lag the key being pressed/released, so read the live
+       state. On macOS Qt maps Cmd to ControlModifier, so this is Cmd there and Ctrl on
+       Windows/Linux -- the platform-native "command" key in both cases. */
+    const Qt::KeyboardModifiers m = QGuiApplication::queryKeyboardModifiers();
+    const bool alt = m & Qt::AltModifier;
+    const bool cmd = m & Qt::ControlModifier;
+    if (alt == cropAltHeld && cmd == cropCmdHeld) return;
+    cropAltHeld = alt;
+    cropCmdHeld = cmd;
+    /* Mid-gesture the drag owns the cursor; only a hover is re-evaluated. */
+    if (!spacePanOverride && !isLeftMouseBtnPressed)
+        cropUpdateHoverCursor(viewport()->mapFromGlobal(QCursor::pos()));
+    viewport()->update();
 }
 
 qreal ImageView::cropLockedAspect() const
@@ -6038,14 +6057,12 @@ bool ImageView::event(QEvent *event) {
         }
     }
 
-    /* Crop: Alt/Opt toggles the "transform" rubber-band look the moment it is pressed/
-       released (the mouse-move path also tracks it, for when this view does not hold
-       keyboard focus). */
+    /* Crop: Opt/Alt (warp) and Cmd/Ctrl (level) switch the frame style and cursor the
+       moment they are pressed/released. MW's event filter does the same for when this
+       view does not hold keyboard focus; the mouse-move path also tracks them. */
     if (cropActive() && (event->type() == QEvent::KeyPress || event->type() == QEvent::KeyRelease)) {
-        if (static_cast<QKeyEvent *>(event)->key() == Qt::Key_Alt) {
-            const bool held = (event->type() == QEvent::KeyPress);
-            if (held != cropAltHeld) { cropAltHeld = held; viewport()->update(); }
-        }
+        const int k = static_cast<QKeyEvent *>(event)->key();
+        if (k == Qt::Key_Alt || k == Qt::Key_Control) cropSyncModifiers();
     }
 
     if (event->type() == QEvent::NativeGesture) {
@@ -6291,10 +6308,6 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    /* Crop: grabbing a handle resizes the frame (static canvas) -- consume it. Alt + a corner in
-       rectangle mode breaks the rectangle into a free 4-point warp quad. Anywhere else is a normal
-       canvas pan that slides the image under the fixed frame, so fall through to the pan handling
-       below (cropDrag stays -1; the frame is re-derived from cropN as the image moves). */
     /* Kaleido: grab the spoke (angle) or the centre; a click elsewhere on the image moves
        the centre there and keeps dragging it. */
     if (!spacePanOverride && kaleidoActive() && event->button() == Qt::LeftButton) {
@@ -6318,6 +6331,14 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         setCursor(Qt::ClosedHandCursor);
         return;
     }
+    /* Crop tool. Cmd (Ctrl) held: draw a level line. Grabbing a
+       handle resizes the frame over a static canvas; Opt (Alt) + a corner breaks the rectangle
+       into a free 4-point warp quad. A drag anywhere else -- inside the frame too -- draws a
+       NEW crop. Panning the image under the frame is Space (spacePanOverride skips all of
+       this and runs the loupe pan below); the wheel zooms. Every press is consumed. */
+    if (!spacePanOverride && cropActive() && event->button() == Qt::LeftButton
+        && (event->modifiers() & Qt::ControlModifier))
+        cropLevelMode = true;       // one-shot: this drag draws a level line; cleared on release
     if (!spacePanOverride && cropActive() && cropLevelMode && event->button() == Qt::LeftButton) {
         cropLevelP1 = cropLevelP2 = event->pos();   // start the level line
         cropLevelDragging = true;
@@ -6325,29 +6346,29 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
     if (!spacePanOverride && cropActive() && event->button() == Qt::LeftButton) {
+        const bool alt = event->modifiers() & Qt::AltModifier;
+        cropAltHeld = alt;          // the hit test honours the warp style
         const int h = cropHitTest(event->pos());
-        if (!cropWarp && (event->modifiers() & Qt::AltModifier) && h >= 0 && h <= 3) {
+        if (!cropWarp && alt && h >= 0 && h <= 3) {
             cropEnterWarp();        // seed the quad, then drag this corner
         }
-        const int maxHandle = cropWarp ? 3 : 7;
+        isLeftMouseBtnPressed = true;
+        const int maxHandle = (cropWarp || alt) ? 3 : 7;
         if (h >= 0 && h <= maxHandle) {
             cropDrag = h;
-            isLeftMouseBtnPressed = true;
             setCursor(Qt::SizeAllCursor);
             viewport()->update();
             return;
         }
-        /* No handle hit. When the crop is still the whole frame, a drag draws a brand-new crop
-           rectangle from here (saves shrinking the full-frame crop by its handles). Otherwise it is
-           a normal canvas pan. */
-        if (cropIsFull()) {
-            cropDrag = kCropDrawNew;
-            cropDrawAnchorVp = event->pos();
-            isLeftMouseBtnPressed = true;
-            setCursor(cropCursor);
-            return;
-        }
-        cropDrag = -1;          // pan: handled by the normal Left-button path below
+        /* The warp tool only drags corners: Opt off a corner starts nothing. */
+        if (alt) { cropDrag = -1; return; }
+        /* No handle hit: rubber-band a brand-new crop from here. Nothing changes until the
+           drag passes a few px (cropDrawStarted), so a stray click keeps the crop. */
+        cropDrag = kCropDrawNew;
+        cropDrawAnchorVp = event->pos();
+        cropDrawStarted = false;
+        setCursor(cropCursor);
+        return;
     }
 
     /* Color Range eyedropper: a left click samples the colour under the cursor (shift = add another
@@ -6542,11 +6563,9 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     if (event->button() == Qt::LeftButton) {
         /* A Develop tool owns the canvas: don't start a pan or let the click reach the
-           base view -- the tool's own branches above handled the gesture. EXCEPTION: a
-           crop with no handle grabbed (cropDrag < 0) deliberately falls through here to
-           pan the image under the fixed frame (see the crop branch above); the crop
-           release handler suppresses the click-to-zoom, so let it start the pan. */
-        if (!spacePanOverride && developToolActive() && !(cropActive() && cropDrag < 0)) { event->accept(); return; }
+           base view -- the tool's own branches above handled the gesture. (Space held
+           borrows the pan, including under the crop frame.) */
+        if (!spacePanOverride && developToolActive()) { event->accept(); return; }
         isLeftMouseBtnPressed = true;
         isMouseDrag = false;
         mousePressPt.setX(event->position().toPoint().x());
@@ -6764,8 +6783,19 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
     }
     if (!spacePanOverride && cropActive()) {
         const bool alt = (event->modifiers() & Qt::AltModifier);
-        if (alt != cropAltHeld) { cropAltHeld = alt; viewport()->update(); }
+        const bool cmd = (event->modifiers() & Qt::ControlModifier);
+        if (alt != cropAltHeld || cmd != cropCmdHeld) {
+            cropAltHeld = alt;
+            cropCmdHeld = cmd;
+            viewport()->update();
+        }
         if (cropDrag == kCropDrawNew) {                // rubber-band a brand-new crop from the anchor
+            if (!cropDrawStarted
+                && (event->pos() - cropDrawAnchorVp).manhattanLength() < 4) return;
+            if (!cropDrawStarted) {
+                cropDrawStarted = true;
+                cropWarp = false;     // a new rectangle replaces an untraced warp quad
+            }
             cropDrawNewFrom(event->pos());
             viewport()->update();
             return;
@@ -6775,15 +6805,9 @@ void ImageView::mouseMoveEvent(QMouseEvent *event)
             viewport()->update();
             return;
         }
-        if (!isLeftMouseBtnPressed) {                  // hover: pick the cursor
-            const int h = cropHitTest(event->pos());
-            if (h >= 0 && h <= 7)      setCursor(Qt::SizeAllCursor);   // over a handle: resize
-            else if (cropIsFull())     setCursor(cropCursor);          // whole frame: draw a new crop
-            else if (h == 8)           setCursor(Qt::OpenHandCursor);  // inside a sub-crop: pan
-            else                       setCursor(Qt::ArrowCursor);
-            return;
-        }
-        /* else: panning -- let the normal scrollbar pan below run, then recompute cropN. */
+        /* Hover, or an Opt press off a corner (nothing to drag): keep the tool cursor. */
+        cropUpdateHoverCursor(event->pos());
+        return;
     }
 
     /* Mask edit drag. Linear: endpoint rotate+scale about centre, or translate. Radial: centre
@@ -7037,7 +7061,7 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
         isLeftMouseBtnPressed = false;
         const bool wasDragging = cropLevelDragging;
         cropLevelDragging = false;
-        setCursor(Qt::ArrowCursor);
+        cropUpdateHoverCursor(event->pos());   // still the level glyph while Cmd is held
         viewport()->update();
         const QPointF d = cropLevelP2 - cropLevelP1;
         if (wasDragging && QLineF(cropLevelP1, cropLevelP2).length() >= 12.0) {
@@ -7051,13 +7075,14 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     }
 
     /* End a crop gesture. The view transform is never touched, so there is no re-stage: just clear
-       the drag, release any grab the pan path took, and leave the image where the user left it
-       (no zoom-toggle-on-release). */
+       the drag and leave the image where the user left it (no zoom-toggle-on-release). The press
+       never reached the base view, so there is no pan grab to release. */
     if (!spacePanOverride && cropActive() && isLeftMouseBtnPressed) {
         /* A free resize (handle or a newly drawn frame) that left the chosen ratio makes
            the crop "Custom": adopt the frame's own ratio here, so a later lock or flip
            honours what is on screen, and tell the Transform panel to show it. */
-        const bool resized = (cropDrag >= 0 && cropDrag <= 7) || cropDrag == kCropDrawNew;
+        const bool resized = (cropDrag >= 0 && cropDrag <= 7)
+                             || (cropDrag == kCropDrawNew && cropDrawStarted);
         if (resized && !cropWarp && !cropAspectLocked) {
             const qreal r = cropFrameAspect();
             const qreal t = cropTargetAspect();
@@ -7069,9 +7094,9 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
             }
         }
         cropDrag = -1;
+        cropDrawStarted = false;
         isLeftMouseBtnPressed = false;
-        QGraphicsView::mouseReleaseEvent(event);     // release the pan grab, if any
-        setCursor(Qt::ArrowCursor);
+        cropUpdateHoverCursor(event->pos());
         viewport()->update();
         cropEmitChanged();
         return;

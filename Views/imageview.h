@@ -385,8 +385,11 @@ public slots:
     void beginCropEdit(double aspect, bool locked, bool flipped,
                        QRectF initialCrop = QRectF(0, 0, 1, 1));
     void endCropEdit();
-    void beginLevel();                  // arm the "draw a level line" tool (crop must be active)
-    void beginWarp();                   // enter 4-point perspective mode (seed the quad, drag corners)
+    /* Crop tool modifiers: Cmd (Ctrl on Windows/Linux) = Level, Opt (Alt) = Warp. Reads the
+       live modifier state and refreshes the frame style + hover cursor. Called from MW's
+       event filter on a bare modifier press/release (ImageView rarely holds focus in
+       Develop) and from mouseMoveEvent. No-op unless the crop tool is open. */
+    void cropSyncModifiers();
     /* aspect = w/h, 0 = free ("As shot"). refit == false RELEASES a ratio instead of
        choosing one (the selected custom aspect was deleted): the constraint goes, but the
        crop frame is left exactly where it is -- a deletion in a combo must not re-shape
@@ -1080,11 +1083,13 @@ private:
        ordered TL,TR,BR,BL. The Rectify button warps the quad back to a rectangle (pixel warp is the
        deferred engine step). */
     bool    cropWarp       = false;
-    bool    cropAltHeld    = false;      // Alt/Opt down: show the "transform" rubber band style
+    bool    cropAltHeld    = false;      // Alt/Opt down: warp tool (red "transform" rubber band)
+    bool    cropCmdHeld    = false;      // Cmd (Ctrl on Win/Linux) down: level tool
     QPointF cropQuadN[4];
     QPointF cropQuadVp[4];
     static constexpr int kCropDrawNew = 9;   // cropDrag value while rubber-banding a brand-new crop
     QPoint  cropDrawAnchorVp;            // drag-start corner while drawing a new crop
+    bool    cropDrawStarted = false;     // the new-crop drag passed its threshold (a click is not a crop)
     QCursor cropCursor;                 // arrow + corner-bracket crop glyph (built in the ctor)
     QCursor levelCursor;               // arrow + spirit-level (vial + bubble) glyph, for the Level tool
     QCursor dropperCursor;             // pipette, hotspot at tip (white balance)
@@ -1134,6 +1139,7 @@ private:
     void    cropSyncFrameFromN();                   // recompute frame/quad from cropN/cropQuadN
     void    cropEmitChanged();                      // clamp cropN to [0,1] and emit cropChanged
     int     cropHitTest(QPoint vp) const;           // handle under vp (-1 none, 8 = inside)
+    void    cropUpdateHoverCursor(QPoint vp);       // crop / level / resize cursor for a hover at vp
     void    cropResizeFromHandle(QPoint vp);        // move handle cropDrag to vp (aspect-aware)
     /* The aspect the drag honours: 0 when unlocked, else cropAspect, except a locked
        "As shot" (cropAspect == 0) resolves to the image's native w/h so the frame
@@ -1153,12 +1159,6 @@ private:
     void    cropDrawNewFrom(QPoint vp);             // rubber-band a new crop, anchor -> vp
     void    cropDrawOverlay(QPainter *p, const QRectF &br);
     bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }
-    /* True when the crop is (still) the whole frame -- then a drag on empty area draws a NEW crop
-       rectangle instead of panning, and the cursor is a crop crosshair. */
-    bool    cropIsFull() const {
-        return !cropWarp && cropN.x() <= 0.001 && cropN.y() <= 0.001 &&
-               cropN.right() >= 0.999 && cropN.bottom() >= 0.999;
-    }
 };
 
 #endif // IMAGEVIEW_H
