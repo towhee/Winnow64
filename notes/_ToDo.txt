@@ -5,12 +5,14 @@ WHAT'S NEW
 - Add Mix to develop color
 
 BUGS / TO DO
+- Export dlg embellish selected small dlg w scroll bars
+- Folder rename / Move / Delete from library (in Filter > Folders)
+- Catalog management: move, copy, join, select
+- Find duplicates (expand/collapse) and library use.
 - Review default workspaces
 - Videos starting at final frame.
 - Space bar not start/stopping video play
 - Arrow navigation in develop when no slider has the focus
-- Catalog management: move, copy, join, select
-- Find duplicates (expand/collapse) and library use.
 - Rethink thumbnail badges
 - Add isVersion to Queries lookup
 - Search for images with an Effect.

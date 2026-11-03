@@ -565,6 +565,44 @@ void MW::deleteSelectedFiles()
     deleteFiles(paths);
 }
 
+void MW::deleteRejectedFiles()
+{
+/*
+    Select every rejected image in the current view (the filtered proxy) and run
+    deleteImagesAction on it, so the confirmation dialog, version handling and
+    trash/recycle bin path are exactly those of Delete. Rejected images hidden by a
+    filter are not selectable and are left alone.
+*/
+    if (G::isLogger) G::log("MW::deleteRejectedFiles");
+
+    if (!G::allMetadataAttempted) {
+        deleteSelectedFiles();                  // shows the "wait until loaded" popup
+        return;
+    }
+
+    /* A frozen selection (Compare) refuses selectRows, so deleteImagesAction would
+       trash the frozen images instead of the rejects. */
+    if (sel->isFrozen()) {
+        G::popup->showPopup("Unfreeze the selection before deleting rejected images.", 2000);
+        return;
+    }
+
+    QList<int> rejectedRows;
+    const int n = dm->sf->rowCount();
+    for (int sfRow = 0; sfRow < n; ++sfRow) {
+        if (dm->sf->index(sfRow, G::PickColumn).data(Qt::EditRole).toString() == "Rejected")
+            rejectedRows.append(sfRow);
+    }
+
+    if (rejectedRows.isEmpty()) {
+        G::popup->showPopup("No rejected images to delete.", 1500);
+        return;
+    }
+
+    sel->selectRows(rejectedRows, false);
+    deleteImagesAction->trigger();
+}
+
 void MW::deleteFiles(QStringList paths)
 {
 /*

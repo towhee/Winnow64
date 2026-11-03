@@ -352,6 +352,26 @@ void MW::createFileActions()
     addAction(deleteImagesAction);
     connect(deleteImagesAction, &QAction::triggered, this, &MW::deleteSelectedFiles);
 
+    /*  Select every rejected image, then run deleteImagesAction on that selection: the
+        same confirmation, version handling and trash/recycle bin path as Delete. Ctrl is
+        Cmd on macOS. */
+    deleteRejectedAction = new QAction("Move rejected to trash", this);
+#ifdef Q_OS_WIN
+    deleteRejectedAction->setText("Move rejected to recycle bin");
+#endif
+    deleteRejectedAction->setObjectName("deleteRejected");
+    deleteRejectedAction->setShortcutVisibleInContextMenu(true);
+    {
+        QList<QKeySequence> keys;
+        keys << QKeySequence("Ctrl+Delete") << QKeySequence("Ctrl+Backspace");
+        deleteRejectedAction->setShortcuts(keys);
+        deleteRejectedAction->setText(QString("%1\t%2, %3").arg(deleteRejectedAction->text())
+            .arg(keys.at(0).toString(QKeySequence::NativeText))
+            .arg(keys.at(1).toString(QKeySequence::NativeText)));
+    }
+    addAction(deleteRejectedAction);
+    connect(deleteRejectedAction, &QAction::triggered, this, &MW::deleteRejectedFiles);
+
     deleteActiveFolderAction = new QAction(moveFolderToWhatever, this);
     deleteActiveFolderAction->setObjectName("deleteActiveFolder");
     addAction(deleteActiveFolderAction);
@@ -2676,6 +2696,7 @@ void MW::createFileMenu()
     fileMenu->addAction(includeSidecarsAction);
     fileMenu->addSeparator();
     fileMenu->addAction(deleteImagesAction);
+    fileMenu->addAction(deleteRejectedAction);
     fileMenu->addAction(deleteActiveFolderAction);
     fileMenu->addSeparator();
     fileMenu->addAction(renameAction);
@@ -3807,6 +3828,7 @@ void MW::enableSelectionDependentMenus()
          isCacheFolder ? needWritable : needClipboard);
 
     gate(deleteImagesAction, canWrite, needWritable);
+    gate(deleteRejectedAction, canWrite, needWritable);
     gate(pickAction, dmHasRows, needFolder);
     gate(pickMouseOverAction, dmHasRows, needFolder);
     gate(rejectAction, dmHasRows, needFolder);

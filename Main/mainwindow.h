@@ -1921,6 +1921,7 @@ private:
     QAction *copyFilesAction;
     QAction *copyImageAction;
     QAction *deleteImagesAction;
+    QAction *deleteRejectedAction;      // shortcut Ctrl/Cmd + Delete or Backspace
     QAction *deleteActiveFolderAction;
     QAction *deleteBookmarkFolderAction;
     QAction *deleteFSTreeFolderAction;
@@ -3712,6 +3713,7 @@ private:
     void selfTestNavigate();            // WINNOW_SELFTEST_NAV, Main/selftestnav.cpp
     void insertFiles(QStringList fPaths);
     void deleteSelectedFiles();
+    void deleteRejectedFiles();
     void deleteFiles(QStringList paths);
     void deleteFolder();
     void deleteAllImageMemCard(QString rootPath, QString name);

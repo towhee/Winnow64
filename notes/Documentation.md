@@ -106,6 +106,7 @@
     - [4.3.2 Rules That Keep It Correct](#432-rules-that-keep-it-correct)
     - [4.3.3 The DataModel Side](#433-the-datamodel-side)
     - [4.3.4 Integrity Checks and Tests](#434-integrity-checks-and-tests)
+    - [4.3.5 Delete Rejected](#435-delete-rejected)
   - [4.4 Worker Threads and the Model](#44-worker-threads-and-the-model)
     - [4.4.1 BuildFilters Reads a Snapshot](#441-buildfilters-reads-a-snapshot)
     - [4.4.2 The Worker Records, the GUI Thread Applies](#442-the-worker-records-the-gui-thread-applies)
@@ -2118,6 +2119,14 @@ The predicate is held while the restore is pending (2026-10-15). Step 5's rebuil
 DataModel::verifyIntegrity runs after every mutation: fPathRow has one entry per row, no empty key, every row's path maps back to its row, the five running load counts equal a recount, and each row's RowSync flags match its columns. A failure prints MODELINTEGRITY lines and raises a G::issue, so the model names the defect when it happens instead of a thumbnail going missing later.
 
 ctest model_mutation (WINNOW_SELFTEST_MUTATION=1, Main/selftestmutation.cpp) works on a temporary copy of the fixture folder. It inserts one file, then two at once, replaces one in place, removes scattered rows, finds an outside add and delete through Refresh, removes everything and inserts into the empty model, checking integrity, presence, sort order, MetaLoaded and proxy order after each, with the model-contract tester attached. Its "click after versions" step checks navigation right after a mid-model insert. Not yet covered: an active filter or a Catalog scope during the mutation, and a mutation racing a folder load (the TSan harness).
+
+#### 4.3.5 Delete Rejected
+
+File > Move rejected to trash (recycle bin on Windows), Cmd/Ctrl + Delete or Cmd/Ctrl + Backspace (2026-11-03). MW::deleteRejectedFiles (`Main/fileoperations.cpp`) selects every proxy row whose pick is "Rejected" with ONE Selection::selectRows call, then triggers deleteImagesAction, so the confirmation, the version handling and the trash path are exactly those of Delete (MW::deleteSelectedFiles). It is gated with deleteImagesAction (refused in the cache folder).
+
+- Only rows in the proxy are selected: a reject hidden by a filter is left alone, because the user cannot see it.
+- A frozen selection (Compare) refuses selectRows, so the action stops with a popup rather than letting deleteImagesAction trash the frozen images.
+- Before all metadata is read it defers to deleteSelectedFiles' "wait until loaded" popup.
 
 The click-through probe, WINNOW_SELFTEST_NAV=1 (MW::selfTestNavigate, Main/selftestnav.cpp; ctest selftest_nav), selects rows one at a time after the load and checks each reaches the ImageCache and the loupe, dumping the ImageCache health checks, decoders and item list on the first failure. That is how the RowSync and attempt-count faults above were found. WINNOW_SELFTEST_CLICK_MS sets the wait per click (default 6000, long enough for a raw). It is not WINNOW_SELFTEST_NAV_MS: that name already drives the generic self-test's own navigation ticker, and reusing it made the two fight over the selection.
 

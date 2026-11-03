@@ -252,6 +252,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Delete rejected</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Delete or Backspace</string>
+        </property>
+        <property name="text">
+         <string>Select all rejected images and delete them (confirmation dialog)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Rename files</string>
         </property>
         <property name="text">
