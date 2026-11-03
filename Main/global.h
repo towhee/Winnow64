@@ -126,6 +126,12 @@ Q_NAMESPACE
         HeightColumn,
         ModifiedColumn,
         CreatedColumn,
+        /* The capture DATE, "yyyy-MM-dd". READ-ONLY -- derived from Year, Month and Day
+           by the row store, never written, so it costs a row nothing. INSERTED, not
+           appended (2026-11-03), so it sits beside Created in the table: every column
+           after it moved up one, and MW::migrateSortColumnLayout shifts the saved
+           sortColumn indices to match. */
+        DateColumn,
         // items read on demand (secondary metadata fields)
         YearColumn,
         /*  Month is the month NAME ("Jan".."Dec"), derived from Created beside Year

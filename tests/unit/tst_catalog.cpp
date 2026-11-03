@@ -265,8 +265,11 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         SHORT with its padding, so rows with an impossible orientation or JPEG/TIFF ISO
         have their stamp and thumb row cleared to be re-read. Version 29 adds no table
         either: it drops the cached thumbnails of wide-gamut images, which are now
-        converted to sRGB (schema29DropsWideGamutThumbs). */
-    QCOMPARE(CacheDb::schemaVersion(), 29);
+        converted to sRGB (schema29DropsWideGamutThumbs). Version 30 adds no table
+        either: image.cropfx/cropfy and the same on image_version, the develop crop a
+        developed row served from the index needs for its cropped size, with the stamps
+        of developed images cleared to be re-read. */
+    QCOMPARE(CacheDb::schemaVersion(), 30);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

@@ -844,6 +844,7 @@
     - [18.1.1 The Scope Is Not Set From the Panel](#1811-the-scope-is-not-set-from-the-panel)
     - [18.1.2 Search Is a Filter Category](#1812-search-is-a-filter-category)
     - [18.1.3 Leaving and Entering a Scope](#1813-leaving-and-entering-a-scope)
+    - [18.1.4 Expand Checked Filters](#1814-expand-checked-filters)
   - [18.2 Categories](#182-categories)
     - [18.2.1 The Catalog's Categories Come From One SQL Map](#1821-the-catalogs-categories-come-from-one-sql-map)
     - [18.2.2 Capture Times Are the Camera's Wall Clock, Not an Instant](#1822-capture-times-are-the-cameras-wall-clock-not-an-instant)
@@ -2225,8 +2226,10 @@ The real variable is CARDINALITY, not category count. Filters::addCategoryItems 
 ##### 4.4.4.2 Category Values That Are Not Just Their Column's Text
 
 - Month (G::MonthColumn) is a DERIVED column beside Year and Day (Datamodel/rowfields.h), written from Catalog::monthLabel as the month NUMBER, "1".."12", unpadded like the day (2026-09-29; it was the English abbreviation "Jan".."Dec"). A number because a query must be able to compare it (month:>5, Utilities/queryexpr.h) and because a number is not a language (createdDT.toString("MMM") would follow the system locale). Catalog::categorySql produces the same text (CAST(CAST(strftime('%m') AS INTEGER) AS TEXT)), so the same June is one filter item in both scopes; pinned by tst_catalog. A saved Library filter that checked a month by its old NAME no longer restores. As text "1".."12" would read 1, 10, 11, 12, 2 ..., so Filters::addCategoryItems inserts months in Catalog::monthLabels() order with the blank (no capture date) last.
-- Day is the day of the month, "1".."31" (2026-09-26), not the date. It used to be "yyyy-MM-dd", which made Days a list of every date shot and duplicated Year and Month. Now Year, Month and Day are three independent categories that AND together: "the 15th of every month" is a filter, and one date is its three items checked together. DataModel::addMetadataForItem writes QString::number(day) and Catalog::categorySql writes CAST(CAST(strftime('%d', ...) AS INTEGER) AS TEXT). Days are inserted in NUMERIC order, blank last.
-- "Most Recent Day" (Filters menu, Shift+D) used to check the last Days item, the newest date; with day-of-month items that would be "the 31st of every month". MW::filterLastDay now finds the newest capture date (Catalog::mostRecentCaptureDate, MAX(captured) read back as the camera's wall clock, in Catalog scope; the newest valid Year/Month/Day triple in the DataModel in Folder scope), and Filters::setMostRecentDay checks (or unchecks) its Year, Month and Day items. Filters::isOnlyMostRecentDayChecked, which syncs the menu tick, is true when exactly one item is checked in each of the three and they are that date.
+- Day (category "Days of month") is the day of the month, "1".."31" (2026-09-26), not the date. It used to be "yyyy-MM-dd", which made Days a list of every date shot and duplicated Year and Month. Now Year, Month and Day are three independent categories that AND together: "the 15th of every month" is a filter, and one date is its three items checked together. DataModel::addMetadataForItem writes QString::number(day) and Catalog::categorySql writes CAST(CAST(strftime('%d', ...) AS INTEGER) AS TEXT). Days are inserted in NUMERIC order, blank last.
+- The periodic categories were renamed "Months of year" and "Days of month" on 2026-11-03 (they had been "Months" and "Days"). Saved filter state is keyed on the category NAME, so Filters::setStateToRestore maps the old names to the new ones.
+- G::DateColumn, "yyyy-MM-dd", is the capture date as a table column (header "Date", beside Created), not a filter category. It is DERIVED in RowStore from Year, Month and Day (zero-padding the unpadded month and day), sharing F_Day's field bit and refusing writes like HasGPSColumn, so it costs a row nothing; pinned by tst_imagerow::dateIsDerivedFromYearMonthDay. It was INSERTED after CreatedColumn, not appended, so every later column moved up one: a saved sortColumn is a column NUMBER (workspaces, WorkflowWorkspaces, LibraryState), and MW::migrateSortColumnLayout shifts those at or past DateColumn once (flag SortColumnDateInserted). Everything else matches columns by header name (TableFields). A workspace JSON exported by an older build is not migrated.
+- "Most Recent Day" (Filters menu, Shift+D) used to check the last Days item, the newest date; with day-of-month items that would be "the 31st of every month". MW::filterLastDay now finds the newest capture date (Catalog::mostRecentCaptureDate, MAX(captured) read back as the camera's wall clock, in Catalog scope; the newest valid Year/Month/Day triple in the DataModel in Folder scope), and Filters::setMostRecentDay checks (or unchecks) its Year, Month and Day items. Folder scope reads G::DateColumn. Filters::isOnlyMostRecentDayChecked, which syncs the menu tick, is true when exactly one item is checked in each of the three and they are that date.
 - ISO follows focal length: the model holds an int, the snapshot right-justifies it to six characters (409600 is the widest a camera reports) so "800" sorts after "1600" rather than between "100" and "8000", and the padded text is what the filter item carries. That works because a QVariant int compares EQUAL to its padded string form (measured, not assumed), so the item can show padded text and still match a row holding the number. The catalog pads identically with printf('%6d', i.iso).
 
 #### 4.4.5 ImageCache Owns Its Own Bookkeeping
@@ -2549,7 +2552,8 @@ G::CroppedDimensionsColumn and G::CroppedAspectRatioColumn ("Cropped Dimensions"
 
 - Factors, not pixels. Metadata::developCropFactors decodes the recipe (EditStack::fromBase64), asks CropTransform::geometryTransform for the geometry stage's output size on the oriented frame (the same straighten -> warp -> crop sizing the render uses) and keeps output/source per axis in ImageMetadata::cropFx/cropFy (VersionSummary::cropFx/cropFy for each version). Factors survive a later correction of the dimensions. A recipe with Transform Preview off (Geometry::show false) counts as identity, because the render bypasses the stage. parseSidecar computes them after the format parse, for the image and every version it lists.
 - Written by DataModel::setCroppedGeometry, from: addMetadataForItem (every file read, and fillVersionRow with the version's own factors); MW::devPreviewUpdated when a recipe is saved (and noteVersionDevelop keeps the version summary in step, so a later refill does not revert it); setValDm when the thumb path supplies dimensions the metadata could not (undeveloped rows only, since the row does not hold its factors); and setIcon1's video branch. devPreviewUpdated also refills any "Filter on..." category over a cropped column, since a new crop can be a value it has not listed.
-- Blank means unknown. A developed row served from the catalog index (ImageMetadata::fromIndex) has not had its recipe read, so both columns stay blank rather than claim the file's size; they fill when the sidecar is read or the recipe is saved. The catalog does not persist them.
+- The catalog persists the factors (schema 30, 2026-11-03): image.cropfx/cropfy and the same on image_version. Before that a developed row served from the index (ImageMetadata::fromIndex) had no recipe to size from, so in the Library every image edited in an earlier session showed a blank "Cropped dim" and no "Cropped:" in the status bar; only images edited that session were right (devPreviewUpdated). CatalogScanner::parseInto writes them from the sidecar read; DataModel::catalogRows recovers them from the row's Cropped Dimensions (the inverse of setCroppedGeometry); IndexMetadata::fill hands them back.
+- Blank means unknown. -1 in the catalog is NOT KNOWN: every row indexed before schema 30, or a developed row whose Cropped Dimensions was blank when it was captured. addMetadataForItem leaves both columns blank for such a row rather than claim the file's size; an undeveloped row is uncropped whatever the catalog holds. The schema 30 step clears the freshness stamps of developed images and images with versions, so the next scan or folder visit re-reads their sidecars and fills the factors.
 
 ### 4.14 Investigations and Fixes
 
@@ -7971,7 +7975,7 @@ Reading is unaffected, deliberately: browsing the cache is how a user answers "w
 
 A devPreview is a byproduct of a render that happened anyway, which covers the image on screen and nothing else. Every image edited in an earlier session, and every target of a multi-image paste (which has no proxy in memory and correctly CLEARS its preview), has a recipe but no render: no preview, so the grid shows the camera thumbnail and the loupe has to decode the raw.
 
-Closing that gap means DECODING AND RENDERING an image purely to cache it, which is exactly what the byproduct rule exists to avoid, so it never happens unasked. Either the user runs Develop > Build Developed Previews, or they turn on "Build developed previews in background" (G::buildDevPreviewsInBackground, off by default) and accept the cost. Main/devpreviewbuilder.cpp.
+Closing that gap means DECODING AND RENDERING an image purely to cache it, which is exactly what the byproduct rule exists to avoid, so it never happens unasked. Either the user runs Develop > Build Developed Previews (or Build Developed Previews (Edited Only), below), or they turn on "Build developed previews in background" (G::buildDevPreviewsInBackground, off by default) and accept the cost. Main/devpreviewbuilder.cpp.
 
 #### 12.9.1 Two Populations
 
@@ -7983,6 +7987,8 @@ The second population exists purely for BROWSING SPEED. With it cached, ImageDec
 
 - The default-render key hashes the RENDERER, not a recipe, because there is no recipe to hash (devPreviewKey returns empty for an unedited image, and an empty key is what loadDevPreview reads as "no preview"). defaultRenderKey hashes everything OUTSIDE the recipe that changes the pixels (the raw engine, G::autoRunDenoise, the opt-in raw preferences when ON) plus a version to bump when a pipeline change makes existing default renders wrong. Changing any of those makes every previously built default render MISS; the stranded entries age out through the LRU. The key is prefixed 'R', not a hex digit, so the recipe and renderer key spaces are provably disjoint.
 - Only the LARGE tier for an unedited raw. The 256 px grid thumbnail lives in the image's XMP sidecar, and an image the user never edited must not GAIN a sidecar as a side effect of a cache fill. The grid keeps the camera-embedded thumbnail, already read during the metadata pass.
+
+Develop > Build Developed Previews (Edited Only) builds the first population alone (MW::buildEditedDevPreviews, 2026-11-03). Build Developed Previews with one or no images selected queues every row in the view, so in an unfiltered Library it queues every raw in the catalog: hours of decodes and more than the cache cap holds. The Edited Only command takes the same scope (the selection when it holds two or more, else every proxy row, so a Library filter limits it) and keeps only rows whose G::DevelopColumn is set, read from the sidecar during the metadata pass, so no file is opened to decide. It is the way to refresh edited images after the cache is cleared or the "Developed preview quality" preference changes.
 
 #### 12.9.2 Only Where the User Said Their Library Is
 
@@ -10199,6 +10205,14 @@ The Search row has its own CONTEXT MENU, because the query is typed, can outgrow
 - Every scope switch clears the CHECKS, because the two scopes are different VOCABULARIES: a folder offers the three camera models in it, the library forty, and re-applying checks that merely share a name would silently build a different query. Returning to Folders asks MW to rebuild the tree from the datamodel (buildFilters->reset() then build()), since only MW knows whether the model is ready.
 - runSearch takes a FORCE: it loads only when the result set CHANGED, right for a re-run and wrong for a scope ENTRY (coming back, the model holds a folder while results still names last time's catalog rows, so the guard would compare equal and load nothing). applyScope forces it.
 
+#### 18.1.4 Expand Checked Filters
+
+The panel's right-click menu has "Expand checked filters" beside Expand all / Collapse all (MW::expandCheckedFiltersAction -> Filters::expandCheckedFilters). It collapses everything, then opens only the categories that hold a check, so the panel shows what is filtering and nothing else.
+
+- Either state counts: an exclusion (PartiallyChecked) filters just as an inclusion does, the same rule as isAnyFilterBut. The Search row counts only when it holds a query, not the "Enter search query" placeholder.
+- Every ANCESTOR of a checked item is opened, not just its category: the group header when grouped, and each branch above a nested keyword, so the check itself is on screen.
+- No shortcut; it is in the context menu only, like its two neighbours.
+
 ### 18.2 Categories
 
 #### 18.2.1 The Catalog's Categories Come From One SQL Map
@@ -10338,7 +10352,7 @@ Groups are a VIEW of the same categories (2026-09-30). The groups button in the 
 
 ```
 Folders and files   Folders, Collections, Queries, File types
-Time                Years, Months, Days
+Time                Years, Months of year, Days of month
 Selection           Picks, Ratings, Color classes
 Camera              Camera models, Lenses, Focal lengths, ISO
 Metadata            Titles, Creators, GPS, Keywords
@@ -10347,7 +10361,7 @@ Status              Availability, Duplicates found
 
 - FLAT USES THE SAME ORDER: Filters::createGroups declares the groups and their members once, and categoryOrder() is those member lists concatenated, so the two arrangements cannot drift. Session categories ("Filter on...") stay top-level at the bottom in both.
 - The Search category's text is "Adhoc search" (Filters::catSearchLabel); catSearch stays "Search" as the key, and the Search header has no CategoryNameRole, so saved and persisted filter state is unchanged.
-- The items are MOVED, not rebuilt: setGrouped takes every top-level item except Search and re-inserts it flat or under its group item, so checks, counts, values and roles travel with it and nothing refilters (the compiled predicate never depended on where a category sits). What does NOT survive a take / insert is the view's state (expansion, hidden rows, including what "Show unfiled only" hides), so it is recorded first and put back. Groups open the first time they appear. A group whose every category is hidden (the Library scope hides several) is hidden too (updateGroupVisibility).
+- The items are MOVED, not rebuilt: setGrouped takes every top-level item except Search and re-inserts it flat or under its group item, so checks, counts, values and roles travel with it and nothing refilters (the compiled predicate never depended on where a category sits). What does NOT survive a take / insert is the view's state (expansion, hidden rows, including what "Show unfiled only" hides), so it is recorded first and put back. Grouping collapses every category that is not expanded into its group: a group opens only if one of its shown categories was expanded (revised 2026-11-03; it used to open every group). A group whose every category is hidden (the Library scope hides several) is hidden too (updateGroupVisibility).
 
 Categories are no longer always top-level, and that was the real work: about thirty sites read "parent() == nullptr" as "is a category", "has a parent" as "is a filter item", or walked to the root to find an item's category, including SortFilter::compileFilters (which would have compiled a grouped category header as a filter item) and save() / restore() (which would have keyed a keyword on "Metadata"). They all ask Filters::isCategoryHeader (structural: top-level, or directly under a group), isGroupHeader (GroupRole present), isFilterItem, or categoryOf. setRowHidden(indexOfTopLevelItem(...)) became item->setHidden. compileFilters skips group rows.
 

@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 29;
+constexpr int kSchemaVersion = 30;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1837,6 +1837,36 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     " (SELECT pathkey FROM image WHERE colorspace NOT IN (0, 1, 9))")) {
             db.rollback();
             return false;
+        }
+    }
+
+    if (version < 30) {
+    /*
+        THE DEVELOP CROP, so a developed row served from the index has a cropped size.
+        The catalog held whether an image was developed but not what its recipe does to
+        the size, so in the Library every image edited in an earlier session showed a
+        blank "Cropped dim" and no "Cropped:" in the status bar (an image edited this
+        session was right: MW::devPreviewUpdated fills it from the recipe).
+
+        Stored as factors (ImageMetadata::cropFx), not pixels, like the row. -1 = NOT
+        KNOWN, the default every existing row takes, which keeps the cropped columns blank
+        rather than claiming the file's size. ADDITIVE, plus a repair: the stamps of
+        developed images, and of images with versions, are cleared so the next scan or
+        folder visit re-reads their sidecars and fills the factors. Re-runnable.
+    */
+        const char *ddl[] = {
+            "ALTER TABLE image ADD COLUMN cropfx REAL NOT NULL DEFAULT -1",
+            "ALTER TABLE image ADD COLUMN cropfy REAL NOT NULL DEFAULT -1",
+            "ALTER TABLE image_version ADD COLUMN cropfx REAL NOT NULL DEFAULT -1",
+            "ALTER TABLE image_version ADD COLUMN cropfy REAL NOT NULL DEFAULT -1",
+            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
+            " WHERE developed = 1 OR id IN (SELECT image_id FROM image_version)",
+        };
+        for (const char *sql : ddl) {
+            if (!q.exec(QString::fromLatin1(sql))) {
+                db.rollback();
+                return false;
+            }
         }
     }
 

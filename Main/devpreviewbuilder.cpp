@@ -598,6 +598,47 @@ void MW::buildDevPreviewsForSelection()
     buildDevPreviews(paths, "menu");
 }
 
+void MW::buildEditedDevPreviews()
+{
+/*
+    Develop > Build Developed Previews (Edited Only). The same scope as
+    buildDevPreviewsForSelection -- the selection when it holds two or more images,
+    otherwise every row in the view -- keeping only images with a develop recipe.
+    Unedited raws, which the other command also renders, are left alone.
+
+    "The view" is the proxy, so in the Library the current filter limits it: a filtered
+    Library builds for the edited images it shows, not for every edit in the catalog.
+    G::DevelopColumn came from the sidecar during the metadata read, so no file is opened
+    to decide.
+*/
+    if (G::isLogger) G::log("MW::buildEditedDevPreviews");
+    if (!dm || dm->rowCount() == 0) return;
+
+    auto isEdited = [](const QModelIndex &sfIdx) {
+        return sfIdx.sibling(sfIdx.row(), G::DevelopColumn).data().toBool();
+    };
+
+    QStringList paths;
+    const QModelIndexList sel = dm->selectionModel->selectedRows();
+    if (sel.count() > 1) {
+        for (const QModelIndex &idx : sel)
+            if (isEdited(idx)) paths << idx.data(G::KeyRole).toString();
+    }
+    else {
+        for (int row = 0; row < dm->sf->rowCount(); ++row) {
+            const QModelIndex idx = dm->sf->index(row, 0);
+            if (isEdited(idx)) paths << idx.data(G::KeyRole).toString();
+        }
+    }
+    if (paths.isEmpty()) {
+        if (G::popup) G::popup->showPopup(sel.count() > 1
+                                              ? "No edited images are selected."
+                                              : "No edited images are showing.", 2000);
+        return;
+    }
+    buildDevPreviews(paths, "menu");
+}
+
 void MW::queueBackgroundDevPreviewBuild()
 {
 /*

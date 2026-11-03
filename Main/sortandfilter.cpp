@@ -1091,20 +1091,18 @@ void MW::filterLastDay()
 //    if (!filters->days->childCount()) launchBuildFilters();
     }
 
-    /*  The most recent capture date. Days is the day of the month, not the date, so the
-        date is found here and checked as its Year, Month and Day items together. Catalog
-        scope asks the index, which is where its items came from; folder scope reads the
-        same three columns its items were counted from. */
+    /*  The most recent capture date. Days of month is the day of the month, not the
+        date, so the date is found here and checked as its Year, Month and Day items
+        together. Catalog scope asks the index, which is where its items came from;
+        folder scope reads the date the row store derives from those three columns. */
     QDate last;
     if (filters->categorySource() == Filters::FromCatalog) {
         last = Catalog::instance().mostRecentCaptureDate();
     }
     else {
         for (int row = 0; row < dm->rowCount(); ++row) {
-            const int y = dm->index(row, G::YearColumn).data().toInt();
-            const int m = dm->index(row, G::MonthColumn).data().toInt();  // "1".."12"
-            const int d = dm->index(row, G::DayColumn).data().toInt();
-            const QDate date(y, m, d);
+            const QDate date = QDate::fromString(
+                dm->index(row, G::DateColumn).data().toString(), "yyyy-MM-dd");
             if (date.isValid() && (!last.isValid() || date > last)) last = date;
         }
     }

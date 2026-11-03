@@ -103,6 +103,8 @@ inline void fill(ImageMetadata &m, const CatalogRow &r, const QDateTime &modifie
     m._url = r._url;
     m.developEdited = r.developed;
     m.devPreviewKey = r.devPreviewKey;
+    m.cropFx = r.cropFx;                 // schema 30; -1 = not known
+    m.cropFy = r.cropFy;
     /*  schema 17: the versions, which a file read gets from parseSidecar. Without them a
         row served from the index would show none (DataModel::fillVersionRow). */
     m.versions = r.versions;

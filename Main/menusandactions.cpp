@@ -932,6 +932,13 @@ void MW::createFilterActions()
     addAction(collapseAllFiltersAction);
     connect(collapseAllFiltersAction, &QAction::triggered, filters, &Filters::collapseAllFilters);
 
+    expandCheckedFiltersAction = new QAction(tr("Expand checked filters"), this);
+    expandCheckedFiltersAction->setObjectName("expandChecked");
+    expandCheckedFiltersAction->setShortcutVisibleInContextMenu(true);
+    addAction(expandCheckedFiltersAction);
+    connect(expandCheckedFiltersAction, &QAction::triggered,
+            filters, &Filters::expandCheckedFilters);
+
     filterSearchAction = new QAction(tr("Filter by search text"), this);
     filterSearchAction->setCheckable(true);
     filterSearchAction->setShortcutVisibleInContextMenu(true);
@@ -1335,6 +1342,17 @@ void MW::createUtilActions()
     addAction(buildDevPreviewsAction);
     connect(buildDevPreviewsAction, &QAction::triggered,
             this, &MW::buildDevPreviewsForSelection);
+
+    /* The same build limited to EDITED images. Build Developed Previews also renders the
+       default look of every unedited raw, which across a Library is many hours of decodes
+       and more than the cache can hold; this is the way to refresh only the edits. */
+    buildEditedDevPreviewsAction =
+        new QAction(tr("Build Developed Previews (Edited Only)"), this);
+    buildEditedDevPreviewsAction->setObjectName("buildEditedDevPreviews");
+    buildEditedDevPreviewsAction->setShortcutVisibleInContextMenu(true);
+    addAction(buildEditedDevPreviewsAction);
+    connect(buildEditedDevPreviewsAction, &QAction::triggered,
+            this, &MW::buildEditedDevPreviews);
 
     clearDevPreviewCacheAction = new QAction(tr("Clear Developed Preview Cache"), this);
     clearDevPreviewCacheAction->setObjectName("clearDevPreviewCache");
@@ -2962,6 +2980,7 @@ void MW::createDevelopMenu()
     developMenu->addAction(developAction);          // enable/disable the Develop panel
     developMenu->addAction(operationModeAction);    // D: enter Develop (E / G / T leave it)
     developMenu->addAction(buildDevPreviewsAction);
+    developMenu->addAction(buildEditedDevPreviewsAction);
     developMenu->addAction(clearDevPreviewCacheAction);
     developMenu->addSeparator();
     developMenu->addAction(developNewScopeAction);
@@ -3414,6 +3433,7 @@ void MW::createFiltersContextMenu()
     filterActions->append(separatorAction);
     filterActions->append(expandAllFiltersAction);
     filterActions->append(collapseAllFiltersAction);
+    filterActions->append(expandCheckedFiltersAction);
     filterActions->append(filterSoloAction);
     filterActions->append(filterGroupsAction);
     // docking panels context menus

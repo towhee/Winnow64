@@ -501,7 +501,7 @@ QVector<BuildFilters::Sink> BuildFilters::sinks(const FilterSnapshot &snap) cons
         {FilterCat::FolderPath,  filters->folders,      "folders"},
         {FilterCat::Year,        filters->years,        "years"},
         {FilterCat::Month,       filters->months,       "months"},
-        {FilterCat::Day,         filters->days,         "days"},
+        {FilterCat::Day,         filters->days,         "days of month"},
         {FilterCat::CameraModel, filters->models,       "models"},
         {FilterCat::Lens,        filters->lenses,       "lenses"},
         {FilterCat::FocalLength, filters->focalLengths, "focal lengths"},

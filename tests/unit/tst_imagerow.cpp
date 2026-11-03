@@ -51,6 +51,7 @@ private slots:
     void folderPathsAllIsDerivedFromThePath();
     void folderAncestryCostsARowOneId();
     void hasGpsIsDerivedFromTheCoordinate();
+    void dateIsDerivedFromYearMonthDay();
     void sourcePathIsDerivedFromTheKey();
     void snapshotRoundTripsEveryCell();
 
@@ -725,6 +726,28 @@ void tst_imagerow::hasGpsIsDerivedFromTheCoordinate()
     s.setValue(2, G::HasGPSColumn, Qt::EditRole, QString("True"));
     QVERIFY(!s.value(2, G::GPSCoordColumn).isValid());
     QVERIFY(!s.value(2, G::HasGPSColumn).isValid());
+}
+
+void tst_imagerow::dateIsDerivedFromYearMonthDay()
+{
+/*
+    G::DateColumn is the capture date for the table: "yyyy-MM-dd", zero-padded from the
+    unpadded Month and Day. DERIVED from Year, Month and Day, so a row with no
+    capture date is unset, and a write to it is refused.
+*/
+    RowStore s;
+    s.resize(2);
+    QVERIFY(RowStore::covers(G::DateColumn, Qt::EditRole));
+    QVERIFY(!s.value(0, G::DateColumn).isValid());
+
+    s.setValue(0, G::YearColumn, Qt::EditRole, "2024");
+    s.setValue(0, G::MonthColumn, Qt::EditRole, "6");
+    s.setValue(0, G::DayColumn, Qt::EditRole, "5");
+    QCOMPARE(s.value(0, G::DateColumn), QVariant(QString("2024-06-05")));
+
+    s.setValue(1, G::DateColumn, Qt::EditRole, QString("2024-06-05"));
+    QVERIFY(!s.value(1, G::DayColumn).isValid());
+    QVERIFY(!s.value(1, G::DateColumn).isValid());
 }
 
 void tst_imagerow::folderAncestryCostsARowOneId()

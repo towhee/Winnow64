@@ -147,6 +147,9 @@ int fieldBit(int column, int role)
     /*  HasGPS is DERIVED from GPSCoord the same way: set exactly when the coordinate
         is, so a row whose metadata has not been read is unset, not "False". */
     case G::HasGPSColumn:               return F_GPSCoord;
+    /*  Date is DERIVED from Year, Month and Day, which are written together, so it
+        shares Day's bit and is unset for a row with no capture date. */
+    case G::DateColumn:                 return F_Day;
 
     /*  SETTLED, AND NOW HELD. Both columns used to carry a different TYPE
         depending on which path wrote them last -- "false" (QString) at row
@@ -311,6 +314,13 @@ QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
     case G::FolderPathsAllColumn:  return mFolderAncestry.value(r.folderPathId);
     case G::HasGPSColumn:
         return QString(mStrings.value(r.gpsId).trimmed().isEmpty() ? "False" : "True");
+    case G::DateColumn: {
+        // "yyyy-MM-dd": Month and Day are held unpadded ("6", "15")
+        const QString y = mStrings.value(r.yearId);
+        if (y.isEmpty()) return QString();
+        return y + '-' + mStrings.value(r.monthId).rightJustified(2, '0')
+                 + '-' + mStrings.value(r.dayId).rightJustified(2, '0');
+    }
     case G::KeywordsColumn:
     case G::KeywordPathsColumn:
     case G::KeywordsAllColumn: {
@@ -338,6 +348,8 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     if (column == G::FolderPathsAllColumn) return;
     // Derived from G::GPSCoordColumn, likewise.
     if (column == G::HasGPSColumn) return;
+    // Derived from G::YearColumn, G::MonthColumn and G::DayColumn, likewise.
+    if (column == G::DateColumn) return;
     // Derived from G::KeyRole, likewise.
     if (column == G::PathColumn
         && (role == G::SourcePathRole || role == G::VersionIdRole)) return;

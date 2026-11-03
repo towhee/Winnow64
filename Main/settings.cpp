@@ -921,6 +921,7 @@ bool MW::loadSettings()
     m_dockSoloMode.insert(Qt::BottomDockWidgetArea, settings->value("Bottom", false).toBool());
     settings->endGroup();
 
+    migrateSortColumnLayout();
     loadWorkspaces();
     // moved read workspaces to separate function as req'd by actions while the
     // rest of QSettings are dependent on actions being defined first.
@@ -965,6 +966,30 @@ void MW::migrateOldSettings()
     newSettings.sync();
     qDebug() << "✅ Migration complete. INI file created at:" << iniFile;
 
+}
+
+void MW::migrateSortColumnLayout()
+{
+/*
+    ONCE: G::DateColumn was INSERTED after G::CreatedColumn (2026-11-03), so every column
+    after it moved up one. A sortColumn is saved as a column NUMBER -- in each workspace
+    (the "Workspaces" array and the "WorkflowWorkspaces" groups) and in "LibraryState" --
+    and one saved by an older build at or past the insertion point now names the column
+    before the one the user chose. Shift those, then set a flag so it never runs twice.
+    Columns are matched by header name everywhere else (TableFields), so only sortColumn
+    needs this.
+*/
+    if (G::isLogger) G::log("MW::migrateSortColumnLayout");
+    if (!isSettings) return;
+    const QString flag = "SortColumnDateInserted";
+    if (settings->value(flag, false).toBool()) return;
+    for (const QString &key : settings->allKeys()) {
+        if (key != "sortColumn" && !key.endsWith("/sortColumn")) continue;
+        const int col = settings->value(key).toInt();
+        if (col >= G::DateColumn && col + 1 < G::TotalColumns)
+            settings->setValue(key, col + 1);
+    }
+    settings->setValue(flag, true);
 }
 
 void MW::removeDeprecatedSettings()

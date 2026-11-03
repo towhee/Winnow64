@@ -42,7 +42,7 @@ public:
     QTreeWidgetItem *isos;
     QTreeWidgetItem *years;
     QTreeWidgetItem *months;
-    QTreeWidgetItem *days;
+    QTreeWidgetItem *days;      // day of the month
     QTreeWidgetItem *creators;
     QTreeWidgetItem *gps;
     QTreeWidgetItem *mapPins;
@@ -62,8 +62,8 @@ public:
     QString catQuery = "Queries";
     QString catFolder = "Folders";
     QString catYear = "Years";
-    QString catMonth = "Months";
-    QString catDay = "Days";
+    QString catMonth = "Months of year";
+    QString catDay = "Days of month";
     QString catModel = "Camera models";
     QString catLens = "Lenses";
     QString catFocalLength = "Focal lengths";
@@ -281,9 +281,9 @@ public:
     void disableColorAllHeaders(bool disable);
     void setProgressBarStyle();
     bool isOnlyMostRecentDayChecked();
-    /*  "Most recent day" is ONE DATE, but Days is the day of the month, so the date is
-        its Year, Month and Day items checked together (they AND across categories).
-        Checks or unchecks all three; false if any of them is not in the panel. */
+    /*  "Most recent day" is ONE DATE, but Days of month is the day of the month, so the
+        date is its Year, Month and Day items checked together (they AND across
+        categories). Checks or unchecks all three; false if any is not in the panel. */
     bool setMostRecentDay(const QDate &date, bool checked);
     QDate mostRecentDay;
 
@@ -399,6 +399,7 @@ public slots:
     void uncheckAllFilters();
     void expandAllFilters();
     void collapseAllFilters();
+    void expandCheckedFilters();
     void collapseAllFiltersExceptSearch();
     /*  The Keywords workflow's view of Filters: everything collapsed, the Keywords
         category (and its group heading, when grouped) expanded and scrolled to the top. */

@@ -541,11 +541,19 @@ void Filters::setGrouped(bool on)
         if (item->treeWidget() == this) item->setHidden(true);
     for (QTreeWidgetItem *item : std::as_const(expanded))
         if (item->treeWidget() == this) item->setExpanded(true);
-    /*  Groups start OPEN the first time: a panel of six closed headers hides every
-        category behind a click the user did not ask for. */
+    /*  Grouping folds away what the user had closed: a group opens only if one of its
+        shown categories was expanded, so the open categories stay in view and every
+        other category collapses into its heading. */
     if (grouped && !wasGrouped)
-        for (const Group &g : std::as_const(groups))
-            if (!expanded.contains(g.item)) g.item->setExpanded(true);
+        for (const Group &g : std::as_const(groups)) {
+            bool anyOpen = false;
+            for (QTreeWidgetItem *cat : g.cats)
+                if (expanded.contains(cat) && !hidden.contains(cat)) {
+                    anyOpen = true;
+                    break;
+                }
+            g.item->setExpanded(anyOpen);
+        }
 
     updateGroupVisibility();
     syncHeaderIcons();
@@ -2968,6 +2976,9 @@ void Filters::setStateToRestore(const QVariantMap &m)
         st.value = parts.at(1);
         st.state = Qt::CheckState(parts.at(2).toInt());
         if (st.state == Qt::Unchecked) continue;        // never saved; never restored
+        /*  Renamed 2026-11-03; the saved state is keyed on the category NAME. */
+        if (st.category == "Months") st.category = catMonth;
+        if (st.category == "Days") st.category = catDay;
         itemStates << st;
     }
     searchText = m.value("searchText").toString();
@@ -3216,6 +3227,30 @@ void Filters::collapseAllFilters()
         qDebug() << "Filters::collapseAllFilters"
                     ;
     collapseAll();
+    syncHeaderIcons();
+}
+
+void Filters::expandCheckedFilters()
+{
+/*
+    Collapse every category, then open only the ones holding a check, so the panel shows
+    what is filtering and nothing else. Either check state counts: an exclusion
+    (PartiallyChecked) filters just as an inclusion does (see isAnyFilterBut). Every
+    ancestor of a checked item is opened -- its group header and, for a nested keyword,
+    each branch above it -- so the check itself is on screen. The search row counts only
+    when it holds text, as in isAnyFilterBut.
+*/
+    if (G::isLogger) G::log("Filters::expandCheckedFilters");
+    collapseAll();
+    QTreeWidgetItemIterator it(this);
+    while (*it) {
+        QTreeWidgetItem *item = *it;
+        bool on = isFilterItem(item) && item->checkState(0) != Qt::Unchecked;
+        if (item == searchTrue && item->text(0) == enterSearchString) on = false;
+        if (on)
+            for (QTreeWidgetItem *p = item->parent(); p; p = p->parent()) p->setExpanded(true);
+        ++it;
+    }
     syncHeaderIcons();
 }
 
@@ -3921,11 +3956,11 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         for (const QString &name : Catalog::monthLabels())
             if (itemMap.contains(name)) inCalendarOrder << name;
         /*  A row with no capture date counts as the blank item, exactly as it does
-            under Years and Days, and it is not a month so it goes last. */
+            under Years and Days of month, and it is not a month so it goes last. */
         if (itemMap.contains("")) inCalendarOrder << "";
         keys = inCalendarOrder;
     }
-    /*  Days are the day of the month, "1".."31", unpadded: as text 10 would come before
+    /*  Days of month are "1".."31", unpadded: as text 10 would come before
         2, so they go in numeric order, blank (no capture date) last as for months. */
     if (category == days) {
         const bool hasBlank = keys.removeAll("") > 0;

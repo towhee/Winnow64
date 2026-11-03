@@ -1995,6 +1995,7 @@ private:
     QAction *clearAllFiltersAction;
     QAction *expandAllFiltersAction;
     QAction *collapseAllFiltersAction;
+    QAction *expandCheckedFiltersAction;
     QAction *filterSearchAction;
     QAction *filterRating1Action;
     QAction *filterRating2Action;
@@ -2040,6 +2041,7 @@ private:
     QAction *browseCompareAction = nullptr;         // "\": compare the current image
     QAction *toggleCameraPreviewAction = nullptr;   // Opt+"\": camera preview / developed
     QAction *buildDevPreviewsAction = nullptr;
+    QAction *buildEditedDevPreviewsAction = nullptr;
     QAction *clearDevPreviewCacheAction = nullptr;
 
     /* Develop mode local shortcuts (see loadDevelopShortcuts).  These actions carry NO
@@ -2488,6 +2490,7 @@ private:
        developPixelSource. Never runs unasked. */
     void buildDevPreviews(const QStringList &paths, const QString &src);
     void buildDevPreviewsForSelection();
+    void buildEditedDevPreviews();
     void queueBackgroundDevPreviewBuild();
     void cancelDevPreviewBuild();
     void clearDevPreviewCache();
@@ -3633,6 +3636,7 @@ private:
     void setupCentralWidget();
     void initialize();
     void migrateOldSettings();
+    void migrateSortColumnLayout();
     void setupPlatform();
     void recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const;
     void checkRecoveredGeometry(const QRect &availableGeometry, QRect *restoredGeometry,

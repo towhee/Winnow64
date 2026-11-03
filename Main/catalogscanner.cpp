@@ -217,6 +217,8 @@ bool CatalogScanner::parseInto(CatalogRow &row)
     row.developed = m.developEdited;
     row.versions = m.versions;          // schema 17: the sidecar's versions (virtual copies)
     row.devPreviewKey = m.devPreviewKey;
+    row.cropFx = m.cropFx;                  // schema 30
+    row.cropFy = m.cropFy;
     row.shootingInfo = m.shootingInfo;
     row.colorSpace = m.colorSpace;          // schema 27
     /* The prefix-expanded PATHS, exactly as DataModel::catalogRows supplies them -- the

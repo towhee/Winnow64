@@ -311,6 +311,7 @@ void DataModel::setModelProperties()
         { G::HeightColumn,               "Height",                   false },
         { G::ModifiedColumn,             "Last Modified",            false },
         { G::CreatedColumn,              "Created",                  false },
+        { G::DateColumn,                 "Date",                     false },
         { G::YearColumn,                 "Year",                     false },
         { G::MonthColumn,                "Month",                    false },
         { G::DayColumn,                  "Day",                      false },
@@ -3621,6 +3622,26 @@ bool DataModel::catalogRowFor(int row, CatalogRow &r) const
     r._url = index(row, G::_UrlColumn).data().toString();
     r.developed = index(row, G::DevelopColumn).data().toBool();
     r.devPreviewKey = index(row, G::DevPreviewKeyColumn).data().toString();
+    /*  schema 30: the develop crop, recovered from the cropped size the row shows
+        (setCroppedGeometry is its inverse). Blank on a developed row means not known,
+        and stays so: -1, never the file's size. */
+    if (!r.developed) {
+        r.cropFx = r.cropFy = 1.0f;
+    }
+    else {
+        const QStringList cd =
+            index(row, G::CroppedDimensionsColumn).data().toString().split('x');
+        const int o = r.orientation;
+        const bool swap = o == 5 || o == 6 || o == 7 || o == 8;
+        const int ow = swap ? r.height : r.width;
+        const int oh = swap ? r.width : r.height;
+        const int cw = cd.size() == 2 ? cd.at(0).toInt() : 0;
+        const int ch = cd.size() == 2 ? cd.at(1).toInt() : 0;
+        if (cw > 0 && ch > 0 && ow > 0 && oh > 0) {
+            r.cropFx = float(double(cw) / ow);
+            r.cropFy = float(double(ch) / oh);
+        }
+    }
     /*  schema 17: its versions, as captured from its sidecar (versionMasters) -- the
         catalog must hold them, because a row served from the index never parses the
         sidecar that lists them. */
@@ -4340,10 +4361,17 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::WidthColumn), m.width);
     setData(index(row, G::HeightColumn), m.height);
     setData(index(row, G::AspectRatioColumn), QString::number((aspectRatio(m.width, m.height, m.orientation)), 'f', 2));
-    /*  The same, after the develop geometry. Not known for a developed row served from
-        the catalog index: its recipe was not read (see ImageMetadata::cropFx). */
-    setCroppedGeometry(row, m.width, m.height, m.orientation, m.cropFx, m.cropFy,
-                       !(m.fromIndex && m.developEdited));
+    /*  The same, after the develop geometry. An undeveloped image is uncropped. A
+        developed row served from the catalog index carries the factors the index stored
+        (schema 30); -1 = not known (indexed before schema 30), so the columns stay blank
+        until the image is re-indexed (see ImageMetadata::cropFx). */
+    {
+        const bool uncropped = !m.developEdited;
+        const bool known = uncropped || (m.cropFx > 0 && m.cropFy > 0);
+        setCroppedGeometry(row, m.width, m.height, m.orientation,
+                           uncropped ? 1.0f : m.cropFx, uncropped ? 1.0f : m.cropFy,
+                           known);
+    }
     QString dim = QString::number(m.width) + "x" + QString::number(m.height);
     setData(index(row, G::DimensionsColumn), dim);
     search += dim;

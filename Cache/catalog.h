@@ -174,6 +174,13 @@ struct CatalogRow
     QString shootingInfo;
     /*  schema 27: a ColorSpaces::Id (Metadata/colorspaces.h); 0 = nothing known. */
     int colorSpace = 0;
+    /*  schema 30: the develop geometry as output/source per axis, as
+        ImageMetadata::cropFx. Without it a developed row served from the index had no
+        cropped size. -1 = NOT KNOWN (a row indexed before schema 30, or a writer that
+        did not supply it), which leaves the cropped columns blank rather than claiming
+        the file's size. */
+    float cropFx = -1.0f;
+    float cropFy = -1.0f;
 
     QStringList keywords;
     /*  dc:subject AS THE FILE SPELLED IT -- not the flattened vocabulary

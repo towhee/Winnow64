@@ -412,7 +412,7 @@ static QStringList headerNames(QTreeWidgetItem *parent, Filters &f)
 
 static const QStringList kFlatOrder {
     "Search", "Folders", "Collections", "Queries", "File types",
-    "Years", "Months", "Days",
+    "Years", "Months of year", "Days of month",
     "Picks", "Ratings", "Color classes",
     "Camera models", "Lenses", "Focal lengths", "ISO",
     "Titles", "Creators", "GPS", "Places", "Map pin", "Keywords",
@@ -435,6 +435,7 @@ void tst_filters::groupsHoldTheirCategories()
 {
     Filters f(nullptr);
     f.addCategoryItems(vocabulary(), f.keywords);
+    f.keywords->setExpanded(true);
     f.setGrouped(true);
 
     QCOMPARE(headerNames(nullptr, f),
@@ -445,7 +446,12 @@ void tst_filters::groupsHoldTheirCategories()
     QVERIFY(!f.isCategoryHeader(metadata));
     QCOMPARE(headerNames(metadata, f),
              QStringList({"Titles", "Creators", "GPS", "Places", "Map pin", "Keywords"}));
-    QVERIFY2(metadata->isExpanded(), "groups open the first time they appear");
+    QVERIFY2(metadata->isExpanded(), "a group holding an expanded category opens");
+    QVERIFY(f.keywords->isExpanded());
+    for (int i = 1; i < f.topLevelItemCount(); ++i)
+        if (f.topLevelItem(i) != metadata)
+            QVERIFY2(!f.topLevelItem(i)->isExpanded(),
+                     "a group with no expanded category collapses");
     /*  EXPANDABLE, as the view sees it. isExpanded() alone passed while the view
         refused to open any header: DontShowIndicator made hasChildren() false. */
     QVERIFY(f.model()->hasChildren(f.model()->index(5, 0)));

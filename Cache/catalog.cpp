@@ -78,7 +78,8 @@ const char *kRowColumns =
     " i.orientation, i.exposurecomp, i.focusx, i.focusy, i.email, i.url,"
     " i.orig_rating, i.orig_label, i.orig_creator, i.orig_title,"
     " i.orig_copyright, i.orig_email, i.orig_url, i.developed, i.devpreviewkey,"
-    " i.keywordpaths, i.shootinginfo, i.keywords_literal, i.colorspace";
+    " i.keywordpaths, i.shootinginfo, i.keywords_literal, i.colorspace,"
+    " i.cropfx, i.cropfy";
 
 /*
     One row of kRowColumns into a CatalogRow, keywords excluded -- they are a join and
@@ -141,6 +142,8 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
     const QString kl = q.value(42).toString();
     if (!kl.isEmpty()) r.keywordsLiteral = kl.split('\n', Qt::SkipEmptyParts);
     r.colorSpace = q.value(43).toInt();             // schema 27
+    r.cropFx = q.value(44).toFloat();               // schema 30
+    r.cropFy = q.value(45).toFloat();
     return q.value(0).toLongLong();
 }
 
@@ -533,7 +536,9 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 /* schema 20 */
                 " change_seq = ?,"
                 /* schema 27 */
-                " colorspace = ?"
+                " colorspace = ?,"
+                /* schema 30 */
+                " cropfx = ?, cropfy = ?"
                 " , unreadable = 0"
               " WHERE id = ?");
 
@@ -547,10 +552,11 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 " orientation, exposurecomp, focusx, focusy, email, url,"
                 " orig_rating, orig_label, orig_creator, orig_title,"
                 " orig_copyright, orig_email, orig_url, developed, devpreviewkey,"
-                " keywordpaths, shootinginfo, keywords_literal, change_seq, colorspace)"
+                " keywordpaths, shootinginfo, keywords_literal, change_seq, colorspace,"
+                " cropfx, cropfy)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1,"
                 " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,"
-                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                " ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
     /*  THE CHANGE SEQUENCE (schema 20): every row this transaction writes is stamped
         with the next value, and the counter advances only if something was written. */
@@ -639,6 +645,8 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(text(r.keywordsLiteral.join('\n')));
         w.addBindValue(seq);
         w.addBindValue(r.colorSpace);               // schema 27
+        w.addBindValue(r.cropFx);                   // schema 30
+        w.addBindValue(r.cropFy);
         if (id) w.addBindValue(id);
 
         if (!w.exec()) {
@@ -1361,8 +1369,9 @@ void Catalog::writeVersionsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
 
     QSqlQuery ins(db);
     ins.prepare("INSERT OR REPLACE INTO image_version"
-                " (image_id, vid, name, rating, label, pick, developed, devpreviewkey)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+                " (image_id, vid, name, rating, label, pick, developed, devpreviewkey,"
+                "  cropfx, cropfy)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     for (const VersionSummary &v : r.versions) {
         if (v.id <= 0) continue;
         ins.addBindValue(imageId);
@@ -1373,6 +1382,8 @@ void Catalog::writeVersionsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
         ins.addBindValue(text(v.pick));
         ins.addBindValue(v.developed ? 1 : 0);
         ins.addBindValue(text(v.devPreviewKey));
+        ins.addBindValue(v.cropFx);                 // schema 30
+        ins.addBindValue(v.cropFy);
         if (!ins.exec())
             G::issueDedup("Warning", "Catalog version write failed: "
                           + ins.lastError().text(), "Catalog::writeVersionsLocked", -1, r.path);
@@ -1392,8 +1403,8 @@ QHash<qint64, QList<VersionSummary>> Catalog::readVersionsLocked(QSqlDatabase &d
     if (ids.isEmpty()) return out;
     const QSet<qint64> want(ids.cbegin(), ids.cend());
     QSqlQuery q(db);
-    if (!q.exec("SELECT image_id, vid, name, rating, label, pick, developed, devpreviewkey"
-                " FROM image_version ORDER BY image_id, vid"))
+    if (!q.exec("SELECT image_id, vid, name, rating, label, pick, developed, devpreviewkey,"
+                " cropfx, cropfy FROM image_version ORDER BY image_id, vid"))
         return out;
     while (q.next()) {
         const qint64 id = q.value(0).toLongLong();
@@ -1406,6 +1417,8 @@ QHash<qint64, QList<VersionSummary>> Catalog::readVersionsLocked(QSqlDatabase &d
         v.pick = q.value(5).toString();
         v.developed = q.value(6).toBool();
         v.devPreviewKey = q.value(7).toString();
+        v.cropFx = q.value(8).toFloat();            // schema 30, -1 = not known
+        v.cropFy = q.value(9).toFloat();
         out[id] << v;
     }
     return out;
