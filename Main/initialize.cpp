@@ -2461,6 +2461,16 @@ void MW::createEmbelDock()
 
     */
 
+    // preferences button
+    BarBtn *embelGearBtn = new BarBtn();
+    embelGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
+    embelGearBtn->setToolTip("Preferences");
+    connect(embelGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
+    embelTitleLayout->addWidget(embelGearBtn);
+
+    // Spacer
+    embelTitleLayout->addSpacing(10);
+
     // question mark button
     BarBtn *embelQuestionBtn = new BarBtn();
     embelQuestionBtn->setIcon(":/images/icon16/questionmark.png", G::iconOpacity);
@@ -3333,6 +3343,16 @@ void MW::createDevelopDock()
 
     // close the centered group of action buttons
     developActionLayout->addStretch(1);
+
+    // preferences button
+    BarBtn *developGearBtn = new BarBtn();
+    developGearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
+    developGearBtn->setToolTip("Preferences");
+    connect(developGearBtn, &BarBtn::clicked, this, &MW::allPreferences);
+    developTitleLayout->addWidget(developGearBtn);
+
+    // Spacer
+    developTitleLayout->addSpacing(10);
 
     // question mark button
     BarBtn *devQuestionBtn = new BarBtn();

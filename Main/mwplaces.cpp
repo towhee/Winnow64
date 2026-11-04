@@ -91,7 +91,7 @@ void MW::createPlacesDock()
         mapView->fitPlaces({id});
     });
 
-    // title bar: New, Cancel, collapse, close
+    // title bar: New, Cancel, preferences, collapse, close
     QHBoxLayout *titleLayout = new QHBoxLayout();
     titleLayout->setContentsMargins(0, 0, 0, 0);
     titleLayout->setSpacing(0);
@@ -110,6 +110,14 @@ void MW::createPlacesDock()
     placesCancelBtn->setIcon(":/images/icon16/reset.png", G::iconOpacity);
     connect(placesCancelBtn, &BarBtn::clicked, this, &MW::cancelPlaceFilter);
     titleLayout->addWidget(placesCancelBtn);
+    titleLayout->addSpacing(10);
+
+    // preferences button
+    BarBtn *gearBtn = new BarBtn();
+    gearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
+    gearBtn->setToolTip("Preferences");
+    connect(gearBtn, &BarBtn::clicked, this, &MW::allPreferences);
+    titleLayout->addWidget(gearBtn);
     titleLayout->addSpacing(10);
 
     if (G::useDWCollapse) {

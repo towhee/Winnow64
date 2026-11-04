@@ -1739,9 +1739,9 @@ void MW::syncWorkflowWorkspaceMenus()
 
     SOURCE    Library | Folders.  The left end of the Module dock, Ctrl+Shift+L /
               Ctrl+Shift+F, View > Library / Folders.  Every workflow works on the
-              current source and selection, so switching source never changes the
-              workflow -- but in Browse it switches the layout, since Browse has one
-              per source (MW::chooseSource).
+              current source and selection, so Library never changes the workflow;
+              Folders goes to Browse.  In Browse it switches the layout, since Browse
+              has one per source (MW::chooseSource).
     WORKFLOW  Browse, Develop, Keywords, Embellish, Slide Show, Map.  The Module dock's
               centred modes, D and K.  Owns the workspace (panel layout).
     VIEW      Loupe, Grid, Table, Compare.  E / G / T / C.  These are the BROWSE views:
@@ -1811,17 +1811,30 @@ void MW::chooseSource(bool library, const QString &src)
     started; a refused change (unsaved picks, an empty catalog opening Manage Catalog)
     puts the old layout back.  Any other workflow keeps its layout.
 
+    FOLDERS ALSO MEANS BROWSE: a running slide show is stopped, then from any other
+    workflow (or Develop mode) Folders leaves it for Browse with the Folders layout, applied the same way before the scope
+    changes.  A refused change stays in Browse, with the layout for the source that is
+    still loaded.  Library keeps the workflow.
+
     Other routes that change the scope -- a folder or bookmark clicked out of the
     Library, File > Open Library -- leave the layout alone; the Browse button re-syncs
     it (MW::invokeBrowseWorkflow).
 */
     if (G::isLogger) G::log("MW::chooseSource", src);
+    /*  A running show stops first.  Its return workflow is dropped so stopping applies
+        no layout of its own: the Browse layout below is the only switch. */
+    if (!library && G::isSlideShow) {
+        slideShowReturnWorkflow = kNoSlideShowReturn;
+        slideShow();
+    }
     const G::Scope target = library ? G::Scope::Catalog : G::Scope::Folders;
     const int before = browseLayoutApplied;
     const int lay = library ? int(WsLibrary) : int(WfSource);
-    const bool follow = currentWorkflow == WfSource
-                        && G::operationMode != G::OperationMode::Develop
-                        && G::scope != target && before != lay;
+    const bool inBrowse = currentWorkflow == WfSource
+                          && G::operationMode != G::OperationMode::Develop;
+    const bool toBrowse = !library && !inBrowse;
+    const bool follow = toBrowse
+                        || (inBrowse && G::scope != target && before != lay);
     /*  COVERED FROM THE CLICK. The Browse layout switch below takes about a second
         (timeline probe: 1.1 s), and until setCatalogScopeWhole puts up its message the
         folder being left sat on screen while the panels moved around it. Raised here;
@@ -1835,6 +1848,7 @@ void MW::chooseSource(bool library, const QString &src)
     }
 
     if (follow) {
+        if (toBrowse) setOperationMode(G::OperationMode::Preview);
         invokeWorkflowLayout(WfSource, lay);
         requestView(browseView);
     }
@@ -1845,7 +1859,7 @@ void MW::chooseSource(bool library, const QString &src)
         lowerLoadCurtain("MW::chooseSource Library refused");
 
     if (follow && G::scope != target) {
-        invokeWorkflowLayout(WfSource, before);
+        invokeWorkflowLayout(WfSource, toBrowse ? workflowLayout(WfSource) : before);
         requestView(browseView);
     }
     /*  setScope pushes the buttons back, but an empty catalog returns before it is

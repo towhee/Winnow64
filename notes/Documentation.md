@@ -987,7 +987,7 @@ The View menu is laid out the same way, with one block per setting: workflows, t
 
 #### 2.2.1 Source
 
-The source is a noun, not a mode: it is which images you have, and every workflow works on the current source and selection. Switching source therefore never changes the workflow; Ctrl+Shift+L inside Develop stays in Develop.
+The source is a noun, not a mode: it is which images you have, and every workflow works on the current source and selection. Choosing the Library therefore never changes the workflow; Ctrl+Shift+L inside Develop stays in Develop. Choosing Folders is the exception: it stops a running slide show (without returning to the workflow the show was started from), then from any other workflow (or Develop mode) it goes to Browse with the Folders layout, applied before the scope changes. If the change is refused it stays in Browse, with the layout for the source still loaded.
 
 The source is chosen at the left end of the Module dock, "Library | Folders", with the workflows centred beside it (see [2.2.4 The Module Dock](#224-the-module-dock)). The buttons and the two source actions (MW::showLibrarySourceAction, MW::showFoldersSourceAction) all call MW::chooseSource. It makes the same requests the old Source panel toggle made (MW::setCatalogScopeWhole, MW::showFoldersSource), so a refused change (Library with nothing catalogued) leaves everything as it was. The current source is lit in every workflow, not only Browse.
 
@@ -3897,7 +3897,7 @@ Its SELECTION is the filter (PlaceList, ExtendedSelection): a click shows only t
 
 - Each change goes to MW::applyPlaceFilter, which, like a Collection or Bookmark click, clears EVERY filter and checks those places in one filterChange (refused while a load runs, with a popup; it first loads every row's metadata so membership is complete), then fits the map to them.
 - MW::syncPlaceListFromFilters, called from syncLibTreeFromFilters after every filter change and build, pushes the category's checks back into the selection (signals blocked), enables Cancel, and has the map draw the checked places (MapView::setShownPlaces).
-- The title bar has + (New Place), Cancel (stop filtering by place, keep the other filters), collapse and close. The context menu (contextMenuEvent; not Qt::ActionsContextMenu, which never delivers it) has New Place..., Zoom Map to, Rename..., Edit Shape... and Delete...; a double-click zooms the map to the place.
+- The title bar has + (New Place), Cancel (stop filtering by place, keep the other filters), preferences (gear), collapse and close. The context menu (contextMenuEvent; not Qt::ActionsContextMenu, which never delivers it) has New Place..., Zoom Map to, Rename..., Edit Shape... and Delete...; a double-click zooms the map to the place.
 - If userdata.db cannot be used, the list and + are greyed with the store's reason above them.
 
 #### 8.2.5 Drawing a Place

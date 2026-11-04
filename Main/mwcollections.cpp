@@ -103,7 +103,7 @@ DockWidget *MW::buildLibrarySetDock(Kind kind, const QString &tabText,
         settings->setValue(expandKey, ids);
     });
 
-    // title bar: New, Cancel, collapse, close
+    // title bar: New, Cancel, preferences, collapse, close
     QHBoxLayout *titleLayout = new QHBoxLayout();
     titleLayout->setContentsMargins(0, 0, 0, 0);
     titleLayout->setSpacing(0);
@@ -128,6 +128,14 @@ DockWidget *MW::buildLibrarySetDock(Kind kind, const QString &tabText,
     cancelBtn->setIcon(":/images/icon16/reset.png", G::iconOpacity);
     connect(cancelBtn, &BarBtn::clicked, this, [this, kind] { cancelSetFilter(kind); });
     titleLayout->addWidget(cancelBtn);
+    titleLayout->addSpacing(10);
+
+    // preferences button
+    BarBtn *gearBtn = new BarBtn();
+    gearBtn->setIcon(":/images/icon16/gear.png", G::iconOpacity);
+    gearBtn->setToolTip("Preferences");
+    connect(gearBtn, &BarBtn::clicked, this, &MW::allPreferences);
+    titleLayout->addWidget(gearBtn);
     titleLayout->addSpacing(10);
 
     if (G::useDWCollapse) {
