@@ -1041,8 +1041,8 @@ void MW::createFilterActions()
     filterGroupsAction->setToolTip(tr("Show the filter categories under headings "
                                       "(Time, Camera, Metadata...) or as one flat list."));
     addAction(filterGroupsAction);
-    filterGroupsAction->setChecked(settings->value("isGroupedFilters", false).toBool()
-                                   && !simulateJustInstalled);
+    filterGroupsAction->setChecked(settings->value("isGroupedFilters", true).toBool()
+                                   || simulateJustInstalled);
     setFilterGroups();  // arrange the categories, sync the title bar button, save
     connect(filterGroupsAction, &QAction::triggered, this, &MW::setFilterGroups);
 
