@@ -1280,7 +1280,7 @@
          <string>New Mask</string>
         </property>
         <property name="text">
-         <string>M</string>
+         <string>N</string>
         </property>
         <property name="text">
          <string>Adds a mask to this image </string>
@@ -1291,10 +1291,10 @@
          <string>New Submask</string>
         </property>
         <property name="text">
-         <string/>
+         <string>M</string>
         </property>
         <property name="text">
-         <string/>
+         <string>Pops the add / subtract mask-tool menu for the current mask</string>
         </property>
        </item>
        <item>
@@ -1383,6 +1383,17 @@
         </property>
         <property name="text">
          <string>Removes the last painted stroke</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Brush Size (Brush / Object / Spot)</string>
+        </property>
+        <property name="text">
+         <string>[  /  ]</string>
+        </property>
+        <property name="text">
+         <string>Smaller / bigger brush; while the tool is active</string>
         </property>
        </item>
        <item>
@@ -1511,10 +1522,10 @@
          <string>Zoom</string>
         </property>
         <property name="text">
-         <string>Space</string>
+         <string>Space (held)</string>
         </property>
         <property name="text">
-         <string/>
+         <string>While a mask, spot or crop tool is active: click toggles zoom, drag pans; release resumes the tool</string>
         </property>
        </item>
        <item>

@@ -2,6 +2,7 @@
 #include "Metadata/colorspaces.h"
 #include <QLocale>
 #include "Utilities/foldertree.h"
+#include "Utilities/pinnedcolumns.h"
 #include "Cache/catalog.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
@@ -30,10 +31,16 @@ class FiltersDelegate : public QStyledItemDelegate
 public:
     explicit FiltersDelegate(QObject *parent = nullptr) : QStyledItemDelegate(parent) { }
 
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex  &/*index*/) const
+    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
     {
+        /* The width is the content's -- checkbox, icon, text, plus the contentShift the
+           item is painted at -- so Filters::sizeHintForColumn(0) measures what a row
+           needs and the column can widen past the viewport (horizontal scroll). */
         int height = qRound(G::strFontSize.toInt() * 1.7 * G::ptToPx);
-        return QSize(option.rect.width(), height);
+        int width = QStyledItemDelegate::sizeHint(option, index).width();
+        if (const Filters *f = qobject_cast<const Filters *>(option.widget))
+            width += f->contentShift(index);
+        return QSize(width + 6, height);
     }
 
     /*  A CHECKABLE ITEM STARTS Filters::contentShift TO THE RIGHT, so its box is clear
@@ -128,6 +135,8 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
 
 */
     if (G::isLogger) G::log("Filters::Filters");
+    // keeps the Avail/All labels above the pinned count columns (pinnedcolumns.h)
+    setHeader(new PinnedColumns::Header(this));
     viewport()->setObjectName("FiltersViewport");
     // hover feedback over the expand arrows -- see mouseMoveEvent
     viewport()->setMouseTracking(true);
@@ -228,6 +237,22 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     setCategoryBackground();
 
     setItemDelegate(new FiltersDelegate(this));
+
+    /* Re-measure column 0 whenever the shown rows may have changed, so a deep keyword
+       branch or a long item gets a horizontal scroll bar instead of eliding. */
+    contentWidthTimer.setSingleShot(true);
+    connect(&contentWidthTimer, &QTimer::timeout, this, &Filters::updateContentWidth);
+    connect(this, &QTreeView::expanded, this, &Filters::scheduleContentWidth);
+    connect(this, &QTreeView::collapsed, this, &Filters::scheduleContentWidth);
+    connect(model(), &QAbstractItemModel::rowsInserted, this, &Filters::scheduleContentWidth);
+    connect(model(), &QAbstractItemModel::rowsRemoved, this, &Filters::scheduleContentWidth);
+    connect(model(), &QAbstractItemModel::layoutChanged, this, &Filters::scheduleContentWidth);
+    connect(model(), &QAbstractItemModel::modelReset, this, &Filters::scheduleContentWidth);
+    connect(model(), &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex &tl, const QModelIndex &br) {
+        // counts and check states change constantly; only column 0 text matters here
+        if (tl.column() <= 0 && br.column() >= 0) scheduleContentWidth();
+    });
 
 #ifdef Q_OS_WIN
     // The native Windows widget style draws a 1px vertical separator at the
@@ -1195,11 +1220,16 @@ void Filters::setEachCatTextColor()
     while (*it) {
         if (isCategoryHeader(*it) && (*it) != search) {
             const QList<QTreeWidgetItem *> items = itemsInCategory(*it);
+            // the Images and Videos nodes are not choices of their own
+            qsizetype choices = items.size();
+            if (*it == types)
+                choices = std::count_if(items.cbegin(), items.cend(),
+                                        [this](QTreeWidgetItem *i) { return !isTypeGroup(i); });
             if (items.isEmpty())
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             /* category only has one item and item not "true". NOT for Collections or
                Queries: one is still a subset of what is loaded, so checking it filters. */
-            else if (items.size() == 1 && items.first()->text(0) != "true"
+            else if (choices == 1 && items.first()->text(0) != "true"
                      && !isSetCategory(*it) && *it != mapPins)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
@@ -2466,6 +2496,7 @@ bool Filters::loadCatalogCategories()
             child->setData(2, Qt::EditRole, n);
             child->setData(3, Qt::EditRole, n);
         }
+        if (c.item == types) refreshTypeGroups();
         bool anyRealValue = false;
         for (auto it = map.constBegin(); it != map.constEnd(); ++it)
             if (!it.key().isEmpty()) { anyRealValue = true; break; }
@@ -2749,6 +2780,10 @@ Query::Expr Filters::activeFiltersAsQuery(QStringList *notSaved) const
                 (exclude ? excExprs : incExprs) << n;
                 continue;
             }
+            if (isTypeGroup(item)) {        // every type beneath it
+                (exclude ? exc : inc) << item->data(1, Qt::EditRole).toStringList();
+                continue;
+            }
             const QString v = cat == collections ? item->text(0)
                                                  : item->data(1, Qt::EditRole).toString();
             (exclude ? exc : inc) << v;
@@ -2847,9 +2882,12 @@ void Filters::fillQuery(CatalogQuery &q) const
             one of two same-named keywords. */
         for (QTreeWidgetItem *child : itemsInCategory(c.item)) {
             const Qt::CheckState st = child->checkState(0);
-            const QString value = itemMapKey(c.item, child);
-            if (st == Qt::Checked) inc << value;
-            else if (st == Qt::PartiallyChecked) exc << value;
+            // an Images or Videos node stands for every type beneath it
+            const QStringList values = isTypeGroup(child)
+                                           ? child->data(1, Qt::EditRole).toStringList()
+                                           : QStringList{itemMapKey(c.item, child)};
+            if (st == Qt::Checked) inc << values;
+            else if (st == Qt::PartiallyChecked) exc << values;
         }
         if (c.dmColumn == G::KeywordsAllColumn) {
             q.keywords = inc;
@@ -3628,6 +3666,140 @@ void Filters::updateFolderItems(const QMap<QString, int> &folderCounts,
     }
 }
 
+void Filters::addTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category)
+{
+/*
+    Build File types as Images and Videos nodes with the types beneath them.
+
+    A TYPE IS A VIDEO when its extension is in videoFormats; everything else, including
+    a combined raw+jpg ("JPG+ARW"), is an image. A node appears only when it has a type
+    under it.
+
+    THE NODE IS A FILTER ITEM like any other: its value is the list of its types (see
+    refreshTypeGroups), and SortFilter::compileFilters, fillQuery and
+    activeFiltersAsQuery expand it, so checking Images includes every image type and
+    Opt+clicking Videos excludes every video. The types under it stay independent, as a
+    keyword or folder under a checked branch does.
+
+    Composes with a second call: types already here are kept, as addCategoryItems does.
+*/
+    QMutexLocker locker(&mutex);
+
+    QHash<QString, QTreeWidgetItem *> groupById;
+    QSet<QString> have;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        if (isTypeGroup(item)) groupById.insert(item->data(0, TypeGroupRole).toString(), item);
+        else have.insert(item->text(0));
+    }
+
+    QHash<QString, QList<QTreeWidgetItem *>> newTypes;     // group id -> new type items
+    for (auto it = itemMap.constBegin(); it != itemMap.constEnd(); ++it) {
+        if (G::stop) return;
+        const QString &key = it.key();
+        if (have.contains(key) || key.startsWith(':')) continue;   // ':' = a node's key
+        const QString ext = key.section('+', 0, 0).toLower();
+        const QString id = videoFormats.contains(ext) ? "Videos" : "Images";
+        QTreeWidgetItem *item = new QTreeWidgetItem();
+        item->setText(0, key);
+        item->setCheckState(0, Qt::Unchecked);
+        item->setData(1, Qt::EditRole, filterValueFor(category, key));
+        item->setData(2, Qt::EditRole, it.value());
+        item->setData(3, Qt::EditRole, it.value());
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        applyItemStyle(item);
+        newTypes[id] << item;
+    }
+
+    const QList<QPair<QString, QString>> groupDefs {
+        {"Images", tr("Images")}, {"Videos", tr("Videos")}
+    };
+    for (const auto &def : groupDefs) {
+        const QList<QTreeWidgetItem *> items = newTypes.value(def.first);
+        if (items.isEmpty()) continue;
+        QTreeWidgetItem *group = groupById.value(def.first, nullptr);
+        if (!group) {
+            group = new QTreeWidgetItem();
+            group->setText(0, def.second);
+            group->setData(0, TypeGroupRole, def.first);
+            group->setCheckState(0, Qt::Unchecked);
+            group->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+            group->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+            group->setToolTip(0, tr("Every %1 type below.\n\n"
+                                    "Click to include. Opt+click to exclude.")
+                                     .arg(def.second.toLower()));
+            applyItemStyle(group);
+            // Images first, Videos after it
+            category->insertChild(def.first == "Images" ? 0 : category->childCount(),
+                                  group);
+            group->setExpanded(true);       // the types show, as they did before the nodes
+        }
+        group->addChildren(items);
+        group->sortChildren(0, Qt::AscendingOrder);
+    }
+    refreshTypeGroups();
+}
+
+void Filters::updateTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category)
+{
+/*
+    REBUILT, keeping the check states (by itemMapKey) and which nodes are collapsed, as
+    updateFolderItems does.
+*/
+    if (G::isLogger) G::log("Filters::updateTypeItems");
+    if (G::stop) return;
+
+    QHash<QString, Qt::CheckState> stateByKey;
+    QSet<QString> collapsed;
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString key = itemMapKey(category, item);
+        if (item->checkState(0) != Qt::Unchecked) stateByKey.insert(key, item->checkState(0));
+        if (isTypeGroup(item) && !item->isExpanded()) collapsed.insert(key);
+    }
+
+    {
+        QMutexLocker locker(&mutex);
+        qDeleteAll(category->takeChildren());
+    }
+
+    addTypeItems(itemMap, category);
+
+    for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        const QString key = itemMapKey(category, item);
+        const auto it = stateByKey.constFind(key);
+        if (it != stateByKey.constEnd()) {
+            item->setCheckState(0, it.value());
+            styleFilterItem(item);
+        }
+        if (collapsed.contains(key)) item->setExpanded(false);
+    }
+}
+
+void Filters::refreshTypeGroups()
+{
+/*
+    Each Images / Videos node's value (the types beneath it) and its counts (their sum:
+    a row has exactly one type). Called after anything that changes the types or their
+    counts. Takes no lock -- its callers may hold the mutex.
+*/
+    if (!types) return;
+    for (int i = 0; i < types->childCount(); ++i) {
+        QTreeWidgetItem *group = types->child(i);
+        if (!isTypeGroup(group)) continue;
+        QStringList values;
+        int filtered = 0, all = 0;
+        for (int j = 0; j < group->childCount(); ++j) {
+            QTreeWidgetItem *t = group->child(j);
+            values << t->data(1, Qt::EditRole).toString();
+            filtered += t->data(2, Qt::EditRole).toInt();
+            all += t->data(3, Qt::EditRole).toInt();
+        }
+        group->setData(1, Qt::EditRole, values);
+        group->setData(2, Qt::EditRole, filtered);
+        group->setData(3, Qt::EditRole, all);
+    }
+}
+
 void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
@@ -3651,6 +3823,10 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
     }
     if (category == folders) {
         updateFolderItems(itemMap, category);
+        return;
+    }
+    if (category == types) {
+        updateTypeItems(itemMap, category);
         return;
     }
 
@@ -3743,6 +3919,8 @@ QString Filters::itemMapKey(const QTreeWidgetItem *category,
         leaf and two keywords can share one -- keying on the label would put both
         Vancouvers' counts on whichever item was visited first. */
     if (isNestedCategory(category)) return item->data(1, Qt::EditRole).toString();
+    // ':' cannot start a file type, so this never meets a count or a real type
+    if (isTypeGroup(item)) return ":" + item->data(0, TypeGroupRole).toString();
     return item->text(0);
 }
 
@@ -3930,6 +4108,10 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         addFolderItems(itemMap, category);
         return;
     }
+    if (category == types) {
+        addTypeItems(itemMap, category);
+        return;
+    }
 
     QMutexLocker locker(&mutex);
 
@@ -4070,6 +4252,7 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
         if (itemMap.contains(key))
             item->setData(3, Qt::EditRole, itemMap.value(key));
     }
+    if (category == types) refreshTypeGroups();
 
     // sort the result
     //category->sortChildren(0, Qt::AscendingOrder);
@@ -4106,6 +4289,7 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
         if (itemMap.contains(key))
             item->setData(2, Qt::EditRole, itemMap.value(key));
     }
+    if (category == types) refreshTypeGroups();
 
     // sort the result
     //category->sortChildren(0, Qt::AscendingOrder);
@@ -4348,6 +4532,7 @@ void Filters::applyCss(const QString &css)
     search->setFont(0, categoryFont);
     searchTrue->setFont(0, searchDefaultTextFont);
     resizeColumns();
+    scheduleContentWidth();     // font size may have changed
 }
 
 void Filters::resizeColumns()
@@ -4366,9 +4551,99 @@ void Filters::resizeColumns()
     int countFilteredColumnWidth = countColumnWidth;
     int col0Width = viewport()->width() - countColumnWidth -
                     countFilteredColumnWidth - 5 /*- decorationWidth*/;
+    /* Never narrower than the widest shown row, so a long or deeply nested item widens
+       the column past the viewport and the horizontal scroll bar appears
+       (ScrollBarAsNeeded) rather than the text being elided. The count columns stay
+       at the right edge (drawRow, Utilities/pinnedcolumns.h). */
+    col0Width = qMax(col0Width, contentWidth0);
     setColumnWidth(3, countColumnWidth);
     setColumnWidth(2, countFilteredColumnWidth);
     setColumnWidth(0, col0Width);
+}
+
+QRect Filters::visualRect(const QModelIndex &index) const
+{
+/*
+    A pinned column's cell is where drawRow paints it (Utilities/pinnedcolumns.h).
+*/
+    QRect r = QTreeWidget::visualRect(index);
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (r.isValid() && g.isPinned(index.column())) r.translate(g.delta, 0);
+    return r;
+}
+
+QModelIndex Filters::indexAt(const QPoint &point) const
+{
+/*
+    A point in the pinned strip is in the pinned cell drawn there, not in the column 0
+    text scrolled beneath it.
+*/
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (g.isActive() && point.x() >= g.left)
+        return QTreeWidget::indexAt(QPoint(point.x() - g.delta, point.y()));
+    return QTreeWidget::indexAt(point);
+}
+
+void Filters::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
+                     const QModelIndex &index) const
+{
+/*
+    When column 0 overruns the viewport, the row is painted twice: as laid out, clipped
+    to the left of the pinned strip, then shifted so its pinned cells land in the strip,
+    clipped to the strip. See Utilities/pinnedcolumns.h.
+*/
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (!g.isActive()) {
+        QTreeWidget::drawRow(painter, option, index);
+        return;
+    }
+    const QRect r = option.rect;
+    painter->save();
+    painter->setClipRect(QRect(0, r.top(), g.left, r.height()), Qt::IntersectClip);
+    QTreeWidget::drawRow(painter, option, index);
+    painter->restore();
+
+    painter->save();
+    painter->setClipRect(QRect(g.left, r.top(), viewport()->width() - g.left, r.height()),
+                         Qt::IntersectClip);
+    painter->translate(g.delta, 0);     // after the clip, which stays in viewport coords
+    QTreeWidget::drawRow(painter, option, index);
+    painter->restore();
+}
+
+void Filters::scrollContentsBy(int dx, int dy)
+{
+/*
+    Qt blits the viewport (and the header) on a horizontal scroll, which would carry the
+    pinned strip with the text. Repaint both whole instead.
+*/
+    QTreeWidget::scrollContentsBy(dx, dy);
+    if (dx) {
+        viewport()->update();
+        header()->viewport()->update();
+    }
+}
+
+void Filters::scheduleContentWidth()
+{
+/*
+    Debounced: a filter rebuild inserts every item, one rowsInserted at a time.
+*/
+    contentWidthTimer.start(50);
+}
+
+void Filters::updateContentWidth()
+{
+/*
+    sizeHintForColumn includes the indentation and FiltersDelegate::sizeHint (box, icon,
+    text, contentShift); hidden rows are skipped. Cached here because resizeColumns runs
+    on every resize event while the dock is dragged.
+*/
+    if (G::isLogger) G::log("Filters::updateContentWidth");
+    const int w = sizeHintForColumn(0);
+    if (w == contentWidth0) return;
+    contentWidth0 = w;
+    resizeColumns();
 }
 
 void Filters::setCountCeiling(int maxCount)
@@ -4388,6 +4663,18 @@ void Filters::resizeEvent(QResizeEvent *event)
 void Filters::paintEvent(QPaintEvent *event)
 {
     // if (G::isLogger) G::log("Filters::paintEvent");
+    /* drawTree picks the columns to draw from the paint region (laid-out coords) before
+       any drawRow, so a pinned column laid out past the viewport would never reach
+       drawRow's shifted pass. Widen the region by the shift; the system clip still
+       limits what is painted. See Utilities/pinnedcolumns.h. */
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (g.isActive()) {
+        QRect r = event->region().boundingRect();
+        r.setRight(r.right() - g.delta);
+        QPaintEvent widened(r);
+        QTreeWidget::paintEvent(&widened);
+        return;
+    }
     QTreeWidget::paintEvent(event);
 }
 

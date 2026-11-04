@@ -24,6 +24,8 @@ public:
 
     Filters(QWidget *parent);
     ~Filters() override;
+    QRect visualRect(const QModelIndex &index) const override;
+    QModelIndex indexAt(const QPoint &point) const override;
     QTreeWidgetItem *search;
     QTreeWidgetItem *searchTrue;
     QTreeWidgetItem *searchFalse;
@@ -157,6 +159,16 @@ public:
         "/"; empty (Folders scope) means "the deepest folder they share". Takes effect at
         the next build, which a scope change always brings. */
     void setFolderAnchors(const QStringList &anchors) { folderAnchors = anchors; }
+    /*  File types sit under an Images and a Videos node (addTypeItems). The video
+        extensions are Metadata::videoFormats, lower case; MW pushes them in once
+        Metadata exists, which is after the panel is made. */
+    void setVideoFormats(const QStringList &formats) { videoFormats = formats; }
+    /*  An Images or Videos node in File types. Its value (data(1)) is the QStringList
+        of the types beneath it, so a check on it includes or excludes all of them. */
+    bool isTypeGroup(const QTreeWidgetItem *item) const
+    {
+        return item != nullptr && item->data(0, TypeGroupRole).isValid();
+    }
     /*  Keywords and Folders: categories whose items form a tree and are keyed on the
         PATH in data(1) rather than on their label. */
     bool isNestedCategory(const QTreeWidgetItem *category) const
@@ -430,6 +442,10 @@ protected:
     void contextMenuEvent(QContextMenuEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
+    /* Count columns pinned to the right edge -- see Utilities/pinnedcolumns.h. */
+    void drawRow(QPainter *painter, const QStyleOptionViewItem &option,
+                 const QModelIndex &index) const override;
+    void scrollContentsBy(int dx, int dy) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
@@ -485,7 +501,10 @@ public:
             it): something beneath it is checked, so it is drawn in the filtering yellow
             like a category header -- a collapsed branch still says where the filter is.
             Set by setEachCatTextColor, read by applyItemStyle. */
-        DescendantFilteringRole
+        DescendantFilteringRole,
+        /*  On an Images or Videos node in File types: "Images" or "Videos", untranslated.
+            See isTypeGroup. */
+        TypeGroupRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
@@ -595,6 +614,11 @@ private:
     int lastFilteringState = -1;        // -1 = never emitted
     QMutex mutex;
     void resizeColumns();
+    /* Horizontal scroll: column 0 widens to its widest shown row (see resizeColumns). */
+    void scheduleContentWidth();
+    void updateContentWidth();
+    QTimer contentWidthTimer;   // debounce re-measure after expand/collapse/rebuild
+    int contentWidth0 = 0;      // cached sizeHintForColumn(0)
     int countCeiling = 0;       // see setCountCeiling
     QLinearGradient categoryBackground;
     QFont categoryFont;
@@ -680,6 +704,11 @@ private:
         so turning it off puts the tree back instead of leaving everything expanded. */
     QSet<QString> expandedBeforeUnfiled;
     QStringList folderAnchors;          // see setFolderAnchors
+    QStringList videoFormats;           // see setVideoFormats
+    /*  File types as a two-level tree: Images / Videos, then the types. */
+    void addTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category);
+    void updateTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category);
+    void refreshTypeGroups();
     QList<QTreeWidgetItem *> sessionCats;       // see addSessionCategory
     QList<QTreeWidgetItem *> retiredSessionCats;    // see removeSessionCategory
     /*  "Filter on...", appended to every menu by addFilterActions. Owned here rather

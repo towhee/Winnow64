@@ -83,6 +83,8 @@ class FSTree : public QTreeView
 public:
     FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent = nullptr);
     ~FSTree() override;
+    QRect visualRect(const QModelIndex &index) const override;
+    QModelIndex indexAt(const QPoint &point) const override;
     void createModel();
     void setShowImageCount(bool showImageCount);
     void updateAFolderCount(const QString &dPath);
@@ -173,6 +175,11 @@ protected:
     void dragMoveEvent(QDragMoveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void resizeEvent(QResizeEvent *event) override;
+    /* Count column pinned to the right edge -- see Utilities/pinnedcolumns.h. */
+    void drawRow(QPainter *painter, const QStyleOptionViewItem &option,
+                 const QModelIndex &index) const override;
+    void scrollContentsBy(int dx, int dy) override;
+    void paintEvent(QPaintEvent *event) override;
     void selectionChanged(const QItemSelection &selected, const QItemSelection &deselected) override;
 
 signals:
@@ -250,6 +257,12 @@ private:
     QStringList visibleFolderPaths() const;
     QTimer watchResyncTimer;   // debounce re-sync of the watch set
     QTimer watchRefreshTimer;  // debounce refresh after a directoryChanged burst
+
+    /* Horizontal scroll: column 0 widens to its widest expanded row (see resizeColumns). */
+    void scheduleContentWidth();
+    void updateContentWidth();
+    QTimer contentWidthTimer;  // debounce re-measure after expand/collapse/model changes
+    int contentWidth0 = 0;     // cached sizeHintForColumn(0)
 };
 
 #endif // FSTREE_H

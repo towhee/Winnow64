@@ -290,6 +290,7 @@
     - [9.8.4 Targets (the B List)](#984-targets-the-b-list)
     - [9.8.5 Comparison](#985-comparison)
     - [9.8.6 Output](#986-output)
+  - [9.9 Horizontal Scroll in Folders and Filters](#99-horizontal-scroll-in-folders-and-filters)
 - [10 Raw Decoding](#10-raw-decoding)
   - [10.1 Pipeline](#101-pipeline)
     - [10.1.1 Why the Decode Stops at Camera-Native](#1011-why-the-decode-stops-at-camera-native)
@@ -850,6 +851,7 @@
     - [18.2.2 Capture Times Are the Camera's Wall Clock, Not an Instant](#1822-capture-times-are-the-cameras-wall-clock-not-an-instant)
     - [18.2.3 Every Category Adds Up, and the Shortfall Is a Blank Row](#1823-every-category-adds-up-and-the-shortfall-is-a-blank-row)
     - [18.2.4 Nested Categories: Keywords (and Folders)](#1824-nested-categories-keywords-and-folders)
+    - [18.2.5 File Types: Images and Videos](#1825-file-types-images-and-videos)
   - [18.3 Searching Folders and Catalog (One Grammar)](#183-searching-folders-and-catalog-one-grammar)
     - [18.3.1 The Grammar](#1831-the-grammar)
     - [18.3.2 Negation](#1832-negation)
@@ -4197,6 +4199,18 @@ Responsiveness: the whole search runs synchronously on the GUI thread. Its progr
 on_updateDupsAndQuitBtn_clicked() writes the result back to the DataModel. It first clears G::CompareColumn on ALL dm->sf rows (candidates are only a subset, so a candidate-only pass would leave stale flags), then sets it for each checked candidate, found by PATH (dm->proxyRowFromPath), because Winnow may have changed folders since the snapshot; candidates no longer loaded are skipped. It then accepts the dialog and MW's accepted handler refreshes the Compare filter.
 
 When NONE of the candidates are loaded any more, updateApplyState() greys the button and puts the reason ("Candidate folder is no longer open in Winnow...") in progressLbl and the tooltip. It is re-checked when the window is activated (changeEvent ActivationChange) and after each search.
+
+### 9.9 Horizontal Scroll in Folders and Filters
+
+A deep folder branch or a long name in the Folders tree (FSTree), or a long or deeply nested item in the Filters tree, gets a horizontal scroll bar instead of being elided.
+
+- Column 0 is set to max(the width that fits the panel, the widest shown row) in FSTree::resizeColumns and Filters::resizeColumns. When the row is wider, the columns overrun the viewport and Qt's default ScrollBarAsNeeded shows the bar.
+- The count columns stay pinned to the right edge (Utilities/pinnedcolumns.h). Qt has no frozen columns, so drawRow paints each row twice: as laid out, clipped left of the strip, then translated by PinnedColumns::Geometry::delta so the count cells land in the strip, clipped to it. paintEvent widens the paint region by the same delta before the base class runs, because drawTree chooses the columns to draw from the region (QTreeViewPrivate::leftAndRight), not from drawRow's option.rect, so a count column laid out past the viewport was otherwise never drawn. visualRect and indexAt apply the same delta, so repaints (a count's dataChanged), clicks, drops and tooltips match what is drawn. scrollContentsBy repaints the whole viewport on a horizontal scroll, because Qt blits it and would carry the strip along. Filters' header is a PinnedColumns::Header, which repaints the Avail/All sections over the strip and maps their tooltips; FSTree's header is hidden. With column 0 fitting, delta is 0 and nothing changes.
+- The widest row is sizeHintForColumn(0) (indentation + delegate sizeHint), cached in contentWidth0 by updateContentWidth(). It is re-measured, debounced 50 ms, on expand, collapse, rowsInserted/Removed, layoutChanged, modelReset, a column-0 dataChanged, and a restyle (font size). The cache matters because resizeColumns runs on every resize event while a dock is dragged.
+- FiltersDelegate::sizeHint returns the content's width (box, icon, text, plus contentShift); it used to return option.rect.width(), which measured nothing.
+- Hiding Filters rows (setHidden) emits no model signal, so the column keeps its width until the next re-measure trigger.
+
+Key files: File/fstree.cpp, Datamodel/filters.cpp.
 
 ## 10 Raw Decoding
 
@@ -10261,6 +10275,14 @@ Keywords are a nested category, because a keyword's identity is its full path ([
 - One level was an assumption written into a dozen loops, all spelled "for i &lt; category->childCount()". On a tree each of those sees the roots and misses the leaves, silently. Filters::itemsInCategory is the single definition of "every filterable item beneath a category", and the count updaters, fillQuery and the catalog count loop all go through it. Filters::itemMapKey is the matching definition of what an itemMap is keyed on (the label everywhere, the path for keywords). SortFilter::compileFilters needed no change: it already walked with a QTreeWidgetItemIterator and read data(1).
 - Filters::save / restore are keyed on {TOP-LEVEL CATEGORY, FILTER VALUE}, not {parent text, item label}. Those were the same thing while every category was one level deep. With Keywords nested, an item's parent is another KEYWORD, so a saved state recorded "Heron" under "Bird" and restore(), which looks under the category name, matched nothing and restored nothing, SILENTLY: the user's filter quietly came back empty after a folder change. Keying on the value also distinguishes the two Vancouvers. tests/unit/tst_filters.cpp pins it, and each of its cases was confirmed to FAIL against the old key before the new one was written.
 - Category identity is Filters::CategoryNameRole, set once by createFilter, not the header's display text (which can carry a count): [16.8.1 Marking Unfiled Keywords in Filters](#1681-marking-unfiled-keywords-in-filters).
+
+#### 18.2.5 File Types: Images and Videos
+
+File types is two levels deep (2026-11-04): an Images node and a Videos node, each with its types beneath it (Filters::addTypeItems; updateTypeItems rebuilds keeping check states and collapsed nodes). A type is a video when its extension (the part before any "+", so "JPG+ARW" is an image) is in Metadata::videoFormats, which MW::createDataModel pushes in with Filters::setVideoFormats because the panel is made before Metadata. A node appears only when it has a type under it, and starts expanded so the types show as they did before.
+
+- THE NODE IS A FILTER ITEM. Its data(1) is the QStringList of the types beneath it (Filters::refreshTypeGroups, which also sums the counts: a row has one type). SortFilter::compileFilters, Filters::fillQuery and Filters::activeFiltersAsQuery expand the list into one value per type, so checking Images includes every image type and Opt+clicking Videos excludes every video. FilterPredicate is unchanged. The types under a checked node stay independent, as under a keyword or folder branch.
+- Filters::isTypeGroup (TypeGroupRole, "Images" or "Videos", untranslated) identifies a node. itemMapKey keys it ":Images" / ":Videos": no file type starts with ':', so a count map never matches it, save/restore round-trips it, and addTypeItems skips such a key if restore(keepMissing) feeds one back.
+- setEachCatTextColor's "only one item" grey ignores the nodes, so a folder of JPGs alone still greys File types.
 
 ### 18.3 Searching Folders and Catalog (One Grammar)
 

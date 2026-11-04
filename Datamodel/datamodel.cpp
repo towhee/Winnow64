@@ -8031,8 +8031,16 @@ void SortFilter::compileFilters()
                         filtering for the rows it does not name. */
                     cat.includeAll = true;
                 }
-                else if (state == Qt::PartiallyChecked) cat.excludes.append(item->data(1, Qt::EditRole));
-                else                                    cat.includes.append(item->data(1, Qt::EditRole));
+                else {
+                    QVector<QVariant> &values =
+                        state == Qt::PartiallyChecked ? cat.excludes : cat.includes;
+                    const QVariant v = item->data(1, Qt::EditRole);
+                    /*  A File types Images / Videos node holds the list of its types
+                        (Filters::isTypeGroup); each is a value of its own. */
+                    if (filters->isTypeGroup(item))
+                        for (const QString &t : v.toStringList()) values.append(t);
+                    else values.append(v);
+                }
             }
         }
         else {

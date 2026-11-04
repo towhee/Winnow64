@@ -1,5 +1,6 @@
 #include "File/fstree.h"
 #include "Utilities/fileops.h"
+#include "Utilities/pinnedcolumns.h"
 #include <QSet>
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
@@ -594,6 +595,23 @@ FSTree::FSTree(MW *mw, DataModel *dm, Metadata *metadata, QWidget *parent)
             this->viewport()->update();});
 
     setupFolderWatcher();
+
+    /* Re-measure column 0 whenever the set of shown folder names may have changed, so a
+       deep branch or a long name gets a horizontal scroll bar instead of eliding. */
+    contentWidthTimer.setSingleShot(true);
+    connect(&contentWidthTimer, &QTimer::timeout, this, &FSTree::updateContentWidth);
+    connect(this, &QTreeView::expanded, this, &FSTree::scheduleContentWidth);
+    connect(this, &QTreeView::collapsed, this, &FSTree::scheduleContentWidth);
+    connect(fsFilter, &QAbstractItemModel::rowsInserted, this, &FSTree::scheduleContentWidth);
+    connect(fsFilter, &QAbstractItemModel::rowsRemoved, this, &FSTree::scheduleContentWidth);
+    connect(fsFilter, &QAbstractItemModel::layoutChanged, this, &FSTree::scheduleContentWidth);
+    connect(fsFilter, &QAbstractItemModel::modelReset, this, &FSTree::scheduleContentWidth);
+    connect(fsFilter, &QAbstractItemModel::dataChanged, this,
+            [this](const QModelIndex &tl, const QModelIndex &br) {
+        // the image count column updates constantly; only names matter here
+        if (tl.column() <= 0 && br.column() >= 0) scheduleContentWidth();
+    });
+    scheduleContentWidth();
 
     isDebug = false;
 }
@@ -1390,6 +1408,7 @@ void FSTree::applyCss(const QString &css)
     if (G::isLogger) G::log("FSTree::applyCss");
     setStyleSheet(css + G::panelFontCss("FSTree"));
     resizeColumns();
+    scheduleContentWidth();     // font size may have changed
 }
 
 void FSTree::resizeColumns()
@@ -1407,8 +1426,118 @@ void FSTree::resizeColumns()
         imageCountColumnWidth = 0;
         hideColumn(4);
     }
-    // have to include the width of the decoration folder png
-    setColumnWidth(0, width() - G::scrollBarThickness - imageCountColumnWidth - 10);
+    /* have to include the width of the decoration folder png.  Never narrower than the
+       widest expanded folder (indent + icon + name), so a deep branch or long name
+       widens the column past the viewport and the horizontal scroll bar appears
+       (ScrollBarAsNeeded) rather than the name being elided. The count column stays
+       at the right edge (drawRow, Utilities/pinnedcolumns.h). */
+    int fitWidth = width() - G::scrollBarThickness - imageCountColumnWidth - 10;
+    setColumnWidth(0, qMax(fitWidth, contentWidth0));
+}
+
+QRect FSTree::visualRect(const QModelIndex &index) const
+{
+/*
+    A pinned column's cell is where drawRow paints it (Utilities/pinnedcolumns.h).
+*/
+    QRect r = QTreeView::visualRect(index);
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (r.isValid() && g.isPinned(index.column())) r.translate(g.delta, 0);
+    return r;
+}
+
+QModelIndex FSTree::indexAt(const QPoint &point) const
+{
+/*
+    A point in the pinned strip is in the pinned cell drawn there, not in the column 0
+    text scrolled beneath it.
+*/
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (g.isActive() && point.x() >= g.left)
+        return QTreeView::indexAt(QPoint(point.x() - g.delta, point.y()));
+    return QTreeView::indexAt(point);
+}
+
+void FSTree::drawRow(QPainter *painter, const QStyleOptionViewItem &option,
+                     const QModelIndex &index) const
+{
+/*
+    When column 0 overruns the viewport, the row is painted twice: as laid out, clipped
+    to the left of the pinned strip, then shifted so its pinned cells land in the strip,
+    clipped to the strip. See Utilities/pinnedcolumns.h.
+*/
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (!g.isActive()) {
+        QTreeView::drawRow(painter, option, index);
+        return;
+    }
+    const QRect r = option.rect;
+    painter->save();
+    painter->setClipRect(QRect(0, r.top(), g.left, r.height()), Qt::IntersectClip);
+    QTreeView::drawRow(painter, option, index);
+    painter->restore();
+
+    painter->save();
+    painter->setClipRect(QRect(g.left, r.top(), viewport()->width() - g.left, r.height()),
+                         Qt::IntersectClip);
+    painter->translate(g.delta, 0);     // after the clip, which stays in viewport coords
+    QTreeView::drawRow(painter, option, index);
+    painter->restore();
+}
+
+void FSTree::paintEvent(QPaintEvent *event)
+{
+/*
+    drawTree picks the columns to draw from the paint region (laid-out coords) before
+    any drawRow, so a pinned column laid out past the viewport would never reach
+    drawRow's shifted pass. Widen the region by the shift; the system clip still limits
+    what is painted. See Utilities/pinnedcolumns.h.
+*/
+    const PinnedColumns::Geometry g = PinnedColumns::geometry(header(), viewport()->width());
+    if (g.isActive()) {
+        QRect r = event->region().boundingRect();
+        r.setRight(r.right() - g.delta);
+        QPaintEvent widened(r);
+        QTreeView::paintEvent(&widened);
+        return;
+    }
+    QTreeView::paintEvent(event);
+}
+
+void FSTree::scrollContentsBy(int dx, int dy)
+{
+/*
+    Qt blits the viewport (and the header) on a horizontal scroll, which would carry the
+    pinned strip with the text. Repaint both whole instead.
+*/
+    QTreeView::scrollContentsBy(dx, dy);
+    if (dx) {
+        viewport()->update();
+        header()->viewport()->update();
+    }
+}
+
+void FSTree::scheduleContentWidth()
+{
+/*
+    Debounced: expanding a folder inserts its children one burst at a time.
+*/
+    contentWidthTimer.start(50);
+}
+
+void FSTree::updateContentWidth()
+{
+/*
+    sizeHintForColumn includes the indentation and the delegate's icon + text width.
+    It samples header()->resizeContentsPrecision() rows (1000) around the viewport, so
+    the cost is bounded however much of the tree is expanded.  Cached here because
+    resizeColumns runs on every resize event while a dock is dragged.
+*/
+    if (G::isLogger) G::log("FSTree::updateContentWidth");
+    const int w = sizeHintForColumn(0);
+    if (w == contentWidth0) return;
+    contentWidth0 = w;
+    resizeColumns();
 }
 
 void FSTree::onItemExpanded(const QModelIndex &index)

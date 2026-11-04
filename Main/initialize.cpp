@@ -332,6 +332,7 @@ void MW::createDataModel()
     if (G::isLogger) G::log("MW::createDataModel");
     icd = new ImageCacheData(this);
     metadata = new Metadata;
+    filters->setVideoFormats(metadata->videoFormats);  // File types: Images / Videos
     progress = new Progress(this);
 
     // loadSettings not run yet

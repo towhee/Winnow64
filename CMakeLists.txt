@@ -795,6 +795,7 @@ set(WINNOW_HEADERS
     Utilities/volumeinfo.h
     Utilities/fileops.h
     Utilities/foldertree.h
+    Utilities/pinnedcolumns.h
     Utilities/searchterms.h
     Utilities/utilities.h
     Utilities/versionkey.h
