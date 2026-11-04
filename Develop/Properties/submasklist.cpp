@@ -88,7 +88,7 @@ QIcon SubmaskList::opIcon(int op)
     QPainter p(&pm);
     p.setRenderHint(QPainter::Antialiasing);
     p.setOpacity(G::iconOpacity);
-    QPen pen(QColor(184, 184, 184), 2.0, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin);
+    QPen pen(G::glyphColor, 2.0, Qt::SolidLine, Qt::FlatCap, Qt::MiterJoin);
     p.setPen(pen);
     p.setBrush(Qt::NoBrush);
     if (op == 1) {                              // Subtract: -

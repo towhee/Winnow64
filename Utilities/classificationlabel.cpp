@@ -11,10 +11,10 @@ ClassificationLabel::ClassificationLabel(QWidget *parent)
     setAlignment(Qt::AlignCenter);
 
     // defaults
-    pickColor = QColor(Qt::green);
-    rejectColor = QColor(Qt::red);
-    pickBackgroundColor = QColor(Qt::green);
-    textColor = QColor(Qt::white);
+    pickColor = G::pickColor;
+    rejectColor = G::rejectColor;
+    pickBackgroundColor = G::pickColor;
+    textColor = G::classificationTextColor;
     diameter = 20;
     isPick = true;
     borderPen.setWidth(3);
@@ -44,11 +44,11 @@ void ClassificationLabel::setRating(QString rating)
 void ClassificationLabel::setColorClass(QString colorClass)
 {
     this->colorClass = colorClass;
-    textColor = Qt::white;
+    textColor = G::classificationTextColor;
     backgroundColor = G::labelNoneColor;
     if (colorClass == "Red") backgroundColor = G::labelRedColor;
     if (colorClass == "Yellow") backgroundColor = G::labelYellowColor;
-    if (colorClass == "Yellow") textColor = Qt::black;
+    if (colorClass == "Yellow") textColor = G::classificationOnYellowTextColor;
     if (colorClass == "Green") backgroundColor = G::labelGreenColor;
     if (colorClass == "Blue") backgroundColor = G::labelBlueColor;
     if (colorClass == "Purple") backgroundColor = G::labelPurpleColor;

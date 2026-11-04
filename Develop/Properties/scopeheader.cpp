@@ -22,9 +22,9 @@
     The Develop dock's scope control -- see scopeheader.h for the shape and the wiring.
 */
 
-/* The scope caption (Global, Mask 1, ...) is yellow so the thing the panel below is
-   editing reads apart from the section headers and slider captions under it. */
-static const QColor kScopeTextColor(Qt::yellow);
+/* The scope caption (Global, Mask 1, ...) is G::attentionColor (yellow) so the thing the
+   panel below is editing reads apart from the section headers and slider captions under
+   it. */
 
 ScopeHeader::ScopeHeader(QWidget *parent) : QWidget(parent)
 {
@@ -97,13 +97,16 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     barLabel->installEventFilter(this);
 
     /* ": n" -- how many scopes this image has, Global included. Painted in the [+]
-       glyph's own grey (#b8b8b8 in new.png) at the same G::iconOpacity BarBtn::setIcon
+       glyph's own grey (G::glyphColor, #b8b8b8 in new.png) at the same G::iconOpacity BarBtn::setIcon
        draws it with, so the count reads as part of the bar's "add" affordance rather than
        as more caption. Refilled by updateScopeBar. A click folds, like the caption. */
     barCountLabel = new QLabel(scopeBar);
     /* Written out rather than via G::labelCss, whose color.name() drops the alpha. */
     barCountLabel->setStyleSheet(
-        "QLabel { color: rgba(184, 184, 184, " + QString::number(G::iconOpacity) + ");"
+        "QLabel { color: rgba(" + QString::number(G::glyphColor.red()) + ", "
+        + QString::number(G::glyphColor.green()) + ", "
+        + QString::number(G::glyphColor.blue()) + ", "
+        + QString::number(G::iconOpacity) + ");"
         " background: transparent; font-size: " + G::strFontSize + "pt; }"
         " QLabel:disabled { color: " + G::disabledColor.name() + "; }");
     barCountLabel->setToolTip("Scopes on this image, Global included");
@@ -121,11 +124,11 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
        the text colour is set: every other QComboBox property still comes from
        WidgetCSS::comboBox(), and the disabled rule is repeated here because a widget's
        own stylesheet outranks the application one. */
-    scopeCombo->setStyleSheet("QComboBox { color: " + kScopeTextColor.name() + "; }"
+    scopeCombo->setStyleSheet("QComboBox { color: " + G::attentionColor.name() + "; }"
                               "QComboBox:disabled { color: " + G::disabledColor.name() + "; }"
                               /* The rename line edit of a mask scope (see hookScopeEdit)
                                  draws as the combo's own text, not as a field inside it. */
-                              "QComboBox QLineEdit { color: " + kScopeTextColor.name() + ";"
+                              "QComboBox QLineEdit { color: " + G::attentionColor.name() + ";"
                               " background: transparent; border: none; padding: 0px; }");
     /* Typing renames the active scope; it never adds an item (and the Return-key insert
        is the only thing NoInsert turns off). */

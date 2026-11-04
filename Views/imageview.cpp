@@ -1149,7 +1149,7 @@ void ImageView::drawDetailPointMarker(QPainter *p)
     p->drawLine(QPointF(vp.x() + kR - 1, vp.y()), QPointF(vp.x() + kR + 4, vp.y()));
     p->drawLine(QPointF(vp.x(), vp.y() - kR - 4), QPointF(vp.x(), vp.y() - kR + 1));
     p->drawLine(QPointF(vp.x(), vp.y() + kR - 1), QPointF(vp.x(), vp.y() + kR + 4));
-    p->setPen(QPen(QColor(120, 200, 195), 1.4));
+    p->setPen(QPen(G::accentTealColor, 1.4));
     p->drawEllipse(vp, kR, kR);
     p->drawLine(QPointF(vp.x() - kR - 4, vp.y()), QPointF(vp.x() - kR + 1, vp.y()));
     p->drawLine(QPointF(vp.x() + kR - 1, vp.y()), QPointF(vp.x() + kR + 4, vp.y()));
@@ -1226,7 +1226,7 @@ void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
     QPainterPath bg;
     bg.addRoundedRect(QRectF(panel), 7, 7);
     p.fillPath(bg, QColor(18, 18, 18, 235));
-    p.setPen(QPen(accent ? QColor(21, 113, 211, 230) : QColor(255, 255, 255, 45),
+    p.setPen(QPen(accent ? G::withAlpha(G::appleBlue, 230) : QColor(255, 255, 255, 45),
                   accent ? 1.6 : 1.0));
     p.drawPath(bg);
 
@@ -1692,7 +1692,7 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
         layer.fill(Qt::transparent);
         QPainter lp(&layer);
         lp.setRenderHint(QPainter::Antialiasing, true);
-        const QColor tint(77, 208, 198, 100);      // panel-accent teal
+        const QColor tint = G::withAlpha(G::accentTealColor, 100);   // panel-accent teal
         auto paintStroke = [&](const QVector<double> &pts, double sizeFrac, bool erase) {
             if (pts.size() < 2) return;
             const double wVp = std::max(1.0, sizeFrac * imgLong * scale);

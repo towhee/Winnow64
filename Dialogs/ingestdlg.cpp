@@ -107,6 +107,13 @@ IngestDlg::IngestDlg(QWidget *parent,
     buildSections();
 
     ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
+    ui->helpBtn->setToolTip(tr("Explain how the automatic destination folder is built"));
+    ui->filenameTemplatesBtn->setToolTip(tr("Create, rename or edit the file name "
+                                            "templates. The templates are shared with "
+                                            "Export and Rename."));
+    ui->cancelBtn->setToolTip(tr("Close without ingesting"));
+    /* The destination buttons' tooltips depend on Automatic vs Manual, so
+       updateEnabledState sets them. okBtn keeps its tooltip from the .ui. */
 
     ui->pathTemplatesCB->setView(new QListView());      // req'd for setting row height in stylesheet
     ui->filenameTemplatesCB->setView(new QListView());  // req'd for setting row height in stylesheet
@@ -1342,6 +1349,36 @@ void IngestDlg::updateEnabledState()
         ui->manualFolderLabel->setEnabled(true);
         ui->manualFolderLabel_2->setEnabled(true);
     }
+
+    /* Tooltips: what each button does when it is enabled, and why it is greyed when it
+       is not. The backup tab's buttons do the same as the primary tab's. */
+    const QString needAuto = tr("Choose \"Automatically generate destination folder\" "
+                                "to use this");
+    const QString needManual = tr("Choose \"Manually select destination folder\" "
+                                  "to use this");
+    ui->selectRootFolderBtn->setToolTip(isAuto
+        ? tr("Choose the root folder the primary destination path is built under")
+        : needAuto);
+    ui->selectRootFolderBtn_2->setToolTip(isAuto
+        ? tr("Choose the root folder the backup destination path is built under")
+        : needAuto);
+    const QString pathTemplatesTip = isAuto
+        ? tr("Create, rename or edit the templates that build the path from the root "
+             "folder to the destination folder")
+        : needAuto;
+    ui->pathTemplatesBtn->setToolTip(pathTemplatesTip);
+    ui->pathTemplatesBtn_2->setToolTip(pathTemplatesTip);
+    const QString descriptionListTip = isAuto
+        ? tr("Remove items from the list of descriptions offered as you type")
+        : needAuto;
+    ui->editDescriptionListBtn->setToolTip(descriptionListTip);
+    ui->editDescriptionListBtn_2->setToolTip(descriptionListTip);
+    ui->selectFolderBtn->setToolTip(!isAuto
+        ? tr("Select and create the primary location for the files to be copied to")
+        : needManual);
+    ui->selectFolderBtn_2->setToolTip(!isAuto
+        ? tr("Select and create the backup location for the files to be copied to")
+        : needManual);
 
     // check boxes
     ui->beepChk->setEnabled(isBackgroundIngest);

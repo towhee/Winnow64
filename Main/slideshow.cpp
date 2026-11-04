@@ -36,8 +36,8 @@ void MW::slideShow()
         G::isSlideShow = true;
 //        isSlideshowPaused = false;
         updateStatusBar();
-        QString msg = "<h2>Press <font color=\"red\"><b>Esc</b></font> to exit slideshow</h2><p>";
-        msg += "Press <font color=\"red\"><b>H</b></font> during slideshow for tips"
+        QString msg = "<h2>Press " + G::keyHtml("Esc") + " to exit slideshow</h2><p>";
+        msg += "Press " + G::keyHtml("H") + " during slideshow for tips"
                       "<p>Starting slideshow";
         msg += "<p>Current settings:<p>";
         msg += "Interval = " + QString::number(slideShowDelay) + " second(s)";
@@ -45,7 +45,7 @@ void MW::slideShow()
         else msg += "<br>Sequential selection";
         if (isSlideShowWrap) msg += "<br>Wrap at end of slides";
         else msg += "<br>Stop at end of slides";
-        msg += "<p>Press <font color=\"red\"><b>SpaceBar</b></font> to start slideshow.";
+        msg += "<p>Press " + G::keyHtml("SpaceBar") + " to start slideshow.";
 
         G::popup->showPopup(msg, 3000, true, 0.75, Qt::AlignLeft);
 
@@ -97,7 +97,7 @@ void MW::nextSlide()
     }
 
     QString msg = "  Slideshow count:"+ QString::number(slideCount) +
-            "  (<font color=\"red\">press H for slideshow shortcuts</font>)";
+            "  (" + G::keyHtml("press H for slideshow shortcuts", false) + ")";
     updateStatus(true, msg, "MW::nextSlide");
 
 }
@@ -219,25 +219,25 @@ void MW::slideshowHelpMsg()
     QString msg =
         "<p><b>Slideshow Shortcuts:</b><br/></p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
-        "<tr><td width=\"120\"><font color=\"red\"><b>Esc</b></font></td><td>Exit slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>  S       </b></font></td><td>Exit slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>  W       </b></font></td><td>Toggle wrapping on and off</td></tr>"
-        "<tr><td><font color=\"red\"><b>  R       </b></font></td><td>Toggle random vs sequential slide selection</td></tr>"
+        "<tr><td width=\"120\">" + G::keyHtml("Esc") + "</td><td>Exit slideshow</td></tr>"
+        "<tr><td>" + G::keyHtml("  S       ") + "</td><td>Exit slideshow</td></tr>"
+        "<tr><td>" + G::keyHtml("  W       ") + "</td><td>Toggle wrapping on and off</td></tr>"
+        "<tr><td>" + G::keyHtml("  R       ") + "</td><td>Toggle random vs sequential slide selection</td></tr>"
         //"<tr><td><font color=\"red\"><b>Backspace </b></font></td><td>Go back to a previous random slide</td></tr>"
-        "<tr><td><font color=\"red\"><b>Spacebar  </b></font></td><td>Pause/Continue slideshow</td></tr>"
-        "<tr><td><font color=\"red\"><b>  H       </b></font></td><td>Show this popup message</td></tr>"
+        "<tr><td>" + G::keyHtml("Spacebar  ") + "</td><td>Pause/Continue slideshow</td></tr>"
+        "<tr><td>" + G::keyHtml("  H       ") + "</td><td>Show this popup message</td></tr>"
         "</table>"
         "<p>Change the slideshow interval.  Go to preferences to set other interval.</p>"
         "<table border=\"0\" style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px;\" cellspacing=\"2\" cellpadding=\"0\">"
-        "<tr><td width=\"120\"><font color=\"red\"><b>1</b></font></td><td>1 second</td></tr>"
-        "<tr><td><font color=\"red\"><b>  2  </b></font></td><td>2 seconds</td></tr>"
-        "<tr><td><font color=\"red\"><b>  3  </b></font></td><td>3 seconds</td></tr>"
-        "<tr><td><font color=\"red\"><b>  4  </b></font></td><td>5 seconds</td></tr>"
-        "<tr><td><font color=\"red\"><b>  5  </b></font></td><td>10 seconds</td></tr>"
-        "<tr><td><font color=\"red\"><b>  6  </b></font></td><td>30 seconds</td></tr>"
-        "<tr><td><font color=\"red\"><b>  7  </b></font></td><td>1 minute</td></tr>"
-        "<tr><td><font color=\"red\"><b>  8  </b></font></td><td>3 minutes</td></tr>"
-        "<tr><td><font color=\"red\"><b>  9  </b></font></td><td>10 minutes</td></tr>"
+        "<tr><td width=\"120\">" + G::keyHtml("1") + "</td><td>1 second</td></tr>"
+        "<tr><td>" + G::keyHtml("  2  ") + "</td><td>2 seconds</td></tr>"
+        "<tr><td>" + G::keyHtml("  3  ") + "</td><td>3 seconds</td></tr>"
+        "<tr><td>" + G::keyHtml("  4  ") + "</td><td>5 seconds</td></tr>"
+        "<tr><td>" + G::keyHtml("  5  ") + "</td><td>10 seconds</td></tr>"
+        "<tr><td>" + G::keyHtml("  6  ") + "</td><td>30 seconds</td></tr>"
+        "<tr><td>" + G::keyHtml("  7  ") + "</td><td>1 minute</td></tr>"
+        "<tr><td>" + G::keyHtml("  8  ") + "</td><td>3 minutes</td></tr>"
+        "<tr><td>" + G::keyHtml("  9  ") + "</td><td>10 minutes</td></tr>"
         "</table>"
         "<p>Current settings:<p>"
         "<ul style=\"line-height:50%; list-style-type:none;\""
@@ -245,7 +245,7 @@ void MW::slideshowHelpMsg()
         "<li>Selection = " + selection + "</li>"
         "<li>Wrap      = " + wrap + "</li>"
         "</ul><p><p>"
-        "Press <font color=\"red\"><b>Space Bar</b></font> continue slideshow and close this message";
+        "Press " + G::keyHtml("Space Bar") + " continue slideshow and close this message";
     G::popup->showPopup(msg, 0, true, 1.0, Qt::AlignLeft);
 }
 

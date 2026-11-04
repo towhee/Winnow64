@@ -8,15 +8,6 @@
 
 namespace {
 constexpr double kPi = std::numbers::pi;    // not M_PI: MSVC needs _USE_MATH_DEFINES
-/* Lightroom's orange for a pin, and the Module dock's selected-option yellow
-   (kSelectedOptionColor in initialize.cpp) for a selected one. */
-const QColor kPinColor("#e8742c");
-const QColor kPinSelectedColor("#f0c419");
-// a place's outline: the Develop mask overlay's blue, so "an area" reads the same
-const QColor kPlaceColor("#4aa3ff");
-// the radial mask editor's handle colours (ImageView::drawRadialMask)
-const QColor kAxisHandleColor("#4aa3ff");
-const QColor kRotateHandleColor("#5ad06a");
 constexpr double kHandlePick = 11;          // px, as ImageView::maskHitTest
 constexpr double kRotateKnobPx = 24;        // past the +x handle
 constexpr double kCloseSnapPx = 10;         // a click this near corner 0 closes
@@ -56,9 +47,11 @@ MapView::MapView(QWidget *parent, DataModel *dm) : QWidget(parent), dm(dm)
     controls = new QWidget(this);
     controls->setObjectName("MapControls");
     controls->setStyleSheet(
-        "#MapControls { background: rgba(20,20,20,190); border-radius: 5px; }"
-        "#MapControls QToolButton { color: #e0e0e0; padding: 2px 6px; }"
-        "#MapControls QToolButton:checked { color: #f0c419; }");
+        "#MapControls { background: " + G::cssRgba(G::withAlpha(G::mapOverlayBgColor, 190))
+        + "; border-radius: 5px; }"
+        "#MapControls QToolButton { color: " + G::mapOverlayTextColor.name()
+        + "; padding: 2px 6px; }"
+        "#MapControls QToolButton:checked { color: " + G::selectedOptionColor.name() + "; }");
     auto *cl = new QHBoxLayout(controls);
     cl->setContentsMargins(6, 3, 6, 3);
     cl->setSpacing(4);
@@ -134,8 +127,9 @@ MapView::MapView(QWidget *parent, DataModel *dm) : QWidget(parent), dm(dm)
     banner = new QFrame(this);
     banner->setObjectName("MapBanner");
     banner->setStyleSheet(
-        "#MapBanner { background: rgba(20,20,20,210); border-radius: 5px; }"
-        "#MapBanner QLabel { color: #e0e0e0; }");
+        "#MapBanner { background: " + G::cssRgba(G::withAlpha(G::mapOverlayBgColor, 210))
+        + "; border-radius: 5px; }"
+        "#MapBanner QLabel { color: " + G::mapOverlayTextColor.name() + "; }");
     auto *bl = new QHBoxLayout(banner);
     bl->setContentsMargins(10, 6, 10, 6);
     bannerText = new QLabel(banner);
@@ -150,17 +144,20 @@ MapView::MapView(QWidget *parent, DataModel *dm) : QWidget(parent), dm(dm)
     // Bottom left: how many of the images are on the map
     countLabel = new QLabel(this);
     countLabel->setObjectName("MapCount");
-    countLabel->setStyleSheet("#MapCount { background: rgba(20,20,20,190); color: #e0e0e0;"
-                              " border-radius: 4px; padding: 2px 6px; }");
+    countLabel->setStyleSheet(
+        "#MapCount { background: " + G::cssRgba(G::withAlpha(G::mapOverlayBgColor, 190))
+        + "; color: " + G::mapOverlayTextColor.name() + ";"
+          " border-radius: 4px; padding: 2px 6px; }");
 
     // Hover preview
     preview = new QFrame(this);
     preview->setObjectName("MapPreview");
     preview->setStyleSheet(
-        "#MapPreview { background: rgba(20,20,20,230); border: 1px solid #555;"
-        " border-radius: 5px; }"
-        "#MapPreview QLabel { color: #e0e0e0; }"
-        "#MapPreview QToolButton { color: #e0e0e0; }");
+        "#MapPreview { background: " + G::cssRgba(G::withAlpha(G::mapOverlayBgColor, 230))
+        + "; border: 1px solid " + G::mapOverlayBorderColor.name() + ";"
+          " border-radius: 5px; }"
+          "#MapPreview QLabel { color: " + G::mapOverlayTextColor.name() + "; }"
+          "#MapPreview QToolButton { color: " + G::mapOverlayTextColor.name() + "; }");
     auto *pl = new QVBoxLayout(preview);
     pl->setContentsMargins(6, 6, 6, 6);
     pl->setSpacing(4);
@@ -622,7 +619,7 @@ void MapView::paintEvent(QPaintEvent *)
                 }
                 p.setOpacity(dim && ci != hoverCluster ? 0.45 : 1.0);
                 p.setPen(QPen(QColor(255, 255, 255, 220), 1.5));
-                p.setBrush(isSel ? kPinSelectedColor : kPinColor);
+                p.setBrush(isSel ? G::selectedOptionColor : G::mapPinColor);
                 if (ci == hoverCluster) p.setBrush(p.brush().color().lighter(125));
                 p.drawEllipse(sp, r, r);
                 if (n > 1) {
@@ -1048,7 +1045,7 @@ void MapView::drawPlace(QPainter &p, const Geo::Place &place, const QString &nam
         for (const QPointF &pt : w) s << worldToScreen(pt + QPointF(k * worldW, 0));
         if (!QRectF(rect()).adjusted(-50, -50, 50, 50).intersects(s.boundingRect()))
             continue;
-        QColor fill = kPlaceColor;
+        QColor fill = G::mapPlaceColor;
         fill.setAlpha(editingThis ? 45 : 60);
         p.setPen(QPen(QColor(255, 255, 255, 230), editingThis ? 1.6 : 2.0));
         if (openPoly) {
@@ -1064,7 +1061,7 @@ void MapView::drawPlace(QPainter &p, const Geo::Place &place, const QString &nam
             p.setBrush(fill);
             p.drawPolygon(s);
             p.setBrush(Qt::NoBrush);
-            p.setPen(QPen(kPlaceColor, 1.0));
+            p.setPen(QPen(G::mapPlaceColor, 1.0));
             p.drawPolygon(s);
         }
         if (!name.isEmpty()) {
@@ -1205,8 +1202,8 @@ void MapView::drawEditHandles(QPainter &p)
         ellipseHandles(h);
         p.setPen(QPen(QColor(255, 255, 255, 200), 1.0));
         p.drawLine(h[1], h[5]);
-        for (int i = 1; i <= 4; ++i) handle(h[i], kAxisHandleColor, 5);
-        handle(h[5], kRotateHandleColor, 5);
+        for (int i = 1; i <= 4; ++i) handle(h[i], G::mapAxisHandleColor, 5);
+        handle(h[5], G::mapRotateHandleColor, 5);
         handle(h[0], Qt::white, 4.5);
         return;
     }
@@ -1214,7 +1211,7 @@ void MapView::drawEditHandles(QPainter &p)
     for (int i = 0; i < w.size(); ++i) {
         // corner 0 is larger while the shape is open: clicking it closes the shape
         const bool first = i == 0 && !polyClosed && w.size() >= 3;
-        handle(worldToScreen(w.at(i)), first ? kRotateHandleColor : Qt::white,
+        handle(worldToScreen(w.at(i)), first ? G::mapRotateHandleColor : Qt::white,
                first ? 6 : 4);
     }
 }
@@ -1404,7 +1401,7 @@ void MapView::drawDropMarker(QPainter &p)
     pin.arcTo(QRectF(head.x() - r, head.y() - r, 2 * r, 2 * r), 217, -254);
     pin.closeSubpath();
     p.setPen(QPen(Qt::white, 1.5));
-    p.setBrush(kPinSelectedColor);
+    p.setBrush(G::selectedOptionColor);
     p.drawPath(pin);
     p.setBrush(QColor(20, 20, 20));
     p.setPen(Qt::NoPen);

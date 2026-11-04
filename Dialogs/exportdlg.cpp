@@ -88,6 +88,27 @@ void sizeButton(QPushButton *b, bool noFocus = true, bool fitText = false,
     if (noFocus) b->setFocusPolicy(Qt::NoFocus);
 }
 
+/* Make root's size hint current. A widget's layout caches what it measured of each child
+   (QWidgetItemV2), and a nested widget's change reaches the cache only through a posted
+   LayoutRequest -- which Qt delivers only to a VISIBLE widget. So in the constructor,
+   before the first show, every group box still reports the height it had at its first
+   measurement, part built: the sections came out ~400 px short and scrolled on a 4K
+   screen. Activating each layout deepest first, then updateGeometry() on its widget,
+   does by hand what those events would have. */
+void refreshLayoutHints(QWidget *root)
+{
+    QList<QWidget*> ws = root->findChildren<QWidget*>();
+    ws.prepend(root);
+    for (int i = int(ws.size()) - 1; i >= 0; --i) {
+        QWidget *w = ws.at(i);
+        if (QLayout *l = w->layout()) {
+            l->invalidate();
+            l->activate();
+        }
+        w->updateGeometry();
+    }
+}
+
 /* The thin rule dividing the settings from the footer's action row. */
 QFrame *separatorLine(QWidget *parent)
 {
@@ -177,11 +198,20 @@ void ExportDlg::fitToContents()
     scroll area shortened by the excess: the sections then scroll and the scope row and
     the Export button stay on screen. ScreenFit cannot do that for a fixed-height dialog,
     since it never shrinks a window below its minimum.
+
+    ROOM FOR THE SCROLL BAR. When the sections do scroll, the dialog widens by the bar
+    plus a gap, and the form keeps its design width beside it: the bar never sits on the
+    group boxes' right edges. A transient (overlay) bar takes no viewport width, so there
+    the form's right margin has to clear it instead.
 */
-    setFixedWidth(kDialogWidth);
     setMinimumHeight(0);
     setMaximumHeight(QWIDGETSIZE_MAX);
-    formBody->layout()->activate();
+    formScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    formBody->layout()->setContentsMargins(0, 0, 0, 0);
+    setFixedWidth(kDialogWidth);
+
+    ensurePolished();                    // the stylesheet's metrics, before measuring
+    refreshLayoutHints(formBody);
     const int bodyH = formBody->sizeHint().height();
     formScroll->setFixedHeight(bodyH);
     layout()->activate();
@@ -193,11 +223,33 @@ void ExportDlg::fitToContents()
     const QScreen *scr = screen();
     const int avail = scr ? scr->availableGeometry().height() - kFrameAllowance : h;
     if (h > avail) {
+        constexpr int kScrollGap = 10;
+        QScrollBar *bar = formScroll->verticalScrollBar();
+        const int barW = bar->sizeHint().width();
+        const bool overlay = bar->style()->styleHint(QStyle::SH_ScrollBar_Transient,
+                                                     nullptr, bar);
+        formBody->layout()->setContentsMargins(0, 0, kScrollGap + (overlay ? barW : 0), 0);
+        formScroll->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
+        setFixedWidth(kDialogWidth + barW + kScrollGap);
         formScroll->setFixedHeight(qMax(120, bodyH - (h - avail)));
         layout()->activate();
         h = qMax(sizeHint().height(), minimumSizeHint().height());
     }
+    if (G::isLogger)
+        G::log("ExportDlg::fitToContents", QString("bodyH %1  h %2  avail %3")
+                   .arg(bodyH).arg(h).arg(avail));
     setFixedHeight(h);
+}
+
+void ExportDlg::showEvent(QShowEvent *event)
+{
+/*
+    The constructor's fit ran before the dialog had a screen of its own (a parent on a
+    second monitor) and before Qt polished it. showEvent precedes the window appearing,
+    so re-fitting here is never seen as a jump.
+*/
+    fitToContents();
+    QDialog::showEvent(event);
 }
 
 QVBoxLayout *ExportDlg::addSection(QVBoxLayout *lay, const QString &title,
@@ -376,8 +428,6 @@ void ExportDlg::buildUi()
     presetLay->addLayout(presetRow);
 
     presetNewBtn->setToolTip(tr("Save these settings as a new named export preset"));
-    presetRenameBtn->setToolTip(tr("Rename the selected preset"));
-    presetDeleteBtn->setToolTip(tr("Delete the selected preset"));
 
     /* ---- Source ----
        Which pixels go out: the develop render, or a raw's embedded camera preview. Only
@@ -543,8 +593,6 @@ void ExportDlg::buildUi()
     exampleLab = new QLabel(this);
     exampleLab->setStyleSheet("QLabel { color:" + G::disabledColor.name() + "; }");
     templateEditorBtn = new QPushButton(tr("Template editor"), this);
-    templateEditorBtn->setToolTip(tr("Create, rename or edit the filename templates. "
-                                     "The templates are shared with Ingest and Rename."));
     sizeButton(templateEditorBtn, /*noFocus*/true, /*fitText*/true);
     QHBoxLayout *exampleRow = new QHBoxLayout;
     exampleRow->addWidget(exampleLab);
@@ -851,6 +899,9 @@ void ExportDlg::buildUi()
     /* Export keeps its focus (it is the default button); Cancel does not need it. */
     sizeButton(exportBtn, /*noFocus*/false);
     sizeButton(closeBtn);
+    exportBtn->setToolTip(tr("Export the images with these settings. The dialog closes "
+                             "and progress shows in the status bar."));
+    closeBtn->setToolTip(tr("Close without exporting"));
     expandAllBtn   = new QPushButton(tr("Expand All"), this);
     collapseAllBtn = new QPushButton(tr("Collapse All"), this);
     sizeButton(expandAllBtn);
@@ -1159,6 +1210,15 @@ void ExportDlg::updateEnabledStates()
         w->setEnabled(!tmplOut && (w != subfolderEdit || subfolderRadio->isChecked())
                       && (w != folderEdit || folderRadio->isChecked())
                       && (w != selectFolderBtn || folderRadio->isChecked()));
+    const QString byTemplate = tr("Set by the embellish template's Export settings");
+    selectFolderBtn->setToolTip(
+        tmplOut ? byTemplate
+        : folderRadio->isChecked() ? tr("Choose the folder to export to")
+                                   : tr("Choose Folder above to pick a destination folder"));
+    templateEditorBtn->setToolTip(
+        tmplOut ? byTemplate
+                : tr("Create, rename or edit the filename templates. "
+                     "The templates are shared with Ingest and Rename."));
     if (!embel)
         embelNoteLab->clear();
     else if (tmplOut)
@@ -1333,6 +1393,10 @@ void ExportDlg::setPresetDirty(bool dirty)
         hasSel ? (dirty ? tr("Overwrite \"%1\" with these settings").arg(selectedPreset())
                         : tr("These settings already match \"%1\"").arg(selectedPreset()))
                : tr("Select a preset to update, or use New"));
+    presetRenameBtn->setToolTip(hasSel ? tr("Rename \"%1\"").arg(selectedPreset())
+                                       : tr("Select a preset to rename"));
+    presetDeleteBtn->setToolTip(hasSel ? tr("Delete \"%1\"").arg(selectedPreset())
+                                       : tr("Select a preset to delete"));
     sections->updateSummaries();                       // the closed Preset row says "modified"
 }
 

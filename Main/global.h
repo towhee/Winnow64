@@ -826,6 +826,75 @@ Q_NAMESPACE
     extern QColor selectionColor;
     extern QColor mouseOverColor;
     extern QColor appleBlue;
+    /*  Shared semantic colours. Values in WidgetCSS::styleGlobals. */
+    extern QColor developColor;         // amber: image has develop edits
+    extern QColor excludedColor;        // red: excluded filter item, invalid query value
+    extern QColor overLimitColor;       // orange: folder over the subfolder limit
+    extern QColor selectedOptionColor;  // yellow: the selected option in "A | B" choices
+    extern QColor attentionColor;       // yellow: "look here" (filtering, scope caption)
+    extern QColor accentTealColor;      // Develop accent: curve points, region handles
+    extern QColor glyphColor;           // the grey drawn into toolbar glyph pngs
+    extern QColor popupKeyColor;        // red: key names in popup messages
+    extern QColor secondaryTextColor;   // grey: notes and labels beside the main text
+    /*  text in popupKeyColor, bold unless bold is false: "Press " + keyHtml("Esc") */
+    QString keyHtml(const QString &text, bool bold = true);
+    /*  text in secondaryTextColor, as a rich-text span */
+    QString secondaryHtml(const QString &text);
+    /*  c with its alpha replaced */
+    QColor withAlpha(const QColor &c, int alpha);
+    /*  c as a stylesheet "rgba(r, g, b, a)", alpha 0-255 */
+    QString cssRgba(const QColor &c);
+    /*  Status, alert and error colours. Values in WidgetCSS::styleGlobals. */
+    extern QColor errorColor;                       // red: error text (cssError), input errors
+    extern QColor warningColor;                     // yellow: warning text (cssWarning), token warning
+    extern QColor okColor;                          // green: ok status (cssOk)
+    extern QColor iconCachePressureColor;           // orange: status dot, icon cache under test pressure
+    extern QColor iconCacheJitColor;                // blue: status dot, JIT icon caching
+    extern QColor alertShowStopperColor;            // Develop alert: show stopper
+    extern QColor alertWarningColor;                // Develop alert: warning
+    extern QColor catalogOwedColor;                 // catalog editor: the clause that asks for an action
+    extern QColor folderNotFoundColor;              // Find Duplicates: folder that does not exist
+    extern QColor appMissingColor;                  // External apps: program not found
+    extern QColor maskOverlayDefaultColor;          // Develop mask overlay until the user picks one
+    /*  Indicator palettes (thumbnails, trees, dialogs, progress, map). Values in
+        WidgetCSS::styleGlobals. */
+    extern QColor pickColor;                        // thumb + loupe badge: picked
+    extern QColor rejectColor;                      // thumb + loupe badge: rejected
+    extern QColor ingestedColor;                    // thumb: ingested
+    extern QColor thumbSelectedColor;               // thumb: selected border
+    extern QColor thumbCacheColor;                  // thumb: cached in ImageCache
+    extern QColor sidecarColor;                     // thumb: has a sidecar
+    extern QColor offlineColor;                     // thumb: volume not mounted
+    extern QColor missingColor;                     // thumb: file gone
+    extern QColor viewportLightColor;               // thumb: zoom viewport rectangle, outer
+    extern QColor viewportDarkColor;                // thumb: zoom viewport rectangle, inner
+    extern QColor classificationTextColor;          // loupe rating text
+    extern QColor classificationOnYellowTextColor;  // loupe rating text on the yellow label
+    extern QColor libraryColor;                     // LibTree: Library row
+    extern QColor collectionColor;                  // Collections
+    extern QColor queryColor;                       // Queries
+    extern QColor targetCollectionColor;            // the target collection
+    extern QColor propertySelectedTextColor;        // property editor: selected item text
+    extern QColor auditSuspectColor;                // Keyword Audit: suspect
+    extern QColor auditSuggestedColor;              // Keyword Audit: suggested
+    extern QColor auditMissingColor;                // Keyword Audit: missing
+    extern QColor auditCorrectColor;                // Keyword Audit: keywords right
+    extern QColor auditDecidedColor;                // Keyword Audit: replace/remove/add/applied
+    extern QColor auditNoThumbColor;                // Keyword Audit: no thumbnail
+    extern QColor progressFocusStackColor;          // status bar progress: Focus Stack
+    extern QColor progressDemosaicColor;            // status bar progress: Demosaic
+    extern QColor progressDevPreviewColor;          // status bar progress: Dev Previews
+    extern QColor progressPresetAutoColor;          // status bar progress: Auto Settings
+    extern QColor progressCatalogColor;             // status bar progress: catalog scan
+    extern QColor progressCatalogLoadColor;         // status bar progress: catalog load
+    extern QColor progressExportColor;              // status bar progress: Export
+    extern QColor mapPinColor;                      // Map: pin
+    extern QColor mapPlaceColor;                    // Map: place outline
+    extern QColor mapAxisHandleColor;               // Map: place axis handles
+    extern QColor mapRotateHandleColor;             // Map: place rotate handle
+    extern QColor mapOverlayBgColor;                // Map: control/banner/preview background
+    extern QColor mapOverlayTextColor;              // Map: control/banner/preview text
+    extern QColor mapOverlayBorderColor;            // Map: preview border
     extern QString lightgray;
     extern QString darkgray;
     extern QString lightpurple;

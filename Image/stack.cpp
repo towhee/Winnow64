@@ -75,7 +75,7 @@ QString Stack::mean()
     G::popup->setProgressVisible(true);
     G::popup->setProgressMax(n + 1);
     QString txt = "Generating the average from " + QString::number(n) + " images." +
-                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+                  "<p>Press " + G::keyHtml("Esc") + " to abort.";
     G::popup->showPopup(txt, 0, true, 1);
 
     // incrementally update mean vector for each selected image
@@ -97,7 +97,7 @@ QString Stack::mean()
                 QString txt = "All images in selection must have the same dimensions.<br>"
                               "Image " + fPath + "<br>"
                               "has diffent dimensions."
-                              "<p>Press <font color=\"red\"><b>Esc</b></font> to continue."
+                              "<p>Press " + G::keyHtml("Esc") + " to continue."
                               ;
                 G::popup->setProgressVisible(false);
                 G::popup->reset();

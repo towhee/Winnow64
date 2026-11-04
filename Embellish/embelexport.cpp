@@ -257,7 +257,7 @@ bool EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     if (embelProperties->templateName == "Do not Embellish") {
         G::popup->showPopup("The current embellish template is 'Do not Embellish'<p>"
                             "Please select an embellish template and try again.<p><hr>"
-                            "Press <font color=\"red\"><b>Esc</b></font> to continue.",
+                            "Press " + G::keyHtml("Esc") + " to continue.",
                             0);
         return false;
     }
@@ -301,7 +301,7 @@ bool EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     G::popup->setProgressMax(srcList.size());
     QString txt = "Exporting " + QString::number(srcList.size()) +
                   " embellished images to " + folderPath +
-                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+                  "<p>Press " + G::keyHtml("Esc") + " to abort.";
     G::popup->showPopup(txt, 0, true, 1);
 
     QTimer::singleShot(0, this, &EmbelExport::startNext);

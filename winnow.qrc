@@ -105,7 +105,6 @@
         <file>images/checkmark256.png</file>
         <file>images/ThumbsUp48.png</file>
         <file>images/NoImagesInFolder.png</file>
-        <file>qss/winnow.css</file>
         <file>images/tokenBackground.png</file>
         <file>Docs/ingesthelp.htm</file>
         <file>images/badImage1.png</file>
@@ -125,6 +124,7 @@
         <file>images/icon16/slideshow.png</file>
         <file>images/icon16/rawjpeg.png</file>
         <file>Docs/ingestautopath.html</file>
+        <file>Docs/managecataloghelp.html</file>
         <file>images/icon16/A-Z.png</file>
         <file>images/icon16/Z-A.png</file>
         <file>images/icon16/swap.png</file>

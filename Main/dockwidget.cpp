@@ -917,7 +917,7 @@ QString MW::dockTabToolTip(const QString &tabText)
         // Title in the dock-title blue (mirrors WidgetCSS "DockTitleBar > QLabel").
         // <nobr> stops Qt from word-wrapping the rich-text tooltip.
         return QString(
-            "<nobr><span style=\"color:#6CC1E8;\">%1</span>: Window > %2.</nobr>"
+            "<nobr><span style=\"color:" + G::header1Color.name() + ";\">%1</span>: Window > %2.</nobr>"
         ).arg(title, menuItem);
     };
 
@@ -927,7 +927,7 @@ QString MW::dockTabToolTip(const QString &tabText)
         /* One panel, two scopes, ONE search key: F2 searches whichever scope is current
            (Folders = what is loaded, Catalog = everything indexed). */
         if (G::useFilterPanel)
-            return QString("<nobr><span style=\"color:#6CC1E8;\">Filters</span>: "
+            return QString("<nobr><span style=\"color:" + G::header1Color.name() + ";\">Filters</span>: "
                            "F2 searches the current scope.</nobr>");
         return tip(filterDockTabText, "Filters Panel");
     }
@@ -935,24 +935,24 @@ QString MW::dockTabToolTip(const QString &tabText)
        datamodel (what is loaded). Not reached with G::useFilterPanel -- there is no
        Catalog tab then. */
     if (!catalogDockTabText.isEmpty() && tabText == catalogDockTabText)
-        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+        return QString("<nobr><span style=\"color:" + G::header1Color.name() + ";\">%1</span>: "
                        "Window > Catalog Panel.</nobr>").arg(catalogDockTabText);
     /*  Keywords has NO SHORTCUT, like every other panel: it is reached from
         Window > Keywords Panel, which is also where the user discovers it exists. */
     if (!keywordsDockTabText.isEmpty() && tabText == keywordsDockTabText)
-        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+        return QString("<nobr><span style=\"color:" + G::header1Color.name() + ";\">%1</span>: "
                        "Window > Keywords Panel.</nobr>").arg(keywordsDockTabText);
     /*  Collections has no shortcut either, for the same reason as Keywords. */
     if (!collectionsDockTabText.isEmpty() && tabText == collectionsDockTabText)
-        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+        return QString("<nobr><span style=\"color:" + G::header1Color.name() + ";\">%1</span>: "
                        "Window > Collections Panel. Library only.</nobr>")
             .arg(collectionsDockTabText);
     if (!queriesDockTabText.isEmpty() && tabText == queriesDockTabText)
-        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+        return QString("<nobr><span style=\"color:" + G::header1Color.name() + ";\">%1</span>: "
                        "Window > Queries Panel. Library only.</nobr>")
             .arg(queriesDockTabText);
     if (!placesDockTabText.isEmpty() && tabText == placesDockTabText)
-        return QString("<nobr><span style=\"color:#6CC1E8;\">%1</span>: "
+        return QString("<nobr><span style=\"color:" + G::header1Color.name() + ";\">%1</span>: "
                        "Window > Places Panel. Areas drawn on the map.</nobr>")
             .arg(placesDockTabText);
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "Metadata Panel");

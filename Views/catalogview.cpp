@@ -284,7 +284,7 @@ void CatalogView::styleKeywordItem(QTreeWidgetItem *item) const
     f.setStrikeOut(excluded);
     item->setFont(0, f);
 
-    if (excluded) item->setForeground(0, QBrush(QColor(0xd0, 0x60, 0x60)));
+    if (excluded) item->setForeground(0, QBrush(G::excludedColor));
     else item->setForeground(0, QBrush(G::textColor));
 }
 

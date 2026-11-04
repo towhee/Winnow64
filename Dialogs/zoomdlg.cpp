@@ -3,19 +3,20 @@
 #include "Main/global.h"
 #include "QDebug"
 
-// ZoomDlg is a frameless stays-on-top HUD with a yellow signature that is
-// intentionally independent of the application theme (G::css). The yellow text
-// on dark gray is the visual identity of the zoom HUD, not theme-bound styling.
+/* ZoomDlg is a frameless stays-on-top HUD with a yellow signature (G::attentionColor)
+   that is intentionally independent of the application theme (G::css). The yellow text
+   on dark gray is the visual identity of the zoom HUD, not theme-bound styling. */
 namespace {
-    const QString zoomSpinBoxCss =
-        "QSpinBox {color: yellow; font-size: 18px;"
+    // functions, not static strings: G::attentionColor is set at runtime (styleGlobals)
+    QString zoomSpinBoxCss() { return
+        "QSpinBox {color: " + G::attentionColor.name() + "; font-size: 18px;"
         " background-color: rgb(111,111,111);"
         " border: 1px solid gray; border-radius: 5px; padding-left: 4px;}"
         "QSpinBox:hover, QSpinBox:focus {border-color: silver;}"
         "QSpinBox:disabled {color: rgb(77,77,77); background-color: rgb(88,88,88);}"
-        "QSpinBox::up-button, QSpinBox::down-button {width: 0px; border-width: 0px;}";
-    const QString zoomLabelCss =
-        "QLabel {color: yellow; font-size: 18px; border:none;}";
+        "QSpinBox::up-button, QSpinBox::down-button {width: 0px; border-width: 0px;}"; }
+    QString zoomLabelCss() { return
+        "QLabel {color: " + G::attentionColor.name() + "; font-size: 18px; border:none;}"; }
     const QString zoomBorderActiveCss =
         "QFrame {border: 2px solid rgb(125,125,125); border-radius: 4px;}";
     const QString zoomBorderInactiveCss =
@@ -48,8 +49,8 @@ ZoomDlg::ZoomDlg(QWidget *parent, qreal zoom, QRect a, QRect c) : QDialog(parent
     // update controls to current zoom factor
     zoomChange(zoom, "ZoomDlg::ZoomDlg");
 
-    ui->zoomSB->setStyleSheet(zoomSpinBoxCss);
-    ui->pctLabel->setStyleSheet(zoomLabelCss);
+    ui->zoomSB->setStyleSheet(zoomSpinBoxCss());
+    ui->pctLabel->setStyleSheet(zoomLabelCss());
     ui->border->setStyleSheet(zoomBorderActiveCss);
 
     // position in middle of main window and at the bottom of the central widget

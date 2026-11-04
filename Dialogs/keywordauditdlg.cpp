@@ -1,6 +1,7 @@
 #include "Dialogs/keywordauditdlg.h"
 #include "Cache/thumbcache.h"
 #include "Datamodel/keywordauditstore.h"
+#include "Main/global.h"
 #include "Metadata/keywordpaths.h"
 
 #include <QAbstractListModel>
@@ -128,7 +129,7 @@ QPixmap KeywordAuditDlg::thumb(const QString &path, int side)
                                            Qt::SmoothTransformation));
     else {
         pm = QPixmap(side, side);
-        pm.fill(QColor(70, 70, 70));
+        pm.fill(G::auditNoThumbColor);
     }
     cache.insert(key, new QPixmap(pm));
     return pm;
@@ -240,10 +241,10 @@ void KeywordAuditDlg::buildUi()
         QString right = d == Undecided
                             ? (sus ? tr("Suspect") : sug ? tr("Suggested") : tr("Missing"))
                             : d == Correct && sug ? tr("Not this one") : tr(names[d]);
-        QColor c = d == Undecided ? (sus ? QColor(220, 110, 100)
-                                   : sug ? QColor(170, 150, 220) : QColor(110, 160, 220))
-                 : d == Correct   ? QColor(140, 140, 140)
-                                  : QColor(110, 190, 120);
+        QColor c = d == Undecided ? (sus ? G::auditSuspectColor
+                                   : sug ? G::auditSuggestedColor : G::auditMissingColor)
+                 : d == Correct   ? G::auditCorrectColor
+                                  : G::auditDecidedColor;
         p->setPen(c);
         p->drawText(text, Qt::AlignRight | Qt::AlignTop, right);
     };
@@ -575,8 +576,7 @@ void KeywordAuditDlg::showCurrent()
     if (f.members.size() > 1)
         claim += tr("<br>A burst of %1 near-identical frames; a decision applies to all.")
                      .arg(f.members.size());
-    claim += tr("<br><span style='color:gray'>Confidence %1%</span>")
-                 .arg(qRound(100 * f.score));
+    claim += "<br>" + G::secondaryHtml(tr("Confidence %1%").arg(qRound(100 * f.score)));
     claimLabel->setText(claim);
 
     auto fillEx = [&](QLabel *caption, QLabel **cells, const QString &keyword) {

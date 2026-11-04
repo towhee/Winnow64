@@ -730,7 +730,7 @@ void InfoView::mousePressEvent(QMouseEvent *event)
             QString selectedCount = ok->index(SelectedRow, 1, statusInfoIdx).data().toString();
             selectedCount.remove(selectedCount.indexOf(" "), selectedCount.length() - 1);
             if (selectedCount.toInt() > 1 && editFields.contains(name)) {
-                QString msg = "<font color=\"red\"><b>Note: </b></font>"
+                QString msg = G::keyHtml("Note: ") +
                               "Any edits to " + name + " will be applied to all " +
                               selectedCount + " selected images.";
                 G::popup->showPopup(msg, 3000);

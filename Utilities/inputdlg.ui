@@ -52,9 +52,6 @@
    </item>
    <item>
     <widget class="QLabel" name="msg">
-     <property name="styleSheet">
-      <string notr="true">color:red</string>
-     </property>
      <property name="text">
       <string/>
      </property>

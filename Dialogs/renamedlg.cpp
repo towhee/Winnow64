@@ -52,6 +52,8 @@ RenameDlg::RenameDlg(QString &name,
         existingNamesString.append("- " + existingNames.at(i) + "<br>");
     }
     ui->name->setToolTip(existingNamesString);
+    ui->okBtn->setToolTip(tr("Use the new name. It must not match an existing name."));
+    ui->cancelBtn->setToolTip(tr("Keep the current name"));
     // setStyleSheet(G::css);
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);

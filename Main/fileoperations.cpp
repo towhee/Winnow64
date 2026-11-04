@@ -478,7 +478,7 @@ void MW::deleteSelectedFiles()
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
                       "right side) will turn green.<p>"
-                      "Press <font color=\"red\"><b>Esc</b></font> to continue.";
+                      "Press " + G::keyHtml("Esc") + " to continue.";
         G::popup->showPopup(msg, 0);
         return;
     }
@@ -617,7 +617,7 @@ void MW::deleteFiles(QStringList paths)
                       "before deleting images.  When the folder is completely<br>"
                       "loaded the metadata light in the status bar (2nd from the<br>"
                       "right side) will turn green.<p>"
-                      "Press <font color=\"red\"><b>Esc</b></font> to continue.";
+                      "Press " + G::keyHtml("Esc") + " to continue.";
         G::popup->showPopup(msg, 0);
         return;
     }

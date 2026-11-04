@@ -130,9 +130,6 @@
                 </property>
                 <item>
                  <widget class="QLabel" name="label_4">
-                  <property name="styleSheet">
-                   <string notr="true">color: rgb(128,128,128);</string>
-                  </property>
                   <property name="text">
                    <string>Only checked candidates are returned as duplicated when Done.</string>
                   </property>
@@ -629,9 +626,6 @@
                </property>
                <item>
                 <widget class="QLabel" name="subfoldersNoteLbl">
-                 <property name="styleSheet">
-                  <string notr="true">color: gray;</string>
-                 </property>
                  <property name="text">
                   <string>*checked includes subfolders</string>
                  </property>

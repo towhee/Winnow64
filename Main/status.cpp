@@ -83,7 +83,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
     // show embellish if active
     if (G::isEmbellish) {
-        base = "<font color=\"red\">" + embelProperties->templateName + "</font>"
+        base = G::keyHtml(embelProperties->templateName, false)
                 + "&nbsp;" + "&nbsp;" + "&nbsp;";
     }
     else base = "  ";
@@ -114,7 +114,7 @@ void MW::updateStatus(bool keepBase, QString s, QString source)
 
         QString preBase = "";
         if (G::isStressTest) {
-            preBase = "<font color=\"red\"><b>PRESS ESC TO STOP STRESS TEST</b></font>  ";
+            preBase = G::keyHtml("PRESS ESC TO STOP STRESS TEST") + "  ";
             preBase += QString::number(stressSecToGoInFolder) + " seconds.\t";
         }
         status = preBase + base;
@@ -532,9 +532,11 @@ void MW::updateMetadataThreadRunStatus(bool isRunning, bool success)
             /* Icon-cache mode indicator: orange under forced pressure (test override),
                blue when JIT caching is active, green for brute force. */
             if (G::iconPressureTestLevel >= 2)
-                metadataThreadRunningLabel->setStyleSheet("QLabel,QLineEdit,QComboBox {color:orange;}");
+                metadataThreadRunningLabel->setStyleSheet("QLabel,QLineEdit,QComboBox {color:"
+                    + G::iconCachePressureColor.name() + ";}");
             else if (G::useJitIconCache)
-                metadataThreadRunningLabel->setStyleSheet("QLabel,QLineEdit,QComboBox {color:blue;}");
+                metadataThreadRunningLabel->setStyleSheet("QLabel,QLineEdit,QComboBox {color:"
+                    + G::iconCacheJitColor.name() + ";}");
             else
                 metadataThreadRunningLabel->setStyleSheet(G::cssOk);
         }

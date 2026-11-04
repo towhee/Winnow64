@@ -128,7 +128,7 @@ void ManageModelsDlg::refresh()
                        new QTableWidgetItem(ModelDownloadDlg::formatBytes(mi.bytes)));
 
         auto *statusItem = new QTableWidgetItem(ModelStore::stateText(s));
-        if (s == State::Stale || s == State::Corrupt) statusItem->setForeground(Qt::yellow);
+        if (s == State::Stale || s == State::Corrupt) statusItem->setForeground(G::attentionColor);
         table->setItem(row, kColStatus, statusItem);
 
         if (!mi.bundled && s != State::Ready) anyDownloadable = true;

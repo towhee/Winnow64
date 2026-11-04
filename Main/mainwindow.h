@@ -3432,7 +3432,7 @@ private:
                               QList<QLabel *> *separators);
     /*  The Module dock's look (Library | Folders and the modes, both styled by
         MW::styleWorkflowSwitcher): the
-        selected option in kSelectedOptionColor (bold when boldSelected), the others in
+        selected option in G::selectedOptionColor (bold when boldSelected), the others in
         the default text colour. fontPt <= 0 leaves the font size alone; vPad is the
         buttons' top and bottom padding in px. */
     QString segmentedOptionCss(int fontPt, bool boldSelected = true, int vPad = 1) const;

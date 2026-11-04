@@ -2,15 +2,18 @@
 #include "Main/catalogenumerate.h"
 #include "Main/catalogscanner.h"
 #include "Main/global.h"
+#include "Utilities/collapsiblesections.h"
+#include "Utilities/htmlwindow.h"
 
 #include <QComboBox>
 #include <QDir>
 #include <QFileDialog>
-#include <QFrame>
+#include <QGroupBox>
 #include <QHBoxLayout>
 #include <QFontMetrics>
 #include <QHeaderView>
 #include <QLocale>
+#include <QRegularExpression>
 #include <QTimer>
 #include <QVBoxLayout>
 
@@ -35,14 +38,6 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
        below keeps each value on one line. */
     setMinimumWidth(850);
     resize(850, height());
-
-    QLabel *intro = new QLabel(
-        "These folders make up your Library. They are scanned in the background, so "
-        "their images can be found in the Library without opening each folder.\n\n"
-        "Only folders listed here are catalogued. You can still browse any other folder, "
-        "but it is not added to the Library. Exclude a folder to carve a branch out of "
-        "an included folder; an exclusion always wins, wherever it sits in the table.");
-    intro->setWordWrap(true);
 
     table = new QTableWidget(0, ColCount);
     table->setHorizontalHeaderLabels(
@@ -98,49 +93,50 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     scanLabel->setWordWrap(true);
     scanLabel->setTextFormat(Qt::RichText);
 
+    helpBtn = new QPushButton("Help");
+    helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
     addBtn = new QPushButton("Append");
     removeBtn = new QPushButton("Remove");
     scanBtn = new QPushButton("Scan");
     closeBtn = new QPushButton("Close");
-    diagBtn = new QPushButton("Diagnostics...");
-    diagBtn->setToolTip("Explain why the folder and Library counts differ.");
     removeBtn->setEnabled(false);
 
+    /* Help on the left, set apart from Append and Remove, which edit the table. */
     QHBoxLayout *btns = new QHBoxLayout;
     btns->setContentsMargins(0, 0, 0, 0);
+    btns->addWidget(helpBtn);
+    btns->addSpacing(24);
     btns->addWidget(addBtn);
     btns->addWidget(removeBtn);
     btns->addStretch(1);
-    btns->addWidget(diagBtn);
     btns->addWidget(scanBtn);
     btns->addWidget(closeBtn);
 
+    /*  TWO COLLAPSIBLE SECTIONS -- the scope (editing) and the information (reporting) --
+        then the scan progress and the buttons, which belong to neither and stay visible
+        whichever is closed. */
     QVBoxLayout *layout = new QVBoxLayout(this);
     layout->setSpacing(8);
-    layout->addWidget(intro);
-    /* The table is a different kind of thing from the paragraph above it and the buttons
-       below it, and a blank line either side is what says so. */
-    layout->addSpacing(8);
-    layout->addWidget(table);
-    layout->addWidget(noteLabel);
-    /*  THREE SECTIONS -- the table, the info, the buttons -- divided by two rules with
-        the SAME space either side, made by one function so the two gaps cannot drift
-        apart. The info section is reporting where the table is editing; the buttons act
-        on both. kSectionGap sits on top of the layout's own 8 px spacing. */
-    constexpr int kSectionGap = 12;
-    auto addSectionRule = [layout]{
-        QFrame *rule = new QFrame;
-        rule->setFrameShape(QFrame::HLine);
-        rule->setFrameShadow(QFrame::Sunken);
-        layout->addSpacing(kSectionGap);
-        layout->addWidget(rule);
-        layout->addSpacing(kSectionGap);
-    };
-    addSectionRule();
-    layout->addWidget(statusLabel);
+    /* The sections in a layout of their own at the default spacing, as ExportDlg's are,
+       so the gap between the boxes matches that dialog. */
+    QVBoxLayout *sectionsLay = new QVBoxLayout;
+    sectionsLay->setContentsMargins(0, 0, 0, 0);
+    layout->addLayout(sectionsLay);
+
+    QVBoxLayout *scopeLay = nullptr;
+    QGroupBox *scopeBox = makeSection("Catalog Scope", scopeLay);
+    scopeLay->addWidget(table);
+    scopeLay->addWidget(noteLabel);
+    sectionsLay->addWidget(scopeBox);
+
+    QVBoxLayout *infoLay = nullptr;
+    QGroupBox *infoBox = makeSection("Catalog Information", infoLay);
+    infoLay->addWidget(statusLabel);
+    sectionsLay->addWidget(infoBox);
+
     /*  The scan's bar and line are ONE block, shown and hidden together, with their gap
-        from the info above inside it -- so an idle window has no stray spacing above the
-        button rule and the two section gaps stay equal. */
+        from the section above inside it -- so an idle window has no stray spacing above
+        the buttons. */
     scanBlock = new QWidget;
     QVBoxLayout *scanLayout = new QVBoxLayout(scanBlock);
     scanLayout->setContentsMargins(0, 4, 0, 0);
@@ -149,8 +145,23 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     scanLayout->addWidget(scanLabel);
     scanBlock->hide();
     layout->addWidget(scanBlock);
-    addSectionRule();
+    layout->addSpacing(14);
     layout->addLayout(btns);
+
+    /*  OPEN BY DEFAULT, unlike ExportDlg and IngestDlg. CollapsibleSections reads a key
+        with nothing saved as collapsed, which suits a form too tall for a small screen;
+        this window is short, and the scope table is the reason to open it. So a first
+        open seeds both keys as open, and after that each opens as the user left it. */
+    const QString group = "CatalogRootsDlg/collapsed";
+    if (G::settings)
+        for (const QString &key : {QString("Scope"), QString("Information")})
+            if (!G::settings->contains(group + "/" + key))
+                G::settings->setValue(group + "/" + key, false);
+    sections = new CollapsibleSections(this, group);
+    sections->add(scopeBox, sectionsLay, "Scope", [this]{ return scopeSummary(); });
+    sections->add(infoBox, sectionsLay, "Information", [this]{ return infoSummary(); });
+    sections->onChanged = [this]{ fitToContents(); };
+    sections->restore();
 
     /* The only editable item state is the Include Subfolders check, so every itemChanged
        is a user toggling one -- the guard is populating, not the column. */
@@ -214,9 +225,78 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     });
 
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
-    connect(diagBtn, &QPushButton::clicked, this, [this]{ emit diagnosticsRequested(); });
+    connect(helpBtn, &QPushButton::clicked, this, [this]{
+        QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+        new HtmlWindow("Winnow - Manage Catalog", ":/Docs/managecataloghelp.html",
+                       QSize(700, 600), r, this);
+    });
 
     updateNote();
+}
+
+QGroupBox *CatalogRootsDlg::makeSection(const QString &title, QVBoxLayout *&inner)
+{
+/*
+    The same box ExportDlg::addSection builds: the title two points up on the body text,
+    an inner body widget that resets the font so the controls do not inherit the title
+    size, and clearance under the title scaled with its font.
+*/
+    QGroupBox *gb = new QGroupBox(title, this);
+    QFont tf = gb->font();
+    tf.setPointSize(font().pointSize() + 2);
+    gb->setFont(tf);
+    const int topGap = tf.pointSize() + 6;
+
+    QVBoxLayout *outer = new QVBoxLayout(gb);
+    outer->setContentsMargins(10, topGap, 10, 10);
+    QWidget *body = new QWidget(gb);
+    body->setFont(font());
+    inner = new QVBoxLayout(body);
+    inner->setContentsMargins(0, 0, 0, 0);
+    inner->setSpacing(8);
+    outer->addWidget(body);
+    return gb;
+}
+
+QString CatalogRootsDlg::scopeSummary() const
+{
+    const CatalogScope s = scope();
+    if (s.isEmpty()) return "No folders";
+    int inc = 0;
+    for (const CatalogScopeEntry &e : s) if (e.include) ++inc;
+    const int exc = int(s.size()) - inc;
+    QString text = QString("%1 folder%2 included").arg(inc).arg(inc == 1 ? "" : "s");
+    if (exc > 0) text += QString(", %1 excluded").arg(exc);
+    return text;
+}
+
+QString CatalogRootsDlg::infoSummary() const
+{
+/*
+    The Catalogued and Status values from MW's table, as plain text: enough to say
+    whether a scan is owed without opening the section. A status that is not a table
+    (the catalog is unavailable) is shown whole.
+*/
+    const QString html = statusLabel->text();
+    auto plain = [](QString t) {
+        t.remove(QRegularExpression("<a [^>]*>.*?</a>"));
+        t.remove(QRegularExpression("<[^>]*>"));
+        t.replace("&mdash;", QString(QChar(0x2014)));
+        t.replace("&hellip;", QString(QChar(0x2026)));
+        t.replace("&nbsp;", " ");
+        return t.simplified();
+    };
+    static const QRegularExpression rowRe(
+        "<td[^>]*>([^<]*)</td>\\s*<td[^>]*>(.*?)</td>");
+    QStringList parts;
+    auto it = rowRe.globalMatch(html);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch m = it.next();
+        const QString label = m.captured(1).trimmed();
+        if (label == "Catalogued" || label == "Status") parts << plain(m.captured(2));
+    }
+    if (parts.isEmpty()) return plain(html);
+    return parts.join(QString("  %1  ").arg(QChar(0x00B7)));
 }
 
 void CatalogRootsDlg::addRow(const CatalogScopeEntry &e)
@@ -326,6 +406,7 @@ void CatalogRootsDlg::setScope(const CatalogScope &scope)
     fitTableHeight();
     removeBtn->setEnabled(false);
     updateNote();
+    sections->updateSummaries();
 }
 
 CatalogScope CatalogRootsDlg::scope() const
@@ -349,6 +430,7 @@ void CatalogRootsDlg::noteEdit()
 {
     if (populating) return;
     updateNote();
+    sections->updateSummaries();
     emit scopeChanged(scope());
 }
 
@@ -443,9 +525,9 @@ void CatalogRootsDlg::setScanProgress(const CatalogScanProgress &p)
                    ? " to check" : "");
     if (p.paused)
         text = "<b>Paused</b> while a folder loads &mdash; resumes by itself.<br>" + text;
-    text += "<br><span style=\"color:gray;\">You can close this window: the scan "
+    text += "<br>" + G::secondaryHtml("You can close this window: the scan "
             "continues in the background, and resumes at the next launch if Winnow "
-            "quits first.</span>";
+            "quits first.");
     const bool wasHidden = scanBlock->isHidden();
     const int oldLines = scanLabel->text().count("<br>");
     scanLabel->setText(text);
@@ -456,5 +538,6 @@ void CatalogRootsDlg::setScanProgress(const CatalogScanProgress &p)
 void CatalogRootsDlg::setCatalogStatus(const QString &text)
 {
     statusLabel->setText(text);
+    sections->updateSummaries();
     fitToContents();
 }

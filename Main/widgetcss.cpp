@@ -10,46 +10,123 @@ void WidgetCSS::styleGlobals()
        TEXT AND HEADER COLOURS
        --------------------------------------------------------------------------------- */
     // G::textShade is the user's "Application text luminousity" (settings)
-    G::textColor = shade(G::textShade);
-    G::disabledColor = shade(bg + 40);
-    G::header1Color = QColor(108,193,232);      // #6cc1e8  dock titles
-    G::header2Color = QColor(81,141,169);       // #518da9
-    G::header3Color = QColor(66,115,138);       // #42738a
+    G::textColor = shade(G::textShade);                      // derived, grey, text
+    G::disabledColor = shade(bg + 40);                       // derived, grey, disabled text
+    G::header1Color = QColor(108,193,232);                   // #6cc1e8, light blue, dock titles, help h1
+    G::header2Color = QColor(81,141,169);                    // #518da9, blue, property editor root rows, help h2
+    G::header3Color = QColor(66,115,138);                    // #42738a, dark blue, property editor headers, help h3
     // G::header3Color = QColor(50,82,98);
     /* Caption colour for the subpanel headers inside a Develop scope (Basic, Color, Mask,
        Submasks, ...). Not the Scope or Raw bands, which keep header2Color. */
-    G::scopeSubheaderColor = G::textColor;
-    G::helpColor = QColor(37,65,40);
-    G::appleBlue = QColor(21,113,211);          // #1571D3
-    G::unfiledKeywordColor = QColor(0x9a, 0x5a, 0x5a);  // Filters + Keywords dock
-    G::appliedKeywordColor = QColor(0xb4, 0xa4, 0x5a);  // Keywords dock: on this image
+    G::scopeSubheaderColor = G::textColor;                   // derived, grey, Develop subpanel captions
+    G::helpColor = QColor(37,65,40);                         // #254128, dark green, help buttons
+    G::appleBlue = QColor(21,113,211);                       // #1571d3, blue, accent, slider focus, compare chip
+    G::unfiledKeywordColor = QColor(154,90,90);              // #9a5a5a, dull red, unfiled keywords, bookmark not in Library
+    G::appliedKeywordColor = QColor(180,164,90);             // #b4a45a, dull yellow, Keywords dock: on this image
+
+    /* ---------------------------------------------------------------------------------
+       SHARED SEMANTIC COLOURS (each used in more than one place)
+       --------------------------------------------------------------------------------- */
+    G::developColor = QColor(150,110,20);                    // #966e14, amber, develop edits: thumb badge, hidden chip
+    G::excludedColor = QColor(208,96,96);                    // #d06060, red, excluded Filters/LibTree/Catalog item, bad query
+    G::overLimitColor = QColor(255,165,0);                   // #ffa500, orange, FSTree/Bookmarks folder over the limit
+    G::selectedOptionColor = QColor(240,196,25);             // #f0c419, yellow, Library | Folders, Module dock, map pin
+    G::attentionColor = QColor(255,255,0);                   // #ffff00, yellow, filtering, current thumb, scope caption, zoom
+    G::accentTealColor = QColor(120,200,195);                // #78c8c3, teal, curve/region handles, mask brush tint
+    G::glyphColor = QColor(184,184,184);                     // #b8b8b8, grey, the grey drawn into the icon pngs
+    G::popupKeyColor = QColor(255,0,0);                      // #ff0000, red, key names in popups ("Press Esc")
+    G::secondaryTextColor = QColor(128,128,128);             // #808080, grey, notes, table labels, inactive status
+
+    /* ---------------------------------------------------------------------------------
+       STATUS, ALERT AND ERROR COLOURS
+       --------------------------------------------------------------------------------- */
+    G::errorColor = QColor(255,0,0);                         // #ff0000, red, error text (cssError), input dialog
+    G::warningColor = QColor(255,255,0);                     // #ffff00, yellow, warning text (cssWarning), token warning
+    G::okColor = QColor(0,128,0);                            // #008000, green, ok status (cssOk)
+    G::iconCachePressureColor = QColor(255,165,0);           // #ffa500, orange, status dot: icon cache test pressure
+    G::iconCacheJitColor = QColor(0,0,255);                  // #0000ff, blue, status dot: JIT icon caching
+    G::alertShowStopperColor = QColor(255,64,64);            // #ff4040, red, Develop alert: show stopper
+    G::alertWarningColor = QColor(255,179,64);               // #ffb340, amber, Develop alert: warning
+    G::catalogOwedColor = QColor(224,104,92);                // #e0685c, warm red, catalog editor: clause that asks for action
+    G::folderNotFoundColor = QColor(229,115,115);            // #e57373, light red, Find Duplicates: folder not found
+    G::appMissingColor = QColor(128,0,0);                    // #800000, maroon, External apps: program not found
+    G::maskOverlayDefaultColor = QColor(220,40,40);          // #dc2828, red, mask overlay until the user picks one
+    auto statusCss = [](const QColor &c) {
+        return "QLabel,QLineEdit,QComboBox {color:" + c.name() + ";}";
+    };
+    G::cssError = statusCss(G::errorColor);
+    G::cssWarning = statusCss(G::warningColor);
+    G::cssOk = statusCss(G::okColor);
+    G::cssInactive = statusCss(G::secondaryTextColor);
+    // a user pick (Develop/maskOverlayColor) survives a restyle
+    if (!G::maskOverlayColor.isValid()) G::maskOverlayColor = G::maskOverlayDefaultColor;
+
+    /* ---------------------------------------------------------------------------------
+       INDICATOR PALETTES (thumbnails, trees, dialogs, progress, map)
+       --------------------------------------------------------------------------------- */
+    G::pickColor = QColor(0,255,0);                          // #00ff00, green, picked: thumb + loupe badge
+    G::rejectColor = QColor(255,0,0);                        // #ff0000, red, rejected: thumb + loupe badge
+    G::ingestedColor = QColor(0,0,255);                      // #0000ff, blue, thumb: ingested
+    G::thumbSelectedColor = QColor(255,255,255);             // #ffffff, white, thumb: selected border
+    G::thumbCacheColor = QColor(200,0,0);                    // #c80000, red, thumb: cached in ImageCache
+    G::sidecarColor = QColor(5,82,56);                       // #055238, dark teal, thumb: has a sidecar
+    /* Availability. Offline is the calmer of the two on purpose: an ejected drive is a
+       normal state a user creates dozens of times a day, while a file that is genuinely
+       gone is the one worth alarming about. */
+    G::offlineColor = QColor(90,130,170);                    // #5a82aa, slate blue, thumb: volume not mounted
+    G::missingColor = QColor(170,70,60);                     // #aa463c, dull red, thumb: file gone
+    G::viewportLightColor = QColor(255,255,255);             // #ffffff, white, thumb: zoom viewport rect, outer
+    G::viewportDarkColor = QColor(0,0,0);                    // #000000, black, thumb: zoom viewport rect, inner
+    G::classificationTextColor = QColor(255,255,255);        // #ffffff, white, loupe rating text
+    G::classificationOnYellowTextColor = QColor(0,0,0);      // #000000, black, loupe rating text on yellow label
+    G::libraryColor = QColor(78,176,166);                    // #4eb0a6, teal, LibTree: Library row ("not a folder")
+    G::collectionColor = QColor(160,130,210);                // #a082d2, violet, Collections
+    G::queryColor = QColor(222,150,70);                      // #de9646, amber, Queries
+    G::targetCollectionColor = QColor(240,80,200);           // #f050c8, magenta, the target collection
+    G::propertySelectedTextColor = QColor(27,138,131);       // #1b8a83, turquoise, property editor: selected text
+    G::auditSuspectColor = QColor(220,110,100);              // #dc6e64, red, Keyword Audit: suspect
+    G::auditSuggestedColor = QColor(170,150,220);            // #aa96dc, lavender, Keyword Audit: suggested
+    G::auditMissingColor = QColor(110,160,220);              // #6ea0dc, blue, Keyword Audit: missing
+    G::auditCorrectColor = QColor(140,140,140);              // #8c8c8c, grey, Keyword Audit: keywords right
+    G::auditDecidedColor = QColor(110,190,120);              // #6ebe78, green, Keyword Audit: replace/remove/add
+    G::auditNoThumbColor = QColor(70,70,70);                 // #464646, dark grey, Keyword Audit: no thumbnail
+    G::progressFocusStackColor = QColor(128,128,0);          // #808000, olive, progress row: Focus Stack
+    G::progressDemosaicColor = QColor(58,151,201);           // #3a97c9, blue, progress row: Demosaic
+    G::progressDevPreviewColor = QColor(143,127,209);        // #8f7fd1, violet, progress row: Dev Previews
+    G::progressPresetAutoColor = QColor(201,162,58);         // #c9a23a, amber, progress row: Auto Settings
+    G::progressCatalogColor = QColor(63,168,160);            // #3fa8a0, teal, progress row: catalog scan
+    G::progressCatalogLoadColor = QColor(106,143,208);       // #6a8fd0, blue, progress row: catalog load
+    G::progressExportColor = QColor(95,174,95);              // #5fae5f, green, progress row: Export
+    G::mapPinColor = QColor(232,116,44);                     // #e8742c, orange, Map: pin (Lightroom's orange)
+    G::mapPlaceColor = QColor(74,163,255);                   // #4aa3ff, blue, Map: place outline (mask overlay blue)
+    G::mapAxisHandleColor = QColor(74,163,255);              // #4aa3ff, blue, Map: place axis handles
+    G::mapRotateHandleColor = QColor(90,208,106);            // #5ad06a, green, Map: place rotate handle
+    G::mapOverlayBgColor = QColor(20,20,20);                 // #141414, near black, Map: control backgrounds (alpha at use)
+    G::mapOverlayTextColor = QColor(224,224,224);            // #e0e0e0, light grey, Map: control text
+    G::mapOverlayBorderColor = QColor(85,85,85);             // #555555, grey, Map: preview border
 
     /* ---------------------------------------------------------------------------------
        WIDGET CHROME
        --------------------------------------------------------------------------------- */
-    G::borderColor = shade(bg + 40);
-    G::tabWidgetBorderColor = shade(bg + 60);
-    G::pushButtonBackgroundColor = shade(bg - 10);
-    G::frameLineColor = shade(bg + 15);         // menu background shade (mb)
-    G::frameLineWidth = 1;
-    G::frameLineRadius = 6;                     // = brInteractive (buttons)
-    G::scrollBarHandleBackgroundColor = QColor(bg, bg + 3, bg);
-    G::selectionColor = QColor(68,95,118);      // #445f76
-    G::mouseOverColor = QColor(40,54,66);
-    G::iconOpacity = 0.5;                       // 0.0 - 1.0 (higher is brighter)
+    G::borderColor = shade(bg + 40);                         // derived, grey, borders
+    G::tabWidgetBorderColor = shade(bg + 60);                // derived, grey, tab widget border
+    G::pushButtonBackgroundColor = shade(bg - 10);           // derived, grey, push buttons
+    G::frameLineColor = shade(bg + 15);                      // derived, grey, menu background shade (mb)
+    G::frameLineWidth = 1;                                   // px
+    G::frameLineRadius = 6;                                  // = brInteractive (buttons)
+    G::scrollBarHandleBackgroundColor = QColor(bg,bg+3,bg);  // derived, grey, scroll bar handle
+    G::selectionColor = QColor(68,95,118);                   // #445f76, slate blue, selection
+    G::mouseOverColor = QColor(40,54,66);                    // #283642, dark slate, hover
+    G::iconOpacity = 0.5;                                    // 0.0 - 1.0 (higher is brighter)
 
     /* Pick label colours */
     const int transparency = 50;
-    G::labelNoneColor = QColor(85,85,85,transparency);  // Background Gray
-    G::labelRedColor = QColor(60,20,20);                // Dark red
-    G::labelYellowColor = QColor(80,55,15);             // Dark yellow
-    G::labelGreenColor = QColor(20,40,20);              // Dark green
-    G::labelBlueColor = QColor(20,20,60);               // Dark blue
-    // G::labelBlueColor = QColor(20,45,100);
-    // G::labelBlueColor = QColor(32,58,124);
-    G::labelPurpleColor = QColor(50,30,70);             // Dark purple
-    // G::labelPurpleColor = QColor(60,30,90);
-    // G::labelPurpleColor = QColor(54,37,95);
+    G::labelNoneColor = QColor(85,85,85,transparency);       // #555555, grey, no label (translucent)
+    G::labelRedColor = QColor(60,20,20);                     // #3c1414, dark red, Red label
+    G::labelYellowColor = QColor(80,55,15);                  // #50370f, dark yellow, Yellow label
+    G::labelGreenColor = QColor(20,40,20);                   // #142814, dark green, Green label
+    G::labelBlueColor = QColor(20,20,60);                    // #14143c, dark blue, Blue label
+    G::labelPurpleColor = QColor(50,30,70);                  // #321e46, dark purple, Purple label
 
     /* Named palette */
     G::lightgray = "#aaaaaa";
@@ -82,8 +159,8 @@ void WidgetCSS::styleGlobals()
        Embellish), the Filters categories, the InfoView categories, and the widget-built
        bands (GradientHeader, ScopeHeader, RawPanel, MaskPanel, Transform, Replace,
        History). */
-    G::headerGradientTop = shade(bg + 5);
-    G::headerGradientBottom = shade(qMax(0, bg - 15));
+    G::headerGradientTop = shade(bg + 5);                    // derived, grey, section header band, top
+    G::headerGradientBottom = shade(qMax(0, bg - 15));       // derived, grey, section header band, bottom
 
     /* ---------------------------------------------------------------------------------
        DEVELOP PANEL SURFACES AND SEPARATORS
@@ -93,7 +170,7 @@ void WidgetCSS::styleGlobals()
        tree's non-header rows) read as a surface distinct from the header bands over them
        -- those keep the headerGradient band -- and from the action row under the dock
        title bar, which stays on the plain background. */
-    G::panelContentBg = shade(bg + 10);
+    G::panelContentBg = shade(bg + 10);                      // derived, grey, subpanel content surface
 
     /* CONTROL-GROUP SEPARATOR: the rule drawn BETWEEN groups of controls inside a
        subpanel -- the dividers between the Basic tone/WB/presence groups in the Edits
@@ -105,7 +182,7 @@ void WidgetCSS::styleGlobals()
          Width   line thickness, px
          Height  vertical space the separator occupies (the line is centred in it)
          Inset   clear space from each side of the panel to the line's ends */
-    G::groupSeparatorColor = shade(bg + 30);
+    G::groupSeparatorColor = shade(bg + 30);                 // derived, grey, rule between control groups
     G::groupSeparatorWidth = 1;
     G::groupSeparatorHeight = qRound(G::fontSize * 1.33);
     G::groupSeparatorInset = 6;
@@ -116,7 +193,7 @@ void WidgetCSS::styleGlobals()
        reads as the same kind of structural division as the boundary between docks --
        quieter than the group rules inside a panel. Its height is panelBorderHeight
        below. */
-    G::panelSeparatorColor = shade(bg + 5);
+    G::panelSeparatorColor = shade(bg + 5);                  // derived, grey, rule under each panel
 
     /* ---------------------------------------------------------------------------------
        LAYOUT METRICS
@@ -481,12 +558,12 @@ QString WidgetCSS::toolButton()
     "}"
 
     "QToolButton#pictureChip[chipState=\"compare\"] {"
-        "border-color: " + QColor(21,113,211).name() + ";"
+        "border-color: " + G::appleBlue.name() + ";"
     "}"
 
     "QToolButton#pictureChip[chipState=\"hidden\"] {"
-        "background-color: " + QColor(150,110,20).name() + ";"
-        "border-color: " + QColor(150,110,20).name() + ";"
+        "background-color: " + G::developColor.name() + ";"
+        "border-color: " + G::developColor.name() + ";"
         "color: white;"
     "}"
 

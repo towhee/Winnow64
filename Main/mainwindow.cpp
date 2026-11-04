@@ -4104,9 +4104,6 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
 
 }
 
-/* The one colour in the catalog editor, and it marks the one clause that asks for an
-   action. Warm enough to read on the dark theme, dark enough to read on the light one. */
-static const char *kCatalogOwedColor = "#e0685c";
 /* The href of the status line's "See which" link; CatalogRootsDlg hands it back and MW
    opens the Catalog Diagnostics report. */
 static const char *kCatalogDiagnosticsLink = "catalog-diagnostics";
@@ -4327,8 +4324,9 @@ QString MW::catalogStatusText() const
     const QLocale loc;
     QStringList rows;
     auto row = [&rows](const QString &label, const QString &value) {
-        rows << QString("<tr><td style=\"padding:2px 16px 2px 0; color:gray;\">%1</td>"
-                        "<td style=\"padding:2px 0;\">%2</td></tr>").arg(label, value);
+        rows << QString("<tr><td style=\"padding:2px 16px 2px 0; color:%3;\">%1</td>"
+                        "<td style=\"padding:2px 0;\">%2</td></tr>")
+                    .arg(label, value, G::secondaryTextColor.name());
     };
     const QString seeWhich =
         QString(" &nbsp;<a href=\"%1\">See which</a>").arg(kCatalogDiagnosticsLink);
@@ -4359,7 +4357,7 @@ QString MW::catalogStatusText() const
         if (owed > 0)
             row("Status", QString("<span style=\"color:%1;\">%2 images not catalogued "
                                   "yet &mdash; press Scan.</span>%3")
-                              .arg(kCatalogOwedColor, loc.toString(owed), seeWhich));
+                              .arg(G::catalogOwedColor.name(), loc.toString(owed), seeWhich));
         else if (diff < 0)
             row("Status", QString("%1 catalogued images are not found in these "
                                   "folders.%2").arg(loc.toString(-diff), seeWhich));
@@ -4398,14 +4396,14 @@ QString MW::catalogStatusText() const
         row("Disk space",
             QString("%1 in total<br>"
                     "%2%3 &nbsp;&middot;&nbsp; Thumbnails %4 (%5) "
-                    "&nbsp;&middot;&nbsp; Develop previews %6 (%7)<br>"
-                    "<span style=\"color:gray;\">%8</span>")
+                    "&nbsp;&middot;&nbsp; Develop previews %6 (%7)<br>%8")
                 .arg(size(catalogStorage.totalBytes()), catalogLabel,
                      size(catalogStorage.catalogBytes), size(catalogStorage.thumbBytes),
                      loc.toString(catalogStorage.thumbCount),
                      size(catalogStorage.devPreviewBytes),
                      loc.toString(catalogStorage.devPreviewCount),
-                     QDir::toNativeSeparators(catalogStorage.dir).toHtmlEscaped()));
+                     G::secondaryHtml(QDir::toNativeSeparators(catalogStorage.dir)
+                                          .toHtmlEscaped())));
     }
     else {
         row("Disk space", "measuring&hellip;");
@@ -8968,8 +8966,8 @@ void MW::bookmarkClicked(QTreeWidgetItem *item, int col)
     back from the Filters panel like any other folder filter (syncLibTreeFromFilters).
     Unlike a LibTree click, a bookmark CLEARS EVERY OTHER FILTER first, as a Collections or
     Queries click does: it means "show me this folder".
-    A bookmark the Library holds nothing in is not a dead row: it opens the folder in
-    Folders, which switches the source the ordinary way (its tooltip says so).
+    A bookmark the Library holds nothing in is disabled and red (BookMarks::styleItem),
+    so it never gets here in the Library; its tooltip says to switch to Folders.
 */
     Q_UNUSED(col)
     if (G::isLogger) G::log("MW::bookmarkClicked");

@@ -74,7 +74,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        before any overlay can paint. */
     {
         const QColor c(setting->value("Develop/maskOverlayColor",
-                                      G::maskOverlayColor.name()).toString());
+                                      G::maskOverlayDefaultColor.name()).toString());
         if (c.isValid()) G::maskOverlayColor = c;
         G::maskOverlayGrayscale =
             setting->value("Develop/maskOverlayGrayscale", false).toBool();

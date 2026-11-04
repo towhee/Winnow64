@@ -1,4 +1,5 @@
 #include "Dialogs/querybuilder.h"
+#include "Main/global.h"
 
 #include <QApplication>
 #include <QComboBox>
@@ -238,7 +239,7 @@ void QueryRuleWidget::checkMatch(QLineEdit *e)
             if (!found) { bad = true; break; }
         }
     }
-    e->setStyleSheet(bad ? "QLineEdit { color: #d06060; }" : QString());
+    e->setStyleSheet(bad ? "QLineEdit { color: " + G::excludedColor.name() + "; }" : QString());
     e->setToolTip(bad ? tr("Nothing loaded in the Library has this value.")
                       : QString());
 }
@@ -472,7 +473,7 @@ QueryBuilderWidget::QueryBuilderWidget(QWidget *parent) : QWidget(parent)
     layout->addWidget(textEdit);
     errorLabel = new QLabel(this);
     errorLabel->setWordWrap(true);
-    errorLabel->setStyleSheet("color: #d06060;");
+    errorLabel->setStyleSheet("color: " + G::excludedColor.name() + ";");
     errorLabel->setVisible(false);
     layout->addWidget(errorLabel);
 

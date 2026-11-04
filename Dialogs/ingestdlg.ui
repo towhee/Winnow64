@@ -789,9 +789,6 @@
           <strikeout>false</strikeout>
          </font>
         </property>
-        <property name="toolTip">
-         <string>Select and create the primary location for the files to be copied to</string>
-        </property>
         <property name="text">
          <string>Primary</string>
         </property>
@@ -1207,9 +1204,6 @@ margin-left =  5px</string>
             <bold>false</bold>
             <strikeout>false</strikeout>
            </font>
-          </property>
-          <property name="toolTip">
-           <string>Remove items from the description completer list.</string>
           </property>
           <property name="toolTipDuration">
            <number>-3</number>
@@ -1635,9 +1629,6 @@ margin-left =  5px</string>
           <bold>false</bold>
           <strikeout>false</strikeout>
          </font>
-        </property>
-        <property name="toolTip">
-         <string>Select and create the backup location for the files to be copied to</string>
         </property>
         <property name="text">
          <string>Backup</string>

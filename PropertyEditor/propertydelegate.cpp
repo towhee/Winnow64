@@ -511,7 +511,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     QPen catPen(headerColor.isValid() ? headerColor : G::header2Color);  // root items
     QPen hdrPen(G::header3Color);           // root items same other items
     QPen regPen(QColor(t,t,t));             // other items have silver text
-    QPen selPen("#1b8a83");                 // selected items have torquoise text
+    QPen selPen(G::propertySelectedTextColor);  // selected items have turquoise text
     QPen disPen(G::disabledColor.name());   // disabled items have gray text
     // QPen brdPen(QColor(c,c,c));             // border color
     QPen brdPen(Qt::NoPen);                 // hide border
@@ -682,7 +682,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             if (valSib.data(UR_DelegateType).toInt() == DT_Slider) {
                 auto *se = static_cast<SliderEditor*>(valSib.data(UR_Editor).value<void*>());
                 if (se && se->sliderHasFocus())
-                    painter->fillRect(r0, QColor(0x15, 0x71, 0xd3, 40));
+                    painter->fillRect(r0, G::withAlpha(G::appleBlue, 40));
             }
             /* Expand/collapse arrow for a DECORATED value row (e.g. Develop's Demosaic
                row, whose raw-denoise sliders are children). The delegate otherwise draws

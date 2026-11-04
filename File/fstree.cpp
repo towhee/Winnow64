@@ -92,7 +92,7 @@ HoverDelegate  (QStyledItemDelegate subclass)
 - Also used by Bookmarks
 - Handles hover and over-limit highlighting.
 - hoverBackground = G::backgroundShade + 20.
-- Over-limit text color = orange (255,165,0).
+- Over-limit text color = G::overLimitColor (orange).
 - setHoveredIndex() updates current hover and emits hoverChanged().
 - paint() fills hover background and recolors text when OverLimitRole == true.
 - FSTree connects hoverChanged → viewport()->update() for repaint.
@@ -1965,7 +1965,7 @@ void FSTree::dropEvent(QDropEvent *event)
     G::popup->setProgressMax(count);
     QString msg = operation + QString::number(count) +
                   " to " + dropDir +
-                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+                  "<p>Press " + G::keyHtml("Esc") + " to abort.";
     G::popup->showPopup(msg, 0, true, 1);
 
     QString issue;

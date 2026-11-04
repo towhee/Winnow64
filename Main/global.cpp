@@ -149,6 +149,63 @@ QColor pushButtonBackgroundColor;
 QColor scrollBarHandleBackgroundColor;
 QColor helpColor;
 QColor appleBlue;
+QColor developColor;
+QColor excludedColor;
+QColor overLimitColor;
+QColor selectedOptionColor;
+QColor attentionColor;
+QColor accentTealColor;
+QColor glyphColor;
+QColor popupKeyColor;
+QColor secondaryTextColor;
+QColor errorColor;
+QColor warningColor;
+QColor okColor;
+QColor iconCachePressureColor;
+QColor iconCacheJitColor;
+QColor alertShowStopperColor;
+QColor alertWarningColor;
+QColor catalogOwedColor;
+QColor folderNotFoundColor;
+QColor appMissingColor;
+QColor maskOverlayDefaultColor;
+QColor pickColor;
+QColor rejectColor;
+QColor ingestedColor;
+QColor thumbSelectedColor;
+QColor thumbCacheColor;
+QColor sidecarColor;
+QColor offlineColor;
+QColor missingColor;
+QColor viewportLightColor;
+QColor viewportDarkColor;
+QColor classificationTextColor;
+QColor classificationOnYellowTextColor;
+QColor libraryColor;
+QColor collectionColor;
+QColor queryColor;
+QColor targetCollectionColor;
+QColor propertySelectedTextColor;
+QColor auditSuspectColor;
+QColor auditSuggestedColor;
+QColor auditMissingColor;
+QColor auditCorrectColor;
+QColor auditDecidedColor;
+QColor auditNoThumbColor;
+QColor progressFocusStackColor;
+QColor progressDemosaicColor;
+QColor progressDevPreviewColor;
+QColor progressPresetAutoColor;
+QColor progressCatalogColor;
+QColor progressCatalogLoadColor;
+QColor progressExportColor;
+QColor mapPinColor;
+QColor mapPlaceColor;
+QColor mapAxisHandleColor;
+QColor mapRotateHandleColor;
+QColor mapOverlayBgColor;
+QColor mapOverlayTextColor;
+QColor mapOverlayBorderColor;
 QColor selectionColor;
 QColor mouseOverColor;
 QColor panelContentBg;
@@ -189,11 +246,11 @@ QString css;                        // app stylesheet;
 /*  Semantic state stylesheets - not theme-bound; used for status indicators,
     error highlights, etc. Color, not font size: widgets that need a specific
     size (e.g. status dots on Windows) should set it via setFont() so it
-    persists across setStyleSheet() calls. */
-QString cssError    = "QLabel,QLineEdit,QComboBox {color:red;}";
-QString cssWarning  = "QLabel,QLineEdit,QComboBox {color:yellow;}";
-QString cssOk       = "QLabel,QLineEdit,QComboBox {color:green;}";
-QString cssInactive = "QLabel,QLineEdit,QComboBox {color:gray;}";
+    persists across setStyleSheet() calls. Set in WidgetCSS::styleGlobals. */
+QString cssError;
+QString cssWarning;
+QString cssOk;
+QString cssInactive;
 
 QColor labelNoneColor;              // pick labels: set in WidgetCSS::styleGlobals
 QColor labelRedColor;
@@ -201,7 +258,33 @@ QColor labelYellowColor;
 QColor labelGreenColor;
 QColor labelBlueColor;
 QColor labelPurpleColor;
-QColor maskOverlayColor(QColor(220,40,40));    // Develop mask overlay (see global.h)
+QColor maskOverlayColor;           // Develop mask overlay (see global.h)
+
+/*  Colour helpers: see global.h */
+QString keyHtml(const QString &text, bool bold)
+{
+    const QString t = bold ? "<b>" + text + "</b>" : text;
+    return "<font color=\"" + popupKeyColor.name() + "\">" + t + "</font>";
+}
+
+QString secondaryHtml(const QString &text)
+{
+    return "<span style=\"color:" + secondaryTextColor.name() + ";\">" + text + "</span>";
+}
+
+QColor withAlpha(const QColor &c, int alpha)
+{
+    QColor a = c;
+    a.setAlpha(alpha);
+    return a;
+}
+
+QString cssRgba(const QColor &c)
+{
+    return QString("rgba(%1, %2, %3, %4)").arg(c.red()).arg(c.green()).arg(c.blue())
+                                          .arg(c.alpha());
+}
+
 bool maskOverlayGrayscale = false;             // desaturate under the overlay (global.h)
 
 QStringList ratings, labelColors;

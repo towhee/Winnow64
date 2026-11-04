@@ -158,12 +158,12 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     indentation = 14;
     setIndentation(indentation);
 
-    hdrIsFilteringColor = QColor(Qt::yellow);
+    hdrIsFilteringColor = G::attentionColor;
     hdrIsEmptyColor = G::disabledColor;
     /* Red reads as "taken out", and does not collide with the yellow a filtering
        category header uses, which sits on a different row. (An amber "ambiguous keyword"
        colour lived here too, until path identity made ambiguity impossible.) */
-    itemIsExcludedColor = QColor(0xd0, 0x60, 0x60);
+    itemIsExcludedColor = G::excludedColor;
     itemIsUnfiledColor = G::unfiledKeywordColor;
 
 

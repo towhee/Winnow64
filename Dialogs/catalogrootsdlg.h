@@ -2,14 +2,17 @@
 #define CATALOGROOTSDLG_H
 
 #include <QDialog>
+#include <QGroupBox>
 #include <QLabel>
 #include <QProgressBar>
 #include <QPushButton>
 #include <QTableWidget>
+#include <QVBoxLayout>
 
 #include "Main/catalogscope.h"
 
 struct CatalogScanProgress;
+class CollapsibleSections;
 
 /*
     Which folders Winnow indexes in the background, and the button that starts a scan.
@@ -82,10 +85,16 @@ signals:
     void scopeChanged(const CatalogScope &scope);
     void scanRequested();
     void stopScanRequested();
-    /* The Diagnostics button, or the status line's "See which" link. */
+    /* The status line's "See which" link. */
     void diagnosticsRequested();
 
 private:
+    /* A collapsible section's group box, styled as ExportDlg's; inner receives its
+       body layout. */
+    QGroupBox *makeSection(const QString &title, QVBoxLayout *&inner);
+    /* One-line summaries shown when a section is closed. */
+    QString scopeSummary() const;
+    QString infoSummary() const;
     /* Build one table row. Widgets, not item flags: a combo says what the two states ARE
        without the user having to click to find out. */
     void addRow(const CatalogScopeEntry &e);
@@ -106,7 +115,8 @@ private:
     QPushButton *removeBtn = nullptr;
     QPushButton *scanBtn = nullptr;
     QPushButton *closeBtn = nullptr;
-    QPushButton *diagBtn = nullptr;
+    QPushButton *helpBtn = nullptr;
+    CollapsibleSections *sections = nullptr;
     QLabel *noteLabel = nullptr;
     QLabel *statusLabel = nullptr;
     QWidget *scanBlock = nullptr;      // scanBar + scanLabel, shown together

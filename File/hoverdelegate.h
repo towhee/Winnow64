@@ -26,7 +26,7 @@ private:
     QColor hoverBackground;
 
     // --- New additions ---
-    QColor overLimitTextColor = QColor(255,165,0);   // orange
+    QColor overLimitTextColor = G::overLimitColor;   // orange
     QColor overLimitBackground = QColor(255,245,220); // light background tint (optional)
 
     // Shared custom role for "too many subfolders" highlight

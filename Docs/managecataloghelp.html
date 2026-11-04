@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Manage Catalog</h1>
+
+<p>The folders in the <span class="highlight">Catalog Scope</span> table make up your
+Library. They are scanned in the background, so their images can be found in the Library
+without opening each folder.</p>
+
+<p>Only folders listed here are catalogued. You can still browse any other folder, but it
+is not added to the Library.</p>
+
+<h2>Catalog Scope</h2>
+
+<p>Each row is one rule: an <span class="highlight">Action</span> (Include or Exclude), a
+<span class="highlight">Folder path</span>, whether the rule reaches into
+<span class="highlight">Include Subfolders</span>, and how many
+<span class="highlight">Images</span> the folder holds on disk now.</p>
+
+<p>Exclude a folder to carve a branch out of an included folder. An exclusion always
+wins, wherever it sits in the table.</p>
+
+<p><span class="highlight">Append</span> adds a folder at the bottom of the table, and
+<span class="highlight">Remove</span> deletes the selected rows.</p>
+
+<p><span class="warn">Removing a row removes its images from the catalog.</span> The image
+files themselves are not affected.</p>
+
+<p>The table cannot be changed while a scan is running.</p>
+
+<h2>Catalog Information</h2>
+
+<p><span class="highlight">Catalogued</span> is what the catalog holds, and
+<span class="highlight">On disk</span> is what the folders in the scope hold. When they
+differ, <span class="highlight">Status</span> says how many images are still to be
+catalogued; press <span class="highlight">Scan</span> to catalogue them.</p>
+
+<p><span class="highlight">See which</span> opens the Catalog Diagnostics report, which
+lists the images behind the difference. It is also in
+<span class="highlight">Help &gt; Diagnostics</span>.</p>
+
+<h2>Scanning</h2>
+
+<p><span class="highlight">Scan</span> starts a background scan, and becomes
+<span class="highlight">Stop</span> while one runs. Its progress shows here and on the
+status bar.</p>
+
+<p>You can close this window during a scan: it continues in the background, and resumes
+at the next launch if Winnow quits first.</p>
+
+<h2>Collapsing sections</h2>
+
+<p>Click a section title to collapse or expand it. A collapsed section shows a one-line
+summary. Right-click a title for Expand all and Collapse all.</p>
+
+</body>
+</html>

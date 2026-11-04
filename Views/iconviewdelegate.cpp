@@ -118,27 +118,27 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     int l40 = G::backgroundShade + 40;
     int l60 = G::backgroundShade + 60;
     defaultBorderColor = QColor(l20,l20,l20);
-    currentItemColor = QColor(Qt::yellow);
-    selectedColor = QColorConstants::Svg::white;
-    pickColor = QColor(Qt::green);
-    rejectColor = QColor(Qt::red);
-    ingestedColor = QColor(Qt::blue);
-    cacheColor = QColor(200,0,0);
+    currentItemColor = G::attentionColor;
+    selectedColor = G::thumbSelectedColor;
+    pickColor = G::pickColor;
+    rejectColor = G::rejectColor;
+    ingestedColor = G::ingestedColor;
+    cacheColor = G::thumbCacheColor;
     cacheBorderColor = QColor(l20,l20,l20);
-    sidecarColor = QColor(5,82,56);                 // dark teal
-    developColor = QColor(150,110,20);              // amber: image has develop edits
+    sidecarColor = G::sidecarColor;                 // dark teal
+    developColor = G::developColor;                 // amber: image has develop edits
     /*  Availability. Offline is the calmer of the two on purpose: an ejected
         drive is a normal state a user creates dozens of times a day, while a
         file that is genuinely gone is the one worth alarming about. */
-    offlineColor = QColor(90,130,170);              // slate blue: volume not mounted
-    missingColor = QColor(170,70,60);               // dull red: file gone
-    ratingBackgoundColor = QColor(Qt::yellow);
+    offlineColor = G::offlineColor;                 // slate blue: volume not mounted
+    missingColor = G::missingColor;                 // dull red: file gone
+    ratingBackgoundColor = G::attentionColor;
     // ratingBackgoundColor = QColor(b,b,b,50);
     labelTextColor = G::textColor;
     videoTextColor = G::textColor;
     numberTextColor = QColor(l60,l60,l60);
-    vp1Color = QColor(Qt::white);
-    vp2Color = QColor(Qt::black);
+    vp1Color = G::viewportLightColor;
+    vp2Color = G::viewportDarkColor;
     // masterColor = QColor(30, 115, 215);          // amber
     masterColor = G::header1Color;                  // blue
     // versionColor = QColor(225, 140, 20);         // blue

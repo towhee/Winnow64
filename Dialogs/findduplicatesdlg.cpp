@@ -97,7 +97,7 @@ void DragToList::markValidity(QListWidgetItem *item)
         item->setToolTip(item->text());
     }
     else {
-        item->setForeground(QColor("#E57373"));
+        item->setForeground(G::folderNotFoundColor);
         item->setToolTip("Folder not found: " + item->text());
     }
 }
@@ -227,7 +227,7 @@ void DragToList::showEvent(QShowEvent *event)
     These actions must be run after the dialog constructor is finished.
 */
     setStyleSheet(
-        "color: yellow;"
+        "color: " + G::attentionColor.name() + ";"
         "background-image: url(:/images/dragfoldershere.png)"
         );
     event->accept();
@@ -320,12 +320,15 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm) :
         "QGroupBox#targetBox::title,"
         "QGroupBox#criteriaBox::title,"
         "QGroupBox#compareImagesBox::title,"
-        "QGroupBox#candidateListBox::title { color: #6CC1E8; }"
+        "QGroupBox#candidateListBox::title { color: " + G::header1Color.name() + "; }"
         "QGroupBox#AImageBox::title,"
         "QGroupBox#BImageBox::title { color: white; }"
     );
 
     ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
+    // explanatory notes in the secondary (grey) text colour
+    ui->label_4->setStyleSheet(G::labelCss(G::secondaryTextColor));
+    ui->subfoldersNoteLbl->setStyleSheet(G::labelCss(G::secondaryTextColor));
 
     // candidate images tableview
     ui->tv->setSelectionBehavior(QAbstractItemView::SelectRows);

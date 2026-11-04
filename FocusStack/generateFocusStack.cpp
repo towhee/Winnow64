@@ -248,7 +248,8 @@ void MW::generateFocusStack(const QStringList paths,
 
     // Progress update
     connect(fs, &FS::progress, this, [this](int current, int total) {
-            progress->updateProgress(progressFocusStackRow, current, total, Qt::darkYellow);
+            progress->updateProgress(progressFocusStackRow, current, total,
+                                     G::progressFocusStackColor);
     }, Qt::QueuedConnection);
 
     // cleanup when finished

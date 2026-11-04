@@ -213,7 +213,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     }
     // qDebug() << "MW::traverseFolderStressTest randomChangeDirection =" << randomChangeDirection;
 
-    QString stopMsg = "Press <font color=\"red\"><b>ESC</b></font> to stop stress test";
+    QString stopMsg = "Press " + G::keyHtml("ESC") + " to stop stress test";
     if (!secPerFolder) G::popup->showPopup(stopMsg, 0);
     G::isStressTest = true;
     bool isForward = true;
@@ -275,7 +275,7 @@ void MW::traverseFolderStressTest(int msPerImage, double secPerFolder, bool utur
     if (!secPerFolder) {
         QString msg = "" + QString::number(slideCount) + " images.<br>" +
                       QString::number(seconds) + " seconds elapsed."
-                      + "<br>Press <font color=\"red\"><b>ESC</b></font> to cancel this popup."
+                      + "<br>Press " + G::keyHtml("ESC") + " to cancel this popup."
                       ;
         G::popup->showPopup(msg, 0);
     }

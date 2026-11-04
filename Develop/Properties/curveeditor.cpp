@@ -268,12 +268,12 @@ void CurveEditor::drawSampleMarker(QPainter &p)
     const int lx = qRound(toPlot(x, 0.0).x());
 
     p.setRenderHint(QPainter::Antialiasing, false);
-    p.setPen(QPen(QColor(120, 200, 195, 170), 1, Qt::SolidLine));
+    p.setPen(QPen(G::withAlpha(G::accentTealColor, 170), 1, Qt::SolidLine));
     p.drawLine(lx, r.top(), lx, r.bottom());
 
     p.setRenderHint(QPainter::Antialiasing, true);
     p.setPen(QPen(QColor(20, 20, 20), 1));
-    p.setBrush(QColor(120, 200, 195));
+    p.setBrush(G::accentTealColor);
     p.drawEllipse(onCurve, kPtR - 1, kPtR - 1);
 
     /* Readout along the BOTTOM: the parametric band label owns the top of the plot, and
@@ -514,7 +514,7 @@ void CurveEditor::paintEvent(QPaintEvent *)
             if (x1 <= x0) continue;
             const int a = (b == hoverBand || b == dragBand) ? 26 : ((b % 2) ? 12 : 0);
             if (a) p.fillRect(QRect(x0, r.top(), x1 - x0, r.height()),
-                              QColor(140, 200, 200, a));
+                              G::withAlpha(G::accentTealColor, a));
         }
         p.setPen(QPen(QColor(90, 90, 90), 1, Qt::DashLine));
         for (int i = 0; i < 3; ++i) {
@@ -595,7 +595,7 @@ void CurveEditor::paintEvent(QPaintEvent *)
         const bool active = (i == dragPt);
         const bool hot    = active || (i == hoverPt);
         p.setPen(QPen(QColor(20, 20, 20), 1));
-        p.setBrush(active ? QColor(120, 200, 195)
+        p.setBrush(active ? G::accentTealColor
                           : (hot ? QColor(230, 230, 230) : QColor(170, 170, 170)));
         p.drawEllipse(c, kPtR, kPtR);
     }

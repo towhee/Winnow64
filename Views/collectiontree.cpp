@@ -28,15 +28,12 @@ namespace {
     (FSTree, Bookmarks, the Finder) recognises it as something to act on. */
 const char *kNodeMime = "application/x-winnow-collection-node";
 
-/*  Collections are violet, so they read as neither a folder on disk (blue on macOS,
+/*  Collections are violet (G::collectionColor), so they read as neither a folder on disk (blue on macOS,
     yellow on Windows) nor the Library row's teal. Queries are amber, and draw their own
     glyph (a magnifier over a list), so a query never reads as a collection -- one holds
-    images, the other describes them. */
-const QColor kCollectionColor(160, 130, 210);
-const QColor kQueryColor(222, 150, 70);
-/*  The target collection's glyph: a saturated magenta, kin to the violet but plainly
-    not it, so the target is found at a glance (a lighter violet was too subtle). */
-const QColor kTargetCollectionColor(240, 80, 200);
+    images, the other describes them (G::queryColor). The target collection's glyph
+    (G::targetCollectionColor) is a saturated magenta, kin to the violet but plainly not
+    it, so the target is found at a glance (a lighter violet was too subtle). */
 
 QIcon tinted(const QString &resource, const QColor &c)
 {
@@ -92,11 +89,11 @@ CollectionTree::CollectionTree(CollectionStore::Kind kind, const QString &countM
     setObjectName(kind == CollectionStore::Kind::Collection ? "collectionTree"
                                                             : "queryTree");
     nodeIcon = kind == CollectionStore::Kind::Query
-        ? tinted(":/images/icon16/queries_white.png", kQueryColor)
-        : tinted(":/images/icon16/collections_white.png", kCollectionColor);
+        ? tinted(":/images/icon16/queries_white.png", G::queryColor)
+        : tinted(":/images/icon16/collections_white.png", G::collectionColor);
     if (kind == CollectionStore::Kind::Collection)
         targetIcon = tinted(":/images/icon16/collections_white.png",
-                            kTargetCollectionColor);
+                            G::targetCollectionColor);
 
     setColumnCount(2);
     setHeaderHidden(true);

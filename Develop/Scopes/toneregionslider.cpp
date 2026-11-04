@@ -128,7 +128,7 @@ void ToneRegionSlider::paintEvent(QPaintEvent *)
             << QPoint(x + kHandleW / 2, top + kHandleH);
         const bool active = (i == dragHandle);
         p.setPen(QPen(QColor(30, 30, 30), 1));
-        p.setBrush(active ? QColor(120, 200, 195) : QColor(190, 190, 190));
+        p.setBrush(active ? G::accentTealColor : QColor(190, 190, 190));
         p.drawPolygon(tri);
     }
 }

@@ -213,7 +213,7 @@ private:
         which would toggle the branch back on a style that expands on release (macOS). */
     bool pressWasExpander = false;
     int maxExpandLimit = 100;
-    QColor overLimitColor = QColor(255,165,0);   // orange
+    QColor overLimitColor = G::overLimitColor;   // orange
 
     bool isSubDirsOverLimit(const QString &root, int hardCap);
 

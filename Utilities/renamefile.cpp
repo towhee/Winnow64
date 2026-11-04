@@ -113,6 +113,17 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
     // geometry-rect height (Qt then opens shorter than the .ui declares).
     // Pin the height explicitly in both branches.
     const int fullHeight = 483;
+    /* Edit templates is greyed while Simple rename is chosen; its tooltip says why. */
+    auto setTemplatesBtnEnabled = [this](bool enabled) {
+        ui->filenameTemplatesBtn->setEnabled(enabled);
+        ui->filenameTemplatesBtn->setToolTip(enabled
+            ? tr("Create, rename or edit the file name templates. The templates are "
+                 "shared with Export and Ingest.")
+            : tr("Choose Template rename to use the templates"));
+    };
+    setTemplatesBtnEnabled(true);
+    ui->okBtn->setToolTip(tr("Rename the images using the choices above. Click Help for "
+                             "which other files (raw+JPG, sidecars) are renamed with them."));
     const int shift = 168;  // templateGroupBox y=178 → 10 when simple is hidden
     if (selection.count() == 1) {
         QFileInfo info(selection.at(0));
@@ -140,24 +151,26 @@ RenameFileDlg::RenameFileDlg(QWidget *parent,
         ui->templateRenameChk->setChecked(true);
         ui->manualRenameGroupBox->setEnabled(false);
         ui->templateGroupBox->setEnabled(true);
-        ui->filenameTemplatesBtn->setEnabled(true);
+        setTemplatesBtnEnabled(true);
 
         // Mutual exclusion: clicking either checkbox forces it on, the other
         // off, and toggles the enabled state of both bodies.
-        connect(ui->simpleRenameChk, &QCheckBox::clicked, this, [this]() {
+        connect(ui->simpleRenameChk, &QCheckBox::clicked, this,
+                [this, setTemplatesBtnEnabled]() {
             ui->simpleRenameChk->setChecked(true);
             ui->templateRenameChk->setChecked(false);
             ui->manualRenameGroupBox->setEnabled(true);
             ui->templateGroupBox->setEnabled(false);
-            ui->filenameTemplatesBtn->setEnabled(false);
+            setTemplatesBtnEnabled(false);
             ui->manualRenameEdit->setFocus();
         });
-        connect(ui->templateRenameChk, &QCheckBox::clicked, this, [this]() {
+        connect(ui->templateRenameChk, &QCheckBox::clicked, this,
+                [this, setTemplatesBtnEnabled]() {
             ui->simpleRenameChk->setChecked(false);
             ui->templateRenameChk->setChecked(true);
             ui->manualRenameGroupBox->setEnabled(false);
             ui->templateGroupBox->setEnabled(true);
-            ui->filenameTemplatesBtn->setEnabled(true);
+            setTemplatesBtnEnabled(true);
         });
 
         setFixedHeight(fullHeight);

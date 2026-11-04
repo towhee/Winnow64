@@ -114,27 +114,38 @@ QString BookMarks::pathOf(const QTreeWidgetItem *item)
 void BookMarks::styleItem(QTreeWidgetItem *item)
 {
 /*
-    Dimmed, with the reason in the tooltip, when the bookmark cannot do what a click on it
-    does in the current source: the folder is gone (or its volume is not mounted), or --
-    in the Library -- the Library holds nothing there. Such a Library bookmark still
-    works: the click opens the folder in Folders instead.
+    The reason a bookmark cannot do what a click on it does in the current source goes in
+    its tooltip:
+    - In the Library, a folder the Library holds nothing in is DISABLED and drawn in
+      G::unfiledKeywordColor, the red Filters and Keywords use for unfiled keywords, with
+      the tooltip note in the same red. This takes precedence over a missing folder.
+    - A folder that is gone (or whose volume is not mounted) is dimmed.
 */
     const QString path = pathOf(item);
-    QString tip = QDir::toNativeSeparators(path);
-    bool dim = false;
-    if (!QFileInfo::exists(path)) {
-        dim = true;
+    const QString nativePath = QDir::toNativeSeparators(path);
+    QString tip = nativePath;
+    QColor color;
+    bool enabled = true;
+    if (libraryMode && libraryKnown && libraryFolders(path).isEmpty()) {
+        enabled = false;
+        color = G::unfiledKeywordColor;
+        tip = "<p style='white-space:pre'>" + nativePath.toHtmlEscaped() + "</p>"
+              "<p style='color:" + color.name() + "'>"
+              + tr("Not in library, switch to Folders to access") + "</p>";
+    }
+    else if (!QFileInfo::exists(path)) {
+        color = G::disabledColor;
         tip += tr("\n\nNot available: the folder does not exist or its volume is not "
                   "mounted.");
     }
-    else if (libraryMode && libraryKnown && libraryFolders(path).isEmpty()) {
-        dim = true;
-        tip += tr("\n\nNot in the Library. Click to open it in Folders.");
-    }
     item->setToolTip(0, tip);
     item->setToolTip(1, tip);
-    if (dim) item->setForeground(0, QBrush(QColor(G::disabledColor)));
-    else     item->setData(0, Qt::ForegroundRole, QVariant());
+    for (int c = 0; c < 2; ++c) {
+        if (color.isValid()) item->setForeground(c, QBrush(color));
+        else                 item->setData(c, Qt::ForegroundRole, QVariant());
+    }
+    if (enabled) item->setFlags(item->flags() | Qt::ItemIsEnabled);
+    else         item->setFlags(item->flags() & ~Qt::ItemIsEnabled);
 }
 
 void BookMarks::setLibraryMode(bool on)
@@ -417,6 +428,12 @@ void BookMarks::mousePressEvent(QMouseEvent *event)
     signals the MW::folderSelectionChange event.
 */
     if (G::isLogger) G::log("BookMarks::mousePressEvent");
+    // a disabled bookmark (not in the Library, see styleItem) is not a click
+    if (event->button() == Qt::LeftButton) {
+        const QTreeWidgetItem *pressed = itemAt(event->pos());
+        if (pressed && !(pressed->flags() & Qt::ItemIsEnabled)) return;
+    }
+
     // ignore rapid mouse press if still processing MW::stop
     qint64 ms = rapidClick.elapsed();
     if (ms < 500) {
@@ -482,7 +499,8 @@ void BookMarks::mouseMoveEvent(QMouseEvent *event)
              << "idx0 =" << idx0
         ;
     //*/
-    if (idx0.isValid()) {
+    // no hover highlight on a disabled bookmark: it is not clickable
+    if (idx0.isValid() && (idx0.flags() & Qt::ItemIsEnabled)) {
         hoverFolderName = idx0.data().toString();
         delegate->setHoveredIndex(idx0);
     } else {
@@ -641,7 +659,7 @@ void BookMarks::dropEvent(QDropEvent *event)
     G::popup->setProgressMax(count);
     QString msg = operation + QString::number(count) +
                   " to " + dropDir +
-                  "<p>Press <font color=\"red\"><b>Esc</b></font> to abort.";
+                  "<p>Press " + G::keyHtml("Esc") + " to abort.";
     G::popup->showPopup(msg, 0, true, 1);
 
     QString issue;

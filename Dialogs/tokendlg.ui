@@ -317,7 +317,7 @@
             </font>
            </property>
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffff00;&quot;&gt;Warning:&lt;/span&gt; The tokenized file name is unlikely to produce unique file names. Consider including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XXXX&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>Warning: set in TokenDlg::TokenDlg</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

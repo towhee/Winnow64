@@ -14,6 +14,7 @@ InputDlg::InputDlg(QString windowTitle,
     doNotUse(doNotUse)
 {
     ui->setupUi(this);
+    ui->msg->setStyleSheet(G::labelCss(G::errorColor));
     setWindowTitle(windowTitle);
     setStyleSheet(G::css);
     int b = G::backgroundShade - 10;

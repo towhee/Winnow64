@@ -307,6 +307,10 @@ TokenDlg::TokenDlg(QStringList &tokens,
     match any changes made to templatesCB and tokenEdit.
 */
     ui->setupUi(this);
+    ui->uniqueWarningLabel->setText(
+        "<span style=\"font-weight:600; color:" + G::warningColor.name() + ";\">Warning:</span>"
+        " The tokenized file name is unlikely to produce unique file names. Consider "
+        "including the ORIGINAL FILENAME, time MINUTE and SECOND or a sequence XXXX");
     this->title = title;
     setWindowTitle(title);
     setAcceptDrops(true);

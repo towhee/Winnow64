@@ -13,13 +13,10 @@
 #include <QScrollBar>
 #include <QStyleFactory>
 
-namespace {
-/*  THE LIBRARY ROW IS TEAL, the colour the retired Catalog row above the Folders tree
-    was, so it reads as "not a folder on disk" against the blue folders macOS draws and
-    the yellow ones Windows draws. Its folders beneath are ordinary folder icons: they
-    ARE folders on disk, which is the whole point of showing them this way. */
-const QColor kLibraryColor(78, 176, 166);
-}  // namespace
+/*  THE LIBRARY ROW IS TEAL (G::libraryColor), the colour the retired Catalog row above
+    the Folders tree was, so it reads as "not a folder on disk" against the blue folders
+    macOS draws and the yellow ones Windows draws. Its folders beneath are ordinary folder
+    icons: they ARE folders on disk, which is the whole point of showing them this way. */
 
 LibTree::LibTree(const QString &countMetric, int countMargin, QWidget *parent)
     : QTreeWidget(parent), countMetric(countMetric), countMargin(countMargin)
@@ -27,11 +24,11 @@ LibTree::LibTree(const QString &countMetric, int countMargin, QWidget *parent)
     if (G::isLogger) G::log("LibTree::LibTree");
     setObjectName("libTree");
 
-    libraryIcon = tintedIcon(":/images/icon16/foldertree_white.png", kLibraryColor);
+    libraryIcon = tintedIcon(":/images/icon16/foldertree_white.png", G::libraryColor);
     catalogIcon = tintedIcon(":/images/icon16/foldertree_white.png",
-                             kLibraryColor.lighter(115));
+                             G::libraryColor.lighter(115));
     folderIcon = QFileIconProvider().icon(QFileIconProvider::Folder);
-    excludedColor = QColor(0xd0, 0x60, 0x60);       // Filters::itemIsExcludedColor
+    excludedColor = G::excludedColor;               // = Filters::itemIsExcludedColor
 
     setColumnCount(2);
     setHeaderHidden(true);

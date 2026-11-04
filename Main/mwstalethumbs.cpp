@@ -344,7 +344,7 @@ void MW::checkCatalogStaleThumbs()
     G::popup->setProgressMax(1);
     G::popup->setProgress(0);
     G::popup->showPopupNow("Checking catalogued JPEGs for stale embedded thumbnails"
-                           "<p>Press <font color=\"red\"><b>Esc</b></font> to stop.",
+                           "<p>Press " + G::keyHtml("Esc") + " to stop.",
                            0, true, 1.0);
 
     struct Result { QStringList stale; int total = 0; int checked = 0; };
@@ -434,7 +434,7 @@ void MW::repairStaleThumbs(const QStringList &paths)
     G::popup->setProgress(0);
     G::popup->showPopupNow("Repairing embedded thumbnails in " + QString::number(total)
                            + (total == 1 ? " file" : " files")
-                           + "<p>Press <font color=\"red\"><b>Esc</b></font> to stop.",
+                           + "<p>Press " + G::keyHtml("Esc") + " to stop.",
                            0, true, 1.0);
 
     struct Outcome {

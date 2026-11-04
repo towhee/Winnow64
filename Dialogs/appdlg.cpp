@@ -205,7 +205,7 @@ void Appdlg::on_removeBtn_clicked()
 void Appdlg::checkProgramsExist(int /*currentRow*/, int /*currentColumn*/, int /*previousRow*/, int /*previousColumn*/)
 {
     QColor defaultColor = QColor(G::textShade, G::textShade, G::textShade);
-    QColor warningColor = QColor(128,0,0);
+    QColor warningColor = G::appMissingColor;
     int rows = static_cast<int>(xApps.length());
         for (int row = 0; row < rows; ++row) {
         QFile test(ui->appsTable->item(row, 2)->text());

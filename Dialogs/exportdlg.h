@@ -56,6 +56,10 @@ public:
     /* The paths to export: the whole selection, or just the current image. */
     QStringList targetPaths() const;
 
+protected:
+    /* Re-fit once the dialog is polished and knows its screen (see fitToContents). */
+    void showEvent(QShowEvent *event) override;
+
 private slots:
     void onExportClicked();          // validate, then accept: the caller runs the export
     void onSelectFolder();

@@ -595,7 +595,7 @@ void MW::createCatalogScanner()
             progress->setRowToolTip(progressCatalogRow, tip);
             if (p.total > 0)
                 progress->updateProgress(progressCatalogRow, p.done, p.total,
-                                         QColor("#3fa8a0"));
+                                         G::progressCatalogColor);
         }
         if (catalogRootsDlg) catalogRootsDlg->setScanProgress(p);
     }, Qt::QueuedConnection);
@@ -1504,7 +1504,7 @@ void MW::createStatusBar()
     progressMetaReadRow = progress->addRow("MetaRead", 4, progress->metaReadCacheColor,
                                            Progress::Fill::Cell);
     progress->setRowText(progressMetaReadRow, "Metadata");
-    progressFocusStackRow = progress->addRow("FocusStack", 2, QColor(Qt::darkYellow),
+    progressFocusStackRow = progress->addRow("FocusStack", 2, G::progressFocusStackColor,
                                              Progress::Fill::FromStart);
     progress->setRowText(progressFocusStackRow, "Focus Stack");
     /* Visible orange (G::darkorange "#1a0d00" is a near-black slider-gradient end,
@@ -1514,7 +1514,7 @@ void MW::createStatusBar()
     progress->setRowText(progressRawDenoiseRow, "Raw Denoise");
     /* Winnow raw demosaic progress on develop-open when auto-run denoise is off (the
        denoise path shows its own row). Blue to distinguish from the orange denoise. */
-    progressDemosaicRow = progress->addRow("Demosaic", 2, QColor("#3a97c9"),
+    progressDemosaicRow = progress->addRow("Demosaic", 2, G::progressDemosaicColor,
                                            Progress::Fill::FromStart);
     progress->setRowText(progressDemosaicRow, "Demosaicing");
     /* Building devPreviews for images edited in an earlier session (Develop > Build
@@ -1522,19 +1522,19 @@ void MW::createStatusBar()
        user is not waiting on, so it belongs in the status bar next to the other caching
        work rather than under a popup parked over the image. Violet: unclaimed by the
        rows above. */
-    progressDevPreviewRow = progress->addRow("DevPreview", 2, QColor("#8f7fd1"),
+    progressDevPreviewRow = progress->addRow("DevPreview", 2, G::progressDevPreviewColor,
                                              Progress::Fill::FromStart);
     progress->setRowText(progressDevPreviewRow, "Dev Previews");
     /* Auto tone / Auto white balance being solved across the selection (the Basic Auto
        button, or a preset / paste carrying Auto settings): a decode per image, seconds
        each on raws. Amber: unclaimed above. */
-    progressPresetAutoRow = progress->addRow("PresetAuto", 2, QColor("#c9a23a"),
+    progressPresetAutoRow = progress->addRow("PresetAuto", 2, G::progressPresetAutoColor,
                                              Progress::Fill::FromStart);
     progress->setRowText(progressPresetAutoRow, "Auto Settings");
     /* The background catalog scan over the user's designated roots. Minutes to hours of
        reading the user is not waiting on, so it reports here beside the other background
        work rather than under a popup. Teal: unclaimed by the rows above. */
-    progressCatalogRow = progress->addRow("Catalog", 2, QColor("#3fa8a0"),
+    progressCatalogRow = progress->addRow("Catalog", 2, G::progressCatalogColor,
                                           Progress::Fill::FromStart);
     /*  The Library's sources being checked for changes (CatalogScanner) -- run by Scan
         Now and automatically on entering the Library. */
@@ -1544,14 +1544,14 @@ void MW::createStatusBar()
         paints; this row keeps the answer visible in the status bar until the last row
         is in. A label that never changes (see Progress::setRowToolTip for why); the
         counts are its tooltip. */
-    progressCatalogLoadRow = progress->addRow("CatalogLoad", 2, QColor("#6a8fd0"),
+    progressCatalogLoadRow = progress->addRow("CatalogLoad", 2, G::progressCatalogLoadColor,
                                               Progress::Fill::FromStart);
     progress->setRowText(progressCatalogLoadRow, "Loading");
     /* An export run: the Export dialog closes as soon as Export is pressed, and the
        render / save / metadata of each image, then the catalog update, report here.
        What is happening, and "Esc to stop", is the tooltip (MW::onExportStage). Green:
        unclaimed by the rows above. */
-    progressExportRow = progress->addRow("Export", 2, QColor("#5fae5f"),
+    progressExportRow = progress->addRow("Export", 2, G::progressExportColor,
                                          Progress::Fill::FromStart);
     progress->setRowText(progressExportRow, "Exporting");
     connect(dm, &DataModel::catalogFillProgress, this, [this](int done, int total) {
@@ -1828,14 +1828,11 @@ void MW::createFolderDock()
     connect(folderDock, &QDockWidget::visibilityChanged, this, &MW::folderDockVisibilityChange);
 }
 
-/*  The one yellow a selected option is drawn in (Library | Folders, the Module dock). */
-static const char *kSelectedOptionColor = "#f0c419";
-
 QString MW::segmentedOptionCss(int fontPt, bool boldSelected, int vPad) const
 {
 /*
     One look for every "A | B | C" choice in the chrome: no button frames, the selected
-    option in kSelectedOptionColor (bold when boldSelected -- Library | Folders is, the
+    option in G::selectedOptionColor (bold when boldSelected -- Library | Folders is, the
     Module dock is not), the others in G::textColor, and the " | " separators (QLabels)
     in the same text colour. The weight is set on the unchecked state too, so a
     stylesheet rule, not the inherited font, decides it.
@@ -1847,7 +1844,7 @@ QString MW::segmentedOptionCss(int fontPt, bool boldSelected, int vPad) const
         "QToolButton:checked { color:%2; font-weight:%6; }"
         "QToolButton:disabled { color:%4; }"
         "QLabel { color:%1; background:transparent; border:none; padding:0;%3 }")
-        .arg(G::textColor.name(), kSelectedOptionColor, size, G::disabledColor.name())
+        .arg(G::textColor.name(), G::selectedOptionColor.name(), size, G::disabledColor.name())
         .arg(vPad)
         .arg(boldSelected ? "bold" : "normal");
 }
@@ -2002,7 +1999,7 @@ void MW::createFilterDock()
         header uses -- so a panel scrolled or collapsed away from the lit category, or a
         docked-but-tabbed panel, still says the view is filtered. */
     connect(filters, &Filters::filteringChanged, this, [this](bool on){
-        filterTitleBar->setTitleColor(on ? QColor(Qt::yellow) : QColor());
+        filterTitleBar->setTitleColor(on ? G::attentionColor : QColor());
     });
 
     // preferences button
@@ -4455,8 +4452,8 @@ void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
         }
         // red = show stopper, amber = warning, plain panel text = info
         const DevelopAlert sev = ordered.at(i).first;
-        const QString colour = sev == AlertShowStopper ? "#FF4040"
-                             : sev == AlertWarning     ? "#FFB340"
+        const QString colour = sev == AlertShowStopper ? G::alertShowStopperColor.name()
+                             : sev == AlertWarning     ? G::alertWarningColor.name()
                                                        : G::textColor.name();
         row->setStyleSheet("QLabel { color: " + colour + "; font-weight: " +
                            (sev == AlertInfo ? "normal" : "bold") +
