@@ -1972,16 +1972,6 @@ void MW::createFilterDock()
         Nor is a refresh: every edit updates its own category, so a rebuild is only an
         escape hatch -- Filter > Rebuild filters (MW::updateAllFilters). */
 
-    // toggle expansion button
-    BarBtn *toggleExpansionBtn = new BarBtn();
-    toggleExpansionBtn->setIcon(QIcon(":/images/icon16/foldertree.png"));
-    toggleExpansionBtn->setToolTip("Toggle expand all / collapse all in the Filters panel.");
-    connect(toggleExpansionBtn, &BarBtn::clicked, filters, &Filters::toggleExpansion);
-    filterTitleLayout->addWidget(toggleExpansionBtn);
-
-    // Spacer
-    filterTitleLayout->addSpacing(5);
-
     /*  Grouped / flat categories. The action (created later, in createFilterActions) owns
         the state and the setting; MW::setFilterGroups syncs this button's look. */
     filterGroupsBtn = new BarBtn();

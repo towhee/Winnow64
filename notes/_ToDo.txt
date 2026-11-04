@@ -5,23 +5,21 @@ WHAT'S NEW
 - Add Mix to develop color
 
 BUGS / TO DO
-- Standardize all colors
 - Review default workspaces
+- Exit slide show Mode highlight is Embellish, not Browse.
 - Import/export catalogs
-- Make Filters Group categories the default.
 - /Users/roryhill/Temp/Photos_to_be_curated/2026/202603/2026-03-19_Neck Point/2026-03-19_0008.arw
   preview dimensions = x
 - Thumb show if the preview is up-to-date and develop has been run
+- Rethink thumbnail badges
 - Folder rename / Move / Delete from library (in Filter > Folders)
 - Catalog management: import/export
 - Find duplicates (expand/collapse) and library use.
 - Videos starting at final frame.
 - Space bar not start/stopping video play
 - Arrow navigation in develop when no slider has the focus
-- Rethink thumbnail badges
 - Add isVersion to Queries lookup
 - Search for images with an Effect.
-- Make a shortcut for 'Delete rejected'
 - Figure out mask refine
 - Review develop presets
 - Revisit the color sampler
@@ -41,8 +39,6 @@ BUGS / TO DO
   still copies the source file's colour profile into it. The new render is sRGB, so a
   source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
 - Can we cache raw denoise? What does LR do?
-- If a file has both flat keywords and nested, only use the nested ones unless there is a
-  flat keyword without a matching nested one.
 - Fine tune overlay tint - when active
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?

@@ -192,6 +192,9 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         workspace is the layout restored at startup, which is a Browse one. */
     const QString leaving = ws.name.isEmpty() ? workflowNames().at(WfSource) : ws.name;
     rememberDockTabSelection(leaving);
+    /*  Reset Winnow defaults: after the remember above, since a reset of the layout on
+        screen is leaving the very workspace it applies. */
+    if (isFrontDockTabsReset) frontDockTabsByWorkspace.remove(w.name);
 
     ws = w;     // current workspace ws
 
@@ -1496,9 +1499,8 @@ void MW::focusKeywordsFilters()
 void MW::invokeWorkflowDefault(int wf)
 {
 /*
-    Apply the layout Winnow ships with for a workflow, ignoring any user override.  This
-    is what the Rory-only Default branch invokes, and the fallback for a workflow the
-    resource does not define is the built-in layout.
+    Apply the layout Winnow ships with for a workflow, ignoring any user override.  The
+    fallback for a workflow the resource does not define is the built-in layout.
 */
     if (G::isLogger) G::log("MW::invokeWorkflowDefault");
     if (wf < 0 || wf >= WsCount) return;
@@ -1510,6 +1512,54 @@ void MW::invokeWorkflowDefault(int wf)
         return;
     }
     builtInDefaultWorkspace();
+}
+
+void MW::resetWorkflowDefault(int wf)
+{
+/*
+    Window > Workspace > Reset Winnow defaults > <layout>.  Go back to the layout Winnow
+    ships with and stay there: the user override is unticked (its captured copy is kept,
+    so ticking it again restores it).  The layout is applied now when it is the one on
+    screen; any other takes effect when its workflow is next opened.  Rory also gets it
+    applied in place, to look at a shipped default before capturing over it.
+
+    The front tab of each tab group is reset too: MW::restoreDockTabSelection would
+    otherwise raise the panel last used in this layout instead of the captured one.
+*/
+    if (G::isLogger) G::log("MW::resetWorkflowDefault");
+    if (wf < 0 || wf >= WsCount) return;
+
+    if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf)) {
+        isWorkflowOverride[wf] = false;
+        saveWorkflowOverride(wf);
+    }
+    frontDockTabsByWorkspace.remove(workflowNames().at(wf));
+    isFrontDockTabsReset = true;
+    if (wf == workflowLayout(currentWorkflow)) invokeWorkflowLayout(currentWorkflow, wf);
+    else if (G::isRory) invokeWorkflowDefault(wf);
+    isFrontDockTabsReset = false;
+    syncWorkflowWorkspaceMenus();
+}
+
+void MW::resetAllWorkflowDefaults()
+{
+/*
+    Window > Workspace > Reset Winnow defaults > All.  MW::resetWorkflowDefault for every
+    layout: untick every user override, forget every layout's front tabs and reapply
+    the current workflow's layout.  Named workspaces keep their front tabs.
+*/
+    if (G::isLogger) G::log("MW::resetAllWorkflowDefaults");
+
+    for (int wf = 0; wf < isWorkflowOverride.count(); ++wf) {
+        if (!isWorkflowOverride.at(wf)) continue;
+        isWorkflowOverride[wf] = false;
+        saveWorkflowOverride(wf);
+    }
+    for (const QString &name : workflowNames()) frontDockTabsByWorkspace.remove(name);
+    isFrontDockTabsReset = true;
+    invokeWorkflowWorkspace(currentWorkflow);
+    isFrontDockTabsReset = false;
+    syncWorkflowWorkspaceMenus();
 }
 
 void MW::toggleWorkflowOverride(int wf, bool isOverride)
@@ -1643,25 +1693,30 @@ void MW::syncWorkflowWorkspaceMenus()
 /*
     Keep the two workflow branches of the Workspace menu in step with the data:
 
-    - The Default branch exists only for Rory (G::isRory is false in a release build),
-      and MW::rory re-runs this when it is toggled at runtime.
-    - A Default item is greyed, with the reason in its tooltip, when the resource has no
-      layout for that workflow -- it would apply the generic built-in layout instead, so
-      saying so beats silently doing something else.
+    - Reset Winnow defaults is always shown, but its "Set Default from Current
+      Layout ..." item exists only for Rory (G::isRory is false in a release build), and
+      MW::rory re-runs this when it is toggled at runtime.
+    - For Rory, a Reset item is greyed, with the reason in its tooltip, when the
+      resource has no layout for that workflow -- it would apply the generic built-in
+      layout instead, so saying so beats silently doing something else.  For everyone
+      else the built-in layout IS Winnow's default, so the item stays live.
     - An override item shows ticked when the override is in use, and its tooltip says
       whether a layout has been captured for it.
 */
     if (G::isLogger) G::log("MW::syncWorkflowWorkspaceMenus");
     if (workspaceDefaultMenuAction == nullptr) return;
 
-    workspaceDefaultMenuAction->setVisible(G::isRory);
+    captureWorkflowDefaultSeparator->setVisible(G::isRory);
+    captureWorkflowDefaultAction->setVisible(G::isRory);
 
     for (int wf = 0; wf < workflowDefaultActions.count(); ++wf) {
         QAction *a = workflowDefaultActions.at(wf);
         const bool isDefined = wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf);
-        a->setEnabled(isDefined);
-        a->setToolTip(isDefined
-            ? tr("Apply the %1 layout Winnow ships with").arg(workflowNames().at(wf))
+        a->setEnabled(isDefined || !G::isRory);
+        a->setToolTip(isDefined || !G::isRory
+            ? tr("Turn off your %1 override and use the layout Winnow ships with.  "
+                 "Applied now if %1 is on screen, otherwise when %1 is next opened")
+                  .arg(workflowNames().at(wf))
             : tr("No %1 layout has been captured yet — Winnow's built-in layout is used")
                   .arg(workflowNames().at(wf)));
     }

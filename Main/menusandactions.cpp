@@ -2216,8 +2216,8 @@ void MW::createWindowActions()
     addActions(workspaceActions);
 
     /*  WORKFLOW WORKSPACES (see MW::invokeWorkflowWorkspace).  Two parallel lists of
-        actions, one per workflow: Default applies the layout Winnow ships with and is
-        Rory only, User override ticks the user's own layout in place of it.  Both are
+        actions, one per workflow: Reset Winnow defaults goes back to the layout Winnow
+        ships with, User override ticks the user's own layout in place of it.  Both are
         built here and kept in step by MW::syncWorkflowWorkspaceMenus.  Indexed by
         WorkflowLayout -- Browse has two, Library and Folders -- and added to the menus
         in workflowLayoutOrder. */
@@ -2226,7 +2226,7 @@ void MW::createWindowActions()
         QAction *d = new QAction(wfNames.at(wf), this);
         d->setObjectName("workflowDefault" + workflowKeys().at(wf));
         d->setShortcutVisibleInContextMenu(true);
-        connect(d, &QAction::triggered, this, [this, wf]() { invokeWorkflowDefault(wf); });
+        connect(d, &QAction::triggered, this, [this, wf]() { resetWorkflowDefault(wf); });
         workflowDefaultActions.append(d);
 
         QAction *o = new QAction(wfNames.at(wf), this);
@@ -2238,6 +2238,14 @@ void MW::createWindowActions()
         });
         workflowOverrideActions.append(o);
     }
+
+    workflowDefaultAllAction = new QAction(tr("All"), this);
+    workflowDefaultAllAction->setObjectName("workflowDefaultAll");
+    workflowDefaultAllAction->setShortcutVisibleInContextMenu(true);
+    workflowDefaultAllAction->setToolTip(
+        tr("Turn off every user override and go back to the layouts Winnow ships with"));
+    connect(workflowDefaultAllAction, &QAction::triggered,
+            this, &MW::resetAllWorkflowDefaults);
 
     captureWorkflowDefaultAction = new QAction(tr("Set Default from Current Layout ..."), this);
     captureWorkflowDefaultAction->setObjectName("captureWorkflowDefault");
@@ -3173,14 +3181,17 @@ void MW::createWindowMenu()
     workspaceMenu->addAction(resetLayoutAction);
     workspaceMenu->addSeparator();
 
-    /*  The two workflow branches.  Default is hidden unless G::isRory (see
+    /*  The two workflow branches, both always shown and listing the same layouts.  Only
+        Reset Winnow defaults' capture item is Rory only (see
         MW::syncWorkflowWorkspaceMenus, which also runs from MW::rory when it is toggled
-        at runtime); User override is always shown and lists the same layouts. */
-    workspaceDefaultMenu = workspaceMenu->addMenu(tr("Default"));
+        at runtime). */
+    workspaceDefaultMenu = workspaceMenu->addMenu(tr("Reset Winnow defaults"));
     workspaceDefaultMenuAction = workspaceDefaultMenu->menuAction();
+    workspaceDefaultMenu->addAction(workflowDefaultAllAction);
+    workspaceDefaultMenu->addSeparator();
     for (int lay : workflowLayoutOrder())
         workspaceDefaultMenu->addAction(workflowDefaultActions.at(lay));
-    workspaceDefaultMenu->addSeparator();
+    captureWorkflowDefaultSeparator = workspaceDefaultMenu->addSeparator();
     workspaceDefaultMenu->addAction(captureWorkflowDefaultAction);
 
     workspaceOverrideMenu = workspaceMenu->addMenu(tr("User override"));

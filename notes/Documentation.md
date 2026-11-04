@@ -1085,7 +1085,7 @@ Adding a WorkspaceData field therefore touches three places: workspaceToMap, wor
 
 There is a layout PER WORKFLOW rather than one default layout for the whole app, and Browse has two: Library and Folders, picked by the current source.
 
-- The workspace lists (workflowDefaultWs, workflowUserWs and their flags) and the Window > Workspace > Default / User override actions are indexed by LAYOUT (MW::WorkflowLayout), not by workflow. Layouts 0 .. WfCount-1 are the workflows' own (WfSource's is the Folders layout), and WsLibrary (= WfCount) is Browse's Library layout.
+- The workspace lists (workflowDefaultWs, workflowUserWs and their flags) and the Window > Workspace > Reset Winnow defaults / User override actions are indexed by LAYOUT (MW::WorkflowLayout), not by workflow. Layouts 0 .. WfCount-1 are the workflows' own (WfSource's is the Folders layout), and WsLibrary (= WfCount) is Browse's Library layout.
 - MW::workflowLayout(wf) maps a workflow to the layout it uses now. MW::invokeWorkflowWorkspace applies it through MW::invokeWorkflowLayout, which records the Browse one in MW::browseLayoutApplied.
 - The menus and capture dialogs list the layouts in MW::workflowLayoutOrder: Library, Folders, Develop, Keywords, Embellish, Slide Show, Map.
 
@@ -1116,11 +1116,13 @@ The word Library has its own precise meaning elsewhere: everything browsed, acro
 
 The shipped defaults live in the resource ":/Workspaces/defaults.json" (source file Workspaces/defaults.json, listed in winnow.qrc), read once by MW::loadWorkflowDefaults before loadSettings. They are a compiled-in resource rather than QSettings because they have to reach users, not just the machine they were captured on.
 
-The developer captures them with Window > Workspace > Default > "Set Default from Current Layout ...". It snapshots the live layout and writes the whole file back into the source tree: MW::writeWorkflowDefaultsJson uses WINNOW_SOURCE_DIR (a CMake compile definition) and falls back to the desktop when there is no source tree, telling the user which it did. The layout then ships with the next build.
+The developer captures them with Window > Workspace > Reset Winnow defaults > "Set Default from Current Layout ...". It snapshots the live layout and writes the whole file back into the source tree: MW::writeWorkflowDefaultsJson uses WINNOW_SOURCE_DIR (a CMake compile definition) and falls back to the desktop when there is no source tree, telling the user which it did. The layout then ships with the next build.
 
 A workflow the resource does not mention keeps isWorkflowDefault false and falls back to the built-in layout, so an empty defaults.json is a valid state.
 
-The Default branch is for the developer only. MW::syncWorkflowWorkspaceMenus hides the whole submenu unless G::isRory (false in a release build), and MW::rory re-runs it so the branch appears and disappears when the flag is toggled at runtime. The same function greys a Default item whose workflow the resource does not define, with the reason in its tooltip: it would apply the generic built-in layout instead, and saying so beats silently doing something else. Both submenus have setToolTipsVisible(true) so the reasons are shown.
+Window > Workspace > Reset Winnow defaults is shown to every user: "All" at the top, then one item per layout. A layout item (MW::resetWorkflowDefault) unticks that layout's user override, keeping the captured copy so ticking it again restores it, and applies the shipped layout if it is the one on screen; any other layout takes effect when its workflow is next opened. "All" (MW::resetAllWorkflowDefaults) unticks every override and reapplies the current workflow's layout. Both also reset the front tab of each tab group: they drop the layout's entry in frontDockTabsByWorkspace, so MW::restoreDockTabSelection does not raise the panel last used there over the captured one. Because a reset of the layout on screen is LEAVING the same workspace it applies, MW::invokeWorkspace would re-remember the current front tabs on the way in; isFrontDockTabsReset, set around the call, makes it drop that entry again after the remember.
+
+Only the capture item is for the developer. MW::syncWorkflowWorkspaceMenus hides "Set Default from Current Layout ..." and its separator unless G::isRory (false in a release build), and MW::rory re-runs it so they appear and disappear when the flag is toggled at runtime. For Rory, a layout item also applies the shipped layout in place when it is not the current one, to look at it before capturing over it, and is greyed with the reason in its tooltip when the resource does not define that layout: it would apply the generic built-in layout instead, and saying so beats silently doing something else. For everyone else the built-in layout is Winnow's default, so the item stays live. Both submenus have setToolTipsVisible(true) so the reasons are shown.
 
 ##### 2.3.2.3 User Overrides
 
@@ -1189,7 +1191,7 @@ WorkspaceData::isGeometryIncluded (QSettings key "isGeometryIncluded"). A worksp
 - A workspace saved before the flag existed reads as TRUE (the original behaviour), and a new workspace starts TRUE.
 - A restored window geometry is fitted to the usable screen area (ScreenFit::fit, see 2.13.2), so a workspace saved on a larger monitor does not put the window under the taskbar.
 
-The Workspace menu flags a workspace that restores the window position and size with " \*" (MW::workspaceMenuName). Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text; name matching there would silently do nothing. The positional match also keeps the workflow branches safe: QMenu::triggered fires for submenu items too, so every Default and User override action reaches invokeWorkspaceFromAction, is not found in workspaceActions, and is ignored.
+The Workspace menu flags a workspace that restores the window position and size with " \*" (MW::workspaceMenuName). Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text; name matching there would silently do nothing. The positional match also keeps the workflow branches safe: QMenu::triggered fires for submenu items too, so every Reset Winnow defaults and User override action reaches invokeWorkspaceFromAction, is not found in workspaceActions, and is ignored.
 
 The choice is made in Manage Workspaces: a "Restore window position and size" checkbox under the dropdown shows the selected workspace's setting and writes it through WorkspaceDlg::setWorkspaceGeometryIncluded(n, isIncluded) to MW::setWorkspaceGeometryIncluded, which saves and re-syncs the menu immediately.
 
@@ -3853,7 +3855,7 @@ The map is central page MapTab (8). MW::invokeWorkflowWorkspace puts it up after
 
 G::mode is deliberately NOT given a "Map" value: it is compared in some fifty places as Loupe / Grid / Table / Compare. Instead MW::inMapModule() (currentWorkflow == WfMap; the WORKFLOW, not the page, because the page is the message page while a folder loads) guards the paths that would otherwise take the page back: MW::fileSelectionChange (which also puts the map back up after a folder load), MW::refreshViewsOnCacheChange, MW::sortChange, the Table re-assert on folder change and the video re-assert after a filter. The four display functions (loupeDisplay, gridDisplay, tableDisplay, compareDisplay) and IconView's double-click route through MW::requestView when called from Map, so Enter, Esc, a double-click or a view key leave for Browse with the workflow, the layout and the lit Module button all changing together. Without that, the loupe came up with the workflow still Map and the next selection change put the map back.
 
-The Map workflow has no shipped default layout until one is captured into Workspaces/defaults.json (Window > Workspace > Default, developer only); until then MW::builtInDefaultWorkspace is used and the Default menu item is greyed with its reason.
+The Map workflow has no shipped default layout until one is captured into Workspaces/defaults.json (Window > Workspace > Reset Winnow defaults > "Set Default from Current Layout ...", developer only); until then MW::builtInDefaultWorkspace is used and the Reset Winnow defaults item is greyed with its reason for the developer.
 
 ### 8.2 Places (Saved Map Areas)
 

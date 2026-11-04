@@ -1021,6 +1021,8 @@ public slots:
     void invokeWorkflowLayout(int wf, int lay);
     void invokeWorkflowDefault(int lay);        // lay: a WorkflowLayout
     void toggleWorkflowOverride(int lay, bool isOverride);
+    void resetWorkflowDefault(int lay);
+    void resetAllWorkflowDefaults();
     /*  Library | Folders: the Module dock's source buttons and View > Library / Folders.
         In Browse the layout follows the source. */
     void chooseSource(bool library, const QString &src);
@@ -2129,15 +2131,17 @@ private:
     QAction *newWorkspaceAction;
     QAction *manageWorkspaceAction;
     QList<QAction *> workspaceActions;
-    /*  Workflow workspaces (see the Workflow enum).  The Default branch is Rory only --
-        its submenu action is hidden unless G::isRory -- while User override is always
-        shown.  Both list the same six workflows. */
+    /*  Workflow workspaces (see the Workflow enum).  Reset Winnow defaults and User
+        override are always shown and list the same layouts; only the capture item (and
+        its separator) is Rory only. */
     QMenu *workspaceDefaultMenu = nullptr;
     QMenu *workspaceOverrideMenu = nullptr;
     QAction *workspaceDefaultMenuAction = nullptr;
     QAction *workspaceOverrideMenuAction = nullptr;
     QList<QAction *> workflowDefaultActions;
     QList<QAction *> workflowOverrideActions;
+    QAction *workflowDefaultAllAction = nullptr;
+    QAction *captureWorkflowDefaultSeparator = nullptr;
     QAction *captureWorkflowDefaultAction = nullptr;
     QAction *captureWorkflowOverrideAction = nullptr;
     QAction *keywordsWorkspaceAction = nullptr;     // "K"
@@ -3534,6 +3538,9 @@ private:
     void rememberDockTabSelection(const QString &wsName);
     void restoreDockTabSelection(const QString &wsName);
     QHash<QString, QStringList> frontDockTabsByWorkspace;
+    /*  Set by Reset Winnow defaults around its invokeWorkspace: drop the remembered front
+        tabs of the workspace being applied, so it comes back with the captured ones. */
+    bool isFrontDockTabsReset = false;
     void updateDockTabGraphics(QTabBar *tabBar);   // responsive text/graphic dock tab titles
     void scheduleDockTabUpdate();                  // deferred re-eval of all dock tab bars
     void moveDroppedDockLast();  // a dock dropped into a tab group lands last
