@@ -441,6 +441,10 @@ void Filters::createDynamicFilters()
 
 Filters::~Filters()
 {
+    /* Members die before ~QTreeWidget clears the model, and clearing it emits
+       rowsRemoved: connected, scheduleContentWidth would start the destroyed
+       contentWidthTimer (heap corruption, caught by glibc on Linux). */
+    disconnect(model(), nullptr, this, nullptr);
     // flat: the group headers are detached and childless, so not the tree's to delete
     for (const Group &g : std::as_const(groups))
         if (!g.item->treeWidget()) delete g.item;
