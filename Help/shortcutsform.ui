@@ -1595,7 +1595,7 @@
        </property>
        <item>
         <property name="text">
-         <string>Select Workspace</string>
+         <string>Select Custom Workspace</string>
         </property>
         <property name="text">
          <string>Cmd/Ctrl + 0 to 9</string>
@@ -1603,7 +1603,7 @@
        </item>
        <item>
         <property name="text">
-         <string>New Workspace</string>
+         <string>New Custom Workspace</string>
         </property>
         <property name="text">
          <string>W</string>
@@ -1611,7 +1611,7 @@
        </item>
        <item>
         <property name="text">
-         <string>Manage Workspaces</string>
+         <string>Manage Custom Workspaces</string>
         </property>
         <property name="text">
          <string>Cmd/Ctrl + W</string>

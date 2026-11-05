@@ -18,9 +18,10 @@
     - [2.3.1 Serialisation (One Field List)](#231-serialisation-one-field-list)
     - [2.3.2 Workflow Workspaces](#232-workflow-workspaces)
       - [2.3.2.1 Layout Keys and Their History](#2321-layout-keys-and-their-history)
-      - [2.3.2.2 Shipped Defaults](#2322-shipped-defaults)
-      - [2.3.2.3 User Overrides](#2323-user-overrides)
-      - [2.3.2.4 A Workflow Workspace Never Moves the Window](#2324-a-workflow-workspace-never-moves-the-window)
+      - [2.3.2.2 Winnow Defaults (Shipped)](#2322-winnow-defaults-shipped)
+      - [2.3.2.3 User Layouts](#2323-user-layouts)
+      - [2.3.2.4 Custom Workspaces](#2324-custom-workspaces)
+      - [2.3.2.5 A Workflow Workspace Never Moves the Window](#2325-a-workflow-workspace-never-moves-the-window)
     - [2.3.3 The Front Tab of Each Tab Group](#233-the-front-tab-of-each-tab-group)
     - [2.3.4 Nothing Paints While a Workspace Is Applied](#234-nothing-paints-while-a-workspace-is-applied)
     - [2.3.5 Startup Layout](#235-startup-layout)
@@ -1004,7 +1005,7 @@ The window title also names the source ("Winnow &lt;version>   Library   &lt;fil
 The workflow is the only setting that owns a workspace (a panel layout). It is chosen in the Module dock across the top of the window: Browse | Develop | Keywords | Map | Embellish | Slide Show, at 1.5x G::fontSize.
 
 - Each button triggers its workflow's QAction (browseWorkflowAction, operationModeAction, keywordsWorkspaceAction, embellishWorkspaceAction, slideShowWorkspaceAction, mapWorkspaceAction), so clicking a button and pressing the key run the same code.
-- MW::buildWorkflowButtons builds the buttons and MW::syncWorkflowSwitcher lights the one for MW::currentWorkflow. A refused switch (Develop in the cache folder) therefore leaves the lit button where it was. No button is lit while a named workspace is applied, because a named workspace is not a workflow.
+- MW::buildWorkflowButtons builds the buttons and MW::syncWorkflowSwitcher lights the one for MW::currentWorkflow. A refused switch (Develop in the cache folder) therefore leaves the lit button where it was. A custom workspace belongs to a workflow, so its workflow is lit while it is applied (see [2.3.2.4 Custom Workspaces](#2324-custom-workspaces)).
 - The buttons are built BEFORE createActions, so they look up their action at click time. createActions mirrors each action's enabled state onto its button through QAction::changed (MW::syncWorkflowButtonEnabled; MW::workflowAction maps a workflow to its action). A greyed button shows the action's "disabledReason" in its tooltip.
 - The same buttons also exist as a status-bar switcher. It is built and kept in sync but hidden (showStatusBarWorkflowSwitcher in MW::createStatusBar), so it can be reinstated by flipping one flag. The old Original / Developed dropdown is gone; the picture chip ([12.2.1 Three Pictures, Two Controls](#1221-three-pictures-two-controls)) replaced it.
 
@@ -1020,8 +1021,8 @@ Embellish, Slide Show and Map each have a button and a View menu item (Embellish
 
 The Slide Show button starts the show:
 
-- MW::invokeSlideShowWorkflow applies the SHIPPED DEFAULT Slide Show layout (MW::invokeWorkflowDefault, never the user override, so a show always looks the same; it then re-stamps currentWorkflow, which invokeWorkspace had set to -1) and calls MW::slideShow. A lit Slide Show module with nothing playing would be a mode with nothing to do.
-- It records the workflow it was entered from (slideShowReturnWorkflow; -1 means a named workspace, whose WorkspaceData is copied to slideShowReturnWs because invokeWorkspace overwrites ws).
+- MW::invokeSlideShowWorkflow applies the Slide Show layout, resolved like any other (a saved Slide Show layout is honoured; until 2026-11-05 a show always used the shipped default), and calls MW::slideShow. A lit Slide Show module with nothing playing would be a mode with nothing to do.
+- It records the workflow it was entered from (slideShowReturnWorkflow) and the custom workspace in use, if any (slideShowReturnCustomWs), so stopping the show goes back to that custom workspace rather than its workflow's own layout.
 - When the show stops (Esc, S, or the end of an unwrapped sequence), MW::slideShow calls MW::leaveSlideShowWorkflow, which goes back by triggering that workflow's own action (so Develop re-enters Develop mode). Clicking the button while a show runs stops it.
 - S (slideShowAction) is unchanged: it starts and stops a show in whatever layout is up and never changes workflow, so leaveSlideShowWorkflow does nothing for a show S started.
 - slideShowWorkspaceAction is gated like slideShowAction (no folder loaded), so the module button greys with that reason.
@@ -1032,9 +1033,9 @@ The Slide Show button starts the show:
 The view keys always mean Browse. E / G / T / C all route through MW::requestView:
 
 - From another workflow, or from Develop mode under any layout, they leave it: out of Develop, then the Browse layout, then the view.
-- Already in Browse, or in a named workspace, they ONLY change the view.
+- Already in Browse, including a custom Browse workspace, they ONLY change the view.
 
-They used to reassert the Browse layout every time (T never did, and C never left Develop; both inconsistencies are gone). That reassertion was how a stranded panel got recovered, but it meant a view key moved panels as a side effect. Recovery is now its own action: Window > Workspace > Reset Layout (Cmd/Ctrl+Shift+R, MW::resetLayout). It reapplies the current workflow's layout, or the named workspace in use, and puts Browse's view back afterwards.
+They used to reassert the Browse layout every time (T never did, and C never left Develop; both inconsistencies are gone). That reassertion was how a stranded panel got recovered, but it meant a view key moved panels as a side effect. Recovery is now its own action: Window > Workspace > Reset Layout (Cmd/Ctrl+Shift+R, MW::resetLayout). It reapplies the current workflow's layout, or the custom workspace in use, and puts Browse's view back afterwards.
 
 MW::browseView is the view Browse was last in, and it is where the Browse button (MW::invokeBrowseWorkflow) returns to. Esc's "back to the grid" fallback is NOT a view key: it still calls gridDisplay in place and does not leave Keywords.
 
@@ -1072,7 +1073,7 @@ On macOS the Module dock's buttons also sit in the window's title bar, replacing
 
 A workspace is a snapshot of the app's appearance: optionally the window's screen, geometry and maximised state (see [2.3.6 Window Position and Size Are Optional](#236-window-position-and-size-are-optional)), the QMainWindow dock state, dock and status bar visibility, the central view (loupe, grid, table, compare), the thumbView/gridView icon parameters. See `Main/workspaces.cpp`. Colour management was part of a workspace until 2026-10-26 and is not any more: it belongs to the screen, not the workflow, and the shipped defaults.json carried false for every workspace, so switching to Develop or Library silently turned it off (see [15.2.2 Colour Management Is Always On](#1522-colour-management-is-always-on-the-alert-and-the-toggle-removed)). A settings file from an older build still holds isColorManage per workspace; it is ignored.
 
-Up to 10 user workspaces live in MW::workspaces (Ctrl+0 .. Ctrl+9, Window > Workspace), persisted as the QSettings array "Workspaces". They sit below a separator at the bottom of the Workspace menu, and Manage Workspaces lists only them.
+Up to 10 CUSTOM workspaces live in MW::workspaces (Ctrl+0 .. Ctrl+9, Window > Workspace), persisted as the QSettings array "Workspaces". They sit below a separator at the bottom of the Workspace menu, and Manage Custom Workspaces lists only them. Each belongs to a workflow (see [2.3.2.4 Custom Workspaces](#2324-custom-workspaces)).
 
 #### 2.3.1 Serialisation (One Field List)
 
@@ -1087,11 +1088,28 @@ Adding a WorkspaceData field therefore touches three places: workspaceToMap, wor
 
 There is a layout PER WORKFLOW rather than one default layout for the whole app, and Browse has two: Library and Folders, picked by the current source.
 
-- The workspace lists (workflowDefaultWs, workflowUserWs and their flags) and the Window > Workspace > Reset Winnow defaults / User override actions are indexed by LAYOUT (MW::WorkflowLayout), not by workflow. Layouts 0 .. WfCount-1 are the workflows' own (WfSource's is the Folders layout), and WsLibrary (= WfCount) is Browse's Library layout.
-- MW::workflowLayout(wf) maps a workflow to the layout it uses now. MW::invokeWorkflowWorkspace applies it through MW::invokeWorkflowLayout, which records the Browse one in MW::browseLayoutApplied.
-- The menus and capture dialogs list the layouts in MW::workflowLayoutOrder: Library, Folders, Develop, Keywords, Embellish, Slide Show, Map.
+- The layout slots (MW::layoutSlots, one MW::LayoutSlot each) are indexed by LAYOUT (MW::WorkflowLayout), not by workflow. Layouts 0 .. WfCount-1 are the workflows' own (WfSource's is the Folders layout), and WsLibrary (= WfCount) is Browse's Library layout.
+- MW::workflowLayout(wf) maps a workflow to the layout it uses now, and MW::currentLayoutSlot is the one on screen. MW::invokeWorkflowWorkspace applies it through MW::invokeWorkflowLayout, which records the Browse one in MW::browseLayoutApplied.
+- Diagnostics list the layouts in MW::workflowLayoutOrder: Library, Folders, Develop, Keywords, Embellish, Slide Show, Map.
 
-Each layout has two possible versions, and MW::invokeWorkflowWorkspace picks the USER OVERRIDE when it is ticked, else the SHIPPED DEFAULT, else MW::builtInDefaultWorkspace.
+Each slot resolves in one line, in MW::invokeWorkflowLayout (the one resolver): the USER LAYOUT if the user has saved one, else the WINNOW DEFAULT (shipped), else MW::builtInDefaultWorkspace. A custom workspace standing in for the workflow comes before all three (see [2.3.2.4 Custom Workspaces](#2324-custom-workspaces)).
+
+The Window > Workspace menu, top to bottom:
+
+```
+Save Layout for Develop                  (Rory: Save as Winnow Default for Develop;
+                                          a custom workspace: Update Custom Workspace "x")
+Revert Develop to Winnow Default         (greyed, with the reason, when there is nothing to revert)
+Revert All Layouts to Winnow Defaults
+Reset Layout                Ctrl+Shift+R
+---
+New Custom Workspace ...
+Manage Custom Workspaces ...
+---
+<custom workspaces>  "Name  —  Workflow"  Ctrl+0 .. Ctrl+9
+```
+
+Every layout action acts on the CURRENT slot, so there is no list of layouts to choose from. MW::syncWorkflowWorkspaceMenus sets the text, enabled state and reason on QMenu::aboutToShow, and MW::rory runs it too, since Save's target follows G::isRory.
 
 The keys that apply them:
 
@@ -1110,35 +1128,41 @@ The Browse key has moved twice:
 1. "Library" became "Source" when the Browse layout was the one layout for both sources.
 2. Browse then split into a Library and a Folders layout. "Source" became "Folders" (the layout it had mostly been captured in), and "Library" is a live key again for the new, second layout.
 
-MW::loadWorkflowOverrides calls MW::migrateWorkflowKey("Source", "Folders") first, which copies an existing "WorkflowWorkspaces/Source" group across and drops the old one, so a captured override survives instead of silently falling back to the shipped default. The older Library -> Source migration was removed, since "Library" is a live key again. Workspaces/defaults.json's "Source" entry was copied to both "Folders" and "Library", so the two start identical until a Library default is captured. currentWorkflow needed no migration: it is a persisted int and WfSource kept index 0.
+MW::loadWorkflowLayouts calls MW::migrateWorkflowKey("Source", "Folders") first, which copies an existing "WorkflowWorkspaces/Source" group across and drops the old one, so a saved layout survives instead of silently falling back to the shipped default. The older Library -> Source migration was removed, since "Library" is a live key again. Workspaces/defaults.json's "Source" entry was copied to both "Folders" and "Library", so the two start identical until a Library default is captured. currentWorkflow needed no migration: it is a persisted int and WfSource kept index 0.
 
 The word Library has its own precise meaning elsewhere: everything browsed, across every catalog (see [17.3 The Library Tree (LibTree)](#173-the-library-tree-libtree)). A catalog is one index with its folder rules.
 
-##### 2.3.2.2 Shipped Defaults
+##### 2.3.2.2 Winnow Defaults (Shipped)
 
-The shipped defaults live in the resource ":/Workspaces/defaults.json" (source file Workspaces/defaults.json, listed in winnow.qrc), read once by MW::loadWorkflowDefaults before loadSettings. They are a compiled-in resource rather than QSettings because they have to reach users, not just the machine they were captured on.
+The Winnow defaults live in the resource ":/Workspaces/defaults.json" (source file Workspaces/defaults.json, listed in winnow.qrc), read once by MW::loadWorkflowDefaults before loadSettings into LayoutSlot::shipped. They are a compiled-in resource rather than QSettings because they have to reach users, not just the machine they were captured on.
 
-The developer captures them with Window > Workspace > Reset Winnow defaults > "Set Default from Current Layout ...". It snapshots the live layout and writes the whole file back into the source tree: MW::writeWorkflowDefaultsJson uses WINNOW_SOURCE_DIR (a CMake compile definition) and falls back to the desktop when there is no source tree, telling the user which it did. The layout then ships with the next build.
+The developer captures them with G::isRory on: Window > Workspace > "Save as Winnow Default for &lt;layout>" (MW::saveCurrentLayout) snapshots the live layout into the current slot and writes the whole file back into the source tree. MW::writeWorkflowDefaultsJson uses WINNOW_SOURCE_DIR (a CMake compile definition) and falls back to the desktop when there is no source tree, telling the user which it did. The layout then ships with the next build. The same save deletes any user layout for that slot, so what is on screen is what ships.
 
-A workflow the resource does not mention keeps isWorkflowDefault false and falls back to the built-in layout, so an empty defaults.json is a valid state.
+A layout the resource does not mention keeps hasShipped false and falls back to the built-in layout, so an empty defaults.json is a valid state.
 
-Window > Workspace > Reset Winnow defaults is shown to every user: "All" at the top, then one item per layout. A layout item (MW::resetWorkflowDefault) unticks that layout's user override, keeping the captured copy so ticking it again restores it, and applies the shipped layout if it is the one on screen; any other layout takes effect when its workflow is next opened. "All" (MW::resetAllWorkflowDefaults) unticks every override and reapplies the current workflow's layout. Both also reset the front tab of each tab group: they drop the layout's entry in frontDockTabsByWorkspace, so MW::restoreDockTabSelection does not raise the panel last used there over the captured one. Because a reset of the layout on screen is LEAVING the same workspace it applies, MW::invokeWorkspace would re-remember the current front tabs on the way in; isFrontDockTabsReset, set around the call, makes it drop that entry again after the remember.
+##### 2.3.2.3 User Layouts
 
-Only the capture item is for the developer. MW::syncWorkflowWorkspaceMenus hides "Set Default from Current Layout ..." and its separator unless G::isRory (false in a release build), and MW::rory re-runs it so they appear and disappear when the flag is toggled at runtime. For Rory, a layout item also applies the shipped layout in place when it is not the current one, to look at it before capturing over it, and is greyed with the reason in its tooltip when the resource does not define that layout: it would apply the generic built-in layout instead, and saying so beats silently doing something else. For everyone else the built-in layout is Winnow's default, so the item stays live. Both submenus have setToolTipsVisible(true) so the reasons are shown.
+Window > Workspace > "Save Layout for &lt;layout>" (MW::saveCurrentLayout, G::isRory off) snapshots the live layout as the user layout for the current slot. The common case is "the panels are how I want them for culling, make that my layout", and that is one click.
 
-##### 2.3.2.3 User Overrides
+A user layout either exists or it does not. "Revert &lt;layout> to Winnow Default" (MW::revertCurrentLayout) deletes it and applies the Winnow default; "Revert All Layouts to Winnow Defaults" (MW::revertAllLayouts) deletes every one and reapplies the current workflow's layout. Both also reset the front tab of each tab group: they drop the layout's entry in frontDockTabsByWorkspace, so MW::restoreDockTabSelection does not raise the panel last used there over the captured one. Because a revert of the layout on screen is LEAVING the same workspace it applies, MW::invokeWorkspace would re-remember the current front tabs on the way in; isFrontDockTabsReset, set around the call, makes it drop that entry again after the remember.
 
-Window > Workspace > User override lists the same layouts as checkable items. This is the half every user sees.
+User layouts are saved per slot in the QSettings group "WorkflowWorkspaces/&lt;key>" (MW::saveWorkflowLayout, which drops the group when there is none) and read back by MW::loadWorkflowLayouts from MW::loadWorkspaces.
 
-- Ticking a layout that has never been captured SNAPSHOTS THE CURRENT LAYOUT (MW::toggleWorkflowOverride). The common case is "the panels are how I want them for culling, make that my layout", and that should be one click, not two.
-- Ticking one that has already been captured re-enables the kept copy, so unticking is not destructive.
-- "Update Override from Current Layout ..." (a list dialog rather than more menu items) replaces a kept copy.
+History: until 2026-11-05 a user layout ("user override") had an on/off tick separate from the captured copy, with two submenus listing every layout (Reset Winnow defaults, User override) and two list dialogs. The three states per layout were the complexity. MW::loadWorkflowLayouts migrates a profile from that model once: a group whose "isOverride" was false (captured but not in use) is dropped, so the slot keeps the Winnow default it was already using; a ticked one loses the key.
 
-Overrides are saved per layout in the QSettings group "WorkflowWorkspaces/&lt;key>", with an extra "isOverride" bool beside the workspace fields, and read back by MW::loadWorkflowOverrides from MW::loadWorkspaces.
+##### 2.3.2.4 Custom Workspaces
 
-##### 2.3.2.4 A Workflow Workspace Never Moves the Window
+A custom workspace (Window > Workspace > New Custom Workspace ..., MW::newWorkspace) belongs to the workflow it was saved in (WorkspaceData::workflow, serialised as "workflow": "Browse", "Develop", ... by MW::workflowKeyFor / MW::workflowFromKey). A custom Browse workspace serves both sources. The menu shows "Name  —  Workflow" (MW::workspaceMenuName).
 
-isGeometryIncluded is forced false on both the shipped defaults and the captured overrides. Switching workflow is about the PANELS; moving the window on every E / G / C / D / K would be intolerable.
+- Invoking one (Ctrl+0..9, MW::invokeCustomWorkspace) sets MW::activeCustomWs and triggers the WORKFLOW'S OWN ACTION with keepCustomWs set, so Develop enters Develop mode, the module button lights, and the resolver applies the custom layout instead of the slot's. currentWorkflow is therefore always a workflow; the old -1 "named workspace" state and its special cases are gone.
+- A workflow that is not available (its action disabled) says why in a popup, the way a disabled shortcut does (MW::actionDisabledReason).
+- It stays in use for Reset Layout (keepCustomWs), a Browse source switch (MW::chooseSource leaves a custom Browse layout alone) and the return from a slide show. Any other workflow switch, the workflow's own button or key included, clears it and goes back to the slot's layout; that is how to leave a custom Develop workspace for the normal Develop layout (D, or the Develop button).
+- While one is in use, Save Layout reads "Update Custom Workspace "x"" and updates it (this replaced Manage Workspaces' "Update to current layout" button).
+- A custom workspace saved before 2026-11-05 has no workflow; MW::loadWorkspaces infers one from the docks it shows (Develop panel -> Develop, Embellish -> Embellish, Places -> Map, else Browse) and saves it.
+
+##### 2.3.2.5 A Workflow Workspace Never Moves the Window
+
+isGeometryIncluded is forced false on both the Winnow defaults and the user layouts. Switching workflow is about the PANELS; moving the window on every E / G / C / D / K would be intolerable.
 
 The cost is that a first run has nothing to size the window with, so MW::showEvent calls MW::centreWindowOnPrimaryScreen before applying the Folders layout. That function was split out of builtInDefaultWorkspace for exactly this. Until 2026-09-25 builtInDefaultWorkspace still called it too, which went unnoticed while every workflow had a shipped default. Map was the first without one, and its first click threw the window onto the primary display, which on a second monitor looked like Winnow quitting. builtInDefaultWorkspace no longer touches the window.
 
@@ -1176,28 +1200,28 @@ Startup applies the Browse layout, and only resumes another workflow as saved. M
 - the state is unreadable or absent, or
 - the last session was left in Develop (below).
 
-It used to leave the restored state alone, but the restored state carries whatever width the left dock drifted to during the session: a splitter drag, a collapse/restore round trip (the deferred resizeDocks in MW::toggleDockArea), or a Develop or Embellish detour never reasserted before quitting. Measured on a real profile, a state written from a Browse session had a 238 px left dock area where the shipped layout is 337 px, in the same size window. The cost is that a left dock widened during a Browse session does not persist across a launch; that is the same trade Reset Layout makes, and Window > Workspace > User override is how a different width is made permanent.
+It used to leave the restored state alone, but the restored state carries whatever width the left dock drifted to during the session: a splitter drag, a collapse/restore round trip (the deferred resizeDocks in MW::toggleDockArea), or a Develop or Embellish detour never reasserted before quitting. Measured on a real profile, a state written from a Browse session had a 238 px left dock area where the shipped layout is 337 px, in the same size window. The cost is that a left dock widened during a Browse session does not persist across a launch; that is the same trade Reset Layout makes, and Window > Workspace > Save Layout is how a different width is made permanent.
 
 A state written before currentWorkflow was persisted (lastWf &lt; 0) reaches this branch with the Develop panel hidden, so it is a Browse layout and is treated as one. Every OTHER workflow's layout is a Preview layout and is restored as saved.
 
 A session left in Develop is the exception, because Develop is not a layout the next session can come up in. Winnow always starts in Preview, so MW::showEvent hides the three Develop panels (MW::closeDevelopDock). Hiding them does not resize anything, and the rest of the restored layout is still at the Develop widths. The Develop layout gives the left dock group far less width than the Browse one, and a dock group that narrow drops its tab text for the 16x16 glyphs, so the reported symptom was "the workspace came back narrow and the tabs are showing their graphic". MW::showEvent therefore reasserts the Browse workspace, just as E / G / T / C do on leaving Develop.
 
-Which workflow the session is in is MW::currentWorkflow. MW::invokeWorkflowWorkspace stamps it, MW::invokeWorkspace clears it to -1 (a named workspace is not a workflow), MW::writeSettings persists it as "currentWorkflow", and showEvent reads it back. Every assignment re-lights the Module dock buttons (MW::syncWorkflowSwitcher). A state written before that key existed has no answer, so the fallback is the tell in the restored layout itself: the Develop panel visible.
+Which workflow the session is in is MW::currentWorkflow. MW::invokeWorkflowLayout stamps it (a custom workspace stamps its own workflow), MW::writeSettings persists it as "currentWorkflow", and showEvent reads it back. Every assignment re-lights the Module dock buttons (MW::syncWorkflowSwitcher). A state written before that key existed has no answer, so the fallback is the tell in the restored layout itself: the Develop panel visible.
 
 #### 2.3.6 Window Position and Size Are Optional
 
 WorkspaceData::isGeometryIncluded (QSettings key "isGeometryIncluded"). A workspace is usually about the PANEL layout, and pulling the window back to where it was saved (possibly on a monitor that is no longer there, or away from where the user just put it) is often not wanted.
 
 - When the flag is off, MW::invokeWorkspace skips restoreGeometry / showMaximized and the fullscreen-on-another-screen dance, and restores only w.state (the dock layout) plus the visibility, view and process settings. The window itself, including its maximised or fullscreen state, is left alone.
-- The flag is a user preference, NOT part of the layout, so MW::snapshotWorkspace does not write it; it survives "Update to current layout".
+- The flag is a user preference, NOT part of the layout, so MW::snapshotWorkspace does not write it; it survives Update Custom Workspace.
 - A workspace saved before the flag existed reads as TRUE (the original behaviour), and a new workspace starts TRUE.
 - A restored window geometry is fitted to the usable screen area (ScreenFit::fit, see 2.13.2), so a workspace saved on a larger monitor does not put the window under the taskbar.
 
-The Workspace menu flags a workspace that restores the window position and size with " \*" (MW::workspaceMenuName). Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text; name matching there would silently do nothing. The positional match also keeps the workflow branches safe: QMenu::triggered fires for submenu items too, so every Reset Winnow defaults and User override action reaches invokeWorkspaceFromAction, is not found in workspaceActions, and is ignored.
+The Workspace menu flags a workspace that restores the window position and size with " \*" (MW::workspaceMenuName). Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text; name matching there would silently do nothing. The positional match also keeps the layout actions safe: QMenu::triggered fires for every item in the menu, so Save Layout, Revert and the rest reach invokeWorkspaceFromAction, are not found in workspaceActions, and are ignored.
 
-The choice is made in Manage Workspaces: a "Restore window position and size" checkbox under the dropdown shows the selected workspace's setting and writes it through WorkspaceDlg::setWorkspaceGeometryIncluded(n, isIncluded) to MW::setWorkspaceGeometryIncluded, which saves and re-syncs the menu immediately.
+The choice is made in Manage Custom Workspaces: a "Restore window position and size" checkbox under the dropdown shows the selected workspace's setting and writes it through WorkspaceDlg::setWorkspaceGeometryIncluded(n, isIncluded) to MW::setWorkspaceGeometryIncluded, which saves and re-syncs the menu immediately.
 
-- With no workspaces saved, the checkbox, Delete and Reassign are disabled and the status line says why.
+- With no workspaces saved, the checkbox and Delete are disabled and the status line says why. Otherwise the status line names the workflow the selected workspace opens in.
 - WorkspaceDlg keeps its own copy of the flags (isGeometry) so the checkbox can be set without a round trip to MW. setChecked is done with signals blocked, otherwise moving the dropdown would write the new selection's value back onto the workspace just left.
 - The "Winnow default workspace" dropdown entry, its separator and the isDefaultSelected / firstWorkspaceIndex plumbing are gone along with the single default workspace.
 
@@ -1211,9 +1235,9 @@ The show/hide bar collapse IS part of a layout (WorkspaceData::areaCollapse; key
 
 The info overlay is NOT part of a layout. The overlay toggled by I (View > Show Info Overlay, MW::infoVisibleAction) is a per-user display preference, kept in QSettings as "isImageInfoVisible" beside the rating badge and icon number toggles. MW::invokeWorkspace and MW::builtInDefaultWorkspace used to apply WorkspaceData::isImageInfoVisible, which made the toggle transient: every workspace bakes a value, the shipped defaults bake TRUE, and E / G / C / K / D apply a workspace every time, so an overlay switched off came straight back on. Because MW::updateState does not re-apply the overlay, the action was also left checked while the overlay stayed hidden, so the next I appeared to do nothing and the wrong value was written at exit.
 
-The grid thumbnail size is NOT part of a WORKFLOW layout (2026-10-27). It is the user's preference, saved in QSettings "thumbWidthGrid" / "thumbHeightGrid" (MW::writeSettings, restored in MW::createGridView), but every workflow layout carries a size too, and MW::showEvent re-applies the Browse layout at startup. So the shipped Library layout's 125 replaced the saved size on every launch, and again on every return from Develop or another workflow. MW::invokeWorkflowLayout now applies a COPY of the layout with WorkspaceData::isWorkflowLayout set (runtime only, never serialised), and MW::invokeWorkspace skips the grid width and height when it is set. The flag travels with ws, so re-applying the current layout (leaving full screen, Reset Layout) skips them too. MW::builtInDefaultWorkspace (the workflow fallback) no longer sets a grid size. A NAMED workspace still applies its grid size, since the user saved it on purpose; MW::newWorkspace and MW::workspaceFromMap clear the flag so a named workspace copied from ws never inherits it. The grid's label settings and the filmstrip (thumbView) size are still applied by every layout.
+The grid thumbnail size is NOT part of a WORKFLOW layout (2026-10-27). It is the user's preference, saved in QSettings "thumbWidthGrid" / "thumbHeightGrid" (MW::writeSettings, restored in MW::createGridView), but every workflow layout carries a size too, and MW::showEvent re-applies the Browse layout at startup. So the shipped Library layout's 125 replaced the saved size on every launch, and again on every return from Develop or another workflow. MW::invokeWorkflowLayout now applies a COPY of the layout with WorkspaceData::isWorkflowLayout set (runtime only, never serialised), and MW::invokeWorkspace skips the grid width and height when it is set. The flag travels with ws, so re-applying the current layout (leaving full screen, Reset Layout) skips them too. MW::builtInDefaultWorkspace (the workflow fallback) no longer sets a grid size. A CUSTOM workspace still applies its grid size, since the user saved it on purpose; MW::newWorkspace and MW::workspaceFromMap clear the flag so a custom workspace copied from ws never inherits it. The grid's label settings and the filmstrip (thumbView) size are still applied by every layout.
 
-The sort is NOT part of a layout either (2026-10-01). WorkspaceData::sortColumn / isReverseSort are no longer applied by MW::invokeWorkspace, which no longer calls sortChange, and MW::builtInDefaultWorkspace no longer resets the sort to column 0. Applying them made the sort follow the workflow: the shipped Develop layout carries column 0, so D threw away a Created sort, and E brought back the Library layout's File Name. Every switch also re-sorted the whole model even when the column had not changed (sortChange, 156-196 ms at 155k rows), and moved images in and out of the icon chunk, so eviction blanked video thumbnails and the current image could change (measured with the WFPROBE trace). The sort belongs to the content: the Sort menu, the table header and the Library state restore (queueLibraryStateRestore) set it. A named workspace saved with a sort no longer restores it.
+The sort is NOT part of a layout either (2026-10-01). WorkspaceData::sortColumn / isReverseSort are no longer applied by MW::invokeWorkspace, which no longer calls sortChange, and MW::builtInDefaultWorkspace no longer resets the sort to column 0. Applying them made the sort follow the workflow: the shipped Develop layout carries column 0, so D threw away a Created sort, and E brought back the Library layout's File Name. Every switch also re-sorted the whole model even when the column had not changed (sortChange, 156-196 ms at 155k rows), and moved images in and out of the icon chunk, so eviction blanked video thumbnails and the current image could change (measured with the WFPROBE trace). The sort belongs to the content: the Sort menu, the table header and the Library state restore (queueLibraryStateRestore) set it. A custom workspace saved with a sort no longer restores it.
 
 ### 2.4 Dock Window State (Versioning)
 
@@ -3857,7 +3881,7 @@ The map is central page MapTab (8). MW::invokeWorkflowWorkspace puts it up after
 
 G::mode is deliberately NOT given a "Map" value: it is compared in some fifty places as Loupe / Grid / Table / Compare. Instead MW::inMapModule() (currentWorkflow == WfMap; the WORKFLOW, not the page, because the page is the message page while a folder loads) guards the paths that would otherwise take the page back: MW::fileSelectionChange (which also puts the map back up after a folder load), MW::refreshViewsOnCacheChange, MW::sortChange, the Table re-assert on folder change and the video re-assert after a filter. The four display functions (loupeDisplay, gridDisplay, tableDisplay, compareDisplay) and IconView's double-click route through MW::requestView when called from Map, so Enter, Esc, a double-click or a view key leave for Browse with the workflow, the layout and the lit Module button all changing together. Without that, the loupe came up with the workflow still Map and the next selection change put the map back.
 
-The Map workflow has no shipped default layout until one is captured into Workspaces/defaults.json (Window > Workspace > Reset Winnow defaults > "Set Default from Current Layout ...", developer only); until then MW::builtInDefaultWorkspace is used and the Reset Winnow defaults item is greyed with its reason for the developer.
+The Map workflow has no shipped default layout until one is captured into Workspaces/defaults.json (in Map, Window > Workspace > "Save as Winnow Default for Map", developer only); until then MW::builtInDefaultWorkspace is used.
 
 ### 8.2 Places (Saved Map Areas)
 

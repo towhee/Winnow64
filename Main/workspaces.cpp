@@ -15,11 +15,13 @@
         - workspace dock visibility and lock mode
         - thumb parameters (size, spacing, padding, label)
 
-    The user can change the workspace menu name, reassign a menu item and delete
-    menu items.
+    The user can change the workspace menu name and delete menu items.
 
-    The data for each workspace is held in a workspaceData struct.  Up to 10
-    workspaces are contained in QList<workspaceData> workspaces.
+    The data for each workspace is held in a workspaceData struct.  Up to 10 CUSTOM
+    workspaces are contained in QList<workspaceData> workspaces.  Each belongs to the
+    workflow it was saved in (WorkspaceData::workflow) and stands in for that workflow's
+    layout when invoked -- see MW::invokeCustomWorkspace and the WORKFLOW WORKSPACES
+    banner below.
 
     Read an item:  QString name = workspaces->at(n).name;
     Write an item: (*workspaces)[n].name = name;
@@ -40,8 +42,8 @@ void MW::newWorkspace()
 
     int n = workspaces->count();
     if (n > 9) {
-        QString msg = "Only ten workspaces allowed.  Use Manage Workspaces\n"
-                      "to delete or reassign workspaces.";
+        QString msg = "Only ten custom workspaces allowed.  Use Manage Custom Workspaces\n"
+                      "to delete workspaces.";
         QMessageBox::information(this, "Oops", msg, QMessageBox::Ok);
         return;
     }
@@ -60,9 +62,12 @@ void MW::newWorkspace()
         /* A new workspace owns the window position and size, the behaviour before it was
            optional.  Manage Workspaces turns it off. */
         (*workspaces)[n].isGeometryIncluded = true;
-        /* Copied from ws, which may be a workflow layout: a named workspace owns its
+        /* Copied from ws, which may be a workflow layout: a custom workspace owns its
            grid size (see MW::invokeWorkspace). */
         (*workspaces)[n].isWorkflowLayout = false;
+        /* It belongs to the workflow it was saved in, and is the layout in use now. */
+        (*workspaces)[n].workflow = currentWorkflow;
+        activeCustomWs = n;
         // sync menu items
         workspaceActions.at(n)->setText(workspaceMenuName(workspaces->at(n)));
         workspaceActions.at(n)->setObjectName("workspace" + QString::number(n));
@@ -110,16 +115,40 @@ void MW::invokeWorkspaceFromAction(QAction *workAction)
     if (G::isLogger) G::log("MW::invokeWorkspaceFromAction");
     int i = workspaceActions.indexOf(workAction);
     if (i < 0 || i >= workspaces->count()) return;
-    invokeWorkspace(workspaces->at(i));
+    invokeCustomWorkspace(i);
+}
+
+void MW::invokeCustomWorkspace(int i)
+{
+/*
+    Enter custom workspace i's workflow by triggering the workflow's own action, so
+    Develop enters Develop mode and the Module dock lights the workflow, with the custom
+    layout standing in for the workflow's (MW::invokeWorkflowLayout).  A workflow that is
+    not available says why, the way a disabled shortcut does.
+*/
+    if (G::isLogger) G::log("MW::invokeCustomWorkspace", QString::number(i));
+    if (i < 0 || i >= workspaces->count()) return;
+    QAction *a = workflowAction(workspaces->at(i).workflow);
+    if (!a) return;
+    if (!a->isEnabled()) {
+        G::popup->showPopup(actionDisabledReason(a), 2000);
+        return;
+    }
+    activeCustomWs = i;
+    keepCustomWs = true;
+    a->trigger();
+    keepCustomWs = false;
 }
 
 QString MW::workspaceMenuName(const WorkspaceData &w) const
 {
 /*
-    The Workspace menu text for a workspace.  A trailing " *" flags a workspace that
-    restores the window position and size as well as the layout.
+    The Workspace menu text for a custom workspace: its name and workflow.  A trailing
+    " *" flags a workspace that restores the window position and size as well as the
+    layout.
 */
-    return w.isGeometryIncluded ? w.name + " *" : w.name;
+    QString text = w.name + "  —  " + customWorkflowName(w.workflow);
+    return w.isGeometryIncluded ? text + " *" : text;
 }
 
 void MW::invokeWorkspace(const WorkspaceData &w)
@@ -179,11 +208,6 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         }
     } paintHold(this);
 
-
-    /*  A named workspace is not a workflow.  invokeWorkflowWorkspace re-stamps this
-        after the layout is applied, so the workflow routes still record themselves. */
-    currentWorkflow = -1;
-    syncWorkflowSwitcher();
 
     /*  Which panel was front in each tab group in the workspace being LEFT, so coming
         back to it comes back to the panel last used there and not to whatever was front
@@ -261,7 +285,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         but every workflow layout carries one too and Browse's is re-applied at startup
         (MW::showEvent), so the shipped Library layout's 125 replaced the saved size on
         every launch, and again on every return from Develop or another workflow.  A
-        NAMED workspace still applies it: the user saved that size on purpose. */
+        CUSTOM workspace still applies it: the user saved that size on purpose. */
     if (!w.isWorkflowLayout) {
         gridView->iconWidth = w.thumbWidthGrid;
         gridView->iconHeight = w.thumbHeightGrid;
@@ -399,8 +423,8 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isFullScreen = isFullScreen();
     wsd.isMaximised = isMaximized();
     /* wsd.isGeometryIncluded is deliberately NOT set here: it is the user's choice for
-       this workspace, not part of the layout being snapshotted, so it survives a
-       reassign (Manage Workspaces > Update to current layout). */
+       this workspace, not part of the layout being snapshotted, so it survives an
+       update (Window > Workspace > Update Custom Workspace). */
 
     // Visibility
     //wsd.isMenuBarVisible = menuBarVisibleAction->isChecked();
@@ -456,33 +480,27 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
 void MW::manageWorkspaces()
 {
 /*
-    Delete, rename and reassign the user's saved workspaces.  The per-workflow default
-    and override layouts are managed from Window > Workspace, not here.
+    Delete and rename the user's custom workspaces, and choose whether each restores the
+    window position and size.  A custom workspace is updated by invoking it and choosing
+    Window > Workspace > Update Custom Workspace.  The workflow layouts are managed from
+    Window > Workspace, not here.
 */
     if (G::isLogger) G::log("MW::manageWorkspaces");
     // Update a list of workspace names for the manager dialog
     QList<QString> wsList;
     QList<bool> wsGeometry;
+    QStringList wsWorkflow;
     for (int i=0; i<workspaces->count(); i++) {
         wsList.append(workspaces->at(i).name);
         wsGeometry.append(workspaces->at(i).isGeometryIncluded);
+        wsWorkflow.append(customWorkflowName(workspaces->at(i).workflow));
     }
-    workspaceDlg = new WorkspaceDlg(&wsList, wsGeometry, this);
+    workspaceDlg = new WorkspaceDlg(&wsList, wsGeometry, wsWorkflow, this);
     connect(workspaceDlg, &WorkspaceDlg::deleteWorkspace, this, &MW::deleteWorkspace);
-    connect(workspaceDlg, &WorkspaceDlg::reassignWorkspace, this, &MW::reassignWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::renameWorkspace, this, &MW::renameWorkspace);
     connect(workspaceDlg, &WorkspaceDlg::reportWorkspaceNum, this, &MW::reportWorkspaceNum);
     connect(workspaceDlg, &WorkspaceDlg::setWorkspaceGeometryIncluded,
             this, &MW::setWorkspaceGeometryIncluded);
-
-    // connect(workspaceDlg, SIGNAL(deleteWorkspace(int)),
-    //         this, SLOT(deleteWorkspace(int)));
-    // connect(workspaceDlg, SIGNAL(reassignWorkspace(int)),
-    //         this, SLOT(reassignWorkspace(int)));
-    // connect(workspaceDlg, SIGNAL(renameWorkspace(int, QString)),
-    //         this, SLOT(renameWorkspace(int, QString)));
-    // connect(workspaceDlg, SIGNAL(reportWorkspace(int)),
-    //         this, SLOT(reportWorkspace(int)));
     workspaceDlg->exec();
     delete workspaceDlg;
 }
@@ -495,6 +513,11 @@ void MW::deleteWorkspace(int n)
 
     // remove workspace from list of workspaces
     workspaces->removeAt(n);
+    // the indexes after n shift down one
+    if (activeCustomWs == n) activeCustomWs = -1;
+    else if (activeCustomWs > n) --activeCustomWs;
+    if (slideShowReturnCustomWs == n) slideShowReturnCustomWs = -1;
+    else if (slideShowReturnCustomWs > n) --slideShowReturnCustomWs;
 
     saveWorkspaces();
 
@@ -519,15 +542,6 @@ void MW::syncWorkspaceMenu()
             workspaceActions.at(i)->setVisible(false);
         }
     }
-}
-
-void MW::reassignWorkspace(int n)
-{
-    if (G::isLogger) G::log("MW::reassignWorkspace");
-    QString name = workspaces->at(n).name;
-    populateWorkspace(n, name);
-    saveWorkspaces();
-    // reportWorkspaceNum(n);
 }
 
 void MW::setWorkspaceGeometryIncluded(int n, bool isIncluded)
@@ -788,15 +802,15 @@ QString MW::reportWorkspaces()
     rpt << "\n\n";
 
     // Workflow workspaces (see MW::invokeWorkflowWorkspace)
-    rpt << "Workflow workspaces:";
-    for (int wf : workflowLayoutOrder()) {
-        const bool isDef = wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf);
-        const bool isOvr = wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf);
-        rpt << "\n  " << workflowNames().at(wf).leftJustified(14)
-            << " shipped default: " << G::s(isDef)
-            << "   user layout captured: " << G::s(hasWorkflowOverride(wf))
-            << "   override in use: " << G::s(isOvr);
+    rpt << "Workflow layouts:";
+    for (int lay : workflowLayoutOrder()) {
+        const bool isDef = lay < layoutSlots.count() && layoutSlots.at(lay).hasShipped;
+        rpt << "\n  " << workflowNames().at(lay).leftJustified(16)
+            << " Winnow default: " << G::s(isDef)
+            << "   user layout: " << G::s(hasUserLayout(lay));
     }
+    rpt << "\n  currentWorkflow = " << currentWorkflow
+        << "   activeCustomWs = " << activeCustomWs;
     rpt << "\n\n";
 
     int n = workspaces->count();
@@ -810,6 +824,7 @@ QString MW::reportWorkspaces()
         rpt
             << "\nWorkspace: " << i
             << "\n  Name                      " << ws.name
+            << "\n  Workflow                  " << customWorkflowName(ws.workflow)
             << "\nRestoreGeometryByteArray:"
             << "\n  frameGeometry             " << G::s(r.frameGeometry)
             // << "\n  Geometry                " << G::s(r.geometry)
@@ -977,6 +992,8 @@ QVariantMap MW::workspaceToMap(const WorkspaceData &wsd) const
     m["isFullScreen"] = wsd.isFullScreen;
     m["isMaximised"] = wsd.isMaximised;
     m["isGeometryIncluded"] = wsd.isGeometryIncluded;
+    // custom workspaces only: a workflow layout belongs to its slot
+    if (wsd.workflow >= 0) m["workflow"] = workflowKeyFor(wsd.workflow);
     // Visibility
     m["isWindowTitleBarVisible"] = wsd.isWindowTitleBarVisible;
     m["isStatusBarVisible"] = wsd.isStatusBarVisible;
@@ -1045,6 +1062,9 @@ void MW::workspaceFromMap(const QVariantMap &m, WorkspaceData &wsd) const
     /*  Absent from a workspace saved before the window position/size became optional,
         which defaults to true -- the original behaviour. */
     wsd.isGeometryIncluded = m.value("isGeometryIncluded", true).toBool();
+    // absent from a workflow layout, and from a custom workspace saved before custom
+    // workspaces had a workflow (MW::loadWorkspaces infers one)
+    wsd.workflow = workflowFromKey(m.value("workflow").toString());
 
     // Visibility
     wsd.isWindowTitleBarVisible = m.value("isWindowTitleBarVisible").toBool();
@@ -1154,7 +1174,7 @@ void MW::readWorkspaceSettings(WorkspaceData &wsd)
 {
 /*
     Read one workspace from the current QSettings position (array index or group).
-    Used by MW::loadWorkspaces and MW::loadWorkflowOverrides.
+    Used by MW::loadWorkspaces and MW::loadWorkflowLayouts.
 */
     QVariantMap m;
     const QStringList keys = settings->childKeys();
@@ -1166,7 +1186,7 @@ void MW::writeWorkspaceSettings(const WorkspaceData &wsd)
 {
 /*
     Write one workspace to the current QSettings position (array index or group).
-    Used by MW::saveWorkspaces and MW::saveWorkflowOverride.
+    Used by MW::saveWorkspaces and MW::saveWorkflowLayout.
 */
     const QVariantMap m = workspaceToMap(wsd);
     for (auto it = m.cbegin(); it != m.cend(); ++it) settings->setValue(it.key(), it.value());
@@ -1179,14 +1199,25 @@ void MW::loadWorkspaces()
 
     // replace with the current list of workspaces
     int size = settings->beginReadArray("Workspaces");
+    bool isInferred = false;
     for (int i = 0; i < size; ++i) {
         settings->setArrayIndex(i);
         readWorkspaceSettings(ws);
+        /*  Saved before a custom workspace belonged to a workflow: the docks it shows
+            are the tell. */
+        if (ws.workflow < 0) {
+            ws.workflow = ws.isDevelopDockVisible ? int(WfDevelop)
+                        : ws.isEmbelDockVisible ? int(WfEmbellish)
+                        : ws.isPlacesDockVisible ? int(WfMap)
+                        : int(WfSource);
+            isInferred = true;
+        }
         workspaces->append(ws);
     }
     settings->endArray();
+    if (isInferred) saveWorkspaces();
 
-    loadWorkflowOverrides();
+    loadWorkflowLayouts();
 }
 
 void MW::saveWorkspaces()
@@ -1250,28 +1281,34 @@ void MW::recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const
 
     BROWSE HAS TWO LAYOUTS, Library and Folders, and uses the one that matches the
     source (MW::workflowLayout); switching source inside Browse switches layout
-    (MW::chooseSource).  So the lists below are indexed by LAYOUT (WorkflowLayout):
+    (MW::chooseSource).  So the slots below are indexed by LAYOUT (WorkflowLayout):
     one per Workflow, WfSource's being the Folders layout, then WsLibrary.
 
-    Each workflow has TWO possible layouts:
+    EACH SLOT RESOLVES AS  USER LAYOUT ?? WINNOW DEFAULT ?? BUILT-IN  (layoutSlots):
 
-    - THE SHIPPED DEFAULT, read from the resource ":/Workspaces/defaults.json".  Rory
-      captures these (Window > Workspace > Default > "Set Default from Current
-      Layout ...", a branch hidden unless G::isRory) and the write goes back into the
-      SOURCE TREE, so the layout ships with the next build rather than living in one
-      machine's QSettings.  A workflow with no entry in the resource falls back to
-      MW::builtInDefaultWorkspace, so an empty defaults.json is a working state.
+    - THE WINNOW DEFAULT, read from the resource ":/Workspaces/defaults.json".  With
+      G::isRory on, Window > Workspace > "Save as Winnow Default for <layout>" writes it
+      back into the SOURCE TREE, so the layout ships with the next build rather than
+      living in one machine's QSettings.  A slot with no entry in the resource falls
+      back to MW::builtInDefaultWorkspace, so an empty defaults.json is a working state.
 
-    - THE USER OVERRIDE, captured from the current layout when the user ticks the
-      workflow in Window > Workspace > User override, and saved in the QSettings group
-      "WorkflowWorkspaces/<key>".  Unticking goes back to the shipped default and KEEPS
-      the user's copy, so re-ticking restores it; "Update Override from Current
-      Layout ..." re-captures it.
+    - THE USER LAYOUT, saved by "Save Layout for <layout>" in the QSettings group
+      "WorkflowWorkspaces/<key>".  It exists or it does not: "Revert <layout> to Winnow
+      Default" deletes it.
+
+    Every Window > Workspace action works on the CURRENT slot, so there is no list of
+    layouts to pick from.
+
+    A CUSTOM WORKSPACE (Ctrl+0..9) belongs to the workflow it was saved in and stands in
+    for that workflow's layout (activeCustomWs).  Invoking it enters the workflow through
+    the workflow's own action; Reset Layout and a Browse source switch keep it; any other
+    workflow switch, the workflow's own button or key included, goes back to the slot.
 
     A workflow workspace deliberately does NOT own the window position and size
     (isGeometryIncluded false): switching workflow is about the panels, and pulling the
     window somewhere else on every E / G / C / D / K would be intolerable.  That is why
     a first run has to size the window itself -- see MW::centreWindowOnPrimaryScreen.
+    A custom workspace may own it (Manage Custom Workspaces).
 */
 
 const QStringList &MW::workflowKeys()
@@ -1295,8 +1332,8 @@ QStringList MW::workflowNames()
 {
     /*  The names also key the session-only front-tab memory
         (MW::rememberDockTabSelection), so renaming one costs nothing there. */
-    return {tr("Folders"), tr("Develop"), tr("Keywords"), tr("Embellish"),
-            tr("Slide Show"), tr("Map"), tr("Library")};
+    return {tr("Browse Folders"), tr("Develop"), tr("Keywords"), tr("Embellish"),
+            tr("Slide Show"), tr("Map"), tr("Browse Library")};
 }
 
 const QList<int> &MW::workflowLayoutOrder()
@@ -1312,18 +1349,49 @@ int MW::workflowLayout(int wf) const
     return wf;
 }
 
+int MW::currentLayoutSlot() const
+{
+    return workflowLayout(currentWorkflow);
+}
+
+QString MW::workflowKeyFor(int wf)
+{
+/*
+    The key a custom workspace stores its workflow under.  Browse is one workflow with
+    two layouts, so it is "Browse", not the "Folders" layout key.
+*/
+    if (wf == WfSource) return "Browse";
+    if (wf < 0 || wf >= WfCount) return QString();
+    return workflowKeys().at(wf);
+}
+
+int MW::workflowFromKey(const QString &key)
+{
+    if (key == "Browse") return WfSource;
+    const int wf = workflowKeys().indexOf(key);
+    return wf >= 0 && wf < WfCount ? wf : -1;
+}
+
+QString MW::customWorkflowName(int wf) const
+{
+    /* A custom Browse workspace serves both sources, so it is plain "Browse". */
+    if (wf == WfSource) return tr("Browse");
+    if (wf < 0 || wf >= WfCount) return QString();
+    return workflowNames().at(wf);
+}
+
 void MW::migrateWorkflowKey(const QString &from, const QString &to)
 {
 /*
     Move a captured workflow override from an old key to its new one.
 
     A workflow's key names its QSettings group ("WorkflowWorkspaces/<key>"), so renaming
-    the key would otherwise orphan the layout the user captured: loadWorkflowOverrides
+    the key would otherwise orphan the layout the user captured: loadWorkflowLayouts
     would find nothing under the new name and silently fall back to the shipped default,
     which reads as "my workspace was thrown away".
 
     The captured state blob is the tell that a group is really there, the same test
-    MW::hasWorkflowOverride uses.  Copy every key across and drop the old group -- a
+    MW::hasUserLayout uses.  Copy every key across and drop the old group -- a
     one-shot, because the new group exists afterwards and the guard below is false from
     then on.  Never overwrites: a user who has already captured under the new name keeps
     that one.
@@ -1342,7 +1410,7 @@ void MW::migrateWorkflowKey(const QString &from, const QString &to)
 
     /*  "name" is the one field that carries the OLD name across: it is the display name
         of the workspace, and copying it verbatim would leave "name=Library" sitting in
-        the migrated group.  Harmless -- loadWorkflowOverrides stamps the name from
+        the migrated group.  Harmless -- loadWorkflowLayouts stamps the name from
         workflowNames() straight after reading -- but a stale word in the settings file
         is exactly what a rename is supposed to remove, so it is restamped here too. */
     const int wf = workflowKeys().indexOf(to);
@@ -1352,29 +1420,21 @@ void MW::migrateWorkflowKey(const QString &from, const QString &to)
     for (auto i = values.cbegin(); i != values.cend(); ++i) settings->setValue(i.key(), i.value());
     settings->endGroup();
 
-    /* remove() on a group path drops the whole group -- see MW::saveWorkflowOverride. */
+    /* remove() on a group path drops the whole group -- see MW::saveWorkflowLayout. */
     settings->remove(oldGroup);
 }
 
 void MW::loadWorkflowDefaults()
 {
 /*
-    Read the shipped per-workflow layouts from the resource.  A workflow the resource
-    does not mention keeps isWorkflowDefault false and falls back to the built-in
-    layout, which is the state a freshly cloned repo is in.
+    Read the shipped per-workflow layouts from the resource.  A slot the resource does
+    not mention keeps hasShipped false and falls back to the built-in layout, which is
+    the state a freshly cloned repo is in.
 */
     if (G::isLogger) G::log("MW::loadWorkflowDefaults");
 
-    workflowDefaultWs.clear();
-    isWorkflowDefault.clear();
-    workflowUserWs.clear();
-    isWorkflowOverride.clear();
-    for (int wf = 0; wf < WsCount; ++wf) {
-        workflowDefaultWs.append(WorkspaceData());
-        isWorkflowDefault.append(false);
-        workflowUserWs.append(WorkspaceData());
-        isWorkflowOverride.append(false);
-    }
+    layoutSlots.clear();
+    layoutSlots.resize(WsCount);
 
     QFile f(":/Workspaces/defaults.json");
     if (!f.open(QIODevice::ReadOnly)) return;
@@ -1387,73 +1447,86 @@ void MW::loadWorkflowDefaults()
     }
 
     const QJsonObject root = doc.object();
-    for (int wf = 0; wf < WsCount; ++wf) {
-        const QString key = workflowKeys().at(wf);
+    for (int lay = 0; lay < WsCount; ++lay) {
+        const QString key = workflowKeys().at(lay);
         if (!root.contains(key) || !root.value(key).isObject()) continue;
-        workspaceFromJson(root.value(key).toObject(), workflowDefaultWs[wf]);
-        workflowDefaultWs[wf].name = workflowNames().at(wf);
+        LayoutSlot &slot = layoutSlots[lay];
+        workspaceFromJson(root.value(key).toObject(), slot.shipped);
+        slot.shipped.name = workflowNames().at(lay);
         /* A workflow workspace never moves the window, whatever was captured. */
-        workflowDefaultWs[wf].isGeometryIncluded = false;
-        isWorkflowDefault[wf] = true;
+        slot.shipped.isGeometryIncluded = false;
+        slot.hasShipped = true;
     }
 }
 
-void MW::loadWorkflowOverrides()
+void MW::loadWorkflowLayouts()
 {
 /*
     Read the user's per-workflow layouts.  Called from MW::loadWorkspaces, ie after
-    MW::loadWorkflowDefaults has sized the lists.
-*/
-    if (G::isLogger) G::log("MW::loadWorkflowOverrides");
-    if (!isSettings) return;
-    if (workflowUserWs.count() < WsCount) return;
+    MW::loadWorkflowDefaults has sized the slots.
 
-    /*  Before anything is read: an override captured under a key that has since been
-        renamed still belongs to the user.  See MW::workflowKeys. */
+    A layout used to have an on/off tick ("isOverride") separate from the captured copy.
+    A copy that was ticked off is not in use, so its group is dropped and the slot falls
+    back to the Winnow default, as it already did; a ticked one simply loses the key.
+    Both are one-shots: the key is gone afterwards.
+*/
+    if (G::isLogger) G::log("MW::loadWorkflowLayouts");
+    if (!isSettings) return;
+    if (layoutSlots.count() < WsCount) return;
+
+    /*  Before anything is read: a layout saved under a key that has since been renamed
+        still belongs to the user.  See MW::workflowKeys. */
     migrateWorkflowKey("Source", "Folders");
 
-    for (int wf = 0; wf < WsCount; ++wf) {
-        settings->beginGroup("WorkflowWorkspaces/" + workflowKeys().at(wf));
-        const bool isCaptured = settings->contains("state");
-        if (isCaptured) {
-            readWorkspaceSettings(workflowUserWs[wf]);
-            workflowUserWs[wf].name = workflowNames().at(wf);
-            workflowUserWs[wf].isGeometryIncluded = false;
-            isWorkflowOverride[wf] = settings->value("isOverride", true).toBool();
+    for (int lay = 0; lay < WsCount; ++lay) {
+        const QString group = "WorkflowWorkspaces/" + workflowKeys().at(lay);
+        if (settings->value(group + "/isOverride", true).toBool() == false) {
+            settings->remove(group);
+            continue;
+        }
+        settings->remove(group + "/isOverride");
+        settings->beginGroup(group);
+        if (settings->contains("state")) {
+            WorkspaceData &user = layoutSlots[lay].user;
+            readWorkspaceSettings(user);
+            user.name = workflowNames().at(lay);
+            user.isGeometryIncluded = false;
         }
         settings->endGroup();
     }
 }
 
-void MW::saveWorkflowOverride(int wf)
+void MW::saveWorkflowLayout(int lay)
 {
-    if (G::isLogger) G::log("MW::saveWorkflowOverride");
-    if (wf < 0 || wf >= WsCount) return;
+/*
+    Write a slot's user layout to QSettings, or drop its group when it has none.
+*/
+    if (G::isLogger) G::log("MW::saveWorkflowLayout");
+    if (lay < 0 || lay >= layoutSlots.count()) return;
 
-    const QString group = "WorkflowWorkspaces/" + workflowKeys().at(wf);
+    const QString group = "WorkflowWorkspaces/" + workflowKeys().at(lay);
     settings->remove(group);
+    if (!hasUserLayout(lay)) return;
     settings->beginGroup(group);
-    writeWorkspaceSettings(workflowUserWs.at(wf));
-    settings->setValue("isOverride", isWorkflowOverride.at(wf));
+    writeWorkspaceSettings(layoutSlots.at(lay).user);
     settings->endGroup();
 }
 
-bool MW::hasWorkflowOverride(int wf) const
+bool MW::hasUserLayout(int lay) const
 {
 /*
-    Has the user ever captured a layout for this workflow?  The captured state blob is
-    the tell -- a workspace that has one has been snapshotted.
+    Has the user saved a layout for this slot?  The captured state blob is the tell --
+    a workspace that has one has been snapshotted.
 */
-    if (wf < 0 || wf >= workflowUserWs.count()) return false;
-    return !workflowUserWs.at(wf).state.isEmpty();
+    if (lay < 0 || lay >= layoutSlots.count()) return false;
+    return !layoutSlots.at(lay).user.state.isEmpty();
 }
 
 void MW::invokeWorkflowWorkspace(int wf)
 {
 /*
-    Apply the layout for a workflow: the user's override when it is ticked, else the
-    layout Winnow ships with, else the built-in layout.  Browse's layout is the one for
-    the current source (MW::workflowLayout).
+    Apply the layout for a workflow.  Browse's layout is the one for the current source
+    (MW::workflowLayout).  See MW::invokeWorkflowLayout.
 */
     if (G::isLogger) G::log("MW::invokeWorkflowWorkspace");
     if (wf < 0 || wf >= WfCount) return;
@@ -1468,16 +1541,28 @@ void MW::invokeWorkflowLayout(int wf, int lay)
 /*
     Apply layout `lay` as workflow `wf`'s.  Only Browse has a choice -- MW::chooseSource
     applies the layout for the source it is ABOUT to switch to, before G::scope says so.
+
+    THE ONE RESOLVER.  The custom workspace standing in for wf when keepCustomWs says
+    to keep it (see MW::invokeCustomWorkspace); otherwise the slot's user layout, else
+    its Winnow default, else the built-in layout.
 */
-    if (wf < 0 || wf >= WfCount || lay < 0 || lay >= WsCount) return;
-    if (lay < isWorkflowOverride.count() && isWorkflowOverride.at(lay)
-        && hasWorkflowOverride(lay)) {
-        WorkspaceData layout = workflowUserWs.at(lay);
-        layout.isWorkflowLayout = true;         // no grid size: see invokeWorkspace
-        invokeWorkspace(layout);
+    if (wf < 0 || wf >= WfCount || lay < 0 || lay >= layoutSlots.count()) return;
+    const bool isCustom = keepCustomWs && activeCustomWs >= 0
+                          && activeCustomWs < workspaces->count()
+                          && workspaces->at(activeCustomWs).workflow == wf;
+    if (isCustom) {
+        invokeWorkspace(workspaces->at(activeCustomWs));
     }
-    else
-        invokeWorkflowDefault(lay);
+    else {
+        activeCustomWs = -1;
+        const LayoutSlot &slot = layoutSlots.at(lay);
+        if (hasUserLayout(lay) || slot.hasShipped) {
+            WorkspaceData layout = hasUserLayout(lay) ? slot.user : slot.shipped;
+            layout.isWorkflowLayout = true;         // no grid size: see invokeWorkspace
+            invokeWorkspace(layout);
+        }
+        else builtInDefaultWorkspace();
+    }
     if (wf == WfSource) browseLayoutApplied = lay;
     currentWorkflow = wf;
     syncWorkflowSwitcher();
@@ -1496,165 +1581,111 @@ void MW::focusKeywordsFilters()
     });
 }
 
-void MW::invokeWorkflowDefault(int wf)
+void MW::saveCurrentLayout()
 {
 /*
-    Apply the layout Winnow ships with for a workflow, ignoring any user override.  The
-    fallback for a workflow the resource does not define is the built-in layout.
-*/
-    if (G::isLogger) G::log("MW::invokeWorkflowDefault");
-    if (wf < 0 || wf >= WsCount) return;
+    Window > Workspace > Save Layout.  What is saved depends on what is on screen:
 
-    if (wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf)) {
-        WorkspaceData layout = workflowDefaultWs.at(wf);
-        layout.isWorkflowLayout = true;         // no grid size: see invokeWorkspace
-        invokeWorkspace(layout);
+    - A custom workspace in use: update it (its name, workflow and window position
+      choice are kept).
+    - Otherwise, with G::isRory on: the WINNOW DEFAULT for the current slot.  The whole
+      resource is written back to the source tree, so the next build carries it, and
+      any user layout for the slot is deleted, so what Rory sees is what ships.
+    - Otherwise: the user layout for the current slot.
+*/
+    if (G::isLogger) G::log("MW::saveCurrentLayout");
+
+    if (activeCustomWs >= 0 && activeCustomWs < workspaces->count()) {
+        populateWorkspace(activeCustomWs, workspaces->at(activeCustomWs).name);
+        saveWorkspaces();
         return;
     }
-    builtInDefaultWorkspace();
-}
 
-void MW::resetWorkflowDefault(int wf)
-{
-/*
-    Window > Workspace > Reset Winnow defaults > <layout>.  Go back to the layout Winnow
-    ships with and stay there: the user override is unticked (its captured copy is kept,
-    so ticking it again restores it).  The layout is applied now when it is the one on
-    screen; any other takes effect when its workflow is next opened.  Rory also gets it
-    applied in place, to look at a shipped default before capturing over it.
+    const int lay = currentLayoutSlot();
+    if (lay < 0 || lay >= layoutSlots.count()) return;
+    LayoutSlot &slot = layoutSlots[lay];
 
-    The front tab of each tab group is reset too: MW::restoreDockTabSelection would
-    otherwise raise the panel last used in this layout instead of the captured one.
-*/
-    if (G::isLogger) G::log("MW::resetWorkflowDefault");
-    if (wf < 0 || wf >= WsCount) return;
-
-    if (wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf)) {
-        isWorkflowOverride[wf] = false;
-        saveWorkflowOverride(wf);
+    if (!G::isRory) {
+        snapshotWorkspace(slot.user);
+        slot.user.name = workflowNames().at(lay);
+        slot.user.isGeometryIncluded = false;
+        saveWorkflowLayout(lay);
+        syncWorkflowWorkspaceMenus();
+        return;
     }
-    frontDockTabsByWorkspace.remove(workflowNames().at(wf));
-    isFrontDockTabsReset = true;
-    if (wf == workflowLayout(currentWorkflow)) invokeWorkflowLayout(currentWorkflow, wf);
-    else if (G::isRory) invokeWorkflowDefault(wf);
-    isFrontDockTabsReset = false;
+
+    snapshotWorkspace(slot.shipped);
+    slot.shipped.name = workflowNames().at(lay);
+    slot.shipped.isGeometryIncluded = false;
+    slot.hasShipped = true;
+    slot.user = WorkspaceData();
+    saveWorkflowLayout(lay);
+
+    QString path;
+    QString err;
+    if (writeWorkflowDefaultsJson(path, err)) {
+        QMessageBox::information(this, tr("Winnow Default Saved"),
+            tr("The %1 layout was written to\n\n%2\n\nRebuild to ship it.")
+                .arg(workflowNames().at(lay), path));
+    }
+    else {
+        QMessageBox::warning(this, tr("Winnow Default Not Saved"),
+            tr("Could not write the workflow defaults:\n\n%1").arg(err));
+    }
     syncWorkflowWorkspaceMenus();
 }
 
-void MW::resetAllWorkflowDefaults()
+void MW::revertCurrentLayout()
 {
 /*
-    Window > Workspace > Reset Winnow defaults > All.  MW::resetWorkflowDefault for every
-    layout: untick every user override, forget every layout's front tabs and reapply
-    the current workflow's layout.  Named workspaces keep their front tabs.
-*/
-    if (G::isLogger) G::log("MW::resetAllWorkflowDefaults");
+    Window > Workspace > Revert <layout> to Winnow Default.  Delete the user layout for
+    the current slot and apply the Winnow default.  A custom workspace in use is left
+    for the slot's layout, like any workflow switch.
 
-    for (int wf = 0; wf < isWorkflowOverride.count(); ++wf) {
-        if (!isWorkflowOverride.at(wf)) continue;
-        isWorkflowOverride[wf] = false;
-        saveWorkflowOverride(wf);
+    The front tab of each tab group is reset too: MW::restoreDockTabSelection would
+    otherwise raise the panel last used in this layout instead of the captured one.
+    Because the reset is LEAVING the same workspace it applies, isFrontDockTabsReset
+    makes invokeWorkspace drop the entry again after it remembers it.
+*/
+    if (G::isLogger) G::log("MW::revertCurrentLayout");
+    const int lay = currentLayoutSlot();
+    if (lay < 0 || lay >= layoutSlots.count()) return;
+
+    layoutSlots[lay].user = WorkspaceData();
+    saveWorkflowLayout(lay);
+    frontDockTabsByWorkspace.remove(workflowNames().at(lay));
+    isFrontDockTabsReset = true;
+    invokeWorkflowLayout(currentWorkflow, lay);
+    isFrontDockTabsReset = false;
+    if (currentWorkflow == WfSource) requestView(browseView);
+    syncWorkflowWorkspaceMenus();
+}
+
+void MW::revertAllLayouts()
+{
+/*
+    Window > Workspace > Revert All Layouts to Winnow Defaults: MW::revertCurrentLayout
+    for every slot.  Custom workspaces are not touched, and keep their front tabs.
+*/
+    if (G::isLogger) G::log("MW::revertAllLayouts");
+
+    for (int lay = 0; lay < layoutSlots.count(); ++lay) {
+        if (!hasUserLayout(lay)) continue;
+        layoutSlots[lay].user = WorkspaceData();
+        saveWorkflowLayout(lay);
     }
     for (const QString &name : workflowNames()) frontDockTabsByWorkspace.remove(name);
     isFrontDockTabsReset = true;
     invokeWorkflowWorkspace(currentWorkflow);
     isFrontDockTabsReset = false;
-    syncWorkflowWorkspaceMenus();
-}
-
-void MW::toggleWorkflowOverride(int wf, bool isOverride)
-{
-/*
-    Tick / untick a workflow in Window > Workspace > User override.
-
-    Ticking a workflow that has never been captured SNAPSHOTS THE CURRENT LAYOUT -- the
-    common case is "I have the panels how I want them for culling, make that my Folders
-    layout", and making that one click rather than two is the point.  Ticking one that
-    has already been captured restores the kept copy instead, so unticking is not
-    destructive.  "Update Override from Current Layout ..." is how a kept copy is
-    replaced.
-*/
-    if (G::isLogger) G::log("MW::toggleWorkflowOverride");
-    if (wf < 0 || wf >= WsCount) return;
-
-    if (isOverride && !hasWorkflowOverride(wf)) {
-        snapshotWorkspace(workflowUserWs[wf]);
-        workflowUserWs[wf].name = workflowNames().at(wf);
-        workflowUserWs[wf].isGeometryIncluded = false;
-    }
-    isWorkflowOverride[wf] = isOverride;
-    saveWorkflowOverride(wf);
-    syncWorkflowWorkspaceMenus();
-}
-
-void MW::captureWorkflowOverride()
-{
-/*
-    Replace the user's layout for a workflow with the current one, and tick it.  The
-    workflow is chosen in a list dialog rather than getting five more menu items.
-*/
-    if (G::isLogger) G::log("MW::captureWorkflowOverride");
-
-    bool ok;
-    const QStringList names = workflowNames();
-    QStringList listed;
-    for (int lay : workflowLayoutOrder()) listed << names.at(lay);
-    const QString name = QInputDialog::getItem(this, tr("Update Override"),
-        tr("Save the current layout as the workspace for:"), listed, 0, false, &ok);
-    if (!ok) return;
-    const int wf = names.indexOf(name);
-    if (wf < 0) return;
-
-    snapshotWorkspace(workflowUserWs[wf]);
-    workflowUserWs[wf].name = names.at(wf);
-    workflowUserWs[wf].isGeometryIncluded = false;
-    isWorkflowOverride[wf] = true;
-    saveWorkflowOverride(wf);
-    syncWorkflowWorkspaceMenus();
-}
-
-void MW::captureWorkflowDefault()
-{
-/*
-    Rory only.  Replace the SHIPPED layout for a workflow with the current one and write
-    the whole resource back to the source tree, so the next build carries it.  Falling
-    back to the desktop when the source tree is not there keeps the capture from being
-    silently lost in a deployed build.
-*/
-    if (G::isLogger) G::log("MW::captureWorkflowDefault");
-
-    bool ok;
-    const QStringList names = workflowNames();
-    QStringList listed;
-    for (int lay : workflowLayoutOrder()) listed << names.at(lay);
-    const QString name = QInputDialog::getItem(this, tr("Set Workflow Default"),
-        tr("Save the current layout as the shipped default for:"), listed, 0, false, &ok);
-    if (!ok) return;
-    const int wf = names.indexOf(name);
-    if (wf < 0) return;
-
-    snapshotWorkspace(workflowDefaultWs[wf]);
-    workflowDefaultWs[wf].name = names.at(wf);
-    workflowDefaultWs[wf].isGeometryIncluded = false;
-    isWorkflowDefault[wf] = true;
-
-    QString path;
-    QString err;
-    if (writeWorkflowDefaultsJson(path, err)) {
-        QMessageBox::information(this, tr("Workflow Default Saved"),
-            tr("The %1 layout was written to\n\n%2\n\nRebuild to ship it.").arg(name, path));
-    }
-    else {
-        QMessageBox::warning(this, tr("Workflow Default Not Saved"),
-            tr("Could not write the workflow defaults:\n\n%1").arg(err));
-    }
+    if (currentWorkflow == WfSource) requestView(browseView);
     syncWorkflowWorkspaceMenus();
 }
 
 bool MW::writeWorkflowDefaultsJson(QString &path, QString &err) const
 {
 /*
-    Write every captured workflow default to Workspaces/defaults.json in the source tree
+    Write every Winnow default to Workspaces/defaults.json in the source tree
     (WINNOW_SOURCE_DIR, defined by CMake), so the file that is compiled into the resource
     is the file that is updated.  Without a source tree -- a deployed build, or a build
     system that does not define it -- the file goes to the desktop and the caller says
@@ -1673,9 +1704,9 @@ bool MW::writeWorkflowDefaultsJson(QString &path, QString &err) const
     path = dir + "/defaults.json";
 
     QJsonObject root;
-    for (int wf = 0; wf < WsCount; ++wf) {
-        if (wf >= isWorkflowDefault.count() || !isWorkflowDefault.at(wf)) continue;
-        root.insert(workflowKeys().at(wf), workspaceToJson(workflowDefaultWs.at(wf)));
+    for (int lay = 0; lay < layoutSlots.count(); ++lay) {
+        if (!layoutSlots.at(lay).hasShipped) continue;
+        root.insert(workflowKeys().at(lay), workspaceToJson(layoutSlots.at(lay).shipped));
     }
 
     QFile f(path);
@@ -1691,46 +1722,52 @@ bool MW::writeWorkflowDefaultsJson(QString &path, QString &err) const
 void MW::syncWorkflowWorkspaceMenus()
 {
 /*
-    Keep the two workflow branches of the Workspace menu in step with the data:
-
-    - Reset Winnow defaults is always shown, but its "Set Default from Current
-      Layout ..." item exists only for Rory (G::isRory is false in a release build), and
-      MW::rory re-runs this when it is toggled at runtime.
-    - For Rory, a Reset item is greyed, with the reason in its tooltip, when the
-      resource has no layout for that workflow -- it would apply the generic built-in
-      layout instead, so saying so beats silently doing something else.  For everyone
-      else the built-in layout IS Winnow's default, so the item stays live.
-    - An override item shows ticked when the override is in use, and its tooltip says
-      whether a layout has been captured for it.
+    The three layout actions name what they will act on: the current slot, or the
+    custom workspace in use.  Run when the Workspace menu is about to show, and by
+    MW::rory, since Save's target follows G::isRory.  Revert is greyed, with the reason,
+    when there is no user layout to revert.
 */
     if (G::isLogger) G::log("MW::syncWorkflowWorkspaceMenus");
-    if (workspaceDefaultMenuAction == nullptr) return;
+    if (saveLayoutAction == nullptr) return;
 
-    captureWorkflowDefaultSeparator->setVisible(G::isRory);
-    captureWorkflowDefaultAction->setVisible(G::isRory);
+    const int lay = currentLayoutSlot();
+    if (lay < 0 || lay >= layoutSlots.count()) return;
+    const QString name = workflowNames().at(lay);
+    const bool isCustom = activeCustomWs >= 0 && activeCustomWs < workspaces->count();
 
-    for (int wf = 0; wf < workflowDefaultActions.count(); ++wf) {
-        QAction *a = workflowDefaultActions.at(wf);
-        const bool isDefined = wf < isWorkflowDefault.count() && isWorkflowDefault.at(wf);
-        a->setEnabled(isDefined || !G::isRory);
-        a->setToolTip(isDefined || !G::isRory
-            ? tr("Turn off your %1 override and use the layout Winnow ships with.  "
-                 "Applied now if %1 is on screen, otherwise when %1 is next opened")
-                  .arg(workflowNames().at(wf))
-            : tr("No %1 layout has been captured yet — Winnow's built-in layout is used")
-                  .arg(workflowNames().at(wf)));
+    if (isCustom) {
+        const QString wsName = workspaces->at(activeCustomWs).name;
+        saveLayoutAction->setText(tr("Update Custom Workspace \"%1\"").arg(wsName));
+        saveLayoutAction->setToolTip(
+            tr("Save the current layout as the custom workspace \"%1\"").arg(wsName));
+    }
+    else if (G::isRory) {
+        saveLayoutAction->setText(tr("Save as Winnow Default for %1").arg(name));
+        saveLayoutAction->setToolTip(
+            tr("Write the current layout to Workspaces/defaults.json, the %1 layout "
+               "Winnow ships with, and delete your own %1 layout").arg(name));
+    }
+    else {
+        saveLayoutAction->setText(tr("Save Layout for %1").arg(name));
+        saveLayoutAction->setToolTip(
+            tr("Use the current layout whenever %1 is opened").arg(name));
     }
 
-    for (int wf = 0; wf < workflowOverrideActions.count(); ++wf) {
-        QAction *a = workflowOverrideActions.at(wf);
-        QSignalBlocker blocker(a);
-        a->setChecked(wf < isWorkflowOverride.count() && isWorkflowOverride.at(wf));
-        a->setToolTip(hasWorkflowOverride(wf)
-            ? tr("Use your own %1 layout instead of the one Winnow ships with")
-                  .arg(workflowNames().at(wf))
-            : tr("Tick to save the current layout as your %1 workspace")
-                  .arg(workflowNames().at(wf)));
-    }
+    const bool hasUser = hasUserLayout(lay);
+    revertLayoutAction->setText(tr("Revert %1 to Winnow Default").arg(name));
+    revertLayoutAction->setEnabled(hasUser);
+    revertLayoutAction->setToolTip(hasUser
+        ? tr("Delete your %1 layout and use the one Winnow ships with").arg(name)
+        : tr("%1 is already using the layout Winnow ships with").arg(name));
+    revertLayoutAction->setProperty("disabledReason", hasUser ? QString()
+        : tr("%1 is already using the layout Winnow ships with").arg(name));
+
+    bool hasAnyUser = false;
+    for (int i = 0; i < layoutSlots.count(); ++i) hasAnyUser |= hasUserLayout(i);
+    revertAllLayoutsAction->setEnabled(hasAnyUser);
+    revertAllLayoutsAction->setToolTip(hasAnyUser
+        ? tr("Delete every layout you have saved and use the ones Winnow ships with")
+        : tr("Every workflow is already using the layout Winnow ships with"));
 }
 
 /*  THE UI MODEL: SOURCE x WORKFLOW x VIEW *****************************************
@@ -1764,12 +1801,12 @@ void MW::requestView(int view)
 
     ALREADY IN BROWSE IT ONLY CHANGES THE VIEW.  The view keys used to reassert the Browse
     layout every time, as the way to recover a stranded panel; that made a view key move
-    panels as a side effect, and it is now MW::resetLayout's job.  A named workspace
-    (currentWorkflow -1) is the user's own layout and is left alone the same way.
+    panels as a side effect, and it is now MW::resetLayout's job.  A custom Browse
+    workspace in use is left alone the same way.
 */
     if (G::isLogger) G::log("MW::requestView", QString::number(view));
     const bool inDevelop = G::operationMode == G::OperationMode::Develop;
-    const bool otherWorkflow = currentWorkflow >= 0 && currentWorkflow != WfSource;
+    const bool otherWorkflow = currentWorkflow != WfSource;
     setOperationMode(G::OperationMode::Preview);
     if (otherWorkflow || inDevelop) invokeWorkflowWorkspace(WfSource);
 
@@ -1787,14 +1824,22 @@ void MW::invokeBrowseWorkflow()
 {
 /*
     The switcher's Browse button and View > Browse Mode: Browse, in the view it was last
-    shown in.  Unlike a view key this applies the Browse layout from a named workspace
+    shown in.  Unlike a view key this applies the Browse layout from a custom workspace
     too -- asking for Browse by name is asking for its layout -- and it re-applies it
     when the source has changed since (a folder click out of the Library), so the
     layout matches the source again.
+
+    Entering a custom Browse workspace (keepCustomWs) always applies it, and keeps the
+    view it was saved with.
 */
     if (G::isLogger) G::log("MW::invokeBrowseWorkflow");
     setOperationMode(G::OperationMode::Preview);
-    if (currentWorkflow != WfSource || browseLayoutApplied != workflowLayout(WfSource))
+    if (keepCustomWs) {
+        invokeWorkflowWorkspace(WfSource);
+        return;
+    }
+    if (currentWorkflow != WfSource || activeCustomWs >= 0
+        || browseLayoutApplied != workflowLayout(WfSource))
         invokeWorkflowWorkspace(WfSource);
     requestView(browseView);
 }
@@ -1833,8 +1878,11 @@ void MW::chooseSource(bool library, const QString &src)
     const bool inBrowse = currentWorkflow == WfSource
                           && G::operationMode != G::OperationMode::Develop;
     const bool toBrowse = !library && !inBrowse;
+    /*  A custom Browse workspace serves both sources, so it stays put. */
+    const bool isCustomBrowse = inBrowse && activeCustomWs >= 0;
     const bool follow = toBrowse
-                        || (inBrowse && G::scope != target && before != lay);
+                        || (inBrowse && !isCustomBrowse && G::scope != target
+                            && before != lay);
     /*  COVERED FROM THE CLICK. The Browse layout switch below takes about a second
         (timeline probe: 1.1 s), and until setCatalogScopeWhole puts up its message the
         folder being left sat on screen while the panels moved around it. Raised here;
@@ -1887,9 +1935,9 @@ void MW::invokeSlideShowWorkflow()
     the end of an unwrapped sequence) returns to the workflow it was entered from, via
     MW::leaveSlideShowWorkflow.
 
-    ALWAYS THE SHIPPED DEFAULT LAYOUT (MW::invokeWorkflowDefault), never the user
-    override: a show is a presentation, so it looks the same every time. The override
-    is still what Reset Layout applies while in the Slide Show module.
+    The Slide Show layout resolves like any other (MW::invokeWorkflowLayout), so a
+    saved Slide Show layout is honoured.  A custom workspace in use is recorded so the
+    show returns to it.
 
     Clicked while a show is running, it stops it. S alone still starts and stops a show
     in whatever layout is up, and does not change workflow.
@@ -1901,11 +1949,9 @@ void MW::invokeSlideShowWorkflow()
     }
     if (!slideShowAction->isEnabled()) return;
     const int from = currentWorkflow;
-    if (from == -1) slideShowReturnWs = ws;     // invokeWorkspace overwrites ws
+    slideShowReturnCustomWs = activeCustomWs;   // cleared by the switch below
     setOperationMode(G::OperationMode::Preview);
-    invokeWorkflowDefault(WfSlideShow);
-    currentWorkflow = WfSlideShow;      // invokeWorkspace stamped -1 (a named workspace)
-    syncWorkflowSwitcher();
+    invokeWorkflowWorkspace(WfSlideShow);
     slideShowReturnWorkflow = from == WfSlideShow ? WfSource : from;
     slideShow();
 }
@@ -1919,13 +1965,21 @@ void MW::leaveSlideShowWorkflow()
     changed away from Slide Show.
 */
     const int wf = slideShowReturnWorkflow;
+    const int customWs = slideShowReturnCustomWs;
     slideShowReturnWorkflow = kNoSlideShowReturn;
+    slideShowReturnCustomWs = -1;
     if (wf == kNoSlideShowReturn || currentWorkflow != WfSlideShow) return;
     if (G::isLogger) G::log("MW::leaveSlideShowWorkflow", QString::number(wf));
 
+    // back to the custom workspace the show was started from
+    if (customWs >= 0 && customWs < workspaces->count()
+        && workspaces->at(customWs).workflow == wf) {
+        invokeCustomWorkspace(customWs);
+        return;
+    }
+
     QAction *a = nullptr;
     switch (wf) {
-    case -1:          invokeWorkspace(slideShowReturnWs); return;   // named workspace
     case WfSource:    invokeBrowseWorkflow(); return;
     case WfDevelop:   a = operationModeAction; break;
     case WfKeywords:  a = keywordsWorkspaceAction; break;
@@ -1966,7 +2020,7 @@ bool MW::inMapModule() const
 /*
     The WORKFLOW, not the page: while a folder loads the page is the message page, and
     MW::fileSelectionChange uses this to put the map back up afterwards. Every way out
-    of Map changes currentWorkflow (invokeWorkspace, invokeWorkflowWorkspace).
+    of Map changes currentWorkflow (invokeWorkflowLayout).
 */
     return mapView && currentWorkflow == WfMap;
 }
@@ -2010,19 +2064,17 @@ void MW::resetLayout()
 {
 /*
     Window > Workspace > Reset Layout: reapply the current workflow's layout (the user's
-    override when ticked, else the shipped one), or the named workspace in use.  The
-    recovery for a panel left open or a dock stranded on a monitor that is gone.
+    layout, else the Winnow default), or the custom workspace in use.  The recovery for
+    a panel left open or a dock stranded on a monitor that is gone.
 
     Neither the operation mode nor the view changes: a workflow layout carries a central
     view of its own, so Browse's view is put back afterwards.
 */
     if (G::isLogger) G::log("MW::resetLayout");
-    if (currentWorkflow < 0) {
-        invokeWorkspace(ws);
-        return;
-    }
     const int wf = currentWorkflow;
+    keepCustomWs = true;
     invokeWorkflowWorkspace(wf);
+    keepCustomWs = false;
     if (wf == WfSource) requestView(browseView);
 }
 
@@ -2050,8 +2102,8 @@ void MW::syncWorkflowSwitcher()
 {
 /*
     Light the button for currentWorkflow in the Module dock, the title bar (macOS) and
-    the (hidden) status-bar switcher; none while a named workspace is in use.  Set programmatically,
-    so a click the workflow refused shows the truth again.
+    the (hidden) status-bar switcher.  Set programmatically, so a click the workflow
+    refused shows the truth again.
 */
     for (const QList<QToolButton *> *btns : {&moduleBtns, &workflowBtns, &titleModeBtns}) {
         for (int wf = 0; wf < btns->count(); ++wf) {

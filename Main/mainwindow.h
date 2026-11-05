@@ -315,6 +315,10 @@ public:
            flag existed reads as true, ie the original behaviour.  The Workspace menu
            appends " *" to the name of a workspace with it on. */
         bool isGeometryIncluded = true;
+        /* A CUSTOM workspace's workflow (a Workflow), which it enters when invoked; -1
+           for a workflow layout, which belongs to its slot instead.  Serialised as a
+           key ("workflow"), see MW::workflowKeyFor. */
+        int workflow = -1;
         // Visibility
         bool isWindowTitleBarVisible;
         bool isMenuBarVisible;
@@ -394,12 +398,12 @@ public:
         layout) and WsLibrary is Browse's Library layout.  MW::workflowLayout picks
         Browse's by G::scope.
 
-        Each workflow has a DEFAULT layout that ships with Winnow, read from the
-        resource ":/Workspaces/defaults.json" (MW::loadWorkflowDefaults), and an
-        optional USER OVERRIDE the user captures from the current layout
-        (Window > Workspace > User override), saved in the QSettings group
-        "WorkflowWorkspaces/<key>".  MW::invokeWorkflowWorkspace picks the override
-        when it is ticked, else the shipped default, else MW::builtInDefaultWorkspace.
+        Each layout slot resolves as USER LAYOUT ?? WINNOW DEFAULT ?? BUILT-IN.  The
+        Winnow default ships in the resource ":/Workspaces/defaults.json"
+        (MW::loadWorkflowDefaults); the user layout is saved by Window > Workspace >
+        Save Layout in the QSettings group "WorkflowWorkspaces/<key>".  A CUSTOM
+        workspace (Ctrl+0..9) belongs to a workflow and stands in for its layout
+        (activeCustomWs).  See MW::invokeWorkflowLayout.
 
         To add a workflow: append to the enum before WfCount, add a row to
         MW::workflowKeys / MW::workflowNames, and capture a default layout. */
@@ -420,16 +424,27 @@ public:
        them; a rename carries a migration (see MW::migrateWorkflowKey). */
     static const QStringList &workflowKeys();
     static QStringList workflowNames();
-    QList<WorkspaceData> workflowDefaultWs;   // shipped layout, indexed by WorkflowLayout
-    QList<bool> isWorkflowDefault;            // a shipped layout was found
-    QList<WorkspaceData> workflowUserWs;      // the user's captured layout
-    QList<bool> isWorkflowOverride;           // use the user's layout, not the default
+    /*  One per WorkflowLayout.  The slot has a user layout when user.state is not
+        empty (hasUserLayout). */
+    struct LayoutSlot {
+        WorkspaceData shipped;      // the Winnow default, from defaults.json
+        bool hasShipped = false;
+        WorkspaceData user;         // the user's saved layout
+    };
+    QVector<LayoutSlot> layoutSlots;
+    /*  The custom workspace (index into workspaces) whose layout stands in for its
+        workflow's, or -1.  Cleared when another workflow is entered. */
+    int activeCustomWs = -1;
+    /*  Set around the calls that keep the custom workspace (invoking it, Reset Layout,
+        returning from a slide show).  Any other workflow switch, its own button or key
+        included, goes back to the workflow's layout. */
+    bool keepCustomWs = false;
     /*  The Browse layout last applied (WfSource or WsLibrary), so a source change
         inside Browse knows whether the layout has to follow it. */
     int browseLayoutApplied = WfSource;
-    /*  The workflow the session is in, or -1 when a named workspace was invoked instead.
-        Persisted ("currentWorkflow") because the layout a session is LEFT in is not
-        always a layout the next session can start in -- see MW::showEvent. */
+    /*  The workflow the session is in.  Persisted ("currentWorkflow") because the
+        layout a session is LEFT in is not always a layout the next session can start
+        in -- see MW::showEvent. */
     int currentWorkflow = WfSource;
     /*  The central views, in the order of the View menu.  browseView is the one Browse
         was last shown in, which is where the switcher's Browse button goes back to. */
@@ -652,12 +667,13 @@ public:
     bool isSlideShowRandom;
     bool isSlideShowWrap = true;
     QStack<QString> *slideshowRandomHistoryStack;
-    /*  The workflow the Slide Show module was entered from (-1 = a named workspace), put
-        back when that show stops. kNoSlideShowReturn when the show was started by S,
-        which does not change the layout. See MW::invokeSlideShowWorkflow. */
+    /*  The workflow the Slide Show module was entered from, put back when that show
+        stops, with the custom workspace that was standing in for it (-1 for none).
+        kNoSlideShowReturn when the show was started by S, which does not change the
+        layout. See MW::invokeSlideShowWorkflow. */
     static constexpr int kNoSlideShowReturn = -2;
     int slideShowReturnWorkflow = kNoSlideShowReturn;
-    WorkspaceData slideShowReturnWs;    // the named workspace, when that was -1
+    int slideShowReturnCustomWs = -1;
 
     /* preferences: map. An OPTIONAL tile provider for the Map module: with mapTileUrl
        empty the map uses OpenStreetMap's own tiles, which need no key (see
@@ -995,6 +1011,7 @@ public slots:
     void rptIngestErrors(QStringList failedToCopy, QStringList integrityFailure);
     void invokeCurrentWorkspace();
     void invokeWorkspaceFromAction(QAction *workAction);
+    void invokeCustomWorkspace(int i);
     void invokeWorkspace(const WorkspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
     void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
@@ -1002,9 +1019,8 @@ public slots:
     void manageWorkspaces();
     void deleteWorkspace(int n);
     void renameWorkspace(int n, QString name);
-    void reassignWorkspace(int n);
     /* Turn the window position/size on or off for a workspace.  n is the index into
-       workspaces, or -1 for the Winnow default workspace. */
+       workspaces. */
     void setWorkspaceGeometryIncluded(int n, bool isIncluded);
     /* Restore the main window dock layout, migrating a state saved by a build with fewer
        docks instead of throwing it away.  See MW::winnowStateVersion. */
@@ -1019,20 +1035,22 @@ public slots:
     /*  Workflow workspaces.  See the Workflow enum above. */
     void invokeWorkflowWorkspace(int wf);
     void invokeWorkflowLayout(int wf, int lay);
-    void invokeWorkflowDefault(int lay);        // lay: a WorkflowLayout
-    void toggleWorkflowOverride(int lay, bool isOverride);
-    void resetWorkflowDefault(int lay);
-    void resetAllWorkflowDefaults();
+    void saveCurrentLayout();
+    void revertCurrentLayout();
+    void revertAllLayouts();
     /*  Library | Folders: the Module dock's source buttons and View > Library / Folders.
         In Browse the layout follows the source. */
     void chooseSource(bool library, const QString &src);
-    void captureWorkflowDefault();
-    void captureWorkflowOverride();
     void loadWorkflowDefaults();
-    void loadWorkflowOverrides();
+    void loadWorkflowLayouts();
     void migrateWorkflowKey(const QString &from, const QString &to);
-    void saveWorkflowOverride(int lay);
-    bool hasWorkflowOverride(int lay) const;
+    void saveWorkflowLayout(int lay);
+    bool hasUserLayout(int lay) const;
+    /*  The layout slot the current layout belongs to: workflowLayout(currentWorkflow). */
+    int currentLayoutSlot() const;
+    QString customWorkflowName(int wf) const;
+    static QString workflowKeyFor(int wf);
+    static int workflowFromKey(const QString &key);
     void syncWorkflowWorkspaceMenus();
     bool writeWorkflowDefaultsJson(QString &path, QString &err) const;
     void requestView(int view);
@@ -2131,19 +2149,11 @@ private:
     QAction *newWorkspaceAction;
     QAction *manageWorkspaceAction;
     QList<QAction *> workspaceActions;
-    /*  Workflow workspaces (see the Workflow enum).  Reset Winnow defaults and User
-        override are always shown and list the same layouts; only the capture item (and
-        its separator) is Rory only. */
-    QMenu *workspaceDefaultMenu = nullptr;
-    QMenu *workspaceOverrideMenu = nullptr;
-    QAction *workspaceDefaultMenuAction = nullptr;
-    QAction *workspaceOverrideMenuAction = nullptr;
-    QList<QAction *> workflowDefaultActions;
-    QList<QAction *> workflowOverrideActions;
-    QAction *workflowDefaultAllAction = nullptr;
-    QAction *captureWorkflowDefaultSeparator = nullptr;
-    QAction *captureWorkflowDefaultAction = nullptr;
-    QAction *captureWorkflowOverrideAction = nullptr;
+    /*  Workflow layouts (see the Workflow enum).  All three act on the CURRENT layout
+        slot; their text follows it (MW::syncWorkflowWorkspaceMenus). */
+    QAction *saveLayoutAction = nullptr;
+    QAction *revertLayoutAction = nullptr;
+    QAction *revertAllLayoutsAction = nullptr;
     QAction *keywordsWorkspaceAction = nullptr;     // "K"
     QAction *browseWorkflowAction = nullptr;        // Browse, in the view it was last in
     QAction *embellishWorkspaceAction = nullptr;    // no key yet

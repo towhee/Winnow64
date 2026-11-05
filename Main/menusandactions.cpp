@@ -2176,13 +2176,13 @@ void MW::createWindowActions()
     connect(metadataFixedSizeAction, &QAction::triggered, this, &MW::setMetadataDockFixedSize);
 
     // Workspace submenu of Window menu
-    newWorkspaceAction = new QAction(tr("New Workspace"), this);
+    newWorkspaceAction = new QAction(tr("New Custom Workspace ..."), this);
     newWorkspaceAction->setObjectName("newWorkspace");
     newWorkspaceAction->setShortcutVisibleInContextMenu(true);
     addAction(newWorkspaceAction);
     connect(newWorkspaceAction, &QAction::triggered, this, &MW::newWorkspace);
 
-    manageWorkspaceAction = new QAction(tr("Manage Workspaces ..."), this);
+    manageWorkspaceAction = new QAction(tr("Manage Custom Workspaces ..."), this);
     manageWorkspaceAction->setObjectName("manageWorkspaces");
     manageWorkspaceAction->setShortcutVisibleInContextMenu(true);
     addAction(manageWorkspaceAction);
@@ -2215,50 +2215,23 @@ void MW::createWindowActions()
     }
     addActions(workspaceActions);
 
-    /*  WORKFLOW WORKSPACES (see MW::invokeWorkflowWorkspace).  Two parallel lists of
-        actions, one per workflow: Reset Winnow defaults goes back to the layout Winnow
-        ships with, User override ticks the user's own layout in place of it.  Both are
-        built here and kept in step by MW::syncWorkflowWorkspaceMenus.  Indexed by
-        WorkflowLayout -- Browse has two, Library and Folders -- and added to the menus
-        in workflowLayoutOrder. */
-    const QStringList wfNames = workflowNames();
-    for (int wf = 0; wf < WsCount; ++wf) {
-        QAction *d = new QAction(wfNames.at(wf), this);
-        d->setObjectName("workflowDefault" + workflowKeys().at(wf));
-        d->setShortcutVisibleInContextMenu(true);
-        connect(d, &QAction::triggered, this, [this, wf]() { resetWorkflowDefault(wf); });
-        workflowDefaultActions.append(d);
+    /*  WORKFLOW LAYOUTS (see MW::invokeWorkflowLayout).  All three act on the CURRENT
+        layout slot, so their text follows it -- MW::syncWorkflowWorkspaceMenus sets it
+        when the Workspace menu is about to show. */
+    saveLayoutAction = new QAction(tr("Save Layout"), this);
+    saveLayoutAction->setObjectName("saveLayout");
+    saveLayoutAction->setShortcutVisibleInContextMenu(true);
+    connect(saveLayoutAction, &QAction::triggered, this, &MW::saveCurrentLayout);
 
-        QAction *o = new QAction(wfNames.at(wf), this);
-        o->setObjectName("workflowOverride" + workflowKeys().at(wf));
-        o->setCheckable(true);
-        o->setShortcutVisibleInContextMenu(true);
-        connect(o, &QAction::triggered, this, [this, wf](bool checked) {
-            toggleWorkflowOverride(wf, checked);
-        });
-        workflowOverrideActions.append(o);
-    }
+    revertLayoutAction = new QAction(tr("Revert to Winnow Default"), this);
+    revertLayoutAction->setObjectName("revertLayout");
+    revertLayoutAction->setShortcutVisibleInContextMenu(true);
+    connect(revertLayoutAction, &QAction::triggered, this, &MW::revertCurrentLayout);
 
-    workflowDefaultAllAction = new QAction(tr("All"), this);
-    workflowDefaultAllAction->setObjectName("workflowDefaultAll");
-    workflowDefaultAllAction->setShortcutVisibleInContextMenu(true);
-    workflowDefaultAllAction->setToolTip(
-        tr("Turn off every user override and go back to the layouts Winnow ships with"));
-    connect(workflowDefaultAllAction, &QAction::triggered,
-            this, &MW::resetAllWorkflowDefaults);
-
-    captureWorkflowDefaultAction = new QAction(tr("Set Default from Current Layout ..."), this);
-    captureWorkflowDefaultAction->setObjectName("captureWorkflowDefault");
-    captureWorkflowDefaultAction->setShortcutVisibleInContextMenu(true);
-    connect(captureWorkflowDefaultAction, &QAction::triggered,
-            this, &MW::captureWorkflowDefault);
-
-    captureWorkflowOverrideAction =
-        new QAction(tr("Update Override from Current Layout ..."), this);
-    captureWorkflowOverrideAction->setObjectName("captureWorkflowOverride");
-    captureWorkflowOverrideAction->setShortcutVisibleInContextMenu(true);
-    connect(captureWorkflowOverrideAction, &QAction::triggered,
-            this, &MW::captureWorkflowOverride);
+    revertAllLayoutsAction = new QAction(tr("Revert All Layouts to Winnow Defaults"), this);
+    revertAllLayoutsAction->setObjectName("revertAllLayouts");
+    revertAllLayoutsAction->setShortcutVisibleInContextMenu(true);
+    connect(revertAllLayoutsAction, &QAction::triggered, this, &MW::revertAllLayouts);
 }
 
 void MW::createHelpActions()
@@ -3176,44 +3149,26 @@ void MW::createWindowMenu()
     windowGroupAct->setMenu(windowMenu);
 
     workspaceMenu = windowMenu->addMenu(tr("&Workspace"));
-    workspaceMenu->addAction(newWorkspaceAction);
-    workspaceMenu->addAction(manageWorkspaceAction);
+    /*  The workflow layout actions first: they act on the current layout slot. */
+    workspaceMenu->addAction(saveLayoutAction);
+    workspaceMenu->addAction(revertLayoutAction);
+    workspaceMenu->addAction(revertAllLayoutsAction);
     workspaceMenu->addAction(resetLayoutAction);
     workspaceMenu->addSeparator();
-
-    /*  The two workflow branches, both always shown and listing the same layouts.  Only
-        Reset Winnow defaults' capture item is Rory only (see
-        MW::syncWorkflowWorkspaceMenus, which also runs from MW::rory when it is toggled
-        at runtime). */
-    workspaceDefaultMenu = workspaceMenu->addMenu(tr("Reset Winnow defaults"));
-    workspaceDefaultMenuAction = workspaceDefaultMenu->menuAction();
-    workspaceDefaultMenu->addAction(workflowDefaultAllAction);
-    workspaceDefaultMenu->addSeparator();
-    for (int lay : workflowLayoutOrder())
-        workspaceDefaultMenu->addAction(workflowDefaultActions.at(lay));
-    captureWorkflowDefaultSeparator = workspaceDefaultMenu->addSeparator();
-    workspaceDefaultMenu->addAction(captureWorkflowDefaultAction);
-
-    workspaceOverrideMenu = workspaceMenu->addMenu(tr("User override"));
-    workspaceOverrideMenuAction = workspaceOverrideMenu->menuAction();
-    for (int lay : workflowLayoutOrder())
-        workspaceOverrideMenu->addAction(workflowOverrideActions.at(lay));
-    workspaceOverrideMenu->addSeparator();
-    workspaceOverrideMenu->addAction(captureWorkflowOverrideAction);
-
-    /*  Tooltips say why a Default item is greyed and whether an override has been
-        captured, so the menus have to show them. */
-    workspaceDefaultMenu->setToolTipsVisible(true);
-    workspaceOverrideMenu->setToolTipsVisible(true);
+    workspaceMenu->addAction(newWorkspaceAction);
+    workspaceMenu->addAction(manageWorkspaceAction);
+    /*  Revert says why it is greyed, so the menu shows tooltips. */
+    workspaceMenu->setToolTipsVisible(true);
+    connect(workspaceMenu, &QMenu::aboutToShow, this, &MW::syncWorkflowWorkspaceMenus);
 
     workspaceMenu->addSeparator();
     // add 10 dummy menu items for custom workspaces
     for (int i=0; i<10; i++) {
         workspaceMenu->addAction(workspaceActions.at(i));
     }
-    /*  QMenu::triggered fires for submenu items too, but MW::invokeWorkspaceFromAction
-        matches on POSITION in workspaceActions, so a workflow action (not in that list)
-        is ignored there and only runs its own connection. */
+    /*  QMenu::triggered fires for every item, but MW::invokeWorkspaceFromAction matches
+        on POSITION in workspaceActions, so a layout action (not in that list) is
+        ignored there and only runs its own connection. */
     connect(workspaceMenu, SIGNAL(triggered(QAction*)),
             SLOT(invokeWorkspaceFromAction(QAction*)));
     syncWorkflowWorkspaceMenus();

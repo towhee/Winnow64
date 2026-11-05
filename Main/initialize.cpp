@@ -3503,8 +3503,8 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
     One button per workflow, the active one lit by MW::syncWorkflowSwitcher. Each button
     triggers its workflow's action, so a click and the key run the same code; the lit
     button is then set from currentWorkflow, so a refused switch (Develop in the cache
-    folder) leaves it where it was. None is lit while a named workspace is applied, which
-    is not a workflow.
+    folder) leaves it where it was. A custom workspace belongs to a workflow, which is
+    lit while it is applied.
 
     Built before createActions, so a button looks its action up at click time; the
     enabled state and the reason for a greyed button are mirrored from the actions in

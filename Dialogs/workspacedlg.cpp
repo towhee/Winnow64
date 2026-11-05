@@ -49,6 +49,7 @@ public:
 
 WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
                            const QList<bool> &isGeometryIncluded,
+                           const QStringList &workflowNames,
                            QWidget *parent) :
     QDialog(parent),
     ui(new Ui::Workspacedlg)
@@ -56,13 +57,13 @@ WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
     ui->setupUi(this);
     this->mainWindow = parent;
     isGeometry = isGeometryIncluded;
+    workflows = workflowNames;
 
     // get height for dropdown items from combobox height
     int h = ui->workspaceCB->height() - 8;
 
-    /* The dropdown lists the user's saved workspaces only.  The per-workflow default and
-       override layouts (Source, Develop, Keywords, Embellish, Slide Show) are managed
-       from Window > Workspace, not here. */
+    /* The dropdown lists the custom workspaces only.  The workflow layouts (Browse,
+       Develop, Keywords ...) are managed from Window > Workspace, not here. */
     ui->workspaceCB->view()->setItemDelegate(new ComboSeparatorDelegate(ui->workspaceCB));
 
     // populate the dropdown list
@@ -101,8 +102,9 @@ int WorkspaceDlg::workspaceIndex() const
 void WorkspaceDlg::updateForSelection()
 {
 /*
-    The window position/size checkbox shows the selected workspace's choice.  With no
-    workspaces saved there is nothing to show, and the reason goes in the status line.
+    The window position/size checkbox shows the selected workspace's choice, and the
+    status line the workflow it opens in.  With no workspaces saved there is nothing to
+    show, and the reason goes in the status line.
 */
     int n = workspaceIndex();
     bool isChecked = false;
@@ -110,14 +112,14 @@ void WorkspaceDlg::updateForSelection()
     QString reason;
     const bool isWorkspace = n >= 0 && n < isGeometry.count();
     ui->deleteBtn->setEnabled(isWorkspace);
-    ui->reassignBtn->setEnabled(isWorkspace);
     if (isWorkspace) {
         isChecked = isGeometry.at(n);
+        if (n < workflows.count()) reason = "Opens in " + workflows.at(n) + ".";
     }
     else {
         isEnabled = false;
-        reason = "There are no saved workspaces yet.  Window > Workspace > New "
-                 "Workspace saves the current layout.";
+        reason = "There are no custom workspaces yet.  Window > Workspace > New "
+                 "Custom Workspace saves the current layout.";
     }
     /* setChecked would emit toggled and write the choice back to the workspace the user
        has just moved away from. */
@@ -144,19 +146,10 @@ void WorkspaceDlg::on_deleteBtn_clicked()
     if (n < 0) return;
     emit deleteWorkspace(n);
     if (n < isGeometry.count()) isGeometry.removeAt(n);
+    if (n < workflows.count()) workflows.removeAt(n);
     ui->workspaceCB->removeItem(ui->workspaceCB->currentIndex());
     ui->workspaceCB->setCurrentIndex(0);
     updateForSelection();
-}
-
-void WorkspaceDlg::on_reassignBtn_clicked()
-{
-    if (G::isLogger) G::log("WorkspaceDlg::on_reassignBtn_clicked");
-    int n = workspaceIndex();
-    if (n < 0) return;
-    emit reassignWorkspace(n);
-    ui->status->setText(ui->workspaceCB->currentText() + " has been reassigned");
-    QTimer::singleShot(2000, this, SLOT(clearStatus()));
 }
 
 void WorkspaceDlg::clearStatus()

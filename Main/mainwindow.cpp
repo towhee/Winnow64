@@ -450,9 +450,9 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // test if new user
     if (settings->contains("slideShowDelay") && !simulateJustInstalled) isSettings = true;
     else isSettings = false;
-    /* The shipped per-workflow layouts size the workflow lists, so they are read before
-       loadSettings -> loadWorkspaces -> loadWorkflowOverrides fills in the user's
-       overrides.  Unconditional: there is a resource to read even with no QSettings. */
+    /* The shipped per-workflow layouts size the layout slots, so they are read before
+       loadSettings -> loadWorkspaces -> loadWorkflowLayouts fills in the user's
+       layouts.  Unconditional: there is a resource to read even with no QSettings. */
     loadWorkflowDefaults();
     loadSettings();     // except settings with dependencies ie for actions not created yet
 
@@ -1338,7 +1338,7 @@ void MW::showEvent(QShowEvent *event)
             / C apply it, and "Winnow opens in the Source workspace" is true of the
             layout and not only of currentWorkflow.  The cost is that a left dock the
             user widened during a Source session does not persist across a launch --
-            the same trade E already makes, and Window > Workspace > User override is
+            the same trade E already makes, and Window > Workspace > Save Layout is
             how a different Source width is made permanent.
 
             lastWf < 0 is a state written before currentWorkflow was persisted; it
@@ -19292,9 +19292,9 @@ void MW::toggleRory()   // shortcut = "Shift+Ctrl+Alt+."
 void MW::rory()
 {
     if (pref != nullptr) pref->rory();
-    /* The Workspace menu's Default branch and the Help > Diagnostics > Tests > Developer
-       submenu are Rory only, so they appear and disappear with the flag rather than only
-       at startup. */
+    /* Save Layout writes the Winnow default for Rory, and the Help > Diagnostics >
+       Tests > Developer submenu is Rory only, so they follow the flag rather than only
+       being set at startup. */
     syncWorkflowWorkspaceMenus();
     syncDeveloperTestMenu();
     if (G::isRory) {

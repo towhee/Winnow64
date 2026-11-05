@@ -18,18 +18,18 @@ class WorkspaceDlg : public QDialog
 public:
     inline static const QString defaultWorkspaceName = "Winnow default workspace";
     /*  isGeometryIncluded holds, for each workspace in wsList, whether it restores the
-        Winnow window position and size.  The per-workflow default and override layouts
-        are NOT managed here -- they live in Window > Workspace (see the Workflow enum in
-        MW) -- so the dropdown lists only the user's saved workspaces. */
+        Winnow window position and size, and workflowNames the workflow it opens in.  The
+        workflow layouts are NOT managed here -- they live in Window > Workspace (see
+        the Workflow enum in MW) -- so the dropdown lists only the custom workspaces. */
     explicit WorkspaceDlg(QList<QString> *wsList,
                           const QList<bool> &isGeometryIncluded,
+                          const QStringList &workflowNames,
                           QWidget *parent = 0) ;
     ~WorkspaceDlg();
     Ui::Workspacedlg *ui;
 
 signals:
     void deleteWorkspace(int);
-    void reassignWorkspace(int);
     void renameWorkspace(int, QString);
     void reportWorkspaceNum(int n);
     /*  n is the index into MW::workspaces. */
@@ -37,7 +37,6 @@ signals:
 
 private slots:
     void on_deleteBtn_clicked();
-    void on_reassignBtn_clicked();
     void on_workspaceCB_editTextChanged(const QString &name);
     void clearStatus();
     void on_workspaceCB_highlighted(int index);
@@ -52,6 +51,7 @@ private:
     /*  Window position/size choice per workspace, indexed as MW::workspaces.  Held here
         so the checkbox can be set without a round trip to MW. */
     QList<bool> isGeometry;
+    QStringList workflows;      // each workspace's workflow, for the status line
     int workspaceIndex() const;
     void updateForSelection();
 };
