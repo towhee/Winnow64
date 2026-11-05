@@ -545,7 +545,8 @@ winnow_add_unit_test(tst_queryexpr unit/tst_queryexpr.cpp)
 # tst_querybuilder opens the Query Builder headless, in both modes, and loads nested
 # queries into it -- the first build crashed on exactly that (a completer freed twice).
 winnow_add_unit_test(tst_querybuilder unit/tst_querybuilder.cpp
-    ${CMAKE_SOURCE_DIR}/Dialogs/querybuilder.cpp)
+    ${CMAKE_SOURCE_DIR}/Dialogs/querybuilder.cpp
+    ${CMAKE_SOURCE_DIR}/Main/widgetcss.cpp)
 
 # tst_keywordvocab covers the AUTHORED vocabulary's tree surgery, and above all the MERGE
 # -- the one operation that walks two trees at once and destroys part of one of them.
@@ -606,7 +607,8 @@ winnow_add_unit_test(tst_keywordpaths unit/tst_keywordpaths.cpp)
 # htmlwindow comes in for Filters::howThisWorks alone -- one help button, one symbol.
 winnow_add_unit_test(tst_filters unit/tst_filters.cpp
     ${CMAKE_SOURCE_DIR}/Datamodel/filters.cpp
-    ${CMAKE_SOURCE_DIR}/Utilities/htmlwindow.cpp)
+    ${CMAKE_SOURCE_DIR}/Utilities/htmlwindow.cpp
+    ${CMAKE_SOURCE_DIR}/Main/widgetcss.cpp)
 
 # tst_rowfields pins Datamodel/rowfields.h -- the single declaration of an image's
 # fields -- against the catalog's image table. The table exists so the model's

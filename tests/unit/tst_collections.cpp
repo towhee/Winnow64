@@ -478,11 +478,12 @@ void tst_collections::anOldCollectionsDbIsRenamedNotLost()
 
     QSqlQuery q(UserDb::instance().db());
     QVERIFY(q.exec("PRAGMA user_version") && q.next());
-    QCOMPARE(q.value(0).toInt(), 3);
-    // migrated: the vocab table exists, and schema 3's audit tables
+    QCOMPARE(q.value(0).toInt(), 4);
+    // migrated: the vocab table exists, schema 3's audit tables and schema 4's picks
     QVERIFY(q.exec("SELECT COUNT(*) FROM vocab") && q.next());
     QVERIFY(q.exec("SELECT COUNT(*) FROM audit_verdict") && q.next());
     QVERIFY(q.exec("SELECT COUNT(*) FROM audit_skip") && q.next());
+    QVERIFY(q.exec("SELECT COUNT(*) FROM saved_pick") && q.next());
 }
 
 void tst_collections::theVocabularyIsImportedFromTheIndexOnce()

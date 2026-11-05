@@ -5,6 +5,8 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include "Dialogs/querybuilder.h"
+#include "Main/global.h"
+#include "Main/widgetcss.h"
 
 /*
     tst_querybuilder drives the Query Builder (Dialogs/querybuilder.h) headless.
@@ -21,6 +23,9 @@ class tst_querybuilder : public QObject
     Q_OBJECT
 
 private slots:
+    /*  The colours are G:: globals the app sets at startup (WidgetCSS::styleGlobals);
+        unset, every one is black and a colour check cannot tell states apart. */
+    void initTestCase() { WidgetCSS().styleGlobals(); }
     void opensEmptyInBothModes();
     void loadsAndReturnsANestedQuery();
     void suggestionsCanBeSetAgain();
@@ -100,7 +105,7 @@ void tst_querybuilder::aValueTheLibraryLacksIsRed()
     dlg.setExpr(Query::Expr::parse("camera:Z7 iso:12345"));
     QLineEdit *bad = valueBox(&dlg, "Z7");
     QVERIFY(bad);
-    QVERIFY(bad->styleSheet().contains("#d06060"));
+    QVERIFY(bad->styleSheet().contains(G::excludedColor.name()));
     // a number field offers nothing, so nothing typed there is "missing"
     QLineEdit *iso = valueBox(&dlg, "12345");
     QVERIFY(iso);

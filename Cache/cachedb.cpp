@@ -1854,19 +1854,28 @@ bool CacheDb::migrate(QSqlDatabase &db)
         developed images, and of images with versions, are cleared so the next scan or
         folder visit re-reads their sidecars and fills the factors. Re-runnable.
     */
-        const char *ddl[] = {
-            "ALTER TABLE image ADD COLUMN cropfx REAL NOT NULL DEFAULT -1",
-            "ALTER TABLE image ADD COLUMN cropfy REAL NOT NULL DEFAULT -1",
-            "ALTER TABLE image_version ADD COLUMN cropfx REAL NOT NULL DEFAULT -1",
-            "ALTER TABLE image_version ADD COLUMN cropfy REAL NOT NULL DEFAULT -1",
-            "UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
-            " WHERE developed = 1 OR id IN (SELECT image_id FROM image_version)",
+        /*  RE-RUNNABLE, like every block from 16 on (the migration tests rewind
+            user_version on a current file; SQLite has no ADD COLUMN IF NOT EXISTS). */
+        auto hasColumn = [&q](const QString &table, const QString &column) {
+            bool has = false;
+            if (q.exec("PRAGMA table_info(" + table + ")"))
+                while (q.next()) if (q.value(1).toString() == column) has = true;
+            return has;
         };
-        for (const char *sql : ddl) {
-            if (!q.exec(QString::fromLatin1(sql))) {
-                db.rollback();
-                return false;
+        for (const char *table : {"image", "image_version"}) {
+            for (const char *column : {"cropfx", "cropfy"}) {
+                if (hasColumn(table, column)) continue;
+                if (!q.exec(QString("ALTER TABLE %1 ADD COLUMN %2 REAL NOT NULL DEFAULT -1")
+                                .arg(table, column))) {
+                    db.rollback();
+                    return false;
+                }
             }
+        }
+        if (!q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
+                    " WHERE developed = 1 OR id IN (SELECT image_id FROM image_version)")) {
+            db.rollback();
+            return false;
         }
     }
 

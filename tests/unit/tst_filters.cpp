@@ -4,6 +4,7 @@
 
 #include "Datamodel/filters.h"
 #include "Main/global.h"
+#include "Main/widgetcss.h"
 
 /*
     THE NESTED KEYWORD CATEGORY, and the trap it set.
@@ -25,6 +26,9 @@ class tst_filters : public QObject
     Q_OBJECT
 
 private slots:
+    /*  The colours are G:: globals the app sets at startup (WidgetCSS::styleGlobals);
+        unset, every one is black and a colour check cannot tell states apart. */
+    void initTestCase() { WidgetCSS().styleGlobals(); }
     void keywordsBuildAsATree();
     void savedNestedStateSurvivesARebuild();
     void persistedStateSurvivesSettingsAndARebuild();
@@ -65,6 +69,18 @@ private:
             QTreeWidgetItem *child = category->child(i);
             if (child->data(1, Qt::EditRole).toString() == value) return child;
             if (QTreeWidgetItem *deeper = findByValue(child, value)) return deeper;
+        }
+        return nullptr;
+    }
+
+    /*  A file type by its label. Types sit under an Images or a Videos node
+        (Filters::addTypeItems), so a type is never a direct child of the category. */
+    static QTreeWidgetItem *findType(QTreeWidgetItem *category, const QString &label)
+    {
+        for (int i = 0; i < category->childCount(); ++i) {
+            QTreeWidgetItem *child = category->child(i);
+            if (child->text(0) == label) return child;
+            if (QTreeWidgetItem *deeper = findType(child, label)) return deeper;
         }
         return nullptr;
     }
@@ -486,7 +502,7 @@ void tst_filters::checksSurviveRegroupingAndSaveRestore()
     QTreeWidgetItem *van = findByValue(f.keywords, "Location|USA|WA|Vancouver");
     QVERIFY(van);
     van->setCheckState(0, Qt::PartiallyChecked);
-    f.types->child(1)->setCheckState(0, Qt::Checked);
+    findType(f.types, "NEF")->setCheckState(0, Qt::Checked);
     const QVariantMap flatState = f.persistableState();
 
     f.setGrouped(true);
@@ -504,7 +520,7 @@ void tst_filters::checksSurviveRegroupingAndSaveRestore()
     QTreeWidgetItem *again = findByValue(f.keywords, "Location|USA|WA|Vancouver");
     QVERIFY(again);
     QCOMPARE(again->checkState(0), Qt::PartiallyChecked);
-    QCOMPARE(f.types->child(1)->checkState(0), Qt::Checked);
+    QCOMPARE(findType(f.types, "NEF")->checkState(0), Qt::Checked);
 
     // and a grouped save restores into a flat tree
     Filters g(nullptr);
@@ -531,14 +547,14 @@ void tst_filters::filteringLightsTheGroupAndSignals()
     f.setGrouped(true);
     QSignalSpy spy(&f, &Filters::filteringChanged);
 
-    f.types->child(0)->setCheckState(0, Qt::Checked);
+    findType(f.types, "JPG")->setCheckState(0, Qt::Checked);
     f.setEachCatTextColor();
     QCOMPARE(spy.count(), 1);
     QCOMPARE(spy.last().at(0).toBool(), true);
     QTreeWidgetItem *files = f.types->parent();
     QVERIFY(f.isGroupHeader(files));
-    QCOMPARE(files->foreground(0).color(), QColor(Qt::yellow));
-    QCOMPARE(f.types->foreground(0).color(), QColor(Qt::yellow));
+    QCOMPARE(files->foreground(0).color(), G::attentionColor);
+    QCOMPARE(f.types->foreground(0).color(), G::attentionColor);
 
     f.setEachCatTextColor();
     QCOMPARE(spy.count(), 1);                       // only when it changes
@@ -547,7 +563,7 @@ void tst_filters::filteringLightsTheGroupAndSignals()
     QCOMPARE(spy.count(), 2);
     QCOMPARE(spy.last().at(0).toBool(), false);
     f.setEachCatTextColor();
-    QVERIFY(files->foreground(0).color() != QColor(Qt::yellow));
+    QVERIFY(files->foreground(0).color() != G::attentionColor);
 }
 
 QTEST_MAIN(tst_filters)
