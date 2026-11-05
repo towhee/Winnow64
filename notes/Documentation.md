@@ -3950,7 +3950,7 @@ The Filters "Places" category (Metadata group, beside GPS and Map pin) filters o
 
 #### 8.2.4 The Panel Is a Second View of the Category
 
-Its SELECTION is the filter (PlaceList, ExtendedSelection): a click shows only that place's images, Cmd+click adds or removes a place, Shift+click takes a range, a click on empty space stops filtering by place.
+Its SELECTION is the filter (PlaceList, ExtendedSelection): a click shows only that place's images, Cmd+click adds or removes a place, Shift+click takes a range, a plain click on a selected place unselects it (just that place; the others stay), a click on empty space stops filtering by place. The unselect waits one double-click interval (PlaceList::deselectTimer), so a double-click on a selected place zooms the map to it without dropping it from the filter.
 
 - Each change goes to MW::applyPlaceFilter, which, like a Collection or Bookmark click, clears EVERY filter and checks those places in one filterChange (refused while a load runs, with a popup; it first loads every row's metadata so membership is complete), then fits the map to them.
 - MW::syncPlaceListFromFilters, called from syncLibTreeFromFilters after every filter change and build, pushes the category's checks back into the selection (signals blocked), enables Cancel, and has the map draw the checked places (MapView::setShownPlaces).

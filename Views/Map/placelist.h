@@ -2,6 +2,7 @@
 #define PLACELIST_H
 
 #include <QHash>
+#include <QTimer>
 #include <QTreeWidget>
 
 /*
@@ -10,8 +11,8 @@
 
     A SECOND VIEW OF THE FILTERS "Places" CATEGORY, as the Collections panel is of
     Collections. The SELECTION is the filter: a click asks for that place alone, Cmd+click
-    adds or removes one, Shift+click takes a range, and a click on empty space asks for
-    none (filterRequested). MW applies it and pushes the category's checks back
+    adds or removes one, Shift+click takes a range, a click on a selected place
+    unselects it, and a click on empty space asks for none (filterRequested). MW applies it and pushes the category's checks back
     (syncFromFilter), with this list's signals blocked, so a check made in the Filters
     panel shows here too.
 
@@ -41,8 +42,14 @@ signals:
 
 protected:
     void contextMenuEvent(QContextMenuEvent *e) override;
+    void mousePressEvent(QMouseEvent *e) override;
+    void mouseDoubleClickEvent(QMouseEvent *e) override;
 
 private:
+    /*  A plain click on a selected place unselects it, one double-click interval
+        later: a double-click (zoom to it) cancels, so the filter is not dropped. */
+    QTimer deselectTimer;
+    qint64 deselectId = 0;
     static qint64 idOf(const QTreeWidgetItem *item);
     QTreeWidgetItem *itemFor(qint64 id) const;
 };

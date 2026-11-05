@@ -1,8 +1,11 @@
 #include "Views/Map/placelist.h"
 
+#include <QApplication>
 #include <QContextMenuEvent>
 #include <QHeaderView>
 #include <QMenu>
+#include <QMouseEvent>
+#include <QStyleHints>
 #include "Main/global.h"
 
 PlaceList::PlaceList(QWidget *parent) : QTreeWidget(parent)
@@ -22,6 +25,7 @@ PlaceList::PlaceList(QWidget *parent) : QTreeWidget(parent)
     setSortingEnabled(false);
     setToolTip(tr("Click a place to show only the images taken inside it.\n"
                   "Cmd+click to add or remove a place, Shift+click for a range.\n"
+                  "Click a selected place to unselect it.\n"
                   "Click empty space to stop filtering by place.\n"
                   "Right-click to rename, reshape or delete."));
 
@@ -32,6 +36,41 @@ PlaceList::PlaceList(QWidget *parent) : QTreeWidget(parent)
     });
     connect(this, &QTreeWidget::itemDoubleClicked, this,
             [this](QTreeWidgetItem *item, int) { emit zoomRequested(idOf(item)); });
+
+    deselectTimer.setSingleShot(true);
+    deselectTimer.setInterval(QApplication::styleHints()->mouseDoubleClickInterval());
+    connect(&deselectTimer, &QTimer::timeout, this, [this] {
+        QTreeWidgetItem *item = itemFor(deselectId);
+        deselectId = 0;
+        // itemSelectionChanged -> filterRequested with the places still selected
+        if (item && item->isSelected()) item->setSelected(false);
+    });
+}
+
+void PlaceList::mousePressEvent(QMouseEvent *e)
+{
+/*
+    A plain click on a selected place unselects it (and so drops it from the filter).
+    Deferred by deselectTimer; Cmd / Shift clicks keep Qt's handling.
+*/
+    if (e->button() == Qt::LeftButton && e->modifiers() == Qt::NoModifier) {
+        QTreeWidgetItem *item = itemAt(e->position().toPoint());
+        if (item && item->isSelected()) {
+            deselectId = idOf(item);
+            deselectTimer.start();
+            e->accept();
+            return;
+        }
+    }
+    QTreeWidget::mousePressEvent(e);
+}
+
+void PlaceList::mouseDoubleClickEvent(QMouseEvent *e)
+{
+    /* Double-click zooms to the place; it must not also unselect it. */
+    deselectTimer.stop();
+    deselectId = 0;
+    QTreeWidget::mouseDoubleClickEvent(e);
 }
 
 qint64 PlaceList::idOf(const QTreeWidgetItem *item)
@@ -67,6 +106,7 @@ void PlaceList::reload(const QList<Row> &rows)
         item->setTextAlignment(1, Qt::AlignRight | Qt::AlignVCenter);
         item->setToolTip(0, tr("Click to show only the images taken in \"%1\".\n"
                                "Cmd+click to add it to the places showing.\n"
+                               "Click it again to unselect it.\n"
                                "Double-click to zoom the map to it.").arg(r.name));
         if (keep.contains(r.id)) item->setSelected(true);
     }
