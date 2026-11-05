@@ -26,34 +26,38 @@ public:
     ~Filters() override;
     QRect visualRect(const QModelIndex &index) const override;
     QModelIndex indexAt(const QPoint &point) const override;
-    QTreeWidgetItem *search;
-    QTreeWidgetItem *searchTrue;
-    QTreeWidgetItem *searchFalse;
-    QTreeWidgetItem *picks;
-    QTreeWidgetItem *ratings;
-    QTreeWidgetItem *labels;
-    QTreeWidgetItem *types;
-    QTreeWidgetItem *folders;
-    QTreeWidgetItem *collections;
-    QTreeWidgetItem *queries;
-    QTreeWidgetItem *models;
-    QTreeWidgetItem *titles;
-    QTreeWidgetItem *lenses;
-    QTreeWidgetItem *keywords;
-    QTreeWidgetItem *focalLengths;
-    QTreeWidgetItem *isos;
-    QTreeWidgetItem *years;
-    QTreeWidgetItem *months;
-    QTreeWidgetItem *days;      // day of the month
-    QTreeWidgetItem *creators;
-    QTreeWidgetItem *gps;
-    QTreeWidgetItem *mapPins;
-    QTreeWidgetItem *places;
-    QTreeWidgetItem *availability;
+    /*  INITIALISED, every one. The constructor's own setText calls run dataChanged before
+        later items exist, and an uninitialised searchTrue (the stack slot of a previous
+        Filters) can equal the freshly allocated search item, sending dataChanged down
+        the search-edit path into a stale searchFalse: an intermittent crash. */
+    QTreeWidgetItem *search = nullptr;
+    QTreeWidgetItem *searchTrue = nullptr;
+    QTreeWidgetItem *searchFalse = nullptr;
+    QTreeWidgetItem *picks = nullptr;
+    QTreeWidgetItem *ratings = nullptr;
+    QTreeWidgetItem *labels = nullptr;
+    QTreeWidgetItem *types = nullptr;
+    QTreeWidgetItem *folders = nullptr;
+    QTreeWidgetItem *collections = nullptr;
+    QTreeWidgetItem *queries = nullptr;
+    QTreeWidgetItem *models = nullptr;
+    QTreeWidgetItem *titles = nullptr;
+    QTreeWidgetItem *lenses = nullptr;
+    QTreeWidgetItem *keywords = nullptr;
+    QTreeWidgetItem *focalLengths = nullptr;
+    QTreeWidgetItem *isos = nullptr;
+    QTreeWidgetItem *years = nullptr;
+    QTreeWidgetItem *months = nullptr;
+    QTreeWidgetItem *days = nullptr;      // day of the month
+    QTreeWidgetItem *creators = nullptr;
+    QTreeWidgetItem *gps = nullptr;
+    QTreeWidgetItem *mapPins = nullptr;
+    QTreeWidgetItem *places = nullptr;
+    QTreeWidgetItem *availability = nullptr;
     // QTreeWidgetItem *missingThumbs;
-    QTreeWidgetItem *compare;
+    QTreeWidgetItem *compare = nullptr;
 
-    QTreeWidgetItem *activeCategory;   // category just filtered
+    QTreeWidgetItem *activeCategory = nullptr;   // category just filtered
 
     QString catSearch = "Search";
     QString catPick = "Picks";
@@ -115,9 +119,9 @@ public:
 
     QMap<QString,int> filterCategoryToDmColumn;
 //    QHash<QString,QString>categories;
-    QLabel *filterLabel;
-    QProgressBar *bfProgressBar;
-    QFrame *msgFrame;
+    QLabel *filterLabel = nullptr;
+    QProgressBar *bfProgressBar = nullptr;
+    QFrame *msgFrame = nullptr;
 
     void createFilter(QTreeWidgetItem *cat, QString name);
     /*  THE VALUE A CHECKED ITEM IS COMPARED AGAINST, which is the item's own text for
@@ -346,7 +350,7 @@ public:
 
     QString diagnostics();
 
-    bool combineRawJpg;
+    bool combineRawJpg = false;
     bool buildingFilters = false;
     bool filtersBuilt = false;
     // bool abort = false;
@@ -626,8 +630,8 @@ private:
     QColor searchDefaultTextColor;
     QColor hdrIsFilteringColor;
     QColor hdrIsEmptyColor;
-    int indentation;
-    bool hdrJustClicked;
+    int indentation = 0;
+    bool hdrJustClicked = false;
     QModelIndex searchTrueIdx;
     bool debugFilters = false;
     /* Paint one item for its state: excluded (struck through, red) and, in the Keywords
