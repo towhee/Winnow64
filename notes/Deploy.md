@@ -45,7 +45,8 @@ pipeline, the config options and the gotchas, see `packaging/README.md`.
 >
 > **From Quark for every platform at once:** write `packaging/changes/<label>.md`, say
 > **"Build release"** (Claude runs `packaging/release.sh build`: both DMGs on Quark,
-> the installer on the Windows VM, an AppImage on each Linux VM, all tested), then
+> the installer on the Windows VM, an AppImage on each Linux VM, all tested; Claude
+> fixes, commits and rebuilds until every platform passes), then
 > **"Publish release"** (`release.sh publish`, one plan, one `yes`). See
 > `packaging/README.md` → *All platforms from Quark*.
 
