@@ -3544,6 +3544,14 @@ void MW::buildWorkflowButtons(QHBoxLayout *layout, QList<QToolButton *> &btns,
             if (a && a->isEnabled() && !isCatalogLoading) a->trigger();
             syncWorkflowSwitcher();
         });
+        /* Right-click: the layouts the workflow can open with (Winnow default, the
+           user's, its custom workspaces).  CustomContextMenu, not a contextMenuEvent
+           override -- see MW::showWorkflowContextMenu. */
+        btn->setContextMenuPolicy(Qt::CustomContextMenu);
+        connect(btn, &QToolButton::customContextMenuRequested,
+                this, [this, wf, btn](const QPoint &pos) {
+            showWorkflowContextMenu(wf, btn, pos);
+        });
     }
 }
 

@@ -1824,6 +1824,10 @@ void MW::createViewActions()
     /* Set here, not in loadShortcuts' default block (see gotoFolderAction). */
     resetLayoutAction->setShortcut(QKeySequence("Ctrl+Shift+R"));
     resetLayoutAction->setShortcutVisibleInContextMenu(true);
+    /* Names the layout once the Workspace menu is shown (syncWorkflowWorkspaceMenus). */
+    resetLayoutAction->setToolTip(
+        tr("Put the panels back the way the current layout has them.  Nothing is "
+           "saved or deleted."));
     addAction(resetLayoutAction);
     connect(resetLayoutAction, &QAction::triggered, this, &MW::resetLayout);
 
@@ -2186,7 +2190,8 @@ void MW::createWindowActions()
     manageWorkspaceAction->setObjectName("manageWorkspaces");
     manageWorkspaceAction->setShortcutVisibleInContextMenu(true);
     addAction(manageWorkspaceAction);
-    connect(manageWorkspaceAction, &QAction::triggered, this, &MW::manageWorkspaces);
+    /* A lambda: triggered(bool) would arrive as wf 0 (Browse) and filter the list. */
+    connect(manageWorkspaceAction, &QAction::triggered, this, [this] { manageWorkspaces(); });
 
     // general connection to handle invoking new workspaces
     // MacOS will not allow runtime menu insertions.  Cludge workaround

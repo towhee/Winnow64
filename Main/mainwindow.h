@@ -435,10 +435,17 @@ public:
     /*  The custom workspace (index into workspaces) whose layout stands in for its
         workflow's, or -1.  Cleared when another workflow is entered. */
     int activeCustomWs = -1;
+    /*  The workflow showing its Winnow default by choice (the Module dock context menu)
+        although it has a user layout, or -1.  Kept and cleared like activeCustomWs. */
+    int winnowDefaultWf = -1;
     /*  Set around the calls that keep the custom workspace (invoking it, Reset Layout,
         returning from a slide show).  Any other workflow switch, its own button or key
         included, goes back to the workflow's layout. */
     bool keepCustomWs = false;
+    /*  Set while MW::invokeWorkspace runs.  The layout's own central view comes up
+        through loupeDisplay / gridDisplay ..., which must not treat it as a request to
+        leave the Map module. */
+    bool isApplyingWorkspace = false;
     /*  The Browse layout last applied (WfSource or WsLibrary), so a source change
         inside Browse knows whether the layout has to follow it. */
     int browseLayoutApplied = WfSource;
@@ -674,6 +681,7 @@ public:
     static constexpr int kNoSlideShowReturn = -2;
     int slideShowReturnWorkflow = kNoSlideShowReturn;
     int slideShowReturnCustomWs = -1;
+    bool slideShowReturnWinnowDefault = false;
 
     /* preferences: map. An OPTIONAL tile provider for the Map module: with mapTileUrl
        empty the map uses OpenStreetMap's own tiles, which need no key (see
@@ -1012,16 +1020,14 @@ public slots:
     void invokeCurrentWorkspace();
     void invokeWorkspaceFromAction(QAction *workAction);
     void invokeCustomWorkspace(int i);
+    void enterWorkflowLayout(int wf, int customWs, bool isWinnowDefault);
+    void showWorkflowContextMenu(int wf, QToolButton *btn, const QPoint &pos);
     void invokeWorkspace(const WorkspaceData &w);
     void invokeRecentFolder(QAction *recentFolderActions);
     void invokeIngestHistoryFolder(QAction *ingestHistoryFolderActions);
     void snapshotWorkspace(WorkspaceData &wsd);
-    void manageWorkspaces();
+    void manageWorkspaces(int wf = -1);     // wf: list only that workflow's
     void deleteWorkspace(int n);
-    void renameWorkspace(int n, QString name);
-    /* Turn the window position/size on or off for a workspace.  n is the index into
-       workspaces. */
-    void setWorkspaceGeometryIncluded(int n, bool isIncluded);
     /* Restore the main window dock layout, migrating a state saved by a build with fewer
        docks instead of throwing it away.  See MW::winnowStateVersion. */
     bool restoreWindowState(const QByteArray &state);

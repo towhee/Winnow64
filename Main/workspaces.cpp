@@ -128,16 +128,111 @@ void MW::invokeCustomWorkspace(int i)
 */
     if (G::isLogger) G::log("MW::invokeCustomWorkspace", QString::number(i));
     if (i < 0 || i >= workspaces->count()) return;
-    QAction *a = workflowAction(workspaces->at(i).workflow);
+    enterWorkflowLayout(workspaces->at(i).workflow, i, false);
+}
+
+void MW::enterWorkflowLayout(int wf, int customWs, bool isWinnowDefault)
+{
+/*
+    Enter workflow wf with a chosen layout: custom workspace customWs (-1 for none), or
+    its Winnow default even when the user has saved a layout, or else the layout it
+    resolves to.  The workflow's own action does the entering, with keepCustomWs set so
+    the resolver (MW::invokeWorkflowLayout) honours the choice.
+*/
+    if (G::isLogger) G::log("MW::enterWorkflowLayout", QString::number(wf));
+    QAction *a = workflowAction(wf);
     if (!a) return;
     if (!a->isEnabled()) {
         G::popup->showPopup(actionDisabledReason(a), 2000);
         return;
     }
-    activeCustomWs = i;
+    activeCustomWs = customWs;
+    winnowDefaultWf = isWinnowDefault ? wf : -1;
     keepCustomWs = true;
     a->trigger();
     keepCustomWs = false;
+}
+
+void MW::showWorkflowContextMenu(int wf, QToolButton *btn, const QPoint &pos)
+{
+/*
+    Right-click on a Module dock workflow button: the layouts that workflow can open
+    with.  Winnow default, the user's own layout, Add current layout and Manage custom
+    workspaces (this workflow's only), then the custom workspaces that belong to it.  The one in use (or, for another workflow, the one it would open with) is
+    ticked.  Add current layout saves a custom workspace, so it needs the workflow to
+    be the one on screen.
+*/
+    if (G::isLogger) G::log("MW::showWorkflowContextMenu", QString::number(wf));
+    if (wf < 0 || wf >= WfCount || !btn) return;
+    const int lay = workflowLayout(wf);
+    const QString name = workflowNames().at(lay);
+    const bool isCurrent = wf == currentWorkflow;
+    const bool hasUser = hasUserLayout(lay);
+    const bool isCustomInUse = isCurrent && activeCustomWs >= 0;
+    const bool isDefaultInUse = !isCustomInUse
+                                && (!hasUser || (isCurrent && winnowDefaultWf == wf));
+
+    QMenu menu(this);
+    menu.setToolTipsVisible(true);
+
+    QAction *def = menu.addAction(tr("Winnow default"));
+    def->setCheckable(true);
+    def->setChecked(isDefaultInUse);
+    def->setToolTip(tr("Open %1 with the layout Winnow ships with").arg(name));
+    connect(def, &QAction::triggered, this, [this, wf] {
+        enterWorkflowLayout(wf, -1, true);
+    });
+
+    QAction *user = menu.addAction(tr("User override"));
+    user->setCheckable(true);
+    user->setChecked(!isCustomInUse && !isDefaultInUse);
+    user->setEnabled(hasUser);
+    user->setToolTip(hasUser
+        ? tr("Open %1 with the layout you saved").arg(name)
+        : tr("No %1 layout saved yet.  Window > Workspace > Save Layout saves one.")
+              .arg(name));
+    connect(user, &QAction::triggered, this, [this, wf] {
+        enterWorkflowLayout(wf, -1, false);
+    });
+
+    menu.addSeparator();
+
+    QAction *add = menu.addAction(tr("Add current layout ..."));
+    add->setEnabled(isCurrent);
+    add->setToolTip(isCurrent
+        ? tr("Save the current layout as a custom %1 workspace")
+              .arg(customWorkflowName(wf))
+        : tr("The layout on screen belongs to %1.  Open %2 first.")
+              .arg(customWorkflowName(currentWorkflow), customWorkflowName(wf)));
+    connect(add, &QAction::triggered, this, &MW::newWorkspace);
+
+    int customCount = 0;
+    for (int i = 0; i < workspaces->count(); ++i)
+        if (workspaces->at(i).workflow == wf) ++customCount;
+    QAction *manage = menu.addAction(tr("Manage custom workspaces ..."));
+    manage->setEnabled(customCount > 0);
+    manage->setToolTip(customCount > 0
+        ? tr("Rename or delete the %1 custom workspaces").arg(customWorkflowName(wf))
+        : tr("There are no %1 custom workspaces yet").arg(customWorkflowName(wf)));
+    connect(manage, &QAction::triggered, this, [this, wf] { manageWorkspaces(wf); });
+
+    bool isSeparated = false;
+    for (int i = 0; i < workspaces->count(); ++i) {
+        if (workspaces->at(i).workflow != wf) continue;
+        if (!isSeparated) {
+            menu.addSeparator();
+            isSeparated = true;
+        }
+        /* The shortcut is shown, not assigned: the Workspace menu's action owns it. */
+        const QString key = QKeySequence("Ctrl+" + QString::number(i))
+                                .toString(QKeySequence::NativeText);
+        QAction *c = menu.addAction(workspaces->at(i).name + "\t" + key);
+        c->setCheckable(true);
+        c->setChecked(isCurrent && activeCustomWs == i);
+        connect(c, &QAction::triggered, this, [this, i] { invokeCustomWorkspace(i); });
+    }
+
+    menu.exec(btn->mapToGlobal(pos));
 }
 
 QString MW::workspaceMenuName(const WorkspaceData &w) const
@@ -207,6 +302,17 @@ void MW::invokeWorkspace(const WorkspaceData &w)
                                         Qt::LowEventPriority);
         }
     } paintHold(this);
+
+    /*  The view this layout puts up (updateState -> setCentralView) is the LAYOUT'S, not
+        a view key: loupeDisplay and the rest must not route it through requestView to
+        leave Map.  They did once currentWorkflow stopped being cleared here, and
+        Map -> Embellish recursed without end.  Restored, so it nests. */
+    struct ApplyingFlag {
+        bool &flag;
+        bool was;
+        explicit ApplyingFlag(bool &f) : flag(f), was(f) { flag = true; }
+        ~ApplyingFlag() { flag = was; }
+    } applying(isApplyingWorkspace);
 
 
     /*  Which panel was front in each tab group in the workspace being LEFT, so coming
@@ -404,6 +510,10 @@ void MW::invokeWorkspace(const WorkspaceData &w)
 
     thumbView->scrollToCurrent("MW::invokeWorkSpace");
 
+    /*  The layout put up a Browse view; in Map the page is the map.  Covers the paths
+        that apply ws directly (leaving full screen) as well as invokeWorkflowLayout. */
+    if (inMapModule()) showMapPage();
+
     // if (w.isMaximised) showMaximized();
 }
 
@@ -477,32 +587,54 @@ void MW::snapshotWorkspace(WorkspaceData &wsd)
     wsd.isReverseSort = sortReverseAction->isChecked();
 }
 
-void MW::manageWorkspaces()
+void MW::manageWorkspaces(int wf)
 {
 /*
-    Delete and rename the user's custom workspaces, and choose whether each restores the
-    window position and size.  A custom workspace is updated by invoking it and choosing
-    Window > Workspace > Update Custom Workspace.  The workflow layouts are managed from
-    Window > Workspace, not here.
+    Rename and delete the user's custom workspaces, and choose whether each restores the
+    window position and size.  The dialog is a table; nothing is applied until its
+    Update button, so closing it any other way changes nothing.  A custom workspace is
+    updated by invoking it and choosing Window > Workspace > Update Custom Workspace.
+    The workflow layouts are managed from Window > Workspace, not here.
+
+    wf -1 lists every custom workspace (Window > Workspace).  A workflow lists only its
+    own (the Module dock context menu, MW::showWorkflowContextMenu); the names of the
+    others still count when the dialog checks a rename for duplicates.
 */
-    if (G::isLogger) G::log("MW::manageWorkspaces");
-    // Update a list of workspace names for the manager dialog
-    QList<QString> wsList;
-    QList<bool> wsGeometry;
-    QStringList wsWorkflow;
-    for (int i=0; i<workspaces->count(); i++) {
-        wsList.append(workspaces->at(i).name);
-        wsGeometry.append(workspaces->at(i).isGeometryIncluded);
-        wsWorkflow.append(customWorkflowName(workspaces->at(i).workflow));
+    if (G::isLogger) G::log("MW::manageWorkspaces", QString::number(wf));
+    QList<WorkspaceDlg::Row> rows;
+    QList<int> index;               // row -> index into workspaces
+    QStringList otherNames;         // not listed, but a rename must not take one
+    for (int i = 0; i < workspaces->count(); i++) {
+        if (wf >= 0 && workspaces->at(i).workflow != wf) {
+            otherNames << workspaces->at(i).name;
+            continue;
+        }
+        WorkspaceDlg::Row row;
+        row.name = workspaces->at(i).name;
+        row.isGeometryIncluded = workspaces->at(i).isGeometryIncluded;
+        rows.append(row);
+        index.append(i);
     }
-    workspaceDlg = new WorkspaceDlg(&wsList, wsGeometry, wsWorkflow, this);
-    connect(workspaceDlg, &WorkspaceDlg::deleteWorkspace, this, &MW::deleteWorkspace);
-    connect(workspaceDlg, &WorkspaceDlg::renameWorkspace, this, &MW::renameWorkspace);
-    connect(workspaceDlg, &WorkspaceDlg::reportWorkspaceNum, this, &MW::reportWorkspaceNum);
-    connect(workspaceDlg, &WorkspaceDlg::setWorkspaceGeometryIncluded,
-            this, &MW::setWorkspaceGeometryIncluded);
-    workspaceDlg->exec();
+    const QString title = wf >= 0
+        ? tr("Manage %1 Custom Workspaces").arg(customWorkflowName(wf))
+        : tr("Manage Custom Workspaces");
+    workspaceDlg = new WorkspaceDlg(rows, otherNames, title, this);
+    const bool isUpdate = workspaceDlg->exec() == QDialog::Accepted;
+    if (isUpdate) rows = workspaceDlg->rows();
     delete workspaceDlg;
+    workspaceDlg = nullptr;
+    /* Closed without Update: nothing changes.  The dialog has checked the names. */
+    if (!isUpdate || rows.count() != index.count()) return;
+
+    for (int r = 0; r < rows.count(); ++r) {
+        (*workspaces)[index.at(r)].name = rows.at(r).name;
+        (*workspaces)[index.at(r)].isGeometryIncluded = rows.at(r).isGeometryIncluded;
+    }
+    // last first, so the indexes still to be deleted do not move
+    for (int r = rows.count() - 1; r >= 0; --r)
+        if (rows.at(r).isDelete) deleteWorkspace(index.at(r));
+    saveWorkspaces();
+    syncWorkspaceMenu();
 }
 
 void MW::deleteWorkspace(int n)
@@ -542,20 +674,6 @@ void MW::syncWorkspaceMenu()
             workspaceActions.at(i)->setVisible(false);
         }
     }
-}
-
-void MW::setWorkspaceGeometryIncluded(int n, bool isIncluded)
-{
-/*
-    Turn the window position and size on or off for a workspace.  Called from the Manage
-    Workspaces dialog checkbox.  n is the index into workspaces.
-*/
-    if (G::isLogger) G::log("MW::setWorkspaceGeometryIncluded");
-
-    if (n < 0 || n >= workspaces->count()) return;
-    (*workspaces)[n].isGeometryIncluded = isIncluded;
-    saveWorkspaces();
-    syncWorkspaceMenu();
 }
 
 bool MW::restoreWindowState(const QByteArray &state)
@@ -769,21 +887,6 @@ void MW::builtInDefaultWorkspace()
        it to column 0 for any workflow without a shipped layout. */
     ws.name = WorkspaceDlg::defaultWorkspaceName;
     updateState();
-}
-
-void MW::renameWorkspace(int n, QString name)
-{
-    if (G::isLogger)
-        G::log("MW::renameWorkspace");
-    // do not rename if duplicate
-    if (workspaces->count() > 0) {
-        for (int i=1; i<workspaces->count(); i++) {
-            if (workspaces->at(i).name == name) return;
-        }
-        (*workspaces)[n].name = name;
-        syncWorkspaceMenu();
-    }
-    saveWorkspaces();
 }
 
 void MW::populateWorkspace(int n, QString name)
@@ -1543,28 +1646,35 @@ void MW::invokeWorkflowLayout(int wf, int lay)
     applies the layout for the source it is ABOUT to switch to, before G::scope says so.
 
     THE ONE RESOLVER.  The custom workspace standing in for wf when keepCustomWs says
-    to keep it (see MW::invokeCustomWorkspace); otherwise the slot's user layout, else
+    to keep it (see MW::enterWorkflowLayout); otherwise the slot's user layout -- unless
+    the Winnow default was chosen for wf (winnowDefaultWf), kept the same way -- else
     its Winnow default, else the built-in layout.
 */
     if (wf < 0 || wf >= WfCount || lay < 0 || lay >= layoutSlots.count()) return;
     const bool isCustom = keepCustomWs && activeCustomWs >= 0
                           && activeCustomWs < workspaces->count()
                           && workspaces->at(activeCustomWs).workflow == wf;
+    const bool isWinnowDefault = !isCustom && keepCustomWs && winnowDefaultWf == wf;
+    if (!isWinnowDefault) winnowDefaultWf = -1;
+    /*  Stamped BEFORE the layout is applied, so everything the apply runs sees the
+        workflow being entered, not the one being left (in Map, the views route
+        elsewhere -- see MW::inMapModule). */
+    currentWorkflow = wf;
     if (isCustom) {
         invokeWorkspace(workspaces->at(activeCustomWs));
     }
     else {
         activeCustomWs = -1;
         const LayoutSlot &slot = layoutSlots.at(lay);
-        if (hasUserLayout(lay) || slot.hasShipped) {
-            WorkspaceData layout = hasUserLayout(lay) ? slot.user : slot.shipped;
+        const bool useUser = hasUserLayout(lay) && !isWinnowDefault;
+        if (useUser || slot.hasShipped) {
+            WorkspaceData layout = useUser ? slot.user : slot.shipped;
             layout.isWorkflowLayout = true;         // no grid size: see invokeWorkspace
             invokeWorkspace(layout);
         }
         else builtInDefaultWorkspace();
     }
     if (wf == WfSource) browseLayoutApplied = lay;
-    currentWorkflow = wf;
     syncWorkflowSwitcher();
     if (wf == WfKeywords) focusKeywordsFilters();
     /* A workspace carries a Browse view (Loupe, Grid ...) and invokeWorkspace just put
@@ -1605,6 +1715,7 @@ void MW::saveCurrentLayout()
     if (lay < 0 || lay >= layoutSlots.count()) return;
     LayoutSlot &slot = layoutSlots[lay];
 
+    winnowDefaultWf = -1;       // what is saved is what is used from now on
     if (!G::isRory) {
         snapshotWorkspace(slot.user);
         slot.user.name = workflowNames().at(lay);
@@ -1753,19 +1864,40 @@ void MW::syncWorkflowWorkspaceMenus()
             tr("Use the current layout whenever %1 is opened").arg(name));
     }
 
+    /*  A custom workspace on screen is not the Winnow default either: Revert leaves it
+        (MW::revertCurrentLayout applies the slot, which clears activeCustomWs). */
+    /*  Reset Layout re-applies whatever is in use (MW::resetLayout); say which. */
+    const QString inUse = isCustom
+        ? tr("the custom workspace \"%1\"").arg(workspaces->at(activeCustomWs).name)
+        : winnowDefaultWf == currentWorkflow || !hasUserLayout(lay)
+              ? tr("the %1 layout Winnow ships with").arg(name)
+              : tr("your %1 layout").arg(name);
+    resetLayoutAction->setToolTip(
+        tr("Put the panels back the way %1 has them: a panel left open, moved, or "
+           "stranded on a monitor that is gone.  Nothing is saved or deleted.")
+            .arg(inUse));
+
     const bool hasUser = hasUserLayout(lay);
+    const bool canRevert = hasUser || isCustom;
+    const QString notReason =
+        tr("%1 is already using the layout Winnow ships with").arg(name);
     revertLayoutAction->setText(tr("Revert %1 to Winnow Default").arg(name));
-    revertLayoutAction->setEnabled(hasUser);
-    revertLayoutAction->setToolTip(hasUser
-        ? tr("Delete your %1 layout and use the one Winnow ships with").arg(name)
-        : tr("%1 is already using the layout Winnow ships with").arg(name));
-    revertLayoutAction->setProperty("disabledReason", hasUser ? QString()
-        : tr("%1 is already using the layout Winnow ships with").arg(name));
+    revertLayoutAction->setEnabled(canRevert);
+    if (isCustom && !hasUser)
+        revertLayoutAction->setToolTip(
+            tr("Leave the custom workspace \"%1\" and use the %2 layout Winnow ships with")
+                .arg(workspaces->at(activeCustomWs).name, name));
+    else if (hasUser)
+        revertLayoutAction->setToolTip(
+            tr("Delete your %1 layout and use the one Winnow ships with").arg(name));
+    else
+        revertLayoutAction->setToolTip(notReason);
+    revertLayoutAction->setProperty("disabledReason", canRevert ? QString() : notReason);
 
     bool hasAnyUser = false;
     for (int i = 0; i < layoutSlots.count(); ++i) hasAnyUser |= hasUserLayout(i);
-    revertAllLayoutsAction->setEnabled(hasAnyUser);
-    revertAllLayoutsAction->setToolTip(hasAnyUser
+    revertAllLayoutsAction->setEnabled(hasAnyUser || isCustom);
+    revertAllLayoutsAction->setToolTip(hasAnyUser || isCustom
         ? tr("Delete every layout you have saved and use the ones Winnow ships with")
         : tr("Every workflow is already using the layout Winnow ships with"));
 }
@@ -1838,7 +1970,7 @@ void MW::invokeBrowseWorkflow()
         invokeWorkflowWorkspace(WfSource);
         return;
     }
-    if (currentWorkflow != WfSource || activeCustomWs >= 0
+    if (currentWorkflow != WfSource || activeCustomWs >= 0 || winnowDefaultWf >= 0
         || browseLayoutApplied != workflowLayout(WfSource))
         invokeWorkflowWorkspace(WfSource);
     requestView(browseView);
@@ -1895,9 +2027,13 @@ void MW::chooseSource(bool library, const QString &src)
         raiseLoadCurtain();
     }
 
+    /*  keepCustomWs: a Winnow default chosen for Browse stays chosen for the other
+        source.  From another workflow nothing matches WfSource, so it is cleared. */
     if (follow) {
         if (toBrowse) setOperationMode(G::OperationMode::Preview);
+        keepCustomWs = true;
         invokeWorkflowLayout(WfSource, lay);
+        keepCustomWs = false;
         requestView(browseView);
     }
 
@@ -1907,7 +2043,9 @@ void MW::chooseSource(bool library, const QString &src)
         lowerLoadCurtain("MW::chooseSource Library refused");
 
     if (follow && G::scope != target) {
+        keepCustomWs = true;
         invokeWorkflowLayout(WfSource, toBrowse ? workflowLayout(WfSource) : before);
+        keepCustomWs = false;
         requestView(browseView);
     }
     /*  setScope pushes the buttons back, but an empty catalog returns before it is
@@ -1949,7 +2087,8 @@ void MW::invokeSlideShowWorkflow()
     }
     if (!slideShowAction->isEnabled()) return;
     const int from = currentWorkflow;
-    slideShowReturnCustomWs = activeCustomWs;   // cleared by the switch below
+    slideShowReturnCustomWs = activeCustomWs;   // both cleared by the switch below
+    slideShowReturnWinnowDefault = winnowDefaultWf == from && from >= 0;
     setOperationMode(G::OperationMode::Preview);
     invokeWorkflowWorkspace(WfSlideShow);
     slideShowReturnWorkflow = from == WfSlideShow ? WfSource : from;
@@ -1966,15 +2105,21 @@ void MW::leaveSlideShowWorkflow()
 */
     const int wf = slideShowReturnWorkflow;
     const int customWs = slideShowReturnCustomWs;
+    const bool isWinnowDefault = slideShowReturnWinnowDefault;
     slideShowReturnWorkflow = kNoSlideShowReturn;
     slideShowReturnCustomWs = -1;
+    slideShowReturnWinnowDefault = false;
     if (wf == kNoSlideShowReturn || currentWorkflow != WfSlideShow) return;
     if (G::isLogger) G::log("MW::leaveSlideShowWorkflow", QString::number(wf));
 
-    // back to the custom workspace the show was started from
+    // back to the custom workspace, or the chosen Winnow default, the show left
     if (customWs >= 0 && customWs < workspaces->count()
         && workspaces->at(customWs).workflow == wf) {
         invokeCustomWorkspace(customWs);
+        return;
+    }
+    if (isWinnowDefault) {
+        enterWorkflowLayout(wf, -1, true);
         return;
     }
 
@@ -2145,6 +2290,8 @@ void MW::syncWorkflowButtonEnabled(int wf)
                       : wf == WfKeywords ? tr("K") : QString();
     QString tip = a->text();
     if (!key.isEmpty()) tip += "  (" + key + ")";
+    // discoverable: MW::showWorkflowContextMenu
+    tip += "\n" + tr("Right-click for its layouts and custom workspaces.");
     const bool hasRows = dm && dm->rowCount() > 0;
     if (isCatalogLoading)
         tip += "\n" + tr("Not available while the catalog is loading.");

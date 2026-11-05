@@ -524,7 +524,6 @@ FORMS += Dialogs/test1.ui
 FORMS += Dialogs/test12.ui
 FORMS += Dialogs/tokendlg.ui
 FORMS += Dialogs/updateAppDlg.ui
-FORMS += Dialogs/workspacedlg.ui
 FORMS += Dialogs/zoomdlg.ui
 FORMS += Embellish/embelCoord.ui
 FORMS += Help/message.ui

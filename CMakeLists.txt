@@ -850,7 +850,6 @@ set(WINNOW_FORMS
     Dialogs/testdlg.ui
     Dialogs/tokendlg.ui
     Dialogs/updateAppDlg.ui
-    Dialogs/workspacedlg.ui
     Dialogs/zoomdlg.ui
     Embellish/embelCoord.ui
     Help/message.ui

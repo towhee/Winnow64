@@ -1,215 +1,189 @@
 #include "workspacedlg.h"
-#include "ui_workspacedlg.h"
 #include "Main/global.h"
-#include <QDebug>
-#include <QTimer>
-#include <QLineEdit>
-#include <QAbstractItemView>
-#include <QPainter>
-#include <QStyledItemDelegate>
+#include "Utilities/htmlwindow.h"
+#include <QCheckBox>
+#include <QHBoxLayout>
+#include <QHeaderView>
+#include <QLabel>
+#include <QPushButton>
+#include <QSet>
+#include <QTableWidget>
+#include <QVBoxLayout>
 
 /*
-    QComboBox::insertSeparator marks the item with Qt::AccessibleDescriptionRole ==
-    "separator", which the native style paints as a line.  Winnow styles the popup
-    (WidgetCSS::comboBox "QComboBox QAbstractItemView::item"), so the popup is drawn by
-    QStyleSheetStyle, which paints the separator as an ordinary (blank) item row and the
-    line disappears.  This delegate draws the line itself.
+    MANAGE CUSTOM WORKSPACES.  A table, one row per custom workspace:
+
+        Rename custom workspace   the name, edited in place (one click) to rename
+        Window *            restore the window position and size (WorkspaceData::
+                            isGeometryIncluded)
+        Delete              ticked rows are deleted
+
+    Nothing is applied until Update, which checks the names, applies everything and
+    closes.  Closing any other way (Esc, the title bar) discards the edits.  MW reads the
+    result with rows() -- see MW::manageWorkspaces.
 */
-class ComboSeparatorDelegate : public QStyledItemDelegate
+
+static QWidget *centredCheckBox(bool isChecked, const QString &tip)
 {
-public:
-    using QStyledItemDelegate::QStyledItemDelegate;
+    /* A checkbox centred in its cell: a checkable QTableWidgetItem sits at the left. */
+    QWidget *box = new QWidget;
+    QHBoxLayout *lay = new QHBoxLayout(box);
+    lay->setContentsMargins(0, 0, 0, 0);
+    lay->setAlignment(Qt::AlignCenter);
+    QCheckBox *cb = new QCheckBox;
+    cb->setChecked(isChecked);
+    cb->setToolTip(tip);
+    lay->addWidget(cb);
+    return box;
+}
 
-    static bool isSeparator(const QModelIndex &idx)
-    {
-        return idx.data(Qt::AccessibleDescriptionRole).toString() == "separator";
-    }
+static bool cellChecked(QTableWidget *table, int row, int col)
+{
+    QWidget *box = table->cellWidget(row, col);
+    QCheckBox *cb = box ? box->findChild<QCheckBox *>() : nullptr;
+    return cb && cb->isChecked();
+}
 
-    void paint(QPainter *painter, const QStyleOptionViewItem &option,
-               const QModelIndex &index) const override
-    {
-        if (!isSeparator(index)) {
-            QStyledItemDelegate::paint(painter, option, index);
-            return;
-        }
-        painter->save();
-        QColor lineColor = option.palette.color(QPalette::Disabled, QPalette::Text);
-        painter->setPen(lineColor);
-        int y = option.rect.center().y();
-        painter->drawLine(option.rect.left() + 4, y, option.rect.right() - 4, y);
-        painter->restore();
-    }
-
-    QSize sizeHint(const QStyleOptionViewItem &option, const QModelIndex &index) const override
-    {
-        if (isSeparator(index)) return QSize(option.rect.width(), 9);
-        return QStyledItemDelegate::sizeHint(option, index);
-    }
-};
-
-WorkspaceDlg::WorkspaceDlg(QList<QString> *wsList,
-                           const QList<bool> &isGeometryIncluded,
-                           const QStringList &workflowNames,
-                           QWidget *parent) :
+WorkspaceDlg::WorkspaceDlg(const QList<Row> &rows, const QStringList &otherNames,
+                           const QString &title, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::Workspacedlg)
+    otherNames(otherNames)
 {
-    ui->setupUi(this);
-    this->mainWindow = parent;
-    isGeometry = isGeometryIncluded;
-    workflows = workflowNames;
+    setWindowTitle(title);
+    resize(480, height());
 
-    // get height for dropdown items from combobox height
-    int h = ui->workspaceCB->height() - 8;
-
-    /* The dropdown lists the custom workspaces only.  The workflow layouts (Browse,
-       Develop, Keywords ...) are managed from Window > Workspace, not here. */
-    ui->workspaceCB->view()->setItemDelegate(new ComboSeparatorDelegate(ui->workspaceCB));
-
-    // populate the dropdown list
-    for (int i=0; i < wsList->count(); i++) {
-        ui->workspaceCB->addItem(wsList->at(i));
+    table = new QTableWidget(rows.count(), ColCount);
+    table->setHorizontalHeaderLabels(
+        QStringList() << tr("Rename custom workspace") << tr("Window *") << tr("Delete"));
+    table->verticalHeader()->setVisible(false);
+    table->setSelectionMode(QAbstractItemView::NoSelection);
+    table->setEditTriggers(QAbstractItemView::DoubleClicked
+                           | QAbstractItemView::EditKeyPressed
+                           | QAbstractItemView::AnyKeyPressed);
+    table->horizontalHeader()->setSectionResizeMode(ColName, QHeaderView::Stretch);
+    table->horizontalHeader()->setSectionResizeMode(ColWindow,
+                                                    QHeaderView::ResizeToContents);
+    table->horizontalHeader()->setSectionResizeMode(ColDelete,
+                                                    QHeaderView::ResizeToContents);
+    for (int r = 0; r < rows.count(); ++r) {
+        QTableWidgetItem *name = new QTableWidgetItem(rows.at(r).name);
+        name->setToolTip(tr("Click to rename"));
+        table->setItem(r, ColName, name);
+        table->setCellWidget(r, ColWindow, centredCheckBox(rows.at(r).isGeometryIncluded,
+            tr("Also restore the window position and size")));
+        table->setCellWidget(r, ColDelete, centredCheckBox(false,
+            tr("Delete this workspace when Update is pressed")));
     }
-    /* Set height for each row (setStylesheet approach did not work).  The separator sizes
-       itself (see ComboSeparatorDelegate), so it is skipped. */
-    for (int i=0; i < ui->workspaceCB->count(); i++) {
-        QModelIndex idx = ui->workspaceCB->model()->index(i, 0);
-        if (ComboSeparatorDelegate::isSeparator(idx)) continue;
-        ui->workspaceCB->model()->setData(idx, QSize(h, h), Qt::SizeHintRole);
+    /* One click edits a name: NoSelection leaves nothing for a first click to select. */
+    connect(table, &QTableWidget::itemClicked, table, [this](QTableWidgetItem *item) {
+        if (item->column() == ColName) table->editItem(item);
+    });
+    /* As tall as its rows (up to the ten allowed), so there is no empty band. */
+    const int rowsShown = qBound(1, int(rows.count()), 10);
+    table->setFixedHeight(table->horizontalHeader()->sizeHint().height()
+                          + rowsShown * table->verticalHeader()->defaultSectionSize()
+                          + 2 * table->frameWidth());
+
+    QLabel *footnote = new QLabel(tr("* Restore window position and size"));
+    footnote->setStyleSheet(G::labelCss(G::secondaryTextColor));     // a note
+
+    status = new QLabel;
+    status->setWordWrap(true);
+
+    helpBtn = new QPushButton("?");
+    helpBtn->setToolTip(tr("How custom workspaces work"));
+    helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
+    helpBtn->setAutoDefault(false);
+    helpBtn->setFixedWidth(helpBtn->sizeHint().height() * 2);
+    updateBtn = new QPushButton(tr("Update"));
+    updateBtn->setDefault(true);
+
+    if (rows.isEmpty()) {
+        updateBtn->setEnabled(false);
+        updateBtn->setToolTip(tr("There are no custom workspaces to update"));
+        status->setText(tr("There are no custom workspaces yet.  Window > Workspace > "
+                           "New Custom Workspace saves the current layout."));
     }
-    ui->workspaceCB->setCurrentIndex(0);
-    editMode = true;
-    updateForSelection();
+    else {
+        updateBtn->setToolTip(tr("Apply the new names, Window * choices and deletions, "
+                                 "and close.  Closing without Update discards them."));
+    }
+
+    QHBoxLayout *btns = new QHBoxLayout;
+    btns->setContentsMargins(0, 0, 0, 0);
+    btns->addWidget(helpBtn);
+    btns->addStretch(1);
+    btns->addWidget(updateBtn);
+
+    QVBoxLayout *layout = new QVBoxLayout(this);
+    layout->addWidget(table);
+    layout->addWidget(footnote);
+    layout->addWidget(status);
+    layout->addSpacing(8);
+    layout->addLayout(btns);
+
+    connect(helpBtn, &QPushButton::clicked, this, &WorkspaceDlg::showHelp);
+    connect(updateBtn, &QPushButton::clicked, this, &WorkspaceDlg::applyUpdate);
+    /* A fixed name problem clears its message as soon as it is fixed. */
+    connect(table, &QTableWidget::itemChanged, this, [this] {
+        if (!status->text().isEmpty() && updateBtn->isEnabled())
+            status->setText(validate());
+    });
+
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
 }
 
-WorkspaceDlg::~WorkspaceDlg()
+QList<WorkspaceDlg::Row> WorkspaceDlg::rows() const
 {
-    delete ui;
+    QList<Row> out;
+    for (int r = 0; r < table->rowCount(); ++r) {
+        Row row;
+        row.name = table->item(r, ColName)->text().trimmed();
+        row.isGeometryIncluded = cellChecked(table, r, ColWindow);
+        row.isDelete = cellChecked(table, r, ColDelete);
+        out.append(row);
+    }
+    return out;
 }
 
-int WorkspaceDlg::workspaceIndex() const
+QString WorkspaceDlg::validate() const
 {
 /*
-    The index into MW::workspaces for the selected item.  The dropdown holds nothing but
-    the saved workspaces, so the combo index IS the workspace index.
+    The reason Update cannot apply, or empty.  Names index the workspaces (and the
+    front-tab memory), so the kept ones must be unique and not blank.  A row being
+    deleted does not count.
 */
-    return ui->workspaceCB->currentIndex();
-}
-
-void WorkspaceDlg::updateForSelection()
-{
-/*
-    The window position/size checkbox shows the selected workspace's choice, and the
-    status line the workflow it opens in.  With no workspaces saved there is nothing to
-    show, and the reason goes in the status line.
-*/
-    int n = workspaceIndex();
-    bool isChecked = false;
-    bool isEnabled = true;
-    QString reason;
-    const bool isWorkspace = n >= 0 && n < isGeometry.count();
-    ui->deleteBtn->setEnabled(isWorkspace);
-    if (isWorkspace) {
-        isChecked = isGeometry.at(n);
-        if (n < workflows.count()) reason = "Opens in " + workflows.at(n) + ".";
+    const QSet<QString> others(otherNames.cbegin(), otherNames.cend());
+    QSet<QString> seen;
+    for (const Row &row : rows()) {
+        if (row.isDelete) continue;
+        if (row.name.isEmpty()) return tr("A workspace needs a name.");
+        if (seen.contains(row.name))
+            return tr("Two workspaces are named \"%1\".  Rename one.").arg(row.name);
+        if (others.contains(row.name))
+            return tr("Another workflow already has a workspace named \"%1\".")
+                .arg(row.name);
+        seen.insert(row.name);
     }
-    else {
-        isEnabled = false;
-        reason = "There are no custom workspaces yet.  Window > Workspace > New "
-                 "Custom Workspace saves the current layout.";
+    return QString();
+}
+
+void WorkspaceDlg::applyUpdate()
+{
+    if (G::isLogger) G::log("WorkspaceDlg::applyUpdate");
+    const QString why = validate();
+    if (!why.isEmpty()) {
+        status->setText(why);
+        return;
     }
-    /* setChecked would emit toggled and write the choice back to the workspace the user
-       has just moved away from. */
-    ui->geometryCB->blockSignals(true);
-    ui->geometryCB->setChecked(isChecked);
-    ui->geometryCB->blockSignals(false);
-    ui->geometryCB->setEnabled(isEnabled);
-    ui->status->setText(reason);
+    accept();
 }
 
-void WorkspaceDlg::on_geometryCB_toggled(bool isChecked)
+void WorkspaceDlg::showHelp()
 {
-    if (G::isLogger) G::log("WorkspaceDlg::on_geometryCB_toggled");
-    int n = workspaceIndex();
-    if (n < 0 || n >= isGeometry.count()) return;
-    isGeometry[n] = isChecked;
-    emit setWorkspaceGeometryIncluded(n, isChecked);
-}
-
-void WorkspaceDlg::on_deleteBtn_clicked()
-{
-    if (G::isLogger) G::log("WorkspaceDlg::on_deleteBtn_clicked");
-    int n = workspaceIndex();
-    if (n < 0) return;
-    emit deleteWorkspace(n);
-    if (n < isGeometry.count()) isGeometry.removeAt(n);
-    if (n < workflows.count()) workflows.removeAt(n);
-    ui->workspaceCB->removeItem(ui->workspaceCB->currentIndex());
-    ui->workspaceCB->setCurrentIndex(0);
-    updateForSelection();
-}
-
-void WorkspaceDlg::clearStatus()
-{
-    /* updateForSelection, not setText(""), so a reason for a disabled control is put
-       back rather than wiped by a transient message timing out. */
-    updateForSelection();
-}
-
-void WorkspaceDlg::on_workspaceCB_editTextChanged(const QString &name)
-{
-    if (G::isLogger) G::log("WorkspaceDlg::on_workspaceCB_editTextChanged");
-    if (editMode) {
-        bool isOkay = true;
-        int n = workspaceIndex();
-        if (n < 0) {
-            editMode = true;
-            return;
-        }
-        ui->workspaceCB->setStyleSheet("");
-        // make sure another workspace name is not being duplicated
-        for (int i=0; i<ui->workspaceCB->count(); i++) {
-            // ignore current item
-            if (i == ui->workspaceCB->currentIndex()) continue;
-            // different, try next item
-            if (name != ui->workspaceCB->itemText(i)) continue;
-            // oh, oh.  Duplicate of another workspace name
-            isOkay = false;
-            ui->workspaceCB->setStyleSheet(G::cssError);
-        }
-        if (isOkay) emit renameWorkspace(n, name);
-        ui->workspaceCB->setItemText(ui->workspaceCB->currentIndex(), name);
-    }
-    editMode = true;
-}
-
-void WorkspaceDlg::on_workspaceCB_highlighted(int /*index*/)
-{
-    if (G::isLogger) G::log("WorkspaceDlg::on_workspaceCB_highlighted");
-    editMode = false;
-}
-
-void WorkspaceDlg::report(QString signalName)
-{
-    int n = ui->workspaceCB->currentIndex();
-    QString text = ui->workspaceCB->currentText();
-    qDebug() << G::t.restart() << "\t" << signalName
-             << "currentIndex =" << n
-             << "editMode =" << editMode
-             << "text =" << text;
-}
-
-void WorkspaceDlg::on_reportLinkButton_clicked()
-{
-//    int n = ui->workspaceCB->currentIndex();
-//    emit reportWorkspaceNum(n);
-}
-
-void WorkspaceDlg::on_workspaceCB_currentIndexChanged(int /*index*/)
-{
-    if (G::isLogger) G::log("WorkspaceDlg::on_workspaceCB_currentIndexChanged");
-    updateForSelection();
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Custom Workspaces", ":/Docs/customworkspaceshelp.html",
+                   QSize(640, 600), r, this);
 }

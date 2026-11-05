@@ -21,6 +21,7 @@
       - [2.3.2.2 Winnow Defaults (Shipped)](#2322-winnow-defaults-shipped)
       - [2.3.2.3 User Layouts](#2323-user-layouts)
       - [2.3.2.4 Custom Workspaces](#2324-custom-workspaces)
+        - [2.3.2.4.1 The Module Dock Context Menu](#23241-the-module-dock-context-menu)
       - [2.3.2.5 A Workflow Workspace Never Moves the Window](#2325-a-workflow-workspace-never-moves-the-window)
     - [2.3.3 The Front Tab of Each Tab Group](#233-the-front-tab-of-each-tab-group)
     - [2.3.4 Nothing Paints While a Workspace Is Applied](#234-nothing-paints-while-a-workspace-is-applied)
@@ -1157,8 +1158,28 @@ A custom workspace (Window > Workspace > New Custom Workspace ..., MW::newWorksp
 - Invoking one (Ctrl+0..9, MW::invokeCustomWorkspace) sets MW::activeCustomWs and triggers the WORKFLOW'S OWN ACTION with keepCustomWs set, so Develop enters Develop mode, the module button lights, and the resolver applies the custom layout instead of the slot's. currentWorkflow is therefore always a workflow; the old -1 "named workspace" state and its special cases are gone.
 - A workflow that is not available (its action disabled) says why in a popup, the way a disabled shortcut does (MW::actionDisabledReason).
 - It stays in use for Reset Layout (keepCustomWs), a Browse source switch (MW::chooseSource leaves a custom Browse layout alone) and the return from a slide show. Any other workflow switch, the workflow's own button or key included, clears it and goes back to the slot's layout; that is how to leave a custom Develop workspace for the normal Develop layout (D, or the Develop button).
+- While one is in use, Revert &lt;layout> to Winnow Default (and Revert All) stays enabled even when the slot has no user layout: the custom layout on screen is not the Winnow default, so Revert leaves it for the slot's Winnow default. The custom workspace itself is not changed.
 - While one is in use, Save Layout reads "Update Custom Workspace "x"" and updates it (this replaced Manage Workspaces' "Update to current layout" button).
 - A custom workspace saved before 2026-11-05 has no workflow; MW::loadWorkspaces infers one from the docks it shows (Develop panel -> Develop, Embellish -> Embellish, Places -> Map, else Browse) and saves it.
+
+###### 2.3.2.4.1 The Module Dock Context Menu
+
+Right-clicking a workflow button in the Module dock (MW::showWorkflowContextMenu, wired in MW::buildWorkflowButtons with Qt::CustomContextMenu) lists the layouts that workflow can open with. The button's tooltip says so.
+
+```
+Winnow default            open the workflow with the shipped layout, even if you saved one
+User override             open it with your saved layout (greyed, with the reason, if none)
+---
+Add current layout ...    New Custom Workspace for this workflow (greyed unless it is on screen)
+Manage custom workspaces ...   Manage Custom Workspaces listing only this workflow's
+                               (greyed, with the reason, if it has none)
+---
+<its custom workspaces>   Ctrl+N shown, not assigned (the Workspace menu's action owns it)
+```
+
+- The layout in use is ticked; for another workflow, the one it would open with.
+- Every item enters the workflow through MW::enterWorkflowLayout, which sets the choice (MW::activeCustomWs, or MW::winnowDefaultWf for Winnow default) and triggers the workflow's own action with keepCustomWs set. MW::invokeCustomWorkspace is the same call.
+- A chosen Winnow default follows the custom workspace rules: Reset Layout, a Browse source switch and the return from a slide show keep it; any other workflow switch drops it, after which the user layout applies again. Save Layout drops it too, since what is saved is then what is used.
 
 ##### 2.3.2.5 A Workflow Workspace Never Moves the Window
 
@@ -1192,6 +1213,8 @@ The release posts its own UpdateRequest. setUpdatesEnabled(true) alone left the 
 
 The guard therefore posts the UpdateRequest itself (not repaint(), which would paint synchronously before requestView's view switch). E from Develop now shows the finished layout directly; requestView's own view switch (loupeDisplay for E) runs after the hold is released, but it is synchronous, so nothing paints between the two.
 
+While MW::invokeWorkspace runs, MW::isApplyingWorkspace is set. The layout's own central view comes up through loupeDisplay / gridDisplay / tableDisplay / compareDisplay, which in the Map module route a view request through requestView to leave Map; during an apply they must not. When invokeWorkspace stopped clearing currentWorkflow to -1 (2026-11-05), Map -> Embellish recursed forever (invokeWorkspace -> gridDisplay -> requestView -> invokeWorkflowWorkspace(Browse) -> invokeWorkspace ...), because the workflow being left was still Map throughout. Stamping the destination workflow first and the flag together fix it. invokeWorkspace ends with showMapPage when the workflow is Map, so leaving full screen in Map keeps the map.
+
 #### 2.3.5 Startup Layout
 
 Startup applies the Browse layout, and only resumes another workflow as saved. MW::showEvent restores the saved WindowState first, then REASSERTS the Browse workspace when:
@@ -1206,7 +1229,7 @@ A state written before currentWorkflow was persisted (lastWf &lt; 0) reaches thi
 
 A session left in Develop is the exception, because Develop is not a layout the next session can come up in. Winnow always starts in Preview, so MW::showEvent hides the three Develop panels (MW::closeDevelopDock). Hiding them does not resize anything, and the rest of the restored layout is still at the Develop widths. The Develop layout gives the left dock group far less width than the Browse one, and a dock group that narrow drops its tab text for the 16x16 glyphs, so the reported symptom was "the workspace came back narrow and the tabs are showing their graphic". MW::showEvent therefore reasserts the Browse workspace, just as E / G / T / C do on leaving Develop.
 
-Which workflow the session is in is MW::currentWorkflow. MW::invokeWorkflowLayout stamps it (a custom workspace stamps its own workflow), MW::writeSettings persists it as "currentWorkflow", and showEvent reads it back. Every assignment re-lights the Module dock buttons (MW::syncWorkflowSwitcher). A state written before that key existed has no answer, so the fallback is the tell in the restored layout itself: the Develop panel visible.
+Which workflow the session is in is MW::currentWorkflow. MW::invokeWorkflowLayout stamps it BEFORE applying the layout (a custom workspace stamps its own workflow), MW::writeSettings persists it as "currentWorkflow", and showEvent reads it back. Every assignment re-lights the Module dock buttons (MW::syncWorkflowSwitcher). A state written before that key existed has no answer, so the fallback is the tell in the restored layout itself: the Develop panel visible.
 
 #### 2.3.6 Window Position and Size Are Optional
 
@@ -1219,13 +1242,21 @@ WorkspaceData::isGeometryIncluded (QSettings key "isGeometryIncluded"). A worksp
 
 The Workspace menu flags a workspace that restores the window position and size with " \*" (MW::workspaceMenuName). Because the menu text is therefore NOT the workspace name, MW::invokeWorkspaceFromAction matches the triggered action by its POSITION in workspaceActions, not by text; name matching there would silently do nothing. The positional match also keeps the layout actions safe: QMenu::triggered fires for every item in the menu, so Save Layout, Revert and the rest reach invokeWorkspaceFromAction, are not found in workspaceActions, and are ignored.
 
-The choice is made in Manage Custom Workspaces: a "Restore window position and size" checkbox under the dropdown shows the selected workspace's setting and writes it through WorkspaceDlg::setWorkspaceGeometryIncluded(n, isIncluded) to MW::setWorkspaceGeometryIncluded, which saves and re-syncs the menu immediately.
+The choice is made in Manage Custom Workspaces (WorkspaceDlg, built in code; the .ui was removed 2026-11-05). It is a table, one row per custom workspace:
 
-- With no workspaces saved, the checkbox and Delete are disabled and the status line says why. Otherwise the status line names the workflow the selected workspace opens in.
-- WorkspaceDlg keeps its own copy of the flags (isGeometry) so the checkbox can be set without a round trip to MW. setChecked is done with signals blocked, otherwise moving the dropdown would write the new selection's value back onto the workspace just left.
-- The "Winnow default workspace" dropdown entry, its separator and the isDefaultSelected / firstWorkspaceIndex plumbing are gone along with the single default workspace.
+```
+Rename custom workspace   Window *   Delete
+Name 1                      [x]       [ ]
+* Restore window position and size
+[ ? ]                               [Update]
+```
 
-WidgetCSS::comboBox styles the popup ("QComboBox QAbstractItemView::item"), so QStyleSheetStyle paints Qt's separator item as a blank row and the line vanishes. ComboSeparatorDelegate (workspacedlg.cpp) draws it. Any other styled combo that needs a separator has the same problem.
+- The name is edited in place to rename, with one click (itemClicked -> editItem, since the table has NoSelection). The footnote is in G::secondaryTextColor. Window * is isGeometryIncluded. Delete marks the row.
+- NOTHING IS APPLIED UNTIL UPDATE. WorkspaceDlg::applyUpdate checks that the kept names are unique and not blank (the name keys the front-tab memory and identifies the workspace), shows the reason in the status line if not, and otherwise accepts. MW::manageWorkspaces then reads WorkspaceDlg::rows(), applies names and Window *, deletes the ticked rows last-first (MW::deleteWorkspace keeps activeCustomWs and slideShowReturnCustomWs pointing at the right rows), saves and re-syncs the menu. Closing any other way discards the edits.
+- MW::manageWorkspaces(wf) can list one workflow's custom workspaces only (the Module dock context menu); the title then names the workflow. The unlisted names are passed to the dialog so a rename still cannot duplicate one. Window > Workspace's item lists them all (wf -1; connected through a lambda, since triggered(bool) would arrive as wf 0).
+- With no custom workspaces, Update is greyed with its reason and the status line says how to make one.
+- The "?" button opens Docs/customworkspaceshelp.html in an HtmlWindow.
+- The checkboxes are cell widgets centred in their cells, since a checkable QTableWidgetItem sits at the left.
 
 #### 2.3.7 What a Workspace Does Not Restore
 

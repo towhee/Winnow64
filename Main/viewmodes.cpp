@@ -41,8 +41,10 @@ void MW::loupeDisplay(const QString src)
         workspaces.cpp): leave through requestView so the workflow, its layout and the
         lit Module button change with the page. Without this Enter or a double-click
         put up the loupe with the workflow still Map, and the next selection change put
-        the map back. requestView re-enters here with the workflow already Browse. */
-    if (inMapModule()) {
+        the map back. requestView re-enters here with the workflow already Browse.
+        NOT while a workspace is being applied: its own view comes up through here, and
+        redirecting then recursed without end (Map -> Embellish, 2026-11-05). */
+    if (inMapModule() && !isApplyingWorkspace) {
         requestView(CvLoupe);
         return;
     }
@@ -170,7 +172,7 @@ void MW::gridDisplay()
     QListView has finished painting itself.
 */
     if (G::isLogger || G::isFlowLogger) G::log("MW::gridDisplay");
-    if (inMapModule()) {                // see loupeDisplay
+    if (inMapModule() && !isApplyingWorkspace) {    // see loupeDisplay
         requestView(CvGrid);
         return;
     }
@@ -295,7 +297,7 @@ void MW::gridDisplay()
 void MW::tableDisplay()
 {
     if (G::isLogger || G::isFlowLogger) G::log(" MW::tableDisplay");
-    if (inMapModule()) {                // see loupeDisplay
+    if (inMapModule() && !isApplyingWorkspace) {    // see loupeDisplay
         requestView(CvTable);
         return;
     }
@@ -414,7 +416,7 @@ void MW::tableDisplay()
 void MW::compareDisplay()
 {
     if (G::isLogger) G::log("MW::compareDisplay");
-    if (inMapModule()) {                // see loupeDisplay
+    if (inMapModule() && !isApplyingWorkspace) {    // see loupeDisplay
         requestView(CvCompare);
         return;
     }
