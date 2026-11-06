@@ -1003,6 +1003,15 @@ endif()
 # See notes/Documentation.md "Model Inference".
 # =============================================================================
 option(WINNOW_ENABLE_ORT "Link ONNX Runtime for neural inference (raw denoise, ...)" OFF)
+# Release presets REQUIRE it: a missing runtime only warned, and v3_beta5 shipped on
+# macOS with raw denoise greyed out ("Not available in this build"). ON turns the
+# not-found warnings below into a failed configure.
+option(WINNOW_REQUIRE_ORT "Fail the configure if WINNOW_ENABLE_ORT cannot find ORT" OFF)
+if(WINNOW_REQUIRE_ORT)
+    set(WINNOW_ORT_MISSING FATAL_ERROR)
+else()
+    set(WINNOW_ORT_MISSING WARNING)
+endif()
 
 # =============================================================================
 # macOS dependencies + bundle resources
@@ -1164,7 +1173,7 @@ if(APPLE)
             target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_ORT)
             message(STATUS "ONNX Runtime enabled (macOS/CoreML): ${ORT_LIB}")
         else()
-            message(WARNING "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
+            message(${WINNOW_ORT_MISSING} "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
                             "(brew install onnxruntime); neural inference stays disabled.")
         endif()
     endif()
@@ -1377,7 +1386,7 @@ if(WIN32)
             target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_ORT)
             message(STATUS "ONNX Runtime enabled (Windows/DirectML): ${ORT_DIR}")
         else()
-            message(WARNING "WINNOW_ENABLE_ORT is ON but ${ORT_DIR}/lib/onnxruntime.lib "
+            message(${WINNOW_ORT_MISSING} "WINNOW_ENABLE_ORT is ON but ${ORT_DIR}/lib/onnxruntime.lib "
                             "was not found; neural inference stays disabled.")
         endif()
     endif()
@@ -1568,7 +1577,7 @@ if(UNIX AND NOT APPLE)
             target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_ORT)
             message(STATUS "ONNX Runtime enabled (Linux/CPU)")
         else()
-            message(WARNING "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
+            message(${WINNOW_ORT_MISSING} "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
                             "(apt install libonnxruntime-dev); "
                             "neural inference stays disabled.")
         endif()

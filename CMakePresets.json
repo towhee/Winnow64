@@ -43,7 +43,9 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "HOMEBREW_PREFIX": "/opt/homebrew"
+        "HOMEBREW_PREFIX": "/opt/homebrew",
+        "WINNOW_ENABLE_ORT": "ON",
+        "WINNOW_REQUIRE_ORT": "ON"
       }
     },
     {
@@ -55,7 +57,9 @@
         "CMAKE_OSX_ARCHITECTURES": "x86_64",
         "WINNOW_MAC_DEPS_PREFIX": "$env{HOME}/Projects/winnow-deps/macos-x86_64",
         "CMAKE_IGNORE_PREFIX_PATH": "/opt/homebrew;/usr/local",
-        "WINNOW_BUILD_TESTS": "OFF"
+        "WINNOW_BUILD_TESTS": "OFF",
+        "WINNOW_ENABLE_ORT": "OFF",
+        "WINNOW_REQUIRE_ORT": "OFF"
       }
     },
 
@@ -128,7 +132,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "WINNOW_ENABLE_ORT": "ON"
+        "WINNOW_ENABLE_ORT": "ON",
+        "WINNOW_REQUIRE_ORT": "ON"
       }
     },
 
@@ -163,7 +168,8 @@
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_C_COMPILER": "clang",
         "CMAKE_CXX_COMPILER": "clang++",
-        "WINNOW_ENABLE_ORT": "ON"
+        "WINNOW_ENABLE_ORT": "ON",
+        "WINNOW_REQUIRE_ORT": "ON"
       }
     }
   ],

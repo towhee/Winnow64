@@ -163,24 +163,24 @@ function build() {
     # a Homebrew Qt). Reconfigure if the build dir was configured against a
     # different Qt — otherwise an existing cache silently keeps the old one.
     export QT_DIR
-    local need_configure=false
-    if [[ ! -f "$BUILD_DIR/CMakeCache.txt" ]]; then
-        need_configure=true
-    else
+    if [[ -f "$BUILD_DIR/CMakeCache.txt" ]]; then
         local cached_qt
         cached_qt=$(grep -E "^Qt6_DIR:" "$BUILD_DIR/CMakeCache.txt" | cut -d= -f2)
         if [[ "$cached_qt" != "$QT_DIR"/* ]]; then
             echo "   ↻ build dir uses a different Qt ($cached_qt); reconfiguring for $QT_DIR"
             rm -f "$BUILD_DIR/CMakeCache.txt"   # force Qt re-detection (keeps object files)
-            need_configure=true
         fi
     fi
     # CMake resolves presets relative to the current working directory (the build
     # preset has no -S to point it at the repo), so run both from REPO_ROOT in a
     # subshell. Otherwise launching the script from elsewhere (e.g. $HOME) makes
     # `cmake --build --preset` look for CMakePresets.json in the wrong place.
+    # ALWAYS configure: it takes seconds on an existing tree, and it is the only way a
+    # preset change reaches a cached build dir. Configuring only when there was no
+    # cache left build/mac-release on its first settings, so the preset's ORT switch
+    # never arrived and v3_beta5 shipped without raw denoise.
     ( cd "$REPO_ROOT" || exit 1
-      $need_configure && { cmake --preset "$PRESET" || exit 1; }
+      cmake --preset "$PRESET" >/dev/null || exit 1
       cmake --build --preset "$PRESET" ) || return 1
     if [[ ! -d "$RELEASE_APP_PATH" ]]; then
         echo "❌ Build did not produce $RELEASE_APP_PATH"
