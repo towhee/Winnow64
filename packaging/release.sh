@@ -366,7 +366,20 @@ function publish() {
     local tag="v$LABEL"
     [[ -f "$RDIR/COMMIT" && -f "$RDIR/SHA256SUMS" ]] || die "nothing built for $LABEL — run build first."
     COMMIT=$(<"$RDIR/COMMIT")
-    [[ "$(git rev-parse HEAD)" == "$COMMIT" ]] || die "HEAD moved since the build (${COMMIT:0:8}) — build again."
+    # HEAD may be AHEAD of the build only by files no platform builds into its app: the
+    # release notes (read here, at publish time), their template, packaging docs and
+    # this script. Fixing a typo in the notes must not cost a full rebuild; anything
+    # else does. The tag still targets the commit that was built.
+    if [[ "$(git rev-parse HEAD)" != "$COMMIT" ]]; then
+        git merge-base --is-ancestor "$COMMIT" HEAD \
+            || die "HEAD is not a descendant of the build (${COMMIT:0:8}) — build again."
+        local moved
+        moved=$(git diff --name-only "$COMMIT" HEAD \
+                | grep -vE '^(packaging/changes/.*\.md|packaging/release-notes\.md|packaging/README\.md|packaging/release\.sh|notes/.*)$')
+        [[ -z "$moved" ]] || { print -r -- "$moved" | sed 's/^/   /'
+            die "HEAD moved since the build (${COMMIT:0:8}) in files that ship — build again."; }
+        echo "ℹ️  HEAD is ahead of the build only in notes/docs; tagging the built ${COMMIT:0:8}."
+    fi
     (cd "$RDIR" && shasum -a 256 -c SHA256SUMS >/dev/null) || die "files changed since the build (SHA256SUMS mismatch)."
     command -v gh >/dev/null && gh auth status >/dev/null 2>&1 || die "gh not logged in (gh auth login)."
 
