@@ -552,6 +552,7 @@ winnow_add_unit_test(tst_queryexpr unit/tst_queryexpr.cpp)
 # queries into it -- the first build crashed on exactly that (a completer freed twice).
 winnow_add_unit_test(tst_querybuilder unit/tst_querybuilder.cpp
     ${CMAKE_SOURCE_DIR}/Dialogs/querybuilder.cpp
+    ${CMAKE_SOURCE_DIR}/Utilities/waitcursor.cpp
     ${CMAKE_SOURCE_DIR}/Main/widgetcss.cpp)
 
 # tst_keywordvocab covers the AUTHORED vocabulary's tree surgery, and above all the MERGE

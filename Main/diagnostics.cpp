@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/waitcursor.h"
 #ifdef Q_OS_LINUX
 #include "Utilities/linux.h"
 #endif
@@ -1609,7 +1610,7 @@ void MW::diagnosticsKeywords()
     window that is otherwise doing nothing visible.
 */
     if (G::isLogger) G::log("MW::diagnosticsKeywords");
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    QGuiApplication::setOverrideCursor(WaitCursor::Get(Qt::BusyCursor));
     const QString rpt = this->keywordDiagnostics();
     QGuiApplication::restoreOverrideCursor();
     diagnosticsReport(rpt, "Winnow Diagnostics: Keywords");

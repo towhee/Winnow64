@@ -1,4 +1,5 @@
 #include "Dialogs/querybuilder.h"
+#include "Utilities/waitcursor.h"
 #include "Main/global.h"
 
 #include <QApplication>
@@ -614,7 +615,7 @@ QueryBuilderDialog::QueryBuilderDialog(Mode mode, QWidget *parent)
     layout->addLayout(bottom);
     connect(testBtn, &QPushButton::clicked, this, [this] {
         if (!counter) return;
-        QApplication::setOverrideCursor(Qt::WaitCursor);
+        QApplication::setOverrideCursor(WaitCursor::Get());
         const QPair<int, int> n = counter(build->expr());
         QApplication::restoreOverrideCursor();
         const QLocale loc;

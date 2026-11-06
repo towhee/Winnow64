@@ -1,4 +1,5 @@
 #include "Develop/Properties/developproperties.h"
+#include "Utilities/waitcursor.h"
 #include "Develop/subjectmask.h"     // autoSubmaskIsNull: the AI refs' "found nothing"
 #include "Develop/skymask.h"
 #include "Develop/beammask.h"      // kDefaultWidth: the Beam's default + panel sync
@@ -954,7 +955,7 @@ void DevelopProperties::applyRawPreset(const DevelopPreset &preset)
             if (base) base = mw->developRawDenoisedBase(fPath, globalBefore, base);
         }
         if (base) {
-            QApplication::setOverrideCursor(Qt::WaitCursor);
+            QApplication::setOverrideCursor(WaitCursor::Get());
             const AutoTone::AutosResult r =
                 AutoTone::ApplyPresetAutos(*base, preset.autoWhiteBalance(),
                                            preset.autoTone(), s.scopes.first().params);
@@ -5168,7 +5169,7 @@ void DevelopProperties::autoTone()
     EditParams &p = activeParams();
     QElapsedTimer t;
     t.start();
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(WaitCursor::Get());
     const AutoTone::AutosResult r = AutoTone::ApplyPresetAutos(*work, false, true, p);
     QApplication::restoreOverrideCursor();
     if (G::isLogger)
@@ -12167,7 +12168,7 @@ bool DevelopProperties::solvePresetAutosNow(const DevelopPreset &preset, EditSta
         const EditParams in = p;
         QElapsedTimer t;
         t.start();
-        if (build) QApplication::setOverrideCursor(Qt::WaitCursor);
+        if (build) QApplication::setOverrideCursor(WaitCursor::Get());
         const AutoTone::AutosResult r = AutoTone::ApplyPresetAutos(*work, wb, tone, p);
         if (build) QApplication::restoreOverrideCursor();
         if (G::isLogger)

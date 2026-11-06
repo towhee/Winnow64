@@ -470,6 +470,7 @@ set(WINNOW_SOURCES
     Utilities/volumeinfo.cpp
     Utilities/fileops.cpp
     Utilities/utilities.cpp
+    Utilities/waitcursor.cpp
     Utilities/winnets.cpp
 
     # Views
@@ -799,6 +800,7 @@ set(WINNOW_HEADERS
     Utilities/searchterms.h
     Utilities/utilities.h
     Utilities/versionkey.h
+    Utilities/waitcursor.h
     Utilities/winnets.h
 
     Views/compareImages.h

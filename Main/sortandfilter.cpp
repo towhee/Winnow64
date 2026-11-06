@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/waitcursor.h"
 #include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
 #include "Utilities/panelbuttonbar.h"
@@ -337,7 +338,7 @@ void MW::filterChange(QString source)
     // if filter change source is the filter panel then sync menu actions isChecked property
     if (source == "Filters::itemClickedSignal") syncActionsWithFilters();
 
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(WaitCursor::Get());
 
     // prevent unwanted fileSelectionChange()
     isFilterChange = true;

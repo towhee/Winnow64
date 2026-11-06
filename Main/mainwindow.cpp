@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Utilities/waitcursor.h"
 #include "Datamodel/savedpicks.h"
 #include "Develop/autotone.h"
 #include "Image/stalethumb.h"
@@ -8833,7 +8834,7 @@ void MW::loadEntireMetadataCache(QString source)
 
     updateIconRange("MW::loadEntireMetadataCache");
 
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(WaitCursor::Get());
 
     /* adding all metadata in dm slightly slower than using metadataReadThread but progress
        bar does not update from separate thread.  RGH check if still true.
@@ -12810,7 +12811,7 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
         return;
     }
 
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    QGuiApplication::setOverrideCursor(WaitCursor::Get(Qt::BusyCursor));
     auto r = std::make_shared<SubjectMask::SubjectRef>();
     const bool ok = subjectPredictor->predict(img, r->cov, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
@@ -12877,7 +12878,7 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
 
     if (G::popup) G::popup->showPopupNow("Finding the sky...", 0, true, 0.75);
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    QGuiApplication::setOverrideCursor(WaitCursor::Get(Qt::BusyCursor));
     const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
                                         fw, fh);
     auto r = std::make_shared<SkyMask::SkyRef>();
@@ -12934,7 +12935,7 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
                                         fw, fh);
     if (img.isNull()) { AiMaskProbe::note(probeTag + "NULL guide composite"); return; }
 
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    QGuiApplication::setOverrideCursor(WaitCursor::Get(Qt::BusyCursor));
     auto r = std::make_shared<DepthMask::DepthRef>();
     const bool ok = depthPredictor->predict(img, r->depth, r->w, r->h);
     QGuiApplication::restoreOverrideCursor();
@@ -13082,7 +13083,7 @@ void MW::ensureObjectMask(const QString &fPath, const WorkingImage &work,
     cropCoverage(fillCov, gw, gh, crop, fillCrop);
     cropCoverage(bandCov, gw, gh, crop, bandCrop);
 
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    QGuiApplication::setOverrideCursor(WaitCursor::Get(Qt::BusyCursor));
     auto r = std::make_shared<ObjectMask::ObjectRef>();
     const bool ok = objectMaskPredictor->refine(fillCrop, bandCrop, crop.width(), crop.height(),
                                                 r->cov, r->w, r->h);
@@ -13176,7 +13177,7 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
     const QImage img = developComposite(lowRes, guideParams(base), degrees, /*fullRes*/true,
                                         gw, gh);
     if (img.isNull()) return false;
-    QGuiApplication::setOverrideCursor(Qt::BusyCursor);
+    QGuiApplication::setOverrideCursor(WaitCursor::Get(Qt::BusyCursor));
     const bool okEnc = objectMaskPredictor->setImage(crop == QRect(0, 0, gw, gh) ? img
                                                                                  : img.copy(crop));
     QGuiApplication::restoreOverrideCursor();

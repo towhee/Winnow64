@@ -1,4 +1,5 @@
 #include "Dialogs/applecamerasdlg.h"
+#include "Utilities/waitcursor.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Main/global.h"
 
@@ -80,7 +81,7 @@ void AppleCamerasDlg::loadVersion()
 #ifdef Q_OS_MAC
     /* ~0.2 s the first time per version (cached after): a wait cursor, not a progress
        popup -- it is well under the one-second line. */
-    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QApplication::setOverrideCursor(WaitCursor::Get());
     const QStringList models =
         AppleRawDecode::SupportedCameraModels(versionCombo->currentData().toInt());
     QApplication::restoreOverrideCursor();
