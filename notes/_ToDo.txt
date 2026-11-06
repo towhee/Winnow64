@@ -5,6 +5,7 @@ WHAT'S NEW
 - Add Mix to develop color
 
 BUGS / TO DO
+- Develop > Basic > Auto crashed
 - Crop when 16x9, then level, lose 16x9
 - Exit slide show Mode highlight is Embellish, not Browse.
 - Import/export catalogs
