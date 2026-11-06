@@ -10446,7 +10446,7 @@ Scope and persistence:
 
 ### 18.6 Grouped Filter Categories (and the Lit Title)
 
-Groups are a VIEW of the same categories (2026-09-30). The groups button in the Filters title bar (images/icon16/groups.png, beside expand / collapse) and "Group categories" on the panel's right-click menu toggle filterGroupsAction; MW::setFilterGroups calls Filters::setGrouped, syncs the button (BarBtn::setActive) and saves settings key isGroupedFilters (default on since 2026-11-04, and on for a fresh install). Grouped, the top level is Adhoc search, then six group headers:
+Groups are a VIEW of the same categories (2026-09-30). The groups / flat buttons in the Filters title bar (images/icon16/groups.png and flat.png, beside expand / collapse) and "Group categories" on the panel's right-click menu toggle filterGroupsAction. The two buttons alternate: only the one matching the current arrangement is visible (filterGroupsBtn while grouped, filterFlatBtn while flat), and clicking it switches. MW::setFilterGroups calls Filters::setGrouped, shows the matching button and saves settings key isGroupedFilters (default on since 2026-11-04, and on for a fresh install). Grouped, the top level is Adhoc search, then six group headers:
 
 ```
 Folders and files   Folders, Collections, Queries, File types

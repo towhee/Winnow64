@@ -1973,15 +1973,28 @@ void MW::createFilterDock()
         Nor is a refresh: every edit updates its own category, so a rebuild is only an
         escape hatch -- Filter > Rebuild filters (MW::updateAllFilters). */
 
-    /*  Grouped / flat categories. The action (created later, in createFilterActions) owns
-        the state and the setting; MW::setFilterGroups syncs this button's look. */
+    /*  Grouped / flat categories: two buttons that alternate, only the one showing the
+        current arrangement visible. Clicking it switches to the other. The action
+        (created later, in createFilterActions) owns the state and the setting;
+        MW::setFilterGroups decides which button shows. */
     filterGroupsBtn = new BarBtn();
     filterGroupsBtn->setIcon(":/images/icon16/groups.png", G::iconOpacity);
-    filterGroupsBtn->setToolTip("Group the filter categories under headings.");
+    filterGroupsBtn->setToolTip(tr("Filter categories are grouped under headings. Click "
+                                   "to show them as one flat list."));
     connect(filterGroupsBtn, &BarBtn::clicked, this, [this]{
         if (filterGroupsAction) filterGroupsAction->trigger();
     });
     filterTitleLayout->addWidget(filterGroupsBtn);
+
+    filterFlatBtn = new BarBtn();
+    filterFlatBtn->setIcon(":/images/icon16/flat.png", G::iconOpacity);
+    filterFlatBtn->setToolTip(tr("Filter categories are one flat list. Click to group "
+                                 "them under headings."));
+    connect(filterFlatBtn, &BarBtn::clicked, this, [this]{
+        if (filterGroupsAction) filterGroupsAction->trigger();
+    });
+    filterTitleLayout->addWidget(filterFlatBtn);
+    filterFlatBtn->hide();
 
     // Spacer
     filterTitleLayout->addSpacing(5);

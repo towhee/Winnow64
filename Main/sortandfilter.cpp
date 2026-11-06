@@ -1054,13 +1054,8 @@ void MW::setFilterGroups()
     if (G::isLogger) G::log("MW::setFilterGroups");
     const bool on = filterGroupsAction->isChecked();
     filters->setGrouped(on);
-    if (filterGroupsBtn) {
-        filterGroupsBtn->setActive(on);
-        filterGroupsBtn->setToolTip(on ? tr("Filter categories are grouped. Click to show "
-                                            "them as one flat list.")
-                                       : tr("Filter categories are a flat list. Click to "
-                                            "group them under headings."));
-    }
+    if (filterGroupsBtn) filterGroupsBtn->setVisible(on);
+    if (filterFlatBtn) filterFlatBtn->setVisible(!on);
     settings->setValue("isGroupedFilters", on);
 }
 

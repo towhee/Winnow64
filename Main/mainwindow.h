@@ -2567,7 +2567,8 @@ private:
     DockTitleBar *folderTitleBar;
     DockTitleBar *favTitleBar;
     DockTitleBar *filterTitleBar;
-    BarBtn *filterGroupsBtn = nullptr;      // title bar toggle for filterGroupsAction
+    BarBtn *filterGroupsBtn = nullptr;      // title bar: shown while grouped
+    BarBtn *filterFlatBtn = nullptr;        // title bar: shown while flat
     /*  FILTER HISTORY: each distinct Filters::persistableState a filterChange settles on,
         oldest first, with filterHistoryPos the one showing. Back/Forward re-apply an
         entry through the same Filters::restore path a folder change uses. Cleared by
