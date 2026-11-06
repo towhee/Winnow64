@@ -2936,9 +2936,8 @@ void MW::createDevelopDock()
     developDock->setObjectName("DevelopDock");
     developDockFeatures = developDock->features();   // remember for setDevelopPanelEnabled()
 
-    /* Dock content = live scopes strip (histogram + vectorscope) pinned above the property tree.
-       The scopes keep a fixed height; developProperties takes the remaining (stretch) space.
-       The strip's "Histogram" header collapses / expands it; the state is persisted. */
+    /* Dock content = live scopes strip (histogram + vectorscope) above the property tree,
+       both inside the dock's scroll area. The scopes keep a fixed height. The strip's "Histogram" header collapses / expands it; the state is persisted. */
     developScopesVisible = settings->value("Develop/scopesVisible", true).toBool();
     /* Which scopes the strip shows (picked from the strip's right-click menu or the
        Develop menu's Scopes submenu: both / histogram / vectorscope). */
@@ -2978,6 +2977,26 @@ void MW::createDevelopDock()
     developActionLayout->addStretch(1);
     developContainerLayout->addWidget(developActionRow);
 
+    /* Every subpanel below the action row -- alerts, scopes strip, Transform, Raw and the
+       scope block -- scrolls together in one QScrollArea, so a short dock never squeezes
+       the editing controls out of reach behind fixed-height strips. Only the action row
+       (and the Copy/Paste bar PanelButtonBar adds at the bottom) stays pinned. The
+       panels are added to developScrollLayout as they are created, in top-to-bottom
+       order. */
+    developScroll = new QScrollArea(developContainer);
+    developScroll->setObjectName("developScroll");
+    developScroll->setFrameShape(QFrame::NoFrame);
+    developScroll->setWidgetResizable(true);
+    developScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    /* The app stylesheet fills a plain QWidget opaquely, which would paint over the
+       dock background (the same trap ScopeHeader's rowsContainer hit). */
+    developScroll->viewport()->setAutoFillBackground(false);
+    QWidget *developScrollBody = new QWidget(developScroll);
+    developScrollBody->setAttribute(Qt::WA_TranslucentBackground);
+    QVBoxLayout *developScrollLayout = new QVBoxLayout(developScrollBody);
+    developScrollLayout->setContentsMargins(0, 0, 0, 0);
+    developScrollLayout->setSpacing(0);
+
     /* Alert rows, directly BELOW the action row: one row per condition the user needs to
        know about before editing (multiple images selected, a video that Develop cannot
        touch, ...). Each is bright red text on the panel background rather than a filled
@@ -2990,25 +3009,25 @@ void MW::createDevelopDock()
     developAlertRows->setObjectName("developAlertRows");
     /* The app stylesheet fills a plain QWidget opaquely, which would paint a slab behind
        the alerts instead of letting the panel background show through (the same trap
-       developScroll's viewport hits below). */
+       developScroll's viewport hits above). */
     developAlertRows->setStyleSheet("QWidget#developAlertRows { background: transparent; }");
     developAlertRowsLayout = new QVBoxLayout(developAlertRows);
     developAlertRowsLayout->setContentsMargins(6, 4, 6, 4);
     developAlertRowsLayout->setSpacing(2);
     developAlertRows->setVisible(false);
-    developContainerLayout->addWidget(developAlertRows);
+    developScrollLayout->addWidget(developAlertRows);
 
     scopesView = new ScopesView(developContainer);
     scopesView->setScopeLayout(static_cast<ScopesView::ScopeLayout>(developScopesLayout));
     scopesView->setExpanded(developScopesVisible);
-    developContainerLayout->addWidget(scopesView);
+    developScrollLayout->addWidget(scopesView);
     /* Transform (crop + perspective) strip sits directly below the scopes and above the tree.
        ALWAYS starts hidden on launch (its visibility is not restored): a visible panel means the
        crop tool is active, which should never be the case before the user asks for it. */
     developTransformVisible = false;
     transformPanel = new TransformPanel(developContainer, settings);
     transformPanel->setVisible(developTransformVisible);
-    developContainerLayout->addWidget(transformPanel);
+    developScrollLayout->addWidget(transformPanel);
     /* Drive the ImageView crop overlay from the Transform panel: aspect changes + the lock toggle
        re-fit the live crop frame. */
     connect(transformPanel, &TransformPanel::aspectChanged, this,
@@ -3128,7 +3147,7 @@ void MW::createDevelopDock()
        files only; DevelopProperties drives its visibility + state). */
     RawPanel *rawPanel = new RawPanel(developContainer, settings);
     rawPanel->setVisible(false);                 // syncRawPanel reveals it for raw
-    developContainerLayout->addWidget(rawPanel);
+    developScrollLayout->addWidget(rawPanel);
     developProperties->bindRawPanel(rawPanel);
 
     ScopeHeader *developScopeHeader = new ScopeHeader(developContainer);
@@ -3140,9 +3159,7 @@ void MW::createDevelopDock()
        (syncMaskPanel).
 
        Because the tree is a detail of the scope control it can no longer scroll itself:
-       it fits its content height and the whole scope block scrolls inside a QScrollArea.
-       Everything above (action row, scopes strip, Transform, Replace, Raw) stays
-       pinned. */
+       it fits its content height and scrolls with the panels above it in developScroll. */
     MaskPanel *maskPanel = new MaskPanel(developContainer);
     maskPanel->setVisible(false);
     developScopeHeader->setRowDetail(maskPanel, ScopeHeader::MaskDetail);
@@ -3151,19 +3168,6 @@ void MW::createDevelopDock()
     developProperties->setFitToContentHeight(true);
     developScopeHeader->setRowDetail(developProperties, ScopeHeader::EditsDetail);
 
-    QScrollArea *developScroll = new QScrollArea(developContainer);
-    developScroll->setObjectName("developScroll");
-    developScroll->setFrameShape(QFrame::NoFrame);
-    developScroll->setWidgetResizable(true);
-    developScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    /* The app stylesheet fills a plain QWidget opaquely, which would paint over the
-       dock background (the same trap ScopeHeader's rowsContainer hit). */
-    developScroll->viewport()->setAutoFillBackground(false);
-    QWidget *developScrollBody = new QWidget(developScroll);
-    developScrollBody->setAttribute(Qt::WA_TranslucentBackground);
-    QVBoxLayout *developScrollLayout = new QVBoxLayout(developScrollBody);
-    developScrollLayout->setContentsMargins(0, 0, 0, 0);
-    developScrollLayout->setSpacing(0);
     developScopeHeader->setParent(developScrollBody);
     developScrollLayout->addWidget(developScopeHeader);
     developScrollLayout->addStretch(1);
@@ -3200,7 +3204,7 @@ void MW::createDevelopDock()
     developDock->setFloating(false);
     developDock->setVisible(true);
     /* Floor the dock so the MW splitter cannot squeeze the Edits bar's trailing buttons
-       ([+] [eye] [:]) out of sight. The scope block lives in a QScrollArea that scrolls
+       ([+] [eye] [:]) out of sight. The panels live in a QScrollArea that scrolls
        VERTICALLY only, so a too-narrow dock CLIPS the bar rather than refusing to shrink
        -- the dock is the only place the limit can be enforced. barMinimumWidth is the
        bar's own layout minimum (arrow, "Scope", combo, gaps, three buttons), so

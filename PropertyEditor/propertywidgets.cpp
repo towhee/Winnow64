@@ -67,6 +67,27 @@ void Slider::mousePressEvent(QMouseEvent *event)
                 //*/
 }
 
+void Slider::wheelEvent(QWheelEvent *event)
+{
+    if (event->phase() == Qt::NoScrollPhase) {
+        QSlider::wheelEvent(event);
+        return;
+    }
+    /* QAbstractSlider reads angleDelta().y() whenever it is non-zero, so a sideways
+       swipe with any vertical drift would move the slider by the drift (and often the
+       wrong way). Pass it the horizontal component alone. */
+    if (event->angleDelta().x() == 0) {
+        event->ignore();
+        return;
+    }
+    QWheelEvent h(event->position(), event->globalPosition(),
+                  QPoint(event->pixelDelta().x(), 0), QPoint(event->angleDelta().x(), 0),
+                  event->buttons(), event->modifiers(), event->phase(),
+                  event->inverted(), event->source(), event->pointingDevice());
+    QSlider::wheelEvent(&h);
+    event->setAccepted(h.isAccepted());
+}
+
 void Slider::keyPressEvent(QKeyEvent *event)
 {
     int s = singleStep() ? singleStep() : 1;

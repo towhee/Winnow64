@@ -2155,6 +2155,39 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* DEVELOP PANEL SWIPE: a VERTICAL two-finger swipe anywhere in the Develop dock's
+       scroll area scrolls the panels, even over a slider, combo or spin box that would
+       otherwise take it as a value change. A HORIZONTAL swipe still goes to the control
+       under the fingers (Slider::wheelEvent moves on the horizontal component only).
+
+       The axis is decided by the first non-zero delta of the gesture and held until the
+       next ScrollBegin, momentum included, so a vertical swipe that wobbles sideways
+       never nudges a slider and a slider drag that wobbles never scrolls the panel (the
+       viewport check eats what a slider at its limit lets propagate). A mouse wheel
+       (NoScrollPhase, see Documentation.md Wheel Click Mode) is left alone: it still
+       adjusts the control under the cursor. Cheap tests first: this is a qApp filter. */
+    if (event->type() == QEvent::Wheel && developScroll) {
+        QWheelEvent *we = static_cast<QWheelEvent *>(event);
+        const Qt::ScrollPhase phase = we->phase();
+        if (phase == Qt::NoScrollPhase || phase == Qt::ScrollBegin) developSwipeAxis = 0;
+        QWidget *w = qobject_cast<QWidget *>(obj);
+        QWidget *body = developScroll->widget();
+        if (phase != Qt::NoScrollPhase && w && body) {
+            if (body->isAncestorOf(w)) {
+                const QPoint d = we->angleDelta();
+                if (developSwipeAxis == 0 && !d.isNull())
+                    developSwipeAxis = qAbs(d.y()) >= qAbs(d.x()) ? Qt::Vertical
+                                                                  : Qt::Horizontal;
+                if (developSwipeAxis == Qt::Vertical) {
+                    QCoreApplication::sendEvent(developScroll->verticalScrollBar(), event);
+                    return true;
+                }
+            }
+            else if (w == developScroll->viewport() && developSwipeAxis == Qt::Horizontal)
+                return true;
+        }
+    }
+
     /* STARTUP FOCUS: a view becoming visible while Winnow opens takes the focus.
        Queued, so it lands after the show (and any layout it triggers) completes. */
     if (startupViewFocusArmed && event->type() == QEvent::Show &&

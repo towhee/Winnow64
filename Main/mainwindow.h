@@ -2896,6 +2896,12 @@ private:
        toggled by a button on the Develop action row and persisted
        (Develop/scopesVisible). */
     ScopesView *scopesView = nullptr;
+    /* The Develop dock's scroll area (every subpanel below the action row) and the axis
+       the current trackpad gesture over it is locked to (Qt::Vertical / Qt::Horizontal,
+       0 = undecided). MW::eventFilter routes a vertical swipe to the scroll area even
+       over a slider; see "DEVELOP PANEL SWIPE" there. */
+    QScrollArea *developScroll = nullptr;
+    int developSwipeAxis = 0;
     bool developScopesVisible = true;
     /* Which scopes the strip shows (ScopesView::ScopeLayout, cycled by "G" and persisted
        in Develop/scopesLayout). Held as an int so mainwindow.h needs no scopes

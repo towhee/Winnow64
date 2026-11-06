@@ -212,6 +212,7 @@
     - [6.2.1 Trackpad: the Kinetic Engine](#621-trackpad-the-kinetic-engine)
     - [6.2.2 Mouse Wheel: Click Mode](#622-mouse-wheel-click-mode)
     - [6.2.3 The Horizontal Thumbnail Row](#623-the-horizontal-thumbnail-row)
+    - [6.2.4 The Develop Panel: Vertical Swipes Always Scroll](#624-the-develop-panel-vertical-swipes-always-scroll)
   - [6.3 Resizing Icons or the Viewport](#63-resizing-icons-or-the-viewport)
     - [6.3.1 Persisted Icon Size](#631-persisted-icon-size)
   - [6.4 Investigations and Fixes](#64-investigations-and-fixes)
@@ -3492,6 +3493,16 @@ A mouse wheel only ever reports a vertical delta, and a thumbView docked top or 
 
 - isWrapping() is the axis test used throughout IconView (scrollPosition, scrollUp/Down, scrollPageUp/Down, both engines). Wrapping follows the thumbDock position: false when docked top or bottom (horizontal row), true when docked left, right or floating, and always true for gridView. Gestures that already carry an x component (two-finger horizontal, a tilt wheel, Shift+wheel on macOS) are untouched.
 - The remap covers a trackpad vertical two-finger swipe as well as a mouse wheel, matching how a single-row list behaves elsewhere on macOS. To limit it to a physical mouse, add event->source() == Qt::MouseEventNotSynthesized to the remap condition; the comment at the remap site says the same.
+
+#### 6.2.4 The Develop Panel: Vertical Swipes Always Scroll
+
+Every Develop dock subpanel below the action row (alerts, scopes strip, Transform, Raw, the scope block) sits in one QScrollArea, MW::developScroll. A vertical two-finger swipe anywhere in it scrolls the panels, even over a slider, combo or spin box. A horizontal swipe still moves the slider under the fingers.
+
+MW::eventFilter ("DEVELOP PANEL SWIPE", a qApp filter) does the routing. It locks each trackpad gesture to one axis (MW::developSwipeAxis), decided by the first non-zero angleDelta and held until the next ScrollBegin, momentum included. A vertical gesture over any descendant of the scroll body is sent to developScroll's vertical scrollbar and eaten, so a vertical swipe that wobbles sideways never nudges a slider. A horizontal gesture goes to the control, and whatever a slider at its limit lets propagate is eaten at the viewport, so a slider swipe that wobbles never scrolls the panel.
+
+Slider::wheelEvent passes QSlider only the horizontal component of a trackpad event, because QAbstractSlider reads angleDelta().y() whenever it is non-zero and would move the slider by the vertical drift (often the wrong way). An event with no horizontal component is ignored and propagates, which also lets a vertical swipe scroll the Preferences tree over a slider.
+
+A mouse wheel (NoScrollPhase) is not routed: it still adjusts the control under the cursor, as before.
 
 ### 6.3 Resizing Icons or the Viewport
 
