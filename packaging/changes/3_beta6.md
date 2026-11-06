@@ -1,0 +1,3 @@
+- Raw denoise restored on Mac.
+- Intel raw denoise and JPEG XL
+- Now MacOS 13.4 minumum 
