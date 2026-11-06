@@ -207,8 +207,9 @@ the live page after publishing (`gh release view <tag>`):
   The Windows and Linux rows are template text: check them against the Qt version's
   supported Windows releases and the Linux glibc floor.
 - **Files and links.** Every row's file is on the release, and every link answers.
-- **Text.** The install notes in `packaging/release-notes.md`, and the download table in
-  the repo `README.md`, still match what ships (formats, platforms, warnings).
+- **Text.** The install notes in `packaging/release-notes.md` still match what ships
+  (formats, platforms, warnings), and the repo `README.md` says nothing that contradicts
+  them (it has no download table: the release page is the one place requirements live).
 A stale requirement is fixed in `packaging/release-notes.md` or `README.md`, committed,
 and the live notes re-rendered (`deploy.command`, menu N) before reporting done.
 
