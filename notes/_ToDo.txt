@@ -1,8 +1,6 @@
 WHAT'S NEW
-- Add PanelButtonBar 'Last' below Develop Editor
-- Add (apply) Previous to Develop
-- Refine Develop UI
-- Add Mix to develop color
+- Change Filters group/flat buttons
+- Fix Basic > Auto crash
 
 BUGS / TO DO
 - Develop > Basic > Auto crashed
