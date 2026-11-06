@@ -198,6 +198,20 @@ commits and pushes the fix (the phrase authorizes those commits), and runs
 `release.sh build` again, until every platform is PASS. It stops to ask only for a real
 decision: a change in behaviour, a test whose intent is unclear, or anything published.
 
+"Publish release" includes a review of the release page, before the `yes` and again on
+the live page after publishing (`gh release view <tag>`):
+- **Requirements.** The macOS rows are filled from measurement: the build records the
+  highest minos of every binary in each notarized app (`packaging/macos/bundle_minos.sh`
+  into `out/release/<label>/MINOS-<arch>`), because dyld refuses a library built for a
+  newer macOS. `verify_bundle.command` fails a bundle that needs more than its floor.
+  The Windows and Linux rows are template text: check them against the Qt version's
+  supported Windows releases and the Linux glibc floor.
+- **Files and links.** Every row's file is on the release, and every link answers.
+- **Text.** The install notes in `packaging/release-notes.md`, and the download table in
+  the repo `README.md`, still match what ships (formats, platforms, warnings).
+A stale requirement is fixed in `packaging/release-notes.md` or `README.md`, committed,
+and the live notes re-rendered (`deploy.command`, menu N) before reporting done.
+
 ### Linux AppImage
 
 ```sh

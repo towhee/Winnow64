@@ -5,8 +5,8 @@
 
 | OS | Architecture | Format | Requirements | Download Link |
 |:---:|:---:|:---:|:---:|:---:|
-| **macOS (Apple Silicon)** | ARM64 | `.dmg` | macOS 12 or later | [Winnow for macOS ARM](https://github.com/{{REPO}}/releases/download/{{TAG}}/Winnow{{VERSION}}.dmg) |
-| **macOS (Intel)** | x86_64 | `.dmg` | macOS 12 or later | [Winnow for macOS Intel](https://github.com/{{REPO}}/releases/download/{{TAG}}/Winnow{{VERSION}}_Intel.dmg) |
+| **macOS (Apple Silicon)** | ARM64 | `.dmg` | {{MACOS_ARM_MIN}} | [Winnow for macOS ARM](https://github.com/{{REPO}}/releases/download/{{TAG}}/Winnow{{VERSION}}.dmg) |
+| **macOS (Intel)** | x86_64 | `.dmg` | {{MACOS_INTEL_MIN}} | [Winnow for macOS Intel](https://github.com/{{REPO}}/releases/download/{{TAG}}/Winnow{{VERSION}}_Intel.dmg) |
 | **Windows** | x64 | `.exe` | Windows 10 or 11 | [Winnow for Windows](https://github.com/{{REPO}}/releases/download/{{TAG}}/WinnowSetup-{{VERSION}}.exe) |
 | **Linux** | x86_64 | `.AppImage` | **Ubuntu 26.04 or later** (glibc 2.43+) | [Winnow for Linux x86_64](https://github.com/{{REPO}}/releases/download/{{TAG}}/Winnow-{{VERSION}}-x86_64.AppImage) |
 | **Linux** | ARM64 | `.AppImage` | **Ubuntu 26.04 or later** (glibc 2.43+) | [Winnow for Linux ARM64](https://github.com/{{REPO}}/releases/download/{{TAG}}/Winnow-{{VERSION}}-aarch64.AppImage) |

@@ -164,6 +164,9 @@ function job_mac() {
     local dmg="$REPO_ROOT/out/${sub}DMG/Winnow$LABEL$suffix.dmg"
     [[ -d "$app" && -f "$dmg" ]] || { echo "❌ expected $app and $dmg"; return 1; }
     cp -f "$dmg" "$RDIR/" || return 1
+    # The macOS this app really needs, for the release page's Requirements column.
+    "$REPO_ROOT/packaging/macos/bundle_minos.sh" "$app" "$arch" > "$RDIR/MINOS-$arch" || return 1
+    echo "=== needs macOS $(<"$RDIR/MINOS-$arch") ($arch) ==="
     local failed=0
     if [[ $arch == arm64 ]]; then
         echo "=== ctest ($preset) ==="
@@ -397,6 +400,19 @@ function publish() {
         echo "  ⚠️  not every platform passed its tests (logs in $RDIR/logs/):"
         print -r -- "$failures" | sed 's/^/        /'
     fi
+    # REQUIREMENTS, measured at build time (job_mac), fill the page's macOS rows. Windows
+    # and Linux rows are template text: check them against the review list in
+    # packaging/README.md ("Publish release") before saying yes.
+    local a
+    for a in arm64 x86_64; do
+        [[ -f "$RDIR/MINOS-$a" ]] || continue
+        [[ $a == arm64 ]] && export WINNOW_MACOS_ARM_MIN=$(<"$RDIR/MINOS-$a") \
+                          || export WINNOW_MACOS_INTEL_MIN=$(<"$RDIR/MINOS-$a")
+    done
+    echo "--------------------------- requirements ---------------------------"
+    echo "  macOS Apple Silicon : ${WINNOW_MACOS_ARM_MIN:-not measured} (highest minos in the app)"
+    echo "  macOS Intel         : ${WINNOW_MACOS_INTEL_MIN:-not measured}"
+    echo "  Linux               : glibc floor is in the template (see project notes)"
     echo "------------------------------ notes ------------------------------"
     "$MAC_DEPLOY" --release-notes "$LABEL" || die "could not render the notes"
     echo "==================================================================="

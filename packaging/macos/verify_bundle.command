@@ -16,7 +16,7 @@
 #   2. no LC_RPATH points outside the bundle
 #   3. every internal (@rpath/@executable_path/@loader_path) dep resolves
 #   4. architecture is $WINNOW_ARCH (default arm64)
-#   5. minimum-OS (minos) is not newer than the supported floor
+#   5. minimum-OS (minos) of EVERY binary in the bundle is not newer than the floor
 #   6. code signature is valid (deep, strict)
 #   7. Gatekeeper accepts it (notarized Developer ID)
 #   8. the notarization ticket is stapled (launches offline)
@@ -35,9 +35,10 @@ if [[ -z "$APP" || ! -d "$APP" ]]; then
 fi
 APP="${APP:A}"   # absolute, resolved
 
-# Supported minimum-OS floor per slice (keep in sync with CMAKE_OSX_DEPLOYMENT_TARGET
-# in CMakePresets.json). Intel is 13.4: the last x86_64 ONNX Runtime needs it.
-if [[ "${WINNOW_ARCH:-arm64}" == x86_64 ]]; then MIN_OS_FLOOR=13.4; else MIN_OS_FLOOR=12.0; fi
+# Supported minimum-OS floor per slice: what the release page promises (release.sh
+# fills the page from the measured value, so this is the ceiling it may reach). Intel
+# is 13.4, the last x86_64 ONNX Runtime's. Apple Silicon is 13.0, Qt 6.11's floor.
+if [[ "${WINNOW_ARCH:-arm64}" == x86_64 ]]; then MIN_OS_FLOOR=13.4; else MIN_OS_FLOOR=13.0; fi
 
 EXE_NAME=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP/Contents/Info.plist" 2>/dev/null)
 EXE_PATH="$APP/Contents/MacOS/$EXE_NAME"
@@ -163,14 +164,18 @@ fi
 
 # ---- 5. minimum OS ----
 echo "[5] Minimum macOS"
-minos=$(otool -l "$EXE_PATH" 2>/dev/null | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; f=0}')
-echo "       minos: ${minos:-unknown}"
-# major.minor as one number (13.4 -> 1304) so a minor-version floor compares too.
+# The executable alone is not the answer: dyld refuses ANY bundled library built for a
+# newer macOS, so one Homebrew dylib sets the real floor (bundle_minos.sh).
+want_arch="${WINNOW_ARCH:-arm64}"
+minos=$("${0:A:h}/bundle_minos.sh" "$APP" "$want_arch")
+echo "       highest minos in the bundle: ${minos:-unknown}"
 osnum() { local v="$1"; local maj="${v%%.*}" min="${v#*.}"; [[ "$min" == "$v" ]] && min=0; min="${min%%.*}"; echo $(( maj * 100 + min )); }
 if [[ -n "$minos" && $(osnum "$minos") -le $(osnum "$MIN_OS_FLOOR") ]]; then
     pass "runs on macOS ${minos}+ (floor ${MIN_OS_FLOOR})"
 else
-    fail "minos ${minos:-unknown} is newer than the supported floor ${MIN_OS_FLOOR}"
+    fail "needs macOS ${minos:-unknown}, newer than the supported floor ${MIN_OS_FLOOR}:"
+    "${0:A:h}/bundle_minos.sh" "$APP" "$want_arch" --above "$MIN_OS_FLOOR" | head -12 \
+        | sed 's/^/         /'
 fi
 
 # ---- 6-8. Gatekeeper / notarization ----

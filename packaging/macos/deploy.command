@@ -704,7 +704,30 @@ function release_notes() {
     notes=${notes//\{\{TAG\}\}/$tag}
     notes=${notes//\{\{VERSION\}\}/$WINNOW_VERSION}
     notes=${notes//\{\{CHANGES\}\}/$changes}
+    local arm intel
+    arm=$(macos_requirement arm64) || return 1
+    intel=$(macos_requirement x86_64) || return 1
+    notes=${notes//\{\{MACOS_ARM_MIN\}\}/$arm}
+    notes=${notes//\{\{MACOS_INTEL_MIN\}\}/$intel}
     print -r -- "$notes"
+}
+
+# "macOS 13.4 or later" for the release page, MEASURED, never typed: the highest minos
+# of any binary in that slice's notarized app (bundle_minos.sh; dyld refuses a library
+# built for a newer macOS). v3_beta5's page said macOS 12 while its Apple Silicon app
+# bundled dylibs built for 27.0. release.sh passes the value it recorded at build time
+# (WINNOW_MACOS_ARM_MIN / WINNOW_MACOS_INTEL_MIN); otherwise the app in out/ is measured.
+function macos_requirement() {
+    local arch="$1" v sub="" suffix=""
+    [[ $arch == x86_64 ]] && { v="$WINNOW_MACOS_INTEL_MIN"; sub="x86_64/"; suffix="_Intel"; } \
+                          || v="$WINNOW_MACOS_ARM_MIN"
+    if [[ -z "$v" ]]; then
+        local app="$REPO_ROOT/out/${sub}Notarized/Winnow${WINNOW_VERSION}${suffix}.app"
+        [[ -d "$app" ]] || { echo "❌ cannot state the $arch macOS requirement: no $app" >&2; return 1; }
+        v=$("${SCRIPT_DIR}/bundle_minos.sh" "$app" "$arch")
+    fi
+    [[ "$v" == *.0 ]] && v="${v%.0}"
+    echo "macOS $v or later"
 }
 
 function changes_file() {
