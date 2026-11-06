@@ -75,7 +75,13 @@ set(CMAKE_AUTOUIC_SEARCH_PATHS
 # Link OpenCV into target, the same build the app links (see the OpenCV block in the
 # top-level CMakeLists). ARGN names the macOS libs; Windows has one combined "world" lib.
 function(winnow_test_link_opencv target scope)
-    if(APPLE)
+    if(APPLE AND WINNOW_MAC_STATIC_LIBS)
+        # Static deps prefix (release presets): OpenCV is archives plus their 3rdparty
+        # archives, so link the whole set the app links; the linker keeps what is used.
+        target_include_directories(${target} ${scope}
+            ${WINNOW_OPENCV_PREFIX}/include/opencv4)
+        target_link_libraries(${target} ${scope} ${WINNOW_MAC_STATIC_LIBS} ZLIB::ZLIB)
+    elseif(APPLE)
         target_include_directories(${target} ${scope}
             ${WINNOW_OPENCV_PREFIX}/include/opencv4)
         target_link_directories(${target} ${scope} ${WINNOW_OPENCV_PREFIX}/lib)

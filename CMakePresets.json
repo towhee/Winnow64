@@ -41,9 +41,13 @@
         "lhs": "${hostSystemName}",
         "rhs": "Darwin"
       },
+      "description": "Apple Silicon release: STATIC OpenCV/libtiff/libjpeg-turbo/libjxl + Microsoft's arm64 ONNX Runtime 1.23.2, installed by packaging/macos/build_mac_deps.sh arm64. Homebrew is ignored: its bottles are built for the host macOS. macOS 13.4+ (ORT's floor).",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "HOMEBREW_PREFIX": "/opt/homebrew",
+        "CMAKE_OSX_DEPLOYMENT_TARGET": "13.4",
+        "WINNOW_MAC_DEPS_PREFIX": "$env{HOME}/Projects/winnow-deps/macos-arm64",
+        "CMAKE_IGNORE_PREFIX_PATH": "/opt/homebrew;/usr/local",
         "WINNOW_ENABLE_ORT": "ON",
         "WINNOW_REQUIRE_ORT": "ON"
       }
@@ -51,16 +55,12 @@
     {
       "name": "mac-release-x86_64",
       "displayName": "macOS Release (Intel x86_64)",
-      "description": "Intel build, cross-compiled on Apple Silicon: the x86_64 slice of the universal official Qt + STATIC OpenCV/libtiff/libjpeg-turbo + Microsoft's x86_64 ONNX Runtime 1.23.2, installed by packaging/macos/build_x86_64_deps.sh. Homebrew (arm64-only) is ignored. macOS 13.4+: ORT's floor (Qt 6.11 already needs 13.0).",
+      "description": "Intel build, cross-compiled on Apple Silicon: the x86_64 slice of the universal official Qt + the same static deps for x86_64 (packaging/macos/build_mac_deps.sh x86_64). Inherits mac-release's macOS 13.4 floor, ORT and Homebrew exclusion.",
       "inherits": "mac-release",
       "cacheVariables": {
         "CMAKE_OSX_ARCHITECTURES": "x86_64",
         "WINNOW_MAC_DEPS_PREFIX": "$env{HOME}/Projects/winnow-deps/macos-x86_64",
-        "CMAKE_IGNORE_PREFIX_PATH": "/opt/homebrew;/usr/local",
-        "WINNOW_BUILD_TESTS": "OFF",
-        "CMAKE_OSX_DEPLOYMENT_TARGET": "13.4",
-        "WINNOW_ENABLE_ORT": "ON",
-        "WINNOW_REQUIRE_ORT": "ON"
+        "WINNOW_BUILD_TESTS": "OFF"
       }
     },
 

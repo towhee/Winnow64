@@ -1032,19 +1032,20 @@ if(APPLE)
         "-framework CoreMedia"
     )
 
-    # Self-built STATIC deps (OpenCV, libtiff, libjpeg-turbo) instead of Homebrew.
-    # This is how the Intel (x86_64) release is built on an Apple Silicon Mac: Homebrew
-    # there is arm64-only, and an x86_64 Homebrew on a new macOS would ship dylibs whose
-    # minos is the HOST OS (Intel Macs top out at macOS 26). The prefix is produced by
-    # packaging/macos/build_x86_64_deps.sh (x86_64, deployment target 12.0). Static, so
-    # the bundle carries no OpenCV/tiff/jpeg dylibs at all -- only Qt's frameworks.
+    # Self-built STATIC deps (OpenCV, libtiff, libjpeg-turbo, libjxl) instead of Homebrew,
+    # for BOTH release presets. Homebrew builds every bottle for the HOST macOS and dyld
+    # refuses a newer-built library, so v3_beta5's Apple Silicon app (~140 Homebrew dylibs
+    # built for macOS 26-27) started on nothing older than 27; Homebrew is also arm64-only
+    # here. The prefix is produced by packaging/macos/build_mac_deps.sh <arch> (deployment
+    # target 13.4). Static, so the bundle carries no OpenCV/tiff/jpeg/jxl dylibs -- only
+    # Qt's frameworks and ONNX Runtime. Dev builds (empty prefix) keep using Homebrew.
     set(WINNOW_MAC_DEPS_PREFIX "" CACHE PATH
         "Prefix of self-built static OpenCV/libtiff/libjpeg-turbo (empty = Homebrew)")
     if(WINNOW_MAC_DEPS_PREFIX)
     set(OPENCV_PREFIX "${WINNOW_MAC_DEPS_PREFIX}")
     if(NOT EXISTS "${OPENCV_PREFIX}/include/opencv4/opencv2/core.hpp")
         message(FATAL_ERROR "OpenCV not found at ${OPENCV_PREFIX} "
-            "(run packaging/macos/build_x86_64_deps.sh)")
+            "(run packaging/macos/build_mac_deps.sh <arch>)")
     endif()
     set(WINNOW_OPENCV_PREFIX "${OPENCV_PREFIX}" CACHE INTERNAL "OpenCV prefix for tests")
     message(STATUS "OpenCV prefix (static deps): ${OPENCV_PREFIX}")
@@ -1057,10 +1058,17 @@ if(APPLE)
         ${WINNOW_MAC_DEPS_PREFIX}/lib/libtiff.a
         ${WINNOW_MAC_DEPS_PREFIX}/lib/libturbojpeg.a
         ${WINNOW_MAC_DEPS_PREFIX}/lib/libjpeg.a)
+    # The tests link OpenCV too, and a static OpenCV is its 3rdparty archives as well.
+    set(WINNOW_MAC_STATIC_LIBS ${_winnow_static_deps}
+        ${WINNOW_MAC_DEPS_PREFIX}/lib/libtiff.a
+        ${WINNOW_MAC_DEPS_PREFIX}/lib/libturbojpeg.a
+        ${WINNOW_MAC_DEPS_PREFIX}/lib/libjpeg.a
+        CACHE INTERNAL "Static OpenCV + deps for the tests")
     target_include_directories(Winnow PRIVATE
         ${OPENCV_PREFIX}/include/opencv4
         ${WINNOW_MAC_DEPS_PREFIX}/include)
     else()
+    set(WINNOW_MAC_STATIC_LIBS "" CACHE INTERNAL "Static OpenCV + deps for the tests")
     # OpenCV (Homebrew). Linked directly to avoid OpenCV's CMake config pulling
     # in transitive deps like -framework AGL (Apple's removed OpenGL framework).
     # Mirrors the explicit LIBS approach in winnow64.pro.
@@ -1128,8 +1136,15 @@ if(APPLE)
 
     # libjxl: JPEG XL tiles in DNG 1.7 (Lightroom pano/HDR merges). Optional -- without
     # it those DNGs show their embedded preview via ImageIO. Homebrew `jpeg-xl`, or a
-    # static libjxl.a (+ brotli, hwy) in WINNOW_MAC_DEPS_PREFIX for the Intel build.
+    # static libjxl.a (+ brotli, hwy) in WINNOW_MAC_DEPS_PREFIX for the release builds.
+    # The prefix branches search afresh on every configure: a build dir first configured
+    # against Homebrew has the Homebrew paths cached, and find_* never searches again
+    # while its variable is set -- the static prefix would be silently ignored.
     if(WINNOW_MAC_DEPS_PREFIX)
+        foreach(_v JXL_INCLUDE_DIR JXL_LIB _jxl_dep_jxl_cms _jxl_dep_hwy
+                   _jxl_dep_brotlidec _jxl_dep_brotlicommon ORT_INCLUDE_DIR ORT_LIB)
+            unset(${_v} CACHE)
+        endforeach()
         find_path(JXL_INCLUDE_DIR jxl/decode.h
             PATHS ${WINNOW_MAC_DEPS_PREFIX}/include NO_DEFAULT_PATH)
         find_library(JXL_LIB NAMES libjxl.a
@@ -1155,14 +1170,15 @@ if(APPLE)
         target_compile_definitions(Winnow PRIVATE WINNOW_HAVE_JXL)
         message(STATUS "libjxl enabled (macOS): ${JXL_LIB}")
     else()
-        message(WARNING "libjxl not found (brew install jpeg-xl): JPEG XL DNGs will "
+        message(WARNING "libjxl not found (brew install jpeg-xl, or build_mac_deps.sh "
+                        "<arch> jxl): JPEG XL DNGs will "
                         "show their embedded preview only.")
     endif()
 
     # ONNX Runtime (Homebrew `onnxruntime`, built with the CoreML EP -> ANE). The
     # CoreML provider header ships in the same include dir. Opt-in via WINNOW_ENABLE_ORT.
-    # The Intel build takes Microsoft's prebuilt x86_64 dylib from the static-deps prefix
-    # instead (Homebrew is arm64-only; see packaging/macos/build_x86_64_deps.sh).
+    # The release builds take Microsoft's prebuilt dylib from the static-deps prefix
+    # instead (Homebrew's is built for the host macOS; see build_mac_deps.sh).
     if(WINNOW_ENABLE_ORT AND WINNOW_MAC_DEPS_PREFIX)
         find_path(ORT_INCLUDE_DIR onnxruntime_cxx_api.h
             PATHS ${WINNOW_MAC_DEPS_PREFIX}/include/onnxruntime NO_DEFAULT_PATH)
@@ -1183,7 +1199,8 @@ if(APPLE)
             message(STATUS "ONNX Runtime enabled (macOS/CoreML): ${ORT_LIB}")
         else()
             message(${WINNOW_ORT_MISSING} "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
-                            "(brew install onnxruntime; Intel: build_x86_64_deps.sh ort); "
+                            "(brew install onnxruntime; release builds: "
+                            "build_mac_deps.sh <arch> ort); "
                             "neural inference stays disabled.")
         endif()
     endif()

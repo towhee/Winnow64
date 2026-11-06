@@ -98,9 +98,10 @@ machine*.
    cp packaging/macos/config.sh.example packaging/macos/config.sh
    ```
 5. Install and log in to the GitHub CLI: `brew install gh`, then `gh auth login`.
-6. For Intel builds only: build the static x86_64 libraries once with
-   `packaging/macos/build_x86_64_deps.sh` (writes to
-   `~/Projects/winnow-deps/macos-x86_64`).
+6. Build the static libraries once per architecture with
+   `packaging/macos/build_mac_deps.sh arm64` and, for Intel,
+   `packaging/macos/build_mac_deps.sh x86_64` (they write to
+   `~/Projects/winnow-deps/macos-<arch>`). The release builds do not use Homebrew.
 
 ### 2.2 Windows
 

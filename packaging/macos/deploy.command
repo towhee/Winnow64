@@ -19,7 +19,7 @@
 # Requirements (see ../README.md for one-time setup):
 #   • Xcode command line tools
 #   • Qt 6.9.2 (macos) at the path in config.sh
-#   • Homebrew deps: opencv ffmpeg webp
+#   • static deps: packaging/macos/build_mac_deps.sh arm64 (and x86_64 for Intel)
 #   • Developer ID Application certificate in the login keychain
 #   • notarytool keychain profile (default name: AC_APIKEY)
 # --------------------------------------------------------------------
@@ -67,9 +67,9 @@ MAC_DIR="${SERVER_WEB_ROOT}/winnow_mac"
 INDEX_PATH="${SERVER_WEB_ROOT}/index.html"
 
 # --- Architecture -----------------------------------------------------
-# arm64 (default) = Apple Silicon, Homebrew deps, preset mac-release.
-# x86_64 = Intel, cross-compiled here against the static deps from
-# build_x86_64_deps.sh (preset mac-release-x86_64). It gets its own build dir,
+# arm64 (default) = Apple Silicon, preset mac-release. x86_64 = Intel, cross-compiled
+# here (preset mac-release-x86_64). Both link the static deps from
+# build_mac_deps.sh <arch>, not Homebrew. Intel gets its own build dir,
 # its own out/x86_64/ and an "_Intel" DMG name, so the two never overwrite each
 # other, and the app's updater picks the DMG matching its own architecture.
 : ${WINNOW_ARCH:=arm64}
@@ -261,9 +261,12 @@ function dependencies() {
         done
     fi
 
-    # Reinstate Homebrew WebP libs (Qt ships incompatible copies). Not for Intel:
-    # Homebrew here is arm64-only.
-    if [[ "$WINNOW_ARCH" == arm64 ]]; then
+    # Reinstate Homebrew WebP libs (Qt ships incompatible copies) -- only when a
+    # Homebrew-linked build pulled WebP dylibs in. The release builds link the static
+    # deps (build_mac_deps.sh: OpenCV's WebP is inside it) and must not gain
+    # Homebrew dylibs built for the host macOS. Never for Intel: Homebrew is arm64-only.
+    local webp_dylibs=("$STAGE_FRAMEWORKS_DIR"/libwebp*.dylib(N))
+    if [[ "$WINNOW_ARCH" == arm64 && ${#webp_dylibs} -gt 0 ]]; then
     rm -f "$STAGE_FRAMEWORKS_DIR"/libwebp*.dylib
     cp "$HOMEBREW_PREFIX"/lib/libwebp*.dylib "$STAGE_FRAMEWORKS_DIR/" 2>/dev/null || true
     cp "$HOMEBREW_PREFIX"/lib/libsharpyuv.0.dylib "$STAGE_FRAMEWORKS_DIR/" 2>/dev/null || true

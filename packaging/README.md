@@ -237,15 +237,20 @@ Produces `out/DMG/Winnow<version>.dmg` (notarized, stapled, with an
 
 ### macOS Intel (x86_64)
 
-The Intel build is cross-compiled on an Apple Silicon Mac. Homebrew there is
-arm64-only, so OpenCV, libtiff and libjpeg-turbo are built from source as static
-x86_64 libraries (deployment target 12.0). Qt is the official universal install, and
-its x86_64 slice is used.
+Both Mac releases link libraries built from source, not Homebrew: Homebrew builds every
+bottle for the host macOS, and macOS refuses a library built for a newer version (the
+v3_beta5 Apple Silicon app needed macOS 27). `build_mac_deps.sh` builds OpenCV,
+libtiff, libjpeg-turbo and libjxl as static libraries for macOS 13.4, and installs
+Microsoft's ONNX Runtime 1.23.2 (the last release with an Intel package; its floor,
+13.4, is the floor of both apps). The Intel build is cross-compiled on Apple Silicon
+from the x86_64 slice of the official universal Qt.
 
 ```sh
-packaging/macos/build_x86_64_deps.sh               # once: ~/Projects/winnow-deps/macos-x86_64
+packaging/macos/build_mac_deps.sh arm64            # once: ~/Projects/winnow-deps/macos-arm64
+packaging/macos/build_mac_deps.sh x86_64           # once: ~/Projects/winnow-deps/macos-x86_64
 WINNOW_ARCH=x86_64 packaging/macos/deploy.command  # same menu; preset mac-release-x86_64
 ```
+`build_mac_deps.sh <arch> ort` or `... jxl` redoes only that part.
 
 `WINNOW_ARCH=x86_64` selects the `mac-release-x86_64` preset (`build/mac-release-x86_64`),
 puts everything under `out/x86_64/`, thins to x86_64, skips the Homebrew dylib/WebP

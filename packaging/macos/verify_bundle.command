@@ -35,10 +35,10 @@ if [[ -z "$APP" || ! -d "$APP" ]]; then
 fi
 APP="${APP:A}"   # absolute, resolved
 
-# Supported minimum-OS floor per slice: what the release page promises (release.sh
-# fills the page from the measured value, so this is the ceiling it may reach). Intel
-# is 13.4, the last x86_64 ONNX Runtime's. Apple Silicon is 13.0, Qt 6.11's floor.
-if [[ "${WINNOW_ARCH:-arm64}" == x86_64 ]]; then MIN_OS_FLOOR=13.4; else MIN_OS_FLOOR=13.0; fi
+# Supported minimum-OS floor: the ceiling the measured value may reach (release.sh fills
+# the page from the measurement). 13.4 for both Macs: ONNX Runtime 1.23.2's minos, and
+# CMAKE_OSX_DEPLOYMENT_TARGET of both presets + build_mac_deps.sh. Qt 6.11 needs 13.0.
+MIN_OS_FLOOR=13.4
 
 EXE_NAME=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP/Contents/Info.plist" 2>/dev/null)
 EXE_PATH="$APP/Contents/MacOS/$EXE_NAME"
