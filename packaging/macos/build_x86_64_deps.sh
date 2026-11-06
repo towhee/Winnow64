@@ -9,7 +9,14 @@
 #
 #   packaging/macos/build_x86_64_deps.sh          # -> ~/Projects/winnow-deps/macos-x86_64
 #
+#   packaging/macos/build_x86_64_deps.sh ort      # only (re)install ONNX Runtime
+#
 # Then: WINNOW_ARCH=x86_64 packaging/macos/deploy.command   (preset mac-release-x86_64)
+#
+# ONNX Runtime is the one PREBUILT, SHARED dependency (raw denoise): Microsoft's
+# official onnxruntime-osx-x86_64 package, pinned by SHA-256. 1.23.2 is the LAST release
+# with an Intel macOS build, and its minos is 13.4 -- which is why the Intel preset's
+# deployment target is 13.4. macdeployqt copies the dylib into the bundle.
 #
 # One-time, ~10 minutes. Needs cmake, Qt Creator's ninja and nasm
 # (`brew install nasm`; an arm64 nasm assembles x86_64 SIMD fine).
@@ -19,12 +26,34 @@ set -euo pipefail
 JPEG_VER=3.1.2
 TIFF_VER=4.7.1
 OPENCV_VER=4.14.0          # keep in step with Homebrew opencv@4 (the arm64 build)
+ORT_VER=1.23.2             # last ORT release with an osx-x86_64 package
+ORT_SHA256=d10359e16347b57d9959f7e80a225a5b4a66ed7d7e007274a15cae86836485a6
 
 DEPS="${WINNOW_DEPS_DIR:-$HOME/Projects/winnow-deps}"
 PREFIX="$DEPS/macos-x86_64"
 NINJA="${NINJA:-$HOME/Qt/Tools/Ninja/ninja}"
 NASM="${NASM:-$(command -v nasm || echo /opt/homebrew/bin/nasm)}"
 mkdir -p "$DEPS/src" "$DEPS/build"
+
+install_ort() {
+    local name="onnxruntime-osx-x86_64-$ORT_VER" tgz="$DEPS/src/onnxruntime-osx-x86_64-$ORT_VER.tgz"
+    if [[ ! -f "$tgz" ]]; then
+        echo "⬇️  ONNX Runtime $ORT_VER"
+        curl -sSLf -o "$tgz.part" \
+            "https://github.com/microsoft/onnxruntime/releases/download/v$ORT_VER/$name.tgz"
+        mv "$tgz.part" "$tgz"
+    fi
+    [[ "$(shasum -a 256 "$tgz" | cut -d' ' -f1)" == "$ORT_SHA256" ]] \
+        || { echo "❌ $tgz: SHA-256 mismatch"; exit 1; }
+    tar xzf "$tgz" -C "$DEPS/src"
+    mkdir -p "$PREFIX/include/onnxruntime" "$PREFIX/lib"
+    cp -R "$DEPS/src/$name/include/." "$PREFIX/include/onnxruntime/"
+    cp -a "$DEPS/src/$name/lib/"libonnxruntime*.dylib "$PREFIX/lib/"
+    cp "$DEPS/src/$name/LICENSE" "$PREFIX/lib/LICENSE-onnxruntime.txt"
+    echo "✅ ONNX Runtime $ORT_VER in $PREFIX"
+}
+install_ort
+[[ "${1:-}" == ort ]] && exit 0
 
 fetch() {   # url dir
     [[ -d "$DEPS/src/$2" ]] && return 0

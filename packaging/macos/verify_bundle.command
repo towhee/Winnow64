@@ -35,8 +35,9 @@ if [[ -z "$APP" || ! -d "$APP" ]]; then
 fi
 APP="${APP:A}"   # absolute, resolved
 
-# Supported minimum-OS floor (keep in sync with CMAKE_OSX_DEPLOYMENT_TARGET).
-MIN_OS_FLOOR_MAJOR=12
+# Supported minimum-OS floor per slice (keep in sync with CMAKE_OSX_DEPLOYMENT_TARGET
+# in CMakePresets.json). Intel is 13.4: the last x86_64 ONNX Runtime needs it.
+if [[ "${WINNOW_ARCH:-arm64}" == x86_64 ]]; then MIN_OS_FLOOR=13.4; else MIN_OS_FLOOR=12.0; fi
 
 EXE_NAME=$(/usr/libexec/PlistBuddy -c "Print CFBundleExecutable" "$APP/Contents/Info.plist" 2>/dev/null)
 EXE_PATH="$APP/Contents/MacOS/$EXE_NAME"
@@ -164,11 +165,12 @@ fi
 echo "[5] Minimum macOS"
 minos=$(otool -l "$EXE_PATH" 2>/dev/null | awk '/LC_BUILD_VERSION/{f=1} f&&/minos/{print $2; f=0}')
 echo "       minos: ${minos:-unknown}"
-minos_major="${minos%%.*}"
-if [[ -n "$minos_major" && "$minos_major" -le "$MIN_OS_FLOOR_MAJOR" ]]; then
-    pass "runs on macOS ${minos}+ (floor ${MIN_OS_FLOOR_MAJOR})"
+# major.minor as one number (13.4 -> 1304) so a minor-version floor compares too.
+osnum() { local v="$1"; local maj="${v%%.*}" min="${v#*.}"; [[ "$min" == "$v" ]] && min=0; min="${min%%.*}"; echo $(( maj * 100 + min )); }
+if [[ -n "$minos" && $(osnum "$minos") -le $(osnum "$MIN_OS_FLOOR") ]]; then
+    pass "runs on macOS ${minos}+ (floor ${MIN_OS_FLOOR})"
 else
-    fail "minos ${minos} is newer than the supported floor ${MIN_OS_FLOOR_MAJOR}.x"
+    fail "minos ${minos:-unknown} is newer than the supported floor ${MIN_OS_FLOOR}"
 fi
 
 # ---- 6-8. Gatekeeper / notarization ----

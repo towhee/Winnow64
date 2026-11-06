@@ -1161,12 +1161,21 @@ if(APPLE)
 
     # ONNX Runtime (Homebrew `onnxruntime`, built with the CoreML EP -> ANE). The
     # CoreML provider header ships in the same include dir. Opt-in via WINNOW_ENABLE_ORT.
-    if(WINNOW_ENABLE_ORT)
+    # The Intel build takes Microsoft's prebuilt x86_64 dylib from the static-deps prefix
+    # instead (Homebrew is arm64-only; see packaging/macos/build_x86_64_deps.sh).
+    if(WINNOW_ENABLE_ORT AND WINNOW_MAC_DEPS_PREFIX)
+        find_path(ORT_INCLUDE_DIR onnxruntime_cxx_api.h
+            PATHS ${WINNOW_MAC_DEPS_PREFIX}/include/onnxruntime NO_DEFAULT_PATH)
+        find_library(ORT_LIB onnxruntime
+            PATHS ${WINNOW_MAC_DEPS_PREFIX}/lib NO_DEFAULT_PATH)
+    elseif(WINNOW_ENABLE_ORT)
         find_path(ORT_INCLUDE_DIR onnxruntime_cxx_api.h
             PATHS ${HOMEBREW_PREFIX}/include/onnxruntime
                   ${HOMEBREW_PREFIX}/opt/onnxruntime/include)
         find_library(ORT_LIB onnxruntime
             PATHS ${HOMEBREW_PREFIX}/lib ${HOMEBREW_PREFIX}/opt/onnxruntime/lib)
+    endif()
+    if(WINNOW_ENABLE_ORT)
         if(ORT_INCLUDE_DIR AND ORT_LIB)
             target_include_directories(Winnow PRIVATE ${ORT_INCLUDE_DIR})
             target_link_libraries(Winnow PRIVATE ${ORT_LIB})
@@ -1174,7 +1183,8 @@ if(APPLE)
             message(STATUS "ONNX Runtime enabled (macOS/CoreML): ${ORT_LIB}")
         else()
             message(${WINNOW_ORT_MISSING} "WINNOW_ENABLE_ORT is ON but onnxruntime was not found "
-                            "(brew install onnxruntime); neural inference stays disabled.")
+                            "(brew install onnxruntime; Intel: build_x86_64_deps.sh ort); "
+                            "neural inference stays disabled.")
         endif()
     endif()
 
