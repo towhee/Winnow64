@@ -1,6 +1,6 @@
 # Winnow
 
-**Fast image browsing, culling and editing for macOS and Windows.**
+**Image asset management, Editor, Focus stacker for macOS, Windows and Linux.**
 
 Winnow started as a tool for one job: getting through a full memory card quickly, picking
 the keepers, and copying them to your computer. It still does that job well, and it now
@@ -23,19 +23,6 @@ required.
 Get the latest version from the
 [Releases page](https://github.com/towhee/Winnow64/releases/latest).
 
-| Platform | File | Requirements |
-|---|---|---|
-| macOS | `Winnow<version>.dmg` | Apple Silicon (M1 or later), macOS 12 or later |
-| Windows | `WinnowSetup-<version>.exe` | 64-bit Windows 10 or 11 |
-
-**macOS:** open the DMG and drag Winnow into Applications. The app is signed and
-notarized by Apple.
-
-**Windows:** run the installer. The installer is not code-signed yet, so Windows
-SmartScreen may show a warning. Click **More info → Run anyway**.
-
-> Winnow 3 is in **beta**. Back up your images before trying any feature that writes
-> files.
 
 ## Features
 
@@ -66,7 +53,7 @@ SmartScreen may show a warning. Click **More info → Run anyway**.
 - Local adjustments with masks: brush, linear gradient, luminance and colour range, plus
   AI masks for subject, sky, background, depth and individual objects.
 - AI models install automatically, just in time: each one downloads the first time you
-  use a tool that needs it, so the app download stays small.
+  use a tool that needs it, so the app download is minimized.
 - Spot removal, presets, copy and paste of settings across a selection, and a full edit
   history.
 - Edits are saved in sidecar files. Your original images are never changed unless you
