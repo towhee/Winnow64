@@ -36,6 +36,7 @@ public:
                               bool isRatingBadgeVisible, QModelIndex idx);
     void test();
     QModelIndexList indexes() const;    // images in the grid, in grid order
+    void panUnselectedToFocus();        // pan to focus on zoomed, unselected views
 
 protected:
     void resizeEvent(QResizeEvent *event);

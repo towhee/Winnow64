@@ -39,6 +39,10 @@ public:
     void select();
     void deselect();
 
+    bool isZoomed() const { return isZoom; }
+    void centerOnPct(QPointF imagePct);     // pan to a fraction of the image w/h
+    QPointF focusPct = QPointF(-1, -1);     // cached pan-to-focus prediction (-1 = none)
+
     ClassificationLabel *classificationLabel;
 
 public slots:

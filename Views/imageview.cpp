@@ -2060,6 +2060,12 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
                                                              : QRectF(0.0, 0.0, 1.0, 1.0);
     if (cropN == QRectF(0.0, 0.0, 1.0, 1.0)) cropFitLargestToAspect();
     if (cropAspect < 0.0) cropResolveCustomAspect();
+    /* A locked ratio is enforced from the start: a stored crop composed under another
+       ratio (or freely) is reshaped about its centre before the user touches it. */
+    else if (cropAspectLocked) {
+        const qreal r = cropFrameAspect(), t = cropLockedAspect();
+        if (r > 0.0 && t > 0.0 && qAbs(r / t - 1.0) > 0.005) cropRefitToAspect();
+    }
 
     cropEditMode = true;
     cropWarp = false;                 // always start as a plain rectangle crop
@@ -2713,7 +2719,13 @@ void ImageView::cropResizeFromHandle(QPoint vp)
         }
         qreal w = qMax(minSz, std::abs(x - anchor.x()));
         qreal h = (a > 0.0) ? w / a : qMax(minSz, std::abs(y - anchor.y()));
-        if (a > 0.0) w = h * a;
+        if (a > 0.0) {
+            /* The height follows the width, so it can run off the image: cap it at the room
+               on the drag side, else the clip below would break the locked ratio. */
+            const qreal roomH = (y < anchor.y()) ? anchor.y() - vr.top() : vr.bottom() - anchor.y();
+            if (h > roomH) h = roomH;
+            w = h * a;
+        }
         const qreal left = (x < anchor.x()) ? anchor.x() - w : anchor.x();
         const qreal top  = (y < anchor.y()) ? anchor.y() - h : anchor.y();
         f = QRectF(left, top, w, h);
@@ -2722,15 +2734,27 @@ void ImageView::cropResizeFromHandle(QPoint vp)
         if (cropDrag == 5 || cropDrag == 7) {        // R / L edge: width changes
             const qreal anchorX = (cropDrag == 5) ? f0.left() : f0.right();
             qreal w = qMax(minSz, std::abs(x - anchorX));
-            const qreal left = (x < anchorX) ? anchorX - w : anchorX;
             qreal h = (a > 0.0) ? w / a : f0.height();
+            if (a > 0.0) {
+                // the height grows about the centre: cap it at twice the nearer room
+                const qreal cy = f0.center().y();
+                const qreal roomH = 2.0 * qMin(cy - vr.top(), vr.bottom() - cy);
+                if (h > roomH) { h = roomH; w = h * a; }
+            }
+            const qreal left = (x < anchorX) ? anchorX - w : anchorX;
             const qreal top = (a > 0.0) ? f0.center().y() - h / 2.0 : f0.top();
             f = QRectF(left, top, w, h);
         } else {                                     // T / B edge: height changes
             const qreal anchorY = (cropDrag == 6) ? f0.top() : f0.bottom();
             qreal h = qMax(minSz, std::abs(y - anchorY));
-            const qreal top = (y < anchorY) ? anchorY - h : anchorY;
             qreal w = (a > 0.0) ? h * a : f0.width();
+            if (a > 0.0) {
+                // the width grows about the centre: cap it at twice the nearer room
+                const qreal cx = f0.center().x();
+                const qreal roomW = 2.0 * qMin(cx - vr.left(), vr.right() - cx);
+                if (w > roomW) { w = roomW; h = w / a; }
+            }
+            const qreal top  = (y < anchorY) ? anchorY - h : anchorY;
             const qreal left = (a > 0.0) ? f0.center().x() - w / 2.0 : f0.left();
             f = QRectF(left, top, w, h);
         }
@@ -2753,7 +2777,13 @@ void ImageView::cropDrawNewFrom(QPoint vp)
     qreal w = std::abs(bx - ax);
     qreal h = std::abs(by - ay);
     const qreal a = cropLockedAspect();
-    if (a > 0.0) h = w / a;
+    if (a > 0.0) {
+        /* The height follows the width; cap it at the room on the drag side so the clip
+           below never breaks the locked ratio. */
+        h = w / a;
+        const qreal roomH = (by < ay) ? ay - vr.top() : vr.bottom() - ay;
+        if (h > roomH) { h = roomH; w = h * a; }
+    }
     const qreal left = (bx < ax) ? ax - w : ax;
     const qreal top  = (by < ay) ? ay - h : ay;
 
@@ -5274,6 +5304,16 @@ void ImageView::predictPanToFocus()
 
     focusPrediction = focusPredictor->predict(pmItem->pixmap().toImage());
     panTo(focusPrediction.x(), focusPrediction.y());
+}
+
+QPointF ImageView::predictFocus(const QImage &image)
+{
+/*
+    The focus prediction for any image, not just the one in the loupe. Used by
+    CompareImages to pan the other compare views to their own focus points.
+*/
+    if (G::isLogger) G::log("ImageView::predictFocus");
+    return focusPredictor->predict(image);
 }
 
 void ImageView::panTo(float xPct, float yPct)

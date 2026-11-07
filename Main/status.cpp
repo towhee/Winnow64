@@ -1050,6 +1050,7 @@ void MW::togglePanToFocus(Tog n)
     updateStatusBar();  // updates btn image and tooltip
 
     if (imageView->panToFocus) {
+        if (G::mode == "Compare") compareImages->panUnselectedToFocus();
         if (!imageView->pmItem->pixmap().isNull()) {
             imageView->predictPanToFocus();
             imageView->showNormalizedViewport(true, true, "MW::togglePanToFocus");

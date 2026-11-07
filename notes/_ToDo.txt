@@ -1,11 +1,11 @@
 WHAT'S NEW
 - Change Filters group/flat buttons
 - Fix Basic > Auto crash
+- Develop editor scrolling
 
 BUGS / TO DO
-- Develop > Basic > Auto crashed
+- Winnow develop presets not persistent from Quark to published release
 - Crop when 16x9, then level, lose 16x9
-- Exit slide show Mode highlight is Embellish, not Browse.
 - Import/export catalogs
 - /Users/roryhill/Temp/Photos_to_be_curated/2026/202603/2026-03-19_Neck Point/2026-03-19_0008.arw
   preview dimensions = x

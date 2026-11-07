@@ -423,6 +423,28 @@ void CompareImages::zoom(QPointF scrollPct, QModelIndex idx, bool isZoom)
             imList->at(i)->slaveZoomToPct(scrollPct, isZoom);
         }
     }
+    panUnselectedToFocus();
+}
+
+void CompareImages::panUnselectedToFocus()
+{
+/*
+    With pan to focus on, a zoom pans every compare view except the selected one to its
+    own predicted focus point instead of mirroring the selected view's scroll position.
+    The selected view keeps the zoom the user aimed. Predictions are cached per view, so
+    only the first zoom runs the model. Later synced pans move by delta and keep each
+    view's offset from its focus point.
+*/
+    if (G::isLogger) G::log("CompareImages::panUnselectedToFocus");
+    if (!imageView->panToFocus) return;
+    const int cur = current();
+    for (int i = 0; i < imList->count(); ++i) {
+        if (i == cur) continue;
+        CompareView *v = imList->at(i);
+        if (!v->isZoomed() || v->pmItem->pixmap().isNull()) continue;
+        if (v->focusPct.x() < 0) v->focusPct = imageView->predictFocus(v->pmItem->pixmap().toImage());
+        v->centerOnPct(v->focusPct);
+    }
 }
 
 void CompareImages::pan(QPointF scrollPct, QModelIndex idx)
@@ -517,6 +539,7 @@ void CompareImages::zoomIn()
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomIn();
     }
+    panUnselectedToFocus();
 }
 
 void CompareImages::zoomOut()
@@ -525,6 +548,7 @@ void CompareImages::zoomOut()
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomOut();
     }
+    panUnselectedToFocus();
 }
 
 void CompareImages::zoomToFit()
@@ -545,6 +569,7 @@ each instance of CompareView, which in turn makes the proper scale change.
     for (int i = 0; i < imList->count(); ++i) {
         imList->at(i)->zoomTo(zoomValue);
     }
+    panUnselectedToFocus();
 }
 
 void CompareImages::zoomToggle()

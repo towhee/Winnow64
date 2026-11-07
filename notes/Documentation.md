@@ -885,6 +885,7 @@
   - [19.1 Architecture](#191-architecture)
   - [19.2 Training a New Model](#192-training-a-new-model)
   - [19.3 Panning the Loupe](#193-panning-the-loupe)
+  - [19.4 Panning the Compare Views](#194-panning-the-compare-views)
 - [20 Help System](#20-help-system)
   - [20.1 Architecture](#201-architecture)
     - [20.1.1 Spacing (No Crowded Pages)](#2011-spacing-no-crowded-pages)
@@ -6410,6 +6411,7 @@ MW wiring: levelAngleEntered -> setDevelopLevelAngle; resetPartRequested -> rese
 #### 11.22.2 Aspect Lock and Flip
 
 - Locking "As shot" constrains drags to the image's native aspect (ImageView::cropLockedAspect); flipping honours 1/aspect.
+- A locked ratio is enforced from the moment a crop starts. beginCropEdit reshapes a stored crop composed under another ratio (more than 0.5% off cropLockedAspect) about its centre with cropRefitToAspect, before the user touches it. A locked drag (cropDrawNewFrom, cropResizeFromHandle) caps the dependent dimension at the room the image leaves on that side (twice the nearer room for an edge drag, which grows about the centre) and shrinks the driving dimension to match. Without the cap, the final clip to the image's on-screen rect would cut the frame and break the ratio near an edge.
 - Flip (ImageView::setCropAspectFlip) turns the crop box 90 deg by swapping its pixel width and height, keeping the centre and scaling down only if the rotated box would not fit. A locked crop already sits at the ratio, so the swap lands on the inverted ratio; a free crop just swaps its own dimensions.
 - Custom (key "free", not "custom", which would collide with the "custom:" user aspects) is the crop's OWN ratio. Releasing a handle drag or a newly drawn frame with the aspect UNLOCKED that leaves the chosen ratio (more than 0.5% off cropTargetAspect) makes the view adopt the frame's ratio (cropAspect = it, flip cleared, flip stash dropped) and emit ImageView::cropAspectFreed; MW connects that to TransformPanel::setCustomAspect, which selects Custom and clears the flip with NO aspectChanged (the view is already there). A negative cropAspect, from picking Custom in the combo or restoring it at beginCropEdit, is resolved by cropResolveCustomAspect to the current frame's ratio (inverted when flipped), so locking or flipping Custom honours what is on screen.
 - The flip STASH: a straight flip back must restore the exact pre-flip rect, or the scale-to-fit clamp shrinks the crop a little on every round trip. cropFlipPrevN holds the rect before the last flip and cropFlipResultN what that flip produced; if cropN still equals cropFlipResultN (epsilon compare), the next flip restores cropFlipPrevN verbatim instead of recomputing. Any manual edit moves cropN off cropFlipResultN, so the next flip recomputes. The stash is discarded in beginCropEdit (a new session) and setCropAspect (an aspect or lock change breaks the pairing).
@@ -10635,6 +10637,10 @@ FocusPredictor    A C++ class that runs the model to predict the focus point for
 When focus prediction is enabled and the loupe is zoomed, ImageView pans to the predicted point at the end of ImageView::loadImage, via ImageView::predictPanToFocus (get the focus coordinate and pan).
 
 The viewport's position within the scene is then shown on the thumbnail: ImageView::predictPanToFocus emits the rectangle and image aspect, IconView::loupeRect receives them, and IconViewDelegate::setNormVpRect / setVpRectVisibility draw a rectangle on the thumbView thumbnail matching the loupe viewport.
+
+### 19.4 Panning the Compare Views
+
+In Compare mode, with focus prediction on, CompareImages::panUnselectedToFocus pans every zoomed compare view EXCEPT the selected one (current()) to its own predicted point (CompareView::centerOnPct). The selected view keeps the position the user zoomed or panned to. It runs after each zoom: a mouse-click zoom (CompareImages::zoom, after the other views follow the zoom), zoomIn, zoomOut and zoomTo, and also when pan to focus is switched on (MW::togglePanToFocus). ImageView::predictFocus runs the shared FocusPredictor on any image. Each view caches its result in CompareView::focusPct, so only the first zoom runs the model. Later synced pans move each view by the same delta, so each view keeps its offset from its own focus point. centerOnPct resets scrollPosPct, so a view that becomes the selected one does not propagate a stale delta.
 
 ## 20 Help System
 

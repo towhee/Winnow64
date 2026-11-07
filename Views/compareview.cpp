@@ -256,6 +256,18 @@ locked to pan together.
     verticalScrollBar()->setValue(scrl.vVal);
 }
 
+void CompareView::centerOnPct(QPointF imagePct)
+{
+/*
+    Pan so the point at imagePct (a fraction of the image width and height, as returned
+    by the focus predictor) is centred. Used by pan to focus. scrollPosPct is resynced
+    so the next propagated pan from this view starts from here, not a stale delta base.
+*/
+    if (G::isLogger) G::log("CompareView::centerOnPct");
+    centerOn(QPointF(imagePct.x() * sceneRect().width(), imagePct.y() * sceneRect().height()));
+    scrollPosPct = getScrollPct();
+}
+
 void CompareView::slaveSetPanStartPct()
 {
 /*

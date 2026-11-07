@@ -171,6 +171,7 @@ public slots:
     void copyImage();
     void panTo(float xPct, float yPct);
     void predictPanToFocus();
+    QPointF predictFocus(const QImage &image);   // focus point as fraction of w/h
     QSize viewportInScene();
     void showNormalizedViewport(bool adjustCenter, bool refresh, QString src);
     void updateToggleZoom(qreal toggleZoomValue);
