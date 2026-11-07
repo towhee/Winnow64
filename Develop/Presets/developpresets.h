@@ -38,11 +38,25 @@
 
         Develop Preset Layout/categories    = array of { name, presets, collapsed }
 
-    "Winnow" (kWinnowCategory) is PERMANENT: layout() always contains it, it cannot be
-    renamed or deleted, and it is where every preset not placed anywhere else lands --
-    presets saved before categories existed, a deleted category's presets, a preset
-    written without a category. layout() reconciles the stored list against the
+    "User Presets" (kUserCategory) is PERMANENT: layout() always contains it, it cannot
+    be renamed or deleted, and it is where every user preset not placed anywhere else
+    lands -- presets saved before categories existed, a deleted category's presets, a
+    preset written without a category. layout() reconciles the stored list against the
     presets that really exist on every call, so the two can never disagree for long.
+
+    "Winnow" (kWinnowCategory) is RESERVED (added 2026-11-07): the presets that ship with
+    the app. They are not in QSettings at all; they are read from the resource
+    ":/Develop/Presets/winnowpresets.json" at construction, in the file's order, and
+    layout() always puts them under Winnow (only Winnow's position and fold state come
+    from the stored layout). Everyone can apply them; only G::isRory can add, update,
+    rename, delete, reorder or move them in or out of Winnow, and every such edit
+    rewrites winnowpresets.json in the source tree (WINNOW_SOURCE_DIR, else the
+    desktop), so the next build -- and the next release -- carries it. Without
+    G::isRory the store refuses those edits (canEditWinnow) and the panel greys them with the
+    reason. Earlier builds used Winnow as the catch-all category, so a user preset
+    still filed there moves to User Presets, and a user preset that shares a shipped
+    preset's name is dropped if identical or renamed "<name> (user)" if not
+    (reconcileWithWinnow).
 
     VERSION / MIGRATION. A preset lives in QSettings indefinitely and is applied by a
     straight assignment of its stored value into an EditParams field, so a preset key is
@@ -105,28 +119,37 @@ class DevelopPresets : public QObject
 public:
     explicit DevelopPresets(QSettings *setting, QObject *parent = nullptr);
 
-    QStringList   names() const;                  // sorted, case-insensitive
+    QStringList   names() const;                  // user + Winnow, case-insensitive sort
     bool          contains(const QString &name) const;
     DevelopPreset read(const QString &name) const;
     /* Overwrites any preset of that name. category empty = leave an existing preset
-       where it is (a new one goes to the end of Winnow); otherwise the preset moves to
-       the end of that category, which is created if it does not exist yet. */
-    void          write(const DevelopPreset &p, const QString &category = QString());
+       where it is (a new one goes to the end of User Presets); otherwise the preset
+       moves to the end of that category, which is created if it does not exist yet.
+       Returns false, writing nothing, when the edit touches Winnow and !canEdit. */
+    bool          write(const DevelopPreset &p, const QString &category = QString());
     bool          rename(const QString &from, const QString &to);
     void          remove(const QString &name);
+
+    /* ---- The reserved Winnow presets (see the class comment) --------------------- */
+    bool isWinnowPreset(const QString &name) const;     // case-insensitive
+    static bool isWinnowCategory(const QString &category);
+    /* Winnow presets and the Winnow category can be edited only by G::isRory. */
+    static bool canEditWinnow();
 
     /* ---- Categories (see the class comment) ---------------------------------------
        All of these keep the preset data alone; only the layout is rewritten. Every
        mutation except setCategoryCollapsed emits changed() -- folding a header is the
        view's own business, so the list does not rebuild for it. */
     static constexpr const char *kWinnowCategory = "Winnow";
+    static constexpr const char *kUserCategory   = "User Presets";
     QVector<PresetCategory> layout() const;         // reconciled, display order
     QStringList categoryNames() const;              // display order
     QString     categoryOf(const QString &preset) const;
     bool        hasCategory(const QString &name) const;     // case-insensitive
     bool        addCategory(const QString &name);           // false: empty or exists
-    bool        renameCategory(const QString &from, const QString &to);  // not Winnow
-    void        removeCategory(const QString &name);        // presets move to Winnow
+    /* Neither Winnow nor User Presets can be renamed or removed. */
+    bool        renameCategory(const QString &from, const QString &to);
+    void        removeCategory(const QString &name);        // presets -> User Presets
     /* toIndex is the insertion point counted BEFORE the item is taken out, i.e. the
        gap the user dropped on; the store corrects for the removal. */
     void        moveCategory(const QString &name, int toIndex);
@@ -189,11 +212,24 @@ private:
     DevelopPreset readGroup(const char *root, const QString &name) const;
     void          writeGroup(const char *root, const DevelopPreset &p);
 
-    /* Persist a layout as given (no reconcile, no changed()). */
+    /* Persist a layout as given (no reconcile, no changed()). Winnow's preset list is
+       not stored: it comes from winnowpresets.json. */
     void          saveLayout(const QVector<PresetCategory> &cats);
     static int    indexOfCategory(const QVector<PresetCategory> &cats, const QString &name);
+    QStringList   userNames() const;              // the QSettings presets only, sorted
+    void          removeUser(const QString &name);    // drop from QSettings, no signal
+
+    /* The shipped Winnow presets, in display order. */
+    static constexpr const char *kWinnowResource = ":/Develop/Presets/winnowpresets.json";
+    static constexpr const char *kWinnowFile     = "winnowpresets.json";
+    void          loadWinnow();
+    /* Rory only: write `winnow` back to winnowpresets.json (see the class comment). */
+    void          saveWinnow();
+    int           indexOfWinnow(const QString &name) const;
+    void          reconcileWithWinnow();          // one-time cleanup, at construction
 
     QSettings *setting;
+    QVector<DevelopPreset> winnow;
 };
 
 #endif // DEVELOPPRESETS_H

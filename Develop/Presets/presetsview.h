@@ -10,7 +10,7 @@ class DevelopPresets;
 
 /*
     PresetDelegate -- paints the three kinds of row: a category HEADER (disclosure arrow,
-    bold name, preset count, a band fill), a PRESET (name indented under its header,
+    bold name, preset count, no fill), a PRESET (name indented under its header,
     elided if the dock is narrow) and the empty-list PLACEHOLDER (disabled colour, never
     highlights). The HOVERED preset gets a light fill because hovering is live (the loupe
     is showing that preset applied); a header that is the target of a drag is outlined.
@@ -50,8 +50,10 @@ private:
     panel). Deliberately the same interaction as the History dock next to it: hovering a
     preset previews it on the loupe, clicking it applies it.
 
-    Presets are grouped under header CATEGORIES (DevelopPresets::layout); "Winnow" is
-    permanent. Clicking a header folds it. DRAG reorders: a preset row can be dropped
+    Presets are grouped under header CATEGORIES (DevelopPresets::layout); "Winnow" (the
+    shipped presets) is reserved -- its presets cannot be dragged, edited or joined
+    unless DevelopPresets::canEditWinnow -- and "User Presets" is permanent. Clicking a
+    header folds it. DRAG reorders: a preset row can be dropped
     between presets of any category or onto a header (top of that category), and a
     header can be dropped between categories. The drag is done by hand rather than with
     QDrag / InternalMove because the rows are not independent -- a header carries its

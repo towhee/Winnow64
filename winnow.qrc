@@ -269,5 +269,6 @@
         <file>Docs/developspothelp.html</file>
         <file>images/icon16/ellipsis_vertical.png</file>
         <file>Workspaces/defaults.json</file>
+        <file>Develop/Presets/winnowpresets.json</file>
     </qresource>
 </RCC>

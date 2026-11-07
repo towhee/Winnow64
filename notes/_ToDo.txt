@@ -4,14 +4,16 @@ WHAT'S NEW
 - Develop editor scrolling
 
 BUGS / TO DO
+- /Users/roryhill/Temp/Photos_to_be_curated/2026/202603/2026-03-19_Neck Point/2026-03-19_0008.arw
+  preview dimensions = x
+- Implement undo
+- Add Actions (replay a series of steps)
 - Winnow develop presets not persistent from Quark to published release
 - Crop when 16x9, then level, lose 16x9
 - Import/export catalogs
-- /Users/roryhill/Temp/Photos_to_be_curated/2026/202603/2026-03-19_Neck Point/2026-03-19_0008.arw
-  preview dimensions = x
 - Thumb show if the preview is up-to-date and develop has been run
 - Rethink thumbnail badges
-- Folder rename / Move / Delete from library (in Filter > Folders)
+- Rename / Move / Delete folders while in Library mode (in Filter > Folders)
 - Catalog management: import/export
 - Find duplicates (expand/collapse) and library use.
 - Videos starting at final frame.

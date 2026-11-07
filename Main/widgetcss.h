@@ -38,6 +38,11 @@ public:
     int l50;
     int l60;
 
+    // darker than text
+    int f20;
+    int f40;
+    int f60;
+
     // height factors
     QString h12;    // 1.2x font height
     QString h15;    // 1.5x font height

@@ -197,6 +197,20 @@ QString SaveDevelopPresetDlg::category() const
     return categoryCombo ? categoryCombo->currentText() : QString();
 }
 
+void SaveDevelopPresetDlg::setReservedNames(const QStringList &names, const QString &reason)
+{
+    if (!nameEdit) return;                      // SavePreset only
+    reservedNames = names;
+    if (!reservedLabel) {
+        reservedLabel = new QLabel(this);
+        reservedLabel->setWordWrap(true);
+        reservedLabel->setVisible(false);
+        form->insertRow(1, QString(), reservedLabel);
+    }
+    reservedLabel->setText(reason);
+    updateSaveEnabled();
+}
+
 QString SaveDevelopPresetDlg::presetName() const
 {
     return nameEdit ? nameEdit->text().trimmed() : QString();
@@ -264,14 +278,16 @@ void SaveDevelopPresetDlg::updateSaveEnabled()
 {
     /* Copying has no name to validate, so Copy is always available -- copying nothing is
        harmless and clears the buffer, which is a legitimate thing to want. */
-    saveBtn->setEnabled(!nameEdit || !presetName().isEmpty());
+    const bool reserved = nameEdit && reservedNames.contains(presetName(), Qt::CaseInsensitive);
+    if (reservedLabel) reservedLabel->setVisible(reserved);
+    saveBtn->setEnabled(!nameEdit || (!presetName().isEmpty() && !reserved));
 }
 
 void SaveDevelopPresetDlg::onAccept()
 {
     if (!nameEdit) { accept(); return; }        // CopySettings: no name, no overwrite
     const QString name = presetName();
-    if (name.isEmpty()) return;
+    if (name.isEmpty() || reservedNames.contains(name, Qt::CaseInsensitive)) return;
     if (existingNames.contains(name, Qt::CaseInsensitive)) {
         const auto ret = QMessageBox::question(this, tr("Overwrite preset"),
             tr("A preset named \"%1\" already exists. Overwrite it?").arg(name),

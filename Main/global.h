@@ -795,6 +795,7 @@ Q_NAMESPACE
     extern std::atomic<int>    probeEmitSuppressed;
 
     extern QColor textColor;
+    extern QColor darktextColor;
     extern QColor backgroundColor;
     extern QColor disabledColor;
     extern QColor header1Color;

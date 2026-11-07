@@ -72,6 +72,11 @@ public:
     void    setCategories(const QStringList &categories, const QString &current);
     QString category() const;       // empty when setCategories was never called
 
+    /* SavePreset only: names the user may not save over (the reserved Winnow presets
+       when !G::isRory). Typing one greys Save and says why under the name, instead of
+       offering an overwrite the store would refuse. */
+    void    setReservedNames(const QStringList &names, const QString &reason);
+
     QString presetName() const;     // always empty in CopySettings (there is no name)
     int     scopeIndex() const;     // index into the scopeNames handed in
     /* Checked leaf keys per group title (only the leaves the user left checked). */
@@ -96,6 +101,8 @@ private:
     QTreeWidget *tree      = nullptr;
     QPushButton *saveBtn   = nullptr;   // "Save" / "Copy"
     QStringList  existingNames;
+    QStringList  reservedNames;
+    QLabel      *reservedLabel = nullptr;   // the reason, shown while the name is reserved
     QVector<QSet<QString>> changedPerScope;
 
     static constexpr int KeyRole   = Qt::UserRole + 1;   // leaf: its key

@@ -4,6 +4,7 @@
 void WidgetCSS::styleGlobals()
 {
     const int bg = G::backgroundShade;
+    const int fg = G::textShade;
     auto shade = [](int s) { return QColor(s, s, s); };
 
     /* ---------------------------------------------------------------------------------
@@ -11,6 +12,7 @@ void WidgetCSS::styleGlobals()
        --------------------------------------------------------------------------------- */
     // G::textShade is the user's "Application text luminousity" (settings)
     G::textColor = shade(G::textShade);                      // derived, grey, text
+    G::darktextColor = shade(fg - 40);                       // derived, grey, text - 40
     G::disabledColor = shade(bg + 40);                       // derived, grey, disabled text
     G::header1Color = QColor(108,193,232);                   // #6cc1e8, light blue, dock titles, help h1
     G::header2Color = QColor(81,141,169);                    // #518da9, blue, property editor root rows, help h2
@@ -272,6 +274,11 @@ QString WidgetCSS::css()
     l40 = bg + 40;
     l50 = bg + 50;
     l60 = bg + 60;
+
+    // darker than text
+    f20 = fg - 20;
+    f40 = fg - 40;
+    f60 = fg - 60;
 
     textColor = G::textColor;
     disabledColor = G::disabledColor;

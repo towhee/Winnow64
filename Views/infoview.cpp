@@ -644,8 +644,25 @@ void InfoView::updateInfo(const int &row)
 
     s = dm->sf->index(row, G::DimensionsColumn).data().toString();
     ok->setData(ok->index(DimensionsRow, 1, fileInfoIdx), s);
-    s = dm->sf->index(row, G::WidthOrigPreviewColumn).data().toString() + "x" +
-        dm->sf->index(row, G::HeightOrigPreviewColumn).data().toString();
+    /* The embedded preview's dimensions are decode geometry, not persisted: a row
+       hydrated from the local index has neither column until a decode reads the
+       header (ImageDecoder::ensureDecodeGeometry), and the row read a bare "x".
+       Read the header now and publish both, so the next visit skips the read. A
+       file with no embedded preview reports 0x0, shown blank. */
+    QVariant previewW = dm->sf->index(row, G::WidthOrigPreviewColumn).data();
+    QVariant previewH = dm->sf->index(row, G::HeightOrigPreviewColumn).data();
+    if ((!previewW.isValid() || !previewH.isValid()) &&
+        metadata->loadImageMetadata(imageInfo, row, dm->instance, true, true, false, false,
+                                    "InfoView::updateInfo previewDim", true)) {
+        previewW = metadata->m.widthOrigPreview;
+        previewH = metadata->m.heightOrigPreview;
+        dm->setValSf(row, G::WidthOrigPreviewColumn, previewW, dm->instance, "InfoView");
+        dm->setValSf(row, G::HeightOrigPreviewColumn, previewH, dm->instance, "InfoView");
+    }
+    if (previewW.toInt() > 0 && previewH.toInt() > 0)
+        s = previewW.toString() + "x" + previewH.toString();
+    else
+        s = "";
     ok->setData(ok->index(PreviewDimensionsRow, 1, fileInfoIdx), s);
     /* After the develop geometry (crop/straighten/perspective). An undeveloped image
        is uncropped, so it reports the file's dimensions. */

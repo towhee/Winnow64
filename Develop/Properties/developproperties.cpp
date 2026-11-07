@@ -10519,16 +10519,34 @@ void DevelopProperties::saveDevelopPresetIn(const QString &category)
                              activeScopeIndex, presets->names(),
                              SaveDevelopPresetDlg::Mode::SavePreset, mw);
     /* Default category: the one asked for, else the last used (if it still exists),
-       else the permanent Winnow. */
+       else the permanent User Presets. Winnow is reserved for G::isRory: it is not
+       offered, and its preset names cannot be saved over. */
+    const bool winnowOk = DevelopPresets::canEditWinnow();
+    QStringList cats = presets->categoryNames();
+    if (!winnowOk) cats.removeIf([](const QString &c){
+        return DevelopPresets::isWinnowCategory(c); });
     QString defCat = category.isEmpty() ? lastPresetCategory : category;
-    if (defCat.isEmpty() || !presets->hasCategory(defCat))
-        defCat = DevelopPresets::kWinnowCategory;
-    dlg.setCategories(presets->categoryNames(), defCat);
+    if (defCat.isEmpty() || !presets->hasCategory(defCat) ||
+        (!winnowOk && DevelopPresets::isWinnowCategory(defCat)))
+        defCat = DevelopPresets::kUserCategory;
+    dlg.setCategories(cats, defCat);
+    if (!winnowOk) {
+        QStringList reserved;
+        for (const PresetCategory &c : presets->layout())
+            if (DevelopPresets::isWinnowCategory(c.name)) reserved = c.presets;
+        dlg.setReservedNames(reserved,
+            tr("A Winnow preset has this name. Winnow presets come with the app and "
+               "cannot be replaced; choose another name."));
+    }
     if (dlg.exec() != QDialog::Accepted) return;
 
     lastPresetCategory = dlg.category();
-    presets->write(buildPreset(dlg.presetName(), dlg.scopeIndex(), dlg.selected(), s),
-                   dlg.category());
+    if (!presets->write(buildPreset(dlg.presetName(), dlg.scopeIndex(), dlg.selected(), s),
+                        dlg.category())) {
+        if (G::popup) G::popup->showPopup("\"" + dlg.presetName() + "\" was not saved: "
+                                          "Winnow presets are reserved.");
+        return;
+    }
     if (G::popup) G::popup->showPopup("Saved develop preset \"" + dlg.presetName() +
                                       "\" in " + dlg.category() + ".");
 }
@@ -11124,7 +11142,11 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
     if (!preset.spots.isEmpty()) preset.spots = s.spots;
     preset.sourceScope = currentScopeNames().value(src, QStringLiteral("Global"));
 
-    presets->write(preset);
+    if (!presets->write(preset)) {
+        if (G::popup) G::popup->showPopup("\"" + name + "\" is a Winnow preset; "
+                                          "Winnow presets are reserved.");
+        return;
+    }
     if (G::popup) G::popup->showPopup("Updated develop preset \"" + name + "\".");
 }
 
@@ -11134,7 +11156,10 @@ void DevelopProperties::renamePreset(const QString &from, const QString &to)
     if (!presets) return;
     const bool wasRawPreset = from == rawApplyPreset;
     if (!presets->rename(from, to)) {
-        if (G::popup) G::popup->showPopup("A preset named \"" + to + "\" already exists.");
+        if (G::popup) G::popup->showPopup(
+            presets->isWinnowPreset(from) && !DevelopPresets::canEditWinnow()
+                ? "\"" + from + "\" is a Winnow preset; Winnow presets are reserved."
+                : "A preset named \"" + to + "\" already exists.");
         return;
     }
     /* The Raw panel's "Apply:" follows the preset to its new name. */

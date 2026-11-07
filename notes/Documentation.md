@@ -550,6 +550,7 @@
     - [11.34.7 Shortcuts](#11347-shortcuts)
     - [11.34.8 Auto Settings](#11348-auto-settings)
     - [11.34.9 Raw Preset (Raw Panel "Apply:")](#11349-raw-preset-raw-panel-apply)
+    - [11.34.10 Winnow Presets (Shipped, Reserved)](#113410-winnow-presets-shipped-reserved)
   - [11.35 Copy and Paste Develop Settings](#1135-copy-and-paste-develop-settings)
     - [11.35.1 The Buffer](#11351-the-buffer)
     - [11.35.2 UI](#11352-ui)
@@ -7222,11 +7223,12 @@ Develop/Presets/presetsview.{h,cpp} (PresetsView + PresetDelegate) is deliberate
 
 The list is grouped under user-named header categories (Lightroom's preset folders).
 
-- "Winnow" is PERMANENT: it always exists, cannot be renamed or deleted, and is where every unplaced preset lands: presets saved before categories existed, the presets of a deleted category (deleting a category never deletes a preset), and a preset written without a category.
+- "Winnow" is RESERVED for the presets that ship with the app (see [11.34.10 Winnow Presets (Shipped, Reserved)](#113410-winnow-presets-shipped-reserved)). It always exists, is first unless dragged, and cannot be renamed or deleted.
+- "User Presets" is PERMANENT: it always exists (second, unless dragged), cannot be renamed or deleted, and is where every unplaced user preset lands: presets saved before categories existed, the presets of a deleted category (deleting a category never deletes a preset), and a preset written without a category. Until 2026-11-07 Winnow played this role.
 - Clicking a header folds it (persisted).
 - DRAG reorders, done by hand in PresetsView rather than QDrag / InternalMove, because the rows are not independent (a header carries its presets, and every drop must land in a category). A preset dropped on the upper / lower half of a preset goes before / after it; onto a header, to the top of that category (header outlined); below the last row, to the end of the last category. A dragged header moves its whole category before / after the category under the cursor. Releasing outside the list cancels.
-- A preset's right-click also has "Move to Category" (the discoverable twin of the drag); a header's has New Preset in "&lt;cat>"... / New Category... / Rename Category... / Delete Category... (Winnow's two greyed with "(Winnow is permanent)"). Category management is pure organisation, so PresetsView calls the store directly; preset actions still go through DevelopProperties.
-- The Save dialog has a Category combo (existing categories in panel order + "New Category...", which prompts and adds the name). The category is only created when the preset is saved, so Cancel leaves no empty category. It defaults to the header's category (from "New Preset in ..."), else the last category used this session, else Winnow. Overwriting an existing preset into a different category moves it to the end of that category.
+- A preset's right-click also has "Move to Category" (the discoverable twin of the drag); a header's has New Preset in "&lt;cat>"... / New Category... / Rename Category... / Delete Category... (greyed with "(Winnow is reserved)" / "(User Presets is permanent)"). Category management is pure organisation, so PresetsView calls the store directly; preset actions still go through DevelopProperties.
+- The Save dialog has a Category combo (existing categories in panel order + "New Category...", which prompts and adds the name). The category is only created when the preset is saved, so Cancel leaves no empty category. It defaults to the header's category (from "New Preset in ..."), else the last category used this session, else User Presets. Winnow is not offered unless G::isRory. Overwriting an existing preset into a different category moves it to the end of that category.
 
 The layout is stored under its OWN QSettings root, so the preset data (a published format) is untouched:
 
@@ -7234,7 +7236,7 @@ The layout is stored under its OWN QSettings root, so the preset data (a publish
 Develop Preset Layout/categories = array of { name, presets (QStringList, display order), collapsed }
 ```
 
-DevelopPresets::layout() reconciles it on every read: entries for vanished presets and duplicates are dropped, Winnow is guaranteed, and unplaced presets append to Winnow in name order. rename keeps the preset's slot; remove drops its entry. movePreset / moveCategory take the DROP GAP (an index counted before the item is removed) and correct for the removal themselves.
+DevelopPresets::layout() reconciles it on every read: entries for vanished presets and duplicates are dropped, Winnow and User Presets are guaranteed, Winnow holds exactly the shipped presets in file order (its stored "presets" list is written empty and ignored), and unplaced user presets append to User Presets in name order. rename keeps the preset's slot; remove drops its entry. movePreset / moveCategory take the DROP GAP (an index counted before the item is removed) and correct for the removal themselves.
 
 #### 11.34.5 The Save Dialog
 
@@ -7305,6 +7307,17 @@ What it does: the preset is MERGED INTO THE RECIPE of every raw opened in Develo
 - THE MERGE (applyRawPreset): mergePreset into scope 0, then the preset's Auto settings solved inline on the base the render is using (MW::developRawDenoisedBase: the denoised one when ready). A preset that switches the renderer (demosaicEngine) needs the other renderer's base, so its Autos go to the batch queue (queuePresetAuto, front) under the step's mergeKey, as applyPresetObject does. One history step, "Raw preset: NAME", on this image ONLY: propagateSuspended, then syncPropagateBase so the next slider edit does not carry the whole preset to the rest of a multi-image selection. noteScopeEdit dirties the image, so its sidecar is written: browsing untouched raws in Develop with a raw preset chosen DOES write sidecars, by design.
 - Only images opened in Develop get it. Export and devPreviews of a raw never opened in Develop render its recipe as it is.
 - Choosing a preset while an untouched raw is on screen applies it there at once (setRawApplyPreset re-arms). Choosing another later does not touch images already preset: they have edits.
+
+#### 11.34.10 Winnow Presets (Shipped, Reserved)
+
+Added 2026-11-07. The presets under the Winnow category ship with every release: WB Shade, Mild S Curve and Sharpen detail to start.
+
+- SOURCE: Develop/Presets/winnowpresets.json, compiled into winnow.qrc as ":/Develop/Presets/winnowpresets.json". Same groups as a QSettings preset: { name, version, sourceScope, sourceImage, "Global" {...}, "Edits" {...}, "spots" [{params, enabled}] } in a "presets" array whose order is the display order. DevelopPresets::loadWinnow reads it at construction (migrating anything older than DevelopSchema::current(), as readGroup does) into DevelopPresets::winnow. These presets are never in QSettings.
+- READ: names() / contains() / read() / layout() cover both stores, so applying, hover preview and the Raw panel's "Apply:" treat a Winnow preset like any other.
+- RESERVED: every store edit that touches Winnow (write into or over it, rename, remove, movePreset into, out of or within it) checks DevelopPresets::canEditWinnow() == G::isRory and refuses otherwise (write() returns false). The view greys Update / Rename / Move to Category / Delete and New Preset in "Winnow"... with "(Winnow presets are reserved)", disables "Winnow" as a Move to Category target, will not start a drag on a Winnow preset, and gives no drop target inside Winnow. The Save dialog omits Winnow from the Category combo and, via SaveDevelopPresetDlg::setReservedNames, greys Save and shows the reason under the name when it matches a Winnow preset. Folding Winnow and dragging its header stay open to everyone: that is the user's own layout.
+- AUTHORING (G::isRory): Rory saves, updates, renames, deletes and drags Winnow presets with the normal UI. Each edit calls saveWinnow, which rewrites winnowpresets.json in the source tree (WINNOW_SOURCE_DIR + "/Develop/Presets", if winnow.qrc is there) and otherwise on the desktop with a popup saying so: the same arrangement as the Workflow Workspaces defaults.json (MW::writeWorkflowDefaultsJson). Dragging a preset out of Winnow moves it to QSettings, and into Winnow moves it out. The running app uses its in-memory list; the next build compiles the edited file in. Commit winnowpresets.json to ship it.
+- MIGRATION (reconcileWithWinnow, at construction): earlier builds filed every unplaced preset under Winnow, so a user preset the stored layout still lists under Winnow moves to User Presets. A user preset sharing a shipped preset's name is dropped if it is the same recipe (sameRecipe compares values as strings, because QSettings hands back QStrings and JSON doubles; both print the same shortest form), else renamed "&lt;name> (user)" in its slot, so nothing the user made is lost and the shipped one is never shadowed. On Rory's machine this removes the three QSettings originals the file was made from.
+- The unit tests link developpresets.cpp without winnow.qrc, so they see no Winnow presets.
 
 ### 11.35 Copy and Paste Develop Settings
 

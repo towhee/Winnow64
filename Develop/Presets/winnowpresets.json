@@ -1,0 +1,36 @@
+{
+    "presets": [
+        {
+            "name": "WB Shade",
+            "version": 1,
+            "sourceScope": "Global",
+            "sourceImage": "2014-09-21_0038.RW2",
+            "Edits": {
+                "temp": 6500,
+                "tint": -14.826883316040039,
+                "wbPreset": 8
+            }
+        },
+        {
+            "name": "Mild S Curve",
+            "version": 1,
+            "sourceScope": "Global",
+            "sourceImage": "2014-09-21_0038.RW2",
+            "Edits": {
+                "curveComposite": "0:0,0,0.30108,0.27861,0.76344,0.79104,1,1"
+            }
+        },
+        {
+            "name": "Sharpen detail",
+            "version": 1,
+            "sourceScope": "Global",
+            "sourceImage": "2025-06-17_0003.arw",
+            "Edits": {
+                "sharpenAmount": 0.8500000238418579,
+                "sharpenDetail": 1,
+                "sharpenMasking": 0,
+                "sharpenRadius": 1.2999999523162842
+            }
+        }
+    ]
+}

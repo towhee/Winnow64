@@ -1,18 +1,51 @@
 #include "Develop/Presets/developpresets.h"
 #include "Main/global.h"
 
+#include <QDir>
+#include <QFile>
+#include <QFileInfo>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QJsonObject>
 #include <QSet>
+#include <QStandardPaths>
 
 /*
     See developpresets.h. Reads / writes named develop presets in QSettings. Everything
     here is deliberately key-by-key: a preset holds only the settings the user ticked,
-    and read() must not invent the rest.
+    and read() must not invent the rest. The reserved Winnow presets are the exception:
+    they live in winnowpresets.json, held in memory (winnow) and written back only for
+    G::isRory.
 */
+
+namespace {
+/* Same recipe, compared as strings: a QSettings value reads back as a QString and a
+   JSON one as a double, and both print the same shortest form. */
+bool sameHash(const QVariantHash &a, const QVariantHash &b)
+{
+    if (a.size() != b.size()) return false;
+    for (auto it = a.constBegin(); it != a.constEnd(); ++it)
+        if (!b.contains(it.key()) || b.value(it.key()).toString() != it.value().toString())
+            return false;
+    return true;
+}
+
+bool sameRecipe(const DevelopPreset &a, const DevelopPreset &b)
+{
+    if (!sameHash(a.globals, b.globals) || !sameHash(a.params, b.params)) return false;
+    if (a.spots.size() != b.spots.size()) return false;
+    for (int i = 0; i < a.spots.size(); ++i)
+        if (a.spots[i].paramsJson != b.spots[i].paramsJson ||
+            a.spots[i].enabled != b.spots[i].enabled) return false;
+    return true;
+}
+}
 
 DevelopPresets::DevelopPresets(QSettings *setting, QObject *parent)
     : QObject(parent), setting(setting)
 {
+    loadWinnow();
+    reconcileWithWinnow();
     /* The copy buffer is SESSION SCOPED: wipe whatever the previous run left behind, so
        Paste stays unavailable until this session's first Copy. It lives in QSettings only
        because that is where the preset store already reads and writes -- persistence is a
@@ -20,12 +53,20 @@ DevelopPresets::DevelopPresets(QSettings *setting, QObject *parent)
     clearClipboard();
 }
 
-QStringList DevelopPresets::names() const
+QStringList DevelopPresets::userNames() const
 {
     if (!setting) return QStringList();
     setting->beginGroup(kRoot);
     QStringList list = setting->childGroups();
     setting->endGroup();
+    list.sort(Qt::CaseInsensitive);
+    return list;
+}
+
+QStringList DevelopPresets::names() const
+{
+    QStringList list = userNames();
+    for (const DevelopPreset &p : winnow) list.append(p.name);
     list.sort(Qt::CaseInsensitive);
     return list;
 }
@@ -37,7 +78,184 @@ bool DevelopPresets::contains(const QString &name) const
 
 DevelopPreset DevelopPresets::read(const QString &name) const
 {
+    const int wi = indexOfWinnow(name);
+    if (wi >= 0) return winnow.at(wi);
     return readGroup(kRoot, name);
+}
+
+/* ---- The reserved Winnow presets ---------------------------------------------------- */
+
+bool DevelopPresets::canEditWinnow()
+{
+    return G::isRory;
+}
+
+bool DevelopPresets::isWinnowCategory(const QString &category)
+{
+    return category.compare(kWinnowCategory, Qt::CaseInsensitive) == 0;
+}
+
+int DevelopPresets::indexOfWinnow(const QString &name) const
+{
+    for (int i = 0; i < winnow.size(); ++i)
+        if (winnow[i].name.compare(name, Qt::CaseInsensitive) == 0) return i;
+    return -1;
+}
+
+bool DevelopPresets::isWinnowPreset(const QString &name) const
+{
+    return indexOfWinnow(name) >= 0;
+}
+
+void DevelopPresets::loadWinnow()
+{
+/*
+    Read the shipped presets from the resource, in file order (= display order). The
+    file holds the same groups as QSettings: "Global" (+ "spots") and "Edits". A build
+    without the resource (the unit tests) simply has no Winnow presets.
+*/
+    winnow.clear();
+    QFile f(kWinnowResource);
+    if (!f.open(QIODevice::ReadOnly)) return;
+    QJsonParseError err;
+    const QJsonDocument doc = QJsonDocument::fromJson(f.readAll(), &err);
+    if (err.error != QJsonParseError::NoError || !doc.isObject()) {
+        G::issue("Warning", "Could not parse " + QString(kWinnowResource) + ": " +
+                 err.errorString(), "DevelopPresets::loadWinnow");
+        return;
+    }
+    const QJsonArray arr = doc.object().value("presets").toArray();
+    for (const QJsonValue &v : arr) {
+        const QJsonObject o = v.toObject();
+        DevelopPreset p;
+        p.name = o.value("name").toString().trimmed();
+        if (p.name.isEmpty() || indexOfWinnow(p.name) >= 0) continue;
+        /* v1 by definition when absent, exactly as readGroup. */
+        p.version     = o.value("version").toInt(1);
+        p.sourceScope = o.value("sourceScope").toString();
+        p.sourceImage = o.value("sourceImage").toString();
+        p.globals     = o.value("Global").toObject().toVariantHash();
+        p.params      = o.value(kEdits).toObject().toVariantHash();
+        const QJsonArray spots = o.value("spots").toArray();
+        for (const QJsonValue &sv : spots) {
+            FillSpot spot;
+            spot.paramsJson = sv.toObject().value("params").toString();
+            spot.enabled    = sv.toObject().value("enabled").toBool(true);
+            p.spots.append(spot);
+        }
+        if (p.version < DevelopSchema::current()) migrate(p);
+        winnow.append(p);
+    }
+}
+
+void DevelopPresets::saveWinnow()
+{
+/*
+    Rory only. Write the Winnow presets to Develop/Presets/winnowpresets.json in the
+    source tree (WINNOW_SOURCE_DIR, defined by CMake), so the file compiled into the
+    resource -- and so into the release -- is the file that changes. Without a source
+    tree the file goes to the desktop and the popup says where. The same arrangement as
+    MW::writeWorkflowDefaultsJson.
+*/
+    if (!canEditWinnow()) return;
+    QString dir;
+    #ifdef WINNOW_SOURCE_DIR
+    if (QFileInfo::exists(QString(WINNOW_SOURCE_DIR) + "/winnow.qrc"))
+        dir = QString(WINNOW_SOURCE_DIR) + "/Develop/Presets";
+    #endif
+    const bool inSource = !dir.isEmpty();
+    if (!inSource) dir = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation);
+    QDir().mkpath(dir);
+    const QString path = dir + "/" + kWinnowFile;
+
+    QJsonArray arr;
+    for (const DevelopPreset &p : winnow) {
+        QJsonObject o;
+        o.insert("name", p.name);
+        o.insert("version", DevelopSchema::current());   // stored current-shaped
+        if (!p.sourceScope.isEmpty()) o.insert("sourceScope", p.sourceScope);
+        if (!p.sourceImage.isEmpty()) o.insert("sourceImage", p.sourceImage);
+        if (!p.globals.isEmpty()) o.insert("Global", QJsonObject::fromVariantHash(p.globals));
+        if (!p.params.isEmpty())  o.insert(kEdits, QJsonObject::fromVariantHash(p.params));
+        if (!p.spots.isEmpty()) {
+            QJsonArray spots;
+            for (const FillSpot &spot : p.spots)
+                spots.append(QJsonObject{{"params", spot.paramsJson},
+                                         {"enabled", spot.enabled}});
+            o.insert("spots", spots);
+        }
+        arr.append(o);
+    }
+    QJsonObject root;
+    root.insert("presets", arr);
+
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (G::popup) G::popup->showPopup("Could not write the Winnow presets: " +
+                                          f.errorString() + " (" + path + ")", 4000);
+        return;
+    }
+    f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
+    f.close();
+    if (G::isLogger) G::log("DevelopPresets::saveWinnow", path);
+    if (!inSource && G::popup)
+        G::popup->showPopup("No source tree: the Winnow presets were written to " + path +
+                            ". Copy it to Develop/Presets to ship it.", 5000);
+}
+
+void DevelopPresets::reconcileWithWinnow()
+{
+/*
+    One-time cleanup of a store written by a build where Winnow was the catch-all
+    category (and Rory's own store, where the shipped presets were first authored):
+
+    - a user preset with a shipped preset's name is dropped if it is the same recipe,
+      else renamed "<name> (user)" in its slot, so nothing the user made is lost and
+      the shipped preset is never shadowed;
+    - user presets the stored layout files under Winnow move to User Presets.
+
+    Both rewrite the layout once; on a clean store this only reads.
+*/
+    if (!setting || winnow.isEmpty()) return;
+    bool dirty = false;
+
+    setting->beginGroup(kLayoutRoot);
+    const int n = setting->beginReadArray("categories");
+    for (int i = 0; i < n && !dirty; ++i) {
+        setting->setArrayIndex(i);
+        if (isWinnowCategory(setting->value("name").toString().trimmed()) &&
+            !setting->value("presets").toStringList().isEmpty()) dirty = true;
+    }
+    setting->endArray();
+    setting->endGroup();
+
+    QVector<PresetCategory> cats = layout();
+    const QStringList users = userNames();
+    for (const QString &name : users) {
+        const int wi = indexOfWinnow(name);
+        if (wi < 0) continue;
+        dirty = true;
+        DevelopPreset u = readGroup(kRoot, name);
+        removeUser(name);
+        if (sameRecipe(u, winnow.at(wi))) continue;
+        QString to = name + " (user)";
+        for (int k = 2; contains(to); ++k) to = name + QString(" (user %1)").arg(k);
+        if (G::isLogger) G::log("DevelopPresets::reconcileWithWinnow", name + " -> " + to);
+        u.name = to;
+        writeGroup(kRoot, u);
+        for (PresetCategory &c : cats)
+            for (QString &p : c.presets)
+                if (p == name) p = to;
+    }
+    if (dirty) saveLayout(cats);
+}
+
+void DevelopPresets::removeUser(const QString &name)
+{
+    if (!setting) return;
+    setting->beginGroup(kRoot);
+    setting->remove(name);
+    setting->endGroup();
 }
 
 DevelopPreset DevelopPresets::readGroup(const char *root, const QString &name) const
@@ -114,14 +332,36 @@ void DevelopPresets::migrate(DevelopPreset &p)
     p.version = cur;
 }
 
-void DevelopPresets::write(const DevelopPreset &p, const QString &category)
+bool DevelopPresets::write(const DevelopPreset &p, const QString &category)
 {
-    if (!setting || p.name.isEmpty()) return;
+    if (!setting || p.name.isEmpty()) return false;
+    /* Winnow: into it (named, or an existing Winnow preset re-saved in place) or out
+       of it (a Winnow preset's name saved to another category). Rory only. */
+    const int wi = indexOfWinnow(p.name);
+    const bool toWinnow = isWinnowCategory(category) || (category.isEmpty() && wi >= 0);
+    if ((toWinnow || wi >= 0) && !canEditWinnow()) return false;
     if (G::isLogger) G::log("DevelopPresets::write", p.name);
+    if (toWinnow) {
+        DevelopPreset q = p;
+        q.version = DevelopSchema::current();
+        if (wi >= 0) winnow[wi] = q;
+        else {
+            removeUser(p.name);         // a user preset of that name is replaced
+            winnow.append(q);
+        }
+        saveWinnow();
+        setting->sync();
+        emit changed();
+        return true;
+    }
+    if (wi >= 0) {
+        winnow.removeAt(wi);
+        saveWinnow();
+    }
     writeGroup(kRoot, p);
     /* A named category places the preset at its end -- unless it is already in that
        category, where re-saving it must not shuffle it. Without one, layout() files an
-       unplaced preset under Winnow on its own. */
+       unplaced preset under User Presets on its own. */
     if (!category.isEmpty()) {
         QVector<PresetCategory> cats = layout();
         int ci = indexOfCategory(cats, category);
@@ -137,6 +377,7 @@ void DevelopPresets::write(const DevelopPreset &p, const QString &category)
     }
     setting->sync();                    // flush now (QSettings otherwise defers it)
     emit changed();
+    return true;
 }
 
 void DevelopPresets::writeGroup(const char *root, const DevelopPreset &p)
@@ -224,6 +465,15 @@ bool DevelopPresets::rename(const QString &from, const QString &to)
 {
     if (!setting || from.isEmpty() || to.isEmpty() || from == to) return false;
     if (contains(to)) return false;
+    const int wi = indexOfWinnow(from);
+    if (wi >= 0) {
+        if (!canEditWinnow()) return false;
+        if (G::isLogger) G::log("DevelopPresets::rename", from);
+        winnow[wi].name = to;
+        saveWinnow();
+        emit changed();
+        return true;
+    }
     /* Read-then-write is enough: a preset is small and read() captures everything the
        store holds, so there is no need to walk the QSettings tree by hand. */
     DevelopPreset p = read(from);
@@ -246,14 +496,21 @@ bool DevelopPresets::rename(const QString &from, const QString &to)
 void DevelopPresets::remove(const QString &name)
 {
     if (!setting || name.isEmpty()) return;
+    const int wi = indexOfWinnow(name);
+    if (wi >= 0) {
+        if (!canEditWinnow()) return;
+        if (G::isLogger) G::log("DevelopPresets::remove", name);
+        winnow.removeAt(wi);
+        saveWinnow();
+        emit changed();
+        return;
+    }
     if (G::isLogger) G::log("DevelopPresets::remove", name);
     /* Drop its layout entry too, so a later preset of the same name starts fresh at
        the end of its category instead of reappearing in the deleted one's slot. */
     QVector<PresetCategory> cats = layout();
     for (PresetCategory &c : cats) c.presets.removeAll(name);
-    setting->beginGroup(kRoot);
-    setting->remove(name);
-    setting->endGroup();
+    removeUser(name);
     saveLayout(cats);
     setting->sync();
     emit changed();
@@ -272,13 +529,15 @@ QVector<PresetCategory> DevelopPresets::layout() const
 {
 /*
     The stored layout, reconciled against the presets that actually exist: entries for
-    vanished presets and duplicates are dropped, Winnow is guaranteed (first, if it was
-    somehow missing), and every preset not placed anywhere -- including all presets saved
-    before categories existed -- is appended to Winnow in name order.
+    vanished presets and duplicates are dropped, Winnow and User Presets are guaranteed
+    (first and second, if they were somehow missing), Winnow holds exactly the shipped
+    presets in file order, and every user preset not placed anywhere -- including all
+    presets saved before categories existed, and any the stored layout still files under
+    Winnow -- is appended to User Presets in name order.
 */
     QVector<PresetCategory> cats;
     if (!setting) return cats;
-    const QStringList all = names();
+    const QStringList all = userNames();
     QSet<QString> placed;
 
     setting->beginGroup(kLayoutRoot);
@@ -289,6 +548,10 @@ QVector<PresetCategory> DevelopPresets::layout() const
         c.name = setting->value("name").toString().trimmed();
         c.collapsed = setting->value("collapsed", false).toBool();
         if (c.name.isEmpty() || indexOfCategory(cats, c.name) >= 0) continue;
+        if (isWinnowCategory(c.name)) {     // its presets come from winnowpresets.json
+            cats.append(c);
+            continue;
+        }
         /* toStringList: a one-item list may read back as a plain QString on some
            backends, and an empty one as an invalid QVariant -- both convert correctly. */
         const QStringList stored = setting->value("presets").toStringList();
@@ -308,8 +571,16 @@ QVector<PresetCategory> DevelopPresets::layout() const
         wi = 0;
     }
     cats[wi].name = kWinnowCategory;    // canonical spelling
-    for (const QString &p : all)        // names() is already sorted
-        if (!placed.contains(p)) cats[wi].presets.append(p);
+    for (const DevelopPreset &p : winnow) cats[wi].presets.append(p.name);
+
+    int ui = indexOfCategory(cats, kUserCategory);
+    if (ui < 0) {
+        cats.insert(wi + 1, {kUserCategory, {}, false});
+        ui = wi + 1;
+    }
+    cats[ui].name = kUserCategory;      // canonical spelling
+    for (const QString &p : all)        // userNames() is already sorted
+        if (!placed.contains(p)) cats[ui].presets.append(p);
     return cats;
 }
 
@@ -322,7 +593,8 @@ void DevelopPresets::saveLayout(const QVector<PresetCategory> &cats)
     for (int i = 0; i < cats.size(); ++i) {
         setting->setArrayIndex(i);
         setting->setValue("name", cats[i].name);
-        setting->setValue("presets", cats[i].presets);
+        setting->setValue("presets", isWinnowCategory(cats[i].name) ? QStringList()
+                                                                     : cats[i].presets);
         setting->setValue("collapsed", cats[i].collapsed);
     }
     setting->endArray();
@@ -366,7 +638,8 @@ bool DevelopPresets::renameCategory(const QString &from, const QString &to)
 {
     const QString n = to.trimmed();
     if (!setting || n.isEmpty()) return false;
-    if (from.compare(kWinnowCategory, Qt::CaseInsensitive) == 0) return false;
+    if (isWinnowCategory(from) ||
+        from.compare(kUserCategory, Qt::CaseInsensitive) == 0) return false;
     if (G::isLogger) G::log("DevelopPresets::renameCategory", from);
     QVector<PresetCategory> cats = layout();
     const int ci = indexOfCategory(cats, from);
@@ -382,15 +655,16 @@ bool DevelopPresets::renameCategory(const QString &from, const QString &to)
 
 void DevelopPresets::removeCategory(const QString &name)
 {
-    if (!setting || name.compare(kWinnowCategory, Qt::CaseInsensitive) == 0) return;
+    if (!setting || isWinnowCategory(name) ||
+        name.compare(kUserCategory, Qt::CaseInsensitive) == 0) return;
     if (G::isLogger) G::log("DevelopPresets::removeCategory", name);
     QVector<PresetCategory> cats = layout();
     const int ci = indexOfCategory(cats, name);
     if (ci < 0) return;
-    /* Deleting a category never deletes presets: they go to the end of Winnow. */
+    /* Deleting a category never deletes presets: they go to the end of User Presets. */
     const QStringList orphans = cats[ci].presets;
     cats.remove(ci);
-    cats[indexOfCategory(cats, kWinnowCategory)].presets.append(orphans);
+    cats[indexOfCategory(cats, kUserCategory)].presets.append(orphans);
     saveLayout(cats);
     emit changed();
 }
@@ -420,12 +694,25 @@ void DevelopPresets::movePreset(const QString &preset, const QString &category, 
         if (fromPos >= 0) from = i;
     }
     if (from < 0) return;
+    const bool fromWinnow = isWinnowCategory(cats[from].name);
+    const bool toWinnow   = isWinnowCategory(cats[to].name);
+    if ((fromWinnow || toWinnow) && !canEditWinnow()) return;
     toIndex = qBound(0, toIndex, int(cats[to].presets.size()));
     if (from == to) {
         if (toIndex > fromPos) --toIndex;
         if (toIndex == fromPos) return;
     }
     if (G::isLogger) G::log("DevelopPresets::movePreset", preset);
+    /* A preset crossing Winnow's edge changes store: winnowpresets.json <-> QSettings.
+       Its position in Winnow's list IS its index in `winnow` (layout() builds it so). */
+    if (fromWinnow || toWinnow) {
+        const DevelopPreset p = fromWinnow ? winnow.at(fromPos) : readGroup(kRoot, preset);
+        if (fromWinnow) winnow.removeAt(fromPos);
+        else            removeUser(preset);
+        if (toWinnow)   winnow.insert(toIndex, p);
+        else            writeGroup(kRoot, p);
+        saveWinnow();
+    }
     cats[from].presets.removeAt(fromPos);
     cats[to].presets.insert(toIndex, preset);
     /* Dropping into a folded category opens it, so the preset is seen to land. */

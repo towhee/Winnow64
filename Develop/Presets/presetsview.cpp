@@ -53,10 +53,8 @@ void PresetDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
     const QRect rect = option.rect;
 
     if (kind == Header) {
-        /* A band fill so the categories read as sections, a disclosure arrow, the name
-           in bold and the preset count dimmed at the right. */
-        const int b = G::backgroundShade + 10;
-        painter->fillRect(rect, QColor(b, b, b));
+        /* No fill (transparent): a disclosure arrow, the name in bold and the preset
+           count dimmed at the right mark the categories as sections. */
         if (index.row() == dropHeaderRow) {
             painter->setPen(QPen(G::textColor, 1));
             painter->setBrush(Qt::NoBrush);
@@ -102,7 +100,7 @@ void PresetDelegate::paint(QPainter *painter, const QStyleOptionViewItem &option
 
     const QFontMetrics fm(option.font);
     const QRect r = rect.adjusted(kPresetIndent, 0, -8, 0);
-    painter->setPen(isPreset ? G::textColor : G::disabledColor);
+    painter->setPen(isPreset ? G::darktextColor : G::disabledColor);
     painter->drawText(r, Qt::AlignLeft | Qt::AlignVCenter,
                       fm.elidedText(text, Qt::ElideRight, r.width()));
 
@@ -170,8 +168,10 @@ void PresetsView::refresh()
     if (!presets) return;
 
     const QVector<PresetCategory> cats = presets->layout();
-    bool any = false;
-    for (const PresetCategory &c : cats) any = any || !c.presets.isEmpty();
+    bool anyUser = false;               // Winnow's shipped presets do not count
+    for (const PresetCategory &c : cats)
+        if (!DevelopPresets::isWinnowCategory(c.name))
+            anyUser = anyUser || !c.presets.isEmpty();
 
     for (const PresetCategory &c : cats) {
         QListWidgetItem *h = new QListWidgetItem(c.name, this);
@@ -179,13 +179,17 @@ void PresetsView::refresh()
         h->setData(PresetDelegate::CategoryRole, c.name);
         h->setData(PresetDelegate::CollapsedRole, c.collapsed);
         h->setData(PresetDelegate::CountRole, int(c.presets.size()));
-        h->setToolTip(tr("Click to fold or unfold \"%1\". Drag to reorder categories; "
-                         "right-click to rename or delete.").arg(c.name));
+        const bool isWinnow = DevelopPresets::isWinnowCategory(c.name);
+        h->setToolTip(isWinnow
+            ? tr("Presets that come with Winnow. Click to fold or unfold. Drag to "
+                 "reorder categories.")
+            : tr("Click to fold or unfold \"%1\". Drag to reorder categories; "
+                 "right-click to rename or delete.").arg(c.name));
 
         /* Say how to make one rather than showing an empty box -- the [+] button in
-           the band is otherwise easy to miss. Only when there are no presets at all,
-           under the permanent category. */
-        if (!any && c.name == DevelopPresets::kWinnowCategory) {
+           the band is otherwise easy to miss. Only when the user has no presets of
+           their own, under the permanent User Presets. */
+        if (!anyUser && c.name == DevelopPresets::kUserCategory) {
             QListWidgetItem *item =
                 new QListWidgetItem(tr("No presets yet - click + to create one"), this);
             item->setData(PresetDelegate::KindRole, PresetDelegate::Placeholder);
@@ -199,10 +203,14 @@ void PresetsView::refresh()
             item->setData(PresetDelegate::NameRole, name);
             item->setData(PresetDelegate::CategoryRole, c.name);
             const QString scope = presets->read(name).sourceScope;
-            item->setToolTip(scope.isEmpty()
-                ? tr("Apply \"%1\" to this image. Drag to reorder.").arg(name)
-                : tr("Apply \"%1\" to this image (saved from %2). Drag to reorder.")
-                      .arg(name, scope));
+            if (isWinnow)
+                item->setToolTip(tr("Apply \"%1\" to this image. Winnow presets come "
+                                    "with the app and cannot be changed.").arg(name));
+            else
+                item->setToolTip(scope.isEmpty()
+                    ? tr("Apply \"%1\" to this image. Drag to reorder.").arg(name)
+                    : tr("Apply \"%1\" to this image (saved from %2). Drag to reorder.")
+                          .arg(name, scope));
             setRowHidden(row(item), c.collapsed);
         }
     }
@@ -334,6 +342,10 @@ PresetsView::DropTarget PresetsView::dropTargetAt(const QPoint &pos) const
         return t;
     }
 
+    /* Winnow is reserved: a preset can neither land in it nor be dragged out of it
+       (mouseMoveEvent never starts that drag) unless the store allows Winnow edits. */
+    if (DevelopPresets::isWinnowCategory(cat) && !DevelopPresets::canEditWinnow())
+        return t;
     t.category = cat;
     if (below) {
         t.index = presets ? int(presets->layout().value(cats.indexOf(cat)).presets.size()) : 0;
@@ -411,7 +423,11 @@ void PresetsView::mousePressEvent(QMouseEvent *event)
 void PresetsView::mouseMoveEvent(QMouseEvent *event)
 {
     if (pressRow >= 0 && (event->buttons() & Qt::LeftButton)) {
-        if (!dragging &&
+        /* A Winnow preset stays put unless Winnow is editable (G::isRory). */
+        const bool movable = kindForRow(pressRow) == PresetDelegate::Header ||
+                             !DevelopPresets::isWinnowCategory(categoryForRow(pressRow)) ||
+                             DevelopPresets::canEditWinnow();
+        if (!dragging && movable &&
             (event->pos() - pressPos).manhattanLength() >= QApplication::startDragDistance()) {
             /* A drag is starting: take any hover preview off the loupe -- the user is
                organising, not trying presets on. */
@@ -527,11 +543,18 @@ void PresetsView::runMenu(const QPoint &globalPos, int row, bool includeHelp)
     const QString name = nameForRow(row);
     const QString category = categoryForRow(row);
     const bool isHeader = (kind == PresetDelegate::Header);
-    const bool isWinnow = (category == DevelopPresets::kWinnowCategory);
+    const bool isWinnow = DevelopPresets::isWinnowCategory(category);
+    const bool isUser   = (category == DevelopPresets::kUserCategory);
+    /* Winnow presets ship with the app: only G::isRory edits them (the store rewrites
+       winnowpresets.json). Everyone else sees the items greyed with the reason. */
+    const bool locked   = isWinnow && !DevelopPresets::canEditWinnow();
+    const QString reserved = tr(" (Winnow presets are reserved)");
 
     QMenu menu(this);
     QAction *aNew    = menu.addAction(isHeader ? tr("New Preset in \"%1\"...").arg(category)
+                                                 + (locked ? reserved : QString())
                                                : tr("New Preset..."));
+    aNew->setEnabled(!(isHeader && locked));
     QAction *aNewCat = menu.addAction(tr("New Category..."));
     QAction *aUpdate = nullptr;
     QAction *aRename = nullptr;
@@ -541,28 +564,39 @@ void PresetsView::runMenu(const QPoint &globalPos, int row, bool includeHelp)
     QMenu   *moveMenu = nullptr;
     if (!name.isEmpty()) {
         menu.addSeparator();
-        aUpdate = menu.addAction(tr("Update with Current Settings"));
-        aRename = menu.addAction(tr("Rename..."));
+        const QString why = locked ? reserved : QString();
+        aUpdate = menu.addAction(tr("Update with Current Settings") + why);
+        aRename = menu.addAction(tr("Rename...") + why);
         /* Drag does the same; the submenu makes it discoverable. */
-        moveMenu = menu.addMenu(tr("Move to Category"));
+        moveMenu = menu.addMenu(tr("Move to Category") + why);
         if (presets) {
             for (const QString &c : presets->categoryNames()) {
-                QAction *a = moveMenu->addAction(c);
+                const bool winnowTarget = DevelopPresets::isWinnowCategory(c) &&
+                                          !DevelopPresets::canEditWinnow();
+                QAction *a = moveMenu->addAction(winnowTarget ? c + reserved : c);
                 a->setData(c);
-                a->setEnabled(c != category);
+                a->setEnabled(c != category && !winnowTarget);
             }
         }
-        aDelete = menu.addAction(tr("Delete"));
+        aDelete = menu.addAction(tr("Delete") + why);
+        aUpdate->setEnabled(!locked);
+        aRename->setEnabled(!locked);
+        moveMenu->setEnabled(!locked);
+        aDelete->setEnabled(!locked);
     }
     else if (isHeader) {
         menu.addSeparator();
-        /* Winnow is permanent: say so in the item rather than hiding it. */
-        aRenCat = menu.addAction(isWinnow ? tr("Rename Category (Winnow is permanent)")
-                                          : tr("Rename Category..."));
-        aDelCat = menu.addAction(isWinnow ? tr("Delete Category (Winnow is permanent)")
-                                          : tr("Delete Category..."));
-        aRenCat->setEnabled(!isWinnow);
-        aDelCat->setEnabled(!isWinnow);
+        /* Winnow and User Presets are permanent: say so in the item rather than
+           hiding it. */
+        const QString why = isWinnow ? tr(" (Winnow is reserved)")
+                          : isUser   ? tr(" (User Presets is permanent)") : QString();
+        const bool fixed = isWinnow || isUser;
+        aRenCat = menu.addAction(fixed ? tr("Rename Category") + why
+                                       : tr("Rename Category..."));
+        aDelCat = menu.addAction(fixed ? tr("Delete Category") + why
+                                       : tr("Delete Category..."));
+        aRenCat->setEnabled(!fixed);
+        aDelCat->setEnabled(!fixed);
     }
 
     /* Help is always the last item, as it is on every section band in the Develop dock. */
@@ -595,7 +629,7 @@ void PresetsView::runMenu(const QPoint &globalPos, int row, bool includeHelp)
         const int n = item(row) ? item(row)->data(PresetDelegate::CountRole).toInt() : 0;
         if (n > 0) {
             const auto ret = QMessageBox::question(this, tr("Delete category"),
-                tr("Delete the category \"%1\"? Its %2 preset(s) move to Winnow; "
+                tr("Delete the category \"%1\"? Its %2 preset(s) move to User Presets; "
                    "no preset is deleted.").arg(category).arg(n),
                 QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
             if (ret != QMessageBox::Yes) return;

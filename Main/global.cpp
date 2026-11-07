@@ -132,6 +132,7 @@ qreal ptToPx;                       // font points to pixels conversion factor
 int textShade = 190;                // app text luminousity (settings), 155 + pref value
 int backgroundShade;                // app background luminousity (settings)
 QColor textColor;
+QColor darktextColor;               // textColor - 40 (widgetcss)
 QColor backgroundColor;             // from backgroundShade (settings / MW)
 QColor disabledColor;
 QColor header1Color;
