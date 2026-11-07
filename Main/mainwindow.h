@@ -1569,6 +1569,7 @@ private slots:
     void togglePickMouseOverItem(QModelIndex idx);
     void togglePickUnlessRejected();
     void clearPicks();
+    void rejectUnpickedClearPicks();
     void loadSavedPicks();
     void restoreSavedPicks();
     void pushPick(QString fPath, QString status = "true");
@@ -1957,6 +1958,7 @@ private:
     QAction *pickMouseOverAction;       // shortcut mouse forward/back buttons
     QAction *popPickHistoryAction;
     QAction *clearPicksAction;
+    QAction *rejectUnpickedClearPicksAction;
     QAction *pickUnlessRejectedAction;
     QAction *filterPickAction;
     QAction *rotateLeftAction;

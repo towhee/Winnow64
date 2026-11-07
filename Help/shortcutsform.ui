@@ -458,6 +458,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Reject unpicked, clear picks</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Opt/Alt + R</string>
+        </property>
+        <property name="text">
+         <string>Rejects every unpicked image and unpicks every picked one (Lightroom Refine Photos)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Filter Picks</string>
         </property>
         <property name="text">

@@ -542,6 +542,17 @@ void MW::createEditActions()
     addAction(clearPicksAction);
     connect(clearPicksAction, &QAction::triggered, this, &MW::clearPicks);
 
+    rejectUnpickedClearPicksAction = new QAction(tr("Reject unpicked, clear picks"), this);
+    rejectUnpickedClearPicksAction->setObjectName("rejectUnpickedClearPicks");
+    rejectUnpickedClearPicksAction->setShortcutVisibleInContextMenu(true);
+    rejectUnpickedClearPicksAction->setToolTip(tr("Reject every loaded unpicked image and "
+                                                  "unpick every picked one, like "
+                                                  "Lightroom's Refine Photos. Undo with "
+                                                  "Ingest > Recover prior pick state."));
+    addAction(rejectUnpickedClearPicksAction);
+    connect(rejectUnpickedClearPicksAction, &QAction::triggered,
+            this, &MW::rejectUnpickedClearPicks);
+
     // //
     // QString moveFilesToWhatever;
     // QString moveFolderToWhatever;
@@ -2724,6 +2735,7 @@ void MW::createIngestMenu()
     //    editMenu->addAction(filterPickAction);
     ingestMenu->addAction(popPickHistoryAction);
     ingestMenu->addAction(clearPicksAction);
+    ingestMenu->addAction(rejectUnpickedClearPicksAction);
     ingestMenu->addSeparator();
     ingestMenu->addAction(ingestAction);
     ingestHistoryFoldersMenu = ingestMenu->addMenu(tr("Ingest History"));
@@ -3485,6 +3497,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(pickAction);
     thumbViewActions->append(rejectAction);
     thumbViewActions->append(pickUnlessRejectedAction);
+    thumbViewActions->append(rejectUnpickedClearPicksAction);
 
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(ratingGroupAct);
@@ -4098,6 +4111,9 @@ void MW::loadShortcuts(bool defaultShortcuts)
 
         pickUnlessRejectedAction->setShortcut(QKeySequence("Shift+Ctrl+`"));
         popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
+        /* Lightroom's Refine Photos: Cmd+Opt+R on macOS (Qt Ctrl = Cmd), Ctrl+Alt+R
+           on Windows and Linux. */
+        rejectUnpickedClearPicksAction->setShortcut(QKeySequence("Alt+Ctrl+R"));
 
         rate1Action->setShortcut(QKeySequence("1"));
         rate2Action->setShortcut(QKeySequence("2"));

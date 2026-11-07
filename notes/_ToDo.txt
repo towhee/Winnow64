@@ -2,13 +2,12 @@ WHAT'S NEW
 - Change Filters group/flat buttons
 - Fix Basic > Auto crash
 - Develop editor scrolling
+- Reject unpicked, clear picks
+- Develop presets - reserve Winnow category
 
 BUGS / TO DO
-- /Users/roryhill/Temp/Photos_to_be_curated/2026/202603/2026-03-19_Neck Point/2026-03-19_0008.arw
-  preview dimensions = x
 - Implement undo
 - Add Actions (replay a series of steps)
-- Winnow develop presets not persistent from Quark to published release
 - Crop when 16x9, then level, lose 16x9
 - Import/export catalogs
 - Thumb show if the preview is up-to-date and develop has been run

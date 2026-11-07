@@ -142,6 +142,67 @@ void MW::clearPicks()
     updateClassification();
 }
 
+void MW::rejectUnpickedClearPicks()
+{
+/*
+    Lightroom's Library > Refine Photos (Cmd/Ctrl + Opt/Alt + R): every Unpicked image
+    becomes Rejected and every Picked image becomes Unpicked, ready for the next round
+    of picking. Rejected and Ingested images are left alone.
+
+    Same scope as clearPicks: the UNFILTERED model, so images hidden by the current
+    filter are refined too (with "Filter picks only" on, the hidden unpicked images are
+    exactly the ones meant to be rejected). The change goes onto the pick history stack
+    as one multiple-select group, so "Recover prior pick state" restores the whole set.
+
+    Triggered by rejectUnpickedClearPicksAction (Ingest menu and the thumbnail context
+    menu), which updatePickDependentActions enables only while something is picked --
+    with no picks it would reject the whole folder.
+*/
+    if (G::isLogger) G::log("MW::rejectUnpickedClearPicks");
+    if (!dm->isAnyPick()) return;
+
+    // collect first: setting the pick can change the proxy while we walk
+    QList<int> rows;
+    QStringList priors;
+    const int n = dm->rowCount();
+    for (int dmRow = 0; dmRow < n; ++dmRow) {
+        QString status = dm->index(dmRow, G::PickColumn).data(Qt::EditRole).toString();
+        if (status == "Picked" || status == "Unpicked") {
+            rows.append(dmRow);
+            priors.append(status);
+        }
+    }
+
+    if (rows.count() > 1) pushPick("Begin multiple select");
+    for (int i = 0; i < rows.count(); ++i) {
+        const int dmRow = rows.at(i);
+        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
+        pushPick(fPath, priors.at(i));
+        QString newStatus = priors.at(i) == "Picked" ? "Unpicked" : "Rejected";
+        emit setValDm(dmRow, G::PickColumn, newStatus, dm->instance,
+                      "MW::rejectUnpickedClearPicks", Qt::EditRole);
+    }
+    if (rows.count() > 1) pushPick("End multiple select");
+
+    // same refresh tail as togglePick (see the suspension comment there)
+    bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
+                                 picksBeingFiltered);
+    if (picksBeingFiltered) {
+        filterChange("MW::rejectUnpickedClearPicks");
+    }
+    else {
+        dm->sf->suspend(false, "MW::rejectUnpickedClearPicks: no filter change");
+        thumbView->refreshIcons("MW::rejectUnpickedClearPicks");
+        gridView->refreshIcons("MW::rejectUnpickedClearPicks");
+    }
+
+    pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
+    updatePickDependentActions();
+    updateStatus(true, "", "MW::rejectUnpickedClearPicks");
+    updateClassification();
+}
+
 void MW::loadSavedPicks()
 {
 /*
