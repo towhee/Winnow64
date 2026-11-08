@@ -1,4 +1,5 @@
 #include "htmlwindow.h"
+#include "helpassembler.h"
 #include "Main/global.h"
 
 HtmlWindow::HtmlWindow(const QString &title,
@@ -44,7 +45,16 @@ HtmlWindow::HtmlWindow(const QString &title,
 */
     setWindowTitle(title);
     text = new QTextBrowser;
-    text->setOpenExternalLinks(true);
+    /* Links are handled here rather than by QTextBrowser: the document is loaded with
+       setHtml() (no source URL), so "#name" jumps are scrolled to explicitly (the
+       general help's table of contents), and anything else opens externally. */
+    text->setOpenLinks(false);
+    connect(text, &QTextBrowser::anchorClicked, this, [this](const QUrl &url) {
+        if (url.scheme().isEmpty() && url.path().isEmpty() && url.hasFragment())
+            text->scrollToAnchor(url.fragment());
+        else
+            QDesktopServices::openUrl(url);
+    });
     text->setMinimumWidth(windowSize.width());
     text->setMinimumHeight(windowSize.height());
     text->setContentsMargins(9,9,9,9);
@@ -160,8 +170,10 @@ void HtmlWindow::applyStyle()
     text->document()->setBaseUrl(QUrl("qrc" + QFileInfo(htmlPath).path() + "/"));
     QFile f(htmlPath);
     if (f.open(QIODevice::ReadOnly)) {
-        text->setHtml(f.readAll());
+        // a page whose links name other help pages (winnowhelp.html) gets them appended
+        const QString html = QString::fromUtf8(f.readAll());
         f.close();
+        text->setHtml(HelpAssembler::assemble(html, QFileInfo(htmlPath).path()));
     }
     // G::css's `QWidget { font-size }` sets the browser's default font; match it
     // to the scaled help size so any text not in a sized block element (above)

@@ -894,7 +894,7 @@
   - [20.3 Formatting](#203-formatting)
     - [20.3.1 Editing Tools](#2031-editing-tools)
   - [20.4 Entry Points](#204-entry-points)
-    - [20.4.1 The Winnow Overview Page](#2041-the-winnow-overview-page)
+    - [20.4.1 The General Help (Winnow Help)](#2041-the-general-help-winnow-help)
   - [20.5 Develop Panel Help Pages](#205-develop-panel-help-pages)
   - [20.6 Orphaned Help Documents](#206-orphaned-help-documents)
 - [21 Check for Updates](#21-check-for-updates)
@@ -10710,6 +10710,12 @@ Help pages must not read as one dense block (reviewed across every page 2026-10-
 5. Open it from C++ (the pattern Filters::howThisWorks uses, Datamodel/filters.cpp):
 
 ```
+Docs/winnowhelp.html       The general help (Help > Winnow Help): a table of contents
+                           and the Overview. Every other page is appended to it at open
+                           time (Utilities/helpassembler.h); see 20.4.1.
+Utilities/helpassembler.h  HelpAssembler::assemble, called by HtmlWindow::applyStyle on
+                           every page. Expands "#<page>" TOC links into chapters; pages
+                           without such links pass through unchanged.
    #include "Utilities/htmlwindow.h"
 ```
 
@@ -10723,7 +10729,10 @@ Help pages must not read as one dense block (reviewed across every page 2026-10-
    }
 ```
 
-6. Build. No other wiring is required.
+6. Add it to the general help: one line in the right group of the Contents in Docs/winnowhelp.html, `<li><a href="#<yourpage>">Title</a></li>` (the href is the file's base name). Its text then appears in Help > Winnow Help automatically. tst_helpdocs fails until every Docs/\*.html is either in the Contents or on the test's exclude list.
+7. Build. No other wiring is required.
+
+Changing a page needs no second edit: the general help reads each page's current file when it opens. Renaming a page's title (its h1) should also rename its Contents line; renaming or deleting the file means editing the Contents line too (tst_helpdocs catches a dead link).
 
 ### 20.3 Formatting
 
@@ -10753,7 +10762,7 @@ Expected differences between the preview and Winnow:
 
 ```
 Trigger                                Caller                                   Page
-Help > Winnow Overview / "?"           MW::help                                 winnowhelp.html
+Help > Winnow Help / "?"               MW::help                                 winnowhelp.html (all pages)
 Source panel "?"                       FSTree::howThisWorks                     sourcecatalogfoldershelp.html
 Filters panel "?"                      Filters::howThisWorks                    filtershelp.html
 Embellish panel "?"                    EmbelProperties::coordHelp               embelcoordsystem.html
@@ -10767,11 +10776,22 @@ Develop band [:] menus                 see [[Develop Panel Help Pages]]
 
 Not converted to HtmlWindow, intentionally: MW::helpShortcuts (Help/shortcutsform.ui), an interactive QTreeWidget. A shortcut change also edits that form; the real bindings are in Main/menusandactions.cpp.
 
-#### 20.4.1 The Winnow Overview Page
+#### 20.4.1 The General Help (Winnow Help)
 
-Docs/winnowhelp.html (Help > Winnow Overview, window "Winnow - Overview") was rewritten from scratch on 2026-10-03; the old "Winnow Help" content (file types, a reset-workspace tip, annotated loupe and grid screenshots) had gone stale and was removed, with the two screenshots' qrc entries.
+Help > Winnow Help (MW::help, window "Winnow - Help") shows every help page in one scrolling document: a Contents list, the Winnow Overview, then each Contents topic in Contents order. Added 2026-11-08.
 
-It is written for users, not developers: keep it NON-TECHNICAL, with no class names, file names or database terms beyond what the UI itself shows (Manage Catalog...). Its one section so far, Overview, explains the two ways of looking at photos: FOLDERS (one folder at a time, nothing to set up) and LIBRARY (every catalogued photo as one set, narrowed with filters; Collections and Queries live here). It covers how photos get into the Library (ONLY the folders listed in Manage Catalog...; browsing another folder does not add it), what works the same in both (filters and search, keywords/ratings/labels, Places), and how to switch. When the Library/Folders switch or Manage Catalog changes, update this page.
+Docs/winnowhelp.html holds only the Contents and the Overview. The Contents links name pages by file base name, `<a href="#developbasichelp">Basic</a>`, grouped under h3 headings (Getting started, Browsing, Keywords, Develop, Tools). When the page renders, HelpAssembler::assemble (Utilities/helpassembler.h) appends, for each such link whose Docs/&lt;name>.html exists, that page's &lt;body> as a chapter, headed by a right-aligned "&uarr; Contents" link (help.css .toclink) carrying `name="<name>"`. Per-page &lt;style> blocks (ingestautopath.html's) are moved into the combined &lt;head>. Links with no file (#overview, #contents) are ordinary in-page anchors. So there is one copy of every page's text: the panel "?" buttons open the same files on their own, and the two cannot drift.
+
+Gotchas:
+
+- Qt's HTML importer drops an empty `<a name="x"></a>` that sits between blocks (after a &lt;/ul>, for one), so anchors ride on text: the chapter's "&uarr; Contents" link, or inside the h1 (`<h1><a name="contents"></a>Winnow Help</h1>`).
+- The document is loaded with setHtml() (no source URL), so HtmlWindow sets setOpenLinks(false) and handles anchorClicked itself: a fragment-only URL scrolls with scrollToAnchor, anything else goes to QDesktopServices::openUrl.
+- Keyboard shortcuts are a .ui tree (Help > Winnow Shortcuts), not HTML; the Contents mentions them in text only.
+- Not in the Contents: _template.html, versions.html (orphan, 20.6) and ingesthelp.htm (orphan; .htm, so not matched). tst_helpdocs holds the exclude list.
+
+Keeping it current: a new help page needs its Contents line (20.2 step 6); tests/unit/tst_helpdocs.cpp enforces that every Docs/\*.html is in the Contents or excluded, that every Contents target is in winnow.qrc, and that the assembled document has one anchor per page in Contents order.
+
+The Overview section is written for users, not developers: keep it NON-TECHNICAL, with no class names, file names or database terms beyond what the UI itself shows (Manage Catalog...). It explains the two ways of looking at photos: FOLDERS (one folder at a time, nothing to set up) and LIBRARY (every catalogued photo as one set, narrowed with filters; Collections and Queries live here). It covers how photos get into the Library (ONLY the folders listed in Manage Catalog...; browsing another folder does not add it), what works the same in both (filters and search, keywords/ratings/labels, Places), and how to switch. When the Library/Folders switch or Manage Catalog changes, update it.
 
 ### 20.5 Develop Panel Help Pages
 

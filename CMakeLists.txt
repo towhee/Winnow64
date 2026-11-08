@@ -773,6 +773,7 @@ set(WINNOW_HEADERS
     Utilities/foldercompressor.h
     Utilities/displaycolor.h
     Utilities/htmlwindow.h
+    Utilities/helpassembler.h
     Utilities/icc.h
     Utilities/ingestprobe.h
     Utilities/panelprobe.h

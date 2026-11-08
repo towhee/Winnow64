@@ -19219,9 +19219,10 @@ void MW::findDuplicates()
 void MW::help()
 {
     if (G::isLogger) G::log("MW::help");
-    HtmlWindow *w = new HtmlWindow("Winnow - Overview",
+    // the general help: contents, the Overview, then every help page (HelpAssembler)
+    HtmlWindow *w = new HtmlWindow("Winnow - Help",
                                    ":/Docs/winnowhelp.html",
-                                   QSize(900, 750), geometry(), this);
+                                   QSize(900, 800), geometry(), this);
     openWindows.append(w);
 }
 

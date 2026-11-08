@@ -2282,7 +2282,7 @@ void MW::createHelpActions()
     addAction(aboutAction);
     connect(aboutAction, &QAction::triggered, this, &MW::about);
 
-    helpAction = new QAction(tr("Winnow Overview"), this);
+    helpAction = new QAction(tr("Winnow Help"), this);
     helpAction->setObjectName("help");
     helpAction->setShortcutVisibleInContextMenu(true);
     addAction(helpAction);

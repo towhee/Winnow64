@@ -162,6 +162,11 @@ winnow_add_unit_test(tst_versionkey unit/tst_versionkey.cpp)
 # tst_appupdate tests Utilities/appupdate.h (header-only): update-check version ordering
 # ("3_beta" < "3.0") and parsing of GitHub's /releases/latest response.
 winnow_add_unit_test(tst_appupdate unit/tst_appupdate.cpp)
+# tst_helpdocs tests Utilities/helpassembler.h (header-only) and Docs/winnowhelp.html:
+# every Docs page is in the general help's contents and assembles as a chapter.
+winnow_add_unit_test(tst_helpdocs unit/tst_helpdocs.cpp)
+target_compile_definitions(tst_helpdocs PRIVATE
+    WINNOW_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 # tst_exportembellish tests ExportPresets::effective: an Embellish template forces the
 # size / depth / space and can supply the destination, naming and format.
 winnow_add_unit_test(tst_exportembellish unit/tst_exportembellish.cpp
