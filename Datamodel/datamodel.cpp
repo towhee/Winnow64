@@ -3,6 +3,7 @@
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Datamodel/savedpicks.h"
+#include "Datamodel/devpreviewready.h"
 #include "Datamodel/variantless.h"
 #include "Cache/framedecoder.h"
 #include "Main/global.h"
@@ -184,6 +185,7 @@ DataModel::DataModel(QObject *parent,
     this->filters = filters;
 
     setModelProperties();
+    devPreviewReady = new DevPreviewReady(this);    // lives as long as the model
 
     sf = new SortFilter(this, filters, combineRawJpg);
     sf->setSourceModel(this);
@@ -6437,7 +6439,7 @@ void DataModel::reportScrollProbe(const QString &src)
     probeFlushEmitNs = 0;
 }
 
-void DataModel::setCached(int sfRow, QString fPath, bool isCached, int instance)
+void DataModel::setCached(int sfRow, QString fPath, int cacheSource, int instance)
 {
 /*
     THE LAST UNTHROTTLED PROXY WRITE.
@@ -6482,14 +6484,14 @@ void DataModel::setCached(int sfRow, QString fPath, bool isCached, int instance)
     if (!dmIdx.isValid()) return;
     {
         const QSignalBlocker blocker(this);
-        setData(dmIdx, isCached);
+        setData(dmIdx, cacheSource);       // G::CacheSource: the thumbnail badge colour
     }
     if (iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
 
     /* Only an image still in the filtered view has a badge or loupe to refresh (an
        evicted-by-filter image is hidden; refreshViewsOnCacheChange would warn). */
     if (sf->mapFromSource(dmIdx).isValid())
-        emit refreshViewsOnCacheChange(fPath, isCached, src);
+        emit refreshViewsOnCacheChange(fPath, cacheSource != G::CacheNone, src);
 }
 
 void DataModel::setAllMetadataAttempted(bool isAttempted)
@@ -7234,13 +7236,13 @@ bool DataModel::getSelectionOrPicks(QStringList &list)
         qDebug() << "DataModel::getSelection"
                  << "instance =" << instance
                  << "isAnyPick() =" << isAnyPick()
-                 << "selectionModel->selectedRows().size() =" << selectionModel->selectedRows().size()
+                 << "selected rows =" << RowSelection::Count(selectionModel)
             ;
 
     bool usePicks = false;
 
     // nothing picked and nothing selected
-    if (!isAnyPick() && selectionModel->selectedRows().size() == 0) {
+    if (!isAnyPick() && RowSelection::Count(selectionModel) == 0) {
         G::popup->showPopup("Oops.  There are no picks or selected images.", 2000);
         return false;
     }
@@ -7275,7 +7277,7 @@ bool DataModel::getSelectionOrPicks(QStringList &list)
         }
     }
     else {
-        QModelIndexList idxList = selectionModel->selectedRows();
+        QModelIndexList idxList = RowSelection::Rows(selectionModel);
         for (int i = 0; i < idxList.size(); ++i)
             add(sf->index(idxList.at(i).row(), 0));
     }

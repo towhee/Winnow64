@@ -431,9 +431,9 @@ void MW::compareDisplay()
         return;
     }
 
-    int n = dm->selectionModel->selectedRows().count();
-    for (int i = 0; i < n; ++i) {
-        QModelIndex idx = dm->selectionModel->selectedRows().at(i);
+    const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
+    const int n = selection.count();
+    for (const QModelIndex &idx : selection) {
         if (dm->sf->index(idx.row(), G::VideoColumn).data().toBool()) {
             G::popup->showPopup(
                 "Compare mode is not available if a video is part of "

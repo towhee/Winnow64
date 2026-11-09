@@ -1620,7 +1620,7 @@ QStringList MW::selectionKeysToSave() const
     if (!dm || dm->currentKey.isEmpty()) return keys;
     keys << dm->currentKey;
     if (!sel || !sel->sm) return keys;
-    const QModelIndexList rows = sel->sm->selectedRows();
+    const QModelIndexList rows = RowSelection::Rows(sel->sm);
     if (rows.size() > kMax) return keys;
     for (const QModelIndex &idx : rows) {
         const QString key = idx.data(G::KeyRole).toString();

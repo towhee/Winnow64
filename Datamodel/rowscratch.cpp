@@ -131,7 +131,7 @@ QVariant ScratchStore::value(int row, int column) const
     case G::ICCBufColumn:                return mBlobs.value(s.iccBufId);
     case G::CacheSizeColumn:             return s.cacheSizeMB;
     case G::IsCachingColumn:             return s.isCaching;
-    case G::IsCachedColumn:              return s.isCached;
+    case G::IsCachedColumn:              return int(s.cacheSource);
     case G::AttemptsColumn:              return s.attempts;
     case G::DecoderIdColumn:             return s.decoderId;
     case G::DecoderReturnStatusColumn:   return s.decoderStatus;
@@ -180,7 +180,7 @@ void ScratchStore::setValue(int row, int column, const QVariant &v)
     case G::ICCBufColumn:                s.iccBufId = mBlobs.id(v.toByteArray()); break;
     case G::CacheSizeColumn:             s.cacheSizeMB = v.toFloat(); break;
     case G::IsCachingColumn:             s.isCaching = v.toBool(); break;
-    case G::IsCachedColumn:              s.isCached = v.toBool(); break;
+    case G::IsCachedColumn:              s.cacheSource = quint8(v.toInt()); break;
     case G::AttemptsColumn:              s.attempts = v.toInt(); break;
     case G::DecoderIdColumn:             s.decoderId = v.toInt(); break;
     case G::DecoderReturnStatusColumn:   s.decoderStatus = v.toInt(); break;

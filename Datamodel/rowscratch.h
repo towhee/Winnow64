@@ -145,7 +145,7 @@ struct RowScratch
     bool isBigEnd = false;
     bool isXmp = false;
     bool isCaching = false;
-    bool isCached = false;
+    quint8 cacheSource = 0;     // IsCachedColumn: G::CacheSource
     bool rawRender = false;
 };
 

@@ -343,6 +343,7 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
     if (priorId && priorId != id) QFile::remove(filePathLocked(priorId));
 
     bytes += qint64(jpg.size()) - oldBytes;
+    bumpLocked();
     evictLocked(db);
 }
 
@@ -364,6 +365,7 @@ QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash
 
     quint64 id = 0;
     QString payloadPath;
+    DroppedHook dropped;                // set only when the stamp check drops the row
     {
         QMutexLocker lk(&mutex);
         QSqlDatabase db = dbLocked();
@@ -384,12 +386,20 @@ QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash
         if (SrcStamp::of(fPath).contradicts(q.value(2).toLongLong(),
                                             q.value(3).toLongLong())) {
             removeLocked(db, key);
-            return QByteArray();
+            dropped = droppedHook;
         }
-
-        id = q.value(0).toULongLong();
-        payloadPath = filePathLocked(id);
+        else {
+            id = q.value(0).toULongLong();
+            payloadPath = filePathLocked(id);
+        }
     }
+    /* Outside the lock: the hook posts to the GUI thread, and nothing it reaches should
+       be able to come back in here while the mutex is held. */
+    if (dropped) {
+        dropped(fPath);
+        return QByteArray();
+    }
+    if (!id) return QByteArray();
 
     QFile f(payloadPath);
     if (!f.open(QIODevice::ReadOnly)) {
@@ -485,6 +495,7 @@ void DevPreviewCache::removeLocked(QSqlDatabase &db, const QString &key)
 
     QFile::remove(filePathLocked(id));
     bytes -= b;
+    bumpLocked();
 }
 
 void DevPreviewCache::evictLocked(QSqlDatabase &db)
@@ -533,6 +544,7 @@ void DevPreviewCache::evictLocked(QSqlDatabase &db)
 
         if (freed <= 0) break;            // deletes are failing; do not spin
         bytes -= freed;
+        bumpLocked();
     }
 }
 
@@ -600,6 +612,7 @@ void DevPreviewCache::onMoved(const QString &srcPath, const QString &dstPath)
         removeLocked(db, cachePathKey(dstVersion));
         move(vk, dstVersion);
     }
+    bumpLocked();
 }
 
 QStringList DevPreviewCache::versionKeysLocked(QSqlDatabase &db, const QString &srcKey)
@@ -630,6 +643,52 @@ void DevPreviewCache::removeEntry(const QString &fPath)
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return;
     removeLocked(db, cachePathKey(fPath));
+}
+
+QPair<qint64, qint64> DevPreviewCache::fileStamp(const QString &fPath)
+{
+    const SrcStamp s = SrcStamp::of(fPath);
+    return {s.size, s.mtime};
+}
+
+void DevPreviewCache::restamp(const QString &fPath, qint64 oldSize, qint64 oldMtime)
+{
+/*
+    See the header and "WHAT INVALIDATES A devPreview". The WHERE on the old stamp is what
+    keeps this honest: it can only carry a row across the one write the caller just made,
+    never vouch for a file that had already changed under the row before it.
+*/
+    if (fPath.isEmpty() || (!oldSize && !oldMtime)) return;
+    const SrcStamp now = SrcStamp::of(fPath);
+    if (!now.valid) return;
+    if (now.size == oldSize && now.mtime == oldMtime) return;    // nothing moved
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+
+    const QString key = cachePathKey(fPath);
+    // the versions are stamped by this same file (SrcStamp::of), so they move with it
+    QStringList keys = versionKeysLocked(db, key);
+    keys.prepend(key);
+    QSqlQuery q(db);
+    q.prepare("UPDATE devpreview SET srcsize = ?, srcmtime = ?"
+              " WHERE pathkey = ? AND srcsize = ? AND srcmtime = ?");
+    for (const QString &k : std::as_const(keys)) {
+        q.addBindValue(now.size);
+        q.addBindValue(now.mtime);
+        q.addBindValue(k);
+        q.addBindValue(oldSize);
+        q.addBindValue(oldMtime);
+        q.exec();
+    }
+    bumpLocked();       // the rows are current again for the file as it now is
+}
+
+void DevPreviewCache::setDroppedHook(DroppedHook hook)
+{
+    QMutexLocker lk(&mutex);
+    droppedHook = std::move(hook);
 }
 
 void DevPreviewCache::onDeleted(const QString &fPath)
@@ -674,6 +733,7 @@ void DevPreviewCache::clear()
         q.exec("DELETE FROM devpreview");
     }
     bytes = 0;
+    bumpLocked();
 
     /* Sweep up the payloads, including anything the index did not know about. */
     QDir cd(dirLocked());
@@ -748,7 +808,7 @@ int DevPreviewCache::sweep()
         /* Stat unlocked -- this is the slow part. */
         QList<quint64> toDemote;
         QList<quint64> toRevive;
-        QList<QString> replaced;                 // keys whose path holds another image
+        QList<QPair<QString, QString>> replaced; // key + path: holds another image now
         QList<QPair<quint64, SrcStamp>> toStamp;
         QList<quint64> toDate;                   // demoted before the column existed
         QList<QString> toReap;                   // demoted longer than the grace period
@@ -795,7 +855,8 @@ int DevPreviewCache::sweep()
                on. A row whose stamp DISAGREES describes something that is no longer the
                image it was made from, so it goes. */
             if (!r.srcSize && !r.srcMtime) toStamp.append({r.id, stamp});
-            else if (stamp.contradicts(r.srcSize, r.srcMtime)) replaced.append(r.key);
+            else if (stamp.contradicts(r.srcSize, r.srcMtime))
+                replaced.append({r.key, r.path});
         }
 
         if (toDemote.isEmpty() && toRevive.isEmpty() && replaced.isEmpty()
@@ -849,9 +910,14 @@ int DevPreviewCache::sweep()
                 q.exec();
             }
         }
-        for (const QString &p : replaced) removeLocked(db, p);
+        for (const auto &r : replaced) removeLocked(db, r.first);
 
         if (inTxn) db.commit();
+        const DroppedHook dropped = droppedHook;
+        lk.unlock();
+        /* Outside the lock, as in get(). */
+        if (dropped)
+            for (const auto &r : replaced) dropped(r.second);
     }
 
     lastReapedCount.storeRelaxed(reaped);

@@ -542,6 +542,13 @@ void MetaRead::stopReaders()
             << "instance / dm->instance =" << instance << "/" << dm->instance;
     }
 
+    /*  Flag every reader first (non-blocking), so a reader mid-read is already winding
+        down when the blocking stop below reaches it. Waiting on each in turn with no
+        flag set left quit hung behind a long parse. */
+    for (int id = 0; id < readerCount; ++id) {
+        readers[id]->signalAbort();
+    }
+
     // stop all readers
     for (int id = 0; id < readerCount; ++id) {
         QMetaObject::invokeMethod(readers[id], "stop", Qt::BlockingQueuedConnection);
@@ -593,9 +600,9 @@ void MetaRead::setAwaitingDecode(int sfRow)
     awaitingDecodeTimer.restart();
 }
 
-void MetaRead::onRowCached(int sfRow, QString /*fPath*/, bool isCached, int /*instance*/)
+void MetaRead::onRowCached(int sfRow, QString /*fPath*/, int cacheSource, int /*instance*/)
 {
-    if (!isCached) return;
+    if (cacheSource == G::CacheNone) return;
     int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);
     if (awaiting == sfRow) {
         awaitingDecodeRow.store(-1, std::memory_order_relaxed);

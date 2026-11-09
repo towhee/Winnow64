@@ -748,6 +748,7 @@ public:
     QString dragDropFolderPath;
     int maxThumbSpaceHeight;
     QString pickMemSize;
+    bool isVisiblePick = false;     // a picked row passes the filter (updatePickDependentActions)
     WidgetCSS widgetCSS;
 
     void test();                // for debugging
@@ -830,6 +831,9 @@ public slots:
         clear the row so MetaRead reads it again, and remember it so the corrected row
         is committed back to the catalog when the read lands. See Cache/scrollverify.h. */
     void refreshStaleRows(const QStringList &paths);
+    /*  Thumbnail context menu "Regenerate thumbnails": drop the cached thumbnail and
+        index row of each selected file and read it again (Main/mwstalethumbs.cpp). */
+    void regenerateThumbnails();
     /*  STALE EMBEDDED JPEG THUMBNAILS (Image/stalethumb.h, Main/mwstalethumbs.cpp).
         A Reader found one and drew the icon from the image instead; collect it and,
         once the burst settles, offer to repair the files. */
@@ -1713,10 +1717,12 @@ private slots:
     void openInExplorer();
     void collapseAllFolders();
     void updateCollapseFoldersAction();
-    void updatePickDependentActions();
+    void updatePickDependentActions(bool recomputeVisiblePick = true);
     /*  At close, while picks have not been ingested: keep them (they are saved) or clear
         them all. False = Cancel; clearPicks is set when the user chose to clear them. */
     bool okToCloseWithPicks(bool &clearPicks);
+    // Reject unpicked, clear picks: confirm the counts first. False = Cancel.
+    bool okToRejectUnpicked(int toReject, int toUnpick);
     bool ownsShortcut(const QKeySequence &seq);
     QAction *disabledActionForShortcut(const QKeySequence &seq);
     QString actionDisabledReason(QAction *a);
@@ -2150,6 +2156,7 @@ private:
     QMenu *targetCollectionMenu = nullptr;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
+    QAction *regenerateThumbsAction;
     QAction *sortReverseAction;
     QAction *colorManageToggeAction;
 

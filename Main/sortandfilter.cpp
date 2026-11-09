@@ -389,6 +389,9 @@ void MW::filterChange(QString source)
     updateStatus(true, "", "MW::filterChange");
     phase("status");
 
+    // Reject unpicked, clear picks needs a pick in the filtered view
+    updatePickDependentActions();
+
     // if filter has eliminated all rows so nothing to show
     if (!dm->sf->rowCount()) {
         nullFiltration();
@@ -1371,7 +1374,7 @@ void MW::setRating()
     if (s == "Rate4") rating = "4";
     if (s == "Rate5") rating = "5";
 
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     if (G::isIngestProbe)
         IngestProbe::Instance().BeginEdit("rating", selection.count());
     // check if selection is entirely rating already - if so set no rating
@@ -1615,7 +1618,7 @@ void MW::setColorClass()
     if (s == "Label4") colorClass = "Blue";
     if (s == "Label5") colorClass = "Purple";
 
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     if (G::isIngestProbe)
         IngestProbe::Instance().BeginEdit("colour", selection.count());
     // check if selection is entirely label color already - if so set no label

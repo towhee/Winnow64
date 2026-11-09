@@ -33,6 +33,7 @@ bool DNG::parse(MetadataParameters &p,
     if (order != 0x4D4D && order != 0x4949) return false;
     bool isBigEnd;
     order == 0x4D4D ? isBigEnd = true : isBigEnd = false;
+    m.isBigEnd = isBigEnd;      // for reporting
 
     // should be magic number 42 next
     if (u.get16(p.file.read(2), isBigEnd) != 42) return false;
@@ -42,7 +43,7 @@ bool DNG::parse(MetadataParameters &p,
     p.hdr = "IFD0";
     p.offset = ifdOffset;
     p.hash = &exif->hash;
-    ifd->readIFD(p);
+    ifd->readIFD(p, isBigEnd);
 
     m.lengthFull = 1;  // set arbitrary length to avoid error msg as tif do not
                           // have full size embedded jpg
@@ -87,7 +88,7 @@ bool DNG::parse(MetadataParameters &p,
 
     // IFD0: Title (ImageDescription)
     (ifd->ifdDataHash.contains(270))
-        ? m.title = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.title = u.getString(p.file, ifd->ifdDataHash.value(270).tagValue + startOffset,
         ifd->ifdDataHash.value(270).tagCount)
         : m.title = "";
 
@@ -139,13 +140,18 @@ bool DNG::parse(MetadataParameters &p,
        it is not the raw data itself: a lossless-JPEG (compression 7) CFA or Linear Raw
        strip starts with FFD8 too. DNG 1.7 previews compressed as JPEG XL (52546, e.g.
        Lightroom pano/HDR merges) do not start with FFD8 and are skipped here; on macOS
-       ImageDecoder reads them through ImageIO. */
+       ImageDecoder reads them through ImageIO.
+       Nor is it a mask: a DNG 1.6 semantic mask (photometric 52527, e.g. the iPhone
+       ProRAW portrait and skin mattes) is a small grey JPEG, and as the smallest "preview"
+       it became the thumbnail -- the subject shown white on black. A DNG 1.5 depth map
+       (51177) is the same trap. */
     auto jpgInIfd = [&]() -> bool {
         if (!ifd->ifdDataHash.contains(273) || !ifd->ifdDataHash.contains(279)) return false;
         if (ifd->ifdDataHash.contains(262)) {
             const quint32 photometric = ifd->ifdDataHash.value(262).tagValue;
-            // CFA or LinearRaw
-            if (photometric == 32803 || photometric == 34892) return false;
+            // CFA, LinearRaw, Depth, SemanticMask
+            if (photometric == 32803 || photometric == 34892 ||
+                photometric == 51177 || photometric == 52527) return false;
         }
         if (!p.file.seek(ifd->ifdDataHash.value(273).tagValue)) return false;
         return u.get16(p.file.read(2), true) == 0xFFD8;
@@ -165,19 +171,31 @@ bool DNG::parse(MetadataParameters &p,
 
     QList<quint32> ifdOffsets;
     if (ifd->ifdDataHash.contains(330)) {
-        int count = static_cast<int>(ifd->ifdDataHash.value(330).tagCount);
+        /*  A SubIFD count no real DNG approaches is a misread (a big-endian file read
+            little-endian turned 1 into 16,777,216): walking it never ends, and a reader
+            stuck here blocks MetaRead::stopReaders, so the app hangs on quit. */
+        const quint32 rawCount = ifd->ifdDataHash.value(330).tagCount;
+        if (rawCount > 64) {
+            G::issue("Warning",
+                     "Implausible SubIFD count " + QString::number(rawCount) + ".",
+                     "DNG::parse", m.row, m.fPath);
+            return false;
+        }
+        int count = static_cast<int>(rawCount);
         if (count > 1) {
             quint32 addr = ifd->ifdDataHash.value(330).tagValue;
-            ifdOffsets = ifd->getSubIfdOffsets(p.file, addr, count);
+            ifdOffsets = ifd->getSubIfdOffsets(p.file, addr, count, isBigEnd);
         }
         else ifdOffsets.append(ifd->ifdDataHash.value(330).tagValue);
 
         // iterate subIFDs looking for embedded JPGs (a non-JPEG one does not stop it)
         for (int i = 0; i < ifdOffsets.length(); ++i) {
+            if (G::stop) break;             // quit / folder change: let the reader return
+            if (ifdOffsets[i] >= p.file.size()) continue;
             p.hdr = "SubIFD" + QString::number(i + 1);
             p.offset = ifdOffsets[i];
             p.hash = &exif->hash;
-            ifd->readIFD(p);
+            ifd->readIFD(p, isBigEnd);
             if (jpgInIfd()) {
                 jpgInfo = jpgFromIfd();
                 /*
@@ -238,7 +256,7 @@ bool DNG::parse(MetadataParameters &p,
         p.hdr = "IFD Exif";
         p.offset = ifdEXIFOffset;
         p.hash = &exif->hash;
-        ifd->readIFD(p);
+        ifd->readIFD(p, isBigEnd);
     }
 
     // EXIF: created datetime
@@ -354,7 +372,7 @@ bool DNG::parse(MetadataParameters &p,
         p.hdr = "IFD GPS";
         p.hash = &gps->hash;
         p.offset = offsetGPS;
-        ifd->readIFD(p);
+        ifd->readIFD(p, isBigEnd);
 
         if (ifd->ifdDataHash.contains(1)) {  // 1 = GPSLatitudeRef
             // process GPS info

@@ -687,6 +687,9 @@ private:
     QTreeWidgetItem *rangeAnchorCategory = nullptr;
     QString rangeAnchorItem;
     void noteRangeAnchor(QTreeWidgetItem *item);
+    /* After an item in File types changes, clear whatever on its Images / Videos node or
+       its types would contradict it or make it moot. See the definition. */
+    void resolveTypeGroup(QTreeWidgetItem *item);
     /* Include every item between the anchor and this one, or clear them all when they
        are already all included. False when there is no usable anchor in this category,
        which leaves the click to be handled as an ordinary one. */

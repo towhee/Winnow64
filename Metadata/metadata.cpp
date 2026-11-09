@@ -1178,8 +1178,14 @@ bool Metadata::embedXmp(const QString &fPath, const std::function<void(Xmp &)> &
     if (G::backupBeforeModifying && !Utilities::backup(fPath, "backup"))
         return fail("the backup failed");
 
+    /* Metadata only: the pixels a devPreview depicts are untouched, so carry its entry
+       across the size/mtime change this write makes. Without it the next lookup reads
+       the write as a different image and drops the preview -- one rating on a developed
+       TIFF and Browse showed it undeveloped. See DevPreviewCache::restamp. */
+    const auto before = DevPreviewCache::fileStamp(fPath);
     const XmpEmbed::Result w = XmpEmbed::write(fPath, xmp.docToByteArray());
     if (w != XmpEmbed::Result::Ok) return fail(XmpEmbed::describe(w));
+    DevPreviewCache::instance().restamp(fPath, before.first, before.second);
     return true;
 }
 

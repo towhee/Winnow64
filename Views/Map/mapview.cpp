@@ -368,7 +368,7 @@ void MapView::rebuildClusters()
 void MapView::rebuildSelected()
 {
     selected.clear();
-    const QModelIndexList rows = dm->selectionModel->selectedRows();
+    const QModelIndexList rows = RowSelection::Rows(dm->selectionModel);
     for (const QModelIndex &i : rows) {
         const QModelIndex src = dm->sf->mapToSource(i);
         if (src.isValid()) selected.insert(src.row());

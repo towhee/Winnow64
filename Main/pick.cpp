@@ -10,7 +10,7 @@ void MW::togglePickUnlessRejected()
     Push the changes onto the pick history stack.
 */
     if (G::isLogger) G::log("MW::togglePickUnlessRejected");
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     qint64 n = selection.count();
 
     // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
@@ -149,14 +149,17 @@ void MW::rejectUnpickedClearPicks()
     becomes Rejected and every Picked image becomes Unpicked, ready for the next round
     of picking. Rejected and Ingested images are left alone.
 
-    Same scope as clearPicks: the UNFILTERED model, so images hidden by the current
-    filter are refined too (with "Filter picks only" on, the hidden unpicked images are
-    exactly the ones meant to be rejected). The change goes onto the pick history stack
-    as one multiple-select group, so "Recover prior pick state" restores the whole set.
+    THE FILTERED DATASET ONLY (dm->sf), unlike clearPicks: images hidden by the current
+    filter keep their pick status. The change goes onto the pick history stack as one
+    multiple-select group, so "Recover prior pick state" restores the whole set.
 
     Triggered by rejectUnpickedClearPicksAction (Ingest menu and the thumbnail context
-    menu), which updatePickDependentActions enables only while something is picked --
-    with no picks it would reject the whole folder.
+    menu), which updatePickDependentActions enables only while a VISIBLE image is
+    picked -- otherwise it would reject every visible image. The same test is repeated
+    here in case the action's state is stale (the shortcut fires on it directly).
+
+    CONFIRMED FIRST. One keystroke can reject a whole folder, so okToRejectUnpicked shows
+    the counts and nothing changes on Cancel.
 */
     if (G::isLogger) G::log("MW::rejectUnpickedClearPicks");
     if (!dm->isAnyPick()) return;
@@ -164,14 +167,22 @@ void MW::rejectUnpickedClearPicks()
     // collect first: setting the pick can change the proxy while we walk
     QList<int> rows;
     QStringList priors;
-    const int n = dm->rowCount();
-    for (int dmRow = 0; dmRow < n; ++dmRow) {
+    bool isVisiblePick = false;
+    const int n = dm->sf->rowCount();
+    for (int sfRow = 0; sfRow < n; ++sfRow) {
+        const int dmRow = dm->modelRowFromProxyRow(sfRow);
+        if (dmRow < 0) continue;
         QString status = dm->index(dmRow, G::PickColumn).data(Qt::EditRole).toString();
         if (status == "Picked" || status == "Unpicked") {
             rows.append(dmRow);
             priors.append(status);
+            if (status == "Picked") isVisiblePick = true;
         }
     }
+    if (!isVisiblePick) return;
+
+    const int toReject = priors.count("Unpicked");
+    if (!okToRejectUnpicked(toReject, priors.count() - toReject)) return;
 
     if (rows.count() > 1) pushPick("Begin multiple select");
     for (int i = 0; i < rows.count(); ++i) {
@@ -201,6 +212,57 @@ void MW::rejectUnpickedClearPicks()
     updatePickDependentActions();
     updateStatus(true, "", "MW::rejectUnpickedClearPicks");
     updateClassification();
+}
+
+bool MW::okToRejectUnpicked(int toReject, int toUnpick)
+{
+/*
+    Confirmation for rejectUnpickedClearPicks, before anything is changed: how many
+    images will be rejected and how many picks cleared. False = Cancel (also the escape
+    button). Reject is the default, so Enter confirms. Test mode skips it: --selftest,
+    --soaktest and --devtest have nobody to answer.
+*/
+    if (G::isLogger) G::log("MW::okToRejectUnpicked");
+    if (QStandardPaths::isTestModeEnabled()) return true;
+
+    auto images = [](int n) {
+        return n == 1 ? QString("1 image") : QString("%1 images").arg(n);
+    };
+
+    QMessageBox msgBox(this);
+    const int msgBoxWidth = 350;
+    msgBox.setWindowTitle("Reject Unpicked, Clear Picks");
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(toReject == 0
+                   ? QString("No unpicked images will be rejected.")
+                   : QString("%1 will be rejected.").arg(images(toReject)));
+    QString info = toUnpick == 1
+                   ? QString("1 picked image will be unpicked.")
+                   : QString("%1 picked images will be unpicked.").arg(toUnpick);
+    info += "\n\nOnly images in the filtered view are changed. "
+            "Undo with Ingest > Recover prior pick state.";
+    msgBox.setInformativeText(info);
+    QPushButton *rejectBtn = msgBox.addButton(toReject == 0 ? QString("Clear Picks")
+                                                            : QString("Reject"),
+                                              QMessageBox::DestructiveRole);
+    QPushButton *cancelBtn = msgBox.addButton(QMessageBox::Cancel);
+    msgBox.setDefaultButton(rejectBtn);
+    msgBox.setEscapeButton(cancelBtn);
+    msgBox.setStyleSheet(G::css);
+    // pad the width and widen the buttons to their text, as okToCloseWithPicks does
+    QSpacerItem *horizontalSpacer = new QSpacerItem(msgBoxWidth, 0, QSizePolicy::Minimum,
+                                                    QSizePolicy::Expanding);
+    QGridLayout *layout = static_cast<QGridLayout*>(msgBox.layout());
+    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    for (QAbstractButton *b : msgBox.buttons()) {
+        QString plain = b->text();
+        plain.remove(QChar('&'));
+        const int textWidth = b->fontMetrics().horizontalAdvance(plain);
+        b->setMinimumWidth(qMax(b->sizeHint().width(), textWidth + 40));
+    }
+    msgBox.exec();
+    resetFocus();
+    return msgBox.clickedButton() == rejectBtn;
 }
 
 void MW::loadSavedPicks()
@@ -289,7 +351,7 @@ void MW::togglePick()
 
 */
     if (G::isLogger) G::log("MW::togglePick");
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     qint64 n = selection.count();
     if (G::isIngestProbe) IngestProbe::Instance().BeginEdit("pick", int(n));
 
@@ -391,7 +453,7 @@ void MW::toggleReject()
 */
     if (G::isLogger) G::log("MW::toggleReject");
     QModelIndex idx;
-    QModelIndexList idxList = dm->selectionModel->selectedRows();
+    QModelIndexList idxList = RowSelection::Rows(dm->selectionModel);
     QString pickStatus;
 
     // add multiple selection flag to pick history
@@ -525,7 +587,7 @@ qulonglong MW::memoryReqdForSelection()
 {
     if (G::isLogger) G::log("MW::memoryReqdForSelection");
     qulonglong memTot = 0;
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     for(int row = 0; row < selection.count(); row++) {
         QModelIndex idx = dm->sf->index(row, G::ByteSizeColumn);
         memTot += idx.data(Qt::EditRole).toULongLong();

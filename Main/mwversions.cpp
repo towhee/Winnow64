@@ -267,7 +267,7 @@ void MW::newVersion()
     }
 
     QStringList keys;
-    for (const QModelIndex &idx : dm->selectionModel->selectedRows())
+    for (const QModelIndex &idx : RowSelection::Rows(dm->selectionModel))
         keys << idx.data(G::KeyRole).toString();
     if (keys.isEmpty() && !dm->currentKey.isEmpty()) keys << dm->currentKey;
 

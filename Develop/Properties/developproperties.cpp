@@ -11737,7 +11737,7 @@ QStringList DevelopProperties::otherSelectedPaths() const
 {
     QStringList paths;
     if (!mw || !mw->dm || !mw->dm->selectionModel) return paths;
-    const QModelIndexList rows = mw->dm->selectionModel->selectedRows();
+    const QModelIndexList rows = RowSelection::Rows(mw->dm->selectionModel);
     if (rows.count() < 2) return paths;          // nothing to fan out to
     for (const QModelIndex &idx : rows) {
         /* A video has no develop recipe; writing one would create a sidecar the
@@ -11766,7 +11766,7 @@ int DevelopProperties::selectedStillCount() const
 */
     if (!mw || !mw->dm || !mw->dm->selectionModel) return 0;
     int n = 0;
-    const QModelIndexList rows = mw->dm->selectionModel->selectedRows();
+    const QModelIndexList rows = RowSelection::Rows(mw->dm->selectionModel);
     for (const QModelIndex &idx : rows) {
         if (idx.siblingAtColumn(G::VideoColumn).data().toBool()) continue;
         if (idx.data(G::KeyRole).toString().isEmpty()) continue;

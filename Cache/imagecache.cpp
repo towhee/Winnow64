@@ -620,7 +620,7 @@ void ImageCache::trimOutsideTargetRange()
                 keysToRemove.append(fPath);
                 removedFromCache.append(sfRow);
                 setStateCached(fPath, false);
-                emit setCached(sfRow, fPath, false, instance);
+                emit setCached(sfRow, fPath, G::CacheNone, instance);
             }
         }
         // release locker
@@ -922,7 +922,7 @@ void ImageCache::setTargetRange(int key)
         // Videos: mark cached; do not count toward sumMB
         if (isVideoAt(pos)) {
             setStateCached(fPath, true);
-            emit setCached(pos, fPath, true, instance);
+            emit setCached(pos, fPath, G::CacheOriginal, instance);
             return;
         }
 
@@ -930,7 +930,7 @@ void ImageCache::setTargetRange(int key)
         // endless looping in fillCache.
         if (stateOf(fPath).status == ImageDecoder::Status::Invalid) {
             setStateCached(fPath, true);
-            emit setCached(pos, fPath, true, instance);
+            emit setCached(pos, fPath, G::CacheOriginal, instance);
             return;
         }
 
@@ -2957,7 +2957,8 @@ void ImageCache::decodeNextImage(int id, int sfRow)
 
 void ImageCache::cacheImage(int id, int sfRow,
                             const QImage &doneImage,
-                            const QString &doneFPath)
+                            const QString &doneFPath,
+                            int cacheSource)
 {
 /*
     Called from fillCache to insert a QImage that has been decoded into icd->imCache.
@@ -3007,7 +3008,7 @@ void ImageCache::cacheImage(int id, int sfRow,
     // update our own state, then mirror to the datamodel for the icon badge
     if (!abort) {
         setStateCached(fPath, true);
-        emit setCached(sfRow, fPath, true, instance);
+        emit setCached(sfRow, fPath, cacheSource, instance);
     }
 
     // Reset attempts so a later trim/re-decode cycle gets a fresh retry budget.
@@ -3179,7 +3180,8 @@ void ImageCache::fillCache(int id,
                            int doneSfRow,
                            QImage doneImage,
                            QString doneFPath,
-                           qint64 doneMsToDecode)
+                           qint64 doneMsToDecode,
+                           int doneCacheSource)
 {
 
     /*
@@ -3256,6 +3258,7 @@ void ImageCache::fillCache(int id,
     QImage effectiveImage = haveSnapshot ? doneImage    : decoders[id]->image;
     QString effectiveFPath= haveSnapshot ? doneFPath    : decoders[id]->rowKey;
     qint64 effectiveMs    = haveSnapshot ? doneMsToDecode : decoders[id]->nsToDecode;
+    int effectiveSource   = haveSnapshot ? doneCacheSource : decoders[id]->cacheSource();
 
     if (debugCaching)
     {
@@ -3289,7 +3292,7 @@ void ImageCache::fillCache(int id,
                                << "isRunning =" << imageCacheThread.isRunning()
                 ;
         }
-        if (!abort) cacheImage(id, cacheRow, effectiveImage, effectiveFPath);
+        if (!abort) cacheImage(id, cacheRow, effectiveImage, effectiveFPath, effectiveSource);
         // calc average recent decoder time (not being used except reporting)
         decodeHistory(effectiveMs);
     }

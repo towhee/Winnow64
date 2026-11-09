@@ -660,6 +660,11 @@ winnow_add_unit_test(tst_filterpredicate unit/tst_filterpredicate.cpp)
 # trees cannot disagree about a parent, a top-level row or a label.
 winnow_add_unit_test(tst_foldertree unit/tst_foldertree.cpp)
 
+# tst_rowselection pins Datamodel/rowselection.h (header-only): RowSelection::Rows and
+# Count agree with Qt's selectedRows() on whole-row selections -- overlapping, adjacent,
+# out-of-order and holed ranges -- and stay linear on a fragmented 150,000-row selection.
+winnow_add_unit_test(tst_rowselection unit/tst_rowselection.cpp)
+
 # tst_thumbcache covers the thumbnail index -- the layer that makes scrolling an
 # unvisited region of a 250k catalog a database read rather than a file open per
 # row. The cases are the ones where a cache can be WRONG rather than empty: a

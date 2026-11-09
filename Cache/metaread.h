@@ -153,7 +153,7 @@ public slots:
     void allFinished(QString src);
     void abortProcessing();
     void setAwaitingDecode(int sfRow);
-    void onRowCached(int sfRow, QString fPath, bool isCached, int instance);
+    void onRowCached(int sfRow, QString fPath, int cacheSource, int instance);
 
 private:
     void read(int startRow = 0, QString src = "");// decoder

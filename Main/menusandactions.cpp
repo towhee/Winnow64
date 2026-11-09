@@ -545,10 +545,11 @@ void MW::createEditActions()
     rejectUnpickedClearPicksAction = new QAction(tr("Reject unpicked, clear picks"), this);
     rejectUnpickedClearPicksAction->setObjectName("rejectUnpickedClearPicks");
     rejectUnpickedClearPicksAction->setShortcutVisibleInContextMenu(true);
-    rejectUnpickedClearPicksAction->setToolTip(tr("Reject every loaded unpicked image and "
-                                                  "unpick every picked one, like "
-                                                  "Lightroom's Refine Photos. Undo with "
-                                                  "Ingest > Recover prior pick state."));
+    rejectUnpickedClearPicksAction->setToolTip(tr("Reject every unpicked image in the "
+                                                  "filtered view and unpick every picked "
+                                                  "one, like Lightroom's Refine Photos. "
+                                                  "Undo with Ingest > Recover prior pick "
+                                                  "state."));
     addAction(rejectUnpickedClearPicksAction);
     connect(rejectUnpickedClearPicksAction, &QAction::triggered,
             this, &MW::rejectUnpickedClearPicks);
@@ -1935,6 +1936,13 @@ void MW::createViewActions()
     thumbsShrinkAction->setShortcutVisibleInContextMenu(true);
     addAction(thumbsShrinkAction);
     connect(thumbsShrinkAction, &QAction::triggered, this, &MW::thumbsShrink);
+
+    regenerateThumbsAction = new QAction(tr("Regenerate thumbnails"), this);
+    regenerateThumbsAction->setObjectName("regenerateThumbs");
+    regenerateThumbsAction->setToolTip(tr("Read the selected images again and rebuild "
+                                          "their thumbnails, ignoring the caches"));
+    addAction(regenerateThumbsAction);
+    connect(regenerateThumbsAction, &QAction::triggered, this, &MW::regenerateThumbnails);
 }
 
 void MW::createWindowActions()
@@ -2799,6 +2807,8 @@ void MW::createEditMenu()
     targetCollectionMenu->setToolTipsVisible(true);
     connect(targetCollectionMenu, &QMenu::aboutToShow, this, &MW::fillTargetCollectionMenu);
     editMenu->addSeparator();
+    editMenu->addAction(regenerateThumbsAction);
+    editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
     editMenu->addAction(rotateLeftAction);
     editMenu->addSeparator();
@@ -3150,6 +3160,8 @@ void MW::createViewMenu()
     viewThumbsMenu = viewMenu->addMenu(tr("Thumbnails"));
     viewThumbsMenu->addAction(thumbsEnlargeAction);
     viewThumbsMenu->addAction(thumbsShrinkAction);
+    viewThumbsMenu->addSeparator();
+    viewThumbsMenu->addAction(regenerateThumbsAction);
 }
 
 void MW::createWindowMenu()
@@ -3522,6 +3534,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction4);
     thumbViewActions->append(thumbsEnlargeAction);
     thumbViewActions->append(thumbsShrinkAction);
+    thumbViewActions->append(regenerateThumbsAction);
 
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(rotateRightAction);
@@ -3740,7 +3753,8 @@ void MW::enableSelectionDependentMenus()
     if (G::isLogger) G::log("MW::enableSelectionDependentMenus");
 
     bool dmHasRows = dm->rowCount() > 0;
-    bool hasSelection = sel->count() > 0;
+    const int selCount = sel->count();
+    bool hasSelection = selCount > 0;
 
     /* PROBE copy-path (temporary): a non-null activePopupWidget means this ran while a
        context menu was open, which re-gates (and greys) the open menu's actions. */
@@ -3756,7 +3770,7 @@ void MW::enableSelectionDependentMenus()
             << "copyPathEnabled =" << copyFolderPathFromContextAction->isEnabled();
     }
 
-    bool has2Selected = sel->count() >= 2;
+    bool has2Selected = selCount >= 2;
     bool isUpDown = gridView->isVisible() || tableView->isVisible();
 
     /* Reason phrases stored on each action as the "disabledReason" dynamic property when it
@@ -3804,8 +3818,10 @@ void MW::enableSelectionDependentMenus()
         gate(a, hasSelection, needSel);
     }
 
-    /* ingest, nextPick, prevPick: enabled only when at least one image is picked */
-    updatePickDependentActions();
+    /* ingest, nextPick, prevPick: enabled only when at least one image is picked. A
+       selection change cannot change picks or the filter, so the visible-pick walk is
+       skipped (see updatePickDependentActions). */
+    updatePickDependentActions(false);
     gate(revealFileAction, dmHasRows, needFolder);
     gate(reportMetadataAction, dmHasRows, needFolder);
     gate(copyImagePathFromContextAction, dmHasRows, needFolder);

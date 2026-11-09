@@ -1,10 +1,13 @@
 #include "Main/mainwindow.h"
 #include "Image/stalethumb.h"
 #include "Cache/thumbcache.h"
+#include "Cache/devpreviewcache.h"
 #include "Cache/catalog.h"
 #include "Metadata/ExifTool.h"
 #include "Utilities/fileops.h"
 #include "Utilities/utilities.h"
+#include "Utilities/versionkey.h"
+#include "Datamodel/rowselection.h"
 
 /*
     STALE EMBEDDED JPEG THUMBNAILS: NOTICE, ASK, REPAIR.
@@ -560,8 +563,12 @@ void MW::repairStaleThumbs(const QStringList &paths)
             }
 
             QString err;
+            /* Only the embedded thumbnail and preview change, not the pixels a
+               devPreview depicts: keep the entry (DevPreviewCache::restamp). */
+            const auto before = DevPreviewCache::fileStamp(it.path);
             if (et.replaceEmbeddedImages(thumbPath, previewPath, it.path, err)) {
                 o.fixed << it.path;
+                DevPreviewCache::instance().restamp(it.path, before.first, before.second);
             }
             else {
                 G::issue("Warning", "ExifTool could not repair the embedded thumbnail: "
@@ -575,4 +582,48 @@ void MW::repairStaleThumbs(const QStringList &paths)
         ThumbCache::instance().clearStale(o.fixed);    // here: one transaction, off GUI
         return o;
     }));
+}
+
+void MW::regenerateThumbnails()
+{
+/*
+    THUMBNAIL CONTEXT MENU "Regenerate thumbnails". The thumbnail cache and the index
+    answer for a file as long as its size and mtime are unchanged, so a thumbnail made
+    by an older parser (an iPhone ProRAW semantic mask taken as the preview) is served
+    forever. This drops both for the selected files and re-reads the rows the way a
+    stale row is re-read (MW::refreshStaleRows): metadata from the file, then the icon.
+
+    A version shares its source file's thumbnail, so the source and every version of it
+    are re-read together. Nothing is written to the image files.
+*/
+    if (G::isLogger) G::log("MW::regenerateThumbnails");
+    if (!dm || !dm->selectionModel) return;
+
+    QStringList files;
+    QStringList keys;
+    {
+        QSet<QString> seen;
+        const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
+        for (const QModelIndex &sfIdx : selection) {
+            const int r = dm->modelRowFromProxyRow(sfIdx.row());
+            if (r < 0) continue;
+            const QString file = VersionKey::sourceOf(
+                dm->index(r, G::PathColumn).data(G::KeyRole).toString());
+            if (file.isEmpty() || seen.contains(file)) continue;
+            seen.insert(file);
+            files << file;
+            keys << file << dm->versionKeysOf(file);
+        }
+    }
+    if (files.isEmpty()) {
+        G::popup->showPopup("Select the images whose thumbnails to regenerate.", 2000);
+        return;
+    }
+
+    for (const QString &f : std::as_const(files)) ThumbCache::instance().onDeleted(f);
+    Catalog::instance().markStale(files);
+    refreshStaleRows(keys);
+
+    G::popup->showPopup("Regenerating " + QString::number(files.size())
+                        + (files.size() == 1 ? " thumbnail." : " thumbnails."), 1500);
 }

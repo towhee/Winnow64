@@ -294,20 +294,9 @@ void Selection::selectRows(const QList<int> &sfRows, bool add)
     std::sort(rows.begin(), rows.end());
     rows.erase(std::unique(rows.begin(), rows.end()), rows.end());
 
-    QItemSelection selection;
-    int runStart = rows.first();
-    int prev = runStart;
-    for (int i = 1; i <= rows.size(); ++i) {
-        if (i < rows.size() && rows.at(i) == prev + 1) {
-            prev = rows.at(i);
-            continue;
-        }
-        selection.select(dm->sf->index(runStart, 0), dm->sf->index(prev, 0));
-        if (i < rows.size()) runStart = prev = rows.at(i);
-    }
-
     if (!add) setCurrentIndex(dm->sf->index(first, 0));
-    sm->select(selection, QItemSelectionModel::Select | QItemSelectionModel::Rows);
+    // runs of consecutive rows, full width (RowSelection::Select)
+    RowSelection::Select(sm, rows, QItemSelectionModel::Select);
 }
 
 void Selection::next(Qt::KeyboardModifiers modifiers)
@@ -594,7 +583,7 @@ void Selection::chkForDeselection(int sfRow)
     if (G::isLogger || isDebug) G::log("Selection::chkForDeselection");
 
     QModelIndex idx = dm->sf->index(sfRow, 0);
-    int count = sm->selectedRows().count();
+    int count = RowSelection::Count(sm);
     bool isCurrent = idx == dm->currentSfIdx;
 
 //    /*
@@ -608,7 +597,7 @@ void Selection::chkForDeselection(int sfRow)
 
     if (!isSelected(idx.row())) {
         // reselect if no selected rows
-        if (sm->selectedRows().count() == 0) {
+        if (RowSelection::Count(sm) == 0) {
             sm->select(idx, QItemSelectionModel::Select  | QItemSelectionModel::Rows);
         }
         //
@@ -631,7 +620,7 @@ void Selection::clear()
 int Selection::count()
 {
     QMutexLocker locker(&mutex);
-    return sm->selectedRows().count();
+    return RowSelection::Count(sm);
 }
 
 void Selection::save(QString src)
@@ -648,14 +637,14 @@ void Selection::save(QString src)
 */
     if (G::isLogger || isDebug) G::log("Selection::save");
     /* old code
-    selectedRows = sm->selectedRows();
+    selectedRows = RowSelection::Rows(sm);
     selectedIndexes = sm->selectedIndexes();
     //*/
 
     // save model indexs, not proxy
     QModelIndex dmIdx;
     dmSelectedRows.clear();
-    foreach (QModelIndex sfIdx, sm->selectedRows()) {
+    foreach (QModelIndex sfIdx, RowSelection::Rows(sm)) {
         dmSelectedRows << dm->sf->mapToSource(sfIdx);
     }
     dmCurrentIndex = dm->sf->mapToSource(sm->currentIndex());
@@ -677,16 +666,16 @@ void Selection::recover(QString src)
     Only the 0 column indexes are saved, as all selections in Winnow are by row.
 */
     if (G::isLogger || isDebug) G::log("Selection::recover");
-    QItemSelection selection;
-
     // QMutexLocker locker(&mutex);
 
+    QList<int> sfRows;
+    sfRows.reserve(dmSelectedRows.count());
     foreach (QModelIndex dmIdx, dmSelectedRows) {
         if (!dmIdx.isValid()) return;
-        QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
-        selection.select(sfIdx, sfIdx);
+        const int sfRow = dm->sf->mapFromSource(dmIdx).row();
+        if (sfRow >= 0) sfRows.append(sfRow);     // hidden by the filter
     }
-    sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    RowSelection::Select(sm, sfRows, QItemSelectionModel::ClearAndSelect);
     dm->currentSfIdx = dm->sf->mapFromSource(dmCurrentIndex);
     sm->setCurrentIndex(dm->currentSfIdx, QItemSelectionModel::NoUpdate);
 
@@ -705,14 +694,15 @@ bool Selection::recoverVisible(QString src)
     const QModelIndex current = dm->sf->mapFromSource(dmCurrentIndex);
     if (!current.isValid()) return false;
 
-    QItemSelection selection;
+    QList<int> sfRows;
+    sfRows.reserve(dmSelectedRows.count());
     for (const QModelIndex &dmIdx : std::as_const(dmSelectedRows)) {
         if (!dmIdx.isValid()) continue;
         const QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
-        if (sfIdx.isValid()) selection.select(sfIdx, sfIdx);
+        if (sfIdx.isValid()) sfRows.append(sfIdx.row());
     }
-    if (selection.isEmpty()) selection.select(current, current);
-    sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    if (sfRows.isEmpty()) sfRows.append(current.row());
+    RowSelection::Select(sm, sfRows, QItemSelectionModel::ClearAndSelect);
     dm->currentSfIdx = current;
     sm->setCurrentIndex(current, QItemSelectionModel::NoUpdate);
     return true;
@@ -755,7 +745,7 @@ QString Selection::diagnostics()
     rpt << "\n\n";
     rpt.reset();
 
-    foreach (QModelIndex sfIdx, sm->selectedRows()) {
+    foreach (QModelIndex sfIdx, RowSelection::Rows(sm)) {
         int dmRow = dm->sf->mapToSource(sfIdx).row();
         int sfRow = sfIdx.row();
         // rpt << "\n" << "  sfRow = " << G::s(sfRow).leftJustified(5) << "  dmRow = " << G::s(dmRow);

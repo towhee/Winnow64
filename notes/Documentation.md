@@ -617,6 +617,7 @@
   - [12.5 Staleness Keys](#125-staleness-keys)
     - [12.5.1 Decoder Fixes: Per-Format Revision](#1251-decoder-fixes-per-format-revision)
     - [12.5.2 Denoiser Fixes: kDenoiserRevision](#1252-denoiser-fixes-kdenoiserrevision)
+    - [12.5.3 devPreview Invalidation: What Makes One Stale](#1253-devpreview-invalidation-what-makes-one-stale)
   - [12.6 Read Paths](#126-read-paths)
     - [12.6.1 The Icon Grid](#1261-the-icon-grid)
     - [12.6.2 The Image Cache](#1262-the-image-cache)
@@ -1802,7 +1803,7 @@ The QSettings PickLog (crash-recovery copy of the picks, and the picks line of t
 - AFTER FILL. MW::folderChanged (once per completed fill: folder, search, whole Library, parked Library put back) calls MW::restoreSavedPicks -> DataModel::syncSavedPicks, ahead of the filter build so the Picks counts include the result. It syncs BOTH WAYS: a parked Library (DataModel::restoreScope) and a Library snapshot come back with the picks they had when put away, and a pick made or cleared since, on the same image in a folder, must win. Step 1 (unpick rows no longer saved) is skipped when pickedCount() == 0 and stops once every picked row has been seen; step 2 walks the saved set against fPathRow. readLibrarySnapshot no longer unpicks the rows itself.
 - NO dataChanged PER ROW. syncSavedPicks writes with signals blocked and emits ONE dataChanged over the span touched: a per-row dataChanged rebuilds the macOS accessibility array (~27 ms each at 43,000 rows).
 - Clear all picks (MW::clearPicks) is model-scoped: it unpicks the LOADED images (filtered ones included), and the saved picks in other folders stay.
-- Reject unpicked, clear picks (MW::rejectUnpickedClearPicks, Cmd/Ctrl+Opt/Alt+R, Ingest menu and thumbnail context menu) is Lightroom's Library > Refine Photos, same shortcut: every Unpicked row becomes Rejected and every Picked row Unpicked; Rejected and Ingested rows are left alone. Same scope as Clear all picks (the unfiltered loaded model), one multiple-select group on the pick history so Recover prior pick state undoes it, and the same refresh tail. Enabled by MW::updatePickDependentActions only while something is picked: with no picks it would reject the whole folder.
+- Reject unpicked, clear picks (MW::rejectUnpickedClearPicks, Cmd/Ctrl+Opt/Alt+R, Ingest menu and thumbnail context menu) is Lightroom's Library > Refine Photos, same shortcut: every Unpicked row becomes Rejected and every Picked row Unpicked; Rejected and Ingested rows are left alone. Unlike Clear all picks it is scoped to the FILTERED dataset (dm->sf): images hidden by the current filter keep their status. One multiple-select group on the pick history so Recover prior pick state undoes it, and the same refresh tail. Enabled by MW::updatePickDependentActions only while an image in the filtered view is picked (otherwise it would reject every visible image); greyed with the reason "no images in the filtered view are picked". That visible-pick test is cached in MW::isVisiblePick: recomputed by the pick paths and MW::filterChange, but not by enableSelectionDependentMenus, which runs on every selection change and passes recomputeVisiblePick = false. The function repeats the test itself in case the action state is stale. Before anything changes, MW::okToRejectUnpicked shows a confirmation with the counts ("N images will be rejected", "M picked images will be unpicked"); Reject is the default button, Cancel the escape button and changes nothing; test mode skips the dialog.
 
 #### 3.5.3 The Close Reminder
 
@@ -2114,6 +2115,12 @@ Every caller of initialize now queues it (see MW::folderAndFileSelectionChange a
 
 When the current row survives the filter, MW::filterChange restores the prior selection via Selection::recoverVisible() (2026-10-19: it was Selection::recover() and only when NO rows were filtered out, so any active filter collapsed a multi-image selection on every filterChange -- including the one a keyword drop on the Keywords panel triggers through rebuildKeywordFilters; the selected rows the filter still shows are now kept, the hidden ones dropped, and only a filtered-out current falls back to selecting a single new current). Like recover() it sets the current index with QItemSelectionModel::NoUpdate and therefore does NOT re-emit fileSelectionChange. The central view is not re-rendered for the current item. A still image keeps showing because imageView retains its decoded pixmap, but a video's first frame (rendered by videoView on the VideoTab) must be re-asserted. MW::refresh does this at its tail: for a video current item in Loupe mode it re-selects the VideoTab and reloads the first frame (guarded so a clip already shown paused is not reloaded).
 
+RECOVERED SELECTIONS ARE MERGED INTO RANGES. Selection::recover and recoverVisible select through RowSelection::Select (Datamodel/rowselection.h), one range per run of adjacent proxy rows. QItemSelection::select does not merge, and QItemSelectionModel::selectedRows (behind Selection::count, Selection::save and the status bar) tests every row of every range against every range, O(rows x ranges). One range per row turned a 152,559-image select-all followed by a reject toggle into ~2.3e10 tests in the Selection::count of enableSelectionDependentMenus, on the selectionChanged the recover emits: a beachball of many minutes (2026-11-07).
+
+NEVER CALL selectedRows() ON THE IMAGE SELECTION. A selection that really is fragmented (every other row) stays one range per row however it is built, so the merge alone does not help it. Use RowSelection::Rows and RowSelection::Count (Datamodel/rowselection.h, included by datamodel.h) on dm->selectionModel / Selection::sm / the views' selectionModel(): every image selection is ENTIRE ROWS, so a row is selected iff some range covers it and Qt's per-column test is skipped. Rows is O(ranges + rows) and keeps Qt's order (range order, top to bottom, duplicates dropped); Count merges and sums the ranges, O(ranges log ranges). Every caller was converted (2026-11-07); the folder, bookmark and keyword trees keep selectedRows(), their selections are not row-wise. QItemSelectionModel::isSelected is still O(ranges) per call, so a loop over every row calling it is quadratic on a fragmented selection too.
+
+NEVER SELECT MANY ROWS WITH THE Rows FLAG. QItemSelectionModel::select(..., Rows) widens every range to full width and de-duplicates as it goes, O(ranges^2): 75,000 one-row ranges took 10.9 s, 20,000 took 0.77 s, the same 20,000 handed over full width without the flag took 3 ms. RowSelection::Select(sm, rows, flags) sorts, merges runs of adjacent rows, builds full-width ranges (RowSelection::Ranges) and strips the flag. Used by Selection::recover / recoverVisible / selectRows (map clusters), the keyword drop paths in Main/keywordedit.cpp and the workspace selection restore. Single-range selects (shift-click, Select All, a one-row toggle) keep the flag: one range costs nothing. Pinned by tests/unit/tst_rowselection.cpp: Rows and Count against Qt's selectedRows() on overlapping, adjacent, out-of-order, holed and random selections, Select against a Rows-flag select, and the 150,000-row every-other-row case under a time bound.
+
 VideoView::load shows a clip's first frame by PAUSING it, never play() then pause() (2026-10-30). QMediaPlayer::setSource stops the player and does nothing for the clip already loaded (back to a video after a photo), and the FFmpeg PlaybackEngine forces a frame step only on a Stopped -> Paused transition, so play() + pause() raced the decoder and left the loupe intermittently blank. The VideoView scrub slider and play button are Qt::NoFocus: showing the VideoTab hands the focus to the page's first tab-focusable child, and a focused slider swallowed Left/Right (MW::eventFilter also skips navigation while a QAbstractSlider has the focus), so the arrow keys intermittently stopped moving to the next image.
 
 #### 4.1.6 A Press That Settles a Filter Must Swallow the Release
@@ -2305,6 +2312,7 @@ isCaching, isCached, attempts, decoderId, decoder status and error message used 
 
 - ImageCache::RowCache is that state, KEYED BY FILE PATH rather than by row: proxy rows shift under filtering and sorting, and icd->imCache is already keyed by path, so the two can never disagree.
 - The model still carries the columns, updated through the same queued signals (the icon delegate draws its cached badge from G::IsCachedColumn and the table shows the rest), but only as a one-way MIRROR for display. Writes go to RowCache FIRST and the model after.
+- IsCachedColumn holds a G::CacheSource (2026-11-08), not a bool: CacheNone, CacheOriginal (the file's own pixels: a raw's embedded JPG, or an unedited non-raw) or CacheDeveloped (ImageDecoder::developApplied or a sensor Raw decode: a devPreview, a sensor-decoded raw, an edited non-raw developed by applyDevelop). ImageDecoder::cacheSource() computes it; it rides the done() signal as doneCacheSource like the other done* snapshots (decoder fields race with the next decode), and ImageCache::setCached carries it. Non-zero still reads true through toBool(). The icon delegate draws the cache circle from it in BOTH operation modes: red G::thumbUncachedColor, purple G::thumbRawPreviewColor, green G::thumbDevPreviewColor (it used to be red-when-uncached only, hidden in Develop). Green ALSO means a built devPreview on disk, where the loupe would serve it (always in Develop, where it is the placeholder; in Preview only with Preview Source = Developed): Develop trims ImageCache to the current image, so ImageCache alone left every other thumbnail red. DevPreviewCache is SQLite-only and stats the source, so paint asks DataModel::devPreviewReady (Datamodel/devpreviewready.h), a lazy memo of contains(rowKey, devPreviewKeyFor(...), acceptReduced) filled for painted rows by one batched pool-thread probe per event-loop pass; a first-true or changed answer repaints via scheduleVisibleEmit. Entries go stale when the row's DevPreviewKeyColumn or DevPreviewCache::generation() moves (bumped under the mutex by put, removeLocked, eviction, onMoved, restamp, clear) and are re-probed on the next paint, showing the last answer meanwhile; a dm->instance change drops the memo.
 - The mirror is keyed by path too: ImageCache::setCached carries fPath, and DataModel::setCached resolves it through fPathRow to the SOURCE row. It used to address the proxy by the snapshot's sfRow, which a filter or sort landing before the queued slot ran had renumbered, producing hundreds of "Invalid sfIdx. Src: DataModel::setCached" issues a day, or a cache badge on the WRONG image. Evictions of filter-hidden images were sent with sfRow = -1 and always failed, so their IsCachedColumn stayed true until the filter was cleared. A path no longer in the model is dropped silently.
 - State is dropped on an instance change (initialize, updateInstance) and per path on removal (removeCachedImage, removeFromCache, which MW's delete/replace path already calls). A path reappearing in the next folder must not inherit its retry count, and one that had failed terminally would otherwise never be decoded again. In initialize() the ORDER matters: resetStaleIsCaching() reads RowCache to find rows left marked caching and mirrors isCaching=false to the DataModel for each, so clearing first would make it a no-op.
 
@@ -3133,6 +3141,8 @@ Settings: "Cache thumbnails" (G::cacheThumbnails) and "Thumbnail cache size" are
 Staleness is the one failure a cache must not have. An image edited by another program keeps its path, so a thumbnail returned on identity alone would be yesterday's picture for today's file. Every row stamps the source's size and mtime, and a mismatch is a MISS. A row stamped with zeros predates the stamp and is grandfathered, as DevPreviewCache does for its imported rows.
 
 The sweep DEMOTES, never deletes, and skips entries whose volume is not mounted. An ejected card, an unplugged drive or a share that is not up looks identical to a deletion from the inside, and throwing away a whole volume's thumbnails because it was not plugged in is what makes a cache feel unreliable. A missing file is marked live = 0, which puts it first in the eviction order without destroying it, so a file restored from the trash finds its thumbnail again. The sweep pages on rowid (see [5.10.2 Thumbnail Cache Checks That Reported Success](#5102-thumbnail-cache-checks-that-reported-success)).
+
+Regenerate thumbnails (thumbnail context menu, Edit menu before Rotate, and View > Thumbnails) is the manual override for a thumbnail that is wrong although its file did not change, e.g. one made by an older parser. MW::regenerateThumbnails (Main/mwstalethumbs.cpp) takes the selected rows' source files, deletes their ThumbCache rows (ThumbCache::onDeleted), clears their index freshness stamp (Catalog::markStale, srcsize/srcmtime/sidecarmtime = -1, so G::useIndexMetadata cannot serve the old parse either), and hands the source plus all its versions to MW::refreshStaleRows, which re-reads metadata and icon and re-commits the catalog row. It writes nothing to the image files.
 
 #### 5.8.2 Writing Thumbnails as They Load
 
@@ -4438,6 +4448,10 @@ Linear Raw DNGs (Photometric 34892: already demosaiced, scene-linear camera RGB,
 - Memory: the base is W*H*3 floats, 1.5 GB at 122 MP. ToCameraNative has an rvalue overload so it is moved into the WorkingImage, not copied.
 
 Such a DNG has no JPEG preview larger than its 256 px IFD0 thumbnail (see [3.6.3 Thumbnail (Icon) Decoding](#363-thumbnail-icon-decoding)), so RawFormat::PreviewTooSmall (a DNG whose largest JPEG has a long edge under 1024 px) makes ImageDecoder decode it from the sensor data in Preview mode too. ImageCache::willUseSensorDecode applies the same rule, so the memory governor's raw concurrency cap counts it. Ordinary DNGs, including Adobe DNG Converter's 1024 px "medium" previews, keep the fast embedded-JPEG path.
+
+iPhone ProRAW (DNG 1.6, e.g. iPhone 17 Pro) is the one common BIG-ENDIAN ("MM") DNG. DNG::parse (the metadata side) passes isBigEnd to every IFD::readIFD and getSubIfdOffsets; until 2026-11-09 it did not, so every ProRAW file failed with "Unable to parse metadata". A count misread that way (SubIFD count 1 read as 16,777,216) also wedged every Reader and hung quit, so a SubIFD count over 64 now fails the parse, offsets past EOF are skipped, and the SubIFD loop leaves on G::stop. (MetaRead::stopReaders also flags every reader with signalAbort before its blocking stop.) UnpackLinear reads ProRAW's 3-sample, 10-bit lossless-JPEG tiles with LinearizationTable; ProfileGainTableMap (0xCD2D, Apple's local tone map) is NOT applied.
+
+ProRAW also embeds SEMANTIC MASKS: SubIFDs with Photometric 52527, 8-bit grey lossy JPEGs at quarter resolution, named by SemanticName (0xCD2E), e.g. `urn:com:apple:photo:2018:aux:portraiteffectsmatte` (subject) and `urn:com:apple:photo:2019:aux:semanticskinmatte` (skin). They start with FFD8, so the preview picker took the smallest as the thumbnail (the subject white on black). jpgInIfd now skips Photometric 52527 and 51177 (DNG 1.5 depth map) along with CFA and Linear Raw. The masks are unused; they are a free subject/skin mask candidate for Develop.
 
 libjxl is optional on every platform; the CMake define is WINNOW_HAVE_JXL. Without it, JPEG XL DNGs show the preview: ImageIO on macOS, the 256 px JPEG elsewhere.
 
@@ -7928,6 +7942,31 @@ RawDecoder::kDenoiserRevision (same header). PMRID changes the pixels without to
 - Bump it when a PMRID change alters output. With Auto run on, that misses every Winnow-engine raw preview once, rebuilt as each image is viewed (the stale sidecar thumbnail falls back to the camera thumbnail in the grid until topUpDevPreviews rewrites it on the next Develop view).
 - Unlike the decoder revision it IS in the base key (it depends on the recipe, which renderKey does not see), so it lands in G::DevPreviewKeyColumn and the catalog. Consequence: a row restored from the catalog WITHOUT a sidecar re-read keeps the pre-bump base key and can go on serving the old loupe preview until the image is viewed in Develop (topUpDevPreviews -> MW::devPreviewUpdated rewrites the column) or its sidecar is re-read. The autoDenoise / engine parts of the base key share that limitation.
 
+#### 12.5.3 devPreview Invalidation: What Makes One Stale
+
+The rule (2026-11-07). A devPreview depicts three things: the source file's PIXELS, put through the RECIPE, by the RENDERER. It goes stale exactly when one of them changes, and never for anything else.
+
+| Invalidates (changes the picture) | Mechanism |
+|---|---|
+| The recipe: any Develop edit, preset, Paste Settings | recipe hash in the key (12.5) |
+| The renderer: raw engine, Auto run denoise, a decoder or denoiser fix | renderer facts and revisions in the key (12.5, 12.5.1, 12.5.2) |
+| Orientation: a rotation | dropped explicitly (DevelopProperties::rotateImageEdits) |
+| The source pixels: the file replaced or re-saved (a focus stack re-run under the same name, an outside editor, a path reused by another image) | source size + mtime stamp (12.7.5) |
+
+| Does NOT invalidate | Why it survives |
+|---|---|
+| Any metadata Winnow writes: rating, label, pick, title, creator, copyright, keywords, location | in a sidecar it never touches the file; EMBEDDED in the file (G::modifySourceFiles, Metadata::embedXmp) it moves the stamp, so the entry is re-stamped (below) |
+| Winnow replacing the embedded thumbnail / preview (Repair Stale Thumbnails) | re-stamped (MW::repairStaleThumbs) |
+| A move or rename | the row is re-keyed (DevPreviewCache::onMoved, 12.7) |
+| View-only state: History hover, Transform / Replace eye, Visualize Range | never cached in the first place (12.4.2) |
+
+The source stamp is the coarse part. It stands in for "the pixels changed", but ANY byte written to the file moves it. Before this rule, Winnow's own embedded metadata write tripped it. Found 2026-11-07: five cropped focus-stack TIFFs had their devPreviews built on leaving Develop; a rating applied to them a minute later was embedded in the files, the next loupe lookup read the new size/mtime as "a different image now lives here", deleted every row, and Browse showed the TIFFs uncropped. The grid stayed right, because the sidecar thumbnail is checked against the recipe only.
+
+- RE-STAMP after a pixel-preserving write. A writer Winnow controls that leaves the pixels alone takes DevPreviewCache::fileStamp(path) immediately before writing and calls DevPreviewCache::restamp(path, oldSize, oldMtime) after a successful write. Only rows still carrying that old stamp move (UPDATE ... WHERE srcsize = old AND srcmtime = old), so a row that was ALREADY stale before the write stays stale; the restamp can carry an entry across this one write and never vouch for an earlier change. The image's versions are stamped by the same file and move with it. Callers: Metadata::embedXmp (every embedded metadata write: writeXMP, writeKeywordsToSidecar) and MW::repairStaleThumbs. XmpEmbed::writeOrientation deliberately does NOT re-stamp: a rotation is an invalidation.
+- An OUTSIDE write still drops the preview. Lightroom or exiftool writing metadata into a TIFF cannot be told apart from an edit to its pixels without hashing the image data on every lookup, and a needless rebuild beats serving the wrong picture.
+- A DROP QUEUES A REBUILD for an edited image. When get() or sweep() drops a row for a contradicting stamp, it calls the hook set with DevPreviewCache::setDroppedHook (outside the cache mutex, on the decoder or pool thread that dropped it). MW posts it to the GUI thread and, if the image is in the loaded folder AND has a recipe (G::DevelopColumn), calls buildDevPreviews(path, "dropped"). Without this the edited image showed undeveloped outside Develop until something else asked for a build, and nothing did. In Develop the request is deferred and built on leaving, like a "flush" (12.9.4). When the build lands for the image on screen, devPreviewStore swaps the loupe to it (12.4.6). NOT rebuilt: an unedited raw's default render, and an image outside the loaded folder. Rendering those unasked is what the byproduct rule forbids; the background build (12.9) or Develop > Build Developed Previews covers them.
+- Adding a new writer: if it changes the file but not what a devPreview depicts, re-stamp around it; if it changes the pixels, do nothing and let the stamp drop the entry.
+
 ### 12.6 Read Paths
 
 #### 12.6.1 The Icon Grid
@@ -8005,6 +8044,7 @@ The recipe hash identifies a RECIPE, not an image. Presets, Paste Settings and m
 
 - Nothing on disk at all is deliberately NOT a mismatch: a missing source is the sweep's demote case (the file is in the trash, or its volume is ejected), and the preview is still the right picture of it. Only a file that is present and DIFFERENT drops the entry.
 - Rows imported from the JSON index carry no stamp; they were grandfathered rather than discarded, and the first sweep (which stats every source image anyway) stamps them.
+- Winnow's own writes that leave the pixels alone (embedded metadata, a replaced embedded thumbnail) RE-STAMP the row rather than tripping this, and a drop of an edited image queues a rebuild. See [12.5.3 devPreview Invalidation](#1253-devpreview-invalidation-what-makes-one-stale).
 
 Lookup is by a NORMALISED KEY, not the raw path. The same file reaches Winnow spelled several ways: DataModel stores QFileInfo::filePath() (the path AS CONSTRUCTED: not cleaned, not absolutised); drop and paste build destinations by concatenation (doubling the separator when the folder already ends in one); Finder and Explorer drags arrive through QUrl::toLocalFile(); Windows mixes '\\' and '/' and varies the drive letter's case; and the same folder can be reached through a symlink, a share mounted under another name, or as /Volumes/X and /System/Volumes/Data/X. A mismatch never showed the wrong picture, but a put under a second spelling INSERTED A SECOND ROW (the same image cached twice at several MB each), a get under a second spelling silently re-decoded the raw, and the FileOps hooks found nothing to update.
 
@@ -10363,7 +10403,7 @@ Keywords are a nested category, because a keyword's identity is its full path ([
 
 File types is two levels deep (2026-11-04): an Images node and a Videos node, each with its types beneath it (Filters::addTypeItems; updateTypeItems rebuilds keeping check states and collapsed nodes). A type is a video when its extension (the part before any "+", so "JPG+ARW" is an image) is in Metadata::videoFormats, which MW::createDataModel pushes in with Filters::setVideoFormats because the panel is made before Metadata. A node appears only when it has a type under it, and starts expanded so the types show as they did before.
 
-- THE NODE IS A FILTER ITEM. Its data(1) is the QStringList of the types beneath it (Filters::refreshTypeGroups, which also sums the counts: a row has one type). SortFilter::compileFilters, Filters::fillQuery and Filters::activeFiltersAsQuery expand the list into one value per type, so checking Images includes every image type and Opt+clicking Videos excludes every video. FilterPredicate is unchanged. The types under a checked node stay independent, as under a keyword or folder branch.
+- THE NODE IS A FILTER ITEM. Its data(1) is the QStringList of the types beneath it (Filters::refreshTypeGroups, which also sums the counts: a row has one type). SortFilter::compileFilters, Filters::fillQuery and Filters::activeFiltersAsQuery expand the list into one value per type, so checking Images includes every image type and Opt+clicking Videos excludes every video. FilterPredicate is unchanged. A node and its types never disagree (2026-11-07): items in a category are OR'd, so a checked Videos used to swallow a checked MTS beneath it and show every video. Filters::resolveTypeGroup, run from itemClickedSignal and setItemFilterState, clears what the latest change makes moot or contradicts: including a type clears its node (the type narrows it); excluding a type clears an excluded node; including a node clears its included types; excluding a node clears all its types. Node included + type excluded is kept ("every video but MTS").
 - Filters::isTypeGroup (TypeGroupRole, "Images" or "Videos", untranslated) identifies a node. itemMapKey keys it ":Images" / ":Videos": no file type starts with ':', so a count map never matches it, save/restore round-trips it, and addTypeItems skips such a key if restore(keepMissing) feeds one back.
 - setEachCatTextColor's "only one item" grey ignores the nodes, so a folder of JPGs alone still greys File types.
 
@@ -10677,6 +10717,12 @@ Docs/<topic>.html          One file per topic. The <head> needs only
                              <link rel="stylesheet" href="help.css">
                            Qt ignores the <link> (it already loaded help.css); VS Code's
                            Live Preview honours it, so the editor view matches Winnow.
+Docs/winnowhelp.html       The general help (Help > Winnow Help): a table of contents
+                           and the Overview. Every other page is appended to it at open
+                           time (Utilities/helpassembler.h); see 20.4.1.
+Utilities/helpassembler.h  HelpAssembler::assemble, called by HtmlWindow::applyStyle on
+                           every page. Expands "#<page>" TOC links into chapters; pages
+                           without such links pass through unchanged.
 Docs/images/               Images used by help pages, referenced relatively:
                            <img src="images/Foo.png">.
 winnow.qrc                 Every .html and image referenced from help must be listed here,
@@ -10710,12 +10756,6 @@ Help pages must not read as one dense block (reviewed across every page 2026-10-
 5. Open it from C++ (the pattern Filters::howThisWorks uses, Datamodel/filters.cpp):
 
 ```
-Docs/winnowhelp.html       The general help (Help > Winnow Help): a table of contents
-                           and the Overview. Every other page is appended to it at open
-                           time (Utilities/helpassembler.h); see 20.4.1.
-Utilities/helpassembler.h  HelpAssembler::assemble, called by HtmlWindow::applyStyle on
-                           every page. Expands "#<page>" TOC links into chapters; pages
-                           without such links pass through unchanged.
    #include "Utilities/htmlwindow.h"
 ```
 

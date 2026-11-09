@@ -1914,9 +1914,51 @@ void Filters::setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state)
     itemCheckStateHasChanged = false;
     item->setCheckState(0, state);
     styleFilterItem(item);
+    resolveTypeGroup(item);
     if (state == Qt::Checked) noteRangeAnchor(item);
     activeCategory = item->parent();
     emit filterChange("Filters::setItemFilterState");
+}
+
+void Filters::resolveTypeGroup(QTreeWidgetItem *item)
+{
+/*
+    AN Images / Videos NODE AND ITS TYPES MUST NOT DISAGREE. Items in a category are
+    OR'd, and a checked node includes every type beneath it, so checking Videos and then
+    MTS showed every video: MTS was silently swallowed by the node above it, though both
+    boxes said it was filtering. The item just changed is the user's latest intent, and
+    whatever it makes moot or contradicts is cleared so the checks say what is shown:
+
+        type included          -> its node cleared (the type narrows it)
+        type excluded          -> its node cleared if excluded too (redundant)
+        node included          -> its included types cleared (redundant)
+        node excluded          -> all its types cleared (moot or contradictory)
+
+    A node included with a type beneath it excluded is kept: "every video but MTS".
+*/
+    if (item == nullptr || item->checkState(0) == Qt::Unchecked) return;
+    if (categoryOf(item) != types) return;
+
+    const Qt::CheckState st = item->checkState(0);
+    if (isTypeGroup(item)) {
+        for (int i = 0; i < item->childCount(); i++) {
+            QTreeWidgetItem *child = item->child(i);
+            const Qt::CheckState cst = child->checkState(0);
+            if (cst == Qt::Unchecked) continue;
+            if (st == Qt::PartiallyChecked || cst == Qt::Checked) {
+                child->setCheckState(0, Qt::Unchecked);
+                styleFilterItem(child);
+            }
+        }
+        return;
+    }
+
+    QTreeWidgetItem *group = item->parent();
+    if (!isTypeGroup(group) || group->checkState(0) == Qt::Unchecked) return;
+    if (st == Qt::Checked || group->checkState(0) == Qt::PartiallyChecked) {
+        group->setCheckState(0, Qt::Unchecked);
+        styleFilterItem(group);
+    }
 }
 
 void Filters::noteRangeAnchor(QTreeWidgetItem *item)
@@ -3682,8 +3724,9 @@ void Filters::addTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *c
     THE NODE IS A FILTER ITEM like any other: its value is the list of its types (see
     refreshTypeGroups), and SortFilter::compileFilters, fillQuery and
     activeFiltersAsQuery expand it, so checking Images includes every image type and
-    Opt+clicking Videos excludes every video. The types under it stay independent, as a
-    keyword or folder under a checked branch does.
+    Opt+clicking Videos excludes every video. A node and its types never disagree:
+    resolveTypeGroup clears whichever the latest click makes moot or contradicts, so
+    checking MTS under a checked Videos narrows to MTS.
 
     Composes with a second call: types already here are kept, as addCategoryItems does.
 */
@@ -4507,6 +4550,8 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
             styleFilterItem(item);
         }
     }
+
+    resolveTypeGroup(item);
 
     /* Whether the click landed on the indicator (Qt toggled it) or on the text (we did),
        an item that ends up checked is where the next Shift+click ranges from. */

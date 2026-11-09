@@ -395,6 +395,7 @@ set(WINNOW_SOURCES
     Datamodel/keywordauditstore.h
     Datamodel/savedpicks.cpp
     Datamodel/savedpicks.h
+    Datamodel/rowselection.h
     Utilities/visualaudit.cpp
     Utilities/visualaudit.h
     Utilities/screensampler.cpp
@@ -484,6 +485,7 @@ set(WINNOW_SOURCES
     Datamodel/imagerow.cpp
     Datamodel/librarysnapshot.cpp
     Datamodel/rowscratch.cpp
+    Datamodel/devpreviewready.cpp
     Views/libtree.cpp
     Views/collectiontree.cpp
     Utilities/queryexpr.cpp
@@ -528,6 +530,7 @@ set(WINNOW_HEADERS
     Datamodel/iconstore.h
     Datamodel/imagerow.h
     Datamodel/rowscratch.h
+    Datamodel/devpreviewready.h
     Datamodel/filterpredicate.h
     Views/libtree.h
     Views/collectiontree.h
@@ -772,8 +775,8 @@ set(WINNOW_HEADERS
     Utilities/depthpredictor.h
     Utilities/foldercompressor.h
     Utilities/displaycolor.h
-    Utilities/htmlwindow.h
     Utilities/helpassembler.h
+    Utilities/htmlwindow.h
     Utilities/icc.h
     Utilities/ingestprobe.h
     Utilities/panelprobe.h

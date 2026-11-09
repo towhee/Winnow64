@@ -127,7 +127,9 @@ private:
     QColor pickColor;
     QColor rejectColor;
     QColor ingestedColor;
-    QColor cacheColor;
+    QColor uncachedColor;
+    QColor rawPreviewColor;
+    QColor devPreviewColor;
     QColor sidecarColor;
     QColor developColor;
     QColor offlineColor;

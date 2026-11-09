@@ -84,7 +84,7 @@ bool CompareImages::load(const QSize &centralWidgetSize, bool isRatingBadgeVisib
     to fit.
     */
     count = 0;
-    selection = selectionModel->selectedRows();
+    selection = RowSelection::Rows(selectionModel);
     count = selection.count();
     if (count > 16) count = 16;
 

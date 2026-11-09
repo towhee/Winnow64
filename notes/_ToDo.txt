@@ -4,19 +4,27 @@ WHAT'S NEW
 - Develop editor scrolling
 - Reject unpicked, clear picks
 - Develop presets - reserve Winnow category
+- Develop previews sometimes dropped
+- Consolidated help doc
 
 BUGS / TO DO
 - Implement undo
 - Add Actions (replay a series of steps)
 - Crop when 16x9, then level, lose 16x9
-- Import/export catalogs
+- Catalog management: import/export, Set catalog location
 - Thumb show if the preview is up-to-date and develop has been run
 - Rethink thumbnail badges
+- Delete images warning - add image count to be moveed to the trash)
+
+- The two SubIFD masks are DNG 1.6 semantic mattes (a subject matte and a skin matte)
+  I saved a memory, project_proraw_embedded_masks.md, with the tag numbers, the names
+  Apple uses for the masks, the resolution, and a sketch of how to use them. The camera
+  supplies a subject mask and a skin mask with no inference cost, so they could seed or
+  replace the AI Select Subject mask on iPhone files. Apple also defines hair, teeth,
+  glasses and sky mattes, but which ones appear varies by shot.
+
 - Rename / Move / Delete folders while in Library mode (in Filter > Folders)
-- Catalog management: import/export
 - Find duplicates (expand/collapse) and library use.
-- Videos starting at final frame.
-- Space bar not start/stopping video play
 - Arrow navigation in develop when no slider has the focus
 - Add isVersion to Queries lookup
 - Search for images with an Effect.
@@ -25,7 +33,6 @@ BUGS / TO DO
 - Revisit the color sampler
 - Panos
 - Add all help items to the main menu Help.
-- Set catalog location
 - Render devPreviews in background (entire catalog??)
 - RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights
   slider): rebuild colour where the SENSOR clipped one or more channels, before white

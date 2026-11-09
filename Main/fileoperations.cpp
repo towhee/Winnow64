@@ -28,7 +28,7 @@ static bool refuseCacheFolder(const QString &path)
 void MW::copyFiles()
 {
     if (G::isLogger) G::log("MW::copy");
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     if (selection.isEmpty()) return;
 
     // flush unsaved per-image Develop edits so copied sidecars are current
@@ -183,7 +183,7 @@ void MW::copyFolderPathFromContext()
 void MW::copyImagePathFromContext()
 {
     if (G::isLogger) G::log("MW::copyImagePathFromContext");
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     // each FILE once: a version (virtual copy) is its source file
     QStringList list;
     for (const QModelIndex &idx : selection) {
@@ -252,7 +252,7 @@ void MW::shareFiles()
 #if defined(Q_OS_MAC) || defined(Q_OS_WIN)
     if (G::isLogger) G::log("MW::shareFiles");
 
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     if (selection.isEmpty()) return;
 
     QList<QUrl> urls;
@@ -487,11 +487,11 @@ void MW::deleteSelectedFiles()
     // if (selection.isEmpty()) return;
     QModelIndexList selection;
     if (G::mode == "Grid") {
-        selection = gridView->selectionModel()->selectedRows();
+        selection = RowSelection::Rows(gridView->selectionModel());
     } else if (G::mode == "Table") {
-        selection = tableView->selectionModel()->selectedRows();
+        selection = RowSelection::Rows(tableView->selectionModel());
     } else {
-        selection = dm->selectionModel->selectedRows();
+        selection = RowSelection::Rows(dm->selectionModel);
     }
 
     if (selection.isEmpty()) {

@@ -7,6 +7,9 @@
 #include <QAtomicInt>
 #include <QMutex>
 #include <QSqlDatabase>
+#include <QPair>
+#include <functional>
+#include <atomic>
 
 /*
     On-disk cache of full-resolution devPreviews -- the large tier of the develop-preview
@@ -72,6 +75,19 @@
          image -- a rename done in Finder while Winnow was closed, a restore from backup,
          a card renumbered by the camera -- would serve the previous occupant's picture
          and every check downstream would call it correct.
+
+    WHAT INVALIDATES A devPreview (notes/Documentation.md "devPreview Invalidation")
+
+    A devPreview depicts three things: the source file's PIXELS, put through the RECIPE,
+    by the RENDERER. It is stale when one of them changes and never for anything else.
+    The recipe and renderer are folded into the hash; orientation is dropped explicitly
+    by DevelopProperties::rotateImageEdits. The pixels are stood in for by the source
+    stamp, which is too coarse on its own -- ANY byte written to the file moves it,
+    including the rating or keyword Winnow itself embeds. So a write Winnow makes that
+    leaves the pixels alone calls restamp() afterwards, and the entry survives. A write
+    anyone else makes still drops it: an outside metadata write cannot be told from an
+    outside pixel edit without hashing the image data, and a needless rebuild beats
+    serving the wrong picture.
 
     ORPHANS
 
@@ -202,6 +218,34 @@ public:
        under a key (Set Version as Master) rather than an image that went away. */
     void removeEntry(const QString &fPath);
 
+    /* Winnow has just rewritten fPath WITHOUT changing its pixels (metadata embedded in
+       the file, an embedded thumbnail replaced). Moves the source stamp of fPath's entry
+       and its versions' to the file as it now is, so the write does not read as a
+       different image. Only rows still carrying the pre-write stamp (oldSize, oldMtime)
+       move: one that already disagreed was stale before the write and stays stale.
+       Callers take the old stamp with fileStamp() immediately before writing. */
+    void restamp(const QString &fPath, qint64 oldSize, qint64 oldMtime);
+    /* The source stamp as the cache records it (size, mtime in secs); {0, 0} when the
+       file is not there. For restamp()'s callers. */
+    static QPair<qint64, qint64> fileStamp(const QString &fPath);
+
+    /* Called with an entry's path whenever get() or sweep() drops it because its source
+       stamp contradicts the file -- the image at that path is not the one the preview
+       depicts any more, so it has no devPreview now. MW uses it to queue a rebuild for an
+       edited image, which would otherwise show undeveloped outside Develop until
+       something else asked for one. Called on whatever thread dropped the entry (a
+       decoder thread for get(), a pool thread for sweep()) and never under the cache
+       mutex. Set once at startup. */
+    using DroppedHook = std::function<void(const QString &path)>;
+    void setDroppedHook(DroppedHook hook);
+
+    /* Bumped by every change to which images have a preview, or to which recipe one
+       depicts: put, removal (including the stamp-check drop in get and sweep), eviction,
+       move, clear. Bumped UNDER the mutex, so a contains() made after reading a value
+       sees at least that state. The thumbnail cache badge memo (Datamodel/
+       devpreviewready.h) re-probes an answer taken under an older value. */
+    quint64 generation() const { return gen.load(std::memory_order_acquire); }
+
     /* Drop everything, on disk and in memory (the preferences "Clear preview cache"). */
     void clear();
 
@@ -303,6 +347,9 @@ private:
     qint64 bytes = 0;
     qint64 capBytes = 20LL * 1024 * 1024 * 1024;  // 20 GB; see G::devPreviewCacheMaxBytes
     bool loaded = false;
+    DroppedHook droppedHook;        // guarded by mutex; copied out before calling
+    std::atomic<quint64> gen{0};    // see generation(); bumped under mutex
+    void bumpLocked() { gen.fetch_add(1, std::memory_order_acq_rel); }
 
     /*  What the last housekeeping pass of this session actually did, for the diagnostics
         report -- the only place a user can see that the orphan layers are working.

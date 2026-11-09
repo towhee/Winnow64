@@ -13,6 +13,7 @@
 #include "Datamodel/iconstore.h"
 #include "Datamodel/rowscratch.h"
 #include "Datamodel/filterpredicate.h"
+#include "Datamodel/rowselection.h"
 #include "Cache/framedecoder.h"
 #include "Cache/catalog.h"
 #include "selectionorpicksdlg.h"
@@ -40,6 +41,8 @@
     already run the search (it shows the count), so resolving the query a second time
     here would be a second pass over the index for an answer we were handed.
 */
+class DevPreviewReady;
+
 struct ScopeRequest
 {
     G::Scope scope = G::Scope::Folders;
@@ -286,6 +289,11 @@ public:
     QSet<QString> mapPinKeySet() const;
     mutable QReadWriteLock mapPinLock;
     QSet<QString> mapPinKeys;
+
+    /*  Which rows have a current devPreview, for the thumbnail cache badge. A lazy memo
+        of DevPreviewCache filled for the rows that are painted; GUI thread only. See
+        Datamodel/devpreviewready.h. */
+    DevPreviewReady *devPreviewReady = nullptr;
 
     /*  PLACE MEMBERSHIP, for G::PlacesColumn: source path -> the ids (as text) of the
         places the image was taken inside. Worked out from each row's GPS coordinates by
@@ -868,7 +876,7 @@ public slots:
     void setCurrent(QModelIndex dmIdx, int instance);
     void setCurrent(QString fPath, int instance);
     bool setCurrentSF(QModelIndex sfIdx, int instance);
-    void setCached(int sfRow, QString fPath, bool isCached, int instance);
+    void setCached(int sfRow, QString fPath, int cacheSource, int instance);
     void issue(const QSharedPointer<Issue>& issue);
     QStringList rptIssues(int sfRow);
     void rebuildTypeFilter();

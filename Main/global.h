@@ -88,6 +88,17 @@ Q_NAMESPACE
         MetaLoaded       = 2
     };
 
+    /* What ImageCache holds for a row, stored in IsCachedColumn (non-zero = cached, so
+       a toBool() read still answers "is it cached"). Drawn as the thumbnail cache badge.
+       Original  -> the file's own pixels: a raw's embedded JPG, or an unedited JPG/TIFF.
+       Developed -> the recipe is in the pixels: a devPreview, a sensor-decoded raw, or a
+                    non-raw the decoder developed. */
+    enum CacheSource {
+        CacheNone      = 0,
+        CacheOriginal  = 1,
+        CacheDeveloped = 2
+    };
+
     /*
     dataModel setHorizontalHeaderItem in DataModel::DataModel must include all prior enum but
     not in the same order!
@@ -863,7 +874,9 @@ Q_NAMESPACE
     extern QColor rejectColor;                      // thumb + loupe badge: rejected
     extern QColor ingestedColor;                    // thumb: ingested
     extern QColor thumbSelectedColor;               // thumb: selected border
-    extern QColor thumbCacheColor;                  // thumb: cached in ImageCache
+    extern QColor thumbUncachedColor;               // thumb: not in ImageCache
+    extern QColor thumbRawPreviewColor;             // thumb: cached, the file's own pixels
+    extern QColor thumbDevPreviewColor;             // thumb: cached, developed pixels
     extern QColor sidecarColor;                     // thumb: has a sidecar
     extern QColor offlineColor;                     // thumb: volume not mounted
     extern QColor missingColor;                     // thumb: file gone

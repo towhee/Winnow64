@@ -178,8 +178,10 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
        asks again: flushAll's topUpDevPreviews has already marked the image handled. The
        image then had a thumbnail but no devPreview, and Browse showed its file
        undeveloped -- uncropped after a crop. setOperationMode builds these on the way
-       out. */
-    if (src == "flush" && G::operationMode == G::OperationMode::Develop) {
+       out. A "dropped" rebuild (DevPreviewCache::setDroppedHook -- the sweep can drop
+       one while Develop is open) is held the same way, for the same reason. */
+    if ((src == "flush" || src == "dropped")
+        && G::operationMode == G::OperationMode::Develop) {
         for (const QString &fPath : paths) devPreviewBuildDeferred.insert(fPath);
         return;
     }
@@ -586,7 +588,7 @@ void MW::buildDevPreviewsForSelection()
     if (!dm || dm->rowCount() == 0) return;
 
     QStringList paths;
-    const QModelIndexList sel = dm->selectionModel->selectedRows();
+    const QModelIndexList sel = RowSelection::Rows(dm->selectionModel);
     if (sel.count() > 1) {
         for (const QModelIndex &idx : sel)
             paths << idx.data(G::KeyRole).toString();
@@ -619,7 +621,7 @@ void MW::buildEditedDevPreviews()
     };
 
     QStringList paths;
-    const QModelIndexList sel = dm->selectionModel->selectedRows();
+    const QModelIndexList sel = RowSelection::Rows(dm->selectionModel);
     if (sel.count() > 1) {
         for (const QModelIndex &idx : sel)
             if (isEdited(idx)) paths << idx.data(G::KeyRole).toString();

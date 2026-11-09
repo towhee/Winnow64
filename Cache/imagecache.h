@@ -90,7 +90,7 @@ public:
 signals:
     void stopped(QString src);
     void waitingForRow(int sfRow, int instance);
-    void setCached(int sfRow, QString fPath, bool isCached, int instance);
+    void setCached(int sfRow, QString fPath, int cacheSource, int instance);  // G::CacheSource
     void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
     void decode(int sfRow, int instance);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
@@ -122,7 +122,8 @@ public slots:
                    int doneSfRow = -1,
                    QImage doneImage = QImage(),
                    QString doneFPath = QString(),
-                   qint64 doneMsToDecode = 0);
+                   qint64 doneMsToDecode = 0,
+                   int doneCacheSource = -1);
     void setCurrentPosition(QString path, QString src);
     void filterChange(QString currentImageFullPath, QString source = "");
     void cacheSizeChange();         // flag when cache size is changed in preferences
@@ -358,7 +359,8 @@ private:
     bool nullInImCache();
     void cacheImage(int id, int cacheKey,
                     const QImage &doneImage,
-                    const QString &doneFPath);  // make room and add image to imageCache
+                    const QString &doneFPath,
+                    int cacheSource);  // make room and add image to imageCache
     bool cacheUpToDate();           // target range all cached
     void resetStaleIsCaching();
     void decodeNextImage(int id, int sfRow);   // launch decoder for the next image in cacheItemList

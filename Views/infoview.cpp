@@ -180,7 +180,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
         QString field;
         // dm->sf->suspend(true,  "InfoView::dataChanged count = 0");
         if (isEditable) {
-            QModelIndexList selection = thumbView->selectionModel()->selectedRows();
+            QModelIndexList selection = RowSelection::Rows(thumbView->selectionModel());
             int n = selection.count();
 
             // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)

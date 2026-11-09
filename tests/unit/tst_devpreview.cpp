@@ -31,6 +31,8 @@
       o an existing JSON index is carried into the database rather than abandoned
       o the same image spelled two ways is ONE entry, not two
       o the payload is read without the cache mutex, so decoder threads run in parallel
+      o Winnow's own pixel-preserving write (embedded metadata) re-stamps rather than
+        drops, and a drop is reported so an edited image can be rebuilt
 */
 class tst_devpreview : public QObject
 {
@@ -66,6 +68,9 @@ private slots:
     void isCachePathIdentifiesTheProtectedFolder();
     void versionsHaveTheirOwnEntries();
     void versionsFollowTheirImage();
+    void restampKeepsThePreviewAcrossOwnWrite();
+    void restampDoesNotReviveAnAlreadyStaleEntry();
+    void droppedHookReportsAStampDrop();
 
 private:
     QString imagePath(const QString &name) const;
@@ -100,6 +105,18 @@ void tst_devpreview::cleanupTestCase()
 {
     /* Release the database handle before QTemporaryDir removes the directory under it. */
     CacheDb::instance().closeThisThread();
+}
+
+/* Rewrite a stand-in image with given bytes and a given mtime (whole seconds, as the
+   stamp records them), so a test controls both halves of the stamp without sleeping. */
+static void writeSource(const QString &path, const QByteArray &bytes, qint64 mtimeSecs)
+{
+    QFile f(path);
+    QVERIFY(f.open(QIODevice::WriteOnly));
+    f.write(bytes);
+    QVERIFY(f.setFileTime(QDateTime::fromSecsSinceEpoch(mtimeSecs),
+                          QFileDevice::FileModificationTime));
+    f.close();
 }
 
 void tst_devpreview::init()
@@ -928,6 +945,94 @@ void tst_devpreview::versionsFollowTheirImage()
     c.onDeleted(b);
     QCOMPARE(c.count(), 1);                     // only the unrelated file's is left
     QCOMPARE(c.get(other, "o"), jpg(0x64));
+}
+
+void tst_devpreview::restampKeepsThePreviewAcrossOwnWrite()
+{
+/*
+    A rating embedded in a developed TIFF rewrote the file, moved its size and mtime, and
+    the next lookup read that as a different image and deleted the preview: Browse showed
+    the TIFF uncropped. Winnow's own metadata write leaves the pixels alone, so the writer
+    re-stamps the entry and it survives -- the master's and its version's alike.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("stack.tif");
+    const QString v1 = VersionKey::make(p, 1);
+    const qint64 t0 = QDateTime::currentSecsSinceEpoch() - 3600;
+    writeSource(p, "pixels", t0);
+    c.put(p, "recipe", jpg(0x31));
+    c.put(v1, "versionRecipe", jpg(0x32));
+
+    const auto before = DevPreviewCache::fileStamp(p);
+    QCOMPARE(before.first, qint64(6));
+    QCOMPARE(before.second, t0);
+    writeSource(p, "pixels + an embedded rating", t0 + 60);   // the metadata write
+    c.restamp(p, before.first, before.second);
+
+    QCOMPARE(c.get(p, "recipe"), jpg(0x31));
+    QCOMPARE(c.get(v1, "versionRecipe"), jpg(0x32));
+    QCOMPARE(c.sweep(), 0);
+    QCOMPARE(c.count(), 2);                 // nor did the sweep take them
+}
+
+void tst_devpreview::restampDoesNotReviveAnAlreadyStaleEntry()
+{
+/*
+    The restamp moves only rows still carrying the PRE-WRITE stamp. A file that had
+    already changed under its row before Winnow wrote to it is a different picture, and
+    Winnow's write must not vouch for it.
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QString p = imagePath("replaced.tif");
+    const qint64 t0 = QDateTime::currentSecsSinceEpoch() - 3600;
+    writeSource(p, "first image", t0);
+    c.put(p, "recipe", jpg(0x33));
+
+    writeSource(p, "a different image, saved over it", t0 + 60);   // outside edit
+    const auto before = DevPreviewCache::fileStamp(p);
+    writeSource(p, "a different image, saved over it + rating", t0 + 120);
+    c.restamp(p, before.first, before.second);
+
+    QVERIFY(c.get(p, "recipe").isEmpty());
+    QCOMPARE(c.count(), 0);
+}
+
+void tst_devpreview::droppedHookReportsAStampDrop()
+{
+/*
+    A drop for a contradicting stamp is the one event after which an edited image has no
+    devPreview and nothing would otherwise build one, so it is reported -- from get() and
+    from sweep(). A recipe miss is NOT a drop (the row stays for the recipe it depicts).
+*/
+    DevPreviewCache &c = DevPreviewCache::instance();
+    QStringList dropped;
+    QMutex m;
+    c.setDroppedHook([&](const QString &path) {
+        QMutexLocker lk(&m);
+        dropped << path;
+    });
+
+    const QString a = imagePath("hookA.tif");
+    const QString b = imagePath("hookB.tif");
+    const qint64 t0 = QDateTime::currentSecsSinceEpoch() - 3600;
+    writeSource(a, "a", t0);
+    writeSource(b, "b", t0);
+    c.put(a, "ra", jpg(0x34));
+    c.put(b, "rb", jpg(0x35));
+
+    QVERIFY(c.get(a, "someOtherRecipe").isEmpty());
+    QVERIFY(dropped.isEmpty());
+
+    writeSource(a, "a, saved over", t0 + 60);
+    QVERIFY(c.get(a, "ra").isEmpty());
+    QCOMPARE(dropped, QStringList{a});
+
+    writeSource(b, "b, saved over", t0 + 60);
+    c.sweep();
+    QCOMPARE(dropped, (QStringList{a, b}));
+    QCOMPARE(c.count(), 0);
+
+    c.setDroppedHook({});
 }
 
 QTEST_MAIN(tst_devpreview)

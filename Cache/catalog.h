@@ -659,6 +659,11 @@ public:
        query plan to image_folder (see the definition for what the wrong plan cost). */
     static const char *reconcileSelectSql();
 
+    /* Clear the freshness stamp of these rows, so the index no longer answers for them
+       and the next read goes to the file (MW::regenerateThumbnails). The rows stay
+       catalogued; the re-read commits them fresh. Returns the number marked. */
+    int markStale(const QStringList &paths);
+
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);

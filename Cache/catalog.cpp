@@ -2295,6 +2295,30 @@ void Catalog::onMoved(const QString &srcPath, const QString &dstPath)
     }
 }
 
+int Catalog::markStale(const QStringList &paths)
+{
+    if (paths.isEmpty()) return 0;
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+
+    /* The same stamp the schema migrations clear: a size and mtime no file has. */
+    if (!db.transaction()) return 0;
+    QSqlQuery q(db);
+    q.prepare("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
+              " WHERE pathkey = ?");
+    int n = 0;
+    for (const QString &p : paths) {
+        const QString key = cachePathKey(p);
+        if (key.isEmpty()) continue;
+        q.addBindValue(key);
+        if (q.exec()) n += q.numRowsAffected();
+    }
+    db.commit();
+    return n;
+}
+
 void Catalog::onDeleted(const QString &fPath)
 {
     if (fPath.isEmpty()) return;

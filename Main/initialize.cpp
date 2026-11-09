@@ -812,11 +812,11 @@ void MW::createImageCache()
        Winnow + Auto-run off). Clear it when the current image finishes caching. */
     connect(imageCache, &ImageCache::demosaicProgress, this, &MW::onDemosaicProgress);
     connect(imageCache, &ImageCache::setCached, this,
-            [this](int, QString fPath, bool isCached, int){
+            [this](int, QString fPath, int cacheSource, int){
         // Named for the ingest probe -- see catalogScanner::status.
         IngestProbe::Scope _ip("imageCache::setCached -> clearProgress");
         // By path: a filter change between emit and delivery re-numbers the proxy rows.
-        if (isCached && dm && fPath == dm->currentKey)
+        if (cacheSource != G::CacheNone && dm && fPath == dm->currentKey)
             progress->clearProgress(progressDemosaicRow);
     });
 
@@ -2658,6 +2658,22 @@ void MW::createDevelopDock()
 
             return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
         });
+
+    /* A devPreview the cache just dropped because its source file changed (see
+       "devPreview Invalidation" in notes/Documentation.md). For an EDITED image that is
+       the developed picture gone: Browse would show the file undeveloped until something
+       else asked for a build, and nothing does. So rebuild it. Edited only, and only
+       when it is in the loaded folder -- an unedited raw's default render, or an image
+       elsewhere in the library, is the background build's to decide, and rendering one
+       unasked is what the byproduct rule forbids. Arrives on a decoder or pool thread. */
+    DevPreviewCache::instance().setDroppedHook([this](const QString &path) {
+        QMetaObject::invokeMethod(this, [this, path]{
+            if (!dm) return;
+            const int row = dm->rowFromKey(path);
+            if (row < 0 || !dm->index(row, G::DevelopColumn).data().toBool()) return;
+            buildDevPreviews(QStringList(path), "dropped");
+        }, Qt::QueuedConnection);
+    });
 
     /* A Develop preset's Auto settings, for images whose base is not in memory: decode
        and solve off the GUI thread, one image at a time (DevelopProperties queues). */

@@ -165,7 +165,7 @@ void ImageDecoder::decode(int row, int instance)
         status = Status::Abort;
         errMsg = "Row out of range.";
         setIdle();
-        emit done(threadId, int(status), sfRow, QImage(), QString(), 0);
+        emit done(threadId, int(status), sfRow, QImage(), QString(), 0, G::CacheNone);
         return;
     }
 
@@ -202,7 +202,7 @@ void ImageDecoder::decode(int row, int instance)
         errMsg = "Instance clash.  New folder selected, processing old folder.";
         G::issueDedup("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         setIdle();
-        emit done(threadId, int(status), sfRow, QImage(), rowKey, 0);
+        emit done(threadId, int(status), sfRow, QImage(), rowKey, 0, G::CacheNone);
         if (isDebug)
         {
             QString fun = "ImageDecoder::decode instance clash";
@@ -267,7 +267,19 @@ void ImageDecoder::decode(int row, int instance)
     emit setValSf(sfRow, G::NSImageColumn, nsToDecode, instance,
                   "ImageDecoder::decode");
 
-    emit done(threadId, int(status), sfRow, image, rowKey, nsToDecode);
+    emit done(threadId, int(status), sfRow, image, rowKey, nsToDecode, cacheSource());
+}
+
+int ImageDecoder::cacheSource() const
+{
+/*
+    What this decode put in the image, for the thumbnail cache badge (G::CacheSource).
+    developApplied covers a devPreview, the sensor path and an edited non-raw; a sensor
+    decode of an identity recipe is still Winnow's render, not the camera's JPEG.
+*/
+    if (image.isNull()) return G::CacheNone;
+    if (developApplied || decoderToUse == Raw) return G::CacheDeveloped;
+    return G::CacheOriginal;
 }
 
 bool ImageDecoder::loadDevPreview()

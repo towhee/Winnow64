@@ -56,6 +56,7 @@ public:
        See the implementation for when this is allowed. Returns false on any miss, which
        simply falls through to the normal decode. */
     bool loadDevPreview();
+    int cacheSource() const;    // G::CacheSource of the decoded image (thumbnail badge)
     /* The DevPreviewCache key for a row: its recipe's base key (G::DevPreviewKeyColumn)
        with the decoder revision folded in, or, with no recipe, the DEFAULT RENDER key of
        a raw Winnow can demosaic. Empty when the row can have no devPreview. Shared by
@@ -163,7 +164,8 @@ signals:
     // Qt copies these into the queued event, so the consumer on imageCacheThread sees a
     // stable view even if the decoder has already started the next decode() on its thread.
     void done(int threadId, int doneStatus, int doneSfRow,
-              QImage doneImage, QString doneFPath, qint64 doneMsToDecode);
+              QImage doneImage, QString doneFPath, qint64 doneMsToDecode,
+              int doneCacheSource);
     /* Per-tile progress of the in-house RAW demosaic (cache-mode decode). ImageCache
        relays it to MW, which shows a "Demosaic" status-bar row for the current image
        while a Winnow raw decodes with Auto-run denoise off (MW::onDemosaicProgress). */

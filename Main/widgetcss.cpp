@@ -70,7 +70,9 @@ void WidgetCSS::styleGlobals()
     G::rejectColor = QColor(255,0,0);                        // #ff0000, red, rejected: thumb + loupe badge
     G::ingestedColor = QColor(0,0,255);                      // #0000ff, blue, thumb: ingested
     G::thumbSelectedColor = QColor(255,255,255);             // #ffffff, white, thumb: selected border
-    G::thumbCacheColor = QColor(200,0,0);                    // #c80000, red, thumb: cached in ImageCache
+    G::thumbUncachedColor = QColor(200,0,0);                 // #c80000, red, thumb: not in ImageCache
+    G::thumbRawPreviewColor = QColor(190,60,255);            // #be3cff, bright purple, thumb: cached, embedded/original
+    G::thumbDevPreviewColor = QColor(0,200,0);               // #00c800, green, thumb: cached, developed
     G::sidecarColor = QColor(5,82,56);                       // #055238, dark teal, thumb: has a sidecar
     /* Availability. Offline is the calmer of the two on purpose: an ejected drive is a
        normal state a user creates dozens of times a day, while a file that is genuinely

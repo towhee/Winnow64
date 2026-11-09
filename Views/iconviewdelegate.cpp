@@ -4,6 +4,7 @@
 #include <cmath>
 #include "Main/dockwidget.h"   // showDockToolTip (consistent cross-platform tooltip offset)
 #include "Utilities/versionkey.h"
+#include "Datamodel/devpreviewready.h"
 
 /*
 
@@ -123,7 +124,9 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     pickColor = G::pickColor;
     rejectColor = G::rejectColor;
     ingestedColor = G::ingestedColor;
-    cacheColor = G::thumbCacheColor;
+    uncachedColor = G::thumbUncachedColor;          // red: not in ImageCache
+    rawPreviewColor = G::thumbRawPreviewColor;      // purple: cached, embedded/original
+    devPreviewColor = G::thumbDevPreviewColor;      // green: cached, developed
     cacheBorderColor = QColor(l20,l20,l20);
     sidecarColor = G::sidecarColor;                 // dark teal
     developColor = G::developColor;                 // amber: image has develop edits
@@ -328,7 +331,9 @@ QString IconViewDelegate::diagnostics()
     rpt << "\n  " << "selectedColor = " << G::s(selectedColor);
     rpt << "\n  " << "pickColor = " << G::s(pickColor);
     rpt << "\n  " << "ingestedColor = " << G::s(ingestedColor);
-    rpt << "\n  " << "cacheColor = " << G::s(cacheColor);
+    rpt << "\n  " << "uncachedColor = " << G::s(uncachedColor);
+    rpt << "\n  " << "rawPreviewColor = " << G::s(rawPreviewColor);
+    rpt << "\n  " << "devPreviewColor = " << G::s(devPreviewColor);
     rpt << "\n  " << "cacheBorderColor = " << G::s(cacheBorderColor);
     return reportString;
 }
@@ -558,7 +563,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
        tooltip is only offered when the symbol is actually drawn for this icon. */
     bool isSidecar = sf->index(row, G::SidecarColumn).data().toBool();
     bool isReadWrite = sf->index(row, G::ReadWriteColumn).data().toBool();
-    bool isCached = sf->index(row, G::IsCachedColumn).data(Qt::EditRole).toBool();
+    int cacheSource = sf->index(row, G::IsCachedColumn).data(Qt::EditRole).toInt();
     bool isVideo = sf->index(row, G::VideoColumn).data().toBool();
     bool metaLoaded = sf->index(row, G::MetadataStatusColumn).data().toInt() == G::MetaLoaded;
     QString rating = sf->index(row, G::RatingColumn).data(Qt::EditRole).toString();
@@ -568,8 +573,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     bool developVisible = sf->index(row, G::DevelopColumn).data().toBool() && !G::isSlideShow;
     bool lockVisible = !isReadWrite;
     bool combineRawJpgVisible = isCombineRawJpg;
-    bool cacheVisible = !isCached && !isVideo && metaLoaded && !G::isSlideShow &&
-                        G::operationMode != G::OperationMode::Develop;
+    bool cacheVisible = !isVideo && metaLoaded && !G::isSlideShow;
     bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
     bool durationVisible = isVideo && G::renderVideoThumb;
     const int avail = sf->index(row, G::AvailabilityColumn).data().toInt();
@@ -620,7 +624,19 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     else if (combineRawJpgVisible && hit("CombineRawJpg"))
         tooltip = "Image is JPG version of a RAW+JPG pair";
     else if (cacheVisible && hit("Cache", 2))
-        tooltip = "Image file is not cached";
+    {
+        bool developed = cacheSource == G::CacheDeveloped;
+        if (!developed && (G::operationMode == G::OperationMode::Develop ||
+                           G::previewSource == G::PreviewSource::Developed)) {
+            developed = dm->devPreviewReady->isReady(
+                sf->index(row, 0).data(G::KeyRole).toString(),
+                sf->index(row, G::DevPreviewKeyColumn).data().toString());
+        }
+        tooltip = developed ? "Developed preview ready"
+                  : cacheSource == G::CacheOriginal
+                        ? "Cached: embedded preview or original file"
+                        : "Image file is not cached";
+    }
     else if (ratingVisible && hit("Rating"))
         tooltip = "Rating: " + rating + (rating == "1" ? " star" : " stars");
     else if (durationVisible && hit("Duration"))
@@ -726,7 +742,7 @@ textRect         = a rectangle below itemRect
     bool isPicked = (pickStatus == "Picked");
     bool isRejected = (pickStatus == "Rejected");
     bool isIngested = index.model()->index(sfRow, G::IngestedColumn).data(Qt::EditRole).toBool();
-    bool isCached = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toBool();
+    int cacheSource = index.model()->index(sfRow, G::IsCachedColumn).data(Qt::EditRole).toInt();
     // bool isMissingThumb = index.model()->index(sfRow, G::MissingThumbColumn).data().toBool();
     bool isSidecar = index.model()->index(sfRow, G::SidecarColumn).data().toBool();
     bool isDeveloped = index.model()->index(sfRow, G::DevelopColumn).data().toBool();
@@ -907,11 +923,26 @@ textRect         = a rectangle below itemRect
     if (isCombineRawJpg) painter->drawImage(combineRawJpgRect.translated(origin), combineRawJpgSymbol);
     if (!isReadWrite) lockRenderer->render(painter, lockRect.translated(origin));
 
-    // Draw cache and missing thumbnail status circles (hidden in Develop Mode)
-    bool notDevelopMode = G::operationMode != G::OperationMode::Develop;
-    if (!isCached && !isVideo && metaLoaded && !G::isSlideShow && notDevelopMode) {
+    /* Cache badge: what the loupe can show for this image without a decode. Red =
+       nothing ready; purple = ImageCache holds the file's own pixels (a raw's embedded
+       JPG or an unedited original); green = a developed picture, either in ImageCache
+       (devPreview, sensor-decoded raw, edited non-raw) or a built devPreview on disk.
+       The devPreview counts only where it is served: always in Develop (the loupe's
+       placeholder), in Preview only with Preview Source = Developed. Develop trims
+       ImageCache to the current image, so without it every other thumbnail read red.
+       Shown in both operation modes. */
+    if (!isVideo && metaLoaded && !G::isSlideShow) {
+        bool developed = cacheSource == G::CacheDeveloped;
+        if (!developed && (G::operationMode == G::OperationMode::Develop ||
+                           G::previewSource == G::PreviewSource::Developed)) {
+            const QString baseKey = index.model()->index(sfRow, G::DevPreviewKeyColumn)
+                                        .data().toString();
+            developed = dm->devPreviewReady->isReady(rowKey, baseKey);
+        }
         painter->setPen(cacheBorderColor);
-        painter->setBrush(cacheColor);
+        painter->setBrush(developed ? devPreviewColor
+                          : cacheSource == G::CacheOriginal ? rawPreviewColor
+                                                            : uncachedColor);
         painter->drawEllipse(cacheRect.translated(origin));
     }
     if (isSidecar && !G::isSlideShow) {

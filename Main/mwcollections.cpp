@@ -837,7 +837,7 @@ void MW::addPathsToCollection(qint64 id, const QStringList &paths)
 static QStringList selectedKeys(DataModel *dm)
 {
     QStringList keys;
-    for (const QModelIndex &sfIdx : dm->selectionModel->selectedRows()) {
+    for (const QModelIndex &sfIdx : RowSelection::Rows(dm->selectionModel)) {
         const QString k = sfIdx.data(G::KeyRole).toString();
         if (!k.isEmpty() && !keys.contains(k)) keys << k;
     }

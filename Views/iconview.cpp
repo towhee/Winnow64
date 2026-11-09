@@ -1987,7 +1987,7 @@ void IconView::mouseReleaseEvent(QMouseEvent *event)
              << "\n" << "sfIdx selected =" << selectionModel()->isSelected(sfIdx)
              << "\n" << "row =" << sfIdx.row()
              << "\n" << "row selected =" << selectionModel()->isRowSelected(sfIdx.row())
-             << "\n" << "selected row count =" << selectionModel()->selectedRows().count()
+             << "\n" << "selected row count =" << RowSelection::Count(selectionModel())
              << "\n" << "dm selected row =" << dm->currentSfRow
              << "\n" << "resizeJustDone =" << resizeJustDone
              << "\n" << "isCellVisible(dm->currentSfRow) =" << isCellVisible(dm->currentSfRow)
@@ -2335,7 +2335,7 @@ void IconView::startDrag(Qt::DropActions)
         m2->sel->select(pressIdx, Qt::NoModifier, "IconView::startDrag");
     }
 
-    QModelIndexList selection = selectionModel()->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(selectionModel());
     if (selection.isEmpty()) {
         QString msg = "Empty selection.";
         G::issue("Warning", msg, "IconView::startDrag");

@@ -1532,7 +1532,7 @@ QString MW::keywordDiagnostics()
        The selection -- what the dock's tag zone is showing
        --------------------------------------------------------------------------- */
     const QMap<QString, int> inSel = keywordsInSelection();
-    const int selCount = dm ? dm->selectionModel->selectedRows().size() : 0;
+    const int selCount = dm ? RowSelection::Count(dm->selectionModel) : 0;
     rpt << "\n" << "Selection (" << G::s(selCount) << " images, "
         << G::s(inSel.size()) << " distinct keywords)";
     if (inSel.isEmpty()) {

@@ -205,7 +205,7 @@ QMap<QString, int> MW::keywordsInSelection() const
         list forever, so the tag zone reported "No images selected" with an image
         selected, and applyKeywordsToSelection quietly did nothing at all. The live
         selection is the QItemSelectionModel's, which is what MW::setRating uses. */
-    const QModelIndexList selection = dm->selectionModel->selectedRows();
+    const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     for (const QModelIndex &sfIdx : selection) {
         const int dmRow = dm->modelRowFromProxyRow(sfIdx.row());
         if (dmRow < 0) continue;
@@ -244,7 +244,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         list forever, so the tag zone reported "No images selected" with an image
         selected, and applyKeywordsToSelection quietly did nothing at all. The live
         selection is the QItemSelectionModel's, which is what MW::setRating uses. */
-    const QModelIndexList selection = dm->selectionModel->selectedRows();
+    const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     if (selection.isEmpty()) return;
 
     /*  Snapshot the rows FIRST. The proxy re-filters as the model changes, so iterating
@@ -1276,7 +1276,7 @@ void MW::refreshKeywordsDock()
     if (!keywordVocab || !keywordTags || !dm || !sel) return;
 
     keywordTags->setSelection(keywordsInSelection(),
-                               dm->selectionModel->selectedRows().size());
+                               RowSelection::Count(dm->selectionModel));
 
     const int dmRow = dm->currentSfRow >= 0
         ? dm->modelRowFromProxyRow(dm->currentSfRow) : -1;
@@ -1573,7 +1573,7 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
 
     /*  Where the user was, restored at the end: a drop must not silently move them. Same
         contract as applyKeywordToPaths, which is why it is spelled the same way. */
-    const QModelIndexList wasSelected = dm->selectionModel->selectedRows();
+    const QModelIndexList wasSelected = RowSelection::Rows(dm->selectionModel);
     const QModelIndex wasCurrent = dm->sf->index(dm->currentSfRow, 0);
 
     const QString src = "MW::applyKeywordMoves";
@@ -1614,7 +1614,7 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
     for (const KeywordMove &m : moves) {
         const QString fromFold = keywordFold(m.from);
 
-        QItemSelection toSelect;
+        QList<int> toSelect;
         for (int i = 0; i < rows.size(); ++i) {
             bool carries = false;
             for (const QString &p : haveByRow.at(i)) {
@@ -1624,12 +1624,12 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
             }
             if (!carries) continue;
             const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(rows.at(i), 0));
-            if (sfIdx.isValid()) toSelect.select(sfIdx, sfIdx);
+            if (sfIdx.isValid()) toSelect.append(sfIdx.row());
         }
         if (toSelect.isEmpty()) continue;
 
-        dm->selectionModel->select(toSelect, QItemSelectionModel::ClearAndSelect
-                                                 | QItemSelectionModel::Rows);
+        RowSelection::Select(dm->selectionModel, toSelect,
+                             QItemSelectionModel::ClearAndSelect);
         applyKeywordsToSelection({m.to}, {m.from}, /*rebuildFilters*/ false);
         filed += m.images;
     }
@@ -1640,11 +1640,11 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
         message about something else is a worse answer than no bar. */
     G::popup->setProgressVisible(false);
 
-    QItemSelection restore;
-    for (const QModelIndex &idx : wasSelected) restore.select(idx, idx);
+    QList<int> restore;
+    for (const QModelIndex &idx : wasSelected) restore.append(idx.row());
     if (!restore.isEmpty()) {
-        dm->selectionModel->select(restore, QItemSelectionModel::ClearAndSelect
-                                                | QItemSelectionModel::Rows);
+        RowSelection::Select(dm->selectionModel, restore,
+                             QItemSelectionModel::ClearAndSelect);
         if (wasCurrent.isValid())
             dm->selectionModel->setCurrentIndex(wasCurrent,
                                                 QItemSelectionModel::NoUpdate);
@@ -1929,28 +1929,28 @@ void MW::applyKeywordToPaths(const QString &keywordPath, const QStringList &imag
         return;
     }
 
-    const QModelIndexList wasSelected = dm->selectionModel->selectedRows();
+    const QModelIndexList wasSelected = RowSelection::Rows(dm->selectionModel);
     const QModelIndex wasCurrent = dm->sf->index(dm->currentSfRow, 0);
 
-    QItemSelection toSelect;
+    QList<int> toSelect;
     for (const QString &p : imagePaths) {
         const int dmRow = dm->rowFromKey(p);
         if (dmRow < 0) continue;                    // dropped from outside this folder
         const QModelIndex sfIdx = dm->sf->mapFromSource(dm->index(dmRow, 0));
-        if (sfIdx.isValid()) toSelect.select(sfIdx, sfIdx);
+        if (sfIdx.isValid()) toSelect.append(sfIdx.row());
     }
     if (toSelect.isEmpty()) return;
 
-    dm->selectionModel->select(toSelect, QItemSelectionModel::ClearAndSelect
-                                             | QItemSelectionModel::Rows);
+    RowSelection::Select(dm->selectionModel, toSelect,
+                         QItemSelectionModel::ClearAndSelect);
     applyKeywordsToSelection({keywordPath}, {});
 
     // put the user back where they were
-    QItemSelection restore;
-    for (const QModelIndex &idx : wasSelected) restore.select(idx, idx);
+    QList<int> restore;
+    for (const QModelIndex &idx : wasSelected) restore.append(idx.row());
     if (!restore.isEmpty()) {
-        dm->selectionModel->select(restore, QItemSelectionModel::ClearAndSelect
-                                                 | QItemSelectionModel::Rows);
+        RowSelection::Select(dm->selectionModel, restore,
+                             QItemSelectionModel::ClearAndSelect);
         if (wasCurrent.isValid())
             dm->selectionModel->setCurrentIndex(wasCurrent,
                                                 QItemSelectionModel::NoUpdate);

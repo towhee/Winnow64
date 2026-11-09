@@ -10242,7 +10242,7 @@ void MW::setRotation(int degrees)
     {
         QSet<int> seen;
         QSet<QString> files;
-        const QModelIndexList selection = dm->selectionModel->selectedRows();
+        const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
         for (const QModelIndex &sfIdx : selection) {
             const int r = dm->modelRowFromProxyRow(sfIdx.row());
             if (r < 0) continue;
@@ -16624,7 +16624,7 @@ bool MW::prepareExport(QStringList &targets)
 
     targets.clear();
     if (dm && dm->selectionModel) {
-        const QModelIndexList rows = dm->selectionModel->selectedRows();
+        const QModelIndexList rows = RowSelection::Rows(dm->selectionModel);
         for (const QModelIndex &idx : rows) {
             const QString fPath = idx.data(G::KeyRole).toString();
             if (!fPath.isEmpty()) targets << fPath;
@@ -18463,7 +18463,7 @@ void MW::infoViewChanged(QStandardItem* item)
      if (G::useInfoView) if (par != infoView->tagInfoIdx) return;
 
     QString tagValue = item->data(Qt::DisplayRole).toString();
-    QModelIndexList selection = dm->selectionModel->selectedRows();
+    QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     int row = item->index().row();
     QModelIndex tagIdx = infoView->ok->index(row, 0, par);
     QString tagName = tagIdx.data().toString();
@@ -18868,20 +18868,44 @@ void MW::collapseAllFolders()
     updateCollapseFoldersAction();
 }
 
-void MW::updatePickDependentActions()
+void MW::updatePickDependentActions(bool recomputeVisiblePick)
 {
 /*
     Enable actions that require at least one picked image.  Called from the pick-toggle
-    paths (which change picks outside of selection events) and after ingest clears picks.
+    paths (which change picks outside of selection events), after ingest clears picks,
+    and from MW::filterChange.
+
+    rejectUnpickedClearPicksAction works on the FILTERED dataset, so it needs a picked
+    row that passes the filter, not just one in the model. isVisiblePick caches that:
+    the walk is O(visible rows) when a filter is hiding rows and nothing visible is
+    picked, and enableSelectionDependentMenus runs on every selection change (each arrow
+    key), so it passes recomputeVisiblePick = false. Picks and the filter cannot change
+    on a selection change, and every path that changes them recomputes it.
 */
     if (G::isLogger) G::log("MW::updatePickDependentActions");
     bool isAnyPick = dm->isAnyPick();
     const QString reason = "no images are picked";
-    for (QAction *a : {ingestAction, nextPickAction, prevPickAction, clearPicksAction,
-                       rejectUnpickedClearPicksAction}) {
-        a->setEnabled(isAnyPick);
+    for (QAction *a : {ingestAction, nextPickAction, prevPickAction, clearPicksAction}) {
         a->setProperty("disabledReason", reason);
+        a->setEnabled(isAnyPick);
     }
+
+    if (recomputeVisiblePick) {
+        isVisiblePick = false;
+        if (isAnyPick) {
+            const int n = dm->sf->rowCount();
+            // nothing hidden: the model-wide count answers it
+            if (n == dm->rowCount()) isVisiblePick = true;
+            for (int sfRow = 0; sfRow < n && !isVisiblePick; ++sfRow) {
+                QModelIndex sfIdx = dm->sf->index(sfRow, G::PickColumn);
+                if (sfIdx.data(Qt::EditRole).toString() == "Picked") isVisiblePick = true;
+            }
+        }
+    }
+    // the reason first: setEnabled emits QAction::changed (see enableSelectionDependentMenus)
+    rejectUnpickedClearPicksAction->setProperty("disabledReason", isAnyPick
+        ? "no images in the filtered view are picked" : reason);
+    rejectUnpickedClearPicksAction->setEnabled(isAnyPick && isVisiblePick);
 }
 
 bool MW::okToCloseWithPicks(bool &clearPicks)

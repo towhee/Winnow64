@@ -500,12 +500,12 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     }
 
     // recover selection
-    QItemSelection selection;
+    QList<int> sfRows;
     foreach (QModelIndex dmIdx, selectedRows) {
         QModelIndex sfIdx = dm->sf->mapFromSource(dmIdx);
-        selection.select(sfIdx, sfIdx);
+        if (sfIdx.isValid()) sfRows.append(sfIdx.row());
     }
-    sel->sm->select(selection, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+    RowSelection::Select(sel->sm, sfRows, QItemSelectionModel::ClearAndSelect);
 
 
     thumbView->scrollToCurrent("MW::invokeWorkSpace");
