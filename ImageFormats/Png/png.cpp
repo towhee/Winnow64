@@ -314,6 +314,9 @@ bool PNG::parse(MetadataParameters &p,
         char type[4];
         if (!readChunkHeader(p.file, size, type)) break;
         quint32 dataStart = static_cast<quint32>(p.file.pos());
+        /*  Every branch seeks to dataStart + size + 4 in quint32 arithmetic: a corrupt
+            size wraps that to an EARLIER offset and the walk never ends. */
+        if (qint64(dataStart) + qint64(size) + 4 > p.file.size()) break;
         QByteArray typeStr(type, 4);
 
         if (typeStr == "IHDR") {

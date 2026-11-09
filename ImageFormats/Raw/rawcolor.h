@@ -54,10 +54,11 @@ public:
         RawImage, so this takes the two arrays rather than a RawImage.
 
         camMul all-equal (or all 1) means "the file gave us none": the matrix-derived
-        neutral is used instead, exactly as in the full path.
+        neutral is used instead, exactly as in the full path -- UNLESS asShotStated says
+        the file wrote them (RawSensorInfo::asShotStated; iPhone ProRAW's 1, 1, 1).
     */
     static void Characterise(const float xyzToCam[3][3], const float camMul[4],
-                             CameraColor &out);
+                             CameraColor &out, bool asShotStated = false);
 };
 
 #endif // RAWCOLOR_H

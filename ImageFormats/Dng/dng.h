@@ -8,6 +8,10 @@
 #include "Metadata/ifd.h"
 #include "ImageFormats/Jpeg/jpeg.h"
 #include "ImageFormats/Raw/rawformat.h"
+#include <memory>
+
+namespace Dcp { struct Profile; }
+struct GainTableMap;
 
 class DNG
 {
@@ -44,6 +48,27 @@ class DngRaw : public RawFormat
 public:
     /* Matrix + as-shot multipliers with no sensor unpack -- see RawFormat. */
     bool ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info) override;
+
+    /*
+        WHAT A DNG CARRIES FOR ITS OWN RENDERING, beyond the matrix and white balance:
+        the profile in IFD 0, its BaselineExposure, and a ProfileGainTableMap(2). iPhone
+        ProRAW carries all three, and needs all three -- see Develop/gaintablemap.h.
+
+        Read from the header only (IFD 0, the raw IFD and the tags' own bytes; ~200 KB for
+        a ProRAW gain map), and CACHED per file (path + size + modified time), because two
+        callers want it: the decode, which stamps it onto the image's CameraColor, and the
+        Develop panel, which needs "does this file have an embedded profile / gain map"
+        before any decode has run. Never null; an empty info for a file with none of
+        them, or one that cannot be read.
+    */
+    struct RenderInfoData {
+        std::shared_ptr<const Dcp::Profile> embeddedProfile;
+        std::shared_ptr<const GainTableMap> gainMap;
+        bool  hasBaselineExposure = false;
+        float baselineExposure = 0.0f;
+    };
+    static std::shared_ptr<const RenderInfoData> RenderInfo(const QString &path);
+    void StampRenderInfo(const QString &path, CameraColor &cam) override;
 
     /* The largest JPEG XL RGB preview as 8-bit RGB (see dng.cpp). */
     static bool ReadJxlPreview(QFile &file, QImage &image);

@@ -1,4 +1,6 @@
 #include "Develop/cameraprofilestore.h"
+#include "Develop/workingimage.h"
+#include "Develop/editparams.h"
 
 #include "ImageFormats/Raw/cameramodel.h"
 
@@ -370,4 +372,23 @@ std::shared_ptr<const Dcp::Profile> CameraProfileStore::profile(const QString &c
     if (cached != parsed.constEnd()) return cached.value();
     parsed.insert(cacheKey, sp);
     return sp;
+}
+
+std::shared_ptr<const Dcp::Profile> CameraProfileStore::resolve(const CameraColor &cam,
+                                                                const QString &profileName)
+{
+    if (profileName == QLatin1String(EditParams::kBuiltInProfile)) return nullptr;
+    if (profileName == QLatin1String(EditParams::kEmbeddedProfile)) return cam.embeddedProfile;
+    if (profileName.isEmpty())
+        return defaultsToEmbedded(cam) ? cam.embeddedProfile : nullptr;
+    return profile(cam.cameraModel, profileName);
+}
+
+bool CameraProfileStore::defaultsToEmbedded(const CameraColor &cam)
+{
+    /* The gain table map is the test, not the profile alone: plenty of DNGs carry a
+       profile in IFD 0 (every Adobe-converted one does), and for those the default stays
+       Winnow Standard as it always was. A file with a gain map was rendered by its maker
+       as a whole -- map, then its profile's curve -- and opens that way. */
+    return cam.gainMap != nullptr && cam.embeddedProfile != nullptr;
 }

@@ -37,6 +37,18 @@ struct OutputLook {
     float toTable[3][3]   = {{1,0,0}, {0,1,0}, {0,0,1}};   // working -> linear ProPhoto
     float fromTable[3][3] = {{1,0,0}, {0,1,0}, {0,0,1}};   // and back
     CameraCurve::Curve profileCurve;    // empty when the profile carries no tone curve
+    /*
+        Apply profileCurve PER CHANNEL rather than hue-preservingly (ApplyRGBTone). True
+        for the profile EMBEDDED in a file with a ProfileGainTableMap -- iPhone ProRAW --
+        whose curve is authored for Apple's renderer, which applies it per channel. On a
+        strong S-curve the two differ visibly: IMG_1106 (tungsten-lit jack-o'-lanterns,
+        2026-11-09) put the lit pumpkins at hue 25 deg / luma 0.475 hue-preserving and
+        8 deg / 0.322 per channel, against Apple's 11 deg / 0.339; whole-image mean
+        |luma error| 0.035 vs 0.018. On a gentle curve (IMG_1097) it is neutral against
+        Lightroom (0.0083 vs 0.0076). Adobe's DCP curves keep ApplyRGBTone: that is how
+        the DNG SDK, and so Lightroom, applies them.
+    */
+    bool curvePerChannel = false;
 
     bool hasLookTable() const { return !lookTable.isEmpty(); }
     bool hasProfileCurve() const { return !profileCurve.isEmpty(); }

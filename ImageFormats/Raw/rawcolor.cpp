@@ -55,7 +55,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
     /* Colour characterisation -- the matrix, the as-shot white balance and the Kelvin
        it resolves to. Shared with the Apple Core Image engine, which has no RawImage
        to hand; see RawColor::Characterise. */
-    Characterise(raw.xyzToCam, raw.camMul, out.cam);
+    Characterise(raw.xyzToCam, raw.camMul, out.cam, raw.asShotStated);
 
     out.width = W;
     out.height = H;
@@ -84,7 +84,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
 }
 
 void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
-                            CameraColor &out)
+                            CameraColor &out, bool asShotStated)
 {
     /*
         Build the camera-RGB -> linear-sRGB matrix and a neutral white balance from the model's
@@ -121,9 +121,10 @@ void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
         preMul[0] = preMul[1] = preMul[2] = 1.0;
     }
 
-    /* White balance: as-shot multipliers when the file provided them (not all equal), else the
-       matrix-derived neutral preMul. Normalised so green is unity to keep exposure stable. */
-    const bool haveAsShot =
+    /* White balance: as-shot multipliers when the file provided them (stated, or not all
+       equal), else the matrix-derived neutral preMul. Normalised so green is unity to
+       keep exposure stable. */
+    const bool haveAsShot = asShotStated ||
         !(camMul[0] == camMul[1] && camMul[1] == camMul[2]);
     double mul[3];
     if (haveAsShot) {

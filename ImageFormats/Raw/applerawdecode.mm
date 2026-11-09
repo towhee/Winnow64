@@ -38,7 +38,7 @@ std::atomic<int> versionPin{0};
 /*  WHAT EACH DECODE CHOSE, for the Raw panel. Keyed on the decoded path; written on a
     decoder thread, read on the GUI thread. Only paths decoded this session are here,
     which in Develop is the current image as soon as it opens. */
-struct Chosen { QList<int> newestFirst; int used = 0; };
+struct Chosen { QList<int> newestFirst; int used = 0; bool appleLook = false; };
 QMutex chosenMutex;
 QHash<QString, Chosen> chosenByPath;
 std::function<void(const QString &)> decodedCallback;
@@ -59,9 +59,20 @@ NSString *PickVersion(NSArray<NSString *> *supported, int pin)
     return pick ? pick : supported.firstObject;
 }
 
-void Record(const QString &path, NSArray<NSString *> *supported, NSString *used)
+/*  Does Core Image turn its local tone map on for this file by default? Apple sets the
+    default per image: 0 on ordinary raws, 1 on iPhone ProRAW, where it is how the file's
+    ProfileGainTableMap is applied. That is the test for keeping Apple's own rendering
+    (see Decode). Read BEFORE anything is set on the filter. */
+bool WantsAppleLook(CIRAWFilter *f) API_AVAILABLE(macos(12.0))
+{
+    return f.isLocalToneMapSupported && f.localToneMapAmount > 0.0f;
+}
+
+void Record(const QString &path, NSArray<NSString *> *supported, NSString *used,
+            bool appleLook)
 {
     Chosen c;
+    c.appleLook = appleLook;
     for (NSString *v in supported.reverseObjectEnumerator) {
         const int n = VersionNumber(v);
         if (!c.newestFirst.contains(n)) c.newestFirst << n;
@@ -138,6 +149,15 @@ QString SupportFingerprint()
     return cached;
 }
 
+bool UsesAppleLook(const QString &path, bool &appleLook)
+{
+    QMutexLocker lock(&chosenMutex);
+    const auto it = chosenByPath.constFind(path);
+    if (it == chosenByPath.constEnd()) return false;
+    appleLook = it->appleLook;
+    return true;
+}
+
 bool DecodedVersions(const QString &path, QList<int> &newestFirst, int &used)
 {
     QMutexLocker lock(&chosenMutex);
@@ -182,7 +202,8 @@ void RequestVersions(const QString &path)
                 CIRAWFilter *f = [CIRAWFilter filterWithImageURL:url];
                 NSArray<NSString *> *supported = f ? f.supportedDecoderVersions : nil;
                 if (supported.count)
-                    Record(path, supported, PickVersion(supported, VersionPin()));
+                    Record(path, supported, PickVersion(supported, VersionPin()),
+                           WantsAppleLook(f));
             }
         }
         QMutexLocker lock(&chosenMutex);
@@ -202,8 +223,9 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
                 return false;
             }
 
-            /* SCENE-LINEAR AND UNSHARPENED, LIKE THE WINNOW ENGINE -- BUT APPLE'S NOISE
-               REDUCTION STAYS ON. Decided 2026-10-13.
+            /* SCENE-LINEAR AND UNSHARPENED, LIKE THE WINNOW ENGINE -- EXCEPT iPHONE
+               PRORAW, WHICH KEEPS APPLE'S OWN RENDERING. Apple's noise reduction stays on
+               for both. Decided 2026-10-13; ProRAW split 2026-11-09.
 
                TONE: boostAmount 0 is "no global tone curve, linear response". The default
                (1) is Apple's tone curve, which Develop's OutputTransform then applied a
@@ -211,8 +233,31 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
                extra saturation, so Apple rendered brighter and harder than Winnow.
                Verified linear: with boost 0, +1 EV doubles every sampled pixel (2.00)
                on D850, CR3, X-T50 and A1 II files. boostShadowAmount only acts through
-               the boost. Local tone map and contrast default to 0 on those files, but
-               Apple says the default "will vary per image", so both are forced to 0.
+               the boost. Local tone map and contrast are forced to 0 (both already
+               default to 0 on those files).
+
+               EXTENDED DYNAMIC RANGE ON for the linear decode (2026-11-09). It defaults
+               to 0, which CLIPS every decode at 1.0 before exposure (ARW, NEF and ProRAW
+               all measured max 1.000), so highlights above white were gone before
+               Develop's Highlights could recover them. At 1 the maxima are 3.0 (ARW,
+               NEF) with the median unchanged; 2 adds nothing.
+
+               iPHONE PRORAW: APPLE'S RENDERING, NOT A LINEAR DECODE. Recognised by
+               Apple's own default (WantsAppleLook: local tone map on by default; 0 on
+               ordinary raws). The file carries a +5.16 EV BaselineExposure whose other
+               half is a ProfileGainTableMap -- Apple's local tone map. Measured on an
+               iPhone 17 Pro DNG (linear luminance, median / 90th pct / share >= 0.95):
+                 local tone map forced off            0.663 / 0.989 / 20.1%
+                 tone map on, then Standard roll-off  0.795 / 0.921 /  5.7%
+                 Apple's own render, EDR 0            0.539 / 0.735 /  0.1%
+                 the file's embedded preview          0.521 / 0.730 /  0.1%
+               With the tone map on, the "linear" output is already in display range,
+               so Winnow's roll-off brightened it a second time. So boost, contrast and
+               local tone map stay at Apple's defaults, EDR stays 0 (with the boost on it
+               brightens rather than adds headroom: median 0.539 -> 0.624), and the image
+               is marked decoderToneMapped so OutputTransform renders it with None. The
+               Winnow engine's own ProRAW rendering (embedded profile + gain table map)
+               is separate work.
 
                SHARPENING OFF (sharpness and edge "detail enhancement"): Develop has its
                own Detail sharpening with radius and masking, applied after the user's
@@ -223,10 +268,14 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
                improved in decoder 9 and it is why this engine is worth choosing. PMRID
                ("Denoise raw") needs the CFA mosaic and is Winnow-only, so the two do not
                compete. This reverses the earlier plan of handing PMRID a noisy image. */
-            f.boostAmount = 0.0;
-            f.boostShadowAmount = 0.0;
-            if (f.isLocalToneMapSupported) f.localToneMapAmount = 0.0;
-            if (f.isContrastSupported)     f.contrastAmount = 0.0;
+            const bool appleLook = WantsAppleLook(f);
+            if (!appleLook) {
+                f.boostAmount = 0.0;
+                f.boostShadowAmount = 0.0;
+                if (f.isLocalToneMapSupported) f.localToneMapAmount = 0.0;
+                if (f.isContrastSupported)     f.contrastAmount = 0.0;
+                f.extendedDynamicRangeAmount = 1.0;
+            }
             if (f.isSharpnessSupported)    f.sharpnessAmount = 0.0;
             if (f.isDetailSupported)       f.detailAmount = 0.0;
 
@@ -270,7 +319,7 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
                 err = QStringLiteral("CIRAWFilter produced no output image.");
                 return false;
             }
-            Record(path, supported, f.decoderVersion);
+            Record(path, supported, f.decoderVersion, appleLook);
 
             /* VERIFY ON FIRST RUN: ROW ORDER -- render:toBitmap writes rows in Core Image's
                bottom-left origin; if the result is vertically flipped vs engine B, reverse the
@@ -338,6 +387,7 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
             out.height = H;
             out.white  = 1.0f;
             out.sceneReferred = true;   // sensor data: scene-linear, with headroom
+            out.decoderToneMapped = appleLook;  // ProRAW: Apple's rendering, see above
             /*
                 Core Image has ALREADY applied its own camera profile and handed back
                 linear Rec.2020 primaries, so unlike the Winnow engine this path arrives in

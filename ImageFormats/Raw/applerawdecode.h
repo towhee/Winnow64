@@ -23,7 +23,8 @@
     Configuration (see applerawdecode.mm): Apple's tone boost, local tone map, contrast,
     sharpening and detail enhancement are OFF, so the output is scene-linear and
     unsharpened like engine B's -- the look comes from OutputTransform, sharpening from
-    Develop's Detail section. Apple's luminance and colour noise reduction are LEFT at
+    Develop's Detail section. EXCEPT iPhone ProRAW (UsesAppleLook): it keeps Apple's tone
+    boost, contrast and local tone map, and is marked WorkingImage::decoderToneMapped. Apple's luminance and colour noise reduction are LEFT at
     Core Image's per-image defaults: that is the reason to choose this engine (much
     improved in decoder 9).
 */
@@ -77,6 +78,11 @@ QString SupportFingerprint();
    first, as numbers ("9.dng" -> 9), and the one it used. False if Decode has not run on
    path this session. */
 bool DecodedVersions(const QString &path, QList<int> &newestFirst, int &used);
+
+/* Whether path renders with APPLE'S OWN LOOK under this engine (iPhone ProRAW: Core
+   Image's local tone map is on by default), for the panel's Tone mapping row. False if
+   neither Decode nor RequestVersions has opened path this session. */
+bool UsesAppleLook(const QString &path, bool &appleLook);
 
 /* Called on the GUI thread, queued, after each successful Decode, with its path. Set
    once at start-up. */

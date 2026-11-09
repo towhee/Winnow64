@@ -11,6 +11,8 @@
 
 #include "ImageFormats/Dcp/dcp.h"
 
+struct CameraColor;
+
 /*
     Which camera profiles exist, and reading the one that was chosen -- the discovery half
     of Phase 4 (see notes/Documentation.txt, "Camera Profiles (DCP) -- Phase 4 Plan").
@@ -84,6 +86,21 @@ public:
        built-in matrix and SAY SO, not silently render as if nothing was chosen. */
     std::shared_ptr<const Dcp::Profile> profile(const QString &cameraModel,
                                                 const QString &profileName);
+
+    /*
+        WHAT A STORED PROFILE NAME SELECTS FOR ONE IMAGE -- the one resolution every
+        render and panel site goes through, because two names are not looked up:
+          EditParams::kEmbeddedProfile  the file's own (cam.embeddedProfile)
+          EditParams::kBuiltInProfile   Winnow Standard, explicitly: nullptr
+          empty                         the image's default: its embedded profile when
+                                        the file also carries a gain table map (iPhone
+                                        ProRAW -- defaultsToEmbedded), else nullptr
+          anything else                 profile(cam.cameraModel, name)
+    */
+    std::shared_ptr<const Dcp::Profile> resolve(const CameraColor &cam,
+                                                const QString &profileName);
+    /* An image whose DEFAULT profile is its embedded one. */
+    static bool defaultsToEmbedded(const CameraColor &cam);
 
     /* The folders swept, in order. Public so the preferences page and a diagnostic can
        show the user where profiles are looked for. */

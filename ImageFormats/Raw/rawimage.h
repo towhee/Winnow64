@@ -68,6 +68,7 @@ struct RawImage {
     double npOffset = 0.0;
 
     float camMul[4] = {1, 1, 1, 1};         // as-shot white-balance multipliers (R,G,B,G2)
+    bool asShotStated = false;              // see RawSensorInfo::asShotStated
     float xyzToCam[3][3] = {                // CIE XYZ (D65) -> camera-native RGB
         {1, 0, 0}, {0, 1, 0}, {0, 0, 1}     // (DNG ColorMatrix / dcraw-libraw adobe_coeff convention)
     };

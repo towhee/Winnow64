@@ -116,6 +116,20 @@ bool resolve(const Dcp::Profile &p, float kelvin, Resolved &out)
     return true;
 }
 
+/*
+    XYZ -> the camera values AS STORED: AnalogBalance * CameraCalibration * ColorMatrix, the
+    DNG specification's chain. Identity AB and CC (every .dcp seen) leave ColorMatrix alone,
+    but a profile EMBEDDED in a DNG takes the file's AnalogBalance, and iPhone ProRAW writes
+    (2.09, 1, 2.27) with AsShotNeutral (1, 1, 1). Against ColorMatrix alone that neutral
+    solved to the end of the Temp/Tint range (50000 K / -150) and the render went orange.
+*/
+static Matrix3 xyzToCamera(const Dcp::Profile &p, const Resolved &r)
+{
+    const double ab[3] = {double(p.analogBalance[0]), double(p.analogBalance[1]),
+                          double(p.analogBalance[2])};
+    return multiply(diag(ab), multiply(r.calibration, r.color));
+}
+
 bool neutralCam(const Dcp::Profile &p, float kelvin, float tint, double n[3])
 {
     Resolved r;
@@ -124,7 +138,7 @@ bool neutralCam(const Dcp::Profile &p, float kelvin, float tint, double n[3])
     double xyz[3];
     if (!WhiteBalance::illuminantXYZ(kelvin, tint, xyz)) return false;
 
-    applyM(r.color, xyz, n);
+    applyM(xyzToCamera(p, r), xyz, n);
     /* Normalised to GREEN == 1, the convention CameraColor::asShotMul already uses, so the
        two are directly comparable and the exposure anchor below is the familiar one. */
     if (!(std::fabs(n[1]) > 1e-9)) return false;
@@ -233,7 +247,7 @@ bool resolveAsShot(const Dcp::Profile &p, CameraColor &cam)
         if (!resolve(p, kelvin, r)) return false;
 
         Matrix3 xyzFromCam;
-        if (!inverse(r.color, xyzFromCam)) return false;
+        if (!inverse(xyzToCamera(p, r), xyzFromCam)) return false;
 
         double xyz[3];
         applyM(xyzFromCam, neutral, xyz);
@@ -314,6 +328,13 @@ bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
         out.toneCurve.isEmpty() && out.exposureScale == 1.0f)
         return false;                           // nothing per-pixel to do
 
+    if (!workingToProPhoto(out.toTable, out.fromTable)) return false;
+    out.active = true;
+    return true;
+}
+
+bool workingToProPhoto(float toOut[3][3], float fromOut[3][3])
+{
     double workWhite[3];
     ColorSpaceMath::whiteOf(ColorSpaceMath::kWorking, workWhite);
 
@@ -347,10 +368,9 @@ bool tables(const Dcp::Profile &p, float kelvin, Tables &out)
 
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) {
-            out.toTable[i][j]   = float(to.m[i][j]);
-            out.fromTable[i][j] = float(from.m[i][j]);
+            toOut[i][j]   = float(to.m[i][j]);
+            fromOut[i][j] = float(from.m[i][j]);
         }
-    out.active = true;
     return true;
 }
 

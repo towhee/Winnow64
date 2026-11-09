@@ -550,6 +550,7 @@ set(WINNOW_HEADERS
     Develop/develop.h
     Develop/outputlook.h
     Develop/huesatmap.h
+    Develop/gaintablemap.h
     Develop/calibrate.h
     Develop/colorgrade.h
     Develop/colormixer.h

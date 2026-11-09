@@ -66,8 +66,10 @@ bool Reader::readIfd(quint32 off, Ifd &tags, QList<quint32> &subIfds, quint32 &n
         t.val4  = QByteArray(reinterpret_cast<const char *>(e + 8), 4);
         tags.insert(tag, t);
         if (tag == 330) {                           // SubIFDs
+            /* Capped: a corrupt count would queue up to a million IFDs for the walk
+               (see IFD::getSubIfdOffsets). */
             const QVector<quint32> offs = u32s(t);
-            for (quint32 s : offs) subIfds << s;
+            for (int k = 0; k < offs.size() && k < 64; ++k) subIfds << offs[k];
         }
     }
     next = g32(b + n * 12);

@@ -242,9 +242,9 @@ static int runDumpWb(int argc, char *argv[])
         const bool read = rawFormat->ReadAsShotColor(file, m, ci);
         file.close();
         CameraColor cam;
-        RawColor::Characterise(ci.xyzToCam, ci.camMul, cam);
+        RawColor::Characterise(ci.xyzToCam, ci.camMul, cam, ci.asShotStated);
         const float *c = ci.camMul;
-        const bool neutral = c[0] == c[1] && c[1] == c[2];
+        const bool neutral = !ci.asShotStated && c[0] == c[1] && c[1] == c[2];
         std::fprintf(stdout, "%s\t%s\tread=%d matrix=%d\tmul %.1f %.1f %.1f %.1f\t"
                      "R/G %.4f B/G %.4f\t%s\t%.0f K\ttint %.1f\n",
                      qPrintable(raw), qPrintable(m.model), read, ci.hasColorMatrix,

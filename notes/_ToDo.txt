@@ -6,9 +6,12 @@ WHAT'S NEW
 - Develop presets - reserve Winnow category
 - Develop previews sometimes dropped
 - Consolidated help doc
+- Fix apple dng endian bug (malicious IRB chains)
+- Regenerate thumbnails
 
 BUGS / TO DO
 - Implement undo
+- Help > Report bugs / feedback
 - Add Actions (replay a series of steps)
 - Crop when 16x9, then level, lose 16x9
 - Catalog management: import/export, Set catalog location

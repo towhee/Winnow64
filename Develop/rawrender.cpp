@@ -68,7 +68,7 @@ QString appleKeyPart(const Choice &c)
 {
 #ifdef Q_OS_MAC
     if (c.apple)
-        return QString("|appleRaw=c3:%1:%2").arg(AppleRawDecode::EffectiveVersionPin(c.applePin))
+        return QString("|appleRaw=c5:%1:%2").arg(AppleRawDecode::EffectiveVersionPin(c.applePin))
                                             .arg(AppleRawDecode::SupportFingerprint());
 #else
     Q_UNUSED(c)

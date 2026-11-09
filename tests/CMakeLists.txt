@@ -378,6 +378,12 @@ target_link_libraries(tst_autotone PRIVATE winnow_test_develop)
 winnow_add_unit_test(tst_inputprofile unit/tst_inputprofile.cpp)
 target_link_libraries(tst_inputprofile PRIVATE winnow_test_develop)
 
+# tst_gaintablemap guards the DNG ProfileGainTableMap (iPhone ProRAW's local tone map):
+# the tag parser in gaintablemap.h, and Develop applying it exactly once at stage 0,
+# even for an identity edit, relative to the full frame for a Detail patch.
+winnow_add_unit_test(tst_gaintablemap unit/tst_gaintablemap.cpp)
+target_link_libraries(tst_gaintablemap PRIVATE winnow_test_develop)
+
 # tst_outputtransform guards the 8-bit pack's transfer LUT -- an APPROXIMATION of the
 # per-pixel pow it replaced (see the TRANSFER LUT note in outputtransform.cpp), so the
 # accuracy bound it was accepted under has to be asserted somewhere. outputtransform.cpp

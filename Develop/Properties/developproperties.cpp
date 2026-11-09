@@ -4,6 +4,7 @@
 #include "Develop/skymask.h"
 #include "Develop/beammask.h"      // kDefaultWidth: the Beam's default + panel sync
 #include "Develop/cameraprofilestore.h"
+#include "ImageFormats/Dng/dng.h"
 #include "Develop/cameraprofile.h"
 #include "Cache/devpreviewcache.h"
 #include "Develop/editrotate.h"
@@ -362,6 +363,9 @@ QString DevelopProperties::uniqueScopeName(const QString &name) const
 void DevelopProperties::buildTree()
 {
     if (G::isLogger) G::log("DevelopProperties::buildTree");
+    /* Recorded HERE, before any row, so syncAppleDecoderVersions' rebuild-on-change
+       settles even if the Tone mapping row is not built. */
+    viewTransformAppleLook = currentUsesAppleLook();
 
     /* Preserve which sections are expanded across the rebuild. On the first build no header row
        exists yet, so the default comes from the session-persistent QSettings state (first-ever
@@ -1031,6 +1035,25 @@ void DevelopProperties::syncAppleDecoderVersions()
         }
     }
     rawPanel->setAppleVersions(versions, used);
+
+    /* The same answer says whether the file uses Apple's own rendering (iPhone ProRAW),
+       which greys Tone mapping. Usually unknown when the tree was built -- Core Image
+       had not opened the file yet -- so rebuild once it is known and differs. */
+    if (currentUsesAppleLook() != viewTransformAppleLook)
+        QTimer::singleShot(0, this, [this]{ buildTree(); });
+}
+
+bool DevelopProperties::currentUsesAppleLook() const
+{
+#ifdef Q_OS_MAC
+    if (!currentIsRaw() || !currentRawRender().apple) return false;
+    const QString src = VersionKey::isVersion(currentImagePath)
+                            ? VersionKey::sourceOf(currentImagePath) : currentImagePath;
+    bool appleLook = false;
+    return AppleRawDecode::UsesAppleLook(src, appleLook) && appleLook;
+#else
+    return false;
+#endif
 }
 
 void DevelopProperties::syncRawPanel()
@@ -4489,7 +4512,7 @@ CameraColor DevelopProperties::currentCam() const
         const EditStack s = stackCache.value(currentImagePath);
         const QString name = s.scopes.isEmpty() ? QString()
                                                 : s.scopes[0].params.cameraProfile;
-        if (const auto prof = CameraProfileStore::instance().profile(cam.cameraModel, name))
+        if (const auto prof = CameraProfileStore::instance().resolve(cam, name))
             CameraProfile::resolveAsShot(*prof, cam);
     }
     return cam;
@@ -6071,12 +6094,35 @@ void DevelopProperties::repopulateCameraProfileCombo()
     const QList<CameraProfileStore::Entry> found =
         CameraProfileStore::instance().forModel(model);
 
+    /* THE FILE'S OWN PROFILE (a DNG's IFD 0), offered as "Embedded" -- and, when the file
+       also carries a gain table map (iPhone ProRAW), it is the DEFAULT: an empty name
+       resolves to it (CameraProfileStore::resolve), so Winnow Standard has to be stored
+       by its reserved name there instead of as empty. */
+    const CameraColor fileColor = currentFileColor();
+    const bool hasEmbedded = fileColor.embeddedProfile != nullptr;
+    const bool embeddedDefault = CameraProfileStore::defaultsToEmbedded(fileColor);
+
     QSignalBlocker block(cameraProfileCombo);
     cameraProfileCombo->clear();
     /* The built-in FIRST: it is the identity, so it heads the list the way every other
        adjustment's identity sits at the start of its range. The rest arrive sorted, with
        any synthesised "Camera Base" among them rather than tacked on the end. */
-    cameraProfileCombo->addItem(kBuiltInProfileLabel, QString());
+    cameraProfileCombo->addItem(kBuiltInProfileLabel,
+                                embeddedDefault ? QString(EditParams::kBuiltInProfile)
+                                                : QString());
+    if (hasEmbedded) {
+        const QString own = fileColor.embeddedProfile->name;
+        cameraProfileCombo->addItem("Embedded", QString(EditParams::kEmbeddedProfile));
+        cameraProfileCombo->setItemData(
+            cameraProfileCombo->count() - 1,
+            QString("The profile stored in this file%1.%2")
+                .arg(own.isEmpty() ? QString() : " (\"" + own + "\")")
+                .arg(embeddedDefault ? " It is this file's default: the file also carries "
+                                       "its maker's local tone map, which is applied "
+                                       "whatever profile is chosen."
+                                     : QString()),
+            Qt::ToolTipRole);
+    }
     /* A RULE UNDER THE BUILT-IN, and only when there is something below it. Winnow
        Standard is the identity -- choosing it is a reset, not a choice -- so it is a
        different kind of thing from the installed profiles and reads better set apart
@@ -6106,7 +6152,25 @@ void DevelopProperties::repopulateCameraProfileCombo()
                 it->setFlags(it->flags() & ~(Qt::ItemIsEnabled | Qt::ItemIsSelectable));
     }
 
-    if (stored.isEmpty()) { cameraProfileCombo->setCurrentIndex(0); return; }
+    /* Empty is the image's DEFAULT: Embedded on a gain-map file, else the built-in. The
+       explicit built-in token always shows as the built-in. */
+    if (stored.isEmpty()) {
+        const int def = embeddedDefault
+            ? cameraProfileCombo->findData(QString(EditParams::kEmbeddedProfile)) : 0;
+        cameraProfileCombo->setCurrentIndex(def >= 0 ? def : 0);
+        return;
+    }
+    if (stored == QLatin1String(EditParams::kBuiltInProfile)) {
+        cameraProfileCombo->setCurrentIndex(0);
+        return;
+    }
+    if (stored == QLatin1String(EditParams::kEmbeddedProfile) && !hasEmbedded) {
+        /* "Embedded" carried onto a file that has none (a pasted preset): it renders
+           with the built-in matrix, and says why -- never a silent reset. */
+        cameraProfileCombo->addItem("Embedded  (none in this file)", stored);
+        cameraProfileCombo->setCurrentIndex(cameraProfileCombo->count() - 1);
+        return;
+    }
 
     int ix = cameraProfileCombo->findData(stored);
     if (ix < 0) {
@@ -6256,7 +6320,8 @@ void DevelopProperties::setCameraProfile(const QString &name)
     if (s.scopes[0].params.cameraProfile == name) return;
     s.scopes[0].params.cameraProfile = name;    // always scope 0, whichever is active
     noteScopeEdit("Global", "Profile",
-                  name.isEmpty() ? QString(kBuiltInProfileLabel) : name,
+                  (name.isEmpty() || name == QLatin1String(EditParams::kBuiltInProfile))
+                      ? QString(kBuiltInProfileLabel) : name,
                   "global/cameraProfile");
     /* A different profile may or may not carry a tone curve ("Profile curve"). */
     refreshViewTransformRow();
@@ -6277,13 +6342,18 @@ void DevelopProperties::refreshCameraProfileRow()
 void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
 {
     const bool raw = currentIsRaw();
+    const bool appleLook = viewTransformAppleLook;  // set by buildTree
 
     clearItemInfo(i);
     i.name = "viewTransform";
     i.parIdx = parIdx;
     i.parentName = "BasicHeader";
     i.captionText = "Tone mapping";
-    i.tooltip = raw
+    i.tooltip = appleLook
+        ? "Apple's decoder has already rendered this iPhone ProRAW with Apple's own "
+          "tone mapping, so there is nothing to choose here. Choose Winnow as the "
+          "decoder to pick a tone mapping."
+        : raw
         ? "How the brightness range is fitted to the screen.\n"
           "Standard is the usual choice. Hue-preserving keeps bright skies blue. Soft "
           "rolls off highlights more gently. Camera contrast matches the camera's JPEGs. "
@@ -6300,7 +6370,7 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
        PropertyDelegate::sizeHint), so 6 buys the 3px gap above -- and the same 3px below,
        which suits a row that heads a group rather than belonging to the one above it. */
     model->setData(capIdx, 6, UR_ExtraRowHeight);
-    setItemEnabled("viewTransform", raw);
+    setItemEnabled("viewTransform", raw && !appleLook);
 
     const QModelIndex valIdx = findValueIndex("viewTransform");
     if (!valIdx.isValid()) return;
@@ -6311,10 +6381,12 @@ void DevelopProperties::addViewTransformRow(const QModelIndex &parIdx)
     vhb->setContentsMargins(0, 0, 10, 0);
     vhb->setSpacing(0);
 
-    if (!raw) {
+    if (!raw || appleLook) {
         /* The REASON, in the value cell where the control would have been -- the rule is
-           greyed control + brief inline reason, never a popup after the fact. */
-        QLabel *why = new QLabel("raw only");
+           greyed control + brief inline reason, never a popup after the fact. The two
+           reasons differ the way the Profile row's do: a JPEG has no choice to make; an
+           Apple-rendered ProRAW has one, under the Winnow decoder. */
+        QLabel *why = new QLabel(appleLook ? "Apple rendering" : "raw only");
         why->setStyleSheet(G::labelCss(G::disabledColor, G::strFontSize.toInt()));
         why->setEnabled(false);
         why->setAttribute(Qt::WA_TransparentForMouseEvents);
@@ -6395,10 +6467,37 @@ bool DevelopProperties::profileHasToneCurve() const
     const EditStack &s = stackCache[currentImagePath];
     if (s.scopes.isEmpty()) return false;
     const QString name = s.scopes[0].params.cameraProfile;
-    if (name.isEmpty()) return false;
-    const QString model = mw ? mw->cameraModelFor(currentImagePath) : QString();
-    const auto prof = CameraProfileStore::instance().profile(model, name);
+    const auto prof = CameraProfileStore::instance().resolve(currentFileColor(), name);
     return prof && !prof->toneCurve.empty();
+}
+
+CameraColor DevelopProperties::currentFileColor() const
+{
+    CameraColor c;
+    if (currentImagePath.isEmpty()) return c;
+    c.cameraModel = mw ? mw->cameraModelFor(currentImagePath) : QString();
+    /* Recorded under the FILE; a version (virtual copy) renders its source. DNG only:
+       no other format carries a profile or a gain map of its own. */
+    const QString src = VersionKey::isVersion(currentImagePath)
+                            ? VersionKey::sourceOf(currentImagePath) : currentImagePath;
+    if (src.endsWith(".dng", Qt::CaseInsensitive)) {
+        const auto info = DngRaw::RenderInfo(src);
+        c.embeddedProfile = info->embeddedProfile;
+        c.gainMap = info->gainMap;
+        c.hasBaselineExposure = info->hasBaselineExposure;
+        c.baselineExposure = info->baselineExposure;
+    }
+    return c;
+}
+
+int DevelopProperties::autoViewTransform() const
+{
+    /* OutputTransform::Resolve's Auto rule, answered from the file instead of a decoded
+       image: Profile curve (None without a curve) for a gain-map file, else Standard. */
+    if (currentFileColor().gainMap)
+        return profileHasToneCurve() ? int(OutputTransform::ViewTransform::ProfileCurve)
+                                     : int(OutputTransform::ViewTransform::None);
+    return int(OutputTransform::ViewTransform::Filmic);
 }
 
 void DevelopProperties::setViewTransform(int vt)
@@ -6426,6 +6525,7 @@ QString DevelopProperties::viewTransformName(int vt)
     case OutputTransform::ViewTransform::ProfileCurve:   return "Profile curve";
     case OutputTransform::ViewTransform::FilmicHue:
         return "Standard roll-off (hue-preserving)";
+    case OutputTransform::ViewTransform::Auto:           return "Auto";
     default: break;
     }
     return "None";
@@ -6462,6 +6562,10 @@ void DevelopProperties::refreshViewTransformRow()
         const EditStack &s = stackCache[currentImagePath];
         if (!s.scopes.isEmpty()) stored = s.scopes[0].params.viewTransform;
     }
+    /* AUTO SHOWS WHAT IT RESOLVES TO for this image (autoViewTransform). The list has no
+       "Auto" row of its own: picking any entry -- including the one already shown --
+       stores it explicitly, which is the only way an explicit choice is ever made. */
+    if (stored == int(OutputTransform::ViewTransform::Auto)) stored = autoViewTransform();
     const int ix = viewTransformCombo->findData(stored);
     if (ix >= 0) {
         QSignalBlocker block(viewTransformCombo);

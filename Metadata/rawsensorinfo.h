@@ -40,6 +40,11 @@ struct RawSensorInfo {
     bool hasColorMatrix = false;
     float xyzToCam[3][3] = {{1, 0, 0}, {0, 1, 0}, {0, 0, 1}};
     float camMul[4] = {1, 1, 1, 1};
+    /* The file STATED camMul (DNG AsShotNeutral / AsShotWhiteXY), so all-equal values
+       are a real as-shot balance, not "none read". iPhone ProRAW writes (1, 1, 1): the
+       data is already balanced by AnalogBalance. Readers that cannot tell leave it
+       false and RawColor keeps treating all-equal as absent. */
+    bool asShotStated = false;
 
     /* Enough to unpack: known geometry and a real strip. Compression handling is the
        decoder's call (e.g. SonyRaw rejects what it cannot unpack yet). */

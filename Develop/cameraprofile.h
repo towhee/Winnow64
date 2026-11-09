@@ -149,6 +149,11 @@ struct Tables {
 */
 bool tables(const Dcp::Profile &p, float kelvin, Tables &out);
 
+/* Working space -> LINEAR ProPhoto (RIMM, D50), and back: the space the DNG spec applies
+   its profile tables AND the gain table map in. One definition for both (the white is
+   ProPhoto's own -- see tables()). False only if a matrix is singular. */
+bool workingToProPhoto(float to[3][3], float from[3][3]);
+
 } // namespace CameraProfile
 
 #endif // CAMERAPROFILE_H

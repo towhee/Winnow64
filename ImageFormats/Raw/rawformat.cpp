@@ -7,6 +7,7 @@
 #include "Develop/workingimage.h"
 #include "Develop/develop.h"
 #include "Develop/outputtransform.h"
+#include "Develop/workingimagecache.h"
 #include "Main/global.h"
 #include <algorithm>
 #include <QHash>
@@ -201,7 +202,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             */
             RawSensorInfo ci = m.rawInfo;       // seeded: Sony fills some at parse
             if (ReadAsShotColor(file, m, ci) || ci.hasColorMatrix) {
-                RawColor::Characterise(ci.xyzToCam, ci.camMul, work->cam);
+                RawColor::Characterise(ci.xyzToCam, ci.camMul, work->cam, ci.asShotStated);
                 work->cam.cameraModel = m.model;
             }
         }
@@ -234,6 +235,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 return false;
             }
             work->cam.cameraModel = m.model;
+            StampRenderInfo(file.fileName(), work->cam);    // DNG: profile, gain map
             work->rawRenderTag = choice.tag();
             decoded = true;
         }
@@ -365,6 +367,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             if (!demosaiced || !color.ToCameraNative(mosaic, rgbDen, *den)) return nullptr;
             dt.denColorMs = lap();
             den->cam.cameraModel = m.model;
+            StampRenderInfo(file.fileName(), den->cam);
             return den;
         };
 
@@ -394,6 +397,9 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                with no path attached. RawColor cannot fill it: it is handed the RawImage,
                not the metadata. See CameraColor::cameraModel. */
             work->cam.cameraModel = m.model;
+            /* ...and what the file says about its own rendering (DNG: an embedded
+               profile, BaselineExposure, a gain table map -- see CameraColor). */
+            StampRenderInfo(file.fileName(), work->cam);
             work->rawRenderTag = choice.tag();      // whatever ToCameraNative reset
             return true;
         };
@@ -483,8 +489,12 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
     const OutputTransform::ViewTransform view =
         edit ? OutputTransform::ViewFromInt(edit->viewTransform)
              : OutputTransform::ViewTransform::None;
-    if (edit && !edit->isIdentity()) {
+    /* A gain-map file develops even under an identity recipe: its default rendering is
+       its embedded profile and that profile's curve (CameraProfileStore::resolve). */
+    if (edit && (!edit->isIdentity() || resultBase->cam.gainMap)) {
         WorkingImage developed = denoisedBase ? *denoisedBase : *resultBase;
+        /* The recipe's camera profile, as every other render path attaches it. */
+        WorkingImageCache::AttachProfile(developed, *edit);
         Develop develop;
         develop.Apply(developed, *edit);
         if (aborted()) { errMsg = "Aborted"; return false; }

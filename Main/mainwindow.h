@@ -834,6 +834,9 @@ public slots:
     /*  Thumbnail context menu "Regenerate thumbnails": drop the cached thumbnail and
         index row of each selected file and read it again (Main/mwstalethumbs.cpp). */
     void regenerateThumbnails();
+    /*  Quit gave up on a reader that would not stop (MetaRead::readersStuck): explain,
+        before closeEvent ends with std::_Exit. */
+    void showReadersStuckDialog(const QStringList &files);
     /*  STALE EMBEDDED JPEG THUMBNAILS (Image/stalethumb.h, Main/mwstalethumbs.cpp).
         A Reader found one and drew the icon from the image instead; collect it and,
         once the burst settles, offer to repair the files. */

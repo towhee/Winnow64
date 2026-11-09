@@ -165,6 +165,11 @@ public:
        to fill it. Optional: null allocates locally, which is what the one-shot callers
        (export, the reference builders, the settle render) want. Caller owns it and must
        keep it alive for the call. */
+    /* Resolve the recipe's camera profile against img (CameraProfileStore::resolve) and
+       attach it, re-solving As Shot under it. CameraNative pixels only. Every render path
+       that runs Develop::Apply on a raw calls this first. */
+    static void AttachProfile(WorkingImage &img, const EditParams &p);
+
     static bool render(const WorkingImage &work, const EditParams &edit, QImage &out,
                        RenderTimings *timings = nullptr,
                        OutDepth depth = OutDepth::Eight,

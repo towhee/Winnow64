@@ -143,6 +143,15 @@ public:
     virtual bool ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo &info)
     { Q_UNUSED(file) Q_UNUSED(m) Q_UNUSED(info) return false; }
 
+    /*
+        What the FILE says about its own rendering, stamped onto a Winnow-engine decode's
+        CameraColor: an embedded camera profile, a BaselineExposure, a gain table map (see
+        CameraColor). Only DNG has any (DngRaw). Default: nothing, leaving cam as decoded.
+        Not called for the Apple engine, which applies the file's own rendering itself.
+    */
+    virtual void StampRenderInfo(const QString &path, CameraColor &cam)
+    { Q_UNUSED(path) Q_UNUSED(cam) }
+
 protected:
     /* THE override point. Read the vendor bitstream described by m and produce a
        normalised CFA mosaic in raw (width/height/pattern/levels/matrix). */

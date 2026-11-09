@@ -91,8 +91,19 @@ public:
            SDK applies a tone curve (CameraCurve::ApplyRGBTone) rather than per channel,
            so a bright saturated colour keeps its hue -- Lightroom's behaviour. Appended:
            the values are a published sidecar format. */
-        FilmicHue      = 5
+        FilmicHue      = 5,
+        /* "Auto": THE IMAGE'S OWN DEFAULT, resolved against the image (Resolve):
+           Profile curve on a file whose gain table map already tone-maps it (iPhone
+           ProRAW -- None if its profile has no curve), Standard roll-off everywhere else.
+           The default since 2026-11-09 (EditParams::kDefaultViewTransform); a stored
+           value never means Auto by accident, so an explicit choice stays explicit. */
+        Auto           = 6
     };
+
+    /* What a stored transform means FOR THIS IMAGE: Auto resolved, the display-referred
+       and decoder-tone-mapped overrides applied, and Profile curve without a curve
+       falling back. The one rule every caller that has the image goes through. */
+    static ViewTransform Resolve(ViewTransform vt, const WorkingImage &img);
 
     /* EditParams::viewTransform (an int, so it rides the existing int machinery) -> the
        enum. An unrecognised value resolves to the IDENTITY rather than asserting: a
@@ -114,6 +125,7 @@ public:
         case int(ViewTransform::CameraContrast): return ViewTransform::CameraContrast;
         case int(ViewTransform::ProfileCurve):   return ViewTransform::ProfileCurve;
         case int(ViewTransform::FilmicHue):      return ViewTransform::FilmicHue;
+        case int(ViewTransform::Auto):           return ViewTransform::Auto;
         default: break;
         }
         return ViewTransform::None;

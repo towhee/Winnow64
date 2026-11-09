@@ -213,12 +213,15 @@ bool Solve(const WorkingImage &work, const EditParams &base, Result &out)
     const float dark = s1.fractionBelow(kDarkThresh);
     const float range = s1.percentile(0.99) - s1.percentile(0.01);
     p.contrast   = kContrast;
-    p.highlights = work.sceneReferred ? kHighlightsRaw : kHighlightsDisplay;
+    /* A decoder-tone-mapped raw (Apple's ProRAW rendering) is display-referred in all
+       but name: its highlights are already rolled off. */
+    const bool linearRaw = work.sceneReferred && !work.decoderToneMapped;
+    p.highlights = linearRaw ? kHighlightsRaw : kHighlightsDisplay;
     p.shadows    = std::round(std::clamp(kShadowsBase + kShadowsDark * dark, 0.0f, 100.0f));
     p.whites     = std::round(std::clamp(kWhitesBase + kWhitesDark * dark +
                                              kWhitesRange * range, -100.0f, 100.0f));
     p.blacks     = std::round(std::clamp(kBlacksBase + kBlacksDark * dark, -100.0f, 0.0f));
-    p.vibrance   = work.sceneReferred ? kVibranceRaw : kVibranceDisplay;
+    p.vibrance   = linearRaw ? kVibranceRaw : kVibranceDisplay;
     p.saturation = kSaturation;
 
     out.rendersMs  = int(stage.elapsed());

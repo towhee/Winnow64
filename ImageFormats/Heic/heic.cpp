@@ -852,9 +852,11 @@ bool Heic::metaBox(quint32 &offset, quint32 &length)
                  << "length =" << length;
 
     while (offset < metaEnd) {
+        const quint32 prev = offset;
         file->seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        if (offset <= prev) break;              // no-progress guard (length 0 / wrap)
     }
 
     offset = metaEnd;
@@ -888,9 +890,11 @@ bool Heic::dinfBox(quint32 &offset, quint32 &length)
     offset += 8;
 
     while (offset < dinfEnd) {
+        const quint32 prev = offset;
         file->seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        if (offset <= prev) break;              // no-progress guard (length 0 / wrap)
     }
 
     offset = dinfEnd;
@@ -1278,11 +1282,13 @@ bool Heic::irefBox(quint32 &offset, quint32 &length)
         qDebug() << "Heic::irefBox" << "offset =" << offset
                  << "length =" << length << "sitrOffset" << sitrOffset;
         while (sitrOffset < irefEndOffset) {
+            const quint32 prev = sitrOffset;
             quint32 sitrLength;
             QString type;
             file->seek(sitrOffset);
-            nextHeifBox(sitrLength, type);
+            if (!nextHeifBox(sitrLength, type)) break;
             if (version == 0) sitrBox(sitrOffset, sitrLength);
+            if (sitrOffset <= prev) break;      // no-progress guard (version != 0 too)
     //        else sitrBoxL(sitrOffset, sitrLength);
             qDebug() << "Heic::irefBox" << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
         }

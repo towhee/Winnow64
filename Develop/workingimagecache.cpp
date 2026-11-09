@@ -17,23 +17,6 @@
 
 namespace {
 
-/*
-    Attach the camera profile the params name, so the render uses it.
-
-    THIS IS THE CALL SITE the whole profile feature hangs off. A profile is an EDIT, not
-    part of the decode, so it is resolved HERE -- against pixels already in the cache --
-    rather than baked in by RawColor. That is the point of the camera-native cache
-    boundary: changing profile is a re-render, never a re-decode.
-
-    Resolved every render rather than cached on the image: the lookup is a hash hit on a
-    profile parsed once per session, and the alternative is a stale profile surviving on a
-    WorkingImage after the user picked a different one. Cleared FIRST for the same reason,
-    so the "no profile" case cannot inherit the last one.
-
-    A name that no longer resolves leaves the profile null and the image renders with the
-    built-in matrix. That is deliberate and it is not silent: the panel resolves the same
-    name and shows the reason.
-*/
 /* Fold one Apply's stage split into a render's [DevTime] buckets. ADDS, so the stack
    path can call it for the base and every scope's layer. */
 void addStageTimings(WorkingImageCache::RenderTimings &r, const Develop::StageTimings &s)
@@ -51,10 +34,29 @@ void addStageTimings(WorkingImageCache::RenderTimings &r, const Develop::StageTi
     r.grainMs    += s.grainMs;
 }
 
-void attachProfile(WorkingImage &img, const EditParams &p)
+} // namespace
+
+/*
+    Attach the camera profile the params name, so the render uses it.
+
+    THIS IS THE CALL SITE the whole profile feature hangs off. A profile is an EDIT, not
+    part of the decode, so it is resolved HERE -- against pixels already in the cache --
+    rather than baked in by RawColor. That is the point of the camera-native cache
+    boundary: changing profile is a re-render, never a re-decode.
+
+    Resolved every render rather than cached on the image: the lookup is a hash hit on a
+    profile parsed once per session, and the alternative is a stale profile surviving on a
+    WorkingImage after the user picked a different one. Cleared FIRST for the same reason,
+    so the "no profile" case cannot inherit the last one.
+
+    A name that no longer resolves leaves the profile null and the image renders with the
+    built-in matrix. That is deliberate and it is not silent: the panel resolves the same
+    name and shows the reason.
+*/
+void WorkingImageCache::AttachProfile(WorkingImage &img, const EditParams &p)
 {
     img.cam.profile.reset();
-    if (!img.cam.valid || p.cameraProfile.isEmpty()) return;
+    if (!img.cam.valid) return;
 
     /* CameraNative only. The Apple Core Image engine now carries a valid cam too (for the
        white balance readout), but its pixels arrive with Core Image's own profile already
@@ -63,8 +65,7 @@ void attachProfile(WorkingImage &img, const EditParams &p)
        Reachable without the (disabled) profile row: a pasted preset, or a sidecar written
        while the Winnow engine was selected. */
     if (img.space != ColorSpaceMath::ColorSpace::CameraNative) return;
-    img.cam.profile = CameraProfileStore::instance().profile(img.cam.cameraModel,
-                                                             p.cameraProfile);
+    img.cam.profile = CameraProfileStore::instance().resolve(img.cam, p.cameraProfile);
 
     /* AS SHOT IS PROFILE-DEPENDENT. asShotK/asShotTint were solved at decode against the
        built-in per-model matrix (WhiteBalance::resolveAsShot); this profile replaces that
@@ -77,6 +78,11 @@ void attachProfile(WorkingImage &img, const EditParams &p)
     if (img.cam.profile) CameraProfile::resolveAsShot(*img.cam.profile, img.cam);
 }
 
+namespace {
+void attachProfile(WorkingImage &img, const EditParams &p)
+{
+    WorkingImageCache::AttachProfile(img, p);
+}
 } // namespace
 
 WorkingImageCache &WorkingImageCache::instance()
@@ -268,7 +274,10 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
        CameraNative, so OutputTransform quietly renders sensor data, which reads as the
        green cast of an unbalanced raw. The cached entry stays pristine, so the
        conversion runs on a copy (the caller's scratch when it offered one). */
-    if (edit.isIdentity()) {
+    /* A file with a GAIN TABLE MAP is not identity-shortcut: its default rendering
+       includes its embedded profile and that profile's curve (CameraProfileStore::
+       defaultsToEmbedded), which only the develop path below attaches. */
+    if (edit.isIdentity() && !work.cam.gainMap) {
         QElapsedTimer t;
         if (timings) t.start();
         if (work.space == ColorSpaceMath::ColorSpace::CameraNative) {

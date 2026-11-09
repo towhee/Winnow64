@@ -31,6 +31,11 @@ public:
 
     void stop();
     void stopReaders();
+    /*  Set by stopReaders when a reader thread was still running at the deadline. Quit
+        then ends with std::_Exit instead of exit() (MW::closeEvent): a live thread in
+        exit()'s static destructors crashes. */
+    bool readersStuck = false;
+    QStringList stuckFiles;         // what each stuck reader was reading, for the quit dialog
     void syncInstance();
     // void cleanupIcons();
     QString diagnostics();

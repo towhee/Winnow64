@@ -1707,7 +1707,50 @@ void MW::closeEvent(QCloseEvent *event)
     G::popup = nullptr;
     delete popup;
 
+    /*  A READER THAT WOULD NOT STOP (MetaRead::stopReaders gave up at its deadline and
+        logged it). A macOS quit ends in exit(), which runs the static destructors while
+        that thread is still using them and crashes (the reason CatalogScanner::shutdown
+        waits, above). So end here instead: everything above is saved, settings synced,
+        and std::_Exit skips the destructors. */
+    if (metaRead && metaRead->readersStuck) {
+        showReadersStuckDialog(metaRead->stuckFiles);
+        std::_Exit(0);
+    }
+
     event->accept();
+}
+
+void MW::showReadersStuckDialog(const QStringList &files)
+{
+/*
+    Quit gave up waiting for a reader (MetaRead::stopReaders) and is about to end with
+    std::_Exit. Say so, and why, rather than vanish: the user should know which file held
+    things up, and that nothing was lost. The main window is already hidden, so the box
+    has no parent.
+*/
+    QString list;
+    for (const QString &f : files) list += "<br>&nbsp;&nbsp;" + f.toHtmlEscaped();
+    if (list.isEmpty()) list = "<br>&nbsp;&nbsp;(the file name was not available)";
+    const bool one = files.size() <= 1;
+
+    QMessageBox box;
+    box.setIcon(QMessageBox::Information);
+    box.setWindowTitle("Winnow");
+    box.setTextFormat(Qt::RichText);
+    box.setText("<b>Winnow closed without waiting for "
+                + QString(one ? "a file" : "some files") + " it was still reading.</b>");
+    box.setInformativeText(
+        "<p>When Winnow closes, it waits for its background readers to finish the "
+        "file each one is reading. After 3 seconds "
+        + QString(one ? "this file was" : "these files were")
+        + " still being read:" + list + "</p>"
+        "<p>The file may be very large, on a slow or sleeping drive, or damaged in a "
+        "way Winnow does not handle.</p>"
+        "<p>Nothing was lost. Your settings, picks and edits were saved before this, "
+        "and the file was only being read, so it has not been changed.</p>"
+        "<p>If this happens again with the same file, please report it.</p>");
+    box.setStandardButtons(QMessageBox::Ok);
+    box.exec();
 }
 
 void MW::moveEvent(QMoveEvent *event)

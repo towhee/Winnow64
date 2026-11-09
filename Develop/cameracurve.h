@@ -51,6 +51,17 @@
     midtones -- its contrast -- are untouched. Chosen by comparison, NOT fitted to a
     Lightroom render; refit if one says otherwise.
 
+    A PROFILE'S OWN CURVE HANDS OVER LATER, at kProfileKneeY = 0.80 (BuildFromPairs).
+    Lightroom applies a ProfileToneCurve in full, and an iPhone ProRAW render says what
+    0.60 costs: its gain map already brings the scene to sensor white, so the tail only
+    dimmed it -- white at 232 against Lightroom's 255, p99 luminance 0.872 against 0.914.
+    Measured 2026-11-09 (IMG_1097, Winnow's gain-mapped data, Apple's curve, Lightroom
+    15.6 export), mean |error| in encoded luminance by handover level:
+        0.60  0.0163     0.70  0.0106     0.80  0.0083     0.90  0.0080   (full: 0.0080)
+    0.80 takes almost all of it and keeps the headroom a pushed exposure needs: 1x / 2x
+    / 4x / 8x over white at 243 / 250 / 252 / 253. The maker curves (BuildFromSamples)
+    keep 0.60: they were matched to Standard roll-off, not to Lightroom.
+
     APPLIED HUE-PRESERVINGLY (ApplyRGBTone), the way the DNG SDK applies a
     ProfileToneCurve (RefBaselineRGBTone): the curve is evaluated on the largest and
     smallest channels and the middle one is interpolated between them, so hue is held
@@ -60,6 +71,7 @@
 namespace CameraCurve {
 
 constexpr float kKneeY     = 0.60f;  // output level where the camera curve hands over
+constexpr float kProfileKneeY = 0.80f;  // the same for a profile's ProfileToneCurve
 constexpr float kTailPower = 0.60f;  // roll-off tail: 1 - y ~ t^-p (smaller = gentler)
 constexpr int   kLutSize = 4096;
 /* The table's log2 window: 2^-16 (deep shadow) .. 2^6 (six stops over white), where the
@@ -97,13 +109,13 @@ struct Shape {
     }
 };
 
-/* Find the knee: the first u where the curve reaches kKneeY, and its slope there. */
-inline void FindKnee(Shape &sh)
+/* Find the knee: the first u where the curve reaches kneeY, and its slope there. */
+inline void FindKnee(Shape &sh, float kneeY = kKneeY)
 {
     sh.uk = 1.0f;
     for (int i = 1; i <= 10000; ++i) {
         const float u = float(i) / 10000.0f;
-        if (sh.camera(u) >= kKneeY) { sh.uk = u; break; }
+        if (sh.camera(u) >= kneeY) { sh.uk = u; break; }
     }
     sh.yk = sh.camera(sh.uk);
     if (sh.yk >= 0.999f) sh.yk = 0.999f;        // a curve that never bends: keep t finite
@@ -158,7 +170,7 @@ inline bool BuildFromPairs(const std::vector<float> &xy, float gain, Curve &out)
         sh.xs.push_back(xy[i * 2]);
         sh.ys.push_back(xy[i * 2 + 1]);
     }
-    FindKnee(sh);
+    FindKnee(sh, kProfileKneeY);
     out.shape = sh;
     Tabulate(out);
     return true;

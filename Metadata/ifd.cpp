@@ -153,9 +153,16 @@ QList<quint32> IFD::getSubIfdOffsets(QFile &file, quint32 subIFDaddr, int count,
 {
     if (G::isLogger) G::log("IFD::getSubIfdOffsets");
     QList<quint32> offsets;
-    file.seek(subIFDaddr);
+    /*  The count is read from the file. A misread or corrupt one (16,777,216 for a
+        big-endian 1 read little-endian) had every caller walk millions of garbage IFDs,
+        wedging the Reader and hanging quit. No real file has more than a handful. */
+    const int kMaxSubIfds = 64;
+    if (count > kMaxSubIfds) count = kMaxSubIfds;
+    if (!file.seek(subIFDaddr)) return offsets;
     for (int i = 0; i < count; i++) {
-        offsets.append(Utilities::get32(file.read(4), isBigEnd)); // big endian by default
+        const QByteArray b = file.read(4);
+        if (b.size() < 4) break;                // past EOF
+        offsets.append(Utilities::get32(b, isBigEnd)); // big endian by default
     }
     return offsets;
 }
@@ -317,9 +324,16 @@ QList<quint32> IFD::getSubIfdOffsets_B(QFile &file, quint32 subIFDaddr, int coun
 {
     if (G::isLogger) G::log("IFD::getSubIfdOffsets_B");
     QList<quint32> offsets;
-    file.seek(subIFDaddr);
+    /*  The count is read from the file. A misread or corrupt one (16,777,216 for a
+        big-endian 1 read little-endian) had every caller walk millions of garbage IFDs,
+        wedging the Reader and hanging quit. No real file has more than a handful. */
+    const int kMaxSubIfds = 64;
+    if (count > kMaxSubIfds) count = kMaxSubIfds;
+    if (!file.seek(subIFDaddr)) return offsets;
     for (int i = 0; i < count; i++) {
-        offsets.append(Utilities::get32(file.read(4), isBigEnd)); // big endian by default
+        const QByteArray b = file.read(4);
+        if (b.size() < 4) break;                // past EOF
+        offsets.append(Utilities::get32(b, isBigEnd)); // big endian by default
     }
     return offsets;
 }

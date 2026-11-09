@@ -34,6 +34,7 @@ private slots:
     void singleIlluminantProfileResolvesEverywhere();
     void neutralRendersNeutral_data();
     void neutralRendersNeutral();
+    void analogBalanceIsPartOfTheCamera();
     void publishedForwardMatrixIsWithinItsOwnRounding();
     void profileChangeDoesNotMoveExposure();
     void realProfilesRenderNeutral();
@@ -267,6 +268,48 @@ void TstCameraProfile::neutralRendersNeutral()
                  qPrintable(QString("channel %1 = %2 at %3 K, tint %4")
                                 .arg(i).arg(rgb[i], 0, 'g', 8)
                                 .arg(double(kelvin)).arg(double(tint))));
+}
+
+void TstCameraProfile::analogBalanceIsPartOfTheCamera()
+{
+    /* A profile EMBEDDED in a DNG takes the file's AnalogBalance, and iPhone ProRAW writes
+       (2.09, 1, 2.27) with AsShotNeutral (1, 1, 1): the stored values carry the gains.
+       Solved against ColorMatrix alone, that neutral read as 50000 K / -150 tint and the
+       picture went orange. The camera neutral must carry the gains, As Shot must solve
+       back to the illuminant, and that neutral must still render to white. */
+    Dcp::Profile plain = canon77D();
+    normaliseForwardToD50(plain);
+    Dcp::Profile p = plain;
+    p.analogBalance[0] = 2.09f;
+    p.analogBalance[2] = 2.27f;
+
+    const float kelvin = 6504.0f;
+    double n0[3], n[3];
+    QVERIFY(CameraProfile::neutralCam(plain, kelvin, 0.0f, n0));
+    QVERIFY(CameraProfile::neutralCam(p, kelvin, 0.0f, n));
+    QVERIFY(qAbs(n[0] - 2.09 * n0[0]) < 1e-5);
+    QVERIFY(qAbs(n[1] - 1.0) < 1e-9);
+    QVERIFY(qAbs(n[2] - 2.27 * n0[2]) < 1e-5);
+
+    CameraColor cam;
+    cam.valid = true;
+    for (int i = 0; i < 3; ++i) cam.asShotMul[i] = float(1.0 / n[i]);
+    QVERIFY(CameraProfile::resolveAsShot(p, cam));
+    QVERIFY2(qAbs(cam.asShotK - kelvin) < 5.0f, qPrintable(QString::number(cam.asShotK)));
+    QVERIFY2(qAbs(cam.asShotTint) < 0.5f, qPrintable(QString::number(cam.asShotTint)));
+
+    for (bool fwd : {true, false}) {
+        Dcp::Profile q = p;
+        q.cal[0].haveForward = q.cal[1].haveForward = fwd;
+        float m[3][3];
+        QVERIFY(CameraProfile::camToWorking(q, kelvin, 0.0f, m));
+        for (int i = 0; i < 3; ++i) {
+            const double v = double(m[i][0]) * n[0] + double(m[i][1]) * n[1] +
+                             double(m[i][2]) * n[2];
+            QVERIFY2(qAbs(v - 1.0) < 1e-6, qPrintable(QString("fwd %1 ch %2 = %3")
+                                                       .arg(fwd).arg(i).arg(v)));
+        }
+    }
 }
 
 void TstCameraProfile::publishedForwardMatrixIsWithinItsOwnRounding()

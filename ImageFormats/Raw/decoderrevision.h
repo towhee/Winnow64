@@ -20,11 +20,25 @@ namespace RawDecoder {
       cr2 1, cr3 1  2026-10-10  masked-border black level averaged lit columns
                                 (7D Mark II black 2130 vs 2047): green cast. See
                                 canon.cpp UnpackCfa.
+      dng 1         2026-11-09  AnalogBalance folded into the matrix (iPhone ProRAW
+                                rendered off-white); the file's own BaselineExposure
+                                and ProfileGainTableMap applied. See dng.cpp RenderInfo.
+      dng 2         2026-11-09  AsShotNeutral (1, 1, 1) honoured, not read as "none"
+                                (ProRAW rendered at D65: yellow indoors). See
+                                RawSensorInfo::asShotStated.
+      dng 3         2026-11-09  not a decoder change: an unedited ProRAW renders with
+                                its profile curve (Auto), whose knee moved to 0.80
+                                (CameraCurve::kProfileKneeY). Bumped here, not
+                                DevelopRevision::kIdentity, to rebuild only DNGs.
+      dng 4         2026-11-09  likewise: ProRAW's embedded curve now per channel
+                                (OutputLook::curvePerChannel).
+      dng 5         2026-11-09  likewise: GamutClip in place of HighlightRolloff for it.
 */
 inline int revision(const QString &ext)
 {
     const QString e = ext.toLower();
     if (e == "cr2" || e == "cr3") return 1;
+    if (e == "dng") return 5;
     return 0;
 }
 

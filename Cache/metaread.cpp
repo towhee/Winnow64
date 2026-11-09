@@ -1,6 +1,7 @@
 #include "metaread.h"
 #include "Main/global.h"
 #include "Utilities/rowtrail.h"
+#include <QDeadlineTimer>
 
 namespace {
 /* RAII nanosecond accumulator for the Phase-2 perf probe. Adds elapsed time to acc on
@@ -531,6 +532,14 @@ void MetaRead::stopReaders()
 /*
     MetaRead::run dispatches all the readers and returns immediately. The isDispatched
     flag indicates that dispatching is still running.
+
+    BOUNDED. This used to invoke Reader::stop BlockingQueued on each reader in turn,
+    which waits for the reader's event loop -- i.e. for the read in flight to finish, with
+    no limit. A parse that never finished (a big-endian DNG read little-endian walked
+    16,777,216 SubIFDs) left quit beachballing forever. Now every reader is flagged, every
+    thread is told to quit (QThread::quit is thread-safe; the loop exits when the current
+    read returns), and all are waited on against ONE shared deadline. A thread still
+    running at the deadline is reported and left; readersStuck tells MW::closeEvent.
 */
 {
     QString fun = "MetaRead::stopReaders";
@@ -549,9 +558,30 @@ void MetaRead::stopReaders()
         readers[id]->signalAbort();
     }
 
-    // stop all readers
+    // stop all readers: quit every thread first, then wait on them together
     for (int id = 0; id < readerCount; ++id) {
-        QMetaObject::invokeMethod(readers[id], "stop", Qt::BlockingQueuedConnection);
+        QThread *t = readers[id]->readerThread;
+        if (t && t->isRunning()) t->quit();
+    }
+    const int kStopTimeoutMs = 3000;
+    QDeadlineTimer deadline(kStopTimeoutMs);
+    QStringList stuck;
+    stuckFiles.clear();
+    for (int id = 0; id < readerCount; ++id) {
+        QThread *t = readers[id]->readerThread;
+        if (!t || !t->isRunning()) continue;
+        if (!t->wait(deadline)) {
+            const QString f = readers[id]->fPathSnapshot();
+            stuck << QString::number(id) + ": " + f;
+            if (!f.isEmpty() && !stuckFiles.contains(f)) stuckFiles << f;
+        }
+    }
+    readersStuck = !stuck.isEmpty();
+    if (readersStuck) {
+        G::issue("Warning",
+                 QString("%1 reader(s) did not stop within %2 ms: ")
+                     .arg(stuck.size()).arg(kStopTimeoutMs) + stuck.join("; "),
+                 fun);
     }
 }
 

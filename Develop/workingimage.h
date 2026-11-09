@@ -14,6 +14,8 @@
 namespace Dcp { struct Profile; }
 /* Likewise the profile's look, built by Develop and applied by OutputTransform. */
 struct OutputLook;
+/* And a DNG's gain table map (Develop/gaintablemap.h), parsed by the DNG reader. */
+struct GainTableMap;
 
 struct WorkingImage;
 /*
@@ -105,6 +107,27 @@ struct CameraColor {
         every image that selected it.
     */
     std::shared_ptr<const Dcp::Profile> profile;
+
+    /*
+        WHAT A DNG CARRIES FOR ITS OWN RENDERING, stamped at decode by the Winnow engine
+        (RawFormat::StampRenderInfo -> DngRaw::RenderInfo); null / false for every other
+        format and for the Apple engine, which applies these itself.
+
+        embeddedProfile  the profile in IFD 0 (ColorMatrix, ProfileToneCurve, ...), what
+                         the Profile row offers as "Embedded". Selected by name like any
+                         profile (EditParams::kEmbeddedProfile), so it is attached at
+                         render time; this only says what that name resolves to.
+        gainMap          ProfileGainTableMap(2): NOT an edit -- the spec applies it to
+                         every render, straight after BaselineExposure. Applied ONCE, when
+                         the pixels leave camera-native (Develop::ToWorkingSpace).
+        baselineExposure the file's BaselineExposure (EV). A DNG states its own, so it
+                         replaces the per-model table (Develop/baselineexposure.h) when
+                         present; the gain map's input weights assume it.
+    */
+    std::shared_ptr<const Dcp::Profile> embeddedProfile;
+    std::shared_ptr<const GainTableMap> gainMap;
+    bool  hasBaselineExposure = false;
+    float baselineExposure = 0.0f;
 };
 
 struct WorkingImage {
@@ -147,6 +170,14 @@ struct WorkingImage {
        Orthogonal to `space`: together they are the full colour state -- WHICH primaries
        (space) and WHICH referring (this). Both needed; neither implies the other. */
     bool sceneReferred = false;
+
+    /* True when the RAW DECODER already tone-mapped these pixels: the Apple engine on
+       iPhone ProRAW, which keeps Apple's own rendering (its gain-table local tone map
+       and tone boost; see AppleRawDecode::Decode). sceneReferred stays true -- it also
+       means "the real raw decode, not the embedded-preview stand-in", which Auto and
+       ImageDecoder test -- but the output stage must not tone-map a second time, so
+       OutputTransform::EffectiveView forces None. */
+    bool decoderToneMapped = false;
 
     /* The RAW RENDERER that decoded these pixels (RawRender::Choice::tag(): "w", "a0",
        "a9"), set by RawFormat::Decode; empty for anything not decoded from a raw (a
@@ -265,6 +296,7 @@ inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)
     dst.white         = src.white;
     dst.space         = src.space;
     dst.sceneReferred = src.sceneReferred;
+    dst.decoderToneMapped = src.decoderToneMapped;
     dst.rawRenderTag  = src.rawRenderTag;
     dst.look          = src.look;
     dst.renderScale   = src.renderScale;

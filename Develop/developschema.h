@@ -49,7 +49,7 @@ namespace DevelopSchema {
 
 /* The schema version this build reads and writes. Must equal the `to` of the last
    released step (tst_developschema checks). */
-constexpr int kVersion = 1;
+constexpr int kVersion = 2;
 
 struct Step {
     int         to;         // the version this step produces (previous + 1)
@@ -63,7 +63,7 @@ struct Step {
     void (*stack)(QJsonObject &stack);
 };
 
-/* THE RELEASED STEPS, oldest first. Empty while kVersion is 1. A step looks like
+/* THE RELEASED STEPS, oldest first. A step looks like
 
        { 2, "2026-11-03", "Shadows recalibrated; your values were converted to match",
          [](QJsonObject &p, bool) {
@@ -74,7 +74,25 @@ struct Step {
 */
 inline const QVector<Step> &releasedSteps()
 {
-    static const QVector<Step> steps;
+    static const QVector<Step> steps = {
+        /*
+            2: TONE MAPPING'S DEFAULT BECAME "AUTO" (EditParams::kDefaultViewTransform).
+            viewTransform is always written, so every recipe from before carries the old
+            default, 1 (Standard roll-off), whether or not anyone chose it. It becomes
+            Auto, which renders exactly Standard roll-off on every file except one whose
+            gain table map already tone-maps it (iPhone ProRAW), where Standard roll-off
+            was the over-exposed render this change exists to fix. Recipes and History
+            only: a PRESET that stores Tone mapping stored it on purpose, so it is left.
+        */
+        { 2, "2026-11-09",
+          "Tone mapping now follows each image's default: iPhone ProRAW opens with its own "
+          "profile curve, every other raw with Standard roll-off as before",
+          [](QJsonObject &params, bool partial) {
+              if (!partial && params.value("viewTransform").toInt(-1) == 1)
+                  params["viewTransform"] = 6;
+          },
+          nullptr },
+    };
     return steps;
 }
 

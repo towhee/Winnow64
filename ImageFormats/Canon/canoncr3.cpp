@@ -218,9 +218,11 @@ bool CanonCR3::metaBox(quint32 &offset, quint32 &length)
              << "length =" << length;
 
     while (offset < metaEnd) {
+        const quint32 prev = offset;
         p->file.seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        if (offset <= prev) break;              // no-progress guard (length 0 / wrap)
     }
 
     offset = metaEnd;
@@ -524,11 +526,13 @@ bool CanonCR3::irefBox(quint32 &offset, quint32 &length)
     qDebug() << "CanonCR3::irefBox" << "offset =" << offset
              << "length =" << length << "sitrOffset" << sitrOffset;
     while (sitrOffset < irefEndOffset) {
+        const quint32 prev = sitrOffset;
         quint32 sitrLength;
         QString type;
         p->file.seek(sitrOffset);
-        nextHeifBox(sitrLength, type);
+        if (!nextHeifBox(sitrLength, type)) break;
         if (version == 0) sitrBox(sitrOffset, sitrLength);
+        if (sitrOffset <= prev) break;          // no-progress guard (version != 0 too)
 //        else sitrBoxL(sitrOffset, sitrLength);
         qDebug() << "CanonCR3::irefBox" << "irefEndOffset =" << irefEndOffset << "sitrOffset" << sitrOffset;
     }
@@ -831,9 +835,11 @@ bool CanonCR3::iprpBox(quint32 &offset, quint32 &length)
     offset += 16;
 
     while (offset < iprpEnd) {
+        const quint32 prev = offset;
         p->file.seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        if (offset <= prev) break;              // no-progress guard (length 0 / wrap)
     }
 
     offset = iprpEnd;
@@ -991,9 +997,11 @@ bool CanonCR3::moovBox(quint32 &offset, quint32 &length)
 //    offset += 24;
 
     while (offset < moovEnd) {
+        const quint32 prev = offset;
         p->file.seek(offset);
-        nextHeifBox(length, type);
+        if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
+        if (offset <= prev) break;              // no-progress guard (length 0 / wrap)
     }
 
     offset = moovEnd;

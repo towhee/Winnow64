@@ -203,8 +203,14 @@ struct EditParams {
 
        A JPEG IS UNAFFECTED whatever this says: OutputTransform forces None when
        img.sceneReferred is false, since a display-referred file already carries its
-       camera's tone curve and mapping it again would tone-map twice. */
-    static constexpr int kDefaultViewTransform = 1;     // OutputTransform::ViewTransform::Filmic
+       camera's tone curve and mapping it again would tone-map twice.
+
+       AUTO SINCE 2026-11-09 (schema 2): the default is now "the image's own default",
+       resolved against the image by OutputTransform::Resolve -- Filmic as before for
+       every file, except a DNG whose gain table map has already tone-mapped it (iPhone
+       ProRAW), which gets the file's own profile curve. Filmic above still describes
+       what an ordinary raw opens with. */
+    static constexpr int kDefaultViewTransform = 6;     // OutputTransform::ViewTransform::Auto
     int   viewTransform = kDefaultViewTransform;
 
     /*
@@ -243,6 +249,19 @@ struct EditParams {
         camera, and one part of a picture cannot have been taken by a different one.
     */
     QString cameraProfile;
+
+    /*
+        TWO RESERVED NAMES, resolved by CameraProfileStore::resolve rather than looked up.
+        kEmbeddedProfile is the profile in the FILE (a DNG's IFD 0) -- whichever file the
+        recipe lands on, so a preset carrying it means "each file's own". kBuiltInProfile
+        is Winnow Standard chosen EXPLICITLY, needed only on a file whose default is its
+        embedded profile (a DNG with a gain table map: iPhone ProRAW, where empty means
+        Embedded); everywhere else Winnow Standard is stored as empty, the identity.
+        Neither can collide with a real profile: Adobe names none "Embedded" and none
+        "Winnow Standard".
+    */
+    static constexpr const char *kEmbeddedProfile = "Embedded";
+    static constexpr const char *kBuiltInProfile  = "Winnow Standard";
 
 
     /* Point Color (the Point Color panel, Lightroom's Color Mixer > Point Color) -- up to

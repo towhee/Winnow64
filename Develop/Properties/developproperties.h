@@ -827,6 +827,10 @@ public slots:
        thread. currentRawRender() is the image in the dock. */
     RawRender::Choice rawRenderFor(const QString &fPath) const;
     RawRender::Choice currentRawRender() const;
+    /* The image in the dock renders with Apple's OWN rendering (Apple engine on an iPhone
+       ProRAW; AppleRawDecode::UsesAppleLook), so Tone mapping does not apply. False
+       until Core Image has opened the file this session. */
+    bool currentUsesAppleLook() const;
 
 signals:
     void paramsChanged();           // a develop value changed (decode hook; deferred)
@@ -1159,6 +1163,12 @@ private:
     void setViewTransform(int vt);
     void refreshViewTransformRow();
     bool profileHasToneCurve() const;
+    /* What the current FILE carries for its own rendering (a DNG's embedded profile and
+       gain table map -- DngRaw::RenderInfo), on a CameraColor with the camera model, for
+       CameraProfileStore::resolve. Read from the header, cached; no decode needed. */
+    CameraColor currentFileColor() const;
+    /* The tone mapping the current image renders with when the recipe says Auto. */
+    int autoViewTransform() const;
     static QString viewTransformName(int vt);
     void setWbDropperActive(bool on);
     void setDetailPickActive(bool on);
@@ -1179,6 +1189,7 @@ private:
     void setCurveSamplerActive(bool on);
     QPointer<QComboBox> wbCombo;
     QPointer<QComboBox> viewTransformCombo;
+    bool viewTransformAppleLook = false;    // the Tone mapping row was built for it
     QPointer<QComboBox> cameraProfileCombo;
     QPointer<BarBtn> wbDropperBtn;
     bool wbDropperActive = false;

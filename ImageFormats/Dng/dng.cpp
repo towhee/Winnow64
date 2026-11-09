@@ -6,6 +6,8 @@
 #include "ImageFormats/Raw/losslessjpeg.h"
 #include "ImageFormats/Raw/rawimage.h"
 #include "ImageFormats/Dng/dngjxl.h"
+#include "ImageFormats/Dcp/dcp.h"
+#include "Develop/gaintablemap.h"
 #include <opencv2/core.hpp>
 #include <atomic>
 #include <cmath>
@@ -408,6 +410,8 @@ enum DngTag {
     LinearizationTable = 50712,
     BlackLevel = 50714, WhiteLevel = 50717, ColorMatrix1 = 50721, ColorMatrix2 = 50722,
     AsShotNeutral = 50728, AsShotWhiteXY = 50729, NoiseProfile = 51041,
+    AnalogBalance = 50727, BaselineExposureTag = 50730,
+    ProfileGainTableMap = 52525, ProfileGainTableMap2 = 52544,
     SamplesPerPixel = 277, SampleFormat = 339, BlackLevelRepeatDim = 50713,
     OpcodeList2 = 51009
 };
@@ -631,6 +635,7 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         RawSensorInfo ci;
         if (haveIfd0 && ReadAsShotColor(file, m, ci)) {
             for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+            raw.asShotStated = ci.asShotStated;
             if (ci.hasColorMatrix)
                 for (int i = 0; i < 3; ++i)
                     for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
@@ -652,6 +657,7 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
                     raw.camMul[1] = float(1.0 / n[1]);
                     raw.camMul[2] = float(1.0 / n[2]);
                     raw.camMul[3] = float(1.0 / n[1]);
+                    raw.asShotStated = true;
                 }
             }
         }
@@ -683,9 +689,25 @@ bool DngRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo 
     if (cmTag) {
         const QVector<double> cm = r.reals(ifd0[cmTag]);
         if (cm.size() >= 9) {
+            /*
+                ANALOG BALANCE IS PART OF THE MATRIX. The spec's XYZ -> camera is
+                AnalogBalance * CameraCalibration * ColorMatrix, and AsShotNeutral is a
+                neutral in THAT camera space -- the stored values already carry the analog
+                gains. Almost every DNG writes 1,1,1 (or nothing), but iPhone ProRAW
+                writes (2.09, 1, 2.27) with AsShotNeutral (1, 1, 1): the data is balanced
+                by the analog gains, and reading ColorMatrix alone put white somewhere
+                else entirely. CameraCalibration is left out, as the profile path's
+                built-in fallback leaves it: per-unit and identity in every file seen.
+            */
+            double ab[3] = {1.0, 1.0, 1.0};
+            if (ifd0.contains(AnalogBalance)) {
+                const QVector<double> v = r.reals(ifd0[AnalogBalance]);
+                if (v.size() >= 3 && v[0] > 0 && v[1] > 0 && v[2] > 0)
+                    for (int i = 0; i < 3; ++i) ab[i] = v[i];
+            }
             for (int i = 0; i < 3; ++i)
                 for (int j = 0; j < 3; ++j)
-                    info.xyzToCam[i][j] = float(cm[i * 3 + j]);
+                    info.xyzToCam[i][j] = float(ab[i] * cm[i * 3 + j]);
             info.hasColorMatrix = true;
         }
     }
@@ -696,6 +718,7 @@ bool DngRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo 
             info.camMul[1] = float(1.0 / n[1]);
             info.camMul[2] = float(1.0 / n[2]);
             info.camMul[3] = float(1.0 / n[1]);
+            info.asShotStated = true;
         }
     } else if (ifd0.contains(AsShotWhiteXY) && info.hasColorMatrix) {
         /* The DNG spec's other as-shot form: a white chromaticity instead of a camera
@@ -713,6 +736,7 @@ bool DngRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo 
                 info.camMul[1] = 1.0f;
                 info.camMul[2] = float(n[1] / n[2]);
                 info.camMul[3] = 1.0f;
+                info.asShotStated = true;
             }
         }
     }
@@ -973,6 +997,7 @@ RawFormat::LinearResult DngRaw::UnpackLinear(QFile &file, const ImageMetadata &m
     RawSensorInfo ci;
     if (ReadAsShotColor(file, m, ci)) {
         for (int i = 0; i < 4; ++i) raw.camMul[i] = ci.camMul[i];
+        raw.asShotStated = ci.asShotStated;
         if (ci.hasColorMatrix)
             for (int i = 0; i < 3; ++i)
                 for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = ci.xyzToCam[i][j];
@@ -986,6 +1011,83 @@ RawFormat::LinearResult DngRaw::UnpackLinear(QFile &file, const ImageMetadata &m
     IFD0 thumbnail (see DNG::parse), so this is what the loupe shows when the main image
     is not decoded. False when there is none, or the build has no libjxl.
 */
+std::shared_ptr<const DngRaw::RenderInfoData> DngRaw::RenderInfo(const QString &path)
+{
+/*
+    See the header. Cached by path + size + modified time: a renamed or rewritten file is a
+    different entry, and a stale one is simply never asked for again. A few hundred files
+    at most per session (one per DNG opened in Develop), each a profile and a ~200 KB map.
+*/
+    static std::mutex m;
+    static QHash<QString, std::shared_ptr<const RenderInfoData>> cache;
+    const QFileInfo fi(path);
+    const QString key = path + '|' + QString::number(fi.size()) + '|' +
+                        QString::number(fi.lastModified().toMSecsSinceEpoch());
+    {
+        std::lock_guard<std::mutex> lock(m);
+        if (auto it = cache.constFind(key); it != cache.constEnd()) return *it;
+    }
+
+    auto info = std::make_shared<RenderInfoData>();
+    QFile file(path);
+    if (file.open(QIODevice::ReadOnly)) {
+        using namespace TiffWalk;
+        Reader r;
+        if (r.init(&file)) {
+            const QVector<Ifd> ifds = allIfds(r);
+            if (!ifds.isEmpty()) {
+                const Ifd &ifd0 = ifds.first();
+
+                if (ifd0.contains(BaselineExposureTag)) {
+                    const QVector<double> v = r.reals(ifd0[BaselineExposureTag]);
+                    if (!v.isEmpty() && std::isfinite(v[0])) {
+                        info->hasBaselineExposure = true;
+                        info->baselineExposure = float(v[0]);
+                    }
+                }
+
+                /* The embedded profile: IFD 0's profile tags, read by the same parser a
+                   .dcp goes through. Only a profile with a ColorMatrix is offered -- it is
+                   what the white balance is solved against. */
+                auto prof = std::make_shared<Dcp::Profile>();
+                if (Dcp::parseIfd(r, ifd0, *prof) && prof->valid && prof->cal[0].haveColor)
+                    info->embeddedProfile = prof;
+
+                /* The gain map: version 2 in IFD 0 supersedes version 1 in the raw IFD
+                   (DNG 1.7.1 p. 88). A profile-IFD map (ExtraCameraProfiles) is not
+                   read: Winnow selects only the IFD 0 profile. */
+                auto map = std::make_shared<GainTableMap>();
+                bool haveMap = false;
+                if (ifd0.contains(ProfileGainTableMap2))
+                    haveMap = GainTableMap::Parse(r.bytes(ifd0[ProfileGainTableMap2]),
+                                                  r.big(), true, *map);
+                if (!haveMap) {
+                    Ifd rawIfd = mainImage(r, ifds, PHOTO_CFA);
+                    if (rawIfd.isEmpty()) rawIfd = mainImage(r, ifds, PHOTO_LINEAR_RAW);
+                    const Ifd &src = rawIfd.contains(ProfileGainTableMap) ? rawIfd : ifd0;
+                    if (src.contains(ProfileGainTableMap))
+                        haveMap = GainTableMap::Parse(r.bytes(src[ProfileGainTableMap]),
+                                                      r.big(), false, *map);
+                }
+                if (haveMap && map->isValid()) info->gainMap = map;
+            }
+        }
+    }
+
+    std::lock_guard<std::mutex> lock(m);
+    cache.insert(key, info);
+    return info;
+}
+
+void DngRaw::StampRenderInfo(const QString &path, CameraColor &cam)
+{
+    const auto info = RenderInfo(path);
+    cam.embeddedProfile = info->embeddedProfile;
+    cam.gainMap = info->gainMap;
+    cam.hasBaselineExposure = info->hasBaselineExposure;
+    cam.baselineExposure = info->baselineExposure;
+}
+
 bool DngRaw::ReadJxlPreview(QFile &file, QImage &image)
 {
     using namespace TiffWalk;

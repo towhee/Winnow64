@@ -306,10 +306,15 @@ inline bool ViewClampsToWhite(OutputTransform::ViewTransform vt)
 }
 
 /*
-    The transform actually applied. Two rules, one place:
+    The transform actually applied. Four rules, one place:
 
       display-referred input   forced to None: the camera baked its own curve in before
                                Winnow saw it, and a second would tone-map twice.
+      decoder tone-mapped      forced to None for the same reason: the Apple engine kept
+                               Apple's own rendering of an iPhone ProRAW
+                               (WorkingImage::decoderToneMapped).
+      Auto                     the image's default: Profile curve (or None) when the file's
+                               gain table map has already tone-mapped it, else Filmic.
       Profile curve, no curve  the selected profile carries no ProfileToneCurve (Adobe
                                Standard, a Camera Base, Winnow's own matrix), so there is
                                nothing to apply; it renders as Standard roll-off, the
@@ -322,11 +327,23 @@ inline OutputTransform::ViewTransform EffectiveView(OutputTransform::ViewTransfo
                                                     const WorkingImage &img)
 {
     if (!img.sceneReferred) return OutputTransform::ViewTransform::None;
-    if (vt == OutputTransform::ViewTransform::ProfileCurve &&
-        !(img.look && img.look->hasProfileCurve()))
+    if (img.decoderToneMapped) return OutputTransform::ViewTransform::None;
+    const bool hasCurve = img.look && img.look->hasProfileCurve();
+    if (vt == OutputTransform::ViewTransform::Auto) {
+        /* A gain table map has already fitted the range (BaselineExposure lifts, the map
+           pulls back); Standard roll-off on top lifts it again -- measured on an iPhone
+           17 Pro DNG, median 0.80 vs the file's own preview 0.53. The DNG chain finishes
+           with the profile's curve, or with nothing when the profile has none. */
+        if (img.cam.gainMap)
+            return hasCurve ? OutputTransform::ViewTransform::ProfileCurve
+                            : OutputTransform::ViewTransform::None;
+        return OutputTransform::ViewTransform::Filmic;
+    }
+    if (vt == OutputTransform::ViewTransform::ProfileCurve && !hasCurve)
         return OutputTransform::ViewTransform::Filmic;
     return vt;
 }
+
 
 /* The camera curves: applied hue-preservingly (CameraCurve::ApplyRGBTone) per pixel, so
    they leave the 1-D table paths and take the camera path in ToImage / ToImage16. */
@@ -456,6 +473,40 @@ inline void HighlightRolloff(float &r, float &g, float &b)
     r = qMin(1.0f, r + bleed);
     g = qMin(1.0f, g + bleed);
     b = qMin(1.0f, b + bleed);
+}
+
+/*
+    GamutClip: the output step for iPhone ProRAW's embedded curve (CameraPath::perChannel)
+    in place of HighlightRolloff. That curve is applied per channel and tops out below
+    white, so nothing reaching here is OVER-EXPOSED -- a channel over 1.0 means a colour
+    more saturated than the output gamut, and the bleed then lifts the other two channels
+    toward white as if it were light. On IMG_1106 (2026-11-09, candle-lit pumpkins) that
+    drew a pink-white halo round every cut-out: 4.8% of pixels went over 1.0 in sRGB and
+    99.6% of those had a NEGATIVE channel, the mark of out-of-gamut, not of brightness.
+    Pumpkin hue / luma against Apple's render (11.4 deg / 0.339):
+        bleed (HighlightRolloff)          7.0 / 0.377   face |error| 0.063  the halo
+        per-channel clip                  8.0 / 0.322                0.016
+        this: luma-held desaturate, clip 11.9 / 0.350                0.023
+    So: pull the colour toward the grey of its own luminance (output primaries) just far
+    enough to lift the negative channel to 0, then clip. Hue and brightness hold; only
+    the part of the saturation the output cannot show is given up, as Apple's renderer
+    does. The bleed stays everywhere else: it was matched to Lightroom on Winnow's own
+    curves.
+*/
+inline void GamutClip(const ColorSpaceMath::Luma &lw, float &r, float &g, float &b)
+{
+    const float mn = qMin(r, qMin(g, b));
+    if (mn < 0.0f) {
+        const float y = lw.r * r + lw.g * g + lw.b * b;
+        if (y <= 0.0f) { r = g = b = 0.0f; return; }
+        const float k = y / (y - mn);
+        r = y + (r - y) * k;
+        g = y + (g - y) * k;
+        b = y + (b - y) * k;
+    }
+    r = qBound(0.0f, r, 1.0f);
+    g = qBound(0.0f, g, 1.0f);
+    b = qBound(0.0f, b, 1.0f);
 }
 
 /*
@@ -658,6 +709,7 @@ struct CameraPath {
     float offset = 1.0f;                // 2^BaselineExposureOffset, before the table
     float unOffset = 1.0f;              // after it: 1/offset unless the profile curve
     const CameraCurve::Curve *curve = nullptr;   // non-null: RGBTone with this curve
+    bool perChannel = false;            // ...or per channel (OutputLook::curvePerChannel)
 };
 
 /*
@@ -693,7 +745,10 @@ CameraPath CameraPathFor(OutputTransform::ViewTransform vt, const WorkingImage &
         cp.offset = look->exposureScale;
         cp.unOffset = profileCurve ? 1.0f : 1.0f / look->exposureScale;
     }
-    if (profileCurve && look) cp.curve = &look->profileCurve;
+    if (profileCurve && look) {
+        cp.curve = &look->profileCurve;
+        cp.perChannel = look->curvePerChannel;
+    }
     else if (vt == OutputTransform::ViewTransform::CameraContrast)
         cp.curve = &CameraCurve::ForCameraModel(img.cam.cameraModel);
     else if (vt == OutputTransform::ViewTransform::FilmicHue)
@@ -737,7 +792,12 @@ inline void CameraLookAndTone(const CameraPath &cp, OutputTransform::ViewTransfo
     }
 
     if (cp.curve) {
-        CameraCurve::ApplyRGBTone(*cp.curve, v[0], v[1], v[2]);
+        if (cp.perChannel) {
+            v[0] = cp.curve->eval(v[0]);
+            v[1] = cp.curve->eval(v[1]);
+            v[2] = cp.curve->eval(v[2]);
+        }
+        else CameraCurve::ApplyRGBTone(*cp.curve, v[0], v[1], v[2]);
         return;
     }
     if (!vm.preIdentity) ToPrimaries(vm.pre, v[0], v[1], v[2]);
@@ -828,6 +888,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
                                                                      : &ViewOnlyLut(vt);
         const TransferLut &encLut = LutFor(OutputTransform::ViewTransform::None,
                                            enc.gammaInv);
+        const ColorSpaceMath::Luma outLuma = ColorSpaceMath::lumaWeights(LinearOf(space));
         auto processRowsCam = [=, &encLut](int y0, int y1) {
             for (int y = y0; y < y1; ++y) {
                 uchar *line = bits + static_cast<qsizetype>(y) * bpl;
@@ -838,7 +899,8 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
                     for (int c = 0; c < 3; ++c) v[c] = rgb[o + c] * scale;
                     CameraLookAndTone(cp, vt, vm, viewLut, v);
                     if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
-                    HighlightRolloff(v[0], v[1], v[2]);
+                    if (cp.perChannel) GamutClip(outLuma, v[0], v[1], v[2]);
+                    else HighlightRolloff(v[0], v[1], v[2]);
                     for (int c = 0; c < 3; ++c)
                         line[x * 3 + c] = static_cast<uchar>(
                             std::lround(LutValue(encLut, v[c]) * 255.0f));
@@ -974,6 +1036,7 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
        the look-and-tone step differs. */
     const CameraPath cp = CameraPathFor(vt, img);
     const bool camActive = CameraPathActive(cp);
+    const ColorSpaceMath::Luma outLuma = ColorSpaceMath::lumaWeights(LinearOf(space));
 
     auto processRows = [=](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
@@ -991,7 +1054,8 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
                     for (int c = 0; c < 3; ++c) v[c] = ViewCurve(vt, v[c]);
                 }
                 if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
-                HighlightRolloff(v[0], v[1], v[2]);
+                if (camActive && cp.perChannel) GamutClip(outLuma, v[0], v[1], v[2]);
+                else HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)
                     line[x * 4 + c] = static_cast<quint16>(
                         std::lround(Transfer(v[c], enc.gammaInv) * 65535.0f));
@@ -1035,4 +1099,10 @@ float OutputTransform::PerceptualFromDisplay(float display, ViewTransform view,
         if (DisplayPosition(mid, view) < display) lo = mid; else hi = mid;
     }
     return 0.5f * (lo + hi);
+}
+
+OutputTransform::ViewTransform OutputTransform::Resolve(ViewTransform vt,
+                                                        const WorkingImage &img)
+{
+    return EffectiveView(vt, img);
 }

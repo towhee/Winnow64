@@ -27,6 +27,10 @@ profiles installed.  Winnow does not ship profiles &mdash; they belong to whoeve
 them &mdash; it reads the ones you already have, and any you put in Winnow&rsquo;s own
 <tt>CameraProfiles</tt> folder.</p>
 
+<p><b>Embedded</b> appears when the file carries a profile of its own, as a DNG can.  On an
+iPhone ProRAW file it is the default: the file also stores Apple&rsquo;s local tone map,
+which Winnow applies to every render of that file whatever profile you choose.</p>
+
 <p><b>Open the list and move down it</b> &mdash; with the mouse or the arrow keys &mdash;
 and each profile is shown on the image as you pass over it.  Nothing is committed until you
 click, and pressing Esc puts the picture back.  Profile names say very little about what
@@ -85,8 +89,8 @@ does not mean quite the same thing under each setting, which is why it is worth 
 first.</p>
 
 <ul>
-<li><b>Standard roll-off</b> is the default: a brightness lift and a smooth highlight
-roll-off.  Familiar and contrasty, close to how the camera would have rendered the shot,
+<li><b>Standard roll-off</b> is the default for most raw files: a brightness lift and a
+smooth highlight roll-off.  Familiar and contrasty, close to how the camera would have rendered the shot,
 and close to what Lightroom shows you for the same file.  It is also where <b>Reset
 Basic</b> puts you.  (This is the transform published as <i>Filmic</i>.)</li>
 <li><b>Standard roll-off (hue-preserving)</b> is the same tone, applied the way Lightroom
@@ -113,7 +117,10 @@ tone.</li>
 &mdash; Camera Neutral&rsquo;s gentle one, Camera Vivid&rsquo;s punchier one &mdash; again
 with the smooth roll-off above it, as Lightroom shows that profile.  Only profiles that
 carry a curve offer it (the <b>Camera&nbsp;&hellip;</b> family); otherwise it is greyed
-out, and an image left on it renders with Standard roll-off.</li>
+out, and an image left on it renders with Standard roll-off.  An iPhone ProRAW file opens
+on it: its own tone map has already fitted the brightness range, so it finishes with the
+file&rsquo;s own curve rather than with Standard roll-off, which would brighten it a
+second time.</li>
 <li><b>None</b>, set apart at the foot of the list, applies no mapping at all: the image is
 shown as the sensor recorded it, which looks dark and flat.  That is not a fault &mdash; it
 is the unrendered data, and it is the right starting point for building a look entirely of

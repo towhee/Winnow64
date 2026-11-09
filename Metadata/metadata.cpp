@@ -677,7 +677,10 @@ void Metadata::developCropFactors(const QString &blob, int width, int height,
     the newest. The "c2" changed them once more: the Apple decode had been rendering
     linear sRGB into the Rec.2020 working space (oversaturated, greens cyan), and every
     preview built that way must miss. "c3": the boost (Apple's tone curve) and its
-    sharpening were turned off, so the output is scene-linear like Winnow's.
+    sharpening were turned off, so the output is scene-linear like Winnow's. "c4": the
+    local tone map returned to Apple's per-image default (ProRAW's gain table map) and
+    extended dynamic range was turned on (decodes had clipped at 1.0). "c5": iPhone
+    ProRAW keeps Apple's own rendering (tone boost on, no Winnow tone mapping).
 
     THE PIN IS NOT THE VERSION A FILE DECODES WITH: under "newest" a camera Apple adds
     to decoder 9 moves from 8 to 9 with the key unchanged, and its version-8 previews

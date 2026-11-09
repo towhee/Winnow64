@@ -3,6 +3,7 @@
 #include "Develop/huesatmap.h"
 #include "Develop/outputlook.h"
 #include "Develop/baselineexposure.h"
+#include "Develop/gaintablemap.h"
 #include "Develop/colorspace.h"
 #include "Develop/whitebalance.h"
 #include "Develop/calibrate.h"
@@ -480,7 +481,9 @@ inline void setHighlightRecovery(ToneShape &t, float exposure)
     t.lutMaxN = kToneLutMaxN * std::exp2(exposure);
 }
 
-inline ToneShape buildToneShape(const EditParams &p)
+/* view is the transform this render will actually use (OutputTransform::Resolve against
+   the image) -- the tone shape is placed on ITS display axis. */
+inline ToneShape buildToneShape(const EditParams &p, OutputTransform::ViewTransform view)
 {
     ToneShape t;
     t.pivot = std::pow(0.18f, kInvGamma);
@@ -515,7 +518,7 @@ inline ToneShape buildToneShape(const EditParams &p)
     t.hiShift = hiC - 0.75f;
     t.reach   = crX - 0.50f;
 
-    t.view = OutputTransform::ViewFromInt(p.viewTransform);
+    t.view = view;
     t.active = (t.slope != 1.0f) || (t.bk != 0.0f) || (t.sh != 0.0f) ||
                (t.hi != 0.0f) || (t.wh != 0.0f);
     setHighlightRecovery(t, p.exposure);
@@ -795,8 +798,14 @@ bool Develop::InputMatrix(const WorkingImage &img, const EditParams *p,
     /* THE CAMERA'S BASELINE EXPOSURE, folded in here because this matrix is applied
        exactly once per image (ToWorkingSpace or the preMat fold) -- a mask layer works on
        a copy of the converted base and never sees it again. A uniform scale, so it
-       commutes with the white balance in the matrix. See Develop/baselineexposure.h. */
-    const float k = std::exp2(BaselineExposure::ForModel(img.cam.cameraModel));
+       commutes with the white balance in the matrix. See Develop/baselineexposure.h.
+       A DNG STATES ITS OWN (CameraColor::baselineExposure) and that wins: the table is
+       what Adobe's converter writes for a proprietary raw, so for a DNG the file IS the
+       authority -- and a gain table map's input weights assume exactly that value. */
+    const float ev = img.cam.hasBaselineExposure
+                         ? img.cam.baselineExposure
+                         : BaselineExposure::ForModel(img.cam.cameraModel);
+    const float k = std::exp2(ev);
     if (ok && k != 1.0f)
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j) m[i][j] *= k;
@@ -873,6 +882,8 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
         look->lookTable = t.lookTable;
         look->exposureScale = t.exposureScale;
         look->profileCurve = t.toneCurve;
+        look->curvePerChannel = img.cam.gainMap &&
+                                img.cam.profile == img.cam.embeddedProfile;
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j) {
                 look->toTable[i][j]   = t.toTable[i][j];
@@ -912,6 +923,59 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
     });
 }
 
+/*
+    THE FILE'S GAIN TABLE MAP (Develop/gaintablemap.h), on pixels just converted to the
+    working space -- so after the white balance and BaselineExposure the input matrix
+    carries, and before any edit, which is where the DNG spec puts it. Not an edit: it is
+    applied to every render of a file that carries one, including an untouched one.
+
+    Its input is read in linear RIMM (ProPhoto D50); the gain is a scalar, so it is applied
+    to the working-space pixels directly. Positions are relative to the FRAME: a Detail
+    patch (frameW > 0) is a crop of it, a proxy or a statistics sample is all of it.
+    Per-row and per-column grid lookups are precomputed; per pixel it is a 3x3, a dot
+    product and four table reads.
+*/
+static void ApplyGainTableMap(WorkingImage &img)
+{
+    const GainTableMap *map = img.cam.gainMap.get();
+    if (!map || !map->isValid() || !img.isValid()) return;
+    float to[3][3], from[3][3];
+    if (!CameraProfile::workingToProPhoto(to, from)) return;
+
+    const int w = img.width, h = img.height;
+    const bool cropped = img.frameW > 0 && img.frameH > 0;
+    const double fw = cropped ? img.frameW : w, fh = cropped ? img.frameH : h;
+    const double fx = cropped ? img.frameX : 0, fy = cropped ? img.frameY : 0;
+    std::vector<int> col0(w), row0(h);
+    std::vector<float> colW(w), rowW(h);
+    for (int x = 0; x < w; ++x)
+        GainTableMap::Axis((fx + x + 0.5) / fw, map->originH, map->spacingH,
+                           map->pointsH, col0[x], colW[x]);
+    for (int y = 0; y < h; ++y)
+        GainTableMap::Axis((fy + y + 0.5) / fh, map->originV, map->spacingV,
+                           map->pointsV, row0[y], rowW[y]);
+
+    float *rgb = img.rgb.data();
+    const size_t n = static_cast<size_t>(w) * static_cast<size_t>(h);
+    const int *c0 = col0.data(), *r0 = row0.data();
+    const float *cw = colW.data(), *rw = rowW.data();
+    parallelFor(n, [=](size_t i0, size_t i1) {
+        size_t y = i0 / size_t(w), x = i0 % size_t(w);
+        for (size_t i = i0; i < i1; ++i) {
+            float *px = rgb + i * 3;
+            const float r = px[0], g = px[1], b = px[2];
+            const float pr = to[0][0] * r + to[0][1] * g + to[0][2] * b;
+            const float pg = to[1][0] * r + to[1][1] * g + to[1][2] * b;
+            const float pb = to[2][0] * r + to[2][1] * g + to[2][2] * b;
+            const float gain = map->Gain(r0[y], rw[y], c0[x], cw[x], map->Input(pr, pg, pb));
+            px[0] = r * gain;
+            px[1] = g * gain;
+            px[2] = b * gain;
+            if (++x == size_t(w)) { x = 0; ++y; }
+        }
+    });
+}
+
 void Develop::ToWorkingSpace(WorkingImage &img, const EditParams *p)
 {
     if (img.space != ColorSpaceMath::ColorSpace::CameraNative) return;
@@ -936,6 +1000,9 @@ void Develop::ToWorkingSpace(WorkingImage &img, const EditParams *p)
         });
     }
     img.space = ColorSpaceMath::kWorking;
+    /* Once, here: this is the one place camera-native pixels become working pixels, and a
+       mask scope works on a copy of the converted base, so it is never applied twice. */
+    ApplyGainTableMap(img);
 }
 
 bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
@@ -1002,11 +1069,22 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
        of a profile is: the conversion has to happen as its own pass first, exactly as an
        active Denoise forces it to. */
     const bool tablesActive = ProfileTablesActive(img, p);
-    if (p.isIdentity() || denoiseActive || tablesActive) ToWorkingSpace(img, &p);
+    /* A GAIN TABLE MAP likewise: it is spatial, so it cannot ride the fused point pass
+       either, and it must run on every render of the file, edited or not. */
+    const bool gainMapActive = img.cam.gainMap != nullptr &&
+                               img.space == ColorSpaceMath::ColorSpace::CameraNative;
+    if (p.isIdentity() || denoiseActive || tablesActive || gainMapActive)
+        ToWorkingSpace(img, &p);
 
     if (p.isIdentity()) {                                // see the note below
-        img.cam.profile.reset();
+        /* A profile attached under an identity recipe can only be a file's DEFAULT one
+           (isIdentity() requires an empty name; CameraProfileStore::resolve gives an
+           iPhone ProRAW its embedded profile). Its matrix is in the pixels already
+           (ToWorkingSpace); its look must still reach the output stage, or the file's
+           curve would appear only once something was edited. No profile: no look. */
         img.look.reset();
+        ApplyProfileTables(img, p);
+        img.cam.profile.reset();
         handOnSample();
         if (t) t->setupMs = probe.elapsed();
         return true;
@@ -2040,8 +2118,8 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
                runs: DisplayPosition, then undo its sRGB transfer), and the inverse by a
                monotone walk of the same samples. Where the view clips (v flat at 1) the
                walk takes the FIRST n to reach it. */
-            const OutputTransform::ViewTransform view =
-                OutputTransform::ViewFromInt(p.viewTransform);
+            const OutputTransform::ViewTransform view = OutputTransform::Resolve(
+                OutputTransform::ViewFromInt(p.viewTransform), img);
             const int N = PointCoeffs::kGradeTfN;
             c.gradeNMax = kToneLutMaxN;
             for (int i = 0; i < N; ++i) {
@@ -2142,7 +2220,8 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
        Built AFTER the front matrix above: Highlights -'s strength depends on where the
        frame's pixels sit on the display axis, which is those pixels through exactly
        that matrix (exposure, white balance, profile). */
-    ToneShape shape = buildToneShape(p);
+    ToneShape shape = buildToneShape(
+        p, OutputTransform::Resolve(OutputTransform::ViewFromInt(p.viewTransform), img));
     constexpr int kLumBins = 2048;
     constexpr float kLumBinSMax = 4.0f;
     std::vector<long long> lumBins;    // Highlights -: frame luminance, for the anchor
@@ -2426,7 +2505,12 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
 void Develop::ParametricCurve(const EditParams &p, float *out, int n)
 {
     if (!out || n < 2) return;
-    const ToneShape shape = buildToneShape(p);
+    /* No image here (the Curves panel's drawing): Auto is drawn as Standard roll-off, what
+       it resolves to on every file without a gain table map. */
+    OutputTransform::ViewTransform view = OutputTransform::ViewFromInt(p.viewTransform);
+    if (view == OutputTransform::ViewTransform::Auto)
+        view = OutputTransform::ViewTransform::Filmic;
+    const ToneShape shape = buildToneShape(p, view);
     for (int i = 0; i < n; ++i) {
         const float s = static_cast<float>(i) / (n - 1);
         out[i] = qBound(0.0f, applyToneShape(shape, s), 1.0f);
