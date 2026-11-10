@@ -358,6 +358,7 @@ void MW::createDataModel()
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(filters, &Filters::mergeUnfiledKeyword, this, &MW::mergeUnfiledKeyword);
     connect(filters, &Filters::filterOnRequested, this, &MW::filterOnColumn);
+    connect(filters, &Filters::filterOnlyItemRequested, this, &MW::filterOnlyItem);
     connect(filters, &Filters::moveImagesToFolderRequested, this, &MW::moveImagesToFolder);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     // versions (virtual copies): a master re-read after the load -- see Main/mwversions.cpp

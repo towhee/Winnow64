@@ -2157,6 +2157,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
 
     QAction *inc = menu.addAction("Include");
     QAction *exc = menu.addAction("Exclude");
+    QAction *only = menu.addAction("Filter only this");
     QAction *clr = menu.addAction("Clear");
     inc->setCheckable(true);
     exc->setCheckable(true);
@@ -2172,6 +2173,7 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     QAction *chosen = menu.exec(event->globalPos());
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
+    else if (chosen == only) emit filterOnlyItemRequested(item);
     else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
     else if (merge != nullptr && chosen == merge)
         emit mergeUnfiledKeyword(item->data(1, Qt::EditRole).toString());
@@ -4916,6 +4918,13 @@ void Filters::mousePressEvent(QMouseEvent *event)
             "item1 remained checked" -- and on every one of these paths it ran MW::filterChange
             a SECOND time over the whole model, which is filtration the user waits for
             twice to arrive where they already were. */
+        /* Cmd/Ctrl+Opt/Alt+click SOLOS the item: it alone is included and every other
+           filter is cleared. Checked before plain Opt+click, which excludes. */
+        if (isAltModifier && isCtrlModifier) {
+            emit filterOnlyItemRequested(item);
+            swallowNextRelease = true;
+            return;
+        }
         if (isShiftModifier && !isAltModifier && applyRangeCheck(item)) {
             swallowNextRelease = true;
             return;

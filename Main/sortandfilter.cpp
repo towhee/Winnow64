@@ -980,6 +980,22 @@ void MW::filterOnKeyword(const QString &path)
     filterChange("MW::filterOnKeyword");
 }
 
+void MW::filterOnlyItem(QTreeWidgetItem *item)
+{
+/*
+    Show only the images matching this Filters item: every other filter -- categories,
+    the search text, the pick/rating/colour actions -- is cleared, then the item is
+    included. setItemFilterState emits the ONE filterChange.
+*/
+    if (G::isLogger) G::log("MW::filterOnlyItem");
+    if (!filters || !dm || !item) return;
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+    uncheckAllFilters();
+    filters->searchString = "";
+    dm->searchStringChange("");
+    filters->setItemFilterState(item, Qt::Checked);
+}
+
 void MW::applyMapPinFilter(const QList<int> &dmRows, bool add)
 {
 /*

@@ -395,6 +395,10 @@ signals:
         MW confirms, moves and refreshes -- see MW::moveImagesToFolder. */
     void moveImagesToFolderRequested(const QStringList &paths, const QStringList &rowKeys,
                                      const QString &folder);
+    /*  Cmd/Ctrl+Opt/Alt+click on an item: show only that item. MW clears every other
+        filter -- categories, search text, pick/rating/colour actions -- then includes
+        it. See MW::filterOnlyItem. */
+    void filterOnlyItemRequested(QTreeWidgetItem *item);
 
 public slots:
 

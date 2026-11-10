@@ -854,6 +854,7 @@
     - [18.1.2 Search Is a Filter Category](#1812-search-is-a-filter-category)
     - [18.1.3 Leaving and Entering a Scope](#1813-leaving-and-entering-a-scope)
     - [18.1.4 Expand Checked Filters](#1814-expand-checked-filters)
+    - [18.1.5 Filter on Only This Item](#1815-filter-on-only-this-item)
   - [18.2 Categories](#182-categories)
     - [18.2.1 The Catalog's Categories Come From One SQL Map](#1821-the-catalogs-categories-come-from-one-sql-map)
     - [18.2.2 Capture Times Are the Camera's Wall Clock, Not an Instant](#1822-capture-times-are-the-cameras-wall-clock-not-an-instant)
@@ -10444,6 +10445,14 @@ The panel's right-click menu has "Expand checked filters" beside Expand all / Co
 - Either state counts: an exclusion (PartiallyChecked) filters just as an inclusion does, the same rule as isAnyFilterBut. The Search row counts only when it holds a query, not the "Enter search query" placeholder.
 - Every ANCESTOR of a checked item is opened, not just its category: the group header when grouped, and each branch above a nested keyword, so the check itself is on screen.
 - Shortcut Shift+E, next to Shift+C (clear all filters). A left double-click in the blank area below the rows (indexAt invalid) runs it too -- Filters::mouseDoubleClickEvent.
+
+#### 18.1.5 Filter on Only This Item
+
+Cmd/Ctrl+Opt/Alt+click on an item SOLOS it: that item alone is included and every other filter is cleared. Filters::mousePressEvent tests it before plain Opt+click (exclude), emits filterOnlyItemRequested and swallows the release ([4.1.6](#416-a-press-that-settles-a-filter-must-swallow-the-release)).
+
+- MW::filterOnlyItem does the clearing, not Filters, for the same reason as MW::filterOnKeyword: "every other filter" includes the search text and the pick / rating / colour / last-day actions, which MW owns. It runs MW::uncheckAllFilters, clears the search string, then Filters::setItemFilterState(item, Checked), whose one filterChange applies the result.
+- The modifier pair is Cmd+Opt rather than Opt alone because Opt+click is already exclude.
+- The item's right-click menu offers it too, as "Filter only this" below Exclude (Filters::contextMenuEvent emits the same signal).
 
 ### 18.2 Categories
 

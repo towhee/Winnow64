@@ -543,6 +543,28 @@
        </item>
        <item>
         <property name="text">
+         <string>Filter on only this item</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Opt/Alt + click</string>
+        </property>
+        <property name="text">
+         <string>In Filters: include this item and clear all other filters</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Exclude filter item</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + click</string>
+        </property>
+        <property name="text">
+         <string>Toggles. The item is shown struck through and its images are left out</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Expand checked filters</string>
         </property>
         <property name="text">
