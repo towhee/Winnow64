@@ -2384,10 +2384,38 @@ void ImageView::cropClampN()
     if (cropN.bottom() > 1.0) cropN.moveBottom(1.0);
 }
 
+QSizeF ImageView::cropCanvasSize() const
+{
+/*
+    The frame cropN is normalized in: the geometry stage's output with the crop REMOVED
+    (straighten / warp kept), which is what the loupe shows once the crop session's own
+    render has landed.
+
+    NOT pmItem WHILE THE LOUPE STILL SHOWS THE CROPPED RENDER. Pressing R on a cropped
+    image starts the overlay before the full-frame render arrives, so pmItem is the old
+    16 x 9 crop result. Fitting a stored 16 x 9 crop of a 3:2 frame against that pixmap
+    read it as the wrong ratio, cropRefitToAspect grew it to the whole pixmap (0,0,1,1),
+    and when the 3:2 frame arrived the overlay showed the uncropped frame. developGeom
+    is still the geometry that render was made with, so the uncropped canvas is
+    recomputed from it. Only the aspect is used by the callers that need this.
+*/
+    if (!developGeomSrc.isEmpty() && !developGeom.cropIsIdentity()) {
+        Geometry g = developGeom;
+        g.cropX = g.cropY = 0.0;
+        g.cropW = g.cropH = 1.0;
+        if (g.isIdentity()) return QSizeF(developGeomSrc);
+        QSizeF out;
+        CropTransform::geometryTransform(developGeomSrc.width(), developGeomSrc.height(),
+                                         g, &out);
+        if (!out.isEmpty()) return out;
+        return QSizeF(developGeomSrc);
+    }
+    return pmItem ? pmItem->boundingRect().size() : QSizeF();
+}
+
 qreal ImageView::cropFrameAspect() const
 {
-    if (!pmItem) return 0.0;
-    const QRectF br = pmItem->boundingRect();
+    const QSizeF br = cropCanvasSize();
     const qreal h = cropN.height() * br.height();
     return (h > 0.0) ? cropN.width() * br.width() / h : 0.0;
 }
@@ -2406,7 +2434,7 @@ void ImageView::cropFitLargestToAspect()
        which is what picking it has to give back. */
     const double a = cropTargetAspect();
     if (a <= 0.0 || !pmItem) return;
-    const QRectF br = pmItem->boundingRect();
+    const QSizeF br = cropCanvasSize();
     if (br.width() <= 0.0 || br.height() <= 0.0) return;
     const double imgA = br.width() / br.height();
     const QPointF c = cropN.center();
@@ -2423,7 +2451,8 @@ void ImageView::cropRefitToAspect()
        stay inside the image. No-op when the aspect is free ("As shot", unlocked). */
     const double a = cropTargetAspect();
     if (a <= 0.0 || !pmItem) return;
-    const QRectF br = pmItem->boundingRect();
+    const QSizeF br = cropCanvasSize();
+    if (br.width() <= 0.0 || br.height() <= 0.0) return;
     const QPointF c = cropN.center();
     /* Keep the current crop width, derive height from the aspect (in image-px, then
        back to normalized), then clamp into the image. */
@@ -2690,8 +2719,7 @@ qreal ImageView::cropTargetAspect() const
            an absence of one. (Its on-screen w/h is the uniformly-scaled image, so it
            equals the image-pixel aspect.) The padlock decides whether DRAGGING is free;
            it must not decide whether picking "As shot" reshapes the crop. */
-        if (!pmItem) return 0.0;
-        const QRectF br = pmItem->boundingRect();
+        const QSizeF br = cropCanvasSize();
         base = (br.height() > 0.0) ? br.width() / br.height() : 0.0;
     }
     if (base <= 0.0) return 0.0;

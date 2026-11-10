@@ -1158,6 +1158,9 @@ private:
        0 for "As shot" unless locked, where it resolves to the image's native w/h. */
     qreal   cropTargetAspect() const;
     qreal   cropFrameAspect() const;                // cropN's own w/h in image pixels
+    /* The canvas cropN is normalized in: the geometry output WITHOUT the crop. Not
+       pmItem until the crop session's first render lands -- see the definition. */
+    QSizeF  cropCanvasSize() const;
     /* "Custom" (cropAspect < 0) means the frame's current ratio: pin cropAspect to it,
        flip-aware, so the lock and the flip honour what is on screen. */
     void    cropResolveCustomAspect();
