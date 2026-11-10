@@ -120,6 +120,8 @@ public:
 
 protected:
     void paintEvent(QPaintEvent *event);
+    // Enter/Return in the value field applies the typed value
+    bool eventFilter(QObject *obj, QEvent *event) override;
 
 signals:
     void editorValueChanged(QWidget *);

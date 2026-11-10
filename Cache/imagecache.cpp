@@ -273,8 +273,9 @@ void ImageCache::abortProcessing()
     // make sure caching status is up-to-date
     for (auto it = toCacheStatus.begin(); it != toCacheStatus.end(); ++it) {
         if (it.value().isCaching) {
-            setStateCaching(pathAt(it.key()), false, -1);
-            emit setValSf(it.key(), G::IsCachingColumn, false, instance, "abort cleanup");
+            const QString cleanPath = pathAt(it.key());
+            setStateCaching(cleanPath, false, -1);
+            emit setValKey(cleanPath, G::IsCachingColumn, false, instance, "abort cleanup");
             it.value().isCaching = false;
         }
     }
@@ -927,11 +928,14 @@ void ImageCache::setTargetRange(int key)
             return;
         }
 
-        // Invalid image: mark cached; do not count toward sumMB.  This prevents
-        // endless looping in fillCache.
+        /* Invalid image: OUR state says cached, so fillCache does not loop on it and it
+           does not count toward sumMB. The MODEL is told CacheNone, because nothing is in
+           icd: CacheOriginal reached MW::refreshViewsOnCacheChange as "cached", the loupe
+           loaded the current image from icd, missed, and set an empty pixmap -- a blank
+           loupe for a file the cache had merely given up on (2026-11-10). */
         if (stateOf(fPath).status == ImageDecoder::Status::Invalid) {
             setStateCached(fPath, true);
-            emit setCached(pos, fPath, G::CacheOriginal, instance);
+            emit setCached(pos, fPath, G::CacheNone, instance);
             return;
         }
 
@@ -1177,10 +1181,8 @@ void ImageCache::resetStaleIsCaching()
     }
     for (const QString &fPath : caching) {
         setStateCaching(fPath, false, -1);
-        const int sfRow = sfRowOf(fPath);
-        if (sfRow >= 0)
-            emit setValSf(sfRow, G::IsCachingColumn, false, instance,
-                          "ImageCache::resetStaleIsCaching");
+        emit setValKey(fPath, G::IsCachingColumn, false, instance,
+                       "ImageCache::resetStaleIsCaching");
     }
 }
 
@@ -2940,9 +2942,9 @@ void ImageCache::decodeNextImage(int id, int sfRow)
     const QString decPath = pathAt(sfRow);
     setStateCaching(decPath, true, id);
     const int attempts = bumpStateAttempts(decPath);
-    emit setValSf(sfRow, G::IsCachingColumn, true, instance, src);
-    emit setValSf(sfRow, G::DecoderIdColumn, id, instance, src);
-    emit setValSf(sfRow, G::AttemptsColumn, attempts, instance, src);
+    emit setValKey(decPath, G::IsCachingColumn, true, instance, src);
+    emit setValKey(decPath, G::DecoderIdColumn, id, instance, src);
+    emit setValKey(decPath, G::AttemptsColumn, attempts, instance, src);
 
     if (debugLog)
     {
@@ -2996,7 +2998,7 @@ void ImageCache::decodeNextImage(int id, int sfRow)
             toCacheStatus[sfRow].isCaching = false;
         }
         setStateCaching(decPath, false, -1);
-        emit setValSf(sfRow, G::IsCachingColumn, false, instance, fun);
+        emit setValKey(decPath, G::IsCachingColumn, false, instance, fun);
 
         if (!abort) fillCache(id);
     }
@@ -3065,7 +3067,7 @@ void ImageCache::cacheImage(int id, int sfRow,
         QMutexLocker lock(&cacheStateMutex);
         cacheState[fPath].attempts = 0;
     }
-    if (!abort) emit setValSf(sfRow, G::AttemptsColumn, 0, instance, src);
+    if (!abort) emit setValKey(fPath, G::AttemptsColumn, 0, instance, src);
 
     // // add a thumbnail if missing in datamodel (why?)
     // if (dm->sf->index(sfRow,0).data(Qt::DecorationRole).isNull()) {
@@ -3136,7 +3138,7 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
     // set isCaching to false
     const QString fillPath = pathAt(sfRow);
     setStateCaching(fillPath, false, -1);
-    emit setValSf(sfRow, G::IsCachingColumn, false, instance, src);
+    emit setValKey(fillPath, G::IsCachingColumn, false, instance, src);
     if (toCacheStatus.contains(sfRow)) {
         toCacheStatus[sfRow].isCaching = false;
     }
@@ -3153,8 +3155,8 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
 
     // save decoder status (from snapshot)
     setStateStatus(fillPath, doneStatus);
-    emit setValSf(sfRow, G::DecoderReturnStatusColumn,
-                  doneStatus, instance, src);
+    emit setValKey(fillPath, G::DecoderReturnStatusColumn,
+                   doneStatus, instance, src);
 
     // if Imagedecoder failed then remove from toCache
     if (effectiveStatus != ImageDecoder::Status::Success) {
@@ -3184,7 +3186,7 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus)
 
     if (!msg.isEmpty()) {
         setStateStatus(fillPath, doneStatus, msg);
-        emit setValSf(sfRow, G::DecoderErrMsgColumn, msg, instance, src);
+        emit setValKey(fillPath, G::DecoderErrMsgColumn, msg, instance, src);
     }
 
     return success;
@@ -3215,7 +3217,7 @@ bool ImageCache::nullInImCache()
             toCacheAppend(sfRow);
             // set isCaching to true
             setStateCaching(path, true, -1);
-            emit setValSf(sfRow, G::IsCachingColumn, true, instance, src);
+            emit setValKey(path, G::IsCachingColumn, true, instance, src);
             isEmptyImage = true;
         }
     }

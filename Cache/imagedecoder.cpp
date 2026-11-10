@@ -58,7 +58,7 @@ ImageDecoder::ImageDecoder(int id,
     isDebug = false;
     isLog = false;
 
-    connect(this, &ImageDecoder::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
+    connect(this, &ImageDecoder::setValKey, dm, &DataModel::setValKey, Qt::QueuedConnection);
 }
 
 ImageDecoder::~ImageDecoder()
@@ -264,8 +264,8 @@ void ImageDecoder::decode(int row, int instance)
              << fPath
         ;//*/
 
-    emit setValSf(sfRow, G::NSImageColumn, nsToDecode, instance,
-                  "ImageDecoder::decode");
+    emit setValKey(rowKey, G::NSImageColumn, nsToDecode, instance,
+                   "ImageDecoder::decode");
 
     emit done(threadId, int(status), sfRow, image, rowKey, nsToDecode, cacheSource());
 }
@@ -369,7 +369,7 @@ bool ImageDecoder::ensureDecodeGeometry(int sfRow, ImageMetadata &geo)
 
     DECODER THREAD, and it stays that way: the read uses a LOCAL Metadata rather
     than the shared one the loader threads are using, and the model writes go
-    through the same queued setValSf every other cross-thread write uses.
+    through a queued setValKey, by row key (see below).
 */
     if (!dm || sfRow < 0) return false;
     const QString fPath = dmVal(G::PathColumn, G::SourcePathRole).toString();
@@ -384,17 +384,24 @@ bool ImageDecoder::ensureDecodeGeometry(int sfRow, ImageMetadata &geo)
         return false;
     geo = metadata->m;
 
-    const int inst = dm->instance;
-    emit setValSf(sfRow, G::OffsetFullColumn, geo.offsetFull, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::LengthFullColumn, geo.lengthFull, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::OffsetThumbColumn, geo.offsetThumb, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::LengthThumbColumn, geo.lengthThumb, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::samplesPerPixelColumn, geo.samplesPerPixel, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::isBigEndianColumn, geo.isBigEnd, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::ifd0OffsetColumn, geo.ifd0Offset, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::ICCBufColumn, geo.iccBuf, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::WidthOrigPreviewColumn, geo.widthOrigPreview, inst, "ensureDecodeGeometry");
-    emit setValSf(sfRow, G::HeightOrigPreviewColumn, geo.heightOrigPreview, inst, "ensureDecodeGeometry");
+    /*  BY ROW KEY, AND UNDER THIS DECODE'S INSTANCE. sfRow is a row of the proxy
+        snapshot this decode was dispatched from, which can lag the live proxy by any
+        number of rows; published by sfRow, the geometry landed on a NEIGHBOUR, whose next
+        decode then read raw sensor data as its embedded JPG and latched Status::Invalid
+        (blank loupe, 2026-11-10). And dm->instance read here, rather than the instance
+        the decode began under, let a write that outlived a sort or filter through the
+        guard. See DataModel::setValKey. */
+    const QString src = "ImageDecoder::ensureDecodeGeometry";
+    emit setValKey(rowKey, G::OffsetFullColumn, geo.offsetFull, instance, src);
+    emit setValKey(rowKey, G::LengthFullColumn, geo.lengthFull, instance, src);
+    emit setValKey(rowKey, G::OffsetThumbColumn, geo.offsetThumb, instance, src);
+    emit setValKey(rowKey, G::LengthThumbColumn, geo.lengthThumb, instance, src);
+    emit setValKey(rowKey, G::samplesPerPixelColumn, geo.samplesPerPixel, instance, src);
+    emit setValKey(rowKey, G::isBigEndianColumn, geo.isBigEnd, instance, src);
+    emit setValKey(rowKey, G::ifd0OffsetColumn, geo.ifd0Offset, instance, src);
+    emit setValKey(rowKey, G::ICCBufColumn, geo.iccBuf, instance, src);
+    emit setValKey(rowKey, G::WidthOrigPreviewColumn, geo.widthOrigPreview, instance, src);
+    emit setValKey(rowKey, G::HeightOrigPreviewColumn, geo.heightOrigPreview, instance, src);
     return true;
 }
 
@@ -622,7 +629,7 @@ bool ImageDecoder::load()
                     developApplied = true;
                     imFile.close();
                     status = Status::Success;
-                    emit setValSf(sfRow, G::RawRenderColumn, true, instance,
+                    emit setValKey(rowKey, G::RawRenderColumn, true, instance,
                                   "ImageDecoder::load");
                     return true;
                 }
@@ -654,7 +661,7 @@ bool ImageDecoder::load()
                 WorkingImageCache::instance().put(fPath, work);
                 imFile.close();
                 status = Status::Success;
-                emit setValSf(sfRow, G::RawRenderColumn, true, instance,
+                emit setValKey(rowKey, G::RawRenderColumn, true, instance,
                               "ImageDecoder::load");
                 return true;
             }
@@ -748,6 +755,37 @@ bool ImageDecoder::load()
             imFile.close();
             status = Status::Invalid;
             return false;
+        }
+
+        /*  NOT A JPEG AT THE STORED OFFSET: THE GEOMETRY IS WRONG, NOT THE FILE. Every
+            JPEG starts FF D8, so bytes that do not were read from somewhere the row's
+            geometry pointed at in error -- the misfiled-geometry bug (DataModel::
+            setValKey) left a neighbour's offset on rows, and decoding the slice of raw
+            sensor data latched Status::Invalid, which is TERMINAL for the folder. Read
+            this file's own header (unless this decode already did) and try once more;
+            for the cache-mode decoder that also republishes the right values, so the row
+            is repaired. Only bytes that are still not a JPEG fall through to fail. */
+        if (!buf.startsWith(QByteArrayLiteral("\xFF\xD8")) && !haveGeoMeta) {
+            bool reread = false;
+            if (isIndependent) {
+                reread = ensureIndependentGeometry();
+                if (reread) {
+                    offsetFull = int(indMeta.offsetFull);
+                    lengthFull = int(indMeta.lengthFull);
+                }
+            }
+            else if (dm && sfRow >= 0) {
+                haveGeoMeta = reread = ensureDecodeGeometry(sfRow, geoMeta);
+                if (reread) {
+                    offsetFull = int(geoMeta.offsetFull);
+                    lengthFull = int(geoMeta.lengthFull);
+                }
+            }
+            /* A plain JPEG has no embedded-image offset: it IS the image. */
+            if (reread && offsetFull == 0 && (ext == "jpg" || ext == "jpeg"))
+                lengthFull = int(imFile.size());
+            if (reread && lengthFull > 0 && imFile.seek(offsetFull))
+                buf = imFile.read(lengthFull);
         }
 
         // SELECT DECODER TO USE

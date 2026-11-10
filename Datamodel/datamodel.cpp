@@ -5038,6 +5038,43 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
     noteVersionValueWrite(dmIdx);
 }
 
+void DataModel::setValKey(QString key, int col, QVariant value, int instance,
+                          QString src, int role)
+{
+/*
+    A worker thread's write to a row, addressed by the row's KEY.
+
+    WORKERS MUST NOT ADDRESS ROWS BY PROXY ROW NUMBER. A worker's sfRow is a row of the
+    proxy snapshot it was handed (DataModel::proxySnapshot), and the snapshot is rebuilt
+    on a coalesced timer -- deliberately, see scheduleProxySnapshotRebuild -- so it can
+    lag the live proxy by any number of rows. setValSf resolves the number against the
+    LIVE proxy, and when the two differed the write landed on another image. The
+    instance guard cannot catch it: nothing changed instance, only the order.
+
+    The damage that exposed it: ImageDecoder::ensureDecodeGeometry published one file's
+    embedded-JPG offset and length onto a neighbour, whose next decode then read a slice
+    of raw sensor data as a JPEG, failed, latched Status::Invalid, and blanked the loupe
+    (2026-11-10, 20 rows of a Library load misfiled ~10 rows apart). See
+    notes/Documentation.md "4.4.9 Worker Writes to the DataModel Go by Key".
+
+    The key names the same image in every snapshot and in the live model. Instance guard
+    as setValSf, including its exception: a stale IsCaching=false must still pass.
+*/
+    if (G::stop) return;
+    if (instance != this->instance) {
+        const bool isCachingCleanup = (col == G::IsCachingColumn) && !value.toBool();
+        if (!isCachingCleanup) {
+            errMsg = "Instance clash from " + src;
+            G::issueDedup("Comment", errMsg, "DataModel::setValKey", -1, key);
+            return;
+        }
+    }
+    const int dmRow = fPathRowValue(key);
+    if (dmRow < 0) return;          // the row left the model while the write was queued
+    // instance already settled above; setValDm does the throttled write
+    setValDm(dmRow, col, value, this->instance, src, role);
+}
+
 bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {

@@ -262,6 +262,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     connect(slider, &QSlider::valueChanged, this, &SliderEditor::change);
     connect(slider, &QSlider::sliderMoved, this, &SliderEditor::sliderMoved);
     connect(lineEdit, &QLineEdit::editingFinished, this, &SliderEditor::updateSliderWhenLineEdited);
+    lineEdit->installEventFilter(this);
 
     QHBoxLayout* layout = new QHBoxLayout(this);
     layout->addWidget(slider, Qt::AlignLeft);
@@ -372,6 +373,29 @@ void SliderEditor::updateSliderWhenLineEdited()
 //    emit editorValueChanged(this);
 }
 
+
+bool SliderEditor::eventFilter(QObject *obj, QEvent *event)
+{
+/*
+    Enter/Return in the value field applies the typed value. The field claims the key on
+    the ShortcutOverride pass, so no window-level action or app filter bound to Return
+    can take it, then applies the value on the KeyPress and hands the focus back to the
+    slider, so the arrow keys nudge the value just entered (and the focus cue follows).
+*/
+    if (obj == lineEdit &&
+        (event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress)) {
+        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+        if (G::isEnterKey(e)) {
+            event->accept();
+            if (event->type() == QEvent::KeyPress) {
+                updateSliderWhenLineEdited();
+                slider->setFocus(Qt::OtherFocusReason);
+            }
+            return true;
+        }
+    }
+    return QWidget::eventFilter(obj, event);
+}
 
 void SliderEditor::fontSizeChanged(int fontSize)
 {

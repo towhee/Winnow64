@@ -837,7 +837,7 @@ void MW::createImageCache()
             this, &MW::refreshViewsOnCacheChange);
 
     // set values in the datamodel
-    connect(imageCache, &ImageCache::setValSf, dm, &DataModel::setValSf);
+    connect(imageCache, &ImageCache::setValKey, dm, &DataModel::setValKey);
 
     imageCache->start();
 }

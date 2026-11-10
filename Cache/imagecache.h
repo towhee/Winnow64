@@ -93,8 +93,9 @@ signals:
     void setCached(int sfRow, QString fPath, int cacheSource, int instance);  // G::CacheSource
     void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
     void decode(int sfRow, int instance);
-    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole); // not used
+    /* By row key, never sfRow: see DataModel::setValKey. */
+    void setValKey(QString key, int col, QVariant value, int instance, QString src,
+                   int role = Qt::EditRole);
     void showCacheStatus(int instruction, bool isAutoSize,
                          quint64 currMB, quint64 maxMB, int targetFirst, int targetLast,
                          QString source = "");

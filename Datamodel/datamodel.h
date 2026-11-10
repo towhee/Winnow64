@@ -872,6 +872,9 @@ public slots:
                   int role = Qt::EditRole);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                   int role = Qt::EditRole);
+    /* The worker-thread write: by row KEY, never row number. See the implementation. */
+    void setValKey(QString key, int col, QVariant value, int instance, QString src,
+                   int role = Qt::EditRole);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role = Qt::EditRole);
     void setCurrent(QModelIndex dmIdx, int instance);
     void setCurrent(QString fPath, int instance);

@@ -158,8 +158,9 @@ public slots:
     void stop();
 
 signals:
-    void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
-                  int role = Qt::EditRole);
+    /* By row key, never sfRow: see DataModel::setValKey. */
+    void setValKey(QString key, int col, QVariant value, int instance,
+                   QString src = "ImageDecoder", int role = Qt::EditRole);
     // doneStatus / doneSfRow / doneImage / doneFPath snapshot the decoder state at emit time.
     // Qt copies these into the queued event, so the consumer on imageCacheThread sees a
     // stable view even if the decoder has already started the next decode() on its thread.
