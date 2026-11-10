@@ -6,6 +6,7 @@
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "Utilities/ingestprobe.h"
+#include "Utilities/icc.h"
 #include <QFileInfo>
 
 /*  How the Image Cache works:
@@ -2534,6 +2535,52 @@ void ImageCache::reloadImageCache()
     icd->clear();
     toCache.clear();
     toCacheStatus.clear();
+    dispatch();
+}
+
+void ImageCache::reloadImageCacheSeeded(QString fPath, QImage image, bool colorManage)
+{
+/*
+    Reload all images in the cache, except that fPath's entry is the image supplied rather
+    than a decode. Used when leaving Develop: the mode change rebuilds the cache (the decode
+    differs between modes), but the developed picture of the current image is already in
+    memory -- it is what the loupe is showing. Decoding it again cost seconds (the
+    devPreview of the recipe just edited is usually not on disk yet, so the decoder fell
+    through to the file) during which Browse waited on pixels it already had.
+
+    The image is the develop render's output, which is sRGB -- the same pixels a devPreview
+    holds -- so it is colour-managed exactly as ImageDecoder::colorManage treats a
+    devPreview: an empty profile, i.e. "from sRGB". Done here, on the ImageCache thread,
+    to keep a full-resolution transform off the GUI thread. setTargetRange skips a key
+    icd already holds, so no decoder is dispatched for it.
+*/
+    if (debugLog || G::isLogger || G::isFlowLogger) log("reloadImageCacheSeeded", fPath);
+    abort = false;
+    icd->clear();
+    toCache.clear();
+    toCacheStatus.clear();
+
+    const int sfRow = fPath.isEmpty() ? -1 : sfRowOf(fPath);
+    if (sfRow >= 0 && !image.isNull() && G::useImageCache) {
+        if (colorManage) {
+            // ICC::transform assumes 4 bytes/pixel (see ImageDecoder::colorManage)
+            if (image.format() != QImage::Format_ARGB32 &&
+                image.format() != QImage::Format_RGB32)
+                image = image.convertToFormat(QImage::Format_ARGB32);
+            if (!image.isNull()) ICC::transform(QByteArray(), image);
+        }
+        if (!image.isNull()) {
+            icd->insert(fPath, image);
+            cachedCount.fetch_add(1, std::memory_order_relaxed);
+            setStateCached(fPath, true);
+            {
+                QMutexLocker lock(&cacheStateMutex);
+                cacheState[fPath].attempts = 0;
+            }
+            // the loupe repaints from it (MW::refreshViewsOnCacheChange)
+            emit setCached(sfRow, fPath, G::CacheDeveloped, instance);
+        }
+    }
     dispatch();
 }
 

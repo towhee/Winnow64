@@ -51,16 +51,18 @@
     midtones -- its contrast -- are untouched. Chosen by comparison, NOT fitted to a
     Lightroom render; refit if one says otherwise.
 
-    A PROFILE'S OWN CURVE HANDS OVER LATER, at kProfileKneeY = 0.80 (BuildFromPairs).
-    Lightroom applies a ProfileToneCurve in full, and an iPhone ProRAW render says what
-    0.60 costs: its gain map already brings the scene to sensor white, so the tail only
-    dimmed it -- white at 232 against Lightroom's 255, p99 luminance 0.872 against 0.914.
-    Measured 2026-11-09 (IMG_1097, Winnow's gain-mapped data, Apple's curve, Lightroom
-    15.6 export), mean |error| in encoded luminance by handover level:
+    IPHONE PRORAW'S EMBEDDED CURVE HANDS OVER LATER, at kProRawKneeY = 0.80 (passed to
+    BuildFromPairs by Develop::ApplyProfileTables for OutputLook::curvePerChannel). Its
+    gain map already brings the scene to sensor white, so the tail only dimmed it --
+    white at 232 against Lightroom's 255, p99 luminance 0.872 against 0.914. Measured
+    2026-11-09 (IMG_1097, Winnow's gain-mapped data, Apple's curve, Lightroom 15.6
+    export), mean |error| in encoded luminance by handover level:
         0.60  0.0163     0.70  0.0106     0.80  0.0083     0.90  0.0080   (full: 0.0080)
-    0.80 takes almost all of it and keeps the headroom a pushed exposure needs: 1x / 2x
-    / 4x / 8x over white at 243 / 250 / 252 / 253. The maker curves (BuildFromSamples)
-    keep 0.60: they were matched to Standard roll-off, not to Lightroom.
+    0.80 keeps 1x / 2x / 4x / 8x over white at 243 / 250 / 252 / 253. It is NOT used
+    for a DCP's curve: on a steep one (0.85 by input 0.5, Camera Neutral's shape) it
+    reaches 252 by ~1.8 stops over and a +3 EV ramp stops separating -- measured in
+    tst_inputprofile::profileCurveRollsOffAPushedExposure, where 0.60 still rises
+    (8-bit sums 727 -> 740 against 751 -> 756 -> 756).
 
     APPLIED HUE-PRESERVINGLY (ApplyRGBTone), the way the DNG SDK applies a
     ProfileToneCurve (RefBaselineRGBTone): the curve is evaluated on the largest and
@@ -71,7 +73,7 @@
 namespace CameraCurve {
 
 constexpr float kKneeY     = 0.60f;  // output level where the camera curve hands over
-constexpr float kProfileKneeY = 0.80f;  // the same for a profile's ProfileToneCurve
+constexpr float kProRawKneeY = 0.80f;  // the same for iPhone ProRAW's embedded curve
 constexpr float kTailPower = 0.60f;  // roll-off tail: 1 - y ~ t^-p (smaller = gentler)
 constexpr int   kLutSize = 4096;
 /* The table's log2 window: 2^-16 (deep shadow) .. 2^6 (six stops over white), where the
@@ -158,7 +160,8 @@ inline void Tabulate(Curve &c)
     0..1) and the gain to apply to the input first. False when the data is unusable, in
     which case the caller has no profile curve rather than a broken one.
 */
-inline bool BuildFromPairs(const std::vector<float> &xy, float gain, Curve &out)
+inline bool BuildFromPairs(const std::vector<float> &xy, float gain, Curve &out,
+                           float kneeY = kKneeY)
 {
     out = Curve();
     const size_t n = xy.size() / 2;
@@ -170,7 +173,7 @@ inline bool BuildFromPairs(const std::vector<float> &xy, float gain, Curve &out)
         sh.xs.push_back(xy[i * 2]);
         sh.ys.push_back(xy[i * 2 + 1]);
     }
-    FindKnee(sh, kProfileKneeY);
+    FindKnee(sh, kneeY);
     out.shape = sh;
     Tabulate(out);
     return true;

@@ -782,6 +782,7 @@ signals:
     void setImageCachePosition(QString, QString);
     void imageCacheFilterChange(QString, QString);
     void imageCacheColorManageChange();
+    void imageCacheReloadSeeded(QString fPath, QImage image, bool colorManage);
     void resizeMW(QRect mainWindowRect, QRect centralWidgetRect);
     // void closeZoomDlg();        // not being used
     void metadataLoaded();
@@ -1398,6 +1399,13 @@ private slots:
        commits the crop into the image's EditStack geometry and re-renders the cropped result. */
     void enterDevelopCrop();
     void exitDevelopCrop();
+    /* Write the open overlay's rectangle into the current image's geometry. Runs at the
+       end of every crop gesture (ImageView::cropSettled), not only on exit, so the crop is
+       stored -- and synced to the selection -- before the user can move to another image. */
+    void commitDevelopCrop();
+    /* The current image changed with the crop tool open: re-seat the overlay on the new
+       image's stored crop and take its Esc snapshot. */
+    void developCropImageChanged();
     /* Esc while the Transform panel is open: cancel the session -- discard every
        crop/straighten/warp change made since it opened (restore the enter-time geometry
        snapshot), drop the overlay WITHOUT committing, and hide the panel. The counterpart
@@ -1455,7 +1463,7 @@ private slots:
     void toggleModifyImagesClick();
     void toggleModifyImages();
     void toggleUseRawClick();
-    void toggleUseRaw(Tog n = toggle);
+    void toggleUseRaw(Tog n = toggle, bool reloadCache = true);
     void togglePanToFocusClick();
     void togglePanToFocus(Tog n = toggle);
     void allPreferences();
@@ -1552,6 +1560,9 @@ private slots:
        Captured when a develop render is launched and compared when its frame is about to
        be cached as a preview -- see developFrameRecipe. */
     QByteArray developRecipeKey(const QString &fPath);
+    /* The retained full-res develop frame of fPath when it is exactly what Browse would
+       show for it (its devPreview), else null. Seeds the image cache on leaving Develop. */
+    QImage developFrameForBrowse(const QString &fPath);
     /* adoptSpotSources, then re-key the retained frames to the adopted recipe. */
     void adoptDevelopSpotSources(const QString &fPath);
     void thumbHasScrolled();
@@ -2977,8 +2988,12 @@ private:
        peek at the cropped/warped RESULT (overlay dropped, geometry applied in the render); false =
        normal editing (full frame + overlay). Reset on enter/exit crop. */
     bool developCropShowResult = false;
+    // the render shows the full frame for the crop overlay (crop suppressed)
+    bool developCropSuppressesCrop() const { return developCropEditing && !developCropShowResult; }
     /* Snapshot of the image's Geometry taken when the Transform panel opens
-       (enterDevelopCrop), so Esc (cancelDevelopTransform) can restore it. Straighten and
+       (enterDevelopCrop) or the crop session moves to another image
+       (developCropImageChanged), so Esc (cancelDevelopTransform) can restore it -- for
+       the image on screen only. Straighten and
        warp are written live during a session, so a cancel must revert them, not just skip
        the pending overlay crop. */
     Geometry developCropGeometryBackup;
@@ -3761,6 +3776,11 @@ private:
     void deleteSelectedFiles();
     void deleteRejectedFiles();
     void deleteFiles(QStringList paths);
+    /*  Thumbnails dropped on a Filters Folders row (Library scope): confirm, move each
+        image and its sidecars into folder, then refresh the model and the filters.
+        rowKeys are the dragged rows, to name a version dragged without its master. */
+    void moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys,
+                            const QString &folder);
     void deleteFolder();
     void deleteAllImageMemCard(QString rootPath, QString name);
     void eraseMemCardImages();

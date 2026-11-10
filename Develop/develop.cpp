@@ -884,6 +884,10 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
         look->profileCurve = t.toneCurve;
         look->curvePerChannel = img.cam.gainMap &&
                                 img.cam.profile == img.cam.embeddedProfile;
+        /* ...and hands over to the roll-off later (CameraCurve::kProRawKneeY). */
+        if (look->curvePerChannel)
+            CameraCurve::BuildFromPairs(img.cam.profile->toneCurve, 1.0f,
+                                        look->profileCurve, CameraCurve::kProRawKneeY);
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j) {
                 look->toTable[i][j]   = t.toTable[i][j];

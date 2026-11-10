@@ -625,17 +625,19 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
         tooltip = "Image is JPG version of a RAW+JPG pair";
     else if (cacheVisible && hit("Cache", 2))
     {
+        // Same rule as the paint() badge, in both operation modes
         bool developed = cacheSource == G::CacheDeveloped;
-        if (!developed && (G::operationMode == G::OperationMode::Develop ||
-                           G::previewSource == G::PreviewSource::Developed)) {
+        if (!developed) {
             developed = dm->devPreviewReady->isReady(
                 sf->index(row, 0).data(G::KeyRole).toString(),
                 sf->index(row, G::DevPreviewKeyColumn).data().toString());
         }
-        tooltip = developed ? "Developed preview ready"
-                  : cacheSource == G::CacheOriginal
-                        ? "Cached: embedded preview or original file"
-                        : "Image file is not cached";
+        const QString now = developed ? "Green"
+                            : cacheSource == G::CacheOriginal ? "Purple" : "Red";
+        tooltip = "Cache status: " + now + "\n\n"
+                  "  Green:\t Developed preview ready\n"
+                  "  Purple:\t Cached embedded preview or original file\n"
+                  "  Red:\t Not cached";
     }
     else if (ratingVisible && hit("Rating"))
         tooltip = "Rating: " + rating + (rating == "1" ? " star" : " stars");
@@ -927,14 +929,14 @@ textRect         = a rectangle below itemRect
        nothing ready; purple = ImageCache holds the file's own pixels (a raw's embedded
        JPG or an unedited original); green = a developed picture, either in ImageCache
        (devPreview, sensor-decoded raw, edited non-raw) or a built devPreview on disk.
-       The devPreview counts only where it is served: always in Develop (the loupe's
-       placeholder), in Preview only with Preview Source = Developed. Develop trims
-       ImageCache to the current image, so without it every other thumbnail read red.
-       Shown in both operation modes. */
+       ONE RULE IN BOTH OPERATION MODES: the badge describes the image, not the mode, so
+       a built devPreview reads green in Browse as well as Develop, and switching modes
+       never repaints the grid in different colours (Develop trims ImageCache to the
+       current image, so without the devPreview test every other thumbnail read red).
+       The tooltip shows the legend. */
     if (!isVideo && metaLoaded && !G::isSlideShow) {
         bool developed = cacheSource == G::CacheDeveloped;
-        if (!developed && (G::operationMode == G::OperationMode::Develop ||
-                           G::previewSource == G::PreviewSource::Developed)) {
+        if (!developed) {
             const QString baseKey = index.model()->index(sfRow, G::DevPreviewKeyColumn)
                                         .data().toString();
             developed = dm->devPreviewReady->isReady(rowKey, baseKey);

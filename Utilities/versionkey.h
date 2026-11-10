@@ -84,6 +84,13 @@ inline QString sortSuffix(int id)
     return QChar(0x01) + QString::number(id).rightJustified(6, u'0');
 }
 
+/*
+    The mime format a thumbnail drag (IconView::startDrag) carries beside its URLs: the
+    dragged ROW KEYS, newline separated. The URLs name each file once, so a version
+    dragged without its master is otherwise indistinguishable from the master.
+*/
+inline const QString kRowKeysMime = QStringLiteral("application/x-winnow-rowkeys");
+
 } // namespace VersionKey
 
 #endif // VERSIONKEY_H

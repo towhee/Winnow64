@@ -275,7 +275,9 @@ public:
        kept. See Cache/devpreviewcache.h and notes/Documentation.txt.
 
        thumbJpg  256px JPEG, base64-encoded into the sidecar (winnow:DevelopPreview)
-       loupeJpg  screen-resolution JPEG for the out-of-band loupe cache */
+       loupe     the frame for the out-of-band loupe cache, NOT yet encoded: at full
+                 sensor resolution the JPEG encode is hundreds of ms, so it runs on
+                 devPreviewWriter rather than on the GUI thread (putDevPreviewAsync) */
     /* Does what the develop render is currently producing actually correspond to the
        STORED recipe? It does not when a History row is being hovered (previewActive
        renders a different stack entirely), when the Transform preview eye is off
@@ -308,8 +310,12 @@ public:
     QStringList migrationSummariesFor(const QString &fPath) const;
 
     using DevPreviewProvider =
-        std::function<bool(const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg)>;
+        std::function<bool(const QString &fPath, QByteArray &thumbJpg, QImage &loupe)>;
     void setDevPreviewProvider(DevPreviewProvider provider);
+    /* Block until every queued loupe-tier write has reached DevPreviewCache. Called after
+       a flushAll that must be COMPLETE on disk: quit, and the FileOps flush hook (a write
+       landing after a rename or delete would file a preview under a path that is gone). */
+    void waitForDevPreviewWrites();
 
     /* Preset AUTO SETTINGS for an image whose pre-develop base is not in memory (see the
        "Preset Auto settings" block in the private section). MW supplies it: decode fPath
@@ -1531,6 +1537,13 @@ private:
        file just to discover there is nothing to do. */
     QString toppedUpPath;
     QByteArray toppedUpKey;
+    /* Encodes and stores the loupe tier off the GUI thread. ONE thread, so writes land
+       in the order they were queued: a later recipe's preview (or drop) for a path can
+       never be overtaken by an earlier one. */
+    QThreadPool devPreviewWriter;
+    /* Queue fPath's loupe tier: scale to G::devPreviewMaxEdge, JPEG-encode, put under
+       key. A null image queues a drop instead (DevPreviewCache::onDeleted). */
+    void putDevPreviewAsync(const QString &fPath, const QByteArray &key, const QImage &loupe);
     /* stackCache entry for any image, loading it from the sidecar on first touch. The
        propagation path needs stacks for images the user has never visited. */
     EditStack &stackFor(const QString &fPath);

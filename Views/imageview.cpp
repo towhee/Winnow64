@@ -2569,6 +2569,20 @@ void ImageView::cropEmitChanged()
     }
     cropN = cropN.intersected(QRectF(0, 0, 1, 1));
     emit cropChanged(cropN.x(), cropN.y(), cropN.width(), cropN.height());
+    if (!isLeftMouseBtnPressed) emit cropSettled();     // mid-drag ticks are not commits
+}
+
+void ImageView::cropSetRect(QRectF n)
+{
+    if (!cropActive()) return;
+    cropN = (n.isValid() && !n.isNull()) ? n.intersected(QRectF(0, 0, 1, 1))
+                                         : QRectF(0.0, 0.0, 1.0, 1.0);
+    cropWarp = false;                 // an untraced quad belonged to the image being left
+    cropDrag = -1;
+    cropDrawStarted = false;
+    cropFlipPrevN = cropFlipResultN = QRectF();   // the flip stash was the other image's
+    cropSyncFrameFromN();
+    viewport()->update();
 }
 
 void ImageView::cropQuad(double q[8]) const
@@ -7250,6 +7264,8 @@ void ImageView::mouseReleaseEvent(QMouseEvent *event)
     if (event->button() == Qt::BackButton || event->button() == Qt::ForwardButton) return;
 
     isLeftMouseBtnPressed = false;
+    /* A Space pan under the crop frame moved the crop: commit where it landed. */
+    if (cropActive()) cropEmitChanged();
 
     // prevent zooming if release is outside the ImageView area
     /*

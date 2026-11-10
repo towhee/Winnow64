@@ -374,7 +374,7 @@ void TstHueSatMap::toneCurveFollowsTheCameraBelowTheKnee()
                  qPrintable(QString("x %1: %2 vs camera %3").arg(double(x))
                                 .arg(double(c.eval(x))).arg(double(want))));
     }
-    QVERIFY(qAbs(c.shape.yk - CameraCurve::kProfileKneeY) < 2e-3f);
+    QVERIFY(qAbs(c.shape.yk - CameraCurve::kKneeY) < 2e-3f);
 }
 
 /*
@@ -410,14 +410,17 @@ void TstHueSatMap::toneCurveHoldsHue()
 */
 void TstHueSatMap::toneCurveRollsOffAboveWhite()
 {
-    /* A profile's ProfileToneCurve hands over later (kProfileKneeY) and must keep the
-       same guarantees. */
-    CameraCurve::Curve profile;
-    QVERIFY(CameraCurve::BuildFromPairs({0.0f, 0.0f, 0.18f, 0.45f, 0.5f, 0.85f,
-                                         1.0f, 1.0f}, 1.0f, profile));
+    /* A profile's ProfileToneCurve, at the ordinary knee and at ProRAW's later one
+       (kProRawKneeY), must keep the same guarantees. */
+    CameraCurve::Curve profile, proRaw;
+    const std::vector<float> pairs = {0.0f, 0.0f, 0.18f, 0.45f, 0.5f, 0.85f, 1.0f, 1.0f};
+    QVERIFY(CameraCurve::BuildFromPairs(pairs, 1.0f, profile));
+    QVERIFY(CameraCurve::BuildFromPairs(pairs, 1.0f, proRaw, CameraCurve::kProRawKneeY));
+    QVERIFY(qAbs(proRaw.shape.yk - CameraCurve::kProRawKneeY) < 2e-3f);
     for (const CameraCurve::Curve *c : {&CameraCurve::Generic(),
                                         &CameraCurve::ForCameraModel("Nikon D7200"),
-                                        static_cast<const CameraCurve::Curve *>(&profile)}) {
+                                        static_cast<const CameraCurve::Curve *>(&profile),
+                                        static_cast<const CameraCurve::Curve *>(&proRaw)}) {
         float prev = c->eval(0.5f);
         for (float x : {1.0f, 2.0f, 4.0f, 8.0f, 16.0f, 32.0f}) {
             const float y = c->eval(x);

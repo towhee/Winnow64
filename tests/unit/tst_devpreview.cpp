@@ -114,6 +114,9 @@ static void writeSource(const QString &path, const QByteArray &bytes, qint64 mti
     QFile f(path);
     QVERIFY(f.open(QIODevice::WriteOnly));
     f.write(bytes);
+    /* Flush first: QFile buffers the write, and close() flushing it afterwards would
+       stamp the mtime "now" again over the time set here. */
+    QVERIFY(f.flush());
     QVERIFY(f.setFileTime(QDateTime::fromSecsSinceEpoch(mtimeSecs),
                           QFileDevice::FileModificationTime));
     f.close();

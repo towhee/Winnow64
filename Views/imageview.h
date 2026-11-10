@@ -401,6 +401,9 @@ public slots:
        free -> swap w/h). */
     void setCropAspectFlip(bool flipped);
     QRectF cropRect() const { return cropN; }         // current crop (normalized), for commit
+    /* Re-seat the open overlay on another image's stored crop (the current image changed
+       mid-session). No refit and no cropSettled: nothing has been edited yet. */
+    void cropSetRect(QRectF n);
     /* Warp (4-point perspective) accessors for the commit/persist flow (MW::rectifyDevelopCrop):
        cropIsWarp = a quad is being traced; cropQuad fills the 4 corners (normalized, TL,TR,BR,BL);
        computeRectifyCrop runs the warp engine on the displayed image and returns the largest
@@ -497,6 +500,10 @@ signals:
     void segmenterDetailRequested(int level);
     /* The crop rectangle changed (drag/resize/pan); normalized image coords, for persistence. */
     void cropChanged(double x, double y, double w, double h);
+    /* A crop gesture finished (release, Space-pan release, aspect / flip change): the
+       rectangle is final for now and MW commits it to the image (MW::commitDevelopCrop),
+       so a switch to another image cannot drop it. Not emitted mid-drag or while warping. */
+    void cropSettled();
     /* A free (unlocked) handle drag left the crop off its chosen ratio; the view has
        adopted the frame's own ratio and the Transform panel should show "Custom". */
     void cropAspectFreed();

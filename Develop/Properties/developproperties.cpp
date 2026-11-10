@@ -146,6 +146,8 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
        more of them than it loses of the image being edited. */
     connect(debounceWriteTimer, &QTimer::timeout, this, [this]{ flushAll(); });
 
+    devPreviewWriter.setMaxThreadCount(1);   // ordered writes; see putDevPreviewAsync
+
     /* The pending submask commits itself once the user's hand stops (see
        armMaskAutoCommit). No commit button: nothing is buffered for one to flush. */
     maskCommitTimer = new QTimer(this);
@@ -3474,9 +3476,10 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         menu.addSeparator();
     }
 
-    /* -------- Tree shape: only where there is a tree to expand -------- */
+    /* -------- Tree shape: the tree and its Solo peers (the Raw panel is one) -------- */
     QAction *aExpandAll = nullptr, *aCollapseAll = nullptr, *aSolo = nullptr;
-    if (section == SectionEdits || section == SectionScopeBar || section == SectionMask) {
+    if (section == SectionEdits || section == SectionScopeBar || section == SectionMask
+        || section == SectionRaw) {
         aExpandAll = menu.addAction(tr("Expand all"));
         aCollapseAll = menu.addAction(tr("Collapse all"));
         aSolo = menu.addAction(tr("Solo mode"));
@@ -11367,6 +11370,42 @@ void DevelopProperties::setDevPreviewProvider(DevPreviewProvider provider)
     devPreviewProvider = std::move(provider);
 }
 
+void DevelopProperties::putDevPreviewAsync(const QString &fPath, const QByteArray &key,
+                                           const QImage &loupe)
+{
+/*
+    The loupe tier of a devPreview, written off the GUI thread. At the default size (Full)
+    this is a full sensor-resolution frame, and its JPEG encode cost hundreds of ms inside
+    every flush -- on leaving Develop, on each debounced write while editing, and on each
+    image switch that topped one up. Nothing on screen waits for it: the frame is already
+    displayed (and, leaving Develop, handed to the ImageCache directly -- see
+    MW::setOperationMode), so the cache entry only matters to a LATER decode.
+
+    The QImage is implicitly shared, so queuing it copies nothing; MW replacing its
+    retained frame afterwards detaches MW's copy, not this one.
+*/
+    devPreviewWriter.start([fPath, key, loupe] {
+        if (loupe.isNull()) {
+            DevPreviewCache::instance().onDeleted(fPath);
+            return;
+        }
+        QImage im = loupe;
+        const int cap = G::devPreviewMaxEdge;
+        if (cap > 0 && qMax(im.width(), im.height()) > cap)
+            im = im.scaled(cap, cap, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        QByteArray jpg;
+        QBuffer buf(&jpg);
+        if (!buf.open(QIODevice::WriteOnly) || !im.save(&buf, "JPG", G::devPreviewQuality))
+            return;
+        DevPreviewCache::instance().put(fPath, key, jpg);
+    });
+}
+
+void DevelopProperties::waitForDevPreviewWrites()
+{
+    devPreviewWriter.waitForDone();
+}
+
 void DevelopProperties::topUpDevPreviews(const QString &fPath)
 {
 /*
@@ -11396,11 +11435,11 @@ void DevelopProperties::topUpDevPreviews(const QString &fPath)
     }
 
     QByteArray thumbJpg;
-    QByteArray loupeJpg;
-    if (!devPreviewProvider(fPath, thumbJpg, loupeJpg)) return;   // no faithful frame
-    if (thumbJpg.isEmpty() && loupeJpg.isEmpty()) return;
+    QImage loupe;
+    if (!devPreviewProvider(fPath, thumbJpg, loupe)) return;   // no faithful frame
+    if (thumbJpg.isEmpty() && loupe.isNull()) return;
 
-    if (!loupeJpg.isEmpty()) DevPreviewCache::instance().put(fPath, key, loupeJpg);
+    if (!loupe.isNull()) putDevPreviewAsync(fPath, key, loupe);
 
     /* A repaired stack keeps its on-disk recipe: this blob is the repaired one, and
        writing it would make the repair permanent on a view. The loupe tier above is
@@ -11488,8 +11527,8 @@ void DevelopProperties::flushImage(const QString &fPath)
     const QString blob = s.isIdentity() ? QString() : s.toBase64();
 
     QByteArray thumbJpg;
-    QByteArray loupeJpg;
-    if (!blob.isEmpty() && devPreviewProvider) devPreviewProvider(fPath, thumbJpg, loupeJpg);
+    QImage loupe;
+    if (!blob.isEmpty() && devPreviewProvider) devPreviewProvider(fPath, thumbJpg, loupe);
 
     // synchronous; sidecar is a few KB plus ~20 KB of preview, and never on a drag
     Metadata::writeDevelopSidecar(fPath, blob,
@@ -11501,15 +11540,13 @@ void DevelopProperties::flushImage(const QString &fPath)
         HistoryStore::save(fPath, history->entries(fPath), history->pos(fPath),
                            HistoryEntry::recipeStamp(s));
 
-    if (!blob.isEmpty() && !loupeJpg.isEmpty()) {
-        DevPreviewCache::instance().put(
-            fPath, Metadata::devPreviewKey(blob, fPath).toLatin1(), loupeJpg);
-    }
-    else {
-        /* No usable preview for this recipe: drop any older one so the loupe never paints
-           pixels from a recipe the user has moved on from. */
-        DevPreviewCache::instance().onDeleted(fPath);
-    }
+    /* No usable preview for this recipe (a null loupe): drop any older one so the loupe
+       never paints pixels from a recipe the user has moved on from. The drop goes
+       through the writer too, so it cannot be overtaken by an earlier queued put. */
+    putDevPreviewAsync(fPath,
+                       blob.isEmpty() ? QByteArray()
+                                      : Metadata::devPreviewKey(blob, fPath).toLatin1(),
+                       blob.isEmpty() ? QImage() : loupe);
 
     /* Tell the grid. A null image means "this row's thumbnail is now wrong" rather than
        "here is the new one", and MW makes the loader re-read it. */

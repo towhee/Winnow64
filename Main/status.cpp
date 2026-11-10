@@ -993,11 +993,13 @@ void MW::toggleUseRawClick()
     toggleUseRaw(Tog::toggle);
 }
 
-void MW::toggleUseRaw(Tog n)
+void MW::toggleUseRaw(Tog n, bool reloadCache)
 {
 /*
     When G::useRaw is on, ImageDecoder demosaics the raw sensor data; when off it shows the
-    embedded preview/jpg. The full-size image cache is rebuilt so the change is visible.
+    embedded preview/jpg. The full-size image cache is rebuilt so the change is visible --
+    unless reloadCache is false, when the caller rebuilds it itself (leaving Develop seeds
+    the current image: MW::setOperationMode).
 */
     if (G::isLogger) G::log("MW::toggleUseRaw");
     if (n == Tog::toggle) G::useRaw = !G::useRaw;
@@ -1023,7 +1025,7 @@ void MW::toggleUseRaw(Tog n)
     imageView->currentImageHasChanged = true;
 
     // reload image cache
-    emit imageCacheColorManageChange();
+    if (reloadCache) emit imageCacheColorManageChange();
 }
 
 void MW::togglePanToFocusClick()

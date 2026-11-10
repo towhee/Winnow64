@@ -42,6 +42,7 @@
     - [2.7.2 Leaving Develop Cancels the Active Tool](#272-leaving-develop-cancels-the-active-tool)
     - [2.7.3 What the Mode Owns](#273-what-the-mode-owns)
     - [2.7.4 Open Question: Thumbnails in Develop](#274-open-question-thumbnails-in-develop)
+    - [2.7.5 Leaving Develop Does Not Re-decode the Current Image](#275-leaving-develop-does-not-re-decode-the-current-image)
   - [2.8 UI Style Values](#28-ui-style-values)
   - [2.9 Panel Borders (the frameLine)](#29-panel-borders-the-frameline)
     - [2.9.1 Where the Line Is Drawn](#291-where-the-line-is-drawn)
@@ -78,6 +79,7 @@
   - [3.3 New Image Selected](#33-new-image-selected)
   - [3.4 Go to Folder (Path Entry)](#34-go-to-folder-path-entry)
     - [3.4.1 In the Library, Opening a Folder Filters](#341-in-the-library-opening-a-folder-filters)
+    - [3.4.2 In the Library, Drop Thumbnails on a Folder to Move Them](#342-in-the-library-drop-thumbnails-on-a-folder-to-move-them)
   - [3.5 Picks Are Saved as They Are Made](#35-picks-are-saved-as-they-are-made)
     - [3.5.1 Write-Through](#351-write-through)
     - [3.5.2 Restoring Picks When Rows Load](#352-restoring-picks-when-rows-load)
@@ -238,7 +240,7 @@
     - [7.5.3 Contextual Keys (Active Only While a Panel or Tool Is Up)](#753-contextual-keys-active-only-while-a-panel-or-tool-is-up)
     - [7.5.4 Space: Temporary Zoom and Pan Over a Develop Tool](#754-space-temporary-zoom-and-pan-over-a-develop-tool)
     - [7.5.5 Guards (MW::developShortcutIntercept, in Order)](#755-guards-mwdevelopshortcutintercept-in-order)
-    - [7.5.6 Selection Keys Are Ignored in Develop Mode](#756-selection-keys-are-ignored-in-develop-mode)
+    - [7.5.6 Selection Keys in Develop Mode](#756-selection-keys-in-develop-mode)
     - [7.5.7 The View Keys Are the Way Out of Develop Mode](#757-the-view-keys-are-the-way-out-of-develop-mode)
     - [7.5.8 Discoverability](#758-discoverability)
   - [7.6 Compare View Freezes the Selection](#76-compare-view-freezes-the-selection)
@@ -614,6 +616,7 @@
     - [12.4.5 Neither May the Embedded Preview](#1245-neither-may-the-embedded-preview)
     - [12.4.6 A Decline Queues a Build](#1246-a-decline-queues-a-build)
     - [12.4.7 Visiting Writes Previews Too](#1247-visiting-writes-previews-too)
+    - [12.4.8 The Loupe Tier Is Encoded Off the GUI Thread](#1248-the-loupe-tier-is-encoded-off-the-gui-thread)
   - [12.5 Staleness Keys](#125-staleness-keys)
     - [12.5.1 Decoder Fixes: Per-Format Revision](#1251-decoder-fixes-per-format-revision)
     - [12.5.2 Denoiser Fixes: kDenoiserRevision](#1252-denoiser-fixes-kdenoiserrevision)
@@ -1403,6 +1406,19 @@ A pending (unsettled) submask is discarded, exactly as Esc discards it.
 
 Should thumbnail generation ALWAYS use the embedded preview (useRaw = false) for raw files, even in Develop? In Develop you edit ONE image; the thumb strip is for orientation and does not need the slow full raw decode. G::useRaw is currently global, so Develop also makes the strip decode raws (bounded by the read-ahead suspension, but still). A dedicated "thumbnails always preview" path would decouple the loupe (raw) from the strip (preview).
 
+#### 2.7.5 Leaving Develop Does Not Re-decode the Current Image
+
+(2026-11-09, untested in-app.) Leaving Develop flips G::useRaw, which rebuilds the image cache, so the current image used to go back to a decoder. Browse then waited on pixels it was already showing. ImageDecoder::loadDevPreview could serve it only if this recipe's devPreview was already on disk, and it usually was not: flushAll ran AFTER the reload was queued (a race), and the full-res JPEG encode ran inside it. Losing the race decoded the file, which took seconds.
+
+setOperationMode now does this on the way out:
+
+1. It flushes FIRST, before the cache reload.
+2. It asks MW::developFrameForBrowse for the retained full-res settle render. It gets one only when that render is exactly the devPreview Browse would serve: Developed preview source, the same image, faithful, and rendered from the recipe in force (the same tests as the devPreview provider, [12.4.3](#1243-and-only-a-current-one)).
+3. With a frame, it rebuilds the cache through ImageCache::reloadImageCacheSeeded instead of colorManageChange (toggleUseRaw(..., reloadCache = false)). That clears the cache, inserts the frame for the current key, colour-managed on the ImageCache thread as a devPreview is (from sRGB, iccFormats only), and emits setCached. setTargetRange skips a key icd already holds, so no decoder is dispatched for it.
+4. The loupe repaints from the seed through MW::refreshViewsOnCacheChange. The pixels are identical, so nothing visibly changes, and loadImage still resets the Develop-only loupe state (geometry, proxy pixmap).
+
+Without a frame (Original chosen, an unedited image, or the settle render not landed or superseded) the reload decodes as before.
+
 ### 2.8 UI Style Values
 
 Every G:: UI style value is assigned in WidgetCSS::styleGlobals (Main/widgetcss.cpp): colours (text, headers, chrome, pick labels, the named palette), the Develop panel surfaces and separators, and the Develop layout metrics (header insets, button gaps, panelBorderHeight ...). It is THE place to experiment with the app's look.
@@ -1777,6 +1793,44 @@ Where the reason a folder is unavailable can be shown before the action, it is:
 - The native Open Folder dialog cannot grey folders, so there the reason is a popup after the choice.
 
 A Library folder whose volume is not mounted still counts, because the Library check runs before any disk check. The Library's folders arrive from MW::updateLibraryTree's background read; until they have (BookMarks::isLibraryKnown), nothing is greyed and the popup says the folders are still being read.
+
+#### 3.4.2 In the Library, Drop Thumbnails on a Folder to Move Them
+
+In the Library, dragging thumbnails from the grid onto a row in the Filters panel's Folders category moves those images, and their sidecars, into that real folder. This is how an image filed in the wrong folder gets put right without leaving the Library.
+
+- **Drop side.** Filters (`Datamodel/filters.cpp`) accepts drops: dragEnterEvent, dragMoveEvent, dragLeaveEvent and dropEvent. Filters::folderDropTarget allows the drop only when all of these hold:
+  - G::scope is Catalog.
+  - The drag came from inside Winnow and carries URLs.
+  - The row is a Folders item: `isFilterItem && categoryOf == folders`. A category header does not count.
+  - The row's path (data(1)) is a directory that exists. A folder on an unmounted drive is refused.
+- **Feedback during the drag.** Over any other row, or over blank space, the drag shows the "no" cursor. The target row is outlined in G::appleBlue (paintEvent, dropHover).
+- **Always CopyAction.** Every accept sets CopyAction (on enter, move and drop), never MoveAction and never IgnoreAction. IconView::startDrag trashes the originals when the drop reports a move. The move here is Winnow's own. See [16.8.5 The Drag Must Not Delete the Photographs](#1685-the-drag-must-not-delete-the-photographs).
+- **What is moved.** The drop removes sidecar URLs (G::includeSidecars adds them to the drag), because moveFile carries each image's companions itself. It then queues moveImagesToFolderRequested, so the confirmation dialog never runs inside the drag's own event loop.
+- **MW::moveImagesToFolder** (`Main/fileoperations.cpp`):
+  - It drops version keys, duplicates, missing files and images already in the folder.
+  - It refuses while a load is running (G::isModifyingDatamodel or G::isLoadRunning).
+  - It always confirms, because a drop on the wrong row of a dense tree is easy.
+  - A clash is a destination image **or** a destination sidecar that already exists (moveClashes). This is checked because FileOps::moveFile silently replaces an existing destination. With no clashes the buttons are Move and Cancel.
+  - When there are clashes, the dialog names them and offers three buttons:
+    - **Rename** (the default) picks the first name\_N that is free for the image and every sidecar.
+    - **Overwrite** sends the existing image (FileOps::trashFile, with its sidecars and caches) or the stray sidecar to the trash first. An overwritten image that was a Library row is removed from the model.
+    - **Cancel** changes nothing.
+- **A version dragged without its master.** A version is not a file: it is a second recipe in its master's sidecar, so the move takes the master file and every version of it. The drag's URLs name each file once, so IconView::startDrag also carries the row keys (VersionKey::kRowKeysMime, `Utilities/versionkey.h`). Filters passes them on, and the dialog lists each version dragged without its master row, with how many versions its master holds. Dragging the master needs no note.
+- **Keys that follow the move.** Before applyModelChange, an open version group's expand state (SortFilter::setVersionsExpanded) and dm->currentKey are re-keyed from the old path to the new one, as DataModel::rekeyVersions does for a rename. Without this an open group came back closed, its versions hidden behind the badge.
+- **The move itself.** Each image goes through FileOps::moveFile. Its onMoved carries:
+  - the thumbnail and devPreview caches
+  - the catalog row, collections, picks and Develop history
+  
+  More than 20 images get a QProgressDialog, with Cancel between files.
+- **The model** follows through applyModelChange(new paths, old paths), which:
+  - removes the old rows
+  - reads in the new ones
+  - saves, rebuilds and restores the filters, so the user's checks stay ("refresh, not clear")
+  
+  After that:
+  - reconcileVersionRows brings back a moved master's version rows, which removeFiles dropped with the old row.
+  - refreshLibraryAfterCatalogChange updates the Filter panel's result list and LibTree counts. Its delta (applyCatalogDelta) then finds nothing left to splice.
+- **Out of scope.** The Folders scope, and drops from the Finder (a copy-in, a different feature).
 
 ### 3.5 Picks Are Saved as They Are Made
 
@@ -2312,7 +2366,7 @@ isCaching, isCached, attempts, decoderId, decoder status and error message used 
 
 - ImageCache::RowCache is that state, KEYED BY FILE PATH rather than by row: proxy rows shift under filtering and sorting, and icd->imCache is already keyed by path, so the two can never disagree.
 - The model still carries the columns, updated through the same queued signals (the icon delegate draws its cached badge from G::IsCachedColumn and the table shows the rest), but only as a one-way MIRROR for display. Writes go to RowCache FIRST and the model after.
-- IsCachedColumn holds a G::CacheSource (2026-11-08), not a bool: CacheNone, CacheOriginal (the file's own pixels: a raw's embedded JPG, or an unedited non-raw) or CacheDeveloped (ImageDecoder::developApplied or a sensor Raw decode: a devPreview, a sensor-decoded raw, an edited non-raw developed by applyDevelop). ImageDecoder::cacheSource() computes it; it rides the done() signal as doneCacheSource like the other done* snapshots (decoder fields race with the next decode), and ImageCache::setCached carries it. Non-zero still reads true through toBool(). The icon delegate draws the cache circle from it in BOTH operation modes: red G::thumbUncachedColor, purple G::thumbRawPreviewColor, green G::thumbDevPreviewColor (it used to be red-when-uncached only, hidden in Develop). Green ALSO means a built devPreview on disk, where the loupe would serve it (always in Develop, where it is the placeholder; in Preview only with Preview Source = Developed): Develop trims ImageCache to the current image, so ImageCache alone left every other thumbnail red. DevPreviewCache is SQLite-only and stats the source, so paint asks DataModel::devPreviewReady (Datamodel/devpreviewready.h), a lazy memo of contains(rowKey, devPreviewKeyFor(...), acceptReduced) filled for painted rows by one batched pool-thread probe per event-loop pass; a first-true or changed answer repaints via scheduleVisibleEmit. Entries go stale when the row's DevPreviewKeyColumn or DevPreviewCache::generation() moves (bumped under the mutex by put, removeLocked, eviction, onMoved, restamp, clear) and are re-probed on the next paint, showing the last answer meanwhile; a dm->instance change drops the memo.
+- IsCachedColumn holds a G::CacheSource (2026-11-08), not a bool: CacheNone, CacheOriginal (the file's own pixels: a raw's embedded JPG, or an unedited non-raw) or CacheDeveloped (ImageDecoder::developApplied or a sensor Raw decode: a devPreview, a sensor-decoded raw, an edited non-raw developed by applyDevelop). ImageDecoder::cacheSource() computes it; it rides the done() signal as doneCacheSource like the other done* snapshots (decoder fields race with the next decode), and ImageCache::setCached carries it. Non-zero still reads true through toBool(). The icon delegate draws the cache circle from it with ONE rule in both operation modes (2026-11-09; the badge describes the image, not the mode, so switching modes never recolours the grid): red G::thumbUncachedColor, purple G::thumbRawPreviewColor, green G::thumbDevPreviewColor (it used to be red-when-uncached only, hidden in Develop). Green ALSO means a built devPreview on disk, in Browse as well as Develop (it was briefly Develop-only, or Preview Source = Developed): Develop trims ImageCache to the current image, so ImageCache alone left every other thumbnail red. The badge tooltip names the current colour and shows the green / purple / red legend. DevPreviewCache is SQLite-only and stats the source, so paint asks DataModel::devPreviewReady (Datamodel/devpreviewready.h), a lazy memo of contains(rowKey, devPreviewKeyFor(...), acceptReduced) filled for painted rows by one batched pool-thread probe per event-loop pass; a first-true or changed answer repaints via scheduleVisibleEmit. Entries go stale when the row's DevPreviewKeyColumn or DevPreviewCache::generation() moves (bumped under the mutex by put, removeLocked, eviction, onMoved, restamp, clear) and are re-probed on the next paint, showing the last answer meanwhile; a dm->instance change drops the memo.
 - The mirror is keyed by path too: ImageCache::setCached carries fPath, and DataModel::setCached resolves it through fPathRow to the SOURCE row. It used to address the proxy by the snapshot's sfRow, which a filter or sort landing before the queued slot ran had renumbered, producing hundreds of "Invalid sfIdx. Src: DataModel::setCached" issues a day, or a cache badge on the WRONG image. Evictions of filter-hidden images were sent with sfRow = -1 and always failed, so their IsCachedColumn stayed true until the filter was cleared. A path no longer in the model is dropped silently.
 - State is dropped on an instance change (initialize, updateInstance) and per path on removal (removeCachedImage, removeFromCache, which MW's delete/replace path already calls). A path reappearing in the next folder must not inherit its retry count, and one that had failed terminally would otherwise never be decoded again. In initialize() the ORDER matters: resetStaleIsCaching() reads RowCache to find rows left marked caching and mirrors isCaching=false to the DataModel for each, so clearing first would make it a no-op.
 
@@ -3804,11 +3858,14 @@ A mask, spot or crop tool owns the mouse (brush, lasso, eyedropper, spot pins, c
 1. Focus in a QDialog: bail. This mirrors the modeless dialog guard, which cannot cover these keys because it matches via MW::ownsShortcut() and a Develop action has no sequence. Without it a bare S typed into a Preferences field would arm the spot tool. Floating QDockWidgets are separate top-level windows too but belong to the MW workspace, hence the QDialog test.
 2. Esc while a submask is open: discard it if still PENDING, else just close it (escapeMaskTool), and consume. Placed BEFORE the value-editor bail so it fires even when focus is on a mask slider (Hue/Sat) or the Color Range wheel; it falls through while the WB dropper or Transform is up, whose Esc handlers run later.
 3. Focus in a value editor (QAbstractSlider / QAbstractSpinBox / QLineEdit / QComboBox): bail, so arrows still nudge a Develop slider and letters still type. EXCEPTION: a key that is in developShortcuts is still arbitrated over a slider or spin box (including a spin box's internal QLineEdit; see isTextEntryWidget()). Focus sits on a dock slider for most of a Develop session, and bailing there passed the key to its GLOBAL action: O opened the folder dialog instead of toggling the overlay (likewise S = Slideshow). Only real text entry (the search field, an EDITABLE QComboBox) keeps its letters. A read-only combo is not text entry: isTextEntryWidget() once treated every QComboBox as text entry, and since the Develop dock's rows are read-only combos (View transform, WB preset) that keep focus after a pick, R/S/O/N/M/W/X/H/P went dead after choosing a View (fixed 2026-08-29). A read-only combo now only loses its type-to-select search.
+   A second exception: Esc over a slider or spin box is not bailed either. After the dropper/picker Esc handlers (which keep priority) and BEFORE the Transform block (whose Esc discards the session), it moves the focus to thumbView, so Left/Right and the other thumbView-focus keys work again without a click (2026-11-10).
 4. Auto-repeat: bail. Every Develop key is a toggle or pops a dialog.
 
-#### 7.5.6 Selection Keys Are Ignored in Develop Mode
+#### 7.5.6 Selection Keys in Develop Mode
 
 Arrows, PgUp/PgDn and Home/End (bare or Shift'd, plus the Ctrl+Shift+Alt pick-nav and Shift+Ctrl+Right random-image combos) are swallowed in Develop unless thumbView has the focus (MW::thumbViewHasFocus()), so the keyboard cannot navigate off the image being developed. Alt+key is EXCLUDED (Alt+arrow / Alt+Home scroll and pan within the image), but Ctrl+Shift+Alt+Left/Right IS pick navigation, hence the Ctrl test in isSelectionKey().
+
+EXCEPTION: Left/Right, bare or Shift'd (no Ctrl/Meta), always step to the next/prior image, as if thumbView had the focus (2026-11-10). The arbiter still consumes them (so the loupe's QGraphicsView cannot scroll on them) but on the KeyPress makes the same calls as the MWWindow intercept below: keyRight/keyLeft in Compare, else sel->next/prev(modifiers). A focused slider or spin box is bailed by guard 3 first, so it still nudges on arrows.
 
 The bare Left/Right navigation intercept further down MW::eventFilter bypasses the shortcut system entirely (faster than a menu shortcut). It needs no mode guard of its own only because the arbiter runs first and consumes the arrow; keep that ordering.
 
@@ -4793,7 +4850,7 @@ Camera contrast (added 2026-10-03): Develop/cameracurve.h + Develop/cameracurved
 
 - The shape: y = C(u) below the knee (u = gain\*x; the camera curve exactly as written, so shadows and midtones carry its contrast), and above it y = yk + (1-yk)\*(1 - (1+t)^-p) with t = s\*(u-uk)/(p\*(1-yk)), s = C'(uk): C1 at the knee, monotonic, asymptotic to white.
 - kKneeY = 0.60 (output), kTailPower = 0.6, chosen against Standard roll-off by display level (generic / D7200 Camera Neutral / Filmic): sensor white 237/235/236, 2x 244/243/247, 4x 248/247/253, 8x 250/250/255, 64x 254/254/255. Sensor white lands where Standard roll-off puts it, with a GENTLER tail above (Filmic clips by 2.6 stops over). The first attempt (knee 0.80, a 1/t tail) put sensor white at \~250 and squeezed 1.4x..3.8x white into levels 250..254 (the +3 EV face still nearly flat white); tst_inputprofile::profileCurveRollsOffAPushedExposure caught it. Not fitted to a Lightroom render; refit if one says otherwise.
-- kProfileKneeY = 0.80 for a PROFILE's ProfileToneCurve (CameraCurve::BuildFromPairs; maker curves keep 0.60). Fitted to Lightroom 2026-11-09 on an iPhone ProRAW (IMG_1097: Winnow's gain-mapped data + Apple's ProfileToneCurve vs a Lightroom 15.6 export, which renders the file with Adobe Standard and still matches Apple's curve applied in full to within 0.008). Mean abs error in encoded luminance by handover: 0.60 0.0163, 0.70 0.0106, 0.80 0.0083, 0.90 0.0080, full curve 0.0080. At 0.60 the gain-mapped scene's white rendered at 232/255 and p99 at 0.872 vs Lightroom's 0.914. With the 0.6-power tail (not the old 1/t), 0.80 keeps 1x/2x/4x/8x over white at 243/250/252/253. Bumped DevelopRevision::kEdited 1 and dng decoder revision 3.
+- kProRawKneeY = 0.80 for iPhone ProRAW's EMBEDDED curve only (OutputLook::curvePerChannel; Develop::ApplyProfileTables passes it to BuildFromPairs). DCP curves and maker curves keep 0.60: on a steep DCP curve 0.80 reached 252 by ~1.8 stops over and tst_inputprofile::profileCurveRollsOffAPushedExposure lost separation (8-bit sums 751, 754, 755, 756, 756 vs 727 ... 740 at 0.60). Fitted to Lightroom 2026-11-09 on an iPhone ProRAW (IMG_1097: Winnow's gain-mapped data + Apple's ProfileToneCurve vs a Lightroom 15.6 export, which renders the file with Adobe Standard and still matches Apple's curve applied in full to within 0.008). Mean abs error in encoded luminance by handover: 0.60 0.0163, 0.70 0.0106, 0.80 0.0083, 0.90 0.0080, full curve 0.0080. At 0.60 the gain-mapped scene's white rendered at 232/255 and p99 at 0.872 vs Lightroom's 0.914. With the 0.6-power tail (not the old 1/t), 0.80 keeps 1x/2x/4x/8x over white at 243/250/252/253. DevelopRevision::kEdited 4, dng decoder revision 3.
 - Why one curve per maker, not per style (measured 2026-10-03 over \~900 installed Camera profiles): within one maker, the Standard / Vivid / Landscape / Portrait curves differ by &lt;= 0.02 above the deep shadows (Canon's three are identical); what makes Camera Vivid vivid is its LookTable, its colour grade. Across makers they differ more (Canon flatter: 0.405 at x=0.18 vs Nikon 0.448), and across bodies of one maker by up to 0.07-0.12. So: ONE camera-contrast curve per maker, and the styles' colour from Profile.
 
 The camera curves, FilmicHue and Profile curve are applied HUE-PRESERVINGLY (CameraCurve::ApplyRGBTone, the SDK's RGBTone: the brightest and darkest channel take the curve, the middle one is interpolated), not per channel, so they take OutputTransform's per-pixel CAMERA PATH rather than the 1-D tables. That path is also what a profile LookTable needs; everything without either keeps the table paths, so Standard roll-off on an image with no look renders bit-for-bit as before. DisplayPosition (tone-region handle placement) has no image, so for both camera curves it uses the GENERIC curve per channel (the maker curves sit within a few levels of it).
@@ -5581,7 +5638,7 @@ Preview is NON-DESTRUCTIVE. Each section header's eye toggles that group's Previ
 
 Group -> keys mapping follows the UI: texture / dehaze are Basic; the tone splits are Basic for Reset only; the sharpen\* quartet and localDenoiseLuma / localDenoiseChroma (Detail "Sharpening" and "Denoise") are Detail (the denoise pair moved there from Effects on 2026-08-20, so a scope's showDetail, not showEffects, gates them; old sidecars carry no showDetail key and it defaults to true); denoiseLuma / denoiseChroma (the Global "Denoise raw") are in no group. The preset format did not change: presets store a flat map of EditParams field names, and section titles only group the checklist UI.
 
-The tree's context menu (anywhere in the tree) also carries Expand all / Collapse all / Solo mode, mirroring the Embellish dock:
+The tree's context menu (anywhere in the tree, the Edits bar, the Mask panel or the Raw panel, which is a Solo peer) also carries Expand all / Collapse all / Solo mode, mirroring the Embellish dock:
 
 - Expand all / Collapse all go through DevelopProperties::setAllSectionsExpanded, which calls QTreeView expandAll/collapseAll AND drives the tree's own scope items (setTreeCollapsed) and the Raw panel (RawPanel::setCollapsed). A bulk guard (isBulkExpandCollapse) keeps Expand all from tripping the Solo handler.
 - Solo mode is a checkable toggle (persisted as "Develop/isSolo") that collapses the other top-level sections whenever one is expanded (PropertyEditor::collapseAllExcept). The Edits bar and the Raw panel are Solo peers too, and the base class cannot reach them, so DevelopProperties::soloCollapseOthers(owner) folds every peer except the one just opened. It is called from onSectionExpanded, from setTreeCollapsed(false), and from the RawPanel::collapseToggled handler (bindRawPanel). RawPanel::setCollapsed is programmatic and emits nothing, so a fold cannot bounce back; the state persists as "Develop/rawCollapsed".
@@ -6507,6 +6564,8 @@ The commit model is Lightroom's. MW::developCropEditing gates it: while the crop
 - MW::enterDevelopCrop: set the flag -> render full -> ImageView::beginCropEdit(storedCrop), saving the Geometry snapshot Esc restores.
 - MW::exitDevelopCrop: read cropRect -> endCropEdit -> DevelopProperties::setCurrentGeometry -> clear the flag -> render cropped. It keeps the stored warp and updates only the crop.
 - Both are driven from toggleDevelopTransform and developDockVisibilityChange.
+- The crop is ALSO committed at the end of every crop gesture, not only on exit: ImageView::cropSettled (emitted by cropEmitChanged when no button is held -- a handle / new-frame release, a Space-pan release, an aspect or flip change; never mid-drag or while warping) -> MW::commitDevelopCrop -> setCurrentGeometry. Committing only on exit lost the crop of every image but the last when the user moved through a selection with the tool open, and the multi-image sync never saw it: the sync reads the selection when an edit lands, and by exit the selection had shrunk to one image. Committing per gesture stores the crop while the selection it was made for is still live, so a batch crop syncs to every selected image.
+- Moving to another image with the tool open keeps it open (select + crop a batch, then iterate it panning each crop). MW::developCropImageChanged (fileSelectionChange, after DevelopProperties::setCurrentImage) re-seats the overlay on the new image's stored crop (ImageView::cropSetRect: no refit, no commit), refreshes the Angle field and takes a new Esc snapshot -- Esc reverts the image on screen only. The loupe does not paint the cached devPreview while the overlay is up (developCropSuppressesCrop): it is cropped, and the overlay belongs on the full frame the render brings.
 - MW::rectifyDevelopCrop stores g.hasWarp + g.quad (the traced corners, normalised in the developed + oriented frame, applyGeometry's input space) + g.crop (the suggested largest-inscribed rect from ImageView::computeRectifyCrop), re-renders the corrected canvas and restarts the overlay on it. The warp is a stored parameter, never baked pixels.
 - ImageView::setDevelopPreview re-fits when the image dimensions change (a crop applied or removed); the same-size path (a slider drag) just swaps pixels.
 
@@ -7937,6 +7996,14 @@ Declining makes flushImage DROP the old devPreview, so if nothing replaced it th
 - Heal / Clone source adoption re-keys the frames (2026-11-01). DevelopProperties::adoptSpotSources writes the engine's auto-picked source into the spot after a render lands, which changes the recipe hash, so the retained frames carried the pre-adoption recipe and every flush of a Heal / Clone edit was declined. MW::adoptDevelopSpotSources wraps it: a frame keyed to the recipe just replaced is re-keyed to the adopted one (same pixels; the source is only written down). In onDevelopFullResReady it now runs AFTER the frame is retained.
 - Re-entry is free: flushAll runs before EVERY file operation (FileOps::flushPendingEdits), so a multi-image paste or ingest would call topUpDevPreviews once per file. It remembers the last (path, recipe) it brought up to date and returns immediately for a repeat.
 - Cleared, not left behind: when flushImage cannot obtain a preview for a new recipe it CLEARS both tiers. A preview that no longer matches its recipe would show a picture the user has already changed; the camera thumbnail is at least honest.
+
+#### 12.4.8 The Loupe Tier Is Encoded Off the GUI Thread
+
+(2026-11-09.) The provider returns the loupe tier UNENCODED (a QImage). DevelopProperties::putDevPreviewAsync scales it to G::devPreviewMaxEdge, JPEG-encodes it and puts it on devPreviewWriter, a one-thread QThreadPool. At Full size the encode had cost hundreds of ms on the GUI thread in every flush: the debounced write while editing, leaving Develop, and every topUpDevPreviews.
+
+- One thread keeps writes ORDERED. flushImage's "drop the old preview" (a null loupe) goes through the same queue, so an earlier recipe's put can never overtake a later put or drop for the same path.
+- waitForDevPreviewWrites drains the queue where the write must be complete. MW::closeEvent calls it after its flushAll. So does the FileOps flush hook, because a put landing after a rename or delete would file a preview under a path that no longer exists.
+- Nothing on screen waits for the write. The frame is already displayed, and when Develop is left it seeds the image cache directly ([2.7.5](#275-leaving-develop-does-not-re-decode-the-current-image)).
 
 ### 12.5 Staleness Keys
 

@@ -8,8 +8,11 @@ WHAT'S NEW
 - Consolidated help doc
 - Fix apple dng endian bug (malicious IRB chains)
 - Regenerate thumbnails
+- Move files in Library
+- Crop and adjust crop for multiple images
 
 BUGS / TO DO
+- D > E should be instant (same devPreview)
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (replay a series of steps)

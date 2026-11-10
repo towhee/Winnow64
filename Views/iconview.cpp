@@ -1,6 +1,7 @@
 #include "Views/iconview.h"
 #include <cmath>
 #include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
 #include "Main/mainwindow.h"
 
 /*  IconView Overview
@@ -2344,8 +2345,10 @@ void IconView::startDrag(Qt::DropActions)
 
     QList<QUrl> urls;
     QList<QString>paths;
+    QStringList rowKeys;                    // G::KeyRole: a version is its own key
     QSet<QString> seenFiles;
     for (int i = 0; i < selection.count(); ++i) {
+        rowKeys << selection.at(i).data(G::KeyRole).toString();
         QString fPath = selection.at(i).data(G::SourcePathRole).toString();
         /* a version (virtual copy) is its source file: hand each file over once */
         if (seenFiles.contains(fPath)) continue;
@@ -2364,6 +2367,10 @@ void IconView::startDrag(Qt::DropActions)
     QMimeData *mimeData = new QMimeData;
 
     mimeData->setUrls(urls);
+    /*  THE ROWS, not just the files. The URLs name each file once, so a version dragged
+        without its master reads as the master. A Winnow target that cares (the Filters
+        folder drop says the move takes every version) reads this; others ignore it. */
+    mimeData->setData(VersionKey::kRowKeysMime, rowKeys.join('\n').toUtf8());
     drag->setMimeData(mimeData);
 
     //  Fancy drag cursor

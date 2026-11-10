@@ -25,18 +25,20 @@
 
     History:
       kEdited 1  2026-11-09  a profile's ProfileToneCurve hands over to the roll-off at
-                             0.80, not 0.60 (CameraCurve::kProfileKneeY, fitted to
+                             0.80, not 0.60 (CameraCurve::kProRawKneeY, fitted to
                              Lightroom). Recipes with Tone mapping = Profile curve.
                              Unedited ProRAW renders are covered by dng revision 3.
       kEdited 2  2026-11-09  ProRAW's embedded profile curve applied per channel, not
                              hue-preserving (OutputLook::curvePerChannel). dng rev 4.
       kEdited 3  2026-11-09  ...and its out-of-gamut colours GamutClip'd, not bled to
                              white (the IMG_1106 pumpkin halo). dng rev 5.
+      kEdited 4  2026-11-09  a DCP's ProfileToneCurve back to the 0.60 knee (kEdited 1
+                             moved it to 0.80; only ProRAW's curve keeps 0.80).
 */
 
 namespace DevelopRevision {
 
-constexpr int kEdited   = 3;
+constexpr int kEdited   = 4;
 constexpr int kIdentity = 0;
 
 /* The key part for a base key: identity renders carry the "R" prefix

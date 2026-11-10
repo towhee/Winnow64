@@ -1610,7 +1610,10 @@ void MW::closeEvent(QCloseEvent *event)
     IngestProbe::Instance().DumpReport();
 
     // persist any unsaved per-image Develop edits to their sidecars before teardown
-    if (developProperties) developProperties->flushAll();
+    if (developProperties) {
+        developProperties->flushAll();
+        developProperties->waitForDevPreviewWrites();   // loupe tier is written off-thread
+    }
 
     /* Persist the develop-preview index. Cheap (one small JSON write) and skipped when
        nothing changed. Losing it costs only re-renders, so it is not worth guarding. */
@@ -2006,8 +2009,11 @@ bool MW::developShortcutIntercept(QEvent *event)
 
       1. A key in developShortcuts runs its Develop action in place of the global action
          bound to the same key (S = spot tool here, Slideshow in Preview).
-      2. A selection key is swallowed unless thumbView has the focus, so arrows and page
-         keys cannot navigate off the image being developed.
+      2. A selection key is swallowed unless thumbView has the focus, so Up/Down and page
+         keys cannot navigate off the image being developed. Left/Right still step to the
+         next/prior image, as if thumbView had the focus.
+
+    Esc on a focused slider/spin box hands the focus back to thumbView (rule 1c).
 
     Everything else falls through and behaves exactly as it does in Preview mode. Returns
     true when the key has been consumed.
@@ -2070,7 +2076,15 @@ bool MW::developShortcutIntercept(QEvent *event)
     const bool developKey = G::bareModifiers(e) == Qt::NoModifier
                             && !e->isAutoRepeat() && developShortcuts.contains(key);
     if (isTextEntryWidget(fw)) return false;
-    if (!developKey &&
+    /* Esc from a Develop slider or spin box (whose focus proxy is its QLineEdit) is not
+       the editor's either: it hands the focus back to the thumbnails (rule 1c below),
+       after any armed dropper/picker has had the chance to claim it. */
+    const bool escFromEditor =
+        key == Qt::Key_Escape && !e->isAutoRepeat()
+        && (qobject_cast<QAbstractSlider *>(fw) || qobject_cast<QAbstractSpinBox *>(fw)
+            || (qobject_cast<QLineEdit *>(fw)
+                && qobject_cast<QAbstractSpinBox *>(fw->parentWidget())));
+    if (!developKey && !escFromEditor &&
         (qobject_cast<QAbstractSlider *>(fw) || qobject_cast<QAbstractSpinBox *>(fw) ||
          qobject_cast<QLineEdit *>(fw)))
         return false;
@@ -2111,6 +2125,16 @@ bool MW::developShortcutIntercept(QEvent *event)
         && e->key() == Qt::Key_Escape && !e->isAutoRepeat()) {
         event->accept();
         if (!isOverride) developProperties->cancelLensFocusPick();
+        return true;
+    }
+
+    /* 1c. Esc on a focused slider/spin box returns the focus to the thumbnails, so the
+       arrows (and everything else bound to thumbView focus) work again without a click.
+       Ahead of the Transform block: Esc there DISCARDS the session, which must not be
+       the price of leaving a slider. */
+    if (escFromEditor) {
+        event->accept();
+        if (!isOverride && thumbView) thumbView->setFocus(Qt::ShortcutFocusReason);
         return true;
     }
 
@@ -2160,9 +2184,24 @@ bool MW::developShortcutIntercept(QEvent *event)
         }
     }
 
-    // 2. Selection keys are inert unless the user is deliberately in the thumbnails
+    /* 2. Selection keys are inert unless the user is deliberately in the thumbnails --
+       EXCEPT Left/Right (bare or Shift'd), which always step to the next/prior image as
+       they would with thumbView focused: the same calls the KEYPRESS INTERCEPT makes at
+       MWWindow, which an arrow swallowed here never reaches. A focused slider or spin box
+       never gets this far (value-editor guard above), so it still nudges on arrows. */
     if (isSelectionKey(e) && !thumbViewHasFocus()) {
         event->accept();
+        const bool ctrl = G::bareModifiers(e) & (Qt::ControlModifier | Qt::MetaModifier);
+        if (!isOverride && !ctrl) {
+            if (key == Qt::Key_Right) {
+                if (G::mode == "Compare") keyRight();
+                else sel->next(e->modifiers());
+            }
+            else if (key == Qt::Key_Left) {
+                if (G::mode == "Compare") keyLeft();
+                else sel->prev(e->modifiers());
+            }
+        }
         return true;
     }
 
@@ -6372,6 +6411,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
+        developCropImageChanged();
         /* The Detail preview's sample point named a place in the PREVIOUS picture, so it
            goes with it -- keeping it would silently magnify a different subject. */
         resetDetailPoint();
@@ -6493,7 +6533,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    so the decode never reaches the screen. Same substitution as the
                    miss branch below, MW::setOperationMode and
                    MW::refreshViewsOnCacheChange. */
-                if (currentDevelopEditsVisible()) {
+                /* Not under an open crop overlay: the devPreview is CROPPED, and the
+                   overlay is placed on the full frame the render brings. */
+                if (currentDevelopEditsVisible() && !developCropSuppressesCrop()) {
                     const QImage cachedPreview = devPreview(fPath);
                     if (!cachedPreview.isNull()
                         && imageView->loadImageInterim(fPath, cachedPreview))
@@ -6518,7 +6560,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                    an edited image the embedded JPG shows the UNDEVELOPED picture, so the
                    loupe used to spend those 2-3s displaying the one thing the user had
                    already decided to change. */
-                const QImage cachedPreview = devPreview(fPath);
+                const QImage cachedPreview = developCropSuppressesCrop()
+                                             ? QImage()       // cropped: see the hit branch
+                                             : devPreview(fPath);
                 developInterimIsDevPreview = !cachedPreview.isNull();
                 if (imageView->loadImageInterim(fPath, cachedPreview)) {
                     revealInfoOverlayOnce();
@@ -8048,6 +8092,27 @@ QByteArray MW::developRecipeKey(const QString &fPath)
     const QString blob = developProperties->developBlobFor(fPath);
     if (blob.isEmpty()) return QByteArray();
     return Metadata::devPreviewKey(blob).toLatin1();
+}
+
+QImage MW::developFrameForBrowse(const QString &fPath)
+{
+/*
+    The developed picture Browse would show for fPath, if it is already in memory: the
+    retained full-res settle render, under the same test the devPreview provider applies
+    before encoding it (same image, faithful, rendered from the recipe in force). That
+    frame is then pixel-for-pixel the devPreview ImageDecoder::loadDevPreview would serve,
+    minus the JPEG round trip.
+
+    Null when Browse would show something else: Original chosen (the camera picture), or
+    an unedited image (its file, or a default render that is not this frame). See
+    MW::setOperationMode.
+*/
+    if (fPath.isEmpty() || G::previewSource != G::PreviewSource::Developed) return QImage();
+    if (fPath != developFullFramePath || developFullFrame.isNull()
+        || !developFullFrameFaithful) return QImage();
+    const QByteArray recipe = developRecipeKey(fPath);
+    if (recipe.isEmpty() || developFullFrameRecipe != recipe) return QImage();
+    return developFullFrame;
 }
 
 void MW::adoptDevelopSpotSources(const QString &fPath)
@@ -17592,18 +17657,44 @@ void MW::exitDevelopCrop()
     /* When result-preview is on, the overlay was already committed + dropped at the toggle, so only
        read/commit the overlay crop when we are still in editing mode. */
     if (!developCropShowResult) {
-        const QRectF crop = imageView->cropRect();
+        commitDevelopCrop();
         imageView->endCropEdit();
-        if (developProperties) {
-            Geometry g = developProperties->currentGeometry();
-            g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
-            developProperties->setCurrentGeometry(g);
-        }
     }
     developCropEditing = false;
     developCropShowResult = false;
     renderDevelopPreview(false);     // geometry applied -> cropped result
     syncDevelopKaleidoOverlay();     // the Effects handles come back if they are wanted
+}
+
+void MW::commitDevelopCrop()
+{
+/*
+    An identical re-set records nothing (setCurrentGeometry), so committing a crop that has
+    not moved -- exit after a gesture already committed it -- is free.
+*/
+    if (!imageView || !developProperties || !developCropEditing || developCropShowResult)
+        return;
+    const QRectF crop = imageView->cropRect();
+    Geometry g = developProperties->currentGeometry();
+    g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
+    developProperties->setCurrentGeometry(g);
+}
+
+void MW::developCropImageChanged()
+{
+/*
+    Called from fileSelectionChange after DevelopProperties has moved to the new image.
+    The image being left needs nothing: its crop was committed when its last gesture
+    ended. The overlay stays open (iterating a selection, panning each crop, is the
+    workflow) but shows THIS image's crop; the loupe's coming full-frame render re-derives
+    the on-screen frame from the normalized rectangle (setDevelopPreview).
+*/
+    if (!developCropEditing || !developProperties || !transformPanel) return;
+    developCropGeometryBackup = developProperties->currentGeometry();
+    const Geometry &g = developCropGeometryBackup;
+    transformPanel->setLevelAngle(g.straighten);
+    if (imageView && !developCropShowResult)
+        imageView->cropSetRect(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
 }
 
 void MW::cancelDevelopTransform()

@@ -389,6 +389,12 @@ signals:
     /*  Whether any category header is lit in the filtering colour -- emitted only when
         that changes. MW colours the Filters title bar with it. */
     void filteringChanged(bool isFiltering);
+    /*  Thumbnails were dropped on a Folders row in Library scope: move these images
+        (companions already filtered out) into that real folder. rowKeys are the dragged
+        rows (VersionKey::kRowKeysMime), so MW can say when a version moves its master.
+        MW confirms, moves and refreshes -- see MW::moveImagesToFolder. */
+    void moveImagesToFolderRequested(const QStringList &paths, const QStringList &rowKeys,
+                                     const QString &folder);
 
 public slots:
 
@@ -456,6 +462,14 @@ protected:
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void drawBranches(QPainter *painter, const QRect &rect,
                       const QModelIndex &index) const override;
+    /*  DROP TO MOVE. Thumbnails dragged from the grid onto a Folders row in Library
+        scope move into that folder. Every accept is a CopyAction: IconView::startDrag
+        trashes the originals when the drop reports a move, and the move here is
+        Winnow's own (FileOps::moveFile, sidecars and caches included). */
+    void dragEnterEvent(QDragEnterEvent *event) override;
+    void dragMoveEvent(QDragMoveEvent *event) override;
+    void dragLeaveEvent(QDragLeaveEvent *event) override;
+    void dropEvent(QDropEvent *event) override;
 
 public:
     /*  THE GAP BETWEEN AN EXPAND ARROW AND THE CHECKBOX AFTER IT, in px. FiltersDelegate
@@ -597,6 +611,14 @@ public:
 
 private:
     bool setsShown = true;            // see setLibrarySetsAvailable
+
+    /*  The Folders row under pos that a thumbnail drag may drop on, or nullptr: Library
+        scope, a drag from inside Winnow, a folder item (not a header) that exists on
+        disk. dropHover is the row painted as the target while a drag is over it -- an
+        index, not the item, so a rebuild mid-drag cannot leave it dangling. */
+    QTreeWidgetItem *folderDropTarget(const QPoint &pos, const QDropEvent *event) const;
+    void setDropHover(QTreeWidgetItem *item);
+    QPersistentModelIndex dropHover;
 
     struct Group {
         QTreeWidgetItem *item = nullptr;

@@ -117,7 +117,7 @@ private slots:
     void foldEqualsSequenceWithCalibrate();
     void denoisePathAgreesWithFoldedPath();
     void nonRawIsUntouched();
-    void defaultViewTransformIsFilmic();
+    void defaultViewTransformIsAuto();
     void viewTransformSanitisesToTheDefault();
     void cameraProfileReplacesTheInputMatrix();
     void cameraProfileWhiteBalancesExactlyOnce();
@@ -131,7 +131,7 @@ private slots:
 };
 
 /*
-    THE DEFAULT IS FILMIC, AND IT IS NOT THE IDENTITY.
+    THE DEFAULT IS AUTO, WHICH IS FILMIC FOR AN ORDINARY RAW, AND IT IS NOT THE IDENTITY.
 
     This test used to assert the opposite -- that the default was None -- on the reasoning
     that a default-constructed EditParams is what "no edits" means, so the default had to
@@ -147,14 +147,22 @@ private slots:
 
       - the PUBLISHED NUMBERING, which is the sidecar format: added to, never renumbered.
       - the IDENTITY is still None == 0, because zero is what an absent field means.
-      - the DEFAULT is Filmic, and everything that asks "is this untouched?" compares
-        against EditParams::kDefaultViewTransform, never against a literal 0.
+      - the DEFAULT is Auto (since 2026-11-09; Filmic before), and everything that asks
+        "is this untouched?" compares against EditParams::kDefaultViewTransform, never
+        against a literal 0.
+
+    Auto is per image (OutputTransform::Resolve): Filmic for an ordinary raw, Profile
+    curve for one whose file carries a gain map and a curve (iPhone ProRAW).
 */
-void TestInputProfile::defaultViewTransformIsFilmic()
+void TestInputProfile::defaultViewTransformIsAuto()
 {
     const EditParams def;
     QCOMPARE(def.viewTransform, EditParams::kDefaultViewTransform);
     QCOMPARE(OutputTransform::ViewFromInt(def.viewTransform),
+             OutputTransform::ViewTransform::Auto);
+    /* ...which an ordinary raw resolves to Standard roll-off, as before Auto existed. */
+    const WorkingImage raw = makeCameraNative(4, 3);
+    QCOMPARE(OutputTransform::Resolve(OutputTransform::ViewFromInt(def.viewTransform), raw),
              OutputTransform::ViewTransform::Filmic);
 
     /* THE POINT OF THE CHANGE: an untouched raw is tone mapped. */
@@ -169,12 +177,12 @@ void TestInputProfile::defaultViewTransformIsFilmic()
     none.viewTransform = int(OutputTransform::ViewTransform::None);
     QVERIFY2(!none.isIdentity(), "choosing None is an edit -- it is not the default");
 
-    /* Reset Basic restores the default, i.e. Filmic, not the identity. */
+    /* Reset Basic restores the default, i.e. Auto, not the identity. */
     EditParams p;
     p.viewTransform = int(OutputTransform::ViewTransform::AgX);
     EditParams::resetGroup(p, EditParams::Group::Basic);
     QCOMPARE(OutputTransform::ViewFromInt(p.viewTransform),
-             OutputTransform::ViewTransform::Filmic);
+             OutputTransform::ViewTransform::Auto);
 
     /* The published numbering itself. */
     QCOMPARE(int(OutputTransform::ViewTransform::None),   0);
@@ -185,6 +193,8 @@ void TestInputProfile::defaultViewTransformIsFilmic()
     QCOMPARE(OutputTransform::ViewFromInt(3), OutputTransform::ViewTransform::CameraContrast);
     QCOMPARE(OutputTransform::ViewFromInt(4), OutputTransform::ViewTransform::ProfileCurve);
     QCOMPARE(int(OutputTransform::ViewTransform::FilmicHue), 5);
+    QCOMPARE(int(OutputTransform::ViewTransform::Auto), 6);
+    QCOMPARE(OutputTransform::ViewFromInt(6), OutputTransform::ViewTransform::Auto);
     QCOMPARE(OutputTransform::ViewFromInt(5), OutputTransform::ViewTransform::FilmicHue);
 
     /* An unknown value (a sidecar from a later build) resolves to the IDENTITY rather

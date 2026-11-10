@@ -358,6 +358,7 @@ void MW::createDataModel()
     connect(filters, &Filters::searchStringChange, dm, &DataModel::searchStringChange);
     connect(filters, &Filters::mergeUnfiledKeyword, this, &MW::mergeUnfiledKeyword);
     connect(filters, &Filters::filterOnRequested, this, &MW::filterOnColumn);
+    connect(filters, &Filters::moveImagesToFolderRequested, this, &MW::moveImagesToFolder);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     // versions (virtual copies): a master re-read after the load -- see Main/mwversions.cpp
     connect(dm, &DataModel::versionsChanged, this, &MW::scheduleVersionReconcile);
@@ -773,6 +774,8 @@ void MW::createImageCache()
     // Signal to ImageCache color manage change
     connect(this, &MW::imageCacheColorManageChange,
             imageCache, &ImageCache::colorManageChange);
+    connect(this, &MW::imageCacheReloadSeeded,
+            imageCache, &ImageCache::reloadImageCacheSeeded);
 
     /* Signal to initialize ImageCache Changed from BlockingQueuedConnection to
     QueuedConnection: BQC froze the UI thread whenever ImageCache's event loop was
@@ -1130,6 +1133,9 @@ void MW::createImageView()
             updateStatus(true, "", "ImageView::cropChanged");
         });
     });
+    /* A crop gesture ended: store it on the image now, while the selection it was made
+       for is still live (multi-image sync reads the selection when the edit lands). */
+    connect(imageView, &ImageView::cropSettled, this, &MW::commitDevelopCrop);
     connect(imageView, &ImageView::setCentralMessage, this, &MW::setCentralMessage);
     connect(thumbView, &IconView::thumbClick, imageView, &ImageView::panTo);
     connect(imageView, &ImageView::handleDrop, this, &MW::handleDrop);
@@ -2532,7 +2538,10 @@ void MW::createDevelopDock()
        rename or resurrect a sidecar that was just deleted. Registered here because this
        is where developProperties comes into existence. See Utilities/fileops.h. */
     FileOps::setFlushHook([this]{
-        if (developProperties) developProperties->flushAll();
+        if (!developProperties) return;
+        developProperties->flushAll();
+        /* The loupe tier is written off-thread; it must land before the file moves. */
+        developProperties->waitForDevPreviewWrites();
     });
 
     /* devPreviews are a byproduct of a render that already happened, never a reason to
@@ -2551,7 +2560,7 @@ void MW::createDevelopDock()
        targets clear their stale preview instead of keeping one.
        See DevelopProperties::flushImage. */
     developProperties->setDevPreviewProvider(
-        [this](const QString &fPath, QByteArray &thumbJpg, QByteArray &loupeJpg) -> bool {
+        [this](const QString &fPath, QByteArray &thumbJpg, QImage &loupe) -> bool {
             if (fPath.isEmpty()) return false;
 
             /* The frame on screen is not always what the recipe says. With the Transform
@@ -2637,26 +2646,18 @@ void MW::createDevelopDock()
                So: full frame, or a proxy that already meets a finite cap. Otherwise
                decline the tier -- flushImage then drops any older entry, the loupe
                decodes the raw and shows the right pixels, and the build queued below
-               writes a proper one. */
+               writes a proper one.
+
+               Handed back UNENCODED: the cap scale and the JPEG encode run on
+               DevelopProperties' writer thread (putDevPreviewAsync). */
             const int cap = G::devPreviewMaxEdge;
-            const QImage *loupeSrc = nullptr;
-            if (haveFull) loupeSrc = &developFullFrame;
+            if (haveFull) loupe = developFullFrame;
             else if (cap > 0 && qMax(developFrame.width(), developFrame.height()) >= cap)
-                loupeSrc = &developFrame;
-
-            if (loupeSrc) {
-                QImage loupe = *loupeSrc;
-                if (cap > 0 && qMax(loupe.width(), loupe.height()) > cap) {
-                    loupe = loupe.scaled(cap, cap, Qt::KeepAspectRatio,
-                                         Qt::SmoothTransformation);
-                }
-                if (!encode(loupe, G::devPreviewQuality, loupeJpg)) loupeJpg.clear();
-            }
-            else {
+                loupe = developFrame;
+            else
                 queueBuild();       // the proxy is too small for the loupe tier
-            }
 
-            return !thumbJpg.isEmpty() || !loupeJpg.isEmpty();
+            return !thumbJpg.isEmpty() || !loupe.isNull();
         });
 
     /* A devPreview the cache just dropped because its source file changed (see
@@ -3117,16 +3118,14 @@ void MW::createDevelopDock()
        case to handle.) */
     connect(transformPanel, &TransformPanel::previewToggled, this, [this](bool shown){
         if (!imageView || !developProperties || !developCropEditing) return;
-        developCropShowResult = shown;
         if (shown) {
-            const QRectF crop = imageView->cropRect();
-            Geometry g = developProperties->currentGeometry();
-            g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
-            developProperties->setCurrentGeometry(g);
+            commitDevelopCrop();                    // before the flag: it commits only while editing
+            developCropShowResult = true;
             imageView->endCropEdit();               // drop the overlay, restore the normal view
             renderDevelopPreview(false);            // geometry applied -> cropped result
         }
         else {
+            developCropShowResult = false;
             renderDevelopPreview(false);            // full frame (geometry suppressed) for the overlay
             const Geometry g = developProperties->currentGeometry();
             imageView->beginCropEdit(transformPanel->aspectRatio(),
@@ -4283,6 +4282,38 @@ void MW::setOperationMode(G::OperationMode mode)
         }
     }
 
+    /* LEAVING DEVELOP: flush the edits FIRST. The cache reload below asks the decoder for
+       the current image, and ImageDecoder::loadDevPreview can only serve it if this
+       recipe's devPreview has been written -- flushing after the reload was queued raced
+       it, and losing the race decoded the file. (The loupe tier itself is written
+       off-thread; the seed below is what spares the current image a decode.) */
+    if (developProperties && mode != G::OperationMode::Develop) {
+        developProperties->flushAll();
+        WorkingImageCache::instance().setPinned(QString());   // no edit session now
+        /* The devPreviews the session's flushes asked for (startDevPreviewBuild holds
+           them while Develop is open). Re-keyed here, so a path edited again after
+           its flush builds its latest recipe; one already current is filtered out. */
+        if (!devPreviewBuildDeferred.isEmpty()) {
+            const QStringList deferred(devPreviewBuildDeferred.cbegin(),
+                                       devPreviewBuildDeferred.cend());
+            devPreviewBuildDeferred.clear();
+            buildDevPreviews(deferred, "flush");
+        }
+    }
+
+    /* LEAVING DEVELOP: Browse must not wait for a picture it is already showing. The
+       retained full-res render of the current image IS its devPreview (the provider
+       encodes the same frame), so hand it to the image cache in place of a decode; the
+       loupe repaints from it the moment it lands (identical pixels, so nothing visibly
+       changes) and the rest of the cache refills behind it. Null when the frame is not
+       exactly what Browse would show -- Original chosen, unedited, a stale recipe, the
+       settle render not landed -- and then the reload decodes as before. */
+    const bool refreshCurrent = imageCache && dm && !dm->currentKey.isEmpty()
+                                && !currentIsVideo();
+    const QImage browseSeed = (mode != G::OperationMode::Develop && refreshCurrent)
+                                  ? developFrameForBrowse(dm->currentKey) : QImage();
+    const bool seeded = !browseSeed.isNull();
+
     /* The mode owns the raw/preview decode: Develop decodes RAW sensor data (best
     quality), Preview shows embedded previews (fast). toggleUseRaw() flips G::useRaw,
     syncs the Develop "Edit: Raw / Embedded Preview" selector, and rebuilds the cache --
@@ -4296,8 +4327,8 @@ void MW::setOperationMode(G::OperationMode mode)
     mode so the next still decodes correctly. */
     const bool wantUseRaw = (mode == G::OperationMode::Develop);
     if (G::useRaw != wantUseRaw)
-        toggleUseRaw(wantUseRaw ? Tog::on : Tog::off);   // flips useRaw + reloads cache
-    else if (imageCache && dm && !dm->currentKey.isEmpty() && !currentIsVideo()) {
+        toggleUseRaw(wantUseRaw ? Tog::on : Tog::off, !seeded);   // flips useRaw + reloads
+    else if (refreshCurrent) {
         /* useRaw already matches the target, but the MODE change alone re-selects
            the decode: ImageDecoder::load() branches on (operationMode == Develop &&
            useRaw), so Preview shows the embedded preview while Develop demosaics the
@@ -4309,13 +4340,19 @@ void MW::setOperationMode(G::OperationMode mode)
            reloadImageCache -> refreshViewsOnCacheChange -> loupe). */
         imageCache->setCurrentPosition(dm->currentKey, "MW::setOperationMode");
         imageView->currentImageHasChanged = true;
-        emit imageCacheColorManageChange();
+        if (!seeded) emit imageCacheColorManageChange();
+    }
+    if (seeded) {
+        const QString ext = dm->index(dm->rowFromKey(dm->currentKey), G::TypeColumn)
+                                .data().toString().toLower();
+        emit imageCacheReloadSeeded(dm->currentKey, browseSeed,
+                                    metadata->iccFormats.contains(ext));
     }
 
     /* Preview greys out the Develop panel; Develop re-enables it. The panel is not kept
     in sync with the selected image while in Preview (fileSelectionChange skips it), so
-    on entering Develop point it at the current image before enabling. Leaving Develop,
-    flush any unsaved edits of the image we were on so they persist. */
+    on entering Develop point it at the current image before enabling. (Leaving Develop
+    flushed the image's edits above, before the cache reload.) */
 
     if (developProperties) {
         if (mode == G::OperationMode::Develop) {
@@ -4336,19 +4373,6 @@ void MW::setOperationMode(G::OperationMode mode)
                                      WorkingImageCache::instance().get(
                                          dm->currentKey, rawRenderFor(dm->currentKey).tag()),
                                      currentImageIso());
-            }
-        }
-        else {
-            developProperties->flushAll();
-            WorkingImageCache::instance().setPinned(QString());   // no edit session now
-            /* The devPreviews the session's flushes asked for (startDevPreviewBuild holds
-               them while Develop is open). Re-keyed here, so a path edited again after
-               its flush builds its latest recipe; one already current is filtered out. */
-            if (!devPreviewBuildDeferred.isEmpty()) {
-                const QStringList deferred(devPreviewBuildDeferred.cbegin(),
-                                           devPreviewBuildDeferred.cend());
-                devPreviewBuildDeferred.clear();
-                buildDevPreviews(deferred, "flush");
             }
         }
         /* Show/hide the multi-image warning for the mode we just entered (the banner is

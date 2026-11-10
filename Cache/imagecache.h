@@ -130,6 +130,10 @@ public slots:
     void colorManageChange();
     void refreshImageCache();
     void reloadImageCache();
+    /* reloadImageCache, with fPath's entry supplied instead of decoded (leaving Develop:
+       MW::setOperationMode). sRGB pixels; colorManage = transform to the display as the
+       decoder would (ImageDecoder::colorManage). */
+    void reloadImageCacheSeeded(QString fPath, QImage image, bool colorManage);
     void removeCachedImage(QString fPath); // remove image from imageCache and update status
     void updateToCache();
 

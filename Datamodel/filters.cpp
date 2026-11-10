@@ -7,6 +7,8 @@
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
 #include "Utilities/htmlwindow.h"
+#include "Utilities/fileops.h"
+#include "Utilities/versionkey.h"
 #include <QStyleFactory>
 #include <functional>
 
@@ -142,6 +144,11 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     viewport()->setMouseTracking(true);
     setRootIsDecorated(false);
     setSelectionMode(QAbstractItemView::NoSelection);
+    // thumbnails dropped on a Folders row move there (Library scope) -- see dropEvent
+    setAcceptDrops(true);
+    viewport()->setAcceptDrops(true);
+    setDragEnabled(false);
+    setDropIndicatorShown(false);
     setColumnCount(4);
 //    setHeaderHidden(true);
     setColumnWidth(0, 250); // chkBox + description
@@ -3604,9 +3611,12 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
         node->setData(3, Qt::EditRole, count);
         node->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         node->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-        node->setToolTip(0, QString("%1\n\nClick to include this folder and every folder "
-                                    "in it. Opt+click to exclude.")
-                                .arg(QDir::toNativeSeparators(n.path)));
+        QString tip = QString("%1\n\nClick to include this folder and every folder "
+                              "in it. Opt+click to exclude.")
+                          .arg(QDir::toNativeSeparators(n.path));
+        if (G::scope == G::Scope::Catalog)
+            tip += "\nDrag thumbnails here to move them into this folder.";
+        node->setToolTip(0, tip);
         applyItemStyle(node);       // never a header, and may not have a parent yet
         byPath.insert(n.path, node);
     }
@@ -4722,9 +4732,112 @@ void Filters::paintEvent(QPaintEvent *event)
         r.setRight(r.right() - g.delta);
         QPaintEvent widened(r);
         QTreeWidget::paintEvent(&widened);
+    }
+    else QTreeWidget::paintEvent(event);
+
+    // the Folders row a thumbnail drag would move into -- see dropEvent
+    if (dropHover.isValid()) {
+        QRect r = visualRect(dropHover);
+        r.setLeft(0);
+        r.setRight(viewport()->width() - 1);
+        QPainter p(viewport());
+        p.setRenderHint(QPainter::Antialiasing);
+        p.setPen(QPen(G::appleBlue, 2));
+        p.setBrush(G::withAlpha(G::appleBlue, 60));
+        p.drawRoundedRect(QRectF(r).adjusted(1, 1, -1, -1), 3, 3);
+    }
+}
+
+QTreeWidgetItem *Filters::folderDropTarget(const QPoint &pos,
+                                           const QDropEvent *event) const
+{
+/*
+    Only in Library scope, where the Folders category is the user's real folder tree,
+    and only for a drag that started inside Winnow (a Finder drop would be a copy-in,
+    a different feature). The item must be a folder row, not the category header, and
+    must exist on disk: a folder on an unmounted drive is still in the catalog.
+*/
+    if (G::scope != G::Scope::Catalog) return nullptr;
+    if (!event->source() || !event->mimeData()->hasUrls()) return nullptr;
+    if (buildingFilters || !folders) return nullptr;
+    QTreeWidgetItem *item = itemAt(pos);
+    if (!item || !isFilterItem(item) || categoryOf(item) != folders) return nullptr;
+    const QString folder = item->data(1, Qt::EditRole).toString();
+    if (folder.isEmpty() || !QFileInfo(folder).isDir()) return nullptr;
+    return item;
+}
+
+void Filters::setDropHover(QTreeWidgetItem *item)
+{
+    const QPersistentModelIndex idx(item ? indexFromItem(item, 0) : QModelIndex());
+    if (idx == dropHover) return;
+    dropHover = idx;
+    viewport()->update();
+}
+
+void Filters::dragEnterEvent(QDragEnterEvent *event)
+{
+    /* Accepted here for any in-app URL drag in Library scope; dragMoveEvent decides row
+       by row. Always CopyAction -- see the header. */
+    if (G::scope == G::Scope::Catalog && event->source() && event->mimeData()->hasUrls()) {
+        event->setDropAction(Qt::CopyAction);
+        event->accept();
         return;
     }
-    QTreeWidget::paintEvent(event);
+    event->ignore();
+}
+
+void Filters::dragMoveEvent(QDragMoveEvent *event)
+{
+    /* REFUSED ANYWHERE BUT A FOLDER ROW, so the cursor says "no" before the drop. */
+    QTreeWidgetItem *target = folderDropTarget(event->position().toPoint(), event);
+    setDropHover(target);
+    if (!target) {
+        event->ignore();
+        return;
+    }
+    event->setDropAction(Qt::CopyAction);
+    event->accept();
+}
+
+void Filters::dragLeaveEvent(QDragLeaveEvent *event)
+{
+    setDropHover(nullptr);
+    QTreeWidget::dragLeaveEvent(event);
+}
+
+void Filters::dropEvent(QDropEvent *event)
+{
+    setDropHover(nullptr);
+    QTreeWidgetItem *target = folderDropTarget(event->position().toPoint(), event);
+    if (!target) {
+        event->ignore();
+        return;
+    }
+    // the action first, so no early return can leave the source believing it moved
+    event->setDropAction(Qt::CopyAction);
+    event->accept();
+
+    /* The drag carries the sidecars too when G::includeSidecars is on; moveFile takes
+       them along with their image, so only the images are asked for. */
+    const QStringList &sidecar = FileOps::sidecarSuffixes();
+    QStringList paths;
+    for (const QUrl &u : event->mimeData()->urls()) {
+        if (!u.isLocalFile()) continue;
+        const QString p = u.toLocalFile();
+        if (sidecar.contains(QFileInfo(p).suffix(), Qt::CaseInsensitive)) continue;
+        paths << p;
+    }
+    if (paths.isEmpty()) return;
+    const QString folder = target->data(1, Qt::EditRole).toString();
+    const QStringList rowKeys =
+        QString::fromUtf8(event->mimeData()->data(VersionKey::kRowKeysMime))
+            .split('\n', Qt::SkipEmptyParts);
+    /* Queued: MW shows a modal confirmation, which must not run inside the drag's own
+       event loop (on macOS the source's exec() is still waiting). */
+    QMetaObject::invokeMethod(this, [this, paths, rowKeys, folder] {
+        emit moveImagesToFolderRequested(paths, rowKeys, folder);
+    }, Qt::QueuedConnection);
 }
 
 void Filters::mousePressEvent(QMouseEvent *event)

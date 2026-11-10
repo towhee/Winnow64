@@ -6,6 +6,7 @@
 #include <QSet>
 #include <QElapsedTimer>
 #include <QProgressDialog>
+#include <QMessageBox>
 
 /*  *******************************************************************************************
 
@@ -698,6 +699,269 @@ void MW::deleteFiles(QStringList paths)
     /* Update selection. When every filtered item is deleted the filters stay and
        the proxy is empty, so nothing is selected; otherwise the prior current row may
        be gone (dm->currentSfRow -1), so fall back to the first row. */
+    int sfRow = dm->currentSfRow;
+    if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
+    if (dm->sf->rowCount() > 0) sel->select(sfRow);
+}
+
+namespace {
+/*  Where src lands in folder, and every file there that the move would replace: the
+    image itself and the destination of each of its sidecars. A stray IMG_1.xmp with no
+    image beside it is still a clash -- moveFile would overwrite it silently. */
+QStringList moveClashes(const QString &src, const QString &dst)
+{
+    QStringList clashes;
+    if (QFileInfo::exists(dst)) clashes << dst;
+    for (const QString &c : FileOps::companions(src)) {
+        const QString cDst = FileOps::companionDest(c, src, dst);
+        if (QFileInfo::exists(cDst)) clashes << cDst;
+    }
+    return clashes;
+}
+}  // namespace
+
+void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys,
+                            const QString &folder)
+{
+/*
+    Thumbnails dropped on a Folders row of the Filters panel in Library scope (see
+    Filters::dropEvent). Each image moves with its sidecars through FileOps::moveFile,
+    which also carries the caches, the catalog row, collections, picks and Develop
+    history to the new path.
+
+    ASK FIRST. A dense folder tree makes a drop on the wrong row easy, so the move is
+    confirmed, and any name already taken in the destination is named in the same
+    dialog with Rename (name_1), Overwrite (the existing files go to the trash) or
+    Cancel.
+
+    A VERSION IS NOT A FILE. It is a second recipe in its master's sidecar, so dragging
+    one moves the master file and every version with it. The drag's row keys say which
+    versions came without their master, and the dialog names them (versionNote).
+
+    THE MODEL follows through applyModelChange -- the old rows out, the new ones read
+    in, the filters saved, rebuilt and restored -- and the Library re-query and LibTree
+    counts through refreshLibraryAfterCatalogChange, whose delta then finds nothing
+    left to do.
+*/
+    if (G::isLogger) G::log("MW::moveImagesToFolder", folder);
+    if (G::scope != G::Scope::Catalog || folder.isEmpty()) return;
+    if (G::isModifyingDatamodel || G::isLoadRunning) {
+        G::popup->showPopup("Please wait until the Library has finished loading "
+                            "before moving images.", 3000);
+        return;
+    }
+    if (!QFileInfo(folder).isDir()) {
+        G::popup->showPopup(QDir::toNativeSeparators(folder) + " is not available.", 3000);
+        return;
+    }
+
+    const QDir dir(folder);
+    QStringList srcs;
+    for (const QString &p : paths) {
+        if (p.isEmpty() || VersionKey::isVersion(p) || srcs.contains(p)) continue;
+        const QFileInfo info(p);
+        if (!info.exists()) continue;
+        // a drop on the image's own folder moves nothing
+        if (QDir(info.absolutePath()) == dir) continue;
+        srcs << p;
+    }
+    if (srcs.isEmpty()) {
+        G::popup->showPopup("Already in " + dir.dirName() + ".", 2000);
+        return;
+    }
+
+    QStringList clashing;                   // the srcs whose destination is taken
+    for (const QString &src : std::as_const(srcs))
+        if (!moveClashes(src, dir.filePath(QFileInfo(src).fileName())).isEmpty())
+            clashing << src;
+
+    /* Versions dragged without their master row, by master: the move takes the master
+       and all of its versions, which the user did not visibly ask for. */
+    QMap<QString, QStringList> lonelyVersions;
+    for (const QString &k : rowKeys) {
+        if (!VersionKey::isVersion(k)) continue;
+        const QString master = VersionKey::sourceOf(k);
+        if (!srcs.contains(master) || rowKeys.contains(master)) continue;
+        const int row = dm->rowFromKey(k);
+        QString name = row < 0 ? QString()
+                               : dm->index(row, G::PathColumn)
+                                     .data(G::VersionNameRole).toString();
+        if (name.isEmpty()) name = "v" + QString::number(VersionKey::idOf(k));
+        lonelyVersions[master] << name;
+    }
+    QString versionNote;
+    if (!lonelyVersions.isEmpty()) {
+        const QStringList allVersionKeys = dm->versionRowKeys();
+        const int show = 5;
+        int shown = 0;
+        for (auto it = lonelyVersions.cbegin(); it != lonelyVersions.cend(); ++it) {
+            if (shown++ == show) {
+                versionNote += "<br>&nbsp;&nbsp;...and " +
+                               QString::number(lonelyVersions.size() - show) + " more";
+                break;
+            }
+            int total = 0;
+            for (const QString &k : allVersionKeys)
+                if (VersionKey::sourceOf(k) == it.key()) ++total;
+            const QString file = QFileInfo(it.key()).fileName().toHtmlEscaped();
+            versionNote += "<br>&nbsp;&nbsp;" + file + " " +
+                           it.value().join(", ").toHtmlEscaped() + " &rarr; moves " +
+                           file + (total == 1 ? " and its version"
+                                              : " and all " + QString::number(total) +
+                                                " of its versions");
+        }
+        const bool one = lonelyVersions.size() == 1 && lonelyVersions.first().size() == 1;
+        versionNote = QString(one ? "This is a version" : "These are versions") +
+                      ", not separate files. Versions live in their image's sidecar, so "
+                      "moving one moves the image and every version of it:" + versionNote;
+    }
+
+    // confirm
+    const int n = srcs.size();
+    const QString images = n == 1 ? "1 image" : QString::number(n) + " images";
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Move Images");
+    msgBox.setTextFormat(Qt::RichText);
+    msgBox.setIcon(clashing.isEmpty() ? QMessageBox::Question : QMessageBox::Warning);
+    msgBox.setText("Move " + images + " and " + (n == 1 ? "its" : "their") +
+                   " sidecars to <b>" + dir.dirName().toHtmlEscaped() + "</b>?<br>" +
+                   G::secondaryHtml(QDir::toNativeSeparators(folder).toHtmlEscaped()));
+    QPushButton *moveBtn = nullptr;
+    QPushButton *renameBtn = nullptr;
+    QPushButton *overwriteBtn = nullptr;
+    if (clashing.isEmpty()) {
+        moveBtn = msgBox.addButton("Move", QMessageBox::AcceptRole);
+        msgBox.setDefaultButton(moveBtn);
+        if (!versionNote.isEmpty()) msgBox.setInformativeText(versionNote);
+    }
+    else {
+        const int show = 10;
+        QString names;
+        for (int i = 0; i < qMin(show, clashing.size()); ++i)
+            names += "<br>&nbsp;&nbsp;" + QFileInfo(clashing.at(i)).fileName().toHtmlEscaped();
+        if (clashing.size() > show)
+            names += "<br>&nbsp;&nbsp;...and " + QString::number(clashing.size() - show) +
+                     " more";
+        msgBox.setInformativeText(
+            QString::number(clashing.size()) + (clashing.size() == 1 ? " is" : " are") +
+            " already there (the image or its sidecar):" + names +
+            "<p><b>Rename</b> moves " + (clashing.size() == 1 ? "it" : "them") +
+            " under a new name (name_1). <b>Overwrite</b> sends the existing files to the " +
+            G::trash + " first." +
+            (versionNote.isEmpty() ? QString() : "<p>" + versionNote));
+        renameBtn = msgBox.addButton("Rename", QMessageBox::AcceptRole);
+        overwriteBtn = msgBox.addButton("Overwrite", QMessageBox::DestructiveRole);
+        msgBox.setDefaultButton(renameBtn);
+    }
+    QPushButton *cancelBtn = msgBox.addButton(QMessageBox::Cancel);
+    msgBox.setEscapeButton(cancelBtn);
+    msgBox.setStyleSheet(G::css);
+    msgBox.exec();
+    resetFocus();
+    QAbstractButton *clicked = msgBox.clickedButton();
+    if (!clicked || clicked == cancelBtn) return;
+    const bool overwrite = clicked == overwriteBtn;
+
+    G::ScrollSignalGuard scrollGuard;       // removing rows scrolls; that is not the user
+
+    QProgressDialog *progress = nullptr;
+    if (n > 20) {
+        progress = new QProgressDialog("Moving " + images + "...", "Cancel", 0, n, this);
+        progress->setWindowTitle("Move Images");
+        progress->setWindowModality(Qt::WindowModal);
+        progress->setMinimumDuration(500);
+        progress->setAutoClose(false);
+        progress->setAutoReset(false);
+        progress->setStyleSheet(G::css);
+        progress->setValue(0);
+    }
+
+    QStringList moved, added, removed, failed;
+    bool cancelled = false;
+    for (int i = 0; i < n; ++i) {
+        if (progress) {
+            progress->setValue(i);
+            if (progress->wasCanceled()) { cancelled = true; break; }
+        }
+        const QString &src = srcs.at(i);
+        const QFileInfo info(src);
+        QString dst = dir.filePath(info.fileName());
+        const QStringList clashes = moveClashes(src, dst);
+        if (!clashes.isEmpty()) {
+            if (overwrite) {
+                /* The existing image goes with its own sidecars and caches; a stray
+                   sidecar with no image is trashed by itself. Either way recoverable. */
+                if (QFileInfo::exists(dst)) {
+                    if (!FileOps::trashFile(dst)) { failed << src; continue; }
+                    removed << dst;         // it may be a loaded Library row
+                }
+                for (const QString &c : moveClashes(src, dst))
+                    QFile::moveToTrash(c);
+                if (!moveClashes(src, dst).isEmpty()) { failed << src; continue; }
+            }
+            else {
+                // rename: the first name_N free for the image and every sidecar
+                const QString base = info.completeBaseName();
+                const QString suffix = info.suffix().isEmpty() ? "" : "." + info.suffix();
+                for (int k = 1; ; ++k) {
+                    dst = dir.filePath(base + "_" + QString::number(k) + suffix);
+                    if (moveClashes(src, dst).isEmpty()) break;
+                }
+            }
+        }
+        if (FileOps::moveFile(src, dst)) {
+            moved << src;
+            added << dst;
+        }
+        else failed << src;
+    }
+
+    if (progress) {
+        progress->setLabelText("Updating the image list...");
+        progress->setCancelButton(nullptr);
+        progress->setValue(n);
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+    }
+
+    if (!moved.isEmpty() || !removed.isEmpty()) {
+        /* The rows come back under new keys, so what was keyed on the old path must
+           follow, as DataModel::rekeyVersions does for a rename: an open version group
+           would otherwise return closed (its versions hidden behind a "1 >" badge), and
+           the current image -- a master or one of its versions -- would be lost. */
+        for (int i = 0; i < moved.size(); ++i) {
+            const QString &from = moved.at(i);
+            const QString &to = added.at(i);
+            if (dm->sf->expandedVersions().contains(from)) {
+                dm->sf->setVersionsExpanded(from, false);
+                dm->sf->setVersionsExpanded(to, true);
+            }
+            if (VersionKey::sourceOf(dm->currentKey) == from)
+                dm->currentKey = VersionKey::isVersion(dm->currentKey)
+                    ? VersionKey::make(to, VersionKey::idOf(dm->currentKey)) : to;
+        }
+        applyModelChange(added, removed + moved, "MW::moveImagesToFolder");
+        // a moved master's versions were dropped with its old row; bring them back
+        reconcileVersionRows("MW::moveImagesToFolder");
+        refreshLibraryAfterCatalogChange();
+    }
+
+    // reset LAST, after every phase
+    if (progress) {
+        progress->close();
+        progress->deleteLater();
+    }
+
+    const QString count = moved.size() == n
+                              ? images : QString::number(moved.size()) + " of " + images;
+    QString msg = (cancelled ? "Cancelled. Moved " : "Moved ") + count + " to " +
+                  dir.dirName().toHtmlEscaped() + ".";
+    if (!failed.isEmpty())
+        msg += "<br>" + QString::number(failed.size()) +
+               " could not be moved. See the Issues log.";
+    G::popup->showPopup(msg, failed.isEmpty() ? 2500 : 5000);
+
+    /* The moved rows usually leave the filtered set (the source folder is what is
+       checked), so the prior current row may be gone. */
     int sfRow = dm->currentSfRow;
     if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
     if (dm->sf->rowCount() > 0) sel->select(sfRow);
