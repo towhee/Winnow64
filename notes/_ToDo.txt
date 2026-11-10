@@ -12,7 +12,7 @@ WHAT'S NEW
 - Crop and adjust crop for multiple images
 
 BUGS / TO DO
-- D > E should be instant (same devPreview)
+- Disable Window menu item Folders when in Library mode
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (replay a series of steps)

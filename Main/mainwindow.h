@@ -1561,8 +1561,9 @@ private slots:
        be cached as a preview -- see developFrameRecipe. */
     QByteArray developRecipeKey(const QString &fPath);
     /* The retained full-res develop frame of fPath when it is exactly what Browse would
-       show for it (its devPreview), else null. Seeds the image cache on leaving Develop. */
-    QImage developFrameForBrowse(const QString &fPath);
+       show for it (its devPreview), else null. Seeds the image cache on leaving Develop.
+       why, when given, names the test that refused the frame ([BrowseSwitch] probe). */
+    QImage developFrameForBrowse(const QString &fPath, QString *why = nullptr);
     /* adoptSpotSources, then re-key the retained frames to the adopted recipe. */
     void adoptDevelopSpotSources(const QString &fPath);
     void thumbHasScrolled();
@@ -3446,6 +3447,11 @@ private:
         read at the end of MW::folderChanged. Compares a switch from a loaded folder with
         the one at startup. */
     QElapsedTimer catalogSwitchClock;
+    /*  [BrowseSwitch] probe: D-to-loupe for leaving Develop, started in
+        MW::setOperationMode and read in MW::refreshViewsOnCacheChange when the current
+        image's picture lands. Catches an intermittent delay switching to Browse. */
+    QElapsedTimer browseSwitchClock;
+    QString browseSwitchPath;
 
     QString filterDockTabText;
     QString catalogDockTabText;

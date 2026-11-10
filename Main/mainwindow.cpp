@@ -8094,7 +8094,7 @@ QByteArray MW::developRecipeKey(const QString &fPath)
     return Metadata::devPreviewKey(blob).toLatin1();
 }
 
-QImage MW::developFrameForBrowse(const QString &fPath)
+QImage MW::developFrameForBrowse(const QString &fPath, QString *why)
 {
 /*
     The developed picture Browse would show for fPath, if it is already in memory: the
@@ -8107,11 +8107,19 @@ QImage MW::developFrameForBrowse(const QString &fPath)
     an unedited image (its file, or a default render that is not this frame). See
     MW::setOperationMode.
 */
-    if (fPath.isEmpty() || G::previewSource != G::PreviewSource::Developed) return QImage();
-    if (fPath != developFullFramePath || developFullFrame.isNull()
-        || !developFullFrameFaithful) return QImage();
+    auto refuse = [why](const char *reason) {
+        if (why) *why = reason;
+        return QImage();
+    };
+    if (fPath.isEmpty()) return refuse("no current image");
+    if (G::previewSource != G::PreviewSource::Developed)
+        return refuse("preview source is not Developed");
+    if (fPath != developFullFramePath) return refuse("full frame is another image");
+    if (developFullFrame.isNull()) return refuse("no full-res settle render");
+    if (!developFullFrameFaithful) return refuse("full frame not faithful");
     const QByteArray recipe = developRecipeKey(fPath);
-    if (recipe.isEmpty() || developFullFrameRecipe != recipe) return QImage();
+    if (recipe.isEmpty()) return refuse("unedited");
+    if (developFullFrameRecipe != recipe) return refuse("full frame is a stale recipe");
     return developFullFrame;
 }
 

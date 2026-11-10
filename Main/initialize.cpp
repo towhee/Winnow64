@@ -4156,6 +4156,9 @@ void MW::setOperationMode(G::OperationMode mode)
        not lost to a workflow switch. */
     if (mode != G::OperationMode::Develop
         && G::operationMode == G::OperationMode::Develop) {
+        /* [BrowseSwitch] probe: time D to the loupe repaint (refreshViewsOnCacheChange). */
+        browseSwitchClock.start();
+        browseSwitchPath = dm ? dm->currentKey : QString();
         if (developTransformVisible) toggleDevelopTransform();
         if (developProperties) developProperties->cancelCanvasTools();
         if (imageView) imageView->endKaleido();      // the Effects > Kaleidoscope handles
@@ -4199,6 +4202,7 @@ void MW::setOperationMode(G::OperationMode mode)
         return;
     }
     G::operationMode = mode;
+    if (mode == G::OperationMode::Develop) browseSwitchClock.invalidate();  // probe
     updateDevelopRenderingHint();     // Preview hides the chip; Develop re-evaluates
     /* Entering Develop with Effects > Kaleidoscope on show: its handles come back. */
     if (mode == G::OperationMode::Develop)
@@ -4310,9 +4314,18 @@ void MW::setOperationMode(G::OperationMode mode)
        settle render not landed -- and then the reload decodes as before. */
     const bool refreshCurrent = imageCache && dm && !dm->currentKey.isEmpty()
                                 && !currentIsVideo();
+    QString seedRefused = "not a refresh";
     const QImage browseSeed = (mode != G::OperationMode::Develop && refreshCurrent)
-                                  ? developFrameForBrowse(dm->currentKey) : QImage();
+                                  ? developFrameForBrowse(dm->currentKey, &seedRefused)
+                                  : QImage();
     const bool seeded = !browseSeed.isNull();
+    if (mode != G::OperationMode::Develop && browseSwitchClock.isValid())
+        qDebug().noquote() << QString("[BrowseSwitch] %1  seeded %2%3  useRaw flip %4  "
+                                      "+%5 ms (flush done)")
+            .arg(QFileInfo(browseSwitchPath).fileName(), seeded ? "yes" : "NO",
+                 seeded ? QString() : " (" + seedRefused + ")",
+                 G::useRaw ? "yes" : "no")
+            .arg(browseSwitchClock.elapsed());
 
     /* The mode owns the raw/preview decode: Develop decodes RAW sensor data (best
     quality), Preview shows embedded previews (fast). toggleUseRaw() flips G::useRaw,
@@ -4394,6 +4407,9 @@ void MW::setOperationMode(G::OperationMode mode)
        image are added/removed to match the new mode. */
     if (thumbView) thumbView->viewport()->update();
     if (gridView) gridView->viewport()->update();
+    if (mode != G::OperationMode::Develop && browseSwitchClock.isValid())
+        qDebug().noquote() << QString("[BrowseSwitch] setOperationMode returned +%1 ms")
+                                  .arg(browseSwitchClock.elapsed());
 }
 
 void MW::updateDevelopSelectionWarning()

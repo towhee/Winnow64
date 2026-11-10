@@ -793,8 +793,13 @@ void MW::updateLibraryOnlyActions()
     set up from Folders as often as from the Library -- the first-folder prompt
     (promptForCatalogScope) sends a Folders user to File > Manage Catalog by name -- so
     it is enabled in both sources.
+
+    ONE BELONGS TO FOLDERS: the Folders panel. The Library spans every catalogued folder,
+    so there is no folder tree to drive it; the Window menu item is disabled there with
+    its reason, the mirror of the two above.
 */
-    if (!collectionsDockVisibleAction || !queriesDockVisibleAction || !manageCatalogAction)
+    if (!collectionsDockVisibleAction || !queriesDockVisibleAction || !manageCatalogAction
+        || !folderDockVisibleAction)
         return;
     const bool library = G::scope == G::Scope::Catalog;
     const QString why = tr("Library only: choose Library at the top left of the window.");
@@ -806,6 +811,10 @@ void MW::updateLibraryOnlyActions()
     queriesDockVisibleAction->setToolTip(library
         ? tr("Queries: saved searches over the Library, built with the Query Builder.")
         : why);
+    folderDockVisibleAction->setEnabled(!library);
+    folderDockVisibleAction->setToolTip(library
+        ? tr("Folders only: choose Folders at the top left of the window.")
+        : tr("Folders: browse and load the folders on your drives."));
     manageCatalogAction->setEnabled(true);
     manageCatalogAction->setToolTip(tr("Choose the folders that make up the Library."));
     updateTargetCollectionActions();
@@ -2220,6 +2229,12 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
         if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
         if (!inMapModule()) centralLayout->setCurrentIndex(prevCentralView);
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
+        if (browseSwitchClock.isValid() && fPath == browseSwitchPath) {
+            qDebug().noquote() << QString("[BrowseSwitch] %1  loupe loaded +%2 ms (%3)")
+                                      .arg(QFileInfo(fPath).fileName())
+                                      .arg(browseSwitchClock.elapsed()).arg(src);
+            browseSwitchClock.invalidate();
+        }
         /*  DON'T FLASH THE UNDEVELOPED IMAGE. loadImage above paints the decode -- the
             picture WITHOUT the saved recipe. In Develop that is the one thing the user
             has already decided to change, and applyDevelopPreviewIfEdited below only

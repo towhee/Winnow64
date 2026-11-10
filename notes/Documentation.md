@@ -911,6 +911,7 @@
 - [22 Diagnostics and Probes](#22-diagnostics-and-probes)
   - [22.1 Probe Switches](#221-probe-switches)
     - [22.1.1 The Row Trail Has No Switch](#2211-the-row-trail-has-no-switch)
+    - [22.1.2 [BrowseSwitch] Has No Switch](#2212-browseswitch-has-no-switch)
   - [22.2 Measuring a Live Session (--perfprobe)](#222-measuring-a-live-session---perfprobe)
   - [22.3 A/B Knobs (Test Mode)](#223-ab-knobs-test-mode)
   - [22.4 Ingest Probe](#224-ingest-probe)
@@ -9469,7 +9470,7 @@ User decision 2026-09-29, replacing a first build in which a click reloaded the 
 
 The Collections panel is a SECOND VIEW of the category, as LibTree is of Folders: the panel ASKS (CollectionTree::filterRequested -> MW::applyCollectionFilter -> Filters::setCollectionFilter, which sets the whole category and emits ONE filterChange), and MW pushes back what the category holds (MW::syncCollectionTreeFromFilters, called from syncLibTreeFromFilters after every filter change and every build). A collection checked in the Filters panel, Clear All, or a restored Library filter all show in the panel; the two cannot disagree.
 
-Library only. In Folders the panel stays on screen greyed, with the reason above it, and the Filters category is hidden and UNCHECKED (Filters::setCollectionsAvailable, from MW::updateCollectionsAvailability, which MW::setScope calls on every scope change): a hidden check would go on filtering where nobody could see it. The menu items follow (2026-10-03, user decision): in Folders, Window > Collections Panel and Window > Queries Panel are DISABLED, each with "Library only: choose Library at the top left of the window." as its tooltip (MW::updateLibraryOnlyActions, from createActions and setScope). A panel already open stays on screen, greyed with its own reason. (File > Manage Catalog... was disabled in Folders too until 2026-10-16, when it was re-enabled in both sources: it configures the index, which is set up from Folders as often as from the Library.)
+Library only. In Folders the panel stays on screen greyed, with the reason above it, and the Filters category is hidden and UNCHECKED (Filters::setCollectionsAvailable, from MW::updateCollectionsAvailability, which MW::setScope calls on every scope change): a hidden check would go on filtering where nobody could see it. The menu items follow (2026-10-03, user decision): in Folders, Window > Collections Panel and Window > Queries Panel are DISABLED, each with "Library only: choose Library at the top left of the window." as its tooltip (MW::updateLibraryOnlyActions, from createActions and setScope). A panel already open stays on screen, greyed with its own reason. The mirror case (2026-11-10): in the Library, Window > Folders Panel is DISABLED with "Folders only: choose Folders at the top left of the window." as its tooltip, since the Library spans every catalogued folder and has no folder tree to drive. (File > Manage Catalog... was disabled in Folders too until 2026-10-16, when it was re-enabled in both sources: it configures the index, which is set up from Folders as often as from the Library.)
 
 #### 17.5.3 The Clicks
 
@@ -11076,6 +11077,21 @@ Utilities/rowtrail.h is the one deliberate exception. It exists for the intermit
 - MW::checkBlankRows runs 15 s after metadataComplete, 20 s after refreshStaleRows, 15 s after the last of a burst of filter changes, and when the stale re-commit gives up (a check that lands while a load flag is still up retries every 10 s rather than being dropped). Any row in the icon range still without an icon 5 s later (videos and offline files excepted) is written once per session to &lt;AppData>/Log/blank_rows.txt (model state, load flags, the row's whole trail, then MetaRead's own view from its thread), and an issue is logged pointing at the file. On macOS that is \~/Library/Application Support/Winnow/Log, beside WinnowIssueLog.txt.
 - Self-heal: MetaRead::setStartRow re-arms the VISIBLE rows on every call in both modes (brute force used to skip re-arming entirely), so a row whose icon was lost after a successful read is re-read on the next selection or scroll. Each heal is a RowTrail event ("MetaRead visible re-arm") and an issue-log Warning naming the files, so the underlying cause is still recorded.
 - Help > Diagnostics > Blank thumbnail report writes the same report on demand for every row blank right now (a blank cell cannot be selected, so Current Row Diagnostics cannot reach it).
+- Remove it with the bug.
+
+#### 22.1.2 [BrowseSwitch] Has No Switch
+
+For an intermittent delay switching from Develop to Browse (seen once, after a crop + Auto + Exposure, not reproduced). Leaving Develop is meant to be instant: MW::setOperationMode hands the image cache the retained full-res settle render (MW::developFrameForBrowse) instead of a decode. Always on, because it cannot be armed after the fact, and it prints at most three lines per D:
+
+```
+[BrowseSwitch] <file>  seeded yes|NO (<reason>)  useRaw flip yes|no  +N ms (flush done)
+[BrowseSwitch] setOperationMode returned +N ms
+[BrowseSwitch] <file>  loupe loaded +N ms (<src>)
+```
+
+- The reason names the developFrameForBrowse test that refused the frame: preview source is not Developed, full frame is another image, no full-res settle render, full frame not faithful, unedited, or full frame is a stale recipe.
+- "flush done" is after DevelopProperties::flushAll, so a large first number means the flush (sidecar + devPreview top-up) held the main thread. A large gap between "returned" and "loupe loaded" means the cache decoded or reloaded the devPreview.
+- The clock starts in setOperationMode and stops in MW::refreshViewsOnCacheChange when the current image's picture lands; entering Develop resets it.
 - Remove it with the bug.
 
 ### 22.2 Measuring a Live Session (--perfprobe)
