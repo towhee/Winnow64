@@ -4199,6 +4199,7 @@ void MW::loadShortcuts(bool defaultShortcuts)
         // Filters
         // filterUpdateAction->setShortcut(QKeySequence("Shift+F"));
         clearAllFiltersAction->setShortcut(QKeySequence("Shift+C"));
+        expandCheckedFiltersAction->setShortcut(QKeySequence("Shift+E"));
         filterPickAction->setShortcut(QKeySequence("Shift+`"));
 
         /*  ONE SEARCH KEY. F2 focuses the search box in the scope that is current --

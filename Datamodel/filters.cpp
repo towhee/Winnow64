@@ -5116,7 +5116,14 @@ void Filters::mouseDoubleClickEvent(QMouseEvent *event)
     double-click, not a press, so mousePressEvent never sees it -- and the base class
     would hand it to the checkbox (or expand/collapse a second time via
     expandsOnDoubleClick). Toggle once more, as the click the user made.
+
+    A double-click in the BLANK area below the rows does what the context menu's
+    "Expand checked filters" does: show only what is filtering.
 */
+    if (event->button() == Qt::LeftButton && !indexAt(event->pos()).isValid()) {
+        if (!buildingFilters) expandCheckedFilters();
+        return;
+    }
     QTreeWidgetItem *arrowItem = nullptr;
     if (event->button() == Qt::LeftButton && overExpander(event->pos(), &arrowItem)
         && !isGroupHeader(arrowItem) && !isCategoryHeader(arrowItem)) {

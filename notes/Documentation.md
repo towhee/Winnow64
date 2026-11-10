@@ -10443,7 +10443,7 @@ The panel's right-click menu has "Expand checked filters" beside Expand all / Co
 
 - Either state counts: an exclusion (PartiallyChecked) filters just as an inclusion does, the same rule as isAnyFilterBut. The Search row counts only when it holds a query, not the "Enter search query" placeholder.
 - Every ANCESTOR of a checked item is opened, not just its category: the group header when grouped, and each branch above a nested keyword, so the check itself is on screen.
-- No shortcut; it is in the context menu only, like its two neighbours.
+- Shortcut Shift+E, next to Shift+C (clear all filters). A left double-click in the blank area below the rows (indexAt invalid) runs it too -- Filters::mouseDoubleClickEvent.
 
 ### 18.2 Categories
 

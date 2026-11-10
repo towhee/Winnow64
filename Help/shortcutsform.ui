@@ -543,6 +543,14 @@
        </item>
        <item>
         <property name="text">
+         <string>Expand checked filters</string>
+        </property>
+        <property name="text">
+         <string>Shift + E</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Reverse Sort Order</string>
         </property>
         <property name="text">
