@@ -299,6 +299,7 @@
 - [10 Raw Decoding](#10-raw-decoding)
   - [10.1 Pipeline](#101-pipeline)
     - [10.1.1 Why the Decode Stops at Camera-Native](#1011-why-the-decode-stops-at-camera-native)
+    - [10.1.2 Clipped Highlights Are Neutralised at Decode](#1012-clipped-highlights-are-neutralised-at-decode)
   - [10.2 Metadata Plumbing (RawSensorInfo)](#102-metadata-plumbing-rawsensorinfo)
   - [10.3 Colour: the Camera Matrix](#103-colour-the-camera-matrix)
     - [10.3.1 Canonical Camera Model](#1031-canonical-camera-model)
@@ -4382,6 +4383,15 @@ Threading: one RawFormat instance is constructed per decode (per decoder thread)
 The buffer RawColor produces is what WorkingImageCache stores, so anything baked in there can only be undone by decoding the raw again. Applying the white balance and the colour matrix downstream of the cache, in Develop, makes a white-balance or camera-profile change a RE-RENDER rather than a re-decode. The old code also clamped negatives to zero here, destroying every out-of-gamut sensor colour before the user had touched the image; that clamp is gone, and out-of-gamut values survive to the output stage, the only stage that knows what gamut it renders into.
 
 It costs nothing per pixel: Develop::buildPointCoeffs folds the input profile, the white balance, exposure, the Colour RGB sliders and the Calibrate matrix into a SINGLE 3x3 (PointCoeffs::preMat). Develop::ToWorkingSpace is the standalone version, used only when the point pass cannot carry it: an identity edit (no point pass at all) and an active Denoise (op #1, which runs BEFORE the point pass and must see working-space pixels).
+
+#### 10.1.2 Clipped Highlights Are Neutralised at Decode
+
+One exception to "nothing baked in": RawColor::NeutraliseClipped, run right after ToCameraNative on the two MOSAIC paths (clean and PMRID-denoised; never Linear Raw, whose values above 1 are real). A blown photosite reads 1.0 in every channel, and the as-shot white balance then scales R and B above G (Sony ~2x / ~1.5x), so a blown white is really magenta-white. The display clip hides it at default tone; Highlights -, Exposure - or Whites - pull it below white and it shows PINK (lichen, snow, skies; 2026-11-10, Little Qualicum 2026-01-09_0012.arw at Highlights -87).
+
+- Each channel's clip level is MEASURED: the channel maximum, if at least max(64, n/100000) pixels pile up within 0.5% of it and it is >= 0.5. Some cameras saturate below the declared white, so 1.0 cannot be assumed. No pile-up = that channel is not clipped anywhere, and an image with none is untouched.
+- A channel's ceiling in white-balanced terms is clip_c x asShotMul_c. Every channel of a pixel is capped at the LOWEST ceiling among its clipped channels, so a blown neutral balances to white while a saturated red with only R clipped keeps its colour.
+- "Clipped" is a smoothstep over the top 10% of the clip level and the ceiling is divided by it, so the cap goes to infinity as a channel leaves the knee: continuous, no edge banding.
+- Uses the AS-SHOT balance; a later Temp change moves the neutral slightly. It is not reconstruction (blown areas become flat white, not recovered detail); a real reconstruction pass is still a ToDo.
 
 ### 10.2 Metadata Plumbing (RawSensorInfo)
 

@@ -365,6 +365,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 demosaic.Run(mosaic, rgbDen, Demosaic::Bilinear, abort, denProg);
             dt.denDemosaicMs = lap();
             if (!demosaiced || !color.ToCameraNative(mosaic, rgbDen, *den)) return nullptr;
+            RawColor::NeutraliseClipped(*den);
             dt.denColorMs = lap();
             den->cam.cameraModel = m.model;
             StampRenderInfo(file.fileName(), den->cam);
@@ -391,6 +392,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 errMsg = "Colour conversion failed.";
                 return false;
             }
+            RawColor::NeutraliseClipped(*work);     // blown whites balance to white
             dt.cleanColorMs = lap();
             /* The camera profile a render may later select is found by MODEL, and nothing
                downstream of here knows the file -- WorkingImageCache hands back an image

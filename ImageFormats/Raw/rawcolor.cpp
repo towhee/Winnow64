@@ -1,6 +1,8 @@
 #include "ImageFormats/Raw/rawcolor.h"
 #include "Develop/whitebalance.h"
 #include "Develop/colorspace.h"
+#include <opencv2/core/utility.hpp>     // parallel_for_
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -167,4 +169,94 @@ void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
         }
     }
     WhiteBalance::resolveAsShot(out);
+}
+
+void RawColor::NeutraliseClipped(WorkingImage &img)
+{
+    const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
+    if (n == 0 || img.rgb.size() != n * 3) return;
+    float *px = img.rgb.data();
+
+    constexpr int kRows = 64;
+    const int W = img.width;
+    const int strips = (img.height + kRows - 1) / kRows;
+
+    /* Per-strip channel maxima, then the count sitting within kPile of each maximum.
+       A clipped plateau piles thousands of pixels at one value; an unclipped highlight
+       is a lone peak. */
+    std::vector<float> stripMax(static_cast<size_t>(strips) * 3, 0.0f);
+    cv::parallel_for_(cv::Range(0, strips), [&](const cv::Range &r) {
+        for (int i = r.start; i < r.end; ++i) {
+            const size_t a = static_cast<size_t>(i) * kRows * W;
+            const size_t b = std::min(n, a + static_cast<size_t>(kRows) * W);
+            float m[3] = {0.0f, 0.0f, 0.0f};
+            for (size_t p = a; p < b; ++p)
+                for (int c = 0; c < 3; ++c) m[c] = std::max(m[c], px[p * 3 + c]);
+            for (int c = 0; c < 3; ++c) stripMax[static_cast<size_t>(i) * 3 + c] = m[c];
+        }
+    });
+    float chMax[3] = {0.0f, 0.0f, 0.0f};
+    for (int i = 0; i < strips; ++i)
+        for (int c = 0; c < 3; ++c)
+            chMax[c] = std::max(chMax[c], stripMax[static_cast<size_t>(i) * 3 + c]);
+
+    constexpr float kPile = 0.995f;
+    std::vector<size_t> stripCount(static_cast<size_t>(strips) * 3, 0);
+    cv::parallel_for_(cv::Range(0, strips), [&](const cv::Range &r) {
+        for (int i = r.start; i < r.end; ++i) {
+            const size_t a = static_cast<size_t>(i) * kRows * W;
+            const size_t b = std::min(n, a + static_cast<size_t>(kRows) * W);
+            size_t k[3] = {0, 0, 0};
+            for (size_t p = a; p < b; ++p)
+                for (int c = 0; c < 3; ++c)
+                    if (px[p * 3 + c] >= chMax[c] * kPile) ++k[c];
+            for (int c = 0; c < 3; ++c) stripCount[static_cast<size_t>(i) * 3 + c] = k[c];
+        }
+    });
+    const size_t minPile = std::max<size_t>(64, n / 100000);
+    float clip[3];
+    bool any = false;
+    for (int c = 0; c < 3; ++c) {
+        size_t k = 0;
+        for (int i = 0; i < strips; ++i) k += stripCount[static_cast<size_t>(i) * 3 + c];
+        /* A pile-up well below the declared white is a dark frame's own maximum, not a
+           sensor clip. */
+        const bool clipped = k >= minPile && chMax[c] >= 0.5f;
+        clip[c] = clipped ? chMax[c] * kPile : 0.0f;
+        any = any || clipped;
+    }
+    if (!any) return;
+
+    const float *mul = img.cam.asShotMul;
+    float ceil[3], kneeLo[3], invKnee[3];
+    constexpr float kKnee = 0.10f;      // the top 10% of the clip level eases in
+    for (int c = 0; c < 3; ++c) {
+        ceil[c] = clip[c] * mul[c];
+        kneeLo[c] = clip[c] * (1.0f - kKnee);
+        invKnee[c] = clip[c] > 0.0f ? 1.0f / (clip[c] * kKnee) : 0.0f;
+    }
+    cv::parallel_for_(cv::Range(0, strips), [&](const cv::Range &r) {
+        for (int i = r.start; i < r.end; ++i) {
+            const size_t a = static_cast<size_t>(i) * kRows * W;
+            const size_t b = std::min(n, a + static_cast<size_t>(kRows) * W);
+            for (size_t p = a; p < b; ++p) {
+                float *v = px + p * 3;
+                /* The lowest white-balanced ceiling among the (softly) clipped channels:
+                   ceil / smoothstep, so an unclipped channel contributes infinity. */
+                float cap = HUGE_VALF;
+                for (int c = 0; c < 3; ++c) {
+                    if (clip[c] <= 0.0f || v[c] <= kneeLo[c]) continue;
+                    float t = (v[c] - kneeLo[c]) * invKnee[c];
+                    if (t > 1.0f) t = 1.0f;
+                    const float s = t * t * (3.0f - 2.0f * t);
+                    if (s > 0.0f) cap = std::min(cap, ceil[c] / s);
+                }
+                if (cap == HUGE_VALF) continue;
+                for (int c = 0; c < 3; ++c) {
+                    const float lim = cap / mul[c];
+                    if (v[c] > lim) v[c] = lim;
+                }
+            }
+        }
+    });
 }

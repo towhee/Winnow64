@@ -59,6 +59,34 @@ public:
     */
     static void Characterise(const float xyzToCam[3][3], const float camMul[4],
                              CameraColor &out, bool asShotStated = false);
+
+    /*
+        CLIPPED HIGHLIGHTS -> NEUTRAL. A blown photosite reads 1.0 in every channel, but
+        the as-shot white balance then scales R and B (Sony ~2x / ~1.5x) above G, so a
+        blown white is really MAGENTA-white. Display clipping hides it at the default
+        tone; any control that pulls the highlights back below white (Highlights -,
+        Exposure -, Whites -) turns blown skies, snow and lichen pink.
+
+        Fix, dcraw-style but soft: each channel's ceiling in white-balanced terms is
+        clip_c x asShotMul_c, and a pixel whose channel c is clipped cannot be brighter
+        than that ceiling in ANY channel without its colour being invented. So every
+        channel is capped at the lowest ceiling among the clipped channels. A blown
+        neutral therefore balances to (1,1,1) -- white -- while a saturated red with only
+        R clipped keeps its colour (its ceiling is R's own). "Clipped" is a smoothstep
+        over the top kKnee of each channel's clip level, and the ceiling is divided by
+        it, so the cap rises to infinity as the channel leaves the knee: continuous, no
+        banding at the clip edge.
+
+        clip_c is MEASURED (a pile-up at the channel maximum), not assumed to be the
+        declared white level: some cameras saturate below it, and then nothing would
+        ever reach the knee. A channel with no pile-up is not clipped anywhere.
+
+        Mosaic raws only: a Linear Raw (HDR/pano merge DNG) has no sensor clip, and its
+        values above 1 are real. In camera-native space, before the cache, using the
+        AS-SHOT balance (the profile's neutral); a later Temp change shifts the neutral
+        a little, which is invisible next to the pink this removes.
+    */
+    static void NeutraliseClipped(WorkingImage &img);
 };
 
 #endif // RAWCOLOR_H
