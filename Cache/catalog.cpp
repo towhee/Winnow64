@@ -517,7 +517,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
     if (!db.transaction()) return 0;
 
     QSqlQuery sel(db);
-    sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime, unreadable FROM image"
+    sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime, unreadable, live FROM image"
                 " WHERE pathkey = ?");
 
     QSqlQuery upd(db);
@@ -583,7 +583,11 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                         reporting files it could now read perfectly well. Three functions
                         compare these stamps and all three had to learn that this row is
                         about Winnow's ability to read the file, not about the file. */
-                    && !sel.value(4).toBool();
+                    && !sel.value(4).toBool()
+                    /*  NOR IS A DEMOTED ROW. The file is here again with the stamps it
+                        had when it was demoted, so the skip left live = 0 and the
+                        promotion the demote relies on never happened. See staleOf. */
+                    && sel.value(5).toBool();
         }
         sel.finish();
         if (id && fresh) continue;
@@ -696,7 +700,7 @@ QSet<QString> Catalog::staleOf(const QList<CatalogRow> &candidates)
         }
 
         QSqlQuery q(db);
-        q.prepare("SELECT srcsize, srcmtime, sidecarmtime, unreadable FROM image"
+        q.prepare("SELECT srcsize, srcmtime, sidecarmtime, unreadable, live FROM image"
                   " WHERE pathkey = ?");
         for (int i = from; i < to; ++i) {
             const CatalogRow &r = candidates.at(i);
@@ -718,7 +722,14 @@ QSet<QString> Catalog::staleOf(const QList<CatalogRow> &candidates)
                             The cost is one re-attempt per unreadable file per scan, and
                             the population is by definition tiny -- a library where it is
                             not is a library whose owner needs to know. */
-                        && !q.value(3).toBool();
+                        && !q.value(3).toBool()
+                        /*  A DEMOTED ROW IS NEVER FRESH. sweep and reconcileFolder demote
+                            on an inference that can be wrong (a folder briefly unreadable,
+                            a load that listed it short), trusting the next commit to
+                            promote the row. But the file comes back unchanged, so its
+                            stamps match, the scan skipped it, commit skipped it, and the
+                            folder stayed "not in the Library" through every rescan. */
+                        && q.value(4).toBool();
             }
             q.finish();
             if (!fresh) stale.insert(r.path);

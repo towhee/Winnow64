@@ -97,6 +97,7 @@ private slots:
     void blankCategoryItemAccountsForEveryImage();
     void folderQueryTakesTheSubtreeAndNothingBeside();
     void liveFolderCountsSkipDemotedRows();
+    void demotedRowIsPromotedByTheNextScan();
     void keywordsMatchAllNeedsEveryOne();
     void scopeFoldersHonourExcludesAndPhotosLibrary();
     void scopeFileCountUsesTheScannersNameRule();
@@ -2412,6 +2413,27 @@ void tst_catalog::liveFolderCountsSkipDemotedRows()
     QVERIFY(!live.contains(gone));
     QCOMPARE(live.value(kept), 1);
     QCOMPARE(cat.folderCounts().value(gone), 1);
+}
+
+void tst_catalog::demotedRowIsPromotedByTheNextScan()
+{
+/*
+    A row demoted on a wrong inference (here a reconcile that did not list the file) comes
+    back when the file is seen again UNCHANGED. Its stamps still match, so freshness alone
+    called it fresh: the scan skipped it, commit skipped it, and the folder stayed out of
+    the Library through every rescan.
+*/
+    Catalog &cat = Catalog::instance();
+    const QString folder = QDir(tmp.path()).absoluteFilePath("dp");
+    const CatalogRow r = rowIn("dp", "d.jpg");
+    cat.commit({r});
+    QCOMPARE(cat.reconcileFolder(folder, {}), 1);
+    QVERIFY(!cat.liveFolderCounts().contains(folder));
+
+    QVERIFY(cat.staleOf({r}).contains(r.path));
+    cat.commit({r});
+    QCOMPARE(cat.liveFolderCounts().value(folder), 1);
+    QVERIFY(cat.staleOf({r}).isEmpty());
 }
 
 void tst_catalog::keywordsMatchAllNeedsEveryOne()
