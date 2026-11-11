@@ -2994,6 +2994,7 @@ A header-click sort ran MW's handling before the sort. MW::sortIndicatorChanged 
 
 ## 5 Caching
 
+- A header click also lost the table's horizontal scroll: the view snapped back to the first columns. After the sort, MW::scrollToCurrentRowIfNotVisible, TableView::scrollToRow and QAbstractItemView's own autoScroll on currentChanged all scroll to a COLUMN 0 index, and QTableView::scrollTo then scrolls horizontally to show column 0. TableView::scrollTo now keeps the horizontal position when the target is a frozen column (the overlay always shows those), so every such caller scrolls only vertically.
 Three caches keep Winnow from decoding or reading the same thing twice:
 
 - Metadata and icons: MetaRead (Cache/metaread.cpp) dispatches a pool of Reader workers (Cache/reader.cpp) that read each row's metadata and its 256 px icon into the DataModel. Icons are also cached on disk in the index (see [5.8 Thumbnails in the Index (ThumbCache)](#58-thumbnails-in-the-index-thumbcache)).

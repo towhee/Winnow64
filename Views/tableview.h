@@ -34,6 +34,7 @@ public:
     void scrollToRow(int row, QString source);
     void ensureRowVisible(int row, QString source = "");
     bool isRowVisible(int row);
+    void scrollTo(const QModelIndex &index, ScrollHint hint = EnsureVisible) override;
     bool scrollWhenReady;
     QStandardItemModel *ok;
     QModelIndex shiftAnchorIndex;
@@ -77,7 +78,7 @@ private:
     IconView *thumbView;
     DataModel *dm;
     QMap<int,int>defaultColumnWidth;
-    int frozenColumns;
+    int frozenColumns = 2;
     bool isDebug = false;  // set true in TableView::TableView
     void createOkToShow();
     void setDefaultColumnWidths();

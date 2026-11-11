@@ -177,6 +177,24 @@ void TableView::scrollToRow(int row, QString source)
     scrollTo(sfIdx, QAbstractItemView::PositionAtCenter);
 }
 
+void TableView::scrollTo(const QModelIndex &index, ScrollHint hint)
+/*
+    Keep the horizontal scroll when the target is a frozen column. Most callers (sort,
+    filter, navigation, and QAbstractItemView's own autoScroll on currentChanged) pass a
+    column 0 index, and QTableView then scrolls horizontally to show column 0, so the
+    user's view of the columns was lost every time a header was clicked to sort. The
+    frozen overlay always shows those columns, so only the vertical scroll is wanted.
+*/
+{
+    if (index.isValid() && index.column() < frozenColumns) {
+        int hPos = horizontalScrollBar()->value();
+        QTableView::scrollTo(index, hint);
+        horizontalScrollBar()->setValue(hPos);
+        return;
+    }
+    QTableView::scrollTo(index, hint);
+}
+
 void TableView::ensureRowVisible(int row, QString source)
 /*
     Minimal vertical scroll to bring row into view (used to follow a shift-extended
