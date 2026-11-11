@@ -35,6 +35,15 @@ QImage rectifyPerspective(const QImage &src, const QPointF quad[4], QRectF &outC
 QImage applyGeometry(const QImage &src, const Geometry &g);
 
 /*
+    The crop in whole pixels of a W x H canvas (applyGeometry's step 3). A free crop is the
+    normalized rect rounded (QRectF::toRect, each edge up to 0.75 px off). With a ratio
+    (g.cropAspect) the LONG side is rounded and the short side derived from it, centred on
+    the rect, so the result is the ratio to the nearest pixel instead of carrying both
+    sides' rounding.
+*/
+QRect cropPixelRect(int W, int H, const Geometry &g);
+
+/*
     A kaleidoscope's settings, from one scope's EditParams (Effects > Kaleidoscope). The
     centre is normalized in the frame being folded -- the CROPPED frame, since the fold
     runs after applyGeometry.

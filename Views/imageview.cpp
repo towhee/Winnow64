@@ -2705,6 +2705,15 @@ void ImageView::cropSyncModifiers()
     viewport()->update();
 }
 
+qreal ImageView::cropRatio() const
+{
+    if (cropWarp || cropAspect <= 0.0) return 0.0;
+    const qreal a = cropAspectFlipped ? 1.0 / cropAspect : cropAspect;
+    const qreal f = cropFrameAspect();
+    if (f <= 0.0 || std::abs(f / a - 1.0) > 1e-3) return 0.0;
+    return a;
+}
+
 qreal ImageView::cropLockedAspect() const
 {
     if (!cropAspectLocked) return 0.0;
@@ -2939,8 +2948,15 @@ QSize ImageView::cropPixelSize() const
     else if (!developGeomSrc.isEmpty()) full = QSizeF(developGeomSrc);
     else if (pmItem)                    full = pmItem->boundingRect().size();
     if (full.isEmpty()) return QSize();
-    return QSize(qMax(1, qRound(cropN.width()  * full.width())),
-                 qMax(1, qRound(cropN.height() * full.height())));
+    /* The render's own rounding (CropTransform::cropPixelRect), so the label is the size
+       the crop renders and exports at, the chosen ratio included. */
+    Geometry g;
+    g.cropX = cropN.x(); g.cropY = cropN.y();
+    g.cropW = cropN.width(); g.cropH = cropN.height();
+    g.cropAspect = cropRatio();
+    const QSize px = CropTransform::cropPixelRect(qRound(full.width()), qRound(full.height()),
+                                                  g).size();
+    return QSize(qMax(1, px.width()), qMax(1, px.height()));
 }
 
 void ImageView::cropDrawSizeLabel(QPainter *painter, const QRectF &frameVp)
@@ -3033,7 +3049,7 @@ void ImageView::setDevelopGeometry(const Geometry &g, QSize orientedSrcSize)
        overlay buffers and the auto-mask guide. */
     auto same = [](const Geometry &a, const Geometry &b) {
         if (a.cropX != b.cropX || a.cropY != b.cropY ||
-            a.cropW != b.cropW || a.cropH != b.cropH ||
+            a.cropW != b.cropW || a.cropH != b.cropH || a.cropAspect != b.cropAspect ||
             a.straighten != b.straighten || a.hasWarp != b.hasWarp) return false;
         if (a.hasWarp)
             for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;

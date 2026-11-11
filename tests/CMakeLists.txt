@@ -507,6 +507,12 @@ winnow_add_unit_test(tst_editrotate unit/tst_editrotate.cpp)
 winnow_add_unit_test(tst_kaleidoscope unit/tst_kaleidoscope.cpp
     ${CMAKE_SOURCE_DIR}/Develop/Transform/croptransform.cpp)
 winnow_test_link_opencv(tst_kaleidoscope PRIVATE opencv_core opencv_imgproc)
+# tst_cropaspect tests a crop made at a chosen ratio (Geometry::cropAspect) keeping it
+# to the export: CropTransform::cropPixelRect, ExportSettings::outputSize's short side
+# from the ratio (16 x 9 at 3840 is always 2160), and the JSON round trip / sanitize.
+winnow_add_unit_test(tst_cropaspect unit/tst_cropaspect.cpp
+    ${CMAKE_SOURCE_DIR}/Develop/Transform/croptransform.cpp)
+winnow_test_link_opencv(tst_cropaspect PRIVATE opencv_core opencv_imgproc)
 # tst_artblur tests Effects > Blur's and Effects > Orton's kernels (header-only
 # Develop/artblur.h): what each artistic blur keeps and smears, Orton's normal blend,
 # resolution independence (proxy vs full), a padded Detail patch matching the full frame,

@@ -678,7 +678,8 @@ QString MW::developDiagnostics()
     rpt << "\n" << "GEOMETRY (crop / straighten / warp -- applied last, then kaleidoscopes)";
     rpt << "\n" << "  isIdentity = " << G::s(g.isIdentity()) << "   show = " << G::s(g.show);
     rpt << "\n" << "  crop = x " << G::s(g.cropX) << "  y " << G::s(g.cropY)
-        << "  w " << G::s(g.cropW) << "  h " << G::s(g.cropH);
+        << "  w " << G::s(g.cropW) << "  h " << G::s(g.cropH)
+        << "  aspect " << G::s(g.cropAspect);
     rpt << "\n" << "  straighten = " << G::s(g.straighten) << " deg"
         << "   hasWarp = " << G::s(g.hasWarp) << "   fillCanvas = " << G::s(g.fillCanvas);
     rpt << "\n";

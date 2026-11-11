@@ -784,12 +784,29 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
 
     /* 3) Crop: g.crop is normalized in the post-warp output space. */
     if (!g.cropIsIdentity()) {
-        const QRect cri = QRectF(g.cropX * img.width(),  g.cropY * img.height(),
-                                 g.cropW * img.width(),  g.cropH * img.height())
-                              .toRect().intersected(img.rect());
+        const QRect cri = cropPixelRect(img.width(), img.height(), g);
         if (cri.isValid() && cri != img.rect()) img = img.copy(cri);
     }
     return img;
+}
+
+QRect CropTransform::cropPixelRect(int W, int H, const Geometry &g)
+{
+    const QRectF r(g.cropX * W, g.cropY * H, g.cropW * W, g.cropH * H);
+    const double a = g.cropAspect;
+    if (a <= 0.0 || W < 1 || H < 1) return r.toRect().intersected(QRect(0, 0, W, H));
+
+    int w, h;
+    if (a >= 1.0) { w = qRound(r.width());  h = qRound(w / a); }
+    else          { h = qRound(r.height()); w = qRound(h * a); }
+    // too big for the canvas (a rect stored at the edge): shrink, keeping the ratio
+    if (w > W) { w = W; h = qRound(w / a); }
+    if (h > H) { h = H; w = qRound(h * a); }
+    w = std::clamp(w, 1, W);
+    h = std::clamp(h, 1, H);
+    const int x = std::clamp(qRound(r.center().x() - w / 2.0), 0, W - w);
+    const int y = std::clamp(qRound(r.center().y() - h / 2.0), 0, H - h);
+    return QRect(x, y, w, h);
 }
 
 QImage CropTransform::applyKaleidoscope(const QImage &src, const Kaleido &k)

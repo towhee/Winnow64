@@ -7792,6 +7792,7 @@ void MW::folderChanged(bool aborted)
     /*  One fill, one run of the metadata tail. Cleared here because this runs once per
         completed fill and ahead of both the places that call MW::metadataComplete. */
     metadataCompleteDone = false;
+    reconcileFolderListGen = dm->folderListGen;
 
     bookmarks->setEnabled(true);
     fsTree->setEnabled(true);
@@ -8442,8 +8443,22 @@ void MW::metadataComplete(QString src)
         any one of them, and treating them as one would demote most of the library. An
         aborted or memory-capped load is a partial listing for the same reason. Both are
         the same precondition Catalog::reconcileFolder states, checked here because this
-        is where it is knowable. */
-    const bool reconcile = dm->scopeRequest().reconcile && !dm->abort && !G::stop;
+        is where it is knowable.
+
+        AND ONLY FOR THE LOAD THAT FINISHED. MetaRead::done is queued and carries no load
+        identity, so the previous folder's can be delivered while the next one is still
+        enumerating (DataModel's load runs processEvents). Its folderList then names
+        folders whose rows are not in yet, and folderPathSets reports one of those as an
+        EMPTY folder -- the whole folder demoted, and before Catalog's demoted-is-never-
+        fresh rule, for good. The generation is checked here and again in the lambda,
+        which is queued too and reads the model only when it runs. */
+    const quint64 loadGen = reconcileFolderListGen;
+    const bool sameLoad = dm->folderListGen == loadGen;
+    if (!sameLoad && dm->scopeRequest().reconcile)
+        qDebug().noquote() << "[Catalog] reconcile SKIPPED: the folder list changed since"
+                              " the fill completed (a previous load's MetaRead::done)";
+    const bool reconcile = dm->scopeRequest().reconcile && !dm->abort && !G::stop
+                           && sameLoad;
 
     /*  A HYDRATED CATALOG SCOPE HAS NOTHING TO COMMIT, and finding that out cost a
         minute of blocked GUI. dm->catalogRows() reads ~40 columns of every row on the
@@ -8458,7 +8473,7 @@ void MW::metadataComplete(QString src)
         it re-reads them, not this. */
     const bool nothingToCommit = dm->scopeRequest().isHydrated();
 
-    QMetaObject::invokeMethod(this, [this, reconcile, nothingToCommit]{
+    QMetaObject::invokeMethod(this, [this, reconcile, nothingToCommit, loadGen]{
         if (nothingToCommit) {
             /*  EXCEPT THE ROWS THE VERIFICATION PASS RE-READ. Everything else in a
                 hydrated scope came from the index and would be written back unchanged;
@@ -8515,9 +8530,13 @@ void MW::metadataComplete(QString src)
             so letting it run outside the scope would be harmless -- but "the table says
             what Winnow does with this folder" is easier to rely on than a rule with one
             exception in it. */
+        const bool stillSameLoad = dm->folderListGen == loadGen;
+        if (reconcile && !stillSameLoad)
+            qDebug().noquote() << "[Catalog] reconcile SKIPPED: a new load began before the"
+                                  " queued commit ran";
         QHash<QString, QSet<QString>> present =
-            (reconcile && anyFolderInScope) ? dm->folderPathSets()
-                                            : QHash<QString, QSet<QString>>();
+            (reconcile && stillSameLoad && anyFolderInScope)
+                ? dm->folderPathSets() : QHash<QString, QSet<QString>>();
         for (auto it = present.begin(); it != present.end(); ) {
             if (isCatalogScopeFolder(it.key())) ++it;
             else it = present.erase(it);
@@ -8528,7 +8547,8 @@ void MW::metadataComplete(QString src)
                 /* After the commit, so a file seen for the first time is inserted (and
                    live) before anything is compared against the listing. */
                 for (auto it = present.cbegin(); it != present.cend(); ++it)
-                    Catalog::instance().reconcileFolder(it.key(), it.value());
+                    Catalog::instance().reconcileFolder(it.key(), it.value(),
+                                                        "MW::metadataComplete");
                 /* Tell the panel what just changed, but only if someone is looking at
                    it: the Keywords category is a query plus a tree rebuild, and the whole
                    point of doing the commit out here is to not spend GUI time on the
@@ -14207,7 +14227,7 @@ void MW::syncPendingMaskOp()
 static bool sameDevelopGeometry(const Geometry &a, const Geometry &b)
 {
     if (a.cropX != b.cropX || a.cropY != b.cropY ||
-        a.cropW != b.cropW || a.cropH != b.cropH ||
+        a.cropW != b.cropW || a.cropH != b.cropH || a.cropAspect != b.cropAspect ||
         a.straighten != b.straighten || a.hasWarp != b.hasWarp ||
         a.show != b.show || a.renderFolds != b.renderFolds) return false;
     if (a.hasWarp)
@@ -14263,7 +14283,7 @@ void MW::renderDevelopPreview(bool fullRes)
        stored quad warps the frame so the crop overlay can be placed on the corrected canvas. */
     if (developCropEditing && !developCropShowResult) {
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
-        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
+        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0; mj.geometry.cropAspect = 0.0;
     }
     const bool kaleidoSuppressed = jobHasKaleido(mj) && developKaleidoSuppressed();
     if (kaleidoSuppressed) stripKaleidos(mj);
@@ -14898,7 +14918,7 @@ void MW::renderDevelopFullResAsync()
     const bool cropSuppressed = developCropEditing && !developCropShowResult;
     if (cropSuppressed) {                 // suppress crop, keep warp (see renderDevelopPreview)
         mj.geometry.cropX = 0.0; mj.geometry.cropY = 0.0;
-        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0;
+        mj.geometry.cropW = 1.0; mj.geometry.cropH = 1.0; mj.geometry.cropAspect = 0.0;
     }
     const bool kaleidoSuppressed = jobHasKaleido(mj) && developKaleidoSuppressed();
     if (kaleidoSuppressed) stripKaleidos(mj);
@@ -15267,7 +15287,7 @@ Geometry MW::developRenderGeometry() const
     const DevelopProperties::StackRenderJob job = developProperties->stackJob();
     Geometry g = job.geometry;
     if (developCropEditing && !developCropShowResult) {
-        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
+        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0; g.cropAspect = 0.0;
     }
     g.renderFolds = jobHasKaleido(job) && !developKaleidoSuppressed();
     return g;
@@ -17493,7 +17513,7 @@ void MW::developExport()
     runExport(dlg.targetPaths(), dlg.settings(),
         [this](const QString &fPath, ImageExporter::Done done) {
             developExportPixelSource(fPath, done);
-        });
+        }, developCropAspectSource());
 }
 
 void MW::developExportWithPreset(const QString &presetName)
@@ -17525,11 +17545,26 @@ void MW::developExportWithPreset(const QString &presetName)
     runExport(targets, s,
         [this](const QString &fPath, ImageExporter::Done done) {
             developExportPixelSource(fPath, done);
-        });
+        }, developCropAspectSource());
+}
+
+ImageExporter::CropAspectSource MW::developCropAspectSource()
+{
+/*
+    The ratio each image's crop was made at, for the exporter's short edge. None for a
+    raw going out as its camera preview: those pixels are the uncropped embedded JPEG.
+*/
+    return [this](const QString &fPath) -> double {
+        if (!developProperties || !imageExporter) return 0.0;
+        if (imageExporter->activeSettings().source == ExportSettings::CameraPreview &&
+            imageExporter->isRaw(fPath)) return 0.0;
+        return developProperties->cropAspectFor(fPath);
+    };
 }
 
 void MW::runExport(const QStringList &targets, const ExportSettings &settings,
-                   ImageExporter::PixelSource source)
+                   ImageExporter::PixelSource source,
+                   ImageExporter::CropAspectSource cropAspect)
 {
 /*
     Every ImageExporter run goes through here, so a preset, the dialog and Save Preview
@@ -17567,8 +17602,9 @@ void MW::runExport(const QStringList &targets, const ExportSettings &settings,
             setEmbelExportLock(true);
         }
         source = embellishedPixelSource(std::move(source), s.embellish);
+        cropAspect = {};                     // the composed picture is not the crop
     }
-    imageExporter->run(targets, s, std::move(source));
+    imageExporter->run(targets, s, std::move(source), std::move(cropAspect));
 }
 
 ImageExporter::PixelSource MW::embellishedPixelSource(ImageExporter::PixelSource inner,
@@ -17685,6 +17721,7 @@ void MW::commitDevelopCrop()
     const QRectF crop = imageView->cropRect();
     Geometry g = developProperties->currentGeometry();
     g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
+    g.cropAspect = imageView->cropRatio();
     developProperties->setCurrentGeometry(g);
 }
 
@@ -17755,6 +17792,7 @@ void MW::rectifyDevelopCrop()
     imageView->cropQuad(g.quad);                 // traced corners (oriented-image normalized space)
     g.cropX = suggested.x();     g.cropY = suggested.y();
     g.cropW = suggested.width(); g.cropH = suggested.height();
+    g.cropAspect = 0.0;                          // the inscribed rect has no chosen ratio
     developProperties->setCurrentGeometry(g);
 
     renderDevelopPreview(false);                 // warp kept, crop suppressed -> corrected canvas
@@ -17791,6 +17829,7 @@ void MW::applyDevelopLevel(double deltaDeg)
     if (!g.hasWarp) {
         const QRectF c = CropTransform::straightenCropNorm(fw, fh, g.straighten);
         g.cropX = c.x(); g.cropY = c.y(); g.cropW = c.width(); g.cropH = c.height();
+        g.cropAspect = 0.0;                      // the wedge-free rect, no chosen ratio
     }
     developProperties->setCurrentGeometry(g);
 
@@ -17877,7 +17916,7 @@ void MW::resetDevelopTransformPart(int part)
            the full frame to whatever constraint is left standing and the reset appears to
            do nothing (or returns a portrait box when the flip was on). */
         transformPanel->resetCropState();
-        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0;
+        g.cropX = 0.0; g.cropY = 0.0; g.cropW = 1.0; g.cropH = 1.0; g.cropAspect = 0.0;
         break;
     case TransformPanel::LevelPart:
         g.straighten = 0.0;

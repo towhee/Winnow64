@@ -50,14 +50,14 @@ bool ImageExporter::isRaw(const QString &fPath) const
 }
 
 void ImageExporter::run(const QStringList &srcPaths, const ExportSettings &settings,
-                        PixelSource source)
+                        PixelSource source, CropAspectSource cropAspect)
 {
     if (G::isLogger) G::log("ImageExporter::run");
     if (!source) {
         G::issue("Warning", "No pixel source set.", "ImageExporter::run");
         return;
     }
-    Batch batch{srcPaths, settings, std::move(source)};
+    Batch batch{srcPaths, settings, std::move(source), std::move(cropAspect)};
     if (running) {                           // one batch at a time: wait behind it
         queue.append(std::move(batch));
         return;
@@ -70,6 +70,7 @@ void ImageExporter::start(Batch batch)
     s = batch.settings;
     paths = batch.paths;
     pixelSource = std::move(batch.source);
+    cropAspectSource = std::move(batch.cropAspect);
     index = 0;
     aborting = false;
     result = Result();
@@ -154,14 +155,16 @@ void ImageExporter::onImageReady(bool ok, const QImage &img)
     const QString src = VersionKey::sourceOf(fPath);       // the file, for its tags
     const int i = index;
     const int total = paths.count();
+    const double cropAspect = cropAspectSource ? cropAspectSource(fPath) : 0.0;
     QPointer<ImageExporter> self(this);
     emit stage(i, total, Stage::Save, fPath);
-    savePool.start([self, img, dst, src, settings, folder, fPath, i, total, renderMs]() {
+    savePool.start([self, img, dst, src, settings, folder, fPath, i, total, renderMs,
+                    cropAspect]() {
         Saved saved;
         saved.dst = dst;
         QElapsedTimer t;
         t.start();
-        const QImage out = resized(img, settings);
+        const QImage out = resized(img, settings, cropAspect);
         saved.ok = save(out, dst, settings);
         saved.saveMs = t.restart();
         if (saved.ok && (settings.copyMetadata || settings.embedThumbnail)) {
@@ -328,27 +331,17 @@ bool ImageExporter::willTouchLoadedFolder(const QStringList &srcPaths,
     return false;
 }
 
-QSize ImageExporter::OutputSize(const QSize &src, const ExportSettings &settings)
+QSize ImageExporter::OutputSize(const QSize &src, const ExportSettings &settings,
+                               double cropAspect)
 {
-    if (settings.sizing == ExportSettings::FullSize || src.isEmpty()) return src;
-
-    const int longEdge = qMax(src.width(), src.height());
-    double factor = 1.0;
-    if (settings.sizing == ExportSettings::LongEdge)
-        factor = double(settings.longEdgePx) / double(longEdge);
-    else
-        factor = double(settings.percent) / 100.0;
-    if (settings.dontEnlarge && factor > 1.0) return src;
-    if (qFuzzyCompare(factor, 1.0)) return src;
-
-    return QSize(qMax(1, int(src.width() * factor + 0.5)),
-                 qMax(1, int(src.height() * factor + 0.5)));
+    return settings.outputSize(src, cropAspect);
 }
 
-QImage ImageExporter::resized(const QImage &src, const ExportSettings &settings)
+QImage ImageExporter::resized(const QImage &src, const ExportSettings &settings,
+                              double cropAspect)
 {
     if (src.isNull()) return src;
-    const QSize size = OutputSize(src.size(), settings);
+    const QSize size = OutputSize(src.size(), settings, cropAspect);
     if (size == src.size()) return src;
     /* Smooth is the right filter for a downscale and this is not an interactive path. */
     return src.scaled(size, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);

@@ -220,6 +220,13 @@ inline EditParams effectiveScopeParams(const EditScope &l) {
 */
 struct Geometry {
     double cropX = 0.0, cropY = 0.0, cropW = 1.0, cropH = 1.0;   // crop rect, post-warp output space
+    /* The w/h ratio the crop was made at (16 x 9 -> 1.777..., portrait 9 x 16 -> 0.5625),
+       0 when the crop is free. The rect above only approximates it: it is normalized,
+       and in a canvas that may be the loupe's proxy, so its rounding to whole pixels is
+       what decides the shape. With a ratio, the render sizes the crop from the ratio
+       (CropTransform::cropPixelRect) and the export derives the short edge from it
+       (ImageExporter::OutputSize), so 16 x 9 at 3840 is always 3840 x 2160. */
+    double cropAspect = 0.0;
     double straighten = 0.0;                                     // degrees (deferred UI)
     bool   hasWarp = false;                                      // 4-point perspective active
     double quad[8] = {0,0, 1,0, 1,1, 0,1};                       // TL,TR,BR,BL, oriented-image space
@@ -672,6 +679,7 @@ struct EditStack {
         QJsonObject o;
         o["cropX"] = g.cropX; o["cropY"] = g.cropY;
         o["cropW"] = g.cropW; o["cropH"] = g.cropH;
+        if (g.cropAspect > 0.0) o["cropAspect"] = g.cropAspect;   // only when set
         o["straighten"] = g.straighten;
         o["hasWarp"] = g.hasWarp;
         o["fillCanvas"] = g.fillCanvas;
@@ -690,6 +698,7 @@ struct EditStack {
         g.cropY = o.value("cropY").toDouble(g.cropY);
         g.cropW = o.value("cropW").toDouble(g.cropW);
         g.cropH = o.value("cropH").toDouble(g.cropH);
+        g.cropAspect = o.value("cropAspect").toDouble(g.cropAspect);
         g.straighten = o.value("straighten").toDouble(g.straighten);
         g.hasWarp = o.value("hasWarp").toBool(g.hasWarp);
         g.fillCanvas = o.value("fillCanvas").toBool(g.fillCanvas);
@@ -1025,6 +1034,10 @@ struct EditStack {
         geomFixed |= clampD(g.cropW, 0.0001, 1.0, 1.0);
         geomFixed |= clampD(g.cropH, 0.0001, 1.0, 1.0);
         geomFixed |= clampD(g.straighten, -45.0, 45.0, 0.0);
+        // an out-of-range ratio is dropped (free crop), not clamped to a wrong shape
+        if (g.cropAspect != 0.0 && !(g.cropAspect >= 0.01 && g.cropAspect <= 100.0)) {
+            g.cropAspect = 0.0; geomFixed = true;
+        }
         if (g.cropX + g.cropW > 1.0) { g.cropX = 0.0; g.cropW = 1.0; geomFixed = true; }
         if (g.cropY + g.cropH > 1.0) { g.cropY = 0.0; g.cropH = 1.0; geomFixed = true; }
         if (g.hasWarp) {

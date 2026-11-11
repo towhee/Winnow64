@@ -8,6 +8,7 @@
 #include "Utilities/foldertree.h"
 #include "Utilities/searchterms.h"
 
+#include <QDebug>
 #include <QDir>
 #include <algorithm>
 #include <QFileInfo>
@@ -1880,7 +1881,8 @@ const char *Catalog::reconcileSelectSql()
     return "SELECT id, path FROM image WHERE folder = ? AND +live = 1";
 }
 
-int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present)
+int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present,
+                             const QString &caller)
 {
 /*
     Demote every live row in this folder that the enumeration did not find. See the
@@ -1937,6 +1939,15 @@ int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present
         if (u.exec()) ++demoted;
     }
     db.commit();
+    /*  EVERY DEMOTION IS LOGGED, with who asked and how much of the folder it took. A
+        wrong one is otherwise invisible: the rows just leave the Library, and by the time
+        anyone looks a rescan may have promoted them again. "all" of a folder that is
+        still on disk is the signature of a partial listing. */
+    qDebug().noquote() << "[Catalog] reconcile demoted" << demoted << "of" << live.size()
+                       << "live rows" << (demoted == live.size() ? "(all)" : "")
+                       << "present =" << present.size()
+                       << "caller =" << (caller.isEmpty() ? QString("?") : caller)
+                       << "folder =" << folder;
     return demoted;
 }
 

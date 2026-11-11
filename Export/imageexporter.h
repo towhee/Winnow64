@@ -60,6 +60,10 @@ public:
        ok == false skips the file (it is recorded as failed and the batch continues). */
     using Done = std::function<void(bool ok, const QImage &img)>;
     using PixelSource = std::function<void(const QString &fPath, Done done)>;
+    /* The w/h ratio fPath's pixels were cropped to (Geometry::cropAspect), 0 when free or
+       unknown. Only a source whose pixels ARE the crop supplies one (Develop, not
+       Embellish); OutputSize ignores a ratio the image does not actually have. */
+    using CropAspectSource = std::function<double(const QString &fPath)>;
 
     /* What the image in flight is doing, for the status-bar row. Render is the pixel
        source; Save and Metadata run on the exporter's worker thread. */
@@ -93,7 +97,7 @@ public:
        dialog closes as soon as Export is pressed, so a second export can be started
        before the first is done. */
     void run(const QStringList &srcPaths, const ExportSettings &settings,
-             PixelSource source);
+             PixelSource source, CropAspectSource cropAspect = {});
 
     bool isRunning() const { return running; }
     int  queuedBatches() const { return int(queue.size()); }
@@ -110,8 +114,10 @@ public:
 
     /* The size settings would write an image whose rendered size is src. src unchanged
        when no resize applies. A PixelSource with a ready-made smaller picture (the
-       devPreview) asks this to decide whether that picture is big enough. */
-    static QSize OutputSize(const QSize &src, const ExportSettings &settings);
+       devPreview) asks this to decide whether that picture is big enough. cropAspect is
+       the ratio the image was cropped to: see ExportSettings::outputSize. */
+    static QSize OutputSize(const QSize &src, const ExportSettings &settings,
+                            double cropAspect = 0.0);
 
     /* The destination path settings would produce for fPath, with no side effects beyond
        resolving the name -- the dialog uses it for its live "Example:" line. seq feeds
@@ -146,6 +152,7 @@ private:
         QStringList    paths;
         ExportSettings settings;
         PixelSource    source;
+        CropAspectSource cropAspect;
     };
     /* The worker's report for one image. */
     struct Saved {
@@ -175,7 +182,8 @@ private:
     /* WORKER THREAD. Static and handed their settings so nothing they touch belongs to
        the exporter: resize, encode and ExifTool are the seconds after the render that
        used to freeze the GUI (a 50 MP q100 JPEG plus an ExifTool rewrite of it). */
-    static QImage resized(const QImage &src, const ExportSettings &settings);
+    static QImage resized(const QImage &src, const ExportSettings &settings,
+                          double cropAspect);
     static bool   save(const QImage &img, const QString &dstPath,
                        const ExportSettings &settings);
     static void   copySourceMetadata(const QString &srcPath, const QString &dstPath,
@@ -185,6 +193,7 @@ private:
     Metadata  *metadata;
 
     PixelSource pixelSource;
+    CropAspectSource cropAspectSource;
     ExportSettings s;
     QStringList paths;
     QList<Batch> queue;              // batches waiting behind the active one

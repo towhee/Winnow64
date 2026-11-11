@@ -290,6 +290,9 @@ public:
        the in-memory stack, which during the write debounce may be AHEAD of the sidecar --
        so a preview keyed on this is matched against what the user actually sees. */
     QString developBlobFor(const QString &fPath);
+    /* The ratio fPath's crop was made at (Geometry::cropAspect), 0 when free or uncropped.
+       The exporter derives the short edge from it (ImageExporter::OutputSize). */
+    double cropAspectFor(const QString &fPath);
 
     /* May a preview write (topUpDevPreviews, MW's devPreview builder) rewrite fPath's
        sidecar recipe? Not when loading it REPAIRED the stack (masks dropped, values

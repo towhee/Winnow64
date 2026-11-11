@@ -10,8 +10,10 @@ WHAT'S NEW
 - Regenerate thumbnails
 - Move files in Library
 - Crop and adjust crop for multiple images
+- Catalog scan
 
 BUGS / TO DO
+- Make TableView current columns visible persistent (when sort, )
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (replay a series of steps)

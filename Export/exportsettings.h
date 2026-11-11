@@ -2,6 +2,8 @@
 #define EXPORTSETTINGS_H
 
 #include <QImageWriter>
+#include <QSize>
+#include <cmath>
 #include <QString>
 #include <QStringList>
 #include <QVector>
@@ -173,6 +175,40 @@ struct ExportSettings {
     bool wants16Bit() const
     {
         return bitDepth == 16 && ExportFormats::find(format).depth16;
+    }
+
+    /* The size these settings write an image whose rendered size is src; src unchanged
+       when no resize applies (ImageExporter::OutputSize).
+
+       cropAspect (> 0) is the w/h ratio the image was cropped to. Scaling both sides
+       and rounding each loses it (a 6000 x 3376 crop at 3840 gives 2161), so the short
+       side is derived from the ratio instead: 16 x 9 at 3840 is always 2160. Ignored
+       unless src is within 0.5% of the ratio, so a picture that is not the crop is
+       scaled as before. */
+    QSize outputSize(const QSize &src, double cropAspect = 0.0) const
+    {
+        if (sizing == FullSize || src.isEmpty()) return src;
+
+        const int longEdge = qMax(src.width(), src.height());
+        double factor = 1.0;
+        if (sizing == LongEdge)
+            factor = double(longEdgePx) / double(longEdge);
+        else
+            factor = double(percent) / 100.0;
+        if (dontEnlarge && factor > 1.0) return src;
+        if (qFuzzyCompare(factor, 1.0)) return src;
+
+        QSize out(qMax(1, int(src.width() * factor + 0.5)),
+                  qMax(1, int(src.height() * factor + 0.5)));
+        const double srcAspect = double(src.width()) / src.height();
+        if (cropAspect > 0.0 && std::abs(srcAspect / cropAspect - 1.0) < 0.005) {
+            // the long side as scaled, the short side from the ratio
+            if (src.width() >= src.height())
+                out.setHeight(qMax(1, qRound(out.width() / cropAspect)));
+            else
+                out.setWidth(qMax(1, qRound(out.height() * cropAspect)));
+        }
+        return out;
     }
 
     /* The extension to write: the format key for every entry in the table. */

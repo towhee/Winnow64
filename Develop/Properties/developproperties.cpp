@@ -10494,6 +10494,9 @@ DevelopPreset DevelopProperties::buildPreset(const QString &name, int srcScope,
         const Geometry &g = s.geometry;
         preset.globals.insert("crop", QStringLiteral("%1,%2,%3,%4")
             .arg(g.cropX).arg(g.cropY).arg(g.cropW).arg(g.cropH));
+        /* Its own key, not a fifth field: a build that predates it reads "crop" as
+           exactly four values and would drop the whole crop. */
+        if (g.cropAspect > 0.0) preset.globals.insert("cropAspect", g.cropAspect);
     }
     if (gk.contains("level"))
         preset.globals.insert("straighten", s.geometry.straighten);
@@ -10705,7 +10708,11 @@ EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack 
                 s.geometry.cropY = v[1].toDouble();
                 s.geometry.cropW = v[2].toDouble();
                 s.geometry.cropH = v[3].toDouble();
+                s.geometry.cropAspect = preset.globals.value("cropAspect").toDouble();
             }
+        }
+        else if (k == "cropAspect") {
+            // read with "crop" above
         }
         else if (k == "straighten") {
             s.geometry.straighten = it.value().toDouble();
@@ -11191,6 +11198,9 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
             it.value() = QStringLiteral("%1,%2,%3,%4")
                 .arg(g.cropX).arg(g.cropY).arg(g.cropW).arg(g.cropH);
         }
+        else if (k == "cropAspect") {
+            // set with "crop" after the loop
+        }
         else if (k == "straighten") {
             it.value() = s.geometry.straighten;
         }
@@ -11245,6 +11255,14 @@ void DevelopProperties::updatePresetFromCurrent(const QString &name)
         else {
             it.value() = 0.0;
         }
+    }
+    /* The crop's ratio follows the crop: added or dropped with the image's, which the
+       loop above (refilling only the keys already there) cannot do. */
+    if (preset.globals.contains("crop")) {
+        if (s.geometry.cropAspect > 0.0)
+            preset.globals.insert("cropAspect", s.geometry.cropAspect);
+        else
+            preset.globals.remove("cropAspect");
     }
     if (!preset.spots.isEmpty()) preset.spots = s.spots;
     preset.sourceScope = currentScopeNames().value(src, QStringLiteral("Global"));
@@ -11363,6 +11381,13 @@ QString DevelopProperties::developBlobFor(const QString &fPath)
     if (fPath.isEmpty()) return QString();
     const EditStack &s = stackFor(fPath);
     return s.isIdentity() ? QString() : s.toBase64();
+}
+
+double DevelopProperties::cropAspectFor(const QString &fPath)
+{
+    if (fPath.isEmpty()) return 0.0;
+    const Geometry &g = stackFor(fPath).geometry;
+    return g.cropIsIdentity() ? 0.0 : g.cropAspect;
 }
 
 void DevelopProperties::setDevPreviewProvider(DevPreviewProvider provider)
@@ -11794,7 +11819,8 @@ constexpr const char *kWarpField       = "warp";
 QSet<QString> diffGeometryFields(const Geometry &a, const Geometry &b)
 {
     QSet<QString> changed;
-    if (a.cropX != b.cropX || a.cropY != b.cropY || a.cropW != b.cropW || a.cropH != b.cropH)
+    if (a.cropX != b.cropX || a.cropY != b.cropY || a.cropW != b.cropW || a.cropH != b.cropH ||
+        a.cropAspect != b.cropAspect)
         changed.insert(QString::fromLatin1(kCropField));
     if (a.straighten != b.straighten) changed.insert(QString::fromLatin1(kStraightenField));
     if (a.hasWarp != b.hasWarp ||
@@ -11810,6 +11836,7 @@ void copyGeometryFields(const Geometry &src, Geometry &dst, const QSet<QString> 
         dst.cropY = src.cropY;
         dst.cropW = src.cropW;
         dst.cropH = src.cropH;
+        dst.cropAspect = src.cropAspect;
     }
     if (fields.contains(QString::fromLatin1(kStraightenField)))
         dst.straighten = src.straighten;

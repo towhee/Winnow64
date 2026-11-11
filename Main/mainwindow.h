@@ -1834,9 +1834,13 @@ private:
        the source in embellishedPixelSource, which composes each image (EmbelCompose, on
        the GUI thread) with that template made current. The template current before the
        first embellished batch is restored, and the editor unlocked, by
-       endEmbellishExport once the exporter is idle with nothing queued. */
+       endEmbellishExport once the exporter is idle with nothing queued. cropAspect (the
+       Develop export's crop ratios) is dropped for an embellished run: the composed
+       picture is not the crop. */
     void runExport(const QStringList &targets, const ExportSettings &settings,
-                   ImageExporter::PixelSource source);
+                   ImageExporter::PixelSource source,
+                   ImageExporter::CropAspectSource cropAspect = {});
+    ImageExporter::CropAspectSource developCropAspectSource();
     ImageExporter::PixelSource embellishedPixelSource(ImageExporter::PixelSource inner,
                                                       const QString &templateName);
     void endEmbellishExport();
@@ -3094,6 +3098,13 @@ private:
         MW::folderChanged, which runs once per completed fill and ahead of both of the
         places that call it. */
     bool metadataCompleteDone = false;
+    /*  dm->folderListGen when the fill now in progress completed (MW::folderChanged).
+        The catalog reconcile in MW::metadataComplete runs only while it still matches:
+        a MetaRead::done from the PREVIOUS load can arrive while the next one is
+        enumerating, and reconciling that half-built model demotes whatever it has not
+        listed yet. Not dm->instance -- filter changes and applyModelChange bump that
+        inside a single load, reconcileVersionRows among them. */
+    quint64 reconcileFolderListGen = 0;
     bool developProxyInFlight = false;
     bool developProxyPending = false;
     quint64 developProxyReqGen = 0;

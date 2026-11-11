@@ -401,6 +401,10 @@ public slots:
        free -> swap w/h). */
     void setCropAspectFlip(bool flipped);
     QRectF cropRect() const { return cropN; }         // current crop (normalized), for commit
+    /* The w/h ratio to store with cropRect() (Geometry::cropAspect): the chosen ratio,
+       flip-aware, when the frame is at it; 0 for "As shot" (its ratio is measured on
+       the proxy), a warp, or a frame that has left the ratio (unlocked drag, clamp). */
+    qreal  cropRatio() const;
     /* Re-seat the open overlay on another image's stored crop (the current image changed
        mid-session). No refit and no cropSettled: nothing has been edited yet. */
     void cropSetRect(QRectF n);

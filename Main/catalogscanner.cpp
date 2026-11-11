@@ -409,7 +409,8 @@ void CatalogScanner::scan(const CatalogScope &scope)
             QSet<QString> present;
             present.reserve(names.size());
             for (const QString &name : names) present.insert(dir.filePath(name));
-            demoted += Catalog::instance().reconcileFolder(folder, present);
+            demoted += Catalog::instance().reconcileFolder(folder, present,
+                                                             "CatalogScanner walk");
         }
         st.reconcileMs += t.elapsed();
 
@@ -567,7 +568,8 @@ void CatalogScanner::scan(const CatalogScope &scope)
             if (catalogScopeExcludes(scope, f)) continue;
             if (mounts.rootOf(f).isEmpty()) continue;
             if (QDir(f).exists()) continue;
-            demoted += Catalog::instance().reconcileFolder(f, QSet<QString>());
+            demoted += Catalog::instance().reconcileFolder(f, QSet<QString>(),
+                                                             "CatalogScanner gone folder");
         }
         st.reconcileMs += t.elapsed();
     }

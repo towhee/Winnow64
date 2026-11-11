@@ -471,6 +471,7 @@
     - [11.22.6 Level (Straighten)](#11226-level-straighten)
     - [11.22.7 Persistence and Rendering](#11227-persistence-and-rendering)
     - [11.22.8 Patterns (Kaleidoscope)](#11228-patterns-kaleidoscope)
+    - [11.22.9 A Chosen Ratio Is Stored With the Crop](#11229-a-chosen-ratio-is-stored-with-the-crop)
   - [11.23 Lens Corrections (Chromatic Aberration and Defringe)](#1123-lens-corrections-chromatic-aberration-and-defringe)
     - [11.23.1 Lateral Chromatic Aberration ("Remove Chromatic Aberration")](#11231-lateral-chromatic-aberration-remove-chromatic-aberration)
     - [11.23.2 Defringe (Purple / Green)](#11232-defringe-purple--green)
@@ -2631,12 +2632,15 @@ A folder scope and a catalog scope are the same thing: a predicate over the cata
 
 MW::folderChangeCompleted commits the loaded rows to the catalog, which says what IS there. Catalog::reconcileFolder(folder, present) says what is NOT: a file deleted outside Winnow used to stay live in the index and keep turning up in searches until the global sweep happened to stat it. It costs NO STAT: the load has just listed the directory, so whatever the index still calls live and the listing did not find is gone. That is cheap enough to run on every folder load, where sweep() (one stat per row over the whole catalog) can only be a rare one-shot.
 
-It DEMOTES, never deletes, as sweep does: a row that comes back is promoted again by the next commit that sees the file, so a briefly unreadable folder costs a rescan rather than its catalogued keywords.
+It DEMOTES, never deletes, as sweep does: a row that comes back is promoted again by the next commit that sees the file, so a briefly unreadable folder costs a rescan rather than its catalogued keywords. That promotion depends on Catalog::staleOf and Catalog::commit treating a demoted row (live = 0) as never fresh: the file comes back with the same stamps it had when it was demoted, so a check on stamps alone skipped it and the folder stayed out of the Library through every rescan (fixed 2026-11-11).
 
-Three preconditions, each of which is a way to delete a library by accident:
+Every demotion logs `[Catalog] reconcile demoted N of M live rows ... caller = ... folder = ...`, with the call site (MW::metadataComplete, CatalogScanner walk, CatalogScanner gone folder). "(all)" for a folder that is still on disk means the listing was partial.
+
+Four preconditions, each of which is a way to delete a library by accident:
 
 - Only a scope that enumerated. A catalog scope's paths are a search result, not a listing of any one folder; treating them as one would demote most of the library. dm->scopeRequest().reconcile is the check.
 - Only a load that finished. An aborted (Esc) or memory-capped load is a partial listing, and a partial listing demotes everything it did not reach.
+- Only the load that finished. MetaRead::done is queued and carries no load identity, and DataModel's load runs processEvents, so the PREVIOUS folder's done can be delivered while the next folder is still enumerating. Reconciling then would read a half-built model, whose not-yet-listed folders look empty, and demote them whole. MW::folderChanged records dm->folderListGen as reconcileFolderListGen, and the reconcile runs only while the generation still matches, checked in MW::metadataComplete and again in its queued lambda; a mismatch logs `[Catalog] reconcile SKIPPED`. dm->instance cannot serve as the token, because filter changes and applyModelChange (reconcileVersionRows among them) bump it inside a single load.
 - An empty folder must be told apart from an unreadable one. Delete every image in a catalogued folder and no row survives to name it, so DataModel::folderPathSets seeds an empty entry from folderList. But folderList is appended BEFORE the listing is attempted, so a folder that is gone, unmounted or unreadable arrives looking exactly like an empty one. One stat per EMPTY folder settles it; folders that produced rows need none.
 
 folderPathSets uses EVERY row, not only the read ones (unlike catalogRows(), which skips anything not yet MetaLoaded): the question is "was this file there", and a row exists because the enumeration found it. Raw+JPG pairing is safe for the same reason: combineRawJpg hides one of a pair in the PROXY, and both members always have a DataModel row.
@@ -2991,10 +2995,10 @@ A header-click sort ran MW's handling before the sort. MW::sortIndicatorChanged 
 
 - The tail now runs QUEUED (so connection order cannot matter) and goes through MW::sortChange, the same function the sort menu uses; the re-sort there is a no-op because the proxy already holds the column and order.
 - MW::sortColumn / isReverseSort are synced here too. Checking a menu action does not emit triggered, so sortChangeFromAction never ran and MW's idea of the sort stayed on whatever the MENU last chose, which MW::filterChange reads to decide whether the sort needs recovering.
+- A header click also lost the table's horizontal scroll: the view snapped back to the first columns. After the sort, MW::scrollToCurrentRowIfNotVisible, TableView::scrollToRow and QAbstractItemView's own autoScroll on currentChanged all scroll to a COLUMN 0 index, and QTableView::scrollTo then scrolls horizontally to show column 0. TableView::scrollTo now keeps the horizontal position when the target is a frozen column (the overlay always shows those), so every such caller scrolls only vertically.
 
 ## 5 Caching
 
-- A header click also lost the table's horizontal scroll: the view snapped back to the first columns. After the sort, MW::scrollToCurrentRowIfNotVisible, TableView::scrollToRow and QAbstractItemView's own autoScroll on currentChanged all scroll to a COLUMN 0 index, and QTableView::scrollTo then scrolls horizontally to show column 0. TableView::scrollTo now keeps the horizontal position when the target is a frozen column (the overlay always shows those), so every such caller scrolls only vertically.
 Three caches keep Winnow from decoding or reading the same thing twice:
 
 - Metadata and icons: MetaRead (Cache/metaread.cpp) dispatches a pool of Reader workers (Cache/reader.cpp) that read each row's metadata and its 256 px icon into the DataModel. Icons are also cached on disk in the index (see [5.8 Thumbnails in the Index (ThumbCache)](#58-thumbnails-in-the-index-thumbcache)).
@@ -6587,7 +6591,7 @@ Holding Cmd (Ctrl) arms the one-shot cropLevelMode on the press: draw a line alo
 
 #### 11.22.7 Persistence and Rendering
 
-EditStack carries a per-image Geometry: cropX/Y/W/H, straighten, hasWarp + quad[8], fillCanvas, show (and the render-only renderFolds, see [11.22.8 Patterns (Kaleidoscope)](#11228-patterns-kaleidoscope)), serialised in the sidecar (toJson / fromJson) and folded into isIdentity. developCompositeStack applies it LAST, CropTransform::applyGeometry(out, job.geometry), after the develop ops and EXIF orientation, on the full-output-dimension image, in both the proxy and async full-res paths (StackRenderJob.geometry from DevelopProperties::stackJob).
+EditStack carries a per-image Geometry: cropX/Y/W/H, cropAspect (see [11.22.9 A Chosen Ratio Is Stored With the Crop](#11229-a-chosen-ratio-is-stored-with-the-crop)), straighten, hasWarp + quad[8], fillCanvas, show (and the render-only renderFolds, see [11.22.8 Patterns (Kaleidoscope)](#11228-patterns-kaleidoscope)), serialised in the sidecar (toJson / fromJson) and folded into isIdentity. developCompositeStack applies it LAST, CropTransform::applyGeometry(out, job.geometry), after the develop ops and EXIF orientation, on the full-output-dimension image, in both the proxy and async full-res paths (StackRenderJob.geometry from DevelopProperties::stackJob).
 
 The commit model is Lightroom's. MW::developCropEditing gates it: while the crop tool is being edited the render NEUTRALISES the crop so the FULL frame shows under the overlay, but KEEPS straighten and warp, so before rectify you trace on the full frame and after rectify you set the final crop on the corrected canvas.
 
@@ -6667,6 +6671,22 @@ Fluted glass type (2026-10-22). kaleidoType 5: the frame seen through reeded gla
 - The overlay: centre + spoke only (no seams). JSON / sanitize / presets (leaf "kaleido" now sixteen fields) / kFloatFields / resetEffect as for the other types.
 - Cost (Quark, -O2): 13 ms at 2.5 MP, 131 ms at 24 MP.
 - Tests: flat glass is the identity (point form and pixels); reeds repeat by one reed, along is unmoved, positive refraction magnifies, negative reverses, angle 90 lays them horizontal; shading on flat grey; JSON / sanitize.
+
+#### 11.22.9 A Chosen Ratio Is Stored With the Crop
+
+A locked 16 x 9 crop exported at a 3840 long edge came out 3840 x 2159 or 2161 about one time in eleven. Three roundings each moved the short side independently:
+
+- The crop is stored NORMALIZED, and CropTransform::applyGeometry turned it into pixels with QRectF::toRect, which rounds the width and height separately (up to 0.75 px each), so a 6000-wide crop could be 3374 or 3376 high instead of 3375.
+- The lock enforces the ratio in ImageView::cropCanvasSize's canvas, which for an uncropped image is the loupe's pixmap (a proxy). A proxy's integer size is not quite the full frame's shape, so the normalized rect is slightly off the ratio at full res.
+- ImageExporter scaled both sides by longEdgePx / long and rounded each, and the margin is small: the short side lands on 2160 only if the crop's height is within (crop width / 7680) px of 9/16 of its width, 0.78 px for a 6000-wide crop (less for a smaller one that is enlarged).
+
+So Geometry carries cropAspect, the w/h ratio the crop was made at (portrait 9 x 16 = 0.5625), 0 for a free crop. Sidecar key "cropAspect", written only when non-zero (additive: an absent key reads as free, so no migration); sanitize drops an out-of-range value to 0 rather than clamping it into a wrong shape.
+
+- Recorded: MW::commitDevelopCrop stores ImageView::cropRatio(): the chosen ratio, flip-aware, when the frame is at it (within 0.1%). It is 0 for "As shot", whose ratio is measured on the proxy, for a warp, and for a frame that has left the ratio (an unlocked drag, a clamp). "Custom" stores the ratio it resolved to. Rectify, Level's auto-crop and the Aspect reset set 0; the render paths that suppress the crop during a session clear it too, so the geometry comparisons (sameDevelopGeometry, ImageView's) do not see the suppressed crop change on each commit.
+- Rendered: CropTransform::cropPixelRect (applyGeometry's step 3). With a ratio it rounds the LONG side, derives the short side from it, centres on the stored rect and keeps it inside the canvas (shrinking at the ratio if needed), so the pixels are the ratio to the nearest pixel, and exactly it when the long side allows (a multiple of 16 for 16 x 9).
+- Exported: ExportSettings::outputSize (ImageExporter::OutputSize wraps it) takes the ratio and derives the short side from the scaled long side, so 16 x 9 at 3840 is always 2160, whatever pixel the crop rounded to. The ratio comes per image from ImageExporter::CropAspectSource, which MW::developCropAspectSource supplies for the Develop exports from DevelopProperties::cropAspectFor. It is not supplied for an Embellish run (the composed picture is not the crop) or for a raw going out as its camera preview (uncropped), and outputSize ignores a ratio the image is not within 0.5% of anyway. Full size, or a resize that is a no-op, writes the rendered crop as it is.
+- Presets: a crop preset stores the ratio as its own "cropAspect" global, not a fifth field of "crop", which builds that predate it read as exactly four values. Update-from-current adds or drops it with the image's.
+- Tests: tst_cropaspect, including the end-to-end property that any locked 16 x 9 crop on several sensor sizes, enlarged or reduced, exports at exactly 3840 x 2160.
 
 ### 11.23 Lens Corrections (Chromatic Aberration and Defringe)
 

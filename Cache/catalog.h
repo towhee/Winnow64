@@ -653,8 +653,13 @@ public:
         recoverable (the next commit that sees the file promotes it again), but a search
         that silently stops finding half a folder is not a good way to find that out.
 
+        caller names the call site for the "[Catalog] reconcile demoted" log line, which
+        is written whenever anything is demoted: a wrong demotion has to be traceable to
+        the code that asked for it.
+
         Returns the number demoted. */
-    int reconcileFolder(const QString &folder, const QSet<QString> &present);
+    int reconcileFolder(const QString &folder, const QSet<QString> &present,
+                        const QString &caller = QString());
     /* The per-folder SELECT reconcileFolder runs, exposed so tst_catalog can pin its
        query plan to image_folder (see the definition for what the wrong plan cost). */
     static const char *reconcileSelectSql();
