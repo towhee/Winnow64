@@ -79,6 +79,7 @@ void MW::writeSettings()
        opposite (larger = less sensitive) scale.  See loadSettings for the migration. */
     settings->setValue("wheelSensitivityPct", G::wheelSensitivity);
     settings->remove("wheelSensitivity");
+    settings->setValue("sliderAboveBelow", G::sliderAboveBelow);
 
     // datamodel
     settings->setValue("maxIconSize", G::maxIconSize);
@@ -556,6 +557,8 @@ bool MW::loadSettings()
     else {
         G::wheelSensitivity = 50;
     }
+
+    G::sliderAboveBelow = settings->value("sliderAboveBelow", false).toBool();
 
     if (settings->contains("pickAudioVolume")) {
         pickClickvolume = settings->value("pickAudioVolume").toFloat() / 100;

@@ -469,6 +469,8 @@ int subHeaderIndent;
 int headerLeftInset;
 int panelBorderHeight;
 int headerCaptionTrim;
+int sliderBandHeight;
+bool sliderAboveBelow = false;      // persistent, see MW::loadSettings
 QModelIndexList copyCutIdxList;
 QStringList copyCutFileList;
 

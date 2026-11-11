@@ -106,6 +106,9 @@ public:
 
     QMap<QString, QModelIndex> sourceIdx;
     void recolorText(const QColor &from, const QColor &to);
+    /* G::sliderAboveBelow changed: re-lay every slider editor and re-measure the rows.
+       Subclasses that size themselves to their rows re-fit after the base. */
+    virtual void refreshSliderLayout();
 
 protected:
     void toggleBranch(const QModelIndex &capIdx);

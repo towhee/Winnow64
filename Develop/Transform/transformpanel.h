@@ -28,18 +28,25 @@ class BarBtn;
         - A property-style gradient header ("Transform") with four trailing BarBtns: [?] tips,
           [E] preview eye (show/ignore the whole transform), [R] reset (clear crop/straighten/warp)
           and [X] close (extreme right -- commits the session and hides the panel, same as "R").
-        - Three groups, each with its own [R] reset in the last column (aligned):
-            Aspect [combo]                                   reset (crop)
-            Lock   [ ]      A
-            Flip   o Landscape  o Portrait  X
-            Angle  [field]  Cmd modifier                     reset (straighten)
-            Warp            Opt modifier                     reset (perspective)
-                            Space bar to pan
+        - Three groups, each opening with a heading row that names the group, the modifier
+          that drives it on the image and its own [R] reset in the last column (aligned);
+          the group's controls follow with indented captions:
+            Crop:           No modifier                      reset (crop)
+              Aspect [combo]
+              Lock   [ ]    A
+              Flip   o Landscape  o Portrait  X
+            ----------------------------------------------------
+            Level:          Cmd modifier                     reset (straighten)
+              Angle  [field]
+            ----------------------------------------------------
+            Warp:           Opt modifier                     reset (perspective)
+            ----------------------------------------------------
+                            Space bar to pan                 (all modifiers)
           The grey tips (keys) share one column so they line up, except Flip's X, which
           follows the radios.
           There are no modes: the crop tool is always live on the image, Cmd (Ctrl) held
           draws a level line and Opt (Alt) held drags warp corners (see ImageView), so the
-          Angle and Warp rows only name the modifier.
+          group headings name the modifier.
 
     Custom aspects, the last-used aspect, the lock state and the flip (portrait) state
     persist to QSettings under "Develop/Transform/".

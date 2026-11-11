@@ -1035,6 +1035,12 @@ Q_NAMESPACE
     extern int headerLeftInset;         // ditto: panel edge -> header collapse arrow
     extern int panelBorderHeight;       // Develop panel bottom separator rule height
     extern int headerCaptionTrim;       // ditto: bottom trim the header caption centres on
+    /* Preferences > User Interface > Controls > Above/Below sliders: every property-tree
+       slider puts Name and Value on one line with the slider full width BELOW them,
+       instead of Name ---o--- Value on a single line. sliderBandHeight is the slider's
+       band under the Name/Value line in that layout. */
+    extern bool sliderAboveBelow;
+    extern int sliderBandHeight;
 
     /* PROPERTY ROW HEIGHT: the height PropertyDelegate::sizeHint gives every row in a
        property tree (1.7 * the text height). Widget-built header bands in the Develop

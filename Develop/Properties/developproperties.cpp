@@ -322,6 +322,12 @@ void DevelopProperties::scheduleContentFit()
     });
 }
 
+void DevelopProperties::refreshSliderLayout()
+{
+    PropertyEditor::refreshSliderLayout();
+    scheduleContentFit();       // slider rows changed height
+}
+
 void DevelopProperties::wheelEvent(QWheelEvent *event)
 {
     /* Fit mode: the tree has no scroll range of its own, so ignore the wheel and let it

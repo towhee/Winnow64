@@ -1,16 +1,19 @@
 WHAT'S NEW
 - Change Filters group/flat buttons
-- Fix Basic > Auto crash
-- Develop editor scrolling
-- Reject unpicked, clear picks
-- Develop presets - reserve Winnow category
-- Develop previews sometimes dropped
-- Consolidated help doc
+- Basic > Auto could crash Winnow
+- Develop editor scrolling now includes all panels
+- Reject unpicked, clear picks option added
+- In Develop presets make the Winnow category same for all users
+- The loupe view not always refreshing
+- Consolidated help doc with TOC
 - Fix apple dng endian bug (malicious IRB chains)
-- Regenerate thumbnails
-- Move files in Library
-- Crop and adjust crop for multiple images
-- Catalog scan
+- Thumbnails were not always being regenerated
+- Move files in Library by dragging thumbnails to the Filters folder category
+- Crop and adjust crop for multiple images was awkward
+- Catalog scan missing changes in folders
+- Honor image aspect ratio precision, including cropping, when exporting.
+- Prevent table view scrolling to column zero when table sort
+- Slider optional above | below layout
 
 BUGS / TO DO
 - Make TableView current columns visible persistent (when sort, )

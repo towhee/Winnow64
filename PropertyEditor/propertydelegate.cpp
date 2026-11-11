@@ -38,6 +38,26 @@ namespace {
     inline int decoCapShift() {
         return qMax(0, decoSize + G::decorationTitleGap - decoIndent);
     }
+
+    /* Above/below slider row (G::sliderAboveBelow): the value cell holds a SliderEditor.
+       Such a row is Name / Value on a line with the slider full width below, so the
+       editor spans the row from the caption's left edge (see updateEditorGeometry). */
+    inline bool isStackedSlider(const QModelIndex &index) {
+        return G::sliderAboveBelow &&
+               index.sibling(index.row(), ValColumn).data(UR_DelegateType).toInt() == DT_Slider;
+    }
+
+    /* Left edge of a leaf caption's text, in VIEWPORT coordinates, so the caption-column
+       pass, the value-column pass and the editor geometry agree. Mirrors paint(): an
+       indented caption starts at its cell (+ one level for UR_ExtraIndent), otherwise r2's
+       5px inset. */
+    inline int captionTextLeft(const QWidget *widget, const QModelIndex &capIndex) {
+        const QTreeView *tv = qobject_cast<const QTreeView*>(widget);
+        if (!tv || !capIndex.data(UR_isIndent).toBool()) return 5;
+        int x = tv->visualRect(capIndex).x();
+        if (capIndex.data(UR_ExtraIndent).toBool()) x += tv->indentation();
+        return x;
+    }
 }
 
 PropertyDelegate::PropertyDelegate(QWidget *parent): QStyledItemDelegate(parent)
@@ -171,6 +191,13 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
            4-line default -- which truncates any view sized to its content. */
         return QSize(option.rect.width(),
                      qMax(1, capIndex.data(UR_DividerHeight).toInt()));
+    }
+
+    /* Above/below slider: a single-line caption over the slider band. The caption has the
+       row's width (less the value), so it is elided rather than wrapped. */
+    if (isStackedSlider(index)) {
+        height += G::sliderBandHeight + capIndex.data(UR_ExtraRowHeight).toInt();
+        return QSize(option.rect.width(), height);
     }
 
     /* Grow the row to fit wrapped caption text. Only the caption column wraps
@@ -373,12 +400,22 @@ void PropertyDelegate::setModelData(QWidget *editor, QAbstractItemModel *model,
 }
 
 void PropertyDelegate::updateEditorGeometry(QWidget *editor,
-    const QStyleOptionViewItem &option, const QModelIndex &/*index*/ ) const
+    const QStyleOptionViewItem &option, const QModelIndex &index ) const
 {
     if (isDebug)
         qDebug() << "PropertyDelegate::updateEditorGeometry"
                  << "option.rect =" << option.rect
             ;
+    /* Above/below slider: span the editor from the caption's left edge to the value
+       cell's right, so the slider runs under the caption. The editor masks itself to its
+       value and slider band (SliderEditor::applyLayout), leaving the caption to the tree. */
+    if (isStackedSlider(index)) {
+        const int left = captionTextLeft(option.widget, index.sibling(index.row(), CapColumn));
+        editor->setGeometry(QRect(left, option.rect.y(),
+                                  qMax(0, option.rect.right() + 1 - left),
+                                  option.rect.height()));
+        return;
+    }
     editor->setGeometry(option.rect);
 }
 
@@ -668,22 +705,62 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
     }
     else {
         // Not a header item
-        if (hasChildren) painter->setPen(hdrPen);
-        else painter->setPen(regPen);
+        const QModelIndex capIndex = index.sibling(index.row(), CapColumn);
+        const QModelIndex valSib = index.sibling(index.row(), ValColumn);
+        /* Selected-row cue: true when this row's value editor is a slider that owns focus.
+           Check DT_Slider first: UR_Editor holds a different editor type for non-slider
+           rows. */
+        bool sliderFocused = false;
+        if (valSib.data(UR_DelegateType).toInt() == DT_Slider) {
+            auto *se = static_cast<SliderEditor*>(valSib.data(UR_Editor).value<void*>());
+            sliderFocused = se && se->sliderHasFocus();
+        }
+        const bool stacked = isStackedSlider(index);
+
+        /* Caption pen: header-ish rows with children use hdrPen; disabled greys; a
+           UR_FlashLevel > 0 blends toward white (DevelopProperties animates it to 0 on a
+           slider-row caption click). Read from the caption cell so the value-column pass
+           of an above/below slider redraws the caption in the same pen. */
+        auto captionPen = [&]() -> QPen {
+            QPen pen = hasChildren ? hdrPen : regPen;
+            if (viewDisabled || capIndex.data(UR_isEnabled).toBool() == false)
+                pen = disPen;
+            const qreal flash = capIndex.data(UR_FlashLevel).toReal();
+            if (flash > 0.0) {
+                const QColor cc = pen.color();
+                pen = QPen(QColor(
+                    int(cc.red()   + (255 - cc.red())   * flash),
+                    int(cc.green() + (255 - cc.green()) * flash),
+                    int(cc.blue()  + (255 - cc.blue())  * flash)));
+            }
+            return pen;
+        };
+
+        /* Above/below slider caption: one elided line in the band above the slider, from
+           the caption's left edge to just before the value (top right). Spans both
+           columns, so it is drawn in BOTH passes, like a header caption: a value-column
+           only repaint refills that cell over the caption's overflow. */
+        auto drawStackedCaption = [&]() {
+            painter->setPen(captionPen());
+            const int left = captionTextLeft(option.widget, capIndex);
+            const int right = w0 + w1 - G::propertyWidgetMarginRight
+                            - valSib.data(UR_FixedWidth).toInt() - 6;
+            QRect rc(left, r.y(), qMax(0, right - left),
+                     qMax(0, r.height() - G::sliderBandHeight));
+            const QString cap = painter->fontMetrics().elidedText(
+                capIndex.data().toString(), Qt::ElideRight, rc.width());
+            painter->drawText(rc, Qt::AlignVCenter|Qt::TextSingleLine, cap);
+        };
+
+        painter->setPen(captionPen());
 
         // caption text and cell borders
         if (index.column() == CapColumn) {
             if (!isAlternatingRows) painter->fillRect(r0, valueRowBackground);
-            /* Selected-row cue: when this row's value editor is a slider that owns focus,
-               tint the caption cell the SAME translucent blue the SliderEditor paints on
-               the value cell, so the whole row reads as one blue band. Check DT_Slider
-               first: UR_Editor holds a different editor type for non-slider rows. */
-            const QModelIndex valSib = index.sibling(index.row(), ValColumn);
-            if (valSib.data(UR_DelegateType).toInt() == DT_Slider) {
-                auto *se = static_cast<SliderEditor*>(valSib.data(UR_Editor).value<void*>());
-                if (se && se->sliderHasFocus())
-                    painter->fillRect(r0, G::withAlpha(G::appleBlue, 40));
-            }
+            /* Tint the caption cell the SAME translucent blue the SliderEditor paints on
+               the value cell, so the whole row reads as one blue band. */
+            if (sliderFocused)
+                painter->fillRect(r0, G::withAlpha(G::appleBlue, 40));
             /* Expand/collapse arrow for a DECORATED value row (e.g. Develop's Demosaic
                row, whose raw-denoise sliders are children). The delegate otherwise draws
                arrows only for header rows; mirror that here, in the gutter over the
@@ -697,21 +774,10 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
                                     isExpanded ? branchOpen : branchClosed);
             }
 //            if (isSelected) painter->setPen(selPen);
-            // disabled?
-            if (viewDisabled || index.data(UR_isEnabled).toBool() == false)
-                painter->setPen(disPen);
-            /* Flash feedback: blend the caption toward white while UR_FlashLevel > 0
-               (DevelopProperties animates it to 0 on a slider-row caption click). */
-            const qreal flash = index.data(UR_FlashLevel).toReal();
-            if (flash > 0.0) {
-                const QColor cc = painter->pen().color();
-                painter->setPen(QColor(
-                    int(cc.red()   + (255 - cc.red())   * flash),
-                    int(cc.green() + (255 - cc.green()) * flash),
-                    int(cc.blue()  + (255 - cc.blue())  * flash)));
-            }
+            if (stacked)
+                drawStackedCaption();
             // indent the text (maybe not if not a header)
-            if (index.data((UR_isIndent)).toBool()) {
+            else if (index.data((UR_isIndent)).toBool()) {
                 QRect ri = r3;
                 /* One extra indent level for root leaves that should line up with a section's
                    children (e.g. Develop's Demosaic / Denoise raw align with the Basic sliders). */
@@ -732,6 +798,14 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         }
         if (index.column() == ValColumn) {
             if (!isAlternatingRows) painter->fillRect(r, valueRowBackground);
+            /* Above/below: the masked editor cannot paint its own focus fill, so the
+               value cell takes the caption cell's tint here, and the spanned caption is
+               redrawn over this cell's fill. */
+            if (stacked) {
+                if (sliderFocused)
+                    painter->fillRect(r, G::withAlpha(G::appleBlue, 40));
+                drawStackedCaption();
+            }
             painter->setPen(brdPen);
             // draw bottom line
             painter->setPen(brdPen);

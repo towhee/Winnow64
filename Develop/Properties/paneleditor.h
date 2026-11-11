@@ -45,6 +45,7 @@ public:
        row. 0 when the panel's own spacing sets the gap under it (the Mask band's
        Edge/Halo, whose rule below must sit at the tree's divider spacing). */
     void fitHeight(int slack = 6);
+    void refreshSliderLayout() override;    // + re-fit, if fitHeight sized the view
 
 signals:
     /* A slider/checkbox changed: key is its param key, value the new int/bool. */
@@ -61,6 +62,7 @@ protected:
     bool isPopulating = false;                     // suppress itemChange while seeding
     QPersistentModelIndex flashIdx;                // caption currently flashing
     QPointer<QVariantAnimation> flashAnim;
+    int fitSlack = -1;                             // last fitHeight slack, -1 = never fitted
 };
 
 #endif // PANELEDITOR_H

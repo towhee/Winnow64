@@ -149,7 +149,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
 */
     if (G::isLogger) G::log("SliderEditor::SliderEditor");
     this->idx = idx;
-    int lineEditWidth = idx.data(UR_FixedWidth).toInt();
+    lineEditWidth = idx.data(UR_FixedWidth).toInt();
     int min = idx.data(UR_Min).toInt();
     int max = idx.data(UR_Max).toInt();
     QString sCol = idx.data(UR_Color).toString();
@@ -264,11 +264,10 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     connect(lineEdit, &QLineEdit::editingFinished, this, &SliderEditor::updateSliderWhenLineEdited);
     lineEdit->installEventFilter(this);
 
-    QHBoxLayout* layout = new QHBoxLayout(this);
-    layout->addWidget(slider, Qt::AlignLeft);
-    layout->addWidget(lineEdit, Qt::AlignRight);
-    layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
-    setLayout(layout);
+    // parented here so the above/below layout, which has no QLayout, still owns them
+    slider->setParent(this);
+    lineEdit->setParent(this);
+    applyLayout();
 
     /* Route focus given to the editor container onto the slider, so clicking or tabbing
        into the row lets the arrow keys nudge the slider (and paints the focus cue). */
@@ -280,6 +279,48 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
                                : static_cast<int>(initial * div);
     slider->setValue(sliderValue);
     emit slider->valueChanged(sliderValue);
+}
+
+void SliderEditor::applyLayout()
+{
+/*
+    Single line: an HBox in the value cell, slider then value.
+
+    Above/below: no QLayout -- layoutStacked() places the two by hand. The delegate gives
+    the editor the WHOLE row from the caption's left edge (PropertyDelegate::
+    updateEditorGeometry) and paints the caption in the top-left of it, so the editor is
+    masked to the value and the slider band: clicks on the caption fall through to the
+    tree (caption click = focus + flash, double click = reset) and the caption painted
+    under the editor shows.
+*/
+    stacked = G::sliderAboveBelow;
+    delete layout();                    // the children stay, parented to this
+    if (stacked) {
+        layoutStacked();
+        return;
+    }
+    clearMask();
+    QHBoxLayout* layout = new QHBoxLayout(this);
+    layout->addWidget(slider, Qt::AlignLeft);
+    layout->addWidget(lineEdit, Qt::AlignRight);
+    layout->setContentsMargins(G::propertyWidgetMarginLeft,0,G::propertyWidgetMarginRight,0);
+    setLayout(layout);
+}
+
+void SliderEditor::layoutStacked()
+{
+    const int top = qMax(0, height() - G::sliderBandHeight);
+    const int lw = qMin(lineEditWidth, width() / 2);
+    lineEdit->setGeometry(width() - G::propertyWidgetMarginRight - lw, 0, lw, top);
+    slider->setGeometry(0, top, qMax(0, width() - G::propertyWidgetMarginRight),
+                        height() - top);
+    setMask(QRegion(lineEdit->geometry()) + QRegion(slider->geometry()));
+}
+
+void SliderEditor::resizeEvent(QResizeEvent *event)
+{
+    QWidget::resizeEvent(event);
+    if (stacked) layoutStacked();
 }
 
 double SliderEditor::valueFromPos(int pos) const
@@ -415,8 +456,9 @@ void SliderEditor::paintEvent(QPaintEvent *event)
     /* Focus cue: mark the slider the Develop arrow-nudge keys will act on. The slider and
        lineEdit are translucent, so the fill drawn here shows around them. The delegate
        tints the CAPTION cell the same blue (see PropertyDelegate::paint), so the whole
-       selected row reads as one blue band. */
-    if (slider->hasFocus()) {
+       selected row reads as one blue band. Above/below, the mask would chop the fill
+       into two pieces, so the delegate tints the whole row instead. */
+    if (slider->hasFocus() && !stacked) {
         QPainter p(this);
         p.setRenderHint(QPainter::Antialiasing);
         p.setPen(Qt::NoPen);

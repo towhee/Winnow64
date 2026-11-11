@@ -530,6 +530,7 @@ public:
        files only) with G::useRaw. Called by MW::toggleUseRaw so the status-bar useRaw button and
        this selector always agree; also toggles the visibility of the Demosaic / Denoise raw rows. */
     void syncEditRaw(bool useRaw);
+    void refreshSliderLayout() override;    // + re-fit the content height
 
 protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we

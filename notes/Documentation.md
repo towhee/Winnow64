@@ -62,14 +62,15 @@
     - [2.13.3 Guarding Platform Code](#2133-guarding-platform-code)
     - [2.13.4 Packaging (AppImage)](#2134-packaging-appimage)
     - [2.13.5 Not Yet Done on Linux](#2135-not-yet-done-on-linux)
-  - [2.14 Investigations and Fixes](#214-investigations-and-fixes)
-    - [2.14.1 Two Aborts From Holding What the Model Threw Away](#2141-two-aborts-from-holding-what-the-model-threw-away)
-      - [2.14.1.1 A Proxy Index Does Not Survive a Filter Change](#21411-a-proxy-index-does-not-survive-a-filter-change)
-      - [2.14.1.2 An Invalid QVariant Is Not Equal to 0](#21412-an-invalid-qvariant-is-not-equal-to-0)
-    - [2.14.2 Two Aborts on the Way In, and a Column Resize](#2142-two-aborts-on-the-way-in-and-a-column-resize)
-      - [2.14.2.1 Opening an Image Directly Crashed](#21421-opening-an-image-directly-crashed)
-      - [2.14.2.2 The Icon Delegate Painted From Uninitialised Members](#21422-the-icon-delegate-painted-from-uninitialised-members)
-      - [2.14.2.3 A Column Width Was Measured From a Thousand Rows](#21423-a-column-width-was-measured-from-a-thousand-rows)
+  - [2.14 Above/Below Sliders](#214-abovebelow-sliders)
+  - [2.15 Investigations and Fixes](#215-investigations-and-fixes)
+    - [2.15.1 Two Aborts From Holding What the Model Threw Away](#2151-two-aborts-from-holding-what-the-model-threw-away)
+      - [2.15.1.1 A Proxy Index Does Not Survive a Filter Change](#21511-a-proxy-index-does-not-survive-a-filter-change)
+      - [2.15.1.2 An Invalid QVariant Is Not Equal to 0](#21512-an-invalid-qvariant-is-not-equal-to-0)
+    - [2.15.2 Two Aborts on the Way In, and a Column Resize](#2152-two-aborts-on-the-way-in-and-a-column-resize)
+      - [2.15.2.1 Opening an Image Directly Crashed](#21521-opening-an-image-directly-crashed)
+      - [2.15.2.2 The Icon Delegate Painted From Uninitialised Members](#21522-the-icon-delegate-painted-from-uninitialised-members)
+      - [2.15.2.3 A Column Width Was Measured From a Thousand Rows](#21523-a-column-width-was-measured-from-a-thousand-rows)
 - [3 Folder Loading](#3-folder-loading)
   - [3.1 Overview](#31-overview)
     - [3.1.1 Phase 1: Build the DataModel (GUI Thread)](#311-phase-1-build-the-datamodel-gui-thread)
@@ -1634,13 +1635,29 @@ Linux ships as one AppImage per architecture, `Winnow-<label>-x86_64.AppImage` a
 - At the root of the Folders panel, Fedora-style `/run/media` is not listed (it is under `/run`, which is hidden).
 - Qt prints "QFont::setPointSizeF: Point size <= 0" a few times at startup: a stylesheet passes a zero font size. Qt ignores it and keeps the inherited size; the source is not yet found.
 
-### 2.14 Investigations and Fixes
+### 2.14 Above/Below Sliders
 
-#### 2.14.1 Two Aborts From Holding What the Model Threw Away
+Preferences > User Interface > Controls > Above/Below sliders (G::sliderAboveBelow, settings key sliderAboveBelow, default off) switches every PropertyEditor slider row (Develop, Embellish, Preferences) between two layouts:
+
+```
+off:  Name    ---------o--------  Value
+on:   Name                        Value
+      ---------------o----------------
+```
+
+- PropertyDelegate::sizeHint gives an above/below slider row G::propertyRowHeight() + G::sliderBandHeight (set in WidgetCSS::styleGlobals). The caption is one elided line, not wrapped.
+- PropertyDelegate::updateEditorGeometry spans the SliderEditor from the caption's text left edge to the value cell's right edge. SliderEditor::applyLayout drops its QHBoxLayout and layoutStacked() places the value top right and the slider in the bottom band by hand.
+- The editor masks itself (setMask) to the value and the slider band. Clicks on the caption fall through to the tree, so caption click (focus + flash) and double click (reset) still work, and the caption the delegate paints under the editor shows through.
+- The caption spans both columns, so the delegate draws it in both the caption and value passes, as it does for a header caption. The masked editor cannot paint its focus fill, so the delegate tints both cells instead (see [11.9 Panel Focus and Slider Arrow-Nudge](#119-panel-focus-and-slider-arrow-nudge)).
+- Changing the preference calls PropertyEditor::refreshSliderLayout on every PropertyEditor in the app. It re-lays each SliderEditor, re-measures the rows and re-places the editors. DevelopProperties re-fits its content height, and PanelEditor re-runs fitHeight with its last slack.
+
+### 2.15 Investigations and Fixes
+
+#### 2.15.1 Two Aborts From Holding What the Model Threw Away
 
 Both are the same mistake: keeping a value the model has since invalidated, and being told about it by an assert Qt only added in 6.9.
 
-##### 2.14.1.1 A Proxy Index Does Not Survive a Filter Change
+##### 2.15.1.1 A Proxy Index Does Not Survive a Filter Change
 
 Selection held shiftAnchorIndex and shiftExtendIndex as QModelIndex members across operations. SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits layoutChanged WITHOUT a persistent-index remapping (its own comment says so). A stored index then keeps reporting isValid() TRUE, because row, column and model are all still set, while its internalPointer() is a freed QSortFilterProxyModelPrivate::Mapping. isValid() cannot protect against that; the next read segfaults inside proxy_to_source.
 
@@ -1648,7 +1665,7 @@ Setting a colour or a rating calls MW::filterChange, so an ordinary cull sequenc
 
 Fix: they are ints now (shiftAnchorRow / shiftExtendRow), and Selection::shiftIdx(row) rebuilds an index against the proxy as it currently is, returning an invalid one when the row no longer exists. A row that has gone out of range is a recoverable answer; a dangling pointer is not.
 
-##### 2.14.1.2 An Invalid QVariant Is Not Equal to 0
+##### 2.15.1.2 An Invalid QVariant Is Not Equal to 0
 
 InfoView::updateInfo guarded its shutter-speed reciprocal with `if (value == 0)`, which compares a QVariant against QVariant(int 0). An invalid QVariant (a row whose metadata has not landed; the info panel updates on every selection, including during a load or a re-sort) is not equal to it, so the guard passed, toDouble() returned 0.0, and 1 / 0.0 is +inf. Qt 6.9 made qRound's conversion checked, so that is now qCheckedFPConversionToInteger asserting; before, it was a garbage shutter speed in the panel.
 
@@ -1656,23 +1673,23 @@ Fix: the guard tests the DOUBLE now.
 
 It was caught by the --selftest stress pass (WINNOW_SELFTEST_STRESS=1), which re-sorts mid-load and so selects rows whose metadata is still in flight. That is the pass that finds this shape of bug.
 
-#### 2.14.2 Two Aborts on the Way In, and a Column Resize
+#### 2.15.2 Two Aborts on the Way In, and a Column Resize
 
 Three things that happen at or near startup, all found while planning the ingest follow-ups rather than from a user report.
 
-##### 2.14.2.1 Opening an Image Directly Crashed
+##### 2.15.2.1 Opening an Image Directly Crashed
 
 MW::handleStartupArgs documents its argument convention as arg[0] = srcProgram, arg[1+] = paths. That is Winnets' convention. It does not hold for `Winnow <file>`, for Finder's Open With, or for a drop on the app icon: those send ONE element, which main.cpp joins into an args string with no delimiter, so argList has length 1, arg[0] IS the path, and the final else branch's unguarded argList.at(1) read past the end (an ASSERT in QList::at in a debug build, an out-of-bounds read in a release one). Every other branch guards its indexing (FocusStack tests &lt; 3, Embellish tests &lt; 2) and the function-wide guard above it is commented out.
 
 Fix: it takes arg[1] when there is one and arg[0] otherwise, and hands the path to folderAndFileSelectionChange, which is what that function is for. Opening an image now lands ON the image rather than merely in its folder.
 
-##### 2.14.2.2 The Icon Delegate Painted From Uninitialised Members
+##### 2.15.2.2 The Icon Delegate Painted From Uninitialised Members
 
 IconViewDelegate held a block of int members with no in-class initialiser (labelFontSize, fontHt, textHeadroom, textHeight, badgeSize, iconNumberSize, ratingDiam, ratingTextSize, alignVertPad, alignHorPad, starsWidth), assigned in exactly one place, setThumbDimensions, and read by paint(). Before that first call they held whatever was on the heap. Qt 6.9 made QRect's constructor compute x2 = x + w - 1 with CHECKED arithmetic, so a garbage starsWidth going into the rating badge's QRect became an abort rather than a wrong rectangle: qt_assert_x -> QCheckedInt operator+ -> QRect -> IconViewDelegate::paint (captured 2026-09-06, debug build).
 
 Fix: all are zero-initialised, which turns the worst case back into an empty rect. The file already carried a scar from the same class of bug (see the setPixelSize note in setThumbDimensions).
 
-##### 2.14.2.3 A Column Width Was Measured From a Thousand Rows
+##### 2.15.2.3 A Column Width Was Measured From a Thousand Rows
 
 MW::folderChangeCompleted measured 809 ms on a 3,404-row card folder, although almost everything in its body is one-shot, queued or O(1). The outlier was tableView->resizeColumns(), which is unconditional and calls resizeColumnToContents for each of the \~78 columns. That goes to sizeHintForColumn, which samples up to QHeaderView::resizeContentsPrecision() rows per column, and nothing had set it, so it was Qt's default of 1000: up to 78,000 delegate sizeHint() calls, each pulling a cell through the proxy, on the GUI thread.
 
@@ -2148,7 +2165,7 @@ MW::scrollToCurrentRowIfNotVisible
 
 SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits ONE layoutAboutToBeChanged / layoutChanged pair; the mapping is rebuilt lazily and once. The incremental invalidateRowsFilter() emits one begin/endInsertRows per CONTIGUOUS RUN of rows changing visibility, and a filter over a photo library is scattered by nature: 348 signal pairs for one action, each splicing the proxy's mapping vectors and reaching three views.
 
-The price is persistent indexes. layoutChanged carries no remapping, so the selection model and any open editor are invalidated rather than moved. That is acceptable only because of what surrounds it: MW::filterChange saves the selection before and restores it after (Selection::recoverVisible, or a fresh select when the current row was filtered out), as it has always done around a sort. Nothing else in the app listens to the proxy's rowsInserted, and the snapshot rebuild is wired to layoutChanged as well, so the workers are still told. A QModelIndex held across a filter change is a dangling pointer (see [2.14.1.1 A Proxy Index Does Not Survive a Filter Change](#21411-a-proxy-index-does-not-survive-a-filter-change)).
+The price is persistent indexes. layoutChanged carries no remapping, so the selection model and any open editor are invalidated rather than moved. That is acceptable only because of what surrounds it: MW::filterChange saves the selection before and restores it after (Selection::recoverVisible, or a fresh select when the current row was filtered out), as it has always done around a sort. Nothing else in the app listens to the proxy's rowsInserted, and the snapshot rebuild is wired to layoutChanged as well, so the workers are still told. A QModelIndex held across a filter change is a dangling pointer (see [2.15.1.1 A Proxy Index Does Not Survive a Filter Change](#21511-a-proxy-index-does-not-survive-a-filter-change)).
 
 #### 4.1.2 No Re-Sort Unless the Sort Is Wrong
 
@@ -6523,10 +6540,10 @@ TransformPanel (Develop/Transform/) is a compact control strip below the scopes 
 #### 11.22.1 Layout
 
 - A property-style gradient HEADER band ("Transform", an internal GradientHeader drawn with PropertyDelegate's backgroundShade +5 -> -15 gradient) with four trailing BarBtns: [?] tips ("Crop and transform tips"); [E] the preview eye (previewToggled, see Persistence below); [R] reset (crop, straighten and warp to identity, resetRequested; reset.png); and, at the extreme right, [X] close (closeRequested). [X] runs MW::toggleDevelopTransform's hide path, so closing from the header COMMITS exactly like the action-row button or R.
-- No modes (the Crop / Level / Warp toggle and its C / L / W keys were removed 2026-11-01): the crop tool is always live on the image, and the level and warp tools are the Cmd and Opt modifiers (see 11.22.4). The body is a caption | control | reset grid in three groups, separated by group dividers, each group's [R] reset (resetPartRequested(TransformPanel::Part)) in the last column so they line up:
-  - Crop: Aspect combo (As shot / Custom / 1x1 / 3x2 / 4x3 / 5x7 / 4x5 / 8.5x11 / 16x9 / 16x10 / the persisted custom aspects / "Add custom aspect..."; each item's userData is the w/h ratio, 0.0 = As shot, -1.0 = Custom (TransformPanel::kCustomRatio)); a Lock checkbox (A); and Flip as Landscape / Portrait radios (X swaps them, as in Lightroom; was F until 2026-11-01). The grid is caption | control | tip | reset: the grey tips (A, "Cmd modifier", "Opt modifier", and "Space bar to pan" under Warp) share the tip column so they line up, except Flip's X, which follows the radios. setAspectLocked / setAspectFlipped are the one path for both the control and the key; updateLockButton / updateFlipButton sync the controls under signal blockers.
-  - Angle: a straighten-angle field (-45..45 deg; editingFinished -> levelAngleEntered, applied as an absolute straighten) and a grey "Cmd modifier" tip ("Ctrl" off macOS).
-  - Warp: a grey "Opt modifier" tip ("Alt" off macOS) and, below it, "Space bar to pan". Commit the traced quad with Enter/Return or a double-click (ImageView claims those via ShortcutOverride while cropWarp is active and emits warpCommitRequested -> MW::rectifyDevelopCrop, which stores the warp + a suggested crop). There is no separate Rectify button.
+- No modes (the Crop / Level / Warp toggle and its C / L / W keys were removed 2026-11-01): the crop tool is always live on the image, and the level and warp tools are the Cmd and Opt modifiers (see 11.22.4). The body is a caption | control | tip | reset grid in three groups, separated by group dividers. Each group opens with a heading row ("Crop:" / "Level:" / "Warp:", the grey modifier tip that drives it on the image -- "No modifier" / "Cmd modifier" / "Opt modifier" -- and the group's [R] reset), and its controls follow with captions indented 12px; each group's [R] reset (resetPartRequested(TransformPanel::Part)) in the last column so they line up:
+  - Crop: Aspect combo (As shot / Custom / 1x1 / 3x2 / 4x3 / 5x7 / 4x5 / 8.5x11 / 16x9 / 16x10 / the persisted custom aspects / "Add custom aspect..."; each item's userData is the w/h ratio, 0.0 = As shot, -1.0 = Custom (TransformPanel::kCustomRatio)); a Lock checkbox (A); and Flip as Landscape / Portrait radios (X swaps them, as in Lightroom; was F until 2026-11-01). The grid is caption | control | tip | reset: the grey tips (A, "No modifier", "Cmd modifier", "Opt modifier", and "Space bar to pan" below its own divider) share the tip column so they line up, except Flip's X, which follows the radios. setAspectLocked / setAspectFlipped are the one path for both the control and the key; updateLockButton / updateFlipButton sync the controls under signal blockers.
+  - Level: a straighten-angle field (Angle) (-45..45 deg; editingFinished -> levelAngleEntered, applied as an absolute straighten); the heading's "Cmd modifier" tip reads "Ctrl" off macOS.
+  - Warp: no controls, only the heading with its "Opt modifier" tip ("Alt" off macOS). Below Warp, after a group divider, "Space bar to pan" stands alone because Space pans under every Transform modifier, not only Warp. Commit the traced quad with Enter/Return or a double-click (ImageView claims those via ShortcutOverride while cropWarp is active and emits warpCommitRequested -> MW::rectifyDevelopCrop, which stores the warp + a suggested crop). There is no separate Rectify button.
 
 Every control is always enabled. Custom aspects, the aspect, the lock state and the flip persist under "Develop/Transform/" (a stale "mode" key from the old toggle is ignored).
 

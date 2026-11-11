@@ -186,6 +186,10 @@ void TransformPanel::buildUi()
     levelHint->setToolTip(tr("Hold %1 and drag on the image along something that should be "
                              "level or plumb").arg(cmdKey));
 
+    /* -------- Crop group heading: the crop tool needs no key -------- */
+    QLabel *cropHint = makeHint(tr("No modifier"));
+    cropHint->setToolTip(tr("Drag on the image to crop; drag inside the frame to move it"));
+
     /* -------- Warp group: only the modifier that drags the corners -------- */
     QLabel *warpHint = makeHint(tr("%1 modifier").arg(optKey));
     warpHint->setToolTip(tr("Hold %1 and drag a corner of the crop onto something "
@@ -215,11 +219,12 @@ void TransformPanel::buildUi()
     grid->setColumnStretch(2, 1);
 
     /* The control-group divider every Develop panel uses (see
-       DevelopProperties::addGroupDivider) above the Angle and Warp groups. The slot is
-       G::groupSeparatorHeight less the grid's row spacing on either side (the spacing a
+       DevelopProperties::addGroupDivider) above the Level and Warp groups and the pan
+       hint. The slot is G::groupSeparatorHeight less the grid's row spacing on either side (the spacing a
        divider row in the property tree takes), plus 12px of extra room above and below
        the line, which paintEvent centres in the slot. */
     const int ruleExtra = 12;
+    const int subIndent = 12;    // a group's control captions sit under its heading
     auto addRule = [&](int row) {
         QWidget *rule = new QWidget(this);
         rule->setAttribute(Qt::WA_TranslucentBackground);
@@ -230,26 +235,41 @@ void TransformPanel::buildUi()
         grid->addWidget(rule, row, 0, 1, 4);
     };
 
-    grid->addWidget(makeCaption(tr("Aspect")), 0, 0);
-    grid->addWidget(aspectCombo,               0, 1, 1, 2);
-    grid->addWidget(cropResetBtn,              0, 3);
-    grid->addWidget(makeCaption(tr("Lock")),   1, 0);
-    grid->addWidget(lockCheck,                 1, 1, Qt::AlignLeft);
-    grid->addWidget(makeHint(tr("A")),         1, 2);
-    grid->addWidget(makeCaption(tr("Flip")),   2, 0);
-    grid->addLayout(flipRow,                   2, 1, 1, 2);
+    /* Each group opens with a heading row (name, the modifier that drives it on the
+       image, the group's reset); its controls follow with their captions indented. */
+    auto makeSubCaption = [&](const QString &text) {
+        QLabel *l = makeCaption(text);
+        l->setContentsMargins(subIndent, 0, 0, 0);
+        return l;
+    };
 
-    addRule(3);
-    grid->addWidget(makeCaption(tr("Angle")),  4, 0);
-    grid->addWidget(angleEdit,                 4, 1, Qt::AlignLeft);
-    grid->addWidget(levelHint,                 4, 2);
-    grid->addWidget(levelResetBtn,             4, 3);
+    grid->addWidget(makeCaption(tr("Crop:")),       0, 0);
+    grid->addWidget(cropHint,                       0, 2);
+    grid->addWidget(cropResetBtn,                   0, 3);
+    grid->addWidget(makeSubCaption(tr("Aspect")),   1, 0);
+    grid->addWidget(aspectCombo,                    1, 1, 1, 2);
+    grid->addWidget(makeSubCaption(tr("Lock")),     2, 0);
+    grid->addWidget(lockCheck,                      2, 1, Qt::AlignLeft);
+    grid->addWidget(makeHint(tr("A")),              2, 2);
+    grid->addWidget(makeSubCaption(tr("Flip")),     3, 0);
+    grid->addLayout(flipRow,                        3, 1, 1, 2);
 
-    addRule(5);
-    grid->addWidget(makeCaption(tr("Warp")),   6, 0);
-    grid->addWidget(warpHint,                  6, 2);
-    grid->addWidget(warpResetBtn,              6, 3);
-    grid->addWidget(panHint,                   7, 2);
+    addRule(4);
+    grid->addWidget(makeCaption(tr("Level:")),      5, 0);
+    grid->addWidget(levelHint,                      5, 2);
+    grid->addWidget(levelResetBtn,                  5, 3);
+    grid->addWidget(makeSubCaption(tr("Angle")),    6, 0);
+    grid->addWidget(angleEdit,                      6, 1, Qt::AlignLeft);
+
+    addRule(7);
+    grid->addWidget(makeCaption(tr("Warp:")),       8, 0);
+    grid->addWidget(warpHint,                       8, 2);
+    grid->addWidget(warpResetBtn,                   8, 3);
+
+    /* Space pans under every Transform modifier, not only Warp, so it sits below its own
+       divider rather than in the Warp group. */
+    addRule(9);
+    grid->addWidget(panHint,                        10, 2);
 
     /* -------- Assemble -------- */
     /* The bottom margin reserves the panel separator rule drawn in paintEvent. */
@@ -684,7 +704,7 @@ void TransformPanel::paintEvent(QPaintEvent *event)
        GradientHeader is a CHILD, and children paint after their parent, so its band
        covers this fill with the header gradient. */
     p.fillRect(rect(), G::panelContentBg);
-    /* Group dividers above Level and Warp: a G::groupSeparatorWidth line centred in each
+    /* Group dividers above Level, Warp and the pan hint: a G::groupSeparatorWidth line centred in each
        translucent placeholder, inset G::groupSeparatorInset from the panel edges like
        the property tree's dividers. */
     const int sepW = G::groupSeparatorWidth;

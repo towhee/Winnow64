@@ -2,6 +2,7 @@
 #include "Main/mainwindow.h"
 #include "Main/global.h"
 #include <QDebug>
+#include <functional>
 
 /*
 The property editor has four components:
@@ -784,6 +785,25 @@ void PropertyEditor::fontSizeChanged(int fontSize)
     resizeColumns();
     // this forces treeview to trigger sizehint for every item
     scheduleDelayedItemsLayout();
+}
+
+void PropertyEditor::refreshSliderLayout()
+{
+    if (G::isLogger) G::log("PropertyEditor::refreshSliderLayout");
+    std::function<void(const QModelIndex &)> relayout = [&](const QModelIndex &parent) {
+        for (int r = 0; r < model->rowCount(parent); ++r) {
+            const QModelIndex valIdx = model->index(r, ValColumn, parent);
+            if (valIdx.data(UR_DelegateType).toInt() == DT_Slider) {
+                if (auto *se = static_cast<SliderEditor*>(valIdx.data(UR_Editor).value<void*>()))
+                    se->applyLayout();
+            }
+            relayout(model->index(r, CapColumn, parent));
+        }
+    };
+    relayout(QModelIndex());
+    doItemsLayout();            // row heights from the new PropertyDelegate::sizeHint
+    updateEditorGeometries();   // span (or un-span) the slider editors over their rows
+    viewport()->update();
 }
 
 void PropertyEditor::setSolo(bool isSolo)

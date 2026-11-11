@@ -172,10 +172,17 @@ int PanelEditor::sliderInt(const QString &key) const
 
 void PanelEditor::fitHeight(int slack)
 {
+    fitSlack = slack;
     int h = slack;
     for (int r = 0; r < model->rowCount(); ++r)
         h += sizeHintForRow(r);
     setFixedHeight(h);
+}
+
+void PanelEditor::refreshSliderLayout()
+{
+    PropertyEditor::refreshSliderLayout();
+    if (fitSlack >= 0) fitHeight(fitSlack);     // slider rows changed height
 }
 
 void PanelEditor::itemChange(QModelIndex index)

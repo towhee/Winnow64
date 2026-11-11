@@ -274,6 +274,7 @@ QString MW::diagnostics()
     rpt << "\n";
     rpt << "\n" << "G::iconOpacity = " << G::s(G::iconOpacity);
     rpt << "\n" << "G::wheelSensitivity = " << G::s(G::wheelSensitivity);
+    rpt << "\n" << "G::sliderAboveBelow = " << G::s(G::sliderAboveBelow);
     rpt << "\n" << "G::wheelSpinning = " << G::s(G::wheelSpinning);
     rpt << "\n";
     rpt << "\n" << "G::loadOnlyVisibleIcons = " << G::s(G::loadOnlyVisibleIcons);

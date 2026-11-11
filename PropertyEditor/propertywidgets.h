@@ -117,9 +117,17 @@ public:
        The Develop sharpening-mask preview is gated on it: it shows only WHILE the slider
        is being worked, as Lightroom's Alt-drag does. */
     bool sliderIsDown() const;
+    /* Lay the editor out for G::sliderAboveBelow: the single-line Name ---o--- Value
+       (slider and value side by side in the value cell) or ABOVE/BELOW, where the
+       delegate spans the editor over the whole row and puts the value top right with
+       the slider full width beneath it. Called on construction and when the preference
+       changes (PropertyEditor::refreshSliderLayout). */
+    void applyLayout();
+    bool isStacked() const { return stacked; }
 
 protected:
     void paintEvent(QPaintEvent *event);
+    void resizeEvent(QResizeEvent *event) override;
     // Enter/Return in the value field applies the typed value
     bool eventFilter(QObject *obj, QEvent *event) override;
 
@@ -134,6 +142,9 @@ private:
     void change(double value);
     void sliderMoved();
     void updateSliderWhenLineEdited();
+    void layoutStacked();       // place value + slider by hand and mask the gap
+    bool stacked = false;
+    int lineEditWidth;
     /* Log-scale mode (UR_LogScale): the slider's integer position is a point on a
        LOGARITHMIC ramp between UR_Min and UR_Max, not the value itself. Needed by the
        white-balance Temp slider, whose 2000..50000 K range would otherwise cram every

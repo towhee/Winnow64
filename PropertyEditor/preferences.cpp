@@ -513,6 +513,13 @@ void Preferences::itemChange(QModelIndex idx)
         G::wheelSensitivity = qBound(1, v.toInt(), 100);
     }
 
+    if (source == "sliderAboveBelow") {
+        G::sliderAboveBelow = v.toBool();
+        // every property tree: Preferences, Embellish and the Develop panels
+        for (QWidget *w : QApplication::allWidgets())
+            if (auto *pe = qobject_cast<PropertyEditor*>(w)) pe->refreshSliderLayout();
+    }
+
     if (source == "globalFontSize") {
         mw->setFontSize(v.toInt());     // recomputes column widths via resizeColumns()
         G::fontSize = v.toInt();
@@ -1307,6 +1314,29 @@ void Preferences::addUserInterface()
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
+    addItem(i);
+
+    // Controls Header
+    i.name = "ControlsHeader";
+    i.parentName = "UserInterfaceHeader";
+    i.captionText = "Controls";
+    i.tooltip = "";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    addItem(i);
+
+    // Slider layout: Name ---o--- Value, or Name / Value above a full-width slider
+    i.name = "sliderAboveBelow";
+    i.parentName = "ControlsHeader";
+    i.captionText = "Above/Below sliders";
+    i.tooltip = "Show each slider's name and value on one line, with the slider full\n"
+                "width below them, instead of name, slider and value on a single line.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::sliderAboveBelow;
+    i.key = "sliderAboveBelow";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
     addItem(i);
 }
 
