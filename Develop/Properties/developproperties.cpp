@@ -70,6 +70,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     if (G::isLogger) G::log("DevelopProperties::DevelopProperties");
     mw = qobject_cast<MW*>(parent);
     this->setting = setting;
+    isDevelopTree = true;       // slider layout: the Develop override (before any row)
 
     /* The mask overlay's single colour is a view preference owned by Develop, but read
        by ImageView (which has no settings handle), so it lives in G::. Seed it here,
@@ -584,6 +585,8 @@ void DevelopProperties::bindScopeHeader(ScopeHeader *header)
     connect(scopeHeader, &ScopeHeader::addScopeRequested,   this, &DevelopProperties::newScope);
     connect(scopeHeader, &ScopeHeader::addMaskRequested,    this, [this]{ showMaskMenu(); });
     connect(scopeHeader, &ScopeHeader::resetAllEditsRequested, this, &DevelopProperties::resetAllEdits);
+    connect(scopeHeader, &ScopeHeader::slidersAboveBelowToggled,
+            this, &DevelopProperties::setDevelopSlidersAboveBelow);
     connect(scopeHeader, &ScopeHeader::hideGlobalImageToggled,
             this, &DevelopProperties::setGlobalImageHidden);
     connect(scopeHeader, &ScopeHeader::maskOverlayToggled,  this,
@@ -3483,14 +3486,22 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
     }
 
     /* -------- Tree shape: the tree and its Solo peers (the Raw panel is one) -------- */
+    /* Also offered from a gap in the dock (SectionOther): blank space belongs to no band,
+       so the panel-wide layout items are what it can do. */
     QAction *aExpandAll = nullptr, *aCollapseAll = nullptr, *aSolo = nullptr;
+    QAction *aAboveBelow = nullptr;
     if (section == SectionEdits || section == SectionScopeBar || section == SectionMask
-        || section == SectionRaw) {
+        || section == SectionRaw || section == SectionOther) {
         aExpandAll = menu.addAction(tr("Expand all"));
         aCollapseAll = menu.addAction(tr("Collapse all"));
         aSolo = menu.addAction(tr("Solo mode"));
         aSolo->setCheckable(true);
         aSolo->setChecked(setting->value("Develop/isSolo", false).toBool());
+        // the Develop-only slider layout override (also in the Scope header [:] menu)
+        menu.addSeparator();
+        aAboveBelow =menu.addAction(tr("Above:below sliders"));
+        aAboveBelow->setCheckable(true);
+        aAboveBelow->setChecked(PropertyEditor::developSlidersAboveBelow());
     }
 
     /* Jump to the raw decode rows. They are Core rows on the Global scope (addCoreItems),
@@ -3561,6 +3572,21 @@ void DevelopProperties::showPanelContextMenu(PanelSection section, const QPoint 
         setSolo(aSolo->isChecked());
         setting->setValue("Develop/isSolo", aSolo->isChecked());
     }
+    else if (chosen == aAboveBelow)    setDevelopSlidersAboveBelow(aAboveBelow->isChecked());
+}
+
+void DevelopProperties::setDevelopSlidersAboveBelow(bool on)
+{
+/*
+    The Develop-only slider layout override. Once set it is Develop's own choice and the
+    preference (Preferences > User Interface > Controls > Above/Below sliders) no longer
+    moves the Develop sliders; the other trees keep following the preference. Re-lays
+    this tree and the Raw / Mask PanelEditors, which re-fit their heights.
+*/
+    if (G::isLogger) G::log("DevelopProperties::setDevelopSlidersAboveBelow");
+    PropertyEditor::developSliderLayout = on ? 1 : 0;
+    setting->setValue("Develop/sliderAboveBelow", on);
+    PropertyEditor::refreshAllSliderLayouts(true);
 }
 
 void DevelopProperties::contextMenuEvent(QContextMenuEvent *event)

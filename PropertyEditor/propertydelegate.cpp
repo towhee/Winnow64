@@ -1,4 +1,5 @@
 #include "propertydelegate.h"
+#include "propertyeditor.h"     // PropertyEditor::slidersAboveBelow
 #include "Main/global.h"
 
 /*
@@ -39,11 +40,15 @@ namespace {
         return qMax(0, decoSize + G::decorationTitleGap - decoIndent);
     }
 
-    /* Above/below slider row (G::sliderAboveBelow): the value cell holds a SliderEditor.
-       Such a row is Name / Value on a line with the slider full width below, so the
-       editor spans the row from the caption's left edge (see updateEditorGeometry). */
-    inline bool isStackedSlider(const QModelIndex &index) {
-        return G::sliderAboveBelow &&
+    /* Above/below slider row: the value cell holds a SliderEditor and the tree lays its
+       sliders out above/below (PropertyEditor::slidersAboveBelow -- the preference, or
+       Develop's override). Such a row is Name / Value on a line with the slider full
+       width below, so the editor spans the row from the caption's left edge (see
+       updateEditorGeometry). view is option.widget, or the delegate's parent tree. */
+    inline bool isStackedSlider(const QObject *view, const QModelIndex &index) {
+        const PropertyEditor *pe = qobject_cast<const PropertyEditor*>(view);
+        const bool aboveBelow = pe ? pe->slidersAboveBelow() : G::sliderAboveBelow;
+        return aboveBelow &&
                index.sibling(index.row(), ValColumn).data(UR_DelegateType).toInt() == DT_Slider;
     }
 
@@ -195,7 +200,7 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
 
     /* Above/below slider: a single-line caption over the slider band. The caption has the
        row's width (less the value), so it is elided rather than wrapped. */
-    if (isStackedSlider(index)) {
+    if (isStackedSlider(option.widget ? option.widget : parent(), index)) {
         height += G::sliderBandHeight + capIndex.data(UR_ExtraRowHeight).toInt();
         return QSize(option.rect.width(), height);
     }
@@ -409,7 +414,7 @@ void PropertyDelegate::updateEditorGeometry(QWidget *editor,
     /* Above/below slider: span the editor from the caption's left edge to the value
        cell's right, so the slider runs under the caption. The editor masks itself to its
        value and slider band (SliderEditor::applyLayout), leaving the caption to the tree. */
-    if (isStackedSlider(index)) {
+    if (isStackedSlider(option.widget, index)) {
         const int left = captionTextLeft(option.widget, index.sibling(index.row(), CapColumn));
         editor->setGeometry(QRect(left, option.rect.y(),
                                   qMax(0, option.rect.right() + 1 - left),
@@ -715,7 +720,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             auto *se = static_cast<SliderEditor*>(valSib.data(UR_Editor).value<void*>());
             sliderFocused = se && se->sliderHasFocus();
         }
-        const bool stacked = isStackedSlider(index);
+        const bool stacked = isStackedSlider(option.widget, index);
 
         /* Caption pen: header-ish rows with children use hdrPen; disabled greys; a
            UR_FlashLevel > 0 blends toward white (DevelopProperties animates it to 0 on a

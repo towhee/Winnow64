@@ -787,6 +787,25 @@ void PropertyEditor::fontSizeChanged(int fontSize)
     scheduleDelayedItemsLayout();
 }
 
+int PropertyEditor::developSliderLayout = -1;      // seeded by MW::loadSettings
+
+bool PropertyEditor::developSlidersAboveBelow()
+{
+    return developSliderLayout < 0 ? G::sliderAboveBelow : developSliderLayout == 1;
+}
+
+bool PropertyEditor::slidersAboveBelow() const
+{
+    return isDevelopTree ? developSlidersAboveBelow() : G::sliderAboveBelow;
+}
+
+void PropertyEditor::refreshAllSliderLayouts(bool developOnly)
+{
+    for (QWidget *w : QApplication::allWidgets())
+        if (auto *pe = qobject_cast<PropertyEditor*>(w))
+            if (!developOnly || pe->isDevelopTree) pe->refreshSliderLayout();
+}
+
 void PropertyEditor::refreshSliderLayout()
 {
     if (G::isLogger) G::log("PropertyEditor::refreshSliderLayout");
@@ -795,7 +814,7 @@ void PropertyEditor::refreshSliderLayout()
             const QModelIndex valIdx = model->index(r, ValColumn, parent);
             if (valIdx.data(UR_DelegateType).toInt() == DT_Slider) {
                 if (auto *se = static_cast<SliderEditor*>(valIdx.data(UR_Editor).value<void*>()))
-                    se->applyLayout();
+                    se->applyLayout(slidersAboveBelow());
             }
             relayout(model->index(r, CapColumn, parent));
         }

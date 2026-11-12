@@ -77,13 +77,13 @@ namespace {
    the shoulder is a real difference from Lightroom, but it is not the one under test. */
 constexpr int kRampN = 256;
 
-WorkingImage makeRamp()
+WorkingImage makeRamp(bool sceneReferred = false)
 {
     WorkingImage img;
     img.width  = kRampN;
     img.height = 1;
     img.white  = 1.0f;
-    img.sceneReferred = false;
+    img.sceneReferred = sceneReferred;
     img.space  = ColorSpaceMath::kWorking;
     img.rgb.resize(static_cast<size_t>(kRampN) * 3);
     for (int i = 0; i < kRampN; ++i) {
@@ -117,11 +117,11 @@ const int kMidIdx = atPerceptual(std::pow(0.18f, 1.0f / 2.2f));
    so a test that renders with None has to say so in the params too. This test caught that
    coupling by failing -- Highlights -100 dragged white 11 levels -- which is worth more
    than the line of setup it costs. */
-std::vector<int> render(const EditParams &pIn)
+std::vector<int> render(const EditParams &pIn, bool sceneReferred = false)
 {
     EditParams p = pIn;
     p.viewTransform = int(OutputTransform::ViewTransform::None);
-    WorkingImage img = makeRamp();
+    WorkingImage img = makeRamp(sceneReferred);
     Develop dev;
     if (!dev.Apply(img, p)) return {};
     QImage out;
@@ -188,6 +188,7 @@ private slots:
     void shadowsIsAGainNotAnOffset();
     void highlightsRecoverAPushPastWhite();
     void highlightsRecoveryDoesNotCompound();
+    void exposureRollsOffADisplayReferredFile();
     void highlightsAdaptsToTheFrame();
     void highlightsStatisticIsTheFrameNotTheCrop();
     void highlightsPullsTheRegion();
@@ -476,6 +477,10 @@ void tst_toneregions::shadowsIsAGainNotAnOffset()
     values sit at display 1, where its weight is zero): before the recovery stage,
     Highlights -100 left every one of them at 255. Full slider must bring them all back
     below white, in order and distinct; -50 must bring back some of them.
+
+    SCENE-REFERRED (a raw with Tone mapping None): since 2026-11-12 Exposure on a
+    display-referred file is a curve that never passes white (6c), so only a raw's
+    linear gain still leaves anything up there to recover.
 */
 void tst_toneregions::highlightsRecoverAPushPastWhite()
 {
@@ -483,7 +488,8 @@ void tst_toneregions::highlightsRecoverAPushPastWhite()
     EditParams rec  = base; rec.highlights  = -100.0f;
     EditParams half = base; half.highlights = -50.0f;
 
-    const std::vector<int> b = render(base), r = render(rec), h = render(half);
+    const std::vector<int> b = render(base, true), r = render(rec, true),
+                           h = render(half, true);
     QVERIFY(!b.empty() && !r.empty() && !h.empty());
 
     auto blown = [](const std::vector<int> &v) {
@@ -522,13 +528,14 @@ void tst_toneregions::highlightsRecoverAPushPastWhite()
     Highlights -100 must not render a highlight darker than the unpushed, unedited ramp.
     Up to level 235: above it the pushed top lands just under white BY DESIGN, so the
     unedited ramp's own last few levels are squeezed beneath it (255 renders 244).
+    Scene-referred, like 6a.
 */
 void tst_toneregions::highlightsRecoveryDoesNotCompound()
 {
     EditParams plain;
     EditParams rec; rec.exposure = 1.5f; rec.highlights = -100.0f;
 
-    const std::vector<int> u = render(plain), r = render(rec);
+    const std::vector<int> u = render(plain, true), r = render(rec, true);
     QVERIFY(!u.empty() && !r.empty());
 
     for (int i = 0; i < kRampN; ++i) {
@@ -539,6 +546,72 @@ void tst_toneregions::highlightsRecoveryDoesNotCompound()
                                     "are pulling the same tones twice")
                             .arg(i).arg(r[i]).arg(u[i])));
     }
+}
+
+/*
+    6c. EXPOSURE ON A DISPLAY-REFERRED FILE ROLLS OFF LIKE LIGHTROOM (2026-11-12). A JPEG
+    has no view transform, so a plain 2^EV clipped everything above about level 160 at
+    +1.65 EV. Exposure there is now F(2^EV * F^-1(x)), F = Standard roll-off's curve
+    (develop.cpp, buildExposureCurve). Pinned to the Lightroom Classic 15.6 exports it was
+    measured on (neutral pixels, linear): +1 EV takes 0.18 to 0.406 and 0.50 to 0.762;
+    -1 EV takes 0.90 to 0.715. White stays white and black stays black at any push, the
+    ramp stays in order, and two pushes compose to one of their sum (what lets a mask's
+    Exposure add in stops on top of Global's).
+*/
+void tst_toneregions::exposureRollsOffADisplayReferredFile()
+{
+    auto linAt = [](const std::vector<int> &v, float in) {
+        const float d = v[atPerceptual(std::pow(in, 1.0f / 2.2f))] / 255.0f;
+        return d <= 0.04045f ? d / 12.92f : std::pow((d + 0.055f) / 1.055f, 2.4f);
+    };
+    EditParams up; up.exposure = 1.0f;
+    up.viewTransform = int(OutputTransform::ViewTransform::None);   // as render() does
+    EditParams down; down.exposure = -1.0f;
+    EditParams big; big.exposure = 3.0f;
+    EditParams two; two.exposure = 2.0f;
+    const std::vector<int> u = render(up), d = render(down), b = render(big);
+    QVERIFY(!u.empty() && !d.empty() && !b.empty());
+
+    const struct { const std::vector<int> *r; float in, lr; const char *what; } pins[] = {
+        {&u, 0.18f, 0.406f, "+1 EV, mid-grey"},
+        {&u, 0.50f, 0.762f, "+1 EV, 0.50"},
+        {&d, 0.90f, 0.715f, "-1 EV, 0.90"},
+    };
+    for (const auto &pin : pins) {
+        const float got = linAt(*pin.r, pin.in);
+        QVERIFY2(std::abs(std::log2(got / pin.lr)) < 0.12f,
+                 qPrintable(QString("%1: rendered %2 linear, Lightroom %3")
+                            .arg(pin.what).arg(got, 0, 'f', 3).arg(pin.lr, 0, 'f', 3)));
+    }
+    QVERIFY2(b[kRampN - 1] == 255 && b[0] == 0,
+             qPrintable(QString("+3 EV moved the endpoints: black %1, white %2")
+                        .arg(b[0]).arg(b[kRampN - 1])));
+    /* Near white the curve is flat enough that 8 bits round its top to 255 (Lightroom's
+       own +3 export reads 254-255 above 0.65), so compare against the plain gain, which
+       blows everything from 2^-3 up: the roll-off must keep well over half of those. */
+    const int blown = int(std::count(b.begin(), b.end(), 255));
+    const int gainBlown = kRampN - atPerceptual(std::pow(0.125f, 1.0f / 2.2f));
+    QVERIFY2(blown * 2 < gainBlown,
+             qPrintable(QString("+3 EV flattened %1 samples into white, a plain gain %2; "
+                                "the curve must roll them off").arg(blown).arg(gainBlown)));
+    for (int i = 1; i < kRampN; ++i)
+        QVERIFY2(b[i] >= b[i - 1],
+                 qPrintable(QString("+3 EV ramp inverts at sample %1").arg(i)));
+
+    /* Two +1 pushes in sequence against one +2. */
+    WorkingImage twice = makeRamp();
+    Develop dev;
+    QVERIFY(dev.Apply(twice, up) && dev.Apply(twice, up));
+    const std::vector<int> once = render(two);
+    QImage out;
+    OutputTransform ot;
+    QVERIFY(ot.ToImage(twice, out, OutputTransform::Space::sRGB,
+                       OutputTransform::ViewTransform::None));
+    const uchar *line = out.constScanLine(0);
+    for (int i = 0; i < kRampN; ++i)
+        QVERIFY2(std::abs(int(line[i * 3]) - once[i]) <= 1,
+                 qPrintable(QString("sample %1: +1 then +1 rendered %2, +2 rendered %3")
+                            .arg(i).arg(int(line[i * 3])).arg(once[i])));
 }
 
 /*

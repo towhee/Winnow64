@@ -559,6 +559,9 @@ bool MW::loadSettings()
     }
 
     G::sliderAboveBelow = settings->value("sliderAboveBelow", false).toBool();
+    // Develop's own slider layout override: absent = follow the preference above
+    PropertyEditor::developSliderLayout = settings->contains("Develop/sliderAboveBelow")
+        ? (settings->value("Develop/sliderAboveBelow").toBool() ? 1 : 0) : -1;
 
     if (settings->contains("pickAudioVolume")) {
         pickClickvolume = settings->value("pickAudioVolume").toFloat() / 100;

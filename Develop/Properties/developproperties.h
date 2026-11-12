@@ -531,6 +531,9 @@ public:
        this selector always agree; also toggles the visibility of the Demosaic / Denoise raw rows. */
     void syncEditRaw(bool useRaw);
     void refreshSliderLayout() override;    // + re-fit the content height
+    /* Menu "Above:below sliders" (Scope header [:] and the dock context menu): set the
+       Develop-only slider layout override, persist it and re-lay the Develop trees. */
+    void setDevelopSlidersAboveBelow(bool on);
 
 protected:
     /* PropertyEditor::mousePressEvent does not select rows (it only handles expand/collapse), so we

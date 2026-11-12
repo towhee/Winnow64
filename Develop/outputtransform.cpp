@@ -510,6 +510,51 @@ inline void GamutClip(const ColorSpaceMath::Luma &lw, float &r, float &g, float 
 }
 
 /*
+    DisplayGamutClip: the output step for a DISPLAY-REFERRED image (a JPEG / TIFF / HEIC,
+    a raw's embedded preview, Apple's ProRAW rendering) in place of HighlightRolloff
+    (2026-11-12). Its Exposure is a curve that tops out at white (develop.cpp,
+    buildExposureCurve), so a channel over 1.0 after a push is mostly a colour the output
+    cannot show, not light, and the bleed lifted it toward white: a pink dress pushed
+    +1.75 EV rendered G 194 where Lightroom's export reads 149.
+
+    GamutClip's rule at BOTH ends: hold the luminance (output primaries) and pull the
+    colour toward the grey of it just far enough that no channel is under 0 or over 1.
+    Luminance itself at or over 1 (Whites +, a white-balance push) can only be white,
+    which is what the bleed gave there too; it gets there continuously, with no hue swing
+    from channels clipping one at a time. Against the Lightroom exposure exports (Rec.2020
+    RGBTone model, RMS levels whole frame / saturated pixels, EV +1 / +1.75 / +2 / +3 / +4):
+
+        bleed (HighlightRolloff)        4.6/7.6  6.1/9.8  6.2/9.7  6.8/11.5  6.8/10.6
+        per-channel clip (GamutClip)    2.4/2.8  3.6/3.8  3.7/3.9  2.9/3.3   3.3/3.1
+        this                            2.3/2.4  3.5/3.4  3.7/3.6  3.3/4.3   4.0/4.8
+
+    A tie with clipping, which Lightroom's export does; this one was chosen because it
+    also treats brightness over range without the clip's hue swing. Scene-referred data
+    keeps the bleed, ProRAW's embedded curve keeps GamutClip.
+*/
+inline void DisplayGamutClip(const ColorSpaceMath::Luma &lw, float &r, float &g, float &b)
+{
+    const float mn = qMin(r, qMin(g, b));
+    const float mx = qMax(r, qMax(g, b));
+    if (mn >= 0.0f && mx <= 1.0f) return;           // in gamut: the common case
+    const float y = lw.r * r + lw.g * g + lw.b * b;
+    if (y >= 1.0f) { r = g = b = 1.0f; return; }
+    if (y <= 0.0f) { r = g = b = 0.0f; return; }
+    float k = 1.0f;
+    if (mn < 0.0f) k = qMin(k, y / (y - mn));
+    if (mx > 1.0f) k = qMin(k, (1.0f - y) / (mx - y));
+    r = qBound(0.0f, y + (r - y) * k, 1.0f);
+    g = qBound(0.0f, y + (g - y) * k, 1.0f);
+    b = qBound(0.0f, y + (b - y) * k, 1.0f);
+}
+
+/* Does this image take DisplayGamutClip? The test Develop and Auto tone use. */
+inline bool ClipsGamut(const WorkingImage &img)
+{
+    return !img.sceneReferred || img.decoderToneMapped;
+}
+
+/*
     TRANSFER LUT (8-bit sRGB output only).
 
     For the sRGB path the per-channel chain collapses to a pure 1-D function of the
@@ -862,6 +907,8 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
 
     const OutputTransform::ViewTransform vt = EffectiveView(view, img);
     const bool clampsToWhite = ViewClampsToWhite(vt);
+    const bool clipGamut = ClipsGamut(img);
+    const ColorSpaceMath::Luma lumaOut = ColorSpaceMath::lumaWeights(LinearOf(space));
     Encoding enc = EncodingFor(space, img.space);
     const float *rgb = img.rgb.data();
     uchar *bits = out.bits();
@@ -889,6 +936,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
         const TransferLut &encLut = LutFor(OutputTransform::ViewTransform::None,
                                            enc.gammaInv);
         const ColorSpaceMath::Luma outLuma = ColorSpaceMath::lumaWeights(LinearOf(space));
+        const bool displayClip = ClipsGamut(img);
         auto processRowsCam = [=, &encLut](int y0, int y1) {
             for (int y = y0; y < y1; ++y) {
                 uchar *line = bits + static_cast<qsizetype>(y) * bpl;
@@ -900,6 +948,7 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
                     CameraLookAndTone(cp, vt, vm, viewLut, v);
                     if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
                     if (cp.perChannel) GamutClip(outLuma, v[0], v[1], v[2]);
+                    else if (displayClip) DisplayGamutClip(outLuma, v[0], v[1], v[2]);
                     else HighlightRolloff(v[0], v[1], v[2]);
                     for (int c = 0; c < 3; ++c)
                         line[x * 3 + c] = static_cast<uchar>(
@@ -936,9 +985,14 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
                     const float v2 = rgb[o + 2] * scale;
                     if (!clampsToWhite) {
                         const float mx = qMax(v0, qMax(v1, v2));
-                        if (mx > 1.0f) {          // rolloff applies: exact maths
+                        /* DisplayGamutClip also acts on a negative channel; the bleed
+                           does not, and the table clamps one to 0 as before. */
+                        const bool over = mx > 1.0f ||
+                                          (clipGamut && qMin(v0, qMin(v1, v2)) < 0.0f);
+                        if (over) {               // rolloff / clip applies: exact maths
                             float w[3] = {v0, v1, v2};
-                            HighlightRolloff(w[0], w[1], w[2]);
+                            if (clipGamut) DisplayGamutClip(lumaOut, w[0], w[1], w[2]);
+                            else HighlightRolloff(w[0], w[1], w[2]);
                             for (int c = 0; c < 3; ++c)
                                 line[x * 3 + c] = static_cast<uchar>(
                                     std::lround(Transfer(w[c], enc.gammaInv) * 255.0f));
@@ -984,7 +1038,8 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
                 if (applyView)
                     for (int c = 0; c < 3; ++c) v[c] = LutValue(viewLut, v[c]);
                 ToPrimaries(enc.m, v[0], v[1], v[2]);
-                HighlightRolloff(v[0], v[1], v[2]);
+                if (clipGamut) DisplayGamutClip(lumaOut, v[0], v[1], v[2]);
+                else HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)
                     line[x * 3 + c] = static_cast<uchar>(
                         std::lround(LutValue(encLut, v[c]) * 255.0f));
@@ -1037,6 +1092,7 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
     const CameraPath cp = CameraPathFor(vt, img);
     const bool camActive = CameraPathActive(cp);
     const ColorSpaceMath::Luma outLuma = ColorSpaceMath::lumaWeights(LinearOf(space));
+    const bool displayClip = ClipsGamut(img);
 
     auto processRows = [=](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
@@ -1055,6 +1111,7 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
                 }
                 if (!enc.identity) ToPrimaries(enc.m, v[0], v[1], v[2]);
                 if (camActive && cp.perChannel) GamutClip(outLuma, v[0], v[1], v[2]);
+                else if (displayClip) DisplayGamutClip(outLuma, v[0], v[1], v[2]);
                 else HighlightRolloff(v[0], v[1], v[2]);
                 for (int c = 0; c < 3; ++c)
                     line[x * 4 + c] = static_cast<quint16>(
@@ -1083,6 +1140,11 @@ float OutputTransform::DisplayPosition(float perceptual, ViewTransform view)
     /* sRGB's transfer: the histogram is drawn on an sRGB-encoded image, and the
        output primaries do not change where a TONE lands, only its colour. */
     return Transfer(v, 0.0f);
+}
+
+float OutputTransform::StandardRollOff(float v)
+{
+    return FilmicTone(v);
 }
 
 /* See the header. 40 bisection steps takes the bracket below one part in 10^12 of the

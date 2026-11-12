@@ -283,6 +283,18 @@ private:
            values the decode deliberately stopped clamping. */
         bool  preMatClamps = false;
 
+        /* Exposure on DISPLAY-REFERRED input (JPEG / TIFF / HEIC, a raw's embedded
+           preview, Apple's ProRAW rendering): a curve, not the 2^EV in channelGain (see
+           buildExposureCurve). Applied hue-preservingly right after channelGain.
+           expoLut maps sqrt(n), n the white-normalised value in [0, 1], to the curve's
+           white-normalised output; below 0 the curve is expoGain * n (its slope at
+           black), above 1 it is expoTop * n. expoActive == false => skip. */
+        static constexpr int kExpoLutSize = 1024;
+        bool  expoActive = false;
+        float expoGain = 1.0f;
+        float expoTop = 1.0f;
+        float expoLut[kExpoLutSize] = {};
+
         /* HSL (hue/saturation/luminance) -- a cross-channel point op applied AFTER the
            tone curve in the same fused pass (it mixes the three channels, so unlike the
            tone curve it cannot be a per-channel LUT). hueMat is a 3x3 rotation about the

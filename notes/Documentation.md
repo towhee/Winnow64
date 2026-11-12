@@ -376,6 +376,7 @@
       - [11.8.4.6 Calibration Record](#11846-calibration-record)
     - [11.8.5 The Calibration Loop](#1185-the-calibration-loop)
     - [11.8.6 Tests](#1186-tests)
+    - [11.8.7 Exposure on a Display-Referred File](#1187-exposure-on-a-display-referred-file)
   - [11.9 Panel Focus and Slider Arrow-Nudge](#119-panel-focus-and-slider-arrow-nudge)
   - [11.10 Develop Diagnostics](#1110-develop-diagnostics)
     - [11.10.1 Render Verification](#11101-render-verification)
@@ -1637,7 +1638,7 @@ Linux ships as one AppImage per architecture, `Winnow-<label>-x86_64.AppImage` a
 
 ### 2.14 Above/Below Sliders
 
-Preferences > User Interface > Controls > Above/Below sliders (G::sliderAboveBelow, settings key sliderAboveBelow, default off) switches every PropertyEditor slider row (Develop, Embellish, Preferences) between two layouts:
+Preferences > User Interface > Controls > Above/Below sliders (G::sliderAboveBelow, settings key sliderAboveBelow, default off) switches every PropertyEditor slider row (Develop, Embellish, Preferences) between two layouts. Develop can override it (below):
 
 ```
 off:  Name    ---------o--------  Value
@@ -1646,10 +1647,16 @@ on:   Name                        Value
 ```
 
 - PropertyDelegate::sizeHint gives an above/below slider row G::propertyRowHeight() + G::sliderBandHeight (set in WidgetCSS::styleGlobals). The caption is one elided line, not wrapped.
-- PropertyDelegate::updateEditorGeometry spans the SliderEditor from the caption's text left edge to the value cell's right edge. SliderEditor::applyLayout drops its QHBoxLayout and layoutStacked() places the value top right and the slider in the bottom band by hand.
+- PropertyDelegate::updateEditorGeometry spans the SliderEditor from the caption's text left edge to the value cell's right edge. SliderEditor::applyLayout drops its QHBoxLayout and layoutStacked() places the value top right and the slider in the bottom band by hand. The slider ends at the value TEXT's right edge, not the line edit's: SliderEditor::valueTextInset() measures the line edit's right-aligned text inset (style contents rect + text margins + Qt's fixed 2 px) and trims the slider by it, so the track does not overhang the number.
 - The editor masks itself (setMask) to the value and the slider band. Clicks on the caption fall through to the tree, so caption click (focus + flash) and double click (reset) still work, and the caption the delegate paints under the editor shows through.
 - The caption spans both columns, so the delegate draws it in both the caption and value passes, as it does for a header caption. The masked editor cannot paint its focus fill, so the delegate tints both cells instead (see [11.9 Panel Focus and Slider Arrow-Nudge](#119-panel-focus-and-slider-arrow-nudge)).
-- Changing the preference calls PropertyEditor::refreshSliderLayout on every PropertyEditor in the app. It re-lays each SliderEditor, re-measures the rows and re-places the editors. DevelopProperties re-fits its content height, and PanelEditor re-runs fitHeight with its last slack.
+- Changing the preference calls PropertyEditor::refreshAllSliderLayouts, which runs refreshSliderLayout on every PropertyEditor in the app. It re-lays each SliderEditor, re-measures the rows and re-places the editors. DevelopProperties re-fits its content height, and PanelEditor re-runs fitHeight with its last slack.
+
+Develop has its own override: "Above:below sliders" in the Scope header [:] menu (ScopeHeader::slidersAboveBelowToggled) and in the Develop dock context menu, next to Expand all / Collapse all / Solo mode. That group now also shows for a right-click on a gap in the dock (SectionOther). Both call DevelopProperties::setDevelopSlidersAboveBelow.
+
+- The layout is per tree: PropertyEditor::slidersAboveBelow(). A tree with isDevelopTree set (DevelopProperties, PanelEditor and so the Raw and Mask panels) uses PropertyEditor::developSlidersAboveBelow(); every other tree uses G::sliderAboveBelow. The delegate asks the view (option.widget, or its parent tree in sizeHint), and SliderEditor asks the PropertyEditor it is created under.
+- PropertyEditor::developSliderLayout: -1 = follow the preference (the default, until the menu item is first used), 0 = single line, 1 = above/below. Settings key Develop/sliderAboveBelow, absent = -1, read in MW::loadSettings so it is set before any Develop tree is built.
+- The menu tick shows the Develop sliders' current layout, whether inherited or set. Setting it re-lays only the Develop trees (refreshAllSliderLayouts(true)).
 
 ### 2.15 Investigations and Fixes
 
@@ -4800,7 +4807,8 @@ Stage  Operation            What it does
 2      White balance        linear channel scale (raw: camMul, from temp/tint)
 2b     Calibration          3x3 primary re-point (R/G/B hue + sat), in LINEAR light,
                             rows sum to 1 so neutrals are fixed (Calibrate panel)
-3      Exposure             linear gain 2^EV
+3      Exposure             linear gain 2^EV; on a display-referred file a roll-off
+                            curve instead (see [[Exposure on a Display-Referred File]])
 3b     Colour RGB           per-channel linear gain (red / green / blue), folded into 2
 4      Contrast             S-curve about mid-grey
 5      Highlights/Shadows,  region-weighted tone lifts; Whites/Blacks as endpoint
@@ -5033,7 +5041,10 @@ When the primaries matrix is the identity, the whole per-channel chain is 1-D an
 
 OutputTransform::HighlightRolloff is the last step before the transfer curve, in linear and in the OUTPUT primaries, the space the clip happens in. Any channel over 1.0 would otherwise be hard-clipped by Transfer's Clamp01, which made a brightened radial mask look banded: the mask core clipped flat, hiding the smootherstep falloff, which then re-appeared with a derivative kink (a Mach-band ring) where the channel dropped back under 1.0, with a hue swing as the channels clipped one at a time. Instead, the energy the peak channel loses to the clip is BLED into the other two, so an over-range colour desaturates smoothly toward white, the Lightroom behaviour (a green frame pushed past white gives \~(154,255,151) here vs Lightroom's \~(172,255,164), measured).
 
-Pixels at or below white are bit-exact, so unedited images and their exports are untouched; that is why this is a bleed and not a compressive shoulder (any soft knee below 1.0 would darken existing whites). It applies to raw and non-raw alike, in both ToImage and ToImage16.
+Pixels at or below white are bit-exact, so unedited images and their exports are untouched; that is why this is a bleed and not a compressive shoulder (any soft knee below 1.0 would darken existing whites). It applies to scene-referred data in both ToImage and ToImage16. Two exceptions take a different step:
+
+- iPhone ProRAW's embedded curve: GamutClip (pull a negative channel up toward the luminance's grey, then clip); see the IMG_1106 pumpkin halo note at GamutClip.
+- A DISPLAY-REFERRED image (JPEG / TIFF / HEIC, a raw's embedded preview, Apple's ProRAW rendering; OutputTransform ClipsGamut, the test Develop's exposure curve uses), since 2026-11-12: DisplayGamutClip, GamutClip's rule at both ends. The luminance (output primaries) is held and the colour pulled toward its grey only as far as keeps every channel within 0..1; a luminance at or over 1 is white. Its Exposure now tops out at white ([11.8.7](#1187-exposure-on-a-display-referred-file)), so a channel over 1 there is mostly a colour the output cannot show, not light, and the bleed washed it toward white (a pink dress at +1.75 EV: G 194 against Lightroom's 149). Against the Lightroom exposure exports, RMS levels whole frame / saturated pixels at +1 / +1.75 / +2 / +3 / +4: bleed 4.6/7.6 6.1/9.8 6.2/9.7 6.8/11.5 6.8/10.6; per-channel clip 2.4/2.8 3.6/3.8 3.7/3.9 2.9/3.3 3.3/3.1; DisplayGamutClip 2.3/2.4 3.5/3.4 3.7/3.6 3.3/4.3 4.0/4.8. A tie with the clip Lightroom does; chosen because it also takes brightness over range (Whites +, a white-balance push) to white continuously, without the clip's hue swing. In range it returns at once, so unedited files stay bit-exact. Test: tst_outputtransform::displayReferredOutOfGamutKeepsItsColour.
 
 ### 11.5 The WorkingImage Cache
 
@@ -5373,14 +5384,40 @@ Pixels Exposure pushes past white cannot be studied from any 8/16-bit export, si
 
 #### 11.8.6 Tests
 
-tst_toneregions (16 cases), including:
+tst_toneregions (17 cases), including:
 
 - highlightsPullsTheRegion: on a dark frame holding a bright pool of low-contrast checker, the checker keeps at least a level more contrast than under the per-pixel band (the same frame rendered as a crop of an unfilled local slot, which is the per-pixel fallback); a pool pixel 2 px inside the edge is pulled within a level of the pool's centre; dark background 3 px outside within a level of background far away. (Its v4 form demanded that a single-pixel 0.6 dot inside a 0.85 pool be pulled like the pool; a local Laplacian rightly treats that contrast as an edge, so that test pinned the guided filter's behaviour, not Lightroom's.)
 - highlightsAdaptsToTheFrame: the same ramp level takes at least twice the pull in a dark frame as in a bright one.
 - highlightsStatisticIsTheFrameNotTheCrop: a crop sharing the frame's sample renders within 1 level of the full frame; the control crop measuring itself differs, so the test can see the bug. It fills the LocalSample before cutting its crop, as cutDetailRoi does.
 - highlightsDoNotDragTheWhitePoint measures white in a flat white tail after the ramp.
 - highlightsDevelopsOnAPoolThread develops the local-Highlights path on the global pool (see [11.42.1 A Stack Overflow on a Pool Thread](#11421-a-stack-overflow-on-a-pool-thread)).
-- shadowsIsAGainNotAnOffset, highlightsRecoverAPushPastWhite, highlightsRecoveryDoesNotCompound, regionsDoNotSlideWithContrast.
+- shadowsIsAGainNotAnOffset, highlightsRecoverAPushPastWhite, highlightsRecoveryDoesNotCompound, regionsDoNotSlideWithContrast. The two recovery cases use a SCENE-REFERRED ramp: on a display-referred one Exposure no longer passes white (11.8.7).
+- exposureRollsOffADisplayReferredFile: see [11.8.7 Exposure on a Display-Referred File](#1187-exposure-on-a-display-referred-file).
+
+#### 11.8.7 Exposure on a Display-Referred File
+
+Added 2026-11-12. On a raw, Exposure is a 2^EV gain on scene-linear data and the view transform's shoulder rolls the push off. A JPEG / TIFF / HEIC has no view transform (its camera's curve is baked in; OutputTransform::EffectiveView forces None), so the same gain clipped everything above about sRGB 160 at +1.65 EV: the blown face in a side-by-side where Lightroom rolled it off.
+
+What Lightroom does, measured on ten Lightroom Classic 15.6 exports of one JPEG (~/Pictures/\_LRref/2019-11-02\_0001\_LR\_Exposure\*.tif, -2 to +4 EV, everything else 0; the 0 EV export is the source): it treats the file as if a filmic curve F had rendered it, undoes F, applies the gain and re-applies F, y = F(2^EV x F^-1(x)). F is Standard roll-off's own curve (OutputTransform::StandardRollOff, the FilmicTone of [11.2.2](#1122-the-filmic-fit-kbaselineexposure-and-the-toe)), UNFITTED. On neutral pixels that alone is within \~5 levels RMS at every EV. The curve is applied the RGBTone way (Adobe's hue-preserving curve: the max and min channels through it, the middle one kept at the same fraction between them).
+
+Whole-frame RMS in levels of 255 (Python model, output clipped), EV -2 / -1 / +0.5 / +1 / +1.75 / +2 / +3 / +4:
+
+```
+linear gain (before)          13.9 10.9  8.6 16.2 21.6 22.4 24.1 25.0
+F per channel                  8.1  6.0  5.2  8.5 12.7 13.8 17.1 18.9
+F, RGBTone in ProPhoto         4.0  2.5  1.3  2.4  3.8  3.9  3.2  3.5
+F, RGBTone in Rec.2020         3.9  2.5  1.4  2.4  3.6  3.7  2.9  3.3
+real pipeline, bleed           3.9  2.5  2.7  4.6  6.1  6.1  6.6  6.6
+real pipeline, DisplayGamutClip 3.7 2.5  1.4  2.3  3.4  3.6  3.0  3.5
+```
+
+- Rec.2020 is the working space, so the RGBTone runs on the pixels as they stand (no conversion).
+- The output stage: a saturated colour (the pink dress, source 204/27/94) lands outside sRGB after the push, and HighlightRolloff's bleed lifted its other channels toward white (G 194 against Lightroom's 149), where Lightroom clips. A display-referred image now takes DisplayGamutClip instead (see [11.4.4 Highlight Roll-off](#1144-highlight-roll-off)).
+- Properties of the form: 0 EV is the identity; white stays white and black stays black at any push; the slope at black is exactly 2^EV; and two moves compose, F(b F^-1(F(a F^-1 x))) = F(ab F^-1 x), so a mask's Exposure adds in stops on top of Global's, as on a raw.
+- Display-referred means !sceneReferred or decoderToneMapped, the test Auto tone uses: a raw's embedded preview (Preview mode) and Apple's ProRAW rendering take the curve too.
+- Code: develop.cpp buildExposureCurve (a 1024-entry table indexed by sqrt(n), built per render), exposeDisplayReferred (per pixel, right after the white balance / RGB gains), PointCoeffs::expoLut. The three statistics loops that mirror the point pass's front stages (the Highlights - band weight, its luminance bins, buildHiField) apply it too. Highlight recovery (Highlights - with a positive Exposure) is off on this path: nothing has been pushed past white.
+- No schema step: no value of the curve reproduces the old clip, so there is nothing to remap. DevelopRevision::kEdited 5 rebuilds previews of edited images (it covers the output change too).
+- Test: tst_toneregions::exposureRollsOffADisplayReferredFile pins +1 EV mid-grey (0.18 -> 0.406 linear) and 0.50 -> 0.762, -1 EV 0.90 -> 0.715, the endpoints at +3, monotonicity, fewer than half the plain gain's blown samples, and +1 then +1 == +2 within a level.
 
 ### 11.9 Panel Focus and Slider Arrow-Nudge
 

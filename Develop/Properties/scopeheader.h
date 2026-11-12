@@ -114,6 +114,7 @@ signals:
     void addScopeRequested();                    // [+] / menu: add a new scope
     void resetAllEditsRequested();               // menu: wipe every edit on this image
     void hideGlobalImageToggled(bool hide);      // menu: "Hide global image"
+    void slidersAboveBelowToggled(bool on);      // menu: "Above:below sliders"
     void addMaskRequested();                     // menu: add a mask tool to this scope
     void maskOverlayToggled();                   // show/hide the mask overlay
     void previewToggled(bool shown);             // show/ignore the whole scope

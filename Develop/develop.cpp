@@ -400,6 +400,94 @@ inline float linearToDisplay(float v)
     return v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
+/*
+    EXPOSURE ON A DISPLAY-REFERRED FILE (2026-11-12). On a raw, Exposure is a gain on
+    scene-linear data and the view transform's shoulder rolls the push off. A JPEG has
+    no view transform (its camera's curve is already baked in), so the same 2^EV clipped
+    everything above about sRGB 160 at +1.65 EV, the blown face of the report, where
+    Lightroom rolled it off.
+
+    WHAT LIGHTROOM DOES, measured on ten Lightroom Classic 15.6 exports of one JPEG,
+    Exposure -2 ... +4, everything else 0 (_LRref/2019-11-02_0001_LR_Exposure*.tif):
+    it treats the file as if a filmic curve F had rendered it. It undoes F, applies the
+    gain, and re-applies F:  y = F(2^EV * F^-1(x)).  F is Standard roll-off's own curve,
+    UNFITTED. On neutrals that alone is within ~5 levels RMS across all ten. The curve is
+    applied the RGBTone way (Adobe's hue-preserving curve: max and min through it, the
+    middle channel keeps its place between them). Whole frame, RMS in levels of 255 (a
+    Python model, output clipped), EV -2 / -1 / +0.5 / +1 / +1.75 / +2 / +3 / +4:
+
+        linear gain (before)          13.9 10.9  8.6 16.2 21.6 22.4 24.1 25.0
+        F per channel                  8.1  6.0  5.2  8.5 12.7 13.8 17.1 18.9
+        F, RGBTone in ProPhoto         4.0  2.5  1.3  2.4  3.8  3.9  3.2  3.5
+        F, RGBTone in Rec.2020         3.9  2.5  1.4  2.4  3.6  3.7  2.9  3.3
+
+    Rec.2020 is the working space, so it is used as it stands (no conversion). Through
+    the real pipeline (developrender): 3.7 2.5 1.4 2.3 3.4 3.6 3.0 3.5. That needed the
+    output stage to stop bleeding out-of-gamut colour toward white on these files (a pink
+    dress washed out; outputtransform.cpp, DisplayGamutClip): with the bleed the positive
+    pushes read 2.7 4.6 6.1 6.1 6.6 6.6.
+
+    Properties that follow from the form: 0 EV is the identity; white stays white for
+    any push and black stays black; the slope at black is exactly 2^EV, so deep shadows
+    still get the plain gain; and two moves compose (F(b F^-1(F(a F^-1 x))) =
+    F(ab F^-1 x)), so a mask's Exposure on top of Global's adds in stops, as on a raw.
+*/
+inline void buildExposureCurve(float ev, float *lut, int size)
+{
+    using F = OutputTransform;
+    const float gain = std::exp2(ev);
+    /* F^-1 by bisection; F reaches 1 at v = 2.318, so [0, 2.35] brackets every y. */
+    auto inverse = [](float y) {
+        float lo = 0.0f, hi = 2.35f;
+        for (int i = 0; i < 40; ++i) {
+            const float mid = 0.5f * (lo + hi);
+            (F::StandardRollOff(mid) < y ? lo : hi) = mid;
+        }
+        return 0.5f * (lo + hi);
+    };
+    const int last = size - 1;
+    for (int i = 0; i <= last; ++i) {
+        const float u = float(i) / last;
+        lut[i] = F::StandardRollOff(gain * inverse(u * u));
+    }
+}
+
+/* The curve at one white-normalised value (see PointCoeffs::expoLut). */
+inline float exposureCurveAt(const float *lut, int last, float gain, float top, float n)
+{
+    if (n <= 0.0f) return n * gain;
+    if (n >= 1.0f) return n * top;
+    const float f = std::sqrt(n) * last;
+    const int i = static_cast<int>(f);
+    return lut[i] + (lut[i + 1] - lut[i]) * (f - i);
+}
+
+/* Display-referred Exposure on one working-space pixel, in place: the brightest and
+   darkest channels through the curve, the middle one kept at the same fraction of the
+   way between them (RGBTone). In the working space (linear Rec.2020) as it stands. */
+inline void exposeDisplayReferred(float *v, const float *lut, int last, float gain,
+                                  float top, float white, float invWhite)
+{
+    float q[3] = {v[0] * invWhite, v[1] * invWhite, v[2] * invWhite};
+    int hi = 0, lo = 0;
+    for (int k = 1; k < 3; ++k) {
+        if (q[k] > q[hi]) hi = k;
+        if (q[k] < q[lo]) lo = k;
+    }
+    if (hi == lo) {                                  // neutral: all three equal
+        const float t = exposureCurveAt(lut, last, gain, top, q[0]) * white;
+        v[0] = v[1] = v[2] = t;
+        return;
+    }
+    const int mid = 3 - hi - lo;
+    const float a = q[lo], b = q[hi];
+    const float ta = exposureCurveAt(lut, last, gain, top, a);
+    const float tb = exposureCurveAt(lut, last, gain, top, b);
+    v[mid] = (ta + (tb - ta) * ((q[mid] - a) / (b - a))) * white;
+    v[lo] = ta * white;
+    v[hi] = tb * white;
+}
+
 /* One signed control -> its display-space shift at d. downAmp replaces down.amp: the
    negative direction's strength is resolved per frame (Highlights -, see the budget). */
 inline float toneOpShift(float amount, const ToneOp &up, const ToneOp &down,
@@ -482,8 +570,11 @@ inline void setHighlightRecovery(ToneShape &t, float exposure)
 }
 
 /* view is the transform this render will actually use (OutputTransform::Resolve against
-   the image) -- the tone shape is placed on ITS display axis. */
-inline ToneShape buildToneShape(const EditParams &p, OutputTransform::ViewTransform view)
+   the image) -- the tone shape is placed on ITS display axis. exposureCurve: Exposure is
+   the display-referred curve (buildExposureCurve), which never pushes anything past
+   white, so there is nothing for highlight recovery to do. */
+inline ToneShape buildToneShape(const EditParams &p, OutputTransform::ViewTransform view,
+                                bool exposureCurve = false)
 {
     ToneShape t;
     t.pivot = std::pow(0.18f, kInvGamma);
@@ -521,7 +612,7 @@ inline ToneShape buildToneShape(const EditParams &p, OutputTransform::ViewTransf
     t.view = view;
     t.active = (t.slope != 1.0f) || (t.bk != 0.0f) || (t.sh != 0.0f) ||
                (t.hi != 0.0f) || (t.wh != 0.0f);
-    setHighlightRecovery(t, p.exposure);
+    setHighlightRecovery(t, exposureCurve ? 0.0f : p.exposure);
     return t;
 }
 
@@ -1391,6 +1482,9 @@ std::shared_ptr<const Develop::HiField> Develop::buildHiField(const WorkingImage
                 v[2] = pm[6] * r + pm[7] * gg + pm[8] * b;
             }
             for (int k = 0; k < 3; ++k) v[k] *= g[k];
+            if (c.expoActive)
+                exposeDisplayReferred(v, c.expoLut, PointCoeffs::kExpoLutSize - 1, c.expoGain,
+                                      c.expoTop, c.white, invWhite);
             if (c.calActive) {
                 const float r = v[0], gg = v[1], b = v[2];
                 v[0] = cm[0] * r + cm[1] * gg + cm[2] * b;
@@ -1974,8 +2068,20 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
     const std::shared_ptr<PointCoeffs> coeffs = std::make_shared<PointCoeffs>();
     PointCoeffs &c = *coeffs;
 
-    /* Exposure: a scene-linear gain of 2^EV (a +1 EV slider doubles the linear value). */
-    const float exposureGain = (p.exposure != 0.0f) ? std::exp2(p.exposure) : 1.0f;
+    /* Exposure: a scene-linear gain of 2^EV (a +1 EV slider doubles the linear value).
+       Display-referred input takes the curve instead (see buildExposureCurve); the test
+       is the one Auto tone uses, a raw Apple has already tone-mapped counting as display-
+       referred. */
+    const bool exposureCurve = p.exposure != 0.0f &&
+                               (!img.sceneReferred || img.decoderToneMapped);
+    if (exposureCurve) {
+        buildExposureCurve(p.exposure, c.expoLut, PointCoeffs::kExpoLutSize);
+        c.expoGain = std::exp2(p.exposure);
+        c.expoTop = c.expoLut[PointCoeffs::kExpoLutSize - 1];
+        c.expoActive = true;
+    }
+    const float exposureGain = (p.exposure != 0.0f && !exposureCurve)
+                                   ? std::exp2(p.exposure) : 1.0f;
 
     /* White balance: per-channel scene-linear gains for the absolute (Kelvin, tint),
        taken RELATIVE to the as-shot rendering so an untouched image (p.temp == 0) is
@@ -2225,7 +2331,8 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
        frame's pixels sit on the display axis, which is those pixels through exactly
        that matrix (exposure, white balance, profile). */
     ToneShape shape = buildToneShape(
-        p, OutputTransform::Resolve(OutputTransform::ViewFromInt(p.viewTransform), img));
+        p, OutputTransform::Resolve(OutputTransform::ViewFromInt(p.viewTransform), img),
+        exposureCurve);
     constexpr int kLumBins = 2048;
     constexpr float kLumBinSMax = 4.0f;
     std::vector<long long> lumBins;    // Highlights -: frame luminance, for the anchor
@@ -2264,6 +2371,9 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
                         v[2] = pm[6] * r + pm[7] * gg + pm[8] * b;
                     }
                     for (int k = 0; k < 3; ++k) v[k] *= g[k];
+                    if (c.expoActive)
+                        exposeDisplayReferred(v, c.expoLut, PointCoeffs::kExpoLutSize - 1,
+                                              c.expoGain, c.expoTop, c.white, invWhite);
                     if (c.calActive) {
                         const float r = v[0], gg = v[1], b = v[2];
                         v[0] = cm[0] * r + cm[1] * gg + cm[2] * b;
@@ -2309,6 +2419,9 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
                         v[2] = pm[6] * r + pm[7] * gg + pm[8] * b;
                     }
                     for (int k = 0; k < 3; ++k) v[k] *= g[k];
+                    if (c.expoActive)
+                        exposeDisplayReferred(v, c.expoLut, PointCoeffs::kExpoLutSize - 1,
+                                              c.expoGain, c.expoTop, c.white, invWhite);
                     if (c.calActive) {
                         const float r = v[0], gg = v[1], b = v[2];
                         v[0] = cm[0] * r + cm[1] * gg + cm[2] * b;
@@ -2497,7 +2610,7 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
     c.active = (c.channelGain[0] != 1.0f) || (c.channelGain[1] != 1.0f) ||
                (c.channelGain[2] != 1.0f) || c.toneActive || c.calActive ||
                c.hslActive || c.gradeActive || c.pcActive || c.mixActive ||
-               c.preMatActive ||
+               c.preMatActive || c.expoActive ||
                c.calShadowTint != 0.0f;
     return coeffs;
 }
@@ -2540,6 +2653,12 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const bool doShTint = shTint != 0.0f;
     const bool doPre  = c.preMatActive;
     const bool doPreClamp = c.preMatClamps;
+    /* Display-referred Exposure (buildExposureCurve): a pointer to the table, never c
+       (see gPush below). */
+    const bool doExpo = c.expoActive;
+    const float *expoLut = c.expoLut;
+    const int expoLast = PointCoeffs::kExpoLutSize - 1;
+    const float expoGain = c.expoGain, expoTop = c.expoTop;
     const bool doHsl  = c.hslActive;
     const bool doGrade = c.gradeActive;
     const bool doPoint = c.pcActive;
@@ -2728,6 +2847,9 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                     px[0] = pr; px[1] = pg; px[2] = pb;
                 }
                 if (doGain) { px[0] *= g0; px[1] *= g1; px[2] *= g2; }
+                if (doExpo)
+                    exposeDisplayReferred(px, expoLut, expoLast, expoGain, expoTop, white,
+                                          invWhite);
                 if (doCal) {
                     /* Re-point the primaries in LINEAR light, before any tone shaping.
                        The matrix fixes the neutral axis, so greys pass through. */

@@ -109,6 +109,17 @@ public:
     /* G::sliderAboveBelow changed: re-lay every slider editor and re-measure the rows.
        Subclasses that size themselves to their rows re-fit after the base. */
     virtual void refreshSliderLayout();
+    /* refreshSliderLayout on every PropertyEditor in the app, or only the Develop ones. */
+    static void refreshAllSliderLayouts(bool developOnly = false);
+    /* SLIDER LAYOUT of this tree. A Develop tree (DevelopProperties and the PanelEditors:
+       Raw, Mask) uses the Develop-only override ("Above:below sliders" in the Scope
+       header and Develop context menus) once it has been set; every other tree, and
+       Develop until then, uses the preference G::sliderAboveBelow. Set isDevelopTree in
+       the subclass constructor, before any slider row is added. */
+    bool isDevelopTree = false;
+    static int developSliderLayout;     // -1 follow the preference, 0 single line, 1 above/below
+    static bool developSlidersAboveBelow();    // the Develop trees' effective layout
+    bool slidersAboveBelow() const;
 
 protected:
     void toggleBranch(const QModelIndex &capIdx);

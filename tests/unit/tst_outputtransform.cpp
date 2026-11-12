@@ -117,6 +117,7 @@ private slots:
     void displayReferredMatchesExactWithinOne();
     void blackAndWhiteAreExact();
     void overRangeSaturatesToWhite();
+    void displayReferredOutOfGamutKeepsItsColour();
     void wideGamutSplitPathMatchesExactWithinOne();
     void viewTransformNoneIsPassThrough();
     void filmicDomainCoversSaturation();
@@ -267,7 +268,8 @@ void TestOutputTransform::filmicDomainCoversSaturation()
     QCOMPARE(int(line[(vs.size() - 1) * 3]), 255);      // v = 100, far past the table
 }
 
-/* Display-referred over-range takes the exact rolloff branch, not the table. */
+/* Display-referred over-range takes the exact branch, not the table. Luminance over 1
+   can only be white (DisplayGamutClip; the bleed gave the same). */
 void TestOutputTransform::overRangeSaturatesToWhite()
 {
     WorkingImage img;
@@ -275,14 +277,59 @@ void TestOutputTransform::overRangeSaturatesToWhite()
     img.height = 1;
     img.white = 1.0f;
     img.sceneReferred = false;
-    img.rgb = { 0.5f, 2.0f, 0.25f };     // green over range: bleeds into red and blue
+    img.rgb = { 0.5f, 2.0f, 0.25f };     // green over range, luminance 1.55
     QImage out;
     OutputTransform t;
     QVERIFY(t.ToImage(img, out));
     const uchar *line = out.constScanLine(0);
-    QCOMPARE(int(line[1]), 255);                 // the over-range channel clips
-    QVERIFY(int(line[0]) == 255);                // and bleeds the excess into the others
+    QCOMPARE(int(line[1]), 255);
+    QVERIFY(int(line[0]) == 255);
     QVERIFY(int(line[2]) == 255);
+}
+
+/*
+    A display-referred colour OUTSIDE the output gamut but not over-bright keeps its colour
+    (DisplayGamutClip, 2026-11-12). The bleed lifted it toward white: Lightroom's export
+    of a pink dress pushed +1.75 EV reads G 149 where the bleed rendered 194. Luminance is
+    held and the colour pulled toward its grey only as far as fits, so the over-range
+    channel lands at 255, the others stay well below it, and the luminance is unchanged.
+*/
+void TestOutputTransform::displayReferredOutOfGamutKeepsItsColour()
+{
+    WorkingImage img;
+    img.width = 2;
+    img.height = 1;
+    img.white = 1.0f;
+    img.sceneReferred = false;
+    img.space = ColorSpaceMath::ColorSpace::LinearSRGB;   // output primaries = these
+    /* A hot pink (red over range, luminance 0.37) and a cyan with a negative red. */
+    img.rgb = { 1.3f, 0.06f, 0.45f,   -0.08f, 0.6f, 0.55f };
+    QImage out;
+    OutputTransform t;
+    QVERIFY(t.ToImage(img, out));
+    const uchar *line = out.constScanLine(0);
+    auto lin = [](int level) {
+        const float d = level / 255.0f;
+        return d <= 0.04045f ? d / 12.92f : std::pow((d + 0.055f) / 1.055f, 2.4f);
+    };
+    auto luma = [&](const uchar *p) {
+        return 0.2126f * lin(p[0]) + 0.7152f * lin(p[1]) + 0.0722f * lin(p[2]);
+    };
+    QCOMPARE(int(line[0]), 255);
+    QVERIFY2(line[1] < 140 && line[2] < 210,
+             qPrintable(QString("the pink washed out toward white: %1 %2 %3")
+                        .arg(line[0]).arg(line[1]).arg(line[2])));
+    const float yPink = 0.2126f * 1.3f + 0.7152f * 0.06f + 0.0722f * 0.45f;
+    QVERIFY2(std::abs(luma(line) - yPink) < 0.01f,
+             qPrintable(QString("pink luminance %1, was %2").arg(luma(line)).arg(yPink)));
+    const uchar *cyan = line + 3;
+    QCOMPARE(int(cyan[0]), 0);
+    QVERIFY2(cyan[1] > cyan[2] && cyan[2] > 150,
+             qPrintable(QString("the cyan lost its hue: %1 %2 %3")
+                        .arg(cyan[0]).arg(cyan[1]).arg(cyan[2])));
+    const float yCyan = 0.2126f * -0.08f + 0.7152f * 0.6f + 0.0722f * 0.55f;
+    QVERIFY2(std::abs(luma(cyan) - yCyan) < 0.01f,
+             qPrintable(QString("cyan luminance %1, was %2").arg(luma(cyan)).arg(yCyan)));
 }
 
 /*

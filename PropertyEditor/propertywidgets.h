@@ -117,12 +117,12 @@ public:
        The Develop sharpening-mask preview is gated on it: it shows only WHILE the slider
        is being worked, as Lightroom's Alt-drag does. */
     bool sliderIsDown() const;
-    /* Lay the editor out for G::sliderAboveBelow: the single-line Name ---o--- Value
-       (slider and value side by side in the value cell) or ABOVE/BELOW, where the
-       delegate spans the editor over the whole row and puts the value top right with
-       the slider full width beneath it. Called on construction and when the preference
-       changes (PropertyEditor::refreshSliderLayout). */
-    void applyLayout();
+    /* Lay the editor out as the single-line Name ---o--- Value (slider and value side
+       by side in the value cell) or, stackedLayout, ABOVE/BELOW, where the delegate
+       spans the editor over the whole row and puts the value top right with the slider
+       full width beneath it. Called on construction and when the tree's layout changes
+       (PropertyEditor::refreshSliderLayout / slidersAboveBelow). */
+    void applyLayout(bool stackedLayout);
     bool isStacked() const { return stacked; }
 
 protected:
@@ -143,6 +143,7 @@ private:
     void sliderMoved();
     void updateSliderWhenLineEdited();
     void layoutStacked();       // place value + slider by hand and mask the gap
+    int valueTextInset() const; // value box right edge -> right edge of its text
     bool stacked = false;
     int lineEditWidth;
     /* Log-scale mode (UR_LogScale): the slider's integer position is a point on a

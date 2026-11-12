@@ -515,9 +515,9 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "sliderAboveBelow") {
         G::sliderAboveBelow = v.toBool();
-        // every property tree: Preferences, Embellish and the Develop panels
-        for (QWidget *w : QApplication::allWidgets())
-            if (auto *pe = qobject_cast<PropertyEditor*>(w)) pe->refreshSliderLayout();
+        /* Every property tree: Preferences, Embellish and the Develop panels (which keep
+           their own layout if the Develop override has been set). */
+        PropertyEditor::refreshAllSliderLayouts();
     }
 
     if (source == "globalFontSize") {

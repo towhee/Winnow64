@@ -9,6 +9,7 @@
 PanelEditor::PanelEditor(QWidget *parent) : PropertyEditor(parent)
 {
     if (G::isLogger) G::log("PanelEditor::PanelEditor");
+    isDevelopTree = true;       // slider layout: the Develop override (before any row)
 
     /* Same chrome as the Develop tree so the rows render identically. */
     setIndentation(10);

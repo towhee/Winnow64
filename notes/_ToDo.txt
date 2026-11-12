@@ -14,9 +14,10 @@ WHAT'S NEW
 - Honor image aspect ratio precision, including cropping, when exporting.
 - Prevent table view scrolling to column zero when table sort
 - Slider optional above | below layout
+- Exposure rolloff for non-raw images
 
 BUGS / TO DO
-- Make TableView current columns visible persistent (when sort, )
+- Brush settings persistent (size, feather, flow, automask)
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (replay a series of steps)

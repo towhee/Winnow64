@@ -178,6 +178,12 @@ public:
     */
     static float PerceptualFromDisplay(float display, ViewTransform view, float maxPerceptual);
 
+    /* Standard roll-off's curve (Filmic): scene-linear in, display-linear 0..1 out. It
+       reaches white at v = 2.318. Develop also uses it as the curve a display-referred
+       file is treated as having been rendered through, which is what lets Exposure move
+       a JPEG the way Lightroom does (see buildExposureCurve in develop.cpp). */
+    static float StandardRollOff(float v);
+
     /* Scene-linear float -> 16-bit QImage (Format_RGBX64), for export. Same view
        transform, primaries and transfer function as ToImage, quantised to 16 bits
        instead of 8 -- one shared code path, so export cannot drift from the loupe. */

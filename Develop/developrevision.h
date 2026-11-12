@@ -34,11 +34,17 @@
                              white (the IMG_1106 pumpkin halo). dng rev 5.
       kEdited 4  2026-11-09  a DCP's ProfileToneCurve back to the 0.60 knee (kEdited 1
                              moved it to 0.80; only ProRAW's curve keeps 0.80).
+      kEdited 5  2026-11-12  Exposure on a display-referred file (JPEG / TIFF / HEIC) is
+                             a roll-off curve fitted to Lightroom, not 2^EV (develop.cpp,
+                             buildExposureCurve), and such a file's over-range output is
+                             DisplayGamutClip'd, not bled (outputtransform.cpp). No schema step: no value of
+                             the curve reproduces the old clip, so there is nothing to
+                             remap.
 */
 
 namespace DevelopRevision {
 
-constexpr int kEdited   = 4;
+constexpr int kEdited   = 5;
 constexpr int kIdentity = 0;
 
 /* The key part for a base key: identity renders carry the "R" prefix

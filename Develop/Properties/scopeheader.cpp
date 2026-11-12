@@ -1,6 +1,7 @@
 #include "Develop/Properties/scopeheader.h"
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
+#include "PropertyEditor/propertyeditor.h"   // developSlidersAboveBelow
 
 #include <QComboBox>
 #include <QLabel>
@@ -91,6 +92,10 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
 
     barLabel = new QLabel(tr("Scope"), scopeBar);
     barLabel->setStyleSheet(G::labelCss(G::header2Color, G::strFontSize.toInt()));
+    barLabel->setToolTip("A scope is the part of the image that the edits below apply to.\n"
+                         "Global covers the whole image; each mask is its own scope,\n"
+                         "with its own settings applied only where the mask covers.\n"
+                         "Click to hide or show the edits below.");
     /* The caption toggles too, as a band click does everywhere else in this dock. Only
        the caption: the rest of the bar is combo and buttons with their own jobs. */
     barLabel->setCursor(Qt::PointingHandCursor);
@@ -488,6 +493,16 @@ void ScopeHeader::showScopeMenu()
     aHide->setToolTip(tr("Show only what the masks cover; the rest is transparent"));
     connect(aHide, &QAction::triggered, this,
             [this](bool on){ emit hideGlobalImageToggled(on); });
+
+    /* The Develop-only slider layout override (also in the dock's context menu). Ticked
+       = the Develop sliders' current layout, whether set here or inherited from the
+       preference. Own connect, like "Hide global image". */
+    QAction *aAboveBelow = menu.addAction(tr("Above:below sliders"));
+    aAboveBelow->setCheckable(true);
+    aAboveBelow->setChecked(PropertyEditor::developSlidersAboveBelow());
+    aAboveBelow->setToolTip(tr("Develop sliders: name and value above a full-width slider"));
+    connect(aAboveBelow, &QAction::triggered, this,
+            [this](bool on){ emit slidersAboveBelowToggled(on); });
 
     /* Wipes the whole recipe (every scope, the geometry and the spots), the history and
        the sidecar record, on every selected image. DevelopProperties confirms first.

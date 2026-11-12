@@ -1,4 +1,5 @@
 #include "propertywidgets.h"
+#include "propertyeditor.h"     // PropertyEditor::slidersAboveBelow
 #include "Main/global.h"
 #include <cmath>
 #include <algorithm>
@@ -267,7 +268,16 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     // parented here so the above/below layout, which has no QLayout, still owns them
     slider->setParent(this);
     lineEdit->setParent(this);
-    applyLayout();
+    /* The layout is the owning tree's (Develop may override the preference). Created by
+       PropertyEditor::addItem with the tree as parent, or under its viewport. */
+    bool stackedLayout = G::sliderAboveBelow;
+    for (QWidget *w = parent; w; w = w->parentWidget()) {
+        if (auto *pe = qobject_cast<PropertyEditor*>(w)) {
+            stackedLayout = pe->slidersAboveBelow();
+            break;
+        }
+    }
+    applyLayout(stackedLayout);
 
     /* Route focus given to the editor container onto the slider, so clicking or tabbing
        into the row lets the arrow keys nudge the slider (and paints the focus cue). */
@@ -281,7 +291,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
     emit slider->valueChanged(sliderValue);
 }
 
-void SliderEditor::applyLayout()
+void SliderEditor::applyLayout(bool stackedLayout)
 {
 /*
     Single line: an HBox in the value cell, slider then value.
@@ -293,7 +303,7 @@ void SliderEditor::applyLayout()
     tree (caption click = focus + flash, double click = reset) and the caption painted
     under the editor shows.
 */
-    stacked = G::sliderAboveBelow;
+    stacked = stackedLayout;
     delete layout();                    // the children stay, parented to this
     if (stacked) {
         layoutStacked();
@@ -312,9 +322,34 @@ void SliderEditor::layoutStacked()
     const int top = qMax(0, height() - G::sliderBandHeight);
     const int lw = qMin(lineEditWidth, width() / 2);
     lineEdit->setGeometry(width() - G::propertyWidgetMarginRight - lw, 0, lw, top);
-    slider->setGeometry(0, top, qMax(0, width() - G::propertyWidgetMarginRight),
+    /* End the slider where the value's TEXT ends, not where its box ends: a QLineEdit
+       draws right-aligned text inset from its right edge, so a slider running to the
+       box edge overhangs the number. */
+    slider->setGeometry(0, top,
+                        qMax(0, width() - G::propertyWidgetMarginRight - valueTextInset()),
                         height() - top);
     setMask(QRegion(lineEdit->geometry()) + QRegion(slider->geometry()));
+}
+
+int SliderEditor::valueTextInset() const
+{
+/*
+    Gap between the value line edit's right edge and the right edge of its right-aligned
+    text: the style's contents rect (border, padding), the text margins, and Qt's fixed
+    2 px horizontal text margin (QLineEditPrivate::horizontalMargin, not exposed).
+*/
+    QStyleOptionFrame opt;
+    opt.initFrom(lineEdit);
+    opt.rect = lineEdit->rect();
+    opt.lineWidth = lineEdit->hasFrame()
+        ? lineEdit->style()->pixelMetric(QStyle::PM_DefaultFrameWidth, &opt, lineEdit) : 0;
+    opt.midLineWidth = 0;
+    opt.state |= QStyle::State_Sunken;
+    const QRect contents =
+        lineEdit->style()->subElementRect(QStyle::SE_LineEditContents, &opt, lineEdit);
+    const int qtHorizontalMargin = 2;
+    return qMax(0, opt.rect.right() - contents.right())
+           + lineEdit->textMargins().right() + qtHorizontalMargin;
 }
 
 void SliderEditor::resizeEvent(QResizeEvent *event)
