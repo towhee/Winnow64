@@ -111,6 +111,10 @@ protected:
     /* Every way the window closes -- Close, Esc, the title bar -- arrives here, so this
        is where pending edits are applied rather than lost. */
     void done(int r) override;
+    /* Re-fits the table once its header has its real, styled height. */
+    void showEvent(QShowEvent *event) override;
+    /* A width change re-wraps the labels, so the height is fitted again. */
+    void resizeEvent(QResizeEvent *event) override;
 
 private:
     /* A collapsible section's group box, styled as ExportDlg's; inner receives its

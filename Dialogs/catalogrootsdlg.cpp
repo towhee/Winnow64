@@ -6,6 +6,7 @@
 #include "Utilities/htmlwindow.h"
 
 #include <QComboBox>
+#include <QResizeEvent>
 #include <QDir>
 #include <QFileDialog>
 #include <QGroupBox>
@@ -189,6 +190,12 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     /* The only editable item state is the Include Subfolders check, so every itemChanged
        is a user toggling one -- the guard is populating, not the column. */
     connect(table, &QTableWidget::itemChanged, this, [this]{ noteEdit(); });
+
+    /* A row or the header settling to its styled size re-fits the table to it. */
+    connect(table->verticalHeader(), &QHeaderView::sectionResized, this,
+            [this]{ fitTableHeight(); });
+    connect(table->horizontalHeader(), &QHeaderView::geometriesChanged, this,
+            [this]{ fitTableHeight(); });
 
     connect(table, &QTableWidget::itemSelectionChanged, this, [this]{
         removeBtn->setEnabled(!scanning && !table->selectedItems().isEmpty());
@@ -374,11 +381,30 @@ void CatalogRootsDlg::fitTableHeight()
     const int n = table->rowCount();
     for (int r = 0; r < qMin(n, kMaxVisibleRows); ++r) rowsH += table->rowHeight(r);
     if (n == 0) rowsH = table->verticalHeader()->defaultSectionSize();
-    /* sizeHint, not height(): before the window is first shown the header has no
-       geometry yet and reports 0. */
-    table->setFixedHeight(table->horizontalHeader()->sizeHint().height() + rowsH
-                          + 2 * table->frameWidth());
+    /*  THE LARGER OF sizeHint AND height(). Before the window is first shown the header
+        has no geometry and height() is 0; once it is, the stylesheet's padding makes it
+        taller than its hint, and sizing to the hint clipped the last row. So this runs
+        again from showEvent and whenever a header resizes. */
+    QHeaderView *hh = table->horizontalHeader();
+    const int headerH = qMax(hh->sizeHint().height(), hh->isVisible() ? hh->height() : 0);
+    const int h = headerH + rowsH + 2 * table->frameWidth();
+    if (table->height() == h && table->minimumHeight() == h) return;
+    table->setFixedHeight(h);
     fitToContents();
+}
+
+void CatalogRootsDlg::showEvent(QShowEvent *event)
+{
+    QDialog::showEvent(event);
+    /* After this pass has laid the header out: see fitTableHeight. */
+    QTimer::singleShot(0, this, [this]{ fitTableHeight(); });
+}
+
+void CatalogRootsDlg::resizeEvent(QResizeEvent *event)
+{
+    QDialog::resizeEvent(event);
+    /* A new width re-wraps the labels: re-pin them (see fitToContents). */
+    if (event->oldSize().width() != event->size().width()) fitToContents();
 }
 
 void CatalogRootsDlg::fitToContents()
@@ -392,13 +418,26 @@ void CatalogRootsDlg::fitToContents()
     fitPending = true;
     QTimer::singleShot(0, this, [this]{
         fitPending = false;
+        /*  A WRAPPED LABEL IS PINNED TO ITS WRAPPED HEIGHT. A section box sizes itself
+            from its children's size hints, and a word-wrapped label's hint is its text
+            on ONE line -- so with the note on two lines the Scope section asked for 16
+            px too little, and the layout overlapped the note onto the table's last row
+            (measured: overlap 16, the table itself a constant 117 px). Growing the
+            window did not help, because the extra height went to the other section. */
+        for (QLabel *l : {noteLabel, pendingLabel, scanLabel}) {
+            if (l->isHidden() || l->width() <= 0) continue;
+            const int need = l->heightForWidth(l->width());
+            if (need > 0 && l->minimumHeight() != need) l->setMinimumHeight(need);
+        }
         layout()->activate();
         const int h = layout()->hasHeightForWidth()
                           ? layout()->totalHeightForWidth(width())
                           : layout()->totalSizeHint().height();
-        if (h > 0 && h != height()) resize(width(), h);
+        if (h <= 0) return;
+        if (h != height()) resize(width(), h);
     });
 }
+
 
 void CatalogRootsDlg::setRowCounts(const QVector<int> &counts)
 {

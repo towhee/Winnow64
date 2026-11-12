@@ -18,18 +18,9 @@ WHAT'S NEW
 - Persistent brush settings
 
 BUGS / TO DO
-- Add factory reset to preferences.  When G::isRory = true, add a 'Test factory settings'
-  that shows Winnow with factory settings, but permits change back to the prior settings.
-  Solo mode = true in preferences and develop
-  Font size = 14
-  Reopen as left = true
-  Remove chromatic aberration on raw files = true
-  Default raw renderer = Winnow
-  Full screen defaults = all false
 - Implement undo
 - Help > Report bugs / feedback
-- Add Actions (replay a series of steps)
-- Crop when 16x9, then level, lose 16x9
+- Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location
 - Thumb show if the preview is up-to-date and develop has been run
 - Rethink thumbnail badges
