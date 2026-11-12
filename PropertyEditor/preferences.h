@@ -19,6 +19,7 @@ public slots:
 private:
     ItemInfo i;
     void addItems();
+    QWidget *addSlider(ItemInfo &i);    // addItem with the Develop Exposure slider colours
     void addGeneral();
     void addModify();
     void addUserInterface();

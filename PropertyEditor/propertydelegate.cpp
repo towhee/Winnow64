@@ -201,7 +201,8 @@ QSize PropertyDelegate::sizeHint(const QStyleOptionViewItem &option, const QMode
     /* Above/below slider: a single-line caption over the slider band. The caption has the
        row's width (less the value), so it is elided rather than wrapped. */
     if (isStackedSlider(option.widget ? option.widget : parent(), index)) {
-        height += G::sliderBandHeight + capIndex.data(UR_ExtraRowHeight).toInt();
+        height += G::sliderTopGap() + G::sliderBandHeight
+                + capIndex.data(UR_ExtraRowHeight).toInt();
         return QSize(option.rect.width(), height);
     }
 
@@ -750,8 +751,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
             const int left = captionTextLeft(option.widget, capIndex);
             const int right = w0 + w1 - G::propertyWidgetMarginRight
                             - valSib.data(UR_FixedWidth).toInt() - 6;
-            QRect rc(left, r.y(), qMax(0, right - left),
-                     qMax(0, r.height() - G::sliderBandHeight));
+            const int gap = G::sliderTopGap();
+            QRect rc(left, r.y() + gap, qMax(0, right - left),
+                     qMax(0, r.height() - gap - G::sliderBandHeight));
             const QString cap = painter->fontMetrics().elidedText(
                 capIndex.data().toString(), Qt::ElideRight, rc.width());
             painter->drawText(rc, Qt::AlignVCenter|Qt::TextSingleLine, cap);

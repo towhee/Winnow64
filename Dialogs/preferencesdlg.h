@@ -22,6 +22,17 @@ public:
     // proportions stay constant when the global font size changes.
     void resizeForFontChange();
 
+    /* The reset buttons at the bottom: "Factory reset" (hidden while testing) on the
+       left; on the right "Test factory settings" for G::isRory, or "Restore my
+       settings" while a test runs.  Called by MW after creating the dialog and from
+       MW::rory. */
+    void syncResetButtons(bool testing);
+
+signals:
+    /* "reset", "test" or "restore": MW::requestSettingsReset (queued -- it may close
+       Winnow, which deletes this dialog). */
+    void resetSettingsRequested(QString step);
+
 public slots:
     void solo();
 
@@ -29,7 +40,10 @@ private:
     PropertyEditor *tree;
     void expand();
     void collapse();
-    QHBoxLayout* layout;
+    QVBoxLayout* layout;
+    QPushButton *factoryResetBtn;
+    QPushButton *testFactoryBtn;        // or "Restore my settings" while testing
+    bool isFactoryTest = false;
     QAction *expandAllAction;
     QAction *collapseAllAction;
     QAction *soloAction;

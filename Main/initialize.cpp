@@ -623,7 +623,11 @@ void MW::createCatalogScanner()
                     object torn down under it) is. The uncatalogable count only means
                     anything from a complete pass, which saw every folder. */
                 const CatalogScanStats st = catalogScanner->lastStats();
-                if (!aborted) catalogUncatalogable = st.zeroByte + st.collisions;
+                /* ...and only from a pass over the WHOLE scope: a scan of one appended
+                   folder counts that folder's twins, not the library's. */
+                if (!aborted && !catalogScanPartial)
+                    catalogUncatalogable = st.zeroByte + st.collisions;
+                catalogScanPartial = false;
                 catalogScanIncomplete = aborted && !catalogScanUserStopped;
                 catalogScanUserStopped = false;
                 if (settings) {
@@ -701,6 +705,16 @@ void MW::createCatalogScanner()
                            ", demoted = " + QString::number(demoted) +
                            ", unreadable = " + QString::number(unreadable) +
                            (aborted ? " (stopped early)" : ""));
+
+                /*  A SCOPE APPLIED WHILE THIS RAN (MW::applyCatalogScopeAndScan) is
+                    walked now. Stopping is the user saying "not now", so a stopped run
+                    drops it -- the catalog status line still says what is owed. */
+                if (catalogScanQueuedPending) {
+                    const CatalogScope queued = catalogScanQueued;
+                    catalogScanQueued.clear();
+                    catalogScanQueuedPending = false;
+                    if (!aborted) startCatalogScan(false, queued);
+                }
             }, Qt::QueuedConnection);
 
 }
@@ -721,35 +735,26 @@ void MW::createImageCache()
         setMaxMB(mb)
     */
 
-    ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore;  // default
-    // load settings
-    if (!isSettings || simulateJustInstalled) {
-        as = ImageCache::AutoStrategy::Moderate;
-        imageCache->setAutoMaxMB(true, as);
+    /* Factory settings (see MW::loadSettings): Auto Moderate.  A saved key replaces its
+       factory value; a missing one keeps it. */
+    bool isAuto = true;
+    QString strategy = "Moderate";
+    quint64 cacheMaxMB = 1024;
+    factorySetting(isAuto, "autoMaxMB", true, true);
+    factorySetting(strategy, "autoMaxMBStrategy", "Moderate", true);
+    factorySetting(cacheMaxMB, "cacheMaxMB", 1024, true);
+    if (isSettings && !simulateJustInstalled) {
+        isAuto = settings->value("autoMaxMB", isAuto).toBool();
+        strategy = settings->value("autoMaxMBStrategy", strategy).toString();
+        cacheMaxMB = settings->value("cacheMaxMB", cacheMaxMB).toULongLong();
     }
-    else {
-        bool isAuto = false;
-        if (settings->contains("autoMaxMB")) {
-            isAuto = settings->value("autoMaxMB").toBool();
-        }
 
-        if (settings->contains("autoMaxMBStrategy")) {
-            QString strategy = settings->value("autoMaxMBStrategy").toString();
-            if (strategy == "Frugal") as = ImageCache::AutoStrategy::Frugal;
-            if (strategy == "Moderate") as = ImageCache::AutoStrategy::Moderate;
-            if (strategy == "Greedy") as = ImageCache::AutoStrategy::Greedy;
-        }
-
-        quint64 cacheMaxMB = 1024; // default
-        if (settings->contains("cacheMaxMB")) {
-            cacheMaxMB = settings->value("cacheMaxMB").toULongLong();
-        }
-
-        imageCache->setAutoMaxMB(isAuto, as);
-        if (!isAuto) {
-            imageCache->setMaxMB(cacheMaxMB);
-        }
-    }
+    ImageCache::AutoStrategy as = ImageCache::AutoStrategy::Ignore;
+    if (strategy == "Frugal") as = ImageCache::AutoStrategy::Frugal;
+    if (strategy == "Moderate") as = ImageCache::AutoStrategy::Moderate;
+    if (strategy == "Greedy") as = ImageCache::AutoStrategy::Greedy;
+    imageCache->setAutoMaxMB(isAuto, as);
+    if (!isAuto) imageCache->setMaxMB(cacheMaxMB);
 
     connect(&imageCacheThread, &QThread::finished,
             imageCache, &QObject::deleteLater);
@@ -850,7 +855,15 @@ void MW::createThumbView()
     // thumbView->setSpacing(0);                // thumbView not visible without this
     thumbView->setAutoScroll(false);
     thumbView->firstVisibleCell = 0;
-    thumbView->showZoomFrame = true;            // may have settings but not showZoomFrame yet
+    /* Factory settings (see MW::loadSettings).  showZoomFrame and labelChoice are applied
+       even with settings, which may not have them yet. */
+    const bool isNew = !isSettings;
+    factorySetting(thumbView->showZoomFrame, "showZoomFrame", true, true);
+    factorySetting(thumbView->labelChoice, "labelChoice", "File name", true);
+    factorySetting(thumbView->iconWidth, "thumbWidth", 100, isNew);
+    factorySetting(thumbView->iconHeight, "thumbHeight", 100, isNew);
+    factorySetting(thumbView->labelFontSize, "labelFontSize", 12, isNew);
+    factorySetting(thumbView->showIconLabels, "showThumbLabels", false, isNew);
 
     if (isSettings) {
         // loadSettings has not run yet (dependencies, but QSettings has been opened
@@ -864,13 +877,9 @@ void MW::createThumbView()
         if (settings->contains("iconNumberSize")) thumbView->iconNumberSize = settings->value("iconNumberSize").toInt();
     }
     else {
-        thumbView->iconWidth = 100;
-        thumbView->iconHeight = 100;
-        thumbView->labelFontSize = 12;
-        thumbView->showIconLabels = false;
-        thumbView->showZoomFrame = true;
-        thumbView->badgeSize = 13;
-        thumbView->iconNumberSize = 24;
+        // factory values from MW::loadSettings
+        thumbView->badgeSize = classificationBadgeSizeFactor;
+        thumbView->iconNumberSize = iconNumberSize;
     }
 
     /* assignedIconWidth is the reference width persisted by snapshotWorkspace and reapplied
@@ -915,6 +924,14 @@ void MW::createGridView()
     gridView->setAutoScroll(false);
     gridView->firstVisibleCell = 0;
 
+    // factory settings (see MW::loadSettings and createThumbView)
+    const bool isNew = !isSettings;
+    gridView->labelChoice = thumbView->labelChoice;     // one key for both
+    factorySetting(gridView->iconWidth, "thumbWidthGrid", 200, isNew);
+    factorySetting(gridView->iconHeight, "thumbHeightGrid", 200, isNew);
+    factorySetting(gridView->labelFontSize, "labelFontSizeGrid", 10, isNew);
+    factorySetting(gridView->showIconLabels, "showThumbLabelsGrid", true, isNew);
+
     if (isSettings) {
         if (settings->contains("thumbWidthGrid")) gridView->iconWidth = settings->value("thumbWidthGrid").toInt();
         if (settings->contains("thumbHeightGrid")) gridView->iconHeight = settings->value("thumbHeightGrid").toInt();
@@ -925,10 +942,7 @@ void MW::createGridView()
         if (settings->contains("iconNumberSize")) gridView->iconNumberSize = settings->value("iconNumberSize").toInt();
     }
     else {
-        gridView->iconWidth = 200;
-        gridView->iconHeight = 200;
-        gridView->labelFontSize = 10;
-        gridView->showIconLabels = true;
+        // factory values from MW::loadSettings
         gridView->badgeSize = classificationBadgeSizeFactor;
         gridView->iconNumberSize = iconNumberSize;
     }
@@ -1107,6 +1121,9 @@ void MW::createImageView()
                               settings->value("classificationBadgeInImageDiameter").toInt(),
                               settings->value("infoOverlayFontSize").toInt());
 
+    // factory setting (see MW::loadSettings)
+    factorySetting(imageView->limitFit100Pct, "limitFit100Pct", true, !isSettings);
+
     if (isSettings) {
         if (settings->contains("limitFit100Pct")) imageView->limitFit100Pct = settings->value("limitFit100Pct").toBool();
         if (settings->contains("infoOverlayFontSize")) imageView->infoOverlayFontSize = settings->value("infoOverlayFontSize").toInt();
@@ -1117,7 +1134,6 @@ void MW::createImageView()
         imageView->toggleZoom = tempZoom;
     }
     else {
-        imageView->limitFit100Pct = true;
         imageView->toggleZoom = 1.0;
         imageView->infoOverlayFontSize = infoOverlayFontSize;   // defined in loadSettings
     }
@@ -2977,8 +2993,25 @@ void MW::createDevelopDock()
         developScopesLayout > ScopesView::VectorscopeOnly)
         developScopesLayout = ScopesView::Both;
     G::autoRunDenoise = settings->value("Develop/autoRunDenoise", true).toBool();
-    G::autoRemoveCA = settings->value("Develop/autoRemoveCA", false).toBool();
-    G::autoLensProfile = settings->value("Develop/autoLensProfile", false).toBool();
+    // factory settings (see MW::loadSettings); a missing key keeps the factory value
+    factorySetting(G::autoRemoveCA, "Develop/autoRemoveCA", false, true);
+    factorySetting(G::autoLensProfile, "Develop/autoLensProfile", false, true);
+    G::autoRemoveCA = settings->value("Develop/autoRemoveCA", G::autoRemoveCA).toBool();
+    G::autoLensProfile =
+        settings->value("Develop/autoLensProfile", G::autoLensProfile).toBool();
+    /* The remembered "Denoise raw" amounts.  Factory settings (see MW::loadSettings) for
+       a NEW user, written at once: an existing user without the key keeps the legacy
+       EditParams::kDefaultDenoise* amounts instead, because every image they never
+       adjusted renders with them (EditParams::denoiseLuma), and those amounts are also
+       the baseline the devPreview key omits (denoiseAmountsKeyPart). */
+    const bool isNewDenoise = !isSettings || simulateJustInstalled;
+    factorySetting(G::denoiseLumaDefault, "Develop/denoiseLumaDefault", 1.0f, isNewDenoise);
+    factorySetting(G::denoiseChromaDefault, "Develop/denoiseChromaDefault", 1.0f,
+                   isNewDenoise);
+    if (isNewDenoise) {
+        settings->setValue("Develop/denoiseLumaDefault", G::denoiseLumaDefault);
+        settings->setValue("Develop/denoiseChromaDefault", G::denoiseChromaDefault);
+    }
     G::denoiseLumaDefault = qBound(0.0f, settings->value("Develop/denoiseLumaDefault",
                                    EditParams::kDefaultDenoiseLuma).toFloat(), 1.0f);
     G::denoiseChromaDefault = qBound(0.0f, settings->value("Develop/denoiseChromaDefault",

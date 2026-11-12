@@ -27,8 +27,15 @@ wins, wherever it sits in the table.</p>
 <p><span class="highlight">Append</span> adds a folder at the bottom of the table, and
 <span class="highlight">Remove</span> deletes the selected rows.</p>
 
-<p><span class="warn">Removing a row removes its images from the catalog.</span> The image
-files themselves are not affected.</p>
+<p>Changing the table does nothing straight away, so you can make several changes in a
+row. A highlighted line under the table says that there are changes waiting.</p>
+
+<p>When you have finished editing, press <span class="highlight">Scan</span> to apply
+the changes. Closing the window applies them too.</p>
+
+<p><span class="warn">Removing a row removes its images from the catalog</span> when the
+changes are applied, and you are asked to confirm first. The image files themselves are
+not affected.</p>
 
 <p>The table cannot be changed while a scan is running.</p>
 
@@ -48,6 +55,10 @@ lists the images behind the difference. It is also in
 <p><span class="highlight">Scan</span> starts a background scan, and becomes
 <span class="highlight">Stop</span> while one runs. Its progress shows here and on the
 status bar.</p>
+
+<p>After you change the table, Scan scans only the folders you added, so a new folder
+does not wait for the rest of the catalog to be rechecked. With no changes waiting,
+Scan rechecks the whole catalog.</p>
 
 <p>You can close this window during a scan: it continues in the background, and resumes
 at the next launch if Winnow quits first.</p>

@@ -399,7 +399,8 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     }
     gridView->labelFontSize = w.labelFontSizeGrid;
     gridView->showIconLabels = w.showThumbLabelsGrid;
-    gridView->labelChoice = w.labelChoice;
+    /* A workspace saved without one (shipped layouts, older builds) keeps the current. */
+    if (!w.labelChoice.isEmpty()) gridView->labelChoice = w.labelChoice;
     gridView->rejustify();
     gridView->setThumbParameters();
     // ImageView: see the Info overlay note above -- w.isImageInfoVisible is not applied.

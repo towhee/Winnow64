@@ -18,10 +18,14 @@ WHAT'S NEW
 - Persistent brush settings
 
 BUGS / TO DO
-- Slightly more spaccing when above:below sliders
-- Brush settings persistent (size, feather, flow, automask)
 - Add factory reset to preferences.  When G::isRory = true, add a 'Test factory settings'
   that shows Winnow with factory settings, but permits change back to the prior settings.
+  Solo mode = true in preferences and develop
+  Font size = 14
+  Reopen as left = true
+  Remove chromatic aberration on raw files = true
+  Default raw renderer = Winnow
+  Full screen defaults = all false
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (replay a series of steps)

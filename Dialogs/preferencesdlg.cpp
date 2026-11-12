@@ -49,9 +49,42 @@ PreferencesDlg::PreferencesDlg(QWidget *parent,
     tree->setStyleSheet(css);
     tree->setHeaderHidden(true);
 
-    layout = new QHBoxLayout(this);
+    /* Reset buttons along the bottom, flat text on the dialog background so they read
+       as quiet commands, not as part of the settings above.  See MW::requestSettingsReset. */
+    const QString flatBtnStyle =
+        "QPushButton {background: transparent; border: none; padding: 0px; min-width: 0;"
+            "color: " + G::secondaryTextColor.name() + ";}"
+        "QPushButton:hover {color: " + G::textColor.name() + ";}";
+    factoryResetBtn = new QPushButton("Factory reset", this);
+    factoryResetBtn->setStyleSheet(flatBtnStyle);
+    factoryResetBtn->setCursor(Qt::PointingHandCursor);
+    factoryResetBtn->setToolTip(
+        "Return every preference, workspace, panel layout and shortcut to the\n"
+        "settings a new installation starts with, and restart Winnow.\n"
+        "Keywords, develop presets, places, the catalog and caches are kept.");
+    connect(factoryResetBtn, &QPushButton::clicked, this, [this]() {
+        emit resetSettingsRequested("reset");
+    });
+
+    testFactoryBtn = new QPushButton("Test factory settings", this);
+    testFactoryBtn->setStyleSheet(flatBtnStyle);
+    testFactoryBtn->setCursor(Qt::PointingHandCursor);
+    connect(testFactoryBtn, &QPushButton::clicked, this, [this]() {
+        emit resetSettingsRequested(isFactoryTest ? "restore" : "test");
+    });
+
+    QHBoxLayout *btnLayout = new QHBoxLayout;
+    btnLayout->setContentsMargins(12,8,12,10);
+    btnLayout->addWidget(factoryResetBtn);
+    btnLayout->addStretch();
+    btnLayout->addWidget(testFactoryBtn);
+
+    layout = new QVBoxLayout(this);
     layout->addWidget(pref);
+    layout->addLayout(btnLayout);
     layout->setContentsMargins(0,0,0,0);
+    layout->setSpacing(0);
+    syncResetButtons(false);
 
     expandAllAction = new QAction(tr("Expand all"), this);
     expandAllAction->setShortcutVisibleInContextMenu(true);
@@ -126,6 +159,26 @@ void PreferencesDlg::resizeForFontChange()
     if (p.x() < avail.left()) p.setX(avail.left());
     if (p.y() < avail.top())  p.setY(avail.top());
     if (p != pos()) move(p);
+}
+
+void PreferencesDlg::syncResetButtons(bool testing)
+{
+    isFactoryTest = testing;
+    factoryResetBtn->setVisible(!testing);
+    if (testing) {
+        testFactoryBtn->setText("Restore my settings");
+        testFactoryBtn->setToolTip("End the factory settings test: restart Winnow with the\n"
+                                   "settings it had before the test.  Changes made while\n"
+                                   "testing are discarded.");
+    }
+    else {
+        testFactoryBtn->setText("Test factory settings");
+        testFactoryBtn->setToolTip("Restart Winnow with the settings a new user sees.  Your\n"
+                                   "own settings are set aside; \"Restore my settings\"\n"
+                                   "brings them back exactly as they are now.");
+    }
+    /* G::isRory is not a setting, so it is off during a test: Restore always shows. */
+    testFactoryBtn->setVisible(testing || G::isRory);
 }
 
 void PreferencesDlg::expand()

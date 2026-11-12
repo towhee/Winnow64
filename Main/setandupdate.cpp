@@ -680,6 +680,8 @@ void MW::setScope(G::Scope s, QString src)
         if (isLibrary)
             for (const CatalogScopeEntry &e : catalogScopeEffective(true)) anchors << e.path;
         filters->setFolderAnchors(anchors);
+        /* ...under the drive each is on: a library spans drives, a folder does not. */
+        filters->setFolderDrives(isLibrary);
     }
     if (!isLibrary) pendingLibraryFolderFilter = PendingFolderFilter();
     /*  Entering the Library re-reads its folders: a file moved or a folder renamed since

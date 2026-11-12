@@ -9,6 +9,7 @@
 #include "Utilities/htmlwindow.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
+#include <QStorageInfo>
 #include <QStyleFactory>
 #include <functional>
 
@@ -529,6 +530,7 @@ QTreeWidgetItem *Filters::categoryOf(const QTreeWidgetItem *item) const
 bool Filters::isFilterItem(const QTreeWidgetItem *item) const
 {
     if (item == nullptr || isGroupHeader(item) || isCategoryHeader(item)) return false;
+    if (isDriveItem(item)) return false;            // see toggleDriveFilter
     return categoryOf(item) != nullptr;
 }
 
@@ -3580,6 +3582,62 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
     const QVector<FolderTree::Node> nodes =
         FolderTree::hierarchy(folderCounts.keys(), folderAnchors);
 
+    /*  DRIVES ABOVE THE ANCHORS (setFolderDrives). Each top-level node is filed under
+        the drive its path names, except one that IS a drive's root -- a whole drive
+        catalogued -- which is the drive's row already and gets no second level. Drive
+        rows are found again by root on a second call, as the folders are by path. */
+    QHash<QString, QTreeWidgetItem *> driveByRoot;
+    QHash<QString, QString> driveOf;                        // anchor path -> root
+    QSet<QTreeWidgetItem *> created;
+    QList<QTreeWidgetItem *> attachOrder;               // attached parents, first seen
+    QHash<QTreeWidgetItem *, QList<QTreeWidgetItem *>> pending;
+    if (folderDrives) {
+        for (int i = 0; i < category->childCount(); ++i) {
+            QTreeWidgetItem *d = category->child(i);
+            if (isDriveItem(d)) driveByRoot.insert(d->data(0, DriveRole).toString(), d);
+        }
+        QSet<QString> rootSet;
+        for (const FolderTree::Node &n : nodes) {
+            if (!n.parent.isEmpty()) continue;
+            const QString root = FolderTree::volumeRootOf(n.path);
+            if (root.isEmpty() || root == n.path) continue;
+            driveOf.insert(n.path, root);
+            rootSet.insert(root);
+        }
+        /* The boot drive first, then the others by name. */
+        QStringList roots(rootSet.begin(), rootSet.end());
+        QHash<QString, QString> labels;
+        for (const QString &r : roots) labels.insert(r, driveLabel(r));
+        QCollator collator;
+        collator.setNumericMode(true);
+        collator.setCaseSensitivity(Qt::CaseInsensitive);
+        std::sort(roots.begin(), roots.end(), [&](const QString &a, const QString &b) {
+            if ((a == "/") != (b == "/")) return a == "/";
+            return collator.compare(labels.value(a), labels.value(b)) < 0;
+        });
+        for (const QString &root : roots) {
+            QTreeWidgetItem *d = driveByRoot.value(root);
+            if (!d) {
+                d = new QTreeWidgetItem();
+                if (!pending.contains(category)) attachOrder << category;
+                pending[category] << d;
+                created.insert(d);
+                driveByRoot.insert(root, d);
+                d->setText(0, labels.value(root));
+                d->setData(0, DriveRole, root);
+                d->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+                d->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+                applyItemStyle(d);
+            }
+            const QStorageInfo si(root);
+            const bool mounted = si.isValid() && si.isReady();
+            d->setToolTip(0, QString("%1%2\n\nClick to include every folder on this "
+                                     "drive. Opt+click to exclude them.")
+                                 .arg(QDir::toNativeSeparators(root),
+                                      mounted ? "" : "  (not mounted)"));
+        }
+    }
+
     /*  BUILT DETACHED, ATTACHED ONCE PER PARENT. Created attached, every node cost an
         insertChild (begin/endInsertRows) and each of its setters a dataChanged through
         the tree model -- ~50,000 signals for the 8,400 folders of a 148,567-image
@@ -3589,14 +3647,12 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
         kept node) are collected and handed to that parent in one addChildren. Order is
         unchanged: nodes arrive parent first with siblings in order, and addChildren
         appends in list order. */
-    QSet<QTreeWidgetItem *> created;
-    QList<QTreeWidgetItem *> attachOrder;               // attached parents, first seen
-    QHash<QTreeWidgetItem *, QList<QTreeWidgetItem *>> pending;
     for (const FolderTree::Node &n : nodes) {
         if (G::stop) break;                                 // attach what was built
         if (byPath.contains(n.path)) continue;
         QTreeWidgetItem *parent = n.parent.isEmpty()
-                                      ? category : byPath.value(n.parent, category);
+                                      ? driveByRoot.value(driveOf.value(n.path), category)
+                                      : byPath.value(n.parent, category);
         const bool parentIsNew = created.contains(parent);
         QTreeWidgetItem *node = parentIsNew ? new QTreeWidgetItem(parent)
                                             : new QTreeWidgetItem();
@@ -3605,7 +3661,10 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
             pending[parent] << node;
         }
         created.insert(node);
-        node->setText(0, n.label);
+        /* A whole drive catalogued is the drive's row: named as the drive is. */
+        const bool isDrive = folderDrives && n.parent.isEmpty()
+                             && FolderTree::volumeRootOf(n.path) == n.path;
+        node->setText(0, isDrive ? driveLabel(n.path) : n.label);
         node->setData(1, Qt::EditRole, n.path);
         node->setCheckState(0, Qt::Unchecked);
         const int count = totals.value(n.path, 0);
@@ -3623,6 +3682,39 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
         byPath.insert(n.path, node);
     }
     for (QTreeWidgetItem *parent : attachOrder) parent->addChildren(pending.value(parent));
+    /*  A drive counts what its folders do -- summed once they are all attached, so a
+        second call does not add its folders on top of the first's. Open, so the folders
+        (the rows that filter) are what the category shows. */
+    for (QTreeWidgetItem *d : std::as_const(driveByRoot)) {
+        int count = 0;
+        for (int i = 0; i < d->childCount(); ++i)
+            count += d->child(i)->data(3, Qt::EditRole).toInt();
+        d->setData(2, Qt::EditRole, count);
+        d->setData(3, Qt::EditRole, count);
+        d->setExpanded(true);
+    }
+}
+
+QString Filters::driveLabel(const QString &root) const
+{
+/*
+    What the drive calls itself ("Macintosh HD", "Yukon"), when it is mounted and says;
+    otherwise the last part of its root, which for an ejected /Volumes/Yukon is the same
+    name. Windows adds the letter, as Explorer does: "Photos (D:)".
+*/
+    const QStorageInfo si(root);
+    QString name;
+    if (si.isValid() && si.isReady()) name = si.displayName();
+#if defined(Q_OS_WIN)
+    if (root.size() == 3 && root.at(1) == ':') {
+        const QString letter = root.left(2);
+        return name.isEmpty() || name == letter || name == root
+                   ? letter : QString("%1 (%2)").arg(name, letter);
+    }
+#endif
+    if (name.isEmpty() || name == root) name = FolderTree::leafOf(root);
+    if (name == "/") name = "System drive";        // a root with no volume name (Linux)
+    return name;
 }
 
 void Filters::folderFilterState(QStringList &includes, QStringList &excludes) const
@@ -3684,6 +3776,42 @@ bool Filters::setFolderFilter(const QStringList &includes, const QStringList &ex
         emit filterChange("Filters::setFolderFilter");
     }
     return true;
+}
+
+void Filters::toggleDriveFilter(QTreeWidgetItem *drive, bool exclude)
+{
+/*
+    NOT A FILTER ON THE DRIVE'S ROOT. The boot drive's root is "/", which is in the
+    ancestry of EVERY path -- "/Volumes/Yukon/..." included -- so including "/" would
+    include every drive. The drive's folders are what is on it, and the catalog holds
+    nothing on a drive outside them, so they are the exact filter.
+
+    A TOGGLE: when every folder on the drive is already in that state the click clears
+    them, the way a click on a checked folder clears it.
+*/
+    if (G::isLogger) G::log("Filters::toggleDriveFilter");
+    if (!isDriveItem(drive)) return;
+    QStringList inc, exc;
+    folderFilterState(inc, exc);
+    QStringList mine;
+    for (int i = 0; i < drive->childCount(); ++i) {
+        const QString p = drive->child(i)->data(1, Qt::EditRole).toString();
+        if (!p.isEmpty()) mine << p;
+    }
+    if (mine.isEmpty()) return;
+    QStringList &target = exclude ? exc : inc;
+    bool all = true;
+    for (const QString &p : mine) if (!target.contains(p)) { all = false; break; }
+    /* Anything beneath the drive is cleared first, not just its folders, so the drive
+       ends in the one state the click asked for rather than a mix. */
+    auto onDrive = [&mine](const QString &p) {
+        for (const QString &m : mine) if (FolderTree::isAtOrUnder(p, m)) return true;
+        return false;
+    };
+    inc.erase(std::remove_if(inc.begin(), inc.end(), onDrive), inc.end());
+    exc.erase(std::remove_if(exc.begin(), exc.end(), onDrive), exc.end());
+    if (!all) target << mine;
+    setFolderFilter(inc, exc);
 }
 
 void Filters::updateFolderItems(const QMap<QString, int> &folderCounts,
@@ -3955,6 +4083,9 @@ QList<QTreeWidgetItem *> Filters::itemsInCategory(QTreeWidgetItem *category) con
     "for i < category->childCount()". The Keywords category is nested now, so each of
     those loops would have seen only the roots -- counts on branches, nothing on leaves,
     and no error anywhere. This is the one place that knows how deep a category goes.
+
+    A DRIVE ROW IS WALKED THROUGH, NOT RETURNED: it has no value, so every loop here
+    (queries, counts, save, restore) would otherwise have to learn to skip it.
 */
     QList<QTreeWidgetItem *> out;
     if (!category) return out;
@@ -3962,7 +4093,7 @@ QList<QTreeWidgetItem *> Filters::itemsInCategory(QTreeWidgetItem *category) con
     std::function<void(QTreeWidgetItem *)> walk = [&](QTreeWidgetItem *parent) {
         for (int i = 0; i < parent->childCount(); ++i) {
             QTreeWidgetItem *child = parent->child(i);
-            out << child;
+            if (!isDriveItem(child)) out << child;
             if (child->childCount()) walk(child);
         }
     };
@@ -4896,6 +5027,14 @@ void Filters::mousePressEvent(QMouseEvent *event)
              << "isValid =" << isValid
                 ; //*/
     bool isCtrlModifier = event->modifiers() & Qt::ControlModifier;
+
+    /*  A DRIVE ROW filters through its folders: it has no checkbox and no value. */
+    if (isLeftBtn && isDriveItem(item)
+        && (categoriesFrom == FromCatalog || (G::allMetadataAttempted && !buildingFilters))) {
+        toggleDriveFilter(item, event->modifiers() & Qt::AltModifier);
+        swallowNextRelease = true;
+        return;
+    }
 
     /* Opt+click EXCLUDES, and a plain click on something already excluded clears it.
        Both are handled here, BEFORE the base class runs, because the base class would

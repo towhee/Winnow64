@@ -8,6 +8,7 @@
 - [2 Application and UI Structure](#2-application-and-ui-structure)
   - [2.1 Settings and Startup](#21-settings-and-startup)
     - [2.1.1 Startup Sequence](#211-startup-sequence)
+    - [2.1.2 Factory Reset and Test Factory Settings](#212-factory-reset-and-test-factory-settings)
   - [2.2 The UI Model (Source x Workflow x View)](#22-the-ui-model-source-x-workflow-x-view)
     - [2.2.1 Source](#221-source)
     - [2.2.2 Workflow](#222-workflow)
@@ -81,6 +82,7 @@
   - [3.4 Go to Folder (Path Entry)](#34-go-to-folder-path-entry)
     - [3.4.1 In the Library, Opening a Folder Filters](#341-in-the-library-opening-a-folder-filters)
     - [3.4.2 In the Library, Drop Thumbnails on a Folder to Move Them](#342-in-the-library-drop-thumbnails-on-a-folder-to-move-them)
+    - [3.4.3 In the Library, Folders Start at the Drive](#343-in-the-library-folders-start-at-the-drive)
   - [3.5 Picks Are Saved as They Are Made](#35-picks-are-saved-as-they-are-made)
     - [3.5.1 Write-Through](#351-write-through)
     - [3.5.2 Restoring Picks When Rows Load](#352-restoring-picks-when-rows-load)
@@ -820,6 +822,7 @@
     - [17.15.4 The Background Scanner](#17154-the-background-scanner)
     - [17.15.5 Progress and the Automatic Scan](#17155-progress-and-the-automatic-scan)
     - [17.15.6 The Manage Catalog Dialog](#17156-the-manage-catalog-dialog)
+    - [17.15.7 Edits Are a Draft Until Scan](#17157-edits-are-a-draft-until-scan)
   - [17.16 The Parked Library](#1716-the-parked-library)
     - [17.16.1 Park and Restore](#17161-park-and-restore)
     - [17.16.2 What Changed While Parked](#17162-what-changed-while-parked)
@@ -988,6 +991,28 @@ Not every setting can be applied immediately, because the class that uses it may
 How the workspace is chosen at startup is covered in [2.3 Workspaces](#23-workspaces).
 
 Startup focus (2026-10-27): when Winnow opens, the grid (gridView) or, failing that, the thumbnail strip (thumbView) takes the keyboard focus as soon as it becomes visible, so the arrow keys move through the images without a click first. MW::eventFilter (a qApp filter) sees either view's Show event while startupViewFocusArmed is set and queues MW::focusStartupView. The app's first activation runs resetFocus, which hands focus to the window, so appStateChange queues focusStartupView again after it. The flag disarms once a view holds focus AND the app has been activated, so later shows of a view (toggling the strip, switching to Grid) do not steal focus.
+
+#### 2.1.2 Factory Reset and Test Factory Settings
+
+Buttons along the bottom of the Preferences dialog (2026-11-12): Factory reset on the left, Test factory settings / Restore my settings on the right. The factory settings are what a new installation sees: MW::loadSettings applies its defaults when settings.ini has no "slideShowDelay" (!isSettings), and every object built after it reads QSettings with its own fallback. The only faithful way to show them is a launch with no settings, so every step restarts Winnow.
+
+- Factory reset (everyone): the old settings.ini is kept as settings-before-factory-reset.ini (the previous one is replaced).
+- Test factory settings (G::isRory only): the old settings.ini waits in settings-factory-test-backup.ini. While that file exists MW::isFactorySettingsTest is set, the right-hand button becomes "Restore my settings", Factory reset is hidden, and a popup says so at startup. G::isRory is not a setting, so it is off during the test until toggled.
+- Restore my settings: the test backup goes back to settings.ini. Anything changed during the test is discarded.
+
+The settings file cannot just be deleted while Winnow runs: closeEvent writes the whole session back (writeSettings, saveLibraryState, hasCrashed, sync). So MW::requestSettingsReset writes the step ("reset", "test", "restore") to settings-reset-request.txt, starts AppInstaller::relaunchAfterExit and closes the window. The helper waits for the process to exit, because a copy started while this one runs would hand its arguments to the single instance and quit. On macOS and Linux it is /bin/sh; on Windows it is PowerShell (Wait-Process, Start-Process). The next launch runs MW::applyPendingSettingsReset before migrateOldSettings and before settings.ini is opened. After "reset" or "test" it leaves an EMPTY settings.ini, because with no file migrateOldSettings would copy the old pre-ini plist settings back in. If the close is declined (a background ingest, or the picks question), the helper keeps waiting and the step runs at the next launch.
+
+Where the factory values live: the "Factory settings" section at the top of MW::loadSettings. Each value is set with factorySetting(var, "key", code value, isNew), keyed by the QSettings key it is saved under, and assigned only for a new user (!isSettings); the section then returns, so a preference left out of it silently keeps its C++ initializer (or none). Owners that do not exist yet set theirs the same way in their create functions: thumbnail/grid view size, labels and label choice in MW::createThumbView / createGridView, limitFit100Pct in MW::createImageView, the image cache size (autoMaxMB, autoMaxMBStrategy, cacheMaxMB) in MW::createImageCache, and Remove chromatic aberration / Apply lens profile (Develop/autoRemoveCA, Develop/autoLensProfile) in MW::createDevelopDock. The default raw renderer is decodeRawEngine plus, on macOS, appleRawDecoderVersion (the Apple decoder version pin). The default raw renderer's factory value is Winnow (2026-11-12).
+
+Two exceptions to "a missing key gets the factory value":
+- The remembered "Denoise raw" amounts (Develop/denoiseLumaDefault, denoiseChromaDefault; factory Lum 100, Color 100) are written to settings.ini on a new user's first launch, and an existing user without the keys keeps the legacy EditParams::kDefaultDenoise* amounts (Lum 75). Every image a user never adjusted renders with these amounts, so changing the fallback would silently re-render existing users' images. Those legacy amounts are also the baseline the devPreview key omits, so they must not be retuned.
+- The Folders panel in front at startup is not a key: MW::showEvent raises folderDock after applying the Source layout when there are no settings, because the shipped layout's state carries whichever tab was in front when it was captured. When adding a preference, add a factorySetting AND give it the same fallback where it is read (settings->value(key, default)), or a new user and an existing user without the key get different values (renderVideoThumb and turnOffEmbellish did, fixed 2026-11-12). Values without a key (session state, debug flags) are plain assignments.
+
+TUNING THE FACTORY SETTINGS (2026-11-12). factorySetting records every key's code value (factoryCodeValues) and its factory value (factoryValues) on every launch, applied or not. The factory value is the code value unless Settings/factory.ini overrides it (factoryOverrides, MW::loadFactoryOverrides). Ending a test with "Restore my settings" runs MW::confirmRestoreAndFactory: it saves the session (writeSettings), lists every factory key whose saved value differs from its factory value, checked, and writes the checked ones to Settings/factory.ini (MW::saveFactoryOverrides). A value set back to the code value is removed from the file, so it only holds differences. Values compare as strings, the form the ini holds. With nothing changed, the plain restore question is asked instead.
+
+Settings/factory.ini is in winnow.qrc. Like Workspaces/defaults.json, a build with its source tree (WINNOW_SOURCE_DIR, and winnow.qrc present) reads and writes the file in the tree, so a tuned value is used at the next launch and ships with the next build. Other builds read the resource copy, and a save goes to the desktop. A changed setting with no factorySetting is not offered: give it one first.
+
+Only settings.ini changes. userdata.db, the index, the caches and downloaded models are kept. The buttons are flat QPushButtons in PreferencesDlg, outside the property tree (transparent, min-width: 0 against the app sheet's 100 px). PreferencesDlg::syncResetButtons sets which show; MW calls it when the dialog opens and from MW::rory. A click emits resetSettingsRequested, connected QUEUED to MW::requestSettingsReset, because a reset closes Winnow and closeEvent deletes the dialog whose button sent it.
 
 ### 2.2 The UI Model (Source x Workflow x View)
 
@@ -1646,7 +1671,7 @@ on:   Name                        Value
       ---------------o----------------
 ```
 
-- PropertyDelegate::sizeHint gives an above/below slider row G::propertyRowHeight() + G::sliderBandHeight (set in WidgetCSS::styleGlobals). The caption is one elided line, not wrapped.
+- PropertyDelegate::sizeHint gives an above/below slider row G::propertyRowHeight() + G::sliderTopGap() + G::sliderBandHeight (set in WidgetCSS::styleGlobals). G::sliderTopGap() is 50% of the font size, a space above the Name / Value line; the delegate's caption and SliderEditor::layoutStacked's value field both start below it. The caption is one elided line, not wrapped.
 - PropertyDelegate::updateEditorGeometry spans the SliderEditor from the caption's text left edge to the value cell's right edge. SliderEditor::applyLayout drops its QHBoxLayout and layoutStacked() places the value top right and the slider in the bottom band by hand. The slider ends at the value TEXT's right edge, not the line edit's: SliderEditor::valueTextInset() measures the line edit's right-aligned text inset (style contents rect + text margins + Qt's fixed 2 px) and trims the slider by it, so the track does not overhang the number.
 - The editor masks itself (setMask) to the value and the slider band. Clicks on the caption fall through to the tree, so caption click (focus + flash) and double click (reset) still work, and the caption the delegate paints under the editor shows through.
 - The caption spans both columns, so the delegate draws it in both the caption and value passes, as it does for a header caption. The masked editor cannot paint its focus fill, so the delegate tints both cells instead (see [11.9 Panel Focus and Slider Arrow-Nudge](#119-panel-focus-and-slider-arrow-nudge)).
@@ -1860,6 +1885,19 @@ In the Library, dragging thumbnails from the grid onto a row in the Filters pane
   - reconcileVersionRows brings back a moved master's version rows, which removeFiles dropped with the old row.
   - refreshLibraryAfterCatalogChange updates the Filter panel's result list and LibTree counts. Its delta (applyCatalogDelta) then finds nothing left to splice.
 - **Out of scope.** The Folders scope, and drops from the Finder (a copy-in, a different feature).
+#### 3.4.3 In the Library, Folders Start at the Drive
+
+In Library scope the Filters panel's Folders category has a row per DRIVE above the catalogued folders: "Macintosh HD" > Photos, "Yukon" > Archive (2026-11-12, user request). A library spans drives and a folder load does not, so Folders scope is unchanged. MW::setScope turns it on with Filters::setFolderDrives(isLibrary), next to setFolderAnchors; MW::applyCatalogScopeAndScan pushes the anchors again after a Manage Catalog edit.
+
+- FolderTree::volumeRootOf (`Utilities/foldertree.h`) names the drive FROM THE PATH TEXT, not the mount table, so an ejected catalogued drive still groups under its own name. macOS: /Volumes/<name>, otherwise "/". Windows: "X:/" or //server/share. Linux: /media/<user>/<name>, /run/media/<user>/<name>, /mnt/<name>, otherwise "/". A volume mounted somewhere unconventional groups under "/": a wrong label, never a wrong filter.
+- The label is QStorageInfo::displayName when the drive is mounted, otherwise the root's last part (Filters::driveLabel). Windows shows "Name (D:)". A nameless "/" is "System drive". The boot drive sorts first, then the rest by name. The tooltip says when the drive is not mounted.
+- An anchor that IS a drive root (a whole drive catalogued) is the drive's row, named as the drive. There is no second level.
+- Built in Filters::addFolderItems, with the same build-detached, attach-once scheme as the folders. A drive's count is the sum of its folders. Drive rows are always open.
+
+A DRIVE ROW IS NOT A FILTER ITEM. The boot drive's root is "/", which is in FolderTree::ancestry of every path, /Volumes/Yukon/... included, so a filter on "/" would include every drive. So the row has no value (data(1) is empty), no checkbox and a DriveRole marker (Filters::isDriveItem). Filters::itemsInCategory walks through it without returning it, which keeps it out of every query, count, save and restore loop. isFilterItem is false for it, so folderDropTarget refuses a drop on it.
+
+- A click on a drive row (Filters::mousePressEvent) calls Filters::toggleDriveFilter. That includes every folder on the drive (Opt+click excludes them), or clears them when they all already are. It goes through setFolderFilter, so it is one filterChange. Anything already checked beneath the drive is cleared first, so the drive ends in one state.
+- Test: tst_filters libraryFoldersGroupUnderTheirDrive; tst_foldertree volumeRootOfNamesTheDrive.
 
 ### 3.5 Picks Are Saved as They Are Made
 
@@ -10082,7 +10120,7 @@ The honest reading, and a trap: on a new install nothing would ever be catalogue
 
 #### 17.15.3 The Table Is the Catalog: Shrinking It Forgets
 
-Removing a root used NOT to un-catalogue what it contributed, which left a catalog that could disagree with the table indefinitely with nothing on screen to say so (rows from removed roots, or from the opportunistic capture before the scope table existed, stayed findable in an Everywhere search). Two statements of intent, one made by adding a row and one by removing it, were honoured unequally. So MW::reconcileCatalogToScope runs on every scope edit (a row removed, an exclusion added, a reach turned off, a path retargeted) and forgets every catalogued folder the table no longer admits.
+Removing a root used NOT to un-catalogue what it contributed, which left a catalog that could disagree with the table indefinitely with nothing on screen to say so (rows from removed roots, or from the opportunistic capture before the scope table existed, stayed findable in an Everywhere search). Two statements of intent, one made by adding a row and one by removing it, were honoured unequally. So MW::reconcileCatalogToScope runs whenever an edited table is applied (a row removed, an exclusion added, a reach turned off, a path retargeted) and forgets every catalogued folder the table no longer admits. Since 2026-11-12 an edit is applied when the user presses Scan or closes Manage Catalog, not as it is made ([17.15.7 Edits Are a Draft Until Scan](#17157-edits-are-a-draft-until-scan)).
 
 - Folder by folder, not by prefix: an included branch may sit inside an excluded tree, so only MW::isCatalogScopeFolder can answer, asked of each catalogued folder in turn. Catalog::folderCounts is one GROUP BY that returns the folders and their costs together; Catalog::forgetFolders deletes exactly the folders named.
 - The count is CONFIRMED FIRST, and Cancel PUTS THE EDIT BACK (Warning icon, Cancel the default and escape button). Accepting an edit while refusing its consequence would leave the table naming folders the catalog still held. setScope repopulates under its populating flag and does not signal back, so putting the rows back cannot recurse.
@@ -10138,7 +10176,27 @@ The Images column counts the DISK, not the index, which is what makes it worth a
 - The Images column is sized ONCE for the widest number it will ever hold (9,999,999): a ResizeToContents column jumps every time a count lands, and a settled table then looks like it is still working.
 - A row that cannot achieve anything SAYS SO, in place, in the note under the table: nothing included yet, or an exclude outside every included tree ("... is not inside any included folder, so excluding it changes nothing"). The note states the rule the table carries: these folders ARE the catalog, and removing a row forgets what it contributed. (There is no pending-deletion count any more: the reconcile is immediate, so that number would always be zero.)
 - While a scan runs, the dialog's button becomes Stop and its scope table is frozen (and the legacy Catalog panel's Manage button is disabled): editing the scope under a running scan would leave the user unsure whether a folder just added is being scanned. File > Manage Catalog is NOT disabled during a scan; the dialog is where scan state is shown.
+- Unapplied edits: see [17.15.7 Edits Are a Draft Until Scan](#17157-edits-are-a-draft-until-scan). A row added or edited since the last apply shows an em dash in Images ("Counted when you Scan"). CatalogRootsDlg::setRowCounts keys MW's counts by row identity (entryKey: path, include, recurse) rather than position, so every unedited row keeps its own number.
 - The Manage entry stays enabled when the catalog is empty: it is how the user FILLS it. It is disabled only when the database will not open at all.
+#### 17.15.7 Edits Are a Draft Until Scan
+
+Until 2026-11-12 every edit in Manage Catalog acted at once. Append started a disk count. Remove asked "Remove from Catalog?" and forgot the rows. Nothing was indexed until Scan, and the only sign of any of it was an ellipsis in the Images column. Users could not tell that something was happening, or that the folder they had just appended still needed a Scan. User decision: an edit does nothing until the table is finished.
+
+- CatalogRootsDlg holds `committed`, the scope MW last gave it through setScope. noteEdit refreshes the note, the counts and the pending line, and emits NOTHING. hasPendingEdits compares the draft with committed, ignoring row order.
+- THE PENDING LINE is a QLabel directly under the table, tinted in G::catalogOwedColor (the colour of the info table's "press Scan" clause, the window's other call to action). It reads: "The table has changed. When you have finished editing, click Scan to update the catalog. Closing this window also applies the changes and scans." Its link does what Scan does. While edits are pending, Scan is the default button.
+- Scan with edits pending emits applyAndScanRequested(scope). With nothing pending it emits scanRequested, the full scan as before.
+- CLOSING APPLIES. CatalogRootsDlg::done (Close, Esc and the title bar all arrive there) emits applyAndScanRequested before closing. Not at quit (G::stop): the apply may ask "Remove from Catalog?", which a quit cannot stop to show, so an unapplied draft is dropped. During a scan it still applies: an automatic scan can start while edits are pending, and the table freezes with them in it. The pending line's link applies them too.
+
+MW::applyCatalogScopeAndScan is the one act:
+
+1. CatalogRootsDlg::showBusy("Applying changes to the catalog..."), laid out and painted before returning, because the reconcile that follows is synchronous.
+2. reconcileCatalogToScope(true): the confirmation and the forget, as before. Declining puts the previous scope back in MW and in the table, and nothing is scanned.
+3. setScope(committed), updateCatalogCounts, and the Library's folder anchors are pushed again.
+4. catalogScopeGain(previous, new) finds what the edit GAINED. That means include rows that are new, turned from Exclude to Include, or given their subfolders, plus, for a removed exclusion, the include rows whose tree held it. Only that is scanned: startCatalogScan(false, gain). A narrowing-only edit has nothing to walk, and the reconcile was the whole job.
+
+A PARTIAL SCAN. startCatalogScan's `only` argument hands the scanner the gained include rows plus every exclude row of the scope. This is safe because CatalogScanner::scan walks, and demotes gone folders, strictly inside the scope it is given (the gone-folder pass tests catalogScopeIncludes/Excludes on that scope). The point is speed: appending one folder to a 150k library does not re-walk the library. Each `only` row is re-read from catalogScope at start, so a gain queued behind a running scan cannot index a row a later apply removed. The progress text names the part being walked ("Scanning 'Photos' -- checking folders 120 of 450"). catalogScanPartial keeps the finished handler from overwriting catalogUncatalogable, the library-wide count of files no scan can catalogue, with one folder's figure.
+
+An apply during a running scan (an automatic one, say) is reconciled at once. Its gain waits in catalogScanQueued, and the finished handler starts it, unless the user stopped that run.
 
 ### 17.16 The Parked Library
 

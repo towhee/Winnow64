@@ -163,6 +163,21 @@ public:
         "/"; empty (Folders scope) means "the deepest folder they share". Takes effect at
         the next build, which a scope change always brings. */
     void setFolderAnchors(const QStringList &anchors) { folderAnchors = anchors; }
+    /*  Put the anchors under a row for the DRIVE each is on ("Macintosh HD" > Photos).
+        Library scope only: its anchors are the catalogued folders, which can be on any
+        number of drives, and the drive is the first thing a library's location says.
+        Takes effect at the next build, like setFolderAnchors. */
+    void setFolderDrives(bool on) { folderDrives = on; }
+    /*  A drive row in Folders. NOT A FILTER ITEM: it has no value and no checkbox, and
+        itemsInCategory skips it, so no query, count or save ever sees it. A click on it
+        includes (Opt: excludes) the folders beneath it -- see toggleDriveFilter. */
+    bool isDriveItem(const QTreeWidgetItem *item) const
+    {
+        return item != nullptr && item->data(0, DriveRole).isValid();
+    }
+    /*  A click on a drive row: include (or with exclude, exclude) every folder beneath
+        it, or clear them when they all already are. ONE filterChange. */
+    void toggleDriveFilter(QTreeWidgetItem *drive, bool exclude);
     /*  File types sit under an Images and a Videos node (addTypeItems). The video
         extensions are Metadata::videoFormats, lower case; MW pushes them in once
         Metadata exists, which is after the panel is made. */
@@ -526,7 +541,9 @@ public:
         DescendantFilteringRole,
         /*  On an Images or Videos node in File types: "Images" or "Videos", untranslated.
             See isTypeGroup. */
-        TypeGroupRole
+        TypeGroupRole,
+        /*  On a DRIVE row in Folders: the volume's root path. See isDriveItem. */
+        DriveRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
@@ -737,6 +754,9 @@ private:
         so turning it off puts the tree back instead of leaving everything expanded. */
     QSet<QString> expandedBeforeUnfiled;
     QStringList folderAnchors;          // see setFolderAnchors
+    bool folderDrives = false;          // see setFolderDrives
+    /* A drive row's label: the volume's name, or its root's last part. */
+    QString driveLabel(const QString &root) const;
     QStringList videoFormats;           // see setVideoFormats
     /*  File types as a two-level tree: Images / Videos, then the types. */
     void addTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category);

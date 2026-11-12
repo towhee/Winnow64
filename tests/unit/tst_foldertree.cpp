@@ -32,6 +32,7 @@ private slots:
     void hierarchySiblingsInNaturalOrder();
     void outermostKeepsOnlyTheRoots();
     void selectedSiblingsAreTwoRows();
+    void volumeRootOfNamesTheDrive();
 };
 
 void TstFolderTree::normalizeKeepsRootsAndDropsTrailingSlash()
@@ -199,6 +200,25 @@ void TstFolderTree::selectedSiblingsAreTwoRows()
     QCOMPARE(paths(n), QStringList({"/U/Pictures/_test1", "/U/Pictures/_test2"}));
     QVERIFY(nodeFor(n, "/U/Pictures/_test1").isAnchor);
     QVERIFY(nodeFor(n, "/U/Pictures/_test2").isAnchor);
+}
+
+void TstFolderTree::volumeRootOfNamesTheDrive()
+{
+    // From the text, so an ejected drive still names itself.
+#if defined(Q_OS_MAC)
+    QCOMPARE(FolderTree::volumeRootOf("/Volumes/Yukon/Photos/2024"), QString("/Volumes/Yukon"));
+    QCOMPARE(FolderTree::volumeRootOf("/Volumes/Yukon"), QString("/Volumes/Yukon"));
+    QCOMPARE(FolderTree::volumeRootOf("/Users/r/Pictures"), QString("/"));
+#elif defined(Q_OS_WIN)
+    QCOMPARE(FolderTree::volumeRootOf("D:/Photos/2024"), QString("D:/"));
+    QCOMPARE(FolderTree::volumeRootOf("D:\\Photos"), QString("D:/"));
+    QCOMPARE(FolderTree::volumeRootOf("//nas/share/Photos"), QString("//nas/share"));
+#elif defined(Q_OS_LINUX)
+    QCOMPARE(FolderTree::volumeRootOf("/media/r/Yukon/Photos"), QString("/media/r/Yukon"));
+    QCOMPARE(FolderTree::volumeRootOf("/run/media/r/Yukon/a"), QString("/run/media/r/Yukon"));
+    QCOMPARE(FolderTree::volumeRootOf("/mnt/photos/2024"), QString("/mnt/photos"));
+    QCOMPARE(FolderTree::volumeRootOf("/home/r/Pictures"), QString("/"));
+#endif
 }
 
 QTEST_GUILESS_MAIN(TstFolderTree)

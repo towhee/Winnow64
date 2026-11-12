@@ -2,6 +2,7 @@
 #include "Cache/devpreviewcache.h"
 #include "Cache/thumbcache.h"
 #include "ImageFormats/Raw/applerawdecode.h"
+#include "Utilities/appinstaller.h"
 
 void MW::writeSetting(QString key, QVariant value)
 {
@@ -244,6 +245,8 @@ void MW::writeSettings()
 
     /* Focus Stack */
     settings->setValue("focusStackMethod", fsMethod);
+    settings->setValue("focusStackRemoveTemp", fsRemoveTemp);
+    settings->setValue("focusStack8bit", fs8bit);
 
     /* Docks are updated in DockWidget */
 
@@ -397,115 +400,160 @@ bool MW::loadSettings()
 */
     if (G::isLogger) G::log("MW::loadSettings");
 
-    /* Default values for first time use (settings does not yet exist).  Apply defaults even
-       when there are settings in case a new setting has been added to the application to make
-       sure the default value is assigned for first time use of the new setting.
-    */
+    /* FACTORY SETTINGS
+       What a new user starts with: these are assigned only when settings.ini has no
+       settings yet (!isSettings).  Everything after this section reads the saved values,
+       and a preference that is not set here keeps its C++ initializer for a new user, so
+       every preference belongs here unless its owner does not exist yet (the thumbnail /
+       grid view defaults are in MW::createThumbView / createGridView, the image cache
+       size in MW::createImageCache, limitFit100Pct in MW::createImageView).  Give a new
+       key the same fallback where it is read below (settings->value(key, default)), or
+       an existing user without the key gets a different value from a new user.
 
-    if (!isSettings || simulateJustInstalled) {
-        // general
-        combineRawJpg = false;
-        G::combineRawJpg = false;
+       factorySetting(var, "key", code value, isNew): "key" is the QSettings key the
+       value is saved under.  A factory test (Preferences > Test factory settings, Rory
+       only) can retune any keyed value: "Restore my settings" offers each one changed
+       during the test, and the accepted values go to Settings/factory.ini, which
+       overrides the code value here.  Values with no key (session state, debug flags)
+       are plain assignments and cannot be tuned that way.
+    */
+    const bool isNew = !isSettings || simulateJustInstalled;
+    loadFactoryOverrides();
+    factoryValues.clear();
+    factoryCodeValues.clear();
+
+    // general
+    factorySetting(combineRawJpg, "combineRawJpg", false, isNew);
+    factorySetting(G::autoAdvance, "autoAdvance", false, isNew);
+    factorySetting(turnOffEmbellish, "turnOffEmbellish", true, isNew);
+    factorySetting(G::renderVideoThumb, "renderVideoThumb", true, isNew);
+    factorySetting(G::wheelSensitivity, "wheelSensitivityPct", 50, isNew);  // percent
+    factorySetting(G::modifySourceFiles, "modifySourceFiles", false, isNew);
+    factorySetting(G::backupBeforeModifying, "backupBeforeModifying", false, isNew);
+    factorySetting(G::autoAddMissingThumbnails, "autoAddMissingThumbnails", false, isNew);
+    factorySetting(ignoreAddThumbnailsDlg, "ignoreAddThumbnailsDlg", false, isNew);
+    factorySetting(deleteWarning, "deleteWarning", true, isNew);
+    factorySetting(pickLossWarning, "pickLossWarning", true, isNew);
+    factorySetting(rememberLastDir, "rememberLastDir", false, isNew);
+    factorySetting(checkIfUpdate, "checkIfUpdate", true, isNew);
+    factorySetting(restoreLibraryState, "restoreLibraryState", false, isNew);
+
+    // appearance
+    factorySetting(G::textShade, "textShade", 190, isNew);
+    factorySetting(G::backgroundShade, "backgroundShade", 50, isNew);
+    factorySetting(G::strFontSize, "fontSize", "12", isNew);
+    factorySetting(infoOverlayFontSize, "infoOverlayFontSize", 24, isNew);
+    factorySetting(classificationBadgeInImageDiameter, "classificationBadgeInImageDiameter",
+                   32, isNew);
+    factorySetting(classificationBadgeSizeFactor, "classificationBadgeSizeFactor", 14, isNew);
+    factorySetting(iconNumberSize, "iconNumberSize", 24, isNew);
+    factorySetting(isRatingBadgeVisible, "isRatingBadgeVisible", true, isNew);
+    factorySetting(isIconNumberVisible, "isIconNumberVisible", true, isNew);
+
+    // datamodel
+    factorySetting(G::maxIconSize, "maxIconSize", 256, isNew);
+
+    // files
+    factorySetting(G::useRaw, "useRaw", false, isNew);
+    /* Default raw renderer (Preferences > Develop): the engine, and on macOS the Apple
+       decoder version pin (0 = newest). */
+    int rawEngine = static_cast<int>(G::decodeRawEngine);
+    factorySetting(rawEngine, "decodeRawEngine",
+                   static_cast<int>(G::DecodeRawEngine::winnowDecodeRawEngine), isNew);
+#ifdef Q_OS_MAC
+    int applePin = AppleRawDecode::VersionPin();
+    factorySetting(applePin, "appleRawDecoderVersion", 0, isNew);
+#endif
+
+    // develop previews, thumbnails, catalog
+    int previewSource = static_cast<int>(G::previewSource);
+    factorySetting(previewSource, "previewSource",
+                   static_cast<int>(G::PreviewSource::Developed), isNew);
+    factorySetting(G::devPreviewMaxEdge, "devPreviewMaxEdge", G::kDevPreviewSizeFull, isNew);
+    factorySetting(G::devPreviewQuality, "devPreviewQuality", G::kDevPreviewQualityDefault,
+                   isNew);
+    factorySetting(G::devPreviewCacheMaxBytes, "devPreviewCacheMaxBytes",
+                   20LL * 1024 * 1024 * 1024, isNew);
+    factorySetting(G::cacheThumbnails, "cacheThumbnails", true, isNew);
+    factorySetting(G::maxIconChunk, "maxIconChunk", 10000, isNew);
+    factorySetting(G::maxSearchResults, "maxSearchResults", 0, isNew);  // 0 = no limit
+    factorySetting(G::useIndexMetadata, "useIndexMetadata", false, isNew);
+    factorySetting(G::useScrollInVerify, "useScrollInVerify", true, isNew);
+    factorySetting(G::autoScanCatalog, "autoScanCatalog", true, isNew);
+    factorySetting(G::autoScanCatalogMinutes, "autoScanCatalogMinutes", 60, isNew);
+    factorySetting(G::thumbCacheMaxBytes, "thumbCacheMaxBytes",
+                   5LL * 1024 * 1024 * 1024, isNew);
+    factorySetting(G::buildDevPreviewsInBackground, "buildDevPreviewsInBackground", false,
+                   isNew);
+
+    // ingest
+    factorySetting(autoIngestFolderPath, "autoIngestFolderPath", false, isNew);
+    factorySetting(autoEjectUsb, "autoEjectUSB", false, isNew);
+    factorySetting(integrityCheck, "integrityCheck", false, isNew);
+    factorySetting(isBackgroundIngest, "isBackgroundIngest", false, isNew);
+    factorySetting(isBackgroundIngestBeep, "isBackgroundIngestBeep", false, isNew);
+    factorySetting(ingestIncludeXmpSidecar, "ingestIncludeXmpSidecar", true, isNew);
+    factorySetting(gotoIngestFolder, "gotoIngestFolder", false, isNew);
+    factorySetting(backupIngest, "backupIngest", false, isNew);
+    factorySetting(pathTemplateSelected, "pathTemplateSelected", 0, isNew);
+    factorySetting(pathTemplateSelected2, "pathTemplateSelected2", 0, isNew);
+    factorySetting(filenameTemplateSelected, "filenameTemplateSelected", 0, isNew);
+
+    // preferences
+    factorySetting(isSoloPrefDlg, "isSoloPrefDlg", true, isNew);
+
+    // slideshow
+    factorySetting(slideShowDelay, "slideShowDelay", 5, isNew);
+    factorySetting(isSlideShowRandom, "isSlideShowRandom", false, isNew);
+    factorySetting(isSlideShowWrap, "isSlideShowWrap", true, isNew);
+
+    // performance / productivity
+    factorySetting(G::showCacheProgress, "showCacheProgress", false, isNew);
+    factorySetting(G::useJitIconCache, "useJitIconCache", false, isNew);
+
+    // focus stack
+    factorySetting(fsMethod, "focusStackMethod", FS::MethodsString.at(FS::Methods::DMap),
+                   isNew);
+    factorySetting(fsRemoveTemp, "focusStackRemoveTemp", true, isNew);
+    factorySetting(fs8bit, "focusStack8bit", true, isNew);
+
+    if (isNew) {
+        // derived from the factory values above
+        G::combineRawJpg = combineRawJpg;
+        G::backgroundColor = QColor(G::backgroundShade, G::backgroundShade, G::backgroundShade);
+        G::fontSize = G::strFontSize.toInt();
+        G::previewSource = static_cast<G::PreviewSource>(previewSource);
+        G::decodeRawEngine = rawEngine == int(G::DecodeRawEngine::winnowDecodeRawEngine)
+                           ? G::DecodeRawEngine::winnowDecodeRawEngine
+                           : G::DecodeRawEngine::appleDecodeRawEngine;
+#ifdef Q_OS_MAC
+        AppleRawDecode::SetVersionPin(applePin);
+#else
+        // the Apple decoder is macOS-only (see the decodeRawEngine read below)
+        G::decodeRawEngine = G::DecodeRawEngine::winnowDecodeRawEngine;
+#endif
+
+        // not settings a user tunes: session state and debug flags
         prevMode = "Loupe";
         G::mode = "Loupe";
         isLogAllToFileForDebugging = false;
         G::isLogger = false;
         G::isRunByExtern = false;
         G::isIssueLogger = false;
-        G::wheelSensitivity = 50;           // percent of maximum sensitivity
-        G::modifySourceFiles = false;
-        G::backupBeforeModifying = false;
-        G::autoAddMissingThumbnails = false;
-        ignoreAddThumbnailsDlg = false;
-
-        // appearance
-        G::textShade = 190;
-        G::backgroundShade = 50;
-        G::backgroundColor = QColor(G::backgroundShade,G::backgroundShade,G::backgroundShade);
-        G::strFontSize = "12";
-        G::fontSize = 12;
-        infoOverlayFontSize = 24;
-        classificationBadgeInImageDiameter = 32;
-        classificationBadgeSizeFactor = 14;
-        iconNumberSize = 24;
-
-        isRatingBadgeVisible = true;
-        isIconNumberVisible = true;
-
-        // datamodel
-        G::maxIconSize = 256;
         sortColumn = G::NameColumn;
-
-        // files
-        G::useRaw = false;
-
-        // develop previews
-        G::previewSource = G::PreviewSource::Developed;
-        G::devPreviewMaxEdge = G::kDevPreviewSizeFull;
-        G::devPreviewQuality = G::kDevPreviewQualityDefault;
-        G::devPreviewCacheMaxBytes = 20LL * 1024 * 1024 * 1024;
-        G::cacheThumbnails = true;
-        G::maxIconChunk = 10000;
-        G::maxSearchResults = 0;      // no limit; see global.cpp
-        G::useIndexMetadata = false;
-        G::useScrollInVerify = true;
-        G::autoScanCatalog = true;
-        G::autoScanCatalogMinutes = 60;
-        G::thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;
-        G::buildDevPreviewsInBackground = false;
-        rememberLastDir = false;
-        checkIfUpdate = true;
-        restoreLibraryState = false;
         lastScopeWasLibrary = false;
         updateSkipVersion = "";
         lastDir = "";
-        deleteWarning = true;
-        pickLossWarning = true;
-        G::modifySourceFiles = false;
-        // G::embedTifJpgThumb = false;
 
-        // ingest
-        autoIngestFolderPath = false;
-        autoEjectUsb = false;
-        integrityCheck = false;
-        isBackgroundIngest = false;
-        isBackgroundIngestBeep = false;
-        ingestIncludeXmpSidecar = true;
-        gotoIngestFolder = false;
-        backupIngest = false;
-        pathTemplateSelected = 0;
-        pathTemplateSelected2 = 0;
-        filenameTemplateSelected = 0;
-
-        // preferences
-        isSoloPrefDlg = true;
-
-        // slideshow
-        slideShowDelay = 5;
-        isSlideShowRandom = false;
-        isSlideShowWrap = true;
-
-        // filters
-
-        // performance / productivity
-        G::showCacheProgress = false;
-        G::useJitIconCache = false;
-
-        // cache (see MW::createImageCache in initialize.cpp)
-
-        // Focus Stack default method
-        fsMethod = FS::MethodsString.at(FS::Methods::DMap);
-        fsRemoveTemp = true;
-
-        if (!isSettings || simulateJustInstalled) return true;
+        return true;
     }
-    // end default settings
+    // end factory settings
 
     // Get settings saved from last session
 
     // general
     G::autoAdvance = settings->value("autoAdvance").toBool();
-    turnOffEmbellish = settings->value("turnOffEmbellish").toBool();
+    turnOffEmbellish = settings->value("turnOffEmbellish", true).toBool();
     isLogAllToFileForDebugging = settings->value("isLogAllToFileForDebugging").toBool();
 
     if (settings->contains("deleteWarning"))
@@ -643,6 +691,10 @@ bool MW::loadSettings()
             e = G::DecodeRawEngine::winnowDecodeRawEngine;
 #endif
         G::decodeRawEngine = e;
+    }
+    else if (rawEngine == int(G::DecodeRawEngine::winnowDecodeRawEngine)) {
+        // no saved engine: the factory one (Factory settings above)
+        G::decodeRawEngine = G::DecodeRawEngine::winnowDecodeRawEngine;
     }
 #ifdef Q_OS_MAC
     /* The Apple decoder version pin (Raw panel "Apple Raw N"); 0 = newest. A pin newer
@@ -828,6 +880,7 @@ bool MW::loadSettings()
     // Focus Stack
     if (settings->contains("focusStackMethod")) fsMethod = settings->value("focusStackMethod").toString();
     if (settings->contains("focusStackRemoveTemp")) fsRemoveTemp = settings->value("focusStackRemoveTemp").toBool();
+    fs8bit = settings->value("focusStack8bit", true).toBool();
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
@@ -972,6 +1025,304 @@ void MW::migrateOldSettings()
     newSettings.sync();
     qDebug() << "✅ Migration complete. INI file created at:" << iniFile;
 
+}
+
+/* Files beside settings.ini used by the factory reset (MW::requestSettingsReset). */
+static const char *kResetRequest = "settings-reset-request.txt";  // the step to apply
+static const char *kBeforeReset  = "settings-before-factory-reset.ini";
+static const char *kTestBackup   = "settings-factory-test-backup.ini";
+
+static QString settingsFile(const char *name)
+{
+    return QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/" + name;
+}
+
+void MW::requestSettingsReset(const QString &step)
+{
+/*
+    The Factory reset / Test factory settings buttons at the bottom of Preferences
+    (PreferencesDlg).  The new-user settings are what MW::loadSettings applies
+    when settings.ini has none (!isSettings), and every object built after it reads
+    QSettings too, so the only faithful way to show them is a launch with no settings.ini.
+    This cannot simply delete the file: closeEvent writes the whole session back
+    (writeSettings, then saveLibraryState, hasCrashed, sync).  So the step is written to
+    kResetRequest, Winnow quits normally, and the next launch carries it out in
+    applyPendingSettingsReset before settings.ini is opened.  A helper started now
+    (AppInstaller::relaunchAfterExit) opens Winnow again once this process has exited.
+
+    Steps:
+        "reset"    factory settings; the old settings.ini is kept as kBeforeReset
+        "test"     (G::isRory) factory settings; the old settings.ini waits in kTestBackup
+        "restore"  end the test: kTestBackup goes back to settings.ini
+
+    Only settings.ini changes.  userdata.db (keywords, presets, places ...), the index,
+    the thumbnail and preview caches and downloaded models are kept.
+*/
+    if (G::isLogger) G::log("MW::requestSettingsReset", step);
+
+    QString title, text, info, okText;
+    if (step == "reset") {
+        title = "Factory Reset";
+        text = "Reset Winnow to the settings a new installation starts with?";
+        info = "Every preference, workspace, panel layout, shortcut and remembered "
+               "choice returns to its default, and Winnow restarts.\n\n"
+               "Your keywords, develop presets, places, catalog and caches are not "
+               "affected.  The current settings are kept in\n"
+               + QDir::toNativeSeparators(settingsFile(kBeforeReset));
+        okText = "Reset and Restart";
+    }
+    else if (step == "test") {
+        title = "Test Factory Settings";
+        text = "Restart Winnow with the settings a new user sees?";
+        info = "Your current settings are set aside.  Change anything you like while "
+               "testing: \"Restore my settings\" at the bottom of Preferences brings back "
+               "your own settings exactly as they are now.  It also offers each factory "
+               "setting you changed as a new factory setting (Settings/factory.ini); "
+               "nothing else done while testing is kept.";
+        okText = "Restart with Factory Settings";
+    }
+    else if (step == "restore") {
+        title = "Restore My Settings";
+        text = "End the factory settings test and restart with your own settings?";
+        info = "Changes made while testing factory settings are discarded.";
+        okText = "Restore and Restart";
+    }
+    else return;
+
+    /* The Preferences dialog stays on top, so a box parented to MW could open under it. */
+    QWidget *parent = preferencesDlg ? static_cast<QWidget*>(preferencesDlg) : this;
+
+    /* Ending a test offers what was changed as new factory settings, when there is any. */
+    bool asked = false;
+    if (step == "restore") {
+        int answer = confirmRestoreAndFactory(parent);
+        if (answer == 0) return;
+        asked = answer == 1;
+    }
+    if (!asked) {
+        QMessageBox box(parent);
+        box.setWindowTitle(title);
+        box.setIcon(QMessageBox::Question);
+        box.setText(text);
+        box.setInformativeText(info);
+        QPushButton *okBtn = box.addButton(okText, QMessageBox::AcceptRole);
+        box.addButton(QMessageBox::Cancel);
+        box.setDefaultButton(QMessageBox::Cancel);
+        box.exec();
+        if (box.clickedButton() != okBtn) return;
+    }
+
+    QFile request(settingsFile(kResetRequest));
+    if (!request.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        QMessageBox::warning(parent, title, "Could not write\n"
+                             + QDir::toNativeSeparators(request.fileName()));
+        return;
+    }
+    request.write(step.toUtf8());
+    request.close();
+
+    QString error;
+    if (!AppInstaller::relaunchAfterExit(error)) {
+        QMessageBox::information(parent, title, error + "\n\nWinnow will close.  "
+                                 "Open it again to finish.");
+    }
+    if (!close()) {
+        G::popup->showPopup("Winnow will restart with the new settings when it closes.",
+                            4000);
+    }
+}
+
+QString MW::factoryOverridesPath(bool *inSourceTree) const
+{
+/*
+    Settings/factory.ini: the factory values tuned by factory tests (see the Factory
+    settings section of MW::loadSettings).  In a build with its source tree
+    (WINNOW_SOURCE_DIR, as for Workspaces/defaults.json) it is the file in the tree, so a
+    tuned value is used at once and ships with the next build.  Otherwise it is the copy
+    compiled into the resource.
+*/
+    #ifdef WINNOW_SOURCE_DIR
+    if (QFileInfo::exists(QString(WINNOW_SOURCE_DIR) + "/winnow.qrc")) {
+        if (inSourceTree) *inSourceTree = true;
+        return QString(WINNOW_SOURCE_DIR) + "/Settings/factory.ini";
+    }
+    #endif
+    if (inSourceTree) *inSourceTree = false;
+    return ":/Settings/factory.ini";
+}
+
+void MW::loadFactoryOverrides()
+{
+    factoryOverrides.clear();
+    const QString path = factoryOverridesPath();
+    if (!QFile::exists(path)) return;
+    QSettings f(path, QSettings::IniFormat);
+    for (const QString &key : f.allKeys()) factoryOverrides.insert(key, f.value(key));
+}
+
+bool MW::saveFactoryOverrides(const QStringList &keys, QString &path, QString &err)
+{
+/*
+    Writes the current value of each key into Settings/factory.ini as its factory value.
+    A value back at the code value is removed instead, so the file only ever holds what
+    differs from MW::loadSettings.  Without a source tree the file goes to the desktop
+    and the caller says where.
+*/
+    bool inSourceTree = false;
+    path = factoryOverridesPath(&inSourceTree);
+    if (!inSourceTree) {
+        path = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)
+             + "/factory.ini";
+    }
+    QDir().mkpath(QFileInfo(path).absolutePath());
+
+    QSettings f(path, QSettings::IniFormat);
+    for (const QString &key : keys) {
+        const QVariant v = settings->value(key);
+        if (v.toString() == factoryCodeValues.value(key).toString()) f.remove(key);
+        else f.setValue(key, v);
+    }
+    f.sync();
+    if (f.status() != QSettings::NoError) {
+        err = "Could not write " + QDir::toNativeSeparators(path);
+        return false;
+    }
+    return true;
+}
+
+int MW::confirmRestoreAndFactory(QWidget *parent)
+{
+/*
+    "Restore my settings" while a factory test runs.  The session is saved first
+    (writeSettings), then every factory setting (factoryValues, see MW::loadSettings)
+    whose saved value differs from its factory value is listed, checked, as a candidate
+    new factory value.  The checked ones are written to Settings/factory.ini
+    (saveFactoryOverrides); everything else from the test is discarded with it.
+
+    Returns 0 cancelled, 1 confirmed here, -1 nothing changed (the caller asks the plain
+    restore question instead).
+*/
+    writeSettings();
+    settings->sync();
+
+    QStringList changed;
+    for (auto it = factoryValues.cbegin(); it != factoryValues.cend(); ++it) {
+        if (!settings->contains(it.key())) continue;
+        if (settings->value(it.key()).toString() != it.value().toString())
+            changed << it.key();
+    }
+    if (changed.isEmpty()) return -1;
+
+    bool inSourceTree = false;
+    QString path = factoryOverridesPath(&inSourceTree);
+    if (!inSourceTree) path = QStandardPaths::writableLocation(QStandardPaths::DesktopLocation)
+                            + "/factory.ini";
+
+    QDialog dlg(parent);
+    dlg.setWindowTitle("Restore My Settings");
+    dlg.setStyleSheet(G::css);
+    QVBoxLayout *layout = new QVBoxLayout(&dlg);
+
+    QLabel *intro = new QLabel("These factory settings were changed during the test.  The "
+                               "checked ones become the new factory settings: what a new "
+                               "user starts with.  Then Winnow restarts with your own "
+                               "settings.", &dlg);
+    intro->setWordWrap(true);
+    layout->addWidget(intro);
+
+    QTreeWidget *list = new QTreeWidget(&dlg);
+    list->setRootIsDecorated(false);
+    list->setHeaderLabels({"Setting", "Factory", "Changed to"});
+    for (const QString &key : changed) {
+        auto *item = new QTreeWidgetItem(list, {key, factoryValues.value(key).toString(),
+                                                settings->value(key).toString()});
+        item->setCheckState(0, Qt::Checked);
+    }
+    for (int c = 0; c < 3; ++c) list->resizeColumnToContents(c);
+    layout->addWidget(list);
+
+    QLabel *where = new QLabel("Saved to " + QDir::toNativeSeparators(path)
+                               + (inSourceTree ? "" : "\n(no source tree: copy it to "
+                                                      "Settings/factory.ini and rebuild)"),
+                               &dlg);
+    where->setWordWrap(true);
+    where->setStyleSheet("color: " + G::secondaryTextColor.name() + ";");
+    layout->addWidget(where);
+
+    QDialogButtonBox *btns = new QDialogButtonBox(&dlg);
+    btns->addButton("Restore and Save Factory Settings", QDialogButtonBox::AcceptRole);
+    btns->addButton(QDialogButtonBox::Cancel);
+    QObject::connect(btns, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    QObject::connect(btns, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    layout->addWidget(btns);
+    dlg.resize(560, 360);
+    if (dlg.exec() != QDialog::Accepted) return 0;
+
+    QStringList keys;
+    for (int i = 0; i < list->topLevelItemCount(); ++i) {
+        QTreeWidgetItem *item = list->topLevelItem(i);
+        if (item->checkState(0) == Qt::Checked) keys << item->text(0);
+    }
+    if (keys.isEmpty()) return 1;
+
+    QString err;
+    if (!saveFactoryOverrides(keys, path, err)) {
+        QMessageBox::warning(parent, "Restore My Settings",
+                             err + "\n\nNothing was restored.");
+        return 0;
+    }
+    return 1;
+}
+
+void MW::applyPendingSettingsReset()
+{
+/*
+    Carries out the step MW::requestSettingsReset left in kResetRequest, then sets
+    isFactorySettingsTest.  Called from the MW constructor BEFORE migrateOldSettings and
+    before settings.ini is opened.  After "reset" or "test" an EMPTY settings.ini is left
+    in place: with no file at all migrateOldSettings would copy the old pre-ini plist
+    settings back in.  An empty file has no "slideShowDelay", so isSettings is false and
+    loadSettings applies the factory defaults.
+*/
+    if (G::isLogger) G::log("MW::applyPendingSettingsReset");
+    const QString ini = settingsFile("settings.ini");
+    const QString backup = settingsFile(kTestBackup);
+
+    QFile request(settingsFile(kResetRequest));
+    if (request.open(QIODevice::ReadOnly)) {
+        const QString step = QString::fromUtf8(request.readAll()).trimmed();
+        request.close();
+        request.remove();
+
+        auto startEmpty = [&ini]() {
+            QFile f(ini);
+            if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) f.close();
+        };
+
+        if (step == "reset") {
+            /* During a test settings.ini is only the test's: the user's own settings
+               stay in the test backup, so keep that and do not save the test's. */
+            if (!QFile::exists(backup)) {
+                QFile::remove(settingsFile(kBeforeReset));
+                QFile::rename(ini, settingsFile(kBeforeReset));
+            }
+            QFile::remove(ini);
+            startEmpty();
+        }
+        else if (step == "test") {
+            if (!QFile::exists(backup)) QFile::rename(ini, backup);
+            QFile::remove(ini);
+            startEmpty();
+        }
+        else if (step == "restore") {
+            if (QFile::exists(backup)) {
+                QFile::remove(ini);
+                QFile::rename(backup, ini);
+            }
+        }
+    }
+
+    isFactorySettingsTest = QFile::exists(backup);
 }
 
 void MW::migrateSortColumnLayout()

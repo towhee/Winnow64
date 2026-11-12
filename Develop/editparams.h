@@ -323,10 +323,10 @@ struct EditParams {
 
        Read them through denoiseLumaOr / denoiseChromaOr, never directly.
 
-       The FACTORY values below seed the remembered amounts for a new user. Color is full:
-       chroma noise is objectionable and chroma detail is low-frequency, so baking 100 at
-       decode is the right baseline. Luma is 0.75: strong enough to clean sensor grain
-       while leaving fine detail intact. Sidecars written before 2026-10-13 always stored
+       The LEGACY values below are the remembered amounts of a user whose settings predate
+       them, and the baseline the devPreview key omits (denoiseAmountsKeyPart) -- do not
+       retune them.  A NEW user's amounts are factory settings (MW::createDevelopDock):
+       Lum 100 and Color 100 since 2026-11-12. Sidecars written before 2026-10-13 always stored
        both amounts explicitly (usually these factory values), so those images keep them
        rather than following the remembered amounts -- reading a stored factory value as
        unset would have re-keyed every edited image's devPreview. */

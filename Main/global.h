@@ -1051,6 +1051,12 @@ Q_NAMESPACE
         return static_cast<int>(strFontSize.toInt() * 1.7 * ptToPx);
     }
 
+    /* Above/below slider rows (G::sliderAboveBelow): extra space above the Name / Value
+       line, 50% of the font size, so stacked rows do not crowd the row above. */
+    inline int sliderTopGap() {
+        return static_cast<int>(strFontSize.toInt() * 0.5 * ptToPx);
+    }
+
     /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,
        hints ...). Use this instead of a bare "color: x" string: a per-widget stylesheet
        OVERRIDES the app stylesheet, including its "QLabel:disabled" rule, so a hand-

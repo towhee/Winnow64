@@ -56,6 +56,15 @@ bool canInstallInPlace(QString *reason = nullptr);
 bool prepare(const QString &installerPath, QString &error);
 bool launchFinisher(const QString &installerPath, QString &error);
 
+/*
+    Starts a detached helper that waits for THIS process to exit and then starts Winnow
+    again (the same bundle / exe / AppImage).  It has to wait: Winnow is a single-instance
+    app, and a copy started while this one runs would hand its arguments over and quit.
+    The caller then closes the main window; if the close is declined the helper keeps
+    waiting.  Used by the Preferences factory reset (MW::requestSettingsReset).
+*/
+bool relaunchAfterExit(QString &error);
+
 } // namespace AppInstaller
 
 #endif // APPINSTALLER_H

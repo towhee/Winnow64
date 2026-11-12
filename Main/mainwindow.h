@@ -876,8 +876,13 @@ public slots:
     int  guiStallInterval() const;
     /*  Start / stop the background scan over catalogScope. automatic says the user did
         not press anything -- see maybeAutoScanCatalog -- which is what earns the run a
-        popup at the end, since nothing else accounts for it. */
-    void startCatalogScan(bool automatic = false);
+        popup at the end, since nothing else accounts for it. only, when not empty, is
+        the part of the scope to walk -- the include rows an edit just added -- and the
+        scope's exclude rows go with it. */
+    void startCatalogScan(bool automatic = false, const CatalogScope &only = CatalogScope());
+    /*  Manage Catalog's draft, applied: forget what it disowns (asking first; declining
+        puts the table back), then scan only what it gained. */
+    void applyCatalogScopeAndScan(const CatalogScope &scope);
     /*  SELECTING THE LIBRARY IS ASKING WHETHER IT IS STILL TRUE. A catalog is an index of
         a filesystem that keeps changing underneath it, and the moment the user asks to
         look at the whole library is the moment a stale one matters most -- so the scan
@@ -2705,6 +2710,13 @@ private:
     bool catalogScanIsAuto = false;
     /* Rows the pre-scan reconcile forgot, carried to the report at the end of the run. */
     int catalogScanForgotten = 0;
+    /*  The scan now running walks only part of the scope (startCatalogScan's only), so
+        what it counts is not the library's: catalogUncatalogable is left alone. */
+    bool catalogScanPartial = false;
+    /*  A scope applied while a scan was running: its gain, scanned when that run ends.
+        queued says one is waiting (a narrowing-only apply has nothing to walk). */
+    CatalogScope catalogScanQueued;
+    bool catalogScanQueuedPending = false;
     /* Set once the "define a catalog scope" prompt has been offered this session, so it
        is offered once per session and not on every folder. Not persisted. */
     bool catalogScopePrompted = false;
@@ -3420,6 +3432,10 @@ private:
 
     bool simulateJustInstalled;
     bool isSettings = false;
+    /* Preferences "Test factory settings" is running: settings.ini is a
+       fresh one and the user's own waits in the test backup for "Restore my settings"
+       (MW::applyPendingSettingsReset). */
+    bool isFactorySettingsTest = false;
     // bool isStressTest;
     int stressSecToGoInFolder;
     bool hasGridBeenActivated;
@@ -3713,6 +3729,34 @@ private:
     void setupCentralWidget();
     void initialize();
     void migrateOldSettings();
+    /* Factory reset (buttons at the bottom of PreferencesDlg).  request writes the step for the next
+       launch and restarts Winnow; apply carries it out before settings.ini is opened.
+       Steps: "reset", "test" (factory settings, own kept aside), "restore". */
+    void requestSettingsReset(const QString &step);
+    void applyPendingSettingsReset();
+
+    /* FACTORY SETTINGS (the "Factory settings" section of MW::loadSettings).  Each
+       factory value is keyed by its QSettings key.  factorySetting takes the value tuned
+       by a factory test (factoryOverrides, from Settings/factory.ini) or else the code
+       value, records both (every launch, so a factory test can compare against them) and
+       assigns it when apply (a new user). */
+    QHash<QString, QVariant> factoryOverrides;
+    QMap<QString, QVariant> factoryValues;          // key -> factory value now
+    QMap<QString, QVariant> factoryCodeValues;      // key -> value in code
+    template <typename T>
+    void factorySetting(T &var, const QString &key, const std::type_identity_t<T> &code,
+                        bool apply)
+    {
+        const T v = factoryOverrides.contains(key)
+                  ? factoryOverrides.value(key).template value<T>() : code;
+        factoryCodeValues.insert(key, QVariant::fromValue(code));
+        factoryValues.insert(key, QVariant::fromValue(v));
+        if (apply) var = v;
+    }
+    QString factoryOverridesPath(bool *inSourceTree = nullptr) const;
+    void loadFactoryOverrides();
+    bool saveFactoryOverrides(const QStringList &keys, QString &path, QString &err);
+    int confirmRestoreAndFactory(QWidget *parent);   // 0 cancel, 1 ok, -1 nothing changed
     void migrateSortColumnLayout();
     void setupPlatform();
     void recoverGeometry(const QByteArray &geometry, RecoverGeometry &r) const;

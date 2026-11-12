@@ -70,6 +70,28 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
 
     noteLabel = new QLabel;
     noteLabel->setWordWrap(true);
+
+    /*  THE PENDING LINE. Edits are a draft (see the header), so something has to say so
+        where the eye already is -- directly under the table it describes -- and say what
+        to do about it. Tinted in the colour the info table uses for "press Scan", the
+        one other place this window asks for an action. Its link is the Scan button. */
+    pendingLabel = new QLabel;
+    pendingLabel->setWordWrap(true);
+    pendingLabel->setTextFormat(Qt::RichText);
+    pendingLabel->setOpenExternalLinks(false);
+    pendingLabel->setTextInteractionFlags(Qt::LinksAccessibleByMouse);
+    {
+        const QColor c = G::catalogOwedColor;
+        pendingLabel->setStyleSheet(
+            QString("QLabel { background-color: rgba(%1,%2,%3,40); "
+                    "border-left: 3px solid %4; padding: 6px 8px; }")
+                .arg(c.red()).arg(c.green()).arg(c.blue()).arg(c.name()));
+    }
+    pendingLabel->setText(
+        "<b>The table has changed.</b> When you have finished editing, "
+        "<a href=\"scan\"><b>click Scan</b></a> to update the catalog. Closing this "
+        "window also applies the changes and scans.");
+    pendingLabel->hide();
     statusLabel = new QLabel;
     /*  NOT word-wrapped. It holds an HTML table whose lines are laid out already, and a
         word-wrapped rich-text QLabel under-reports its height -- the last line (the
@@ -126,6 +148,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     QVBoxLayout *scopeLay = nullptr;
     QGroupBox *scopeBox = makeSection("Catalog Scope", scopeLay);
     scopeLay->addWidget(table);
+    scopeLay->addWidget(pendingLabel);
     scopeLay->addWidget(noteLabel);
     sectionsLay->addWidget(scopeBox);
 
@@ -209,19 +232,21 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
         std::sort(rows.begin(), rows.end(), std::greater<int>());
         for (int r : rows) table->removeRow(r);
         fitTableHeight();
-        /*  REMOVING A ROW UN-CATALOGUES WHAT IT CONTRIBUTED, and this is the ordinary
-            scopeChanged that says so: the table states what the catalog HOLDS, not
-            merely what a scan visits, so no separate signal or confirmation belongs
-            here. MW counts what the removal disowns, asks, and puts the rows back if the
-            user declines -- which is why this does not need to know whether the deletion
-            was accepted. Removing an exclusion still indexes nothing by itself: the next
-            scan picks that folder up like any other. */
+        /*  REMOVING A ROW UN-CATALOGUES WHAT IT CONTRIBUTED -- but not here. The table
+            states what the catalog HOLDS, so when the draft is applied MW counts what
+            the removal disowns, asks, and puts the rows back if the user declines. */
         noteEdit();
     });
 
-    connect(scanBtn, &QPushButton::clicked, this, [this]{
+    auto scan = [this]{
         if (scanning) emit stopScanRequested();
+        else if (hasPendingEdits()) emit applyAndScanRequested(scope());
         else emit scanRequested();
+    };
+    connect(scanBtn, &QPushButton::clicked, this, scan);
+    /* Applies even while an automatic scan runs: MW queues what it gains behind it. */
+    connect(pendingLabel, &QLabel::linkActivated, this, [this]{
+        if (hasPendingEdits()) emit applyAndScanRequested(scope());
     });
 
     connect(closeBtn, &QPushButton::clicked, this, &QDialog::close);
@@ -378,34 +403,110 @@ void CatalogRootsDlg::fitToContents()
 void CatalogRootsDlg::setRowCounts(const QVector<int> &counts)
 {
 /*
+    MW counts ITS table, which is the committed one -- so the counts are keyed by row
+    identity rather than position, and a draft that has since added, removed or edited
+    rows still shows each unedited row its own number.
+*/
+    lastCounts.clear();
+    for (int i = 0; i < committed.size() && i < counts.size(); ++i)
+        lastCounts.insert(entryKey(committed.at(i)), counts.at(i));
+    refreshCounts();
+}
+
+void CatalogRootsDlg::refreshCounts()
+{
+/*
     Written with populating held, because these are items in the same table whose
     itemChanged is how a user edit is noticed -- without it, showing a count would look
-    like an edit, which would ask MW for the counts again, forever.
+    like an edit.
 */
     const bool wasPopulating = populating;
     populating = true;
-    for (int r = 0; r < table->rowCount(); ++r) {
+    const CatalogScope s = scope();
+    for (int r = 0; r < table->rowCount() && r < s.size(); ++r) {
         QTableWidgetItem *item = table->item(r, ColImages);
         if (!item) continue;
-        const int n = r < counts.size() ? counts.at(r) : -1;
-        /* -2 counting, -1 unknown (the folder is not there, or unmounted), 0 or more the
-           answer. A stale number left in place would be read as a fresh one. */
+        const QString key = entryKey(s.at(r));
+        const bool counted = lastCounts.contains(key);
+        const int n = counted ? lastCounts.value(key) : -1;
+        /* -2 counting, -1 unknown (the folder is not there, or unmounted, or the row is
+           new), 0 or more the answer. A stale number left in place would be read as a
+           fresh one. */
         if (n == -2) item->setText("...");
         else if (n < 0) item->setText(QString(QChar(0x2014)));
         else item->setText(QLocale().toString(n));
+        item->setToolTip(counted ? "Images in this folder on disk now. The Library "
+                                   "matches it after a scan."
+                                 : "Counted when you Scan.");
     }
     populating = wasPopulating;
+}
+
+QString CatalogRootsDlg::entryKey(const CatalogScopeEntry &e)
+{
+    return e.path + QChar(0) + (e.include ? '1' : '0') + (e.recurse ? '1' : '0');
+}
+
+bool CatalogRootsDlg::hasPendingEdits() const
+{
+    QStringList a, b;
+    for (const CatalogScopeEntry &e : scope()) a << entryKey(e);
+    for (const CatalogScopeEntry &e : committed) b << entryKey(e);
+    a.sort();
+    b.sort();
+    return a != b;
+}
+
+void CatalogRootsDlg::updatePending()
+{
+    const bool pending = hasPendingEdits();
+    /* Enter presses Scan while there is something for it to apply. */
+    scanBtn->setDefault(pending);
+    if (pendingLabel->isVisible() == pending) return;
+    pendingLabel->setVisible(pending);
+    fitToContents();
+}
+
+void CatalogRootsDlg::done(int r)
+{
+/*
+    Closing with edits pending applies them -- forget, then scan -- exactly as Scan
+    would. Not at quit (G::stop): applying may ask "Remove from Catalog?", which a quit
+    cannot stop to show, so an unapplied draft is simply not kept.
+*/
+    if (!applying && !G::stop && hasPendingEdits()) {
+        applying = true;
+        emit applyAndScanRequested(scope());
+        applying = false;
+    }
+    QDialog::done(r);
+}
+
+void CatalogRootsDlg::showBusy(const QString &text)
+{
+    scanBar->setRange(0, 0);
+    scanLabel->setText(text);
+    scanBlock->show();
+    /* Laid out and painted now, not on the next pass: the caller is about to block the
+       event loop, and this is the only thing saying why. */
+    layout()->activate();
+    const int h = layout()->totalSizeHint().height();
+    if (h > height()) resize(width(), h);
+    repaint();
 }
 
 void CatalogRootsDlg::setScope(const CatalogScope &scope)
 {
     populating = true;                  // a restore is not a user edit
+    committed = scope;
     table->setRowCount(0);
     for (const CatalogScopeEntry &e : scope) addRow(e);
     populating = false;
     fitTableHeight();
     removeBtn->setEnabled(false);
+    refreshCounts();
     updateNote();
+    updatePending();
     sections->updateSummaries();
 }
 
@@ -430,8 +531,9 @@ void CatalogRootsDlg::noteEdit()
 {
     if (populating) return;
     updateNote();
+    refreshCounts();
+    updatePending();
     sections->updateSummaries();
-    emit scopeChanged(scope());
 }
 
 void CatalogRootsDlg::updateNote()
@@ -468,10 +570,11 @@ void CatalogRootsDlg::updateNote()
     }
 
     noteLabel->setText("These folders are the catalog: removing a row removes its "
-                       "images from the catalog. The image files are not affected.");
+                       "images from the catalog when you Scan. The image files are not "
+                       "affected.");
 }
 
-void CatalogRootsDlg::setScanning(bool on)
+void CatalogRootsDlg::setScanning(bool on, const QString &what)
 {
 /*
     While a scan runs the button becomes Stop and the table is frozen: editing the scope
@@ -479,6 +582,7 @@ void CatalogRootsDlg::setScanning(bool on)
     added is being scanned or not.
 */
     scanning = on;
+    scanWhat = on ? what : QString();
     scanBtn->setText(on ? "Stop" : "Scan");
     table->setEnabled(!on);
     addBtn->setEnabled(!on);
@@ -487,9 +591,14 @@ void CatalogRootsDlg::setScanning(bool on)
         scanBlock->hide();
         fitToContents();
     }
-    else if (scanBlock->isHidden()) {
-        scanBar->setRange(0, 0);            // busy until the first report
-        scanLabel->setText("Starting the scan...");
+    else {
+        /* Busy until the first report. Shown even when showBusy put the block up
+           already: its "Applying changes..." is over once the scan starts. */
+        scanBar->setRange(0, 0);
+        scanLabel->setText(scanWhat.isEmpty()
+                               ? QString("Starting the scan...")
+                               : QString("Starting the scan of \u2018%1\u2019...")
+                                     .arg(scanWhat));
         scanBlock->show();
         fitToContents();
     }
@@ -505,14 +614,25 @@ void CatalogRootsDlg::setScanProgress(const CatalogScanProgress &p)
 
     /*  TWO LINES: where the scan is and how long is left, then -- in grey -- that the
         window is not needed. One sentence carrying both was the crowding. */
+    /* A scan of only what the last edit added names it, so the user can tell it from
+       a scan of the whole catalog. */
+    const QString what = scanWhat.isEmpty()
+        ? QString()
+        : QString("<b>Scanning &lsquo;%1&rsquo;</b> &mdash; ").arg(scanWhat.toHtmlEscaped());
     QString text;
     if (p.phase == CatalogScanProgress::Checking) {
-        text = QString("<b>Checking folders</b> for new and changed images: %1 of %2")
-                   .arg(loc.toString(p.done), loc.toString(p.total));
+        text = what.isEmpty()
+            ? QString("<b>Checking folders</b> for new and changed images: %1 of %2")
+                  .arg(loc.toString(p.done), loc.toString(p.total))
+            : what + QString("checking folders %1 of %2")
+                         .arg(loc.toString(p.done), loc.toString(p.total));
     }
     else {
-        text = QString("<b>Indexing</b> %1 of %2 images").arg(loc.toString(p.done),
-                                                              loc.toString(p.total));
+        text = what.isEmpty()
+            ? QString("<b>Indexing</b> %1 of %2 images").arg(loc.toString(p.done),
+                                                            loc.toString(p.total))
+            : what + QString("indexing %1 of %2 images").arg(loc.toString(p.done),
+                                                            loc.toString(p.total));
         if (p.filesPerSec > 0) {
             const int decimals = p.filesPerSec < 10 ? 1 : 0;
             text += QString(" &nbsp;&middot;&nbsp; %1 per second")

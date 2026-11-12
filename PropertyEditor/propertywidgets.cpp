@@ -320,8 +320,9 @@ void SliderEditor::applyLayout(bool stackedLayout)
 void SliderEditor::layoutStacked()
 {
     const int top = qMax(0, height() - G::sliderBandHeight);
+    const int gap = qMin(G::sliderTopGap(), top);   // space above the Name / Value line
     const int lw = qMin(lineEditWidth, width() / 2);
-    lineEdit->setGeometry(width() - G::propertyWidgetMarginRight - lw, 0, lw, top);
+    lineEdit->setGeometry(width() - G::propertyWidgetMarginRight - lw, gap, lw, top - gap);
     /* End the slider where the value's TEXT ends, not where its box ends: a QLineEdit
        draws right-aligned text inset from its right edge, so a slider running to the
        box edge overhangs the number. */

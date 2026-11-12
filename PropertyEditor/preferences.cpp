@@ -631,7 +631,6 @@ void Preferences::itemChange(QModelIndex idx)
         mw->fs8bit = v.toBool();
         mw->writeSetting("focusStack8bit", v.toBool());  // also saved in MW::writeSettings
     }
-
 }
 
 void Preferences::addItems()
@@ -666,6 +665,24 @@ void Preferences::addItems()
     addMetadataPanel();
     addTableView();
     if (G::isRory) addUtilities();
+}
+
+QWidget *Preferences::addSlider(ItemInfo &i)
+{
+/*
+    Adds a DT_Slider item with the groove of the Develop Basic panel's Exposure slider
+    (G::darkgray to G::lightgray) rather than the text-shade-to-white default. The item's
+    colours are restored afterwards: the shared ItemInfo carries them on to later items,
+    where UR_Color is LineEdit/LabelEdit text.
+*/
+    const QString color = i.color;
+    const QString color1 = i.color1;
+    i.color = G::darkgray;
+    i.color1 = G::lightgray;
+    QWidget *w = addItem(i);
+    i.color = color;
+    i.color1 = color1;
+    return w;
 }
 
 void Preferences::addGeneral()
@@ -1024,7 +1041,7 @@ void Preferences::addUserInterface()
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Application background luminousity
     i.name = "globalBackgroundShade";
@@ -1041,7 +1058,7 @@ void Preferences::addUserInterface()
     i.min = 10;
     i.max = 100;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Mouse wheel sensitivity
     i.name = "wheelSensitivity";
@@ -1058,7 +1075,7 @@ void Preferences::addUserInterface()
     i.min = 1;
     i.max = 100;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // UserInterfaceHeader > Font size header
     i.name = "FontSizeHeader";
@@ -1086,7 +1103,7 @@ void Preferences::addUserInterface()
     i.min = 6;
     i.max = 24;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Info overlay font size
     i.name = "infoOverlayFontSize";
@@ -1104,7 +1121,7 @@ void Preferences::addUserInterface()
     i.min = 6;
     i.max = 30;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Thumbnail count number size
     i.name = "iconNumberSize";
@@ -1122,7 +1139,7 @@ void Preferences::addUserInterface()
     i.min = 10;
     i.max = 60;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // General category::Badge size subcategory
     i.name = "BadgeSizeHeader";
@@ -1150,7 +1167,7 @@ void Preferences::addUserInterface()
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
-    // addItem(i);
+    // addSlider(i);
 
     // Thumbnail classification badge
     i.name = "classificationBadgeSizeFactor";
@@ -1171,7 +1188,7 @@ void Preferences::addUserInterface()
     i.min = 3;
     i.max = 20;
     i.fixedWidth = 50;
-    // addItem(i);
+    // addSlider(i);
 
     // Label Header
     i.name = "LabelHeader";
@@ -1213,7 +1230,7 @@ void Preferences::addUserInterface()
     i.min = 6;
     i.max = 16;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Show thumbnail label
     i.name = "thumbViewShowLabel";
@@ -1243,7 +1260,7 @@ void Preferences::addUserInterface()
     i.min = 6;
     i.max = 16;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Show grid thumbnail label
     i.name = "gridViewShowLabel";
@@ -1314,7 +1331,7 @@ void Preferences::addUserInterface()
     i.min = 0;
     i.max = 100;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     // Controls Header
     i.name = "ControlsHeader";
@@ -1499,7 +1516,7 @@ void Preferences::addCaching()
     i.min = 100;
     i.max = 2000;
     i.fixedWidth = 50;
-    addItem(i);
+    addSlider(i);
 
     i.name = "maxIconChunk";
     i.parentName = "CachingHeader";

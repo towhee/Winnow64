@@ -14,10 +14,10 @@
    <string>ScrollArea</string>
   </property>
   <property name="frameShape">
-   <enum>QFrame::NoFrame</enum>
+   <enum>QFrame::Shape::NoFrame</enum>
   </property>
   <property name="frameShadow">
-   <enum>QFrame::Plain</enum>
+   <enum>QFrame::Shadow::Plain</enum>
   </property>
   <property name="lineWidth">
    <number>5</number>
@@ -30,8 +30,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1330</width>
-     <height>1694</height>
+     <width>1325</width>
+     <height>1890</height>
     </rect>
    </property>
    <layout class="QHBoxLayout" name="horizontalLayout">
@@ -41,7 +41,7 @@
     <item>
      <spacer name="horizontalSpacer">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>
@@ -56,7 +56,7 @@
       <item>
        <spacer name="verticalSpacer_2">
         <property name="orientation">
-         <enum>Qt::Vertical</enum>
+         <enum>Qt::Orientation::Vertical</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -75,10 +75,10 @@
          </size>
         </property>
         <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
+         <enum>QFrame::Shape::NoFrame</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <item>
@@ -96,13 +96,13 @@
             </size>
            </property>
            <property name="frameShape">
-            <enum>QFrame::Box</enum>
+            <enum>QFrame::Shape::Box</enum>
            </property>
            <property name="text">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p align=&quot;center&quot;&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;span style=&quot; font-size:24pt; color:#ffffff;&quot;&gt;Welcome to Winnow&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;&lt;br/&gt;&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <set>Qt::AlignmentFlag::AlignCenter</set>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -122,13 +122,13 @@
         </layout>
        </widget>
       </item>
-      <item alignment="Qt::AlignTop">
+      <item alignment="Qt::AlignmentFlag::AlignTop">
        <widget class="QFrame" name="frame">
         <property name="frameShape">
-         <enum>QFrame::NoFrame</enum>
+         <enum>QFrame::Shape::NoFrame</enum>
         </property>
         <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
+         <enum>QFrame::Shadow::Raised</enum>
         </property>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
@@ -146,19 +146,19 @@
             </size>
            </property>
            <property name="frameShape">
-            <enum>QFrame::Box</enum>
+            <enum>QFrame::Shape::Box</enum>
            </property>
            <property name="lineWidth">
             <number>1</number>
            </property>
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Modes&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;Browse, Develop, Keywords, Map, Embellish and Slideshow reconfigure the workspace to carry out these activities efficiently.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Help&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;There are some help videos at &lt;/span&gt;&lt;a href=&quot;http://winnow.ca/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#007af4;&quot;&gt;winnow.ca&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;. They can also be accessed via Help &amp;gt; About.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Shortcuts&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;Most of the shortcuts are shown in the menus. You can see a complete list via the menu: &lt;/span&gt;&lt;span style=&quot; font-size:13pt; font-style:italic; color:#cccccc;&quot;&gt;Help &amp;gt; Shortcuts&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Workspaces&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;Each mode has its own layout. Arrange the panels the way you like and use Window &amp;gt; Workspace &amp;gt; Save Layout to make it the layout for that mode. You can also save custom workspaces for a mode and switch to them instantly with Ctrl/Cmd 0-9.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Panels&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;The panels will float or dock to the top, bottom, right or left sides of the main window.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Context Menus&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;Right mouse click to see context menus. Right clicking in the image panel (the one where this text resides) will show the main menu. This is handy when the main menu is hidden in full screen mode.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-size:13pt; font-weight:600; color:#ffffff;&quot;&gt;Tool tips&lt;/span&gt;&lt;span style=&quot; font-size:13pt; color:#cccccc;&quot;&gt;: &lt;br/&gt;Hover over an item with the mouse to see a tool tip. Try this in the preferences dialog to see explanations for different settings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Modes&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;Browse, Develop, Keywords, Map, Embellish and Slideshow reconfigure the workspace to carry out these activities efficiently.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Help&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;There are some help videos at &lt;/span&gt;&lt;a href=&quot;http://winnow.ca/&quot;&gt;&lt;span style=&quot; text-decoration: underline; color:#007af4;&quot;&gt;winnow.ca&lt;/span&gt;&lt;/a&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;. They can also be accessed via Help &amp;gt; About.  Help is available in Winnow via the shortcut '?' or the ? buttons sprinkled throughout Winnow.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Shortcuts&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;Most of the shortcuts are shown in the menus. You can see a complete list via the menu: &lt;/span&gt;&lt;span style=&quot; font-style:italic; color:#cccccc;&quot;&gt;Help &amp;gt; Shortcuts&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Workspaces&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;Each mode has its own layout. Arrange the panels the way you like and use Window &amp;gt; Workspace &amp;gt; Save Layout to make it the layout for that mode. You can also save custom workspaces for a mode and switch to them instantly with Ctrl/Cmd 0-9.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Panels&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;The panels will float or dock to the top, bottom, right or left sides of the main window.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Context Menus&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;Right mouse click to see context menus. Right clicking in the image panel (the one where this text resides) will show the main menu. This is handy when the main menu is hidden in full screen mode.&lt;/span&gt;&lt;/p&gt;&lt;p&gt;&lt;span style=&quot; font-weight:600; color:#ffffff;&quot;&gt;Tool tips&lt;/span&gt;&lt;span style=&quot; color:#cccccc;&quot;&gt;: &lt;br/&gt;Hover over an item with the mouse to see a tool tip. Try this in the preferences dialog to see explanations for different settings.&lt;/span&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="textFormat">
-            <enum>Qt::RichText</enum>
+            <enum>Qt::TextFormat::RichText</enum>
            </property>
            <property name="alignment">
-            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+            <set>Qt::AlignmentFlag::AlignLeading|Qt::AlignmentFlag::AlignLeft|Qt::AlignmentFlag::AlignTop</set>
            </property>
            <property name="wordWrap">
             <bool>true</bool>
@@ -174,7 +174,7 @@
       <item>
        <spacer name="verticalSpacer">
         <property name="orientation">
-         <enum>Qt::Vertical</enum>
+         <enum>Qt::Orientation::Vertical</enum>
         </property>
         <property name="sizeHint" stdset="0">
          <size>
@@ -189,7 +189,7 @@
     <item>
      <spacer name="horizontalSpacer_2">
       <property name="orientation">
-       <enum>Qt::Horizontal</enum>
+       <enum>Qt::Orientation::Horizontal</enum>
       </property>
       <property name="sizeHint" stdset="0">
        <size>

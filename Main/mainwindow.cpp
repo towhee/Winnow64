@@ -440,6 +440,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     initialize();
 
     // persistant settings between sessions
+    applyPendingSettingsReset();    // a factory reset / test / restore from Preferences
     migrateOldSettings();
     iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
@@ -624,6 +625,16 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
 
     // crash log
     settings->setValue("hasCrashed", true);
+
+    /* Say how to get back: "Restore my settings" at the bottom of Preferences. */
+    if (isFactorySettingsTest) {
+        QTimer::singleShot(1500, this, []() {
+            if (G::popup)
+                G::popup->showPopup("Testing factory settings.<br>\"Restore my settings\" at "
+                                    "the bottom of Preferences brings yours back.",
+                                    6000);
+        });
+    }
 
     // Memory-overrun watchdog: GUI-thread QTimer that polls phys_footprint
     // independently of any subsystem. Runs continuously so it catches growth
@@ -1365,6 +1376,9 @@ void MW::showEvent(QShowEvent *event)
     else {
         centreWindowOnPrimaryScreen();
         invokeWorkflowWorkspace(WfSource);
+        /* Factory setting: a new user starts on the Folders panel.  The shipped layout's
+           state carries whichever tab was in front when it was captured. */
+        if (folderDock) folderDock->raise();
         if (G::isPanelProbe)
             PanelProbe::Instance().Mark("after WfSource (no settings)");
     }
@@ -4799,16 +4813,41 @@ void MW::updateCatalogCounts()
     }));
 }
 
-void MW::startCatalogScan(bool automatic)
+void MW::startCatalogScan(bool automatic, const CatalogScope &only)
 {
 /*
     Kick off the background scan over the folders the user nominated. Queued onto the
     scanner's own thread; nothing here blocks.
+
+    ONLY PART OF THE SCOPE, WHEN only SAYS SO. Appending one folder to a library must
+    not cost a walk of the library. The scanner walks -- and demotes gone folders --
+    strictly inside the scope it is handed (CatalogScanner::scan), so the new include
+    rows plus every exclude row is a scope it can be trusted with: nothing outside it is
+    touched, and an exclusion inside a new row is still honoured.
 */
     if (G::isLogger) G::log("MW::startCatalogScan");
     if (!catalogScanner) return;
     if (catalogScanner->isRunning()) return;
     if (catalogScope.isEmpty()) return;
+
+    CatalogScope walk = catalogScope;
+    QStringList walkNames;
+    if (!only.isEmpty()) {
+        walk.clear();
+        for (const CatalogScopeEntry &e : only) {
+            /* As the scope holds it NOW: a gain queued behind a running scan may have
+               been removed or excluded by a later apply. */
+            const CatalogScopeEntry *cur = nullptr;
+            for (const CatalogScopeEntry &c : catalogScope)
+                if (c.path == e.path) { cur = &c; break; }
+            if (!cur || !cur->include) continue;
+            walk << *cur;
+            walkNames << QDir(e.path).dirName();
+        }
+        for (const CatalogScopeEntry &e : catalogScope) if (!e.include) walk << e;
+        if (walkNames.isEmpty()) return;
+    }
+    catalogScanPartial = !only.isEmpty();
 
     /*  Read by the finished handler, which is the only place that can know what the run
         actually found. Set before the reconcile below, so its count is attributed to
@@ -4839,9 +4878,106 @@ void MW::startCatalogScan(bool automatic)
 
     if (catalogView) catalogView->setScanning(true);
     if (filterPanel) filterPanel->setScanning(true);
-    if (catalogRootsDlg) catalogRootsDlg->setScanning(true);
+    if (catalogRootsDlg)
+        catalogRootsDlg->setScanning(true, walkNames.join(QString::fromUtf8(", ")));
     QMetaObject::invokeMethod(catalogScanner, "scan", Qt::QueuedConnection,
-                              Q_ARG(CatalogScope, catalogScope));
+                              Q_ARG(CatalogScope, walk));
+}
+
+namespace {
+
+/*  What an edit of the scope table GAINED: the include rows a scan has not walked as
+    they now stand -- new, turned from Exclude to Include, or given their subfolders --
+    and, for an exclusion that was removed, the include rows whose tree held it. What it
+    LOST is the reconcile's business (forget, not scan), so it is not here. */
+CatalogScope catalogScopeGain(const CatalogScope &before, const CatalogScope &after)
+{
+    auto find = [](const CatalogScope &s, const QString &path) -> const CatalogScopeEntry * {
+        for (const CatalogScopeEntry &e : s) if (e.path == path) return &e;
+        return nullptr;
+    };
+    CatalogScope gain;
+    auto add = [&gain](const CatalogScopeEntry &e) {
+        for (const CatalogScopeEntry &g : gain) if (g.path == e.path) return;
+        gain << e;
+    };
+    for (const CatalogScopeEntry &e : after) {
+        if (!e.include) continue;
+        const CatalogScopeEntry *was = find(before, e.path);
+        if (!was || !was->include || (e.recurse && !was->recurse)) add(e);
+    }
+    for (const CatalogScopeEntry &x : before) {
+        if (x.include) continue;
+        const CatalogScopeEntry *now = find(after, x.path);
+        if (now && !now->include) continue;              // still excluded
+        for (const CatalogScopeEntry &e : after)
+            if (e.include && (e.path == x.path
+                              || (e.recurse && FolderTree::isAtOrUnder(x.path, e.path))))
+                add(e);
+    }
+    return gain;
+}
+
+}  // namespace
+
+void MW::applyCatalogScopeAndScan(const CatalogScope &scope)
+{
+/*
+    THE EDIT, THE DELETION AND THE SCAN ARE ONE ACT, taken when the user says the table
+    is finished (Scan, or closing Manage Catalog). The table states what the catalog
+    holds, so a row removed, an exclusion added or a reach turned off is applied to the
+    index here -- and if the user declines the deletion the EDIT GOES BACK TOO. Keeping
+    the edit while refusing its consequence is the drift the reconcile exists to end.
+
+    THEN ONLY WHAT WAS GAINED IS WALKED (catalogScopeGain): the user just appended a
+    folder and is waiting for it, not for a re-check of everything else. A scan already
+    running is not interrupted; the gain waits for it (catalogScanQueued).
+
+    setScope repopulates under the dialog's own populating flag and does not signal
+    back, so putting the rows back cannot recurse.
+*/
+    if (G::isLogger) G::log("MW::applyCatalogScopeAndScan");
+    const CatalogScope previous = catalogScope;
+
+    /* The reconcile below is synchronous and can take a moment on a large index; say
+       so before it starts. */
+    if (catalogRootsDlg && catalogRootsDlg->isVisible())
+        catalogRootsDlg->showBusy("Applying changes to the catalog...");
+
+    catalogScope = scope;
+    if (reconcileCatalogToScope(true) < 0) {
+        catalogScope = previous;
+        if (catalogRootsDlg) {
+            catalogRootsDlg->setScope(previous);
+            /* Put the busy block away; a running scan's next report restores its own. */
+            if (!catalogScanner || !catalogScanner->isRunning())
+                catalogRootsDlg->setScanning(false);
+        }
+        updateCatalogCounts();
+        return;
+    }
+    if (catalogRootsDlg) catalogRootsDlg->setScope(catalogScope);
+    updateCatalogCounts();
+    /* The Library's Folders filter starts at the included folders (MW::setScope pushes
+       them on entry); a new one is a new top row from the next build on. */
+    if (filters && G::scope == G::Scope::Catalog) {
+        QStringList anchors;
+        for (const CatalogScopeEntry &e : catalogScopeEffective(true)) anchors << e.path;
+        filters->setFolderAnchors(anchors);
+    }
+
+    const CatalogScope gain = catalogScopeGain(previous, catalogScope);
+    if (catalogScanner && catalogScanner->isRunning()) {
+        for (const CatalogScopeEntry &e : gain) catalogScanQueued << e;
+        catalogScanQueuedPending = !catalogScanQueued.isEmpty();
+        return;
+    }
+    if (gain.isEmpty()) {
+        /* Only narrowed: the reconcile was the whole job. Put the progress block away. */
+        if (catalogRootsDlg) catalogRootsDlg->setScanning(false);
+        return;
+    }
+    startCatalogScan(false, gain);
 }
 
 void MW::maybeAutoScanCatalog(const QString &src, bool loadExpected)
@@ -4982,26 +5118,8 @@ void MW::manageCatalogRoots()
 
     if (!catalogRootsDlg) {
         catalogRootsDlg = new CatalogRootsDlg(this);
-        connect(catalogRootsDlg, &CatalogRootsDlg::scopeChanged, this,
-                [this](const CatalogScope &scope) {
-                    /*  THE EDIT AND THE DELETION ARE ONE ACT. The table states what the
-                        catalog holds, so a row removed, an exclusion added or a reach
-                        turned off is applied to the index here and now -- and if the
-                        user declines the deletion the EDIT GOES BACK TOO. Keeping the
-                        edit while refusing its consequence is the drift the reconcile
-                        exists to end: the table would name folders the catalog still
-                        held, with nothing on screen to say so.
-
-                        setScope repopulates under its own populating flag and does not
-                        signal back, so putting the rows back cannot recurse. */
-                    const CatalogScope previous = catalogScope;
-                    catalogScope = scope;
-                    if (reconcileCatalogToScope(true) < 0) {
-                        catalogScope = previous;
-                        catalogRootsDlg->setScope(previous);
-                    }
-                    updateCatalogCounts();
-                });
+        connect(catalogRootsDlg, &CatalogRootsDlg::applyAndScanRequested,
+                this, &MW::applyCatalogScopeAndScan);
         /*  A LAMBDA, NOT THE METHOD: startCatalogScan's automatic flag is a default
             argument, and a default argument is a property of the call rather than of the
             function's type -- a PMF connection to a signal with no arguments does not
@@ -9508,7 +9626,12 @@ void MW::preferences(QString text)
         // pref = new Preferences(this);
         // preferencesDlg = new PreferencesDlg(nullptr, isSoloPrefDlg, pref, G::css);
         preferencesDlg = new PreferencesDlg(this, isSoloPrefDlg, pref, G::css);
+        /* Queued: a reset closes Winnow, and closeEvent deletes the dialog whose button
+           sent this. */
+        connect(preferencesDlg, &PreferencesDlg::resetSettingsRequested,
+                this, &MW::requestSettingsReset, Qt::QueuedConnection);
     }
+    preferencesDlg->syncResetButtons(isFactorySettingsTest);
     /* Expand the requested branch every time, not only when the dialog is first
        created. The dialog is reused (NonModal, not deleted on close), so leaving this
        inside the creation guard meant the branch only expanded on the first open. */
@@ -19533,6 +19656,7 @@ void MW::toggleRory()   // shortcut = "Shift+Ctrl+Alt+."
 void MW::rory()
 {
     if (pref != nullptr) pref->rory();
+    if (preferencesDlg != nullptr) preferencesDlg->syncResetButtons(isFactorySettingsTest);
     /* Save Layout writes the Winnow default for Rory, and the Help > Diagnostics >
        Tests > Developer submenu is Rory only, so they follow the flag rather than only
        being set at startup. */

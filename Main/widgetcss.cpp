@@ -246,8 +246,8 @@ void WidgetCSS::styleGlobals()
        their bands as "Basic" and "Color" do in theirs. 0 centres everything instead. */
     G::headerCaptionTrim = 3;
     /* ABOVE/BELOW SLIDERS (G::sliderAboveBelow): height of the slider band under a slider
-       row's Name / Value line. The row is G::propertyRowHeight() + this. The handle is
-       14px, so keep it at least that. */
+       row's Name / Value line. The row is G::propertyRowHeight() + G::sliderTopGap() +
+       this. The handle is 14px, so keep it at least that. */
     G::sliderBandHeight = 16;
 }
 

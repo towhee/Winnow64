@@ -221,6 +221,23 @@ bool launchFinisher(const QString &installerPath, QString &error)
     return true;
 }
 
+bool relaunchAfterExit(QString &error)
+{
+    /* $1 pid to wait for, $2 the running bundle.  `open` rather than the executable so
+       the new copy is a normal LaunchServices launch (Dock icon, activation). */
+    clearTestEnvironment();
+    const QString script =
+        "while kill -0 \"$1\" 2>/dev/null; do sleep 0.2; done; open \"$2\"";
+    const QStringList args = {"-c", script, "sh",
+                              QString::number(QCoreApplication::applicationPid()),
+                              runningBundle()};
+    if (!QProcess::startDetached("/bin/sh", args)) {
+        error = "Could not start the helper that reopens Winnow.";
+        return false;
+    }
+    return true;
+}
+
 #elif defined(Q_OS_WIN)
 
 bool canInstallInPlace(QString *reason)
@@ -252,6 +269,25 @@ bool launchFinisher(const QString &installerPath, QString &error)
                       reinterpret_cast<LPCWSTR>(params.utf16()), nullptr, SW_SHOWNORMAL));
     if (rc <= 32) {
         error = QString("Could not start the update installer (error %1).").arg(rc);
+        return false;
+    }
+    return true;
+}
+
+bool relaunchAfterExit(QString &error)
+{
+    /* PowerShell waits for this process, then starts Winnow.exe again.  Single quotes
+       are a literal string in PowerShell; a quote inside the path is doubled. */
+    clearTestEnvironment();
+    QString exe = QDir::toNativeSeparators(QCoreApplication::applicationFilePath());
+    exe.replace("'", "''");
+    const QString cmd = QString("Wait-Process -Id %1 -ErrorAction SilentlyContinue; "
+                                "Start-Process -FilePath '%2'")
+                            .arg(QCoreApplication::applicationPid()).arg(exe);
+    const QStringList args = {"-NoProfile", "-NonInteractive", "-WindowStyle", "Hidden",
+                              "-Command", cmd};
+    if (!QProcess::startDetached("powershell.exe", args)) {
+        error = "Could not start the helper that reopens Winnow.";
         return false;
     }
     return true;
@@ -372,6 +408,27 @@ bool launchFinisher(const QString &installerPath, QString &error)
     return true;
 }
 
+bool relaunchAfterExit(QString &error)
+{
+    /* $1 pid to wait for, $2 the AppImage (or the executable of a build-tree / distro
+       copy).  As in kFinisherScript, the old AppImage runtime's variables are dropped,
+       or the new copy would look for its files in a directory that is unmounted. */
+    clearTestEnvironment();
+    QString target = runningAppImage();
+    if (target.isEmpty()) target = QCoreApplication::applicationFilePath();
+    const QString script =
+        "while kill -0 \"$1\" 2>/dev/null; do sleep 0.2; done; "
+        "env -u APPIMAGE -u APPDIR -u ARGV0 -u OWD -u LD_LIBRARY_PATH -u QT_PLUGIN_PATH "
+        "setsid \"$2\" >/dev/null 2>&1 &";
+    const QStringList args = {"-c", script, "sh",
+                              QString::number(QCoreApplication::applicationPid()), target};
+    if (!QProcess::startDetached("/bin/sh", args)) {
+        error = "Could not start the helper that reopens Winnow.";
+        return false;
+    }
+    return true;
+}
+
 #else
 
 bool canInstallInPlace(QString *reason)
@@ -381,6 +438,7 @@ bool canInstallInPlace(QString *reason)
 }
 bool prepare(const QString &, QString &error) { error = "Not supported."; return false; }
 bool launchFinisher(const QString &, QString &error) { error = "Not supported."; return false; }
+bool relaunchAfterExit(QString &error) { error = "Not supported."; return false; }
 
 #endif
 

@@ -37,6 +37,7 @@ private slots:
     void foldersBuildAsATreeUnderTheirAnchors();
     void folderCountsRollUpAndStateSurvivesARebuild();
     void foldersReachTheQueryByPath();
+    void libraryFoldersGroupUnderTheirDrive();
     void aNestedCategoryIsCountedAtEveryDepth();
     void keywordMatchModeTravelsAndResets();
     void flatOrderIsTheGroupOrder();
@@ -342,6 +343,58 @@ void tst_filters::foldersReachTheQueryByPath()
     QCOMPARE(q.exclude.value(G::FolderPathsAllColumn),
              QStringList{"/U/Photos/2020-2029/2021/DxO"});
     QVERIFY2(!q.include.contains(G::FolderNameColumn), "a folder NAME must not reach it");
+}
+
+void tst_filters::libraryFoldersGroupUnderTheirDrive()
+{
+/*
+    Library scope puts each catalogued folder under its drive. The drive row is not a
+    filter item -- the boot drive's root "/" is an ancestor of every path -- so a click
+    on it includes exactly its folders, and nothing on another drive.
+*/
+#if defined(Q_OS_WIN)
+    const QString a = "C:/Photos", b = "D:/Archive";
+#elif defined(Q_OS_LINUX)
+    const QString a = "/home/r/Photos", b = "/media/r/Yukon/Archive";
+#else
+    const QString a = "/Users/r/Photos", b = "/Volumes/Yukon/Archive";
+#endif
+    Filters f(nullptr);
+    f.setFolderAnchors({a, b});
+    f.setFolderDrives(true);
+    f.addCategoryItems({{a + "/2024", 3}, {a + "/2025", 4}, {b + "/Old", 5}}, f.folders);
+
+    QCOMPARE(f.folders->childCount(), 2);                   // two drives
+    QTreeWidgetItem *photos = findByValue(f.folders, a);
+    QTreeWidgetItem *archive = findByValue(f.folders, b);
+    QVERIFY(photos && archive);
+    QTreeWidgetItem *driveA = photos->parent();
+    QTreeWidgetItem *driveB = archive->parent();
+    QVERIFY(f.isDriveItem(driveA) && f.isDriveItem(driveB) && driveA != driveB);
+    QCOMPARE(driveA->data(3, Qt::EditRole).toInt(), 7);
+    QCOMPARE(driveB->data(3, Qt::EditRole).toInt(), 5);
+    QVERIFY(!f.isFilterItem(driveA));
+    QVERIFY(!f.itemsInCategory(f.folders).contains(driveA));
+
+    // a drive click includes its folders, and only them
+    f.filtersBuilt = true;
+    f.toggleDriveFilter(driveA, false);
+    QStringList inc, exc;
+    f.folderFilterState(inc, exc);
+    QCOMPARE(inc, QStringList{a});
+    QVERIFY(exc.isEmpty());
+    CatalogQuery q;
+    f.fillQuery(q);
+    QVERIFY2(!q.include.value(G::FolderPathsAllColumn).contains("/"),
+             "the drive's root must never reach the query");
+
+    // again clears; Opt excludes
+    f.toggleDriveFilter(driveA, false);
+    f.folderFilterState(inc, exc);
+    QVERIFY(inc.isEmpty());
+    f.toggleDriveFilter(driveB, true);
+    f.folderFilterState(inc, exc);
+    QCOMPARE(exc, QStringList{b});
 }
 
 void tst_filters::aNestedCategoryIsCountedAtEveryDepth()

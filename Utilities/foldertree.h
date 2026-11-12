@@ -88,6 +88,54 @@ inline QString leafOf(const QString &path)
     return i < 0 ? p : p.mid(i + 1);
 }
 
+/*
+    THE DRIVE A FOLDER IS ON, as the path's own text says it: "/Volumes/Yukon" for
+    "/Volumes/Yukon/Photos", "C:/" for "C:/Photos". The Library's Folders filter groups
+    its catalogued folders under this (Filters::setFolderDrives).
+
+    FROM THE TEXT, NOT THE MOUNT TABLE, so a catalogued drive that is ejected still
+    groups under its own name instead of collapsing into the boot drive. The price is
+    that a volume mounted somewhere unconventional (a Linux /srv/photos partition) groups
+    under "/" -- a wrong label, never a wrong filter, because a drive row's filter is its
+    folders (Filters::toggleDriveFilter), not this path.
+*/
+inline QString volumeRootOf(const QString &path)
+{
+    const QString p = normalize(path);
+    /* p up to the end of its n-th component: ("/Volumes/Yukon/Photos", 2) is
+       "/Volumes/Yukon". */
+    auto head = [&p](int n) {
+        int i = 0;
+        for (int k = 0; k < n; ++k) {
+            i = p.indexOf('/', i + 1);
+            if (i < 0) return p;
+        }
+        return p.left(i);
+    };
+#if defined(Q_OS_WIN)
+    Q_UNUSED(head)
+    if (p.size() >= 2 && p.at(1) == ':') return p.left(2) + '/';
+    if (p.startsWith("//")) {                               // //server/share
+        const int share = p.indexOf('/', 2);
+        if (share < 0) return p;
+        const int end = p.indexOf('/', share + 1);
+        return end < 0 ? p : p.left(end);
+    }
+    return QString();
+#elif defined(Q_OS_MAC)
+    if (p.startsWith("/Volumes/")) return head(2);
+    return QStringLiteral("/");
+#elif defined(Q_OS_LINUX)
+    if (p.startsWith("/media/")) return head(3);           // /media/<user>/<name>
+    if (p.startsWith("/run/media/")) return head(4);       // /run/media/<user>/<name>
+    if (p.startsWith("/mnt/")) return head(2);
+    return QStringLiteral("/");
+#else
+    Q_UNUSED(head)
+    return QStringLiteral("/");
+#endif
+}
+
 /*  The folder and every folder above it, ROOT FIRST: "/Users/r/Photos" gives "/",
     "/Users", "/Users/r" and "/Users/r/Photos". A drive gives its root ("C:/"), and a UNC
     path starts at its server ("//srv") because nothing sits above that. */
