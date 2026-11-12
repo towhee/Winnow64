@@ -1524,6 +1524,10 @@ private:
     QString segmenterNote;
     /* maskBrushSettingsChanged from the current settings. */
     void emitBrushSettings(const MaskComponent &m);
+    /* The Brush tool's next-stroke settings (size, feather, flow, auto mask) persist in
+       QSettings ("Develop/brush*"): saved on every change, loaded by beginMaskTool. */
+    void saveBrushSettings(const MaskComponent &m);
+    void loadBrushSettings(MaskComponent &m);
     /* A canvas gesture changed a mask setting: seed the row wherever it is showing --
        the MaskPanel's editor (Lab UI) and/or the main tree (legacy) -- without echoing
        back. */

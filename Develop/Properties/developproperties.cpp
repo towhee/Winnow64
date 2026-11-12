@@ -1594,6 +1594,7 @@ void DevelopProperties::onMaskEditorSetting(const QString &key, const QVariant &
         else if (key == "maskSize")     put("size", v.toDouble());
         else if (key == "maskFlow")     put("flow", v.toInt());
         else if (key == "maskAutoMask") put("autoMask", v.toBool());
+        if (!lastOnly) saveBrushSettings(*mm);
         emitBrushSettings(*mm);
         /* A stroke that is already down changed -> re-composite. Arming the next stroke
            changes nothing on screen but the cursor. */
@@ -1768,7 +1769,7 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     m.op   = int(MaskOp::Add);   // the real op is written on commit, from pendingOp
     m.tool = tool;
     m.paramsJson = defaultMaskParams(tool);
-    if (tool == int(MaskTool::Brush)) m.feather = 0.0f;   // brush -> crisp edge
+    if (tool == int(MaskTool::Brush)) loadBrushSettings(m);   // last-used brush
     /* The AI masks start CRISP: their cutout or matte is the result, and Feather is a
        real spatial blur on top of it (Develop/maskfeather.h) -- at the old default of 50
        every new mask would arrive with a ~5% halo. (Refine Brush keeps the default: a
@@ -3986,6 +3987,7 @@ void DevelopProperties::setActiveBrushSize(double size)
        (2026-10-14). Resizing what is there is the panel slider's job (its header says
        "applies to N strokes"). No re-render: nothing painted changed. */
     m.paramsJson = brushWith(m.paramsJson, "size", s);
+    saveBrushSettings(m);
     noteEdit("Brush size", QString::number(s, 'f', 1), "mask/brushSize");
     syncMaskSlider("maskSize", s);
 }
@@ -4005,6 +4007,7 @@ void DevelopProperties::setActiveMaskFeather(double feather)
     const int f = qBound(0, int(feather + 0.5), 100);
     if (int(m.feather + 0.5f) == f) return;
     m.feather = f;
+    saveBrushSettings(m);
     noteEdit("Feather", QString::number(f), "mask/maskFeather");
     syncMaskSlider("maskFeather", f);
     /* Brush feather from the canvas belongs to the NEXT stroke (each stroke keeps its
@@ -4056,6 +4059,7 @@ void DevelopProperties::setActiveBrushAutoMask(bool on)
     const bool retro = (pendingIdx < 0);
     m.paramsJson = retro ? brushStrokesWith(m.paramsJson, "autoMask", on)
                          : brushWith(m.paramsJson, "autoMask", on);
+    saveBrushSettings(m);
     noteEdit("Auto mask", on ? "On" : "Off");
     /* The checkbox the user sees is the MASK PANEL's (its embedded MaskEditor), so sync
        that one -- updating only the tree row, as this did, left the panel's box stale
@@ -4074,6 +4078,30 @@ void DevelopProperties::emitBrushSettings(const MaskComponent &m)
                                   m.feather,
                                   brushNum(m.paramsJson, "flow", 100),
                                   brushBool(m.paramsJson, "autoMask", false));
+}
+
+void DevelopProperties::saveBrushSettings(const MaskComponent &m)
+{
+    /* Brush only: Refine Brush and Object share the stroke canvas but are different
+       tools with their own defaults. The values saved are the NEXT-stroke ones (the
+       component's top-level params + its feather), so a last-stroke correction, which
+       leaves those alone, does not change how the brush comes out next time. */
+    if (m.tool != int(MaskTool::Brush)) return;
+    setting->setValue("Develop/brushSize", brushNum(m.paramsJson, "size", 20));
+    setting->setValue("Develop/brushFeather", double(m.feather));
+    setting->setValue("Develop/brushFlow", brushNum(m.paramsJson, "flow", 100));
+    setting->setValue("Develop/brushAutoMask", brushBool(m.paramsJson, "autoMask", false));
+}
+
+void DevelopProperties::loadBrushSettings(MaskComponent &m)
+{
+    const double size = qBound(0.1, setting->value("Develop/brushSize", 20.0).toDouble(), 100.0);
+    const double flow = qBound(0.0, setting->value("Develop/brushFlow", 100.0).toDouble(), 100.0);
+    const bool autoMask = setting->value("Develop/brushAutoMask", false).toBool();
+    m.feather = float(qBound(0.0, setting->value("Develop/brushFeather", 50.0).toDouble(), 100.0));
+    m.paramsJson = brushWith(m.paramsJson, "size", size);
+    m.paramsJson = brushWith(m.paramsJson, "flow", flow);
+    m.paramsJson = brushWith(m.paramsJson, "autoMask", autoMask);
 }
 
 void DevelopProperties::setMaskOverlayShown(bool shown)
