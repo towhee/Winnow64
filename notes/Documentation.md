@@ -1450,7 +1450,21 @@ setOperationMode now does this on the way out:
 3. With a frame, it rebuilds the cache through ImageCache::reloadImageCacheSeeded instead of colorManageChange (toggleUseRaw(..., reloadCache = false)). That clears the cache, inserts the frame for the current key, colour-managed on the ImageCache thread as a devPreview is (from sRGB, iccFormats only), and emits setCached. setTargetRange skips a key icd already holds, so no decoder is dispatched for it.
 4. The loupe repaints from the seed through MW::refreshViewsOnCacheChange. The pixels are identical, so nothing visibly changes, and loadImage still resets the Develop-only loupe state (geometry, proxy pixmap).
 
-Without a frame (Original chosen, an unedited image, or the settle render not landed or superseded) the reload decodes as before.
+Without a frame (Original chosen, an unedited image, or no faithful render of this recipe) the reload decodes as before.
+
+**Proxy fallback and the crop tool (2026-11-13, untested in-app).** Pressing E (or G / T / D) with the crop tool open showed several crops in turn before settling. R then E did not. Closing the Transform session commits the crop and re-renders asynchronously, and every frame on hand was rendered with the crop suppressed (not faithful). So the leave had no seed, and Browse showed:
+
+1. the camera JPEG (uncropped and undeveloped, since Browse does not apply the recipe),
+2. then the late proxy render, painted by the Develop completion straight over the Browse picture,
+3. then the devPreview build.
+
+The fix has three parts:
+
+- setOperationMode calls MW::waitForDevelopFrame after closing the session. It waits up to 1.5 s, with user input excluded, for the committed crop's faithful proxy (~0.1 s).
+- developFrameForBrowse falls back to the faithful proxy when there is no full frame of this recipe. This also covers leaving inside the settle window after a slider edit. The proxy is soft at 100%, and the "flush" devPreview build re-caches the image when it lands (same picture, sharper).
+- The proxy and full-res completions no longer paint the loupe outside Develop. renderDevelopFullResAsync returns outside Develop, so a settle timer armed just before the leave does not take developRenderPool's one thread from the devPreview build.
+
+The [BrowseSwitch] refusal reasons are now: preview source is not Developed, unedited, and no faithful frame of this recipe.
 
 ### 2.8 UI Style Values
 
@@ -10618,6 +10632,8 @@ The Search row has its own CONTEXT MENU, because the query is typed, can outgrow
 
 The panel's right-click menu has "Expand checked filters" beside Expand all / Collapse all (MW::expandCheckedFiltersAction -> Filters::expandCheckedFilters). It collapses everything, then opens only the categories that hold a check, so the panel shows what is filtering and nothing else.
 
+The dock's own actions end the menu in three groups (MW::createFiltersContextMenu): Expand all / Collapse all / Expand checked filters, then Solo mode / Group categories, then "Filters help" (Filters::howThisWorks, the same page as the ? in the title bar).
+
 - Either state counts: an exclusion (PartiallyChecked) filters just as an inclusion does, the same rule as isAnyFilterBut. The Search row counts only when it holds a query, not the "Enter search query" placeholder.
 - Every ANCESTOR of a checked item is opened, not just its category: the group header when grouped, and each branch above a nested keyword, so the check itself is on screen.
 - Shortcut Shift+E, next to Shift+C (clear all filters). A left double-click in the blank area below the rows (indexAt invalid) runs it too -- Filters::mouseDoubleClickEvent.
@@ -11274,7 +11290,7 @@ For an intermittent delay switching from Develop to Browse (seen once, after a c
 [BrowseSwitch] <file>  loupe loaded +N ms (<src>)
 ```
 
-- The reason names the developFrameForBrowse test that refused the frame: preview source is not Developed, full frame is another image, no full-res settle render, full frame not faithful, unedited, or full frame is a stale recipe.
+- The reason names the developFrameForBrowse test that refused the frame: preview source is not Developed, unedited, or no faithful frame of this recipe (neither the full-res settle render nor the proxy; see 2.7.5).
 - "flush done" is after DevelopProperties::flushAll, so a large first number means the flush (sidecar + devPreview top-up) held the main thread. A large gap between "returned" and "loupe loaded" means the cache decoded or reloaded the devPreview.
 - The clock starts in setOperationMode and stops in MW::refreshViewsOnCacheChange when the current image's picture lands; entering Develop resets it.
 - Remove it with the bug.

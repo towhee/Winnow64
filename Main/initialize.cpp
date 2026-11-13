@@ -4193,7 +4193,10 @@ void MW::setOperationMode(G::OperationMode mode)
         /* [BrowseSwitch] probe: time D to the loupe repaint (refreshViewsOnCacheChange). */
         browseSwitchClock.start();
         browseSwitchPath = dm ? dm->currentKey : QString();
-        if (developTransformVisible) toggleDevelopTransform();
+        if (developTransformVisible) {
+            toggleDevelopTransform();
+            if (dm) waitForDevelopFrame(dm->currentKey, 1500);   // the cropped proxy
+        }
         if (developProperties) developProperties->cancelCanvasTools();
         if (imageView) imageView->endKaleido();      // the Effects > Kaleidoscope handles
         if (imageView) imageView->resetToolCursor();

@@ -3429,8 +3429,13 @@ void MW::createFiltersContextMenu()
     filterActions->append(expandAllFiltersAction);
     filterActions->append(collapseAllFiltersAction);
     filterActions->append(expandCheckedFiltersAction);
+    filterActions->append(separatorAction1);
     filterActions->append(filterSoloAction);
     filterActions->append(filterGroupsAction);
+    filterActions->append(separatorAction2);
+    QAction *filtersHelpAction = new QAction(tr("Filters help"), this);
+    connect(filtersHelpAction, &QAction::triggered, filters, &Filters::howThisWorks);
+    filterActions->append(filtersHelpAction);
     // docking panels context menus
     filters->addActions(*filterActions);
     /*  DefaultContextMenu, NOT ActionsContextMenu, so that Filters::contextMenuEvent is

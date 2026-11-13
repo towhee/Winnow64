@@ -1568,10 +1568,14 @@ private slots:
        Captured when a develop render is launched and compared when its frame is about to
        be cached as a preview -- see developFrameRecipe. */
     QByteArray developRecipeKey(const QString &fPath);
-    /* The retained full-res develop frame of fPath when it is exactly what Browse would
-       show for it (its devPreview), else null. Seeds the image cache on leaving Develop.
-       why, when given, names the test that refused the frame ([BrowseSwitch] probe). */
+    /* The retained develop frame of fPath (full-res settle render, else the proxy) when
+       it is exactly what Browse would show for it (its devPreview), else null. Seeds the
+       image cache on leaving Develop. why, when given, names the test that refused the
+       frame ([BrowseSwitch] probe). */
     QImage developFrameForBrowse(const QString &fPath, QString *why = nullptr);
+    /* Leaving Develop with the crop tool open: wait (user input excluded) for the
+       committed crop's proxy render, so Browse has a cropped frame to show. */
+    void waitForDevelopFrame(const QString &fPath, int timeoutMs);
     /* adoptSpotSources, then re-key the retained frames to the adopted recipe. */
     void adoptDevelopSpotSources(const QString &fPath);
     void thumbHasScrolled();

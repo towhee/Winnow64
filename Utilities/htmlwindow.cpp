@@ -175,6 +175,9 @@ void HtmlWindow::applyStyle()
         f.close();
         text->setHtml(HelpAssembler::assemble(html, QFileInfo(htmlPath).path()));
     }
+    // Keep text off the window frame: a margin of about one character, set here (after
+    // setHtml) so it tracks a live font change. Qt's default is only 4px.
+    text->document()->setDocumentMargin(bodyPx);
     // G::css's `QWidget { font-size }` sets the browser's default font; match it
     // to the scaled help size so any text not in a sized block element (above)
     // scales too. The per-element rules in the document stylesheet do the rest.

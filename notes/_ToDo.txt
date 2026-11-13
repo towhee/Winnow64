@@ -41,6 +41,7 @@ BUGS / TO DO
 - Review develop presets
 - Revisit the color sampler
 - Panos
+- HDR
 - Add all help items to the main menu Help.
 - Render devPreviews in background (entire catalog??)
 - RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights

@@ -8222,6 +8222,12 @@ QImage MW::developFrameForBrowse(const QString &fPath, QString *why)
     frame is then pixel-for-pixel the devPreview ImageDecoder::loadDevPreview would serve,
     minus the JPEG round trip.
 
+    FALLS BACK TO THE PROXY. Leaving inside the settle window (a slider edit, or a crop
+    committed by the leave itself) has no full frame of this recipe yet, and refusing
+    made Browse decode the camera JPEG -- uncropped and undeveloped -- until the
+    devPreview build landed. The faithful proxy is the right picture, just soft at 100%;
+    the build the flush queued for it re-caches the image when it lands.
+
     Null when Browse would show something else: Original chosen (the camera picture), or
     an unedited image (its file, or a default render that is not this frame). See
     MW::setOperationMode.
@@ -8233,13 +8239,44 @@ QImage MW::developFrameForBrowse(const QString &fPath, QString *why)
     if (fPath.isEmpty()) return refuse("no current image");
     if (G::previewSource != G::PreviewSource::Developed)
         return refuse("preview source is not Developed");
-    if (fPath != developFullFramePath) return refuse("full frame is another image");
-    if (developFullFrame.isNull()) return refuse("no full-res settle render");
-    if (!developFullFrameFaithful) return refuse("full frame not faithful");
     const QByteArray recipe = developRecipeKey(fPath);
     if (recipe.isEmpty()) return refuse("unedited");
-    if (developFullFrameRecipe != recipe) return refuse("full frame is a stale recipe");
-    return developFullFrame;
+    if (fPath == developFullFramePath && !developFullFrame.isNull()
+        && developFullFrameFaithful && developFullFrameRecipe == recipe)
+        return developFullFrame;
+    if (fPath == developFramePath && !developFrame.isNull()
+        && developFrameFaithful && developFrameRecipe == recipe)
+        return developFrame;
+    return refuse("no faithful frame of this recipe");
+}
+
+void MW::waitForDevelopFrame(const QString &fPath, int timeoutMs)
+{
+/*
+    Leaving Develop with the crop tool open (E / G / T / D). Closing the session commits
+    the crop and re-renders asynchronously, and every frame on hand was rendered with the
+    crop suppressed, so without this Browse had no cropped picture: it showed the camera
+    JPEG, then the late proxy, then the devPreview -- several crops in turn. Closing with
+    R first never showed it because the cropped render had landed before E.
+
+    The proxy is a screen-resolution render (~0.1 s), so wait for it here and let
+    developFrameForBrowse seed Browse with it. User input is excluded so a second key
+    cannot re-enter the mode switch. On a timeout the leave goes ahead as before.
+*/
+    if (G::isLogger) G::log("MW::waitForDevelopFrame", fPath);
+    if (fPath.isEmpty() || currentIsVideo()) return;
+    const QByteArray recipe = developRecipeKey(fPath);
+    if (recipe.isEmpty()) return;               // unedited: Browse shows the file itself
+    auto landed = [&] {
+        return fPath == developFramePath && !developFrame.isNull()
+               && developFrameFaithful && developFrameRecipe == recipe;
+    };
+    QElapsedTimer t;
+    t.start();
+    while (!landed() && t.elapsed() < timeoutMs) {
+        qApp->processEvents(QEventLoop::ExcludeUserInputEvents |
+                            QEventLoop::WaitForMoreEvents, 50);
+    }
 }
 
 void MW::adoptDevelopSpotSources(const QString &fPath)
@@ -14690,7 +14727,10 @@ void MW::renderDevelopPreview(bool fullRes)
                 /* Pair the geometry with the pixels it produced, BEFORE they are shown:
                    the overlays map mask coordinates (pre-geometry) onto this frame, so a
                    stale pairing would draw them in the wrong place for one tick. */
-                if (!cameraUp) {
+                /* Nor once Develop has been left: a render launched by the leave itself
+                   (the crop commit) landing over the Browse picture was one of the
+                   crops that flashed by. The frame is still kept below. */
+                if (!cameraUp && G::operationMode == G::OperationMode::Develop) {
                     imageView->setDevelopGeometry(appliedGeom, orientedSize);
                     imageView->setDevelopPreview(shown, displaySize);
                 }
@@ -15029,6 +15069,9 @@ void MW::renderDevelopFullResAsync()
     captured here; the WorkingImage is const and held alive by a shared_ptr for the worker.
 */
     if (G::isLogger) G::log("MW::renderDevelopFullResAsync");
+    /* A settle timer armed just before Develop was left: Browse has its picture, and
+       developRenderPool's one thread is wanted for the devPreview build. */
+    if (G::operationMode != G::OperationMode::Develop) return;
     if (developFullResInFlight) return;   // one at a time; onDevelopFullResReady re-arms if needed
 
     const QString fPath = dm->currentKey;
@@ -15452,8 +15495,10 @@ void MW::onDevelopFullResReady(const QImage &out, const QImage &shown,
     if (!out.isNull() && currentImage && gen == developParamsGen && geomCurrent) {
         /* gen and geometry unchanged => the recipe is still the one this render used, so
            the current state is the right pairing for the overlays. */
-        /* Not while the Opt+"\" camera preview is latched over this image. */
-        if (!(developCameraShown && developCameraPath == fPath)) {
+        /* Not while the Opt+"\" camera preview is latched over this image, nor once
+           Develop has been left (Browse owns the loupe; see the proxy completion). */
+        if (!(developCameraShown && developCameraPath == fPath)
+            && G::operationMode == G::OperationMode::Develop) {
             pushDevelopGeometryToView();
             imageView->setDevelopPreview(shown);
         }
