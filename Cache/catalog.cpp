@@ -5,6 +5,7 @@
 #include "Cache/pathkey.h"
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
+#include "Metadata/metatext.h"
 #include "Utilities/foldertree.h"
 #include "Utilities/searchterms.h"
 
@@ -145,6 +146,9 @@ qint64 readRow(const QSqlQuery &q, CatalogRow &r)
     r.colorSpace = q.value(43).toInt();             // schema 27
     r.cropFx = q.value(44).toFloat();               // schema 30
     r.cropFy = q.value(45).toFloat();
+    /*  A row stored before the guard in Metadata::readMetadata existed can carry a binary
+        title (see Metadata/metatext.h); it would hang the Filters sort on every load. */
+    MetaText::cleanFields(r);
     return q.value(0).toLongLong();
 }
 

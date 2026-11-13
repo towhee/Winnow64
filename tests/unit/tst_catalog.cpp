@@ -72,6 +72,7 @@ private slots:
     void migrationStoresCaptureAsTheWallClock();
     void schema28RereadsOnlyBlankAndUncalibrated();
     void schema29DropsWideGamutThumbs();
+    void schema31RepairsBinaryTitles();
     void versionTwelveRepairsDriftedLinksAndLeavesTheVocabularyAlone();
     void linksFollowTheTextEvenWhenTheExpansionDisagrees();
     void existingKeywordLinksToItsOwnRow();
@@ -269,8 +270,10 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         converted to sRGB (schema29DropsWideGamutThumbs). Version 30 adds no table
         either: image.cropfx/cropfy and the same on image_version, the develop crop a
         developed row served from the index needs for its cropped size, with the stamps
-        of developed images cleared to be re-read. */
-    QCOMPARE(CacheDb::schemaVersion(), 30);
+        of developed images cleared to be re-read. Version 31 adds no table either: it
+        blanks titles that are a file's own bytes and re-reads pre-3fdfeb30 DNGs with an
+        impossible size (schema31RepairsBinaryTitles). */
+    QCOMPARE(CacheDb::schemaVersion(), 31);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants
@@ -1605,6 +1608,60 @@ void tst_catalog::schema29DropsWideGamutThumbs()
     while (q.next()) kept << QFileInfo(q.value(0).toString()).fileName();
     kept.sort();
     QCOMPARE(kept, QStringList({"cs0.jpg", "cs1.jpg", "cs9.jpg"}));
+    q.finish();
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));
+}
+
+void tst_catalog::schema31RepairsBinaryTitles()
+{
+/*
+    Schema 31: a title that is the file's own bytes (an iPhone DNG read little-endian,
+    a TIFF read at Artist's offset) is blanked and its row re-read, as is a DNG whose
+    size is impossible. An ordinary titled row keeps its title and its stamp.
+*/
+    QTemporaryDir dir;
+    QVERIFY(dir.isValid());
+    const QString dbPath = QDir(dir.path()).absoluteFilePath("index.db");
+    CacheDb::instance().setPath(dbPath);
+    Catalog &cat = Catalog::instance();
+    QVERIFY(cat.isAvailable());
+
+    QVector<CatalogRow> rows;
+    for (const char *name : {"ok.dng", "binary.dng", "huge.dng", "header.tif", "size.dng"})
+        rows << rowFor(name);
+    QCOMPARE(cat.commit(rows), 5);
+    {
+        QSqlDatabase db = CacheDb::instance().db();
+        QSqlQuery q(db);
+        QVERIFY(q.exec("UPDATE image SET title = 'Low tide' WHERE filename = 'ok.dng'"));
+        QVERIFY(q.exec("UPDATE image SET title = 'MM' || char(65533) || 'APPLEDNG'"
+                       " WHERE filename = 'binary.dng'"));
+        QVERIFY(q.exec("UPDATE image SET title = substr(hex(zeroblob(3000)), 1, 6000)"
+                       " WHERE filename = 'huge.dng'"));
+        QVERIFY(q.exec("UPDATE image SET title = 'II*' WHERE filename = 'header.tif'"));
+        QVERIFY(q.exec("UPDATE image SET width = -1609105408 WHERE filename = 'size.dng'"));
+        QVERIFY(q.exec("PRAGMA user_version = 30"));
+    }
+    CacheDb::instance().closeThisThread();
+    CacheDb::instance().setPath(QDir(dir.path()).absoluteFilePath("other.db"));
+    CacheDb::instance().setPath(dbPath);
+    QVERIFY2(cat.isAvailable(), "a version 30 file must migrate, not be moved aside");
+
+    QSqlDatabase db = CacheDb::instance().db();
+    QSqlQuery q(db);
+    QVERIFY(q.exec("SELECT filename, title, srcmtime FROM image"));
+    QHash<QString, QPair<QString, qint64>> got;
+    while (q.next())
+        got.insert(q.value(0).toString(), {q.value(1).toString(), q.value(2).toLongLong()});
+    QCOMPARE(got.size(), 5);
+    QCOMPARE(got.value("ok.dng").first, QString("Low tide"));
+    QVERIFY(got.value("ok.dng").second != -1);
+    for (const char *name : {"binary.dng", "huge.dng", "header.tif"}) {
+        QVERIFY2(got.value(name).first.isEmpty(), name);
+        QCOMPARE(got.value(name).second, qint64(-1));
+    }
+    QCOMPARE(got.value("size.dng").second, qint64(-1));
     q.finish();
     CacheDb::instance().closeThisThread();
     CacheDb::instance().setPath(QDir(cacheTmp.path()).absoluteFilePath("index.db"));

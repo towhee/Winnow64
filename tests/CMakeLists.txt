@@ -536,6 +536,9 @@ winnow_add_unit_test(tst_xmpembed unit/tst_xmpembed.cpp
 # paired as "Folders"/"Catalog", and used to disagree -- "heron OR eagle" was a literal
 # string to QString::contains.
 winnow_add_unit_test(tst_searchterms unit/tst_searchterms.cpp)
+# tst_metatext is header-only (Metadata/metatext.h). It pins the guard that discards a
+# binary title/creator/... -- a DNG's own bytes read as its title hung the Filters sort.
+winnow_add_unit_test(tst_metatext unit/tst_metatext.cpp)
 # tst_catalog covers the catalog tables in the shared index database (schema 4).
 # Catalog.cpp is already in WINNOW_CORE_TEST_SOURCES; Main/catalogenumerate.cpp is added
 # for the scope walk and the gap classifier behind Catalog Diagnostics.

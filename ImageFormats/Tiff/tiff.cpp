@@ -291,7 +291,7 @@ bool Tiff::parse(MetadataParameters &p,
 
     // IFD0: Title (ImageDescription)
     (ifd->ifdDataHash.contains(270))
-        ? m.title = u.getString(p.file, ifd->ifdDataHash.value(315).tagValue + startOffset,
+        ? m.title = u.getString(p.file, ifd->ifdDataHash.value(270).tagValue + startOffset,
         ifd->ifdDataHash.value(270).tagCount)
         : m.title = "";
 

@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 30;
+constexpr int kSchemaVersion = 31;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1874,6 +1874,49 @@ bool CacheDb::migrate(QSqlDatabase &db)
         }
         if (!q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
                     " WHERE developed = 1 OR id IN (SELECT image_id FROM image_version)")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 31) {
+    /*
+        A FILE'S OWN BYTES STORED AS ITS METADATA. Before 3fdfeb30 (2026-11-09) a DNG's
+        IFD0 was read little-endian whatever its byte order, so a big-endian iPhone ProRAW
+        DNG came back with scrambled tags: no make, a width and height of +-1e9, and in
+        some files a tag read as ImageDescription with a count in the millions. The title
+        read then used ARTIST's offset, 0 when the file has none (Tiff::parse had the same
+        bug until this schema), so the "title" was megabytes of the file from byte 0. The
+        Filters Titles sort on it never finished (Metadata/metatext.h). The TIFFs the
+        Tiff::parse bug hit carry a short one starting with their own II* / MM\0* header.
+
+        The damaged rows are the ones showing it: a DNG with an impossible size, a title
+        holding U+FFFD or longer than any real one, or a title that is a TIFF header. Their
+        junk title is blanked here (in image_fts too, which keeps its own copy), and their
+        stamp and thumb row are cleared so the next scan or visit re-reads them with the
+        fixed readers -- the pre-fix DNG thumbnail could be a semantic-mask matte.
+        Re-runnable.
+    */
+        const char *damaged =
+            "((lower(ext) = 'dng' AND (width < 0 OR height < 0"
+            "   OR width > 200000 OR height > 200000))"
+            " OR instr(title, char(65533)) > 0"
+            " OR length(CAST(title AS BLOB)) > 4096"
+            " OR title GLOB 'II[*]*'"
+            " OR hex(substr(CAST(title AS BLOB), 1, 4)) = '4D4D002A')";
+        const char *junkTitle =
+            "(instr(title, char(65533)) > 0"
+            " OR length(CAST(title AS BLOB)) > 4096"
+            " OR title GLOB 'II[*]*'"
+            " OR hex(substr(CAST(title AS BLOB), 1, 4)) = '4D4D002A')";
+        // in this order: the title is blanked LAST because damaged reads it
+        if (!q.exec(QString("DELETE FROM thumb WHERE pathkey IN"
+                            " (SELECT pathkey FROM image WHERE %1)").arg(damaged))
+            || !q.exec(QString("UPDATE image SET srcsize = -1, srcmtime = -1,"
+                               " sidecarmtime = -1 WHERE %1").arg(damaged))
+            || !q.exec(QString("UPDATE image_fts SET title = '' WHERE rowid IN"
+                               " (SELECT id FROM image WHERE %1)").arg(junkTitle))
+            || !q.exec(QString("UPDATE image SET title = '' WHERE %1").arg(junkTitle))) {
             db.rollback();
             return false;
         }

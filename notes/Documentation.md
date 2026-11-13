@@ -201,6 +201,7 @@
     - [5.9.2 The Contract It Changes: Segment Offsets on Demand](#592-the-contract-it-changes-segment-offsets-on-demand)
     - [5.9.3 What the Catalog Must Store to Fill a Row](#593-what-the-catalog-must-store-to-fill-a-row)
     - [5.9.4 Bugs the Fingerprint Found in the Loader](#594-bugs-the-fingerprint-found-in-the-loader)
+    - [5.9.5 A Binary Title Hung the Filters Sort](#595-a-binary-title-hung-the-filters-sort)
   - [5.10 Investigations and Fixes](#510-investigations-and-fixes)
     - [5.10.1 What Phase 2 Actually Costs (Icons, Not the Metadata Read)](#5101-what-phase-2-actually-costs-icons-not-the-metadata-read)
     - [5.10.2 Thumbnail Cache Checks That Reported Success](#5102-thumbnail-cache-checks-that-reported-success)
@@ -3394,6 +3395,18 @@ The catalog originally stored what SEARCH needs, not what DISPLAY needs. Fingerp
 Note that several early A/B runs were taken against stale catalog data written before these fixes, because the catalog capture itself was silently not running headlessly (see [17.19.2 The Catalog Capture Was Silently Not Running](#17192-the-catalog-capture-was-silently-not-running)). Once it ran, the divergence collapsed from eight columns to three, and then to zero.
 
 Single SHORT values and their padding (schema 26): a TIFF/EXIF entry holding one SHORT (type 3, or SSHORT 8) uses the first 2 bytes of its 4-byte value field. The spec says the other 2 are zero, but not every writer does it: ACD Systems software and a Fujifilm FinePix S602 leave junk there. IFD::readIFD (the QFile version) handled this only for big-endian files and read little-endian ones as 32 bits, so the catalog stored Orientation 1229520897 (0x49490001) and ISO 23396552 (0x016500C8, i.e. 200). It now reads 2 bytes in either byte order (tst_ifd readIFD_shortIgnoresPadding). Schema 26 clears the freshness stamp and the thumb row of every row showing the damage, which is an orientation outside 0..8 or a JPEG/TIFF ISO over 65535: 34 rows in the user's index. Other SHORT fields in those files (e.g. ResolutionUnit) were wrong the same way and are fixed by the re-read. Single BYTE values have the same theoretical exposure but were left alone; no damage has been seen.
+
+#### 5.9.5 A Binary Title Hung the Filters Sort
+
+Editing the title of 23 images while browsing the whole catalog gave a permanent beachball. The main thread was in Filters::updateCategoryItems, in QTreeWidgetItem::sortChildren on the Titles category (5,749 items): QTreeWidgetItem::operator< compares with QString::localeAwareCompare, which Unicode-normalises BOTH strings on EVERY comparison, and one title was 10.7 million characters. Normalising that is quadratic in practice, so the sort never finished. The edit was only the trigger; any rebuild of the Titles list would have hung.
+
+The titles were not text. Two iPhone ProRAW DNGs carried 20 to 24 MB "titles" that were the files' own bytes from offset 0 (MM\0*...APPLEDNG, with U+FFFD for every byte that is not UTF-8), stored by the catalog and reloaded on every visit. Nine TIFFs carried short ones (II\*...): Tiff::parse read ImageDescription (270) at ARTIST's (315) offset, which is 0 when the file has no Artist tag. That line is fixed. The DNGs were the same bug plus one more, both fixed in 3fdfeb30 (2026-11-09), the morning after they were indexed: DNG::parse read IFD0 little-endian whatever the file's byte order, so a big-endian iPhone ProRAW DNG came back with scrambled tags (one read as ImageDescription with a count in the millions), and its title read too used Artist's offset. A parse of the same file today is clean. The catalog kept the damage because the files never changed, so their freshness stamps stayed current: 42 pre-fix DNG rows also had no make and a width and height of around 1e9.
+
+The guard is Metadata/metatext.h, applied where user text enters: Metadata::readMetadata after the sidecar is read, and Catalog's readRow for rows stored before the guard. Title, creator, copyright, email and url (and their originals, so an unchanged field still compares equal for Metadata::writeXMP) are DISCARDED if they contain U+FFFD or a C0 control other than tab, CR and LF, since real text metadata never does, and truncated to 1024 characters, the IPTC reader's cap. A file read that trips it issues "Unreadable title discarded or truncated." Pinned by tst_metatext.
+
+Schema 31 (Cache/cachedb.cpp) repairs existing indexes, including those of the v3_beta6 release, which predates 3fdfeb30. A row is damaged if it is a DNG with an impossible size, or has a title holding U+FFFD, over 4,096 bytes, or starting with a TIFF header. Its stamp and thumb row are cleared so the fixed readers re-read it, and only then is the junk title blanked, in image_fts too (that order matters: the damage predicate reads the title). Pinned by tst_catalog::schema31RepairsBinaryTitles.
+
+Note for anyone querying the index by hand: SQLite's length() on TEXT stops at the first NUL, so these rows reported a title length of 0 to 64. Measure with length(cast(title as blob)).
 
 ### 5.10 Investigations and Fixes
 

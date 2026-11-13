@@ -8,6 +8,7 @@
 #include "ImageFormats/Heic/heic.h"
 #include "Main/global.h"
 #include "Metadata/metareport.h"
+#include "Metadata/metatext.h"
 #include "Metadata/keywordpaths.h"   // keywordFold, for writeXMP's change detection
 #include "Cache/devpreviewcache.h"
 #include "Utilities/fileops.h"
@@ -2137,6 +2138,13 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         }
 
         parseSidecar();
+
+        // binary or runaway user text (see Metadata/metatext.h)
+        const QStringList junk = MetaText::cleanFields(m);
+        if (!junk.isEmpty()) {
+            QString msg = "Unreadable " + junk.join(", ") + " discarded or truncated.";
+            G::issueDedup("Warning", msg, "Metadata::readMetadata", m.row, path);
+        }
 
         if (!parsed) {
             p.file.close();

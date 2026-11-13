@@ -533,11 +533,13 @@ void MW::deleteSelectedFiles()
         QMessageBox msgBox(this);
         int msgBoxWidth = 300;
         msgBox.setWindowTitle("Delete Images");
+        QString selectedImages = QString("%1 selected image%2")
+                                     .arg(paths.size()).arg(paths.size() == 1 ? "" : "s");
         #ifdef Q_OS_WIN
-        msgBox.setText("This operation will move all selected images to the recycle bin.");
+        msgBox.setText("This operation will move " + selectedImages + " to the recycle bin.");
         #endif
         #ifndef Q_OS_WIN
-        msgBox.setText("This operation will move all selected images to the trash.");
+        msgBox.setText("This operation will move " + selectedImages + " to the trash.");
         #endif
         QString info = "Do you want continue?";
         if (versionsGoing > 0)

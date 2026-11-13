@@ -744,6 +744,7 @@ set(WINNOW_HEADERS
     Metadata/irb.h
     Metadata/metadata.h
     Metadata/metareport.h
+    Metadata/metatext.h
     Metadata/rapidxml.h
     Metadata/rapidxml_print_rgh.h
     Metadata/versions.h
