@@ -144,8 +144,20 @@ ImageCache::ImageCache(QObject *parent,
 
     moveToThread(&imageCacheThread);
 
-    // Signal to ImageCache when datamodel loaded for some row
-    connect(dm, &DataModel::rowLoaded, this, [&] { condition.wakeAll(); });
+    /*  Signal to ImageCache when datamodel loaded for some row. rowLoaded is emitted
+        on the GUI thread and arrives QUEUED, so it is delivered only once this thread
+        is back in its event loop: waitForMetaRead has already timed out and okToDecode
+        has skipped the row ("Metadata not loaded"). Waking alone did nothing and the
+        cache sat idle with the row in toCache: a blank loupe after a re-read of the
+        current row (a sidecar written by Develop, then E) until the user stepped away
+        and back (2026-11-13). So the skipped row is dispatched now. See
+        Documentation.md 4.4.10. */
+    connect(dm, &DataModel::rowLoaded, this, [this] {
+        condition.wakeAll();
+        if (abort || isInitializing || G::removingRowsFromDM) return;
+        if (G::dmInstance != instance) return;
+        if (!cacheUpToDate()) dispatch();
+    });
 
     // data is kept in ImageCacheData icd, a hash table
     this->icd = icd;
@@ -1125,14 +1137,24 @@ void ImageCache::removeFromCache(QStringList &pathList)
 
 void ImageCache::rename(QString oldPath, QString newPath)
 /*
-    Called by MW::renameSelectedFiles then RenameFileDlg::renameDatamodel.
+    Called by RenameFileDlg (and for each version it re-keys) on the GUI thread, after the
+    file is renamed on disk. Carries the decoded image AND our bookkeeping to the new
+    path: left under the old one, the new path started with no status or attempts, and
+    the old entry lingered, describing a file that no longer exists.
 */
 {
     if (debugLog || G::isLogger) log("rename");
-    if (icd->contains(oldPath)) {
-        QImage image = icd->imCache.take(oldPath);  // Remove the old key-value pair
-        icd->imCache.insert(newPath, image);
+    if (oldPath == newPath) return;
+    icd->rename(oldPath, newPath);
+
+    QMutexLocker lock(&cacheStateMutex);
+    auto it = cacheState.find(oldPath);
+    if (it != cacheState.end()) {
+        const RowCache r = it.value();
+        cacheState.erase(it);
+        cacheState.insert(newPath, r);
     }
+    if (supersededDecodes.remove(oldPath)) supersededDecodes.insert(newPath);
 }
 
 void ImageCache::toCacheAppend(int sfRow)

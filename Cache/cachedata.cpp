@@ -59,6 +59,29 @@ void ImageCacheData::remove(const QString &key)
     safeSubBytes(bytes, static_cast<quint64>(img.sizeInBytes()));
 }
 
+bool ImageCacheData::rename(const QString &oldKey, const QString &newKey)
+{
+/*
+    One lock for the take and the insert, so the ImageCache thread never sees the image
+    under neither key. The byte total is unchanged unless newKey was already cached, in
+    which case the image it held is dropped.
+*/
+    QMutexLocker locker(&rwLock);
+    if (oldKey == newKey) return imCache.contains(oldKey);
+    auto it = imCache.find(oldKey);
+    if (it == imCache.end()) return false;
+    const QImage img = it.value();
+    imCache.erase(it);
+    if (auto dup = imCache.find(newKey); dup != imCache.end()) {
+        safeSubBytes(bytes, static_cast<quint64>(dup.value().sizeInBytes()));
+        dup.value() = img;
+    }
+    else {
+        imCache.insert(newKey, img);
+    }
+    return true;
+}
+
 void ImageCacheData::clear()
 {
     QMutexLocker locker(&rwLock);

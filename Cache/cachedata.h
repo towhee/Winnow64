@@ -19,6 +19,8 @@ public:
     bool get(const QString &key, QImage &image) const;
     void insert(const QString &key, const QImage &image);
     void remove(const QString &key);
+    // re-key one image (a file rename); false when oldKey is not cached
+    bool rename(const QString &oldKey, const QString &newKey);
     void clear();
 
     // O(1) read, no lock needed

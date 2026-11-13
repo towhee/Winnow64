@@ -502,8 +502,9 @@ void DataModel::resizeRowSync(int rows)
 
     Driven by the proxy's own structural signals rather than by a list of call
     sites, so a path that inserts, removes, re-sorts or re-filters cannot forget
-    to do it. Paths do not change once a row exists, so nothing else can make
-    this stale.
+    to do it. The one other thing that can make it stale is a path changing on an
+    existing row (rename, version re-key, move), and setData's re-key branch
+    schedules it for that.
 */
 void DataModel::scheduleProxySnapshotRebuild()
 {
@@ -1460,6 +1461,13 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
             RowTrail::note(oldKey, idx.row(), "icon re-keyed", "to " + newKey);
             RowTrail::note(newKey, idx.row(), "icon re-keyed", "from " + oldKey);
         }
+        /*  and the proxy snapshot: a re-key is a dataChanged, not one of the structural
+            signals that republish it, so the workers kept the OLD paths. After a rename
+            ImageCache decoded the old files into the new rows, marked them done, and
+            could not find the current image (sfRowOf -> -1): a blank loupe that no
+            amount of stepping repaired (2026-11-13). Coalesced, so a 500-file rename
+            is one rebuild; it runs after this write lands in the store. */
+        if (!oldKey.isEmpty() && oldKey != newKey) scheduleProxySnapshotRebuild();
     }
 
     if (role == Qt::DecorationRole && col == 0) {

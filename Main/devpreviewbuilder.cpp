@@ -438,8 +438,11 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
         /* Nor for a stack that was REPAIRED on load: blob is the repaired recipe, and
            writing it would drop the user's masks from disk on a background pass. */
         if (!r.thumbJpg.isEmpty() && (edited || !VersionKey::isVersion(fPath))
-            && developProperties->sidecarRecipeRewritable(fPath))
+            && developProperties->sidecarRecipeRewritable(fPath)) {
             Metadata::writeDevelopSidecar(fPath, blob, r.thumbJpg.toBase64());
+            // an edited image is restamped by devPreviewUpdated below
+            if (!edited) restampCatalogAfterSidecarWrite(fPath);
+        }
         if (!r.previewJpg.isEmpty())
             DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg, reduced);
 
@@ -607,13 +610,33 @@ void MW::buildEditedDevPreviews()
     buildDevPreviewsForSelection -- the selection when it holds two or more images,
     otherwise every row in the view -- keeping only images with a develop recipe.
     Unedited raws, which the other command also renders, are left alone.
-
-    "The view" is the proxy, so in the Library the current filter limits it: a filtered
-    Library builds for the edited images it shows, not for every edit in the catalog.
-    G::DevelopColumn came from the sidecar during the metadata read, so no file is opened
-    to decide.
 */
     if (G::isLogger) G::log("MW::buildEditedDevPreviews");
+    buildEditedDevPreviewsIn(true);
+}
+
+void MW::buildEditedDevPreviewsFiltered()
+{
+/*
+    Thumbnail context menu > Build Edited Previews (Filtered). Every edited row in the
+    view, whatever is selected. A right-click usually selects the image under the cursor,
+    so honouring the selection would make the command depend on where the user happened
+    to click.
+*/
+    if (G::isLogger) G::log("MW::buildEditedDevPreviewsFiltered");
+    buildEditedDevPreviewsIn(false);
+}
+
+void MW::buildEditedDevPreviewsIn(bool honourSelection)
+{
+/*
+    Queue the edited images in scope: the selection when honourSelection and it holds two
+    or more images, otherwise every row in the view.
+
+    "The view" is the proxy, so the current filter limits it: a filtered Library builds
+    for the edited images it shows, not for every edit in the catalog. G::DevelopColumn
+    came from the sidecar during the metadata read, so no file is opened to decide.
+*/
     if (!dm || dm->rowCount() == 0) return;
 
     auto isEdited = [](const QModelIndex &sfIdx) {
@@ -621,7 +644,8 @@ void MW::buildEditedDevPreviews()
     };
 
     QStringList paths;
-    const QModelIndexList sel = RowSelection::Rows(dm->selectionModel);
+    QModelIndexList sel;
+    if (honourSelection) sel = RowSelection::Rows(dm->selectionModel);
     if (sel.count() > 1) {
         for (const QModelIndex &idx : sel)
             if (isEdited(idx)) paths << idx.data(G::KeyRole).toString();

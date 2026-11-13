@@ -1542,6 +1542,10 @@ private slots:
     /*  Push one row's edited values back to the catalog, after its sidecar has
         been written. See MW::updateCatalogForRow. */
     void updateCatalogForRow(int dmRow);
+    /*  Winnow has just written fPath's sidecar (Develop): commit the row with the
+        sidecar's new stamp, so ScrollVerify does not take our own write for an outside
+        edit. See MW::restampCatalogAfterSidecarWrite. */
+    void restampCatalogAfterSidecarWrite(const QString &fPath);
 
     /*  EVERYTHING THE LOAD CAN FINISH WITHOUT AN ICON -- the filter build, the sort and
         filter controls, the column widths, the catalog commit. Split out of
@@ -1749,6 +1753,7 @@ private slots:
         them all. False = Cancel; clearPicks is set when the user chose to clear them. */
     bool okToCloseWithPicks(bool &clearPicks);
     // Reject unpicked, clear picks: confirm the counts first. False = Cancel.
+    void warnHiddenPicks(int hiddenPicks);
     bool okToRejectUnpicked(int toReject, int toUnpick);
     bool ownsShortcut(const QKeySequence &seq);
     QAction *disabledActionForShortcut(const QKeySequence &seq);
@@ -2107,6 +2112,7 @@ private:
     QAction *toggleCameraPreviewAction = nullptr;   // Opt+"\": camera preview / developed
     QAction *buildDevPreviewsAction = nullptr;
     QAction *buildEditedDevPreviewsAction = nullptr;
+    QAction *buildFilteredEditedDevPreviewsAction = nullptr;   // thumbView context menu
     QAction *clearDevPreviewCacheAction = nullptr;
 
     /* Develop mode local shortcuts (see loadDevelopShortcuts).  These actions carry NO
@@ -2551,6 +2557,8 @@ private:
     void buildDevPreviews(const QStringList &paths, const QString &src);
     void buildDevPreviewsForSelection();
     void buildEditedDevPreviews();
+    void buildEditedDevPreviewsFiltered();
+    void buildEditedDevPreviewsIn(bool honourSelection);
     void queueBackgroundDevPreviewBuild();
     void cancelDevPreviewBuild();
     void clearDevPreviewCache();
@@ -3346,6 +3354,10 @@ private:
     /*  Consecutive drains that committed nothing while rows were still pending. Bounds
         the retry; see MW::drainStaleRecommit. */
     int staleRecommitAttempts = 0;
+    /*  [StaleProbe] master path -> ms since epoch of Winnow's last sidecar write to it
+        (restampCatalogAfterSidecarWrite), so refreshStaleRows can say whether a stale
+        verdict was our own write. */
+    QHash<QString, qint64> ownSidecarWriteMs;
     /*  Paths MW::checkBlankRows has already reported this session (once each). */
     QSet<QString> blankRowsReported;
     Thumb *refreshThumb = nullptr;    // lazily created; refreshes a single icon after in-place replace

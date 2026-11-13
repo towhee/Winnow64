@@ -20,6 +20,7 @@
 #include "Utilities/titlebar.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
+#include "Metadata/indexmetadata.h"
 #include "Cache/cachedb.h"
 #include "Main/catalogenumerate.h"
 #include "Cache/devpreviewcache.h"
@@ -5522,6 +5523,38 @@ void MW::refreshStaleRows(const QStringList &paths)
     if (G::isLogger) G::log("MW::refreshStaleRows", QString::number(paths.size()));
     if (paths.isEmpty() || !dm) return;
 
+    /*  [StaleProbe] WHAT MOVED, AND WAS IT US. One session-issue line per stale row: the
+        source file or only its sidecar, and how long since Winnow last wrote that sidecar
+        itself (restampCatalogAfterSidecarWrite). A sidecar-only verdict soon after our
+        own write means the restamp missed (or lost the race to the verify pass). One
+        primary-key lookup per path, and a pass reports only the few rows it found. */
+    {
+        const QHash<QString, CatalogRow> held = Catalog::instance().rowsForPaths(paths);
+        const qint64 now = QDateTime::currentMSecsSinceEpoch();
+        for (const QString &fPath : paths) {
+            const CatalogRow cand = IndexMetadata::candidate(QFileInfo(fPath), metadata);
+            const auto it = held.constFind(fPath);
+            QString what = "not in catalog";
+            if (it != held.cend()) {
+                const bool src = it->srcSize != cand.srcSize
+                                 || it->srcMtime != cand.srcMtime;
+                const bool side = it->sidecarMtime != cand.sidecarMtime;
+                what = src && side ? "source and sidecar changed"
+                     : src         ? "source changed"
+                     : side        ? QString("sidecar only (catalog %1, file %2)")
+                                         .arg(it->sidecarMtime).arg(cand.sidecarMtime)
+                                   : "stamps now match";
+            }
+            const auto own = ownSidecarWriteMs.constFind(fPath);
+            const QString by = own == ownSidecarWriteMs.cend()
+                ? "no Winnow write this session"
+                : QString("Winnow wrote it %1 s ago").arg((now - *own) / 1000.0, 0, 'f', 1);
+            G::issue(own == ownSidecarWriteMs.cend() ? "Comment" : "Warning",
+                     "[StaleProbe] stale: " + what + "; " + by,
+                     "MW::refreshStaleRows", -1, fPath);
+        }
+    }
+
     int cleared = 0;
     for (const QString &fPath : paths) {
         const int dmRow = dm->rowFromKey(fPath);
@@ -8348,8 +8381,10 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
         dm->noteVersionDevelop(fPath, !blob.isEmpty(),
                                blob.isEmpty() ? QString() : Metadata::devPreviewKey(blob),
                                cropFx, cropFy);
-        updateCatalogForRow(dm->rowFromKey(VersionKey::sourceOf(fPath)));
     }
+    /* The sidecar was just written; the catalog takes its new stamp (the master's, for a
+       version). */
+    restampCatalogAfterSidecarWrite(fPath);
 
     /* The full-size image cached for this path was decoded from the OLD recipe (or from
        the camera render), so it no longer depicts the image. Drop it: the next visit
@@ -8473,6 +8508,60 @@ void MW::updateCatalogForRow(int dmRow)
     if (!isCatalogScopeFolder(r.folder)) return;
 
     QThreadPool::globalInstance()->start([r]{ Catalog::instance().commit({r}); });
+}
+
+void MW::restampCatalogAfterSidecarWrite(const QString &fPath)
+{
+/*
+    WINNOW'S OWN SIDECAR WRITE IS NOT AN OUTSIDE EDIT.
+
+    Every Develop flush rewrites the sidecar (recipe, preview thumbnail, modifydate),
+    which moves its mtime. The catalog's freshness stamp includes that mtime, so ScrollVerify's
+    next pass over the row found it "out of date with its file" and MW::refreshStaleRows
+    reset it to MetaNotAttempted, cleared the icon and re-read it -- after every edit. A
+    re-read of the CURRENT image also stranded ImageCache (Documentation.md 4.4.10).
+
+    So the row is committed as soon as the write lands, with the stamp the write left.
+    The whole row, as in updateCatalogForRow, because devPreviewUpdated has just moved
+    the developed flag, devPreview key and crop that the catalog also holds.
+
+    THE SIDECAR IS STAT'D UNCONDITIONALLY, as IndexMetadata::candidate stats it.
+    catalogRowFor stats it only when SidecarColumn says there is one, and a first Develop
+    edit is often what CREATES the .xmp: it would commit 0 and stay stale. SidecarColumn
+    is set here for the same reason.
+
+    A version writes its record into its master's sidecar, so the master row is stamped.
+*/
+    if (G::isLogger) G::log("MW::restampCatalogAfterSidecarWrite", fPath);
+    if (fPath.isEmpty() || !dm) return;
+    if (!Catalog::instance().isAvailable()) return;
+
+    const QString master = VersionKey::isVersion(fPath) ? VersionKey::sourceOf(fPath)
+                                                        : fPath;
+    const int dmRow = dm->rowFromKey(master);
+    if (dmRow < 0) return;
+    CatalogRow r;
+    if (!dm->catalogRowFor(dmRow, r)) return;
+    if (!isCatalogScopeFolder(r.folder)) return;
+
+    const QFileInfo si(FileOps::existingSidecar(master));
+    r.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
+    if (r.sidecarMtime) dm->setData(dm->index(dmRow, G::SidecarColumn), true);
+    ownSidecarWriteMs.insert(master, QDateTime::currentMSecsSinceEpoch());
+
+    QThreadPool::globalInstance()->start([r]{
+        /*  [StaleProbe] Did this write move the stamp the catalog held? If so, before
+            this commit existed the row would have been reported stale. Once per
+            session. */
+        const QHash<QString, CatalogRow> held = Catalog::instance().rowsForPaths({r.path});
+        const auto it = held.constFind(r.path);
+        if (it != held.cend() && it->sidecarMtime != r.sidecarMtime)
+            G::issueDedup("Comment",
+                          "[StaleProbe] Develop sidecar write moved the catalog's sidecar "
+                          "stamp; restamped",
+                          "MW::restampCatalogAfterSidecarWrite", -1, r.path);
+        Catalog::instance().commit({r});
+    });
 }
 
 void MW::metadataComplete(QString src)

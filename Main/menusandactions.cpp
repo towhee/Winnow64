@@ -1366,6 +1366,18 @@ void MW::createUtilActions()
     connect(buildEditedDevPreviewsAction, &QAction::triggered,
             this, &MW::buildEditedDevPreviews);
 
+    /* Thumbnail context menu variant: always every edited image the filter shows, never
+       the selection (the right-click itself selects an image). */
+    buildFilteredEditedDevPreviewsAction =
+        new QAction(tr("Build Edited Previews (Filtered)"), this);
+    buildFilteredEditedDevPreviewsAction->setObjectName("buildFilteredEditedDevPreviews");
+    buildFilteredEditedDevPreviewsAction->setToolTip(
+        tr("Build developed previews for every edited image in the current filtered "
+           "view, ignoring the selection"));
+    addAction(buildFilteredEditedDevPreviewsAction);
+    connect(buildFilteredEditedDevPreviewsAction, &QAction::triggered,
+            this, &MW::buildEditedDevPreviewsFiltered);
+
     clearDevPreviewCacheAction = new QAction(tr("Clear Developed Preview Cache"), this);
     clearDevPreviewCacheAction->setObjectName("clearDevPreviewCache");
     clearDevPreviewCacheAction->setShortcutVisibleInContextMenu(true);
@@ -3540,6 +3552,7 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(thumbsEnlargeAction);
     thumbViewActions->append(thumbsShrinkAction);
     thumbViewActions->append(regenerateThumbsAction);
+    thumbViewActions->append(buildFilteredEditedDevPreviewsAction);
 
     thumbViewActions->append(separatorAction5);
     thumbViewActions->append(rotateRightAction);

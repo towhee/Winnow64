@@ -158,6 +158,10 @@ void MW::rejectUnpickedClearPicks()
     picked -- otherwise it would reject every visible image. The same test is repeated
     here in case the action's state is stale (the shortcut fires on it directly).
 
+    REFUSED WHEN A PICK IS HIDDEN. If any picked image is outside the filtered view,
+    refining would leave it Picked while its visible companions are cleared, mixing two
+    rounds of picking. warnHiddenPicks explains and nothing changes.
+
     CONFIRMED FIRST. One keystroke can reject a whole folder, so okToRejectUnpicked shows
     the counts and nothing changes on Cancel.
 */
@@ -180,6 +184,12 @@ void MW::rejectUnpickedClearPicks()
         }
     }
     if (!isVisiblePick) return;
+
+    const int hiddenPicks = dm->pickCount() - priors.count("Picked");
+    if (hiddenPicks > 0) {
+        warnHiddenPicks(hiddenPicks);
+        return;
+    }
 
     const int toReject = priors.count("Unpicked");
     if (!okToRejectUnpicked(toReject, priors.count() - toReject)) return;
@@ -212,6 +222,36 @@ void MW::rejectUnpickedClearPicks()
     updatePickDependentActions();
     updateStatus(true, "", "MW::rejectUnpickedClearPicks");
     updateClassification();
+}
+
+void MW::warnHiddenPicks(int hiddenPicks)
+{
+/*
+    Why rejectUnpickedClearPicks did nothing: picked images are hidden by the current
+    filter. Test mode skips the dialog (nobody to answer); the refine is still refused.
+*/
+    if (G::isLogger) G::log("MW::warnHiddenPicks");
+    if (QStandardPaths::isTestModeEnabled()) return;
+
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Reject Unpicked, Clear Picks");
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(hiddenPicks == 1
+                   ? QString("1 picked image is not in the filtered view.")
+                   : QString("%1 picked images are not in the filtered view.")
+                         .arg(hiddenPicks));
+    msgBox.setInformativeText("Nothing was changed. Refine works on the filtered view "
+                              "only, so it would leave the hidden picks picked.\n\n"
+                              "Clear the filters, or unpick the hidden images, and try "
+                              "again.");
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setStyleSheet(G::css);
+    QSpacerItem *horizontalSpacer = new QSpacerItem(350, 0, QSizePolicy::Minimum,
+                                                    QSizePolicy::Expanding);
+    QGridLayout *layout = static_cast<QGridLayout*>(msgBox.layout());
+    layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    msgBox.exec();
+    resetFocus();
 }
 
 bool MW::okToRejectUnpicked(int toReject, int toUnpick)
