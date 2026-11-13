@@ -526,10 +526,10 @@ void MW::deleteSelectedFiles()
         return;
     }
 
-    /*  Warning MessageBox. Always shown when versions would go to the trash with their
-        image: turning the warning off agreed to trashing images, not to losing versions
-        the user may not know are there. */
-    if (deleteWarning || versionsGoing > 0) {
+    /*  Warning MessageBox. Always shown when any version is going, whether to the trash
+        with its image or as a selected version's record: turning the warning off agreed
+        to trashing images, not to losing versions. */
+    if (deleteWarning || versionsGoing > 0 || !versionsOnly.isEmpty()) {
         QMessageBox msgBox(this);
         int msgBoxWidth = 300;
         msgBox.setWindowTitle("Delete Images");

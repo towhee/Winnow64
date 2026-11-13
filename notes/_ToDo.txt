@@ -24,7 +24,6 @@ BUGS / TO DO
 - Catalog management: import/export, Set catalog location
 - Thumb show if the preview is up-to-date and develop has been run
 - Rethink thumbnail badges
-- Delete images warning - add image count to be moveed to the trash)
 
 - The two SubIFD masks are DNG 1.6 semantic mattes (a subject matte and a skin matte)
   I saved a memory, project_proraw_embedded_masks.md, with the tag numbers, the names
