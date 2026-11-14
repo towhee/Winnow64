@@ -10818,7 +10818,7 @@ The dock's own actions end the menu in three groups (MW::createFiltersContextMen
 
 - Either state counts: an exclusion (PartiallyChecked) filters just as an inclusion does, the same rule as isAnyFilterBut. The Search row counts only when it holds a query, not the "Enter search query" placeholder.
 - Every ANCESTOR of a checked item is opened, not just its category: the group header when grouped, and each branch above a nested keyword, so the check itself is on screen.
-- Shortcut Shift+E, next to Shift+C (clear all filters). A left double-click in the blank area below the rows (indexAt invalid) runs it too -- Filters::mouseDoubleClickEvent.
+- No keyboard shortcut (Shift+E was removed 2026-11-14). Besides the menu, a left double-click in the blank area below the rows (indexAt invalid) runs it -- Filters::mouseDoubleClickEvent.
 
 #### 18.1.5 Filter on Only This Item
 
