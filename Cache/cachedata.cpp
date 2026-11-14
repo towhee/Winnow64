@@ -17,7 +17,7 @@ inline void safeSubBytes(std::atomic<quint64> &counter, quint64 sub) {
 
 ImageCacheData::ImageCacheData(QObject *) {}
 
-bool ImageCacheData::contains(const QString &key)
+bool ImageCacheData::contains(const QString &key) const
 {
     QMutexLocker locker(&rwLock);
     return imCache.contains(key);
@@ -32,8 +32,42 @@ bool ImageCacheData::get(const QString &key, QImage &image) const
     return true;
 }
 
+int ImageCacheData::count() const
+{
+    QMutexLocker locker(&rwLock);
+    return int(imCache.size());
+}
+
+QStringList ImageCacheData::keys() const
+{
+    QMutexLocker locker(&rwLock);
+    return imCache.keys();
+}
+
+void ImageCacheData::forEach(
+    const std::function<void(const QString &, const QImage &)> &fn) const
+{
+    QMutexLocker locker(&rwLock);
+    for (auto it = imCache.cbegin(); it != imCache.cend(); ++it) fn(it.key(), it.value());
+}
+
+bool ImageCacheData::replaceIfPresent(const QString &key, const QImage &image)
+{
+    if (image.isNull()) return false;
+    QMutexLocker locker(&rwLock);
+    auto it = imCache.find(key);
+    if (it == imCache.end()) return false;
+    safeSubBytes(bytes, static_cast<quint64>(it.value().sizeInBytes()));
+    it.value() = image;
+    bytes.fetch_add(static_cast<quint64>(image.sizeInBytes()), std::memory_order_relaxed);
+    return true;
+}
+
 void ImageCacheData::insert(const QString &key, const QImage &image)
 {
+    /*  A null image is a miss, not an entry: stored, it was a "hit" that painted nothing
+        (ImageCache::nullInImCache existed to find and re-queue them). */
+    if (image.isNull() || key.isEmpty()) return;
     QMutexLocker locker(&rwLock);
 
     // replace: subtract the old image's bytes before swapping

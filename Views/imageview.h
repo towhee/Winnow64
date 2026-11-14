@@ -4,6 +4,7 @@
 #include <QtWidgets>
 #include <QHash>
 #include "Main/global.h"                // G::maskOverlayGrayscale (mask overlay backdrop)
+#include "Views/loupeshown.h"
 #include <QJsonArray>
 #include <QJsonObject>
 #include "Develop/brushstamp.h"
@@ -51,6 +52,10 @@ public:
     QTransform transform;
     Pixmap *pixmap;
     QString currentImagePath;
+    /*  What the loupe is showing, set on every load attempt, hit or miss. Not
+        currentImagePath, which a miss leaves naming the last hit: see loupeshown.h. */
+    LoupeShown loupeShown;
+    bool isShowing(const QString &fPath) const { return loupeShown.isShowing(fPath); }
 
     int cwMargin = 20;
     qreal imAspect = 1;
@@ -89,7 +94,6 @@ public:
     qreal toggleZoom;
     bool isRubberBand;
     int wheelDeltaThreshold = 20;
-    bool currentImageHasChanged = false;
 
 
 
@@ -154,6 +158,14 @@ public slots:
        DEVELOPED look instead of the untouched camera render. Framing is identical either
        way: both are reduced-resolution stand-ins for the same image. */
     bool loadImageInterim(QString fPath, const QImage &substitute = QImage());
+    /* A cache miss with no Develop stand-in: show the thumbnail, presented at the full
+       image's size so zoom and fit are in the same terms as the real image that
+       replaces it. Returns false (shows nothing) without a thumbnail. Documentation
+       4.4.14. */
+    bool loadImagePlaceholder(const QString &fPath, const QImage &thumb, QSize fullSize);
+    bool isFullyShown(const QString &fPath) const { return loupeShown.isFull(fPath); }
+    LoupeShown::Kind shownKind() const { return loupeShown.state(); }
+    QString loupeShownName() const { return loupeShown.stateName(); }
     /* Record the zoom/pan of the outgoing image for a Develop navigation to fPath.
        Must be called before the displayed pixmap is replaced, while the live scroll
        state is still that of the image being left. */

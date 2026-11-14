@@ -110,7 +110,8 @@ public:
         NoFile,
         BlankFilePath,
         NoMetadata,
-        FileOpen
+        FileOpen,
+        NoGeometry      // transient: no embedded-JPG offset yet; ImageCache defers it
     } status;
 
     QStringList statusText {
@@ -125,7 +126,8 @@ public:
         "NoFile",
         "BlankFilePath",
         "NoMetadata",
-        "FileOpen"
+        "FileOpen",
+        "NoGeometry"
     };
 
     enum decoders {
@@ -153,7 +155,9 @@ public:
     };
 
 public slots:
-    void decode(int sfRow, int instance);
+    /*  key: the image ImageCache chose (Documentation 4.4.18). The row is only a hint;
+        the decoder never re-resolves it through a newer snapshot. */
+    void decode(int sfRow, int instance, QString key = QString());
     void abortProcessing();
     void stop();
 
@@ -173,11 +177,9 @@ signals:
     void demosaicProgress(int sfRow, QString fPath, int done, int total);
 
 private:
-    QThread decoderThread;
     QAtomicInt running {0}; // 0 = not running, 1 = running
 
     mutable QMutex mutex;
-    QWaitCondition idleCondition;
     void setIdle(bool v);
 
     bool load();
@@ -206,6 +208,13 @@ private:
     */
     bool isIndependent = false;
     ImageMetadata indMeta;
+
+    /*  G::operationMode == Develop, G::useRaw and G::previewSource == Developed, read
+        once at the start of each decode (captureModeSettings). */
+    bool modeDevelop = false;
+    bool useRawAtStart = false;
+    bool previewDeveloped = false;
+    void captureModeSettings();
 
     /*  Decode geometry read on demand for a row whose metadata came from the
         local index (see ensureDecodeGeometry). A MEMBER rather than a local

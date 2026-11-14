@@ -344,6 +344,7 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
     // 2  mutate
     const int rowsBefore = dm->rowCount();
     QStringList toLoad;
+    QStringList rewritten;
     if (!removed.isEmpty()) dm->removeFiles(removed);
     for (const QString &fPath : added) {
         if (fPath.isEmpty() || toLoad.contains(fPath)) continue;
@@ -362,8 +363,10 @@ void MW::applyModelChange(const QStringList &added, const QStringList &removed,
             field in it. Start it again from what addFileDataForRow put there. */
         dm->setData(dm->index(dmRow, G::SearchTextColumn),
                     fPath + dm->index(dmRow, G::ModifiedColumn).data().toString());
-        imageCache->removeCachedImage(fPath);
+        rewritten << fPath;
     }
+    // the decoded images are of the old content (Documentation 4.4.13)
+    if (!rewritten.isEmpty()) imageCache->invalidate(rewritten, "MW::applyModelChange");
     if (!added.isEmpty()) dm->insertFiles(added);
     if (reconcileDisk) toLoad << dm->refresh();
     toLoad.removeDuplicates();

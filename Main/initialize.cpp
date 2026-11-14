@@ -467,14 +467,6 @@ void MW::createMetaRead()
     // cleanup icons outside icon chunk range
     connect(metaRead, &MetaRead::cleanupIcons, dm, &DataModel::clearIconsOutsideChunkRange);
 
-    // update thumbView in case scrolling has occurred
-    connect(metaRead, &MetaRead::updateScroll, thumbView, &IconView::repaintView,
-            Qt::BlockingQueuedConnection);
-
-    // update gridView in case scrolling has occurred
-    connect(metaRead, &MetaRead::updateScroll, gridView, &IconView::repaintView,
-            Qt::BlockingQueuedConnection);
-
     // loading image metadata into datamodel, okay to select
     connect(metaRead, &MetaRead::okToSelect, sel, &Selection::okToSelect);
 
@@ -517,14 +509,8 @@ void MW::createMetaRead()
     connect(scrollVerify, &ScrollVerify::rowsAreStale, this, &MW::refreshStaleRows);
     connect(dm, &DataModel::folderChange, scrollVerify, [this](bool){ scrollVerify->reset(); });
 
-    // Signal to change selection, fileSelectionChange, update ImageCache
-    connect(metaRead, &MetaRead::fileSelectionChange, this, &MW::fileSelectionChange, Qt::QueuedConnection);
-
     // update statusbar metadata active light
     connect(metaRead, &MetaRead::runStatus, this, &MW::updateMetadataThreadRunStatus);
-
-    // update loading metadata in central window
-    connect(metaRead, &MetaRead::centralMsg, this, &MW::setCentralMessage);
 
     // update filters MetaRead progress
     connect(metaRead, &MetaRead::updateProgressInFilter, filters, &Filters::updateProgress);
@@ -753,19 +739,12 @@ void MW::createImageCache()
     if (strategy == "Frugal") as = ImageCache::AutoStrategy::Frugal;
     if (strategy == "Moderate") as = ImageCache::AutoStrategy::Moderate;
     if (strategy == "Greedy") as = ImageCache::AutoStrategy::Greedy;
-    imageCache->setAutoMaxMB(isAuto, as);
-    if (!isAuto) imageCache->setMaxMB(cacheMaxMB);
-
-    connect(&imageCacheThread, &QThread::finished,
-            imageCache, &QObject::deleteLater);
-
-    // Signal to ImageCache start
-    connect(this, &MW::startImageCache,
-            imageCache, &ImageCache::start);
-
-    // Signal to stop (quit) the ImageCache
-    connect(this, &MW::stopImageCache,
-            imageCache, &ImageCache::stop);
+    /*  Queued like every other entry into ImageCache (Documentation 4.4.13): they run
+        when its thread starts, before anything can be cached. */
+    QMetaObject::invokeMethod(imageCache, [this, isAuto, as, cacheMaxMB] {
+        imageCache->setAutoMaxMB(isAuto, as);
+        if (!isAuto) imageCache->setMaxMB(cacheMaxMB);
+    }, Qt::QueuedConnection);
 
     // Signal to abort the ImageCache
     connect(this, &MW::abortImageCache, imageCache, &ImageCache::abortProcessing);
@@ -801,9 +780,10 @@ void MW::createImageCache()
     // connect(this, &MW::setAutoMaxMB,
     //         imageCache, &ImageCache::setAutoMaxMB, Qt::BlockingQueuedConnection);
 
-    // Signal to update imageCache maxMB
+    /*  Signal to update imageCache maxMB. Queued, not BlockingQueued: the GUI must
+        never wait on the cache thread (Preferences froze while it was busy). */
     connect(this, &MW::setMaxMB,
-            imageCache, &ImageCache::setMaxMB, Qt::BlockingQueuedConnection);
+            imageCache, &ImageCache::setMaxMB, Qt::QueuedConnection);
 
     // Signal to ImageCache new image selection
     connect(this, &MW::setImageCachePosition,
@@ -829,9 +809,8 @@ void MW::createImageCache()
             progress->clearProgress(progressDemosaicRow);
     });
 
-    // Signal datamodel to signal back when some row is loaded
-    connect(imageCache, &ImageCache::waitingForRow,
-            dm, &DataModel::imageCacheWaiting);
+    /*  Rows ImageCache deferred for metadata are woken by DataModel::rowsChanged, which
+        ImageCache connects itself (watchRowLoaded). */
 
     // Update the cache status progress bar when changed in ImageCache
     connect(imageCache, &ImageCache::showCacheStatus,
@@ -4386,10 +4365,9 @@ void MW::setOperationMode(G::OperationMode mode)
            re-decode + reload so the loupe reflects the new mode -- without this it
            keeps showing the prior mode's image until the user toggles the Edit-source
            selector (which re-decodes via toggleUseRaw). Matches the toggleUseRaw
-           refresh (currentImageHasChanged + imageCacheColorManageChange ->
+           refresh (imageCacheColorManageChange ->
            reloadImageCache -> refreshViewsOnCacheChange -> loupe). */
-        imageCache->setCurrentPosition(dm->currentKey, "MW::setOperationMode");
-        imageView->currentImageHasChanged = true;
+        emit setImageCachePosition(dm->currentKey, "MW::setOperationMode");   // queued
         if (!seeded) emit imageCacheColorManageChange();
     }
     if (seeded) {

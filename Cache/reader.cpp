@@ -40,7 +40,7 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
     /* FrameDecoder→DataModel signals are connected once in MetaRead. Here we
        only wire this Reader's videoFrameDecode emission into the shared queue. */
     connect(this, &Reader::videoFrameDecode, frameDecoder, &FrameDecoder::addToQueue);
-    connect(this, &Reader::setValDm, dm, &DataModel::setValDm);
+    connect(this, &Reader::setValKey, dm, &DataModel::setValKey, Qt::QueuedConnection);
 
     isDebug = false;
     debugLog = false;
@@ -49,60 +49,6 @@ Reader::Reader(int id, DataModel *dm, ImageCache *imageCache,
 Reader::~Reader()
 {
     // frameDecoder is shared and owned by MetaRead — do not delete here.
-}
-
-void Reader::stop()
-{
-    QString fun = "Reader::stop";
-    if (isDebug)
-        qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
-
-    {
-        QMutexLocker locker(&mutex);
-        abort = true;
-        thumb->abortProcessing();
-    } // Unlock mutex before waiting
-
-    if (readerThread->isRunning()) {
-        readerThread->quit();
-        // prevent thread waiting on itself if called from same thread
-        if (QThread::currentThread() != readerThread) {
-            readerThread->wait();
-        }
-    }
-}
-
-void Reader::abortProcessing()
-{
-    QString fun = "Reader::abortProcessing";
-    if (G::isLogger) G::log(fun, fPath);
-
-    // qDebug().noquote() << fun.leftJustified(col0Width) << "id =" << threadId;
-
-    thumb->abortProcessing();
-    // FrameDecoder is shared; flushing it from a single Reader would clobber
-    // other Readers' pending video work. MetaRead::abortProcessing handles
-    // the global FrameDecoder::stop.
-
-    // Tell worker to stop accepting new work
-    QMutexLocker lock(&mutex);
-    abort  = true;
-
-    // Now wait until pending == false (or timeout)
-    QDeadlineTimer deadline(500);
-    while (pending) {
-        const qint64 remaining = deadline.remainingTime();
-        if (remaining <= 0) {
-            // timed out — keep abort=true so the reader exits at next check
-            break;
-        }
-        if (!pendingCondition.wait(&mutex, int(remaining))) {
-            // wait returned false = deadline expired; keep abort=true
-            break;
-        }
-    }
-
-    status = Status::Aborted;
 }
 
 void Reader::signalAbort()
@@ -224,7 +170,7 @@ bool Reader::readMetadata()
     if (!abort) {
         // Backpressure: bump pending counter; DataModel::addMetadataForItem decrements.
         dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
-        emit addToDatamodel(metadata->m, "Reader::readMetadata");
+        emit addToDatamodel(metadata->m, fPath, "Reader::readMetadata");
     }
     if (abort) {status = Status::Aborted; return false;}
 
@@ -493,13 +439,13 @@ void Reader::readIcon()
             << "Emitting setIcon" << "thumb = " << pm << "instance =" << instance;
         // Backpressure: bump pending counter; DataModel::setIcon1 decrements.
         dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
-        emit setIcon(dmRow, image, instance, "MetaRead::readIcon");
+        emit setIcon(dmRow, image, instance, "MetaRead::readIcon", fPath);
 
         // qint64 msToDecode = tIcon.elapsed();
         qint64 msToDecode = tIcon.nsecsElapsed()/1000;
         // qDebug() << fun << "instance =" << instance << "dmRow =" << dmRow << "microsec =" << msToDecode;
-        emit setValDm(dmRow, G::NSThumbColumn, msToDecode, instance,
-                      "Reader::readIcon");
+        emit setValKey(fPath, G::NSThumbColumn, msToDecode, instance,
+                       "Reader::readIcon");
 
         if (!image.isNull()) return;
     }
@@ -507,7 +453,7 @@ void Reader::readIcon()
     // failed to load icon, load error icon
     QImage im = QImage(":/images/error_image256.png");
     dm->queuedReaderEvents.fetch_add(1, std::memory_order_relaxed);
-    emit setIcon(dmRow, im, instance, "MetaRead::readIcon");
+    emit setIcon(dmRow, im, instance, "MetaRead::readIcon", fPath);
     if (status == Status::MetaFailed) status = Status::MetaIconFailed;
     else status = Status::IconFailed;
     msg = "Failed to load thumbnail.";
@@ -567,7 +513,18 @@ void Reader::read(int dmRow, QString filePath, int instance,
         fPath = filePath;
     }
     this->instance = instance;
-    isVideo = dm->index(dmRow, G::VideoColumn).data().toBool();
+    /*  THE ROW AS IT IS NOW (4.4.15). This reader reads the live model by row below
+        (video flag, and on an icon-only read the thumb offsets, orientation, Develop
+        flag and size). A removal since MetaRead dispatched shifts the row, and those
+        reads then describe another image. liveRow is where the key is now; -1 means it
+        left the model, so there is nothing to read. Results go back by key either way. */
+    const int liveRow = dm->rowForKey(dmRow, filePath);
+    if (liveRow < 0) {
+        setPending(false);
+        if (!abort) emit done(threadId, true);
+        return;
+    }
+    isVideo = dm->index(liveRow, G::VideoColumn).data().toBool();
     status = Status::Success;
     setPending(true);
     loadedIcon = false;
@@ -605,8 +562,8 @@ void Reader::read(int dmRow, QString filePath, int instance,
            Pull this row's embedded-thumb offsets from the DataModel and preset them, so
            loadThumb uses the correct offsets and skips reading them from the stale m. */
         if (!needMeta) {
-            offsetThumb = dm->index(dmRow, G::OffsetThumbColumn).data().toUInt();
-            lengthThumb = dm->index(dmRow, G::LengthThumbColumn).data().toUInt();
+            offsetThumb = dm->index(liveRow, G::OffsetThumbColumn).data().toUInt();
+            lengthThumb = dm->index(liveRow, G::LengthThumbColumn).data().toUInt();
             thumb->presetOffset(offsetThumb, lengthThumb);
             /*  And every other field of m the icon path READS, for the same reason.
                 loadThumb rotates the thumbnail by m->orientation, so on an icon-only read
@@ -616,11 +573,11 @@ void Reader::read(int dmRow, QString filePath, int instance,
                 developEdited decides whether ThumbCache may answer at all, and the size
                 feeds a whole-file decode. The model holds this row's current values,
                 including a rotation made seconds ago. */
-            m->orientation = dm->index(dmRow, G::OrientationColumn).data().toInt();
-            m->rotationDegrees = dm->index(dmRow, G::RotationDegreesColumn).data().toInt();
-            m->developEdited = dm->index(dmRow, G::DevelopColumn).data().toBool();
-            m->width = dm->index(dmRow, G::WidthColumn).data().toInt();
-            m->height = dm->index(dmRow, G::HeightColumn).data().toInt();
+            m->orientation = dm->index(liveRow, G::OrientationColumn).data().toInt();
+            m->rotationDegrees = dm->index(liveRow, G::RotationDegreesColumn).data().toInt();
+            m->developEdited = dm->index(liveRow, G::DevelopColumn).data().toBool();
+            m->width = dm->index(liveRow, G::WidthColumn).data().toInt();
+            m->height = dm->index(liveRow, G::HeightColumn).data().toInt();
         }
         readIcon();
     }

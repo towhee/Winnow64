@@ -7,6 +7,7 @@
 #include <QElapsedTimer>
 #include <atomic>
 #include "Metadata/metadata.h"
+#include "Datamodel/rowwatch.h"
 #include "Datamodel/filters.h"
 #include "Datamodel/modelsync.h"
 #include "Datamodel/imagerow.h"
@@ -323,6 +324,11 @@ public:
         removeRows reports as ROWLOSS. */
     bool mExpectedRemoval = false;
 
+    /*  Set when existing rows change index (a removal, or an insert that is not an
+        append); ownRowMoves turns it into one instance bump. Documentation 4.4.15. */
+    bool mRowsMoved = false;
+    void ownRowMoves(const QString &src);
+
     /*  Thumbnails, keyed by path rather than held on the row -- see
         Datamodel/iconstore.h. Reached through data()/setData() on
         Qt::DecorationRole exactly as before, so no view or delegate changed. */
@@ -335,6 +341,7 @@ public:
     ScratchStore scratchStore;
 
     RowSyncPtr rowSync() const;
+    ModelView modelView() const;            // snapshot + RowSync together; any thread
     ProxySnapshotPtr proxySnapshot() const;
     void rebuildProxySnapshot();            // GUI thread
     /*  COALESCED, because the signals that ask for it arrive in BURSTS and the rebuild
@@ -430,6 +437,10 @@ public:
         invalidates every in-flight decode and reader task, so during a cull it matters
         which action is spending them. Diagnostic only. */
     void newInstance(const QString &src = QString());
+    /*  A worker result addressed by row AND key: the row if it still holds the key,
+        else wherever the key is now, else -1 (the row left the model). An empty key
+        trusts the row. Any thread (RowStore and fPathRow are locked). 4.4.15. */
+    int rowForKey(int dmRowHint, const QString &key);
     bool sourceModified(QStringList &added, QStringList &removed, QStringList&modified);
     bool isQueueEmpty();
     bool contains(QString &path);
@@ -692,6 +703,29 @@ private:
     /*  The deferral for a visible-row repaint. NOT zero -- see scheduleVisibleEmit. */
     static constexpr int kVisibleEmitDeferMs = 20;
 public:
+    /*  "TELL ME WHEN THIS ROW'S METADATA LANDS" -- the one wake path from the model to a
+        worker that is waiting on a row (Documentation 4.4.10).
+
+        A worker that finds a row not yet loaded calls watchRowLoaded(key) from its own
+        thread, then reads the row's RowSync flag once more. The GUI thread, writing the
+        row's MetadataStatus, publishes the RowSync flag FIRST and then takes the key from
+        the watch set. Datamodel/rowwatch.h spells out why the wake cannot be lost
+        between the worker's check and its watch.
+
+        The wake is POSTED: the keys are collected and rowsChanged() is emitted on a
+        later turn of the GUI event loop, never inside the function that wrote the row.
+        addMetadataForItem runs its whole body under a QSignalBlocker, which swallowed the
+        direct rowLoaded() emit this replaces, so a late-arriving current image was never
+        decoded. A watch is one-shot: it is removed when it fires. */
+    enum RowAspect { AspectMetadata = 0x1 };
+    void watchRowLoaded(const QString &key);     // any thread
+private:
+    void noteRowLoaded(int dmRow);               // GUI, from setData
+    void flushRowsChanged();
+    RowWatch rowWatch;                           // thread-safe, see rowwatch.h
+    QStringList pendingChangedKeys;              // GUI only
+    bool rowsChangedScheduled = false;           // GUI only
+public:
 
     QModelIndex instanceParent;         // &index.parent() != &instanceParent means instance clash
     QString firstFolderPathWithImages;
@@ -715,6 +749,9 @@ public:
     mutable QMutex mSyncMutex;
     RowSyncPtr mRowSync;
     ProxySnapshotPtr mProxySnapshot;
+    /*  Bumped (GUI thread) with every RowSync array that follows a structural change;
+        stamped into both it and the next snapshot. See ModelView. */
+    quint64 mStructureGen = 0;
     /*  The shared path table and the RowStore path generation it was built for. GUI
         thread (rebuildProxySnapshot). */
     ProxyPathsPtr mProxyPaths;
@@ -794,6 +831,9 @@ public:
     QHash<QString, QRect>iconSymbolRects;
 
 signals:
+    /*  A new proxy snapshot is published (rebuildProxySnapshot). Workers waiting for
+        one that matches the model resume on it instead of polling (4.4.15). */
+    void proxySnapshotPublished();
     /*  A master's version list changed after the load finished (a re-read of its
         sidecar): MW::reconcileVersionRows adds and drops version rows to match.
         Coalesced by the receiver. */
@@ -821,7 +861,9 @@ signals:
         means the fill has ended (finished or aborted). Drives the status-bar Loading row
         beside the central "x of y images loading" message. */
     void catalogFillProgress(int done, int total);
-    void rowLoaded();
+    /*  Posted, one-shot answer to watchRowLoaded: these keys' metadata status has just
+        been written (loaded or failed). Emitted outside any QSignalBlocker. */
+    void rowsChanged(QStringList keys, int aspects);
     void updateStatus(bool keepBase, QString s, QString source);
     void refreshViewsOnCacheChange(QString fPath, bool isCached, QString src);
 
@@ -846,16 +888,21 @@ public slots:
     void enqueueFolderSelection(const QString &folderPath, G::FolderOp op, bool recurse = false,
                                 const QStringList &subDirs = QStringList());
     void addAllMetadata();
-    void setAllMetadataAttempted(bool isAttempted);
+    /*  G::allMetadataAttempted has ONE writer, here (Documentation 4.4.16): every row
+        attempted (isMetaReadFinished), republished whenever the count or the row count
+        moves. beginMetaLoad says a load is starting, so "finished" waits for rows. */
+    void publishMetaAttempted();
+    void beginMetaLoad();
     bool addMetadataForItem(ImageMetadata m, QString src);
     /*  Reader's entry point: decrements the backpressure counter Reader incremented,
         then delegates. Every other caller uses addMetadataForItem directly. */
-    bool addMetadataForItemFromReader(ImageMetadata m, QString src);
+    bool addMetadataForItemFromReader(ImageMetadata m, QString key, QString src);
     QString primaryFolderPath();
     QVariant valueSf(int row, int column, int role = Qt::DisplayRole);
     void setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, QString src = "");
     bool iconRowVisible(const QModelIndex &dmIdx);  // true if row in visible range (or flag off)
-    void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "");
+    void setIcon1(int dmRow, const QImage &im, int fromInstance, QString src = "",
+                  QString key = QString());
 
     /* Replace a row's icon with a freshly rendered develop preview. Unlike setIcon1 this
        DELIBERATELY overwrites an existing icon -- see the implementation for why that is
@@ -884,7 +931,6 @@ public slots:
     QStringList rptIssues(int sfRow);
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
-    void imageCacheWaiting(int sfRow, int instance);
     bool isMetaReadFinished();          // O(1): every row attempted (== rowCount)
     bool isAllIconChunkLoaded(int first, int last);
     // Intercepts MetadataStatus/IconLoaded/Video column writes to keep the
@@ -1142,8 +1188,6 @@ public:
     void processErr(Error e);
 
     bool isDebug = false;
-
-    int imageCacheWaitingForRow = -1;
 
     QString errMsg;
 

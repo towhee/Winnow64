@@ -40,8 +40,9 @@ public:
 signals:
     void videoFrameDecode(QString fPath, int longSide, QString source,
                           int dmRow, int dmInstance);
-    void setValDm(int sfRow, int sfCol, QVariant value, int instance, QString src,
-                    int role = Qt::EditRole); // not used
+    /*  By key: a removal can move the row while the thumb decodes (4.4.15). */
+    void setValKey(QString key, int col, QVariant value, int instance, QString src,
+                   int role = Qt::EditRole);
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src,
                   int role = Qt::EditRole); // not used
     void getFrame(QString fPath);

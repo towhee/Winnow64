@@ -222,7 +222,8 @@ void MW::selfTestModelMutation(const QString &folder)
         if (dm->currentKey != after) fail("click after versions", "selection did not move");
         if (!icd->contains(after))
             fail("click after versions", "the ImageCache did not decode the clicked image\n"
-                 + imageCache->reportHealthChecks());
+                 + imageCache->fromCacheThread([this] {
+                       return imageCache->reportHealthChecks(); }));
         if (imageView->currentImagePath != after)
             fail("click after versions", "the loupe is showing " + imageView->currentImagePath);
         fprintf(stderr, "SELFTEST: mutation [click after versions] ok\n");

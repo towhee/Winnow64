@@ -366,10 +366,12 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         return false;
     }
 
-    // Already displayed
-    if (isCurrent && replace == false) {
+    /*  Already displayed -- only when the loupe really shows this image's full pixels
+        (LoupeShown::canSkipLoad), not merely because currentImagePath still names it
+        after a miss painted nothing. */
+    if (loupeShown.canSkipLoad(fPath, replace)) {
         isLoadingImage = false;
-        if (isDebug) qDebug() << srcFun << "quit because isCurrent && replace == false";
+        if (isDebug) qDebug() << srcFun << "quit because already showing full image";
         return true;
     }
 
@@ -432,6 +434,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             // set null pixmap
             QPixmap nullPm;
             pmItem->setPixmap(nullPm);
+            loupeShown.clear();      // the slideshow load failed: nothing is up
             isLoadingImage = false;
             return false;
         }
@@ -493,6 +496,7 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         has been chosen or the same image is being reloaded. It is also used by
         Embellish. */
         currentImagePath = fPath;
+        loupeShown.noteHit(fPath);
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
@@ -554,6 +558,15 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
     else {
         if (isDebug)
             qDebug() << "ImageView::loadImage isLoaded = false";
+        /*  A miss on the image already on screen keeps what is shown: the Develop
+            interim stand-in, or the full image when a forced reload (replace) finds it
+            gone from the cache -- an invalidation or a late refresh. Blanking it would
+            show black until the decode lands, which repaints it. Any other miss shows
+            nothing, and says so (LoupeShown). */
+        if (loupeShown.noteMiss(fPath)) {
+            isLoadingImage = false;
+            return false;
+        }
         // set null pixmap
         QPixmap nullPm;
         pmItem->setPixmap(nullPm);
@@ -602,6 +615,7 @@ bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
     developCaptureLocked = true;
 
     currentImagePath = fPath;
+    loupeShown.noteInterim(fPath);
     pmItem->setPixmap(QPixmap::fromImage(preview));
     pmItem->setVisible(true);
     setSceneRect(scene->itemsBoundingRect());
@@ -630,6 +644,55 @@ bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
     pmItem->setGraphicsEffect(nullptr);
     cropRestorePanRoom();           // the scene reset above dropped the crop's pan room
     developCaptureLocked = false;   // resume tracking (thumb click pan, zoom, scroll)
+    return true;
+}
+
+bool ImageView::loadImagePlaceholder(const QString &fPath, const QImage &thumb,
+                                     QSize fullSize)
+{
+/*
+    A MISS IS NOT BLACK (C16, Documentation 4.4.14). Every fast arrow past the cache
+    used to paint an empty pixmap until the decode landed. The thumbnail is already in
+    memory (IconStore), so show that, scaled up, instead.
+
+    It is presented at the full image's size (ScaledPixmapItem holds the small pixmap
+    and stretches it at paint time), so the fit zoom, a 1:1 zoom and the pan are all in
+    full-image terms and nothing jumps when the real image replaces it. Only the long
+    side is taken from the metadata, and the aspect from the thumbnail, which is
+    already oriented; without a size the thumbnail's own is used and fit scales it.
+
+    G::isFirstImageNewInstance is left for the real load, which owns the first-image
+    framing. LoupeShown says Placeholder, so loadImage never skips the real pixels.
+*/
+    if (G::isLogger) G::log("ImageView::loadImagePlaceholder", fPath);
+    if (fPath.isEmpty() || thumb.isNull()) return false;
+
+    dropCompare();      // a real load supersedes a Browse compare
+
+    QSize logical = thumb.size();
+    const int longFull = qMax(fullSize.width(), fullSize.height());
+    const int longThumb = qMax(thumb.width(), thumb.height());
+    if (longThumb > 0 && longFull > longThumb)
+        logical = thumb.size().scaled(longFull, longFull, Qt::KeepAspectRatio);
+
+    currentImagePath = fPath;
+    loupeShown.notePlaceholder(fPath);
+    pmItem->setTransformationMode(Qt::SmoothTransformation);
+    pmItem->setPixmapScaled(QPixmap::fromImage(thumb), logical);
+    pmItem->setVisible(true);
+    setSceneRect(scene->itemsBoundingRect());
+
+    updateShootingInfo();
+
+    // full-image terms: undo an interim's zoom scaling (see loadImageInterim)
+    if (!isFit && interimZoomScale > 0) zoom /= interimZoomScale;
+    interimZoomScale = 1.0;
+    zoomFit = getFitScaleFactor(rect(), pmItem->boundingRect());
+    if (G::isFirstImageNewInstance || zoom < 0.1) isFit = true;
+    if (isFit) setFitZoom();
+    scale(true);
+    pmItem->setGraphicsEffect(nullptr);
+    cropRestorePanRoom();
     return true;
 }
 
@@ -714,6 +777,8 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
                                                         : Qt::FastTransformation);
     pmItem->setPixmapScaled(QPixmap::fromImage(image), shown);
     pmItem->setVisible(true);
+    // the render of the image whose stand-in was up: the loupe now shows the real thing
+    loupeShown.noteRender(currentImagePath);
     developShownPath = currentImagePath;
     developShownKey = pmItem->pixmap().cacheKey();
     if (sizeChanged) {
@@ -4917,6 +4982,7 @@ void ImageView::clear()
     QPixmap nullPm;
     pmItem->setPixmap(nullPm);
     pmItem->setVisible(false);
+    loupeShown.clear();
 }
 
 void ImageView::noJpgAvailable()
@@ -7385,6 +7451,8 @@ QString ImageView::diagnostics()
     rpt << "\n" << "shootingInfo = " << G::s(infoText);
     rpt << "\n" << "infoOverlayFontSize = " << G::s(infoOverlayFontSize);
     rpt << "\n" << "currentImagePath = " << G::s(currentImagePath);
+    rpt << "\n" << "shown path = " << G::s(loupeShown.path());
+    rpt << "\n" << "shown kind = " << loupeShown.stateName();
     rpt << "\n" << "firstImageLoaded = " << G::s(G::isFirstImageNewInstance);
     rpt << "\n" << "classificationBadgeDiam = " << G::s(classificationBadgeDiam);
     rpt << "\n" << "cursorIsHidden = " << G::s(cursorIsHidden);
@@ -7436,12 +7504,14 @@ void ImageView::copyImage()
         pm = pm.scaled(pmItem->displaySize(), Qt::IgnoreAspectRatio,
                        Qt::SmoothTransformation);
     if (pm.isNull()) {
-       if (icd->contains(dm->currentKey)) {
-            pm = QPixmap::fromImage(icd->imCache.value(dm->currentKey));
+        QImage cached;
+        if (icd->get(dm->currentKey, cached)) {     // one locked lookup; never null
+            pm = QPixmap::fromImage(cached);
         }
         else {
             QString msg = "Could not copy the current image to the clipboard";
             G::popup->showPopup(msg, 1500);
+            return;     // not "Copied": the clipboard would get an empty pixmap
         }
     }
     QApplication::clipboard()->setPixmap(pm, QClipboard::Clipboard);

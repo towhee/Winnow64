@@ -1162,7 +1162,7 @@ void MW::restoreParkedLibrary(const QSet<QString> &changed)
     rt.start();
     if (G::isPerfProbe) armGuiStallWatchdog();
 
-    G::allMetadataAttempted = false;
+    dm->beginMetaLoad();
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
     resetDevelopCachesForNewFolder();

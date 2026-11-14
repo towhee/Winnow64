@@ -884,7 +884,13 @@ void MW::diagnosticsMetadata() {
 }
 void MW::diagnosticsXMP() {} // dummy for now
 void MW::diagnosticsMetadataCache() {diagnosticsReport(metaRead->diagnostics(), "Winnow Diagnostics: MetaRead");}
-void MW::diagnosticsImageCache() {diagnosticsReport(imageCache->diagnostics(), "Winnow Diagnostics: ImageCache");}
+void MW::diagnosticsImageCache()
+{
+    // on the ImageCache thread: the report reads its queue and target range
+    ImageCache *ic = imageCache;
+    diagnosticsReport(ic->fromCacheThread([ic] { return ic->diagnostics(); }),
+                      "Winnow Diagnostics: ImageCache");
+}
 
 void MW::diagnosticsMemory()
 {

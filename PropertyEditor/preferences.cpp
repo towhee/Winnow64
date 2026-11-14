@@ -341,8 +341,10 @@ void Preferences::itemChange(QModelIndex idx)
             else if (size == "Auto Greedy") {
                 as = ImageCache::AutoStrategy::Greedy;
             }
-            mw->imageCache->setAutoMaxMB(true, as);
-            // emit mw->setAutoMaxMB(true, as);
+            // queued: ImageCache thread state (Documentation 4.4.13)
+            ImageCache *ic = mw->imageCache;
+            QMetaObject::invokeMethod(ic, [ic, as] { ic->setAutoMaxMB(true, as); },
+                                      Qt::QueuedConnection);
             QString strategy = mw->imageCache->autoStrategyStr.at(as);
             mw->settings->setValue("autoMaxMBStrategy", strategy);
         }
@@ -362,11 +364,10 @@ void Preferences::itemChange(QModelIndex idx)
             else if (size == "32 GB") mb = 32000;
             else if (size == "48 GB") mb = 48000;
             else if (size == "64 GB") mb = 64000;
-            mw->imageCache->setAutoMaxMB(false, as);
-            qDebug() << "mw->imageCache->setMaxMB(mb)";
-            // mw->imageCache->setMaxMB(mb);
-            // emit mw->setAutoMaxMB(false, as);
-            emit mw->setMaxMB(mb);
+            ImageCache *ic = mw->imageCache;
+            QMetaObject::invokeMethod(ic, [ic, as] { ic->setAutoMaxMB(false, as); },
+                                      Qt::QueuedConnection);
+            emit mw->setMaxMB(mb);          // queued, after setAutoMaxMB
             mw->settings->setValue("cacheMaxMB", mb);
         }
         mw->refreshAfterImageCacheSizeChange();

@@ -20,7 +20,7 @@ void MW::slideShow()
         progress->setSuppressed(false);   // end slideshow: allow progress to show again
         // change to ImageCache
         if (G::useImageCache)
-            imageCache->setCurrentPosition(dm->currentKey, "MW::slideShow");
+            emit setImageCachePosition(dm->currentKey, "MW::slideShow");     // queued
         // enable main window QAction shortcuts
         QList<QAction*> actions = findChildren<QAction*>();
         for (QAction *a : actions) a->setShortcutContext(Qt::WindowShortcut);

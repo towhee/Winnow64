@@ -453,9 +453,19 @@ void DataModel::spliceRowSync(int at, int count)
 {
     const int rows = rowCount();
     auto fresh = std::make_shared<RowSyncArray>(rows);
+    fresh->setStructureGen(++mStructureGen);
+    {
+        QMutexLocker lock(&mSyncMutex);
+        if (mRowSync) fresh->copySpliced(*mRowSync, at, count);
+        mRowSync = fresh;
+    }
+    scheduleProxySnapshotRebuild();     // the snapshot catches up (4.4.15)
+}
+
+ModelView DataModel::modelView() const
+{
     QMutexLocker lock(&mSyncMutex);
-    if (mRowSync) fresh->copySpliced(*mRowSync, at, count);
-    mRowSync = fresh;
+    return {mProxySnapshot, mRowSync};
 }
 
 void DataModel::rebuildRowSync()
@@ -481,8 +491,12 @@ void DataModel::rebuildRowSync()
         fresh->setFlag(r, RowSync::IsVideo, v[2].toBool());
         fresh->setCacheMB(r, v[3].toFloat());
     });
-    QMutexLocker lock(&mSyncMutex);
-    mRowSync = fresh;
+    fresh->setStructureGen(++mStructureGen);
+    {
+        QMutexLocker lock(&mSyncMutex);
+        mRowSync = fresh;
+    }
+    scheduleProxySnapshotRebuild();
 }
 
 void DataModel::resizeRowSync(int rows)
@@ -493,8 +507,10 @@ void DataModel::resizeRowSync(int rows)
         QMutexLocker lock(&mSyncMutex);
         if (mRowSync && mRowSync->size() == rows) return;
         if (mRowSync) fresh->copyFrom(*mRowSync);
+        fresh->setStructureGen(++mStructureGen);
         mRowSync = fresh;
     }
+    scheduleProxySnapshotRebuild();
 }
 
 /*  Republish the proxy's order and identity. GUI THREAD ONLY -- it reads both
@@ -550,6 +566,7 @@ void DataModel::rebuildProxySnapshot()
 
     auto snap = std::make_shared<ProxySnapshot>();
     snap->instance = instance;
+    snap->structureGen = mStructureGen;     // GUI thread, as are the splices
     const int dmRows = rowCount();
     snap->sourceRows = dmRows;
 
@@ -588,6 +605,9 @@ void DataModel::rebuildProxySnapshot()
         QMutexLocker lock(&mSyncMutex);
         mProxySnapshot = snap;
     }
+    /*  AFTER the publish, so a worker that read the old snapshot and is waiting for a
+        new one always receives this (4.4.15). */
+    emit proxySnapshotPublished();
 
     if (G::isPerfProbe) {
         probeSnapRebuilds++;
@@ -700,12 +720,19 @@ void DataModel::clearDataModel()
         staleness protocol every cross-thread write already checks. */
     {
         QMutexLocker lock(&mSyncMutex);
-        mRowSync = std::make_shared<RowSyncArray>(0);
-        mProxySnapshot = std::make_shared<ProxySnapshot>();
+        // an empty pair that agrees (ModelView::consistent)
+        auto sync = std::make_shared<RowSyncArray>(0);
+        auto snap = std::make_shared<ProxySnapshot>();
+        sync->setStructureGen(++mStructureGen);
+        snap->structureGen = mStructureGen;
+        mRowSync = sync;
+        mProxySnapshot = snap;
     }
     rowStore.clear();
     iconStore.clear();
     scratchStore.clear();
+    rowWatch.clear();
+    pendingChangedKeys.clear();
 
     // reset the raw/jpg bulk-load pairing trackers (prevRawRow is a row index)
     prevRawSuffix = "";
@@ -725,6 +752,7 @@ void DataModel::clearDataModel()
     evictsSinceFullSweep = 0;
     iconChunkMissing = 0;
     // model is now empty: reset the running load-flag counts
+    beginMetaLoad();
     metadataAttemptedCount.store(0, std::memory_order_relaxed);
     metadataLoadedCount.store(0, std::memory_order_relaxed);
     iconLoadedCount.store(0, std::memory_order_relaxed);
@@ -865,7 +893,7 @@ bool DataModel::restoreScope()
         const int r = p->currentKey.isEmpty() ? -1 : fPathRowValue(p->currentKey);
         setCurrent(index(r >= 0 ? r : 0, 0), instance);
     }
-    setAllMetadataAttempted(true);
+    publishMetaAttempted();
     endLoad(true);
     emit folderChange(false);
     return true;
@@ -1052,11 +1080,13 @@ bool DataModel::insertRows(int row, int count, const QModelIndex &parent)
 {
     if (parent.isValid() || count <= 0) return false;
     if (row < 0 || row > rowCount()) return false;
+    if (row < rowCount()) mRowsMoved = true;        // not an append: rows below shift
     beginInsertRows(QModelIndex(), row, row + count - 1);
     rowStore.insertRows(row, count);
     scratchStore.insertRows(row, count);
     splicePendingEmitRows(row, 0, count);
     endInsertRows();
+    publishMetaAttempted();      // more rows, none attempted yet
     return true;
 }
 
@@ -1095,6 +1125,7 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
                  "DataModel::removeRows");
     }
 
+    mRowsMoved = true;
     beginRemoveRows(QModelIndex(), row, row + count - 1);
     rowStore.removeRows(row, count);
     scratchStore.removeRows(row, count);
@@ -1111,6 +1142,7 @@ bool DataModel::removeRows(int row, int count, const QModelIndex &parent)
         mIssueLists.swap(next);
     }
     endRemoveRows();
+    publishMetaAttempted();
     return true;
 }
 
@@ -1390,8 +1422,10 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
                                QString("%1 -> %2").arg(oldStatus).arg(newStatus));
                 const bool wasAttempted = (oldStatus != G::MetaNotAttempted);
                 const bool isAttempted  = (newStatus != G::MetaNotAttempted);
-                if (isAttempted != wasAttempted)
+                if (isAttempted != wasAttempted) {
                     metadataAttemptedCount.fetch_add(isAttempted ? 1 : -1, std::memory_order_relaxed);
+                    publishMetaAttempted();
+                }
                 const bool wasLoaded = (oldStatus == G::MetaLoaded);
                 const bool isLoaded  = (newStatus == G::MetaLoaded);
                 if (isLoaded != wasLoaded)
@@ -1534,8 +1568,13 @@ bool DataModel::setData(const QModelIndex &idx, const QVariant &value, int role)
                 const int row = idx.row();
                 if (isStatusCol) {
                     const int st = value.toInt();
-                    rs->setFlag(row, RowSync::MetaAttempted, st != G::MetaNotAttempted);
-                    rs->setFlag(row, RowSync::MetaLoaded,    st == G::MetaLoaded);
+                    // one swap: a worker never sees attempted without loaded (C8)
+                    const quint8 v =
+                        quint8((st != G::MetaNotAttempted ? RowSync::MetaAttempted : 0) |
+                               (st == G::MetaLoaded ? RowSync::MetaLoaded : 0));
+                    rs->setFlags(row, RowSync::MetaAttempted | RowSync::MetaLoaded, v);
+                    // after the flags: see watchRowLoaded
+                    if (st != G::MetaNotAttempted) noteRowLoaded(row);
                 }
                 else if (col == G::IconLoadedColumn) {
                     rs->setFlag(row, RowSync::IconLoaded, value.toBool());
@@ -1575,6 +1614,7 @@ void DataModel::recountLoadFlags()
     iconLoadedCount.store(icon,         std::memory_order_relaxed);
     videoRowCount.store(video,          std::memory_order_relaxed);
     iconUnloadableCount.store(unloadable, std::memory_order_relaxed);
+    publishMetaAttempted();
 }
 
 void DataModel::newInstance(const QString &src)
@@ -1592,6 +1632,33 @@ void DataModel::newInstance(const QString &src)
     if (G::isGuiThread()) scheduleProxySnapshotRebuild();
     else QMetaObject::invokeMethod(this, [this]{ scheduleProxySnapshotRebuild(); },
                                    Qt::QueuedConnection);
+}
+
+void DataModel::ownRowMoves(const QString &src)
+{
+/*
+    STRUCTURE CHANGES OWN THE INSTANCE (C20, Documentation 4.4.15). Workers address the
+    model by row number (MetaRead's sets, a reader's dmRow, ImageCache's queue of
+    snapshot rows), and the instance is how a late result says "I belong to another
+    model". A removal or a non-append insert changes which image a row number names
+    without changing the instance, unless the caller remembered to bump it:
+    applyModelChange did, removing a folder from a multi-folder load did not, and a read
+    in flight then landed one image's thumbnail and metadata on another, marked loaded
+    so that nothing re-read it. The operation that moves rows now bumps it itself, once.
+    A caller that already bumped costs one more number, nothing else.
+*/
+    if (!mRowsMoved) return;
+    mRowsMoved = false;
+    newInstance("rows moved: " + src);
+}
+
+int DataModel::rowForKey(int dmRowHint, const QString &key)
+{
+    if (key.isEmpty()) return dmRowHint;
+    if (dmRowHint >= 0 && dmRowHint < rowCount() &&
+        rowStore.value(dmRowHint, G::PathColumn, G::KeyRole).toString() == key)
+        return dmRowHint;
+    return fPathRowValue(key);
 }
 
 bool DataModel::lessThan(const QFileInfo &i1, const QFileInfo &i2)
@@ -1729,10 +1796,11 @@ QList<int> DataModel::insertFiles(const QStringList &paths)
     // once, now that every row has its path
     rebuildRowFromPathHash();
     recountLoadFlags();
+    ownRowMoves("insertFiles");
     setCurrent(currentKey, instance);
 
-    // reset loaded flags so MetaRead knows to load
-    G::allMetadataAttempted = false;
+    // reset loaded flags so MetaRead knows to load (the new rows are not attempted)
+    publishMetaAttempted();
     G::iconChunkLoaded = false;
 
     verifyIntegrity("DataModel::insertFiles");
@@ -2089,6 +2157,7 @@ void DataModel::removeFiles(const QStringList &paths)
             if (k < rows.size() && rows[k] == r) { newRow[r] = -1; ++k; }
             else newRow[r] = next++;
         }
+        mRowsMoved = true;
         beginResetModel();
         rowStore.compact(newRow);
         scratchStore.compact(newRow);
@@ -2111,6 +2180,8 @@ void DataModel::removeFiles(const QStringList &paths)
 
     // removeRows bypasses setData, so resync the running load-flag counts
     recountLoadFlags();
+
+    ownRowMoves("removeFiles");
 
     // update current index
     int last = sf->rowCount() - 1;
@@ -2902,7 +2973,7 @@ void DataModel::finishCatalogFill()
         ft.restart();
     }
 
-    setAllMetadataAttempted(true);
+    publishMetaAttempted();
     if (probeBig) { qDebug().noquote() << "[PERF] finishCatalogFill  allMetaAttempted"
                                        << ft.elapsed() << "ms"; ft.restart(); }
 
@@ -3202,6 +3273,7 @@ bool DataModel::endLoad(bool success)
     else {
         clear();
         // model emptied on the failure path: reset running load-flag counts
+        beginMetaLoad();
         metadataAttemptedCount.store(0, std::memory_order_relaxed);
         metadataLoadedCount.store(0, std::memory_order_relaxed);
         iconLoadedCount.store(0, std::memory_order_relaxed);
@@ -3983,7 +4055,7 @@ void DataModel::addAllMetadata()
         }
         if (abort || G::stop) {
             endLoad(false);
-            setAllMetadataAttempted(false);
+            publishMetaAttempted();
             return;
         }
         // is metadata already cached (or attempted?)
@@ -4024,7 +4096,7 @@ void DataModel::addAllMetadata()
             << " fromIndex=" << fromIndexCount;
     }
 
-    setAllMetadataAttempted(true);
+    publishMetaAttempted();
     emit centralMsg("Metadata loaded");
     if (G::useProcessEvents) qApp->processEvents(QEventLoop::ExcludeUserInputEvents | QEventLoop::ExcludeSocketNotifiers);
     endLoad(true);
@@ -4155,23 +4227,57 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     return true;
 }
 
-void DataModel::imageCacheWaiting(int sfRow, int instance)
+void DataModel::watchRowLoaded(const QString &key)
 {
-    // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow;
-    if (instance != this->instance) {
-        return;
-    }
-
-    int dmRow = sf->mapToSource(sf->index(sfRow, 0)).row();
-    imageCacheWaitingForRow = dmRow;
-    if (metadataLoaded(dmRow)) {
-        // qDebug() << "DataModel::imageCacheWaiting" << "row =" << sfRow << "emit rowLoaded()";
-        imageCacheWaitingForRow = -1;
-        emit rowLoaded();
-    }
+/*
+    Any thread. See the header: the caller must read the row's RowSync MetaAttempted /
+    MetaLoaded flags AGAIN after this returns, and act on them if they are now set.
+*/
+    if (key.isEmpty()) return;
+    rowWatch.watch(key);
 }
 
-bool DataModel::addMetadataForItemFromReader(ImageMetadata m, QString src)
+void DataModel::noteRowLoaded(int dmRow)
+{
+/*
+    GUI thread, from setData, AFTER the row's RowSync flags were published. Cheap when
+    nothing is watched (the common case): one uncontended lock and an isEmpty test.
+*/
+    QString key;
+    // the path lookup runs only when something is watched
+    if (!rowWatch.take([&] {
+            key = rowStore.value(dmRow, G::PathColumn, G::KeyRole).toString();
+            return key;
+        })) return;
+    // the pending list and its timer are GUI-thread state
+    auto post = [this, key] {
+        pendingChangedKeys.append(key);
+        if (rowsChangedScheduled) return;
+        rowsChangedScheduled = true;
+        QTimer::singleShot(0, this, &DataModel::flushRowsChanged);
+    };
+    if (G::isGuiThread()) post();
+    else QMetaObject::invokeMethod(this, post, Qt::QueuedConnection);
+}
+
+void DataModel::flushRowsChanged()
+{
+    rowsChangedScheduled = false;
+    if (pendingChangedKeys.isEmpty()) return;
+    /*  A caller further up the stack may hold a QSignalBlocker on the model (that is how
+        the old direct emit was lost). Try again on the next turn rather than emit into
+        it. */
+    if (signalsBlocked()) {
+        rowsChangedScheduled = true;
+        QTimer::singleShot(0, this, &DataModel::flushRowsChanged);
+        return;
+    }
+    const QStringList keys = pendingChangedKeys;
+    pendingChangedKeys.clear();
+    emit rowsChanged(keys, AspectMetadata);
+}
+
+bool DataModel::addMetadataForItemFromReader(ImageMetadata m, QString key, QString src)
 {
 /*
     THE READER'S ENTRY POINT, and the only one that owes the backpressure counter a
@@ -4199,6 +4305,18 @@ bool DataModel::addMetadataForItemFromReader(ImageMetadata m, QString src)
         ~QrEvGuard() { c.fetch_sub(1, std::memory_order_relaxed); }
     } qrEvGuard{queuedReaderEvents};
 
+    /*  BY KEY, NOT ONLY BY ROW (4.4.15). The reader was handed a row number and a key;
+        the row is trusted only while it still holds the key. A late result for another
+        instance is refused by addMetadataForItem whatever row it names. */
+    if (m.instance == instance) {
+        const int row = rowForKey(m.row, key);
+        if (row < 0) {
+            G::issueDedup("Comment", "Reader metadata for a row that left the model",
+                          "DataModel::addMetadataForItemFromReader", m.row, key);
+            return false;
+        }
+        m.row = row;
+    }
     return addMetadataForItem(m, src);
 }
 
@@ -4566,19 +4684,11 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (isDebug) qDebug() << "DataModel::addMetadataForItem" << "instance =" << instance << "DONE";
 
     // Publish so MetaRead worker can poll without a BlockingQueuedConnection.
-    G::allMetadataAttempted = isMetaReadFinished();
+    publishMetaAttempted();
 
-    // signal ImageCache that row is loaded
-    // if (imageCacheWaitingForRow > -1)
-    //     qDebug() << "DataModel::addMetadataForItem row =" << row
-    //              << "imageCacheWaitingForRow =" << imageCacheWaitingForRow
-    //         ;
-
-    if (row == imageCacheWaitingForRow) {
-        // qDebug() << "DataModel::addMetadataForItem emit rowLoaded() for row =" << row;
-        emit rowLoaded();
-        imageCacheWaitingForRow = -1;
-    }
+    /*  ImageCache is woken, if it was waiting on this row, by the MetadataStatus write
+        above (setData → noteRowLoaded → a posted rowsChanged). Nothing is emitted here:
+        this function's QSignalBlocker would swallow it. */
 
     sampleRowBytesUsed(row);
 
@@ -5606,7 +5716,8 @@ void DataModel::clearDevelopIcon(int dmRow)
     emit dataChanged(dmIdx, index(dmRow, columnCount() - 1));
 }
 
-void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src)
+void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString src,
+                         QString key)
 {
     /*
     setIcon is a slot that can be signalled from another thread. If the user is
@@ -5664,6 +5775,16 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
         G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmRow);
         trailDrop(QString("instance %1 != %2").arg(fromInstance).arg(instance.load()));
         return;
+    }
+
+    /*  The reader's row is trusted only while it still holds the key (4.4.15). */
+    if (!key.isEmpty()) {
+        const int row = rowForKey(dmRow, key);
+        if (row < 0) {
+            trailDrop("key left the model: " + key);
+            return;
+        }
+        dmRow = row;
     }
 
     if (isDebug)
@@ -6511,19 +6632,19 @@ void DataModel::setCached(int sfRow, QString fPath, int cacheSource, int instanc
     QString src = "DataModel::setCached";
     const QModelIndex dmIdx = index(fPathRowValue(fPath), G::IsCachedColumn);
     if (instance != this->instance) {
-        /*  THE LOUPE IS NEVER TOLD. The image is in the cache -- ImageCache::cacheImage
-            inserted it before it got here -- but refreshViewsOnCacheChange is below this
-            return, so a selection that was waiting on this row stays blank until the
-            user does something else. Counted rather than silently dropped. */
+        /*  TRUTH BEATS INSTANCE FOR "THE IMAGE IS AVAILABLE". The image is in the cache
+            -- ImageCache::cacheImage inserted it, by path, before this was sent -- so a
+            filter, sort or version change since then does not make it less there. The
+            badge write is skipped (the instance's bookkeeping is ImageCache's to redo),
+            but the current image's loupe is told: before, a selection waiting on this
+            row stayed blank until the user did something else (Documentation
+            4.4.12). */
         if (G::isIngestProbe) IngestProbe::Instance().NoteDroppedCacheSignal();
         errMsg = "Instance clash from " + src;
         G::issueDedup("Comment", errMsg, src, dmIdx.row(), fPath);
-
-        /*
-        qDebug() << src << sfRow << errMsg
-                 << "ImageCache instance =" << instance
-                 << "DataModel instance =" << this->instance
-            ;//*/
+        if (cacheSource != G::CacheNone && dmIdx.isValid() && fPath == currentKey
+            && sf->mapFromSource(dmIdx).isValid())
+            emit refreshViewsOnCacheChange(fPath, true, src);
         return;
     }
     if (!dmIdx.isValid()) return;
@@ -6539,11 +6660,23 @@ void DataModel::setCached(int sfRow, QString fPath, int cacheSource, int instanc
         emit refreshViewsOnCacheChange(fPath, cacheSource != G::CacheNone, src);
 }
 
-void DataModel::setAllMetadataAttempted(bool isAttempted)
+void DataModel::publishMetaAttempted()
 {
-    if (isDebug)
-    qDebug() << "DataModel::setAllMetadataAttempted" << "instance =" << instance;
-    G::allMetadataAttempted = isAttempted;
+/*
+    THE ONE WRITER OF G::allMetadataAttempted (R10, Documentation 4.4.16). It is derived:
+    every row has been attempted. Eleven writers on two threads used to set it from what
+    they believed -- MetaRead::allFinished set it true unconditionally, even after
+    giving up on rows -- and some forty readers gate deletes, sorts, filters and
+    Combine Raw+JPG on it. Republished wherever the attempted count or the row count
+    changes, all on the GUI thread.
+*/
+    G::allMetadataAttempted = isMetaReadFinished();
+}
+
+void DataModel::beginMetaLoad()
+{
+    // a load is starting: not finished until its rows say so
+    G::allMetadataAttempted = false;
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)
@@ -7613,7 +7746,7 @@ QString DataModel::diagnostics()
     rpt << "\n" << G::sj("hasDupRawJpg", dots) << G::s(hasDupRawJpg);
     rpt << "\n" << G::sj("loadingModel", dots) << G::s(loadingModel);
     rpt << "\n" << G::sj("basicFileInfoLoaded", dots) << G::s(basicFileInfoLoaded);
-    rpt << "\n" << G::sj("imageCacheWaitingForRow", dots) << G::s(imageCacheWaitingForRow);
+    rpt << "\n" << G::sj("watchedKeys (rows awaited)", dots) << G::s(rowWatch.count());
     rpt << "\n" << G::sj("folderHasMissingEmbeddedThumb", dots) << G::s(folderHasMissingEmbeddedThumb);
     rpt << "\n" << G::sj("filtersBuilt", dots) << G::s(filters->filtersBuilt);
     rpt << "\n" << G::sj("bytesUsed", dots) << Utilities::fitNumber(bytesUsed, 18);

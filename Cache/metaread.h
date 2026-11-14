@@ -2,6 +2,7 @@
 #define METAREAD_H
 
 #include <QtWidgets>
+#include <QSet>
 #include <QObject>
 #include <QMutex>
 #include <QThread>
@@ -36,7 +37,6 @@ public:
         exit()'s static destructors crashes. */
     bool readersStuck = false;
     QStringList stuckFiles;         // what each stuck reader was reading, for the quit dialog
-    void syncInstance();
     // void cleanupIcons();
     QString diagnostics();
     QString rowStateText(int dmRow, int sfRow);
@@ -89,9 +89,7 @@ public:
 
 signals:
     void stopped(QString src);
-    void updateScroll();
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, bool /*success*/, QString/*calledBy*/);
-    void centralMsg(QString message);
     void okToSelect(bool ok);
     /*  The proxy ROW to select, not a QModelIndex: this is delivered queued, and
         an index is only valid in the thread and the moment that built it. The
@@ -113,14 +111,7 @@ signals:
     void cleanupIcons(int instance);
     // a Reader's embedded JPEG thumb was stale (Image/stalethumb.h); MW collects them
     void staleEmbeddedThumb(QString fPath);
-    void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
-    void fileSelectionChange(QModelIndex sfIdx,
-                             QModelIndex idx2 = QModelIndex(),
-                             bool clearSelection = false,
-                             QString src = "MetaRead::dispatch");
-
     void done();
-    void dispatchIsFinished(QString src);
 
     /* Emitted when the periodic memory probe in dispatch sees the
        process footprint exceed G::memoryAbortMB. The receiving slot
@@ -133,6 +124,9 @@ public slots:
     /*  DataModel::videoReadingCleared -> drop the worker-local marker for a
         video row whose frame decode has been resolved. */
     void onVideoReadingCleared(int dmRow, int fromInstance);
+    /*  DataModel::proxySnapshotPublished: resume readers that were waiting for a
+        snapshot matching the model (Documentation 4.4.15). */
+    void onSnapshotPublished();
 
     /*  owesSelection: a folder load owes its first image a selection (see
         firstSelectionPending). A re-initialize that keeps the folder (MW::filterChange)
@@ -147,6 +141,9 @@ public slots:
        JIT re-arm block in setStartRow for why. Thread-safe; call it queued, before the
        setStartRow that should act on it. */
     void invalidateLoadedIcons();
+    /*  Rows whose metadata was reset (their files changed): forget them as read, so
+        the next cycle reads them wherever they are (Documentation 4.4.16). */
+    void invalidateRows(const QStringList &keys);
     /* PROBE (--perfprobe): why a row refreshStaleRows cleared is not being re-read.
        Prints this thread's view of it -- in-flight / success sets, RowSync flags, the
        readers' cycling flags, the a/b cursors, the icon range. Call it queued. */
@@ -157,7 +154,7 @@ public slots:
     void dispatchFinished(QString src);
     void allFinished(QString src);
     void abortProcessing();
-    void setAwaitingDecode(int sfRow);
+    void setAwaitingDecode(QString fPath);
     void onRowCached(int sfRow, QString fPath, int cacheSource, int instance);
 
 private:
@@ -189,12 +186,24 @@ private:
     bool isVideoAt(int sfRow) const;
     bool isVideoDm(int dmRow) const;
     bool nextRowToRead();
+    /*  Readers waiting for a snapshot that matches the model; resumed by
+        onSnapshotPublished, or by a slow fallback timer. MetaRead thread only. */
+    QSet<int> snapshotWaiters;
+    bool snapshotFallbackArmed = false;
+    void waitForSnapshot(int id);
+    void resumeSnapshotWaiters();
 
     QMutex mutex;
-    QWaitCondition condition;
     bool abort = false;
-    std::atomic<int> awaitingDecodeRow{-1};   // sfRow we're waiting on; -1 = no wait
+    /* Navigation gate (setAwaitingDecode). Keyed by PATH: ImageCache's setCached carries
+       a snapshot sfRow and the selection a live one, which differ after a sort or an
+       insert, so a row comparison missed and held the gate its full 500 ms (C14).
+       awaitingDecodePath is MetaRead-thread only; awaitingDecode mirrors it for the
+       diagnostics report, which runs on the GUI thread. */
+    QString awaitingDecodePath;
+    std::atomic<bool> awaitingDecode{false};
     QElapsedTimer awaitingDecodeTimer;        // wall-clock safety bound
+    void clearAwaitingDecode();
     std::atomic<bool> idle{false};
     /* Set by invalidateLoadedIcons, consumed (and reset) by setStartRow. */
     std::atomic<bool> loadedIconsInvalidated{false};
@@ -312,6 +321,8 @@ private:
     bool success;
     bool isDone;
     bool allFinishedFired;
+    bool rearmedUnattempted = false;     // rearmUnattempted ran this instance
+    void rearmUnattempted(const QString &src);
     bool aIsDone;
     bool bIsDone;
     bool quitAfterTimeoutInitiated;

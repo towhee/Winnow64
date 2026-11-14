@@ -468,6 +468,7 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
     for (const QString &k : std::as_const(versions))
         byMaster[VersionKey::sourceOf(k)] << VersionKey::idOf(k);
     QStringList masters;
+    QStringList deadKeys;
     for (auto it = byMaster.cbegin(); it != byMaster.cend(); ++it) {
         const QList<int> ids = it.value();
         int removed = 0;
@@ -480,10 +481,11 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
             const QString k = VersionKey::make(it.key(), id);
             if (developProperties) developProperties->forgetImage(k);
             DevPreviewCache::instance().removeEntry(k);
-            if (icd) icd->remove(k);
+            deadKeys << k;
             CollectionStore::instance().onDeleted(k);  // its own memberships only
         }
     }
+    if (imageCache) imageCache->invalidate(deadKeys, "MW::deleteVersionRecords");
     rereadVersionMasters(masters, "MW::deleteVersionRecords");
 }
 

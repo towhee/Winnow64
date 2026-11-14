@@ -5,6 +5,9 @@
 #include <QObject>
 #include <atomic>
 #include "Cache/cachedata.h"
+#include "Cache/deferredrows.h"
+#include "Cache/decodeverdict.h"
+#include <functional>
 #include "Datamodel/datamodel.h"
 #include "Metadata/metadata.h"
 #include "Image/pixmap.h"
@@ -39,8 +42,34 @@ public:
     bool isRunning() const;
 
     quint64 getImCacheSize();         // add up total MB cached
-    void removeFromCache(QStringList &pathList);
+    /*  ANY THREAD. Re-key a renamed file's decoded image and bookkeeping. icd and the
+        per-path state are both locked, and nothing row-keyed is touched. */
     void rename(QString oldPath, QString newPath);
+
+    /*  THE ONE WAY TO CHANGE WHAT THE CACHE HOLDS FROM OUTSIDE IT (Documentation
+        4.4.13). Any thread.
+
+        invalidate: these images no longer depict their files (edited outside Winnow, a
+        new Develop recipe or devPreview, rewritten in place, deleted). They leave icd
+        NOW, so a loupe load right after this misses instead of showing the old picture,
+        and a decode already running for one of them is superseded (okToCache discards
+        it). On the ImageCache thread the bookkeeping follows: per-path state reset, the
+        model's cache badge set to CacheNone, and -- with refill -- a dispatch, which
+        queues again whatever is still in the target range, the current image first.
+        refill = false when re-decoding now would be waste: the image being edited in
+        Develop, whose loupe shows renders, not the cache.
+
+        replace: swap the cached image for one already derived from it (a rotation). Only
+        if it is still cached; a decode in flight is superseded, because it reads the
+        old orientation. */
+    void invalidate(const QStringList &keys, const QString &src, bool refill = true);
+    void replace(const QString &key, const QImage &image);
+
+    /*  Run fn on the ImageCache thread and return its result: the diagnostic reports
+        read state only that thread may touch (toCache, toCacheStatus, the target
+        range). Runs fn directly when already there or when the thread is not running.
+        Waits at most timeoutMs; a busy thread yields a note instead of a hang. */
+    QString fromCacheThread(std::function<QString()> fn, int timeoutMs = 3000);
 
     bool getAutoMaxMB();
     QString getAutoStrategy();
@@ -89,7 +118,6 @@ public:
 
 signals:
     void stopped(QString src);
-    void waitingForRow(int sfRow, int instance);
     void setCached(int sfRow, QString fPath, int cacheSource, int instance);  // G::CacheSource
     void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
     void decode(int sfRow, int instance);
@@ -135,7 +163,6 @@ public slots:
        MW::setOperationMode). sRGB pixels; colorManage = transform to the display as the
        decoder would (ImageDecoder::colorManage). */
     void reloadImageCacheSeeded(QString fPath, QImage image, bool colorManage);
-    void removeCachedImage(QString fPath); // remove image from imageCache and update status
     void updateToCache();
 
     /* Memory pressure throttle (driven by MW::memoryWatchdogTick). memoryPause parks
@@ -146,6 +173,13 @@ public slots:
     void memoryPause(quint64 footprintMB, quint64 capMB);
     void memoryResume(quint64 footprintMB);
 
+    /*  DataModel::rowsChanged: rows this cache deferred (metadata not loaded yet) have
+        had their metadata written. Dispatches if any of them is still wanted. */
+    void onRowsChanged(QStringList keys, int aspects);
+    /*  DataModel::proxySnapshotPublished: a pending position or rows deferred because
+        the snapshot was behind the model can go now (Documentation 4.4.15). */
+    void onSnapshotPublished();
+
 private slots:
     void dispatch();  // Main processing loop
 
@@ -154,13 +188,32 @@ private:
     QAtomicInt running {0};         // 0 = not running, 1 = running
 
     QMutex gMutex;
-    QWaitCondition condition;
+    /*  Rows waiting on something, never on a blocked thread: see Cache/deferredrows.h.
+        Replaces waitForMetaRead, whose QWaitCondition could only be woken by a slot
+        queued to the very thread it blocked (Documentation 4.4.10). ImageCache thread
+        only. */
+    DeferredRows deferred;
+    void armIdleBackstop();
+    void idleBackstop();
+    /*  setCurrentPosition waiting for a proxy snapshot that knows the current path and
+        the model's instance (a filter or insert republishes it on the next GUI turn). */
+    QString pendingPositionPath;
+    QString pendingPositionSrc;
+    int positionRetries = 0;
+    bool positionRetryArmed = false;
+    static constexpr int kPositionRetryMs = 10;
+    static constexpr int kMaxPositionRetries = 200;     // 2 s
     int instance;                   // incremented on every DataModel::load
     bool abort;
     int abortDelay = 1000;
     bool isDecoders = false;
 
     int maxAttemptsToCacheImage = 10;
+    /*  Paths whose attempts cap was lifted once by setCurrentPosition (the current image
+        always gets one more try). Cleared with the state it overrides. ImageCache thread
+        only. */
+    QSet<QString> capLifted;
+    void readmitCurrent(const QString &fPath);
 
     /* Memory pressure throttle state. memoryThrottled is set by the GUI-thread watchdog
        (setMemoryThrottled) and read on the ImageCache thread at the decode choke point.
@@ -216,8 +269,8 @@ private:
         G::IsCachedColumn and the table shows the rest -- but that is now a
         one-way MIRROR for display, never a source of truth.
 
-        Touched only on the ImageCache thread, except the diagnostic reports,
-        which MW calls directly on the GUI thread; hence the mutex. */
+        Written on the ImageCache thread; invalidate(), replace() and rename() (any
+        thread) also reach it, hence the mutex. */
     struct RowCache {
         bool isCaching = false;
         bool isCached  = false;
@@ -228,11 +281,36 @@ private:
     };
     mutable QMutex cacheStateMutex;
     QHash<QString, RowCache> cacheState;
-    /* Keys whose decode was IN FLIGHT when removeCachedImage dropped them: the result
-       depicts what the image used to be, so okToCache discards it and re-queues the row.
-       Guarded by cacheStateMutex. */
+    /* Keys whose decode was IN FLIGHT when invalidate() or replace() changed them: the
+       result depicts what the image used to be, so okToCache discards it and re-queues
+       the row. Guarded by cacheStateMutex. */
     QSet<QString> supersededDecodes;
     bool takeSupersededDecode(const QString &fPath);
+    void markSuperseded(const QStringList &keys);          // any thread
+    /*  ImageCache thread. A supersede mark with no decode running for its key would
+        refuse the NEXT, legitimate decode; drop those. */
+    void settleSuperseded(const QStringList &keys);
+    void onInvalidated(const QStringList &keys, const QString &src, bool refill);
+
+    /*  WHAT EACH DECODER IS WORKING ON, as this thread assigned it (decodeNextImage) --
+        the key okToCache files the result under when the decoder reports none, and the
+        in-flight test for superseding and resetStaleIsCaching. ImageCache thread only. */
+    QVector<QString> decoderPath;
+    QSet<QString> inFlightKeys() const;
+
+    /*  THE CACHE'S GENERATION. Bumped by every reload (operation mode, Decode Raw,
+        preview source, colour management): a decode started under an older generation
+        chose its pixels by the old settings, so okToCache supersedes it (C26).
+        decoderGeneration[id] is the generation a decoder was dispatched under.
+        ImageCache thread only. */
+    int generation = 0;
+    QVector<int> decoderGeneration;
+    void bumpGeneration(const QString &src);
+    void clearForReload(const QString &src);
+
+    /*  Debug aid: records a session issue (once per function) when a function that
+        owns ImageCache-thread state runs on another thread (C4). */
+    void checkCacheThread(const char *fun);
 
     /*  THE MODEL IS READ ONLY THROUGH THESE on the ImageCache thread. Each
         takes its own reference to the published view (Datamodel/modelsync.h)
@@ -241,6 +319,17 @@ private:
         live facts (metadata loaded, cache size estimate, video) from the
         lock-free per-row array. */
     QString pathAt(int sfRow) const;
+    QVariant sfVal(int sfRow, int col, int role = Qt::DisplayRole) const;   // reports
+    /*  THE QUEUE'S SNAPSHOT (Documentation 4.4.18). Every row number this cache holds
+        (toCache, toCacheStatus, currRow, the target range) means a row of queueSnap,
+        and the helpers here answer from it, never from a newer one. adoptSnapshot moves
+        to the model's latest at the two entry points (setCurrentPosition,
+        updateToCache): if any queued row now names another image, the row-numbered
+        queue is dropped and rebuilt from the current path. ImageCache thread only. */
+    ProxySnapshotPtr queueSnap;
+    QString currPath;
+    ProxySnapshotPtr qsnap() const { return queueSnap ? queueSnap : dm->proxySnapshot(); }
+    void adoptSnapshot();
     int     sfRowOf(const QString &fPath) const;
     int     rowCountSf() const;
     bool    isVideoAt(int sfRow) const;
@@ -360,8 +449,7 @@ private:
     // --- End Cache pressure section ---
 
     void launchDecoders(QString src);
-    bool okToCache(int id, int sfRow, int doneStatus);
-    bool nullInImCache();
+    bool okToCache(int id, int sfRow, int doneStatus, const QString &doneFPath);
     void cacheImage(int id, int cacheKey,
                     const QImage &doneImage,
                     const QString &doneFPath,
@@ -389,7 +477,6 @@ private:
     void updateTargets(bool dotForward, bool isAhead, int &pos,
                        int &amount, bool &isDone, quint64 &sumMB);
     void setTargetRange(int key);
-    bool waitForMetaRead(int sfRow, int ms);
     void log(const QString function, const QString comment = "");
 };
 

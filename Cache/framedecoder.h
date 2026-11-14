@@ -31,7 +31,7 @@ signals:
        exception). Lets DataModel clear MetadataReadingColumn so MetaRead's
        dispatcher can move on. */
     void videoFrameFailed(int dmRow, int dmInstance);
-    /* Mirrors Reader::setValDm so video thumb decode time can be recorded
+    /* Mirrors Reader's NSThumb write so video thumb decode time can be recorded
        in G::NSThumb the same way image thumb decode time is. */
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "FrameDecoder",
                   int role = Qt::EditRole);

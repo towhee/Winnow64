@@ -114,6 +114,8 @@ MetaRead::MetaRead(QObject *parent,
     /* The GUI thread tells us when a video decode has resolved, so the
        worker-local in-flight marker can be dropped without reading the model
        from this thread. Queued: dm lives on the GUI thread, this does not. */
+    connect(dm, &DataModel::proxySnapshotPublished,
+            this, &MetaRead::onSnapshotPublished, Qt::QueuedConnection);
     connect(dm, &DataModel::videoReadingCleared,
             this, &MetaRead::onVideoReadingCleared);
     connect(frameDecoder, &FrameDecoder::setValDm,
@@ -292,7 +294,7 @@ QString MetaRead::rowStateText(int dmRow, int sfRow)
         << " aIsDone =" << aIsDone << " bIsDone =" << bIsDone << " isDone =" << isDone
         << " iconRange =" << firstIconRow << "-" << lastIconRow
         << " sfRowCount =" << rowCountSf()
-        << " awaitingDecodeRow =" << awaitingDecodeRow.load()
+        << " awaitingDecode =" << awaitingDecode.load()
         << " queuedReaderEvents =" << dm->queuedReaderEvents.load();
     return txt;
 }
@@ -613,30 +615,41 @@ void MetaRead::abortProcessing()
     emit stopped("MetaRead");
 }
 
-void MetaRead::setAwaitingDecode(int sfRow)
+void MetaRead::setAwaitingDecode(QString fPath)
 {
 /*
-    Arm the navigation gate in dispatch(). Called from
-    MW::fileSelectionChange just before the ImageCache position is set,
-    so the reader pool yields CPU to the decoder for the new selection.
-    Cleared by onRowCached when ImageCache reports the row decoded, or
-    by the 500 ms safety bound inside dispatch().
+    Arm the navigation gate in dispatch(). Called from MW::fileSelectionChange just
+    before the ImageCache position is set, and only when the image is not already
+    cached (a cached image sends no setCached, so the gate would sit out its full
+    bound), so the reader pool yields CPU to the decoder for the new selection.
+    Cleared by onRowCached when ImageCache reports that PATH cached, by initialize, or
+    by the 500 ms safety bound inside dispatch(). An empty path clears it.
 */
-    if (sfRow < 0) {
-        awaitingDecodeRow.store(-1, std::memory_order_relaxed);
+    if (fPath.isEmpty()) {
+        clearAwaitingDecode();
         return;
     }
-    awaitingDecodeRow.store(sfRow, std::memory_order_relaxed);
+    awaitingDecodePath = fPath;
+    awaitingDecode.store(true, std::memory_order_relaxed);
     awaitingDecodeTimer.restart();
 }
 
-void MetaRead::onRowCached(int sfRow, QString /*fPath*/, int cacheSource, int /*instance*/)
+void MetaRead::clearAwaitingDecode()
 {
+    awaitingDecodePath.clear();
+    awaitingDecode.store(false, std::memory_order_relaxed);
+}
+
+void MetaRead::onRowCached(int /*sfRow*/, QString fPath, int cacheSource, int /*instance*/)
+{
+/*
+    By path, not row: the sfRow is ImageCache's snapshot row, the awaited image was
+    named by the live selection, and after a sort or an insert those are different
+    numbers for the same image (C14).
+*/
     if (cacheSource == G::CacheNone) return;
-    int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);
-    if (awaiting == sfRow) {
-        awaitingDecodeRow.store(-1, std::memory_order_relaxed);
-    }
+    if (!awaitingDecodePath.isEmpty() && fPath == awaitingDecodePath)
+        clearAwaitingDecode();
 }
 
 void MetaRead::setIdle()
@@ -721,6 +734,8 @@ void MetaRead::initialize(QString src, bool owesSelection)
     bIsDone = false;
     isDone = false;
     allFinishedFired = false;
+    rearmedUnattempted = false;
+    clearAwaitingDecode();      // the awaited image belongs to the old load
     /*  A new folder owes one selection; see the members in metaread.h. A filter change
         leaves the flag as it was (still owed if the folder is mid-load). Re-armed there,
         the backstop in allFinished re-selected the row current at the filter change once
@@ -754,12 +769,6 @@ void MetaRead::initialize(QString src, bool owesSelection)
     G::probeThumbRetryCount.store(0, std::memory_order_relaxed);
 
     t.start();
-}
-
-void MetaRead::syncInstance()
-{
-    if (G::isLogger) G::log("MetaRead::syncInstance");
-    instance = dm->instance;
 }
 
 void MetaRead::test()
@@ -1187,28 +1196,59 @@ QString MetaRead::pathAt(int sfRow) const
     return snap ? snap->path(sfRow) : QString();
 }
 
+/*  Through a consistent snapshot + RowSync pair (ModelView, Documentation 4.4.15). The
+    dispatch gate below already refuses an inconsistent pair; these keep a read made
+    between the gate and a splice from answering with another image's flags. Loaded and
+    attempted answer "no" when inconsistent: a spare read is cheap, and the reader
+    follows its key (DataModel::rowForKey), whereas a row skipped as done may not be
+    visited again this cycle. */
 bool MetaRead::iconLoadedAt(int sfRow) const
 {
-    auto snap = dm->proxySnapshot();
-    auto sync = dm->rowSync();
-    if (!snap || !sync) return false;
-    return sync->has(snap->dmRow(sfRow), RowSync::IconLoaded);
+    const ModelView mv = dm->modelView();
+    if (!mv.consistent()) return false;
+    return mv.sync->has(mv.snap->dmRow(sfRow), RowSync::IconLoaded);
 }
 
 bool MetaRead::metaAttemptedAt(int sfRow) const
 {
-    auto snap = dm->proxySnapshot();
-    auto sync = dm->rowSync();
-    if (!snap || !sync) return false;
-    return sync->has(snap->dmRow(sfRow), RowSync::MetaAttempted);
+    const ModelView mv = dm->modelView();
+    if (!mv.consistent()) return false;
+    return mv.sync->has(mv.snap->dmRow(sfRow), RowSync::MetaAttempted);
 }
 
 bool MetaRead::isVideoAt(int sfRow) const
 {
-    auto snap = dm->proxySnapshot();
-    auto sync = dm->rowSync();
-    if (!snap || !sync) return false;
-    return sync->has(snap->dmRow(sfRow), RowSync::IsVideo);
+    const ModelView mv = dm->modelView();
+    if (!mv.consistent()) return false;
+    return mv.sync->has(mv.snap->dmRow(sfRow), RowSync::IsVideo);
+}
+
+void MetaRead::waitForSnapshot(int id)
+{
+    snapshotWaiters.insert(id);
+    if (snapshotFallbackArmed) return;
+    snapshotFallbackArmed = true;
+    /*  A safety net, not the mechanism: proxySnapshotPublished is emitted after every
+        publish, so a reader that saw the old snapshot always receives it. This used to
+        be the mechanism, a 10 ms poll per waiting reader. */
+    QTimer::singleShot(50, this, [this] {
+        snapshotFallbackArmed = false;
+        resumeSnapshotWaiters();
+    });
+}
+
+void MetaRead::resumeSnapshotWaiters()
+{
+    if (snapshotWaiters.isEmpty()) return;
+    const QSet<int> ids = snapshotWaiters;
+    snapshotWaiters.clear();
+    if (abort) return;
+    for (int id : ids) dispatch(id, false);
+}
+
+void MetaRead::onSnapshotPublished()
+{
+    resumeSnapshotWaiters();
 }
 
 void MetaRead::onVideoReadingCleared(int dmRow, int fromInstance)
@@ -2004,10 +2044,9 @@ void MetaRead::dispatch(int id, bool isReturning)
     for the awaited row, or after a 500 ms safety bound so a failed/missed decode can't
     stall MetaRead forever. */
     if (!abort) {
-        const int awaiting = awaitingDecodeRow.load(std::memory_order_relaxed);
-        if (awaiting >= 0) {
+        if (!awaitingDecodePath.isEmpty()) {
             if (awaitingDecodeTimer.isValid() && awaitingDecodeTimer.elapsed() > 500) {
-                awaitingDecodeRow.store(-1, std::memory_order_relaxed);
+                clearAwaitingDecode();
             } else {
                 QTimer::singleShot(15, this, [this, id]() {
                     if (!abort) dispatch(id, false);
@@ -2031,12 +2070,10 @@ void MetaRead::dispatch(int id, bool isReturning)
         and the wait loses no work. DataModel::newInstance schedules the rebuild that
         ends the wait. */
     if (!abort) {
-        auto snap = dm->proxySnapshot();
-        if (!snap || snap->instance != dm->instance
-            || snap->sourceRows != dm->rowStore.size()) {
-            QTimer::singleShot(10, this, [this, id]() {
-                if (!abort) dispatch(id, false);
-            });
+        const ModelView mv = dm->modelView();
+        if (!mv.snap || mv.snap->instance != dm->instance || !mv.consistent()
+            || mv.snap->sourceRows != dm->rowStore.size()) {
+            waitForSnapshot(id);
             return;
         }
     }
@@ -2248,6 +2285,52 @@ void MetaRead::dispatchFinished(QString src)
     allFinished(src);
 }
 
+void MetaRead::rearmUnattempted(const QString &src)
+{
+/*
+    Once per instance, at the end of a cycle: any row whose metadata was never attempted
+    (a reader aborted, a return dropped, quitAfterTimeout gave up) is removed from
+    readSuccessThisCycle and the cycle restarts, so it is read rather than left
+    NotAttempted -- which now keeps G::allMetadataAttempted false, and deletes waiting.
+*/
+    if (rearmedUnattempted || dm->isMetaReadFinished()) return;
+    rearmedUnattempted = true;
+    const ModelView mv = dm->modelView();
+    if (!mv.consistent()) return;
+    int n = 0;
+    for (int sfRow = 0; sfRow < mv.snap->rowCount(); ++sfRow) {
+        const int dmRow = mv.snap->dmRow(sfRow);
+        if (mv.sync->has(dmRow, RowSync::MetaAttempted)) continue;
+        if (readSuccessThisCycle.remove(dmRow) || !rowsReading.contains(dmRow)) ++n;
+    }
+    if (!n) return;
+    G::issue("Comment", QString("MetaRead cycle ended with %1 row(s) never attempted; "
+                                "reading them again").arg(n), src);
+    const int row = startRow;
+    QMetaObject::invokeMethod(this, [this, row] {
+        if (!abort) setStartRow(row, false, "MetaRead::rearmUnattempted");
+    }, Qt::QueuedConnection);
+}
+
+void MetaRead::invalidateRows(const QStringList &keys)
+{
+/*
+    R9 (Documentation 4.4.16). These rows' metadata was reset because their files
+    changed (MW::refreshStaleRows). readSuccessThisCycle short-circuits needToRead, and
+    the old re-arm (invalidateLoadedIcons) freed only rows missing an icon INSIDE the
+    icon range: a row reset while outside it stayed NotAttempted until it scrolled back
+    in or the instance changed (C10). Forget each of them as read, wherever it is; the
+    caller's reloadIconChunk then restarts the cycle (setStartRow, queued after this).
+*/
+    int n = 0;
+    for (const QString &k : keys) {
+        const int dmRow = dm->rowForKey(-1, k);
+        if (dmRow >= 0 && readSuccessThisCycle.remove(dmRow)) ++n;
+    }
+    loadedIconsInvalidated.store(true);     // their icons were cleared too
+    if (G::isLogger) G::log("MetaRead::invalidateRows", QString::number(n));
+}
+
 void MetaRead::allFinished(QString src)
 {
     // Runs once per folder load, after the last row has been read and saved
@@ -2260,7 +2343,12 @@ void MetaRead::allFinished(QString src)
     if (debugLog && (G::isLogger || G::isFlowLogger))
         G::log(fun, src);
 
-    G::allMetadataAttempted = true;
+    /*  NOT ASSERTED HERE ANY MORE (Documentation 4.4.16). This set
+        G::allMetadataAttempted = true whatever the rows said, even after
+        quitAfterTimeout gave up on some, so a sort, filter or delete went ahead on
+        rows never read. DataModel derives it from the rows. If rows remain
+        unattempted, they get one more cycle: forgotten as read, and dispatched again. */
+    rearmUnattempted(fun);
     if (dm->metaReadHadFailure()) {
         // O(1) atomics — avoid scanning the model from this worker thread.
         const int failed = dm->metadataAttemptedCount.load(std::memory_order_relaxed)

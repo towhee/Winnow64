@@ -126,7 +126,15 @@
     - [4.4.7 ImageDecoder Reads the Store](#447-imagedecoder-reads-the-store)
     - [4.4.8 Every Worker Thread Is Stopped in closeEvent](#448-every-worker-thread-is-stopped-in-closeevent)
     - [4.4.9 Worker Writes to the DataModel Go by Key](#449-worker-writes-to-the-datamodel-go-by-key)
-    - [4.4.10 A Row Whose Metadata Lands Late Is Dispatched](#4410-a-row-whose-metadata-lands-late-is-dispatched)
+    - [4.4.10 A Row That Is Not Ready Is Deferred, Never Waited For](#4410-a-row-that-is-not-ready-is-deferred-never-waited-for)
+    - [4.4.11 The Loupe Knows What It Is Showing](#4411-the-loupe-knows-what-it-is-showing)
+    - [4.4.12 ImageCache Adopts the Model's Instance](#4412-imagecache-adopts-the-models-instance)
+    - [4.4.13 One Owner for What the Image Cache Holds](#4413-one-owner-for-what-the-image-cache-holds)
+    - [4.4.14 The Current Image Always Wins](#4414-the-current-image-always-wins)
+    - [4.4.15 Worker Results Follow the Key; Snapshot and RowSync Agree](#4415-worker-results-follow-the-key-snapshot-and-rowsync-agree)
+    - [4.4.16 MetaRead Re-reads What Was Invalidated; One Owner for "All Attempted"](#4416-metaread-re-reads-what-was-invalidated-one-owner-for-all-attempted)
+    - [4.4.17 Winnow's Own Writes Restamp the Catalog](#4417-winnows-own-writes-restamp-the-catalog)
+    - [4.4.18 The Image Cache Queue Belongs to One Snapshot](#4418-the-image-cache-queue-belongs-to-one-snapshot)
   - [4.5 Row Storage](#45-row-storage)
     - [4.5.1 The Field Table (rowfields.h)](#451-the-field-table-rowfieldsh)
     - [4.5.2 RowStore](#452-rowstore)
@@ -2460,7 +2468,7 @@ Everything else ImageCache reads comes through six accessors (pathAt, sfRowOf, r
 - ProxySnapshot answers the STRUCTURAL questions: what is at proxy row N, which proxy row holds this path, how many rows.
 - RowSyncArray answers the LIVE ones: is the metadata loaded, how big will this decode be, is it a video.
 
-The split is not cosmetic. ImageCache::waitForMetaRead POLLS metadata status in a condition-wait loop, so a copy would never see it change, while the paths and row order must NOT change under a pass or the cache trims the wrong rows.
+The split is not cosmetic. ImageCache::okToDecode re-tests metadata status every time it meets a deferred row ([4.4.10](#4410-a-row-that-is-not-ready-is-deferred-never-waited-for)), so a copy would never see it change, while the paths and row order must NOT change under a pass or the cache trims the wrong rows.
 
 The snapshot is rebuilt from the proxy's own signals (rowsInserted, rowsRemoved, modelReset, layoutChanged), not from a list of call sites; there is no correct list to maintain, since SortFilter::invalidate() is reached from MW, the Filters tree and combineRawJpg alike. Those four are sufficient because the VIEWS rely on exactly the same signals; a change that emitted none of them would leave the grid stale too. It is ALSO rebuilt explicitly in DataModel::endLoad and at the end of the batched insert, because the batch calls setRowCount BEFORE it writes any cell, so the snapshot built from that rowsInserted has the right number of rows and no paths. Rebuilds are coalesced (see [4.1.3 The Proxy Snapshot Is Coalesced](#413-the-proxy-snapshot-is-coalesced)), and ProxyPaths (every row's path by DataModel row and the reverse hash) is shared between rebuilds until RowStore::fieldGeneration(PathColumn, PathRole) moves; only dmRowOf and sfRowOfDm (a vector) are rebuilt per proxy change. RowSyncArray is grown from the SOURCE row count, not the proxy's: it is indexed by DataModel row, and a filtered-out row still needs its slot.
 
@@ -2507,13 +2515,17 @@ Two backstops went in with it:
 - ImageDecoder::load checks that the bytes at the stored offset start FF D8. If not, the GEOMETRY is wrong, not the file: it re-reads this file's header (ensureDecodeGeometry, which also republishes the right values by key; ensureIndependentGeometry for an independent decode) and tries once more. A plain JPEG whose re-read offset is 0 is read whole. Only bytes that are still not a JPEG fail.
 - setTargetRange's Invalid branch keeps ImageCache's own state "cached" (so fillCache does not loop) but tells the model CacheNone, so the loupe is never told there is an image to load.
 
-#### 4.4.10 A Row Whose Metadata Lands Late Is Dispatched
+#### 4.4.10 A Row That Is Not Ready Is Deferred, Never Waited For
 
-ImageCache only decodes a row whose RowSync flags say MetaLoaded. When okToDecode meets one that is not, waitForMetaRead emits waitingForRow (DataModel::imageCacheWaiting records the row) and waits 50 ms on a condition. DataModel::addMetadataForItem emits rowLoaded when that row lands. But rowLoaded is a GUI-thread signal to an object on the ImageCache thread, so it is QUEUED: it cannot be delivered while that thread is blocked in the wait, only after the wait has timed out and the row has been skipped with "Metadata not loaded".
+ImageCache never blocks its thread waiting for something another thread will do (2026-11-13, pipeline sync review batch B1). A row it cannot decode yet stays in toCache and is marked DEFERRED, with a reason, in Cache/deferredrows.h; a wake or the idle backstop brings it back.
 
-Until 2026-11-13 the slot only woke the condition, which by then had no waiter, so the late landing was lost. With no decoder busy nothing else ran fillCache, and the cache sat idle: cacheUpToDate = false, the row alone in toCache with "Metadata not loaded", while the model's own column said MetaLoaded. Seen as a blank loupe after Develop edits, a pick and E: ScrollVerify found the edited row's sidecar newer than the catalog's stamp, MW::refreshStaleRows reset it to MetaNotAttempted for a re-read, and devPreviewUpdated had already dropped its decode from icd, so leaving Develop asked ImageCache for a row that was mid re-read. Stepping away and back repaired it.
+- **Metadata not loaded** (okToDecode, RowSync says neither attempted nor loaded). okToDecode calls DataModel::watchRowLoaded(key), tests the RowSync flag again, and if it is still not set defers the row ("Deferred: metadata not loaded"). When the row's MetadataStatus is written, DataModel::setData publishes the RowSync flags FIRST and then takes the key from the watch set (Datamodel/rowwatch.h); a taken key is POSTED to ImageCache as rowsChanged(keys, AspectMetadata) on a later GUI turn, coalesced, and never emitted while the model's signals are blocked. ImageCache::onRowsChanged clears the deferral and dispatches. Because the watch and the take share a mutex and each side tests after its own write, the wake cannot be lost between the worker's test and its watch; tst_rowwatch runs that protocol on two threads.
+- **No embedded-JPG geometry yet** (ImageDecoder status NoGeometry, new). The decoder refuses a raw whose offset is still 0 rather than decode the header as a JPEG. That used to return Undefined, which okToDecode treats as retry-now: the row was picked again at once and ten quick retries reached "Max attempts reached", which nothing reset. okToCache now gives the attempt back and defers the row; okToDecode skips it until the backstop clears the mark.
+- **The idle backstop.** When the last decoder goes idle (fillCache) or a dispatch finds nothing to launch, and rows are still queued, one 250 ms timer is armed. Each firing clears the geometry marks and dispatches. Progress (an image cached, a new position, a wake) restores its budget; eight firings without progress stop it, so a row that can never decode costs at most 2 s of retries. It also covers what no wake reaches, such as a torn RowSync read that reported "Metadata read failed" for a row a moment from loaded (C8, batch B4).
+- nextToCache is one pass in priority order. The second pass that waited on each unloaded row is gone.
+- The deferrals are cleared by initialize and by reloadImageCache / reloadImageCacheSeeded. Help > Diagnostics > ImageCache shows the backstop's firings; DataModel's report shows the watched-key count.
 
-The rowLoaded slot now also calls dispatch() when the cache is not up to date (and not aborting, initializing, removing rows or on a stale instance). rowLoaded fires only for the row ImageCache gave up waiting on, so this is one dispatch per skipped row, and launchDecoders skips decoders already cycling.
+What it replaced, and why that failed. okToDecode called waitForMetaRead, which emitted waitingForRow (DataModel::imageCacheWaiting recorded the row) and waited 50 ms on a QWaitCondition. Its only waker was a slot connected to DataModel::rowLoaded on the ImageCache object, so it was QUEUED to the very thread that was blocked: every wait ran to its timeout and the row was skipped with "Metadata not loaded". And addMetadataForItem, which emitted rowLoaded, runs its whole body under a QSignalBlocker, so the emit was swallowed whenever the row landed after the wait; the 2026-11-13 morning fix (the slot also dispatched) never ran in that case. The result was a cache idle with work queued: cacheUpToDate = false, the current row alone in toCache with "Metadata not loaded", the model saying MetaLoaded, and a black loupe until the user stepped away and back. The wait itself had two more costs. nextToCache's second pass called it for EVERY queued unloaded row, once per idle decoder, so a dispatch during a folder load could hold the cache thread for decoders x rows x 50 ms, unable to take a returning decoder, a new position or an abort. And a wake that arrived after the deadline made the remaining time negative, which Qt 6 turns into QDeadlineTimer::Forever: a wait that never times out.
 
 Why the row was being re-read at all. Every Develop flush rewrites the image's sidecar (recipe, preview thumbnail, modifydate) and so moves its mtime, one of the catalog's three freshness stamps. Nothing updated the catalog for a MASTER (devPreviewUpdated did it only for a version, through updateCatalogForRow, whose catalogRowFor stats the sidecar only when SidecarColumn is set, so a first edit that CREATED the .xmp still committed 0). ScrollVerify then took Winnow's own write for an outside edit, and refreshStaleRows cleared the row, its icon and its decode after every edit. MW::restampCatalogAfterSidecarWrite now commits the row with the sidecar's new stamp right after the write. It is called from devPreviewUpdated (every Develop write site and the version swap end there) and from the preview builder for an unedited image. The sidecar is stat'd unconditionally, as IndexMetadata::candidate does, and SidecarColumn is set; a version stamps its master. The commit is on the pool, so a verify pass already in flight can still beat it.
 
@@ -2521,6 +2533,156 @@ Why the row was being re-read at all. Every Develop flush rewrites the image's s
 
 - `Develop sidecar write moved the catalog's sidecar stamp; restamped` (Comment, once a session): the write would have made the row stale before this fix. This confirms the cause.
 - `stale: <what>; <who>` from refreshStaleRows, one per stale row: whether the source file or only the sidecar moved, and whether Winnow wrote that sidecar this session. A Warning (Winnow wrote it) with "sidecar only" means the restamp missed or lost the race.
+
+#### 4.4.11 The Loupe Knows What It Is Showing
+
+ImageView keeps LoupeShown (Views/loupeshown.h): the path on screen and what kind of picture it is, Full (the cached image, or its Develop render), Interim (the Develop stand-in while the sensor decode runs), Placeholder (the thumbnail on any other miss, [4.4.14](#4414-the-current-image-always-wins)) or None. Every load attempt updates it, hit or miss (2026-11-13, batch B1).
+
+- loadImage's "already displayed" shortcut fires only for a Full image of the same path, and only without replace.
+- A miss on the image already on screen keeps what is shown: the stand-in, or a Full image a forced reload (refreshViewsOnCacheChange) no longer finds in the cache. The new decode repaints it. Any other miss records None, and MW then shows the thumbnail (Placeholder) when it has one.
+- A Develop render landing on the image whose stand-in is up makes it Full.
+- loadImage now returns true only when the loupe shows that image's full pixels, so the ingest probe's Cached/Miss count is truthful. The self-test's "shown" check reads ImageView::isShowing. Help > Diagnostics > ImageView prints the shown path and kind.
+
+Why. The shortcut compared against currentImagePath, which names the last image whose pixels were painted and which a miss leaves alone. Show A, arrow to an uncached B (black, currentImagePath still A), arrow straight back to A: loadImage(A) returned "already displayed" over the black pixmap, fileSelectionChange took the hit branch, and ImageCache, finding A cached, sent no setCached, so nothing ever repainted it. A black loupe on an image that IS in the cache, until the user moved to a cached image and back. Common when overshooting while culling, or returning during any long miss. The ingest probe counted it as Cached and the self-test as shown, because both read the same field. tst_loupeshown pins the rules.
+
+#### 4.4.12 ImageCache Adopts the Model's Instance
+
+The instance's only job in ImageCache is rejecting LATE decode results (okToCache); it is never a reason to refuse a request (2026-11-13, batch B1).
+
+- setCurrentPosition no longer returns on an instance clash. It needs a proxy snapshot of the model's current instance that holds the path; until the coalesced rebuild publishes one (or while ImageCache is initializing or rows are being removed) the position is retried every 10 ms, at most 200 times (2 s). A newer position replaces the pending one. Running out logs "Position abandoned ..." in Help > View session issues. updateToCache / setTargetRange then adopt dm->instance and clear the queue, as they always did.
+- The same retry covers a current path the snapshot does not hold yet (an insert or re-key, finding C22), which used to queue nothing for the current image.
+- initialize clears isInitializing on its "no rows" early return. MW::reset initializes right after clearing the model, so every load used to leave the flag set until the second initialize, refusing any selection made meanwhile.
+- On MW::folderChanged's "nothing to read" branch (a folder removed from a multi-folder load), initializeImageCache is emitted BEFORE folderChangeCompleted (2026-11-14). folderChangeCompleted runs metadataComplete, which queues setImageCachePosition for the current image; initialize used to be queued after it, cleared the queue that position had just built and never dispatched, so the cache sat empty and idle until the next selection (finding C7). Both go to the cache thread queued, so emit order is run order.
+- DataModel::setCached, on an instance mismatch, still skips the badge write but now emits refreshViewsOnCacheChange when the path is the current image and the cache source is not CacheNone. The image IS in the cache (cacheImage inserted it by path before sending), so a filter, sort or version change since then does not make it less there. LoupeShown keeps a shown image on screen if that refresh misses.
+
+Why. Anything that bumps dm->instance without a filter change reaching ImageCache (applyModelChange when refreshViews takes its "not every row attempted" branch, a filter result that is empty, filterChange returning early during a load) left ImageCache on the old instance, and setCurrentPosition refused every later selection ("Instance clash from MW::fileSelectionChange"): every uncached image stayed black until some other dispatch re-synced it. And DataModel::setCached dropped the loupe refresh on an instance change, so rating an image under a filter while its decode was in flight left the loupe black on an image that had just been cached.
+
+#### 4.4.13 One Owner for What the Image Cache Holds
+
+Only ImageCache changes what the image cache holds, and its bookkeeping runs only on its own thread (2026-11-13, pipeline sync review batch B2).
+
+**Changing the contents from outside: invalidate and replace.** Any thread may call them.
+
+- `ImageCache::invalidate(keys, src, refill)`: these images no longer depict their files. They leave icd at once, so a loupe load right after it misses instead of showing the old picture. A decode already running for one of them is marked superseded. Then, on the cache thread: the per-path state (attempts, status, cached) is reset, the model's badge is set to CacheNone, and with refill the cache dispatches, which queues again whatever is still in the target range, current image first. Callers: MW::refreshStaleRows, MW::devPreviewUpdated (refill off for the image being edited in Develop: its loupe shows renders, and a sensor re-decode after every flush would be waste), the devPreview builder, deleting a version, and applyModelChange for files rewritten in place.
+- `ImageCache::replace(key, image)`: a rotation. Swaps the cached image only if it is still cached (`ImageCacheData::replaceIfPresent` never resurrects one the cache trimmed meanwhile) and supersedes a decode in flight, which read the old orientation.
+- A supersede mark with no decode running would refuse the next, legitimate decode, so the cache thread drops those (settleSuperseded). It knows what each decoder is working on: decoderPath, set when it dispatches the decode.
+
+Before, five GUI-thread sites called `icd->remove()` directly and `removeCachedImage` ran ImageCache code on the GUI thread. The per-path state and the model's badge went on saying "cached", nothing was queued again (in Preview the next visit missed and showed black until some other dispatch), and a decode in flight landed the old picture afterwards (C5).
+
+**A reload supersedes what it replaces.** Every reload (operation mode, Decode Raw, preview source, colour management; reloadImageCache and reloadImageCacheSeeded) bumps the cache's generation, and each decode is dispatched under one. A decode that lands under an older generation chose its pixels by the old settings, so it is superseded and the row queued again (C26: press D while the cache fills, and neighbouring raws kept their embedded-JPG decode). The reload also turns every badge it clears to CacheNone, which it used to leave saying cached. ImageDecoder reads G::operationMode, G::useRaw and G::previewSource once at the start of each decode (captureModeSettings) instead of at three points mid-decode.
+
+**What happens to a finished decode** is one rule, `DecodeVerdict::judge` (Cache/decodeverdict.h), in this order:
+
+- Stale: the model is a new instance, or the key is gone. Dropped; not an attempt.
+- Superseded: an older generation, or invalidated since it started. Dropped, attempt given back, queued again.
+- Accept, Defer (NoGeometry, [4.4.10](#4410-a-row-that-is-not-ready-is-deferred-never-waited-for)), Retry (transient), Fail (terminal, off the queue).
+
+okToCache files every result under the DECODER's key (the path it reported, else the one the cache assigned it), not `pathAt(sfRow)` in the current snapshot, which after a re-sort named another image (C21, partly: the queue itself is still keyed by row).
+
+**Smaller fixes in the same pass.**
+
+- cacheImage finding the key already cached (by another decoder, a seeded reload or a replace) now still takes the row off the queue. It returned early and left the cache churning on a row it held (C12).
+- ImageCacheData::insert ignores a null image, so a hit is always something to paint. nullInImCache, which scanned the whole cache on every idle for null entries, is gone.
+- resetStaleIsCaching, run on every dispatch, no longer clears isCaching under a decode that is still running (C15).
+- updateInstance keeps "cached" for what icd still holds (C17).
+
+**Thread confinement.** ImageCache's queue, target range, decoder bookkeeping and generation are touched only on its thread.
+
+- The direct calls from the GUI thread are queued: setCurrentPosition from setOperationMode and the end of a slideshow (emit setImageCachePosition), updateStatus from updateProgressBarWidth, setAutoMaxMB / setMaxMB at start-up and from Preferences. setMaxMB's connection was BlockingQueued, which froze Preferences whenever the cache thread was busy; it is queued.
+- The diagnostic reports read that state, so MW runs them there: `ImageCache::fromCacheThread(fn)` posts fn and waits at most 3 s, returning a note instead of hanging if the thread is busy. The reports read the model through the snapshot and RowStore (`sfVal`), never dm->sf, which only the GUI thread may touch. Several used `dm->index(sfRow, ...)`, a proxy row as a model row: another image's values whenever a filter was on.
+- `checkCacheThread` records a session issue ("... ran off the ImageCache thread", once per function) if updateToCache, setCurrentPosition, dispatch, decodeNextImage, okToCache, cacheImage or fillCache ever runs elsewhere.
+- rename stays callable from any thread: it touches only icd and the per-path state, both locked.
+
+**ImageCacheData's hash is private** (Cache/cachedata.h). Callers use get (test and fetch under one lock), contains, count, keys, a locked forEach, and the mutators. CompareView::loadImage and ImageView::copyImage called contains() and then read the hash directly: a gap in which the cache thread could trim the entry (a blank compare pane, a failed copy) or rehash under the read (C25). copyImage also announced "Copied" after failing.
+
+**Dead wiring removed**, so the connections are the truth: MetaRead's never-emitted updateScroll (which was connected BlockingQueued to both icon views), centralMsg, setIcon, fileSelectionChange and dispatchIsFinished signals and their connects; MetaRead::syncInstance and MetaRead::condition; Reader::stop and Reader::abortProcessing; ImageDecoder's decoderThread and idleCondition; MW's imageCacheThread and its startImageCache / stopImageCache signals; ImageView::currentImageHasChanged; ImageCache::removeFromCache.
+
+Tests: tst_decodeverdict (the verdict order), tst_cachedata (the locked API, and a reader racing a writer that must never see a null hit).
+
+#### 4.4.14 The Current Image Always Wins
+
+The loupe never sits black on the current image, and when it is not showing the real pixels something is still working on it, then says so if it gives up (2026-11-13, pipeline sync review batch B3).
+
+**A miss shows the thumbnail.** On a cache miss that the Develop stand-in does not cover (Preview, or Develop on a non-raw), MW::fileSelectionChange calls showLoupePlaceholder: the row's thumbnail, already in memory (IconStore), painted by ImageView::loadImagePlaceholder. It is presented at the full image's size, the long side from the metadata and the aspect from the thumbnail (already oriented), so the fit zoom, a 1:1 zoom and the pan are all in full-image terms and nothing jumps when the decode replaces it. The first-image framing is left to the real load. LoupeShown records Placeholder, so the "already displayed" shortcut never skips the real pixels. With no thumbnail yet the loupe stays blank, as before. The thumbnail is soft at any zoom, so it looks provisional, and it is up only until the decode lands (usually a fraction of a second).
+
+Before, every fast arrow past the cache window, and every path in C2/C3/C5, showed black (C16).
+
+**The current-image watchdog** (MW::loupeWatchdog). Any selection that does not leave the loupe showing the image's full pixels arms a one-second timer. When it fires, if the selection is unchanged and the loupe still does not show Full:
+
+- The cache holds the image: a repaint was lost between ImageCache::setCached and refreshViewsOnCacheChange. The watchdog repaints through refreshViewsOnCacheChange and records "Loupe repainted by the watchdog" in Help > View session issues. In Develop an Interim stand-in over a cached image is the render's to replace, so that case is left alone.
+- It is not cached yet: the position is posted again (harmless while a decode is running) and the watchdog looks again, at most five times. Then it records one issue, "Current image not shown after 5 s", with the loupe kind and the row's caching flag, attempts and decoder status, unless a Develop stand-in is up (a slow sensor decode is not a fault).
+- During a load or a row removal it waits, without spending a try. A new selection or a slideshow ends it.
+
+**The current image always gets another try** (ImageCache::readmitCurrent, called by setCurrentPosition). A terminal decode status is cleared every time the image becomes current, and the attempts cap is lifted once per path (one more try; forgotten on a reload, an invalidate or a new folder). An Invalid image also had OUR "cached" flag set, which setTargetRange uses to stop fillCache looping on it, and the old re-admit tested that flag, so it never re-admitted an Invalid image: a transient Invalid (a file still being copied, a network hiccup, geometry misfiled for a moment) left the image blank for the rest of the folder, as did a transient status that spent the whole attempts budget (C19).
+
+Tests: tst_loupeshown (Placeholder is never Full and survives a re-selecting miss). The watchdog and placeholder are GUI behaviour; the self-test's "shown" check reads ImageView::isShowing.
+
+#### 4.4.15 Worker Results Follow the Key; Snapshot and RowSync Agree
+
+Workers hand results back by row number, and a row number names an image only until rows move. Two rules close that gap (2026-11-13, pipeline sync review batch B4).
+
+**Every reader result carries its key** (finding C20).
+
+- Reader sends the key with its metadata (`addToDatamodel(m, key, src)` → `DataModel::addMetadataForItemFromReader`) and its icon (`setIcon(..., key)` → `DataModel::setIcon1`). Thumb's dimension and status writes, and the reader's thumb timing, go through `DataModel::setValKey`.
+- `DataModel::rowForKey(row, key)` trusts the row while it still holds the key, otherwise follows the key (fPathRow), otherwise reports -1: the row left the model and the result is dropped (a session-issue Comment, or a RowTrail note for an icon).
+- The workers' own reads of the live model by row follow the key too: Reader at the start of each read (video flag, and on an icon-only read the thumb offsets, orientation, Develop flag and size), ImageDecoder before every dmVal read. A key that has left the model is not read at all.
+
+**Moving rows bumps the instance.** `DataModel::insertRows` (anything but an append) and `removeRows`, and the compacting path in removeFiles, set a flag; removeFiles and insertFiles turn it into one `newInstance` (`ownRowMoves`). applyModelChange already bumped; removing a folder from a multi-folder load did not. Before this, a read in flight across that removal landed one image's thumbnail and metadata on whatever row now had its old index, marked loaded, so nothing ever re-read it, and the readers decoded a file with another image's thumb offsets. The bump also makes ImageCache adopt the new instance, which clears its row-numbered queue. The video frame paths (setIconFromVideoFrame, clearVideoReadingFlag) still address by row and rely on this bump through their instance guards.
+
+**A snapshot and RowSync say whether they agree** (findings C8, C9).
+
+- RowSync (the live per-row flags) is spliced the moment rows move; the proxy snapshot (row order and paths) is rebuilt a turn of the event loop later. In between, a snapshot row's dmRow indexes the new array: ImageCache read another image's video flag, metadata status and size, and a still flagged as video was marked cached.
+- Each RowSync array carries a structure generation, bumped with every splice, reset or resize, and every snapshot is stamped with the generation current when it was built. `DataModel::modelView()` returns both under one lock, and `ModelView::consistent()` says whether they describe the same rows.
+- ImageCache reads flags only through a consistent pair: inconsistent answers are "not a video, not loaded, no size", and okToDecode defers the row with reason Structure. MetaRead refuses to dispatch from an inconsistent pair, and its per-row reads answer "needs reading" (a spare read follows its key; a row skipped as done might not be revisited).
+- Metadata status is published as one compare-and-swap of both bits (`RowSyncArray::setFlags`). Two swaps let a worker see "attempted, not loaded" on a NotAttempted → Loaded change, which ImageCache skipped as "Metadata read failed", with nothing to wake it.
+
+**Notification instead of polling.** `DataModel::proxySnapshotPublished` is emitted after every snapshot publish. ImageCache retries a pending position at once and wakes Structure deferrals; MetaRead resumes readers waiting for a matching snapshot. A reader that saw the old snapshot always receives the signal, because it is emitted after the publish. MetaRead's 10 ms poll per waiting reader became a 50 ms safety net.
+
+Tests: tst_modelsync (setFlags never tears under a racing reader, the generation rule, splice shifts), tst_deferredrows (Structure wakes only Structure). selftest_nav and model_mutation run the integrated paths.
+
+#### 4.4.16 MetaRead Re-reads What Was Invalidated; One Owner for "All Attempted"
+
+Two fixes to MetaRead's bookkeeping and the flag the rest of Winnow reads from it (2026-11-13, pipeline sync review batch B5).
+
+**Invalidated rows are read again, wherever they are** (R9, finding C10). MW::refreshStaleRows (ScrollVerify found rows whose files changed) resets each row to MetaNotAttempted and clears its icon. MetaRead keeps readSuccessThisCycle, every row a reader returned this instance, and needToRead refuses those before it tests whether metadata is needed. The old re-arm (`invalidateLoadedIcons`) freed only rows missing an icon INSIDE the icon range, so a row reset while outside it stayed NotAttempted until it scrolled back in or the instance changed. Meanwhile the "all attempted" flag stayed false, deletes were refused ("Please wait until the folder has been completely loaded"), and the image cache deferred the row. Now refreshStaleRows posts `MetaRead::invalidateRows(paths)`, which forgets each of those rows as read (by key, so wherever it is), and then reloads the icon chunk, whose setStartRow restarts the cycle.
+
+**G::allMetadataAttempted has one writer** (R10). It means "every row's metadata has been attempted", and it is now exactly that.
+
+- `DataModel::publishMetaAttempted()` sets it from `isMetaReadFinished()` (the attempted count against the row count). It runs wherever either changes: a status write in setData, insertRows, removeRows, recountLoadFlags, a restored scope, the catalog fill, addAllMetadata. `DataModel::beginMetaLoad()` sets it false when a load starts (clearDataModel and MW's load entry points), since an empty model being filled is not finished.
+- Gone: eleven writers on two threads. MW set it false at four load entry points and in refreshStaleRows, and true in folderChanged; FSTree set it false on a click; insertFiles set it false; MetaRead::allFinished set it TRUE unconditionally, even after quitAfterTimeout had given up on rows, so sorts, filters, Combine Raw+JPG and deletes went ahead on rows nobody had read.
+- In place of that assertion, `MetaRead::rearmUnattempted` runs once per instance at the end of a cycle: any row still NotAttempted is forgotten as read and the cycle restarts, with a session-issue Comment giving the count.
+- G::iconChunkLoaded is unchanged. Its DataModel writers already derive it from the missing-icon count; the MW writers only set it false where a load starts.
+- ImageCache::initialize already clears isInitializing on every path (B1).
+
+**A test that read the restore too early.** library_snapshot waited for "settled" after asking for the Library, but the snapshot is read on a pool thread, and until it lands the Folders model is still up and idle with the scope already Catalog. The wait passed at once and the restore count was read before the restore: an intermittent false failure. It now waits for the restore to be counted as well.
+
+Tests: selftest_nav, model_mutation, park_restore, library_snapshot and the catalog self-tests run these paths. MetaRead's dispatch needs a live model, so there is no unit test.
+
+#### 4.4.17 Winnow's Own Writes Restamp the Catalog
+
+ScrollVerify checks hydrated (catalog) rows against their file's and sidecar's stamps, and a row whose stamps moved is re-read as edited outside Winnow (MW::refreshStaleRows): its metadata reset, its icon cleared, its full-size decode dropped. Winnow's own writes move those stamps too, so each one must recommit the row with what it left (2026-11-13, pipeline sync review batch B6, finding C18).
+
+**One completion step: `MW::restampCatalogAfterOwnWrite(fPath)`.**
+
+- It stats the sidecar AND the image, both unconditionally, commits the whole row (catalogRowFor) with those stamps off the GUI thread, sets SidecarColumn when a sidecar now exists, brings the model's ByteSize and Modified columns up to date when the file itself was patched, and records the time in ownSidecarWriteMs. A version's write goes to its master's row.
+- Every caller has just written: `updateCatalogForRow` (ratings and labels through writeXMP, keywords, geotags, versions) now IS this step. It used to commit the stamps the model held (the file's size and mtime from the load; the sidecar's only when SidecarColumn already said there was one), so a first edit, which creates the .xmp, or an edit written into the file itself, committed a stamp already out of date. The Develop sidecar (devPreviewUpdated and the devPreview builder) called it under its old name, restampCatalogAfterSidecarWrite.
+- **Rotation reports back.** `Metadata::writeOrientation` ran fire-and-forget on QtConcurrent, writing the sidecar or, with "Permit image file modification", patching the JPEG/TIFF/DNG itself. Nothing restamped, so the image just rotated, usually the current one, came back as stale: a thumbnail flash, a re-decode, and the C2/C10 conditions. It now runs on the pool and posts the restamp back to the GUI thread when it finishes.
+
+**A verdict moments after our own write is ours.** refreshStaleRows restamps a row instead of re-reading it when Winnow wrote it within the last 5 s (`kOwnWriteGraceMs`): the verify pass stat'd between the write and its commit. The grace counts from the write, not from the restamp, so it cannot renew itself, and a verdict outside it stands. An edit made elsewhere after ours is still re-read.
+
+[StaleProbe] (Help > View session issues) still reports every stale verdict, with whether and when Winnow last wrote the file. The check for this batch: rate, keyword, Develop and rotate images in a Library scope, scroll back over them, and expect no "[StaleProbe] stale" lines.
+
+#### 4.4.18 The Image Cache Queue Belongs to One Snapshot
+
+ImageCache plans in proxy rows: the queue (toCache), its per-row status (toCacheStatus), the current row and the target range are rows of a proxy snapshot, because the target range is a span of the sorted, filtered order. A row number names an image only within one snapshot, and the cache used to mix them (2026-11-13, pipeline sync review batch B4, finding C21).
+
+- **The queue's snapshot.** ImageCache keeps `queueSnap`, and every helper it reads rows through (pathAt, sfRowOf, rowCountSf, isVideoAt, metaLoadedAt, cacheMBAt, sfVal) answers from it, never from a newer snapshot. `adoptSnapshot()` moves to the model's latest at the two entry points, setCurrentPosition and updateToCache, and recomputes the current row from the current PATH.
+- **A queued row that now names another image drops the queue.** Only an instance change used to clear it, and a sort keeps the instance: an in-flight decode's isCaching then blocked the image that moved into its row, and toCacheRemove dropped that image from the queue. adoptSnapshot compares each queued row's path in the old and new snapshots; if any differ, toCache and toCacheStatus are cleared and setTargetRange rebuilds them at once, current image first. An append (a load adding rows at the end) moves nothing and keeps the queue.
+- **In-flight decodes are known by path.** okToDecode also refuses a path whose per-path state says caching (cacheState), so a decode dispatched before the queue was dropped is not started twice. resetStaleIsCaching already spares in-flight keys (4.4.13).
+- **The decoder decodes the key it was given.** decodeNextImage passes the path with the row (`ImageDecoder::decode(sfRow, instance, key)`). The decoder used to look the row up again in whatever snapshot was current when it ran, so after a re-sort it decoded a different image than the cache had chosen. The result is filed under the decoder's key (4.4.13), and its live-model reads follow that key (4.4.15).
+- **MetaRead's navigation gate waits for a path.** MW::fileSelectionChange arms the gate (MetaRead::setAwaitingDecode) so the readers yield CPU to the decode of the new selection, and ImageCache's setCached releases it (MetaRead::onRowCached). The gate used to hold the live currentSfRow and compare it with setCached's snapshot sfRow; after a sort or an insert those are different numbers for the same image, so the release never matched and the readers sat out the full 500 ms bound (finding C14). It now holds the path and matches setCached's path. MW also arms it only on a cache miss: a cached image sends no setCached, so arming it there always cost the 500 ms. MetaRead::initialize clears it (2026-11-14).
+
+This is the plan's R3 without rekeying the queue itself. Results, in-flight state, invalidation and the badge were already path-keyed; what remained row-keyed is now consistent within one snapshot and rebuilt when the order changes.
 
 ### 4.5 Row Storage
 

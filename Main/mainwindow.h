@@ -775,7 +775,6 @@ signals:
     void setValSf(int sfRow, int sfCol, QVariant value, int instance, QString src = "MW",
                     int role = Qt::EditRole);
     void setValuePath(QString fPath, int col, QVariant value, int instance, int role);
-    void startImageCache();
     void initializeImageCache();
     void setAutoMaxMB(bool autoSize, ImageCache::AutoStrategy strategy);
     void setMaxMB(quint64 mb);
@@ -789,7 +788,6 @@ signals:
     void aSyncGo(int);          // rgh req'd?
     void needToShow();          // not being used
     void abortMDCache();        // not being used
-    void stopImageCache();
     void abortMetaRead();
     void abortImageCache();
     void abortBuildFilters();   // not being used
@@ -874,6 +872,13 @@ public slots:
         can reproduce a stall without setting an environment variable first. */
     void armGuiStallWatchdog();
     int  guiStallInterval() const;
+    /*  THE CURRENT IMAGE ALWAYS WINS, VISIBLY (Documentation 4.4.14). A loupe miss shows
+        the thumbnail (showLoupePlaceholder) and arms the watchdog, which re-posts the
+        cache position until the real pixels are up and reports one issue if they never
+        come. */
+    bool showLoupePlaceholder(const QString &fPath);
+    void armLoupeWatchdog(const QString &fPath);
+    void loupeWatchdog();
     /*  Start / stop the background scan over catalogScope. automatic says the user did
         not press anything -- see maybeAutoScanCatalog -- which is what earns the run a
         popup at the end, since nothing else accounts for it. only, when not empty, is
@@ -1542,10 +1547,11 @@ private slots:
     /*  Push one row's edited values back to the catalog, after its sidecar has
         been written. See MW::updateCatalogForRow. */
     void updateCatalogForRow(int dmRow);
-    /*  Winnow has just written fPath's sidecar (Develop): commit the row with the
-        sidecar's new stamp, so ScrollVerify does not take our own write for an outside
-        edit. See MW::restampCatalogAfterSidecarWrite. */
-    void restampCatalogAfterSidecarWrite(const QString &fPath);
+    /*  THE ONE COMPLETION STEP FOR A WINNOW WRITE (Documentation 4.4.17): Winnow has
+        just written fPath's sidecar or the file itself (ratings, keywords, Develop,
+        rotation, versions). Commit the row with the file's and the sidecar's new
+        stamps, so ScrollVerify does not take our own write for an outside edit. */
+    void restampCatalogAfterOwnWrite(const QString &fPath);
 
     /*  EVERYTHING THE LOAD CAN FINISH WITHOUT AN ICON -- the filter build, the sort and
         filter controls, the column widths, the catalog commit. Split out of
@@ -3354,15 +3360,15 @@ private:
     /*  Consecutive drains that committed nothing while rows were still pending. Bounds
         the retry; see MW::drainStaleRecommit. */
     int staleRecommitAttempts = 0;
-    /*  [StaleProbe] master path -> ms since epoch of Winnow's last sidecar write to it
-        (restampCatalogAfterSidecarWrite), so refreshStaleRows can say whether a stale
-        verdict was our own write. */
+    /*  Master path -> ms since epoch of Winnow's last write to it or its sidecar
+        (restampCatalogAfterOwnWrite). refreshStaleRows treats a stale verdict within
+        kOwnWriteGraceMs of one as ours, and [StaleProbe] reports it. */
     QHash<QString, qint64> ownSidecarWriteMs;
+    static constexpr qint64 kOwnWriteGraceMs = 5000;
     /*  Paths MW::checkBlankRows has already reported this session (once each). */
     QSet<QString> blankRowsReported;
     Thumb *refreshThumb = nullptr;    // lazily created; refreshes a single icon after in-place replace
     ImageCache *imageCache;
-    QThread imageCacheThread;
     InfoView *infoView;
     Ingest *backgroundIngest = nullptr;
     IngestDlg *ingestDlg;
@@ -3498,6 +3504,12 @@ private:
         image's picture lands. Catches an intermittent delay switching to Browse. */
     QElapsedTimer browseSwitchClock;
     QString browseSwitchPath;
+    /*  Current-image watchdog state -- see MW::loupeWatchdog. */
+    QTimer *loupeWatchTimer = nullptr;
+    QString loupeWatchKey;
+    int loupeWatchTries = 0;
+    static constexpr int kLoupeWatchMs = 1000;
+    static constexpr int kLoupeWatchMaxTries = 5;
 
     QString filterDockTabText;
     QString catalogDockTabText;

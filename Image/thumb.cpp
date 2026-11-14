@@ -46,7 +46,7 @@ Thumb::Thumb(DataModel *dm, FrameDecoder *frameDecoder)
     thumbMax.setWidth(G::maxIconSize);
     thumbMax.setHeight(G::maxIconSize);
 
-    connect(this, &Thumb::setValDm, dm, &DataModel::setValDm, Qt::QueuedConnection);
+    connect(this, &Thumb::setValKey, dm, &DataModel::setValKey, Qt::QueuedConnection);
     connect(this, &Thumb::setValSf, dm, &DataModel::setValSf, Qt::QueuedConnection);
 
     // FrameDecoder→DataModel signals are connected once in MetaRead.
@@ -177,18 +177,18 @@ void Thumb::setImageDimensions(QString &fPath, QSize fullSize, QSize previewSize
     QString src = "Thumb::setImageDimensions";
 
     if (previewSize.isValid() && previewSize.height() > 0) {
-        emit setValDm(row, G::WidthOrigPreviewColumn, previewSize.width(), instance, src);
-        emit setValDm(row, G::HeightOrigPreviewColumn, previewSize.height(), instance, src);
+        emit setValKey(fPath, G::WidthOrigPreviewColumn, previewSize.width(), instance, src);
+        emit setValKey(fPath, G::HeightOrigPreviewColumn, previewSize.height(), instance, src);
     }
 
     if (fullSize.isValid() && fullSize.height() > 0) {
         const int w = fullSize.width();
         const int h = fullSize.height();
-        emit setValDm(row, G::WidthColumn, w, instance, src);
-        emit setValDm(row, G::HeightColumn, h, instance, src);
-        emit setValDm(row, G::AspectRatioColumn,
+        emit setValKey(fPath, G::WidthColumn, w, instance, src);
+        emit setValKey(fPath, G::HeightColumn, h, instance, src);
+        emit setValKey(fPath, G::AspectRatioColumn,
                       QString::number(w * 1.0 / h, 'f', 2), instance, src);
-        emit setValDm(row, G::DimensionsColumn,
+        emit setValKey(fPath, G::DimensionsColumn,
                       QString::number(w) + "x" + QString::number(h), instance, src);
     }
     else if (!previewSize.isValid() || previewSize.height() == 0) {
@@ -199,7 +199,7 @@ void Thumb::setImageDimensions(QString &fPath, QSize fullSize, QSize previewSize
         return;
     }
 
-    emit setValDm(row, G::MetadataStatusColumn, G::MetaLoaded, instance, src);
+    emit setValKey(fPath, G::MetadataStatusColumn, G::MetaLoaded, instance, src);
 
 }
 
@@ -222,7 +222,7 @@ void Thumb::loadFromVideo(QString &fPath, int dmRow)
         emit videoFrameDecode(fPath, G::maxIconSize, "dmThumb", dmRow, dm->instance);
     // NEW: Tell MetaRead the icon is "loaded" so it doesn't get stuck in a redo loop
     // and prematurely abort before calling folderChangeCompleted()
-    emit setValDm(dmRow, G::IconLoadedColumn, true, dm->instance, "Thumb::loadFromVideo");
+    emit setValKey(fPath, G::IconLoadedColumn, true, dm->instance, "Thumb::loadFromVideo");
 }
 
 Thumb::Status Thumb::loadFromEntireFile(QString &fPath, QImage &image, int row,

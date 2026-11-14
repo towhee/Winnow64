@@ -53,13 +53,14 @@ public:
     };
 
 signals:
-    void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src = "MW",
-                  int role = Qt::EditRole);
     void videoFrameDecode(QString fPath, int longSide, QString source,
                           int dmRow, int dmInstance);
     void tiffMissingThumbDecode(QString fPath, int dmRow, int instance, int offset);
-    void addToDatamodel(ImageMetadata m, QString src);
-    void setIcon(int dmRow, const QImage &im, int fromInstance, QString src);
+    /*  Row AND key: DataModel trusts the row only while it holds the key (4.4.15). */
+    void addToDatamodel(ImageMetadata m, QString key, QString src);
+    void setIcon(int dmRow, const QImage &im, int fromInstance, QString src, QString key);
+    void setValKey(QString key, int col, QVariant value, int instance, QString src,
+                   int role = Qt::EditRole);
     // void setIcon(QModelIndex dmIdx, const QPixmap pm, int fromInstance, QString src);
     void addToImageCache(int row, QString fPath, int instance);
     void done(int threadId, bool isReturning);
@@ -68,9 +69,6 @@ signals:
 public slots:
     void read(int dmRow, QString filePath, int instance,
               bool needMeta, bool needIcon);
-    void abortProcessing();
-    void stop();
-
     void signalAbort();   // non-blocking: sets abort flag without waiting
     bool isPending();     // returns whether a read is currently in progress
 

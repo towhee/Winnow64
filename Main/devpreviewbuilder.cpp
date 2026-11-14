@@ -441,7 +441,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
             && developProperties->sidecarRecipeRewritable(fPath)) {
             Metadata::writeDevelopSidecar(fPath, blob, r.thumbJpg.toBase64());
             // an edited image is restamped by devPreviewUpdated below
-            if (!edited) restampCatalogAfterSidecarWrite(fPath);
+            if (!edited) restampCatalogAfterOwnWrite(fPath);
         }
         if (!r.previewJpg.isEmpty())
             DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg, reduced);
@@ -456,7 +456,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
             if (!r.previewJpg.isEmpty() && imageCache && dm && fPath == dm->currentKey
                 && G::operationMode != G::OperationMode::Develop
                 && G::previewSource == G::PreviewSource::Developed) {
-                imageCache->removeCachedImage(fPath);
+                imageCache->invalidate({fPath}, "MW::devPreviewStore");
                 emit setImageCachePosition(fPath, "MW::devPreviewStore");
             }
             devPreviewBuildStepDone();
@@ -474,7 +474,8 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
            decoded from the camera JPEG, and the next visit should serve the devPreview just
            written instead. Skipped for the image ON SCREEN, whose loupe pixmap is that cached
            decode -- it picks the preview up on the next visit rather than blinking now. */
-        if (icd && dm && fPath != dm->currentKey) icd->remove(fPath);
+        if (imageCache && dm && fPath != dm->currentKey)
+            imageCache->invalidate({fPath}, "MW::devPreviewStore default render");
         devPreviewBuildStepDone();
     });
 

@@ -20,8 +20,9 @@
                        status, the cached-image size estimate). Lock-free
                        atomics, indexed by DATAMODEL row, written by the GUI
                        thread in DataModel::setData. It must be live: ImageCache
-                       ::waitForMetaRead polls metadata status in a wait loop, so
-                       a point-in-time copy would never see it change.
+                       ::okToDecode re-tests metadata status each time it meets a
+                       deferred row, so a point-in-time copy would never see it
+                       change.
 
       ProxySnapshot -- the ORDER and IDENTITY of rows: proxy row to datamodel
                        row and file path, and the reverse lookup. These change
@@ -75,6 +76,25 @@ public:
     }
     bool has(int dmRow, RowSync::Flag f) const { return flags(dmRow) & f; }
 
+    /*  Several flags in ONE compare-and-swap: the bits in mask take the bits of value.
+        A metadata status change moves Attempted and Loaded together, and two separate
+        swaps let a worker read attempted && !loaded on a NotAttempted -> Loaded change
+        and skip the row as "Metadata read failed" (C8, Documentation 4.4.15). */
+    void setFlags(int dmRow, quint8 mask, quint8 value) {
+        if (!contains(dmRow)) return;
+        RowSync &r = mRows[dmRow];
+        quint8 cur = r.flags.load(std::memory_order_relaxed);
+        quint8 want;
+        do { want = quint8((cur & ~mask) | (value & mask)); }
+        while (!r.flags.compare_exchange_weak(cur, want, std::memory_order_relaxed));
+    }
+
+    /*  Which arrangement of rows this array describes: DataModel bumps it whenever rows
+        are inserted, removed or reset, and stamps the same number into every proxy
+        snapshot it builds. Set once, before the array is published. */
+    quint64 structureGen() const { return mGen; }
+    void setStructureGen(quint64 gen) { mGen = gen; }
+
     void setFlag(int dmRow, RowSync::Flag f, bool on) {
         if (!contains(dmRow)) return;
         RowSync &r = mRows[dmRow];
@@ -123,6 +143,7 @@ public:
 
 private:
     int mSize = 0;
+    quint64 mGen = 0;
     std::unique_ptr<RowSync[]> mRows;
 };
 
@@ -144,6 +165,11 @@ typedef std::shared_ptr<const ProxyPaths> ProxyPathsPtr;
     two integer vectors are rebuilt; the paths come from the shared ProxyPaths. */
 struct ProxySnapshot {
     int instance = -1;
+    /*  The RowSyncArray::structureGen current when this was built. RowSync is spliced
+        at once when rows move; the snapshot is rebuilt a turn later. In between, a
+        snapshot row's dmRow indexes the new array and reads another image's flags
+        (C9). ModelView::consistent says whether the pair agrees. */
+    quint64 structureGen = 0;
     /*  The DATAMODEL row count. Not the same as rowCount() below, which is the
         proxy's: a filtered row still exists in the model, and progress
         reporting and the load-completion checks count model rows. */
@@ -172,5 +198,17 @@ struct ProxySnapshot {
 };
 
 typedef std::shared_ptr<const ProxySnapshot> ProxySnapshotPtr;
+
+/*  A snapshot and the live per-row array, taken together (DataModel::modelView). Read a
+    row's flags through the snapshot's dmRow only when consistent(): otherwise the row
+    numbers belong to different arrangements of the model. A caller that finds them
+    inconsistent treats the row as not ready; DataModel::proxySnapshotPublished says
+    when to look again. Documentation 4.4.15. */
+struct ModelView {
+    ProxySnapshotPtr snap;
+    std::shared_ptr<RowSyncArray> sync;
+    bool consistent() const
+        { return snap && sync && snap->structureGen == sync->structureGen(); }
+};
 
 #endif // MODELSYNC_H

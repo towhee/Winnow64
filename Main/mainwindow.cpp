@@ -3959,7 +3959,6 @@ void MW::handleStartupArgs(const QString &args)
                 folderAndFileSelectionChange(fPath, "handleStartupArgs");
             }
             else {
-                imageView->currentImageHasChanged = true;
                 insertFiles(embellishedPaths);
                 // update filter counts
                 buildFilters->recount();
@@ -4152,7 +4151,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
             setOperationMode(G::OperationMode::Preview);
     }
 
-    G::allMetadataAttempted = false;
+    dm->beginMetaLoad();
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
 
@@ -4401,6 +4400,9 @@ void MW::promptForCatalogScope()
     Manage Catalog is enabled in both sources, and the text names it.
 */
     if (skipCatalogScopePrompt || catalogScopePrompted) return;
+    /* A harness run has isolated settings, so the scope is always empty and the modal
+       would wait forever for a click nobody makes (the --soaktest stall). */
+    if (G::isAutomatedRun) return;
     if (!catalogScope.isEmpty()) return;
     if (!Catalog::instance().isAvailable()) return;
     catalogScopePrompted = true;
@@ -5307,7 +5309,7 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
         writing diagnostics to the console unasked. */
     if (G::isPerfProbe) armGuiStallWatchdog();
 
-    G::allMetadataAttempted = false;
+    dm->beginMetaLoad();
     G::iconChunkLoaded = false;
     G::isModifyingDatamodel = true;
 
@@ -5525,7 +5527,7 @@ void MW::refreshStaleRows(const QStringList &paths)
 
     /*  [StaleProbe] WHAT MOVED, AND WAS IT US. One session-issue line per stale row: the
         source file or only its sidecar, and how long since Winnow last wrote that sidecar
-        itself (restampCatalogAfterSidecarWrite). A sidecar-only verdict soon after our
+        itself (restampCatalogAfterOwnWrite). A sidecar-only verdict soon after our
         own write means the restamp missed (or lost the race to the verify pass). One
         primary-key lookup per path, and a pass reports only the few rows it found. */
     {
@@ -5555,16 +5557,31 @@ void MW::refreshStaleRows(const QStringList &paths)
         }
     }
 
+    /*  OURS, NOT AN OUTSIDE EDIT (R12, Documentation 4.4.17). A verdict on a file Winnow
+        wrote moments ago is almost always that write racing its own restamp (the verify
+        pass stat'd between the write and the commit). Restamp it again rather than
+        throwing away the row, its icon and its decode. Outside the grace window the
+        verdict stands, so an edit made elsewhere after ours is still re-read. */
+    const qint64 nowMs = QDateTime::currentMSecsSinceEpoch();
     int cleared = 0;
+    QStringList staleDecodes;
     for (const QString &fPath : paths) {
         const int dmRow = dm->rowFromKey(fPath);
         if (dmRow < 0) continue;
+        const QString master = VersionKey::sourceOf(fPath);
+        const qint64 ownMs = ownSidecarWriteMs.value(master, 0);
+        if (ownMs && nowMs - ownMs < kOwnWriteGraceMs) {
+            restampCatalogAfterOwnWrite(fPath);
+            // the write's own time, not now: the grace must not renew itself
+            ownSidecarWriteMs.insert(master, ownMs);
+            continue;
+        }
 
         dm->setData(dm->index(dmRow, G::MetadataStatusColumn), G::MetaNotAttempted);
         dm->setData(dm->index(dmRow, G::IconLoadedColumn), false);
         dm->setIcon(dm->index(dmRow, 0), QPixmap(), dm->instance, "MW::refreshStaleRows");
         /*  The full-size decode was made from a file that has since changed. */
-        if (icd) icd->remove(fPath);
+        staleDecodes << fPath;
 
         if (thumbView && thumbView->iconViewDelegate)
             thumbView->iconViewDelegate->clearCacheItem(fPath);
@@ -5575,13 +5592,19 @@ void MW::refreshStaleRows(const QStringList &paths)
         ++cleared;
     }
     if (!cleared) return;
+    // out of icd now; re-decoded once re-read (Documentation 4.4.13)
+    if (imageCache) imageCache->invalidate(staleDecodes, "MW::refreshStaleRows");
 
     if (G::isPerfProbe)
         qDebug().noquote() << "[PERF] stale repair: re-reading" << cleared << "row(s)";
 
-    G::allMetadataAttempted = false;
+    /*  G::allMetadataAttempted followed the status writes above (DataModel owns it).
+        MetaRead forgets these rows were read, wherever they are, and reads them again
+        (MetaRead::invalidateRows, Documentation 4.4.16); the icon chunk reload
+        restarts its cycle. */
     G::iconChunkLoaded = false;
-    QMetaObject::invokeMethod(metaRead, "invalidateLoadedIcons", Qt::QueuedConnection);
+    QMetaObject::invokeMethod(metaRead, "invalidateRows", Qt::QueuedConnection,
+                              Q_ARG(QStringList, paths));
     reloadIconChunk();
 
     /*  The re-read has been asked for; the commit follows when it lands. Created on first
@@ -6672,7 +6695,9 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
             /*  MISS UNTIL SHOWN OTHERWISE. loadImage returns false on a cache miss and
                 leaves the loupe blank; the ingest probe holds that open and closes it
                 when (or if) refreshViewsOnCacheChange repairs it. The Develop interim
-                branch below overrides this with Interim. */
+                branch below overrides this with Interim. loadImage returns true only
+                when the loupe shows this image's full pixels (Views/loupeshown.h), so
+                a return to the image before a miss is no longer counted as Cached. */
             if (G::isIngestProbe)
                 IngestProbe::Instance().NoteLoupe(loaded ? IngestProbe::Cached
                                                          : IngestProbe::Miss);
@@ -6743,6 +6768,12 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
                                          currentImageIso());
                 }
             }
+            /*  A MISS IS NOT BLACK (C16). Any miss the Develop stand-in did not cover
+                shows the thumbnail scaled up, unless the loupe already shows this image
+                (LoupeShown::noteMiss kept it). Then, until the real pixels are up, the
+                watchdog makes sure they come (Documentation 4.4.14). */
+            if (!loaded && !imageView->isShowing(fPath)) showLoupePlaceholder(fPath);
+            if (!imageView->isFullyShown(fPath)) armLoupeWatchdog(fPath);
         }
     }
 
@@ -6771,11 +6802,13 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         && (!G::removingRowsFromDM)
        )
     {
-        // Arm MetaRead's navigation gate so its reader pool yields CPU
-        // to the ImageCache decoder for this selection.
+        /* Arm MetaRead's navigation gate so its reader pool yields CPU to the
+           ImageCache decoder for this selection. By path (C14), and only on a miss:
+           a cached image sends no setCached to release it. */
         QMetaObject::invokeMethod(metaRead, "setAwaitingDecode",
                                   Qt::QueuedConnection,
-                                  Q_ARG(int, dm->currentSfRow));
+                                  Q_ARG(QString, icd->contains(dm->currentKey)
+                                                 ? QString() : dm->currentKey));
         emit setImageCachePosition(dm->currentKey, "MW::fileSelectionChange");
     }
     probe.mark("cachePos");
@@ -7236,7 +7269,7 @@ bool MW::reset(QString src)
     dm->newInstance("folderSelectionChange");
     emit initializeImageCache();    // may not be req'd
 
-    G::allMetadataAttempted = false;
+    dm->beginMetaLoad();
     G::iconChunkLoaded = false;
 
     // filters
@@ -8036,10 +8069,15 @@ void MW::folderChanged(bool aborted)
         opening the file, and either way it is MetaRead's job. */
     dm->setIconRange(startRow);
     if (dm->isMetaReadFinished() && dm->isIconRangeLoaded()) {
-        G::allMetadataAttempted = true;
+        dm->publishMetaAttempted();     // true: isMetaReadFinished, tested above
         G::iconChunkLoaded = true;
+        /* INITIALIZE FIRST (C7). folderChangeCompleted -> metadataComplete queues
+           setImageCachePosition for the current image; initialize queued after it
+           cleared that position's queue and never dispatched, leaving the cache empty
+           and idle until the next selection. Both are queued to the cache thread, so
+           emit order is run order. */
+        emit initializeImageCache();
         folderChangeCompleted();
-        emit initializeImageCache();    // may not be req'd
         return;
     }
 
@@ -8384,12 +8422,16 @@ void MW::devPreviewUpdated(const QString &fPath, const QImage &thumb)
     }
     /* The sidecar was just written; the catalog takes its new stamp (the master's, for a
        version). */
-    restampCatalogAfterSidecarWrite(fPath);
+    restampCatalogAfterOwnWrite(fPath);
 
     /* The full-size image cached for this path was decoded from the OLD recipe (or from
-       the camera render), so it no longer depicts the image. Drop it: the next visit
-       re-reads, which outside Develop mode now means loading the new devPreview. */
-    if (icd) icd->remove(fPath);
+       the camera render), so it no longer depicts the image. Drop it, and outside
+       Develop queue it again, so the next visit hits the new devPreview instead of
+       missing. Not the image being edited in Develop: its loupe shows renders, and a
+       sensor re-decode after every flush would be pure cost (Documentation 4.4.13). */
+    const bool refill = !(G::operationMode == G::OperationMode::Develop
+                          && fPath == dm->currentKey);
+    if (imageCache) imageCache->invalidate({fPath}, "MW::devPreviewUpdated", refill);
 
     /* A multi-image edit target (the usual null-thumb case): its preview is rendered
        properly in the background, so the grid shows the edit. The builder renders these
@@ -8498,22 +8540,25 @@ void MW::updateCatalogForRow(int dmRow)
     Off the GUI thread, because it is SQL. commit() skips a row whose stamp
     already matches, so this costs nothing when the catalog is already right.
 */
+    /*  EVERY CALLER HAS JUST WRITTEN (writeXMP, keywords, geotag, versions), so this is
+        the own-write completion step: the row goes with the stamps the write left,
+        both of them stat'd now (Documentation 4.4.17). It used to send the stamps the
+        MODEL held -- the file's size and mtime from the load, the sidecar's only when
+        SidecarColumn already said there was one -- so a first edit, which is what
+        creates the .xmp, or an edit written into the file itself, committed a stamp
+        that was already out of date, and ScrollVerify then re-read the row as edited
+        outside Winnow. */
     if (dmRow < 0 || !dm) return;
-    if (!Catalog::instance().isAvailable()) return;
-
-    CatalogRow r;
-    if (!dm->catalogRowFor(dmRow, r)) return;
-    /* The scope table is definitive here too: an edit to an image outside it must not be
-       the thing that puts that image in the index. */
-    if (!isCatalogScopeFolder(r.folder)) return;
-
-    QThreadPool::globalInstance()->start([r]{ Catalog::instance().commit({r}); });
+    restampCatalogAfterOwnWrite(dm->index(dmRow, 0).data(G::KeyRole).toString());
 }
 
-void MW::restampCatalogAfterSidecarWrite(const QString &fPath)
+void MW::restampCatalogAfterOwnWrite(const QString &fPath)
 {
 /*
-    WINNOW'S OWN SIDECAR WRITE IS NOT AN OUTSIDE EDIT.
+    WINNOW'S OWN WRITE IS NOT AN OUTSIDE EDIT (R12, Documentation 4.4.17). The single
+    completion step for every Winnow write that moves a stamp: writeXMP and the keyword,
+    geotag and version edits (through updateCatalogForRow), the Develop sidecar, and the
+    orientation written by a rotation (reported back from its pool thread).
 
     Every Develop flush rewrites the sidecar (recipe, preview thumbnail, modifydate),
     which moves its mtime. The catalog's freshness stamp includes that mtime, so ScrollVerify's
@@ -8530,9 +8575,14 @@ void MW::restampCatalogAfterSidecarWrite(const QString &fPath)
     edit is often what CREATES the .xmp: it would commit 0 and stay stale. SidecarColumn
     is set here for the same reason.
 
+    SO IS THE FILE. With "Permit image file modification" a rotation (and an embedded
+    XMP edit) patches the image itself, which moves its size or mtime; catalogRowFor
+    takes those from the model, as they were at load. The model's ByteSize and Modified
+    columns follow, so the next commit from the model agrees.
+
     A version writes its record into its master's sidecar, so the master row is stamped.
 */
-    if (G::isLogger) G::log("MW::restampCatalogAfterSidecarWrite", fPath);
+    if (G::isLogger) G::log("MW::restampCatalogAfterOwnWrite", fPath);
     if (fPath.isEmpty() || !dm) return;
     if (!Catalog::instance().isAvailable()) return;
 
@@ -8547,6 +8597,17 @@ void MW::restampCatalogAfterSidecarWrite(const QString &fPath)
     const QFileInfo si(FileOps::existingSidecar(master));
     r.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
     if (r.sidecarMtime) dm->setData(dm->index(dmRow, G::SidecarColumn), true);
+    const QFileInfo fi(master);
+    if (fi.exists()) {
+        const qint64 size = fi.size();
+        const QDateTime mtime = fi.lastModified();
+        if (r.srcSize != size)
+            dm->setData(dm->index(dmRow, G::ByteSizeColumn), size);
+        if (r.srcMtime != mtime.toSecsSinceEpoch())
+            dm->setData(dm->index(dmRow, G::ModifiedColumn), mtime);
+        r.srcSize = size;
+        r.srcMtime = mtime.toSecsSinceEpoch();
+    }
     ownSidecarWriteMs.insert(master, QDateTime::currentMSecsSinceEpoch());
 
     QThreadPool::globalInstance()->start([r]{
@@ -8555,11 +8616,13 @@ void MW::restampCatalogAfterSidecarWrite(const QString &fPath)
             session. */
         const QHash<QString, CatalogRow> held = Catalog::instance().rowsForPaths({r.path});
         const auto it = held.constFind(r.path);
-        if (it != held.cend() && it->sidecarMtime != r.sidecarMtime)
+        if (it != held.cend() && (it->sidecarMtime != r.sidecarMtime
+                                  || it->srcSize != r.srcSize
+                                  || it->srcMtime != r.srcMtime))
             G::issueDedup("Comment",
-                          "[StaleProbe] Develop sidecar write moved the catalog's sidecar "
-                          "stamp; restamped",
-                          "MW::restampCatalogAfterSidecarWrite", -1, r.path);
+                          "[StaleProbe] Winnow's own write moved the catalog's stamp; "
+                          "restamped",
+                          "MW::restampCatalogAfterOwnWrite", -1, r.path);
         Catalog::instance().commit({r});
     });
 }
@@ -8574,7 +8637,7 @@ void MW::metadataComplete(QString src)
     that is right: the metadata and the icons are read by the same pass and arrive
     together. For a HYDRATED CATALOG SCOPE it is not. Every row comes out of the image
     table already MetaLoaded, DataModel::finishCatalogFill has already called
-    setAllMetadataAttempted(true), and the only thing MetaRead has left to do is fetch
+    publishMetaAttempted() (true), and the only thing MetaRead has left to do is fetch
     thumbnails -- which nothing here needs. Measured on a 41,464-image catalog: the filter
     build began 11.7 SECONDS after the images were on screen, and the filters do not read
     an icon (BuildFilters::makeSnapshot takes text columns, KeywordsAllColumn and
@@ -9006,7 +9069,7 @@ void MW::buildFiltersWhenModelReady(int forInstance, int attempt)
 
         The condition the wait exists to guarantee -- that the model is fully updated
         before the filters read it -- is already true on this path, and by a stronger
-        route: the fill is complete and setAllMetadataAttempted(true) has run before
+        route: the fill is complete and publishMetaAttempted() has run before
         folderChange is emitted at all (DataModel::finishCatalogFill). */
     const bool hydrated = dm->scopeRequest().isHydrated();
 
@@ -10694,7 +10757,8 @@ void MW::setRotation(int degrees)
         QImage image;
         if (icd->get(fPath, image) && !image.isNull()) {
             image = image.transformed(QTransform().rotate(degrees), Qt::SmoothTransformation);
-            icd->insert(fPath, image);
+            // only if still cached; a decode in flight read the old orientation
+            if (imageCache) imageCache->replace(fPath, image);
         }
         // after the cache holds the rotated image: Develop rebuilds from it
         invalidateDevelopAfterRotation(fPath);
@@ -10713,9 +10777,19 @@ void MW::setRotation(int degrees)
         const QString file = VersionKey::sourceOf(fPath);
         if (orient.length() && !orientationWritten.contains(file)) {
             orientationWritten.insert(file);
-            // note that Metadata::writeOrientation must be static!
-            // writes to source EXIF if G::modifySourceFiles, otherwise to xmp sidecar
-            QtConcurrent::run(&Metadata::writeOrientation, file, orient);
+            /*  Writes to source EXIF if G::modifySourceFiles, otherwise to the xmp
+                sidecar, on a pool thread. It used to be fire-and-forget, so the catalog
+                kept the stamp from before it, and ScrollVerify re-read the image just
+                rotated -- usually the current one -- as edited outside Winnow (C18).
+                Now it reports back, and the row is restamped (4.4.17). */
+            QPointer<MW> self(this);
+            QThreadPool::globalInstance()->start([self, file, orient] {
+                Metadata::writeOrientation(file, orient);
+                if (!self) return;
+                QMetaObject::invokeMethod(self, [self, file] {
+                    if (self) self->restampCatalogAfterOwnWrite(file);
+                }, Qt::QueuedConnection);
+            });
         }
     }
     for (const QString &file : std::as_const(orientationWritten))
@@ -15629,6 +15703,105 @@ static QString rawDenoiseKey(const QString &fPath, const EditParams &base, int i
 static QString pmridBaseKey(const QString &fPath, int iso)
 {
     return QString("%1|iso=%2").arg(fPath).arg(iso);
+}
+
+bool MW::showLoupePlaceholder(const QString &fPath)
+{
+/*
+    The thumbnail for a loupe miss (ImageView::loadImagePlaceholder). It is already in
+    memory (IconStore), so this costs no I/O. False when the row has no icon yet: the
+    loupe stays blank, as before, and the watchdog still runs.
+*/
+    const int dmRow = dm->rowFromKey(fPath);
+    if (dmRow < 0) return false;
+    const QIcon icon = dm->index(dmRow, 0).data(Qt::DecorationRole).value<QIcon>();
+    if (icon.isNull()) return false;
+    const QList<QSize> sizes = icon.availableSizes();
+    const QSize sz = sizes.isEmpty() ? QSize(G::maxIconSize, G::maxIconSize) : sizes.last();
+    const QImage thumb = icon.pixmap(sz, 1.0).toImage();
+    const QSize full(dm->index(dmRow, G::WidthColumn).data().toInt(),
+                     dm->index(dmRow, G::HeightColumn).data().toInt());
+    return imageView->loadImagePlaceholder(fPath, thumb, full);
+}
+
+void MW::armLoupeWatchdog(const QString &fPath)
+{
+    if (!G::useImageCache || G::isSlideShow || fPath.isEmpty()) return;
+    if (!loupeWatchTimer) {
+        loupeWatchTimer = new QTimer(this);
+        loupeWatchTimer->setSingleShot(true);
+        connect(loupeWatchTimer, &QTimer::timeout, this, &MW::loupeWatchdog);
+    }
+    if (fPath != loupeWatchKey) loupeWatchTries = 0;
+    loupeWatchKey = fPath;
+    loupeWatchTimer->start(kLoupeWatchMs);
+}
+
+void MW::loupeWatchdog()
+{
+/*
+    THE CURRENT IMAGE ALWAYS WINS (R11, Documentation 4.4.14). Armed by a loupe miss in
+    fileSelectionChange; fires kLoupeWatchMs later.
+
+    - Moved on, or the loupe now shows the image's full pixels: nothing to do.
+    - The cache HOLDS the image but the loupe does not show it: a repaint was lost
+      somewhere between ImageCache::setCached and refreshViewsOnCacheChange. Repaint
+      through the normal repair path and record it, so a residual bug says so instead of
+      leaving the user looking at a thumbnail. In Develop an Interim stand-in over a
+      cached image is the render's to replace, not a loss.
+    - Not cached yet: post the position again (harmless when a decode is in flight:
+      setCurrentPosition finds it caching) and look again, at most kLoupeWatchMaxTries
+      times. Then one issue with the image's cache state, unless a Develop stand-in is
+      up (a slow sensor decode is not a fault).
+
+    Every outcome is bounded: the watchdog stops when it has spent its tries or the
+    selection moves.
+*/
+    const QString k = loupeWatchKey;
+    auto done = [this] { loupeWatchKey.clear(); loupeWatchTries = 0; };
+    if (k.isEmpty() || k != dm->currentKey || G::isSlideShow || G::mode == "Compare") {
+        done();
+        return;
+    }
+    if (imageView->isFullyShown(k)) { done(); return; }
+
+    // a removal or a load in progress: not yet, look again
+    if (G::removingRowsFromDM || G::isModifyingDatamodel) {
+        loupeWatchTimer->start(kLoupeWatchMs);
+        return;
+    }
+
+    const bool interim = imageView->shownKind() == LoupeShown::Interim;
+    if (icd->contains(k)) {
+        if (G::operationMode == G::OperationMode::Develop && interim) { done(); return; }
+        G::issueDedup("Warning", "Loupe repainted by the watchdog: the image was "
+                      "cached but not shown", "MW::loupeWatchdog", dm->currentSfRow, k);
+        refreshViewsOnCacheChange(k, true, "MW::loupeWatchdog");
+        done();
+        return;
+    }
+
+    if (loupeWatchTries >= kLoupeWatchMaxTries) {
+        if (!interim) {
+            const int dmRow = dm->rowFromKey(k);
+            auto col = [&](int c) {
+                return dmRow < 0 ? QString("?") : dm->index(dmRow, c).data().toString();
+            };
+            QString msg = "Current image not shown after " +
+                          QString::number(kLoupeWatchMaxTries * kLoupeWatchMs / 1000) +
+                          " s: loupe " + imageView->loupeShownName() +
+                          ", caching " + col(G::IsCachingColumn) +
+                          ", attempts " + col(G::AttemptsColumn) +
+                          ", decoder status " + col(G::DecoderReturnStatusColumn) +
+                          " " + col(G::DecoderErrMsgColumn);
+            G::issueDedup("Warning", msg, "MW::loupeWatchdog", dm->currentSfRow, k);
+        }
+        done();
+        return;
+    }
+    ++loupeWatchTries;
+    emit setImageCachePosition(k, "MW::loupeWatchdog");
+    loupeWatchTimer->start(kLoupeWatchMs);
 }
 
 int MW::currentImageIso() const

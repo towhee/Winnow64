@@ -654,6 +654,27 @@ winnow_add_unit_test(tst_rowscratch unit/tst_rowscratch.cpp ../Datamodel/rowscra
 # "text is not number" have to be checked here instead. It also pins the row
 # splicing that replaced the rebuild-from-items.
 winnow_add_unit_test(tst_imagerow unit/tst_imagerow.cpp ../Datamodel/imagerow.cpp)
+
+# Pipeline sync (Documentation 4.4.10, 4.4.11). tst_deferredrows pins how ImageCache
+# keeps a row it cannot decode yet without blocking its thread, and the bounded idle
+# backstop. tst_rowwatch pins the one-shot watch behind DataModel::rowsChanged,
+# including a two-thread run of the protocol that must never lose a wake.
+# tst_loupeshown pins what the loupe believes is on screen: A shown, B missed, back to
+# A must load A.
+winnow_add_unit_test(tst_deferredrows unit/tst_deferredrows.cpp)
+winnow_add_unit_test(tst_rowwatch unit/tst_rowwatch.cpp)
+winnow_add_unit_test(tst_loupeshown unit/tst_loupeshown.cpp)
+# tst_decodeverdict pins what ImageCache does with a finished decode (stale, superseded
+# by a reload or an invalidate, accepted, deferred, retried, failed) -- the order is the
+# point. tst_cachedata pins the locked decoded-image hash, including a reader racing a
+# writer that must never see a null hit (Documentation 4.4.13).
+winnow_add_unit_test(tst_decodeverdict unit/tst_decodeverdict.cpp)
+winnow_add_unit_test(tst_cachedata unit/tst_cachedata.cpp ../Cache/cachedata.cpp)
+# tst_modelsync pins what workers read of the model: metadata flags published in one
+# swap (a reader racing the writer must never see attempted-without-loaded), and the
+# structure generation that says whether a snapshot and RowSync describe the same
+# rows (Documentation 4.4.15).
+winnow_add_unit_test(tst_modelsync unit/tst_modelsync.cpp)
 # tst_zchunkdevice: the chunked zlib stream the library snapshot is written through --
 # round trip across chunk boundaries, the end mark, truncation and corruption refused.
 winnow_add_unit_test(tst_zchunkdevice unit/tst_zchunkdevice.cpp ../Utilities/zchunkdevice.cpp)

@@ -193,14 +193,25 @@ void MW::selfTestLibrarySnapshot(const QString &folder)
     const int restoresBefore = libraryRestoreCount;
     const int repairsBefore = settledRepairs;
     chooseSource(true, "selftest snapshot: Library again");
-    if (!waitFor(settled(G::Scope::Catalog), 30000))
+    /*  NOT SETTLED UNTIL THE RESTORE HAS HAPPENED. The snapshot is read on a pool thread
+        (startLibrarySnapshotRestore), and until it lands the Folders model is still up
+        and idle with the scope already Catalog, so settled() alone passed at once and
+        the restore count was read before the restore: an intermittent false failure.
+        A Library that was LOADED instead never counts a restore, so it times out here
+        and is reported as that. */
+    const auto restored = settled(G::Scope::Catalog);
+    if (!waitFor([&]{ return libraryRestoreCount != restoresBefore && restored(); },
+                 30000)) {
+        if (libraryRestoreCount == restoresBefore)
+            failS("restore", "the Library was loaded, not restored from the snapshot");
         failS("restore", QString("did not settle: rows=%1 scope=%2 loadRunning=%3"
                                  " modifying=%4 metaAttempted=%5 curtain=%6")
                              .arg(dm->rowCount()).arg(int(G::scope))
                              .arg(bool(G::isLoadRunning)).arg(bool(G::isModifyingDatamodel))
                              .arg(bool(G::allMetadataAttempted)).arg(loadCurtainUp));
+    }
     if (libraryRestoreCount != restoresBefore + 1)
-        failS("restore", "the Library was loaded, not restored from the snapshot");
+        failS("restore", "the Library was restored more than once");
     if (lastSnapshotChanged != 1)
         failS("restore", QString("%1 rows reported changed, expected 1")
                              .arg(lastSnapshotChanged));

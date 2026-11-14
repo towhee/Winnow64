@@ -136,8 +136,8 @@ bool CompareView::loadImage(QModelIndex idx, QString fPath)
 
     // load the image from the image cache if available
     QImage image;
-    if (icd->contains(fPath)) {
-        pmItem->setPixmap(QPixmap::fromImage(icd->imCache.value(fPath)));
+    if (icd->get(fPath, image)) {           // one locked lookup; never null
+        pmItem->setPixmap(QPixmap::fromImage(image));
         isLoaded = true;
     }
     else {

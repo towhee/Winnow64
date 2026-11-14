@@ -58,7 +58,10 @@ void MW::selfTestNavigate()
         }
         const bool video = idx.sibling(r, G::VideoColumn).data().toBool();
         const bool current = dm->currentKey == key;
-        const bool shown = video || imageView->currentImagePath == key;
+        /*  isShowing, not currentImagePath: a miss leaves that naming the last hit. A
+            Placeholder (the thumbnail on a miss, 4.4.14) is not the image. */
+        const bool shown = video || (imageView->isShowing(key) &&
+                                     imageView->shownKind() != LoupeShown::Placeholder);
         const bool inCache = video || icd->contains(key);
         fprintf(stderr, "SELFTEST: nav row=%d current=%d shown=%d inCache=%d cached=%d "
                         "icons=%d/%d instance=%d suspended=%d allMeta=%d removing=%d %s\n",
@@ -71,12 +74,15 @@ void MW::selfTestNavigate()
                 (decoder instances among them) and parameters -- because "not cached"
                 has several causes and the fix depends on which. */
             if (failures++ == 0) {
-                fprintf(stderr, "SELFTEST: nav diagnostics\n%s\n%s\n",
-                        imageCache->reportHealthChecks().toLocal8Bit().constData(),
-                        imageCache->reportCacheParameters().toLocal8Bit().constData());
-                fprintf(stderr, "%s\n%s\n",
-                        imageCache->reportCacheDecoders().toLocal8Bit().constData(),
-                        imageCache->reportCacheItemList().toLocal8Bit().constData());
+                // on the ImageCache thread: the reports read its queue
+                ImageCache *ic = imageCache;
+                const QString rpt = ic->fromCacheThread([ic] {
+                    return ic->reportHealthChecks() + "\n" + ic->reportCacheParameters()
+                           + "\n" + ic->reportCacheDecoders() + "\n"
+                           + ic->reportCacheItemList();
+                });
+                fprintf(stderr, "SELFTEST: nav diagnostics\n%s\n",
+                        rpt.toLocal8Bit().constData());
             }
         }
     }

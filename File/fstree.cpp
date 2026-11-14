@@ -1808,7 +1808,7 @@ void FSTree::mousePressEvent(QMouseEvent *event)
         // qApp->processEvents();
         // fsModel->maxRecursedRoots.clear();
         clearFolderOverLimit();
-        G::allMetadataAttempted = false;
+        // G::allMetadataAttempted: the load MW starts says so (DataModel::beginMetaLoad)
     }
 
     // Clear and select folder

@@ -514,6 +514,8 @@ set(WINNOW_HEADERS
     Cache/mountsnapshot.h
     Cache/framedecoder.h
     Cache/imagecache.h
+    Cache/deferredrows.h
+    Cache/decodeverdict.h
     Cache/imagedecoder.h
     Cache/metaread.h
     Cache/scrollverify.h
@@ -526,6 +528,7 @@ set(WINNOW_HEADERS
     Datamodel/filters.h
     Datamodel/filtersnapshot.h
     Datamodel/modelsync.h
+    Datamodel/rowwatch.h
     Datamodel/rowfields.h
     Datamodel/iconstore.h
     Datamodel/imagerow.h
@@ -814,6 +817,7 @@ set(WINNOW_HEADERS
     Views/iconview.h
     Views/iconviewdelegate.h
     Views/imageview.h
+    Views/loupeshown.h
     Views/infostring.h
     Views/catalogview.h
     Views/filterpanel.h

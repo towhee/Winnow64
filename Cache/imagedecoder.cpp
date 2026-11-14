@@ -44,8 +44,6 @@ ImageDecoder::ImageDecoder(int id,
 {
     if (isDebug) G::log("ImageDecoder::ImageDecoder", "Thread " + QString::number(id));
 
-    // connect(&decoderThread, &QThread::started, this, &ImageDecoder::run);
-    // connect(this, &ImageDecoder::done, &decoderThread, &QThread::quit);
 
     threadId = id;
     // status = Status::Ready;
@@ -76,10 +74,6 @@ void ImageDecoder::stop()
     }
 
     abort.storeRelease(1);
-    if (decoderThread.isRunning()) {
-        decoderThread.quit();
-        // decoderThread.wait();
-    }
 }
 
 bool ImageDecoder::quit()
@@ -122,7 +116,6 @@ void ImageDecoder::setIdle(bool v)
     QMutexLocker lock(&mutex);
     if (idle == v) return;
     idle = v;
-    if (idle) idleCondition.wakeAll();  // notify waiters
 }
 
 bool ImageDecoder::isRunning() const
@@ -130,7 +123,22 @@ bool ImageDecoder::isRunning() const
     return running.loadRelaxed();
 }
 
-void ImageDecoder::decode(int row, int instance)
+void ImageDecoder::captureModeSettings()
+{
+/*
+    THE SETTINGS A DECODE CHOOSES ITS PIXELS BY, READ ONCE. They are GUI-thread globals
+    that the user can change at any moment (D, the Edit source, the preview source), and
+    load() consulted them at three separate points: a toggle mid-decode could produce
+    an image that matched neither the old settings nor the new (C26). Whatever is read
+    here is what this decode means; ImageCache's generation discards it if a reload has
+    happened since it was dispatched (Documentation 4.4.13).
+*/
+    modeDevelop = G::operationMode == G::OperationMode::Develop;
+    useRawAtStart = G::useRaw;
+    previewDeveloped = G::previewSource == G::PreviewSource::Developed;
+}
+
+void ImageDecoder::decode(int row, int instance, QString key)
 {
     /*  Fresh per decode: geometry fetched for one row must never be read for
         the next one. */
@@ -140,6 +148,7 @@ void ImageDecoder::decode(int row, int instance)
     abort.storeRelease(0);
     sfRow = row;                   // set early so fillCache has valid row
     this->instance = instance;
+    captureModeSettings();
 
     /*  NEVER THE PROXY FROM THIS THREAD. Every column below used to be read through
         dm->sf->index(sfRow, ...), and QSortFilterProxyModel builds its mapping LAZILY:
@@ -160,7 +169,7 @@ void ImageDecoder::decode(int row, int instance)
         A row missing from the snapshot means the model changed under the request, which
         is transient too: Abort leaves the row retry-eligible. */
     const ProxySnapshotPtr snap = dm->proxySnapshot();
-    if (!snap || !snap->contains(row)) {
+    if (key.isEmpty() && (!snap || !snap->contains(row))) {
         dmRow = -1;
         status = Status::Abort;
         errMsg = "Row out of range.";
@@ -175,11 +184,27 @@ void ImageDecoder::decode(int row, int instance)
     setBusy();
 
     status = Status::Undefined;
-    dmRow = snap->dmRow(sfRow);
+    dmRow = snap ? snap->dmRow(sfRow) : -1;
     /*  The snapshot holds the row KEY. For a version (virtual copy) that is not a file:
         the pixels come from its source (fPath), the result is cached and reported under
-        the key (rowKey). See Utilities/versionkey.h. */
-    rowKey = snap->path(sfRow);
+        the key (rowKey). See Utilities/versionkey.h.
+
+        THE KEY IMAGECACHE CHOSE, when it says (4.4.18). This decoder used to look the
+        row up again in whatever snapshot was current when it ran, and after a re-sort
+        or a filter since the dispatch that was another image: decoded, and cached
+        under its own key, while the image the cache wanted stayed "caching". */
+    rowKey = key.isEmpty() ? snap->path(sfRow) : key;
+    /*  dmVal reads the live model by row. The snapshot's row is right only until a
+        removal shifts the model, so trust it only while it still holds the key, else
+        follow the key (4.4.15). A key that left the model has nothing to decode. */
+    dmRow = dm->rowForKey(dmRow, rowKey);
+    if (dmRow < 0) {
+        status = Status::Abort;
+        errMsg = "Row left the model.";
+        setIdle();
+        emit done(threadId, int(status), sfRow, QImage(), rowKey, 0, G::CacheNone);
+        return;
+    }
     fPath = VersionKey::sourceOf(rowKey);
     image = QImage();
     loadedFromDevPreview = false;
@@ -311,8 +336,8 @@ bool ImageDecoder::loadDevPreview()
     loadedFromDevPreview says so.
 */
     if (isIndependent) return false;
-    if (G::operationMode == G::OperationMode::Develop) return false;
-    if (G::previewSource != G::PreviewSource::Developed) return false;
+    if (modeDevelop) return false;
+    if (!previewDeveloped) return false;
 
     const QString key = devPreviewKeyFor(dmVal(G::DevPreviewKeyColumn).toString(),
                                          rowKey, fPath, ext);
@@ -600,8 +625,8 @@ bool ImageDecoder::load()
         previewTooSmall = RawFormat::PreviewTooSmall(ext, pw, ph);
     }
     const bool wantSensor = previewTooSmall || (isIndependent
-        ? (G::useRaw || forceSensorDecode)
-        : (G::operationMode == G::OperationMode::Develop && G::useRaw));
+        ? (useRawAtStart || forceSensorDecode)
+        : (modeDevelop && useRawAtStart));
     if (wantSensor) {
         if (std::unique_ptr<RawFormat> rawFormat = RawFormat::Create(ext)) {
             /* Reuse an already-decoded clean base (e.g. one MW::ensureRawDenoise
@@ -697,10 +722,11 @@ bool ImageDecoder::load()
     with a zero offset, and the failure latches.
 
     So this is the last chance to find the geometry, and if it cannot be found the decode
-    must NOT be attempted. Undefined is deliberate: okToDecode treats Undefined, Abort and
-    InstanceClash as transient and keeps the row retry-eligible, which is the honest state
-    -- nothing about the FILE has been shown to be wrong, only that this attempt was made
-    before its geometry was known.
+    must NOT be attempted. The status is NoGeometry, which is transient: nothing about the
+    FILE has been shown to be wrong, only that this attempt was made before its geometry
+    was known. ImageCache keeps the row queued but defers it (it was Undefined, retried
+    at once, and ten quick retries reached "Max attempts reached"); the idle backstop
+    tries it again later, and its attempt is given back (Documentation 4.4.10).
 */
     if (metadata->hasJpg.contains(ext) && offsetFull == 0) {
         if (!isIndependent && !haveGeoMeta && dm && sfRow >= 0)
@@ -712,7 +738,7 @@ bool ImageDecoder::load()
         if (offsetFull == 0) {
             errMsg = "No embedded jpg offset.";
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
-            status = Status::Undefined;     // transient: retry when the geometry is known
+            status = Status::NoGeometry;    // transient: ImageCache defers the row
             imFile.close();
             return false;
         }
@@ -1037,7 +1063,6 @@ void ImageDecoder::setIdle()
     QMutexLocker lock(&mutex);
     if (idle) return;
     idle = true;
-    idleCondition.wakeAll();  // notify waiters
 }
 
 void ImageDecoder::setBusy()
@@ -1130,7 +1155,7 @@ void ImageDecoder::applyDevelop()
     if (isLog || G::isLogger) G::log("ImageDecoder::applyDevelop", "sfRow = " + QString::number(sfRow));
     /* Preview mode shows the as-shot image WITHOUT the saved develop recipe (fast review). Only the
        browse/loupe decode is gated on mode; independent decodes (focus stack) still develop. */
-    if (!isIndependent && G::operationMode != G::OperationMode::Develop) return;
+    if (!isIndependent && !modeDevelop) return;
     if (developApplied || image.isNull()) return;
 
     /* Develop wants the WorkingImage even for an identity recipe (the first slider tick,
@@ -1241,6 +1266,7 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
     sfRow = -1;
     decodeProgress = progress;      // forwarded to the RAW demosaic by load()
     if (render) rawRender = *render; else rawRender.reset();
+    captureModeSettings();
 
     if (load()) {
         if (metadata->rotateFormats.contains(ext)) rotate();

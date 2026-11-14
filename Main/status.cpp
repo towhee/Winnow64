@@ -465,7 +465,11 @@ void MW::updateProgressBarWidth()
         int availableSpace = availableSpaceForProgressBar();
         if (availableSpace < cacheBarProgressWidth) cacheBarProgressWidth = availableSpace;
         progress->setContainerWidth(cacheBarProgressWidth);
-        imageCache->updateStatus(ImageCache::StatusAction::All, "MW::updateProgressBarWidth");
+        // queued: updateStatus reads the target range, ImageCache thread state
+        QMetaObject::invokeMethod(imageCache, [this] {
+            imageCache->updateStatus(ImageCache::StatusAction::All,
+                                     "MW::updateProgressBarWidth");
+        }, Qt::QueuedConnection);
     }
 }
 
@@ -558,7 +562,7 @@ void MW::updateImageCachingThreadRunStatus(bool isRunning, bool showCacheLabel)
     else {
         if (G::isTest) {
             int ms = testTime.elapsed();
-            int n = icd->imCache.count();
+            int n = icd->count();
             if (n)
             qDebug() << "MW::updateImageCachingThreadRunStatus"
                     << "Total time to fill cache =" << ms
@@ -976,9 +980,6 @@ void MW::setPreviewSource(G::PreviewSource source)
     thumbView->viewport()->update();
     gridView->viewport()->update();
 
-    // let ImageView know that the image changed
-    imageView->currentImageHasChanged = true;
-
     // reload image cache
     emit imageCacheColorManageChange();
 }
@@ -1020,9 +1021,6 @@ void MW::toggleUseRaw(Tog n, bool reloadCache)
        updates each row's cached flag as it goes. */
     thumbView->viewport()->update();
     gridView->viewport()->update();
-
-    // let ImageView know that the image changed
-    imageView->currentImageHasChanged = true;
 
     // reload image cache
     if (reloadCache) emit imageCacheColorManageChange();
