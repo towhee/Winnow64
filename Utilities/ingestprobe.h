@@ -62,7 +62,7 @@ public:
     enum Loupe { Unset, Cached, Miss, Interim, Video, NoView };
 
     /* ---- selection path (GUI thread) ---- */
-    void BeginSelection(int sfRow, const QString &fPath);
+    void BeginSelection(int sfRow, const QString &fPath, const QString &src = QString());
     void NoteLoupe(Loupe outcome);
     void MarkSelection(const char *phase);
     void EndSelection();
@@ -149,7 +149,9 @@ private:
         QString name;               // file name only; the path is in the buffer key
         QString path;
         Loupe  loupe = Unset;
-        qint64 repairMs = -1;       // Miss only: -1 not yet, -2 abandoned, else the wait
+        qint64 repairMs = -1;       // Miss only: -1 not yet, -2 abandoned, -3 a re-selection
+                                    // of a still-blank image (the same wait), else the wait
+        QString src;                // who selected (fileSelectionChange's src)
         QString phases;             // "loadImage=12.4 cachePos=3.1"
     };
 

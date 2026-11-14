@@ -189,6 +189,9 @@ public:
        index change made after it was written (Main/selftestpark.cpp, ctest
        library_snapshot). */
     void selfTestLibrarySnapshot(const QString &folder);
+    /* WINNOW_SELFTEST_ROTATE=1: rotating in the Library leaves the catalog current, so
+       ScrollVerify finds nothing stale (Main/selftestpark.cpp, ctest rotate_stamp). */
+    void selfTestRotateStamp(const QString &folder);
 
     // End-to-end metadata read used by the metadata test layer (tests/). Reads
     // filePath through the full Metadata pipeline and exits 0 if make/model and
@@ -2293,6 +2296,7 @@ private:
     QAction *diagnosticsXMPAction;
     QAction *diagnosticsMetadataCacheAction;
     QAction *diagnosticsImageCacheAction;
+    QAction *diagnosticsPipelineSyncAction;
     QAction *diagnosticsMemoryAction;
     QAction *diagnosticsDataModelAction;
     QAction *diagnosticsDataModelAllRowsAction;
@@ -3362,7 +3366,7 @@ private:
     int staleRecommitAttempts = 0;
     /*  Master path -> ms since epoch of Winnow's last write to it or its sidecar
         (restampCatalogAfterOwnWrite). refreshStaleRows treats a stale verdict within
-        kOwnWriteGraceMs of one as ours, and [StaleProbe] reports it. */
+        kOwnWriteGraceMs of one as ours. */
     QHash<QString, qint64> ownSidecarWriteMs;
     static constexpr qint64 kOwnWriteGraceMs = 5000;
     /*  Paths MW::checkBlankRows has already reported this session (once each). */
@@ -3930,6 +3934,7 @@ private:
     void diagnosticsCurrent();
     QString diagnostics();
     QString developDiagnostics();
+    QString pipelineSyncCounters();   // Help > Diagnostics > Pipeline sync counters
     /*  The keyword system at all four levels -- files, datamodel, catalog links
         and the authored vocabulary -- with the comparisons between them that
         every keyword fault so far has been. See the implementation. */
@@ -3953,6 +3958,7 @@ private:
     void diagnosticsXMP();
     void diagnosticsMetadataCache();
     void diagnosticsImageCache();
+    void diagnosticsPipelineSync();
     void diagnosticsMemory();
     void diagnosticsDataModel();
     void diagnosticsDataModelAllRows();

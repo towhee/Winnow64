@@ -1,4 +1,5 @@
 #include "Cache/imagecache.h"
+#include "Cache/pipelinecounters.h"
 #ifdef Q_OS_LINUX
 #include "Utilities/linux.h"
 #endif
@@ -1646,7 +1647,7 @@ QString ImageCache::reportLifetimeCounters()
         << Utilities::fitNumber(trimmedCount.load(),      12) << "\n";
     rpt << "  late decodes (raced)   : "
         << Utilities::fitNumber(lateDecodeCount.load(),   12) << "\n";
-    rpt << "  hit attempt cap        : "
+    rpt << "  images at attempt cap  : "
         << Utilities::fitNumber(attemptCapHitCount.load(),12) << "\n";
     rpt << "\n";
     return reportString;
@@ -2336,6 +2337,7 @@ void ImageCache::initialize()
     trimmedCount.store(0, std::memory_order_relaxed);
     lateDecodeCount.store(0, std::memory_order_relaxed);
     attemptCapHitCount.store(0, std::memory_order_relaxed);
+    capHitPaths.clear();
 
     updateStatus(StatusAction::Clear, "ImageCache::initializeImageCache");
 
@@ -2955,7 +2957,13 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
     int attempts = stateOf(fPath).attempts;
     if (attempts >= maxAttemptsToCacheImage) {
         msg = "Max attempts reached";
-        attemptCapHitCount.fetch_add(1, std::memory_order_relaxed);
+        /*  Once per image per load: okToDecode looks at a capped row on every
+            dispatch, so counting calls measured how often it was looked at. */
+        if (!capHitPaths.contains(fPath)) {
+            capHitPaths.insert(fPath);
+            attemptCapHitCount.fetch_add(1, std::memory_order_relaxed);
+            PipelineCounters::attemptCapImages.fetch_add(1, std::memory_order_relaxed);
+        }
         return false;
     }
 
@@ -3366,6 +3374,7 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus, const QString &don
             that asked for it was rebuilt for the new instance. */
         if (G::isIngestProbe && !r.instanceCurrent)
             IngestProbe::Instance().NoteDiscardedDecode();
+        if (!r.instanceCurrent) PipelineCounters::noteClash("ImageCache::okToCache");
         return false;
 
     case Verdict::Superseded: {
@@ -3381,7 +3390,10 @@ bool ImageCache::okToCache(int id, int sfRow, int doneStatus, const QString &don
 
     case Verdict::Accept:
         // trimmed from toCache mid-decode: the image is good, accept it, but count it
-        if (!toCache.contains(sfRow)) lateDecodeCount.fetch_add(1, std::memory_order_relaxed);
+        if (!toCache.contains(sfRow)) {
+            lateDecodeCount.fetch_add(1, std::memory_order_relaxed);
+            PipelineCounters::lateDecodes.fetch_add(1, std::memory_order_relaxed);
+        }
         setStateStatus(key, doneStatus);
         emit setValKey(key, G::DecoderReturnStatusColumn, doneStatus, instance, src);
         return true;

@@ -500,9 +500,13 @@ void MW::runSoakTest(const QStringList &folders, int durationMs,
         if (remainingSec < 0.1) break;
         if (secPerFolder > remainingSec) secPerFolder = remainingSec;
 
-        if (fsTree->select(path))
-            folderSelectionChange(path, G::FolderOp::Add, /*resetDataModel*/true,
-                                  /*recurse*/false);
+        /*  FSTree::select IS the load: it emits folderSelectionChange itself, as a click
+            does. This also called MW::folderSelectionChange when it returned true, so every
+            bounce queued two loads of one folder; the second found the folder already in
+            the model, its empty pump emitted folderChange again, and MW::folderChanged ran
+            twice -- two MetaRead initializes, two first-image selections, two image
+            cache initializes. The soak was measuring a load the app never does. */
+        fsTree->select(path);
         waitUntilMetadataLoaded(30000, "runSoakTest");
         if (!G::isStressTest) break;
 
@@ -537,6 +541,9 @@ void MW::runSoakTest(const QStringList &folders, int durationMs,
         (long long)bounceCount, (long long)total.elapsed(),
         (unsigned long long)G::processFootprintMB(),
         threadsBaseline, threadsMax, threadsGrowth);
+    /*  The pipeline's self-repairs over the soak (Help > Diagnostics > Pipeline sync
+        counters): a soak is the one run long enough for a slow climb to show. */
+    fprintf(stderr, "%s\n", pipelineSyncCounters().toLocal8Bit().constData());
     fflush(stderr);
 
     if (qEnvironmentVariableIntValue("WINNOW_SOAK_FAST_EXIT") == 1) {

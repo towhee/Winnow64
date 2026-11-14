@@ -2501,6 +2501,13 @@ void MW::createHelpActions()
     addAction(diagnosticsImageCacheAction);
     connect(diagnosticsImageCacheAction, &QAction::triggered, this, &MW::diagnosticsImageCache);
 
+    diagnosticsPipelineSyncAction = new QAction(tr("Pipeline sync counters"), this);
+    diagnosticsPipelineSyncAction->setObjectName("diagnosticsPipelineSync");
+    diagnosticsPipelineSyncAction->setShortcutVisibleInContextMenu(true);
+    addAction(diagnosticsPipelineSyncAction);
+    connect(diagnosticsPipelineSyncAction, &QAction::triggered,
+            this, &MW::diagnosticsPipelineSync);
+
     diagnosticsMemoryAction = new QAction(tr("Memory diagnostics"), this);
     diagnosticsMemoryAction->setObjectName("diagnosticsMemory");
     diagnosticsMemoryAction->setShortcutVisibleInContextMenu(true);
@@ -3308,6 +3315,7 @@ void MW::createHelpMenu()
     helpDiagnosticsMenu->addAction(diagnosticsBlankRowsAction);
     helpDiagnosticsMenu->addAction(diagnosticsMetadataCacheAction);
     helpDiagnosticsMenu->addAction(diagnosticsImageCacheAction);
+    helpDiagnosticsMenu->addAction(diagnosticsPipelineSyncAction);
     helpDiagnosticsMenu->addAction(diagnosticsMemoryAction);
     helpDiagnosticsMenu->addAction(diagnosticsFiltersAction);
     helpDiagnosticsMenu->addAction(diagnosticsKeywordsAction);

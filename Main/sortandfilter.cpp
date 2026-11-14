@@ -510,7 +510,7 @@ void MW::filterChange(QString source)
         dm->flushProxySnapshot();
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
-                                  Q_ARG(bool, false),
+                                  Q_ARG(int, MetaRead::Scroll),
                                   Q_ARG(QString, QString("MW::filterChange")));
     }
     phase("dispatch");

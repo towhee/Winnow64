@@ -77,7 +77,7 @@ void IngestProbe::Reset()
 
 /* ------------------------------------------------------------------ selection path */
 
-void IngestProbe::BeginSelection(int sfRow, const QString &fPath)
+void IngestProbe::BeginSelection(int sfRow, const QString &fPath, const QString &src)
 {
     if (!armed.load(std::memory_order_relaxed)) return;
 
@@ -94,6 +94,7 @@ void IngestProbe::BeginSelection(int sfRow, const QString &fPath)
     cur.sfRow = sfRow;
     cur.path = fPath;
     cur.name = QFileInfo(fPath).fileName();
+    cur.src = src;
     curPhases.clear();
     selPhaseNs = 0;
     inSelection = true;
@@ -127,19 +128,49 @@ void IngestProbe::EndSelection()
     /*  A Miss that is still open when the NEXT selection begins is abandoned: the user
         moved on, so whatever arrives later repairs an image nobody is looking at. That is
         the blank-loupe complaint in its worst form, and it is counted separately from a
-        miss that was repaired late. */
-    for (int i : std::as_const(openMisses)) {
-        if (i >= 0 && i < sels.size() && sels[i].repairMs == -1) {
-            sels[i].repairMs = -2;
-            qDebug().noquote() << "[INGEST] loupe NEVER repaired  row =" << sels[i].sfRow
-                               << sels[i].name;
-        }
-    }
-    openMisses.clear();
+        miss that was repaired late.
 
-    if (sels.size() >= maxSels) sels.remove(0, sels.size() - maxSels + 1);
+        UNLESS THE NEXT SELECTION IS THE SAME IMAGE. A re-selection of it (a folder load
+        selects its first image twice, a filter change re-selects the current one) has
+        not moved on: the user is still waiting on the same decode. A re-selection that
+        HITS the cache ends that wait, so the miss is repaired at that moment -- no
+        refreshViewsOnCacheChange follows a hit, so NoteLoupeRepair never would. One that
+        misses again continues it: the original miss stays open, and the re-selection is
+        recorded as a continuation (repairMs -3), not as a second miss. */
+    QList<int> stillOpen;
+    bool continues = false;
+    for (int i : std::as_const(openMisses)) {
+        if (i < 0 || i >= sels.size() || sels[i].repairMs != -1) continue;
+        if (sels[i].path == cur.path) {
+            if (cur.loupe == Cached) {
+                sels[i].repairMs = cur.atMs - sels[i].atMs;
+                qDebug().noquote() << "[INGEST] loupe repaired  row =" << sels[i].sfRow
+                                   << " after" << sels[i].repairMs << "ms"
+                                   << sels[i].name << "(re-selected, cached)";
+            }
+            else {
+                stillOpen << i;
+                if (cur.loupe == Miss) continues = true;
+            }
+            continue;
+        }
+        sels[i].repairMs = -2;
+        qDebug().noquote() << "[INGEST] loupe NEVER repaired  row =" << sels[i].sfRow
+                           << sels[i].name;
+    }
+    if (continues) cur.repairMs = -3;
+
+    /*  Open misses are indices into sels, so they move with the oldest entries dropped. */
+    if (sels.size() >= maxSels) {
+        const int drop = sels.size() - maxSels + 1;
+        sels.remove(0, drop);
+        QList<int> shifted;
+        for (int i : std::as_const(stillOpen)) if (i - drop >= 0) shifted << i - drop;
+        stillOpen = shifted;
+    }
     sels.append(cur);
-    if (cur.loupe == Miss) openMisses.append(sels.size() - 1);
+    if (cur.loupe == Miss && !continues) stillOpen << sels.size() - 1;
+    openMisses = stillOpen;
 
     if (cur.loupe != Cached || cur.guiMs >= kSelNoisyMs) {
         static const char *name[] = {"unset", "cached", "MISS", "interim", "video", "noview"};
@@ -147,6 +178,8 @@ void IngestProbe::EndSelection()
                            << " gap =" << cur.gapMs << "ms"
                            << " gui =" << cur.guiMs << "ms"
                            << " loupe =" << name[cur.loupe]
+                           << (cur.repairMs == -3 ? " (same image, still waiting)" : "")
+                           << " src =" << cur.src
                            << " " << cur.phases;
     }
 }
@@ -362,12 +395,14 @@ QString IngestProbe::Report() const
     int cached = 0, miss = 0, interim = 0, video = 0, noview = 0;
     QList<qint64> repairMs;
     int abandoned = 0;
+    int continued = 0;      // a blank image selected again: the same wait, not a new miss
     for (const SelEvent &e : sels) {
         guiMs << e.guiMs;
         if (e.gapMs >= 0) gapMs << e.gapMs;
         switch (e.loupe) {
         case Cached:  ++cached; break;
-        case Miss:    ++miss;
+        case Miss:    if (e.repairMs == -3) { ++continued; break; }
+                      ++miss;
                       if (e.repairMs >= 0) repairMs << e.repairMs;
                       else if (e.repairMs == -2) ++abandoned;
                       break;
@@ -391,6 +426,7 @@ QString IngestProbe::Report() const
         << (repairMs.isEmpty() ? "" : QString("   %1  ms").arg(MsList(repairMs))) << "\n";
     rpt << "  abandoned (never shown)= " << abandoned << "\n";
     rpt << "  still open             = " << (miss - repairMs.size() - abandoned) << "\n";
+    rpt << "  re-selected still blank= " << continued << "  (same wait, not counted)\n";
     rpt << "loupe interim (develop)  = " << interim << "\n";
     rpt << "video                    = " << video << "\n";
     rpt << "no image view            = " << noview << "\n";

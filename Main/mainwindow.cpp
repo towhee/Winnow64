@@ -20,6 +20,7 @@
 #include "Utilities/titlebar.h"
 #include "Utilities/panelbuttonbar.h"
 #include "Cache/catalog.h"
+#include "Cache/pipelinecounters.h"
 #include "Metadata/indexmetadata.h"
 #include "Cache/cachedb.h"
 #include "Main/catalogenumerate.h"
@@ -721,21 +722,36 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         fflush(stderr);
     }
 
-    /*  WINNOW_SELFTEST_MUTATION=1 loads a TEMPORARY COPY of the folder, because the
-        mutation test creates and deletes files (see Main/selftestmutation.cpp). The copy
-        is removed at the end of the run; _Exit skips QTemporaryDir's destructor. */
+    /*  WINNOW_SELFTEST_MUTATION=1 and WINNOW_SELFTEST_ROTATE=1 load a TEMPORARY COPY of
+        the folder, because they write files: the mutation test creates and deletes them
+        (Main/selftestmutation.cpp), the rotation test writes orientation into the image
+        and its sidecar (Main/selftestpark.cpp). The copy is removed at the end of the
+        run; _Exit skips QTemporaryDir's destructor. */
     const bool mutation = qEnvironmentVariableIntValue("WINNOW_SELFTEST_MUTATION") == 1;
+    const bool rotateStamp = qEnvironmentVariableIntValue("WINNOW_SELFTEST_ROTATE") == 1;
     QString loadPath = folderPath;
-    if (mutation) {
-        loadPath = QDir::tempPath() + "/WinnowSelfTestMutation_" +
-                   QString::number(QCoreApplication::applicationPid());
+    if (mutation || rotateStamp) {
+        /*  pid AND time: the test-mode catalog outlives the run, and a reused pid would
+            hand a new run an earlier run's catalog rows for the same path. */
+        loadPath = QDir::tempPath() +
+                   (mutation ? "/WinnowSelfTestMutation_" : "/WinnowSelfTestRotate_") +
+                   QString::number(QCoreApplication::applicationPid()) + "_" +
+                   QString::number(QDateTime::currentMSecsSinceEpoch());
         QDir().mkpath(loadPath);
         const QDir src(folderPath);
         for (const QString &n : src.entryList(QDir::Files))
             QFile::copy(src.filePath(n), QDir(loadPath).filePath(n));
-        qputenv("WINNOW_SELFTEST_MUTATION_SRC", folderPath.toLocal8Bit());
-        fprintf(stderr, "SELFTEST: mutation test on copy %s\n",
+        fprintf(stderr, "SELFTEST: %s test on copy %s\n", mutation ? "mutation" : "rotate",
                 loadPath.toLocal8Bit().constData());
+    }
+    if (rotateStamp) {
+        QTimer::singleShot(settleMs / 4, this, [this, loadPath]() {
+            QThreadPool::globalInstance()->waitForDone(30000);   // let the capture land
+            selfTestRotateStamp(loadPath);
+        });
+    }
+    if (mutation) {
+        qputenv("WINNOW_SELFTEST_MUTATION_SRC", folderPath.toLocal8Bit());
         QTimer::singleShot(settleMs / 2, this, [this, loadPath]() {
             QThreadPool::globalInstance()->waitForDone(30000);
             selfTestModelMutation(loadPath);
@@ -5525,38 +5541,6 @@ void MW::refreshStaleRows(const QStringList &paths)
     if (G::isLogger) G::log("MW::refreshStaleRows", QString::number(paths.size()));
     if (paths.isEmpty() || !dm) return;
 
-    /*  [StaleProbe] WHAT MOVED, AND WAS IT US. One session-issue line per stale row: the
-        source file or only its sidecar, and how long since Winnow last wrote that sidecar
-        itself (restampCatalogAfterOwnWrite). A sidecar-only verdict soon after our
-        own write means the restamp missed (or lost the race to the verify pass). One
-        primary-key lookup per path, and a pass reports only the few rows it found. */
-    {
-        const QHash<QString, CatalogRow> held = Catalog::instance().rowsForPaths(paths);
-        const qint64 now = QDateTime::currentMSecsSinceEpoch();
-        for (const QString &fPath : paths) {
-            const CatalogRow cand = IndexMetadata::candidate(QFileInfo(fPath), metadata);
-            const auto it = held.constFind(fPath);
-            QString what = "not in catalog";
-            if (it != held.cend()) {
-                const bool src = it->srcSize != cand.srcSize
-                                 || it->srcMtime != cand.srcMtime;
-                const bool side = it->sidecarMtime != cand.sidecarMtime;
-                what = src && side ? "source and sidecar changed"
-                     : src         ? "source changed"
-                     : side        ? QString("sidecar only (catalog %1, file %2)")
-                                         .arg(it->sidecarMtime).arg(cand.sidecarMtime)
-                                   : "stamps now match";
-            }
-            const auto own = ownSidecarWriteMs.constFind(fPath);
-            const QString by = own == ownSidecarWriteMs.cend()
-                ? "no Winnow write this session"
-                : QString("Winnow wrote it %1 s ago").arg((now - *own) / 1000.0, 0, 'f', 1);
-            G::issue(own == ownSidecarWriteMs.cend() ? "Comment" : "Warning",
-                     "[StaleProbe] stale: " + what + "; " + by,
-                     "MW::refreshStaleRows", -1, fPath);
-        }
-    }
-
     /*  OURS, NOT AN OUTSIDE EDIT (R12, Documentation 4.4.17). A verdict on a file Winnow
         wrote moments ago is almost always that write racing its own restamp (the verify
         pass stat'd between the write and the commit). Restamp it again rather than
@@ -6512,7 +6496,8 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         anything, so the whole keypress is inside it. Closed by ~SelectPhaseProbe. */
     if (G::isIngestProbe) {
         IngestProbe::Instance().BeginSelection(
-            current.row(), dm->sf->index(current.row(), 0).data(G::KeyRole).toString());
+            current.row(), dm->sf->index(current.row(), 0).data(G::KeyRole).toString(),
+            src);
     }
 
     /* debug
@@ -7730,7 +7715,7 @@ void MW::reloadIconChunk()
     dm->flushProxySnapshot();
     QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                               Q_ARG(int, dm->currentSfRow),
-                              Q_ARG(bool, false),
+                              Q_ARG(int, MetaRead::Scroll),
                               Q_ARG(QString, QString("MW::reloadIconChunk"))
                               );
 }
@@ -8112,7 +8097,7 @@ void MW::folderChanged(bool aborted)
         dm->flushProxySnapshot();
         QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                   Q_ARG(int, startRow),
-                                  Q_ARG(bool, true),
+                                  Q_ARG(int, MetaRead::OpenFolder),
                                   Q_ARG(QString, fun)
                                   );
     }
@@ -8202,7 +8187,9 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
             dm->flushProxySnapshot();
             QMetaObject::invokeMethod(metaRead, "setStartRow", Qt::QueuedConnection,
                                       Q_ARG(int, sfRow),
-                                      Q_ARG(bool, isFileSelectionChange),
+                                      Q_ARG(int, isFileSelectionChange
+                                                 ? MetaRead::Selected
+                                                 : MetaRead::Scroll),
                                       Q_ARG(QString, src)
                                       );
         }
@@ -8216,7 +8203,9 @@ void MW::updateChange(int sfRow, bool isFileSelectionChange, QString src)
        results in an approx 2 second delay showing the new folder in the thumbView
        and the first image in the loupe view.  Also must check if first file is a video*/
     if (isFileSelectionChange) {
-        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true, "MW::updateChange");
+        // src carries the caller through (ingest probe, logs): it is never branched on
+        fileSelectionChange(dm->sf->index(sfRow,0), QModelIndex(), true,
+                            "MW::updateChange from " + src);
 
         /*  RE-MEASURE THE VISIBLE WINDOW, because navigating by keyboard never did.
 
@@ -8610,19 +8599,23 @@ void MW::restampCatalogAfterOwnWrite(const QString &fPath)
     }
     ownSidecarWriteMs.insert(master, QDateTime::currentMSecsSinceEpoch());
 
-    QThreadPool::globalInstance()->start([r]{
-        /*  [StaleProbe] Did this write move the stamp the catalog held? If so, before
-            this commit existed the row would have been reported stale. Once per
-            session. */
-        const QHash<QString, CatalogRow> held = Catalog::instance().rowsForPaths({r.path});
-        const auto it = held.constFind(r.path);
-        if (it != held.cend() && (it->sidecarMtime != r.sidecarMtime
-                                  || it->srcSize != r.srcSize
-                                  || it->srcMtime != r.srcMtime))
-            G::issueDedup("Comment",
-                          "[StaleProbe] Winnow's own write moved the catalog's stamp; "
-                          "restamped",
-                          "MW::restampCatalogAfterOwnWrite", -1, r.path);
+    QThreadPool::globalInstance()->start([r]() mutable {
+        /*  THE LAST COMMIT MUST CARRY THE LAST STAT. Two restamps of one image are often
+            in flight together (a rotation's Develop invalidation, then its orientation
+            write), and the pool may commit them in either order: the one stat'd BEFORE
+            the write could land last and leave the catalog stale, which ScrollVerify
+            then re-reads as an outside edit (found by ctest rotate_stamp). So the stamps
+            are taken again here, and stat and commit run under one lock: whichever
+            commits last also stat'd last. */
+        static QMutex restampOrder;
+        QMutexLocker order(&restampOrder);
+        const QFileInfo side(FileOps::existingSidecar(r.path));
+        r.sidecarMtime = side.exists() ? side.lastModified().toSecsSinceEpoch() : 0;
+        const QFileInfo file(r.path);
+        if (file.exists()) {
+            r.srcSize = file.size();
+            r.srcMtime = file.lastModified().toSecsSinceEpoch();
+        }
         Catalog::instance().commit({r});
     });
 }
@@ -15774,6 +15767,7 @@ void MW::loupeWatchdog()
     const bool interim = imageView->shownKind() == LoupeShown::Interim;
     if (icd->contains(k)) {
         if (G::operationMode == G::OperationMode::Develop && interim) { done(); return; }
+        PipelineCounters::watchdogRepaints.fetch_add(1, std::memory_order_relaxed);
         G::issueDedup("Warning", "Loupe repainted by the watchdog: the image was "
                       "cached but not shown", "MW::loupeWatchdog", dm->currentSfRow, k);
         refreshViewsOnCacheChange(k, true, "MW::loupeWatchdog");
@@ -15783,6 +15777,7 @@ void MW::loupeWatchdog()
 
     if (loupeWatchTries >= kLoupeWatchMaxTries) {
         if (!interim) {
+            PipelineCounters::watchdogGaveUp.fetch_add(1, std::memory_order_relaxed);
             const int dmRow = dm->rowFromKey(k);
             auto col = [&](int c) {
                 return dmRow < 0 ? QString("?") : dm->index(dmRow, c).data().toString();
@@ -15800,6 +15795,7 @@ void MW::loupeWatchdog()
         return;
     }
     ++loupeWatchTries;
+    PipelineCounters::watchdogReposts.fetch_add(1, std::memory_order_relaxed);
     emit setImageCachePosition(k, "MW::loupeWatchdog");
     loupeWatchTimer->start(kLoupeWatchMs);
 }

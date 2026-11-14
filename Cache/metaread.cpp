@@ -299,7 +299,7 @@ QString MetaRead::rowStateText(int dmRow, int sfRow)
     return txt;
 }
 
-void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
+void MetaRead::setStartRow(int sfRow, int reason, QString src)
 {
 /*
     Must use QMetaObject::invokeMethod when calling this function.  Invoked by
@@ -313,13 +313,12 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
         QString running;
         metaReadThread.isRunning() ? running = "true" : running = "false";
         QString s = "row = " + QString::number(sfRow) +
-                    " fileSelectionChanged = " + QVariant(fileSelectionChanged).toString() +
+                    " reason = " + QString::number(reason) +
                     " src = " + src + " isRunning = " + running;
         G::log(fun, s);
     }
 
-    // could be called by a scroll event, then no file selection change
-    this->fileSelectionChanged = fileSelectionChanged;
+    startReason = reason;
 
     if (isDebug)
     {
@@ -328,7 +327,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
             << "startRow =" << sfRow
             << "sfRowCount =" << sfRowCount
             << "imageCacheTriggered =" << imageCacheTriggered
-            << "fileSelectionChanged =" << fileSelectionChanged
+            << "reason =" << reason
             << "G::allMetadataAttempted =" << G::allMetadataAttempted
             << "G::iconChunkLoaded =" << G::iconChunkLoaded
             << "src =" << src
@@ -353,10 +352,19 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
     sfRowCount = rowCountSf();
     lastRow = sfRowCount - 1;
     imageCacheTriggered = false;
-    /* Arm on a selection call, but NEVER disarm on a scroll: a scroll's setStartRow
-       arrives with fileSelectionChanged = false while the folder's own start row is
-       still being read, and clearing here is what left the loupe blank. */
-    if (fileSelectionChanged) pendingSelectionDmRow = dmRowOf(sfRow);
+    /*  THE OWED FIRST SELECTION (see pendingSelectionDmRow). Armed only by the folder's
+        opening call; NEVER disarmed by a scroll, which arrives while the start row is
+        still being read -- clearing then is what left the loupe blank. A selection
+        meets it. Arming on a selection too (the old bool) meant MetaRead's own
+        selectRow re-armed it through MW::updateChange, and the next reader to return
+        row 0 -- or the backstop's read after it -- selected it again: two selections
+        of the first image on every folder load, and a re-select of whatever the user
+        clicked during a load once its reader came back. */
+    if (reason == OpenFolder) pendingSelectionDmRow = dmRowOf(sfRow);
+    else if (reason == Selected) {
+        pendingSelectionDmRow = -1;
+        firstSelectionPending = false;
+    }
     aIsDone = false;
     bIsDone = false;
     if (startRow == 0) bIsDone = true;
@@ -450,7 +458,7 @@ void MetaRead::setStartRow(int sfRow, bool fileSelectionChanged, QString src)
              << "firstIconRow =" << firstIconRow
              << "lastIconRow =" << lastIconRow
              << "iconChunkSize =" << dm->iconChunkSize
-             << "fileSelectionChanged =" << fileSelectionChanged
+             << "reason =" << reason
              << "G::allMetadataAttempted =" << G::allMetadataAttempted
              << "G::iconChunkLoaded =" << G::iconChunkLoaded
              << "isRunning =" << metaReadThread.isRunning()
@@ -845,7 +853,7 @@ QString MetaRead::diagnostics()
     kv("a (ahead)",                  QString::number(a));
     kv("b (behind)",                 QString::number(b));
     kv("isAhead",                    QVariant(isAhead).toString());
-    kv("fileSelectionChanged",       QVariant(fileSelectionChanged).toString());
+    kv("startReason",                QString::number(startReason));
     kv("isNewStartRowWhileDisp.",    QVariant(isNewStartRowWhileDispatching).toString());
     kv("imageCacheTriggered",        QVariant(imageCacheTriggered).toString());
     kv("pendingSelectionDmRow",      QVariant(pendingSelectionDmRow).toString());
@@ -1679,7 +1687,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
         // Selection::setCurrentIndex routes through MW::updateChange which
         // in turn invokes MW::fileSelectionChange, so do not emit
         // fileSelectionChange here as well.
-        emit selectRow(sfRow, dmRow, clearSelection);
+        emit selectRow(sfRow, dmRow, clearSelection, instance);
     }
 
     if (isDebug)  // returning reader, row has been processed by reader
@@ -2308,7 +2316,7 @@ void MetaRead::rearmUnattempted(const QString &src)
                                 "reading them again").arg(n), src);
     const int row = startRow;
     QMetaObject::invokeMethod(this, [this, row] {
-        if (!abort) setStartRow(row, false, "MetaRead::rearmUnattempted");
+        if (!abort) setStartRow(row, Scroll, "MetaRead::rearmUnattempted");
     }, Qt::QueuedConnection);
 }
 
@@ -2377,7 +2385,7 @@ void MetaRead::allFinished(QString src)
             if (G::isLogger || G::isFlowLogger)
                 G::log(fun, "No reader triggered the first selection; selecting row " +
                             QString::number(sfRow));
-            emit selectRow(sfRow, selDmRow, true);
+            emit selectRow(sfRow, selDmRow, true, instance);
         }
     }
 

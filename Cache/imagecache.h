@@ -432,7 +432,8 @@ private:
     std::atomic<quint64> cachedCount{0};            // successful icd->insert in cacheImage
     std::atomic<quint64> trimmedCount{0};           // keys removed in trimOutsideTargetRange
     std::atomic<quint64> lateDecodeCount{0};        // okToCache: decode finished after row trimmed from toCache
-    std::atomic<quint64> attemptCapHitCount{0};     // okToDecode: "Max attempts reached"
+    std::atomic<quint64> attemptCapHitCount{0};     // okToDecode: images at "Max attempts reached"
+    QSet<QString> capHitPaths;                      // ...each counted once per load (cache thread)
 
     // cache size ceiling with default start amount (MB) to prevent runaway growth
     qint64 maxMBCeiling = G::availableMemoryMB * 0.9;

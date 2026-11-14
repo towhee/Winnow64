@@ -87,6 +87,20 @@ public:
 
     void test();
 
+public:
+    /*  WHY setStartRow WAS CALLED, which decides what happens to the folder's owed first
+        selection (pendingSelectionDmRow). An int so it travels by name through
+        QMetaObject::invokeMethod (Q_ARG(int, MetaRead::Selected)).
+        Scroll      the range moved (scroll, icon chunk, filter, re-arm): owed selection
+                    left as it is.
+        Selected    a selection has ALREADY been made (MW::updateChange runs
+                    fileSelectionChange itself): the owed selection is met and cleared.
+                    It used to re-arm instead, so the next reader to return that row
+                    selected it a second time -- twice per folder load.
+        OpenFolder  MW::folderChanged's opening call: select this row when its reader
+                    returns (or from the allFinished backstop). */
+    enum StartReason { Scroll = 0, Selected = 1, OpenFolder = 2 };
+
 signals:
     void stopped(QString src);
     void runStatus(bool/*isRunning*/, bool/*showCacheLabel*/, bool /*success*/, QString/*calledBy*/);
@@ -97,8 +111,12 @@ signals:
         AND THE DATAMODEL ROW (-1 if unknown), which the connect site prefers: sfRow
         comes from this thread's proxy snapshot, and a sort on the GUI thread before
         the signal lands (a restored Library's, at load end) made it name another
-        image. The dm row names the image; the GUI maps it through the live proxy. */
-    void selectRow(int sfRow, int dmRow, bool clearSelection);
+        image. The dm row names the image; the GUI maps it through the live proxy.
+        AND THE INSTANCE it was owed under: two folder loads in quick succession each
+        owe a selection, and the first load's arrives after the second has replaced
+        the model, where its dm row names some other image. The connect site drops it
+        (counted as an instance clash, Documentation 4.4.19). */
+    void selectRow(int sfRow, int dmRow, bool clearSelection, int instance);
     void updateProgressInFilter(int progress);
     void updateProgressInStatusbar(int progress, int total, QColor);
     // void updateProgressInStatusbar(int progress, int total, QColor darkRed);
@@ -134,7 +152,7 @@ public slots:
     void initialize(QString src = "", bool owesSelection = true);
     void dispatchReaders();
     void dispatch(int id, bool isReturning);
-    void setStartRow(int row, bool fileSelectionChanged, QString src = "");
+    void setStartRow(int row, int reason, QString src = "");
     /* Icons already loaded have been DISCARDED by something outside the loader (the
        Original / Developed switch is the one case -- see MW::setPreviewSource), so the
        next setStartRow must re-arm them. Without this they are never re-read: see the
@@ -273,7 +291,7 @@ private:
     QThread *frameDecoderThread;
     ImageCache *imageCache;
     Thumb *thumb;                   // decoder requires this
-    bool fileSelectionChanged;
+    int startReason = Scroll;      // last setStartRow's StartReason (diagnostics)
     // int instance;                   // new instance for each folder to detect conflict
     Reader *r;                      // terse ptr for current decoder
     int sfRowCount;
@@ -288,14 +306,15 @@ private:
         that promise.
 
         MW::folderChanged does not select anything itself: it calls setStartRow with
-        fileSelectionChanged = true and relies on the reader for that row returning to
-        emit selectRow, which is what eventually reaches MW::fileSelectionChange and
-        paints the loupe. Every other setStartRow caller is a scroll
-        (MW::thumbHasScrolled and friends), which passes false -- and the thumb strip
-        scrolls while the folder is still loading, because icons are arriving into it.
-        A scroll landing before the start row's reader returned used to overwrite
-        startRow and clear fileSelectionChanged, so the trigger never fired and the
-        loupe kept showing nothing until the user clicked a thumbnail.
+        OpenFolder and relies on the reader for that row returning to emit selectRow,
+        which is what eventually reaches MW::fileSelectionChange and paints the loupe.
+        A Scroll call (MW::thumbHasScrolled and friends) leaves the promise alone --
+        and the thumb strip scrolls while the folder is still loading, because icons
+        are arriving into it. A scroll landing before the start row's reader returned
+        used to overwrite startRow and clear the trigger, so it never fired and the
+        loupe kept showing nothing until the user clicked a thumbnail. A Selected call
+        (any selection, including the one selectRow itself causes) keeps the promise:
+        the image is chosen, so nothing more is owed and both flags are cleared.
 
         pendingSelectionDmRow is the DATAMODEL row -- the image -- still owed a
         selection. A scroll does not touch it, so the bootstrap survives one. It was a

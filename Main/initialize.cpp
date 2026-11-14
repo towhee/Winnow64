@@ -14,6 +14,7 @@
 #include "Main/keywordsuggester.h"
 #include "Datamodel/keywordauditstore.h"
 #include "Cache/pathkey.h"
+#include "Cache/pipelinecounters.h"
 #include "Views/libtree.h"
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/applerawdecode.h"
@@ -476,7 +477,13 @@ void MW::createMetaRead()
         connection was built on metaReadThread and could name a different row by
         the time it arrived. */
     connect(metaRead, &MetaRead::selectRow, sel,
-            [this](int sfRow, int dmRow, bool clearSelection) {
+            [this](int sfRow, int dmRow, bool clearSelection, int instance) {
+        /*  Owed by a load the model has since left (see the signal): its rows are not
+            this model's rows. The current load owes its own selection. */
+        if (instance != dm->instance) {
+            PipelineCounters::noteClash("MW selectRow (owed by a superseded load)");
+            return;
+        }
         /*  The IMAGE, where it is now: the dm row through the live proxy (see the
             signal). The snapshot's sfRow only when no dm row is known or it is no longer
             in the proxy (filtered out). */

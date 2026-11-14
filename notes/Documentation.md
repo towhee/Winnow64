@@ -135,6 +135,8 @@
     - [4.4.16 MetaRead Re-reads What Was Invalidated; One Owner for "All Attempted"](#4416-metaread-re-reads-what-was-invalidated-one-owner-for-all-attempted)
     - [4.4.17 Winnow's Own Writes Restamp the Catalog](#4417-winnows-own-writes-restamp-the-catalog)
     - [4.4.18 The Image Cache Queue Belongs to One Snapshot](#4418-the-image-cache-queue-belongs-to-one-snapshot)
+    - [4.4.19 Pipeline Sync Counters](#4419-pipeline-sync-counters)
+    - [4.4.20 A Folder Load Selects Its First Image Once](#4420-a-folder-load-selects-its-first-image-once)
   - [4.5 Row Storage](#45-row-storage)
     - [4.5.1 The Field Table (rowfields.h)](#451-the-field-table-rowfieldsh)
     - [4.5.2 RowStore](#452-rowstore)
@@ -937,6 +939,7 @@
     - [22.4.1 Is the Pause Periodic, and in What?](#2241-is-the-pause-periodic-and-in-what)
     - [22.4.2 What Held the Event Loop](#2242-what-held-the-event-loop)
     - [22.4.3 Running It](#2243-running-it)
+    - [22.4.4 Re-Selecting the Image Still Waiting](#2244-re-selecting-the-image-still-waiting)
   - [22.5 Panel Probe](#225-panel-probe)
   - [22.6 Auto-Mask Probe](#226-auto-mask-probe)
 
@@ -2527,12 +2530,9 @@ ImageCache never blocks its thread waiting for something another thread will do 
 
 What it replaced, and why that failed. okToDecode called waitForMetaRead, which emitted waitingForRow (DataModel::imageCacheWaiting recorded the row) and waited 50 ms on a QWaitCondition. Its only waker was a slot connected to DataModel::rowLoaded on the ImageCache object, so it was QUEUED to the very thread that was blocked: every wait ran to its timeout and the row was skipped with "Metadata not loaded". And addMetadataForItem, which emitted rowLoaded, runs its whole body under a QSignalBlocker, so the emit was swallowed whenever the row landed after the wait; the 2026-11-13 morning fix (the slot also dispatched) never ran in that case. The result was a cache idle with work queued: cacheUpToDate = false, the current row alone in toCache with "Metadata not loaded", the model saying MetaLoaded, and a black loupe until the user stepped away and back. The wait itself had two more costs. nextToCache's second pass called it for EVERY queued unloaded row, once per idle decoder, so a dispatch during a folder load could hold the cache thread for decoders x rows x 50 ms, unable to take a returning decoder, a new position or an abort. And a wake that arrived after the deadline made the remaining time negative, which Qt 6 turns into QDeadlineTimer::Forever: a wait that never times out.
 
-Why the row was being re-read at all. Every Develop flush rewrites the image's sidecar (recipe, preview thumbnail, modifydate) and so moves its mtime, one of the catalog's three freshness stamps. Nothing updated the catalog for a MASTER (devPreviewUpdated did it only for a version, through updateCatalogForRow, whose catalogRowFor stats the sidecar only when SidecarColumn is set, so a first edit that CREATED the .xmp still committed 0). ScrollVerify then took Winnow's own write for an outside edit, and refreshStaleRows cleared the row, its icon and its decode after every edit. MW::restampCatalogAfterSidecarWrite now commits the row with the sidecar's new stamp right after the write. It is called from devPreviewUpdated (every Develop write site and the version swap end there) and from the preview builder for an unedited image. The sidecar is stat'd unconditionally, as IndexMetadata::candidate does, and SidecarColumn is set; a version stamps its master. The commit is on the pool, so a verify pass already in flight can still beat it.
+Why the row was being re-read at all. Every Develop flush rewrites the image's sidecar (recipe, preview thumbnail, modifydate) and so moves its mtime, one of the catalog's three freshness stamps. Nothing updated the catalog for a MASTER (devPreviewUpdated did it only for a version, through updateCatalogForRow, whose catalogRowFor stats the sidecar only when SidecarColumn is set, so a first edit that CREATED the .xmp still committed 0). ScrollVerify then took Winnow's own write for an outside edit, and refreshStaleRows cleared the row, its icon and its decode after every edit. MW::restampCatalogAfterSidecarWrite (now restampCatalogAfterOwnWrite, [4.4.17](#4417-winnows-own-writes-restamp-the-catalog)) now commits the row with the sidecar's new stamp right after the write. It is called from devPreviewUpdated (every Develop write site and the version swap end there) and from the preview builder for an unedited image. The sidecar is stat'd unconditionally, as IndexMetadata::candidate does, and SidecarColumn is set; a version stamps its master. The commit is on the pool, so a verify pass already in flight can still beat it.
 
-[StaleProbe] lines in Help > View session issues check this:
-
-- `Develop sidecar write moved the catalog's sidecar stamp; restamped` (Comment, once a session): the write would have made the row stale before this fix. This confirms the cause.
-- `stale: <what>; <who>` from refreshStaleRows, one per stale row: whether the source file or only the sidecar moved, and whether Winnow wrote that sidecar this session. A Warning (Winnow wrote it) with "sidecar only" means the restamp missed or lost the race.
+The [StaleProbe] lines that confirmed this (one per stale verdict, and one when an own write had moved a catalog stamp) were removed on 2026-11-14 once ctest rotate_stamp covered it; see [4.4.17](#4417-winnows-own-writes-restamp-the-catalog).
 
 #### 4.4.11 The Loupe Knows What It Is Showing
 
@@ -2670,7 +2670,9 @@ ScrollVerify checks hydrated (catalog) rows against their file's and sidecar's s
 
 **A verdict moments after our own write is ours.** refreshStaleRows restamps a row instead of re-reading it when Winnow wrote it within the last 5 s (`kOwnWriteGraceMs`): the verify pass stat'd between the write and its commit. The grace counts from the write, not from the restamp, so it cannot renew itself, and a verdict outside it stands. An edit made elsewhere after ours is still re-read.
 
-[StaleProbe] (Help > View session issues) still reports every stale verdict, with whether and when Winnow last wrote the file. The check for this batch: rate, keyword, Develop and rotate images in a Library scope, scroll back over them, and expect no "[StaleProbe] stale" lines.
+**The last commit carries the last stat.** Two restamps of one image are often in flight together (a rotation invalidates Develop, then its orientation write reports back), and the pool may run their commits in either order. The restamp used to stat on the GUI thread and commit later, so the one stat'd BEFORE the write could commit last and leave the catalog stale. The pool task now stats the file and sidecar again and commits under one lock, so whichever commits last also stat'd last (2026-11-14). The model's ByteSize, Modified and SidecarColumn are still set from the GUI-side stat.
+
+**ctest rotate_stamp** (MW::selfTestRotateStamp, Main/selftestpark.cpp) guards this. On a temporary copy of the fixture it puts the folder in the catalog, opens the Library and rotates sample01.jpg twice, once writing the sidecar and once with "Permit image file modification" writing the JPEG. After each it checks that the catalog's stamps equal the file's (IndexMetadata::candidate, as ScrollVerify compares them) and that a whole-set ScrollVerify run after the 5 s grace reports nothing stale. Verified to fail with the restamp disabled (the stamp check catches the sidecar write; ScrollVerify catches the file write, since the scroll pass's grace restamp repairs a sidecar-only miss) and, intermittently, with the ordering race above. It replaced the [StaleProbe] session-issue lines (removed 2026-11-14). selfTestCatalogueFolder, which all the Library self-tests share, now counts only the folder's own rows (a whole-index count passed at once on an index holding an earlier fixture, so the scan never ran) and waits for the scanner to finish (a scan still committing earlier stats overwrote later writes). The six tests that share the test-mode catalog and Library snapshot file (park_restore, rotate_stamp, library_snapshot, catalog_capture, catalog_load, catalog_scan) hold CTest RESOURCE_LOCK winnow_test_catalog: under ctest -j2, rotate_stamp's Library opened library_snapshot's rows. rotate_stamp also deletes the Library snapshot file and drops the parked Library before opening it: the test-mode snapshot outlives the run that wrote it, so a later run restored library_snapshot's fixture rows instead of loading its own copy. The copy's folder is named by pid and time, since the test catalog outlives the run and a reused pid would inherit an earlier run's rows. On a stamp mismatch the test waits 3 s more and says whether the restamp landed late or never.
 
 #### 4.4.18 The Image Cache Queue Belongs to One Snapshot
 
@@ -2683,6 +2685,29 @@ ImageCache plans in proxy rows: the queue (toCache), its per-row status (toCache
 - **MetaRead's navigation gate waits for a path.** MW::fileSelectionChange arms the gate (MetaRead::setAwaitingDecode) so the readers yield CPU to the decode of the new selection, and ImageCache's setCached releases it (MetaRead::onRowCached). The gate used to hold the live currentSfRow and compare it with setCached's snapshot sfRow; after a sort or an insert those are different numbers for the same image, so the release never matched and the readers sat out the full 500 ms bound (finding C14). It now holds the path and matches setCached's path. MW also arms it only on a cache miss: a cached image sends no setCached, so arming it there always cost the 500 ms. MetaRead::initialize clears it (2026-11-14).
 
 This is the plan's R3 without rekeying the queue itself. Results, in-flight state, invalidation and the badge were already path-keyed; what remained row-keyed is now consistent within one snapshot and rebuilt when the order changes.
+
+#### 4.4.19 Pipeline Sync Counters
+
+Help > Diagnostics > Pipeline sync counters (MW::pipelineSyncCounters, Main/diagnostics.cpp) counts the moments this session the pipeline caught itself out of step and recovered. It is also part of All Diagnostics, and the headless soak prints it after its "SOAK: done" line, so a soak measures it (2026-11-14).
+
+The counts live in Cache/pipelinecounters.h: header-only atomics plus one mutex-guarded hash, any thread, never reset. They stay out of Main/global.h, which every file includes. ImageCache's own lifetime counters (in its diagnostics report) still restart at each folder load.
+
+- **Loupe watchdog** ([4.4.14](#4414-the-current-image-always-wins)): repainted (the cache held the current image but the loupe did not show it, so a repaint was lost), position re-posted (not cached yet), gave up (still not shown after 5 s). Repainted and gave up are the ones that mean a remaining bug; each also writes its session issue.
+- **Late decodes**: a successful decode whose row had left toCache while it ran (okToCache accepts it). Normal in small numbers when arrowing past the cache.
+- **Images at the attempt cap**: distinct images that reached "Max attempts reached". okToDecode looks at a capped row on every dispatch, so the per-load counter used to count looks, not images; it now counts each image once per load (ImageCache::capHitPaths).
+- **Instance clashes, by site**: a result stamped with a model instance that has moved on, dropped where it arrived. The sites are DataModel's writers (setValKey, setValueDm, setIcon, addMetadataForItem, setCached from its sender, ...), ImageCache::okToCache (a Stale verdict) and ImageDecoder::decode. Every folder change, filter, sort or version insert bumps the instance, so results in flight at that moment are dropped by design: a 60 s soak over 35 folder switches counted 68. The signal is a count that climbs while browsing one folder with nothing changing. Since B1 a clash is never a reason to refuse a request ([4.4.12](#4412-imagecache-adopts-the-models-instance)), only a late result.
+
+#### 4.4.20 A Folder Load Selects Its First Image Once
+
+The ingest probe showed every folder load selecting row 0 twice, 10-20 ms apart (2026-11-14). A backtrace in Selection::setCurrentIndex put both at the MetaRead::selectRow connect site (MW::createMetaRead), so MetaRead was paying its owed first selection twice. Three causes, found in turn by instrumenting the two emit sites (processReturningReader and the allFinished backstop):
+
+1. **A selection re-armed the promise it had just kept.** MetaRead::setStartRow took a bool, fileSelectionChanged, and armed pendingSelectionDmRow whenever it was true. MW::folderChanged passes it to mean "select this row when its reader returns"; MW::updateChange passed the same true to mean "a selection has just been made", and updateChange runs fileSelectionChange itself. So MetaRead's own selectRow went through updateChange and re-armed it, and the next reader to return row 0 selected it again. When the backstop paid first (every row already read), the read that followed always did. It also meant any image clicked during a load was selected a second time when its reader came back. setStartRow now takes a reason (MetaRead::StartReason, passed as an int so it travels by name through invokeMethod): **OpenFolder** arms, **Selected** clears both pendingSelectionDmRow and firstSelectionPending (the image is chosen; nothing more is owed), **Scroll** leaves them alone. The scroll rule is the one from [4.14.18](#41418-sort-the-catalog-and-every-other-cell-is-blank-a-position-is-not-an-image): a scroll during a load must not disarm the bootstrap.
+2. **A superseded load's selection landed in the next model.** selectRow carried no instance. Two loads in quick succession each owe a selection, and the first load's arrived after the second had replaced the model, where its DataModel row names some other image. The signal now carries MetaRead's instance; the connect site drops a stale one and counts it as an instance clash, "MW selectRow (owed by a superseded load)" ([4.4.19](#4419-pipeline-sync-counters)).
+3. **The soak loaded every folder twice.** MW::runSoakTest called FSTree::select, which emits folderSelectionChange itself, and then called MW::folderSelectionChange as well. The second request found the folder already in the model (DataModel::enqueueOp skips it), its empty pump reached "All done" and emitted folderChange again, and MW::folderChanged ran twice: two MetaRead initializes, two image cache initializes, two first selections. A harness bug, but every soak measurement before 2026-11-14 includes it, the instance-clash total in 4.4.19 among them. runSoakTest now calls FSTree::select only.
+
+Measured with `--ingestprobe --soaktest` (60 s, 600 ms per image, seeds 1-3): before, 34 / 33 / 31 row-0 selections for 33 / 31 / 28 loads, with one to three same-image re-selections per run. After, exactly one per load (33 / 32 / 29) and none repeated. ctest 107/107.
+
+Not changed: an empty pump (a load request for a folder already in the model) still emits folderChange. Only a duplicate request reaches it, and with the harness fixed none does. A pump left over after a stop is already handled, by its G::stop branch.
 
 ### 4.5 Row Storage
 
@@ -11572,6 +11597,17 @@ Help > Diagnostics > "Ingest probe (record cull session)" arms it (and the GUI s
 Live output, prefixed [INGEST] beside the watchdog's [PERF] lines: nothing for an ordinary selection; a line for one whose loupe did not come from the cache or cost more than 120 ms; a line when a miss is repaired, with the wait; a line when a miss is ABANDONED (the user moved on before the image arrived); and a line for a classification key over 150 ms.
 
 Disarmed, the cost is one relaxed atomic load per hook site, each written `if (G::isIngestProbe) ...`. Nothing is allocated and no timer runs until armed. The event buffers are GUI-thread only; the three counters reached from the ImageCache and decoder threads are plain atomics.
+
+Each selection line ends with "src =", the caller handed to MW::fileSelectionChange. MW::updateChange passes its own caller through ("MW::updateChange from Selection::setCurrentIndex"). It used to say only "MW::updateChange", which named every selection the same.
+
+#### 22.4.4 Re-Selecting the Image Still Waiting
+
+A miss stays open until the loupe shows that image. IngestProbe::EndSelection used to close every open miss when the next selection arrived, and call it "NEVER repaired" (abandoned) unless that next selection was a cache hit. But a selection of the SAME image is not the user moving on. MetaRead's double first selection ([4.4.20](#4420-a-folder-load-selects-its-first-image-once)) and an arrow that comes back before the decode lands both looked like a blank loupe the user had given up on. The rule now (2026-11-14), when the next selection is the same path:
+
+- **It is a cache hit**: the miss is repaired, at that moment, and prints "loupe repaired ... (re-selected, cached)".
+- **It misses again**: the original miss stays open and the new one is a continuation (repairMs -3), printed "(same image, still waiting)". It is not counted as a new miss. The report lists it as "re-selected still blank" and does not count it as a wait.
+
+A selection of a different image still abandons the open miss. In a fast soak (600 ms per image) the NEVERs left are that: a large raw still decoding when the next image is selected.
 
 ### 22.5 Panel Probe
 

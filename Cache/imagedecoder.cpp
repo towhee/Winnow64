@@ -1,4 +1,5 @@
 #include "imagedecoder.h"
+#include "Cache/pipelinecounters.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
 #include "Cache/devpreviewcache.h"
@@ -225,6 +226,7 @@ void ImageDecoder::decode(int row, int instance, QString key)
     if (instance != dm->instance) {
         status = Status::InstanceClash;
         errMsg = "Instance clash.  New folder selected, processing old folder.";
+        PipelineCounters::noteClash("ImageDecoder::decode");
         G::issueDedup("Comment", errMsg, "ImageDecoder::run", sfRow, fPath);
         setIdle();
         emit done(threadId, int(status), sfRow, QImage(), rowKey, 0, G::CacheNone);

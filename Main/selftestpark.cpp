@@ -1,4 +1,6 @@
 #include "Main/mainwindow.h"
+#include "Cache/catalog.h"
+#include "Metadata/indexmetadata.h"
 
 #include <cstdlib>          // std::_Exit
 
@@ -56,8 +58,24 @@ bool MW::selfTestCatalogueFolder(const QString &folder)
     int files = 0;      // dot files are never catalogued (catalogCandidateName)
     for (const QString &name : QDir(folder).entryList(QDir::Files))
         if (!name.startsWith(QLatin1Char('.'))) ++files;
-    if (Catalog::instance().count() < files) startCatalogScan();
-    return waitFor([files]{ return Catalog::instance().count() >= files; }, 30000);
+    /*  THIS FOLDER'S ROWS, not the whole index: an index holding another folder's rows
+        (an earlier test's fixture) passed a whole-index count at once, so the scan never
+        ran and the Library held none of this folder. Both spellings of the path, as the
+        scanner may record either (macOS /var is a link to /private/var). */
+    const QString canon = QFileInfo(folder).canonicalFilePath();
+    auto under = [folder, canon]{
+        int n = Catalog::instance().countUnder(folder, false);
+        if (!canon.isEmpty() && canon != folder)
+            n += Catalog::instance().countUnder(canon, false);
+        return n;
+    };
+    if (under() < files) startCatalogScan();
+    /*  AND THE SCAN HAS FINISHED. It runs on its own thread, so a caller draining the
+        pool does not wait for it, and a scan still committing rows it stat'd earlier
+        overwrites anything written since: rotate_stamp's restamp, intermittently. */
+    return waitFor([this, files, under]{
+        return under() >= files && !(catalogScanner && catalogScanner->isRunning());
+    }, 30000);
 }
 
 void MW::selfTestParkLibrary(const QString &folder)
@@ -235,5 +253,139 @@ void MW::selfTestLibrarySnapshot(const QString &folder)
 
     fprintf(stderr, "SELFTEST: SNAPSHOT PASS\n");
     fflush(stderr);
+    std::_Exit(0);
+}
+
+void MW::selfTestRotateStamp(const QString &folder)
+{
+/*
+    A ROTATION IN THE LIBRARY IS NOT AN OUTSIDE EDIT (ctest rotate_stamp, finding C18,
+    Documentation 4.4.17). Rotating writes the orientation on a pool thread -- to the XMP
+    sidecar, or with "Permit image file modification" into the JPEG itself -- and that
+    moves a stamp the catalog holds. Before the restamp, ScrollVerify's next pass found
+    the row "out of date with its file" and refreshStaleRows threw away its metadata, icon
+    and decode: the image just rotated, usually the current one.
+
+    Both write paths, on a copy of the fixture (runSelfTest makes it). After each:
+    - the catalog's stamps equal the file's, compared as ScrollVerify compares them
+      (IndexMetadata::candidate);
+    - past the own-write grace (kOwnWriteGraceMs), which would otherwise hide a missed
+      restamp as "ours", a whole-set verify reports nothing stale.
+*/
+    auto failR = [&folder](const QString &step, const QString &why) {
+        fprintf(stderr, "SELFTEST: ROTATE FAIL [%s] %s\n",
+                step.toLocal8Bit().constData(), why.toLocal8Bit().constData());
+        fflush(stderr);
+        QDir(folder).removeRecursively();
+        std::_Exit(10);
+    };
+    auto settled = [this]{
+        return G::scope == G::Scope::Catalog && dm->rowCount() > 0 && !G::isLoadRunning
+               && !G::isModifyingDatamodel && G::allMetadataAttempted && !loadCurtainUp;
+    };
+    /*  The write runs on the pool, reports back queued, and the restamp commits on the
+        pool again: drain, let the queued call run, drain. */
+    auto drain = []{
+        QThreadPool::globalInstance()->waitForDone(15000);
+        waitFor([]{ return false; }, 300);
+        QThreadPool::globalInstance()->waitForDone(15000);
+    };
+
+    if (!selfTestCatalogueFolder(folder)) failR("catalogue", "the fixture was not indexed");
+    /*  A LOADED Library, not one restored: the test-mode snapshot file outlives the run
+        that wrote it (library_snapshot leaves one holding the fixture's rows), and a
+        restore would open those instead of this copy. */
+    QFile::remove(librarySnapshotPath());
+    dropParkedLibrary("selftest rotate: load the Library fresh");
+    chooseSource(true, "selftest rotate: Library");
+    if (!waitFor(settled, 30000)) failR("Library", "did not settle");
+    if (!scrollVerify) failR("Library", "no ScrollVerify");
+    G::useScrollInVerify = true;
+
+    // either spelling: macOS /var is a link to /private/var
+    QString path = QDir(QFileInfo(folder).canonicalFilePath()).filePath("sample01.jpg");
+    if (dm->rowFromKey(path) < 0) path = QDir(folder).filePath("sample01.jpg");
+    const int dmRow = dm->rowFromKey(path);
+    if (dmRow < 0) {
+        QStringList k;
+        for (int r = 0; r < dm->rowCount() && r < 8; ++r)
+            k << dm->index(r, 0).data(G::KeyRole).toString();
+        failR("Library", path + " is not in the Library; it holds " +
+                         QString::number(dm->rowCount()) + ": " + k.join(", "));
+    }
+    sel->setCurrentRow(dm->proxyRowFromModelRow(dmRow));
+    waitFor([]{ return false; }, 300);
+
+    QStringList staleSeen;
+    const QMetaObject::Connection watch =
+        connect(scrollVerify, &ScrollVerify::rowsAreStale, this,
+                [&staleSeen](const QStringList &paths){ staleSeen << paths; });
+
+    const bool modifyWas = G::modifySourceFiles;
+    for (const bool modify : {false, true}) {
+        const QString step = modify ? "rotate, file written" : "rotate, sidecar written";
+        G::modifySourceFiles = modify;
+        const qint64 fileMtime = QFileInfo(path).lastModified().toMSecsSinceEpoch();
+
+        setRotation(90);
+        drain();
+        if (modify && QFileInfo(path).lastModified().toMSecsSinceEpoch() == fileMtime)
+            fprintf(stderr, "SELFTEST: rotate note: [%s] the image file did not change\n",
+                    step.toLocal8Bit().constData());
+
+        auto stampsMatch = [this, &path](QString *why) {
+            const CatalogRow cand = IndexMetadata::candidate(QFileInfo(path), metadata);
+            const QHash<QString, CatalogRow> held =
+                Catalog::instance().rowsForPaths({path});
+            if (held.isEmpty()) { if (why) *why = "the row left the catalog"; return false; }
+            const CatalogRow &h = held.cbegin().value();
+            const bool ok = h.srcSize == cand.srcSize && h.srcMtime == cand.srcMtime
+                            && h.sidecarMtime == cand.sidecarMtime;
+            if (!ok && why)
+                *why = QString("size %1/%2 mtime %3/%4 sidecar %5/%6 (catalog/file)")
+                           .arg(h.srcSize).arg(cand.srcSize)
+                           .arg(h.srcMtime).arg(cand.srcMtime)
+                           .arg(h.sidecarMtime).arg(cand.sidecarMtime);
+            return ok;
+        };
+        QString why;
+        if (!stampsMatch(&why)) {
+            /*  Still a failure, but say which kind: a restamp that lands late (test
+                timing) reads differently from one that never comes (the bug). */
+            QElapsedTimer late;
+            late.start();
+            const bool landed = waitFor([&]{ return stampsMatch(nullptr); }, 3000);
+            failR(step, "catalog stamps not restamped after the write: " + why
+                        + (landed ? QString("; they matched %1 ms later").arg(late.elapsed())
+                                  : QString("; still not after 3 s"))
+                        + QString("; in scope %1")
+                              .arg(isCatalogScopeFolder(QFileInfo(path).absolutePath())));
+        }
+
+        waitFor([]{ return false; }, int(kOwnWriteGraceMs) + 1000);
+        staleSeen.clear();
+        /*  reset() first: the load's own sweep has just verified every row, and a row
+            verified in the last kReverifySecs is skipped. The sweep starts after
+            kWholeSetStartMs (3 s). */
+        scrollVerify->reset();
+        scrollVerify->verifyWholeSet();
+        waitFor([]{ return false; }, 6000);
+        QThreadPool::globalInstance()->waitForDone(15000);
+        waitFor([]{ return false; }, 300);
+        if (staleSeen.contains(path))
+            failR(step, "ScrollVerify reported the rotated image stale");
+        /*  Only this image is the test's. The test catalog persists between runs, so
+            the Library also holds rows of earlier runs' deleted copies. */
+        if (!staleSeen.isEmpty())
+            fprintf(stderr, "SELFTEST: rotate note: [%s] %lld other row(s) stale\n",
+                    step.toLocal8Bit().constData(), qlonglong(staleSeen.size()));
+        fprintf(stderr, "SELFTEST: rotate [%s] clean\n", step.toLocal8Bit().constData());
+    }
+    G::modifySourceFiles = modifyWas;
+    disconnect(watch);
+
+    fprintf(stderr, "SELFTEST: ROTATE PASS\n");
+    fflush(stderr);
+    QDir(folder).removeRecursively();
     std::_Exit(0);
 }

@@ -516,6 +516,7 @@ set(WINNOW_HEADERS
     Cache/imagecache.h
     Cache/deferredrows.h
     Cache/decodeverdict.h
+    Cache/pipelinecounters.h
     Cache/imagedecoder.h
     Cache/metaread.h
     Cache/scrollverify.h

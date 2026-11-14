@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Cache/pipelinecounters.h"
 #include "Utilities/waitcursor.h"
 #ifdef Q_OS_LINUX
 #include "Utilities/linux.h"
@@ -177,7 +178,61 @@ void MW::diagnosticsAll()
     rpt << embelProperties->diagnostics();
     rpt << metadata->diagnostics(dm->currentSourcePath());
     rpt << dm->diagnostics();
+    rpt << pipelineSyncCounters();
     diagnosticsReport(reportString);
+}
+
+QString MW::pipelineSyncCounters()
+{
+/*
+    Help > Diagnostics > Pipeline sync counters: the pipeline's self-repairs this session
+    (Cache/pipelinecounters.h, Documentation 4.4.19). Session totals, unlike ImageCache's
+    lifetime counters, which restart with every folder load.
+*/
+    if (G::isLogger) G::log("MW::pipelineSyncCounters");
+    using namespace PipelineCounters;
+    QString reportString;
+    QTextStream rpt;
+    rpt.setString(&reportString);
+    auto num = [](quint64 v) { return QString::number(v).rightJustified(8); };
+    auto n = [&num](const std::atomic<quint64> &c) {
+        return num(c.load(std::memory_order_relaxed));
+    };
+    rpt << Utilities::centeredRptHdr('=', "Pipeline Sync Counters (this session)");
+    rpt << "\nEach is a moment the pipeline caught itself out of step and recovered."
+           "\nA count that climbs while you browse normally says where to look.\n";
+
+    rpt << "\nLoupe watchdog (current image not shown 1 s after a miss)";
+    rpt << "\n  repainted (cached but not shown) : " << n(watchdogRepaints);
+    rpt << "\n  position re-posted               : " << n(watchdogReposts);
+    rpt << "\n  gave up (not shown after 5 s)    : " << n(watchdogGaveUp);
+    rpt << "\n";
+
+    rpt << "\nImage cache";
+    rpt << "\n  late decodes (row left the queue): " << n(lateDecodes);
+    rpt << "\n  images at the attempt cap        : " << n(attemptCapImages);
+    rpt << "\n";
+
+    const QHash<QString, quint64> byClashSite = clashes();
+    quint64 total = 0;
+    for (quint64 c : byClashSite) total += c;
+    rpt << "\nInstance clashes (a result for a model instance that had moved on)"
+           "\n  Expected after a folder change, filter, sort or version insert: results"
+           "\n  still in flight are dropped. Worth a look when they climb without one.";
+    rpt << "\n  total                            : " << num(total);
+    QStringList sites = byClashSite.keys();
+    std::sort(sites.begin(), sites.end(), [&](const QString &a, const QString &b) {
+        return byClashSite.value(a) > byClashSite.value(b);
+    });
+    for (const QString &site : std::as_const(sites))
+        rpt << "\n    " << num(byClashSite.value(site)) << "  " << site;
+    rpt << "\n";
+    return reportString;
+}
+
+void MW::diagnosticsPipelineSync()
+{
+    diagnosticsReport(pipelineSyncCounters(), "Winnow Diagnostics: Pipeline sync counters");
 }
 
 void MW::diagnosticsCurrent()

@@ -1,4 +1,5 @@
 #include "Datamodel/datamodel.h"
+#include "Cache/pipelinecounters.h"
 #include "Metadata/colorspaces.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
@@ -4126,6 +4127,7 @@ bool DataModel::readMetadataForItem(int row, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash(fun);
         G::issueDedup("Comment", errMsg, fun, row);
         return true;
     }
@@ -4185,6 +4187,7 @@ bool DataModel::refreshMetadataForItem(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash(fun);
         G::issueDedup("Comment", errMsg, fun, sfRow);
         return true;
     }
@@ -4386,6 +4389,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     if (instance > -1 && m.instance != instance) {
         if (G::showIssueInConsole)
         errMsg = "Instance clash from " + src;
+        PipelineCounters::noteClash("DataModel::addMetadataForItem");
         G::issueDedup("Comment", errMsg, "DataModel::addMetadataForItem", m.row);
         return false;
     }
@@ -5042,6 +5046,7 @@ void DataModel::setValDm(int dmRow, int dmCol, QVariant value, int instance,
 
     if (instance != this->instance) {
         errMsg = "Instance clash from " + src;
+        PipelineCounters::noteClash("DataModel::setValueDm");
         G::issueDedup("Comment", errMsg, "DataModel::setValueDm", dmRow);
         return ;
     }
@@ -5109,6 +5114,7 @@ void DataModel::setValSf(int sfRow, int sfCol, QVariant value, int instance,
             (sfCol == G::IsCachingColumn) && !value.toBool();
         if (!isCachingCleanup) {
             errMsg = "Instance clash from " + src;
+            PipelineCounters::noteClash("DataModel::setValueSF");
             G::issueDedup("Comment", errMsg, "DataModel::setValueSF", sfRow);
             return;
         }
@@ -5183,6 +5189,7 @@ void DataModel::setValKey(QString key, int col, QVariant value, int instance,
         const bool isCachingCleanup = (col == G::IsCachingColumn) && !value.toBool();
         if (!isCachingCleanup) {
             errMsg = "Instance clash from " + src;
+            PipelineCounters::noteClash("DataModel::setValKey");
             G::issueDedup("Comment", errMsg, "DataModel::setValKey", -1, key);
             return;
         }
@@ -5197,6 +5204,7 @@ bool DataModel::setCurrentSF(QModelIndex sfIdx, int instance)
 {
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash("DataModel::setCurrent");
         G::issueDedup("Comment", errMsg, "DataModel::setCurrent", sfIdx.row());
         return false;
     }
@@ -5225,6 +5233,7 @@ void DataModel::setCurrent(QModelIndex dmIdx, int instance)
     if (G::isLogger) G::log("DataModel::setCurrent (dmIdx)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash("DataModel::setCurrent");
         G::issueDedup("Comment", errMsg, "DataModel::setCurrent", dmIdx.row());
         return;
     }
@@ -5254,6 +5263,7 @@ void DataModel::setCurrent(QString fPath, int instance)
     if (G::isLogger) G::log("DataModel::setCurrent (fPath)");
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash("DataModel::setCurrent");
         G::issueDedup("Comment", errMsg, "DataModel::setCurrent");
         return;
     }
@@ -5297,6 +5307,7 @@ void DataModel::setValuePath(QString fPath, int col, QVariant value, int instanc
     QModelIndex dmIdx = index(fPathRowValue(fPath), col);
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash("DataModel::setValuePath");
         G::issueDedup("Comment", errMsg, "DataModel::setValuePath", dmIdx.row(), fPath);
         return;
     }
@@ -5337,6 +5348,7 @@ void DataModel::setIconFromVideoFrame(int dmRow, QImage im, int fromInstance,
     if (G::stop) return;
     if (fromInstance != instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash("DataModel::setIconFromVideoFrame");
         G::issueDedup("Comment", errMsg, "DataModel::setIconFromVideoFrame", dmRow);
         return;
     }
@@ -5543,6 +5555,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
 
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
+        PipelineCounters::noteClash("DataModel::setIcon");
         G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmIdx.row());
         RowTrail::note(rowStore.value(dmIdx.row(), G::PathColumn, G::KeyRole).toString(),
                        dmIdx.row(), "setIcon DROPPED",
@@ -5772,6 +5785,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
 
     if (fromInstance != instance) {
         errMsg = "Instance clash from " + src;
+        PipelineCounters::noteClash("DataModel::setIcon");
         G::issueDedup("Comment", errMsg, "DataModel::setIcon", dmRow);
         trailDrop(QString("instance %1 != %2").arg(fromInstance).arg(instance.load()));
         return;
@@ -5890,6 +5904,7 @@ bool DataModel::iconLoaded(int sfRow, int instance)
     // might be called from previous folder during folder change
     if (instance != this->instance) {
         errMsg = "Instance clash.";
+        PipelineCounters::noteClash("DataModel::iconLoaded");
         G::issueDedup("Comment", errMsg, "DataModel::iconLoaded", sfRow);
         return false;
     }
@@ -6641,6 +6656,7 @@ void DataModel::setCached(int sfRow, QString fPath, int cacheSource, int instanc
             4.4.12). */
         if (G::isIngestProbe) IngestProbe::Instance().NoteDroppedCacheSignal();
         errMsg = "Instance clash from " + src;
+        PipelineCounters::noteClash("DataModel::setCached from " + src);
         G::issueDedup("Comment", errMsg, src, dmIdx.row(), fPath);
         if (cacheSource != G::CacheNone && dmIdx.isValid() && fPath == currentKey
             && sf->mapFromSource(dmIdx).isValid())

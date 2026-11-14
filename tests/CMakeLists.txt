@@ -781,14 +781,39 @@ if(TARGET Winnow)
     # restoreScope): same rows, same current image, verifyIntegrity clean, and a
     # restore counted rather than a reload, which would pass everything else.
     # -------------------------------------------------------------------------
+    # RESOURCE_LOCK winnow_test_catalog: park_restore, rotate_stamp, library_snapshot,
+    # catalog_capture, catalog_load and catalog_scan share the test-mode catalog and
+    # Library snapshot file, so under ctest -j one test's Library could open another's
+    # rows. The lock runs them one at a time; everything else still runs alongside.
     add_test(
         NAME park_restore
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
     )
     set_tests_properties(park_restore PROPERTIES
+        RESOURCE_LOCK winnow_test_catalog
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_PARK=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=120000"
         PASS_REGULAR_EXPRESSION "SELFTEST: PARK PASS"
         FAIL_REGULAR_EXPRESSION "PARK FAIL|MODELINTEGRITY|ROWLOSS"
+        LABELS "smoke"
+        TIMEOUT 180
+    )
+
+    # -------------------------------------------------------------------------
+    # rotate_stamp -- a rotation in the Library is not an outside edit
+    # (MW::selfTestRotateStamp, finding C18). On a copy of the fixture: rotate with
+    # the sidecar written, then with the image file written; after each the catalog's
+    # stamps must equal the file's, and past the own-write grace a whole-set
+    # ScrollVerify must report nothing stale.
+    # -------------------------------------------------------------------------
+    add_test(
+        NAME rotate_stamp
+        COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
+    )
+    set_tests_properties(rotate_stamp PROPERTIES
+        RESOURCE_LOCK winnow_test_catalog
+        ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_ROTATE=1;WINNOW_SELFTEST_MS=120000"
+        PASS_REGULAR_EXPRESSION "SELFTEST: ROTATE PASS"
+        FAIL_REGULAR_EXPRESSION "ROTATE FAIL|MODELINTEGRITY|ROWLOSS"
         LABELS "smoke"
         TIMEOUT 180
     )
@@ -805,6 +830,7 @@ if(TARGET Winnow)
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
     )
     set_tests_properties(library_snapshot PROPERTIES
+        RESOURCE_LOCK winnow_test_catalog
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_SNAPSHOT=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=120000"
         PASS_REGULAR_EXPRESSION "SELFTEST: SNAPSHOT PASS"
         FAIL_REGULAR_EXPRESSION "SNAPSHOT FAIL|MODELINTEGRITY|ROWLOSS"
@@ -824,6 +850,7 @@ if(TARGET Winnow)
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
     )
     set_tests_properties(catalog_capture PROPERTIES
+        RESOURCE_LOCK winnow_test_catalog
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_CATALOG=1"
         LABELS "smoke"
         TIMEOUT 180
@@ -842,6 +869,7 @@ if(TARGET Winnow)
         COMMAND $<TARGET_FILE:Winnow> --selftest ${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images
     )
     set_tests_properties(catalog_load PROPERTIES
+        RESOURCE_LOCK winnow_test_catalog
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_CATALOG_QUERY=;WINNOW_SELFTEST_MS=40000"
         LABELS "smoke"
         TIMEOUT 240
@@ -873,6 +901,7 @@ if(TARGET Winnow)
         "WINNOW_SELFTEST_CATALOG_SCAN=${CMAKE_CURRENT_SOURCE_DIR}/fixtures/images"
         "WINNOW_SELFTEST_MS=30000")
     set_tests_properties(catalog_scan PROPERTIES
+        RESOURCE_LOCK winnow_test_catalog
         ENVIRONMENT "${catalogScanEnv}"
         LABELS "smoke"
         TIMEOUT 180
