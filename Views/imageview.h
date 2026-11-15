@@ -217,6 +217,10 @@ public slots:
        (FillSpotGeom paramsJson: size/feather/pts). */
     void beginSpotEdit();
     void endSpotEdit();
+    /* The Replace tool's [ ] Enter Esc; true when used. Also called by the Develop key
+       arbiter, since focus is usually in the dock while the tool is armed. */
+    bool spotToolKey(QKeyEvent *event);
+    bool spotToolWants(const QKeyEvent *event) const;   // spotToolKey would use it
     /* White-balance dropper: arm/disarm "click a neutral". A click emits wbSampled with
        the normalized image point and the tool disarms itself (the dock does the colour
        solve -- ImageView only reports where). */

@@ -2073,6 +2073,21 @@ bool MW::developShortcutIntercept(QEvent *event)
     QWidget *win = fw ? fw->window() : nullptr;
     if (win && win != this && qobject_cast<QDialog *>(win)) return false;
 
+    /* The Replace tool owns [ ] Enter Esc wherever the focus is (ImageView::spotToolKey).
+       It is chosen from the Replace menu, so focus is usually left in the Develop dock
+       and ImageView::keyPressEvent never saw the keys: Esc did nothing until the image
+       was clicked. Ahead of the mask Esc below, which would otherwise collapse a mask
+       tool left open in the (greyed) dock instead of closing Replace. Not while typing.
+       Both events are claimed (the override frees Enter and [ ] from their global
+       actions); the work is done on the KeyPress. A key the tool does not use (Enter
+       with nothing painted) falls through (ImageView::spotToolWants). */
+    if (imageView && developProperties && developProperties->isSpotActive()
+        && !e->isAutoRepeat() && !isTextEntryWidget(fw) && imageView->spotToolWants(e)) {
+        event->accept();
+        if (!isOverride) imageView->spotToolKey(e);
+        return true;
+    }
+
     /* Esc collapses the active MASK tool (hide its settings), like the other Develop
        tools exit on Esc. Checked BEFORE the value-editor guard below: while a mask is
        edited focus is usually on a dock slider (Hue/Sat) or the Color Range wheel, so the

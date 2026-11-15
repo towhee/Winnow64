@@ -1055,6 +1055,70 @@ void ImageView::beginSpotEdit()
     viewport()->update();
 }
 
+/* Replace-tool brush size (diameter % of the long edge) per wheel pixel, and per [ / ]
+   press: one nominal wheel notch (angleDelta 120 = 15 wheel pixels), so the keys step
+   like a click of the wheel. */
+static constexpr double kSpotSizePerWheelPx = 0.02;
+static constexpr double kSpotSizeKeyStep    = 15 * kSpotSizePerWheelPx;   // 0.3
+
+bool ImageView::spotToolKey(QKeyEvent *event)
+{
+/*
+    The Replace tool's keys: [ / ] resize the brush; in Fill / Object Enter commits the
+    pending painted area as ONE FillSpot; Esc clears pending paint first, then a second
+    Esc exits the tool. Returns true when the key was used.
+
+    Called from keyPressEvent AND from MW::developShortcutIntercept: the tool is usually
+    chosen from the Replace menu, which leaves focus in the Develop dock, so without the
+    arbiter path Esc and Enter never reached the tool until the image was clicked.
+*/
+    if (!spotToolWants(event)) return false;
+    const int key = event->key();
+    if (key == Qt::Key_BracketLeft) {
+        spotBrushSize = qMax(spotSizeMin(), spotBrushSize - kSpotSizeKeyStep);
+        viewport()->update();
+        return true;
+    }
+    if (key == Qt::Key_BracketRight) {
+        spotBrushSize = qMin(100.0, spotBrushSize + kSpotSizeKeyStep);
+        viewport()->update();
+        return true;
+    }
+    if (G::isEnterKey(event)) {
+        std::vector<FillSpotGeom::Stroke> strokes;
+        strokes.reserve(spotPending.size());
+        for (const SpotPendingStroke &st : spotPending) {
+            FillSpotGeom::Stroke s;
+            s.sizeFrac = st.size;
+            s.erase    = st.erase;
+            s.pts.assign(st.pts.begin(), st.pts.end());
+            strokes.push_back(std::move(s));
+        }
+        spotPending.clear();
+        viewport()->update();
+        emit spotStrokeCommitted(FillSpotGeom::toJson(spotFeather, spotReplaceMode,
+                                                      strokes));
+        return true;
+    }
+    if (key == Qt::Key_Escape) {
+        if (!spotPending.isEmpty()) { spotPending.clear(); viewport()->update(); return true; }
+        emit spotToolExited();
+        return true;
+    }
+    return false;
+}
+
+bool ImageView::spotToolWants(const QKeyEvent *event) const
+{
+    /* Enter only while a painted area waits (Fill / Object); otherwise it falls through
+       to its usual action. */
+    if (!spotEditMode || G::bareModifiers(event) != Qt::NoModifier) return false;
+    const int key = event->key();
+    if (key == Qt::Key_Escape || key == Qt::Key_BracketLeft || key == Qt::Key_BracketRight)
+        return true;
+    return G::isEnterKey(event) && !spotPainting && !spotPending.isEmpty();
+}
+
 void ImageView::endSpotEdit()
 {
     if (!spotEditMode) return;
@@ -6013,9 +6077,11 @@ void ImageView::wheelEvent(QWheelEvent *event)
         qDebug() << "ImageView::wheelEvent";
 
     /* Spot removal armed: a two-finger drag (or wheel) resizes the spot brush, not the
-       image. Space held (spacePanOverride) bypasses this so the wheel zooms instead. */
+       image. Space held (spacePanOverride) bypasses this so the wheel zooms instead.
+       kSpotSizePerWheelPx (0.02; was 0.04, too coarse for small spots). */
     if (!spacePanOverride && spotEditMode) {
-        spotBrushSize = qBound(spotSizeMin(), spotBrushSize + wheelDelta(event) * 0.04, 100.0);
+        spotBrushSize = qBound(spotSizeMin(), spotBrushSize + wheelDelta(event) * kSpotSizePerWheelPx,
+                               100.0);
         spotCursorVp = event->position().toPoint();
         spotCursorOn = true;
         viewport()->update();
@@ -6278,36 +6344,8 @@ void ImageView::keyPressEvent(QKeyEvent *event){
         emit pointColorPickExited();
         return;
     }
-    /* Spot removal: [ / ] resize the brush, Escape disarms the tool. */
-    if (spotEditMode) {
-        if (event->key() == Qt::Key_BracketLeft)  {
-            spotBrushSize = qMax(spotSizeMin(), spotBrushSize - 1); viewport()->update(); return; }
-        if (event->key() == Qt::Key_BracketRight) {
-            spotBrushSize = qMin(100.0, spotBrushSize + 1); viewport()->update(); return; }
-        /* Fill / Object: Enter commits the pending painted area as ONE FillSpot;
-           Escape clears the pending paint first, then a second Escape exits the tool. */
-        if (G::isEnterKey(event) && !spotPainting && !spotPending.isEmpty()) {
-            std::vector<FillSpotGeom::Stroke> strokes;
-            strokes.reserve(spotPending.size());
-            for (const SpotPendingStroke &st : spotPending) {
-                FillSpotGeom::Stroke s;
-                s.sizeFrac = st.size;
-                s.erase    = st.erase;
-                s.pts.assign(st.pts.begin(), st.pts.end());
-                strokes.push_back(std::move(s));
-            }
-            spotPending.clear();
-            viewport()->update();
-            emit spotStrokeCommitted(FillSpotGeom::toJson(spotFeather, spotReplaceMode,
-                                                          strokes));
-            return;
-        }
-        if (event->key() == Qt::Key_Escape) {
-            if (!spotPending.isEmpty()) { spotPending.clear(); viewport()->update(); return; }
-            emit spotToolExited();
-            return;
-        }
-    }
+    /* Replace tool: [ ] Enter Esc (spotToolKey). */
+    if (spotToolKey(event)) return;
     /* Segmenter: [ = smaller pieces (finer Detail), ] = bigger pieces -- the same sense
        [ and ] have for a brush's size. */
     if (maskEditMode && maskIsSegmenter()
