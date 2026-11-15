@@ -1927,6 +1927,8 @@ void MW::createViewActions()
     zoomToggleAction = new QAction(tr("Zoom fit <-> 100%"), this);
     zoomToggleAction->setObjectName("resetZoom");
     zoomToggleAction->setShortcutVisibleInContextMenu(true);
+    // A held Space must toggle once, not flicker fit <-> 100% on key auto-repeat
+    zoomToggleAction->setAutoRepeat(false);
     addAction(zoomToggleAction);
     connect(zoomToggleAction, &QAction::triggered, this, &MW::zoomToggle);
 
