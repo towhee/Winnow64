@@ -221,6 +221,15 @@ public slots:
        arbiter, since focus is usually in the dock while the tool is armed. */
     bool spotToolKey(QKeyEvent *event);
     bool spotToolWants(const QKeyEvent *event) const;   // spotToolKey would use it
+    /* The Replace brush size (diameter % of the long edge). setSpotBrushSize clamps to
+       spotSizeMin..100 and emits spotBrushSizeChanged when it moves; the wheel and [ ]
+       go through it too, so the Replace panel's Size slider follows them. */
+    double spotSize() const { return spotBrushSize; }
+    void setSpotBrushSize(double size);
+    /* From the panel slider: as setSpotBrushSize, and while the pointer is off the image
+       the brush ring is drawn at the view centre for a moment, so the size can be seen
+       while dragging the slider. */
+    void previewSpotBrushSize(double size);
     /* White-balance dropper: arm/disarm "click a neutral". A click emits wbSampled with
        the normalized image point and the tool disarms itself (the dock does the colour
        solve -- ImageView only reports where). */
@@ -558,6 +567,7 @@ signals:
     /* A spot pin was clicked (remove that spot), or Escape disarmed the tool. */
     void spotRemoveRequested(int index);
     void spotToolExited();
+    void spotBrushSizeChanged(double size);     // wheel, [ ], or setSpotBrushSize
     /* A Heal / Clone source pin was dragged: the new source offset from the spot's
        centroid, normalized (dx of the width, dy of the height). */
     void spotSourceMoved(int index, QPointF offset);
@@ -740,6 +750,8 @@ private:
     bool    suppressClickZoom = false;
     int     spotReplaceMode = 0;        // FillSpotGeom::Kind: spot fill object heal clone
     double  spotBrushSize = 8.0;        // diameter as % of the long edge ([ ] resize)
+    bool    spotSizePreviewOn = false;  // ring at the view centre (previewSpotBrushSize)
+    QTimer  spotSizePreviewTimer;       // ends spotSizePreviewOn
     double  spotFeather   = 40.0;       // 0..100, composite edge softness
     QVector<double> spotStrokePts;      // in-progress stroke, flat normalized x,y
     /* Fill mode paints an AREA before committing: strokes accumulate here (each with

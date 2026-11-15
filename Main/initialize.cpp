@@ -3203,6 +3203,13 @@ void MW::createDevelopDock()
             developProperties, &DevelopProperties::pasteSpots);
     connect(developProperties, &DevelopProperties::spotCountsChanged,
             replacePanel, &ReplacePanel::setSpotCounts);
+    /* Size: the slider drives the loupe brush, and the wheel / [ ] on the loupe move
+       the slider. ImageView clamps, so the slider settles on the size actually used. */
+    connect(replacePanel, &ReplacePanel::brushSizeChanged,
+            imageView, &ImageView::previewSpotBrushSize);
+    connect(imageView, &ImageView::spotBrushSizeChanged,
+            replacePanel, &ReplacePanel::setBrushSize);
+    replacePanel->setBrushSize(imageView->spotSize());
     connect(developProperties, &DevelopProperties::spotActiveChanged, this, [this](bool active){
         replacePanel->setVisible(active);
         syncDevelopPanelEnabled();      // grey (or restore) the rest of the dock

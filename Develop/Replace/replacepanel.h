@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class QLabel;
+class QSlider;
 class QPushButton;
 class BarBtn;
 class GradientHeader;
@@ -24,11 +25,16 @@ class GradientHeader;
         | Replace                   [?][E][X]|  | Fill                      [?][E][X]|
         |------------------------------------|  |------------------------------------|
         | Spot                               |  | Paint over something thin or ...   |
-        | Click a blemish: it is healed ...  |  | Make as many strokes as you need.  |
+        | Click a blemish: it is healed ...  |  | Size  ------o-----------    2.4 %  |
+        | Size  ------o-----------    2.4 %  |  | Make as many strokes as you need.  |
         | 3 spots on this image              |  | Hold Opt/Alt ... to erase ...      |
         | [Copy all spots] [Paste all spots] |  | Return or Enter  execute: replace..|
         | 3 spots copied. Paste adds ...     |  | Esc              cancel: clear ... |
         |------------------------------------|  |------------------------------------|
+
+    Size is every tool's brush (ImageView::spotBrushSize, diameter % of the long edge),
+    on a log scale so the small sizes spots need get most of the track. The wheel and
+    [ ] on the image move it too (setBrushSize keeps the slider in step).
 
     The Spot-only block (count, Copy, Paste once something is copied) shows for the Spot
     tool alone.
@@ -59,6 +65,7 @@ public:
     void setPreviewShown(bool shown);      // sync the eye (no signal emitted)
     /* onImage = Spot-tool repairs on the current image, copied = spots held for Paste. */
     void setSpotCounts(int onImage, int copied);
+    void setBrushSize(double size);        // sync the Size slider (no signal emitted)
 
 signals:
     void tipsRequested();                  // [?]
@@ -66,6 +73,7 @@ signals:
     void closeRequested();                 // [X]: turn the spot tool off
     void copySpotsRequested();             // Copy all spots
     void pasteSpotsRequested();            // Paste all spots
+    void brushSizeChanged(double size);    // Size slider moved by the user
 
 protected:
     /* Panel background + separator rule across the bottom edge, so stacked Develop
@@ -76,6 +84,9 @@ private:
     void buildUi();
     void updatePreviewButton();
     void updateSpotTools();
+    void updateSizeLabel();
+    static double sizeFromPos(int pos);
+    static int    posFromSize(double size);
 
     GradientHeader *header   = nullptr;
     BarBtn      *tipBtn      = nullptr;
@@ -83,6 +94,8 @@ private:
     BarBtn      *closeBtn    = nullptr;
     QLabel      *modeLbl     = nullptr;    // tool name
     QLabel      *hintLbl     = nullptr;    // how to use it
+    QSlider     *sizeSlider  = nullptr;    // brush size, log scale (sizeFromPos)
+    QLabel      *sizeValLbl  = nullptr;    // "2.4 %"
     QWidget     *paintKeys   = nullptr;    // Fill / Object: strokes, Return/Enter, Esc
     QWidget     *spotTools   = nullptr;    // Spot tool only: copy / paste block
     QLabel      *countLbl    = nullptr;    // "3 spots on this image" or why Copy is off
@@ -94,6 +107,7 @@ private:
     bool previewShown = true;
     int  spotsOnImage = 0;
     int  spotsCopied  = 0;
+    double brushSize  = 8.0;
 };
 
 #endif // REPLACEPANEL_H

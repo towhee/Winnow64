@@ -2,6 +2,7 @@
 #include "Develop/fillspot.h"
 #include "Main/dockwidget.h"        // BarBtn
 #include "Main/global.h"
+#include "PropertyEditor/propertywidgets.h"   // Slider
 #include "Utilities/gradientheader.h"
 
 #include <QLabel>
@@ -10,6 +11,7 @@
 #include <QHBoxLayout>
 #include <QVBoxLayout>
 #include <QPainter>
+#include <cmath>
 
 ReplacePanel::ReplacePanel(QWidget *parent)
     : QWidget(parent)
@@ -56,6 +58,28 @@ QString ReplacePanel::panelTitle(int mode)
     case FillSpotGeom::Object: return tr("Inpaint");
     default:                   return tr("Replace");
     }
+}
+
+/* The Size slider's log ramp: kSizeSteps positions from kSizeMin to kSizeMax % of the
+   long edge. Log, because a spot is usually 0.2 - 3 % and a linear 0..100 track would
+   squeeze that into its first few pixels. ImageView clamps the low end further
+   (spotSizeMin, ~3 px). */
+static constexpr double kSizeMin   = 0.02;
+static constexpr double kSizeMax   = 100.0;
+static constexpr int    kSizeSteps = 1000;
+
+double ReplacePanel::sizeFromPos(int pos)
+{
+    const double t = double(pos) / kSizeSteps;
+    return std::exp(std::log(kSizeMin) + t * (std::log(kSizeMax) - std::log(kSizeMin)));
+}
+
+int ReplacePanel::posFromSize(double size)
+{
+    const double s = qBound(kSizeMin, size, kSizeMax);
+    const double t = (std::log(s) - std::log(kSizeMin))
+                   / (std::log(kSizeMax) - std::log(kSizeMin));
+    return qRound(t * kSizeSteps);
 }
 
 QString ReplacePanel::paintAreaKeysHint()
@@ -108,6 +132,46 @@ void ReplacePanel::buildUi()
     hintLbl = new QLabel(this);
     hintLbl->setStyleSheet(G::labelCss(G::textColor));
     hintLbl->setWordWrap(true);
+
+    /* -------- Size: every tool's brush (ImageView::spotBrushSize) -------- */
+    QWidget *sizeRow = new QWidget(this);
+    sizeRow->setAttribute(Qt::WA_TranslucentBackground);
+    QHBoxLayout *sr = new QHBoxLayout(sizeRow);
+    sr->setContentsMargins(0, 4, 0, 2);
+    sr->setSpacing(8);
+    QLabel *sizeLbl = new QLabel(tr("Size"), sizeRow);
+    sizeLbl->setStyleSheet(G::labelCss(G::textColor));
+    /* Slider (PropertyEditor): click jumps the handle, arrows nudge, and a vertical
+       trackpad swipe scrolls the dock rather than moving it -- as the Develop sliders. */
+    sizeSlider = new Slider(Qt::Horizontal, 1, sizeRow);
+    sizeSlider->setRange(0, kSizeSteps);
+    sizeSlider->setSingleStep(5);
+    sizeSlider->setPageStep(50);
+    sizeSlider->setToolTip(tr("Brush size. The mouse wheel and [ ] on the image change "
+                              "it too."));
+    sizeSlider->setStyleSheet(
+        "QSlider { background: transparent; }"
+        "QSlider::groove:horizontal { background: " + G::disabledColor.name() + ";"
+            " border: none; height: 3px; }"
+        "QSlider::handle:horizontal { background: gray; width: 14px; margin: -6px 0;"
+            " height: 8px; border-radius: 7px; }"
+        "QSlider::handle:focus, QSlider::handle:hover { background: "
+            + G::appleBlue.name() + "; }"
+        "QSlider::groove:horizontal:disabled { background: #4b4b4b; }"
+        "QSlider::handle:horizontal:disabled { background: #5a5a5a; }");
+    connect(sizeSlider, &QSlider::valueChanged, this, [this](int pos) {
+        brushSize = sizeFromPos(pos);
+        updateSizeLabel();
+        emit brushSizeChanged(brushSize);
+    });
+    sizeValLbl = new QLabel(sizeRow);
+    sizeValLbl->setStyleSheet(G::labelCss(G::textColor));
+    sizeValLbl->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
+    sizeValLbl->setMinimumWidth(sizeValLbl->fontMetrics().horizontalAdvance("100.00 %"));
+    sr->addWidget(sizeLbl);
+    sr->addWidget(sizeSlider, 1);
+    sr->addWidget(sizeValLbl);
+    setBrushSize(brushSize);
 
     /* -------- Fill / Object: the painted area waits for Return/Enter or Esc -------- */
     paintKeys = new QWidget(this);
@@ -196,6 +260,7 @@ void ReplacePanel::buildUi()
     body->setSpacing(4);
     body->addWidget(modeLbl);
     body->addWidget(hintLbl);
+    body->addWidget(sizeRow);
     body->addWidget(paintKeys);
     body->addWidget(spotTools);
     lay->addLayout(body);
@@ -244,6 +309,25 @@ void ReplacePanel::updateSpotTools()
     copiedLbl->setVisible(spotsCopied > 0);
     copiedLbl->setText(tr("%1 copied. Paste adds them to every selected image.")
                        .arg(spots(spotsCopied)));
+}
+
+void ReplacePanel::setBrushSize(double size)
+{
+    brushSize = size;
+    {
+        const QSignalBlocker block(sizeSlider);
+        sizeSlider->setValue(posFromSize(size));
+    }
+    updateSizeLabel();
+}
+
+void ReplacePanel::updateSizeLabel()
+{
+    /* Two decimals below 1 %, where the spots live; one below 10; whole above. */
+    const int dec = brushSize < 1.0 ? 2 : brushSize < 10.0 ? 1 : 0;
+    sizeValLbl->setText(QString::number(brushSize, 'f', dec) + " %");
+    sizeValLbl->setToolTip(tr("Brush diameter as a percentage of the image's long "
+                              "edge"));
 }
 
 void ReplacePanel::setPreviewShown(bool shown)

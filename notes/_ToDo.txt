@@ -19,6 +19,7 @@ WHAT'S NEW
 - Spot removal reference (repeat all spots on other images)
 
 BUGS / TO DO
+- Revisit why library reread on almost every Winnooow open.
 - Develop previews when D > E > D ... no judder, devPreview for images without edits
 - Review Develop shortcuts (N, M, X)
 - Review and refine develop replacement tools

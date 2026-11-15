@@ -289,6 +289,15 @@ ImageView::ImageView(QWidget *parent,
     mouseMovementElapsedTimer = new QElapsedTimer;
     // connect(mouseMovementTimer, SIGNAL(timeout()), this, SLOT(monitorCursorState()));
 
+    /* The Replace panel's Size slider shows the brush ring at the view centre while it
+       moves (previewSpotBrushSize); this ends the preview once the slider rests. */
+    spotSizePreviewTimer.setSingleShot(true);
+    spotSizePreviewTimer.setInterval(900);
+    connect(&spotSizePreviewTimer, &QTimer::timeout, this, [this]{
+        spotSizePreviewOn = false;
+        viewport()->update();
+    });
+
     // mouse wheel is spinning
     wheelTimer.setSingleShot(true);
     connect(&wheelTimer, &QTimer::timeout, this, &ImageView::wheelStopped);
@@ -1074,14 +1083,15 @@ bool ImageView::spotToolKey(QKeyEvent *event)
 */
     if (!spotToolWants(event)) return false;
     const int key = event->key();
+    /* Held [ ] keep resizing; a held Esc or Enter acts once, its repeats swallowed. */
+    if (event->isAutoRepeat() && key != Qt::Key_BracketLeft && key != Qt::Key_BracketRight)
+        return true;
     if (key == Qt::Key_BracketLeft) {
-        spotBrushSize = qMax(spotSizeMin(), spotBrushSize - kSpotSizeKeyStep);
-        viewport()->update();
+        setSpotBrushSize(spotBrushSize - kSpotSizeKeyStep);
         return true;
     }
     if (key == Qt::Key_BracketRight) {
-        spotBrushSize = qMin(100.0, spotBrushSize + kSpotSizeKeyStep);
-        viewport()->update();
+        setSpotBrushSize(spotBrushSize + kSpotSizeKeyStep);
         return true;
     }
     if (G::isEnterKey(event)) {
@@ -1108,6 +1118,24 @@ bool ImageView::spotToolKey(QKeyEvent *event)
     return false;
 }
 
+void ImageView::setSpotBrushSize(double size)
+{
+    const double s = qBound(spotSizeMin(), size, 100.0);
+    if (s == spotBrushSize) return;
+    spotBrushSize = s;
+    viewport()->update();
+    emit spotBrushSizeChanged(spotBrushSize);
+}
+
+void ImageView::previewSpotBrushSize(double size)
+{
+    setSpotBrushSize(size);
+    if (!spotEditMode || spotCursorOn) return;      // the real cursor ring shows it
+    spotSizePreviewOn = true;
+    spotSizePreviewTimer.start();
+    viewport()->update();
+}
+
 bool ImageView::spotToolWants(const QKeyEvent *event) const
 {
     /* Enter only while a painted area waits (Fill / Object); otherwise it falls through
@@ -1116,6 +1144,9 @@ bool ImageView::spotToolWants(const QKeyEvent *event) const
     const int key = event->key();
     if (key == Qt::Key_Escape || key == Qt::Key_BracketLeft || key == Qt::Key_BracketRight)
         return true;
+    /* A held Enter's repeats are swallowed (spotToolKey) even once the first press has
+       committed the paint, so they cannot fall through to Enter's global action. */
+    if (G::isEnterKey(event) && event->isAutoRepeat()) return true;
     return G::isEnterKey(event) && !spotPainting && !spotPending.isEmpty();
 }
 
@@ -1126,6 +1157,7 @@ void ImageView::endSpotEdit()
     spotEditMode = false;
     spotPainting = false;
     spotCursorOn = false;
+    spotSizePreviewOn = false;
     spotStrokePts.clear();
     spotPending.clear();                // uncommitted Fill paint is discarded
     spotStrokeErase = false;
@@ -1851,10 +1883,13 @@ void ImageView::drawSpotOverlay(QPainter *painter, const QRectF &br)
         painter->drawImage(0, 0, layer);
     }
 
-    if (spotCursorOn && br.width() > 0) {               // brush-size circle
+    /* Brush-size circle: at the cursor, or (spotSizePreviewOn, the panel's Size slider)
+       at the view centre while the pointer is off the image. */
+    if ((spotCursorOn || spotSizePreviewOn) && br.width() > 0) {
+        const QPoint ringVp = spotCursorOn ? spotCursorVp : viewport()->rect().center();
         const double rImg = (qBound(0.0, spotBrushSize, 100.0) / 200.0) * imgLong;
-        const QPointF cImg = pmItem->mapFromScene(mapToScene(spotCursorVp));
-        const QPointF cVp(spotCursorVp);
+        const QPointF cImg = pmItem->mapFromScene(mapToScene(ringVp));
+        const QPointF cVp(ringVp);
         const double rVp =
             QLineF(cVp, mapFromScene(pmItem->mapToScene(cImg + QPointF(rImg, 0)))).length();
 
@@ -6080,10 +6115,9 @@ void ImageView::wheelEvent(QWheelEvent *event)
        image. Space held (spacePanOverride) bypasses this so the wheel zooms instead.
        kSpotSizePerWheelPx (0.02; was 0.04, too coarse for small spots). */
     if (!spacePanOverride && spotEditMode) {
-        spotBrushSize = qBound(spotSizeMin(), spotBrushSize + wheelDelta(event) * kSpotSizePerWheelPx,
-                               100.0);
         spotCursorVp = event->position().toPoint();
         spotCursorOn = true;
+        setSpotBrushSize(spotBrushSize + wheelDelta(event) * kSpotSizePerWheelPx);
         viewport()->update();
         event->accept();
         return;

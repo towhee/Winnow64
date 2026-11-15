@@ -2080,9 +2080,11 @@ bool MW::developShortcutIntercept(QEvent *event)
        tool left open in the (greyed) dock instead of closing Replace. Not while typing.
        Both events are claimed (the override frees Enter and [ ] from their global
        actions); the work is done on the KeyPress. A key the tool does not use (Enter
-       with nothing painted) falls through (ImageView::spotToolWants). */
+       with nothing painted) falls through (ImageView::spotToolWants). Auto-repeat is
+       claimed too: a held [ ] keeps resizing, and letting its repeats through ran the
+       global zoom / thumbnail-size actions on the same keys. */
     if (imageView && developProperties && developProperties->isSpotActive()
-        && !e->isAutoRepeat() && !isTextEntryWidget(fw) && imageView->spotToolWants(e)) {
+        && !isTextEntryWidget(fw) && imageView->spotToolWants(e)) {
         event->accept();
         if (!isOverride) imageView->spotToolKey(e);
         return true;
