@@ -19599,6 +19599,9 @@ bool MW::okToCloseWithPicks(bool &clearPicks)
         const int textWidth = b->fontMetrics().horizontalAdvance(plain);
         b->setMinimumWidth(qMax(b->sizeHint().width(), textWidth + 40));
     }
+    // gap between the informative text and the buttons
+    if (QDialogButtonBox *buttonBox = msgBox.findChild<QDialogButtonBox*>())
+        buttonBox->setContentsMargins(0, 16, 0, 0);
     msgBox.exec();
 
     if (msgBox.clickedButton() == cancelBtn || msgBox.clickedButton() == nullptr)

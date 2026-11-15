@@ -250,6 +250,9 @@ void MW::warnHiddenPicks(int hiddenPicks)
                                                     QSizePolicy::Expanding);
     QGridLayout *layout = static_cast<QGridLayout*>(msgBox.layout());
     layout->addItem(horizontalSpacer, layout->rowCount(), 0, 1, layout->columnCount());
+    // gap between the informative text and the buttons
+    if (QDialogButtonBox *buttonBox = msgBox.findChild<QDialogButtonBox*>())
+        buttonBox->setContentsMargins(0, 16, 0, 0);
     msgBox.exec();
     resetFocus();
 }
@@ -300,6 +303,9 @@ bool MW::okToRejectUnpicked(int toReject, int toUnpick)
         const int textWidth = b->fontMetrics().horizontalAdvance(plain);
         b->setMinimumWidth(qMax(b->sizeHint().width(), textWidth + 40));
     }
+    // gap between the informative text and the buttons
+    if (QDialogButtonBox *buttonBox = msgBox.findChild<QDialogButtonBox*>())
+        buttonBox->setContentsMargins(0, 16, 0, 0);
     msgBox.exec();
     resetFocus();
     return msgBox.clickedButton() == rejectBtn;

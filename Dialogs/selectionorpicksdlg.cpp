@@ -10,6 +10,20 @@ SelectionOrPicksDlg::SelectionOrPicksDlg(Option &option, QWidget *parent) :
     ui->setupUi(this);
     setStyleSheet(G::css);
     option = Cancel;
+
+    /*
+    A word-wrapped QLabel does not report its wrapped height to the layout, so the
+    dialog came up too short and clipped the text. Fix the label width, set its height
+    from heightForWidth (after polish, so the G::css font size is in effect) and size
+    the dialog to fit. The fixed spacer below the label keeps a gap above the buttons.
+    */
+    const int labelWidth = 420;
+    ui->label->ensurePolished();
+    ui->label->setFixedWidth(labelWidth);
+    ui->label->setMinimumHeight(ui->label->heightForWidth(labelWidth));
+    adjustSize();
+    setFixedSize(size());
+
     #ifdef Q_OS_WIN
         Win::setTitleBarColor(winId(), G::backgroundColor);
     #endif
