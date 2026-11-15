@@ -61,6 +61,8 @@ std::atomic<bool> removingRowsFromDM{false};
 
 // datamodel status
 std::atomic<bool> allMetadataAttempted{false};
+/*  Owned by DataModel: derived from its icon-range count and written only by
+    DataModel::publishIconChunk (and lowered by beginMetaLoad). Documentation 4.4.16. */
 std::atomic<bool> iconChunkLoaded{false};
 std::atomic<int> dmInstance{0};
 std::atomic<bool> isModifyingDatamodel{false};

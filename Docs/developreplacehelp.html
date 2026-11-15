@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Replace</h1>
+
+<h2>What it does</h2>
+<p>The Replace tools take things out of a photo by replacing them with what should be
+there: dust, blemishes, a stray twig, a wire, a leash, a whole object.  Every repair is a
+recipe entry, like the rest of Develop: the original is never touched, and a repair can
+be removed at any time.</p>
+
+<p>Click the <b>Replace</b> button in the Develop action row, or press <b>S</b>, and
+choose a tool from the menu.  While a tool is on, <b>S</b> turns it off.</p>
+
+<p>To turn the tool off, press <b>Esc</b> on the image, click the <b>X</b> on its panel,
+choose <b>Turn off Replace tool</b> in the Replace menu, or choose the checked tool
+again.</p>
+
+<h2>The five tools</h2>
+
+<h3>Spot</h3>
+<p>Click a blemish.  Winnow finds a matching area nearby and heals the spot from it.  Best
+for dust and small skin or sensor marks.</p>
+
+<h3>Heal</h3>
+<p>Brush over a flaw.  Winnow picks a source area and blends its texture into the tone
+around the flaw, so the repair takes on the local brightness and colour.</p>
+
+<p>A white ring marks the source, joined to the repair by a dashed line.  Drag the ring to
+take the texture from somewhere else.  Hovering either end outlines the brushed area at
+both places, so you can line the source up.</p>
+
+<h3>Clone</h3>
+<p>Like Heal, but the source is copied exactly as it is, tone and all.  Use it when the
+blend of Heal smears an edge or a pattern that must line up.  Drag the source ring the
+same way.</p>
+
+<h3>Fill</h3>
+<p>For things that are long, thin or scattered: a wire across the sky, a twig, a leash.
+Paint over it in as many strokes as you need, then press <b>Return</b> or <b>Enter</b>.
+Winnow fills the painted area piece by piece, each piece from its own nearby source.</p>
+
+<h3>Inpaint</h3>
+<p>For a whole object.  Paint over it completely, with a little margin, then press
+<b>Return</b> or <b>Enter</b>.  The area is replaced by an AI (regenerative) fill.  The first time,
+Winnow offers to download the fill model.</p>
+
+<p>Cover the object entirely.  Anything left showing at the edge can guide the fill back
+into the shape you are removing.</p>
+
+<h2>The tool panel</h2>
+<p>While a tool is on, its panel opens in the Develop Editor, under the histogram:
+<b>Replace</b> for Spot, Heal and Clone, <b>Fill</b> for Fill, and <b>Inpaint</b>
+for Inpaint.  It says how to use the tool.  Its <b>X</b> turns the tool off, and its eye
+shows or hides the repairs, like <b>Show repairs</b>.</p>
+
+<p>The other Develop Editor panels are greyed out while a tool is on.  Turn the tool off
+to adjust the photo again.</p>
+
+<p>The Fill and Inpaint panels list the keys: make as many strokes as you need, then
+press <b>Return</b> or <b>Enter</b> to replace the painted area, or <b>Esc</b> to
+cancel the painting.</p>
+
+<h3>Copying spots to other images</h3>
+<p>Sensor dust sits in the same place on every frame, so the spots you fix on one photo
+can be applied to the rest.  With the <b>Spot</b> tool chosen, the Replace panel shows
+how many spots the image has and a <b>Copy all spots</b> button.</p>
+
+<p>Click <b>Copy all spots</b>.  A <b>Paste all spots</b> button appears.  Select the
+images to fix, then click <b>Paste all spots</b>: the spots are added to every selected
+image.  Each image heals each spot from its own surroundings.</p>
+
+<p>Only repairs made with the Spot tool are copied.  Pasting never adds a spot an image
+already has, so pasting twice is harmless.  Each image gets one History step, so the
+paste can be undone.  The copied spots are kept until you quit Winnow.</p>
+
+<p>Spots land at the same place in the frame.  A portrait photo and a landscape photo
+from the same camera will not line up with the same dust.</p>
+
+<h2>While painting</h2>
+<p><b>[</b> and <b>]</b> (or a two-finger drag) change the brush size.</p>
+
+<p>In Fill and Inpaint, hold <b>Opt/Alt</b> while painting to erase part of the painted
+area.  <b>Esc</b> clears the painting before you commit it.</p>
+
+<p>Each repair leaves a pin.  Click a pin to remove that repair.</p>
+
+<p><b>Esc</b> turns the tool off.</p>
+
+<h2>Checking your work</h2>
+<p>Each repair is a History step named after its tool: <b>Spot</b>, <b>Heal</b>,
+<b>Clone</b>, <b>Fill</b> or <b>Inpaint</b>.</p>
+
+<p>Uncheck <b>Show repairs</b> in the Replace menu to see the photo without any of its
+repairs; check it again to bring them back.  Nothing is removed.</p>
+
+</body>
+</html>

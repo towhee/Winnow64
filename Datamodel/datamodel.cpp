@@ -1616,6 +1616,10 @@ void DataModel::recountLoadFlags()
     videoRowCount.store(video,          std::memory_order_relaxed);
     iconUnloadableCount.store(unloadable, std::memory_order_relaxed);
     publishMetaAttempted();
+    /*  Rows inserted into or removed from the icon range change what it owes. Without
+        this an insert left the flag to MW (which lowered it whether or not a new row
+        fell in the range) and a removal left it stale until the next scroll. */
+    recountIconChunk();
 }
 
 void DataModel::newInstance(const QString &src)
@@ -1802,7 +1806,6 @@ QList<int> DataModel::insertFiles(const QStringList &paths)
 
     // reset loaded flags so MetaRead knows to load (the new rows are not attempted)
     publishMetaAttempted();
-    G::iconChunkLoaded = false;
 
     verifyIntegrity("DataModel::insertFiles");
     return inserted;
@@ -5462,58 +5465,63 @@ void DataModel::clearVideoReadingFlag(int dmRow, int fromInstance)
     emit videoReadingCleared(dmRow, fromInstance);
 }
 
-void DataModel::updateIconChunkLoaded(int dmRow)
+void DataModel::noteIconLanded(int dmRow)
 {
 /*
-    Refresh G::iconChunkLoaded without rescanning the whole icon chunk on every
-    icon set. isAllIconChunkLoaded needs all non-video rows in
-    [startIconRange, endIconRange] to carry an icon. Since icons-in-chunk can
-    never exceed the model-wide iconLoadedCount, and videos-in-chunk can never
-    exceed the model-wide videoRowCount, the chunk cannot be complete until
-    iconLoadedCount reaches (span - videoRowCount). Below that threshold we
-    answer false for free; only at/above it do we run the authoritative scan.
-    On a fresh front-loaded folder iconLoadedCount tracks the chunk directly,
-    so the O(chunk) scan runs only as the chunk nears completion instead of
-    once per icon — removing the prior O(N·chunk) GUI-thread cost.
+    An icon has just been stored at dmRow: one fewer row in the range owes one.
+
+    THE ANSWER IS MAINTAINED INCREMENTALLY, NOT RECOMPUTED. The gate this replaced was
+    model-wide while the requirement is chunk-local: iconLoadedCount counts icons ANYWHERE
+    in the model, so on a 42,956-row catalog scope with a 2,000-row chunk the count passed
+    2,000 almost at once, and from then on every icon write ran the full O(span) scan,
+    2,000 proxy rows x 3 columns on the GUI thread per icon. The scroll probe measured
+    "scan calls = 1247  rows = 2495247  ms = 306.8" in one second of scrolling, 1,245 of
+    them icon writes.
+
+    So iconChunkMissing is exact after every recountIconChunk (a range change, an insert,
+    a removal, a cleared icon) and decremented here. A row delivered twice is decremented
+    twice and the count runs low until the next range change corrects it; the index
+    prefetch, which duplicates deliberately, recounts when it finishes
+    (MW::prefetchIconsFromIndex).
 */
-    const int span = endIconRange - startIconRange + 1;
-    /*  Unloadable rows come off the requirement with the videos. A catalog scope can hold
-        rows whose file is on an unplugged drive or gone, and requiring an icon of those
-        left this permanently false -- which is what put MetaRead into a redo loop that
-        blocked the GUI for 31 seconds (see "The Redo Loop That Could Never Finish"). */
-    /*  THE GATE IS MODEL-WIDE AND THE REQUIREMENT IS CHUNK-LOCAL, which makes it a gate
-        that never closes once the model is bigger than the chunk. iconLoadedCount counts
-        icons ANYWHERE in the model; needed is the span of the WINDOW. On a 42,956-row
-        catalog scope with a 2,000-row chunk the count passes 2,000 almost at once and
-        stays there, so from then on every single icon write ran the full authoritative
-        scan -- 2,000 proxy rows x 3 columns, on the GUI thread, per icon.
+    if (dmRow < 0) return;
+    const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
+    if (sfRow >= startIconRange && sfRow <= endIconRange && iconChunkMissing > 0)
+        --iconChunkMissing;
+    publishIconChunk();
+}
 
-        Measured by the scroll probe: "scan calls = 1247  rows = 2495247  ms = 306.8" in
-        one second of scrolling, with setIconRange responsible for 2 of those calls. The
-        other 1,245 were icon writes.
-
-        So the answer is maintained incrementally instead of recomputed. iconChunkMissing
-        is the number of rows in the CURRENT range that still owe an icon; setIconRange
-        recomputes it exactly whenever the range moves (which is every scroll event, so
-        any drift is corrected within one event), and an icon landing inside the range
-        decrements it. O(1) per icon, and the O(span) walk happens once per range change
-        rather than once per thumbnail. */
-    if (dmRow >= 0) {
-        const int sfRow = sf->mapFromSource(index(dmRow, 0)).row();
-        if (sfRow >= startIconRange && sfRow <= endIconRange && iconChunkMissing > 0)
-            --iconChunkMissing;
-        G::iconChunkLoaded = (iconChunkMissing == 0);
-        return;
+void DataModel::recountIconChunk()
+{
+/*
+    The exact count of rows in the current icon range that still owe an icon, then
+    publish. O(span) proxy reads: the "scan" cost in the scroll probe (G::isPerfProbe,
+    reportScrollProbe). The range is clamped to the proxy, so after a removal that left
+    it running past the end it counts the rows that exist instead of answering 0 for the
+    whole span.
+*/
+    QElapsedTimer probeTimer;
+    const int first = qMax(0, int(startIconRange));
+    const int last  = qMin(int(endIconRange), sf->rowCount() - 1);
+    if (G::isPerfProbe) {
+        probeTimer.start();
+        probeScanCalls++;
+        probeScanRows += qMax(0, last - first + 1);
     }
+    iconChunkMissing = last < first ? 0 : countIconChunkMissing(first, last);
+    if (G::isPerfProbe) probeScanNs += probeTimer.nsecsElapsed();
+    publishIconChunk();
+}
 
-    const int needed = span - videoRowCount.load(std::memory_order_relaxed)
-                            - iconUnloadableCount.load(std::memory_order_relaxed);
-    if (span > 0 &&
-        iconLoadedCount.load(std::memory_order_relaxed) < needed) {
-        G::iconChunkLoaded = false;
-        return;
-    }
-    G::iconChunkLoaded = isAllIconChunkLoaded(startIconRange, endIconRange);
+void DataModel::publishIconChunk()
+{
+/*
+    THE ONE WRITER OF G::iconChunkLoaded, apart from beginMetaLoad lowering it as a load
+    starts (the same shape as publishMetaAttempted). GUI thread. Read lock-free by
+    MetaRead::allMetaIconLoaded and by MW::updateChange, which between them decide whether
+    the loader still owes the range anything.
+*/
+    G::iconChunkLoaded = (iconChunkMissing == 0);
 }
 
 int DataModel::countIconChunkMissing(int first, int last)
@@ -5619,7 +5627,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
         The empty-QVariant write is the remove the icon store documents (see the
         DecorationRole branch of setData), the same one clearIconsOutsideChunkRange uses.
 
-        THE CHUNK COUNT IS RECOMPUTED RATHER THAN DECREMENTED. updateIconChunkLoaded's
+        THE CHUNK COUNT IS RECOMPUTED RATHER THAN DECREMENTED. noteIconLanded's
         O(1) path assumes an icon has ARRIVED; an icon leaving moves the count the other
         way. Removals are rare -- a repair or an insert -- so the exact O(span) recount is
         affordable here and cannot drift. */
@@ -5632,8 +5640,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
             setData(index(dmIdx.row(), G::IconLoadedColumn), false);
         }
         if (iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
-        iconChunkMissing = countIconChunkMissing(startIconRange, endIconRange);
-        G::iconChunkLoaded = (iconChunkMissing == 0);
+        recountIconChunk();
         return;
     }
 
@@ -5655,7 +5662,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
             if (iconRowVisible(dmIdx))
                 scheduleVisibleEmit(dmIdx.row());
             if (G::isPerfProbe) probeIconsRedundant++;
-            updateIconChunkLoaded(dmIdx.row());
+            noteIconLanded(dmIdx.row());
             return;
         }
     }
@@ -5670,7 +5677,7 @@ void DataModel::setIcon(QModelIndex dmIdx, const QPixmap &pm, int fromInstance, 
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmIdx.row());
     if (G::isPerfProbe) probeIconsSet++;
-    updateIconChunkLoaded(dmIdx.row());
+    noteIconLanded(dmIdx.row());
 }
 
 void DataModel::setDevelopIcon(int dmRow, const QImage &im)
@@ -5858,7 +5865,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
             if (iconRowVisible(dmIdx))
                 scheduleVisibleEmit(dmRow);
             if (G::isPerfProbe) probeIconsRedundant++;
-            updateIconChunkLoaded(dmRow);
+            noteIconLanded(dmRow);
             return;
         }
     }
@@ -5881,7 +5888,7 @@ void DataModel::setIcon1(int dmRow, const QImage &im, int fromInstance, QString 
     if (iconRowVisible(dmIdx))
         scheduleVisibleEmit(dmRow);
     if (G::isPerfProbe) probeIconsSet++;
-    updateIconChunkLoaded(dmRow);
+    noteIconLanded(dmRow);
 
     /* Layer 2 (measured refinement): accumulate the real per-icon footprint. Still
        measured -- avgIconMB and the diagnostics report both read it -- but no longer
@@ -5934,59 +5941,6 @@ int DataModel::iconCount()
     return count;
 }
 
-bool DataModel::isAllIconChunkLoaded(int first, int last)
-{
-    if (isDebug)
-        qDebug() << "DataModel::isAllIconChunkLoaded" << "instance =" << instance;
-
-    if (first < 0 || last > sf->rowCount()) return false;
-
-    /*  Probe only (G::isPerfProbe). This walk is the first of the three per-scroll costs
-        described in the header -- see DataModel::reportScrollProbe. */
-    QElapsedTimer probeTimer;
-    if (G::isPerfProbe) {
-        probeTimer.start();
-        probeScanCalls++;
-        probeScanRows += qMax(0, last - first + 1);
-    }
-    struct ProbeScan {
-        DataModel *dm; QElapsedTimer &t; bool on;
-        ~ProbeScan() { if (on) dm->probeScanNs += t.nsecsElapsed(); }
-    } probeScan{this, probeTimer, G::isPerfProbe};
-
-    for (int row = first; row <= last; ++row) {
-        // ignore video
-        if (sf->index(row, G::VideoColumn).data().toBool()) continue;
-        /*  Ignore a row that cannot produce an icon at all: its file is on an unmounted
-            volume or is gone. Present is 0 and is also the value an unset cell reads, so
-            a folder load -- which never writes this column -- is unaffected. */
-        if (sf->index(row, G::AvailabilityColumn).data().toInt()
-                != int(Catalog::Availability::Present)) continue;
-
-        QModelIndex sfIdx = sf->index(row, 0);
-        if (!sfIdx.isValid()) {
-            /*
-            qDebug() << "DataModel::isAllIconChunkLoaded invalid index!"
-                     << "row =" << row
-                     << "first =" << first
-                     << "last =" << last
-                ; //*/
-            return false;
-        }
-        if (sfIdx.data(Qt::DecorationRole).isNull()) {
-            /*
-            qDebug() << "DataModel::allIconChunkLoaded  false for row =" << row
-                     << "first =" << first
-                     << "last =" << last
-                        ; //*/
-            return false;
-        }
-    }
-    // qDebug() << "DataModel::allIconChunkLoaded = true";
-    return true;
-
-}
-
 bool DataModel::isIconRangeLoaded()
 /*
     Called by MetaRead::dispatch when aIsDone && bIsDone (readers have been dispatched
@@ -6007,10 +5961,6 @@ void DataModel::setIconRange(int sfRow)
     Called by MW::updateChange and MW::updateIconRange.
 */
 {
-    // if (iconChunkSize >= rowCount()) {
-    //     G::iconChunkLoaded = true;
-    //     return;
-    // }
     int rows = sf->rowCount();
     int start = qMax(0, sfRow - iconChunkSize / 2);
     int end = qMin(rows - 1, start + iconChunkSize);
@@ -6021,9 +5971,8 @@ void DataModel::setIconRange(int sfRow)
     endIconRange = end;
     if (G::isPerfProbe) probeSetRangeCalls++;
     /*  The exact recount, once per range change -- what makes the incremental
-        maintenance in updateIconChunkLoaded self-correcting. */
-    iconChunkMissing = countIconChunkMissing(startIconRange, endIconRange);
-    G::iconChunkLoaded = (iconChunkMissing == 0);
+        maintenance in noteIconLanded self-correcting. */
+    recountIconChunk();
 }
 
 void DataModel::setChunkSize(int chunkSize)
@@ -6693,6 +6642,10 @@ void DataModel::beginMetaLoad()
 {
     // a load is starting: not finished until its rows say so
     G::allMetadataAttempted = false;
+    /*  Nor is its icon chunk. Lowered here, the only write outside publishIconChunk, so
+        the loader is not told "nothing owed" between the clear and the first range;
+        the next recountIconChunk derives it again. */
+    G::iconChunkLoaded = false;
 }
 
 bool DataModel::isMetadataAttempted(int sfRow)

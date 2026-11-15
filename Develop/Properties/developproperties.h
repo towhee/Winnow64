@@ -632,11 +632,21 @@ public slots:
        moved. Not a History step -- the heal on screen is unchanged. Returns true when
        a source was written (the recipe changed). */
     bool adoptSpotSources(const QString &fPath);
-    bool isSpotActive() const { return spotMode; }   // for the action-row spot button
+    bool isSpotActive() const { return spotMode; }   // for the action-row Replace button
     /* Replace panel preview eye: false renders WITHOUT the spot heals (non-destructive
        bypass, like the Transform eye); the spots stay in the stack. Session-wide. */
     void setSpotsShown(bool shown) { spotsShown = shown; }
     bool isSpotsShown() const { return spotsShown; }
+    /* Fill Replace panel, Spot tool: Copy all spots / Paste all spots. Copy holds the
+       current image's Spot-tool repairs (kind "spot") for the session; Paste APPENDS
+       them to every selected image (the current one included), skipping a spot an
+       image already has, as one linked History step per image changed. Spots are
+       stored in normalized image coordinates, so they land at the same place in each
+       frame -- the sensor-dust case. spotCountsChanged keeps the panel's counts. */
+    void copySpots();
+    void pasteSpots();
+    int  copyableSpotCount() const;               // Spot-tool repairs on this image
+    int  copiedSpotCount() const { return int(spotClipboard.size()); }
 
     /* ---- ScopeHeader widget handlers (the scope dropdown + buttons above the tree) ---- */
     void onScopeSelected(const QString &name);    // dropdown picked a different scope
@@ -665,7 +675,7 @@ public slots:
     void submasksHelp();                          // Mask band help (the submasks page)
     void rawHelp();                               // Raw panel help ([?] and its context menu)
     void transformHelp();                         // Transform panel help ([?] and its context menu)
-    void spotHelp();                              // Spot tools help (the Spot menu's Help)
+    void spotHelp();                              // Replace tools help (menu + panel [?])
     void versionsHelp();                          // "What changed" on the settings-updated alert
 
     /* ---- Develop presets (the Presets dock) --------------------------------------
@@ -928,10 +938,12 @@ signals:
        file being solved (empty between images). total 0 = the batch is over (MW clears
        its status-bar row). */
     void presetAutoProgress(int done, int total, const QString &now);
-    /* Spot tool armed/disarmed: drives the action-row spot button's on/off icon. */
+    /* Spot tool armed/disarmed: drives the action-row Replace button's on/off icon. */
     void spotActiveChanged(bool active);
     /* The current image's spots (paramsJson, stack order), for ImageView's pins. */
     void spotPinsChanged(const QStringList &spotParams);
+    /* Fill Replace panel: Spot-tool repairs on the current image, spots held to paste. */
+    void spotCountsChanged(int onImage, int copied);
     void maskFeatherChanged(double feather);    // Feather slider -> live overlay ramp update
     /* Rotation slider -> ImageView turns the Linear Gradient, which persists the new
        geometry through maskGeometryChanged (setActiveMaskParams owns history + render). */
@@ -1880,7 +1892,10 @@ private:
     void onMaskEditorWheel(int hueLo, int hueHi, int satLo, int satHi, bool commit);
     bool spotMode = false;              // regenerative spot-fill brushing is armed
     bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed
+    QStringList spotClipboard;          // Copy all spots: paramsJson, session only
     void emitSpotPins();                       // push the current image's spots to ImageView
+    /* A repair's History step name, from its kind: Spot, Heal, Clone, Fill, Inpaint. */
+    static QString spotStepName(const QString &paramsJson);
     ScopeHeader *scopeHeader = nullptr;     // scope combo + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;
     QTimer *debounceWriteTimer = nullptr;

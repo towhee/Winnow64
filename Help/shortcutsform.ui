@@ -1541,13 +1541,13 @@
        </item>
        <item>
         <property name="text">
-         <string>Spot Removal</string>
+         <string>Replace Tool</string>
         </property>
         <property name="text">
          <string>S</string>
         </property>
         <property name="text">
-         <string>Toggles the spot-removal tool (in the last tool used: Spot, Heal, Clone, Fill or Object)</string>
+         <string>Off: opens the Replace menu to choose Spot, Heal, Clone, Fill or Inpaint. On: turns the Replace tool off</string>
         </property>
        </item>
        <item>

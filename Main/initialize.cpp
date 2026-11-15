@@ -3175,15 +3175,40 @@ void MW::createDevelopDock()
                                      transformPanel->isAspectFlipped(), QRectF(0, 0, 1, 1));
         }
     });
-    /* Spot Removal has no panel: the action-row Spot menu (MW::showDevelopSpotMenu)
-       chooses the tool, shows/hides the repairs and opens the help. Arming pushes the
-       current tool to the loupe capture. */
+    /* Replace tools: the action-row Replace menu (MW::showDevelopReplaceMenu) chooses
+       the tool; the replace panel below Transform (Replace / Fill / Inpaint) shows
+       what that tool offers while it is armed. Arming pushes the current tool to the
+       loupe capture. */
     developSpotMode = qBound(int(FillSpotGeom::Spot),
                              settings->value("Develop/Replace/mode",
                                              int(FillSpotGeom::Spot)).toInt(),
                              int(FillSpotGeom::Clone));
+    replacePanel = new ReplacePanel(developContainer);
+    replacePanel->setMode(developSpotMode);
+    replacePanel->setPreviewShown(developProperties->isSpotsShown());
+    replacePanel->setVisible(false);            // shown while the spot tool is armed
+    developScrollLayout->addWidget(replacePanel);
+    connect(replacePanel, &ReplacePanel::tipsRequested,
+            developProperties, &DevelopProperties::spotHelp);
+    connect(replacePanel, &ReplacePanel::previewToggled, this, [this](bool shown){
+        developProperties->setSpotsShown(shown);
+        developParamsChange();
+    });
+    connect(replacePanel, &ReplacePanel::closeRequested, this, [this]{
+        if (developProperties->isSpotActive()) toggleDevelopReplace();
+    });
+    connect(replacePanel, &ReplacePanel::copySpotsRequested,
+            developProperties, &DevelopProperties::copySpots);
+    connect(replacePanel, &ReplacePanel::pasteSpotsRequested,
+            developProperties, &DevelopProperties::pasteSpots);
+    connect(developProperties, &DevelopProperties::spotCountsChanged,
+            replacePanel, &ReplacePanel::setSpotCounts);
     connect(developProperties, &DevelopProperties::spotActiveChanged, this, [this](bool active){
+        replacePanel->setVisible(active);
+        syncDevelopPanelEnabled();      // grey (or restore) the rest of the dock
         if (!active) return;
+        replacePanel->setMode(developSpotMode);
+        replacePanel->setPreviewShown(developProperties->isSpotsShown());
         if (imageView) imageView->setSpotReplaceMode(developSpotMode);
         if (developDock) { developDock->setVisible(true); developDock->raise(); }
     });
@@ -3303,21 +3328,21 @@ void MW::createDevelopDock()
     developActionLayout->addWidget(developNewMaskBtn);
     developActionLayout->addSpacing(10);
 
-    /* Spot removal: a click pops the spot-tool menu (Spot, Heal, Clone, Fill, Object,
-       Help -- MW::showDevelopSpotMenu), as New mask pops the mask tools. Heals are
+    /* Replace: a click pops the replace-tool menu (Spot, Heal, Clone, Fill, Inpaint,
+       Help -- MW::showDevelopReplaceMenu), as New mask pops the mask tools. Heals are
        recorded in EditStack::spots. DevelopProperties owns the armed state and drives
        the icon back via spotActiveChanged (full opacity armed, dimmed off). */
-    developSpotBtn = new BarBtn();
-    developSpotBtn->setSide(devActSide);
-    developSpotBtn->setIcon(devActIcons + "spot.png", G::iconOpacity);
-    developSpotBtn->setToolTip("Spot removal: choose Spot, Heal, Clone, Fill or Object  (S)");
-    connect(developSpotBtn, &BarBtn::clicked, this, &MW::showDevelopSpotMenu);
-    connect(developProperties, &DevelopProperties::spotActiveChanged, developSpotBtn,
+    developReplaceBtn = new BarBtn();
+    developReplaceBtn->setSide(devActSide);
+    developReplaceBtn->setIcon(devActIcons + "spot.png", G::iconOpacity);
+    developReplaceBtn->setToolTip("Replace using Spot, Heal, Clone, Fill or Inpaint  (S)");
+    connect(developReplaceBtn, &BarBtn::clicked, this, &MW::showDevelopReplaceMenu);
+    connect(developProperties, &DevelopProperties::spotActiveChanged, developReplaceBtn,
             [this, devActIcons](bool active){
-        developSpotBtn->setIcon(devActIcons + "spot.png", active ? 1.0 : G::iconOpacity);
-        developSpotBtn->setActive(active);
+        developReplaceBtn->setIcon(devActIcons + "spot.png", active ? 1.0 : G::iconOpacity);
+        developReplaceBtn->setActive(active);
     });
-    developActionLayout->addWidget(developSpotBtn);
+    developActionLayout->addWidget(developReplaceBtn);
     developActionLayout->addSpacing(10);
 
     /* Screen Sampler: a 5x5 colour average from ANYWHERE on screen -- another app's
@@ -4097,8 +4122,15 @@ void MW::setDevelopPanelEnabled(bool visible, bool usable)
        the property panel (RawPanel + the Edits bar and everything below it) for the
        duration -- the Transform strip itself stays live, and R / Esc / [X] re-enables
        them through syncDevelopPanelEnabled(). */
-    const bool editsLive = live && !developTransformVisible;
+    /* An armed replace tool (Replace / Fill / Inpaint) is the same: the loupe is
+       the tool's canvas, and every other panel in the dock -- the histogram (its tone
+       region slider edits), Transform, Raw and the Edits tree -- is greyed until the
+       tool is turned off. The replace panel and the action row (which switches or turns
+       off the tool) stay live. spotActiveChanged re-runs this. */
+    const bool replaceArmed = developProperties && developProperties->isSpotActive();
+    const bool editsLive = live && !developTransformVisible && !replaceArmed;
     if (developProperties) developProperties->setPanelEnabled(editsLive);
+    if (scopesView) scopesView->setEnabled(live && !replaceArmed);
     if (developActionRow) developActionRow->setEnabled(live);
     /* Transform is a SIBLING of the property panel inside the dock (a pinned strip, not
        part of the tree), so setPanelEnabled does not reach it -- it has to be greyed here
@@ -4107,7 +4139,8 @@ void MW::setDevelopPanelEnabled(bool visible, bool usable)
        the selection moves to a video.
        Everything in the dock is greyed this way EXCEPT developAlertRows, which must stay
        readable precisely when the rest is disabled -- it says why. */
-    if (transformPanel) transformPanel->setEnabled(live);
+    if (transformPanel) transformPanel->setEnabled(live && !replaceArmed);
+    if (replacePanel) replacePanel->setEnabled(live);       // same reason as Transform
     /* The History panel is part of the Develop tool: it comes and goes with it. Show it
        FIRST -- showing a tabified dock makes it the front tab, so Develop must be shown
        last (and raised) or the group would open on the History tab. */

@@ -59,8 +59,8 @@ struct ScopedNs {
         consider if a read operation has failed or if the file has been read but the
         reader done signal has not been processed yet.
 
-        • dm->isMetaReadFinished and dm->isAllIconChunkLoaded check if datamodel is
-          complete.  If not, calling redo will redispatch readers to try again, up to
+        • G::allMetadataAttempted and G::iconChunkLoaded (both owned by DataModel)
+          say whether the datamodel is complete.  If not, calling redo will redispatch readers to try again, up to
           5 times.
         • quitAfterTimeout runs if dispatchFinished has not run after a delay of 1000 ms.
           redo is called and then dispatchFinished.
@@ -370,7 +370,7 @@ void MetaRead::setStartRow(int sfRow, int reason, QString src)
     if (startRow == 0) bIsDone = true;
     isDone = false;
     success = false;                        // used to update statusbar
-    // set icon range. G::iconChunkLoaded is set in MW::updateChange
+    // icon range: set by DataModel::setIconRange, which also owns G::iconChunkLoaded
     firstIconRow = dm->startIconRange;
     lastIconRow = dm->endIconRange;
 
@@ -1514,7 +1514,7 @@ bool MetaRead::allMetaIconLoaded()
 
     Reads atomic flags maintained by DataModel on the main thread:
     - G::allMetadataAttempted — published in DataModel::addMetadataForItem
-    - G::iconChunkLoaded   — published in DataModel::setIcon, setIcon1, setIconRange
+    - G::iconChunkLoaded   — published only by DataModel::publishIconChunk
 
     The previous implementation used Qt::BlockingQueuedConnection to dispatch
     isMetaReadFinished/isAllIconChunkLoaded onto the main thread. That
@@ -1700,7 +1700,7 @@ void MetaRead::processReturningReader(int id, Reader *r)
             //<< "startRow =" << QString::number(startRow).leftJustified(4, ' ')
             << "row =" << QString::number(dmRow).leftJustified(4, ' ')
             // << "isRunning =" << QVariant(r->isRunning()).toString().leftJustified(5)
-            // << "iconChunkLoaded =" << QVariant(dm->isAllIconChunkLoaded(firstIconRow, lastIconRow)).toString().leftJustified(5)
+            // << "iconChunkLoaded =" << QVariant(G::iconChunkLoaded).toString().leftJustified(5)
             // //<< "toRead =" << toRead.size()
             // << "rowCount =" << dm->rowCount()
             // << "a =" << QString::number(a).leftJustified(4, ' ')

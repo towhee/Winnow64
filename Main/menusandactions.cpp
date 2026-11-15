@@ -1314,11 +1314,11 @@ void MW::createUtilActions()
     addAction(developAddToMaskAction);
     connect(developAddToMaskAction, &QAction::triggered, this, &MW::developAddToMask);
 
-    developSpotAction = new QAction(tr("Spot Removal Tool\tS"), this);
+    developSpotAction = new QAction(tr("Replace Tool\tS"), this);
     developSpotAction->setObjectName("developSpot");
     developSpotAction->setShortcutVisibleInContextMenu(true);
     addAction(developSpotAction);
-    connect(developSpotAction, &QAction::triggered, this, &MW::toggleDevelopReplace);
+    connect(developSpotAction, &QAction::triggered, this, &MW::developReplaceShortcut);
 
     screenSamplerAction = new QAction(tr("Screen Sampler"), this);
     screenSamplerAction->setObjectName("screenSampler");

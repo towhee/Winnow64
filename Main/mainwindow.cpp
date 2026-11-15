@@ -4167,8 +4167,7 @@ void MW::folderSelectionChange(QString folderPath, G::FolderOp op, bool resetDat
             setOperationMode(G::OperationMode::Preview);
     }
 
-    dm->beginMetaLoad();
-    G::iconChunkLoaded = false;
+    dm->beginMetaLoad();            // lowers allMetadataAttempted and iconChunkLoaded
     G::isModifyingDatamodel = true;
 
     resetDevelopCachesForNewFolder();
@@ -5325,8 +5324,7 @@ void MW::loadCatalogScope(const ScopeRequest &req, const QStringList &paths)
         writing diagnostics to the console unasked. */
     if (G::isPerfProbe) armGuiStallWatchdog();
 
-    dm->beginMetaLoad();
-    G::iconChunkLoaded = false;
+    dm->beginMetaLoad();            // lowers allMetadataAttempted and iconChunkLoaded
     G::isModifyingDatamodel = true;
 
     if (!req.append) {
@@ -5582,11 +5580,11 @@ void MW::refreshStaleRows(const QStringList &paths)
     if (G::isPerfProbe)
         qDebug().noquote() << "[PERF] stale repair: re-reading" << cleared << "row(s)";
 
-    /*  G::allMetadataAttempted followed the status writes above (DataModel owns it).
+    /*  G::allMetadataAttempted and G::iconChunkLoaded followed the writes above
+        (DataModel owns both: the icons were cleared through setIcon, which recounts).
         MetaRead forgets these rows were read, wherever they are, and reads them again
         (MetaRead::invalidateRows, Documentation 4.4.16); the icon chunk reload
         restarts its cycle. */
-    G::iconChunkLoaded = false;
     QMetaObject::invokeMethod(metaRead, "invalidateRows", Qt::QueuedConnection,
                               Q_ARG(QStringList, paths));
     reloadIconChunk();
@@ -7254,8 +7252,7 @@ bool MW::reset(QString src)
     dm->newInstance("folderSelectionChange");
     emit initializeImageCache();    // may not be req'd
 
-    dm->beginMetaLoad();
-    G::iconChunkLoaded = false;
+    dm->beginMetaLoad();            // lowers allMetadataAttempted and iconChunkLoaded
 
     // filters
     if (dm->sf) dm->sf->holdPredicate(false, "MW::reset");   // a new set: no restore to wait for
@@ -7670,7 +7667,7 @@ void MW::updateIconRange(QString src)
     // update icons cached only when the icon or viewport size changes
     if (chunkSizeChanged) {
         bool fileSelectionChange = false;
-        G::iconChunkLoaded = false;
+        // updateChange's setIconRange recounts the resized chunk (DataModel owns the flag)
         updateChange(midVisible, fileSelectionChange, "MW::updateIconRange");
     }
 
@@ -7897,7 +7894,7 @@ void MW::prefetchIconsFromIndex(QString src)
             /*  PUT THE CHUNK COUNT BACK ON AN EXACT FOOTING.
 
                 iconChunkMissing is maintained incrementally -- one decrement per icon
-                that lands in the range -- and DataModel::updateIconChunkLoaded decrements
+                that lands in the range -- and DataModel::noteIconLanded decrements
                 on its idempotent path too, so a row delivered twice is counted twice.
                 That drift already existed (a re-dispatch after a scroll does it) and is
                 tolerated because every range change recomputes the count exactly; but
@@ -7906,12 +7903,10 @@ void MW::prefetchIconsFromIndex(QString src)
                 alone the count would run low, G::iconChunkLoaded would go true early, and
                 MetaRead would stop asking for icons that are not there.
 
-                countIconChunkMissing is that exact recount, which is what setIconRange
+                recountIconChunk is that exact recount, which is what setIconRange
                 uses; asking for it here once, at the end, costs one O(span) walk and
                 removes the whole class of drift this pass could introduce. */
-            dm->iconChunkMissing = dm->countIconChunkMissing(dm->startIconRange,
-                                                             dm->endIconRange);
-            dm->updateIconChunkLoaded();
+            dm->recountIconChunk();
         }, Qt::QueuedConnection);
     });
 }
@@ -8054,8 +8049,9 @@ void MW::folderChanged(bool aborted)
         opening the file, and either way it is MetaRead's job. */
     dm->setIconRange(startRow);
     if (dm->isMetaReadFinished() && dm->isIconRangeLoaded()) {
+        /*  G::iconChunkLoaded is already true: setIconRange just recounted, and
+            isIconRangeLoaded (no exemptions) implies nothing in the range is owed. */
         dm->publishMetaAttempted();     // true: isMetaReadFinished, tested above
-        G::iconChunkLoaded = true;
         /* INITIALIZE FIRST (C7). folderChangeCompleted -> metadataComplete queues
            setImageCachePosition for the current image; initialize queued after it
            cleared that position's queue and never dispatched, leaving the cache empty
@@ -16566,7 +16562,8 @@ void MW::toggleDevelopTransform()
 void MW::toggleDevelopReplace()
 {
 /*
-    "S" in Develop mode (and the Spot menu): arm/disarm the spot tool in developSpotMode.
+    Arm/disarm the replace tool in developSpotMode: the Replace menu, the panel's [X],
+    and S while the tool is on (developReplaceShortcut).
     DevelopProperties owns the armed state and reports it via spotActiveChanged (the
     action-row button icon, and the loupe capture mode -- see createDevelopDock), so
     Escape on the loupe disarms through the same path.
@@ -16578,7 +16575,7 @@ void MW::toggleDevelopReplace()
 */
     if (G::isLogger) G::log("MW::toggleDevelopReplace");
     if (G::operationMode != G::OperationMode::Develop) {
-        if (G::popup) G::popup->showPopup("Spot Removal is only available in Develop Mode, "
+        if (G::popup) G::popup->showPopup("The Replace tool is only available in Develop Mode, "
                                           "which can be set in the status bar or the shortcut \"D\".",
                                           3000);
         return;
@@ -16589,16 +16586,30 @@ void MW::toggleDevelopReplace()
     developProperties->onSpotToolToggled(arming);
 }
 
-void MW::showDevelopSpotMenu()
+void MW::developReplaceShortcut()
 {
 /*
-    The action-row Spot button pops the spot tools, as New mask pops the mask tools: what
-    KIND of repair to make. Choosing one arms the tool in that mode (or switches mode when
-    it is already armed); the armed tool carries the check, and choosing it again -- or
-    Turn off, or Esc on the image -- turns the tool off. There is no Spot panel: this menu
-    also carries the one view setting (Show repairs, the old panel eye) and the help.
+    "S" in Develop mode and Develop > Replace Tool. Off: pop the Replace menu so the user
+    picks the tool (S used to arm the last tool used, unannounced). On: turn it off, so
+    S still closes what it opened.
 */
-    if (G::isLogger) G::log("MW::showDevelopSpotMenu");
+    if (G::isLogger) G::log("MW::developReplaceShortcut");
+    if (developProperties && developProperties->isSpotActive()) toggleDevelopReplace();
+    else showDevelopReplaceMenu();
+}
+
+void MW::showDevelopReplaceMenu()
+{
+/*
+    The action-row Replace button pops the replace tools, as New mask pops the mask
+    tools: what KIND of repair to make. Choosing one arms the tool in that mode (or
+    switches mode when it is already armed); the armed tool carries the check, and
+    choosing it again -- or Turn off, or Esc on the image -- turns the tool off. The menu
+    also carries Show repairs and the help; the replace panel (ReplacePanel, shown while
+    the tool is armed) carries the chosen tool's controls -- Copy / Paste all spots for
+    Spot.
+*/
+    if (G::isLogger) G::log("MW::showDevelopReplaceMenu");
     if (G::operationMode != G::OperationMode::Develop) {
         toggleDevelopReplace();             // explains Develop mode, arms nothing
         return;
@@ -16606,33 +16617,22 @@ void MW::showDevelopSpotMenu()
     if (!developProperties) return;
     const bool armed = developProperties->isSpotActive();
 
-    struct Item { int mode; const char *name; const char *tip; };
-    const Item items[] = {
-        {FillSpotGeom::Spot, "Spot",
-         "Click a blemish: it is healed from a nearby source picked for you."},
-        {FillSpotGeom::Heal, "Heal",
-         "Brush over a flaw: a source area's texture is blended into the surrounding "
-         "tone. Drag the source pin to choose another source."},
-        {FillSpotGeom::Clone, "Clone",
-         "Brush over an area to cover it with an exact copy of a source area. Drag the "
-         "source pin to choose another source."},
-        {FillSpotGeom::Fill, "Fill",
-         "Paint over something thin or scattered -- a wire, a twig, a leash -- then press "
-         "Enter to fill it from its surroundings."},
-        {FillSpotGeom::Object, "Object",
-         "Paint over an object, then press Enter to remove it with a regenerative (AI) "
-         "fill."},
-    };
+    /* Names and tips come from ReplacePanel so the menu and the panel never disagree. */
+    const int modes[] = {FillSpotGeom::Spot, FillSpotGeom::Heal, FillSpotGeom::Clone,
+                         FillSpotGeom::Fill, FillSpotGeom::Object};
     QMenu menu(this);
     menu.setToolTipsVisible(true);
-    for (const Item &it : items) {
-        QAction *a = menu.addAction(tr(it.name));
-        a->setData(it.mode);
+    for (const int m : modes) {
+        QAction *a = menu.addAction(ReplacePanel::modeName(m));
+        a->setData(m);
         a->setCheckable(true);
-        const bool on = armed && it.mode == developSpotMode;
+        const bool on = armed && m == developSpotMode;
         a->setChecked(on);
         a->setToolTip(on ? tr("In use -- choose it again to turn the tool off.")
-                         : tr(it.tip));
+                         : FillSpotGeom::isPaintArea(m)
+                           ? ReplacePanel::modeHint(m) + " " +
+                             ReplacePanel::paintAreaKeysHint()
+                           : ReplacePanel::modeHint(m));
     }
     menu.addSeparator();
     /* The non-destructive bypass: render with or without every repair, to compare. */
@@ -16641,14 +16641,20 @@ void MW::showDevelopSpotMenu()
     aShow->setChecked(developProperties->isSpotsShown());
     aShow->setToolTip(tr("Uncheck to see the photo without any of its repairs."));
     QAction *aOff = nullptr;
-    if (armed) aOff = menu.addAction(tr("Turn off spot tool\tEsc"));
+    if (armed) aOff = menu.addAction(tr("Turn off Replace tool\tEsc"));
     QAction *aHelp = menu.addAction(tr("Help"));
-    QAction *chosen = menu.exec(QCursor::pos());
+    /* Dropped from the Replace button when it is on screen -- for S too, so the key
+       shows where the tools live -- else at the cursor. */
+    QPoint at = QCursor::pos();
+    if (developReplaceBtn && developReplaceBtn->isVisible())
+        at = developReplaceBtn->mapToGlobal(QPoint(0, developReplaceBtn->height()));
+    QAction *chosen = menu.exec(at);
     if (!chosen) return;
     if (chosen == aHelp) { developProperties->spotHelp(); return; }
     if (chosen == aOff)  { toggleDevelopReplace(); return; }
     if (chosen == aShow) {
         developProperties->setSpotsShown(aShow->isChecked());
+        if (replacePanel) replacePanel->setPreviewShown(aShow->isChecked());
         developParamsChange();
         return;
     }
@@ -16658,6 +16664,7 @@ void MW::showDevelopSpotMenu()
     developSpotMode = mode;
     settings->setValue("Develop/Replace/mode", mode);
     if (imageView) imageView->setSpotReplaceMode(mode);
+    if (replacePanel) replacePanel->setMode(mode);
     if (!armed) toggleDevelopReplace();
 }
 

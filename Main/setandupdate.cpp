@@ -1162,8 +1162,7 @@ void MW::restoreParkedLibrary(const QSet<QString> &changed)
     rt.start();
     if (G::isPerfProbe) armGuiStallWatchdog();
 
-    dm->beginMetaLoad();
-    G::iconChunkLoaded = false;
+    dm->beginMetaLoad();            // lowers allMetadataAttempted and iconChunkLoaded
     G::isModifyingDatamodel = true;
     resetDevelopCachesForNewFolder();
     bookmarks->setEnabled(false);

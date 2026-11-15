@@ -17,6 +17,7 @@
 #include "Develop/History/historystore.h"
 #include "Develop/Presets/presetsview.h"
 #include "Develop/fillspot.h"
+#include "Develop/Replace/replacepanel.h"   // modeName: history steps name the tool
 #include "Utilities/inference/lamafill.h"   // autoSource: a Heal / Clone spot's chosen source
 #include "Main/mainwindow.h"
 #include "Main/global.h"
@@ -2240,9 +2241,14 @@ void DevelopProperties::onSpotToolToggled(bool active)
     /* The tool is taking the canvas, so a latched Before has to come off it first --
        the same reason toggleBeforeAfter declines to go up while a tool is armed. */
     if (active) endHistoryPreview();
-    emit spotActiveChanged(active);            // update the action-row spot button icon
+    emit spotActiveChanged(active);            // the action-row Replace button icon
     if (active) { emit spotEditBegin(); emitSpotPins(); }   // arm + seed the pins
     else        emit spotEditEnd();
+}
+
+QString DevelopProperties::spotStepName(const QString &paramsJson)
+{
+    return ReplacePanel::modeName(FillSpotGeom::parse(paramsJson).kind);
 }
 
 void DevelopProperties::onSpotStrokeCommitted(const QString &paramsJson)
@@ -2253,7 +2259,9 @@ void DevelopProperties::onSpotStrokeCommitted(const QString &paramsJson)
     FillSpot fs;
     fs.paramsJson = paramsJson;
     s.spots.append(fs);
-    noteScopeEdit(QString(), "Spot heal");   // whole-image, belongs to no scope
+    /* The step names the tool, as the Replace menu does: Spot, Heal, Clone, Fill,
+       Inpaint. Whole-image, so it belongs to no scope. */
+    noteScopeEdit(QString(), spotStepName(paramsJson));
     emitSpotPins();
     emit paramsChanged();                   // re-render -> MiganFill heals the new spot
 }
@@ -2264,8 +2272,9 @@ void DevelopProperties::onSpotRemoveRequested(int index)
     if (currentImagePath.isEmpty()) return;
     EditStack &s = stackCache[currentImagePath];
     if (index < 0 || index >= s.spots.size()) return;
+    const QString name = spotStepName(s.spots.at(index).paramsJson).toLower();
     s.spots.remove(index);
-    noteScopeEdit(QString(), "Remove spot heal");
+    noteScopeEdit(QString(), "Remove " + name);
     emitSpotPins();
     emit paramsChanged();                   // re-render without the removed spot
 }
@@ -2278,7 +2287,7 @@ void DevelopProperties::onSpotSourceMoved(int index, QPointF offset)
     if (index < 0 || index >= s.spots.size()) return;
     FillSpot &sp = s.spots[index];
     sp.paramsJson = FillSpotGeom::withSource(sp.paramsJson, offset.x(), offset.y());
-    noteScopeEdit(QString(), "Move heal source");
+    noteScopeEdit(QString(), "Move " + spotStepName(sp.paramsJson).toLower() + " source");
     emitSpotPins();
     emit paramsChanged();                   // re-heal from the new source
 }
@@ -2315,6 +2324,121 @@ void DevelopProperties::emitSpotPins()
         for (const FillSpot &sp : stackCache.value(currentImagePath).spots)
             params.append(sp.paramsJson);
     emit spotPinsChanged(params);
+    emit spotCountsChanged(copyableSpotCount(), copiedSpotCount());
+}
+
+int DevelopProperties::copyableSpotCount() const
+{
+    int n = 0;
+    if (currentImagePath.isEmpty()) return n;
+    for (const FillSpot &sp : stackCache.value(currentImagePath).spots)
+        if (sp.enabled && FillSpotGeom::parse(sp.paramsJson).kind == FillSpotGeom::Spot)
+            ++n;
+    return n;
+}
+
+void DevelopProperties::copySpots()
+{
+/*
+    Fill Replace panel "Copy all spots": hold the current image's Spot-tool repairs for
+    Paste. Only kind "spot" -- the click-to-heal dust tool, whose source is picked per
+    image, so a copied spot heals from the right surroundings wherever it lands. Heal,
+    Clone, Fill and Object repairs fit the content of the image they were made on. The
+    buffer lives for the session (like Copy Settings, which also starts empty).
+*/
+    if (G::isLogger) G::log("DevelopProperties::copySpots");
+    if (currentImagePath.isEmpty()) return;
+    spotClipboard.clear();
+    for (const FillSpot &sp : stackCache.value(currentImagePath).spots)
+        if (sp.enabled && FillSpotGeom::parse(sp.paramsJson).kind == FillSpotGeom::Spot)
+            spotClipboard.append(sp.paramsJson);
+    emit spotCountsChanged(copyableSpotCount(), copiedSpotCount());
+    if (G::popup) {
+        const int n = copiedSpotCount();
+        G::popup->showPopup(n == 1 ? QString("Copied 1 spot.")
+                                   : QString("Copied %1 spots.").arg(n), 1500);
+    }
+}
+
+void DevelopProperties::pasteSpots()
+{
+/*
+    Fill Replace panel "Paste all spots": append the copied spots to EVERY selected image,
+    the current one included. A spot already on an image (the same stroke, byte for byte
+    -- the image it was copied from, or a second paste) is skipped, so pasting is safe to
+    repeat.
+
+    History follows propagatePreset: the current image's step goes through noteScopeEdit
+    (propagateSuspended: spots never travel as an adjustment anyway), every other image
+    that changed gets its own step seeded with its state before the paste, and all of them
+    share one syncId so a revert follows the link across the selection. An image that
+    gained nothing records nothing.
+*/
+    if (G::isLogger) G::log("DevelopProperties::pasteSpots");
+    if (currentImagePath.isEmpty() || spotClipboard.isEmpty()) return;
+    /* An adjustment batch still in its window lands first, so its steps come before
+       this one on every image. */
+    flushPropagation();
+
+    auto addTo = [this](EditStack &s) {
+        QSet<QString> have;
+        for (const FillSpot &sp : s.spots) have.insert(sp.paramsJson);
+        int added = 0;
+        for (const QString &json : spotClipboard) {
+            if (have.contains(json)) continue;
+            FillSpot fs;
+            fs.paramsJson = json;
+            s.spots.append(fs);
+            have.insert(json);
+            ++added;
+        }
+        return added;
+    };
+    const QString label = "Paste spots";
+    int nImages = 0;
+
+    const int nCurrent = addTo(stackCache[currentImagePath]);
+    if (nCurrent > 0) {
+        propagateSuspended = true;
+        noteScopeEdit(QString(), label);          // whole-image, belongs to no scope
+        propagateSuspended = false;
+        ++nImages;
+    }
+
+    quint64 syncId = 0;
+    for (const QString &p : otherSelectedPaths()) {
+        EditStack &t = stackFor(p);
+        EditStack after = t;
+        if (addTo(after) == 0) continue;
+        if (!syncId) {
+            syncId = ++nextSyncId;
+            if (nCurrent > 0 && history) history->stampTop(currentImagePath, syncId);
+        }
+        if (history) history->seed(p, t);         // the state before, to revert to
+        t = after;
+        dirty.insert(p);
+        if (history) history->record(p, QString(), label, QString(), QString(), t, syncId);
+        ++nImages;
+    }
+    /* Seeding and recording touched every target; touch the image on screen last so a
+       large selection can never evict ITS history. */
+    if (syncId && history) history->seed(currentImagePath, stackCache.value(currentImagePath));
+    if (nImages > 0 && G::isDevelopDebounceWrite && debounceWriteTimer)
+        debounceWriteTimer->start(kDebounceWriteMs);
+
+    if (nCurrent > 0) {
+        emitSpotPins();
+        emit paramsChanged();                     // re-render -> heal the pasted spots
+    }
+    if (G::popup) {
+        const int n = copiedSpotCount();
+        const QString what = n == 1 ? QString("1 spot") : QString("%1 spots").arg(n);
+        G::popup->showPopup(nImages == 0
+            ? "Every selected image already has the copied spots."
+            : "Pasted " + what + " onto " + (nImages == 1 ? QString("1 image")
+                                             : QString("%1 images").arg(nImages)) + ".",
+            2000);
+    }
 }
 
 void DevelopProperties::renameActiveScope()
@@ -12784,8 +12908,8 @@ void DevelopProperties::spotHelp()
 {
     if (G::isLogger) G::log("DevelopProperties::spotHelp");
     QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
-    new HtmlWindow("Winnow - Spot Removal",
-                   ":/Docs/developspothelp.html",
+    new HtmlWindow("Winnow - Replace",
+                   ":/Docs/developreplacehelp.html",
                    QSize(700, 600), r, window());
 }
 

@@ -71,7 +71,8 @@ class TitleBarStrip;
 #include "Develop/developstackcache.h"   // MW::developStackCache (interactive proxy)
 #include "Develop/Scopes/scopesview.h"
 #include "Develop/Transform/transformpanel.h"
-#include "Develop/fillspot.h"           // FillSpotGeom::Kind (the Spot menu tools)
+#include "Develop/Replace/replacepanel.h"
+#include "Develop/fillspot.h"           // FillSpotGeom::Kind (the Replace menu tools)
 #include "Develop/History/historyview.h"
 #include "Develop/Presets/presetsview.h"
 #include "Develop/History/historypanel.h"
@@ -1349,13 +1350,16 @@ private slots:
     void syncDevelopScopesMenu();
     /* Show/hide the Develop Transform panel (action-row toggle / "R"); persists. */
     void toggleDevelopTransform();
-    /* Arm/disarm the spot tool on the loupe in developSpotMode ("S" in Develop mode,
-       Develop > Spot Removal Tool, and the Spot menu). */
+    /* Arm/disarm the spot tool on the loupe in developSpotMode (the Replace menu, the
+       panel's [X], and S while armed). */
     void toggleDevelopReplace();
-    /* The action-row Spot button: a menu of the spot tools (Spot, Heal, Clone, Fill,
+    /* "S" in Develop mode and Develop > Replace Tool: the Replace menu when the tool is
+       off (pick a tool), toggleDevelopReplace when it is on. */
+    void developReplaceShortcut();
+    /* The action-row Replace button: a menu of the spot tools (Spot, Heal, Clone, Fill,
        Object), Show repairs, Turn off (while armed) and Help, like the New mask button's
        tool menu. */
-    void showDevelopSpotMenu();
+    void showDevelopReplaceMenu();
     /* "W" in Develop mode: arm/disarm the Basic panel's white-balance dropper. Transform
        claims W for Warp while it is active (arbiter rule 1a), so this only runs when no
        Transform session is up. */
@@ -2141,7 +2145,7 @@ private:
     /* Title-bar toggle buttons that carry the blue "active" border while their panel /
        tool is on (kept in sync from the toggle handlers). */
     BarBtn *developTransformBtn = nullptr;
-    BarBtn *developSpotBtn = nullptr;
+    BarBtn *developReplaceBtn = nullptr;
     BarBtn *developSamplerBtn = nullptr;   // Screen Sampler (pipette)
     ScreenSampler *screenSampler = nullptr;   // built on first use
     QAction *screenSamplerAction = nullptr;
@@ -3014,9 +3018,12 @@ private:
        and above the property tree. Toggled by a button on the Develop action row and
        the "R" shortcut; visibility persists (Develop/transformVisible). */
     TransformPanel *transformPanel = nullptr;
-    /* The Spot tool armed by S and chosen in the Spot menu (FillSpotGeom::Kind: Spot,
+    /* The Spot tool armed by S and chosen in the Replace menu (FillSpotGeom::Kind: Spot,
        Heal, Clone, Fill, Object); persists as Develop/Replace/mode. */
     int developSpotMode = FillSpotGeom::Spot;
+    /* Develop Fill Replace panel: the controls for developSpotMode, below Transform.
+       Shown while the spot tool is armed; its [X] turns the tool off. */
+    ReplacePanel *replacePanel = nullptr;
     bool developTransformVisible = false;
     /* True while the crop tool is being edited: the render pipeline then SUPPRESSES the geometry
        (shows the full frame for the overlay); committing the crop clears it and re-renders cropped. */

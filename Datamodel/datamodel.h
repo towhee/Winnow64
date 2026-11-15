@@ -890,7 +890,8 @@ public slots:
     void addAllMetadata();
     /*  G::allMetadataAttempted has ONE writer, here (Documentation 4.4.16): every row
         attempted (isMetaReadFinished), republished whenever the count or the row count
-        moves. beginMetaLoad says a load is starting, so "finished" waits for rows. */
+        moves. beginMetaLoad says a load is starting, so "finished" waits for rows; it
+        lowers G::iconChunkLoaded too (see recountIconChunk). */
     void publishMetaAttempted();
     void beginMetaLoad();
     bool addMetadataForItem(ImageMetadata m, QString src);
@@ -932,7 +933,6 @@ public slots:
     void rebuildTypeFilter();
     void searchStringChange(QString searchString);
     bool isMetaReadFinished();          // O(1): every row attempted (== rowCount)
-    bool isAllIconChunkLoaded(int first, int last);
     // Intercepts MetadataStatus/IconLoaded/Video column writes to keep the
     // running counts above accurate; delegates everything to the base class.
     /*  Serves the covered columns from the packed row store -- the seam the
@@ -941,9 +941,17 @@ public slots:
     bool setData(const QModelIndex &index, const QVariant &value,
                  int role = Qt::EditRole) override;
     void recountLoadFlags();        // full rescan to resync counts after removals
-    /*  Refresh G::iconChunkLoaded. Pass the dm row an icon just landed on for the O(1)
-        incremental path; the no-argument form does the full authoritative recount. */
-    void updateIconChunkLoaded(int dmRow = -1);
+    /*  G::iconChunkLoaded HAS ONE OWNER, this model (Documentation 4.4.16). It is
+        derived: no row in the current icon range still owes an icon (iconChunkMissing
+        == 0), published by publishIconChunk and nothing else. MW used to set it from
+        six places on what it believed (false at each load start, after a stale
+        repair, on a chunk resize; true at folderChanged), and wrote iconChunkMissing
+        itself. noteIconLanded is the O(1) step as an icon arrives in the range;
+        recountIconChunk is the exact O(span) walk, run when the range moves
+        (setIconRange), rows are inserted or removed (recountLoadFlags), an icon is
+        cleared, or a pass may have counted an icon twice (the index prefetch). */
+    void noteIconLanded(int dmRow);
+    void recountIconChunk();
     int  countIconChunkMissing(int first, int last);
 
     /*  THE SCROLL PATH, MEASURED (G::isPerfProbe / WINNOW_PERF_PROBE=1).
@@ -954,11 +962,11 @@ public slots:
         O(1), and which of them costs what cannot be reasoned out -- static analysis has
         named the wrong culprit here twice:
 
-          scan   isAllIconChunkLoaded, called from setIconRange, which runs TWICE per
+          scan   recountIconChunk, called from setIconRange, which runs TWICE per
                  scroll event (MW::updateIconRange and MW::updateChange). It walks the
                  whole icon chunk -- up to G::maxIconChunk rows, 10,000 by default --
-                 asking the PROXY for three columns each, and unlike updateIconChunkLoaded
-                 it has no O(1) counter gate in front of it.
+                 asking the PROXY for three columns each. (It was isAllIconChunkLoaded,
+                 removed 2026-11-14; same walk, now the exact count.)
           evict  clearIconsOutsideChunkRange, queued from MetaRead::dispatchFinished onto
                  the GUI thread. It walks EVERY row outside the chunk -- 33,000 of 43,000
                  -- reading a decoration from each.
@@ -997,7 +1005,7 @@ public:
         only, so a plain bool. */
     bool proxySnapshotPending = false;
 
-    qint64 probeScanNs = 0;             // isAllIconChunkLoaded, cumulative
+    qint64 probeScanNs = 0;             // recountIconChunk, cumulative
     qint64 probeScanCalls = 0;
     qint64 probeScanRows = 0;
     qint64 probeEvictNs = 0;            // clearIconsOutsideChunkRange, cumulative
@@ -1021,11 +1029,6 @@ public:
     std::atomic<qint64> probeRedos{0};        // MetaRead::redo passes
     QElapsedTimer probeScrollClock;
     qint64 probeLastReportMs = -1;
-    /*  Rows in the CURRENT icon range that still owe an icon. Exact after every
-        setIconRange, decremented as icons land. G::iconChunkLoaded == (this == 0).
-        Not a probe -- it is live state; it sits here because this is the plain-data
-        block (the surrounding section is public slots:, where moc rejects members). */
-    int iconChunkMissing = 0;
     /*  The range the last eviction sweep covered, so the next one can walk only what the
         chunk has slid off. -1 means "no sweep yet": do a full one. */
     int lastEvictStart = -1;
@@ -1051,6 +1054,13 @@ private:
     Metadata *metadata;
     Filters *filters;
     bool &combineRawJpg;
+
+    /*  Rows in the CURRENT icon range that still owe an icon: exact after every
+        recountIconChunk, decremented by noteIconLanded. G::iconChunkLoaded == (this ==
+        0), published only by publishIconChunk. Private so nothing outside the model can
+        move it (MW's index prefetch used to). */
+    int iconChunkMissing = 0;
+    void publishIconChunk();
     static bool lessThan(const QFileInfo &i1, const QFileInfo &i2);
     static bool lessThanCombineRawJpg(const QFileInfo &i1, const QFileInfo &i2);
 

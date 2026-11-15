@@ -18,12 +18,21 @@ WHAT'S NEW
 - Persistent brush settings
 
 BUGS / TO DO
+- Develop previews when D > E > D ... no judder, devPreview for images without edits
+- Review Develop shortcuts (N, M, X)
+- Spot remove brush size gradation is too course
+- Spot removal reference (repeat all spots on other images)
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location
 - Thumb show if the preview is up-to-date and develop has been run
 - Rethink thumbnail badges
+
+- Consider a setting to turn the scaled-up thumbnail on or off.
+- Decide whether to do the full path-keyed cache queue.
+- Give G::iconChunkLoaded a single owner (left unchanged for now).
+
 
 - The two SubIFD masks are DNG 1.6 semantic mattes (a subject matte and a skin matte)
   I saved a memory, project_proraw_embedded_masks.md, with the tag numbers, the names
