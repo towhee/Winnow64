@@ -1358,7 +1358,7 @@ private slots:
     void developReplaceShortcut();
     /* The action-row Replace button: a menu of the spot tools (Spot, Heal, Clone, Fill,
        Object), Show repairs, Turn off (while armed) and Help, like the New mask button's
-       tool menu. */
+       tool menu. Opens at the cursor (also from S). */
     void showDevelopReplaceMenu();
     /* "W" in Develop mode: arm/disarm the Basic panel's white-balance dropper. Transform
        claims W for Warp while it is active (arbiter rule 1a), so this only runs when no

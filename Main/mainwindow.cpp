@@ -16643,12 +16643,8 @@ void MW::showDevelopReplaceMenu()
     QAction *aOff = nullptr;
     if (armed) aOff = menu.addAction(tr("Turn off Replace tool\tEsc"));
     QAction *aHelp = menu.addAction(tr("Help"));
-    /* Dropped from the Replace button when it is on screen -- for S too, so the key
-       shows where the tools live -- else at the cursor. */
-    QPoint at = QCursor::pos();
-    if (developReplaceBtn && developReplaceBtn->isVisible())
-        at = developReplaceBtn->mapToGlobal(QPoint(0, developReplaceBtn->height()));
-    QAction *chosen = menu.exec(at);
+    /* At the cursor, for a click and for S alike. */
+    QAction *chosen = menu.exec(QCursor::pos());
     if (!chosen) return;
     if (chosen == aHelp) { developProperties->spotHelp(); return; }
     if (chosen == aOff)  { toggleDevelopReplace(); return; }
