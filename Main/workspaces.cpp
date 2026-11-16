@@ -1843,25 +1843,17 @@ void MW::ApplyBrowseDevelopSync(const WorkspaceData &w, bool sync)
         }
         if (other->areaCollapse[0].collapsed) otherLeft = 0;
         if (other->areaCollapse[1].collapsed) otherRight = 0;
-        // TEMP probe (Sync Browse/Develop): remove once verified in-app
-        qDebug() << "SyncBD own L/R" << left << right << "other" << other->name
-                 << "L/R" << otherLeft << otherRight;
         /* A side this layout does not show stays unshown. */
         if (left > 0) left = qMax(left, otherLeft);
         if (right > 0) right = qMax(right, otherRight);
     }
 
-    // TEMP probe (Sync Browse/Develop): remove once verified in-app
-    qDebug() << "SyncBD" << (currentWorkflow == WfSource ? "Browse" : "Develop")
-             << w.name << "sync" << sync << "target L/R" << left << right
-             << "thumb" << thumbW << thumbH << "(own" << w.thumbHeight << ")";
     SetSideWidth(Qt::LeftDockWidgetArea, left);
     SetSideWidth(Qt::RightDockWidgetArea, right);
     SetFilmstripThumbSize(thumbW, thumbH);
     const int wf = currentWorkflow;
     QTimer::singleShot(0, this, [this, wf, left, right] {
         if (currentWorkflow != wf) return;      // moved on before the queue turned
-        qDebug() << "SyncBD deferred pass";     // TEMP probe
         SetSideWidth(Qt::LeftDockWidgetArea, left);
         SetSideWidth(Qt::RightDockWidgetArea, right);
         FitFilmstrip();
@@ -1893,9 +1885,6 @@ void MW::SetSideWidth(Qt::DockWidgetArea area, int width)
         if (!rep) rep = d;
     }
     if (!rep) return;
-    // TEMP probe (Sync Browse/Develop): remove once verified in-app
-    qDebug() << "SyncBD set" << (area == Qt::LeftDockWidgetArea ? "left" : "right")
-             << "rep" << rep->objectName() << "repW" << rep->width() << "-> " << width;
     resizeDocks({rep}, {width}, Qt::Horizontal);
     if (G::isPanelProbe)
         PanelProbe::Instance().NoteRequest(rep->objectName(),
@@ -1932,9 +1921,6 @@ void MW::FitFilmstrip()
     const Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
     if (area != Qt::BottomDockWidgetArea && area != Qt::TopDockWidgetArea) return;
     if (isDockAreaCollapsed(area)) return;
-    // TEMP probe (Sync Browse/Develop): remove once verified in-app
-    qDebug() << "SyncBD filmstrip thumbH" << thumbView->iconHeight
-             << "dockH before" << thumbDock->height();
     setThumbDockFeatures(area);
 }
 

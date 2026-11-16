@@ -635,11 +635,15 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
         const bool developed = cacheSource == G::CacheDeveloped || ready;
         const QString now = developed ? (reduced ? "Orange" : "Green")
                             : cacheSource == G::CacheOriginal ? "Purple" : "Red";
-        tooltip = "Cache status: " + now + "\n\n"
-                  "  Green:\t Developed preview ready\n"
-                  "  Orange:\t Developed preview, reduced size\n"
-                  "  Purple:\t Cached embedded preview or original file\n"
-                  "  Red:\t Not cached";
+        /* A table, not tabs: "Orange:" overruns the first tab stop, which pushed its
+           description out of line with the others. */
+        tooltip = "<p style='white-space:pre'>Cache status: " + now + "</p>"
+                  "<table cellspacing='0' cellpadding='0' style='margin-left:8px'>"
+                  "<tr><td>Green:&nbsp;&nbsp;</td><td>Developed preview ready</td></tr>"
+                  "<tr><td>Orange:&nbsp;&nbsp;</td><td>Developed preview, reduced size</td></tr>"
+                  "<tr><td>Purple:&nbsp;&nbsp;</td><td>Cached embedded preview or original file</td></tr>"
+                  "<tr><td>Red:&nbsp;&nbsp;</td><td>Not cached</td></tr>"
+                  "</table>";
     }
     else if (ratingVisible && hit("Rating"))
         tooltip = "Rating: " + rating + (rating == "1" ? " star" : " stars");
