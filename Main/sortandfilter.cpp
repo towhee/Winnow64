@@ -550,8 +550,9 @@ void MW::recordFilterHistory()
     entries, as a browser does.
 
     THE STATE IS Filters::persistableState: checked items keyed on {category, value,
-    include/exclude}, the search text and the keyword any/all mode. Session categories
-    (Filter on..., map pins) are not in it, so a change to one alone records nothing.
+    include/exclude}, the search text and its row's check, and the keyword any/all
+    mode. Session categories (Filter on..., map pins) are not in it, so a change to one
+    alone records nothing.
 
     THE FIRST ENTRY IS "NOTHING FILTERED". By the time filterChange runs the tree already
     holds the new checks, so the state before the first change is gone; after MW::reset it
@@ -563,6 +564,7 @@ void MW::recordFilterHistory()
         QVariantMap none;
         none["items"] = QStringList();
         none["searchText"] = QString();
+        none["searchChecked"] = true;       // the row's default; see persistableState
         none["keywordsMatchAll"] = state.value("keywordsMatchAll");
         filterHistory << none;
         filterHistoryPos = 0;

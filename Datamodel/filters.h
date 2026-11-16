@@ -828,6 +828,9 @@ private:
     QList<ItemState> checkedItemStates() const;
     bool savedKeywordsMatchAll = false;     // the any/all mode, with itemStates
     QString searchText;
+    /*  The Search row's own check, saved apart from itemStates: see restore(). Checked
+        is the row's default, so a state saved before this existed restores as before. */
+    Qt::CheckState searchCheckState = Qt::Checked;
 };
 
 #endif // FILTERS_H

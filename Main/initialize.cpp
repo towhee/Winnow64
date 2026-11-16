@@ -418,6 +418,21 @@ void MW::createDataModel()
         the vocabulary has never been pushed in. */
     connect(buildFilters, &BuildFilters::finishedBuildFilters,
             this, &MW::refreshFilterVocabMarking);
+    /*  THE BUILD'S STAGE MESSAGE ENDS WITH THE BUILD. It is written to the message pane's
+        label (see buildStage above), and normally the view covers that pane before
+        anyone reads it. But when the result is EMPTY the pane IS the view: nullFiltration
+        writes "No images in filter result.", and the count update that its filterChange
+        starts then overwrote it with "Building filters: updating the panel ...", which
+        stayed up for good. Connected after restoreFiltersAfterFolderChange, so it sees
+        the filtration that restore applied. Behind the load curtain the stages went to
+        the curtain, not the label. */
+    connect(buildFilters, &BuildFilters::finishedBuildFilters, this, [this] {
+        if (loadCurtainUp || centralLayout->currentIndex() != MessageTab) return;
+        const QString shown = msg.msgLabel->text();
+        if (!shown.contains("Building filters")
+            && !shown.contains("Counting images per filter")) return;
+        if (!showCentralMessageIfNoImages()) setCentralMessage(loadedMsg().trimmed());
+    });
     /*  A build that cleared the categories and was then aborted leaves the tail of them
         empty with nothing to put them back -- the update that did the aborting fills only
         its own. Re-run it. */

@@ -3094,6 +3094,7 @@ void Filters::save()
     savedKeywordsMatchAll = keywordsMatchAll();
     searchText = searchTrue->text(0);
     if (searchText == enterSearchString) searchText = "";
+    searchCheckState = searchTrue->checkState(0);
 }
 
 QList<Filters::ItemState> Filters::checkedItemStates() const
@@ -3140,6 +3141,7 @@ QVariantMap Filters::persistableState() const
     QVariantMap m;
     m["items"] = items;
     m["searchText"] = text;
+    m["searchChecked"] = searchTrue->checkState(0) != Qt::Unchecked;
     m["keywordsMatchAll"] = keywordsMatchAll();
     return m;
 }
@@ -3163,6 +3165,8 @@ void Filters::setStateToRestore(const QVariantMap &m)
         itemStates << st;
     }
     searchText = m.value("searchText").toString();
+    // absent from a state saved before it was carried: the row's default
+    searchCheckState = m.value("searchChecked", true).toBool() ? Qt::Checked : Qt::Unchecked;
     savedKeywordsMatchAll = m.value("keywordsMatchAll").toBool();
 }
 
@@ -3216,6 +3220,15 @@ void Filters::restore(bool keepMissing)
         placeholder with an empty row -- an EDIT of the search text, which ran a search
         and two whole-proxy filterChanges (~600 ms at 148,567 rows) on every restore, a
         folder add/remove's as well as the Library's at start. */
+    /*  THE SEARCH ROW'S CHECK GOES BACK EXPLICITLY, and BEFORE its text. The item loop
+        above cannot restore it: the row is keyed on its text, which uncheckAllFilters has
+        just reset to the placeholder, so a saved "insect" never matches -- and
+        setSearchNewFolder left the row Checked. A search the user had unchecked came back
+        checked on every rebuild (a version deleted, a file inserted), and the grid
+        emptied to whatever the old search matched. Set first, so the setText below runs
+        a search but no filterChange when the row is unchecked. */
+    if (searchTrue->checkState(0) != searchCheckState)
+        searchTrue->setCheckState(0, searchCheckState);
     const QString wantSearch = searchText.isEmpty() ? enterSearchString : searchText;
     if (searchTrue->text(0) != wantSearch) searchTrue->setText(0, wantSearch);
     // the mode goes back with the checks it combines; the caller re-applies both
