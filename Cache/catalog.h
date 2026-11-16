@@ -672,6 +672,9 @@ public:
     /* File-operation sync. Call via Utilities/fileops.h, not directly. */
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);
+    /* A folder Winnow renamed or moved: every row under from, at any depth, re-keyed
+       under to. Returns the rows carried. */
+    int onFolderMoved(const QString &from, const QString &to);
 
     /* Drop every catalogued row. Does NOT touch the devPreview tables in the same
        file. */

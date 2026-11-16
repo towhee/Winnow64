@@ -182,4 +182,24 @@ void OnFolderDeleted(const QString &folder)
     });
 }
 
+void OnFolderMoved(const QString &from, const QString &to)
+{
+/*
+    A folder Winnow renamed or moved: every pick under it, at any depth and versions
+    included, follows -- OnMoved for a whole folder. The keys are row keys, spelled as
+    the model spells them, so the prefix is compared as text.
+*/
+    onGui([from, to] {
+        if (!opened || from.isEmpty() || to.isEmpty() || from == to) return;
+        const QString prefix = from.endsWith('/') ? from : from + "/";
+        QStringList moving;
+        for (const QString &k : std::as_const(keys))
+            if (k.startsWith(prefix)) moving << k;
+        for (const QString &k : std::as_const(moving)) {
+            Set(k, false);
+            Set(to + k.mid(prefix.size() - 1), true);
+        }
+    });
+}
+
 }   // namespace SavedPicks

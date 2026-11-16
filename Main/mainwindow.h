@@ -3884,7 +3884,21 @@ private:
         rowKeys are the dragged rows, to name a version dragged without its master. */
     void moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys,
                             const QString &folder);
+    /*  The context menu of a Filters Folders row in the Library
+        (Filters::addFolderActions): rename the folder in place, move it under a folder
+        the user picks, or send it to the trash. Rename and move go through
+        relocateLibraryFolder. */
+    void renameLibraryFolder(const QString &folder);
+    void moveLibraryFolder(const QString &folder);
+    void trashLibraryFolder(const QString &folder);
+    /*  Rename or move a Library folder from -> to on disk, then carry everything keyed
+        on its paths (FileOps::onFolderMoved), the scope table rows, bookmarks and the
+        loaded rows. verb ("Rename" / "Move") words the messages. */
+    void relocateLibraryFolder(const QString &from, const QString &to,
+                               const QString &verb);
     void deleteFolder();
+    // the body of deleteFolder, for a path already chosen
+    void deleteFolderPath(const QString &dirToDelete);
     void deleteAllImageMemCard(QString rootPath, QString name);
     void eraseMemCardImages();
     void eraseMemCardImagesFromContextMenu();

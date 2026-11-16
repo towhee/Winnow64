@@ -51,6 +51,7 @@ private slots:
     void versionsTravelWithTheImage();
     void versionKeysAreRefused();
     void folderDeleteClearsPreviewsUnderItOnly();
+    void folderMoveCarriesPreviewsUnderItOnly();
 
 private:
     QString p(const QString &name) const;
@@ -619,6 +620,45 @@ void tst_fileops::folderDeleteClearsPreviewsUnderItOnly()
     // init() clears files only, so take the folders away here
     QDir(d.absoluteFilePath("a")).removeRecursively();
     QDir(d.absoluteFilePath("a raw")).removeRecursively();
+}
+
+void tst_fileops::folderMoveCarriesPreviewsUnderItOnly()
+{
+/*
+    FileOps::onFolderMoved re-keys by PATH-KEY PREFIX, carrying the tail of each key:
+    an image in the folder, one in a subfolder and a VERSION of the first all answer
+    at the new path and not at the old one, and the sibling "b raw" -- which a plain
+    startsWith would have caught -- is left where it was.
+*/
+    QDir d(tmp.path());
+    QVERIFY(d.mkpath("b/sub"));
+    QVERIFY(d.mkpath("b raw"));
+    const QString from  = d.absoluteFilePath("b");
+    const QString to    = d.absoluteFilePath("renamed");
+    const QString inB   = d.absoluteFilePath("b/IMG_1.NEF");
+    const QString inSub = d.absoluteFilePath("b/sub/IMG_2.NEF");
+    const QString other = d.absoluteFilePath("b raw/IMG_3.NEF");
+    const QString ver   = VersionKey::make(inB, 1);
+
+    DevPreviewCache &c = DevPreviewCache::instance();
+    const QByteArray payload(1024, 'm');
+    c.put(inB, "r", payload);
+    c.put(inSub, "r", payload);
+    c.put(other, "r", payload);
+    c.put(ver, "r", payload);
+
+    FileOps::onFolderMoved(from, to);
+
+    QVERIFY(c.get(inB, "r").isEmpty());
+    QVERIFY(c.get(inSub, "r").isEmpty());
+    QVERIFY(c.get(ver, "r").isEmpty());
+    QCOMPARE(c.get(to + "/IMG_1.NEF", "r"), payload);
+    QCOMPARE(c.get(to + "/sub/IMG_2.NEF", "r"), payload);
+    QCOMPARE(c.get(VersionKey::make(to + "/IMG_1.NEF", 1), "r"), payload);
+    QCOMPARE(c.get(other, "r"), payload);
+
+    QDir(from).removeRecursively();
+    QDir(d.absoluteFilePath("b raw")).removeRecursively();
 }
 
 QTEST_MAIN(tst_fileops)

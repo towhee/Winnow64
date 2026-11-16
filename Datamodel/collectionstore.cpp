@@ -532,6 +532,53 @@ void CollectionStore::onFolderDeleted(const QString &folder)
     if (q.exec() && q.numRowsAffected() > 0) emit membersChanged();
 }
 
+void CollectionStore::onFolderMoved(const QString &from, const QString &to)
+{
+/*
+    A folder Winnow renamed or moved: every membership under it follows, by key prefix
+    -- see onMoved for the one-image form and ThumbCache::onFolderMoved for the prefix
+    arithmetic. OR IGNORE then delete what is left, as onMoved does, so a collection
+    that already held the destination keeps one membership. A case-only rename keeps
+    every key and respells path alone.
+*/
+    if (QThread::currentThread() != thread()) {
+        QMetaObject::invokeMethod(this, [this, from, to] { onFolderMoved(from, to); },
+                                  Qt::QueuedConnection);
+        return;
+    }
+    const QString fromKey = cachePathKey(from);
+    const QString toKey = cachePathKey(to);
+    if (fromKey.isEmpty() || toKey.isEmpty()) return;
+    if (!isOpen() && !QFileInfo::exists(this->path())) return;
+    QSqlDatabase d = db();
+    if (!d.isOpen()) return;
+    const QString toPath = QDir::cleanPath(QDir::fromNativeSeparators(to));
+    const QString fromPrefix = fromKey + "/";
+    d.transaction();
+    QSqlQuery q(d);
+    /*  path's tail comes from path, not from the key as onMoved's does: there the tail
+        is only "/#v<id>", here it holds file names, and the key's are case-folded. */
+    q.prepare("UPDATE OR IGNORE member SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(path, length(?) + 1)"
+              " WHERE substr(pathkey, 1, length(?)) = ?");
+    q.addBindValue(toKey);
+    q.addBindValue(fromKey);
+    q.addBindValue(toPath);
+    q.addBindValue(QDir::cleanPath(QDir::fromNativeSeparators(from)));
+    q.addBindValue(fromPrefix);
+    q.addBindValue(fromPrefix);
+    q.exec();
+    const bool changed = q.numRowsAffected() > 0;
+    if (fromKey != toKey) {
+        q.prepare("DELETE FROM member WHERE substr(pathkey, 1, length(?)) = ?");
+        q.addBindValue(fromPrefix);
+        q.addBindValue(fromPrefix);
+        q.exec();
+    }
+    d.commit();
+    if (changed) emit membersChanged();
+}
+
 void CollectionStore::onDeleted(const QString &path)
 {
     if (QThread::currentThread() != thread()) {

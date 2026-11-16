@@ -724,6 +724,55 @@ void DevPreviewCache::onFolderDeleted(const QString &folder)
     for (const QString &k : std::as_const(keys)) removeLocked(db, k);
 }
 
+void DevPreviewCache::onFolderMoved(const QString &from, const QString &to)
+{
+/*
+    A folder Winnow renamed or moved: every entry under it re-keyed under the new path,
+    versions and subfolders included, by key prefix -- see ThumbCache::onFolderMoved.
+    The payload files are named for the row, not the path, so they stay where they are.
+
+    Entries already under the destination describe files that are not there, so they go
+    first, through removeLocked, which keeps their payloads and the byte total right.
+    The source stamp is unchanged: a rename does not touch the files' size or mtime.
+*/
+    const QString fromKey = cachePathKey(from);
+    const QString toKey = cachePathKey(to);
+    if (fromKey.isEmpty() || toKey.isEmpty()) return;
+    const QString fromPath = QDir::cleanPath(QDir::fromNativeSeparators(from));
+    const QString toPath = QDir::cleanPath(QDir::fromNativeSeparators(to));
+    const QString fromPrefix = fromKey + "/";
+    const QString toPrefix = toKey + "/";
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    if (fromKey != toKey) {
+        QStringList stale;
+        QSqlQuery s(db);
+        s.prepare("SELECT pathkey FROM devpreview WHERE substr(pathkey, 1, length(?)) = ?");
+        s.addBindValue(toPrefix);
+        s.addBindValue(toPrefix);
+        if (s.exec())
+            while (s.next()) stale << s.value(0).toString();
+        for (const QString &k : std::as_const(stale)) removeLocked(db, k);
+    }
+    QSqlQuery q(db);
+    q.prepare("UPDATE devpreview SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(path, length(?) + 1),"
+              " folder = ? || substr(folder, length(?) + 1)"
+              " WHERE substr(pathkey, 1, length(?)) = ?");
+    q.addBindValue(toKey);
+    q.addBindValue(fromKey);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(fromPrefix);
+    q.addBindValue(fromPrefix);
+    q.exec();
+    bumpLocked();
+}
+
 void DevPreviewCache::clear()
 {
     QMutexLocker lk(&mutex);

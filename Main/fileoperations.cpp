@@ -3,6 +3,9 @@
 #include "Utilities/rowtrail.h"
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
+#include "Cache/catalog.h"
+#include "Cache/pathkey.h"
+#include "Utilities/foldertree.h"
 #include <QSet>
 #include <QElapsedTimer>
 #include <QProgressDialog>
@@ -972,6 +975,304 @@ void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys
     if (dm->sf->rowCount() > 0) sel->select(sfRow);
 }
 
+namespace {
+/*  Where path is once folder from has become to: to itself, or to plus the rest of a
+    path beneath from. Empty when path is neither. Compared by cache key, so a spelling
+    the filesystem treats as the same folder still matches. */
+QString relocatedPath(const QString &path, const QString &from, const QString &to)
+{
+    const QString key = cachePathKey(path);
+    const QString fromKey = cachePathKey(from);
+    if (key.isEmpty() || fromKey.isEmpty()) return QString();
+    if (key == fromKey) return to;
+    if (key.startsWith(fromKey + "/")) return to + path.mid(from.size());
+    return QString();
+}
+
+/*  The checks every Library folder operation shares. False, with a popup saying why,
+    when the folder cannot be touched now. The Filters menu greys these same cases with
+    the reason, so a popup here means the state changed while the menu was open. */
+bool libraryFolderOpAllowed(const QString &folder, const QString &what)
+{
+    if (G::scope != G::Scope::Catalog || folder.isEmpty()) return false;
+    if (G::isModifyingDatamodel || G::isLoadRunning) {
+        G::popup->showPopup("Please wait until the Library has finished loading "
+                            "before you " + what + " a folder.", 3000);
+        return false;
+    }
+    if (!QFileInfo(folder).isDir()) {
+        G::popup->showPopup(QDir::toNativeSeparators(folder) + " is not available.", 3000);
+        return false;
+    }
+    if (refuseCacheFolder(folder)) return false;
+    return true;
+}
+}  // namespace
+
+void MW::renameLibraryFolder(const QString &folder)
+{
+/*
+    "Rename folder..." on a Folders row in the Library. The new name is a NAME, not a
+    path: the folder stays where it is. A name only the case of which differs is a
+    rename too (relocateLibraryFolder takes it through a temporary name, which a
+    case-insensitive volume needs).
+*/
+    if (G::isLogger) G::log("MW::renameLibraryFolder", folder);
+    if (!libraryFolderOpAllowed(folder, "rename")) return;
+    const QFileInfo info(folder);
+    const QString oldName = info.fileName();
+
+    bool ok = false;
+    const QString name = QInputDialog::getText(
+        this, tr("Rename Folder"), tr("New name for the folder \"%1\":").arg(oldName),
+        QLineEdit::Normal, oldName, &ok).trimmed();
+    resetFocus();
+    if (!ok || name.isEmpty() || name == oldName) return;
+
+    /* The characters no platform allows in a name, and the ones Windows adds. A name is
+       one component, so a separator would silently make it a move. */
+    QString bad = "/\\";
+#ifdef Q_OS_WIN
+    bad += ":*?\"<>|";
+#endif
+    for (const QChar c : bad) {
+        if (name.contains(c)) {
+            G::popup->showPopup(tr("A folder name cannot contain %1").arg(c), 3000);
+            return;
+        }
+    }
+    if (name == "." || name == "..") return;
+
+    relocateLibraryFolder(folder, info.dir().filePath(name), "Rename");
+}
+
+void MW::moveLibraryFolder(const QString &folder)
+{
+/*
+    "Move folder..." on a Folders row in the Library: the user picks the folder it is to
+    go INTO, starting at the one that holds it now. The pick is the confirmation -- a
+    folder dialog cannot be dropped on the wrong row the way a drag can.
+*/
+    if (G::isLogger) G::log("MW::moveLibraryFolder", folder);
+    if (!libraryFolderOpAllowed(folder, "move")) return;
+    const QFileInfo info(folder);
+    const QString name = info.fileName();
+
+    QString dest = QFileDialog::getExistingDirectory(
+        this, tr("Move \"%1\" into").arg(name), info.absolutePath(),
+        QFileDialog::ShowDirsOnly | QFileDialog::DontResolveSymlinks);
+    resetFocus();
+    if (dest.isEmpty()) return;
+    dest = FolderTree::normalize(dest);
+
+    if (cachePathKey(dest) == cachePathKey(info.absolutePath())) {
+        G::popup->showPopup(tr("\"%1\" is already there.").arg(name), 2500);
+        return;
+    }
+    if (!relocatedPath(dest, folder, folder).isEmpty()) {
+        G::popup->showPopup(tr("A folder cannot be moved into itself."), 3000);
+        return;
+    }
+    relocateLibraryFolder(folder, QDir(dest).filePath(name), "Move");
+}
+
+void MW::trashLibraryFolder(const QString &folder)
+{
+/*
+    "Move folder to trash" on a Folders row in the Library: the same as the Folders
+    panel's own, through deleteFolderPath -- the warning, the trash, the catalog rows and
+    caches forgotten (FileOps::onFolderDeleted) and the Library refreshed.
+*/
+    if (G::isLogger) G::log("MW::trashLibraryFolder", folder);
+    if (!libraryFolderOpAllowed(folder, "delete")) return;
+    deleteFolderPath(folder);
+}
+
+void MW::relocateLibraryFolder(const QString &from, const QString &to, const QString &verb)
+{
+/*
+    Rename or move a folder in the Library, and bring everything that knows it by path
+    along. See "Renaming, Moving and Deleting Folders in the Library" in
+    notes/Documentation.md.
+
+    REFUSED, NOT ATTEMPTED, when it cannot work cleanly: the destination already exists
+    (a merge is a different operation), or it is on another drive -- a rename cannot
+    cross volumes, and a copy-then-delete of a whole folder tree is too much to do
+    behind a menu item without a way to watch or stop it.
+
+    ONE RENAME ON DISK, THEN ONE PREFIX REWRITE PER STORE (FileOps::onFolderMoved), so
+    a folder of thousands of images is not thousands of moves.
+
+    THE SCOPE TABLE FOLLOWS. A scope row naming the folder, or a folder beneath it, is
+    the user's statement about THAT folder, so it moves with it. What is left is the
+    case of a folder moved OUT of every included folder: the table is definitive, so its
+    images leave the catalog (and with it the Library), and the result says so.
+
+    THE MODEL follows as moveImagesToFolder's does: the old rows out and the new ones in
+    through applyModelChange, versions brought back by reconcileVersionRows, and the
+    open version groups and current image re-keyed first so they survive it.
+*/
+    if (G::isLogger) G::log("MW::relocateLibraryFolder", from + " -> " + to);
+    const QString name = QFileInfo(from).fileName();
+    const QString newName = QFileInfo(to).fileName();
+    const QString toParent = QFileInfo(to).absolutePath();
+    const bool caseOnly = from != to && cachePathKey(from) == cachePathKey(to);
+
+    if (!caseOnly && QFileInfo::exists(to)) {
+        G::popup->showPopup(tr("There is already a folder called \"%1\" in %2.")
+                                .arg(newName, QDir::toNativeSeparators(toParent)), 4000);
+        return;
+    }
+    if (refuseCacheFolder(to)) return;
+    if (!caseOnly) {
+        const QStorageInfo a(from);
+        const QStorageInfo b(toParent);
+        if (a.isValid() && b.isValid() && a.rootPath() != b.rootPath()) {
+            G::popup->showPopup(tr("\"%1\" is on a different drive. A folder can only be "
+                                   "moved to another folder on the same drive.")
+                                    .arg(QDir::toNativeSeparators(toParent)), 4000);
+            return;
+        }
+    }
+
+    // the sidecars on disk must be current before their folder moves
+    FileOps::flushPendingEdits();
+
+    /* The loaded rows that are leaving: every MASTER from under the folder. Removing a
+       master takes its version rows with it; reconcileVersionRows brings them back under
+       the new path. */
+    QStringList oldMasters, newMasters;
+    for (int r = 0; r < dm->rowCount(); ++r) {
+        const QString key = dm->index(r, G::PathColumn).data(G::KeyRole).toString();
+        if (key.isEmpty() || VersionKey::isVersion(key)) continue;
+        const QString moved = relocatedPath(key, from, to);
+        if (moved.isEmpty()) continue;
+        oldMasters << key;
+        newMasters << moved;
+    }
+
+    /* ON DISK. A case-only rename goes through a temporary name: on a case-insensitive
+       volume the destination "exists" (it is the same folder), and a rename onto it is
+       refused or does nothing. */
+    bool ok = false;
+    if (caseOnly) {
+        const QString tmp = from + ".winnow-rename";
+        if (!QFileInfo::exists(tmp) && QDir().rename(from, tmp)) {
+            ok = QDir().rename(tmp, to);
+            if (!ok) QDir().rename(tmp, from);
+        }
+    }
+    else ok = QDir().rename(from, to);
+    if (!ok) {
+        const QString msg = tr("Could not %1 \"%2\". A file in it may be open in another "
+                               "application, or the folder may be protected.")
+                                .arg(verb.toLower(), name);
+        G::issue("Warning", msg, "MW::relocateLibraryFolder", -1, from);
+        G::popup->showPopup(msg, 4000);
+        return;
+    }
+
+    // everything keyed on the old paths
+    FileOps::onFolderMoved(from, to);
+
+    // the scope table rows that name the folder or a folder under it
+    bool scopeChanged = false;
+    for (CatalogScopeEntry &e : catalogScope) {
+        const QString moved = relocatedPath(e.path, from, to);
+        if (moved.isEmpty()) continue;
+        e.path = catalogScopeNormalize(moved);
+        scopeChanged = true;
+    }
+    if (scopeChanged) {
+        if (catalogRootsDlg) catalogRootsDlg->setScope(catalogScope);
+        if (filters) {
+            QStringList anchors;
+            for (const CatalogScopeEntry &e : catalogScopeEffective(true)) anchors << e.path;
+            filters->setFolderAnchors(anchors);
+        }
+    }
+
+    // bookmarks on the folder or beneath it
+    if (bookmarks) {
+        bool marked = false;
+        const QSet<QString> paths = bookmarks->bookmarkPaths;
+        for (const QString &p : paths) {
+            const QString moved = relocatedPath(p, from, to);
+            if (moved.isEmpty()) continue;
+            bookmarks->bookmarkPaths.remove(p);
+            bookmarks->bookmarkPaths.insert(moved);
+            marked = true;
+        }
+        if (marked) bookmarks->reloadBookmarks();
+    }
+
+    /* MOVED OUT OF THE LIBRARY: catalogued folders now under to that no include row
+       admits leave the catalog, as a reconcile would remove them. */
+    QStringList leaving;
+    int leavingImages = 0;
+    const QMap<QString, int> counts = Catalog::instance().folderCounts();
+    for (auto it = counts.cbegin(); it != counts.cend(); ++it) {
+        if (relocatedPath(it.key(), to, to).isEmpty()) continue;
+        if (isCatalogScopeFolder(it.key())) continue;
+        leaving << it.key();
+        leavingImages += it.value();
+    }
+    if (!leaving.isEmpty()) Catalog::instance().forgetFolders(leaving);
+
+    // the loaded rows
+    if (!oldMasters.isEmpty()) {
+        QProgressDialog *progress = nullptr;
+        if (oldMasters.size() > 50) {
+            progress = new QProgressDialog(tr("Updating the Library..."), QString(),
+                                           0, 0, this);
+            progress->setWindowTitle(verb + " Folder");
+            progress->setWindowModality(Qt::WindowModal);
+            progress->setMinimumDuration(0);
+            progress->setStyleSheet(G::css);
+            progress->show();
+            qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
+        }
+
+        G::ScrollSignalGuard scrollGuard;   // removing rows scrolls; that is not the user
+        QStringList added;
+        for (int i = 0; i < oldMasters.size(); ++i) {
+            const QString &o = oldMasters.at(i);
+            const QString &n = newMasters.at(i);
+            if (dm->sf->expandedVersions().contains(o)) {
+                dm->sf->setVersionsExpanded(o, false);
+                dm->sf->setVersionsExpanded(n, true);
+            }
+            if (VersionKey::sourceOf(dm->currentKey) == o)
+                dm->currentKey = VersionKey::isVersion(dm->currentKey)
+                    ? VersionKey::make(n, VersionKey::idOf(dm->currentKey)) : n;
+            // a folder that left the Library comes back out of the model, not into it
+            if (isCatalogScopeFolder(QFileInfo(n).absolutePath())) added << n;
+        }
+        applyModelChange(added, oldMasters, "MW::relocateLibraryFolder");
+        reconcileVersionRows("MW::relocateLibraryFolder");
+
+        // reset LAST
+        if (progress) {
+            progress->close();
+            progress->deleteLater();
+        }
+    }
+    refreshLibraryAfterCatalogChange();
+
+    QString msg = verb == "Rename"
+        ? tr("Renamed \"%1\" to \"%2\".").arg(name.toHtmlEscaped(), newName.toHtmlEscaped())
+        : tr("Moved \"%1\" to %2.").arg(name.toHtmlEscaped(),
+              QDir::toNativeSeparators(toParent).toHtmlEscaped());
+    if (leavingImages > 0)
+        msg += "<br>" + tr("It is outside the Library's folders, so its %n image(s) "
+                           "left the Library.", "", leavingImages);
+    G::popup->showPopup(msg, leavingImages > 0 ? 5000 : 2500);
+
+    int sfRow = dm->currentSfRow;
+    if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
+    if (dm->sf->rowCount() > 0) sel->select(sfRow);
+}
+
 void MW::currentFolderDeletedExternally(QString path)
 {
     if (G::isLogger) G::log("MW::currentFolderDeletedExternally");
@@ -1016,7 +1317,13 @@ void MW::deleteFolder()
     else if (senderObject == "deleteFSTreeFolder") {
         dirToDelete = mouseOverFolderPath;
     }
+    deleteFolderPath(dirToDelete);
+}
 
+void MW::deleteFolderPath(const QString &dirToDelete)
+{
+    if (G::isLogger) G::log("MW::deleteFolderPath", dirToDelete);
+    if (dirToDelete.isEmpty()) return;
     if (refuseCacheFolder(dirToDelete)) return;
 
     if (!QFile(dirToDelete).exists()) {

@@ -3,6 +3,7 @@
 #include "Cache/pathkey.h"
 #include <QAtomicInt>
 #include <QDateTime>
+#include <QDir>
 #include <QJsonDocument>
 #include <QSqlQuery>
 #include <QVariant>
@@ -156,6 +157,43 @@ void onFolderDeleted(const QString &folder)
     q.addBindValue(prefix.size());
     q.addBindValue(prefix);
     q.exec();
+}
+
+void onFolderMoved(const QString &from, const QString &to)
+{
+/*
+    A folder Winnow renamed or moved: every history under it follows, by key prefix --
+    see ThumbCache::onFolderMoved. Histories already under the destination are of files
+    that are not there (the move was refused if the folder existed), so they go first.
+*/
+    const QString fromKey = cachePathKey(from);
+    const QString toKey = cachePathKey(to);
+    if (fromKey.isEmpty() || toKey.isEmpty()) return;
+    QSqlDatabase db = CacheDb::instance().db();
+    if (!db.isOpen()) return;
+    const QString fromPath = QDir::cleanPath(QDir::fromNativeSeparators(from));
+    const QString toPath = QDir::cleanPath(QDir::fromNativeSeparators(to));
+    const QString fromPrefix = fromKey + "/";
+    const QString toPrefix = toKey + "/";
+    db.transaction();
+    QSqlQuery q(db);
+    if (fromKey != toKey) {
+        q.prepare("DELETE FROM develop_history WHERE substr(pathkey, 1, length(?)) = ?");
+        q.addBindValue(toPrefix);
+        q.addBindValue(toPrefix);
+        q.exec();
+    }
+    q.prepare("UPDATE develop_history SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(path, length(?) + 1)"
+              " WHERE substr(pathkey, 1, length(?)) = ?");
+    q.addBindValue(toKey);
+    q.addBindValue(fromKey);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(fromPrefix);
+    q.addBindValue(fromPrefix);
+    q.exec();
+    db.commit();
 }
 
 }   // namespace HistoryStore

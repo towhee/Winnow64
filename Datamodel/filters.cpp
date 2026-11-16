@@ -2113,8 +2113,11 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         QAction *unfiled = inKeywords ? addUnfiledAction(menu) : nullptr;
         QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
         QAction *removeSession = addRemoveSession(menu);
+        // a folder row while the Library loads: shown, greyed with the reason
+        const FolderActions folderActs = addFolderActions(menu, item);
         addFilterActions(menu);
         QAction *chosen = menu.exec(event->globalPos());
+        if (runFolderAction(folderActs, chosen)) return;
         if (unfiled != nullptr && chosen == unfiled)
             setShowUnfiledOnly(!showUnfiledOnly);
         else if (mode != nullptr && chosen == mode)
@@ -2170,9 +2173,11 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
     if (sessionCat != nullptr) menu.addSeparator();
     QAction *removeSession = addRemoveSession(menu);
+    const FolderActions folderActs = addFolderActions(menu, item);
     addFilterActions(menu);
 
     QAction *chosen = menu.exec(event->globalPos());
+    if (runFolderAction(folderActs, chosen)) return;
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
     else if (chosen == only) emit filterOnlyItemRequested(item);
@@ -2291,6 +2296,87 @@ QAction *Filters::addUnfiledAction(QMenu &menu)
                       "with the branches above them.");
     }
     return a;
+}
+
+Filters::FolderActions Filters::addFolderActions(QMenu &menu, QTreeWidgetItem *item)
+{
+/*
+    ONLY IN LIBRARY SCOPE. There the Folders category is the user's real folder tree and
+    the Source panel shows LibTree, not the FSTree whose context menu has these for
+    Folders scope -- so without them a folder in the Library could not be renamed,
+    moved or deleted from anywhere in Winnow. In Folders scope the category lists only
+    the loaded folders, and the FSTree beside it is the place for folder operations.
+
+    A folder row, not a drive row: drive rows have no path (isDriveItem), and a row that
+    IS a drive's root -- a whole drive catalogued -- is offered greyed, because a volume
+    is renamed or ejected by the system, not by moving a directory.
+*/
+    FolderActions fa;
+    if (G::scope != G::Scope::Catalog || !folders || !item) return fa;
+    if (isDriveItem(item) || !isFilterItem(item) || categoryOf(item) != folders) return fa;
+    const QString path = item->data(1, Qt::EditRole).toString();
+    if (path.isEmpty()) return fa;
+    fa.path = path;
+
+    QString reason, tip;
+    const QFileInfo info(path);
+    /*  Its own busy test, not contextMenuEvent's `ready`: that one is always true for
+        categories built from the catalog, which the Library's are, and a folder must
+        not move while the model is being filled from it. */
+    if (G::isModifyingDatamodel || G::isLoadRunning || buildingFilters) {
+        reason = "Library is loading";
+        tip = "Wait until the Library has finished loading and its filters are built.";
+    }
+    else if (!info.isDir()) {
+        reason = "folder not available";
+        tip = QDir::toNativeSeparators(path) + " is not on disk. If it is on a drive that "
+              "is not connected, connect the drive first.";
+    }
+    else {
+        const QStorageInfo si(path);
+        if (si.isValid()
+            && FolderTree::normalize(si.rootPath()) == FolderTree::normalize(path)) {
+            reason = "this is a whole drive";
+            tip = "A drive is renamed or ejected by the system, not from here.";
+        }
+    }
+
+    const QString name = info.fileName();
+    menu.addSeparator();
+    fa.rename = menu.addAction("Rename folder...");
+    fa.move = menu.addAction("Move folder...");
+    fa.trash = menu.addAction("Move folder to " + G::trash);
+    if (!reason.isEmpty()) {
+        for (QAction *a : {fa.rename, fa.move, fa.trash}) {
+            a->setEnabled(false);
+            a->setText(a->text() + " - " + reason);
+            a->setToolTip(tip);
+        }
+    }
+    else {
+        fa.rename->setToolTip("Give \"" + name + "\" a new name. Its images keep their "
+                              "ratings, edits, collections and history.");
+        fa.move->setToolTip("Move \"" + name + "\" and everything in it into another "
+                            "folder on the same drive.");
+        fa.trash->setToolTip("Send \"" + name + "\" and everything in it to the " +
+                             G::trash + ", and remove its images from the Library.");
+    }
+    menu.setToolTipsVisible(true);
+    return fa;
+}
+
+bool Filters::runFolderAction(const FolderActions &fa, QAction *chosen)
+{
+    if (!chosen || fa.path.isEmpty()) return false;
+    void (Filters::*request)(const QString &) = nullptr;
+    if (chosen == fa.rename)     request = &Filters::renameFolderRequested;
+    else if (chosen == fa.move)  request = &Filters::moveFolderRequested;
+    else if (chosen == fa.trash) request = &Filters::trashFolderRequested;
+    if (!request) return false;
+    const QString path = fa.path;
+    QMetaObject::invokeMethod(this, [this, request, path] { emit (this->*request)(path); },
+                              Qt::QueuedConnection);
+    return true;
 }
 
 void Filters::addFilterActions(QMenu &menu)

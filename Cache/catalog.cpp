@@ -2321,6 +2321,59 @@ void Catalog::onMoved(const QString &srcPath, const QString &dstPath)
     }
 }
 
+int Catalog::onFolderMoved(const QString &from, const QString &to)
+{
+/*
+    By key prefix, in one statement: a folder can hold thousands of images and onMoved
+    per image would be a statement each. substr carries the rest of each path and
+    folder (subfolders, file name); filename and the FTS rows are untouched, since a
+    folder move changes no file's name. See ThumbCache::onFolderMoved.
+
+    ROWS ALREADY UNDER THE DESTINATION go first (forgetUnder): the move was refused if
+    the folder existed, so they describe images that are not there, and they would
+    collide with the unique pathkey.
+
+    STAMPED WITH A NEW change_seq, so a library snapshot taken before the move reads
+    these rows again rather than trusting paths that no longer exist.
+*/
+    const QString fromKey = cachePathKey(from);
+    const QString toKey = cachePathKey(to);
+    if (fromKey.isEmpty() || toKey.isEmpty()) return 0;
+    const QString fromPath = QDir::cleanPath(QDir::fromNativeSeparators(from));
+    const QString toPath = QDir::cleanPath(QDir::fromNativeSeparators(to));
+    if (fromKey != toKey) forgetUnder(toPath, /*recurse*/true);
+
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+    const qint64 seq = changeSeqLocked(db) + 1;
+    db.transaction();
+    QSqlQuery q(db);
+    q.prepare("UPDATE image SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(path, length(?) + 1),"
+              " folder = ? || substr(folder, length(?) + 1),"
+              " change_seq = ?"
+              " WHERE substr(pathkey, 1, length(?)) = ?");
+    const QString fromPrefix = fromKey + "/";
+    q.addBindValue(toKey);
+    q.addBindValue(fromKey);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(seq);
+    q.addBindValue(fromPrefix);
+    q.addBindValue(fromPrefix);
+    if (!q.exec()) {
+        db.rollback();
+        return 0;
+    }
+    const int moved = qMax(0, q.numRowsAffected());
+    if (moved > 0) setMetaLocked(db, "change_seq", QString::number(seq));
+    db.commit();
+    return moved;
+}
+
 int Catalog::markStale(const QStringList &paths)
 {
     if (paths.isEmpty()) return 0;

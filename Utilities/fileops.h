@@ -147,6 +147,13 @@ public:
        Develop history. Returns the catalog rows removed, so a GUI caller knows whether
        the Library needs redrawing. Any thread. */
     static int onFolderDeleted(const QString &folder);
+    /* A whole FOLDER Winnow renamed or moved (the Filters panel's Folders rows in the
+       Library): everything onFolderDeleted would forget is carried instead, re-keyed
+       from from to to -- the catalog rows, thumbnails, devPreviews, collection
+       membership, picks and Develop history of every image beneath it, versions
+       included. The caller moves the folder itself, and checks first that to did not
+       exist. Returns the catalog rows carried. Any thread. */
+    static int onFolderMoved(const QString &from, const QString &to);
 
     /* NEW IMAGE FILES ON DISK -- an export, an ingest copy, a stacked or embellished
        result. Call once the file is COMPLETE (metadata copied, sidecar written), since

@@ -492,6 +492,29 @@ int FileOps::onFolderDeleted(const QString &folder)
     return Catalog::instance().forgetUnder(folder, /*recurse*/true);
 }
 
+int FileOps::onFolderMoved(const QString &from, const QString &to)
+{
+/*
+    ONE PREFIX REWRITE PER STORE, not onMoved per image. A folder can hold thousands of
+    images and onMoved is a statement or more in each of six stores, which on a big
+    folder was seconds of GUI-thread SQL. The stores carry the tail of each key
+    (subfolders, file name, "/#v<id>") with substr, so nothing is enumerated.
+
+    NO onCreated. A folder that moves stays inside the scope it came from or leaves
+    it; either way the caller reconciles the catalog to the scope table, which is what
+    onCreated would have asked of it one file at a time.
+*/
+    const QString f = QDir::cleanPath(QDir::fromNativeSeparators(from));
+    const QString t = QDir::cleanPath(QDir::fromNativeSeparators(to));
+    if (f.isEmpty() || t.isEmpty() || f == t) return 0;
+    DevPreviewCache::instance().onFolderMoved(f, t);
+    ThumbCache::instance().onFolderMoved(f, t);
+    CollectionStore::instance().onFolderMoved(f, t);
+    SavedPicks::OnFolderMoved(f, t);
+    HistoryStore::onFolderMoved(f, t);
+    return Catalog::instance().onFolderMoved(f, t);
+}
+
 void FileOps::onCreated(const QStringList &paths)
 {
     if (paths.isEmpty()) return;

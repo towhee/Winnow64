@@ -267,6 +267,8 @@ public:
     void onMoved(const QString &srcPath, const QString &dstPath);
     void onDeleted(const QString &fPath);
     void onFolderDeleted(const QString &folder);   // every image under folder, at any depth, versions included
+    // the same set as onFolderDeleted, re-keyed under to
+    void onFolderMoved(const QString &from, const QString &to);
 
     /*  Demote entries whose source file is gone, skipping unmounted volumes.
         Safe to call off the GUI thread. Returns the number demoted. */

@@ -361,6 +361,10 @@ void MW::createDataModel()
     connect(filters, &Filters::filterOnRequested, this, &MW::filterOnColumn);
     connect(filters, &Filters::filterOnlyItemRequested, this, &MW::filterOnlyItem);
     connect(filters, &Filters::moveImagesToFolderRequested, this, &MW::moveImagesToFolder);
+    // Library: a Folders row's Rename / Move / Move to trash (Filters::addFolderActions)
+    connect(filters, &Filters::renameFolderRequested, this, &MW::renameLibraryFolder);
+    connect(filters, &Filters::moveFolderRequested, this, &MW::moveLibraryFolder);
+    connect(filters, &Filters::trashFolderRequested, this, &MW::trashLibraryFolder);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     // versions (virtual copies): a master re-read after the load -- see Main/mwversions.cpp
     connect(dm, &DataModel::versionsChanged, this, &MW::scheduleVersionReconcile);

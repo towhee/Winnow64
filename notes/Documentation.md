@@ -83,6 +83,7 @@
     - [3.4.1 In the Library, Opening a Folder Filters](#341-in-the-library-opening-a-folder-filters)
     - [3.4.2 In the Library, Drop Thumbnails on a Folder to Move Them](#342-in-the-library-drop-thumbnails-on-a-folder-to-move-them)
     - [3.4.3 In the Library, Folders Start at the Drive](#343-in-the-library-folders-start-at-the-drive)
+    - [3.4.4 In the Library, Rename, Move and Delete Folders](#344-in-the-library-rename-move-and-delete-folders)
   - [3.5 Picks Are Saved as They Are Made](#35-picks-are-saved-as-they-are-made)
     - [3.5.1 Write-Through](#351-write-through)
     - [3.5.2 Restoring Picks When Rows Load](#352-restoring-picks-when-rows-load)
@@ -1925,6 +1926,32 @@ A DRIVE ROW IS NOT A FILTER ITEM. The boot drive's root is "/", which is in Fold
 
 - A click on a drive row (Filters::mousePressEvent) calls Filters::toggleDriveFilter. That includes every folder on the drive (Opt+click excludes them), or clears them when they all already are. It goes through setFolderFilter, so it is one filterChange. Anything already checked beneath the drive is cleared first, so the drive ends in one state.
 - Test: tst_filters libraryFoldersGroupUnderTheirDrive; tst_foldertree volumeRootOfNamesTheDrive.
+
+#### 3.4.4 In the Library, Rename, Move and Delete Folders
+
+In the Library, right-clicking a row in the Filters panel's Folders category offers **Rename folder...**, **Move folder...** and **Move folder to trash** (recycle bin on Windows), under the Include/Exclude items (2026-11-15, user request). In Folders scope the Source panel's FSTree has its own folder menu. In the Library the Source panel shows LibTree, so without these a Library folder could not be renamed, moved or deleted from anywhere in Winnow.
+
+- **Menu side.** Filters::addFolderActions (`Datamodel/filters.cpp`) adds the three actions in both branches of contextMenuEvent. It adds nothing unless:
+  - G::scope is Catalog.
+  - The row is a Folders item with a path (`isFilterItem && categoryOf == folders`). It is not a drive row (isDriveItem).
+- **Disabled with the reason** (the text says why, and the tooltip says what to do):
+  - "Library is loading": G::isModifyingDatamodel, G::isLoadRunning or buildingFilters. This has its own test because contextMenuEvent's `ready` is always true for categories built from the catalog.
+  - "folder not available": the path is not a directory on disk (its drive is not connected).
+  - "this is a whole drive": QStorageInfo's root is the path itself. A volume is renamed or ejected by the system.
+- **The request.** Filters::runFolderAction emits renameFolderRequested, moveFolderRequested or trashFolderRequested, QUEUED, so MW's dialogs open after the menu has closed and the tree can be rebuilt under them.
+- **MW** (`Main/fileoperations.cpp`). libraryFolderOpAllowed repeats the checks (the state can change while the menu is open) and refuses the devPreview cache folder.
+  - renameLibraryFolder asks for a NAME (QInputDialog) and refuses separators (and `:*?"<>|` on Windows).
+  - moveLibraryFolder asks for the folder to move INTO (QFileDialog::getExistingDirectory, starting at the parent). It refuses the current parent and the folder itself or anything inside it. The pick is the confirmation.
+  - trashLibraryFolder is deleteFolderPath, the body MW::deleteFolder now shares with the FSTree menu: the warning, the trash, FileOps::onFolderDeleted, refreshLibraryAfterCatalogChange.
+- **MW::relocateLibraryFolder(from, to, verb)** does rename and move.
+  - It refuses a destination that exists (a merge is a different operation) and a destination on another drive (QStorageInfo roots differ). A rename cannot cross volumes, and a copy-and-delete of a whole tree is too much to run behind a menu item.
+  - It flushes pending Develop edits, then does ONE QDir::rename. A case-only rename goes through a temporary name, because on a case-insensitive volume the destination "exists".
+  - **FileOps::onFolderMoved** carries everything keyed on the paths: devPreviews, thumbnails (thumb and stale_thumb), the catalog, collections, picks and Develop history. Each store does ONE prefix rewrite (`substr(pathkey, length(?) + 1)` carries the tail: subfolders, file name, "/#v<id>"), not onMoved per image. Rows already under the destination are dropped first; the move was refused if that folder existed, so they describe files that are not there. Catalog::onFolderMoved stamps the rows with a new change_seq.
+  - **Scope table rows** naming the folder or a folder under it move with it: the catalog roots dialog and the Filters anchors are updated. A folder moved out of every include row leaves the catalog (Catalog::forgetFolders on the catalogued folders now under it that isCatalogScopeFolder refuses), and the popup says how many images left the Library.
+  - **Bookmarks** on the folder or under it are re-pathed.
+  - **The model** follows as in [3.4.2](#342-in-the-library-drop-thumbnails-on-a-folder-to-move-them): open version groups and dm->currentKey are re-keyed, then applyModelChange(new masters, old masters) (more than 50 rows show a busy QProgressDialog, reset last), reconcileVersionRows, refreshLibraryAfterCatalogChange.
+- **Not done.** A Folders filter checked on the moved folder is not carried to the new path: the filters are restored by value and the old value is gone. Not carried: image_embedding and audit_verdict rows (FileOps::onMoved does not carry them for single files either). An EXCLUDED subfolder that a move takes into an included place is not catalogued until the next scan.
+- Test: tst_fileops folderMoveCarriesPreviewsUnderItOnly.
 
 ### 3.5 Picks Are Saved as They Are Made
 

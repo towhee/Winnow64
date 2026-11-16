@@ -410,6 +410,12 @@ signals:
         MW confirms, moves and refreshes -- see MW::moveImagesToFolder. */
     void moveImagesToFolderRequested(const QStringList &paths, const QStringList &rowKeys,
                                      const QString &folder);
+    /*  The context menu of a Folders row in Library scope (addFolderActions): rename,
+        move or trash that real folder. MW asks, does it and refreshes -- see
+        MW::renameLibraryFolder, MW::moveLibraryFolder, MW::trashLibraryFolder. */
+    void renameFolderRequested(const QString &folder);
+    void moveFolderRequested(const QString &folder);
+    void trashFolderRequested(const QString &folder);
     /*  Cmd/Ctrl+Opt/Alt+click on an item: show only that item. MW clears every other
         filter -- categories, search text, pick/rating/colour actions -- then includes
         it. See MW::filterOnlyItem. */
@@ -714,6 +720,21 @@ private:
     QAction *addUnfiledAction(QMenu &menu);
     /*  "Match all checked keywords", appended beside the unfiled toggle. */
     QAction *addKeywordModeAction(QMenu &menu);
+    /*  Rename / Move / Move to trash, on a Folders row in Library scope -- where the
+        category is the user's real folder tree and the Source panel's FSTree, which has
+        these for Folders scope, is not showing. Each is DISABLED WITH THE REASON when
+        it cannot run (the Library is loading, the folder's drive is not connected, the
+        row is a whole drive). An empty struct when the row is not a Library folder. */
+    struct FolderActions {
+        QString path;
+        QAction *rename = nullptr;
+        QAction *move = nullptr;
+        QAction *trash = nullptr;
+    };
+    FolderActions addFolderActions(QMenu &menu, QTreeWidgetItem *item);
+    /*  Emit the request for chosen if it is one of fa's. Queued, so the dialogs MW
+        opens run after the menu has gone and the tree may be rebuilt under them. */
+    bool runFolderAction(const FolderActions &fa, QAction *chosen);
     /*  The any/all label in the Keywords header's Avail column: dimmed while fewer than
         two keywords are included, because the mode changes nothing until then. Called
         from setEachCatTextColor, which runs after every build and filter change. */

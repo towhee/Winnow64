@@ -17,9 +17,10 @@ WHAT'S NEW
 - Exposure rolloff for non-raw images
 - Persistent brush settings
 - Spot removal reference (repeat all spots on other images)
+- Rename, move and delete folders in Library filters.
 
 BUGS / TO DO
-- Revisit why library reread on almost every Winnooow open.
+- Revisit why library reread on almost every time Winoow open.
 - Develop previews when D > E > D ... no judder, devPreview for images without edits
 - Review Develop shortcuts (N, M, X)
 - Review and refine develop replacement tools
@@ -41,6 +42,7 @@ BUGS / TO DO
   glasses and sky mattes, but which ones appear varies by shot.
 
 - Rename / Move / Delete folders while in Library mode (in Filter > Folders)
+
 - Find duplicates (expand/collapse) and library use.
 - Arrow navigation in develop when no slider has the focus
 - Add isVersion to Queries lookup

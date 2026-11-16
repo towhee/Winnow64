@@ -748,6 +748,67 @@ void ThumbCache::onFolderDeleted(const QString &folder)
     q.exec();
 }
 
+void ThumbCache::onFolderMoved(const QString &from, const QString &to)
+{
+/*
+    A folder Winnow renamed or moved: every row under it re-keyed under the new path,
+    versions and subfolders included, in one statement per table. A folder holds
+    thousands of images, and onMoved per image would be a transaction each. substr
+    carries the rest of each key (subfolders, file name, "/#v<id>"), and length() is
+    bound rather than computed here so SQLite counts the characters it compares.
+
+    Rows already filed under the destination describe files that are not there -- the
+    move was refused if the folder existed -- so they go first, freeing the unique key.
+    A case-only rename keeps every key and only respells the paths.
+*/
+    const QString fromKey = cachePathKey(from);
+    const QString toKey = cachePathKey(to);
+    if (fromKey.isEmpty() || toKey.isEmpty()) return;
+    const QString fromPath = QDir::cleanPath(QDir::fromNativeSeparators(from));
+    const QString toPath = QDir::cleanPath(QDir::fromNativeSeparators(to));
+    const QString fromPrefix = fromKey + "/";
+    const QString toPrefix = toKey + "/";
+
+    QMutexLocker lk(&mMutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    const bool inTxn = db.transaction();
+    QSqlQuery q(db);
+    if (fromKey != toKey) {
+        for (const char *table : {"thumb", "stale_thumb"}) {
+            q.prepare(QString("DELETE FROM %1 WHERE substr(pathkey, 1, length(?)) = ?")
+                          .arg(table));
+            q.addBindValue(toPrefix);
+            q.addBindValue(toPrefix);
+            q.exec();
+        }
+    }
+    q.prepare("UPDATE thumb SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(path, length(?) + 1),"
+              " folder = ? || substr(folder, length(?) + 1)"
+              " WHERE substr(pathkey, 1, length(?)) = ?");
+    q.addBindValue(toKey);
+    q.addBindValue(fromKey);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(fromPrefix);
+    q.addBindValue(fromPrefix);
+    q.exec();
+    q.prepare("UPDATE stale_thumb SET pathkey = ? || substr(pathkey, length(?) + 1),"
+              " path = ? || substr(path, length(?) + 1)"
+              " WHERE substr(pathkey, 1, length(?)) = ?");
+    q.addBindValue(toKey);
+    q.addBindValue(fromKey);
+    q.addBindValue(toPath);
+    q.addBindValue(fromPath);
+    q.addBindValue(fromPrefix);
+    q.addBindValue(fromPrefix);
+    q.exec();
+    if (inTxn) db.commit();
+}
+
 int ThumbCache::sweep()
 {
 /*

@@ -46,6 +46,8 @@ void remove(const QString &path);
 void onMoved(const QString &srcPath, const QString &dstPath);
 void onDeleted(const QString &path);
 void onFolderDeleted(const QString &folder);   // every image under folder, at any depth, versions included
+// the same set as onFolderDeleted, re-keyed under to
+void onFolderMoved(const QString &from, const QString &to);
 
 }   // namespace HistoryStore
 

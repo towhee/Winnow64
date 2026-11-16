@@ -53,6 +53,7 @@ void ClearAll();
 void OnMoved(const QString &srcPath, const QString &dstPath);
 void OnDeleted(const QString &path);
 void OnFolderDeleted(const QString &folder);
+void OnFolderMoved(const QString &from, const QString &to);
 
 }   // namespace SavedPicks
 
