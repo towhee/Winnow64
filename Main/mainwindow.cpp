@@ -5791,10 +5791,36 @@ void MW::drainStaleRecommit()
     }
     constexpr int kMaxStaleRecommitAttempts = 5;        // 5 x 3 s = 15 s
     if (fixed.isEmpty() && ++staleRecommitAttempts >= kMaxStaleRecommitAttempts) {
+        /*  GIVING UP MUST RELEASE THE ROWS, not just stop waiting for them.
+            refreshStaleRows set each one MetaNotAttempted, and G::allMetadataAttempted
+            counts EVERY model row -- so a row whose re-read never lands held the flag
+            false for the rest of the session: every delete refused with "wait until the
+            folder has been completely loaded", every sort and filter change re-running
+            loadEntireMetadataCache. The usual reason it never lands is that the row
+            left the filtered view after it was verified (MetaRead walks only the
+            proxy).
+
+            Back to MetaLoaded is the state before the verification: its values were
+            never cleared, only its icon, which IconLoadedColumn already says is owed.
+            A row still stale is asked about again once ScrollVerify::kReverifySecs has
+            passed, and re-read then, when it is in view -- which is what the message
+            promised and did not deliver. */
+        int released = 0;
+        int outsideView = 0;
+        for (const QString &fPath : std::as_const(staleRecommit)) {
+            const int dmRow = dm->rowFromKey(fPath);
+            if (dmRow < 0) continue;
+            if (dm->proxyRowFromKey(fPath) < 0) ++outsideView;
+            const QModelIndex statusIdx = dm->index(dmRow, G::MetadataStatusColumn);
+            if (statusIdx.data().toInt() != G::MetaNotAttempted) continue;
+            dm->setData(statusIdx, G::MetaLoaded);
+            ++released;
+        }
         G::issue("Warning",
                  QString("Gave up re-committing %1 verified row(s): the re-read did not "
-                         "complete. They will be re-checked when next visited.")
-                     .arg(staleRecommit.size()),
+                         "complete (%2 outside the filtered view). %3 released as they were "
+                         "before the check; they will be re-checked when next visited.")
+                     .arg(staleRecommit.size()).arg(outsideView).arg(released),
                  "MW::drainStaleRecommit");
         staleRecommit.clear();
         staleRecommitAttempts = 0;
