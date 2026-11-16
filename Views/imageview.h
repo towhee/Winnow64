@@ -1114,6 +1114,13 @@ private:
        Both invalid = no stash. */
     QRectF  cropFlipPrevN;
     QRectF  cropFlipResultN;
+    /* Seat memory (see cropReseatIfCanvasChanged): the crop beginCropEdit started from,
+       the aspect it was given, what seating produced, and the canvas w/h it was fitted
+       against. cropSeatResultN invalid = nothing to re-seat. */
+    QRectF  cropSeatFromN;
+    QRectF  cropSeatResultN;
+    double  cropSeatAspect = 0.0;
+    qreal   cropSeatCanvasAspect = 0.0;
     int     cropDrag       = -1;         // -1 none/pan; 0..7 handles (see cropHitTest)
     QRectF  cropFrameVp;                 // the frame in viewport px (derived from cropN, or dragged)
 
@@ -1198,7 +1205,11 @@ private:
     void    cropResolveCustomAspect();
     void    cropClampN();                           // clamp cropN's edges into [0,1]
     void    cropRefitToAspect();                    // reshape cropN to cropTargetAspect()
-    void    cropFitLargestToAspect();               // grow cropN to the largest fit at that aspect
+    void    cropFitLargestToAspect();               // largest cropN fit at that aspect
+    /* beginCropEdit's placement of the frame: the stored crop (or the largest fit for an
+       uncropped image), reshaped to a locked ratio. Records the seat memory. */
+    void    cropSeat(QRectF initialCrop);
+    void    cropReseatIfCanvasChanged();            // redo cropSeat on the real canvas
     void    cropDrawNewFrom(QPoint vp);             // rubber-band a new crop, anchor -> vp
     void    cropDrawOverlay(QPainter *p, const QRectF &br);
     bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }

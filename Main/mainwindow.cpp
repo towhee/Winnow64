@@ -14800,9 +14800,13 @@ void MW::renderDevelopPreview(bool fullRes)
     const quint64 geomGen = developProxyGeomGen;
     /* Pair the frame with whether it actually depicts the STORED recipe. Captured here,
        on the GUI thread with the job, because the view overrides it reflects (History
-       hover, Transform eye, Replace eye) can change while the render is in flight. */
+       hover, Transform eye, Replace eye) can change while the render is in flight.
+       A crop-suppressed frame (the crop tool is open) is the wrong SHAPE for the stored
+       recipe, as in the settle path. Marked faithful, it satisfied waitForDevelopFrame
+       at once on E and seeded Browse with the UNCROPPED frame, and the devPreview build
+       then swapped in the crop (2026-11-16). */
     const bool faithful = developProperties && developProperties->renderMatchesStoredRecipe()
-                          && !kaleidoSuppressed;
+                          && !developCropSuppressesCrop() && !kaleidoSuppressed;
     /* Only a faithful frame can ever be cached, so only a faithful one pays for the hash. */
     const QByteArray recipe = faithful ? developRecipeKey(fPath) : QByteArray();
     /* Arm the full-resolution settle render for the callers that re-render WITHOUT going

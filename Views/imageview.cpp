@@ -2218,18 +2218,7 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
     cropAspect = aspect;
     cropAspectLocked = locked;
     cropAspectFlipped = flipped;
-    /* Start from the stored crop (re-entering an already-cropped image), else the full image (or
-       the aspect-constrained largest inscribed rect). */
-    cropN = (initialCrop.isValid() && !initialCrop.isNull()) ? initialCrop
-                                                             : QRectF(0.0, 0.0, 1.0, 1.0);
-    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0)) cropFitLargestToAspect();
-    if (cropAspect < 0.0) cropResolveCustomAspect();
-    /* A locked ratio is enforced from the start: a stored crop composed under another
-       ratio (or freely) is reshaped about its centre before the user touches it. */
-    else if (cropAspectLocked) {
-        const qreal r = cropFrameAspect(), t = cropLockedAspect();
-        if (r > 0.0 && t > 0.0 && qAbs(r / t - 1.0) > 0.005) cropRefitToAspect();
-    }
+    cropSeat(initialCrop);
 
     cropEditMode = true;
     cropWarp = false;                 // always start as a plain rectangle crop
@@ -2246,6 +2235,60 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
     cropSyncModifiers();              // picks the crop / level / handle cursor under the pointer
     viewport()->update();
     cropEmitChanged();
+}
+
+void ImageView::cropSeat(QRectF initialCrop)
+{
+    /* Start from the stored crop (re-entering an already-cropped image), else the full
+       image (or the aspect-constrained largest inscribed rect). */
+    cropSeatFromN = initialCrop;
+    cropSeatAspect = cropAspect;
+    cropN = (initialCrop.isValid() && !initialCrop.isNull()) ? initialCrop
+                                                             : QRectF(0.0, 0.0, 1.0, 1.0);
+    if (cropN == QRectF(0.0, 0.0, 1.0, 1.0)) cropFitLargestToAspect();
+    if (cropAspect < 0.0) cropResolveCustomAspect();
+    /* A locked ratio is enforced from the start: a stored crop composed under another
+       ratio (or freely) is reshaped about its centre before the user touches it. */
+    else if (cropAspectLocked) {
+        const qreal r = cropFrameAspect(), t = cropLockedAspect();
+        if (r > 0.0 && t > 0.0 && qAbs(r / t - 1.0) > 0.005) cropRefitToAspect();
+    }
+    cropSeatResultN = cropN;
+    const QSizeF c = cropCanvasSize();
+    cropSeatCanvasAspect = (c.height() > 0.0) ? c.width() / c.height() : 0.0;
+}
+
+void ImageView::cropReseatIfCanvasChanged()
+{
+/*
+    The fit in cropSeat is made in NORMALIZED coords against the canvas on screen, so it
+    is only right if that canvas is this image. It may not be. A loupe miss leaves the
+    PREVIOUS picture up (loadImage paints nothing until the decode lands), and R can be
+    pressed in that gap. Seen 2026-11-16 going from a 16 x 9-cropped image (Browse shows
+    its cropped devPreview) to an uncropped 3:2 one: 16 x 9 fitted to a 16 x 9 canvas is
+    the whole frame, (0,0,1,1), so when the 3:2 picture landed the locked crop read as
+    "As shot". E then R worked because the image was cached by then.
+
+    So when the canvas changes shape under a frame the user has not touched (cropN is
+    still what seating produced), seat it again against the real image. Called from
+    cropRestorePanRoom, which every pixmap swap during a crop session goes through.
+*/
+    if (!cropSeatResultN.isValid() || cropWarp) return;
+    const QSizeF c = cropCanvasSize();
+    if (c.height() <= 0.0 || cropSeatCanvasAspect <= 0.0) return;
+    const qreal a = c.width() / c.height();
+    if (qAbs(a / cropSeatCanvasAspect - 1.0) <= 0.005) return;   // same shape
+    if (cropN != cropSeatResultN) {          // the user has reshaped it: theirs now
+        cropSeatResultN = QRectF();
+        return;
+    }
+    if (G::isLogger) G::log("ImageView::cropReseatIfCanvasChanged");
+    if (cropSeatAspect < 0.0) cropAspect = cropSeatAspect;   // Custom: re-resolve
+    cropSeat(cropSeatFromN);
+    cropFlipPrevN = cropFlipResultN = QRectF();
+    /* Commit the corrected frame (cropSettled), but not from inside the pixmap swap
+       that got us here. */
+    QTimer::singleShot(0, this, [this]{ if (cropActive()) cropEmitChanged(); });
 }
 
 void ImageView::cropSetPanSceneRect()
@@ -2269,6 +2312,7 @@ void ImageView::cropRestorePanRoom()
     does not jump; at fit that point is the image centre.
 */
     if (!cropActive()) return;
+    cropReseatIfCanvasChanged();     // the frame may have been fitted to the last picture
     const QPointF c = mapToScene(viewport()->rect().center());
     cropSetPanSceneRect();
     centerOn(c);
@@ -2282,6 +2326,7 @@ void ImageView::endCropEdit()
     if (G::isLogger) G::log("ImageView::endCropEdit");
     cropEditMode = false;
     cropWarp = false;
+    cropSeatResultN = QRectF();      // no re-seat outside a session
     cropAltHeld = cropCmdHeld = false;
     cropLevelMode = cropLevelDragging = false;
     cropDrag = -1;
@@ -2774,6 +2819,7 @@ void ImageView::cropSetRect(QRectF n)
     cropDrag = -1;
     cropDrawStarted = false;
     cropFlipPrevN = cropFlipResultN = QRectF();   // the flip stash was the other image's
+    cropSeatResultN = QRectF();      // so was the seat: no re-seat of the new image
     cropSyncFrameFromN();
     viewport()->update();
 }
