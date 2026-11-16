@@ -1791,6 +1791,19 @@ private slots:
 private:
 //    QApplication *app;
 
+    /* ---- Sync Browse/Develop (Window > Workspace) -----------------------------------
+       Browse and Develop give the left and right dock areas the WIDER of their two
+       layouts' widths and the filmstrip the TALLER (the larger thumbnail size), so the
+       loupe keeps its size and place across E > D > E.  Plain methods, not slots.  See
+       MW::ApplyBrowseDevelopSync. */
+    void ApplyBrowseDevelopSync(const WorkspaceData &w, bool sync);
+    void SetSideWidth(Qt::DockWidgetArea area, int width);
+    void SetFilmstripThumbSize(int width, int height);
+    void FitFilmstrip();
+    /* The layout workflow wf opens with now (user ?? Winnow default), or nullptr for
+       the built-in layout, which has no state blob to read. */
+    const WorkspaceData *ResolvedWorkflowLayout(int wf) const;
+
     /* ---- Export helpers ------------------------------------------------------------
        Plain methods, deliberately NOT slots: moc cannot parse a std::function parameter
        (it reads "void(bool, const QImage&)" as a return type) and silently emits a broken
@@ -2233,6 +2246,7 @@ private:
     QAction *slideShowWorkspaceAction = nullptr;    // layout + start; S = show only
     QAction *mapWorkspaceAction = nullptr;          // the Map module; no key yet
     QAction *resetLayoutAction = nullptr;           // reapply the workflow's layout
+    QAction *syncBrowseDevelopAction = nullptr;     // same side widths in Browse/Develop
     QAction *showLibrarySourceAction = nullptr;     // Source = Library
     QAction *showFoldersSourceAction = nullptr;     // Source = Folders
 

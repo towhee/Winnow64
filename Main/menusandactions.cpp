@@ -1855,6 +1855,23 @@ void MW::createViewActions()
     addAction(resetLayoutAction);
     connect(resetLayoutAction, &QAction::triggered, this, &MW::resetLayout);
 
+    /* Same left and right panel widths and filmstrip height in Browse and Develop, so
+       the loupe does not move or resize on E / D.  A preference, not part of any
+       layout: default on. */
+    syncBrowseDevelopAction = new QAction(tr("Sync Browse/Develop"), this);
+    syncBrowseDevelopAction->setObjectName("syncBrowseDevelop");
+    syncBrowseDevelopAction->setCheckable(true);
+    syncBrowseDevelopAction->setChecked(
+        !isSettings || settings->value("syncBrowseDevelopWidths", true).toBool());
+    syncBrowseDevelopAction->setToolTip(
+        tr("Give Browse and Develop the same left and right panel widths (the wider of "
+           "the two layouts) and the same filmstrip (the taller), so the image keeps its "
+           "size and place when you switch between them."));
+    connect(syncBrowseDevelopAction, &QAction::toggled, this, [this](bool on) {
+        settings->setValue("syncBrowseDevelopWidths", on);
+        ApplyBrowseDevelopSync(ws, on);
+    });
+
     /* THE SOURCE, from the keyboard. The same MW::chooseSource the Module dock's
        Library | Folders buttons call, so a refused change leaves everything where it
        was. Neither changes the workflow: switching source inside Develop stays in
@@ -3204,6 +3221,7 @@ void MW::createWindowMenu()
     workspaceMenu->addAction(revertLayoutAction);
     workspaceMenu->addAction(revertAllLayoutsAction);
     workspaceMenu->addAction(resetLayoutAction);
+    workspaceMenu->addAction(syncBrowseDevelopAction);
     workspaceMenu->addSeparator();
     workspaceMenu->addAction(newWorkspaceAction);
     workspaceMenu->addAction(manageWorkspaceAction);

@@ -2,6 +2,7 @@
 #include "Utilities/panelprobe.h"
 #include "Utilities/titlebar.h"
 #include "Utilities/screenfit.h"
+#include <QDataStream>
 
 /*  *******************************************************************************************
 
@@ -491,6 +492,11 @@ void MW::invokeWorkspace(const WorkspaceData &w)
         the side had when it was captured.  After everything above that sets dock
         visibility, or one of those would undo it. */
     applyAreaCollapse(w.areaCollapse);
+
+    /*  Window > Workspace > Sync Browse/Develop: the side widths the two share.  After
+        the collapse, so a side this layout holds collapsed is left alone. */
+    if (syncBrowseDevelopAction && syncBrowseDevelopAction->isChecked())
+        ApplyBrowseDevelopSync(w, true);
 
     /*  A workspace switch is the other route to a panel the wrong size, and it uses the
         same restoreState the startup path does -- so it is marked the same way, and
@@ -1682,6 +1688,254 @@ void MW::invokeWorkflowLayout(int wf, int lay)
        it up; the Map workflow's page is the map instead. Here rather than in
        invokeMapWorkflow so Reset Layout and a resumed session get the map too. */
     if (wf == WfMap) showMapPage();
+}
+
+namespace {
+
+/*  READING A SIDE'S WIDTH OUT OF A SAVED LAYOUT, without applying it.
+
+    Sync Browse/Develop needs the width of the layout NOT on screen, and the only record
+    of it is the QMainWindow::saveState blob.  Its format is Qt's (Qt 6.11
+    QMainWindow::saveState, QDockAreaLayout::saveState, QDockAreaLayoutInfo::saveState):
+
+        int 0xff (VersionMarker), int version, uchar 0xfd (DockWidgetStateMarker),
+        int areaCount, then per non-empty area: int pos (0 left, 1 right, 2 top,
+        3 bottom), QSize areaRect, and the area's item tree.
+
+    An item tree is uchar 0xfa (tabbed, then int front index) or 0xfc (a sequence),
+    uchar orientation, int itemCount, then per item either uchar 0xfb (a dock: QString
+    objectName, uchar flags, 4 ints) or uchar 0xfc (4 ints and a nested tree).  Flag 1 is
+    visible, 2 floating.
+
+    The area rect is the side's width as captured.  A side counts only when one of its
+    docks is visible and docked: a side whose panels are all closed has a stale rect and
+    nothing on screen.  Any surprise in the stream returns false and the caller leaves
+    the layout as Qt restored it -- a format change costs the sync, never the layout. */
+bool ReadDockAreaTree(QDataStream &s, bool &hasVisible, int depth)
+{
+    if (depth > 16) return false;
+    uchar marker = 0;
+    s >> marker;
+    if (marker == 0xfa) {
+        int frontIndex = 0;
+        s >> frontIndex;
+    }
+    else if (marker != 0xfc) return false;
+    uchar orientation = 0;
+    int count = 0;
+    s >> orientation >> count;
+    if (s.status() != QDataStream::Ok || count < 0 || count > 1024) return false;
+    for (int i = 0; i < count; ++i) {
+        uchar item = 0;
+        int a = 0, b = 0, c = 0, d = 0;
+        s >> item;
+        if (item == 0xfb) {
+            QString name;
+            uchar flags = 0;
+            s >> name >> flags >> a >> b >> c >> d;
+            if ((flags & 1) && !(flags & 2) && !name.isEmpty()) hasVisible = true;
+        }
+        else if (item == 0xfc) {
+            s >> a >> b >> c >> d;
+            if (!ReadDockAreaTree(s, hasVisible, depth + 1)) return false;
+        }
+        else return false;
+        if (s.status() != QDataStream::Ok) return false;
+    }
+    return true;
+}
+
+/*  The left and right widths a saved layout shows, 0 for a side with nothing on it. */
+bool SavedSideWidths(const QByteArray &state, int &left, int &right)
+{
+    left = right = 0;
+    if (state.isEmpty()) return false;
+    QDataStream s(state);
+    s.setVersion(QDataStream::Qt_5_0);      // what QMainWindow::saveState writes
+    int versionMarker = 0, version = 0, areaCount = 0;
+    uchar dockMarker = 0;
+    s >> versionMarker >> version >> dockMarker >> areaCount;
+    if (s.status() != QDataStream::Ok || versionMarker != 0xff || dockMarker != 0xfd
+        || areaCount < 0 || areaCount > 4) return false;
+    for (int i = 0; i < areaCount; ++i) {
+        int pos = -1;
+        QSize size;
+        bool hasVisible = false;
+        s >> pos >> size;
+        if (!ReadDockAreaTree(s, hasVisible, 0)) return false;
+        if (!hasVisible) continue;
+        if (pos == 0) left = size.width();
+        else if (pos == 1) right = size.width();
+    }
+    return true;
+}
+
+} // namespace
+
+const MW::WorkspaceData *MW::ResolvedWorkflowLayout(int wf) const
+{
+/*
+    What workflow wf's own key opens now: the slot's user layout, unless its Winnow
+    default was chosen, else the Winnow default.  Mirrors MW::invokeWorkflowLayout,
+    leaving out the custom workspace -- entering a workflow clears that.
+*/
+    const int lay = workflowLayout(wf);
+    if (lay < 0 || lay >= layoutSlots.count()) return nullptr;
+    const LayoutSlot &slot = layoutSlots.at(lay);
+    if (hasUserLayout(lay) && winnowDefaultWf != wf) return &slot.user;
+    if (slot.hasShipped) return &slot.shipped;
+    return nullptr;
+}
+
+void MW::ApplyBrowseDevelopSync(const WorkspaceData &w, bool sync)
+{
+/*
+    Window > Workspace > Sync Browse/Develop.
+
+    The loupe is the central widget, so its size and place are set by the dock areas
+    around it.  Browse and Develop are separate layouts, captured with their own side
+    widths and filmstrip height, and E > D > E moved and resized the image.  With the
+    sync on, the layout being applied (w) and the other workflow's share:
+
+      . each SIDE: the WIDER of the two widths, read from the other layout's state blob
+        (SavedSideWidths).
+      . the FILMSTRIP: the TALLER of the two.  The strip's height is not a free dock
+        size -- MW::setThumbDockFeatures fits the dock to the thumbnail cell -- so what
+        is shared is the thumbnail size (WorkspaceData::thumbWidth / thumbHeight, the
+        larger), and the dock is refit to it.  The saved bottom-area height cannot be
+        used anyway: the Browse layouts are captured in Grid, with the strip hidden.
+
+    Called at the end of MW::invokeWorkspace (sync on) and when the menu item is
+    toggled (sync = its new state; off puts back w's own widths).  Only in Browse and
+    Develop, and only from the layouts themselves: a panel dragged during the session
+    is not part of either, exactly as E / D already treat it.
+
+    Limits: a side shown in only one of the two layouts keeps its own width (there is
+    nothing to widen on the other), a side collapsed by a show/hide bar is left alone,
+    and the built-in layout (no state blob) is not synced.  The top and bottom areas
+    are synced only through the filmstrip (no other bottom or top panel is).
+
+    The width is applied twice: inline, so the paint the workspace's PaintHold posts
+    (low priority) already has it, and once more from the queue, after the deferred
+    passes that run when a side is re-shown (MW::toggleDockArea's resizeDocks), which
+    would otherwise overwrite it.  Setting a side to the width it already has changes
+    nothing on screen.  The strip is refit on the second pass too: in Browse it is
+    hidden while the layout is applied and shown just after by the loupe view
+    (MW::requestView).
+*/
+    if (G::isLogger) G::log("MW::ApplyBrowseDevelopSync");
+    if (currentWorkflow != WfSource && currentWorkflow != WfDevelop) return;
+
+    int left = 0, right = 0;
+    if (!SavedSideWidths(w.state, left, right)) return;
+    if (w.areaCollapse[0].collapsed) left = 0;      // collapsibleAreas: 0 left, 1 right
+    if (w.areaCollapse[1].collapsed) right = 0;
+
+    int thumbW = w.thumbWidth, thumbH = w.thumbHeight;
+    if (sync) {
+        const int otherWf = currentWorkflow == WfSource ? WfDevelop : WfSource;
+        const WorkspaceData *other = ResolvedWorkflowLayout(otherWf);
+        int otherLeft = 0, otherRight = 0;
+        if (!other || !SavedSideWidths(other->state, otherLeft, otherRight)) return;
+        if (other->thumbHeight > thumbH) {
+            thumbW = other->thumbWidth;
+            thumbH = other->thumbHeight;
+        }
+        if (other->areaCollapse[0].collapsed) otherLeft = 0;
+        if (other->areaCollapse[1].collapsed) otherRight = 0;
+        // TEMP probe (Sync Browse/Develop): remove once verified in-app
+        qDebug() << "SyncBD own L/R" << left << right << "other" << other->name
+                 << "L/R" << otherLeft << otherRight;
+        /* A side this layout does not show stays unshown. */
+        if (left > 0) left = qMax(left, otherLeft);
+        if (right > 0) right = qMax(right, otherRight);
+    }
+
+    // TEMP probe (Sync Browse/Develop): remove once verified in-app
+    qDebug() << "SyncBD" << (currentWorkflow == WfSource ? "Browse" : "Develop")
+             << w.name << "sync" << sync << "target L/R" << left << right
+             << "thumb" << thumbW << thumbH << "(own" << w.thumbHeight << ")";
+    SetSideWidth(Qt::LeftDockWidgetArea, left);
+    SetSideWidth(Qt::RightDockWidgetArea, right);
+    SetFilmstripThumbSize(thumbW, thumbH);
+    const int wf = currentWorkflow;
+    QTimer::singleShot(0, this, [this, wf, left, right] {
+        if (currentWorkflow != wf) return;      // moved on before the queue turned
+        qDebug() << "SyncBD deferred pass";     // TEMP probe
+        SetSideWidth(Qt::LeftDockWidgetArea, left);
+        SetSideWidth(Qt::RightDockWidgetArea, right);
+        FitFilmstrip();
+    });
+}
+
+void MW::SetSideWidth(Qt::DockWidgetArea area, int width)
+{
+/*
+    Make one side `width` wide: resizeDocks one visible panel on it to exactly that.
+    Qt passes the size up through a tab group or a vertical stack unchanged and sets the
+    area to it (QDockAreaLayout::resizeDocks), so any member sizes the whole side.
+
+    NOT MEASURED FROM THE SCREEN.  The first version took the union of the side's
+    unhidden panels and resized one by the difference.  Right after restoreState the
+    back tabs of a group are not hidden yet and can still carry the previous layout's
+    size, so both the span and the panel's own width could be wrong, and Browse's two
+    tab-group sides came up NARROWER than their layout (2026-11-16).
+
+    The panel used is the front tab where one can be told; any visible one otherwise.
+    Side-by-side columns on one side would need the difference instead; no Winnow layout
+    has them.
+*/
+    if (width <= 0 || isDockAreaCollapsed(area)) return;
+    DockWidget *rep = nullptr;
+    for (DockWidget *d : docksInArea(area)) {
+        if (d->isHidden()) continue;
+        if (isSelectedDockTab(d)) { rep = d; break; }
+        if (!rep) rep = d;
+    }
+    if (!rep) return;
+    // TEMP probe (Sync Browse/Develop): remove once verified in-app
+    qDebug() << "SyncBD set" << (area == Qt::LeftDockWidgetArea ? "left" : "right")
+             << "rep" << rep->objectName() << "repW" << rep->width() << "-> " << width;
+    resizeDocks({rep}, {width}, Qt::Horizontal);
+    if (G::isPanelProbe)
+        PanelProbe::Instance().NoteRequest(rep->objectName(),
+                                           "Sync Browse/Develop resizeDocks horizontal",
+                                           width);
+}
+
+void MW::SetFilmstripThumbSize(int width, int height)
+{
+/*
+    Give the filmstrip (thumbView) the thumbnail size `width` x `height` and fit its dock
+    to it.  The same steps MW::invokeWorkspace takes with a layout's thumbnail size;
+    nothing is done when it already has that size.
+*/
+    if (width <= 0 || height <= 0) return;
+    if (thumbView->iconWidth != width || thumbView->iconHeight != height) {
+        thumbView->iconWidth = width;
+        thumbView->iconHeight = height;
+        thumbView->assignedIconWidth = width;
+        thumbView->rejustify();
+        thumbView->setThumbParameters();
+    }
+    FitFilmstrip();
+}
+
+void MW::FitFilmstrip()
+{
+/*
+    Fit a docked, visible top or bottom filmstrip to its thumbnail cell
+    (MW::setThumbDockFeatures, the one place that decides the strip height).  A hidden
+    strip is fitted when it is shown: see the second pass in MW::ApplyBrowseDevelopSync.
+*/
+    if (thumbDock->isFloating() || thumbDock->isHidden()) return;
+    const Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
+    if (area != Qt::BottomDockWidgetArea && area != Qt::TopDockWidgetArea) return;
+    if (isDockAreaCollapsed(area)) return;
+    // TEMP probe (Sync Browse/Develop): remove once verified in-app
+    qDebug() << "SyncBD filmstrip thumbH" << thumbView->iconHeight
+             << "dockH before" << thumbDock->height();
+    setThumbDockFeatures(area);
 }
 
 void MW::focusKeywordsFilters()
