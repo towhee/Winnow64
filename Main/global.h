@@ -877,6 +877,7 @@ Q_NAMESPACE
     extern QColor thumbUncachedColor;               // thumb: not in ImageCache
     extern QColor thumbRawPreviewColor;             // thumb: cached, the file's own pixels
     extern QColor thumbDevPreviewColor;             // thumb: cached, developed pixels
+    extern QColor thumbReducedPreviewColor;         // thumb: developed, reduced size
     extern QColor sidecarColor;                     // thumb: has a sidecar
     extern QColor offlineColor;                     // thumb: volume not mounted
     extern QColor missingColor;                     // thumb: file gone

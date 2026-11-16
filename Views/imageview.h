@@ -179,6 +179,8 @@ public slots:
        that size to the scene while holding the small pixmap, instead of the caller
        upscaling a 50MP QImage per drag tick. Omit it when `image` IS the full render. */
     void setDevelopPreview(const QImage &image, QSize displaySize = QSize());
+    /* The same, from a pixmap already in hand (no QImage round trip). */
+    void setDevelopPreviewPixmap(const QPixmap &pm, QSize displaySize = QSize());
     void monitorCursorState();
     void copyImage();
     void panTo(float xPct, float yPct);
@@ -410,7 +412,22 @@ public slots:
        in normalized image coords (0..1). endCropEdit restores the normal fit/zoom view. */
     void beginCropEdit(double aspect, bool locked, bool flipped,
                        QRectF initialCrop = QRectF(0, 0, 1, 1));
-    void endCropEdit();
+    /* committed, when given, is the geometry the session is closing with: the frame on
+       screen is cropped to it at once (cropPaintResult), so the loupe goes straight to
+       the result instead of showing the full frame until the cropped render lands. */
+    void endCropEdit(const Geometry *committed = nullptr);
+    /* WHICH CANVAS THE OVERLAY BELONGS ON. The overlay is drawn, and the frame seated,
+       only while the loupe shows a crop-free frame of `path`: a frame whose geometry is
+       `canvas` (the stored geometry with the crop suppressed). Until then the session is
+       open but hidden (cropCanvasPending). `stored` is the geometry a cached develop
+       preview carries, `browse` the one a Browse-mode picture carries (stored when
+       Browse shows developed pictures, else identity). Set before beginCropEdit and on
+       every change of image or stored geometry (MW::setDevelopCropCanvas). */
+    void setCropCanvas(const QString &path, const Geometry &canvas,
+                       const Geometry &stored, const Geometry &browse);
+    /* The overlay's rectangle means something only once it has been seated on the right
+       canvas; before that, committing it would write a crop fitted to another picture. */
+    bool cropCanvasConfirmed() const { return cropEditMode && cropConfirmed; }
     /* Crop tool modifiers: Cmd (Ctrl on Windows/Linux) = Level, Opt (Alt) = Warp. Reads the
        live modifier state and refreshes the frame style + hover cursor. Called from MW's
        event filter on a bare modifier press/release (ImageView rarely holds focus in
@@ -1121,6 +1138,18 @@ private:
     QRectF  cropSeatResultN;
     double  cropSeatAspect = 0.0;
     qreal   cropSeatCanvasAspect = 0.0;
+    /* What kind of frame the loupe shows, which decides its geometry (cropShownGeometry):
+       a develop render carries developGeom; a cached develop preview the stored geometry;
+       a Develop decode or the embedded JPEG none; a Browse picture cropBrowseGeom. */
+    enum class ShownFrame { None, Render, DevPreview, Decode, BrowseDecode, Embedded };
+    ShownFrame shownFrame = ShownFrame::None;
+    QString  cropCanvasPath;                 // the image the session is cropping
+    Geometry cropCanvasGeom;                 // the crop-free canvas the overlay needs
+    Geometry cropStoredGeom;                 // what a cached develop preview depicts
+    Geometry cropBrowseGeom;                 // what a Browse picture depicts
+    bool     cropCanvasPending = false;      // session open, canvas not on screen yet
+    bool     cropConfirmed = false;          // seated on the right canvas at least once
+    bool     cropPendingRefit = false;       // aspect / flip chosen while pending
     int     cropDrag       = -1;         // -1 none/pan; 0..7 handles (see cropHitTest)
     QRectF  cropFrameVp;                 // the frame in viewport px (derived from cropN, or dragged)
 
@@ -1210,9 +1239,15 @@ private:
        uncropped image), reshaped to a locked ratio. Records the seat memory. */
     void    cropSeat(QRectF initialCrop);
     void    cropReseatIfCanvasChanged();            // redo cropSeat on the real canvas
+    Geometry cropShownGeometry() const;             // the geometry of the frame on screen
+    bool    cropCanvasMatches() const;              // loupe shows the session's canvas
+    void    cropUpdateCanvasReady();                // latch cropCanvasPending
+    void    cropPaintResult(const QRectF &n, const Geometry &committed);
     void    cropDrawNewFrom(QPoint vp);             // rubber-band a new crop, anchor -> vp
     void    cropDrawOverlay(QPainter *p, const QRectF &br);
-    bool    cropActive() const { return cropEditMode && pmItem && pmItem->isVisible(); }
+    bool    cropActive() const {
+        return cropEditMode && !cropCanvasPending && pmItem && pmItem->isVisible();
+    }
 };
 
 #endif // IMAGEVIEW_H

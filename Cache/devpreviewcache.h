@@ -2,6 +2,7 @@
 #define DEVPREVIEWCACHE_H
 
 #include <QString>
+#include <QImage>
 #include <QByteArray>
 #include <QList>
 #include <QAtomicInt>
@@ -186,6 +187,15 @@ public:
        replaces it with a full one. get() still SERVES it, so the loupe shows the
        developed picture meanwhile instead of decoding the raw. */
     static constexpr const char *kReducedSuffix = "~r";
+    /* QImage::text key on a devPreview the image cache holds SMALLER than the picture it
+       stands for (a reduced or capped entry): "WxH" of the image as displayed. The
+       loupe presents the pixmap at that size, so fit and 100% are in image pixels, not
+       the JPEG's (ImageDecoder::tagDevPreviewDisplaySize, ImageView::loadImage). */
+    static constexpr const char *kDisplaySizeText = "winnow.displaySize";
+    /* Tag `im` with kDisplaySizeText from displayDims ("WxH", G::CroppedDimensionsColumn)
+       when the image is smaller than that and the aspect agrees within 1% -- a stale
+       column must not stretch the picture. No-op otherwise. */
+    static void tagDisplaySize(QImage &im, const QString &displayDims);
     void put(const QString &fPath, const QByteArray &blobHash, const QByteArray &jpg,
              bool reduced = false);
 
@@ -197,9 +207,10 @@ public:
 
     /* A CURRENT preview: the recipe matches and it is full size. acceptReduced also
        counts a reduced one -- for "is there a developed picture to show?", not for
-       "does this need building?". */
+       "does this need building?". isReduced, when given, says which it was (the
+       thumbnail badge draws a reduced one as a hollow ring). */
     bool contains(const QString &fPath, const QByteArray &blobHash,
-                  bool acceptReduced = false) const;
+                  bool acceptReduced = false, bool *isReduced = nullptr) const;
 
     /* Full path of the payload file holding fPath's preview, or "" when the index has no
        row for it. DIAGNOSTIC ONLY -- it answers "which JPEG in the cache folder is this

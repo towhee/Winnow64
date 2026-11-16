@@ -179,8 +179,9 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
        image then had a thumbnail but no devPreview, and Browse showed its file
        undeveloped -- uncropped after a crop. setOperationMode builds these on the way
        out. A "dropped" rebuild (DevPreviewCache::setDroppedHook -- the sweep can drop
-       one while Develop is open) is held the same way, for the same reason. */
-    if ((src == "flush" || src == "dropped")
+       one while Develop is open) is held the same way, for the same reason, and so
+       is the "reduced" rebuild after an Auto-settings batch (which runs in Develop). */
+    if ((src == "flush" || src == "dropped" || src == "reduced")
         && G::operationMode == G::OperationMode::Develop) {
         for (const QString &fPath : paths) devPreviewBuildDeferred.insert(fPath);
         return;
@@ -319,6 +320,31 @@ void MW::devPreviewBuildNext()
         }, nullptr, -1, /*requireSensor*/false, reduced ? kAutoBatchPreviewEdge : 0);
 }
 
+void MW::requestReducedDevPreviewRebuild()
+{
+/*
+    The second half of the Auto-settings batch's REDUCED previews (kAutoBatchPreviewEdge).
+    The batch writes them small to stay fast; without this, only opening the image in
+    Develop, the background build or Develop > Build Developed Previews replaced them, so
+    with the background build off a Full-size preference got 2560 px previews for good --
+    and Browse zoomed and showed them at that size.
+
+    Waits for the batch to end (presetAutoProgress total 0): queued earlier, each rebuild
+    would sit in front of the batch's own renders on the builder's one thread. A reduced
+    store landing after the end (the last image's render) comes straight through. Routed
+    as src "reduced", which startDevPreviewBuild defers while Develop is open -- the
+    builder only takes the batch's own targets there -- and builds on the way out. The
+    cache check in buildDevPreviews skips any image that has been upgraded meanwhile.
+*/
+    if (presetAutoBatchActive || devPreviewReducedPending.isEmpty()) return;
+    const QStringList paths(devPreviewReducedPending.cbegin(),
+                            devPreviewReducedPending.cend());
+    devPreviewReducedPending.clear();
+    if (G::isLogger)
+        G::log("MW::requestReducedDevPreviewRebuild", QString::number(paths.count()));
+    buildDevPreviews(paths, "reduced");
+}
+
 void MW::devPreviewBuildStepDone()
 {
 /*
@@ -443,8 +469,14 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
             // an edited image is restamped by devPreviewUpdated below
             if (!edited) restampCatalogAfterOwnWrite(fPath);
         }
-        if (!r.previewJpg.isEmpty())
+        if (!r.previewJpg.isEmpty()) {
             DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg, reduced);
+            /* A stand-in: rebuild it at the preference's size when the batch is over. */
+            if (reduced) {
+                devPreviewReducedPending.insert(fPath);
+                requestReducedDevPreviewRebuild();
+            }
+        }
 
         if (edited) {
             /* Bring the grid (and the image cache) into line, exactly as a flushed edit does. */

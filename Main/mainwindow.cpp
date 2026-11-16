@@ -6585,6 +6585,7 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
     if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
+        if (developEntryDecodePath != fPath) developEntryDecodePath.clear();
         developCropImageChanged();
         /* The Detail preview's sample point named a place in the PREVIOUS picture, so it
            goes with it -- keeping it would silently magnify a different subject. */
@@ -7130,6 +7131,7 @@ void MW::stop(QString src)
        actually missing next time the command runs, so nothing is lost by dropping it. */
     cancelDevPreviewBuild();
     devPreviewBuildDeferred.clear();
+    devPreviewReducedPending.clear();
 
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
     stopped.clear();
@@ -8318,8 +8320,16 @@ QImage MW::developFrameForBrowse(const QString &fPath, QString *why)
         && developFullFrameFaithful && developFullFrameRecipe == recipe)
         return developFullFrame;
     if (fPath == developFramePath && !developFrame.isNull()
-        && developFrameFaithful && developFrameRecipe == recipe)
-        return developFrame;
+        && developFrameFaithful && developFrameRecipe == recipe) {
+        /* Screen resolution: say what it stands for, or Browse zooms it as if it were
+           the whole picture (DevPreviewCache::kDisplaySizeText). */
+        QImage f = developFrame;
+        const QSize d = developFrameDisplaySize;
+        if (d.isValid())
+            DevPreviewCache::tagDisplaySize(f, QString("%1x%2").arg(d.width())
+                                                               .arg(d.height()));
+        return f;
+    }
     return refuse("no faithful frame of this recipe");
 }
 
@@ -8344,9 +8354,12 @@ void MW::waitForDevelopFrame(const QString &fPath, int timeoutMs)
         return fPath == developFramePath && !developFrame.isNull()
                && developFrameFaithful && developFrameRecipe == recipe;
     };
+    /* Only a render in flight (or queued behind one) can still deliver the frame. With
+       none, waiting would only stall the leave for the whole timeout. */
+    auto rendering = [this] { return developProxyInFlight || developProxyPending; };
     QElapsedTimer t;
     t.start();
-    while (!landed() && t.elapsed() < timeoutMs) {
+    while (!landed() && rendering() && t.elapsed() < timeoutMs) {
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents |
                             QEventLoop::WaitForMoreEvents, 50);
     }
@@ -14906,12 +14919,19 @@ void MW::renderDevelopPreview(bool fullRes)
                 if (!cameraUp && G::operationMode == G::OperationMode::Develop) {
                     imageView->setDevelopGeometry(appliedGeom, orientedSize);
                     imageView->setDevelopPreview(shown, displaySize);
+                    /* A real render is up: whatever the entry re-decode still brings,
+                       the picture on screen is no longer a stand-in. */
+                    if (fPath == developEntryDecodePath) {
+                        developEntryDecodePath.clear();
+                        updateDevelopRenderingHint();
+                    }
                 }
                 /* Keep the frame: the sharpening mask preview is derived from the pixels
                    on screen, so it must be rebuilt from each one -- a Masking drag with
                    Opt held is exactly the case that has to stay live. */
                 developFrame = out;
                 developFramePath = fPath;
+                developFrameDisplaySize = displaySize;
                 developFrameFaithful = faithful;
                 developFrameRecipe = recipe;
                 /* The 1:1 patch, if this tick rendered one. Pushed with the frame it was
@@ -15604,7 +15624,7 @@ void MW::updateDevelopRenderingHint()
     /* Distinguish the two placeholders. Showing a cached develop preview already looks
        like the finished picture, so the chip has to say the pixels are provisional --
        otherwise the later swap to the real render reads as an unexplained flicker. */
-    if (developWorkInFlight == fPath) {
+    if (developWorkInFlight == fPath || developEntryDecodePath == fPath) {
         imageView->setRenderingHint(developInterimIsDevPreview
                                         ? tr("Cached preview - decoding raw")
                                         : tr("Decoding raw"));
@@ -18133,9 +18153,7 @@ void MW::enterDevelopCrop()
     transformPanel->setPreviewShown(false);      // eye reflects "editing", not "showing result"
     renderDevelopPreview(false);     // full frame (geometry suppressed); refits if it was cropped
     const Geometry g = developProperties->currentGeometry();
-    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
-                             transformPanel->isAspectFlipped(),
-                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    beginDevelopCropOverlay(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     transformPanel->setLevelAngle(g.straighten);         // show the stored angle in the Angle field
     syncDevelopKaleidoOverlay();     // the crop session owns the canvas: handles off
 }
@@ -18152,7 +18170,10 @@ void MW::exitDevelopCrop()
        read/commit the overlay crop when we are still in editing mode. */
     if (!developCropShowResult) {
         commitDevelopCrop();
-        imageView->endCropEdit();
+        /* Crop the frame on screen to the result now, so the loupe does not show the
+           full frame until the cropped render lands. */
+        const Geometry committed = developProperties->currentGeometry();
+        imageView->endCropEdit(&committed);
     }
     developCropEditing = false;
     developCropShowResult = false;
@@ -18168,6 +18189,9 @@ void MW::commitDevelopCrop()
 */
     if (!imageView || !developProperties || !developCropEditing || developCropShowResult)
         return;
+    /* Not seated on this image's canvas yet (the overlay is still hidden): its rectangle
+       was fitted to another picture, and the stored crop is what stands. */
+    if (!imageView->cropCanvasConfirmed()) return;
     const QRectF crop = imageView->cropRect();
     Geometry g = developProperties->currentGeometry();
     g.cropX = crop.x(); g.cropY = crop.y(); g.cropW = crop.width(); g.cropH = crop.height();
@@ -18188,8 +18212,30 @@ void MW::developCropImageChanged()
     developCropGeometryBackup = developProperties->currentGeometry();
     const Geometry &g = developCropGeometryBackup;
     transformPanel->setLevelAngle(g.straighten);
-    if (imageView && !developCropShowResult)
+    if (imageView && !developCropShowResult) {
+        setDevelopCropCanvas();      // the new image: the overlay waits for its frame
         imageView->cropSetRect(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    }
+}
+
+void MW::setDevelopCropCanvas()
+{
+    if (!imageView || !developProperties || !dm) return;
+    const Geometry stored = developProperties->currentGeometry();
+    /* Browse shows the developed picture (the devPreview, so the stored geometry) unless
+       the user chose the camera's own. */
+    const Geometry browse = (G::previewSource == G::PreviewSource::Developed)
+                            ? stored : Geometry();
+    imageView->setCropCanvas(dm->currentKey, developRenderGeometry(), stored, browse);
+}
+
+void MW::beginDevelopCropOverlay(QRectF initial)
+{
+    if (!imageView || !transformPanel) return;
+    setDevelopCropCanvas();
+    imageView->beginCropEdit(transformPanel->aspectRatio(),
+                             transformPanel->isAspectLocked(),
+                             transformPanel->isAspectFlipped(), initial);
 }
 
 void MW::cancelDevelopTransform()
@@ -18204,7 +18250,9 @@ void MW::cancelDevelopTransform()
     if (G::isLogger) G::log("MW::cancelDevelopTransform");
     if (!developTransformVisible || !developCropEditing) return;
 
-    if (imageView) imageView->endCropEdit();     // drop overlay; do NOT commit cropRect()
+    /* Drop the overlay WITHOUT committing cropRect(), and put the restored crop up at
+       once when it is a crop of the frame on screen (see ImageView::endCropEdit). */
+    if (imageView) imageView->endCropEdit(&developCropGeometryBackup);
     if (developProperties)
         developProperties->setCurrentGeometry(developCropGeometryBackup);   // revert
     developCropEditing = false;
@@ -18247,9 +18295,7 @@ void MW::rectifyDevelopCrop()
 
     renderDevelopPreview(false);                 // warp kept, crop suppressed -> corrected canvas
     /* Restart the crop overlay (rectangle mode) on the corrected canvas at the suggested crop. */
-    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
-                             transformPanel->isAspectFlipped(),
-                             suggested);
+    beginDevelopCropOverlay(suggested);
 }
 
 void MW::applyDevelopLevel(double deltaDeg)
@@ -18284,9 +18330,7 @@ void MW::applyDevelopLevel(double deltaDeg)
     developProperties->setCurrentGeometry(g);
 
     renderDevelopPreview(false);                 // straighten kept, crop suppressed -> level canvas
-    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
-                             transformPanel->isAspectFlipped(),
-                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    beginDevelopCropOverlay(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     transformPanel->setLevelAngle(g.straighten); // reflect the new angle in the Level field
 }
 
@@ -18383,9 +18427,7 @@ void MW::resetDevelopTransformPart(int part)
     developCropShowResult = false;
     transformPanel->setPreviewShown(false);
     renderDevelopPreview(false);
-    imageView->beginCropEdit(transformPanel->aspectRatio(), transformPanel->isAspectLocked(),
-                             transformPanel->isAspectFlipped(),
-                             QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+    beginDevelopCropOverlay(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
 }
 
 void MW::onImageCursorPos(double xFraction, double yFraction)

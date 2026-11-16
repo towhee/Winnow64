@@ -56,6 +56,9 @@ public:
        See the implementation for when this is allowed. Returns false on any miss, which
        simply falls through to the normal decode. */
     bool loadDevPreview();
+    /* A devPreview smaller than the image it depicts: record the displayed size on it
+       (DevPreviewCache::kDisplaySizeText). */
+    void tagDevPreviewDisplaySize();
     int cacheSource() const;    // G::CacheSource of the decoded image (thumbnail badge)
     /* The DevPreviewCache key for a row: its recipe's base key (G::DevPreviewKeyColumn)
        with the decoder revision folded in, or, with no recipe, the DEFAULT RENDER key of

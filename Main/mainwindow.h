@@ -1423,6 +1423,14 @@ private slots:
     /* The current image changed with the crop tool open: re-seat the overlay on the new
        image's stored crop and take its Esc snapshot. */
     void developCropImageChanged();
+    /* Tell the loupe which canvas the crop overlay belongs on (ImageView::setCropCanvas):
+       the current image, under the geometry a render would apply now (crop suppressed).
+       The overlay stays hidden until that frame is on screen. */
+    void setDevelopCropCanvas();
+    /* Open (or restart) the crop overlay from `initial`, with the panel's aspect, lock
+       and flip, on the canvas setDevelopCropCanvas names. Every start goes through
+       here. */
+    void beginDevelopCropOverlay(QRectF initial);
     /* Esc while the Transform panel is open: cancel the session -- discard every
        crop/straighten/warp change made since it opened (restore the enter-time geometry
        snapshot), drop the overlay WITHOUT committing, and hide the panel. The counterpart
@@ -2609,6 +2617,14 @@ private:
        dropped by the Develop gate, and built when Develop is left (setOperationMode).
        Cleared by MW::stop -- its paths belong to the folder being left. */
     QSet<QString> devPreviewBuildDeferred;
+    /* Auto-settings batch images whose devPreview was written REDUCED (2560 px, for the
+       batch's speed) under a larger size preference. Rebuilt at the preference's size
+       once the batch is over (requestReducedDevPreviewRebuild), whether or not the
+       background build is on: the preference is what the user asked for, and the
+       reduced entry is only a stand-in. Cleared by MW::stop. */
+    QSet<QString> devPreviewReducedPending;
+    bool presetAutoBatchActive = false;  // presetAutoProgress total > 0
+    void requestReducedDevPreviewRebuild();
     int devPreviewBuildTotal = 0;        // 0 = no build running
     int devPreviewBuildDone = 0;
     bool devPreviewBuildCancelled = false;
@@ -3060,6 +3076,9 @@ private:
        the pipeline. Replaced by every applied proxy / full-res render. */
     QImage developFrame;
     QString developFramePath;
+    /* The size developFrame stands for (the proxy is screen resolution, the picture it
+       depicts full size): tagged on it when it seeds Browse (developFrameForBrowse). */
+    QSize developFrameDisplaySize;
     /* developFrame depicts the STORED recipe (not a History hover, and with the Transform
        and Replace preview eyes on). Only a faithful frame may be cached as a preview. */
     bool developFrameFaithful = false;
@@ -3222,6 +3241,10 @@ private:
     double  developPmridResB = 0.0;
     bool    developPmridResHadNP = false;
     QString developWorkInFlight;                  // path whose scene-linear decode is running (ensureDevelopWork coalesce)
+    /* Entering Develop re-decodes the current raw in the image cache (~2-3 s), which
+       developWorkInFlight does not see. Set on entry, cleared when that decode lands, so
+       the loupe's rendering chip says the picture on screen is provisional. */
+    QString developEntryDecodePath;
     QString developWorkTriedPath;                 // path already async-decoded but with no scene-linear result
     QHash<QString,bool> folderWritableCache;       // per-folder sidecar writability (currentImageFolderIsWritable)
                                                   // (display-referred format) -> render the fallback, don't loop

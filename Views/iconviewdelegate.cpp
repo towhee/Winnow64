@@ -127,6 +127,7 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     uncachedColor = G::thumbUncachedColor;          // red: not in ImageCache
     rawPreviewColor = G::thumbRawPreviewColor;      // purple: cached, embedded/original
     devPreviewColor = G::thumbDevPreviewColor;      // green: cached, developed
+    reducedPreviewColor = G::thumbReducedPreviewColor;  // orange: reduced devPreview
     cacheBorderColor = QColor(l20,l20,l20);
     sidecarColor = G::sidecarColor;                 // dark teal
     developColor = G::developColor;                 // amber: image has develop edits
@@ -334,6 +335,7 @@ QString IconViewDelegate::diagnostics()
     rpt << "\n  " << "uncachedColor = " << G::s(uncachedColor);
     rpt << "\n  " << "rawPreviewColor = " << G::s(rawPreviewColor);
     rpt << "\n  " << "devPreviewColor = " << G::s(devPreviewColor);
+    rpt << "\n  " << "reducedPreviewColor = " << G::s(reducedPreviewColor);
     rpt << "\n  " << "cacheBorderColor = " << G::s(cacheBorderColor);
     return reportString;
 }
@@ -626,16 +628,16 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     else if (cacheVisible && hit("Cache", 2))
     {
         // Same rule as the paint() badge, in both operation modes
-        bool developed = cacheSource == G::CacheDeveloped;
-        if (!developed) {
-            developed = dm->devPreviewReady->isReady(
-                sf->index(row, 0).data(G::KeyRole).toString(),
-                sf->index(row, G::DevPreviewKeyColumn).data().toString());
-        }
-        const QString now = developed ? "Green"
+        bool reduced = false;
+        const bool ready = dm->devPreviewReady->isReady(
+            sf->index(row, 0).data(G::KeyRole).toString(),
+            sf->index(row, G::DevPreviewKeyColumn).data().toString(), &reduced);
+        const bool developed = cacheSource == G::CacheDeveloped || ready;
+        const QString now = developed ? (reduced ? "Orange" : "Green")
                             : cacheSource == G::CacheOriginal ? "Purple" : "Red";
         tooltip = "Cache status: " + now + "\n\n"
                   "  Green:\t Developed preview ready\n"
+                  "  Orange:\t Developed preview, reduced size\n"
                   "  Purple:\t Cached embedded preview or original file\n"
                   "  Red:\t Not cached";
     }
@@ -934,18 +936,24 @@ textRect         = a rectangle below itemRect
        never repaints the grid in different colours (Develop trims ImageCache to the
        current image, so without the devPreview test every other thumbnail read red).
        The tooltip shows the legend. */
+    /* ORANGE = developed, but the devPreview is a REDUCED stand-in (an Auto-settings
+       batch writes 2560 px; MW::requestReducedDevPreviewRebuild replaces it at the size
+       preference, and the dot turns green when it lands). Asked of DevPreviewReady even
+       when ImageCache holds a developed picture: it is the only place that knows the
+       entry's size. */
     if (!isVideo && metaLoaded && !G::isSlideShow) {
-        bool developed = cacheSource == G::CacheDeveloped;
-        if (!developed) {
-            const QString baseKey = index.model()->index(sfRow, G::DevPreviewKeyColumn)
-                                        .data().toString();
-            developed = dm->devPreviewReady->isReady(rowKey, baseKey);
-        }
+        const QString baseKey = index.model()->index(sfRow, G::DevPreviewKeyColumn)
+                                    .data().toString();
+        bool reduced = false;
+        const bool ready = dm->devPreviewReady->isReady(rowKey, baseKey, &reduced);
+        const bool developed = cacheSource == G::CacheDeveloped || ready;
+        const QRectF r = QRectF(cacheRect.translated(origin));
         painter->setPen(cacheBorderColor);
-        painter->setBrush(developed ? devPreviewColor
+        painter->setBrush(developed && reduced ? reducedPreviewColor
+                          : developed ? devPreviewColor
                           : cacheSource == G::CacheOriginal ? rawPreviewColor
                                                             : uncachedColor);
-        painter->drawEllipse(cacheRect.translated(origin));
+        painter->drawEllipse(r);
     }
     if (isSidecar && !G::isSlideShow) {
         painter->setPen(cacheBorderColor);

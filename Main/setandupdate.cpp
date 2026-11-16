@@ -2229,6 +2229,9 @@ void MW::refreshViewsOnCacheChange(QString fPath, bool isCached, QString src)
             gap between the two is exactly how long the user looked at nothing. */
         if (G::isIngestProbe) IngestProbe::Instance().NoteLoupeRepair(fPath);
         if (!inMapModule()) centralLayout->setCurrentIndex(prevCentralView);
+        /* The Develop-entry re-decode has landed: the chip stops saying so (it is
+           refreshed by applyDevelopPreviewIfEdited below). */
+        if (fPath == developEntryDecodePath) developEntryDecodePath.clear();
         imageView->loadImage(fPath, true, "MW::refreshViewsOnCacheChange");
         if (browseSwitchClock.isValid() && fPath == browseSwitchPath) {
             qDebug().noquote() << QString("[BrowseSwitch] %1  loupe loaded +%2 ms (%3)")

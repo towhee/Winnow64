@@ -36,14 +36,16 @@ public:
     explicit DevPreviewReady(DataModel *dm) : dm(dm) {}
 
     /* rowKey is G::KeyRole (a version is its own row), baseKey the row's
-       G::DevPreviewKeyColumn. */
-    bool isReady(const QString &rowKey, const QString &baseKey);
+       G::DevPreviewKeyColumn. reduced, when given, is set when the ready preview is a
+       REDUCED stand-in (DevPreviewCache "REDUCED"): the badge draws it as a ring. */
+    bool isReady(const QString &rowKey, const QString &baseKey, bool *reduced = nullptr);
 
 private:
     struct Entry {
         QString baseKey;
         quint64 gen = 0;
         bool ready = false;
+        bool reduced = false;
     };
     void queue(const QString &rowKey, const QString &baseKey);
     void flush();

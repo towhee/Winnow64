@@ -265,6 +265,7 @@ void ImageDecoder::decode(int row, int instance, QString key)
             if (!abort.loadAcquire()) applyDevelop();
         }
         if (!abort.loadAcquire()) colorManage();     // always on (2026-10-26)
+        if (loadedFromDevPreview && !image.isNull()) tagDevPreviewDisplaySize();
         if (image.isNull()) status = Status::Failed;
     }
     else {
@@ -360,6 +361,20 @@ bool ImageDecoder::loadDevPreview()
     decoderToUse = DevPreview;
     status = Status::Success;
     return true;
+}
+
+void ImageDecoder::tagDevPreviewDisplaySize()
+{
+/*
+    A devPreview is not always full size: an Auto-settings batch writes a REDUCED one
+    (~2560 px) and the "Developed preview size" preference can cap it. Shown at its own
+    pixel size, a 2560 px stand-in for an 8672 px Sony ILCE-1M2 frame made fit read 72%
+    instead of 21% and "100%" a 3.4x under-zoom. The displayed size (oriented, then
+    cropped -- G::CroppedDimensionsColumn) says what it stands for. Only when the aspect
+    agrees, so a stale column (a recipe the row has not caught up with) cannot stretch
+    the picture. After colorManage, which may replace the QImage.
+*/
+    DevPreviewCache::tagDisplaySize(image, dmVal(G::CroppedDimensionsColumn).toString());
 }
 
 QString ImageDecoder::devPreviewKeyFor(const QString &baseKey, const QString &rowKey,

@@ -87,6 +87,21 @@ void DevPreviewCache::setCacheDir(const QString &d)
     CacheDb::instance().closeThisThread();
 }
 
+void DevPreviewCache::tagDisplaySize(QImage &im, const QString &displayDims)
+{
+    if (im.isNull()) return;
+    const QStringList wh = displayDims.split('x');
+    if (wh.size() != 2) return;
+    const int w = wh.at(0).trimmed().toInt();
+    const int h = wh.at(1).trimmed().toInt();
+    if (w <= 0 || h <= 0) return;
+    if (w <= im.width() && h <= im.height()) return;            // full size already
+    const double a = double(w) / h;
+    const double b = double(im.width()) / im.height();
+    if (qAbs(a / b - 1.0) > 0.01) return;
+    im.setText(kDisplaySizeText, QString("%1x%2").arg(w).arg(h));
+}
+
 QString DevPreviewCache::cacheDir() const
 {
     QMutexLocker lk(&mutex);
@@ -431,8 +446,9 @@ QByteArray DevPreviewCache::get(const QString &fPath, const QByteArray &blobHash
 }
 
 bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash,
-                               bool acceptReduced) const
+                               bool acceptReduced, bool *isReduced) const
 {
+    if (isReduced) *isReduced = false;
     QMutexLocker lk(&mutex);
     QSqlDatabase db = const_cast<DevPreviewCache *>(this)->dbLocked();
     if (!db.isOpen()) return false;
@@ -442,13 +458,15 @@ bool DevPreviewCache::contains(const QString &fPath, const QByteArray &blobHash,
     q.addBindValue(cachePathKey(fPath));
     if (!q.exec() || !q.next()) return false;
     const QByteArray stored = q.value(0).toString().toLatin1();
-    if (stored != blobHash &&
-        !(acceptReduced && stored == blobHash + kReducedSuffix)) return false;
+    const bool reduced = stored != blobHash && stored == blobHash + kReducedSuffix;
+    if (stored != blobHash && !(acceptReduced && reduced)) return false;
     /* Same source-identity check as get(), minus the repair -- contains() is const, and a
        caller asking "is there one?" must get the same answer get() would give. (The one
        deliberate difference: a REDUCED entry counts only with acceptReduced.) */
-    return !SrcStamp::of(fPath).contradicts(q.value(1).toLongLong(),
-                                            q.value(2).toLongLong());
+    const bool ok = !SrcStamp::of(fPath).contradicts(q.value(1).toLongLong(),
+                                                     q.value(2).toLongLong());
+    if (ok && isReduced) *isReduced = reduced;
+    return ok;
 }
 
 QString DevPreviewCache::payloadPath(const QString &fPath) const

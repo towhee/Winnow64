@@ -179,6 +179,7 @@ QColor thumbSelectedColor;
 QColor thumbUncachedColor;
 QColor thumbRawPreviewColor;
 QColor thumbDevPreviewColor;
+QColor thumbReducedPreviewColor;
 QColor sidecarColor;
 QColor offlineColor;
 QColor missingColor;

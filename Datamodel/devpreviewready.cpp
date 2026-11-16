@@ -8,8 +8,10 @@
 #include <QTimer>
 #include <QVector>
 
-bool DevPreviewReady::isReady(const QString &rowKey, const QString &baseKey)
+bool DevPreviewReady::isReady(const QString &rowKey, const QString &baseKey,
+                              bool *reduced)
 {
+    if (reduced) *reduced = false;
     if (rowKey.isEmpty()) return false;
     const int instance = dm->instance.load();
     if (instance != memoInstance) {
@@ -27,6 +29,7 @@ bool DevPreviewReady::isReady(const QString &rowKey, const QString &baseKey)
     }
     // stale: keep showing the last answer while it is re-probed
     if (it->baseKey != baseKey || it->gen != gen) queue(rowKey, baseKey);
+    if (reduced) *reduced = it->ready && it->reduced;
     return it->ready;
 }
 
@@ -45,11 +48,11 @@ void DevPreviewReady::flush()
     flushQueued = false;
     if (pending.isEmpty()) return;
 
-    struct Probe { QString rowKey, baseKey; bool ready = false; };
+    struct Probe { QString rowKey, baseKey; bool ready = false; bool reduced = false; };
     QVector<Probe> batch;
     batch.reserve(pending.size());
     for (auto it = pending.cbegin(); it != pending.cend(); ++it) {
-        batch.append({it.key(), it.value(), false});
+        batch.append({it.key(), it.value(), false, false});
         inFlight.insert(it.key());
     }
     pending.clear();
@@ -69,17 +72,21 @@ void DevPreviewReady::flush()
                 ImageDecoder::devPreviewKeyFor(p.baseKey, p.rowKey, fPath, ext);
             p.ready = !key.isEmpty() &&
                       DevPreviewCache::instance().contains(p.rowKey, key.toLatin1(),
-                                                           /*acceptReduced*/ true);
+                                                           /*acceptReduced*/ true,
+                                                           &p.reduced);
         }
         QMetaObject::invokeMethod(dm, [this, batch, instance, gen]() {
             if (instance != memoInstance || instance != dm->instance.load()) return;
             for (const Probe &p : batch) {
                 inFlight.remove(p.rowKey);
                 auto it = memo.find(p.rowKey);
-                /* Repaint when the answer moved, or when it is a first true: an
-                   unknown row was painted as false. */
-                const bool changed = it == memo.end() ? p.ready : it->ready != p.ready;
-                memo.insert(p.rowKey, {p.baseKey, gen, p.ready});
+                /* Repaint when the answer moved (ready, or reduced -> full when the
+                   rebuild lands), or when it is a first true: an unknown row was
+                   painted as false. */
+                const bool changed = it == memo.end()
+                                     ? p.ready
+                                     : it->ready != p.ready || it->reduced != p.reduced;
+                memo.insert(p.rowKey, {p.baseKey, gen, p.ready, p.reduced});
                 if (changed) dm->scheduleVisibleEmit(dm->rowFromKey(p.rowKey));
             }
         }, Qt::QueuedConnection);

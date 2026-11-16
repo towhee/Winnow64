@@ -4,6 +4,7 @@
 #include "Main/global.h"
 #include "Views/imageview.h"
 #include "Develop/Transform/croptransform.h"
+#include "Cache/devpreviewcache.h"
 #include "Utilities/ingestprobe.h"
 #include "Utilities/modelstore.h"
 
@@ -479,7 +480,15 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (isDebug)
             qDebug() << srcFun + "  row =" << sfRow << fPath;
 
-        pmItem->setPixmap(QPixmap::fromImage(cached));
+        /* A reduced or capped devPreview is presented at the size of the picture it
+           stands for, so zoom is in image pixels (DevPreviewCache::kDisplaySizeText).
+           Pixel reads go through imageToPixmap, as for the Develop proxy. */
+        QSize logical;
+        const QStringList wh =
+            cached.text(DevPreviewCache::kDisplaySizeText).split('x');
+        if (wh.size() == 2) logical = QSize(wh.at(0).toInt(), wh.at(1).toInt());
+        pmItem->setTransformationMode(Qt::SmoothTransformation);
+        pmItem->setPixmapScaled(QPixmap::fromImage(cached), logical);
         isLoaded = true;
         if (isDebug)
             qDebug() << srcFun
@@ -550,7 +559,10 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         }
 
         // the scene reset above dropped the crop tool's pan room
+        shownFrame = (G::operationMode == G::OperationMode::Develop)
+                     ? ShownFrame::Decode : ShownFrame::BrowseDecode;
         cropRestorePanRoom();
+        cropUpdateCanvasReady();
 
         // update viewpoint box in IconViewDelegate
         bool adjustCenter = panToFocus;
@@ -651,7 +663,9 @@ bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
     scale(true);
     if (!isFit && isScrollable) setScrollBars(developCaptureScrollPct);   // keep the pan
     pmItem->setGraphicsEffect(nullptr);
+    shownFrame = substitute.isNull() ? ShownFrame::Embedded : ShownFrame::DevPreview;
     cropRestorePanRoom();           // the scene reset above dropped the crop's pan room
+    cropUpdateCanvasReady();
     developCaptureLocked = false;   // resume tracking (thumb click pan, zoom, scroll)
     return true;
 }
@@ -689,6 +703,8 @@ bool ImageView::loadImagePlaceholder(const QString &fPath, const QImage &thumb,
     pmItem->setTransformationMode(Qt::SmoothTransformation);
     pmItem->setPixmapScaled(QPixmap::fromImage(thumb), logical);
     pmItem->setVisible(true);
+    shownFrame = ShownFrame::None;   // a thumbnail: its geometry is not known here
+    cropUpdateCanvasReady();
     setSceneRect(scene->itemsBoundingRect());
 
     updateShootingInfo();
@@ -760,8 +776,14 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
 */
     if (G::isLogger) G::log("ImageView::setDevelopPreview");
     if (image.isNull()) return;
+    setDevelopPreviewPixmap(QPixmap::fromImage(image), displaySize);
+}
+
+void ImageView::setDevelopPreviewPixmap(const QPixmap &pm, QSize displaySize)
+{
+    if (pm.isNull()) return;
     const QSize shown = (displaySize.isValid() && !displaySize.isEmpty()) ? displaySize
-                                                                          : image.size();
+                                                                          : pm.size();
     /* Compare what the scene SEES, not what the pixmap holds -- a proxy tick changes the
        pixmap size constantly while the displayed size stays put. */
     const QSize oldSize = pmItem->displaySize();
@@ -782,10 +804,11 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
     const QPointF livePan = isScrollable ? getScrollPct() : scrollPct;
     /* Mid-drag the proxy is stretched fast (matching the old FastTransformation upscale);
        a full-res render needs no stretch at all. */
-    pmItem->setTransformationMode(shown == image.size() ? Qt::SmoothTransformation
-                                                        : Qt::FastTransformation);
-    pmItem->setPixmapScaled(QPixmap::fromImage(image), shown);
+    pmItem->setTransformationMode(shown == pm.size() ? Qt::SmoothTransformation
+                                                     : Qt::FastTransformation);
+    pmItem->setPixmapScaled(pm, shown);
     pmItem->setVisible(true);
+    shownFrame = ShownFrame::Render;     // geometry: developGeom (setDevelopGeometry)
     // the render of the image whose stand-in was up: the loupe now shows the real thing
     loupeShown.noteRender(currentImagePath);
     developShownPath = currentImagePath;
@@ -822,6 +845,7 @@ void ImageView::setDevelopPreview(const QImage &image, QSize displaySize)
            render arrives at the full frame, after beginCropEdit. */
         cropRestorePanRoom();
     }
+    cropUpdateCanvasReady();             // the crop overlay's canvas may just have landed
 }
 
 void ImageView::showCompare(const QImage &image, const QString &label)
@@ -2210,10 +2234,24 @@ void ImageView::setMaskBrushSettings(double size, double feather, double flow, b
    (cropSyncFrameFromN). beginCropEdit/endCropEdit only toggle the overlay -- they leave the image
    exactly where the user had it. */
 
+/* Same frame SHAPE: the crop / straighten / warp a frame was made with. Left out:
+   cropAspect (the ratio CHOSEN, not the frame -- a full-frame crop saved under "3 x 2"
+   is the same frame as no crop), renderFolds (pixels, not shape) and show (already
+   applied in the geometry a render reports). */
+static bool sameFrameGeometry(const Geometry &a, const Geometry &b)
+{
+    if (a.cropX != b.cropX || a.cropY != b.cropY ||
+        a.cropW != b.cropW || a.cropH != b.cropH ||
+        a.straighten != b.straighten || a.hasWarp != b.hasWarp) return false;
+    if (a.hasWarp)
+        for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
+    return true;
+}
+
 void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF initialCrop)
 {
     if (G::isLogger) G::log("ImageView::beginCropEdit");
-    if (!pmItem || !pmItem->isVisible()) return;
+    if (!pmItem) return;
 
     cropAspect = aspect;
     cropAspectLocked = locked;
@@ -2227,6 +2265,18 @@ void ImageView::beginCropEdit(double aspect, bool locked, bool flipped, QRectF i
     cropDrag = -1;
     cropDrawStarted = false;
     cropFlipPrevN = cropFlipResultN = QRectF();   // no flip stash into a new session
+    cropPendingRefit = false;
+    cropConfirmed = false;
+    /* Not on screen yet (a cropped frame, another image, the frame before a warp or
+       straighten): the session is open but the overlay waits for its canvas -- drawing
+       it now would put the frame in the wrong place. cropUpdateCanvasReady seats and
+       shows it when the canvas lands. */
+    cropCanvasPending = !cropCanvasMatches();
+    if (cropCanvasPending) {
+        viewport()->update();
+        return;
+    }
+    cropConfirmed = true;
     /* Give the view room to pan even at fit zoom (so the image can be dragged under the fixed
        frame, with parts moving off the central widget) WITHOUT changing the zoom: only the
        scrollable area grows, not the transform. Restored in endCropEdit. */
@@ -2291,6 +2341,111 @@ void ImageView::cropReseatIfCanvasChanged()
     QTimer::singleShot(0, this, [this]{ if (cropActive()) cropEmitChanged(); });
 }
 
+void ImageView::setCropCanvas(const QString &path, const Geometry &canvas,
+                              const Geometry &stored, const Geometry &browse)
+{
+    cropCanvasPath = path;
+    cropCanvasGeom = canvas;
+    cropStoredGeom = stored;
+    cropBrowseGeom = browse;
+}
+
+Geometry ImageView::cropShownGeometry() const
+{
+    switch (shownFrame) {
+    case ShownFrame::Render:       return developGeom;
+    case ShownFrame::DevPreview:   return cropStoredGeom;
+    case ShownFrame::BrowseDecode: return cropBrowseGeom;
+    default:                       return Geometry();     // Decode, Embedded: the file
+    }
+}
+
+bool ImageView::cropCanvasMatches() const
+{
+/*
+    The loupe shows the crop-free canvas of the image being cropped. Not the PREVIOUS
+    image (a loupe miss leaves it up), and not a frame of this one with a different
+    geometry: the cropped result or cropped devPreview when R opens on a cropped image,
+    the unwarped frame while a Rectify renders. Without a target (setCropCanvas never
+    called) the frame on screen is trusted, as it always was.
+*/
+    if (!pmItem || !pmItem->isVisible()) return false;
+    if (cropCanvasPath.isEmpty()) return true;
+    if (currentImagePath != cropCanvasPath) return false;
+    if (shownFrame == ShownFrame::None) return false;
+    return sameFrameGeometry(cropShownGeometry(), cropCanvasGeom);
+}
+
+void ImageView::cropUpdateCanvasReady()
+{
+/*
+    Called after every pixmap swap (setDevelopPreview, loadImage, loadImageInterim) and
+    on a change of image. Latches cropCanvasPending. On the canvas arriving the overlay
+    is seated (cropSeat again, if the user has not reshaped the frame -- they cannot while
+    it is hidden), given its pan room and shown, and the frame is committed on the next
+    tick. On the canvas going away the overlay hides until the next one lands.
+*/
+    if (!cropEditMode) return;
+    const bool ready = cropCanvasMatches();
+    if (ready != cropCanvasPending) return;                // no change
+    cropCanvasPending = !ready;
+    if (!ready) {
+        cropDrag = -1;
+        cropDrawStarted = false;
+        cropLevelDragging = false;
+        viewport()->update();
+        return;
+    }
+    if (G::isLogger) G::log("ImageView::cropUpdateCanvasReady");
+    if (cropSeatResultN.isValid() && cropN == cropSeatResultN) {
+        if (cropSeatAspect < 0.0) cropAspect = cropSeatAspect;   // Custom: re-resolve
+        cropSeat(cropSeatFromN);
+    }
+    else if (cropPendingRefit) {
+        /* An aspect or flip chosen while hidden, on a frame not seated by
+           beginCropEdit (a navigation): apply it as setCropAspect would have. */
+        if (cropAspect < 0.0) cropResolveCustomAspect();
+        if (cropAspect <= 0.0) cropFitLargestToAspect();
+        else                   cropRefitToAspect();
+    }
+    cropPendingRefit = false;
+    cropConfirmed = true;
+    const QPointF c = mapToScene(viewport()->rect().center());
+    cropSetPanSceneRect();
+    centerOn(c);
+    cropSyncFrameFromN();
+    cropSyncModifiers();
+    viewport()->update();
+    QTimer::singleShot(0, this, [this]{ if (cropActive()) cropEmitChanged(); });
+}
+
+void ImageView::cropPaintResult(const QRectF &n, const Geometry &committed)
+{
+/*
+    Closing the crop: put the committed crop of the frame ALREADY ON SCREEN up at once.
+    The cropped render takes a proxy tick or more, and until it lands the loupe showed
+    the whole uncropped frame -- the flash on R, the Transform eye, or leaving Develop.
+    Cropping the canvas is exactly what the render's crop stage does (a copy, after
+    straighten / warp, which the canvas already carries), so the render that replaces
+    this is the same picture: at most it pops in sharper. Paired with the committed
+    geometry so the mask overlays map through the crop meanwhile.
+*/
+    const QPixmap pm = pmItem->pixmap();
+    const QSize disp = pmItem->displaySize();
+    if (pm.isNull() || disp.isEmpty()) return;
+    const QRectF nn = n.intersected(QRectF(0.0, 0.0, 1.0, 1.0));
+    if (nn.isEmpty() || nn == QRectF(0.0, 0.0, 1.0, 1.0)) return;   // nothing to crop
+    const QRect src = QRect(qRound(nn.x() * pm.width()), qRound(nn.y() * pm.height()),
+                            qRound(nn.width() * pm.width()),
+                            qRound(nn.height() * pm.height())) & pm.rect();
+    if (src.isEmpty()) return;
+    const QSize shown(qMax(1, qRound(nn.width() * disp.width())),
+                      qMax(1, qRound(nn.height() * disp.height())));
+    if (G::isLogger) G::log("ImageView::cropPaintResult");
+    setDevelopGeometry(committed, developGeomSrc);
+    setDevelopPreviewPixmap(pm.copy(src), shown);
+}
+
 void ImageView::cropSetPanSceneRect()
 {
     /* Pad the scene by one image size on every side so the canvas can be panned under the
@@ -2320,13 +2475,29 @@ void ImageView::cropRestorePanRoom()
     viewport()->update();
 }
 
-void ImageView::endCropEdit()
+void ImageView::endCropEdit(const Geometry *committed)
 {
     if (!cropEditMode) return;
     if (G::isLogger) G::log("ImageView::endCropEdit");
+    /* Only a frame that is the session's canvas can be cropped to the result: a hidden
+       overlay means the loupe shows something else, and an untraced quad is no crop.
+       The result must also be a crop OF that canvas: a cancel restores the straighten
+       and warp from before the session, which the canvas may no longer carry. */
+    bool paintResult = committed && committed->show && !cropCanvasPending
+                       && !cropWarp && pmItem && pmItem->isVisible();
+    if (paintResult) {
+        Geometry uncropped = *committed;
+        uncropped.cropX = uncropped.cropY = 0.0;
+        uncropped.cropW = uncropped.cropH = 1.0;
+        uncropped.cropAspect = 0.0;
+        paintResult = sameFrameGeometry(uncropped, cropShownGeometry());
+    }
     cropEditMode = false;
     cropWarp = false;
     cropSeatResultN = QRectF();      // no re-seat outside a session
+    cropCanvasPending = false;
+    cropConfirmed = false;
+    cropPendingRefit = false;
     cropAltHeld = cropCmdHeld = false;
     cropLevelMode = cropLevelDragging = false;
     cropDrag = -1;
@@ -2337,6 +2508,9 @@ void ImageView::endCropEdit()
     centerOn(pmItem);
     setCursor(isScrollable ? Qt::OpenHandCursor : Qt::ArrowCursor);
     viewport()->update();            // clear the overlay; the view transform is untouched
+    if (paintResult)
+        cropPaintResult(QRectF(committed->cropX, committed->cropY,
+                               committed->cropW, committed->cropH), *committed);
     // drop the live "Cropped: WxH" (a cancel leaves no saved crop to refresh it)
     emit updateStatus(true, "", "ImageView::endCropEdit");
 }
@@ -2678,6 +2852,13 @@ void ImageView::setCropAspect(double aspect, bool locked, bool flipped, bool ref
     cropAspectLocked = locked;
     cropAspectFlipped = flipped;
     if (!cropEditMode) return;
+    /* Hidden (the canvas has not landed): fitting now would fit the wrong picture. The
+       choice is applied when it lands (cropUpdateCanvasReady). */
+    if (cropCanvasPending) {
+        cropSeatAspect = aspect;
+        if (refit) cropPendingRefit = true;
+        return;
+    }
     if (cropAspect < 0.0) cropResolveCustomAspect();   // Custom: keep the frame's ratio
     cropFlipPrevN = cropFlipResultN = QRectF();   // aspect/lock change breaks the pairing
     /* Releasing a ratio (refit == false) is not the same as choosing one: the constraint
@@ -2701,6 +2882,7 @@ void ImageView::setCropAspectFlip(bool flipped)
 {
     cropAspectFlipped = flipped;
     if (!cropEditMode || !pmItem) return;
+    if (cropCanvasPending) { cropPendingRefit = true; return; }   // see setCropAspect
     cropWarp = false;
 
     const QRectF before = cropN;
@@ -2812,7 +2994,7 @@ void ImageView::cropEmitChanged()
 
 void ImageView::cropSetRect(QRectF n)
 {
-    if (!cropActive()) return;
+    if (!cropEditMode) return;
     cropN = (n.isValid() && !n.isNull()) ? n.intersected(QRectF(0, 0, 1, 1))
                                          : QRectF(0.0, 0.0, 1.0, 1.0);
     cropWarp = false;                 // an untraced quad belonged to the image being left
@@ -2820,6 +3002,9 @@ void ImageView::cropSetRect(QRectF n)
     cropDrawStarted = false;
     cropFlipPrevN = cropFlipResultN = QRectF();   // the flip stash was the other image's
     cropSeatResultN = QRectF();      // so was the seat: no re-seat of the new image
+    cropConfirmed = true;            // a stored crop, valid on any canvas of the image
+    /* Usually hidden now: the loupe still shows the image being left. */
+    cropUpdateCanvasReady();
     cropSyncFrameFromN();
     viewport()->update();
 }
@@ -3257,15 +3442,8 @@ void ImageView::setDevelopGeometry(const Geometry &g, QSize orientedSrcSize)
     /* Called on EVERY develop render tick, including each tick of a brush or slider drag,
        so an unchanged geometry must cost nothing: the invalidation below re-rasters the
        overlay buffers and the auto-mask guide. */
-    auto same = [](const Geometry &a, const Geometry &b) {
-        if (a.cropX != b.cropX || a.cropY != b.cropY ||
-            a.cropW != b.cropW || a.cropH != b.cropH || a.cropAspect != b.cropAspect ||
-            a.straighten != b.straighten || a.hasWarp != b.hasWarp) return false;
-        if (a.hasWarp)
-            for (int i = 0; i < 8; ++i) if (a.quad[i] != b.quad[i]) return false;
-        return true;
-    };
-    if (orientedSrcSize == developGeomSrc && same(g, developGeom)) return;
+    if (orientedSrcSize == developGeomSrc && sameFrameGeometry(g, developGeom)
+        && g.cropAspect == developGeom.cropAspect) return;
 
     developGeom = g;
     developGeomSrc = orientedSrcSize;
@@ -5128,6 +5306,7 @@ void ImageView::clear()
     pmItem->setPixmap(nullPm);
     pmItem->setVisible(false);
     loupeShown.clear();
+    shownFrame = ShownFrame::None;
 }
 
 void ImageView::noJpgAvailable()

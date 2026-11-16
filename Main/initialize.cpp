@@ -2699,6 +2699,9 @@ void MW::createDevelopDock()
                    row already covers that work ("each thumbnail updates as its image is
                    done"), so the builder's row is gated off until the batch ends. */
                 progress->setRowEnabled(progressDevPreviewRow, total <= 0);
+                /* Batch over: rebuild the previews it wrote reduced at full size. */
+                presetAutoBatchActive = total > 0;
+                if (total <= 0) requestReducedDevPreviewRebuild();
                 if (total <= 0) { progress->clearProgress(progressPresetAutoRow); return; }
                 progress->showRow(progressPresetAutoRow, true);
                 progress->updateProgress(progressPresetAutoRow, done, total);
@@ -2733,10 +2736,7 @@ void MW::createDevelopDock()
         transformPanel->setLevelAngle(g.straighten);
         if (developCropShowResult) return;
         if (g.cropIsIdentity()) transformPanel->resetCropState();
-        imageView->beginCropEdit(transformPanel->aspectRatio(),
-                                 transformPanel->isAspectLocked(),
-                                 transformPanel->isAspectFlipped(),
-                                 QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+        beginDevelopCropOverlay(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
     });
     /* Before / After ("\"): the latch can come down without the user pressing the key
        (an edit, a navigation, a mask or spot tool taking the canvas), so the menu item
@@ -3145,17 +3145,17 @@ void MW::createDevelopDock()
         if (shown) {
             commitDevelopCrop();                    // before the flag: it commits only while editing
             developCropShowResult = true;
-            imageView->endCropEdit();               // drop the overlay, restore the normal view
+            /* Drop the overlay, restore the normal view, and crop the frame on screen to
+               the result at once (no full frame until the cropped render lands). */
+            const Geometry committed = developProperties->currentGeometry();
+            imageView->endCropEdit(&committed);
             renderDevelopPreview(false);            // geometry applied -> cropped result
         }
         else {
             developCropShowResult = false;
             renderDevelopPreview(false);            // full frame (geometry suppressed) for the overlay
             const Geometry g = developProperties->currentGeometry();
-            imageView->beginCropEdit(transformPanel->aspectRatio(),
-                                     transformPanel->isAspectLocked(),
-                                     transformPanel->isAspectFlipped(),
-                                     QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
+            beginDevelopCropOverlay(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
         }
     });
     /* Transform [X]: close the panel exactly as the action-row button / "R" does --
@@ -3174,9 +3174,7 @@ void MW::createDevelopDock()
         transformPanel->setPreviewShown(false);
         renderDevelopPreview(false);
         if (developCropEditing && imageView) {
-            imageView->beginCropEdit(transformPanel->aspectRatio(),
-                                     transformPanel->isAspectLocked(),
-                                     transformPanel->isAspectFlipped(), QRectF(0, 0, 1, 1));
+            beginDevelopCropOverlay(QRectF(0, 0, 1, 1));
         }
     });
     /* Replace tools: the action-row Replace menu (MW::showDevelopReplaceMenu) chooses
@@ -4223,10 +4221,12 @@ void MW::setOperationMode(G::OperationMode mode)
         /* [BrowseSwitch] probe: time D to the loupe repaint (refreshViewsOnCacheChange). */
         browseSwitchClock.start();
         browseSwitchPath = dm ? dm->currentKey : QString();
-        if (developTransformVisible) {
-            toggleDevelopTransform();
-            if (dm) waitForDevelopFrame(dm->currentKey, 1500);   // the cropped proxy
-        }
+        if (developTransformVisible) toggleDevelopTransform();
+        /* Whatever render is still in flight -- the cropped proxy the close above just
+           launched, or one an edit or an R a moment ago did -- is the picture Browse
+           should open on. Returns at once when nothing is rendering. */
+        if (dm) waitForDevelopFrame(dm->currentKey, 1500);
+        developEntryDecodePath.clear();
         if (developProperties) developProperties->cancelCanvasTools();
         if (imageView) imageView->endKaleido();      // the Effects > Kaleidoscope handles
         if (imageView) imageView->resetToolCursor();
@@ -4341,6 +4341,14 @@ void MW::setOperationMode(G::OperationMode mode)
        This is a SEPARATE hook from the one in fileSelectionChange. That one fires on an
        image-cache MISS; a mode switch is a cache HIT (the Preview decode is still
        cached), so it never reaches that branch. */
+    /* The re-decode below is the image cache's, which the rendering chip does not
+       otherwise see: flag it so whatever stands in meanwhile is labelled as provisional
+       (MW::updateDevelopRenderingHint). Raw only -- other formats re-decode quickly. */
+    if (mode == G::OperationMode::Develop && dm && !currentIsVideo()
+        && isFileRaw(dm->currentKey)) {
+        developEntryDecodePath = dm->currentKey;
+        updateDevelopRenderingHint();
+    }
     if (mode == G::OperationMode::Develop && imageView && dm && !currentIsVideo()) {
         const QString fPath = dm->currentKey;
         const QImage cached = devPreview(fPath);

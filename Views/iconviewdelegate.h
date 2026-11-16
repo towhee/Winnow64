@@ -130,6 +130,7 @@ private:
     QColor uncachedColor;
     QColor rawPreviewColor;
     QColor devPreviewColor;
+    QColor reducedPreviewColor;
     QColor sidecarColor;
     QColor developColor;
     QColor offlineColor;
