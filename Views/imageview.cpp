@@ -2995,16 +2995,33 @@ void ImageView::cropEmitChanged()
 void ImageView::cropSetRect(QRectF n)
 {
     if (!cropEditMode) return;
-    cropN = (n.isValid() && !n.isNull()) ? n.intersected(QRectF(0, 0, 1, 1))
-                                         : QRectF(0.0, 0.0, 1.0, 1.0);
+    const QRectF stored = (n.isValid() && !n.isNull()) ? n.intersected(QRectF(0, 0, 1, 1))
+                                                       : QRectF(0.0, 0.0, 1.0, 1.0);
+    /* Seat it exactly as R does (cropSeat), so a locked aspect holds across navigation:
+       an uncropped image gets the largest frame of the locked ratio, not the whole
+       frame (seen 2026-11-16: 16 x 9 locked, step to an uncropped image, frame read
+       As shot). The fit is made against the canvas on screen, which is usually still
+       the image being left, so cropUpdateCanvasReady seats it again when this image
+       lands -- the user cannot reshape it while it is hidden. */
+    cropSeat(stored);
     cropWarp = false;                 // an untraced quad belonged to the image being left
     cropDrag = -1;
     cropDrawStarted = false;
     cropFlipPrevN = cropFlipResultN = QRectF();   // the flip stash was the other image's
-    cropSeatResultN = QRectF();      // so was the seat: no re-seat of the new image
-    cropConfirmed = true;            // a stored crop, valid on any canvas of the image
+    cropPendingRefit = false;
+    /* The stored crop is valid on any canvas of the image, so it may be committed at
+       once. A frame seating CHANGED was fitted to a canvas that may not be this image:
+       it waits for the real one (commitDevelopCrop skips it until then). */
+    cropConfirmed = (cropN == stored);
     /* Usually hidden now: the loupe still shows the image being left. */
     cropUpdateCanvasReady();
+    /* Not pending = this image's canvas is already on screen (cropUpdateCanvasReady
+       returns early when that did not change), so the seat above was made against it:
+       confirm and commit it, as the canvas landing would have. */
+    if (!cropCanvasPending && !cropConfirmed) {
+        cropConfirmed = true;
+        QTimer::singleShot(0, this, [this]{ if (cropActive()) cropEmitChanged(); });
+    }
     cropSyncFrameFromN();
     viewport()->update();
 }
