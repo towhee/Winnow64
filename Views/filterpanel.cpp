@@ -326,7 +326,14 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
         result looked UNCHANGED and the export was never spliced in -- the index held it,
         the query returned it, and the Library never showed it. So the splice no longer
         requires the path list to have changed, and asks the model directly. Not while a
-        load is filling the model: every unread row would look missing. */
+        load is filling the model: every unread row would look missing.
+
+        REMOVED IS WHAT THE MODEL STILL HOLDS, for the same reason. A trashed image
+        leaves the model at once (MW::refreshAfterRemoval, MW::deleteFolderPath) but
+        stayed in resultPathList, so the next re-run counted it as removed. Those piled
+        up: past kMaxSpliceDelta (bulk-deleting duplicates, then Develop and back,
+        whose Filters dock reshow refreshes) the panel reloaded the Library and the
+        user's filters went with it. A row already gone needs no splice. */
     QStringList added, removed;
     const bool askModel = isLoaded && !G::isLoadRunning;
     const bool canSplice = !force && (changed || askModel) && resultLoaded
@@ -337,7 +344,7 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
         for (const QString &p : paths)
             if (askModel ? !isLoaded(p) : !before.contains(p)) added << p;
         for (const QString &p : std::as_const(resultPathList))
-            if (!after.contains(p)) removed << p;
+            if (!after.contains(p) && (!askModel || isLoaded(p))) removed << p;
     }
     results = rows;
     resultPathList = paths;
@@ -379,6 +386,11 @@ void FilterPanel::applySearchResult(quint64 gen, const QVector<CatalogRow> &rows
             emit searchNotLoaded();                 // same set, new order: nothing to do
     }
     else if ((force || changed) && !results.isEmpty() && results.size() <= autoLoadMax()) {
+        /*  An UNASKED reload resets the user's filters and place, so say why it ran. */
+        if (!force)
+            qDebug().noquote() << "[Library] re-query reloads the Library: canSplice ="
+                               << canSplice << " added =" << added.size()
+                               << " removed =" << removed.size() << " rows =" << rows.size();
         resultLoaded = true;
         loadedSeq = seq;
         emit loadResults(results, false, q);

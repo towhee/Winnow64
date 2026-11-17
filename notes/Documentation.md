@@ -877,6 +877,7 @@
       - [17.20.8.2 And None of Them Was Unreadable at All](#172082-and-none-of-them-was-unreadable-at-all)
       - [17.20.8.3 The Stub Rows Themselves Hid the Fix](#172083-the-stub-rows-themselves-hid-the-fix)
     - [17.20.9 The Catalog Scanner Had Never Once Run](#17209-the-catalog-scanner-had-never-once-run)
+    - [17.20.10 Trashed Images Reloaded the Library (and Cleared the Filters)](#172010-trashed-images-reloaded-the-library-and-cleared-the-filters)
 - [18 Filters](#18-filters)
   - [18.1 The Filter Dock (Folders and Catalog)](#181-the-filter-dock-folders-and-catalog)
     - [18.1.1 The Scope Is Not Set From the Panel](#1811-the-scope-is-not-set-from-the-panel)
@@ -10930,6 +10931,14 @@ The crash is three lines before the scan is queued, so the invokeMethod that sta
 Why it survived: CatalogScanner appeared in tests/ only inside a comment, MW::startCatalogScan had exactly one call site, and that call site was a button in a preferences sub-dialog, so no headless run ever reached it, and a person only reaches it by deciding to index a library. Everything about the scanner had been reasoned about carefully and none of it had been executed. The lesson is not about initialisers: a feature whose only entry point is a button nobody automated is a feature with no evidence behind it, however well its parts are understood.
 
 The guard is the catalog_scan SMOKE TEST, which DRIVES the scanner rather than checking the pointer: WINNOW_SELFTEST_CATALOG_SCAN=&lt;folder> sets the scope to that one included folder and calls startCatalogScan, and the settle exit fails (code 6) unless CatalogScanner::finished arrived un-aborted with scanned > 0. It asserts `scanned`, NOT `indexed`: the scanner skips work already done, and the fixture folder has just been catalogued by the folder load in the same run, so a correct scan legitimately indexes nothing. Proved by reverting the one-line fix and watching it fail (SEGFAULT, 17 s), then restoring it.
+
+#### 17.20.10 Trashed Images Reloaded the Library (and Cleared the Filters)
+
+Reported 2026-11-17: deleting Library duplicates while filtering on them, then going to Develop and back, reloaded the whole Library and cleared the filters.
+
+FilterPanel keeps resultPathList, the paths of the result the model was loaded from, and splices a re-run's difference (resultsDelta) instead of reloading, up to kMaxSpliceDelta (200) paths. Trashing an image takes its row out of the model at once (MW::refreshAfterRemoval; a Library folder, MW::deleteFolderPath) but left the path in resultPathList, so every later re-run counted it as removed. Deleting stayed cheap, but the count piled up. The next unasked re-run went past 200 and became a full reload. Showing the Filters dock again re-runs the query (its visibilityChanged calls refresh()), and the Develop workflow hides it. A scan finishing or a folder-load commit does the same.
+
+Fix (FilterPanel::applySearchResult): REMOVED counts only paths the model still holds, as ADDED already counted only paths it lacks. A row that is already gone needs no splice. An unforced re-run that still reloads now logs "[Library] re-query reloads the Library" with its added and removed counts.
 
 ## 18 Filters
 
