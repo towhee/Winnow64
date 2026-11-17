@@ -3179,10 +3179,30 @@ void Filters::restore(bool keepMissing)
     whose value no row carries any more is put back on an empty item, so the filter
     stays and shows nothing, rather than silently lifting and showing everything. A
     folder change leaves it false -- there a value not in the new set should go.
+
+    EXCEPT A FOLDER THAT IS GONE (relocateFolderChecks). A Folders check on a folder
+    Winnow renamed or moved follows it to the new path; one on a folder it trashed is
+    dropped. Kept on an empty item, the trashed folder stayed in the Folders category,
+    checked, with nothing in it. The state stays in itemStates when dropped, so the
+    caller still sees there were checks and re-filters (restoreFiltersAfterFolderChange).
 */
 {
     if (G::isLogger || G::isFlowLogger) G::log("Filters::restore");
     uncheckAllFilters();
+
+    QSet<int> droppedStates;
+    for (int i = 0; i < itemStates.size(); ++i) {
+        ItemState &st = itemStates[i];
+        if (st.category != catFolder) continue;
+        const QString value = FolderTree::normalize(st.value);
+        for (const auto &r : std::as_const(folderRelocations)) {
+            if (!FolderTree::isAtOrUnder(value, r.first)) continue;
+            if (r.second.isEmpty()) droppedStates.insert(i);
+            else st.value = r.second + value.mid(r.first.size());
+            break;
+        }
+    }
+    folderRelocations.clear();
 
     /*  Keyed the same way save() keys, which is the whole point: {top-level category,
         filter value}. Built once rather than searched per state. */
@@ -3198,7 +3218,9 @@ void Filters::restore(bool keepMissing)
     }
 
     // restore checked items
-    for (const auto &state : itemStates) {
+    for (int i = 0; i < itemStates.size(); ++i) {
+        if (droppedStates.contains(i)) continue;
+        const ItemState &state = itemStates.at(i);
         QTreeWidgetItem *item =
             byCategoryAndValue.value(state.category).value(state.value, nullptr);
         /*  A state with no matching item is normal rather than an error: the value is
@@ -3238,6 +3260,17 @@ void Filters::restore(bool keepMissing)
         history step (MW::stepFilterHistory) can land on an unfiltered state. */
     notifyFilteringState();
     // emit filterChange("Filters::restore");
+}
+
+void Filters::relocateFolderChecks(const QString &from, const QString &to)
+{
+/*
+    Queued for the next restore() rather than applied to itemStates now: the caller's
+    applyModelChange saves the checks (save() replaces itemStates) after this call.
+*/
+    const QString f = FolderTree::normalize(from);
+    if (f.isEmpty()) return;
+    folderRelocations.append({f, to.isEmpty() ? QString() : FolderTree::normalize(to)});
 }
 
 void Filters::holdPaint(bool hold, const QString &src)

@@ -796,12 +796,15 @@ void MW::updateLibraryOnlyActions()
     (promptForCatalogScope) sends a Folders user to File > Manage Catalog by name -- so
     it is enabled in both sources.
 
-    ONE BELONGS TO FOLDERS: the Folders panel. The Library spans every catalogued folder,
-    so there is no folder tree to drive it; the Window menu item is disabled there with
-    its reason, the mirror of the two above.
+    TWO BELONG TO FOLDERS: the Folders panel and File > Move folder to trash. The Library
+    spans every catalogued folder, so there is no folder tree to drive the panel and no
+    one loaded folder for the File menu item to trash -- it took dm->folderList.at(0),
+    an arbitrary Library folder. Both are disabled there with their reason, the mirror
+    of the two above. A Library folder is trashed from its row in the Filters panel's
+    Folders category (MW::trashLibraryFolder).
 */
     if (!collectionsDockVisibleAction || !queriesDockVisibleAction || !manageCatalogAction
-        || !folderDockVisibleAction)
+        || !folderDockVisibleAction || !deleteActiveFolderAction)
         return;
     const bool library = G::scope == G::Scope::Catalog;
     const QString why = tr("Library only: choose Library at the top left of the window.");
@@ -817,6 +820,21 @@ void MW::updateLibraryOnlyActions()
     folderDockVisibleAction->setToolTip(library
         ? tr("Folders only: choose Folders at the top left of the window.")
         : tr("Folders: browse and load the folders on your drives."));
+    const QString trashWhy = tr("Folders only. In the Library, right-click the folder in "
+                                "the Filters panel's Folders category.");
+    // the reason first: setEnabled emits QAction::changed (see enableSelectionDependentMenus)
+    deleteActiveFolderAction->setProperty("disabledReason",
+        QString("in the Library, right-click the folder in the Filters panel instead"));
+    deleteActiveFolderAction->setEnabled(!library);
+    // not G::trash: setupPlatform sets it after createActions has called this
+#ifdef Q_OS_WIN
+    const QString bin = tr("recycle bin");
+#else
+    const QString bin = tr("trash");
+#endif
+    deleteActiveFolderAction->setToolTip(library
+        ? trashWhy : tr("Move the loaded folder and all its subfolders to the %1.")
+                         .arg(bin));
     manageCatalogAction->setEnabled(true);
     manageCatalogAction->setToolTip(tr("Choose the folders that make up the Library."));
     updateTargetCollectionActions();

@@ -433,6 +433,10 @@ public slots:
         needs to know to decide whether the compiled predicate is now stale. */
     bool hasSavedStates() const { return !itemStates.isEmpty(); }
     void restore(bool keepMissing = false);
+    /*  A folder Winnow itself renamed, moved (to = its new path) or trashed (to empty).
+        The next restore() carries a saved Folders check at or under from to the new path,
+        or drops it, instead of keeping it on an empty item. See restore. */
+    void relocateFolderChecks(const QString &from, const QString &to);
     /*  Freeze the panel's painting across a rebuild of the SAME set, so it shows the
         old tree until the new one is complete. See holdPaint in filters.cpp. */
     void holdPaint(bool hold, const QString &src);
@@ -817,6 +821,8 @@ private:
         Qt::CheckState state = Qt::Checked;
     };
     QList<ItemState>itemStates;
+    // {from, to} from relocateFolderChecks, applied and cleared by the next restore()
+    QList<QPair<QString, QString>> folderRelocations;
     // {category, value} of every nested node open at save(); re-opened by restore()
     QSet<QPair<QString, QString>> expandedStates;
     bool paintHeld = false;

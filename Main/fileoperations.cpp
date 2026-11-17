@@ -1081,7 +1081,8 @@ void MW::trashLibraryFolder(const QString &folder)
 /*
     "Move folder to trash" on a Folders row in the Library: the same as the Folders
     panel's own, through deleteFolderPath -- the warning, the trash, the catalog rows and
-    caches forgotten (FileOps::onFolderDeleted) and the Library refreshed.
+    caches forgotten (FileOps::onFolderDeleted), the loaded rows removed and the
+    Folders filter rebuilt without it, and the Library refreshed.
 */
     if (G::isLogger) G::log("MW::trashLibraryFolder", folder);
     if (!libraryFolderOpAllowed(folder, "delete")) return;
@@ -1248,6 +1249,10 @@ void MW::relocateLibraryFolder(const QString &from, const QString &to, const QSt
             // a folder that left the Library comes back out of the model, not into it
             if (isCatalogScopeFolder(QFileInfo(n).absolutePath())) added << n;
         }
+        /* A Folders check on the folder follows it, or goes with it when it left the
+           Library; restore would otherwise keep it on an empty item under the old path. */
+        if (filters)
+            filters->relocateFolderChecks(from, isCatalogScopeFolder(to) ? to : QString());
         applyModelChange(added, oldMasters, "MW::relocateLibraryFolder");
         reconcileVersionRows("MW::relocateLibraryFolder");
 
@@ -1312,6 +1317,9 @@ void MW::deleteFolder()
     QString senderObject = (static_cast<QAction*>(sender()))->objectName();
     // allow deletion of multiple folders with ample warnings
     if (senderObject == "deleteActiveFolder") {
+        /* Folders scope only: in the Library the loaded set spans many folders, so
+           folderList.at(0) is an arbitrary one (updateLibraryOnlyActions disables it). */
+        if (G::scope == G::Scope::Catalog || dm->folderList.isEmpty()) return;
         dirToDelete = dm->folderList.at(0);
     }
     else if (senderObject == "deleteFSTreeFolder") {
@@ -1359,7 +1367,23 @@ void MW::deleteFolderPath(const QString &dirToDelete)
         if (ret == QMessageBox::Cancel) return;
     }
 
-    if (dm->folderList.contains(dirToDelete)) {
+    /*  IN THE LIBRARY THE LOADED SET IS THE CATALOG'S, NOT THIS FOLDER'S, so trashing a
+        folder takes its rows out of it -- it does not stop and clear the whole model, as
+        it must when the folder is the one Folders scope is showing. The rows go through
+        applyModelChange directly rather than waiting for the re-query's splice
+        (refreshLibraryAfterCatalogChange), which does not run for every result (over
+        kMaxSpliceDelta, an empty Library). Every MASTER at or under the folder: removing
+        a master takes its version rows with it. */
+    const bool library = G::scope == G::Scope::Catalog;
+    QStringList goneMasters;
+    if (library) {
+        for (int r = 0; r < dm->rowCount(); ++r) {
+            const QString key = dm->index(r, G::PathColumn).data(G::KeyRole).toString();
+            if (key.isEmpty() || VersionKey::isVersion(key)) continue;
+            if (!relocatedPath(key, dirToDelete, dirToDelete).isEmpty()) goneMasters << key;
+        }
+    }
+    else if (dm->folderList.contains(dirToDelete)) {
         stop("deleteFolder");
         // reset();
         setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
@@ -1367,7 +1391,20 @@ void MW::deleteFolderPath(const QString &dirToDelete)
 
     // okay to delete
     if (QFile(dirToDelete).moveToTrash()) {
-        if (FileOps::onFolderDeleted(dirToDelete) > 0) refreshLibraryAfterCatalogChange();
+        const int forgotten = FileOps::onFolderDeleted(dirToDelete);
+        if (!goneMasters.isEmpty()) {
+            /* A Folders check on the trashed folder goes with it; restore would
+               otherwise keep it, checked, on an empty item (Filters::restore). */
+            if (filters) filters->relocateFolderChecks(dirToDelete, QString());
+            G::ScrollSignalGuard scrollGuard;   // removing rows scrolls; not the user
+            applyModelChange(QStringList(), goneMasters, "MW::deleteFolderPath");
+        }
+        if (forgotten > 0 || !goneMasters.isEmpty()) refreshLibraryAfterCatalogChange();
+        if (!goneMasters.isEmpty()) {
+            int sfRow = dm->currentSfRow;
+            if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
+            if (dm->sf->rowCount() > 0) sel->select(sfRow);
+        }
     }
 
     // currentFolderDeletedExternally can check if internal folder deletion
