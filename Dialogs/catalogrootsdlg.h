@@ -131,6 +131,9 @@ private:
     void noteEdit();
     /* Show or hide the pending line, and mark Scan as the button to press. */
     void updatePending();
+    /* Scan's tooltip for what the button does now: Stop while scanning, otherwise
+       apply-and-scan or plain scan depending on pending edits. */
+    void setScanButtonToolTip();
     /* The Images column from lastCounts: a row MW has not counted (new or edited since
        the last commit) shows an em dash. */
     void refreshCounts();

@@ -124,6 +124,21 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     closeBtn = new QPushButton("Close");
     removeBtn->setEnabled(false);
 
+    /* Append and Remove say why they can be greyed out: a tooltip still shows on a
+       disabled button. Scan's changes with its text (setScanning). */
+    helpBtn->setToolTip("Open help for this window: the catalog scope, scanning and "
+                        "the catalog information.");
+    addBtn->setToolTip("Add a folder to the table, to include in or exclude from the "
+                       "catalog.\nThe change is pending until you click Scan or close "
+                       "this window.\nUnavailable while a scan is running.");
+    removeBtn->setToolTip("Remove the selected rows from the table.\nImages they "
+                          "added to the catalog are removed from it when the change is "
+                          "applied, after you confirm.\nSelect one or more rows first. "
+                          "Unavailable while a scan is running.");
+    closeBtn->setToolTip("Close this window. Pending changes to the table are applied "
+                         "and scanned.\nA running scan continues in the background.");
+    setScanButtonToolTip();
+
     /* Help on the left, set apart from Append and Remove, which edit the table. */
     QHBoxLayout *btns = new QHBoxLayout;
     btns->setContentsMargins(0, 0, 0, 0);
@@ -501,9 +516,23 @@ void CatalogRootsDlg::updatePending()
     const bool pending = hasPendingEdits();
     /* Enter presses Scan while there is something for it to apply. */
     scanBtn->setDefault(pending);
+    setScanButtonToolTip();
     if (pendingLabel->isVisible() == pending) return;
     pendingLabel->setVisible(pending);
     fitToContents();
+}
+
+void CatalogRootsDlg::setScanButtonToolTip()
+{
+    if (scanning)
+        scanBtn->setToolTip("Stop the running scan. Scan again later to finish "
+                            "it.");
+    else if (hasPendingEdits())
+        scanBtn->setToolTip("Apply the changes to the table, then scan the catalog "
+                            "folders for new and changed images.");
+    else
+        scanBtn->setToolTip("Scan the catalog folders for new and changed "
+                            "images.");
 }
 
 void CatalogRootsDlg::done(int r)
@@ -623,6 +652,7 @@ void CatalogRootsDlg::setScanning(bool on, const QString &what)
     scanning = on;
     scanWhat = on ? what : QString();
     scanBtn->setText(on ? "Stop" : "Scan");
+    setScanButtonToolTip();
     table->setEnabled(!on);
     addBtn->setEnabled(!on);
     removeBtn->setEnabled(!on && !table->selectedItems().isEmpty());

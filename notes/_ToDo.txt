@@ -19,6 +19,8 @@ WHAT'S NEW
 - Spot removal reference (repeat all spots on other images)
 - Rename, move and delete folders in Library filters.
 - Sync Browse/Develop workspaces
+- Fix rotation changing sort order
+- Improve crop workflow
 
 BUGS / TO DO
 - Revisit why library reread on almost every time Winoow compiles.
