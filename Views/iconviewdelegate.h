@@ -140,6 +140,9 @@ private:
     QColor labelTextColor;
     QColor videoTextColor;
     QColor numberTextColor;
+    QColor duplicateColor;             // number badge: a Library duplicate
+    QColor duplicateOkColor;           // number badge: an okayed duplicate
+    QColor duplicateTextColor;
     QColor vp1Color;
     QColor vp2Color;
     QColor masterColor;

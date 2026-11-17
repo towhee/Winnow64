@@ -22,7 +22,7 @@ const char *kOldDbName = "collections.db";
       2  vocab (the keyword vocabulary), imported once from index.db
       3  audit_verdict, audit_skip (Audit Keywords: findings judged, keywords excluded)
       4  saved_pick (picks, written through as they change) */
-constexpr int kSchemaVersion = 4;
+constexpr int kSchemaVersion = 5;
 
 }  // namespace
 
@@ -262,6 +262,16 @@ bool UserDb::migrate(QSqlDatabase &d)
         const QStringList ddl = {
             "CREATE TABLE IF NOT EXISTS saved_pick ("
             "  key TEXT PRIMARY KEY) WITHOUT ROWID",
+        };
+        if (!runAll(ddl)) { d.rollback(); return false; }
+    }
+    if (version < 5) {
+        /*  DUPLICATE OKAY (Datamodel/duplicateok.h). The file path of every image the
+            user told the Library duplicates check to ignore -- a decision, so here and
+            not in the rebuildable index. */
+        const QStringList ddl = {
+            "CREATE TABLE IF NOT EXISTS duplicate_ok ("
+            "  path TEXT PRIMARY KEY) WITHOUT ROWID",
         };
         if (!runAll(ddl)) { d.rollback(); return false; }
     }

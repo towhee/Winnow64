@@ -35,6 +35,8 @@ set(WINNOW_CORE_TEST_SOURCES
     ${CMAKE_SOURCE_DIR}/Datamodel/userdb.cpp
     # Picks carried between sessions (MW::savePicks), the file's smallest tenant.
     ${CMAKE_SOURCE_DIR}/Datamodel/savedpicks.cpp
+    # ...and the okayed Library duplicates (Datamodel/duplicateok.h), kept the same way.
+    ${CMAKE_SOURCE_DIR}/Datamodel/duplicateok.cpp
     # ...and Develop history (the History dock's undo steps), keyed on the path the same
     # way. Qt Core + Sql only; the entries are header-only EditStack JSON.
     ${CMAKE_SOURCE_DIR}/Develop/History/historystore.cpp
@@ -548,6 +550,12 @@ winnow_add_unit_test(tst_metatext unit/tst_metatext.cpp)
 # its duplicate keyword rows in place rather than be rebuilt.
 winnow_add_unit_test(tst_catalog unit/tst_catalog.cpp
     ${CMAKE_SOURCE_DIR}/Main/catalogenumerate.cpp)
+# tst_duplicates pins the Library duplicates rule (Cache/duplicateclassify.h, pure), the
+# index queries behind it (candidates, fingerprints cleared when content changes, the
+# hooks) and MOV::durationMs, the video fingerprint, on in-memory mvhd boxes.
+winnow_add_unit_test(tst_duplicates unit/tst_duplicates.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Video/mov.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Video/mov.h)
 
 # tst_collections pins the store behind the Collections panel -- the user's own work,
 # which nothing can rebuild: a delete takes exactly its subtree, a drag cannot nest a

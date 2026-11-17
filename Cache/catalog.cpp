@@ -545,6 +545,10 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
                 /* schema 30 */
                 " cropfx = ?, cropfy = ?"
                 " , unreadable = 0"
+                /*  schema 32: the duplicates fingerprint describes the file's CONTENT, so
+                    it survives a sidecar-only rewrite and goes when the file changes. */
+                " , pixelhash = CASE WHEN ? THEN NULL ELSE pixelhash END"
+                " , duration_ms = CASE WHEN ? THEN NULL ELSE duration_ms END"
               " WHERE id = ?");
 
     QSqlQuery ins(db);
@@ -568,15 +572,24 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
     const qint64 seq = changeSeqLocked(db) + 1;
 
     int written = 0;
+    QStringList contentKeys;            // for contentChangedHook, see the header
     for (const CatalogRow &r : rows) {
         if (r.path.isEmpty()) continue;
         const QString key = cachePathKey(r.path);
 
         qint64 id = 0;
         bool fresh = false;
+        /*  What the duplicates check needs to hear (schema 32): a new row, new content
+            (the fingerprint is cleared), or a row coming back to the live set. */
+        bool contentChanged = true;
+        bool clearFingerprint = true;
         sel.addBindValue(key);
         if (sel.exec() && sel.next()) {
             id = sel.value(0).toLongLong();
+            clearFingerprint = sel.value(1).toLongLong() != r.srcSize
+                               || sel.value(2).toLongLong() != r.srcMtime
+                               || sel.value(4).toBool();
+            contentChanged = clearFingerprint || !sel.value(5).toBool();
             fresh = sel.value(1).toLongLong() == r.srcSize
                     && sel.value(2).toLongLong() == r.srcMtime
                     && sel.value(3).toLongLong() == r.sidecarMtime
@@ -656,7 +669,11 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(r.colorSpace);               // schema 27
         w.addBindValue(r.cropFx);                   // schema 30
         w.addBindValue(r.cropFy);
-        if (id) w.addBindValue(id);
+        if (id) {
+            w.addBindValue(clearFingerprint);       // schema 32
+            w.addBindValue(clearFingerprint);
+            w.addBindValue(id);
+        }
 
         if (!w.exec()) {
             G::issueDedup("Warning", "Catalog write failed: " + w.lastError().text(),
@@ -672,6 +689,7 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         writeFtsLocked(db, id, r);
         writeVersionsLocked(db, id, r);
         noteChangedLocked(r.path);
+        if (contentChanged) contentKeys << key;
         ++written;
     }
 
@@ -680,6 +698,9 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         db.rollback();
         return 0;
     }
+    /* Released first: the hook may call back into the catalog. */
+    lk.unlock();
+    if (!contentKeys.isEmpty() && contentChangedHook) contentChangedHook(contentKeys);
     return written;
 }
 
@@ -1952,6 +1973,8 @@ int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present
                        << "present =" << present.size()
                        << "caller =" << (caller.isEmpty() ? QString("?") : caller)
                        << "folder =" << folder;
+    lk.unlock();
+    if (demoted) notifyMembershipChanged();
     return demoted;
 }
 
@@ -2150,6 +2173,8 @@ int Catalog::forgetUnder(const QString &folder, bool recurse)
     if (!d.exec()) { db.rollback(); return 0; }
     const int gone = d.numRowsAffected();
     db.commit();
+    lk.unlock();
+    if (gone > 0) notifyMembershipChanged();
     return gone > 0 ? gone : 0;
 }
 
@@ -2225,6 +2250,8 @@ int Catalog::forgetFolders(const QStringList &folders)
         if (d.numRowsAffected() > 0) gone += d.numRowsAffected();
     }
     db.commit();
+    lk.unlock();
+    if (gone) notifyMembershipChanged();
     return gone;
 }
 
@@ -2289,6 +2316,7 @@ int Catalog::sweep()
         }
         db.commit();
     }
+    if (demoted) notifyMembershipChanged();
     return demoted;
 }
 
@@ -2319,6 +2347,8 @@ void Catalog::onMoved(const QString &srcPath, const QString &dstPath)
         del.addBindValue(cachePathKey(srcPath));
         del.exec();
     }
+    lk.unlock();
+    notifyMembershipChanged();
 }
 
 int Catalog::onFolderMoved(const QString &from, const QString &to)
@@ -2371,6 +2401,8 @@ int Catalog::onFolderMoved(const QString &from, const QString &to)
     const int moved = qMax(0, q.numRowsAffected());
     if (moved > 0) setMetaLocked(db, "change_seq", QString::number(seq));
     db.commit();
+    lk.unlock();
+    if (moved > 0) notifyMembershipChanged();
     return moved;
 }
 
@@ -2422,6 +2454,9 @@ void Catalog::onDeleted(const QString &fPath)
         d.prepare("DELETE FROM image WHERE id = ?");
         d.addBindValue(imageId);
         d.exec();
+        id.finish();
+        lk.unlock();
+        notifyMembershipChanged();
     }
 }
 
@@ -2446,7 +2481,11 @@ void Catalog::clear()
     /*  A NEW IDENTITY: an emptied index is not the one any snapshot was read from, even
         though its change counter carries on (see catalogId). */
     q.exec("DELETE FROM catalog_meta WHERE key = 'catalog_id'");
+    /* Nothing is left to have been checked for duplicates (Cache/duplicates.h). */
+    q.exec("DELETE FROM catalog_meta WHERE key = 'duplicates_checked'");
     if (trackingChanges) changedOverflow = true;    // every row changed
+    lk.unlock();
+    notifyMembershipChanged();
 }
 
 qint64 Catalog::changeSeqLocked(QSqlDatabase &db)
@@ -2555,4 +2594,176 @@ void Catalog::noteChangedLocked(const QString &path)
         return;
     }
     changedPaths.insert(path);
+}
+
+/* ---------------------------------------------------------------------------------
+   Library duplicates (schema 32) -- see Cache/duplicates.h
+   --------------------------------------------------------------------------------- */
+
+namespace {
+/*  The columns every duplicates query selects, in the order readDuplicateRowsLocked
+    reads them. */
+constexpr const char *kDuplicateCols =
+    "i.pathkey, i.path, i.captured, i.ext, i.width, i.height, i.srcsize, i.srcmtime,"
+    " i.pixelhash, i.duration_ms";
+/*  What takes part at all: a live, readable row with a capture time. */
+constexpr const char *kDuplicateEligible =
+    "i.live = 1 AND i.unreadable = 0 AND i.captured IS NOT NULL";
+}
+
+QVector<DuplicateRow> Catalog::readDuplicateRowsLocked(QSqlQuery &q)
+{
+    QVector<DuplicateRow> out;
+    while (q.next()) {
+        DuplicateRow r;
+        r.pathkey = q.value(0).toString();
+        r.path = q.value(1).toString();
+        r.captured = q.value(2).toLongLong();
+        r.ext = q.value(3).toString().toLower();
+        r.width = q.value(4).toInt();
+        r.height = q.value(5).toInt();
+        r.srcSize = q.value(6).toLongLong();
+        r.srcMtime = q.value(7).toLongLong();
+        r.pixelHash = q.value(8).toByteArray();
+        r.durationMs = q.value(9).isNull() ? DuplicateRow::kNoDuration
+                                           : q.value(9).toLongLong();
+        out << r;
+    }
+    return out;
+}
+
+QVector<DuplicateRow> Catalog::duplicateCandidates()
+{
+/*
+    ONE GROUP BY over the candidate key, which image_dupkey covers, joined back to the
+    rows. `IS` rather than `=` on width and height: a row the parser gave no size has
+    NULL there, and GROUP BY already treats two NULLs as the same group -- `=` would then
+    find that group's rows matching nothing.
+*/
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return {};
+    QSqlQuery q(db);
+    const QString eligibleK = QString(kDuplicateEligible).replace("i.", "k2.");
+    q.prepare(QString("SELECT %1 FROM image i JOIN"
+                      " (SELECT captured, ext, width, height FROM image k2 WHERE %2"
+                      "  GROUP BY captured, ext, width, height HAVING COUNT(*) > 1) k"
+                      " ON i.captured = k.captured AND i.ext = k.ext"
+                      " AND i.width IS k.width AND i.height IS k.height"
+                      " WHERE %3")
+                  .arg(kDuplicateCols, eligibleK, kDuplicateEligible));
+    if (!q.exec()) return {};
+    return readDuplicateRowsLocked(q);
+}
+
+QVector<DuplicateRow> Catalog::duplicateCandidatesFor(const QStringList &pathkeys)
+{
+/*
+    Per key: its candidate key, then every eligible row sharing it (an image_dupkey
+    probe). PAGED, taking the lock per page, the staleOf convention -- a folder's worth of
+    new rows must not hold the catalog for the whole batch.
+*/
+    QVector<DuplicateRow> out;
+    QSet<QString> seen;
+    for (int from = 0; from < pathkeys.size(); from += kPageRows) {
+        const int to = qMin(int(pathkeys.size()), from + kPageRows);
+        QMutexLocker lk(&mutex);
+        QSqlDatabase db = dbLocked();
+        if (!db.isOpen()) return out;
+        QSqlQuery k(db);
+        k.prepare("SELECT captured, ext, width, height FROM image i"
+                  " WHERE pathkey = ? AND " + QString(kDuplicateEligible));
+        QSqlQuery m(db);
+        m.prepare(QString("SELECT %1 FROM image i WHERE i.captured = ? AND i.ext = ?"
+                          " AND i.width IS ? AND i.height IS ? AND %2")
+                      .arg(kDuplicateCols, kDuplicateEligible));
+        for (int i = from; i < to; ++i) {
+            const QString &key = pathkeys.at(i);
+            if (seen.contains(key)) continue;       // already in a group read below
+            k.addBindValue(key);
+            if (!k.exec() || !k.next()) { k.finish(); continue; }
+            const QVariant captured = k.value(0), ext = k.value(1),
+                           width = k.value(2), height = k.value(3);
+            k.finish();
+            m.addBindValue(captured);
+            m.addBindValue(ext);
+            m.addBindValue(width);
+            m.addBindValue(height);
+            if (!m.exec()) continue;
+            const QVector<DuplicateRow> group = readDuplicateRowsLocked(m);
+            m.finish();
+            for (const DuplicateRow &r : group) seen.insert(r.pathkey);
+            if (group.size() > 1) out << group;
+        }
+    }
+    return out;
+}
+
+QVector<DuplicateRow> Catalog::duplicateFingerprinted()
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return {};
+    QSqlQuery q(db);
+    /*  The fingerprint term spelled exactly as image_fingerprinted's WHERE, which is
+        what lets SQLite use the partial index. */
+    q.prepare(QString("SELECT %1 FROM image i"
+                      " WHERE (pixelhash IS NOT NULL OR duration_ms IS NOT NULL) AND %2")
+                  .arg(kDuplicateCols, kDuplicateEligible));
+    if (!q.exec()) return {};
+    return readDuplicateRowsLocked(q);
+}
+
+int Catalog::setDuplicateFingerprints(const QVector<DuplicateRow> &rows)
+{
+    if (rows.isEmpty()) return 0;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return 0;
+    if (!db.transaction()) return 0;
+    QSqlQuery u(db);
+    u.prepare("UPDATE image SET pixelhash = ?, duration_ms = ?"
+              " WHERE pathkey = ? AND srcsize = ? AND srcmtime = ?");
+    int n = 0;
+    for (const DuplicateRow &r : rows) {
+        u.addBindValue(r.pixelHash.isEmpty() ? QVariant(QMetaType(QMetaType::QByteArray))
+                                             : QVariant(r.pixelHash));
+        u.addBindValue(r.durationMs == DuplicateRow::kNoDuration
+                           ? QVariant(QMetaType(QMetaType::LongLong))
+                           : QVariant(r.durationMs));
+        u.addBindValue(r.pathkey);
+        u.addBindValue(r.srcSize);
+        u.addBindValue(r.srcMtime);
+        if (u.exec()) n += qMax(0, u.numRowsAffected());
+    }
+    db.commit();
+    return n;
+}
+
+void Catalog::setContentChangedHook(std::function<void(const QStringList &)> hook)
+{
+    QMutexLocker lk(&mutex);
+    contentChangedHook = std::move(hook);
+}
+
+void Catalog::setMembershipChangedHook(std::function<void()> hook)
+{
+    QMutexLocker lk(&mutex);
+    membershipChangedHook = std::move(hook);
+}
+
+QString Catalog::metaValue(const QString &key)
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return QString();
+    return metaLocked(db, key);
+}
+
+void Catalog::setMetaValue(const QString &key, const QString &value)
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return;
+    setMetaLocked(db, key, value);
 }

@@ -21,12 +21,9 @@ WHAT'S NEW
 - Sync Browse/Develop workspaces
 - Fix rotation changing sort order
 - Improve crop workflow
+- Auto + manual duplicates check in library
 
 BUGS / TO DO
-
-- File > "Move folder to trash" is never disabled in the Library. There it targets
-folderList.at(0), which is an arbitrary Library folder. The confirmation dialog names the
-folder, but it should probably be disabled with a reason in Library mode.
 
 - Revisit why library reread on almost every time Winoow compiles.
 - Review Develop shortcuts (N, M, X)

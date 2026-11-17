@@ -303,6 +303,14 @@ Q_NAMESPACE
            (DataModel::setPlaceMembership). READ-ONLY. Appended for the same reason as
            DevelopColumn. */
         PlacesColumn,
+        /* The Library duplicates status (Cache/duplicates.h): Duplicate, Okayed or none.
+           NOT STORED IN THE ROW, like PlacesColumn: DataModel::data answers it from a
+           side table keyed by row key (DataModel::setDuplicateStatus), because a check
+           finishing, an okay or a trash elsewhere changes the answer without the row
+           changing. READ-ONLY. EditRole the code, DisplayRole the word. The red ones
+           are mirrored into CompareColumn, the "Duplicates found" filter. Appended for
+           the same reason as DevelopColumn. */
+        DuplicateColumn,
         TotalColumns    // insert additional columns before this
     };
 
@@ -881,6 +889,8 @@ Q_NAMESPACE
     extern QColor sidecarColor;                     // thumb: has a sidecar
     extern QColor offlineColor;                     // thumb: volume not mounted
     extern QColor missingColor;                     // thumb: file gone
+    extern QColor duplicateColor;                   // thumb number badge: duplicate
+    extern QColor duplicateOkColor;                 // thumb number badge: okayed
     extern QColor viewportLightColor;               // thumb: zoom viewport rectangle, outer
     extern QColor viewportDarkColor;                // thumb: zoom viewport rectangle, inner
     extern QColor classificationTextColor;          // loupe rating text
@@ -903,6 +913,7 @@ Q_NAMESPACE
     extern QColor progressCatalogColor;             // status bar progress: catalog scan
     extern QColor progressCatalogLoadColor;         // status bar progress: catalog load
     extern QColor progressExportColor;              // status bar progress: Export
+    extern QColor progressDuplicatesColor;          // progress row: duplicates check
     extern QColor mapPinColor;                      // Map: pin
     extern QColor mapPlaceColor;                    // Map: place outline
     extern QColor mapAxisHandleColor;               // Map: place axis handles

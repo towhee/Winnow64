@@ -702,6 +702,15 @@ void MW::createEditActions()
     connect(addToTargetCollectionAction, &QAction::triggered,
             this, &MW::toggleSelectionInTargetCollection);
 
+    /* Library duplicates: "these are meant to be here". Checked, enabled and its reason
+       from updateDuplicateOkAction; see Main/mwduplicates.cpp. */
+    duplicateOkAction = new QAction(tr("Duplicate Okay"), this);
+    duplicateOkAction->setObjectName("duplicateOk");
+    duplicateOkAction->setCheckable(true);
+    duplicateOkAction->setShortcutVisibleInContextMenu(true);
+    addAction(duplicateOkAction);
+    connect(duplicateOkAction, &QAction::triggered, this, &MW::toggleDuplicateOk);
+
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
     rotateRightAction->setShortcutVisibleInContextMenu(true);
@@ -2845,6 +2854,8 @@ void MW::createEditMenu()
     targetCollectionMenu->setToolTipsVisible(true);
     connect(targetCollectionMenu, &QMenu::aboutToShow, this, &MW::fillTargetCollectionMenu);
     editMenu->addSeparator();
+    editMenu->addAction(duplicateOkAction);
+    editMenu->addSeparator();
     editMenu->addAction(regenerateThumbsAction);
     editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
@@ -3561,6 +3572,8 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(labelGroupAct);
     /* Lightroom's B. Disabled with the reason in Folders (updateTargetCollectionActions). */
     thumbViewActions->append(addToTargetCollectionAction);
+    /* Greyed with the reason unless a selected image is a Library duplicate. */
+    thumbViewActions->append(duplicateOkAction);
 
     thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);
@@ -4021,6 +4034,9 @@ void MW::enableSelectionDependentMenus()
     // diagnosticsMetadataCacheAction->setEnabled(dmHasRows);
     // diagnosticsImageCacheAction->setEnabled(dmHasRows);
     diagnosticsEmbellishAction->setEnabled(dmHasRows);
+
+    /* Depends on WHICH images are selected, not just how many (mwduplicates.cpp). */
+    updateDuplicateOkAction();
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)

@@ -304,6 +304,25 @@ public:
     mutable QReadWriteLock placeLock;
     QHash<QString, QStringList> placeIdsByPath;
 
+    /*  LIBRARY DUPLICATES, for G::DuplicateColumn (Cache/duplicates.h): file path ->
+        DuplicateStatus (Duplicate, Okayed). Replaced whole by MW::refreshDuplicateStatus
+        and read by data() under the lock, as the place table is. Answered by the row's
+        KEY, so a version (whose key is not a file path) is never a duplicate.
+
+        THE RED ONES ARE ALSO "Duplicates found". G::CompareColumn is the row-store bool
+        the Filters category of that name counts (Find Duplicates writes it too), so a
+        row that becomes a Library duplicate has it set and one that stops being one has
+        it cleared -- only those rows, so a Find Duplicates result on other rows stands.
+        A row being filled or re-read keeps it (isLibraryDuplicateRow). Returns whether
+        the table changed; GUI thread. */
+    bool setDuplicateStatus(const QHash<QString, int> &byPath);
+    /* Set G::CompareColumn again on every loaded Library duplicate (after Find
+       Duplicates cleared the column). Returns rows written. */
+    int reapplyDuplicateCompare();
+    bool isLibraryDuplicateRow(int row) const;
+    mutable QReadWriteLock duplicateLock;
+    QHash<QString, int> duplicateByPath;
+
     /*  Column headers: the name and the geek flag, one entry per column. See
         setModelProperties. */
     std::vector<QString> mHeaderName;

@@ -80,6 +80,8 @@ void WidgetCSS::styleGlobals()
        gone is the one worth alarming about. */
     G::offlineColor = QColor(90,130,170);                    // #5a82aa, slate blue, thumb: volume not mounted
     G::missingColor = QColor(170,70,60);                     // #aa463c, dull red, thumb: file gone
+    G::duplicateColor = QColor(255,30,30);                   // #ff1e1e, red, duplicate badge
+    G::duplicateOkColor = QColor(150,70,210);                // #9646d2, purple, okayed badge
     G::viewportLightColor = QColor(255,255,255);             // #ffffff, white, thumb: zoom viewport rect, outer
     G::viewportDarkColor = QColor(0,0,0);                    // #000000, black, thumb: zoom viewport rect, inner
     G::classificationTextColor = QColor(255,255,255);        // #ffffff, white, loupe rating text
@@ -102,6 +104,7 @@ void WidgetCSS::styleGlobals()
     G::progressCatalogColor = QColor(63,168,160);            // #3fa8a0, teal, progress row: catalog scan
     G::progressCatalogLoadColor = QColor(106,143,208);       // #6a8fd0, blue, progress row: catalog load
     G::progressExportColor = QColor(95,174,95);              // #5fae5f, green, progress row: Export
+    G::progressDuplicatesColor = QColor(220,70,70);          // #dc4646, red, duplicates row
     G::mapPinColor = QColor(232,116,44);                     // #e8742c, orange, Map: pin (Lightroom's orange)
     G::mapPlaceColor = QColor(74,163,255);                   // #4aa3ff, blue, Map: place outline (mask overlay blue)
     G::mapAxisHandleColor = QColor(74,163,255);              // #4aa3ff, blue, Map: place axis handles

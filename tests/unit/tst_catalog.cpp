@@ -272,8 +272,11 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         developed row served from the index needs for its cropped size, with the stamps
         of developed images cleared to be re-read. Version 31 adds no table either: it
         blanks titles that are a file's own bytes and re-reads pre-3fdfeb30 DNGs with an
-        impossible size (schema31RepairsBinaryTitles). */
-    QCOMPARE(CacheDb::schemaVersion(), 31);
+        impossible size (schema31RepairsBinaryTitles). Version 32 adds no table either:
+        image.pixelhash and image.duration_ms, the Library duplicates fingerprint
+        (Cache/duplicates.h), filled lazily, plus the image_dupkey and
+        image_fingerprinted indexes (tst_duplicates::schema32IsRerunnable). */
+    QCOMPARE(CacheDb::schemaVersion(), 32);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

@@ -1,6 +1,8 @@
 ﻿#include "Main/mainwindow.h"
 #include "Utilities/waitcursor.h"
 #include "Datamodel/savedpicks.h"
+#include "Datamodel/duplicateok.h"
+#include "Cache/duplicates.h"
 #include "Develop/autotone.h"
 #include "Image/stalethumb.h"
 #include "Develop/workingdump.h"
@@ -506,6 +508,7 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     loadShortcuts(true);        // dependent on createActions
     setupCentralWidget();
     createStressTest();         // dependent on DataModel
+    createDuplicates();         // dependent on DataModel, Filters, status bar, actions
 
     // platform specific settings (must follow dock creation)
     setupPlatform();
@@ -1670,6 +1673,9 @@ void MW::closeEvent(QCloseEvent *event)
     /* No more created files queued at an MW that is going away. */
     FileOps::setCreatedHook({});
     if (catalogScanner) catalogScanner->shutdown();
+    /* The duplicates check decodes on its own threads: stopped and waited for too. */
+    Duplicates::instance().shutdown();
+    DuplicateOk::Flush();
     /* The same for an audit that is still embedding or scoring: stop it and wait. */
     if (keywordAuditJob) keywordAuditJob->shutdown();
     if (keywordSuggester) keywordSuggester->shutdown();
@@ -4546,6 +4552,39 @@ QString MW::catalogStatusText() const
                                   "Availability &rsaquo; Unreadable")
                               .arg(loc.toString(cannotRead)));
 
+    /*  LIBRARY DUPLICATES (Cache/duplicates.h). Red like the backlog, and for the same
+        reason: it is the one other line here that asks for an action. Images added
+        since are checked as they arrive, so the count is current even between presses;
+        "Not checked yet" says the Library from BEFORE has never been looked at. */
+    {
+        Duplicates &dups = Duplicates::instance();
+        const DuplicateCounts dc = dups.counts();
+        const QString where = "Filters &rsaquo; Status &rsaquo; Duplicates found";
+        QString value;
+        if (dc.found > 0)
+            value = QString("<span style=\"color:%1;\">%2 image%3 in %4 group%5</span>"
+                            " &mdash; %6")
+                        .arg(G::catalogOwedColor.name(), loc.toString(dc.found),
+                             dc.found == 1 ? "" : "s", loc.toString(dc.groups),
+                             dc.groups == 1 ? "" : "s", where);
+        else if (dups.hasCheckedAll() || dups.isCheckingAll())
+            value = "None found.";
+        if (dups.isCheckingAll())
+            value = (value == "None found." ? QString() : value + "<br>")
+                    + "checking the Library&hellip;";
+        else if (!dups.hasCheckedAll())
+            value = value.isEmpty()
+                        ? QString("Not checked yet &mdash; press Duplicates.")
+                        : value + "<br>New images are checked as they arrive; the rest "
+                                  "of the Library is not checked yet &mdash; press "
+                                  "Duplicates.";
+        row("Duplicates found", value);
+        if (dc.okayed > 0)
+            row("Duplicates okayed",
+                QString("%1 image%2 (purple number badge) &mdash; ignored by the check")
+                    .arg(loc.toString(dc.okayed), dc.okayed == 1 ? "" : "s"));
+    }
+
     /* Disk space in SI units, as the Finder reports it. */
     if (catalogStorage.valid) {
         auto size = [](qint64 b) {
@@ -5165,11 +5204,16 @@ void MW::manageCatalogRoots()
                 this, &MW::stopCatalogScan);
         connect(catalogRootsDlg, &CatalogRootsDlg::diagnosticsRequested,
                 this, &MW::diagnosticsCatalog);
+        connect(catalogRootsDlg, &CatalogRootsDlg::duplicatesRequested,
+                this, &MW::startLibraryDuplicatesCheck);
+        connect(catalogRootsDlg, &CatalogRootsDlg::stopDuplicatesRequested,
+                this, []{ Duplicates::instance().stop(); });
     }
 
     catalogRootsDlg->setScope(catalogScope);
     updateCatalogCounts();
     catalogRootsDlg->setScanning(catalogScanner && catalogScanner->isRunning());
+    catalogRootsDlg->setDuplicatesChecking(Duplicates::instance().isCheckingAll());
     catalogRootsDlg->setCatalogStatus(catalogStatusText());
     catalogRootsDlg->show();
     catalogRootsDlg->raise();
@@ -19955,6 +19999,9 @@ void MW::findDuplicates()
     }
     findDuplicatesDlg = new FindDuplicatesDlg(this, dm);   // WA_DeleteOnClose
     connect(findDuplicatesDlg, &QDialog::accepted, this, [this, srcFun]() {
+        /*  The dialog cleared CompareColumn on every row before marking its own; the
+            Library duplicates (Cache/duplicates.h) are "Duplicates found" too. */
+        dm->reapplyDuplicateCompare();
         // add true to compare filter
         /*  runSync: filterChange follows, and an async category rebuild racing it is a
             use-after-free -- see the contract in BuildFilters::updateCategory. */

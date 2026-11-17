@@ -2231,6 +2231,8 @@ private:
     QActionGroup *zoomGroupAction;
     QAction *panFocusToggleAction;
     QAction *addToTargetCollectionAction = nullptr;
+    /* Library duplicates: okay (or un-okay) the selected ones. See mwduplicates.cpp. */
+    QAction *duplicateOkAction = nullptr;
     QMenu *targetCollectionMenu = nullptr;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
@@ -2449,6 +2451,8 @@ private:
     int progressCatalogLoadRow = -1;
     /* An export run (ImageExporter): the dialog closes on Export and reports here. */
     int progressExportRow = -1;
+    /* The Library duplicates check (Cache/duplicates.h). */
+    int progressDuplicatesRow = -1;
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -2925,6 +2929,12 @@ private:
     void setPlacesDockVisibility();
     void refreshPlaceNodes();
     void refreshPlaceMembership();
+    /*  LIBRARY DUPLICATES (Main/mwduplicates.cpp, engine Cache/duplicates.h). */
+    void createDuplicates();
+    void startLibraryDuplicatesCheck();
+    void refreshDuplicateStatus();
+    void updateDuplicateOkAction();
+    void toggleDuplicateOk();
     void applyPlaceFilter(const QVector<qint64> &ids);
     void cancelPlaceFilter();
     void syncPlaceListFromFilters();

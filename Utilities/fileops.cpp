@@ -5,6 +5,7 @@
 #include "Cache/thumbcache.h"
 #include "Datamodel/collectionstore.h"
 #include "Datamodel/savedpicks.h"
+#include "Datamodel/duplicateok.h"
 #include "Develop/History/historystore.h"
 #include "Main/global.h"
 #include "Cache/pathkey.h"
@@ -470,6 +471,7 @@ void FileOps::onMoved(const QString &srcPath, const QString &dstPath)
     CollectionStore::instance().onMoved(srcPath, dstPath);
     /* Picks key on the path as well; a picked image stays picked where it went. */
     SavedPicks::OnMoved(srcPath, dstPath);
+    DuplicateOk::OnMoved(srcPath, dstPath);
     /* Develop history keys on the path as well; undo steps follow the image. */
     HistoryStore::onMoved(srcPath, dstPath);
     /* A move INTO the catalog scope from outside it is a new image as far as the
@@ -488,6 +490,7 @@ int FileOps::onFolderDeleted(const QString &folder)
     ThumbCache::instance().onFolderDeleted(folder);
     CollectionStore::instance().onFolderDeleted(folder);
     SavedPicks::OnFolderDeleted(folder);
+    DuplicateOk::OnFolderDeleted(folder);
     HistoryStore::onFolderDeleted(folder);
     return Catalog::instance().forgetUnder(folder, /*recurse*/true);
 }
@@ -511,6 +514,7 @@ int FileOps::onFolderMoved(const QString &from, const QString &to)
     ThumbCache::instance().onFolderMoved(f, t);
     CollectionStore::instance().onFolderMoved(f, t);
     SavedPicks::OnFolderMoved(f, t);
+    DuplicateOk::OnFolderMoved(f, t);
     HistoryStore::onFolderMoved(f, t);
     return Catalog::instance().onFolderMoved(f, t);
 }
@@ -529,5 +533,6 @@ void FileOps::onDeleted(const QString &fPath)
     Catalog::instance().onDeleted(fPath);
     CollectionStore::instance().onDeleted(fPath);
     SavedPicks::OnDeleted(fPath);
+    DuplicateOk::OnDeleted(fPath);
     HistoryStore::onDeleted(fPath);
 }

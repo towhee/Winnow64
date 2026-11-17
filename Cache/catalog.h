@@ -12,7 +12,10 @@
 #include <QStringList>
 #include <QVariant>
 #include <QVector>
+#include <functional>
 #include "Metadata/versions.h"      // VersionSummary (QtCore only)
+
+class QSqlQuery;
 
 /*
     Winnow's catalog: what the app has learned about images it has seen, kept so that a
@@ -289,6 +292,25 @@ struct KeywordAudit
     /* Up to a handful of drifted images, spelled out: path, what the text says, what the
        links say. A count says there is a problem; these say what it looks like. */
     QStringList examples;
+};
+
+/*  ONE ROW AS THE LIBRARY DUPLICATES CHECK SEES IT (Cache/duplicates.h): the candidate
+    key (captured, ext, width, height), the stamps the fingerprint was taken against, and
+    the fingerprint itself. pixelHash empty = not computed; durationMs kNoDuration = not
+    read, -1 = the video has no readable duration. */
+struct DuplicateRow
+{
+    static constexpr qint64 kNoDuration = -2;
+    QString pathkey;
+    QString path;
+    qint64 captured = 0;      // Catalog::wallClockSecs
+    QString ext;              // lower case
+    int width = 0;
+    int height = 0;
+    qint64 srcSize = 0;
+    qint64 srcMtime = 0;
+    QByteArray pixelHash;
+    qint64 durationMs = kNoDuration;
 };
 
 class Catalog
@@ -680,6 +702,39 @@ public:
        file. */
     void clear();
 
+    /*  LIBRARY DUPLICATES (Cache/duplicates.h, schema 32). Only live, readable rows
+        with a capture time take part; a version is not a row here, so it never does.
+
+        duplicateCandidates: every row whose candidate key (captured, ext, width, height)
+        another row shares -- what a full check has to fingerprint.
+        duplicateCandidatesFor: the same for the rows these pathkeys name -- the given
+        rows AND the rows they share a key with, or nothing for a key nobody shares.
+        duplicateFingerprinted: every row holding a fingerprint, which is what the status
+        is derived from (a partial index keeps this a probe, not a table scan).
+        setDuplicateFingerprints: store pixelHash / durationMs, in one transaction, ONLY
+        where the row's stamps still match the ones it was read with -- a file that
+        changed while it was being decoded keeps its NULL and is checked again. */
+    QVector<DuplicateRow> duplicateCandidates();
+    QVector<DuplicateRow> duplicateCandidatesFor(const QStringList &pathkeys);
+    QVector<DuplicateRow> duplicateFingerprinted();
+    int setDuplicateFingerprints(const QVector<DuplicateRow> &rows);
+
+    /*  WHO HEARS ABOUT A CHANGE TO THE ROWS, for the duplicates check. Both are called
+        with the catalog mutex RELEASED (a hook may call back in), on whatever thread made
+        the change, so a hook must only queue work.
+
+        contentChanged: the pathkeys commit() INSERTED, or rewrote with new content stamps
+        (its fingerprint was cleared), or brought back from Missing -- what has to be
+        checked again. membershipChanged: rows left the live set or changed path
+        (delete, forget, demote, move, clear) -- the status has to be re-derived, nothing
+        has to be decoded. */
+    void setContentChangedHook(std::function<void(const QStringList &pathkeys)> hook);
+    void setMembershipChangedHook(std::function<void()> hook);
+
+    /* catalog_meta, for state that belongs to the index (e.g. "duplicates_checked"). */
+    QString metaValue(const QString &key);
+    void setMetaValue(const QString &key, const QString &value);
+
 private:
     Catalog() = default;
     Q_DISABLE_COPY(Catalog)
@@ -721,6 +776,11 @@ private:
     void setMetaLocked(QSqlDatabase &db, const QString &key, const QString &value);
     QHash<QString, CatalogRow> fetchRows(const QList<CatalogRow> &candidates,
                                          bool requireFresh);
+    /* See setContentChangedHook. Set once at startup, read on any thread. */
+    std::function<void(const QStringList &)> contentChangedHook;
+    std::function<void()> membershipChangedHook;
+    void notifyMembershipChanged() const { if (membershipChangedHook) membershipChangedHook(); }
+    QVector<DuplicateRow> readDuplicateRowsLocked(QSqlQuery &q);
     bool trackingChanges = false;
     bool changedOverflow = false;
     QSet<QString> changedPaths;

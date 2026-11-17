@@ -1,6 +1,8 @@
 #include "mov.h"
 #include "Main/global.h"
 #include <QTimeZone>
+#include <QtEndian>
+#include <QFile>
 
 bool MOV::isDebug = false;
 
@@ -181,4 +183,88 @@ QDateTime MOV::createDate(const QString &filePath) {
 
     return createDate;
 
+}
+
+namespace {
+/*  One box header at the device's position: its type, and where its payload starts and
+    ends. False at end of data or on a malformed header. */
+bool readBox(QIODevice &dev, qint64 limit, QByteArray &type, qint64 &payload, qint64 &end)
+{
+    const qint64 start = dev.pos();
+    if (limit - start < 8) return false;
+    const QByteArray h = dev.read(8);
+    if (h.size() != 8) return false;
+    quint64 size = qFromBigEndian<quint32>(h.constData());
+    type = h.mid(4, 4);
+    payload = start + 8;
+    if (size == 1) {                        // 64-bit largesize follows the type
+        const QByteArray big = dev.read(8);
+        if (big.size() != 8) return false;
+        size = qFromBigEndian<quint64>(big.constData());
+        payload = start + 16;
+        if (size < 16) return false;
+    }
+    else if (size == 0) {                   // the box runs to the end
+        size = quint64(limit - start);
+    }
+    else if (size < 8) {
+        return false;
+    }
+    end = start + qint64(size);
+    return end <= limit && end > start;
+}
+
+/*  Find the first box of this type between the device's position and limit, leaving the
+    device at its payload. */
+bool findBox(QIODevice &dev, qint64 limit, const char *want, qint64 &payload, qint64 &end)
+{
+    QByteArray type;
+    while (readBox(dev, limit, type, payload, end)) {
+        if (type == want) return dev.seek(payload);
+        if (!dev.seek(end)) return false;
+    }
+    return false;
+}
+}   // namespace
+
+qint64 MOV::durationMs(QIODevice &dev)
+{
+    if (!dev.isOpen() || !dev.seek(0)) return -1;
+    const qint64 size = dev.size();
+    qint64 payload = 0, end = 0;
+    if (!findBox(dev, size, "moov", payload, end)) return -1;
+    if (!findBox(dev, end, "mvhd", payload, end)) return -1;
+
+    /*  mvhd: version (1), flags (3), then v0: ctime, mtime, timescale, duration (4 each);
+        v1: ctime, mtime (8 each), timescale (4), duration (8). */
+    const QByteArray v = dev.read(4);
+    if (v.size() != 4) return -1;
+    const int version = quint8(v.at(0));
+    quint64 timescale = 0, duration = 0;
+    if (version == 0) {
+        const QByteArray b = dev.read(16);
+        if (b.size() != 16) return -1;
+        timescale = qFromBigEndian<quint32>(b.constData() + 8);
+        duration = qFromBigEndian<quint32>(b.constData() + 12);
+    }
+    else if (version == 1) {
+        const QByteArray b = dev.read(28);
+        if (b.size() != 28) return -1;
+        timescale = qFromBigEndian<quint32>(b.constData() + 16);
+        duration = qFromBigEndian<quint64>(b.constData() + 20);
+    }
+    else {
+        return -1;
+    }
+    /*  All-ones is "indeterminate" in ISO 14496-12; a zero timescale is no duration. */
+    if (timescale == 0 || duration == 0
+        || duration == (version == 0 ? 0xFFFFFFFFull : ~0ull)) return -1;
+    return qint64(duration * 1000 / timescale);
+}
+
+qint64 MOV::durationMs(const QString &filePath)
+{
+    QFile file(filePath);
+    if (!file.open(QIODevice::ReadOnly)) return -1;
+    return durationMs(file);
 }

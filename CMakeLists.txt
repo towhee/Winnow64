@@ -123,6 +123,7 @@ set(WINNOW_SOURCES
     Cache/cachedb.cpp
     Cache/catalog.cpp
     Cache/catalogprobe.cpp
+    Cache/duplicates.cpp
     Cache/devpreviewcache.cpp
     Cache/thumbcache.cpp
     Cache/framedecoder.cpp
@@ -345,6 +346,7 @@ set(WINNOW_SOURCES
     Main/mwstalethumbs.cpp
     Main/mwcollections.cpp
     Main/mwplaces.cpp
+    Main/mwduplicates.cpp
     Main/mwgeotag.cpp
     Main/selftestnav.cpp
     Main/pick.cpp
@@ -396,6 +398,8 @@ set(WINNOW_SOURCES
     Datamodel/keywordauditstore.h
     Datamodel/savedpicks.cpp
     Datamodel/savedpicks.h
+    Datamodel/duplicateok.cpp
+    Datamodel/duplicateok.h
     Datamodel/rowselection.h
     Utilities/visualaudit.cpp
     Utilities/visualaudit.h
@@ -510,6 +514,8 @@ set(WINNOW_HEADERS
     Cache/cachedata.h
     Cache/catalog.h
     Cache/catalogprobe.h
+    Cache/duplicateclassify.h
+    Cache/duplicates.h
     Cache/devpreviewcache.h
     Cache/thumbcache.h
     Cache/mountsnapshot.h

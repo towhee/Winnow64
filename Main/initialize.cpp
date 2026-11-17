@@ -1592,6 +1592,12 @@ void MW::createStatusBar()
     progressExportRow = progress->addRow("Export", 2, G::progressExportColor,
                                          Progress::Fill::FromStart);
     progress->setRowText(progressExportRow, "Exporting");
+    /*  The Library duplicates check (Cache/duplicates.h): the Manage Catalog button's
+        whole-Library pass, and the checks of new images that run longer than a second.
+        Counts in the tooltip (MW::createDuplicates). */
+    progressDuplicatesRow = progress->addRow("Duplicates", 2, G::progressDuplicatesColor,
+                                             Progress::Fill::FromStart);
+    progress->setRowText(progressDuplicatesRow, "Duplicates");
     connect(dm, &DataModel::catalogFillProgress, this, [this](int done, int total) {
         if (!progress) return;
         if (total <= 0) {

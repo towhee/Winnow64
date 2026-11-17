@@ -858,19 +858,25 @@
     - [17.18.5 "13 Images Not Catalogued Yet: Press Scan" That No Scan Closed](#17185-13-images-not-catalogued-yet-press-scan-that-no-scan-closed)
     - [17.18.6 Catalog Diagnostics](#17186-catalog-diagnostics)
     - [17.18.7 Where the Time Went](#17187-where-the-time-went)
-  - [17.19 Investigations and Fixes](#1719-investigations-and-fixes)
-    - [17.19.1 What Selecting the Catalog Actually Cost (14.2 s to 1.7 s, and the Three Bugs Underneath)](#17191-what-selecting-the-catalog-actually-cost-142-s-to-17-s-and-the-three-bugs-underneath)
-    - [17.19.2 The Catalog Capture Was Silently Not Running](#17192-the-catalog-capture-was-silently-not-running)
-    - [17.19.3 The Filter Tree Recompiled Once per Item (56 Seconds of Dead GUI)](#17193-the-filter-tree-recompiled-once-per-item-56-seconds-of-dead-gui)
-    - [17.19.4 Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)](#17194-metadata-done-is-not-work-done-why-no-thumbnail-ever-appeared)
-    - [17.19.5 The Redo Loop That Could Never Finish](#17195-the-redo-loop-that-could-never-finish)
-    - [17.19.6 Is What We Loaded Still True? (the Whole-Set Sweep, and the Three Bugs That Stopped It Repairing Anything)](#17196-is-what-we-loaded-still-true-the-whole-set-sweep-and-the-three-bugs-that-stopped-it-repairing-anything)
-    - [17.19.7 Why Raw Thumbnails Were Never Cached (the Stale Struct on the Icon-Only Read)](#17197-why-raw-thumbnails-were-never-cached-the-stale-struct-on-the-icon-only-read)
-    - [17.19.8 Twenty Images the Scan Could Never Catalogue](#17198-twenty-images-the-scan-could-never-catalogue)
-      - [17.19.8.1 Unreadable Files Are Catalogued as Stubs](#171981-unreadable-files-are-catalogued-as-stubs)
-      - [17.19.8.2 And None of Them Was Unreadable at All](#171982-and-none-of-them-was-unreadable-at-all)
-      - [17.19.8.3 The Stub Rows Themselves Hid the Fix](#171983-the-stub-rows-themselves-hid-the-fix)
-    - [17.19.9 The Catalog Scanner Had Never Once Run](#17199-the-catalog-scanner-had-never-once-run)
+  - [17.19 Library Duplicates](#1719-library-duplicates)
+    - [17.19.1 What a Duplicate Is](#17191-what-a-duplicate-is)
+    - [17.19.2 Candidates, Fingerprints, Status](#17192-candidates-fingerprints-status)
+    - [17.19.3 Duplicate Okay](#17193-duplicate-okay)
+    - [17.19.4 Keeping It Current](#17194-keeping-it-current)
+    - [17.19.5 Where It Is Shown](#17195-where-it-is-shown)
+  - [17.20 Investigations and Fixes](#1720-investigations-and-fixes)
+    - [17.20.1 What Selecting the Catalog Actually Cost (14.2 s to 1.7 s, and the Three Bugs Underneath)](#17201-what-selecting-the-catalog-actually-cost-142-s-to-17-s-and-the-three-bugs-underneath)
+    - [17.20.2 The Catalog Capture Was Silently Not Running](#17202-the-catalog-capture-was-silently-not-running)
+    - [17.20.3 The Filter Tree Recompiled Once per Item (56 Seconds of Dead GUI)](#17203-the-filter-tree-recompiled-once-per-item-56-seconds-of-dead-gui)
+    - [17.20.4 Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)](#17204-metadata-done-is-not-work-done-why-no-thumbnail-ever-appeared)
+    - [17.20.5 The Redo Loop That Could Never Finish](#17205-the-redo-loop-that-could-never-finish)
+    - [17.20.6 Is What We Loaded Still True? (the Whole-Set Sweep, and the Three Bugs That Stopped It Repairing Anything)](#17206-is-what-we-loaded-still-true-the-whole-set-sweep-and-the-three-bugs-that-stopped-it-repairing-anything)
+    - [17.20.7 Why Raw Thumbnails Were Never Cached (the Stale Struct on the Icon-Only Read)](#17207-why-raw-thumbnails-were-never-cached-the-stale-struct-on-the-icon-only-read)
+    - [17.20.8 Twenty Images the Scan Could Never Catalogue](#17208-twenty-images-the-scan-could-never-catalogue)
+      - [17.20.8.1 Unreadable Files Are Catalogued as Stubs](#172081-unreadable-files-are-catalogued-as-stubs)
+      - [17.20.8.2 And None of Them Was Unreadable at All](#172082-and-none-of-them-was-unreadable-at-all)
+      - [17.20.8.3 The Stub Rows Themselves Hid the Fix](#172083-the-stub-rows-themselves-hid-the-fix)
+    - [17.20.9 The Catalog Scanner Had Never Once Run](#17209-the-catalog-scanner-had-never-once-run)
 - [18 Filters](#18-filters)
   - [18.1 The Filter Dock (Folders and Catalog)](#181-the-filter-dock-folders-and-catalog)
     - [18.1.1 The Scope Is Not Set From the Panel](#1811-the-scope-is-not-set-from-the-panel)
@@ -2496,7 +2502,7 @@ What one costs, measured at -O2 on an M4:
 - About 24 bytes per row per slot in the snapshot (QString headers; the buffers are shared with the model).
 - Nothing for filtering: FilterPredicate::accepts skips a category that is not filtering with one inline isFiltering() test and never reads its column.
 
-The real variable is CARDINALITY, not category count. Filters::addCategoryItems creates a QTreeWidgetItem per DISTINCT VALUE on the GUI thread, the shape that produced the 56-second stall applyOps is timed for (see [17.19.3 The Filter Tree Recompiled Once per Item (56 Seconds of Dead GUI)](#17193-the-filter-tree-recompiled-once-per-item-56-seconds-of-dead-gui)). Twelve months and sixty ISOs are nothing; a category over a continuous value should be bucketed rather than listed raw.
+The real variable is CARDINALITY, not category count. Filters::addCategoryItems creates a QTreeWidgetItem per DISTINCT VALUE on the GUI thread, the shape that produced the 56-second stall applyOps is timed for (see [17.20.3 The Filter Tree Recompiled Once per Item (56 Seconds of Dead GUI)](#17203-the-filter-tree-recompiled-once-per-item-56-seconds-of-dead-gui)). Twelve months and sixty ISOs are nothing; a category over a continuous value should be bucketed rather than listed raw.
 
 ##### 4.4.4.2 Category Values That Are Not Just Their Column's Text
 
@@ -3511,7 +3517,7 @@ These are the invariants the icon machinery depends on. Each was learned from a 
 - needToRead decides first and marks second. Marking a row in rowsReading (the worker-local "a Reader has this one" set) before deciding whether it needs reading poisons it: only a returning Reader or an instance change clears the mark, and a row no Reader was dispatched for gets neither. Harmless on a folder (every row arrives MetaNotAttempted, so every row touched IS dispatched), fatal on a catalog scope (rows arrive MetaLoaded, so outside the chunk nothing is needed and every row the walk passed was poisoned).
 - Clearing a loaded icon does not make MetaRead re-read it. needToRead short-circuits on readSuccessThisCycle (rows a Reader has already returned). Anything that discards loaded icons from outside the loader must call MetaRead::invalidateLoadedIcons (queued, before the setStartRow that should act on it), as MW::setPreviewSource, devPreviewUpdated and refreshStaleRows do. setStartRow re-arms the VISIBLE rows on every call in both modes, and the JIT and redo re-arm loops include VIDEO rows: a failed video decode sets IconLoaded = true (DataModel::clearVideoReadingFlag), so it is not retried, and a video still decoding is held by videoRowsReading, which needToRead tests first, so no second QMediaPlayer starts on the same file.
 - G::iconChunkLoaded is maintained incrementally. iconChunkMissing is the number of rows in the current range still owing an icon, recounted exactly by setIconRange (every scroll event, so drift cannot outlive one event) and decremented as icons land. countIconChunkMissing must keep the video / not-Present exemptions (it once had to match isAllIconChunkLoaded, now deleted), or the loader would redo forever chasing a row nobody expects an icon from. One owner since 2026-11-14: [4.4.16](#4416-metaread-re-reads-what-was-invalidated-one-owner-for-all-attempted). (A model-wide O(1) gate in front of a chunk-local requirement never closed once the model outgrew the chunk.)
-- A dispatch cycle judges its OWN range. MetaRead::dispatch counts what is missing in the range captured when setStartRow ran, not G::iconChunkLoaded (which describes the range right now). A cycle whose range has moved finishes rather than redoing; redo is for a read that failed in the range it was asked about, and it is bounded by progress (see [17.19.5 The Redo Loop That Could Never Finish](#17195-the-redo-loop-that-could-never-finish)).
+- A dispatch cycle judges its OWN range. MetaRead::dispatch counts what is missing in the range captured when setStartRow ran, not G::iconChunkLoaded (which describes the range right now). A cycle whose range has moved finishes rather than redoing; redo is for a read that failed in the range it was asked about, and it is bounded by progress (see [17.20.5 The Redo Loop That Could Never Finish](#17205-the-redo-loop-that-could-never-finish)).
 - Eviction walks the difference. clearIconsOutsideChunkRange walks only the rows the chunk has just slid off (the difference between the previous sweep's range and this one), the OLD window when the range jumps clear of it, and a full sweep every 64 sweeps regardless, because a reader can deliver an icon for a row that was in range when dispatched and out of range when it lands. Its writes are blocked and routed through iconRowVisible / scheduleVisibleEmit like every other per-row write. A proxy layoutChanged resets the delta (lastEvictStart/End).
 - Reader backpressure pairs exactly. queuedReaderEvents is incremented by Reader before it emits and decremented only in addMetadataForItemFromReader, the one entry point where that pairing is true. (The decrement once lived inside addMetadataForItem, which a dozen non-Reader callers also reach, so the catalog fill drove it to minus the row count and wedged the backpressure valve open.) MetaRead::dispatch consults it (kQueueCap), and MW::allReaderEventsDrained uses it to decide the model is up to date.
 
@@ -3684,7 +3690,7 @@ The catalog originally stored what SEARCH needs, not what DISPLAY needs. Fingerp
 - Width and Height were the EMBEDDED PREVIEW's size. The catalog held 160 where the file said 6016, because Thumb::setImageDimensions wrote the same decoded size to both G::WidthColumn (how big the IMAGE is: what the table shows, what MPix, Dimensions and Aspect Ratio derive from, what gets catalogued) and G::WidthOrigPreviewColumn (how big the embedded preview is, which the image cache budgets memory from). That is right for paths that decode the whole file and wrong for ones that decode the preview, and HEIC takes the second kind on both platforms (Heic::decodeThumbnail on Windows, macImageIOThumbnail on macOS), so whichever of the metadata read and the thumbnail decode landed last decided what the row said. setImageDimensions now takes the two sizes SEPARATELY, and an invalid fullSize means "I only decoded the preview", in which case the image dimensions are left alone. If the metadata read failed they stay 0, which is honest; a plausible wrong number is worse than a missing one, because nothing downstream can tell. Verified on the 50-file folder: no width at or below G::maxIconSize on any row, and an A7R2 reads 8000 wide with a 1616-wide preview.
 - QImageReader::size() is not reliably the full image. On macOS a raw goes through the ImageIO plugin, which reports the dimensions of whatever representation it decoded (for a NEF, the 160 px embedded preview), and Thumb::loadFromEntireFile passed it on as the image's size. loadFromEntireFile now prefers the metadata read's dimensions; QImageReader is the fallback for formats with no metadata read of their own.
 
-Note that several early A/B runs were taken against stale catalog data written before these fixes, because the catalog capture itself was silently not running headlessly (see [17.19.2 The Catalog Capture Was Silently Not Running](#17192-the-catalog-capture-was-silently-not-running)). Once it ran, the divergence collapsed from eight columns to three, and then to zero.
+Note that several early A/B runs were taken against stale catalog data written before these fixes, because the catalog capture itself was silently not running headlessly (see [17.20.2 The Catalog Capture Was Silently Not Running](#17202-the-catalog-capture-was-silently-not-running)). Once it ran, the divergence collapsed from eight columns to three, and then to zero.
 
 Single SHORT values and their padding (schema 26): a TIFF/EXIF entry holding one SHORT (type 3, or SSHORT 8) uses the first 2 bytes of its 4-byte value field. The spec says the other 2 are zero, but not every writer does it: ACD Systems software and a Fujifilm FinePix S602 leave junk there. IFD::readIFD (the QFile version) handled this only for big-endian files and read little-endian ones as 32 bits, so the catalog stored Orientation 1229520897 (0x49490001) and ISO 23396552 (0x016500C8, i.e. 200). It now reads 2 bytes in either byte order (tst_ifd readIFD_shortIgnoresPadding). Schema 26 clears the freshness stamp and the thumb row of every row showing the damage, which is an orientation outside 0..8 or a JPEG/TIFF ISO over 65535: 34 rows in the user's index. Other SHORT fields in those files (e.g. ResolutionUnit) were wrong the same way and are fixed by the re-read. Single BYTE values have the same theoretical exposure but were left alone; no damage has been seen.
 
@@ -9852,7 +9858,7 @@ Its title bar carries an exclusive pair of buttons beside "Source" (MW::createFo
 
 #### 17.3.3 A LibTree Click Filters; It Does Not Load
 
-The whole Library is already loaded ([17.19.1 What Selecting the Catalog Actually Cost (14.2 s to 1.7 s, and the Three Bugs Underneath)](#17191-what-selecting-the-catalog-actually-cost-142-s-to-17-s-and-the-three-bugs-underneath)), so reloading a folder's worth would only add cost. A click CHECKS THE FOLDER in the Filters panel's Folders category, and that category is the ONE folder filter: LibTree holds no filter state of its own.
+The whole Library is already loaded ([17.20.1 What Selecting the Catalog Actually Cost (14.2 s to 1.7 s, and the Three Bugs Underneath)](#17201-what-selecting-the-catalog-actually-cost-142-s-to-17-s-and-the-three-bugs-underneath)), so reloading a folder's worth would only add cost. A click CHECKS THE FOLDER in the Filters panel's Folders category, and that category is the ONE folder filter: LibTree holds no filter state of its own.
 
 - It asks (LibTree::folderFilterRequested -> MW::applyLibraryFolderFilter -> Filters::setFolderFilter, which sets every folder item and emits ONE filterChange), and MW pushes the result back (MW::syncLibTreeFromFilters -> LibTree::syncFromFilters) after every filter change and every build. So a folder checked in Filters lights up in LibTree, Clear All clears both, and neither can disagree. Selection by the mouse is disabled (NoSelection): what is selected is what Filters includes.
 - A click during the load WAITS: BuildFilters::build runs on a thread, so the Folders category is empty until its Done op runs on the GUI thread. The request is kept in pendingLibraryFolderFilter and applied on BuildFilters::finishedBuildFilters (MW::applyPendingLibraryFolderFilter). (Applying it at the click, or where the build is ASKED for, checks an item about to be deleted or not yet made: the retired year rows taught that, and appeared to do nothing at all.) A folder the Library lists but no loaded row is in (all its raws hidden behind JPGs, say) says so in a popup rather than being a dead click.
@@ -10131,7 +10137,7 @@ Availability is also a Filters category and is re-verified as rows scroll in; se
 
 The category is ALWAYS SHOWN, disabled when there is nothing to choose. It used to be HIDDEN while every loaded row was Present, which answered a question the user never got to ask ("can Winnow tell me which of these files it cannot open?"), and a category that appears and disappears with the data is one nobody learns is there. Greyed with its items still visible says the same thing in the place the user is already looking. The enable test: any value that is not Present, so a scope in which every row is offline still counts.
 
-A fourth value, UNREADABLE, marks a catalogued file the parser could not read (a stub row): Catalog::availabilityOf asks the volume first, then live, then the flag, ordered by what the user can act on ("cannot be parsed" only means something once the file is known to be there). Checking it shows exactly which files they are ([17.19.8 Twenty Images the Scan Could Never Catalogue](#17198-twenty-images-the-scan-could-never-catalogue)).
+A fourth value, UNREADABLE, marks a catalogued file the parser could not read (a stub row): Catalog::availabilityOf asks the volume first, then live, then the flag, ordered by what the user can act on ("cannot be parsed" only means something once the file is known to be there). Checking it shows exactly which files they are ([17.20.8 Twenty Images the Scan Could Never Catalogue](#17208-twenty-images-the-scan-could-never-catalogue)).
 
 ### 17.9 Edits Write Back to the Catalog
 
@@ -10271,7 +10277,7 @@ There are two ways rows get into the model, and for a long time only the folder 
 
 It had to be made discriminating. The first run loaded the four-image fixture folder and then catalog-loaded four images: the numbers matched and proved nothing, because the same four images were on both sides. Cataloguing a fifty-image folder first and then loading the four-image one showed the model going from 4 rows to 43, from a folder the run had never opened. A test whose passing number equals its starting number is not testing the step in between.
 
-ctest catalog_load fails if the search matches nothing (exit 4) or the model is empty after the load (exit 5). It is self-contained: the fixture folder is catalogued by the same run, with a wait on the thread pool so the capture has landed before the query. Verified to fail by making the catalog load return early ("catalogLoaded rows=0"). The wait lives in this mode alone, not on the default selftest path (see [17.19.2 The Catalog Capture Was Silently Not Running](#17192-the-catalog-capture-was-silently-not-running)).
+ctest catalog_load fails if the search matches nothing (exit 4) or the model is empty after the load (exit 5). It is self-contained: the fixture folder is catalogued by the same run, with a wait on the thread pool so the capture has landed before the query. Verified to fail by making the catalog load return early ("catalogLoaded rows=0"). The wait lives in this mode alone, not on the default selftest path (see [17.20.2 The Catalog Capture Was Silently Not Running](#17202-the-catalog-capture-was-silently-not-running)).
 
 ### 17.12 Verifying a Hydrated Row (Scroll-In Stat)
 
@@ -10304,7 +10310,7 @@ What changed is not knowable from the stamps (a rating, a title, the whole keywo
 
 Only rows filled from the index are worth asking about; a folder scope read every row from its file. The gate is a Catalog scope whose rows came back in the query that found them (ScopeRequest::isHydrated()), or any load while G::useIndexMetadata is on. It is the same condition MW::folderChangeCompleted uses to decide there is nothing to commit, and the two must not drift: what one skips committing, the other is responsible for. Rows already marked Offline or Missing are skipped: the availability pass has said the file is unreachable, and on an absent network volume the stat is not cheap.
 
-The whole-set sweep (see [17.19.6 Is What We Loaded Still True? (the Whole-Set Sweep, and the Three Bugs That Stopped It Repairing Anything)](#17196-is-what-we-loaded-still-true-the-whole-set-sweep-and-the-three-bugs-that-stopped-it-repairing-anything)) covers what scrolling never reaches.
+The whole-set sweep (see [17.20.6 Is What We Loaded Still True? (the Whole-Set Sweep, and the Three Bugs That Stopped It Repairing Anything)](#17206-is-what-we-loaded-still-true-the-whole-set-sweep-and-the-three-bugs-that-stopped-it-repairing-anything)) covers what scrolling never reaches.
 
 ### 17.13 Start-up Source and State Restore
 
@@ -10462,7 +10468,7 @@ Opening a folder catalogues it (free, when it is in scope), but that only covers
 - It skips work already done, which makes Scan cheap enough to offer as a button: each folder is stat'd into bare CatalogRows (path, size, mtime, sidecar mtime, no parsing) and handed to Catalog::staleOf; only what comes back is opened. A rescan of an unchanged root is one stat per file (tst_catalog::staleOfSkipsUnchangedOnRescan).
 - The recursive exclusions PRUNE THE WALK rather than filtering its result: Utilities::subFolderTree takes them and never descends into an excluded folder, so carving out a hierarchy of a hundred thousand folders costs nothing (a big branch is exactly what a user excludes). A NON-RECURSIVE exclude cannot prune (the folders below it are still wanted), so those are applied to what comes back (catalogScopeExcludes).
 - Commits are CHUNKED (200 rows) rather than one transaction per folder, bounding what a quit costs to a few hundred files re-stat'd; the scan resumes from staleOf.
-- Files the scanner cannot parse are catalogued as STUB rows ([17.19.8 Twenty Images the Scan Could Never Catalogue](#17198-twenty-images-the-scan-could-never-catalogue)).
+- Files the scanner cannot parse are catalogued as STUB rows ([17.20.8 Twenty Images the Scan Could Never Catalogue](#17208-twenty-images-the-scan-could-never-catalogue)).
 
 It reconciles every folder it walks, which is where orphans go. Indexing alone only GROWS the catalog, so a library the user had been deleting from left every removed image findable until the once-per-session sweep. The scanner has already read each folder's directory, and a complete listing is precisely Catalog::reconcileFolder's precondition, so the walk answers "what is gone" for free.
 
@@ -10717,9 +10723,52 @@ Every scan records CatalogScanStats (CatalogScanner::lastStats): walk, directory
 
 The first measurement settled it (2026-09-25). A rescan of 155k files in 8,842 folders took 290 s, and 268 s of it was "reconcile"; parsing was 2.2 s. Catalog::reconcileFolder's "WHERE folder = ? AND live = 1" was planned on image_live rather than image_folder (the index has no ANALYZE statistics), and since nearly every row is live, each folder read the whole table: 39 ms per folder against 0.08 ms. The query now says "+live = 1", which keeps the planner off image_live; tst_catalog pins the plan (reconcileQueryUsesTheFolderIndex). Parallel parsing is not needed on this evidence.
 
-### 17.19 Investigations and Fixes
+### 17.19 Library Duplicates
 
-#### 17.19.1 What Selecting the Catalog Actually Cost (14.2 s to 1.7 s, and the Three Bugs Underneath)
+Cache/duplicates.h (engine), Cache/duplicateclassify.h (the rule, pure), Datamodel/duplicateok.h (the user's okays), Main/mwduplicates.cpp (MainWindow's side). Added 2026-11-17.
+
+#### 17.19.1 What a Duplicate Is
+
+Another Library image with the same CAPTURE TIME, FILE TYPE and PIXELS. For a video: the same capture time, file type and DURATION. A raw+JPEG pair is not a duplicate (two types); burst frames are not (same second, different pixels); a copy rotated in Winnow is (orientation is not part of the pixels).
+
+"Pixels" means the image as Winnow decodes it in Preview mode: a raw's embedded full-size JPEG (Metadata::hasJpg formats, m.offsetFull / m.lengthFull), otherwise the file itself through QImageReader with autoTransform off. Decoding the raw sensor data instead was considered and declined: about ten times slower per candidate, and the embedded preview of two different exposures does not agree. A video's duration comes from its mvhd atom (MOV::durationMs, ImageFormats/Video/mov.cpp), which walks the top-level boxes itself because camera files put a 64-bit-size mdat (size field 1) in front of moov. That covers the ISO-BMFF family (mov, mp4, m4v, m4p, 3gp, 3g2); a video format with no parser (avi, mkv, mts, ...) has no duration and is never a duplicate. A file Qt cannot decode (some HEIC without a plugin, an unusual TIFF) gets a one-byte "failed" fingerprint, so it is not retried on every check and is in no group.
+
+#### 17.19.2 Candidates, Fingerprints, Status
+
+Three stages, each as cheap as it can be:
+
+1. CANDIDATES come from the index alone: rows sharing (captured, ext, width, height), live, readable and with a capture time (Catalog::duplicateCandidates, a GROUP BY that the image_dupkey index covers). Almost every image shares that with nothing and is never opened. Width and height compare with IS, not =, because a row with no size holds NULL and GROUP BY already puts NULLs together.
+2. FINGERPRINTS are taken for candidates only, once per file content, and stored in the row: image.pixelhash (SHA-1 of the decoded pixels, row by row without scanline padding, the size first) or image.duration_ms (schema 32, [17.7 Index Schema and Migrations](#177-index-schema-and-migrations)). Catalog::commit clears both only when the content stamps (srcsize, srcmtime) change, so a sidecar-only edit keeps them; a fingerprint is stored only if the row's stamps still match the ones it was read with (setDuplicateFingerprints), so a file that changed mid-decode is checked again. DuplicateChecker runs on its own low-priority thread and decodes on a private pool of 1-3 threads with 8 MB stacks and one Metadata per thread, kBatch (12) files at a time, writing each batch as it completes. It gives way to folder loads exactly as CatalogScanner does (G::isModifyingDatamodel / isLoadRunning / stop). The "[Duplicates] fingerprinted" log line gives candidates, decode and hash milliseconds (pool totals), undecodable files and videos without a duration.
+3. STATUS is derived from the fingerprinted rows (Catalog::duplicateFingerprinted, through the partial index image_fingerprinted, so it reads only those rows) and the okayed set, by classifyDuplicates. In memory, no decode: an okay or a trash re-derives it in milliseconds.
+
+A GROUP is rows with an equal (captured, ext, fingerprint). Per image: DUPLICATE (red) when it is not okayed and at least one twin is not okayed either; OKAYED (purple) when it is in a group but not red. tests/unit/tst_duplicates.cpp pins the rule, the queries, the hooks, MOV::durationMs on built mvhd boxes, and that schema 32 re-runs.
+
+#### 17.19.3 Duplicate Okay
+
+Edit > Duplicate Okay, and the thumbnail context menu: the selected images that are in a group are okayed, or un-okayed when every one of them already is. An okayed image is left out of the comparison, so okaying either image of a pair clears both (both purple); a triple with one okayed keeps the other two red; a copy that arrives later is red against any twin that is not okayed. The action is checked when every selected duplicate is okayed, and greyed with the reason (disabledReason, tooltip) when no selected image is in a group or the Library has no duplicates. Past 5,000 selected rows the selection is not walked to set its state; the action decides when triggered.
+
+The okays are the user's decision, so they live in userdata.db (schema 5, table duplicate_ok, keyed by file path), not in the rebuildable index; rebuilding index.db re-finds the duplicates and they come back okayed. DuplicateOk copies SavedPicks: an in-memory set, written through on the next turn of the event loop, and moves, renames and deletes Winnow makes follow the image (FileOps::onMoved / onDeleted / onFolderMoved / onFolderDeleted).
+
+#### 17.19.4 Keeping It Current
+
+The catalog tells the engine; nothing has to remember to ask.
+
+- Catalog::setContentChangedHook: commit() reports the pathkeys it INSERTED, rewrote with new content stamps, or brought back from Missing. Debounced 500 ms, they go to DuplicateChecker::checkKeys, which fingerprints them and their key-mates as needed (Catalog::duplicateCandidatesFor, paged) and re-derives. That covers the scanner, indexFiles (ingest, copy, move, export, stack) and the opportunistic folder-load commit.
+- Catalog::setMembershipChangedHook: onDeleted (trash), forgetUnder / forgetFolders (Remove from Catalog), reconcileFolder / sweep (demoted to Missing), onMoved / onFolderMoved and clear(). Debounced 300 ms, the status is re-derived; nothing is decoded. So trashing one of a pair clears the other's red badge.
+- Both hooks run on whatever thread changed the rows, with the catalog mutex released (a hook may call back in), and only queue work onto the Duplicates object's thread.
+- The whole-Library check (Manage Catalog > Duplicates) is still needed once, for what was catalogued before this existed; catalog_meta "duplicates_checked" records that it completed, and clear() drops it. Stop is generation-numbered (DuplicateChecker::stopFull), so a Stop pressed while the full check is still queued behind an incremental one stops the full check, not the incremental.
+
+#### 17.19.5 Where It Is Shown
+
+- THE NUMBER BADGE (IconViewDelegate::paint): bright red (G::duplicateColor) for a duplicate, purple (G::duplicateOkColor) for an okayed one, white text, drawn even when icon numbers are hidden. Its tooltip says how many other images match, on what, and what to do.
+- G::DuplicateColumn ("Duplicate" in the table): Duplicate / Okayed / blank, answered by DataModel::data from a side table keyed by row KEY (DataModel::setDuplicateStatus), like PlacesColumn, so a version is never a duplicate. "Filter on..." can filter on it, which is how to list the okayed ones.
+- FILTERS > STATUS > DUPLICATES FOUND: the existing category over G::CompareColumn, which Find Duplicates also writes. setDuplicateStatus sets CompareColumn on rows that became red and clears it on rows that stopped being red, only those, so a Find Duplicates result on other rows stands; a row being filled or re-read keeps it (isLibraryDuplicateRow in addFileDataForRow and addMetadataForItem), and Find Duplicates' Update re-applies them after clearing the column (reapplyDuplicateCompare). MW::refreshDuplicateStatus then rebuilds the category (BuildFilters::CompareEdit, runSync) and refilters only when it is filtering.
+- MANAGE CATALOG: the Duplicates button (Stop while checking; greyed with the reason during a scan, and Scan greyed during a check), its progress in the scan progress block, and two Catalog Information rows: "Duplicates found" (red count and groups, "None found.", or "Not checked yet - press Duplicates.") and "Duplicates okayed".
+- THE STATUS BAR: the "Duplicates" progress row (progressDuplicatesRow), counts and time left in its tooltip. An incremental check reports only after it has run for a second, so checking the two files an ingest made never flashes it.
+
+### 17.20 Investigations and Fixes
+
+#### 17.20.1 What Selecting the Catalog Actually Cost (14.2 s to 1.7 s, and the Three Bugs Underneath)
 
 The complaint was the Filters. Selecting the Catalog on a 41,464-image library put the images on screen in about two seconds and then left the Filters panel stale for another twelve, with the central widget still showing the last message the fill had written. The obvious reading (building the filter tree over 41,000 rows is expensive) was wrong, and no amount of reading the code would have said so. A temporary probe (one stopwatch, laps at every stage, the whole span from the click to "images shown AND filters built") said it in one run: the filter build was 290 ms of a 14,111 ms load, about 2%. The 11,734 ms was a single segment ending BEFORE the build began.
 
@@ -10733,7 +10782,7 @@ What was measured and thrown away: RowStore::setValue takes a write lock per CEL
 
 What the insert actually cost (release, per row): addMeta 9.8 us, fileData 4.1, indexFill 1.4, insertRows 0.8. Inside addMetadataForItem the keyword expansion was 2.8 us (28% of it), and keywordEffectivePaths / keywordPrefixExpand are pure functions of the two keyword lists. A library reuses those lists heavily (18,325 rows carry hierarchical paths but only 2,935 DISTINCT values, and 23,653 rows carry none), so memoised on the two lists (with their counts in the key, because joining lists is ambiguous on its own) and given a branch for the empty case, the insert went 800 ms to 730.
 
-#### 17.19.2 The Catalog Capture Was Silently Not Running
+#### 17.20.2 The Catalog Capture Was Silently Not Running
 
 A real bug, not a test artefact. It looked at first like the headless test could not reach it: a folder loaded, MW::folderChangeCompleted ran, and the catalog stayed empty.
 
@@ -10745,7 +10794,7 @@ Fix: the capture is POSTED rather than run inline. A queued invocation runs afte
 
 catalog_capture is the ctest that was missing: it loads the fixture folder and fails if nothing reached the catalog. Verified to fail by restoring the inline capture ("catalogued=0 rows=4"). The wait it needs lives in that mode alone and NOT on the default selftest path, because waiting lets pool tasks complete and queue GUI callbacks that then run around the model_contract test's own row removal, which made that gate flaky.
 
-#### 17.19.3 The Filter Tree Recompiled Once per Item (56 Seconds of Dead GUI)
+#### 17.20.3 The Filter Tree Recompiled Once per Item (56 Seconds of Dead GUI)
 
 A person clicked Catalog and waited several minutes for thumbnails, twice, after two earlier fixes had each made the headless numbers look fine. Every automated check ran on a \~1,000-row fixture, and this whole class of bug only appears at 43,000. Winnow --catalogload (MW::runCatalogLoadTest) exists for that: the real index, the real load path, headless, printing the time to the first batch and the last, then sampling the event loop every second until icons stop arriving.
 
@@ -10767,7 +10816,7 @@ The compile storm also delayed the START (tree mutations during teardown and set
 
 A hydrated catalog scope also stopped committing itself back. MW::folderChangeCompleted builds the commit payload with dm->catalogRows(), which reads \~40 columns of every row on the GUI thread, and wrote them to the index for rows that had just come OUT of the index, unchanged. It is skipped when the scope is hydrated (ScopeRequest::isHydrated()). A folder scope still commits, because its rows were read from files and the index may never have seen them.
 
-#### 17.19.4 Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
+#### 17.20.4 Metadata Done Is Not Work Done (Why No Thumbnail Ever Appeared)
 
 Filters appeared instantly and thumbnails never appeared at all: not slowly, never. MW::folderChanged has an early return that means "nothing was added, so there is nothing to read":
 
@@ -10781,7 +10830,7 @@ Fix: the early return also requires isIconRangeLoaded(), and dm->setIconRange(st
 
 What this cost: three fixes in a row each looked complete on the headless numbers and each left a person waiting (a pump that never pumped, a filter tree that recompiled per item, and this). icons=0 sat in --catalogload's output for two rounds before it was read as the signal it was; it was explained away as an artefact of running offscreen. The icon range is chunk-based, not visibility-based, so it never was one.
 
-#### 17.19.5 The Redo Loop That Could Never Finish
+#### 17.20.5 The Redo Loop That Could Never Finish
 
 The catalog beachball was not the filters, and the numbers said so once a person clicked with the stall watchdog armed:
 
@@ -10814,7 +10863,7 @@ REDO MAXED OUT still appears, now legitimately: each pass gains icons, so the gu
 
 What this cost: four rounds of "fixed it" that were not, three because a headless run reported healthy numbers for code that stalled in the GUI, and twice because a number in the probe's own output (icons=0, treeItems=17) was explained away instead of checked. The stall watchdog exists because it measures the SYMPTOM (how late a 250 ms timer fired) rather than a function somebody suspected.
 
-#### 17.19.6 Is What We Loaded Still True? (the Whole-Set Sweep, and the Three Bugs That Stopped It Repairing Anything)
+#### 17.20.6 Is What We Loaded Still True? (the Whole-Set Sweep, and the Three Bugs That Stopped It Repairing Anything)
 
 The gap: ScrollVerify checks the rows a person is LOOKING AT, leaving the other forty thousand unverified until they scroll to them ([17.12 Verifying a Hydrated Row (Scroll-In Stat)](#1712-verifying-a-hydrated-row-scroll-in-stat)); CatalogScanner checks the scope tree ON DISK, a different set reached by a folder walk. Neither answers "is the set I just loaded still true". ScrollVerify::verifyWholeSet does: the same stat, the same Catalog::outOfDate question and the same repair, paged 2,000 rows at a time over every loaded row, three seconds after the load settles. It is affordable for the reason the scroll pass is (a stat is \~137x cheaper than a read), and the scroll pass outranks it for the single in-flight slot, because the rows on screen are the ones whose staleness can be seen.
 
@@ -10828,7 +10877,7 @@ The test of a repair loop is that it SETTLES: stale = 2, repair, then stale = 0 
 
 And a retry that could not stop: catalogRowsForStale leaves a row pending until it comes back MetaLoaded (so a half-read row is never committed over a good index entry), which means the drain's stopping condition is somebody else's work finishing. When the re-read never landed it re-armed every three seconds for the rest of the session. The allowance is now bounded the way MW::rebuildAbortedFilters bounds its own: giving up is cheap, because the verification passes forget an answer after kReverifySecs and ask again.
 
-#### 17.19.7 Why Raw Thumbnails Were Never Cached (the Stale Struct on the Icon-Only Read)
+#### 17.20.7 Why Raw Thumbnails Were Never Cached (the Stale Struct on the Icon-Only Read)
 
 The shape of the evidence: after the bulk prefetch landed, a catalog load served 8,437 of 9,789 icons from the index and read 1,352 from files, and the SAME 1,352 on every load, with the thumbnail count never moving. A cache that never fills is a cache with a bug in it, not a cold one. 1,241 of them were raw (1,190 arw and 46 cr2), against every jpg and tif in the chunk caching on first sight.
 
@@ -10840,11 +10889,11 @@ The gate now asks what it can answer LOCALLY (do I have usable offsets?) rather 
 
 No backfill scanner was built, and the plan had called for one. The premise (coverage was a gap to be filled by indexing more eagerly) was wrong: ordinary browsing already writes every thumbnail it decodes, and coverage was not growing because of a defect in the path that decodes them. A scanner-side thumbnailer would have hidden it.
 
-#### 17.19.8 Twenty Images the Scan Could Never Catalogue
+#### 17.20.8 Twenty Images the Scan Could Never Catalogue
 
 Unreadable stubs, and three HEIC parser defects. The first library the scope table shipped against settled at 20 images on disk and not in the index, and pressing Scan could never close the gap: Metadata::loadImageMetadata failed on them (18 HEIC and 2 JPG), so parseInto dropped them and no row was written. A file that is on disk, absent from the index and invisible to every part of the UI is not something a user can act on; the only evidence was a difference between two counts.
 
-##### 17.19.8.1 Unreadable Files Are Catalogued as Stubs
+##### 17.20.8.1 Unreadable Files Are Catalogued as Stubs
 
 The scan writes a STUB ROW for each such file (Catalog::commitUnreadable): path, folder, filename, extension and the freshness stamp, and nothing else, because everything else in a catalog row comes from the parse that failed, and writing zeros into those columns would be inventing a photograph's metadata.
 
@@ -10852,7 +10901,7 @@ The scan writes a STUB ROW for each such file (Catalog::commitUnreadable): path,
 - They surface as a fourth AVAILABILITY, Unreadable ([17.8 Availability (Offline Is Not Missing)](#178-availability-offline-is-not-missing)), which makes them a list rather than a number. The editor's status line points at it by name.
 - The old bookkeeping went with it: a persisted MW::catalogUnreadable, reset whenever the scope changed, was two sources of truth for one fact; the count comes from Catalog::unreadableCount(). Because a stub IS a catalogued row, the scope and catalog totals reconcile again rather than being permanently 20 apart.
 
-##### 17.19.8.2 And None of Them Was Unreadable at All
+##### 17.20.8.2 And None of Them Was Unreadable at All
 
 Reviewed one by one, all 20 were HEIC (including two that call themselves .JPG and are ftypheic inside), and Winnow renders every one of them in the loupe. Three separate defects lay behind one symptom, and the first two hid the third:
 
@@ -10864,7 +10913,7 @@ A HEIC with the wrong extension is still a HEIC: Metadata::parseJPG already snif
 
 Proved against the 20 real files, not reasoned about: the parser was linked into a standalone harness against the app's own object files and run over every path the catalog had flagged. All 20 parse (the iPhone files with full Exif, 4032x3024, "iPhone 11", orientation 6/3/1; the two Exif-less ones with dimensions from ispe). tst_heicboxes pins both box defects with fixtures built byte by byte.
 
-##### 17.19.8.3 The Stub Rows Themselves Hid the Fix
+##### 17.20.8.3 The Stub Rows Themselves Hid the Fix
 
 Rescanning after the parser was corrected changed nothing, twice over, because a stub records the file's freshness STAMP like any other row, and THREE functions compare those stamps: staleOf (so the scan re-attempts the file instead of skipping it), fetchFresh (so the loader is not handed an empty row INSTEAD of reading the file), and commit itself, which skips a row whose stamps match, so a file just parsed successfully looked unchanged, the write was skipped, and the flag stayed set. The first two were fixed and the symptom did not move, because the third still swallowed the result.
 
@@ -10872,7 +10921,7 @@ The stamp answers "has the file changed", which is not the question for these ro
 
 Proved on a COPY OF THE REAL INDEX, after two rounds of "this should fix it" that did not: the scanner's path (staleOf, loadImageMetadata, commit) was linked into a standalone harness and run against a copy of the 38,904-row database over the exact 20 paths. staleOf returned all 20 as stale, all 20 parsed, and commit cleared every flag it wrote: the whole chain, end to end, before anyone rebuilt the app.
 
-#### 17.19.9 The Catalog Scanner Had Never Once Run
+#### 17.20.9 The Catalog Scanner Had Never Once Run
 
 Everything written about the scanner had been written about a feature that crashed on its first line. MW::startCatalogScan begins by telling the views a scan has started, and its very first such line is `if (catalogView) catalogView->setScanning(true);`. CatalogView \*catalogView was declared in mainwindow.h WITHOUT an initialiser, the one member of its group missing one (catalogDock, catalogScanner, catalogRootsDlg, filterPanel and their siblings all had `= nullptr`). MW::createCatalogDock returns early when G::useFilterPanel is set (the default) and its own comment says "catalogDock and catalogView stay NULL"; only catalogDock actually did. An uninitialised pointer passes `if (p)`, so the guard was decorative and the call jumped into whatever happened to be mapped (in the reported crash, libre2's \_\_TEXT segment, which is why it arrived as SIGBUS at a mapped address rather than the usual SIGSEGV near zero).
 
@@ -10892,7 +10941,7 @@ One panel, two scopes. Filters searched the datamodel and the Catalog panel sear
 - The code names match the UI: the panel was called Find while it was being built (FindPanel, G::useFindDock), because it was conceived as a search surface over the catalog. What shipped is a FILTER with a scope, so everything is FilterPanel / Views/filterpanel.\* / G::useFilterPanel / "the Filter dock".
 - The category tree IS the Filters widget itself, re-parented into the panel, not a copy: both scopes render the same categories, checkboxes, include / exclude gestures and colours. A second category renderer is precisely what the two panels had, and it is what drifted.
 - Which scope is showing is said in the DOCK TITLE: "Filters (Folders)" or "Filters (Library)", written by MW::setScope (the one place G::scope changes, which re-asserts its state even when nothing changed). The panel used to say it in the search box's placeholder, which vanished the moment anything was typed. The TAB text stays "Filters" in both scopes: a tab that changes width moves every tab beside it.
-- G::useFilterPanel is an ESCAPE HATCH, not a shelved feature: false rebuilds both original panels exactly as they were ([17.2.1 The Legacy Catalog Dock](#1721-the-legacy-catalog-dock)). It is read at dock-creation time, so changing it takes a restart. Under it catalogDock and catalogView stay null (both initialised to nullptr in the header, because createDocks and placeDocksAddedSince reach for them before that is decided; see [17.19.9 The Catalog Scanner Had Never Once Run](#17199-the-catalog-scanner-had-never-once-run)).
+- G::useFilterPanel is an ESCAPE HATCH, not a shelved feature: false rebuilds both original panels exactly as they were ([17.2.1 The Legacy Catalog Dock](#1721-the-legacy-catalog-dock)). It is read at dock-creation time, so changing it takes a restart. Under it catalogDock and catalogView stay null (both initialised to nullptr in the header, because createDocks and placeDocksAddedSince reach for them before that is decided; see [17.20.9 The Catalog Scanner Had Never Once Run](#17209-the-catalog-scanner-had-never-once-run)).
 
 #### 18.1.1 The Scope Is Not Set From the Panel
 

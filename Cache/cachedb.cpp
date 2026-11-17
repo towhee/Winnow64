@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 31;
+constexpr int kSchemaVersion = 32;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1917,6 +1917,43 @@ bool CacheDb::migrate(QSqlDatabase &db)
             || !q.exec(QString("UPDATE image_fts SET title = '' WHERE rowid IN"
                                " (SELECT id FROM image WHERE %1)").arg(junkTitle))
             || !q.exec(QString("UPDATE image SET title = '' WHERE %1").arg(junkTitle))) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 32) {
+    /*
+        LIBRARY DUPLICATES (Cache/duplicates.h). Two images are duplicates when they share
+        a capture time, a file type and their pixels (a video: its duration). The capture
+        time and type are already columns; what is added is the confirming fingerprint,
+        filled LAZILY by DuplicateChecker for the rows that share a candidate key, and
+        cleared by Catalog::commit whenever the file's content stamps change.
+
+          pixelhash    SHA-1 of the decoded pixels (an image), NULL = not computed.
+          duration_ms  a video's mvhd duration, NULL = not read, -1 = no duration.
+
+        image_dupkey is the candidate key, so "which rows share this one's key" is an
+        index probe rather than a scan of the whole table. image_fingerprinted is PARTIAL:
+        it holds only the rows with a fingerprint -- the few that ever shared a key -- so
+        deriving the status (Catalog::duplicateFingerprinted) reads those and not 250k.
+        ADDITIVE; existing rows need no re-read, because nothing in them is wrong.
+        Re-runnable.
+    */
+        auto hasColumn = [&q](const QString &table, const QString &column) {
+            bool has = false;
+            if (q.exec("PRAGMA table_info(" + table + ")"))
+                while (q.next()) if (q.value(1).toString() == column) has = true;
+            return has;
+        };
+        if ((!hasColumn("image", "pixelhash")
+             && !q.exec("ALTER TABLE image ADD COLUMN pixelhash BLOB"))
+            || (!hasColumn("image", "duration_ms")
+                && !q.exec("ALTER TABLE image ADD COLUMN duration_ms INTEGER"))
+            || !q.exec("CREATE INDEX IF NOT EXISTS image_dupkey"
+                       " ON image(captured, ext, width, height)")
+            || !q.exec("CREATE INDEX IF NOT EXISTS image_fingerprinted ON image(captured)"
+                       " WHERE pixelhash IS NOT NULL OR duration_ms IS NOT NULL")) {
             db.rollback();
             return false;
         }

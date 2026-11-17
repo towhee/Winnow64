@@ -13,6 +13,7 @@
 #include "Main/catalogscope.h"
 
 struct CatalogScanProgress;
+struct DuplicateProgress;
 class CollapsibleSections;
 
 /*
@@ -98,6 +99,13 @@ public:
         time left, or why it is paused. Hidden again by setScanning(false). */
     void setScanProgress(const CatalogScanProgress &p);
 
+    /*  THE LIBRARY DUPLICATES CHECK (Cache/duplicates.h), run by the Duplicates button.
+        While it runs the button says Stop, Scan is greyed (a scan rewrites the rows the
+        check is fingerprinting) and the progress block shows the check. Scanning greys
+        Duplicates the same way. */
+    void setDuplicatesChecking(bool checking);
+    void setDuplicatesProgress(const DuplicateProgress &p);
+
 signals:
     /* Scan with the table as it stands now committed: the edits are applied first. */
     void applyAndScanRequested(const CatalogScope &scope);
@@ -106,6 +114,9 @@ signals:
     void stopScanRequested();
     /* The status line's "See which" link. */
     void diagnosticsRequested();
+    /* The Duplicates button: check the whole Library, or stop the check. */
+    void duplicatesRequested();
+    void stopDuplicatesRequested();
 
 protected:
     /* Every way the window closes -- Close, Esc, the title bar -- arrives here, so this
@@ -153,6 +164,7 @@ private:
     QPushButton *addBtn = nullptr;
     QPushButton *removeBtn = nullptr;
     QPushButton *scanBtn = nullptr;
+    QPushButton *dupBtn = nullptr;
     QPushButton *closeBtn = nullptr;
     QPushButton *helpBtn = nullptr;
     CollapsibleSections *sections = nullptr;
@@ -163,6 +175,9 @@ private:
     QProgressBar *scanBar = nullptr;
     QLabel *scanLabel = nullptr;
     bool scanning = false;
+    bool duplicatesChecking = false;
+    /* Duplicates' tooltip for what it does now, and why it is greyed. */
+    void setDuplicatesButtonState();
     bool populating = false;
     bool applying = false;             // done() is applying; a nested close must not
     CatalogScope committed;            // what MW holds; the draft is compared with it

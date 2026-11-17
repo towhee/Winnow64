@@ -1,6 +1,7 @@
 #include "Dialogs/catalogrootsdlg.h"
 #include "Main/catalogenumerate.h"
 #include "Main/catalogscanner.h"
+#include "Cache/duplicates.h"
 #include "Main/global.h"
 #include "Utilities/collapsiblesections.h"
 #include "Utilities/htmlwindow.h"
@@ -121,6 +122,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     addBtn = new QPushButton("Append");
     removeBtn = new QPushButton("Remove");
     scanBtn = new QPushButton("Scan");
+    dupBtn = new QPushButton("Duplicates");
     closeBtn = new QPushButton("Close");
     removeBtn->setEnabled(false);
 
@@ -138,6 +140,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     closeBtn->setToolTip("Close this window. Pending changes to the table are applied "
                          "and scanned.\nA running scan continues in the background.");
     setScanButtonToolTip();
+    setDuplicatesButtonState();
 
     /* Help on the left, set apart from Append and Remove, which edit the table. */
     QHBoxLayout *btns = new QHBoxLayout;
@@ -146,6 +149,10 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
     btns->addSpacing(24);
     btns->addWidget(addBtn);
     btns->addWidget(removeBtn);
+    /* Set apart from Append and Remove: it reads the catalog, it does not edit the
+       table. */
+    btns->addSpacing(24);
+    btns->addWidget(dupBtn);
     btns->addStretch(1);
     btns->addWidget(scanBtn);
     btns->addWidget(closeBtn);
@@ -266,6 +273,10 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
         else emit scanRequested();
     };
     connect(scanBtn, &QPushButton::clicked, this, scan);
+    connect(dupBtn, &QPushButton::clicked, this, [this]{
+        if (duplicatesChecking) emit stopDuplicatesRequested();
+        else emit duplicatesRequested();
+    });
     /* Applies even while an automatic scan runs: MW queues what it gains behind it. */
     connect(pendingLabel, &QLabel::linkActivated, this, [this]{
         if (hasPendingEdits()) emit applyAndScanRequested(scope());
@@ -524,7 +535,12 @@ void CatalogRootsDlg::updatePending()
 
 void CatalogRootsDlg::setScanButtonToolTip()
 {
-    if (scanning)
+    scanBtn->setEnabled(!duplicatesChecking || scanning);
+    if (duplicatesChecking && !scanning)
+        scanBtn->setToolTip("Unavailable while the duplicates check runs: a scan "
+                            "rewrites the rows it is checking.\nStop the check with "
+                            "the Duplicates button, or wait for it to finish.");
+    else if (scanning)
         scanBtn->setToolTip("Stop the running scan. Scan again later to finish "
                             "it.");
     else if (hasPendingEdits())
@@ -653,6 +669,7 @@ void CatalogRootsDlg::setScanning(bool on, const QString &what)
     scanWhat = on ? what : QString();
     scanBtn->setText(on ? "Stop" : "Scan");
     setScanButtonToolTip();
+    setDuplicatesButtonState();
     table->setEnabled(!on);
     addBtn->setEnabled(!on);
     removeBtn->setEnabled(!on && !table->selectedItems().isEmpty());
@@ -729,4 +746,60 @@ void CatalogRootsDlg::setCatalogStatus(const QString &text)
     statusLabel->setText(text);
     sections->updateSummaries();
     fitToContents();
+}
+
+void CatalogRootsDlg::setDuplicatesButtonState()
+{
+    dupBtn->setText(duplicatesChecking ? "Stop" : "Duplicates");
+    dupBtn->setEnabled(duplicatesChecking || !scanning);
+    if (duplicatesChecking)
+        dupBtn->setToolTip("Stop the duplicates check. What it has checked so far is "
+                           "kept;\nchecking again picks up where it stopped.");
+    else if (scanning)
+        dupBtn->setToolTip("Unavailable while a scan is running: the check reads the "
+                           "rows the scan is writing.\nIt is available again when the "
+                           "scan ends.");
+    else
+        dupBtn->setToolTip("Find duplicates in the Library: images with the same "
+                           "capture time, file type and pixels\n(videos: the same "
+                           "capture time, file type and duration).\nThey get a red "
+                           "number badge and are listed in Filters > Duplicates found.");
+}
+
+void CatalogRootsDlg::setDuplicatesChecking(bool on)
+{
+    duplicatesChecking = on;
+    setDuplicatesButtonState();
+    setScanButtonToolTip();
+    if (scanning) return;                   // the scan owns the progress block
+    if (on) {
+        scanBar->setRange(0, 0);
+        scanLabel->setText("Finding duplicate candidates...");
+        scanBlock->show();
+    }
+    else {
+        scanBlock->hide();
+    }
+    fitToContents();
+}
+
+void CatalogRootsDlg::setDuplicatesProgress(const DuplicateProgress &p)
+{
+    if (!duplicatesChecking || scanning || !p.full) return;
+    const QLocale loc;
+    scanBar->setRange(0, qMax(1, p.total));
+    scanBar->setValue(qMin(p.done, qMax(1, p.total)));
+    QString text = QString("<b>Checking duplicates</b>: %1 of %2 candidates")
+                       .arg(loc.toString(p.done), loc.toString(p.total));
+    text += " &nbsp;&middot;&nbsp; " + catalogFormatEta(p.etaSecs)
+            + (p.etaSecs < 0 ? "" : " left");
+    if (p.paused)
+        text = "<b>Paused</b> while a folder loads &mdash; resumes by itself.<br>" + text;
+    text += "<br>" + G::secondaryHtml("You can close this window: the check continues "
+                                      "in the background.");
+    const bool wasHidden = scanBlock->isHidden();
+    const int oldLines = scanLabel->text().count("<br>");
+    scanLabel->setText(text);
+    scanBlock->show();
+    if (wasHidden || oldLines != text.count("<br>")) fitToContents();
 }

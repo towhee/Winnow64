@@ -63,6 +63,39 @@ Scan rechecks the whole catalog.</p>
 <p>You can close this window during a scan: it continues in the background, and resumes
 at the next launch if Winnow quits first.</p>
 
+<h2>Duplicates</h2>
+
+<p>A duplicate is another image in the Library with the same capture time, file type and
+pixels. For a raw file the pixels are its embedded preview. For a video, the duration
+is compared instead of the pixels. A raw file and its JPEG are not duplicates, and
+neither are burst frames.</p>
+
+<p><span class="highlight">Duplicates</span> checks the whole Library, and becomes
+<span class="highlight">Stop</span> while it runs. Its progress shows here and on the
+status bar. It cannot run during a scan.</p>
+
+<p>Only images that share a capture time, file type and size are opened, so most of the
+Library is never decoded. What a check finds is kept, so a stopped check picks up where
+it left off.</p>
+
+<p>You only need to press it once. After that, images added to the Library are checked as
+they arrive, and moving an image to the trash updates its twin.</p>
+
+<p><span class="highlight">Duplicates found</span> in Catalog Information says how many
+images are duplicates, in how many groups. To see them, use
+<span class="highlight">Filters &gt; Status &gt; Duplicates found</span>.</p>
+
+<p>A duplicate's thumbnail number is <span class="warn">bright red</span>, even when
+thumbnail numbers are turned off. Hover over it to see how many other images match.</p>
+
+<p>If the copies are meant to be there, select them and choose
+<span class="highlight">Edit &gt; Duplicate Okay</span> (also on the thumbnail
+right-click menu). The check then ignores them and their numbers turn purple. Okaying
+one image of a pair clears both. Choose it again to undo.</p>
+
+<p><span class="highlight">Duplicates okayed</span> in Catalog Information counts them.
+The Duplicate column in the table view shows Duplicate or Okayed for each image.</p>
+
 <h2>Collapsing sections</h2>
 
 <p>Click a section title to collapse or expand it. A collapsed section shows a one-line

@@ -5,6 +5,7 @@
 #include "Main/dockwidget.h"   // showDockToolTip (consistent cross-platform tooltip offset)
 #include "Utilities/versionkey.h"
 #include "Datamodel/devpreviewready.h"
+#include "Cache/duplicates.h"
 
 /*
 
@@ -141,6 +142,9 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     labelTextColor = G::textColor;
     videoTextColor = G::textColor;
     numberTextColor = QColor(l60,l60,l60);
+    duplicateColor = G::duplicateColor;             // bright red: a Library duplicate
+    duplicateOkColor = G::duplicateOkColor;         // purple: an okayed duplicate
+    duplicateTextColor = Qt::white;
     vp1Color = G::viewportLightColor;
     vp2Color = G::viewportDarkColor;
     // masterColor = QColor(30, 115, 215);          // amber
@@ -584,6 +588,9 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     bool labelVisible = isRatingBadgeVisible && G::labelColors.contains(colorClass);
     QString pickStatus = sf->index(row, G::PickColumn).data(Qt::EditRole).toString();
     bool isIngested = sf->index(row, G::IngestedColumn).data(Qt::EditRole).toBool();
+    /* A Library duplicate's badge is drawn whether or not numbers are shown (paint). */
+    const int dupStatus = sf->index(row, G::DuplicateColumn).data(Qt::EditRole).toInt();
+    const bool numberVisible = isIconNumberVisible || dupStatus != DuplicateStatus::None;
 
     auto hit = [&](const char *symbol, int margin = 0) {
         return getSymbolRect(symbol, option.rect, index)
@@ -649,9 +656,29 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
         tooltip = "Rating: " + rating + (rating == "1" ? " star" : " stars");
     else if (durationVisible && hit("Duration"))
         tooltip = "Video duration";
-    else if (isIconNumberVisible && hit("IconNumber"))
+    else if (numberVisible && hit("IconNumber")) {
         tooltip = "Position " + QString::number(index.row() + 1)
                   + " in the current sort and filter";
+        if (dupStatus != DuplicateStatus::None) {
+            const DuplicateInfo info = Duplicates::instance().infoOf(
+                sf->index(row, 0).data(G::KeyRole).toString());
+            const QString same = info.video ? "capture time, file type and duration"
+                                            : "capture time, file type and pixels";
+            const QString others = info.twins == 1
+                                       ? QString("1 other image")
+                                       : QString("%1 other images").arg(info.twins);
+            if (dupStatus == DuplicateStatus::Duplicate)
+                tooltip += "\nRed: a duplicate. " + others + " in the Library "
+                           + (info.twins == 1 ? "has" : "have") + " the same " + same
+                           + ".\nFilters > Duplicates found lists them; right-click > "
+                             "Duplicate okay to keep this one.";
+            else
+                tooltip += "\nPurple: a duplicate that is okayed. " + others
+                           + " in the Library " + (info.twins == 1 ? "has" : "have")
+                           + " the same " + same
+                           + ", and the duplicates check ignores them.";
+        }
+    }
     else if (hit("Thumb")) {
         tooltip = sf->index(row, 0).data(G::SourcePathRole).toString();
         // The pick border is drawn on the thumbnail's edge, so its meaning goes here
@@ -761,6 +788,10 @@ textRect         = a rectangle below itemRect
     /*  0 is Present, which is every folder-scope row and most catalog rows, so
         the common case reads one int and draws nothing. */
     const int availability = index.model()->index(sfRow, G::AvailabilityColumn).data().toInt();
+    /*  A Library duplicate (Cache/duplicates.h): its number badge is bright red, or
+        purple once okayed, and is drawn even when icon numbers are off -- the badge is
+        where the user is told. */
+    const int dupStatus = index.model()->index(sfRow, G::DuplicateColumn).data(Qt::EditRole).toInt();
 
     // --- THUMBNAIL ---
 
@@ -988,8 +1019,11 @@ textRect         = a rectangle below itemRect
     }
 
     // Render icon number overlay
-    if (isIconNumberVisible) {
-        painter->setBrush(labelColorToUse);
+    if (isIconNumberVisible || dupStatus != DuplicateStatus::None) {
+        const bool isDup = dupStatus != DuplicateStatus::None;
+        painter->setBrush(dupStatus == DuplicateStatus::Duplicate ? duplicateColor
+                          : dupStatus == DuplicateStatus::Okayed  ? duplicateOkColor
+                                                                  : labelColorToUse);
         QFont numberFont = painter->font();
         int pxSize = qMax(6, iconNumberSize);
         numberFont.setPixelSize(pxSize);
@@ -1001,7 +1035,7 @@ textRect         = a rectangle below itemRect
         QRect numberRect(frameRect.left(), frameRect.top(), numberWidth + 4, iconNumberSize);
         painter->setPen(Qt::transparent);
         painter->drawRoundedRect(numberRect, 8, 8);
-        painter->setPen(numberTextColor);
+        painter->setPen(isDup ? duplicateTextColor : numberTextColor);
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }
 
