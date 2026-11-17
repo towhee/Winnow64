@@ -898,6 +898,15 @@ void MW::createThumbView()
     connect(thumbView->horizontalScrollBar(), SIGNAL(valueChanged(int)),
             this, SLOT(thumbHasScrolled()));
 
+    /*  An edit to the sort column re-sorts that row by itself (dynamicSortFilter):
+        follow the current image, queued and coalesced. See followCurrentAfterReorder. */
+    connect(dm->sf, &QAbstractItemModel::layoutChanged, this, [this]{
+        if (followCurrentQueued) return;
+        followCurrentQueued = true;
+        QMetaObject::invokeMethod(this, [this]{ followCurrentAfterReorder(); },
+                                  Qt::QueuedConnection);
+    });
+
     // Force thumbView to update whenever the proxy model layout changes
     // connect(dm->sf, &QAbstractItemModel::layoutChanged, thumbView, qOverload<>(&QListView::update));
 

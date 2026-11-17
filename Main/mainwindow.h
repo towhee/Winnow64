@@ -1421,8 +1421,9 @@ private slots:
        stored -- and synced to the selection -- before the user can move to another image. */
     void commitDevelopCrop();
     /* The current image changed with the crop tool open: re-seat the overlay on the new
-       image's stored crop and take its Esc snapshot. */
-    void developCropImageChanged();
+       image's stored crop and take its Esc snapshot. `left` is the geometry of the image
+       just left: an uncropped new image takes its crop (single-image selection only). */
+    void developCropImageChanged(const Geometry &left);
     /* Tell the loupe which canvas the crop overlay belongs on (ImageView::setCropCanvas):
        the current image, under the geometry a render would apply now (crop suppressed).
        The overlay stays hidden until that frame is on screen. */
@@ -1484,6 +1485,12 @@ private slots:
     void sortReverse();
     void sortChange(QString src = "Action");
     void updateSortColumn(int sortColumn);
+    /*  The Sort menu action for a column, or nullptr for a column only the table can sort
+        by (Orientation, ...). One table for every path that syncs the menu to a sort. */
+    QAction *sortActionForColumn(int column) const;
+    /*  An edit moved the current image under the active sort (the proxy's dynamic
+        re-sort): follow it. A no-op after a sort or filter that already did. */
+    void followCurrentAfterReorder();
     void toggleSortDirectionClick();
     void toggleSortDirection(Tog n = toggle);
     void toggleIncludeSidecarsClick();
@@ -2627,8 +2634,9 @@ private:
     /* Queued by a multi-image edit (src "sync"): the only paths the builder renders while
        Develop is open. See devPreviewBuildNext. */
     QSet<QString> devPreviewBuildSyncPaths;
-    /* Queued by a flush (src "flush") while Develop is open: held here instead of being
-       dropped by the Develop gate, and built when Develop is left (setOperationMode).
+    /* Queued by a flush (src "flush") of the image being edited while Develop is open:
+       held here instead of being dropped by the Develop gate, and built when Develop is
+       left (setOperationMode). A flush of an image already left is built at once.
        Cleared by MW::stop -- its paths belong to the folder being left. */
     QSet<QString> devPreviewBuildDeferred;
     /* Auto-settings batch images whose devPreview was written REDUCED (2560 px, for the
@@ -3498,6 +3506,7 @@ private:
     bool isFilterChange = false;        // prevent fileSelectionChange
     bool iconRangeSettleQueued = false; // one pending scheduleIconRangeSettle at a time
     bool iconReorderResyncQueued = false; // one pending resyncIconLoaderAfterReorder
+    bool followCurrentQueued = false;     // one pending followCurrentAfterReorder
     std::shared_ptr<QElapsedTimer> timelineClock;   // set by startCentralTimeline (probe)
 
     bool simulateJustInstalled;

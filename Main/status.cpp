@@ -211,17 +211,24 @@ void MW::updateStatusBar()
         useRawBtn->setToolTip("Decode Raw is Off (show embedded preview).  Click to toggle on/off");
     }
 
+    /*  THE COLUMN THE PROXY IS ACTUALLY SORTED BY. A sort from a table header (say
+        Orientation) has no Sort menu item, so the menu shows nothing checked; this is
+        where it can be read. -1 is source order, which is path order. */
+    const int sortCol = (dm && dm->sf) ? dm->sf->sortColumn() : -1;
+    const QString sortedBy = sortCol < 0
+        ? QString("File Name")
+        : dm->headerData(sortCol, Qt::Horizontal).toString();
     if (sortReverseAction->isChecked()) {
         reverseSortBtn->setIcon(QIcon(":/images/icon16/Z-A.png"));
         reverseSortBtn->setToolTip(
-            "Reverse sort is On.  Click to toggle on/off.  "
+            "Sorted by " + sortedBy + ", reversed.  Click to toggle reverse on/off.  "
             "Shortcut: Opt/Alt + S"
         );
     }
     else {
         reverseSortBtn->setIcon(QIcon(":/images/icon16/A-Z.png"));
         reverseSortBtn->setToolTip(
-            "Reverse sort is Off.  Click to toggle on/off.  "
+            "Sorted by " + sortedBy + ".  Click to toggle reverse on/off.  "
             "Shortcut: Opt/Alt + S"
         );
     }
@@ -669,44 +676,10 @@ void MW::sortIndicatorChanged(int column, Qt::SortOrder sortOrder)
     if (!G::allMetadataAttempted && column > G::DimensionsColumn) loadEntireMetadataCache("SortChange");
 
     sortMenuUpdateToMatchTable = true; // suppress sorting to update menu
-    switch (column) {
-    case G::NameColumn: sortFileNameAction->setChecked(true); break;
-    case G::PickColumn: sortPickAction->setChecked(true); break;
-    case G::LabelColumn: sortLabelAction->setChecked(true); break;
-    case G::RatingColumn: sortRatingAction->setChecked(true); break;
-    case G::TypeColumn: sortFileTypeAction->setChecked(true); break;
-    case G::ByteSizeColumn: sortFileSizeAction->setChecked(true); break;
-    case G::CreatedColumn: sortCreateAction->setChecked(true); break;
-    case G::ModifiedColumn: sortModifyAction->setChecked(true); break;
-    case G::CreatorColumn: sortCreatorAction->setChecked(true); break;
-    case G::MegaPixelsColumn: sortMegaPixelsAction->setChecked(true); break;
-    case G::DimensionsColumn: sortDimensionsAction->setChecked(true); break;
-    case G::ApertureColumn: sortApertureAction->setChecked(true); break;
-    case G::ShutterspeedColumn: sortShutterSpeedAction->setChecked(true); break;
-    case G::ISOColumn: sortISOAction->setChecked(true); break;
-    case G::CameraModelColumn: sortModelAction->setChecked(true); break;
-    case G::LensColumn: sortLensAction->setChecked(true); break;
-    case G::FocalLengthColumn: sortFocalLengthAction->setChecked(true); break;
-    case G::TitleColumn: sortTitleAction->setChecked(true); break;
-    default:
-        // table column clicked and sorted that is not a menu sort item - uncheck all menu items
-        if (sortFileNameAction->isChecked()) sortFileNameAction->setChecked(false);
-        if (sortFileTypeAction->isChecked()) sortFileTypeAction->setChecked(false);
-        if (sortFileSizeAction->isChecked()) sortFileSizeAction->setChecked(false);
-        if (sortCreateAction->isChecked()) sortCreateAction->setChecked(false);
-        if (sortModifyAction->isChecked()) sortModifyAction->setChecked(false);
-        if (sortPickAction->isChecked()) sortPickAction->setChecked(false);
-        if (sortLabelAction->isChecked()) sortLabelAction->setChecked(false);
-        if (sortRatingAction->isChecked()) sortRatingAction->setChecked(false);
-        if (sortMegaPixelsAction->isChecked()) sortMegaPixelsAction->setChecked(false);
-        if (sortDimensionsAction->isChecked()) sortDimensionsAction->setChecked(false);
-        if (sortApertureAction->isChecked()) sortApertureAction->setChecked(false);
-        if (sortShutterSpeedAction->isChecked()) sortShutterSpeedAction->setChecked(false);
-        if (sortISOAction->isChecked()) sortISOAction->setChecked(false);
-        if (sortModelAction->isChecked()) sortModelAction->setChecked(false);
-        if (sortFocalLengthAction->isChecked()) sortFocalLengthAction->setChecked(false);
-        if (sortTitleAction->isChecked()) sortTitleAction->setChecked(false);
-    }
+    /*  A table column with no menu item unchecks the menu (it missed Lens and Creator
+        when this was a list of its own). */
+    if (QAction *a = sortActionForColumn(column)) a->setChecked(true);
+    else if (QAction *a = sortGroupAction->checkedAction()) a->setChecked(false);
     sortMenuUpdateToMatchTable = false;
 
     /* Sync MW's own idea of the sort with the table.  Checking a menu action does not

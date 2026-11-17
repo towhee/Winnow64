@@ -6610,9 +6610,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
        (no edits are pending to flush either); setOperationMode re-syncs it on entering Develop. */
     if (developProperties && G::operationMode == G::OperationMode::Develop) {
         const bool selIsVideo = dm->sf->index(current.row(), G::VideoColumn).data().toBool();
+        const Geometry cropLeft = developProperties->currentGeometry();   // image left
         developProperties->setCurrentImage(selIsVideo ? QString() : fPath);
         if (developEntryDecodePath != fPath) developEntryDecodePath.clear();
-        developCropImageChanged();
+        developCropImageChanged(cropLeft);
         /* The Detail preview's sample point named a place in the PREVIOUS picture, so it
            goes with it -- keeping it would silently magnify a different subject. */
         resetDetailPoint();
@@ -18225,23 +18226,45 @@ void MW::commitDevelopCrop()
     developProperties->setCurrentGeometry(g);
 }
 
-void MW::developCropImageChanged()
+void MW::developCropImageChanged(const Geometry &left)
 {
 /*
     Called from fileSelectionChange after DevelopProperties has moved to the new image.
-    The image being left needs nothing: its crop was committed when its last gesture
-    ended. The overlay stays open (iterating a selection, panning each crop, is the
-    workflow) but shows THIS image's crop; the loupe's coming full-frame render re-derives
-    the on-screen frame from the normalized rectangle (setDevelopPreview).
+    The image being left needs nothing here: its crop was committed when its last gesture
+    ended, and its devPreview + thumbnail are rendered by the builder (its flush declines
+    -- every frame was rendered with the crop suppressed -- and startDevPreviewBuild
+    renders a left image's flush at once). The overlay stays open (iterating a selection,
+    panning each crop, is the workflow) but shows THIS image's crop; the loupe's coming
+    full-frame render re-derives the on-screen frame from the normalized rectangle.
+
+    CARRY (2026-11-16). An UNCROPPED new image takes the crop of the image just left
+    (user's choice: an already-cropped one keeps its own) and it is committed to it, so
+    stepping through a shoot crops each frame the same way, ready to nudge. cropSetRect
+    seats it like any stored crop (a locked aspect reshapes it about its centre on an
+    image of another shape). Not with several images selected: their crops already sync
+    from the commit (queuePropagation), and committing a carried crop here would sync it
+    over crops the user has panned on the others. Not from or onto a warp: a warped
+    image's crop is in the rectified canvas, which another image does not share. Esc
+    reverts to the snapshot taken before the carry, i.e. uncropped.
 */
     if (!developCropEditing || !developProperties || !transformPanel) return;
     developCropGeometryBackup = developProperties->currentGeometry();
     const Geometry &g = developCropGeometryBackup;
     transformPanel->setLevelAngle(g.straighten);
-    if (imageView && !developCropShowResult) {
-        setDevelopCropCanvas();      // the new image: the overlay waits for its frame
-        imageView->cropSetRect(QRectF(g.cropX, g.cropY, g.cropW, g.cropH));
-    }
+    if (!imageView || developCropShowResult) return;
+
+    const bool carry = !developProperties->currentPath().isEmpty()
+                       && g.cropIsIdentity() && !g.hasWarp
+                       && !left.cropIsIdentity() && !left.hasWarp
+                       && developProperties->selectedEditCount() <= 1;
+    const QRectF rect = carry ? QRectF(left.cropX, left.cropY, left.cropW, left.cropH)
+                              : QRectF(g.cropX, g.cropY, g.cropW, g.cropH);
+    setDevelopCropCanvas();          // the new image: the overlay waits for its frame
+    imageView->cropSetRect(rect);
+    /* A seat that left the carried rectangle alone is confirmed now; commit it. One
+       the seat reshaped is committed when this image's canvas lands
+       (cropUpdateCanvasReady). */
+    if (carry) commitDevelopCrop();
 }
 
 void MW::setDevelopCropCanvas()

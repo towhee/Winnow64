@@ -181,14 +181,28 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
        out. A "dropped" rebuild (DevPreviewCache::setDroppedHook -- the sweep can drop
        one while Develop is open) is held the same way, for the same reason, and so
        is the "reduced" rebuild after an Auto-settings batch (which runs in Develop). */
+    /* EXCEPT A FLUSH OF AN IMAGE THE USER HAS LEFT (2026-11-16). Its live render is gone,
+       so no settle render will top it up, and holding it until Develop is left kept the
+       grid and the loupe showing the pre-edit picture for the rest of the session. The
+       case that exposed it: crop image 4 with the Transform tool open, step to image 5
+       -- every frame of 4 was rendered with the crop suppressed, so its flush declined,
+       and 4 stayed uncropped in the filmstrip. Rendered now, as a multi-image edit
+       target is (same cost: one builder render ahead of the next settle render). The
+       image being edited stays deferred: its settle render, or leaving it, comes next. */
+    QStringList build = paths;
+    bool sync = (src == "sync");
     if ((src == "flush" || src == "dropped" || src == "reduced")
         && G::operationMode == G::OperationMode::Develop) {
-        for (const QString &fPath : paths) devPreviewBuildDeferred.insert(fPath);
-        return;
+        build.clear();
+        for (const QString &fPath : paths) {
+            if (src == "flush" && fPath != dm->currentKey) build << fPath;
+            else devPreviewBuildDeferred.insert(fPath);
+        }
+        if (build.isEmpty()) return;
+        sync = true;            // the only kind devPreviewBuildNext renders in Develop
     }
 
-    const bool sync = (src == "sync");
-    for (const QString &fPath : paths) {
+    for (const QString &fPath : std::as_const(build)) {
         if (sync) devPreviewBuildSyncPaths.insert(fPath);
         if (devPreviewBuildQueue.contains(fPath)) continue;
         if (fPath == devPreviewBuildCurrent && !sync) continue;
@@ -280,8 +294,15 @@ void MW::devPreviewBuildNext()
     if (G::operationMode == G::OperationMode::Develop) {
         const QString editing = dm ? dm->currentKey : QString();
         QStringList keep;
-        for (const QString &p : std::as_const(devPreviewBuildQueue))
+        for (const QString &p : std::as_const(devPreviewBuildQueue)) {
             if (devPreviewBuildSyncPaths.contains(p) && p != editing) keep << p;
+            /* The user came back to it before it rendered: its own session takes over,
+               and leaving Develop builds it if nothing else does. */
+            else if (devPreviewBuildSyncPaths.contains(p)) {
+                devPreviewBuildSyncPaths.remove(p);
+                devPreviewBuildDeferred.insert(p);
+            }
+        }
         if (keep.count() != devPreviewBuildQueue.count()) {
             devPreviewBuildTotal -= devPreviewBuildQueue.count() - keep.count();
             devPreviewBuildQueue = keep;

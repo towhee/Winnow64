@@ -1237,6 +1237,7 @@ void MW::sortChange(QString source)
 
     if (!inMapModule()) centralLayout->setCurrentIndex(prevCentralView);
     updateStatus(true, "", "MW::sortChange");
+    updateStatusBar();      // the sort button's tooltip names the new sort column
 
     /* sync image cache with datamodel filtered proxy unless sort has been triggered by a
        filter change, which will do its own rebuildImageCacheParameters */
@@ -1276,26 +1277,77 @@ void MW::sortReverse()
 
 void MW::updateSortColumn(int sortColumn)
 {
+/*
+    Put the Sort menu in step with sortColumn (a restored or deferred sort). A column the
+    menu has no item for -- one sorted from a table header, such as Orientation --
+    UNCHECKS the menu: this used to leave the previous item (File Name, set at load)
+    ticked while the images were ordered by something else, so an edit to that column
+    (a rotation changes Orientation) re-placed the image for no reason the user could
+    see. The status bar sort button's tooltip names the column either way.
+*/
     if (G::isLogger) G::log("MW::updateSortColumn");
 
     if (sortColumn == 0) sortColumn = G::NameColumn;
 
-    if (sortColumn == G::NameColumn) sortFileNameAction->setChecked(true);
-    if (sortColumn == G::TypeColumn) sortFileTypeAction->setChecked(true);
-    if (sortColumn == G::ByteSizeColumn) sortFileSizeAction->setChecked(true);
-    if (sortColumn == G::CreatedColumn) sortCreateAction->setChecked(true);
-    if (sortColumn == G::ModifiedColumn) sortModifyAction->setChecked(true);
-    if (sortColumn == G::PickColumn) sortPickAction->setChecked(true);
-    if (sortColumn == G::LabelColumn) sortLabelAction->setChecked(true);
-    if (sortColumn == G::RatingColumn) sortRatingAction->setChecked(true);
-    if (sortColumn == G::MegaPixelsColumn) sortMegaPixelsAction->setChecked(true);
-    if (sortColumn == G::DimensionsColumn) sortDimensionsAction->setChecked(true);
-    if (sortColumn == G::ApertureColumn) sortApertureAction->setChecked(true);
-    if (sortColumn == G::ShutterspeedColumn) sortShutterSpeedAction->setChecked(true);
-    if (sortColumn == G::ISOColumn) sortISOAction->setChecked(true);
-    if (sortColumn == G::CameraModelColumn) sortModelAction->setChecked(true);
-    if (sortColumn == G::FocalLengthColumn) sortFocalLengthAction->setChecked(true);
-    if (sortColumn == G::TitleColumn) sortTitleAction->setChecked(true);
+    if (QAction *a = sortActionForColumn(sortColumn)) a->setChecked(true);
+    else if (QAction *a = sortGroupAction->checkedAction()) a->setChecked(false);
+}
+
+QAction *MW::sortActionForColumn(int column) const
+{
+    switch (column) {
+    case G::NameColumn:         return sortFileNameAction;
+    case G::TypeColumn:         return sortFileTypeAction;
+    case G::ByteSizeColumn:     return sortFileSizeAction;
+    case G::CreatedColumn:      return sortCreateAction;
+    case G::ModifiedColumn:     return sortModifyAction;
+    case G::PickColumn:         return sortPickAction;
+    case G::LabelColumn:        return sortLabelAction;
+    case G::RatingColumn:       return sortRatingAction;
+    case G::MegaPixelsColumn:   return sortMegaPixelsAction;
+    case G::DimensionsColumn:   return sortDimensionsAction;
+    case G::ApertureColumn:     return sortApertureAction;
+    case G::ShutterspeedColumn: return sortShutterSpeedAction;
+    case G::ISOColumn:          return sortISOAction;
+    case G::CameraModelColumn:  return sortModelAction;
+    case G::LensColumn:         return sortLensAction;
+    case G::FocalLengthColumn:  return sortFocalLengthAction;
+    case G::TitleColumn:        return sortTitleAction;
+    case G::CreatorColumn:      return sortCreatorAction;
+    default:                    return nullptr;
+    }
+}
+
+void MW::followCurrentAfterReorder()
+{
+/*
+    THE PROXY RE-SORTS AN EDITED ROW BY ITSELF (dynamicSortFilter): an edit to the sort
+    column of a row -- a rotation under an Orientation sort, a rating under a Rating sort
+    -- takes that row out and puts it back where the sort says, and emits layoutChanged.
+    The selection model follows (persistent indexes), but dm->currentSfRow, the
+    delegates' current row, the status bar "Pos" and the scroll did not: the yellow
+    current frame stayed on the old position, now a different image, and the image just
+    edited slid out of view.
+
+    Queued from sf layoutChanged, so a sort or filter change -- which run synchronously
+    and set currentSfRow themselves -- has finished first; it finds the row unchanged
+    and does nothing. Not while the model is being built or torn down.
+*/
+    followCurrentQueued = false;
+    if (G::isModifyingDatamodel || G::isLoadRunning || !dm || !dm->currentDmIdx.isValid())
+        return;
+    const int row = dm->sf->mapFromSource(dm->currentDmIdx).row();
+    if (row < 0 || row == dm->currentSfRow) return;
+    if (G::isLogger) G::log("MW::followCurrentAfterReorder",
+                            QString::number(dm->currentSfRow) + " -> " + QString::number(row));
+    dm->currentSfRow = row;
+    thumbView->iconViewDelegate->currentRow = row;
+    gridView->iconViewDelegate->currentRow = row;
+    updateStatus(true, "", "MW::followCurrentAfterReorder");
+    // the image cache walks proxy order, which just changed
+    emit imageCacheFilterChange(dm->currentKey, "SortChange");
+    scrollToCurrentRowIfNotVisible();
+    resyncIconLoaderAfterReorder("MW::followCurrentAfterReorder");
 }
 
 // void MW::toggleSortDirectionClick()
