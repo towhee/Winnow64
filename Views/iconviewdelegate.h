@@ -91,6 +91,7 @@ public:
 
     QString tooltip;
     QString objName;
+    bool isGrid = false;    // gridView (central widget): right-click shows the main menu
 
 signals:
 
@@ -103,7 +104,6 @@ public slots:
     void setVpRectVisibility(bool isVisible);
 
 private:
-    QObject parent;
     DataModel *dm;
     QItemSelectionModel *selectionModel;
 

@@ -2385,7 +2385,7 @@ void MW::createMetadataDock()
 void MW::createThumbDock()
 {
     if (G::isLogger) G::log("MW::createThumbDock");
-    thumbDockTabText = "Thumbnails";
+    thumbDockTabText = "Film strip";
     dockTextNames << thumbDockTabText;
     thumbDock = new DockWidget(thumbDockTabText, "ThumbDock", this);  // Thumbnails
     // thumbDock = new QDockWidget("Thumbs", this);  // Thumbnails

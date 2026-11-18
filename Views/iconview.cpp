@@ -257,6 +257,7 @@ IconView::IconView(QWidget *parent, DataModel *dm, QString objName)
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
     iconViewDelegate->objName = objName;
+    iconViewDelegate->isGrid = (objName == "Grid");
     setItemDelegate(iconViewDelegate);
 
     zoomFrame = new QLabel;

@@ -1146,7 +1146,7 @@
        </item>
        <item>
         <property name="text">
-         <string>Bottom Panel (Thumbnails)</string>
+         <string>Bottom Panel (Film strip)</string>
         </property>
         <property name="text">
          <string>F6</string>
@@ -1272,7 +1272,7 @@
          <string>Arrows, PgUp / PgDn, Home / End</string>
         </property>
         <property name="text">
-         <string>Ignored in Develop mode unless the Thumbnails panel has the focus.</string>
+         <string>Ignored in Develop mode unless the Film strip has the focus.</string>
         </property>
        </item>
        <item>

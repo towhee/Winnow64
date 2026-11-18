@@ -670,8 +670,9 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
             if (dupStatus == DuplicateStatus::Duplicate)
                 tooltip += "\nRed: a duplicate. " + others + " in the Library "
                            + (info.twins == 1 ? "has" : "have") + " the same " + same
-                           + ".\nFilters > Duplicates found lists them; right-click > "
-                             "Duplicate okay to keep this one.";
+                           + ".\n'Filters > Duplicates found' lists them; right-click > "
+                           + (isGrid ? "'Edit > Duplicate okay'" : "'Duplicate okay'")
+                           + " to keep this one.";
             else
                 tooltip += "\nPurple: a duplicate that is okayed. " + others
                            + " in the Library " + (info.twins == 1 ? "has" : "have")

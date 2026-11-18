@@ -956,7 +956,7 @@ QString MW::dockTabToolTip(const QString &tabText)
                        "Window > Places Panel. Areas drawn on the map.</nobr>")
             .arg(placesDockTabText);
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "Metadata Panel");
-    if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "Thumbnails Panel");
+    if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "Film strip Panel");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "Embellish Panel");
     if (tabText == developDockTabText)  return tip(developDockTabText,  "Develop Panel");
     /* History is Develop-only, so its keys are Develop mode local ("H" for the panel,
@@ -1423,7 +1423,7 @@ void MW::updateShowHideBarTips()
     const Tip tips[] = {
         {leftBar,   toggleLeftPanelsAction,   "Hide or show the panels on the left"},
         {rightBar,  toggleRightPanelsAction,  "Hide or show the panels on the right"},
-        {bottomBar, toggleBottomPanelsAction, "Hide or show the thumbnails"},
+        {bottomBar, toggleBottomPanelsAction, "Hide or show the film strip"},
         {topBar,    toggleTopPanelsAction,    "Hide or show the Module panel"},
     };
     for (const Tip &t : tips) {

@@ -1874,7 +1874,7 @@ void MW::createViewActions()
         !isSettings || settings->value("syncBrowseDevelopWidths", true).toBool());
     syncBrowseDevelopAction->setToolTip(
         tr("Give Browse and Develop the same left and right panel widths (the wider of "
-           "the two layouts) and the same filmstrip (the taller), so the image keeps its "
+           "the two layouts) and the same film strip (the taller), so the image keeps its "
            "size and place when you switch between them."));
     connect(syncBrowseDevelopAction, &QAction::toggled, this, [this](bool on) {
         settings->setValue("syncBrowseDevelopWidths", on);
@@ -2134,7 +2134,7 @@ void MW::createWindowActions()
     addAction(metadataDockVisibleAction);
     connect(metadataDockVisibleAction, &QAction::triggered, this, &MW::showMetadataDock);
 
-    thumbDockVisibleAction = new QAction(tr("Thumbnails Panel"), this);
+    thumbDockVisibleAction = new QAction(tr("Film strip Panel"), this);
     thumbDockVisibleAction->setObjectName("toggleThumbs");
     thumbDockVisibleAction->setShortcutVisibleInContextMenu(true);
     thumbDockVisibleAction->setCheckable(true);

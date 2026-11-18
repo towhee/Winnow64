@@ -1219,7 +1219,7 @@ void Preferences::addUserInterface()
     // Filmstrip label font size
     i.name = "thumbViewLabelSize";
     i.parentName = "FontSizeHeader";
-    i.captionText = "Filmstrip file name / title";
+    i.captionText = "Film strip file name / title";
     i.tooltip = "Change the display size of the file name shown at the bottom of each thumbnail.";
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -1236,8 +1236,8 @@ void Preferences::addUserInterface()
     // Show thumbnail label
     i.name = "thumbViewShowLabel";
     i.parentName = "LabelHeader";
-    i.captionText = "Show in filmstrip";
-    i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in the filmstrip.";
+    i.captionText = "Show in film strip";
+    i.tooltip = "Show or hide the file name / title at the bottom of each thumbnail in the film strip.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.defaultValue = 8;
@@ -2162,8 +2162,8 @@ void Preferences::addFullScreen()
     // Full screen - show filmstrip
     i.name = "fullScreenShowThumbs";
     i.parentName = "FullScreenHeader";
-    i.captionText = "Show filmstrip";
-    i.tooltip = "When you switch to full screen show the filmstrip.";
+    i.captionText = "Show film strip";
+    i.tooltip = "When you switch to full screen show the film strip.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = mw->fullScreenDocks.isThumbs;
