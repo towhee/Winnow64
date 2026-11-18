@@ -2,6 +2,8 @@
 #include "Cache/duplicates.h"
 #include "Datamodel/duplicateok.h"
 #include "Datamodel/rowselection.h"
+#include "Views/iconview.h"
+#include "Views/iconviewdelegate.h"
 #include "Dialogs/catalogrootsdlg.h"
 #include "Main/catalogenumerate.h"
 
@@ -19,6 +21,9 @@
         purple number badge (IconViewDelegate), the Duplicate column, and the red ones in
         Filters > Duplicates found (G::CompareColumn).
       o Duplicate Okay (toggleDuplicateOk) is the user's "these are meant to be here".
+      o WHICH ones are twins: the current image's group has its badges inverted
+        (updateDuplicateTwins), the badge tooltip lists the twins' paths, and Show
+        Duplicates of This Image (showDuplicateTwins) filters to them.
 */
 
 namespace {
@@ -105,6 +110,7 @@ void MW::refreshDuplicateStatus()
     if (catalogRootsDlg && catalogRootsDlg->isVisible())
         catalogRootsDlg->setCatalogStatus(catalogStatusText());
     updateDuplicateOkAction();
+    updateDuplicateTwins();
     if (!changed) return;
 
     if (thumbView) thumbView->viewport()->update();
@@ -123,32 +129,47 @@ void MW::refreshDuplicateStatus()
 void MW::updateDuplicateOkAction()
 {
 /*
-    Enabled when a selected image is in a duplicates group; checked when every such image
-    is okayed. Greyed with the reason otherwise -- the tooltip and the disabled-shortcut
-    feedback both read it.
+    Duplicate Okay and Show Duplicates of This Image. Enabled when a selected image is in
+    a duplicates group; Okay is checked when every such image is okayed. The Edit menu's
+    are greyed with the reason otherwise -- the tooltip and the disabled-shortcut
+    feedback both read it; the thumbnail context menu's copies are simply not there.
 */
-    if (!duplicateOkAction || !dm) return;
-    auto gate = [this](bool enabled, const QString &reason) {
-        duplicateOkAction->setProperty("disabledReason", reason);
-        duplicateOkAction->setEnabled(enabled);
+    if (!duplicateOkAction || !showDuplicateTwinsAction || !dm) return;
+    auto apply = [this](bool enabled, bool checked, const QString &why) {
+        const QString okTip =
+            tr("Okay the selected duplicates: the duplicates check ignores them and "
+               "their number badge turns purple.\nChoose it again to undo.");
+        const QString showTip =
+            tr("Show only the selected duplicates and their twins (Filters > "
+               "Duplicates of).\nUncheck that filter to show all images again.");
+        for (QAction *a : {duplicateOkAction, showDuplicateTwinsAction}) {
+            a->setProperty("disabledReason", enabled ? QString() : why);
+            a->setToolTip(enabled ? (a == duplicateOkAction ? okTip : showTip)
+                                  : tr("Unavailable: %1.").arg(why));
+            a->setEnabled(enabled);
+        }
+        duplicateOkAction->setChecked(checked);
+        duplicateOkContextAction->setChecked(checked);
+        duplicateOkContextAction->setVisible(enabled);
+        showDuplicateTwinsContextAction->setVisible(enabled);
+        /* The shortcut column, which a context copy has no shortcut of its own to show. */
+        auto mirror = [](QAction *copy, const QAction *a) {
+            const QString keys = a->shortcut().toString(QKeySequence::NativeText);
+            copy->setText(keys.isEmpty() ? a->text() : a->text() + "\t" + keys);
+            copy->setToolTip(a->toolTip());
+        };
+        mirror(duplicateOkContextAction, duplicateOkAction);
+        mirror(showDuplicateTwinsContextAction, showDuplicateTwinsAction);
     };
-    const QString enabledTip =
-        tr("Okay the selected duplicates: the duplicates check ignores them and their "
-           "number badge turns purple.\nChoose it again to undo.");
 
     if (Duplicates::instance().status().isEmpty()) {
-        const QString why = tr("there are no duplicates in the Library (File > Manage "
-                               "Catalog > Duplicates finds them)");
-        duplicateOkAction->setChecked(false);
-        duplicateOkAction->setToolTip(tr("Unavailable: %1.").arg(why));
-        gate(false, why);
+        apply(false, false, tr("there are no duplicates in the Library (File > Manage "
+                               "Catalog > Duplicates finds them)"));
         return;
     }
     const QModelIndexList rows = RowSelection::Rows(dm->selectionModel);
     if (rows.size() > kMaxOkStateRows) {
-        duplicateOkAction->setChecked(false);
-        duplicateOkAction->setToolTip(enabledTip);
-        gate(true, QString());
+        apply(true, false, QString());
         return;
     }
     int inGroup = 0, okayed = 0;
@@ -158,16 +179,98 @@ void MW::updateDuplicateOkAction()
         ++inGroup;
         if (DuplicateOk::IsOk(idx.data(G::KeyRole).toString())) ++okayed;
     }
-    duplicateOkAction->setChecked(inGroup > 0 && okayed == inGroup);
     if (inGroup == 0) {
-        const QString why = tr("no selected image is a Library duplicate (red or purple "
-                               "number badge)");
-        duplicateOkAction->setToolTip(tr("Unavailable: %1.").arg(why));
-        gate(false, why);
+        apply(false, false, tr("no selected image is a Library duplicate (red or purple "
+                               "number badge)"));
         return;
     }
-    duplicateOkAction->setToolTip(enabledTip);
-    gate(true, QString());
+    apply(true, okayed == inGroup, QString());
+}
+
+void MW::updateDuplicateTwins()
+{
+/*
+    The current image's duplicates group into the thumbnail delegates, which invert the
+    badges of every image in it (IconViewDelegate::setDuplicateTwinGroup). A view only
+    repaints the old and new current cells by itself, so a CHANGE of group repaints the
+    views; moving between images in no group costs one hash lookup.
+*/
+    int group = 0;
+    if (dm && dm->sf && dm->selectionModel && !Duplicates::instance().status().isEmpty()) {
+        const QModelIndex cur = dm->selectionModel->currentIndex();
+        if (cur.isValid()) {
+            const QString key = cur.sibling(cur.row(), 0).data(G::KeyRole).toString();
+            group = Duplicates::instance().infoOf(key).group;
+        }
+    }
+    if (group == duplicateTwinGroup) return;
+    duplicateTwinGroup = group;
+    for (IconView *v : {thumbView, gridView}) {
+        if (!v || !v->iconViewDelegate) continue;
+        v->iconViewDelegate->setDuplicateTwinGroup(group);
+        v->viewport()->update();
+    }
+}
+
+void MW::showDuplicateTwins()
+{
+/*
+    Show only the selected duplicates and their twins: the Filters "Duplicates of" item,
+    in ONE filterChange that replaces every other filter, as a map pin click does -- it
+    means "show me these". Held as keys (DataModel::setDuplicateTwinKeys), so a sort or
+    an insert cannot move it onto other images.
+
+    A twin that is not loaded -- in another folder, with a folder open -- cannot be
+    shown; the popup says how many and where to find them (the badge tooltip lists them).
+
+    NOT WHILE A LOAD IS RUNNING: the load's filter build resets the checks when it lands
+    (MW::applyMapPinFilter).
+*/
+    if (G::isLogger) G::log("MW::showDuplicateTwins");
+    if (!dm || !filters) return;
+    if (G::isLoadRunning || G::isModifyingDatamodel || filters->buildingFilters) {
+        if (G::popup)
+            G::popup->showPopup(tr("Still loading. Try again when it has finished."), 2500);
+        return;
+    }
+    const Duplicates &d = Duplicates::instance();
+    QSet<QString> keys;
+    QString firstName;
+    int chosen = 0;
+    for (const QModelIndex &idx : RowSelection::Rows(dm->selectionModel)) {
+        const QString key = idx.data(G::KeyRole).toString();
+        if (d.infoOf(key).group <= 0 || keys.contains(key)) continue;
+        if (chosen++ == 0) firstName = QFileInfo(key).fileName();
+        keys.insert(key);
+        for (const QString &twin : d.twinsOf(key)) keys.insert(twin);
+    }
+    if (keys.isEmpty()) {
+        if (G::popup)
+            G::popup->showPopup(tr("None of the selected images is a Library duplicate."),
+                                2000);
+        updateDuplicateOkAction();
+        return;
+    }
+    int loaded = 0;
+    for (const QString &k : std::as_const(keys))
+        if (dm->rowFromKey(k) >= 0) ++loaded;
+
+    if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+    uncheckAllFilters();
+    filters->searchString = "";
+    dm->searchStringChange("");
+    dm->setDuplicateTwinKeys(keys);
+    const QString label = chosen == 1 ? tr("%1 and its twins").arg(firstName)
+                                      : tr("%n selected duplicates and their twins", "",
+                                           chosen);
+    filters->setDuplicateTwinsItem(loaded, label);
+    filterChange("MW::showDuplicateTwins");
+
+    const int elsewhere = int(keys.size()) - loaded;
+    if (elsewhere > 0 && G::popup)
+        G::popup->showPopup(tr("%n twin(s) are not in what is loaded. Hover a red badge "
+                               "to see where they are, or browse the Library to show "
+                               "them.", "", elsewhere), 4000);
 }
 
 void MW::toggleDuplicateOk()

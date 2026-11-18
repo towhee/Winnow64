@@ -6,6 +6,7 @@
 #include <QSet>
 #include <QString>
 #include <QVector>
+#include <algorithm>
 #include "Cache/catalog.h"          // DuplicateRow
 
 /*
@@ -24,6 +25,11 @@
     So okaying either image of a pair clears both (both purple), a triple with one
     okayed keeps the other two red, and a copy that arrives later is red against any
     twin that is not okayed.
+
+    GROUP IDS (DuplicateInfo::group) say WHICH images are twins -- a duplicated focus
+    stack is thirty red pairs that look alike. Numbered from 1 in capture-time order,
+    then by the group's first path, so the same Library gets the same numbers on every
+    rebuild; an id only means "same group as", and is renumbered when groups come or go.
 */
 namespace DuplicateStatus {
 constexpr int None = 0;
@@ -38,6 +44,7 @@ struct DuplicateInfo
 {
     int status = DuplicateStatus::None;
     int twins = 0;              // other images in the group
+    int group = 0;              // >= 1, shared by every image in the group
     bool video = false;         // matched on duration rather than pixels
 };
 
@@ -66,11 +73,23 @@ inline QHash<QString, DuplicateInfo> classifyDuplicates(const QVector<DuplicateR
         groups[key].append(i);
     }
 
+    /* The groups in a stable order, for their ids (see GROUP IDS above). */
+    struct Ordered { qint64 captured; QString first; const QVector<int> *members; };
+    QVector<Ordered> ordered;
+    for (auto it = groups.cbegin(); it != groups.cend(); ++it) {
+        if (it.value().size() < 2) continue;
+        QString first = rows.at(it.value().first()).path;
+        for (int i : it.value()) first = std::min(first, rows.at(i).path);
+        ordered.append({rows.at(it.value().first()).captured, first, &it.value()});
+    }
+    std::sort(ordered.begin(), ordered.end(), [](const Ordered &a, const Ordered &b) {
+        return a.captured != b.captured ? a.captured < b.captured : a.first < b.first;
+    });
+
     QHash<QString, DuplicateInfo> out;
     DuplicateCounts c;
-    for (auto it = groups.cbegin(); it != groups.cend(); ++it) {
-        const QVector<int> &members = it.value();
-        if (members.size() < 2) continue;
+    for (int g = 0; g < ordered.size(); ++g) {
+        const QVector<int> &members = *ordered.at(g).members;
         int notOk = 0;
         for (int i : members) if (!okPaths.contains(rows.at(i).path)) ++notOk;
         bool anyRed = false;
@@ -82,6 +101,7 @@ inline QHash<QString, DuplicateInfo> classifyDuplicates(const QVector<DuplicateR
             info.status = (!ok && otherNotOk >= 1) ? DuplicateStatus::Duplicate
                                                    : DuplicateStatus::Okayed;
             info.twins = int(members.size()) - 1;
+            info.group = g + 1;
             info.video = r.pixelHash.size() < 8;
             if (info.status == DuplicateStatus::Duplicate) { ++c.found; anyRed = true; }
             else ++c.okayed;

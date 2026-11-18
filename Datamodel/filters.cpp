@@ -305,6 +305,8 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     filterCategoryToDmColumn[catAvailability] = G::AvailabilityColumn;
     // filterCategoryToDmColumn[catMissingThumbs] = G::MissingThumbColumn;
     filterCategoryToDmColumn[catCompare] = G::CompareColumn;
+    /* true for the duplicates "Show Duplicates of This Image" chose. */
+    filterCategoryToDmColumn[catDuplicateTwins] = G::DuplicateTwinsColumn;
 
     createPredefinedFilters();
     createDynamicFilters();
@@ -479,6 +481,7 @@ void Filters::createDynamicFilters()
     availability = new QTreeWidgetItem();
     // missingThumbs = new QTreeWidgetItem();
     compare = new QTreeWidgetItem();
+    duplicateTwins = new QTreeWidgetItem();
 
     createFilter(picks, catPick);
     createFilter(ratings, catRating);
@@ -514,6 +517,10 @@ void Filters::createDynamicFilters()
     createFilter(availability, catAvailability);
     // createFilter(missingThumbs, catMissingThumbs);
     createFilter(compare, catCompare);
+    createFilter(duplicateTwins, catDuplicateTwins);
+    duplicateTwins->setToolTip(0, tr("A duplicate and its twins, from right-click > "
+                                     "Show Duplicates of This Image.\nUncheck to show "
+                                     "all images again."));
 }
 
 Filters::~Filters()
@@ -552,7 +559,7 @@ void Filters::createGroups()
     add(tr("Selection"),         {picks, ratings, labels});
     add(tr("Camera"),            {models, lenses, focalLengths, isos});
     add(tr("Metadata"),          {titles, creators, gps, places, mapPins, keywords});
-    add(tr("Status"),            {availability, compare});
+    add(tr("Status"),            {availability, compare, duplicateTwins});
 
     for (QTreeWidgetItem *cat : categoryOrder()) addTopLevelItem(cat);
 }
@@ -847,6 +854,7 @@ void Filters::setCategoryBackground()
     setCategoryBackground(availability);
     // setCategoryBackground(missingThumbs);
     setCategoryBackground(compare);
+    setCategoryBackground(duplicateTwins);
     for (QTreeWidgetItem *cat : std::as_const(sessionCats)) setCategoryBackground(cat);
     for (const Group &g : std::as_const(groups)) setCategoryBackground(g.item);
 }
@@ -1312,7 +1320,7 @@ void Filters::setEachCatTextColor()
             /* category only has one item and item not "true". NOT for Collections or
                Queries: one is still a subset of what is loaded, so checking it filters. */
             else if (choices == 1 && items.first()->text(0) != "true"
-                     && !isSetCategory(*it) && *it != mapPins)
+                     && !isSetCategory(*it) && *it != mapPins && *it != duplicateTwins)
                 (*it)->setForeground(0, QBrush(hdrIsEmptyColor));
             else {
                 bool isChecked = false;
@@ -1669,6 +1677,7 @@ void Filters::reset()
 
     // a map pin names rows of the model being replaced
     clearMapPinItem();
+    clearDuplicateTwinsItem();      // the same: keys of the model being replaced
     // reset all items to unchecked
     clearAll();
     /*  And the Keywords any/all mode with them: a lasting "all" would quietly empty the
@@ -3109,6 +3118,51 @@ bool Filters::isMapPinFiltering() const
            && mapPins->child(0)->checkState(0) != Qt::Unchecked;
 }
 
+void Filters::setDuplicateTwinsItem(int count, const QString &label)
+{
+/*
+    setMapPinItem's twin: the one item, CHECKED, labelled with what was chosen. No
+    filterChange: MW::showDuplicateTwins runs the one filterChange itself.
+*/
+    if (G::isLogger) G::log("Filters::setDuplicateTwinsItem", QString::number(count));
+    QTreeWidgetItem *item = duplicateTwins->childCount() ? duplicateTwins->child(0)
+                                                         : nullptr;
+    if (!item) {
+        item = new QTreeWidgetItem();           // detached: configured, then added
+        item->setData(1, Qt::EditRole, true);   // compared with G::DuplicateTwinsColumn
+        item->setToolTip(0, tr("The duplicates you chose and their twins. Opt+click to "
+                               "exclude them instead."));
+        item->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+        item->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+        item->setCheckState(0, Qt::Checked);
+        duplicateTwins->addChild(item);
+    }
+    item->setText(0, label);
+    item->setCheckState(0, Qt::Checked);
+    styleFilterItem(item);
+    item->setData(2, Qt::EditRole, count);
+    item->setData(3, Qt::EditRole, count);
+    if (!duplicateTwins->isExpanded()) duplicateTwins->setExpanded(true);
+    for (QTreeWidgetItem *up = duplicateTwins->parent(); up; up = up->parent())
+        if (!up->isExpanded()) up->setExpanded(true);
+    // a programmatic change, not a click still to be interpreted (see dataChanged)
+    itemCheckStateHasChanged = false;
+    activeCategory = duplicateTwins;
+}
+
+void Filters::clearDuplicateTwinsItem()
+{
+    if (!duplicateTwins || !duplicateTwins->childCount()) return;
+    QMutexLocker locker(&mutex);
+    qDeleteAll(duplicateTwins->takeChildren());
+}
+
+bool Filters::isDuplicateTwinsFiltering() const
+{
+    return duplicateTwins && duplicateTwins->childCount()
+           && duplicateTwins->child(0)->checkState(0) != Qt::Unchecked;
+}
+
 void Filters::setLibrarySetsAvailable(bool available)
 {
     setsShown = available;
@@ -3379,6 +3433,7 @@ QVariantMap Filters::persistableState() const
     for (const QTreeWidgetItem *c : sessionCats)
         sessionNames.insert(c->data(0, CategoryNameRole).toString());
     sessionNames.insert(catMapPin);     // the pin's keys are this session's too
+    sessionNames.insert(catDuplicateTwins);
     QStringList items;
     for (const ItemState &st : checkedItemStates())
         if (!sessionNames.contains(st.category))

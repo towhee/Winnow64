@@ -35,6 +35,7 @@ private slots:
     void sameHashDifferentTypeOrTimeIsNotADuplicate();
     void noFingerprintIsInNoGroup();
     void videosMatchOnDuration();
+    void groupIdsSayWhichAreTwins();
 
     // the video fingerprint
     void durationFromMvhdVersion0();
@@ -230,6 +231,27 @@ void tst_duplicates::noFingerprintIsInNoGroup()
         row("/a/1.avi", 100, "avi", QByteArray(), -1),
         row("/b/1.avi", 100, "avi", QByteArray(), -1)};
     QVERIFY(classifyDuplicates(rows, {}).isEmpty());
+}
+
+void tst_duplicates::groupIdsSayWhichAreTwins()
+{
+    /*  A duplicated two-frame stack: each frame pairs with its own copy, never with the
+        other frame, and the ids follow capture time whatever order the rows come in. */
+    const QVector<DuplicateRow> rows = {row("/copy/2.arw", 101, "arw", kHashB),
+                                        row("/a/1.arw", 100, "arw", kHashA),
+                                        row("/a/2.arw", 101, "arw", kHashB),
+                                        row("/copy/1.arw", 100, "arw", kHashA),
+                                        row("/a/3.arw", 102, "arw", kHashA)};
+    const auto st = classifyDuplicates(rows, {});
+    QCOMPARE(st.value("/a/1.arw").group, 1);
+    QCOMPARE(st.value("/copy/1.arw").group, 1);
+    QCOMPARE(st.value("/a/2.arw").group, 2);
+    QCOMPARE(st.value("/copy/2.arw").group, 2);
+    QVERIFY(!st.contains("/a/3.arw"));
+    /* Okaying keeps the group: the badge is purple and the twins are still twins. */
+    const auto ok = classifyDuplicates(rows, {"/a/1.arw"});
+    QCOMPARE(ok.value("/copy/1.arw").status, DuplicateStatus::Okayed);
+    QCOMPARE(ok.value("/copy/1.arw").group, 1);
 }
 
 void tst_duplicates::videosMatchOnDuration()

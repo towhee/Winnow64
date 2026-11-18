@@ -354,12 +354,17 @@ void Duplicates::start()
                              || [&] {
                                     for (auto it = status.cbegin(); it != status.cend(); ++it) {
                                         const DuplicateInfo o = statusByPath.value(it.key());
-                                        if (o.status != it->status || o.twins != it->twins)
+                                        if (o.status != it->status || o.twins != it->twins
+                                            || o.group != it->group)
                                             return true;
                                     }
                                     return false;
                                 }();
         statusByPath = status;
+        pathsByGroup.clear();
+        for (auto it = status.cbegin(); it != status.cend(); ++it)
+            pathsByGroup[it->group].append(it.key());
+        for (QStringList &paths : pathsByGroup) paths.sort();
         lastCounts = c;
         if (changed) emit statusChanged();
     }, Qt::QueuedConnection);
@@ -385,6 +390,15 @@ void Duplicates::start()
 
     /* The answer stored by the last session, before anything changes. */
     requestRebuild();
+}
+
+QStringList Duplicates::twinsOf(const QString &path) const
+{
+    const int group = statusByPath.value(path).group;
+    if (group <= 0) return {};
+    QStringList out = pathsByGroup.value(group);
+    out.removeAll(path);
+    return out;
 }
 
 void Duplicates::shutdown()

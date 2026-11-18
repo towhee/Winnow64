@@ -118,6 +118,8 @@ public:
     /* The current answer, GUI thread. */
     const QHash<QString, DuplicateInfo> &status() const { return statusByPath; }
     DuplicateInfo infoOf(const QString &path) const { return statusByPath.value(path); }
+    /* The other images in path's group, sorted; empty when it is in none. */
+    QStringList twinsOf(const QString &path) const;
     DuplicateCounts counts() const { return lastCounts; }
     /* Whether a whole-Library check has ever completed on this index. */
     bool hasCheckedAll();
@@ -134,6 +136,7 @@ private:
 
     DuplicateChecker *checker = nullptr;
     QHash<QString, DuplicateInfo> statusByPath;
+    QHash<int, QStringList> pathsByGroup;     // DuplicateInfo::group -> its paths, sorted
     DuplicateCounts lastCounts;
     bool checkingAll = false;
     int fullGen = 0;

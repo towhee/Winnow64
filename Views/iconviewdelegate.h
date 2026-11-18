@@ -24,6 +24,12 @@ public:
                           const QPoint &pos) const;
     // label and video text colour (MW::setTextShade)
     void setTextColor(const QColor &c) { labelTextColor = c; videoTextColor = c; }
+    /*  THE CURRENT IMAGE'S DUPLICATES GROUP (DuplicateInfo::group), 0 for none. Every
+        image in it has its number badge inverted -- white, with the red or purple
+        number -- so a duplicate's twins stand out from the other red badges. Set by
+        MW::updateDuplicateTwins, which repaints the views. */
+    void setDuplicateTwinGroup(int group) { duplicateTwinGroup = group; }
+    int twinGroup() const { return duplicateTwinGroup; }
     IconViewDelegate(QObject *parent,
                      bool &isRatingBadgeVisible,
                      bool &isIconNumberVisible,
@@ -143,6 +149,7 @@ private:
     QColor duplicateColor;             // number badge: a Library duplicate
     QColor duplicateOkColor;           // number badge: an okayed duplicate
     QColor duplicateTextColor;
+    int duplicateTwinGroup = 0;        // see setDuplicateTwinGroup
     QColor vp1Color;
     QColor vp2Color;
     QColor masterColor;

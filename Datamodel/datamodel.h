@@ -323,6 +323,14 @@ public:
     mutable QReadWriteLock duplicateLock;
     QHash<QString, int> duplicateByPath;
 
+    /*  "SHOW DUPLICATES OF THIS IMAGE", for G::DuplicateTwinsColumn: the keys of the
+        selected duplicates and their twins. Session-only and replaced whole by
+        MW::showDuplicateTwins, read by data() under the lock -- the map pin's pattern. */
+    void setDuplicateTwinKeys(const QSet<QString> &keys);
+    QSet<QString> duplicateTwinKeySet() const;
+    mutable QReadWriteLock duplicateTwinLock;
+    QSet<QString> duplicateTwinKeys;
+
     /*  Column headers: the name and the geek flag, one entry per column. See
         setModelProperties. */
     std::vector<QString> mHeaderName;

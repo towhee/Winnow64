@@ -1041,6 +1041,9 @@ void MW::createSelection()
        index changes (fileSelectionChange). */
     connect(sel->sm, &QItemSelectionModel::selectionChanged,
             this, &MW::enableSelectionDependentMenus);
+    /* The current image's Library duplicates group inverts its twins' badges. */
+    connect(sel->sm, &QItemSelectionModel::currentChanged,
+            this, &MW::updateDuplicateTwins);
     /* Develop edits apply to the whole selection, so the dock's red multi-image alert
        tracks the selection set (and any queued propagation lands before it changes). */
     connect(sel->sm, &QItemSelectionModel::selectionChanged,

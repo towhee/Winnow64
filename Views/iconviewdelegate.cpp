@@ -660,8 +660,8 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
         tooltip = "Position " + QString::number(index.row() + 1)
                   + " in the current sort and filter";
         if (dupStatus != DuplicateStatus::None) {
-            const DuplicateInfo info = Duplicates::instance().infoOf(
-                sf->index(row, 0).data(G::KeyRole).toString());
+            const QString key = sf->index(row, 0).data(G::KeyRole).toString();
+            const DuplicateInfo info = Duplicates::instance().infoOf(key);
             const QString same = info.video ? "capture time, file type and duration"
                                             : "capture time, file type and pixels";
             const QString others = info.twins == 1
@@ -678,6 +678,20 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
                            + " in the Library " + (info.twins == 1 ? "has" : "have")
                            + " the same " + same
                            + ", and the duplicates check ignores them.";
+            /*  WHICH ones -- a twin can be scrolled away or in another folder, where the
+                inverted badges (paint) cannot show it. */
+            const QStringList twins = Duplicates::instance().twinsOf(key);
+            constexpr int kMaxListed = 8;
+            if (!twins.isEmpty()) {
+                tooltip += "\n\nDuplicate of:";
+                for (int i = 0; i < twins.size() && i < kMaxListed; ++i)
+                    tooltip += "\n  " + QDir::toNativeSeparators(twins.at(i));
+                if (twins.size() > kMaxListed)
+                    tooltip += QString("\n  ... and %1 more").arg(twins.size() - kMaxListed);
+            }
+            tooltip += QString("\n\nWhile this image is current, its twins' badges are "
+                               "white. %1 'Show Duplicates of This Image' shows only "
+                               "them.").arg(isGrid ? "Edit >" : "Right-click >");
         }
     }
     else if (hit("Thumb")) {
@@ -1022,9 +1036,15 @@ textRect         = a rectangle below itemRect
     // Render icon number overlay
     if (isIconNumberVisible || dupStatus != DuplicateStatus::None) {
         const bool isDup = dupStatus != DuplicateStatus::None;
-        painter->setBrush(dupStatus == DuplicateStatus::Duplicate ? duplicateColor
-                          : dupStatus == DuplicateStatus::Okayed  ? duplicateOkColor
-                                                                  : labelColorToUse);
+        const QColor badgeColor = dupStatus == DuplicateStatus::Duplicate ? duplicateColor
+                                  : dupStatus == DuplicateStatus::Okayed  ? duplicateOkColor
+                                                                          : labelColorToUse;
+        /*  In the current image's group (setDuplicateTwinGroup): inverted, so its twins
+            read as a set among the other red badges. One hash lookup, duplicates only. */
+        const bool isTwin = isDup && duplicateTwinGroup > 0 && !rowKey.isEmpty()
+                            && Duplicates::instance().infoOf(rowKey).group
+                                   == duplicateTwinGroup;
+        painter->setBrush(isTwin ? duplicateTextColor : badgeColor);
         QFont numberFont = painter->font();
         int pxSize = qMax(6, iconNumberSize);
         numberFont.setPixelSize(pxSize);
@@ -1034,9 +1054,9 @@ textRect         = a rectangle below itemRect
         QString labelNumber = QString::number(sfRow + 1);
         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
         QRect numberRect(frameRect.left(), frameRect.top(), numberWidth + 4, iconNumberSize);
-        painter->setPen(Qt::transparent);
+        painter->setPen(isTwin ? QPen(badgeColor, 1.5) : QPen(Qt::transparent));
         painter->drawRoundedRect(numberRect, 8, 8);
-        painter->setPen(isDup ? duplicateTextColor : numberTextColor);
+        painter->setPen(isTwin ? badgeColor : isDup ? duplicateTextColor : numberTextColor);
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }
 

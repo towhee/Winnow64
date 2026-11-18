@@ -311,6 +311,11 @@ Q_NAMESPACE
            are mirrored into CompareColumn, the "Duplicates found" filter. Appended for
            the same reason as DevelopColumn. */
         DuplicateColumn,
+        /* True for the images "Show Duplicates of This Image" chose -- the selected
+           duplicates and their twins: what the Filters "Duplicates of" category filters
+           on. A session-only key set, like MapPinColumn (DataModel::setDuplicateTwinKeys).
+           READ-ONLY. Appended for the same reason as DevelopColumn. */
+        DuplicateTwinsColumn,
         TotalColumns    // insert additional columns before this
     };
 

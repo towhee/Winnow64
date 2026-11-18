@@ -56,6 +56,7 @@ public:
     QTreeWidgetItem *availability = nullptr;
     // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare = nullptr;
+    QTreeWidgetItem *duplicateTwins = nullptr;
 
     QTreeWidgetItem *activeCategory = nullptr;   // category just filtered
 
@@ -83,6 +84,7 @@ public:
     QString catAvailability = "Availability";
     // QString catMissingThumbs = "Missing embedded thumbs";
     QString catCompare = "Duplicates found";
+    QString catDuplicateTwins = "Duplicates of";
     /*  What the Search category SAYS. catSearch stays the key (filterCategoryToDmColumn,
         the "Filter on..." name check); only the row's text changed. */
     QString catSearchLabel = "Adhoc search";
@@ -268,6 +270,13 @@ public:
     void setMapPinItem(int count);
     void clearMapPinItem();
     bool isMapPinFiltering() const;
+    /*  THE "DUPLICATES OF" CATEGORY: one item, checked by "Show Duplicates of This
+        Image" (MW::showDuplicateTwins), filtering on G::DuplicateTwinsColumn -- the map
+        pin's pattern throughout: MW gives it its label and count, it is a session
+        choice, and it is dropped with a new load. Greyed and empty until used. */
+    void setDuplicateTwinsItem(int count, const QString &label);
+    void clearDuplicateTwinsItem();
+    bool isDuplicateTwinsFiltering() const;
     /*  The query an item tests, as text, or empty for an ordinary value item: the Search
         row's text for searchTrue/searchFalse (unless it is the placeholder), a Query
         item's QueryTextRole. Read by SortFilter::compileFilters. */

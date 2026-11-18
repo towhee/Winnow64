@@ -389,6 +389,7 @@ void DataModel::setModelProperties()
         { G::MapPinColumn,               "Map Pin",                  true },
         { G::PlacesColumn,               "Places",                   true },
         { G::DuplicateColumn,            "Duplicate",                false },
+        { G::DuplicateTwinsColumn,       "Duplicates Of",            true },
     };
     mHeaderName.assign(G::TotalColumns, QString());
     mHeaderGeek.assign(G::TotalColumns, false);
@@ -1183,6 +1184,18 @@ QSet<QString> DataModel::mapPinKeySet() const
     return mapPinKeys;
 }
 
+void DataModel::setDuplicateTwinKeys(const QSet<QString> &keys)
+{
+    QWriteLocker lock(&duplicateTwinLock);
+    duplicateTwinKeys = keys;
+}
+
+QSet<QString> DataModel::duplicateTwinKeySet() const
+{
+    QReadLocker lock(&duplicateTwinLock);
+    return duplicateTwinKeys;
+}
+
 bool DataModel::setPlaceMembership(const QHash<QString, QStringList> &byPath)
 {
     QWriteLocker lock(&placeLock);
@@ -1340,6 +1353,18 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         const QString key =
             rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString();
         return mapPinKeys.contains(key);
+    }
+
+    /*  G::DuplicateTwinsColumn: is the row one "Show Duplicates of This Image" chose.
+        A bool, never invalid, as the map pin's. */
+    if (idx.isValid() && idx.column() == G::DuplicateTwinsColumn
+        && (role == Qt::EditRole || role == Qt::DisplayRole))
+    {
+        QReadLocker lock(&duplicateTwinLock);
+        if (duplicateTwinKeys.isEmpty() || !rowStore.contains(idx.row())) return false;
+        const QString key =
+            rowStore.value(idx.row(), G::PathColumn, G::KeyRole).toString();
+        return duplicateTwinKeys.contains(key);
     }
 
     /*  The scratch columns come from the row-keyed side table

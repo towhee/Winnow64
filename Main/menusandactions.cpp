@@ -711,6 +711,22 @@ void MW::createEditActions()
     addAction(duplicateOkAction);
     connect(duplicateOkAction, &QAction::triggered, this, &MW::toggleDuplicateOk);
 
+    showDuplicateTwinsAction = new QAction(tr("Show Duplicates of This Image"), this);
+    showDuplicateTwinsAction->setObjectName("showDuplicateTwins");
+    showDuplicateTwinsAction->setShortcutVisibleInContextMenu(true);
+    addAction(showDuplicateTwinsAction);
+    connect(showDuplicateTwinsAction, &QAction::triggered, this, &MW::showDuplicateTwins);
+
+    /* Not addAction'd and given no shortcut: the Edit menu's actions own those. */
+    duplicateOkContextAction = new QAction(duplicateOkAction->text(), this);
+    duplicateOkContextAction->setCheckable(true);
+    duplicateOkContextAction->setVisible(false);
+    connect(duplicateOkContextAction, &QAction::triggered, this, &MW::toggleDuplicateOk);
+    showDuplicateTwinsContextAction = new QAction(showDuplicateTwinsAction->text(), this);
+    showDuplicateTwinsContextAction->setVisible(false);
+    connect(showDuplicateTwinsContextAction, &QAction::triggered,
+            this, &MW::showDuplicateTwins);
+
     rotateRightAction = new QAction(tr("Rotate CW"), this);
     rotateRightAction->setObjectName("rotateRight");
     rotateRightAction->setShortcutVisibleInContextMenu(true);
@@ -2864,6 +2880,7 @@ void MW::createEditMenu()
     connect(targetCollectionMenu, &QMenu::aboutToShow, this, &MW::fillTargetCollectionMenu);
     editMenu->addSeparator();
     editMenu->addAction(duplicateOkAction);
+    editMenu->addAction(showDuplicateTwinsAction);
     editMenu->addSeparator();
     editMenu->addAction(regenerateThumbsAction);
     editMenu->addSeparator();
@@ -3584,8 +3601,9 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(labelGroupAct);
     /* Lightroom's B. Disabled with the reason in Folders (updateTargetCollectionActions). */
     thumbViewActions->append(addToTargetCollectionAction);
-    /* Greyed with the reason unless a selected image is a Library duplicate. */
-    thumbViewActions->append(duplicateOkAction);
+    /* Shown only when a selected image is a Library duplicate (updateDuplicateOkAction). */
+    thumbViewActions->append(duplicateOkContextAction);
+    thumbViewActions->append(showDuplicateTwinsContextAction);
 
     thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);

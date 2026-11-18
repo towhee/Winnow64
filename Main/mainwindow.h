@@ -2236,6 +2236,15 @@ private:
     QAction *addToTargetCollectionAction = nullptr;
     /* Library duplicates: okay (or un-okay) the selected ones. See mwduplicates.cpp. */
     QAction *duplicateOkAction = nullptr;
+    /* A duplicate and its twins, as a filter (showDuplicateTwins). */
+    QAction *showDuplicateTwinsAction = nullptr;
+    /*  The thumbnail context menu's copies of the two: HIDDEN unless a selected image is
+        a duplicate, where the Edit menu's are greyed with the reason. Copies because a
+        hidden action's shortcut does not fire. */
+    QAction *duplicateOkContextAction = nullptr;
+    QAction *showDuplicateTwinsContextAction = nullptr;
+    /* The current image's group, as the delegates have it (updateDuplicateTwins). */
+    int duplicateTwinGroup = 0;
     QMenu *targetCollectionMenu = nullptr;
     QAction *thumbsEnlargeAction;
     QAction *thumbsShrinkAction;
@@ -2938,6 +2947,8 @@ private:
     void refreshDuplicateStatus();
     void updateDuplicateOkAction();
     void toggleDuplicateOk();
+    void updateDuplicateTwins();
+    void showDuplicateTwins();
     void applyPlaceFilter(const QVector<qint64> &ids);
     void cancelPlaceFilter();
     void syncPlaceListFromFilters();
