@@ -10,15 +10,18 @@
     copy leaves) are DELETED. They are never legitimate, and they are not harmless: on
     Windows "._sample01.jpg" is an ordinary file, so the selftests loaded four of them as
     undecodable images and failed (2026-10-25).
+  - Files the repo has DELETED (listed in -Deleted) are deleted: they can only be stale
+    copies, and CMake's globs and the tests pick them up (a stale Docs\*.html failed
+    tst_helpdocs in 3_beta7).
   - Any other file that is not in the commit, outside the folders known to be untracked
     (build, Lib, out, release\et.exe, packaging\windows\config.ps1), is LISTED, not
-    deleted: it may be something put there by hand, and CMake's globs can pick up a stale
-    source file, so it is worth seeing.
+    deleted: it may be something put there by hand, so it is worth seeing.
 
   -Manifest is the commit's file list, one repo-relative path per line (git ls-tree -r
-  --name-only). Always exits 0; the listing is a warning.
+  --name-only). -Deleted is every path the repo deleted that is not in the commit
+  (release.sh deleted_paths). Always exits 0; the listing is a warning.
 #>
-param([Parameter(Mandatory)][string]$Manifest)
+param([Parameter(Mandatory)][string]$Manifest, [string]$Deleted)
 
 $RepoRoot = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 $untrackedDirs  = @('build', 'Lib', 'out')
@@ -26,6 +29,15 @@ $untrackedFiles = @('release/et.exe', 'packaging/windows/config.ps1')
 
 $tracked = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
 Get-Content $Manifest | ForEach-Object { [void]$tracked.Add($_) }
+
+$gone = 0
+if ($Deleted -and (Test-Path $Deleted)) {
+    Get-Content $Deleted | Where-Object { $_ } | ForEach-Object {
+        $p = Join-Path $RepoRoot ($_.Replace('/', '\'))
+        if (Test-Path -LiteralPath $p -PathType Leaf) { Remove-Item -Force -LiteralPath $p; $gone++ }
+    }
+}
+if ($gone) { Write-Host "Removed $gone file(s) the repo has deleted" }
 
 $removed = 0
 $stale = @()

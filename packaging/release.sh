@@ -185,6 +185,17 @@ function job_mac() {
     (( failed )) && return 2 || return 0
 }
 
+# Every path the repo has deleted at some point and that is not in $COMMIT, one per
+# line. A VM tree holding one of these is holding a stale copy (the sync never deletes),
+# so the prune steps remove them: a stale Docs/*.html failed tst_helpdocs (3_beta7).
+# A file never tracked stays listed only, since it may have been put there by hand.
+function deleted_paths() {
+    comm -23 \
+        <(git -C "$REPO_ROOT" log --pretty=format: --name-only --diff-filter=D "$COMMIT" \
+            | grep -v '^$' | LC_ALL=C sort -u) \
+        <(git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" | LC_ALL=C sort)
+}
+
 # Run PowerShell on the Windows VM in the repo folder; returns its exit code.
 function winps() {
     ssh "${SSH_OPTS[@]}" "$WIN_HOST" "cd $WIN_REPO; $1; exit \$LASTEXITCODE"
@@ -200,10 +211,13 @@ function job_windows() {
     git -C "$REPO_ROOT" archive --format=tar "$COMMIT" \
         | ssh "${SSH_OPTS[@]}" "$WIN_HOST" "tar -xf - -C $stage" || return 1
     ssh "${SSH_OPTS[@]}" "$WIN_HOST" "powershell -NoProfile -ExecutionPolicy Bypass -File $stage\\packaging\\windows\\syncstage.ps1 -Stage $stage -Repo $WIN_REPO; exit \$LASTEXITCODE" || return 1
-    # tar -x never deletes: drop AppleDouble files and list anything else not in the commit
+    # tar -x never deletes: drop AppleDouble files and files the repo deleted, and list
+    # anything else not in the commit
     git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" > "$RDIR/logs/manifest.txt"
-    scp "${SSH_OPTS[@]}" -q "$RDIR/logs/manifest.txt" "$WIN_HOST:$WIN_REPO/out/manifest.txt" || return 1
-    winps "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\prune.ps1 -Manifest out\\manifest.txt" || return 1
+    deleted_paths > "$RDIR/logs/deleted.txt"
+    scp "${SSH_OPTS[@]}" -q "$RDIR/logs/manifest.txt" "$RDIR/logs/deleted.txt" \
+        "$WIN_HOST:$WIN_REPO/out/" || return 1
+    winps "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\prune.ps1 -Manifest out\\manifest.txt -Deleted out\\deleted.txt" || return 1
     echo "=== deploy.ps1 -Steps 0,1,2,3,V ==="
     winps "powershell -NoProfile -ExecutionPolicy Bypass -File packaging\\windows\\deploy.ps1 -Steps 0,1,2,3,V" || return 1
     local setup; setup=$(asset_name windows "$LABEL")
@@ -246,8 +260,12 @@ function job_linux() {
         | ssh "${SSH_OPTS[@]}" "$host" "tar -xf - -C $stage" || return 1
     ssh "${SSH_OPTS[@]}" "$host" "out=\$(rsync -rlpc --itemize-changes $stage/ $repo/) || exit 1; \
         echo \"Synced: \$(printf '%s\n' \"\$out\" | grep -c '^>f') file(s) changed\"" || return 1
-    # Same tidy as packaging/windows/prune.ps1: tar -x never deletes, so AppleDouble files
-    # go and anything else not in the commit (outside build/ and out/) is listed.
+    # Same tidy as packaging/windows/prune.ps1: tar -x never deletes, so files the repo
+    # deleted (deleted_paths) and AppleDouble files go, and anything else not in the
+    # commit (outside build/ and out/) is listed.
+    deleted_paths | ssh "${SSH_OPTS[@]}" "$host" "cd $repo && n=0; \
+        while IFS= read -r f; do [ -f \"\$f\" ] && rm -f -- \"\$f\" && n=\$((n+1)); done; \
+        [ \$n -gt 0 ] && echo \"Removed \$n file(s) the repo has deleted\"; true" || return 1
     git -C "$REPO_ROOT" ls-tree -r --name-only "$COMMIT" \
         | ssh "${SSH_OPTS[@]}" "$host" "cd $repo && export LC_ALL=C && \
             m=\$(mktemp) && sort > \$m && skip='( -path ./build -o -path ./out ) -prune -o' && \
