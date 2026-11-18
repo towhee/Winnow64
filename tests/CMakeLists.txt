@@ -775,7 +775,9 @@ if(TARGET Winnow)
         # 200 s: the mutation steps start at half of this and must finish before the
         # generic self-test's own timer fires at the whole of it (MW::runSelfTest).
         # The steps take ~65 s on the Windows VM (timed 2026-10-29), so 120 s (60 s
-        # for the steps) failed there intermittently.
+        # for the steps) failed there intermittently. The run exits as soon as the
+        # steps finish rather than idling to 200 s, which on the emulated x86_64
+        # Linux VM had overrun TIMEOUT (3_beta7).
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen;WINNOW_SELFTEST_MUTATION=1;WINNOW_SELFTEST_MODELTEST=1;WINNOW_SELFTEST_MS=200000"
         PASS_REGULAR_EXPRESSION "SELFTEST: MUTATION PASS"
         FAIL_REGULAR_EXPRESSION "MUTATION FAIL|MODELINTEGRITY|ROWLOSS"

@@ -753,12 +753,18 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
             selfTestRotateStamp(loadPath);
         });
     }
+    /*  The settle exit, assigned at the end of this function. Held here so the mutation
+        test can end the run as soon as its steps are done: waiting out the rest of
+        settleMs idled ~100 s per run, and on the emulated x86_64 Linux VM that put
+        model_mutation past its ctest TIMEOUT (3_beta7). */
+    auto settleExit = std::make_shared<std::function<void()>>();
     if (mutation) {
         qputenv("WINNOW_SELFTEST_MUTATION_SRC", folderPath.toLocal8Bit());
-        QTimer::singleShot(settleMs / 2, this, [this, loadPath]() {
+        QTimer::singleShot(settleMs / 2, this, [this, loadPath, settleExit]() {
             QThreadPool::globalInstance()->waitForDone(30000);
             selfTestModelMutation(loadPath);
             QDir(loadPath).removeRecursively();
+            if (*settleExit) (*settleExit)();
         });
     }
 
@@ -951,7 +957,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         navTimer->start();
     }
 
-    QTimer::singleShot(settleMs, this, [this, folderPath, scanResult]() {
+    *settleExit = [this, folderPath, scanResult]() {
         const int rows = dm ? dm->rowCount() : 0;
         if (!qEnvironmentVariable("WINNOW_SELFTEST_CATALOG_QUERY").isNull()) {
             /*  The catalog load replaced the model; a run that ends with the
@@ -1032,7 +1038,8 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
         // in-flight queued signals to a half-destroyed MW (teardown assert). The
         // orderly shutdown path (window close) is not what this smoke test covers.
         std::_Exit(rows > 0 ? 0 : 2);
-    });
+    };
+    QTimer::singleShot(settleMs, this, [settleExit]() { (*settleExit)(); });
 }
 
 void MW::runDevelopStressTest(const QString &folderPath, int durationMs)
