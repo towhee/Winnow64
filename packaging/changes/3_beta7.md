@@ -1,3 +1,23 @@
-- Raw denoise restored on Mac.
-- Intel raw denoise and JPEG XL
-- Now macOS 13.4 minimum 
+- Change Filters group/flat buttons.
+- Basic > Auto could crash Winnow.
+- Develop editor scrolling now includes all panels.
+- Reject unpicked, clear picks option added.
+- In Develop presets make the Winnow category same for all users.
+- The loupe view not always refreshing.
+- Consolidated help doc with TOC.
+- Fix apple dng endian bug (malicious IRB chains).
+- Thumbnails were not always being regenerated.
+- Move files in Library by dragging thumbnails to the Filters folder category.
+- Crop and adjust crop for multiple images was awkward.
+- Catalog scan missing changes in folders.
+- Honor image aspect ratio precision, including cropping, when exporting.
+- Prevent table view scrolling to column zero when table sort.
+- Slider optional above | below layout.
+- Exposure rolloff for non-raw images.
+- Persistent brush settings.
+- Spot removal reference (repeat all spots on other images).
+- Rename, move and delete folders in Library filters.
+- Sync Browse/Develop workspaces.
+- Fix rotation changing sort order.
+- Improve crop workflow.
+- Auto + manual duplicates check in library.
