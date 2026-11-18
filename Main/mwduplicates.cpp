@@ -217,7 +217,8 @@ void MW::showDuplicateTwins()
 /*
     Show only the selected duplicates and their twins: the Filters "Duplicates of" item,
     in ONE filterChange that replaces every other filter, as a map pin click does -- it
-    means "show me these". Held as keys (DataModel::setDuplicateTwinKeys), so a sort or
+    means "show me these". The filters it replaced come back when it ends: the item
+    unchecked, or the set rebuilt under it after a trash (Filters::rememberStateBeforeTwins). Held as keys (DataModel::setDuplicateTwinKeys), so a sort or
     an insert cannot move it onto other images.
 
     A twin that is not loaded -- in another folder, with a folder open -- cannot be
@@ -256,6 +257,8 @@ void MW::showDuplicateTwins()
         if (dm->rowFromKey(k) >= 0) ++loaded;
 
     if (!G::allMetadataAttempted) loadEntireMetadataCache("FilterChange");
+    // put back when "Duplicates of" is unchecked or the set is rebuilt under it
+    filters->rememberStateBeforeTwins();
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");

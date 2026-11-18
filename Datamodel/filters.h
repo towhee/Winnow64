@@ -57,6 +57,7 @@ public:
     // QTreeWidgetItem *missingThumbs;
     QTreeWidgetItem *compare = nullptr;
     QTreeWidgetItem *duplicateTwins = nullptr;
+    QVariantMap stateBeforeTwins;       // persistableState; empty = none held
 
     QTreeWidgetItem *activeCategory = nullptr;   // category just filtered
 
@@ -277,6 +278,11 @@ public:
     void setDuplicateTwinsItem(int count, const QString &label);
     void clearDuplicateTwinsItem();
     bool isDuplicateTwinsFiltering() const;
+    /*  THE FILTERS IT REPLACED COME BACK when it ends -- the item unchecked
+        (itemClickedSignal), or the set rebuilt under it, a trash or a folder change
+        (save). MW::showDuplicateTwins calls this BEFORE clearing them; a second Show
+        while one is filtering keeps the first state. See Documentation.md 17.19.6. */
+    void rememberStateBeforeTwins();
     /*  The query an item tests, as text, or empty for an ordinary value item: the Search
         row's text for searchTrue/searchFalse (unless it is the placeholder), a Query
         item's QueryTextRole. Read by SortFilter::compileFilters. */

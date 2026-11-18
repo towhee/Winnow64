@@ -3150,6 +3150,12 @@ void Filters::setDuplicateTwinsItem(int count, const QString &label)
     activeCategory = duplicateTwins;
 }
 
+void Filters::rememberStateBeforeTwins()
+{
+    if (isDuplicateTwinsFiltering() && !stateBeforeTwins.isEmpty()) return;
+    stateBeforeTwins = persistableState();
+}
+
 void Filters::clearDuplicateTwinsItem()
 {
     if (!duplicateTwins || !duplicateTwins->childCount()) return;
@@ -3397,6 +3403,17 @@ void Filters::save()
     searchText = searchTrue->text(0);
     if (searchText == enterSearchString) searchText = "";
     searchCheckState = searchTrue->checkState(0);
+
+    /*  "DUPLICATES OF" DOES NOT SURVIVE A REBUILD -- reset() drops its session item --
+        so restoring its check put back nothing, and trashing a duplicate from it left
+        every filter cleared. The rebuild restores what it replaced instead. */
+    if (isDuplicateTwinsFiltering() && !stateBeforeTwins.isEmpty()) {
+        const QSet<QPair<QString, QString>> expanded = expandedStates;
+        locker.unlock();
+        setStateToRestore(std::exchange(stateBeforeTwins, {}));
+        locker.relock();
+        expandedStates = expanded;
+    }
 }
 
 QList<Filters::ItemState> Filters::checkedItemStates() const
@@ -5131,6 +5148,15 @@ void Filters::itemClickedSignal(QTreeWidgetItem *item, int column)
     if (item->checkState(0) == Qt::Checked) noteRangeAnchor(item);
 
     activeCategory = item->parent();
+
+    /*  "Duplicates of" unchecked: back to the filters Show Duplicates replaced
+        (rememberStateBeforeTwins), in this one filterChange. */
+    if (item->parent() == duplicateTwins && item->checkState(0) == Qt::Unchecked
+        && !stateBeforeTwins.isEmpty()) {
+        setStateToRestore(std::exchange(stateBeforeTwins, {}));
+        restore();
+        setEachCatTextColor();
+    }
     emit filterChange("Filters::itemClickedSignal");
 }
 
