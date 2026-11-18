@@ -321,6 +321,16 @@ public:
     /* Set one item to include (Qt::Checked), exclude (Qt::PartiallyChecked) or off, then
        restyle it and emit filterChange. The one way an item's filter state changes. */
     void setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state);
+    /*  Exclude each Folders row directly beneath folder, WITHOUT a filterChange: the
+        caller's setItemFilterState on folder emits the one change. Include folder plus
+        this = "this folder only" (Shift+Cmd+Opt+click). */
+    void excludeSubfolders(QTreeWidgetItem *folder);
+    /*  True when folder is in the "this folder only" state excludeSubfolders leaves:
+        included, and every folder directly in it excluded. */
+    bool isThisFolderOnly(QTreeWidgetItem *folder) const;
+    /*  Undo "this folder only": clear folder and the exclusions on the folders directly
+        in it, in ONE filterChange. The second Shift+Cmd+Opt+click. */
+    void clearThisFolderOnly(QTreeWidgetItem *folder);
 
     /* --- The Filter dock's shared-category interface (G::useFilterPanel) -----------
        The same tree renders both scopes: Folders from the datamodel via BuildFilters,
@@ -420,8 +430,9 @@ signals:
     void trashFolderRequested(const QString &folder);
     /*  Cmd/Ctrl+Opt/Alt+click on an item: show only that item. MW clears every other
         filter -- categories, search text, pick/rating/colour actions -- then includes
-        it. See MW::filterOnlyItem. */
-    void filterOnlyItemRequested(QTreeWidgetItem *item);
+        it. See MW::filterOnlyItem. With Shift on a Folders row, thisFolderOnly: the
+        folders inside it are excluded as well, so only its own images show. */
+    void filterOnlyItemRequested(QTreeWidgetItem *item, bool thisFolderOnly = false);
 
 public slots:
 
@@ -770,6 +781,12 @@ private:
        are already all included. False when there is no usable anchor in this category,
        which leaves the click to be handled as an ordinary one. */
     bool applyRangeCheck(QTreeWidgetItem *item);
+    /* The rows a Shift+click on item would range over, within its parent. False when
+       there is no usable anchor there. Shared by applyRangeCheck and the context menu. */
+    bool rangeRows(QTreeWidgetItem *item, int &first, int &last) const;
+    /* Every filterable child of cat in rows first..last is included, so a range over
+       them CLEARS rather than includes. */
+    bool rangeAllIncluded(QTreeWidgetItem *cat, int first, int last) const;
     /* mousePressEvent settled the state itself, so the matching release must not reach
        the base class: it would emit itemClicked and toggle the item a second time. */
     bool swallowNextRelease = false;

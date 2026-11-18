@@ -1476,8 +1476,9 @@ private slots:
         or keyword-list click. */
     void filterOnKeyword(const QString &path);
     /*  Clear every filter, then include this one Filters item. Cmd/Ctrl+Opt/Alt+click
-        in the Filters panel. */
-    void filterOnlyItem(QTreeWidgetItem *item);
+        in the Filters panel; with Shift on a Folders row, thisFolderOnly also excludes
+        the folders inside it. */
+    void filterOnlyItem(QTreeWidgetItem *item, bool thisFolderOnly = false);
     /*  A Map module pin click: the Filters "Map pin" category, set to these datamodel
         rows. See the definition. */
     void applyMapPinFilter(const QList<int> &dmRows, bool add);

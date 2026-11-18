@@ -982,12 +982,16 @@ void MW::filterOnKeyword(const QString &path)
     filterChange("MW::filterOnKeyword");
 }
 
-void MW::filterOnlyItem(QTreeWidgetItem *item)
+void MW::filterOnlyItem(QTreeWidgetItem *item, bool thisFolderOnly)
 {
 /*
     Show only the images matching this Filters item: every other filter -- categories,
     the search text, the pick/rating/colour actions -- is cleared, then the item is
     included. setItemFilterState emits the ONE filterChange.
+
+    thisFolderOnly (Shift+Cmd+Opt+click on a Folders row): the folders directly inside
+    it are excluded first, silently, so the one filterChange shows only the images in
+    the folder itself -- the include-plus-exclude-children LibTree's Opt+click uses.
 */
     if (G::isLogger) G::log("MW::filterOnlyItem");
     if (!filters || !dm || !item) return;
@@ -995,6 +999,7 @@ void MW::filterOnlyItem(QTreeWidgetItem *item)
     uncheckAllFilters();
     filters->searchString = "";
     dm->searchStringChange("");
+    if (thisFolderOnly) filters->excludeSubfolders(item);
     filters->setItemFilterState(item, Qt::Checked);
 }
 

@@ -13,6 +13,74 @@
 #include <QStyleFactory>
 #include <functional>
 
+/*  THE FOLDERS CLICKS, named once for the Folders header's tooltip table and the folder
+    row's context menu, so the two cannot disagree. Key names per platform. */
+#ifdef Q_OS_MAC
+static const QString kOpt = "Opt", kCmd = "Cmd";
+#else
+static const QString kOpt = "Alt", kCmd = "Ctrl";
+#endif
+namespace {
+struct FolderClick { QString keys; QString what; };
+QList<FolderClick> folderClicks()
+{
+    const QString solo = kCmd + "+" + kOpt + "+click";
+    return {
+        {"Click", "Include the folder and every folder in it"},
+        {kOpt + "+click", "Exclude the folder and every folder in it"},
+        {"Shift+click", "Include every folder from the last one checked to this one"},
+        {solo, "Only this folder and its subfolders; every other filter is cleared"},
+        {"Shift+" + solo, "Only this folder, not its subfolders; every other filter is "
+                          "cleared. Again to turn it off"},
+    };
+}
+
+QString folderClicksTable()
+{
+/*
+    THE CLICKS, AS A TABLE, on the Folders header and every folder row: five gestures do
+    not fit a sentence. Rich text: Qt renders a ruled <table> (border-collapse) in a
+    tooltip. The rules are secondaryTextColor, a grey that reads on the light and dark
+    tooltip backgrounds alike.
+*/
+    const QColor rule = G::secondaryTextColor.isValid() ? G::secondaryTextColor
+                                                        : QColor(128, 128, 128);
+    const QString cell = "style=\"border:1px solid " + rule.name()
+                         + "; padding:3px 8px; white-space:nowrap\"";
+    QString tip = "<table cellspacing=\"0\" style=\"border-collapse:collapse; "
+                  "border:1px solid " + rule.name() + "\">"
+                  "<tr><th " + cell + ">Click</th><th " + cell + ">What it does</th></tr>";
+    for (const FolderClick &c : folderClicks())
+        tip += "<tr><td " + cell + ">" + c.keys + "</td><td " + cell + ">" + c.what
+               + "</td></tr>";
+    return tip + "</table>";
+}
+
+class FolderItem : public QTreeWidgetItem
+{
+/*
+    A FOLDERS ROW, whose tooltip -- path, the drag hint in Library scope, then the click
+    table -- is made when asked for, not stored: a ~2 KB rich-text copy on each of a
+    Library's thousands of folder rows would be waste. It is answered through
+    ToolTipRole, not a viewportEvent override, because MW::eventFilter (a qApp filter)
+    takes every item-view ToolTip first, reads ToolTipRole and SWALLOWS the event when
+    it is empty -- an override never sees it.
+*/
+public:
+    using QTreeWidgetItem::QTreeWidgetItem;
+    QVariant data(int column, int role) const override
+    {
+        if (role != Qt::ToolTipRole) return QTreeWidgetItem::data(column, role);
+        const QString path = QTreeWidgetItem::data(1, Qt::EditRole).toString();
+        QString tip = "<p style=\"white-space:nowrap\">"
+                      + QDir::toNativeSeparators(path).toHtmlEscaped() + "</p>";
+        if (G::scope == G::Scope::Catalog)
+            tip += "<p>Drag thumbnails here to move them into this folder.</p>";
+        return tip + folderClicksTable() + "<p>Right-click for these as a menu.</p>";
+    }
+};
+}
+
 /*
     OVERVIEW
 
@@ -417,6 +485,7 @@ void Filters::createDynamicFilters()
     createFilter(labels, catLabel);
     createFilter(types, catType);
     createFilter(folders, catFolder);
+    folders->setToolTip(0, folderClicksTable());
     createFilter(collections, catCollection);
     createFilter(queries, catQuery);
     queries->setToolTip(0, tr("Your saved queries, from the Queries panel.\n"
@@ -1929,6 +1998,62 @@ void Filters::setItemFilterState(QTreeWidgetItem *item, Qt::CheckState state)
     emit filterChange("Filters::setItemFilterState");
 }
 
+void Filters::excludeSubfolders(QTreeWidgetItem *folder)
+{
+/*
+    "THIS FOLDER ONLY" IS NOT A NEW KIND OF FILTER. A Folders row matches its whole
+    subtree (G::FolderPathsAllColumn), so its own images alone are the row included and
+    each folder DIRECTLY in it excluded -- an exclusion covers everything beneath that
+    child. The panel then shows the filter truthfully, LibTree mirrors it, and it saves
+    and restores like any other check. No filterChange here: the caller's
+    setItemFilterState on folder emits the one change.
+*/
+    if (!folder || categoryOf(folder) != folders || isDriveItem(folder)) return;
+    if (G::isLogger) G::log("Filters::excludeSubfolders", folder->text(0));
+    for (int i = 0; i < folder->childCount(); ++i) {
+        QTreeWidgetItem *child = folder->child(i);
+        if (!isFilterableItem(child)) continue;
+        child->setCheckState(0, Qt::PartiallyChecked);
+        styleFilterItem(child);
+    }
+}
+
+bool Filters::isThisFolderOnly(QTreeWidgetItem *folder) const
+{
+/*
+    The state a Shift+Cmd+Opt+click leaves, so the same click can TOGGLE it off. Read
+    from the checks, not remembered: a restored filter, or one the user built by hand
+    (include the folder, Opt+click each child), is the same filter and toggles the same.
+    A folder with no subfolders only has to be included.
+*/
+    if (!folder || categoryOf(folder) != folders || isDriveItem(folder)) return false;
+    if (folder->checkState(0) != Qt::Checked) return false;
+    for (int i = 0; i < folder->childCount(); ++i) {
+        QTreeWidgetItem *child = folder->child(i);
+        if (isFilterableItem(child) && child->checkState(0) != Qt::PartiallyChecked)
+            return false;
+    }
+    return true;
+}
+
+void Filters::clearThisFolderOnly(QTreeWidgetItem *folder)
+{
+/*
+    The children are cleared silently; setItemFilterState on the folder emits the one
+    filterChange. Every other filter is left alone -- the first click already cleared
+    them, and anything added since is the user's.
+*/
+    if (!isThisFolderOnly(folder)) return;
+    if (G::isLogger) G::log("Filters::clearThisFolderOnly", folder->text(0));
+    for (int i = 0; i < folder->childCount(); ++i) {
+        QTreeWidgetItem *child = folder->child(i);
+        if (!isFilterableItem(child)) continue;
+        child->setCheckState(0, Qt::Unchecked);
+        styleFilterItem(child);
+    }
+    setItemFilterState(folder, Qt::Unchecked);
+}
+
 void Filters::resolveTypeGroup(QTreeWidgetItem *item)
 {
 /*
@@ -1997,35 +2122,11 @@ bool Filters::applyRangeCheck(QTreeWidgetItem *item)
     re-runs the filter over the datamodel, and a fifty-item range would re-run it fifty
     times to arrive at the same place.
 */
-    if (!isFilterableItem(item)) return false;
+    int first, last;
+    if (!rangeRows(item, first, last)) return false;
     QTreeWidgetItem *cat = item->parent();
-    if (cat == nullptr || cat != rangeAnchorCategory) return false;
-
-    int anchorRow = -1;
-    for (int i = 0; i < cat->childCount(); i++) {
-        if (cat->child(i)->text(0) == rangeAnchorItem) {
-            anchorRow = i;
-            break;
-        }
-    }
-    /* The anchor item is gone -- the category was rebuilt since it was checked. Nothing
-       to range from, so the caller treats this as an ordinary click. */
-    if (anchorRow == -1) return false;
-
-    const int clickedRow = cat->indexOfChild(item);
-    const int first = qMin(anchorRow, clickedRow);
-    const int last = qMax(anchorRow, clickedRow);
-
-    bool allChecked = true;
-    for (int i = first; i <= last; i++) {
-        QTreeWidgetItem *child = cat->child(i);
-        if (!isFilterableItem(child)) continue;
-        if (child->checkState(0) != Qt::Checked) {
-            allChecked = false;
-            break;
-        }
-    }
-    const Qt::CheckState state = allChecked ? Qt::Unchecked : Qt::Checked;
+    const Qt::CheckState state = rangeAllIncluded(cat, first, last) ? Qt::Unchecked
+                                                                     : Qt::Checked;
 
     for (int i = first; i <= last; i++) {
         QTreeWidgetItem *child = cat->child(i);
@@ -2063,6 +2164,38 @@ void Filters::setKeywordCategoryToolTip()
     /*  The per-item tooltips are set by addKeywordItems as each node is built, because a
         nested item's tooltip carries its full PATH -- which is how two keywords sharing a
         leaf are told apart in a tree that shows only leaves. */
+}
+
+bool Filters::rangeRows(QTreeWidgetItem *item, int &first, int &last) const
+{
+    if (!isFilterableItem(item)) return false;
+    QTreeWidgetItem *cat = item->parent();
+    if (cat == nullptr || cat != rangeAnchorCategory) return false;
+
+    int anchorRow = -1;
+    for (int i = 0; i < cat->childCount(); i++) {
+        if (cat->child(i)->text(0) == rangeAnchorItem) {
+            anchorRow = i;
+            break;
+        }
+    }
+    /* The anchor item is gone -- the category was rebuilt since it was checked. Nothing
+       to range from, so the caller treats this as an ordinary click. */
+    if (anchorRow == -1) return false;
+
+    const int clickedRow = cat->indexOfChild(item);
+    first = qMin(anchorRow, clickedRow);
+    last = qMax(anchorRow, clickedRow);
+    return true;
+}
+
+bool Filters::rangeAllIncluded(QTreeWidgetItem *cat, int first, int last) const
+{
+    for (int i = first; i <= last; i++) {
+        QTreeWidgetItem *child = cat->child(i);
+        if (isFilterableItem(child) && child->checkState(0) != Qt::Checked) return false;
+    }
+    return true;
 }
 
 void Filters::contextMenuEvent(QContextMenuEvent *event)
@@ -2160,9 +2293,48 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         menu.addSeparator();
     }
 
-    QAction *inc = menu.addAction("Include");
-    QAction *exc = menu.addAction("Exclude");
-    QAction *only = menu.addAction("Filter only this");
+    /*  A FOLDERS ROW GETS EVERY FOLDER CLICK BY NAME, each with its gesture in the
+        shortcut column (text after a tab: a label, not a key binding), so the menu
+        teaches the clicks the header's tooltip table lists (folderClicks). The range
+        and "this folder only" are folder-only here: elsewhere the range is still a
+        Shift+click, and Shift adds nothing to the solo. */
+    const bool isFolder = root == folders && !isDriveItem(item);
+    const QList<FolderClick> clicks = folderClicks();
+    auto label = [&](const QString &text, int click) {
+        return isFolder ? text + "\t" + clicks.at(click).keys : text;
+    };
+    QAction *inc = menu.addAction(label("Include", 0));
+    QAction *exc = menu.addAction(label("Exclude", 1));
+    QAction *range = nullptr;
+    QAction *only = menu.addAction(label(isFolder ? "Only this folder and its subfolders"
+                                                  : "Filter only this", 3));
+    QAction *folderOnly = nullptr;
+    int rangeFirst = -1, rangeLast = -1;
+    if (isFolder) {
+        range = new QAction(&menu);
+        menu.insertAction(only, range);
+        // the anchor IS this folder: a range of one is no range
+        if (rangeRows(item, rangeFirst, rangeLast) && rangeFirst != rangeLast) {
+            const bool clears = rangeAllIncluded(item->parent(), rangeFirst, rangeLast);
+            range->setText(label(clears ? "Clear from last checked to here"
+                                        : "Include from last checked to here", 2));
+        }
+        else {
+            range->setText(label("Include from last checked to here - "
+                                 "check a folder beside it first", 2));
+            range->setEnabled(false);
+            range->setToolTip("A range runs from the folder last checked to this one, "
+                              "among the folders at this level. Check one of them first.");
+        }
+        folderOnly = menu.addAction(label("Only this folder, not its subfolders", 4));
+        folderOnly->setCheckable(true);
+        folderOnly->setChecked(isThisFolderOnly(item));
+        folderOnly->setToolTip(folderOnly->isChecked()
+            ? "Showing only the images in this folder. Choose again to turn it off."
+            : "Show only the images directly in this folder, not those in the folders "
+              "inside it. Every other filter is cleared.");
+        menu.setToolTipsVisible(true);
+    }
     QAction *clr = menu.addAction("Clear");
     inc->setCheckable(true);
     exc->setCheckable(true);
@@ -2181,6 +2353,11 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     if (chosen == inc)      setItemFilterState(item, Qt::Checked);
     else if (chosen == exc) setItemFilterState(item, Qt::PartiallyChecked);
     else if (chosen == only) emit filterOnlyItemRequested(item);
+    else if (range != nullptr && chosen == range) applyRangeCheck(item);
+    else if (folderOnly != nullptr && chosen == folderOnly) {
+        if (isThisFolderOnly(item)) clearThisFolderOnly(item);
+        else emit filterOnlyItemRequested(item, true);
+    }
     else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
     else if (merge != nullptr && chosen == merge)
         emit mergeUnfiledKeyword(item->data(1, Qt::EditRole).toString());
@@ -3857,8 +4034,8 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
                                       ? driveByRoot.value(driveOf.value(n.path), category)
                                       : byPath.value(n.parent, category);
         const bool parentIsNew = created.contains(parent);
-        QTreeWidgetItem *node = parentIsNew ? new QTreeWidgetItem(parent)
-                                            : new QTreeWidgetItem();
+        QTreeWidgetItem *node = parentIsNew ? new FolderItem(parent)
+                                            : new FolderItem();
         if (!parentIsNew) {
             if (!pending.contains(parent)) attachOrder << parent;
             pending[parent] << node;
@@ -3875,12 +4052,7 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
         node->setData(3, Qt::EditRole, count);
         node->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
         node->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
-        QString tip = QString("%1\n\nClick to include this folder and every folder "
-                              "in it. Opt+click to exclude.")
-                          .arg(QDir::toNativeSeparators(n.path));
-        if (G::scope == G::Scope::Catalog)
-            tip += "\nDrag thumbnails here to move them into this folder.";
-        node->setToolTip(0, tip);
+        // no stored tooltip: FolderItem::data makes it (path + click table) on hover
         applyItemStyle(node);       // never a header, and may not have a parent yet
         byPath.insert(n.path, node);
     }
@@ -5261,9 +5433,14 @@ void Filters::mousePressEvent(QMouseEvent *event)
             a SECOND time over the whole model, which is filtration the user waits for
             twice to arrive where they already were. */
         /* Cmd/Ctrl+Opt/Alt+click SOLOS the item: it alone is included and every other
-           filter is cleared. Checked before plain Opt+click, which excludes. */
+           filter is cleared. Checked before plain Opt+click, which excludes. With Shift
+           on a Folders row it is THIS FOLDER ONLY: the folders inside it are excluded
+           too (Filters::excludeSubfolders), and the same click again TOGGLES it off
+           (clearThisFolderOnly). Elsewhere Shift adds nothing. */
         if (isAltModifier && isCtrlModifier) {
-            emit filterOnlyItemRequested(item);
+            const bool folderOnly = isShiftModifier && categoryOf(item) == folders;
+            if (folderOnly && isThisFolderOnly(item)) clearThisFolderOnly(item);
+            else emit filterOnlyItemRequested(item, folderOnly);
             swallowNextRelease = true;
             return;
         }
