@@ -311,6 +311,10 @@ struct DuplicateRow
     qint64 srcMtime = 0;
     QByteArray pixelHash;
     qint64 durationMs = kNoDuration;
+    /*  What a copy carries that the fingerprint ignores -- so the user can tell which
+        twin to keep. Read by duplicateFingerprinted only (kDuplicateExtras). */
+    bool developed = false;
+    int versions = 0;
 };
 
 class Catalog

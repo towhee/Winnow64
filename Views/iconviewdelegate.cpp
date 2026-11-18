@@ -681,11 +681,39 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
             /*  WHICH ones -- a twin can be scrolled away or in another folder, where the
                 inverted badges (paint) cannot show it. */
             const QStringList twins = Duplicates::instance().twinsOf(key);
+            /*  WHAT EACH COPY CARRIES that the match ignores -- develop edits, versions --
+                so the user can see which one to keep before trashing one (a trash takes
+                the versions with it). The loaded row's live values; the index's, as of the
+                last rebuild, for a twin that is not loaded. */
+            auto carries = [this](const QString &path) {
+                bool developed;
+                int versions;
+                const int dmRow = dm ? dm->rowFromKey(path) : -1;
+                if (dmRow >= 0) {
+                    developed = dm->index(dmRow, G::DevelopColumn).data().toBool();
+                    versions = int(dm->versionKeysOf(path).size());
+                } else {
+                    const DuplicateInfo t = Duplicates::instance().infoOf(path);
+                    developed = t.developed;
+                    versions = t.versions;
+                }
+                QStringList parts;
+                if (developed) parts << "developed";
+                if (versions > 0)
+                    parts << (versions == 1 ? QString("1 version")
+                                            : QString("%1 versions").arg(versions));
+                return parts.join(", ");
+            };
+            const QString mine = carries(key);
+            if (!mine.isEmpty()) tooltip += "\n\nThis copy: " + mine + ".";
             constexpr int kMaxListed = 8;
             if (!twins.isEmpty()) {
                 tooltip += "\n\nDuplicate of:";
-                for (int i = 0; i < twins.size() && i < kMaxListed; ++i)
+                for (int i = 0; i < twins.size() && i < kMaxListed; ++i) {
                     tooltip += "\n  " + QDir::toNativeSeparators(twins.at(i));
+                    const QString theirs = carries(twins.at(i));
+                    if (!theirs.isEmpty()) tooltip += "  (" + theirs + ")";
+                }
                 if (twins.size() > kMaxListed)
                     tooltip += QString("\n  ... and %1 more").arg(twins.size() - kMaxListed);
             }

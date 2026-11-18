@@ -36,6 +36,7 @@ private slots:
     void noFingerprintIsInNoGroup();
     void videosMatchOnDuration();
     void groupIdsSayWhichAreTwins();
+    void whatACopyCarriesIsKept();
 
     // the video fingerprint
     void durationFromMvhdVersion0();
@@ -47,6 +48,7 @@ private slots:
     void candidatesForAKeyIncludeItsMates();
     void aContentChangeClearsTheFingerprintASidecarChangeDoesNot();
     void theHooksHearInsertsAndDeletes();
+    void fingerprintedRowsSayDevelopedAndVersions();
     void schema32IsRerunnable();
 
 private:
@@ -254,6 +256,21 @@ void tst_duplicates::groupIdsSayWhichAreTwins()
     QCOMPARE(ok.value("/copy/1.arw").group, 1);
 }
 
+void tst_duplicates::whatACopyCarriesIsKept()
+{
+    /*  Edits and versions do not split a group -- the match ignores them -- but each
+        copy's own are carried, so the tooltip can say which twin to keep. */
+    DuplicateRow edited = row("/a/1.arw", 100, "arw", kHashA);
+    edited.developed = true;
+    edited.versions = 2;
+    const auto st = classifyDuplicates({edited, row("/b/1.arw", 100, "arw", kHashA)}, {});
+    QCOMPARE(st.size(), 2);
+    QVERIFY(st.value("/a/1.arw").developed);
+    QCOMPARE(st.value("/a/1.arw").versions, 2);
+    QVERIFY(!st.value("/b/1.arw").developed);
+    QCOMPARE(st.value("/b/1.arw").versions, 0);
+}
+
 void tst_duplicates::videosMatchOnDuration()
 {
     const QVector<DuplicateRow> rows = {row("/a/1.mov", 100, "mov", QByteArray(), 12345),
@@ -358,6 +375,26 @@ void tst_duplicates::aContentChangeClearsTheFingerprintASidecarChangeDoesNot()
     cat.setDuplicateFingerprints(stale);
     for (const DuplicateRow &r : cat.duplicateFingerprinted())
         QVERIFY2(r.path != b.path, "a stale fingerprint was stored");
+}
+
+void tst_duplicates::fingerprintedRowsSayDevelopedAndVersions()
+{
+    Catalog &cat = Catalog::instance();
+    CatalogRow a = catalogRow("v1.arw", 6000), b = catalogRow("v2.arw", 6000);
+    a.developed = true;
+    VersionSummary v1, v2;
+    v1.id = 1;
+    v2.id = 2;
+    a.versions = {v1, v2};
+    QCOMPARE(cat.commit({a, b}), 2);
+    QVector<DuplicateRow> c = cat.duplicateCandidates();
+    QCOMPARE(c.size(), 2);
+    for (DuplicateRow &r : c) r.pixelHash = kHashA;
+    QCOMPARE(cat.setDuplicateFingerprints(c), 2);
+    for (const DuplicateRow &r : cat.duplicateFingerprinted()) {
+        QCOMPARE(r.developed, r.path == a.path);
+        QCOMPARE(r.versions, r.path == a.path ? 2 : 0);
+    }
 }
 
 void tst_duplicates::theHooksHearInsertsAndDeletes()

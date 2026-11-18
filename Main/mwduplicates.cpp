@@ -252,6 +252,18 @@ void MW::showDuplicateTwins()
         updateDuplicateOkAction();
         return;
     }
+    /*  The FILES are the duplicates; how many are not loaded is counted on them. Their
+        VERSIONS come too, groups opened, so the filtered view shows everything a trash
+        of one copy would take with it (FileOps warns, but only once deleting). */
+    const QSet<QString> files = keys;
+    int notLoaded = 0;
+    for (const QString &k : files) {
+        if (dm->rowFromKey(k) < 0) { ++notLoaded; continue; }
+        const QStringList versions = dm->versionKeysOf(k);
+        if (versions.isEmpty()) continue;
+        for (const QString &v : versions) keys.insert(v);
+        dm->sf->setVersionsExpanded(k, true);
+    }
     int loaded = 0;
     for (const QString &k : std::as_const(keys))
         if (dm->rowFromKey(k) >= 0) ++loaded;
@@ -269,7 +281,7 @@ void MW::showDuplicateTwins()
     filters->setDuplicateTwinsItem(loaded, label);
     filterChange("MW::showDuplicateTwins");
 
-    const int elsewhere = int(keys.size()) - loaded;
+    const int elsewhere = notLoaded;
     if (elsewhere > 0 && G::popup)
         G::popup->showPopup(tr("%n twin(s) are not in what is loaded. Hover a red badge "
                                "to see where they are, or browse the Library to show "

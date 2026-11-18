@@ -18,6 +18,7 @@
 #include <QRegularExpression>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QSqlRecord>
 #include <QStandardPaths>
 #include <QTimeZone>
 #include <QVariant>
@@ -2607,6 +2608,11 @@ constexpr const char *kDuplicateCols =
     "i.pathkey, i.path, i.captured, i.ext, i.width, i.height, i.srcsize, i.srcmtime,"
     " i.pixelhash, i.duration_ms";
 /*  What takes part at all: a live, readable row with a capture time. */
+/*  duplicateFingerprinted's extra columns: the develop flag and the version count. Not
+    in the candidate queries, which would pay a correlated count per candidate for
+    nothing; the count is a probe of image_version's primary key. */
+constexpr const char *kDuplicateExtras =
+    ", i.developed, (SELECT COUNT(*) FROM image_version v WHERE v.image_id = i.id)";
 constexpr const char *kDuplicateEligible =
     "i.live = 1 AND i.unreadable = 0 AND i.captured IS NOT NULL";
 }
@@ -2614,6 +2620,7 @@ constexpr const char *kDuplicateEligible =
 QVector<DuplicateRow> Catalog::readDuplicateRowsLocked(QSqlQuery &q)
 {
     QVector<DuplicateRow> out;
+    const bool hasExtras = q.record().count() >= 12;     // kDuplicateExtras
     while (q.next()) {
         DuplicateRow r;
         r.pathkey = q.value(0).toString();
@@ -2627,6 +2634,10 @@ QVector<DuplicateRow> Catalog::readDuplicateRowsLocked(QSqlQuery &q)
         r.pixelHash = q.value(8).toByteArray();
         r.durationMs = q.value(9).isNull() ? DuplicateRow::kNoDuration
                                            : q.value(9).toLongLong();
+        if (hasExtras) {
+            r.developed = q.value(10).toInt() != 0;
+            r.versions = q.value(11).toInt();
+        }
         out << r;
     }
     return out;
@@ -2707,9 +2718,9 @@ QVector<DuplicateRow> Catalog::duplicateFingerprinted()
     QSqlQuery q(db);
     /*  The fingerprint term spelled exactly as image_fingerprinted's WHERE, which is
         what lets SQLite use the partial index. */
-    q.prepare(QString("SELECT %1 FROM image i"
-                      " WHERE (pixelhash IS NOT NULL OR duration_ms IS NOT NULL) AND %2")
-                  .arg(kDuplicateCols, kDuplicateEligible));
+    q.prepare(QString("SELECT %1%2 FROM image i"
+                      " WHERE (pixelhash IS NOT NULL OR duration_ms IS NOT NULL) AND %3")
+                  .arg(kDuplicateCols, kDuplicateExtras, kDuplicateEligible));
     if (!q.exec()) return {};
     return readDuplicateRowsLocked(q);
 }

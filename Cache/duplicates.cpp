@@ -355,7 +355,9 @@ void Duplicates::start()
                                     for (auto it = status.cbegin(); it != status.cend(); ++it) {
                                         const DuplicateInfo o = statusByPath.value(it.key());
                                         if (o.status != it->status || o.twins != it->twins
-                                            || o.group != it->group)
+                                            || o.group != it->group
+                                            || o.developed != it->developed
+                                            || o.versions != it->versions)
                                             return true;
                                     }
                                     return false;

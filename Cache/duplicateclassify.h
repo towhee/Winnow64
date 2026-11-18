@@ -46,6 +46,10 @@ struct DuplicateInfo
     int twins = 0;              // other images in the group
     int group = 0;              // >= 1, shared by every image in the group
     bool video = false;         // matched on duration rather than pixels
+    /*  As the index had it at the last rebuild (DuplicateRow). The badge tooltip prefers
+        the loaded row's live values; these answer for a twin that is not loaded. */
+    bool developed = false;
+    int versions = 0;
 };
 
 struct DuplicateCounts
@@ -103,6 +107,8 @@ inline QHash<QString, DuplicateInfo> classifyDuplicates(const QVector<DuplicateR
             info.twins = int(members.size()) - 1;
             info.group = g + 1;
             info.video = r.pixelHash.size() < 8;
+            info.developed = r.developed;
+            info.versions = r.versions;
             if (info.status == DuplicateStatus::Duplicate) { ++c.found; anyRed = true; }
             else ++c.okayed;
             out.insert(r.path, info);
