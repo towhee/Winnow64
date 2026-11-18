@@ -2850,6 +2850,17 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 folder = QFileInfo(path).fileName()
             */
 
+            /*  ThumbView: the image under the click, for Sync Filters>Folder. Empty
+                when the click is between thumbnails (the slot then uses the current
+                image). */
+            if (obj == thumbView->viewport()) {
+                QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
+                const QModelIndex idx = thumbView->indexAt(e->pos());
+                contextThumbPath = idx.isValid()
+                    ? idx.sibling(idx.row(), 0).data(G::SourcePathRole).toString()
+                    : QString();
+            }
+
             // FSTree
             if (obj == fsTree->viewport()) {
                 QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
@@ -19589,6 +19600,33 @@ void MW::revealFileFromContext()
 {
     if (G::isLogger) G::log("MW::revealFileFromContext");
     revealInFileBrowser(mouseOverFolderPath);
+}
+
+void MW::syncFiltersFolder()
+{
+/*
+    Go > Sync Filters>Folder, and the same item in the thumbnail context menu. Library
+    only (updateLibraryOnlyActions hides it in Folders). Opens the Filters panel and
+    expands its Folders category to the folder holding the image: the one right-clicked
+    (contextThumbPath, set in MW::eventFilter), else the current image.
+*/
+    if (G::isLogger) G::log("MW::syncFiltersFolder");
+    QString path = contextThumbPath;
+    contextThumbPath.clear();
+    if (path.isEmpty() && dm && dm->sf && dm->currentSfRow >= 0)
+        path = dm->sf->index(dm->currentSfRow, 0).data(G::SourcePathRole).toString();
+    if (path.isEmpty()) {
+        G::popup->showPopup("Sync Filters>Folder: no image to sync to.", 2000);
+        return;
+    }
+    if (!filterDock->isVisible()) {
+        filterDock->setVisible(true);
+        filterDockVisibleAction->setChecked(true);
+    }
+    filterDock->raise();
+    QString reason;
+    if (!filters->syncToFolder(QFileInfo(path).absolutePath(), reason))
+        G::popup->showPopup("Sync Filters>Folder: " + reason + ".", 2500);
 }
 
 void MW::revealInFileBrowser(QString path)

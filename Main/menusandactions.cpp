@@ -910,6 +910,15 @@ void MW::createGoActions()
     addAction(keyScrollCurrentAction);
     connect(keyScrollCurrentAction, &QAction::triggered, this, &MW::keyScrollCurrent);
 
+    /* Library only: hidden in Folders by updateLibraryOnlyActions. */
+    syncFiltersFolderAction = new QAction(tr("Sync Filters>Folder"), this);
+    syncFiltersFolderAction->setObjectName("syncFiltersFolder");
+    syncFiltersFolderAction->setShortcutVisibleInContextMenu(true);
+    syncFiltersFolderAction->setToolTip(tr("Expand the Filters panel's Folders category "
+                                           "to the folder holding this image."));
+    addAction(syncFiltersFolderAction);
+    connect(syncFiltersFolderAction, &QAction::triggered, this, &MW::syncFiltersFolder);
+
     // Not a menu item - used by slide show
     randomImageAction = new QAction(tr("Random"), this);
     randomImageAction->setObjectName("randomImage");
@@ -2871,6 +2880,9 @@ void MW::createGoMenu()
     goGroupAct->setMenu(goMenu);
     goMenu->addAction(gotoFolderAction);
     goMenu->addAction(jumpAction);
+    goMenu->addAction(syncFiltersFolderAction);
+    /* From the Go menu it is the CURRENT image, not one right-clicked earlier. */
+    connect(goMenu, &QMenu::aboutToShow, this, [this] { contextThumbPath.clear(); });
     goMenu->addSeparator();
     // moved to MW::eventFilter
     goMenu->addAction(keyRightAction);
@@ -3577,6 +3589,7 @@ void MW::createThumbViewContextMenu()
 
     thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);
+    thumbViewActions->append(syncFiltersFolderAction);
     thumbViewActions->append(openWithGroupAct);
     thumbViewActions->append(embelExportGroupAct);
     thumbViewActions->append(focusStackAction);

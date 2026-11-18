@@ -826,6 +826,9 @@ void MW::updateLibraryOnlyActions()
     deleteActiveFolderAction->setProperty("disabledReason",
         QString("in the Library, right-click the folder in the Filters panel instead"));
     deleteActiveFolderAction->setEnabled(!library);
+    /*  SYNC FILTERS>FOLDER IS HIDDEN, not greyed, in Folders (user request): there the
+        Folders panel already shows the folder. */
+    if (syncFiltersFolderAction) syncFiltersFolderAction->setVisible(library);
     // not G::trash: setupPlatform sets it after createActions has called this
 #ifdef Q_OS_WIN
     const QString bin = tr("recycle bin");

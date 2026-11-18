@@ -363,6 +363,7 @@ void MW::createDataModel()
     connect(filters, &Filters::moveImagesToFolderRequested, this, &MW::moveImagesToFolder);
     // Library: a Folders row's Rename / Move / Move to trash (Filters::addFolderActions)
     connect(filters, &Filters::renameFolderRequested, this, &MW::renameLibraryFolder);
+    connect(filters, &Filters::revealFolderRequested, this, &MW::revealInFileBrowser);
     connect(filters, &Filters::moveFolderRequested, this, &MW::moveLibraryFolder);
     connect(filters, &Filters::trashFolderRequested, this, &MW::trashLibraryFolder);
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);

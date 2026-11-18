@@ -2298,10 +2298,58 @@ QAction *Filters::addUnfiledAction(QMenu &menu)
     return a;
 }
 
+bool Filters::syncToFolder(const QString &folder, QString &reason)
+{
+/*
+    Show the image's folder in the Folders category: expand every row above it and
+    scroll it to the centre. The tree is NoSelection, so the row is not selected -- it
+    is put in view, and its checkbox is left alone (this is navigation, not filtering).
+
+    THE DEEPEST ROW AT OR ABOVE THE FOLDER, not only an exact match. Rows are built
+    from folders that hold images, so the image's own folder is normally there; a
+    deeper match is preferred over its ancestors, and an ancestor is the fallback while
+    the category is mid-rebuild.
+*/
+    if (G::isLogger) G::log("Filters::syncToFolder", folder);
+    reason.clear();
+    if (!folders || folder.isEmpty()) {
+        reason = "no folder";
+        return false;
+    }
+    if (buildingFilters) {
+        reason = "the filters are still being built";
+        return false;
+    }
+    const QString target = FolderTree::normalize(folder);
+    QTreeWidgetItem *best = nullptr;
+    int bestLen = -1;
+    for (QTreeWidgetItem *item : itemsInCategory(folders)) {
+        const QString p = item->data(1, Qt::EditRole).toString();
+        if (p.isEmpty()) continue;
+        const QString n = FolderTree::normalize(p);
+        if (n.length() <= bestLen || !FolderTree::isAtOrUnder(target, n)) continue;
+        best = item;
+        bestLen = n.length();
+        if (n == target) break;
+    }
+    if (!best) {
+        reason = "the folder is not in the Folders filter";
+        return false;
+    }
+    if (best->isHidden()) {
+        reason = "the folder is hidden by the Filters search";
+        return false;
+    }
+    for (QTreeWidgetItem *p = best->parent(); p; p = p->parent()) p->setExpanded(true);
+    scrollToItem(best, QAbstractItemView::PositionAtCenter);
+    return true;
+}
+
 Filters::FolderActions Filters::addFolderActions(QMenu &menu, QTreeWidgetItem *item)
 {
 /*
-    ONLY IN LIBRARY SCOPE. There the Folders category is the user's real folder tree and
+    REVEAL IN BOTH SCOPES; RENAME / MOVE / TRASH ONLY IN LIBRARY SCOPE. There the Folders
+    category is the user's real folder tree and
     the Source panel shows LibTree, not the FSTree whose context menu has these for
     Folders scope -- so without them a folder in the Library could not be renamed,
     moved or deleted from anywhere in Winnow. In Folders scope the category lists only
@@ -2312,14 +2360,38 @@ Filters::FolderActions Filters::addFolderActions(QMenu &menu, QTreeWidgetItem *i
     is renamed or ejected by the system, not by moving a directory.
 */
     FolderActions fa;
-    if (G::scope != G::Scope::Catalog || !folders || !item) return fa;
+    if (!folders || !item) return fa;
     if (isDriveItem(item) || !isFilterItem(item) || categoryOf(item) != folders) return fa;
     const QString path = item->data(1, Qt::EditRole).toString();
     if (path.isEmpty()) return fa;
     fa.path = path;
+    const QFileInfo info(path);
+    const QString name = info.fileName();
+
+    /*  REVEAL, IN EITHER SCOPE. It changes nothing on disk, so neither a load in
+        progress nor a whole-drive row stops it -- only a folder that is not there. */
+    menu.addSeparator();
+    #if defined(Q_OS_WIN)
+    fa.reveal = menu.addAction("Show folder in Explorer");
+    #elif defined(Q_OS_MAC)
+    fa.reveal = menu.addAction("Reveal folder in Finder");
+    #else
+    fa.reveal = menu.addAction("Show folder in File Manager");
+    #endif
+    if (!info.isDir()) {
+        fa.reveal->setEnabled(false);
+        fa.reveal->setText(fa.reveal->text() + " - folder not available");
+        fa.reveal->setToolTip(QDir::toNativeSeparators(path) + " is not on disk. If it "
+                              "is on a drive that is not connected, connect the drive "
+                              "first.");
+    }
+    else {
+        fa.reveal->setToolTip("Open \"" + name + "\" in the system file browser.");
+    }
+    menu.setToolTipsVisible(true);
+    if (G::scope != G::Scope::Catalog) return fa;
 
     QString reason, tip;
-    const QFileInfo info(path);
     /*  Its own busy test, not contextMenuEvent's `ready`: that one is always true for
         categories built from the catalog, which the Library's are, and a folder must
         not move while the model is being filled from it. */
@@ -2341,8 +2413,6 @@ Filters::FolderActions Filters::addFolderActions(QMenu &menu, QTreeWidgetItem *i
         }
     }
 
-    const QString name = info.fileName();
-    menu.addSeparator();
     fa.rename = menu.addAction("Rename folder...");
     fa.move = menu.addAction("Move folder...");
     fa.trash = menu.addAction("Move folder to " + G::trash);
@@ -2369,9 +2439,10 @@ bool Filters::runFolderAction(const FolderActions &fa, QAction *chosen)
 {
     if (!chosen || fa.path.isEmpty()) return false;
     void (Filters::*request)(const QString &) = nullptr;
-    if (chosen == fa.rename)     request = &Filters::renameFolderRequested;
-    else if (chosen == fa.move)  request = &Filters::moveFolderRequested;
-    else if (chosen == fa.trash) request = &Filters::trashFolderRequested;
+    if (chosen == fa.reveal)      request = &Filters::revealFolderRequested;
+    else if (chosen == fa.rename) request = &Filters::renameFolderRequested;
+    else if (chosen == fa.move)   request = &Filters::moveFolderRequested;
+    else if (chosen == fa.trash)  request = &Filters::trashFolderRequested;
     if (!request) return false;
     const QString path = fa.path;
     QMetaObject::invokeMethod(this, [this, request, path] { emit (this->*request)(path); },

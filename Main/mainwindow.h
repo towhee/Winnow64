@@ -1770,6 +1770,7 @@ private slots:
     void revealLogFile();
     void revealFile();
     void revealFileFromContext();
+    void syncFiltersFolder();
     void createFolderFromContext();
     void revealInFileBrowser(QString path);
     void openInFinder();
@@ -2081,6 +2082,7 @@ private:
     QAction *keyScrollHomeAction;
     QAction *keyScrollEndAction;
     QAction *keyScrollCurrentAction;
+    QAction *syncFiltersFolderAction = nullptr;     // Library only: updateLibraryOnlyActions
 
     QAction *nextPickAction;
     QAction *prevPickAction;
@@ -3548,6 +3550,8 @@ private:
     int prevCentralView;
     QString mouseOverFolderPath;        // current mouseover folder in folder dock used
                                     // in context menu to eject usb drives
+    // the image right-clicked in thumbView (MW::eventFilter); cleared when Go opens
+    QString contextThumbPath;
 
     QString rating = "";
     QString colorClass = "";

@@ -414,6 +414,8 @@ signals:
         move or trash that real folder. MW asks, does it and refreshes -- see
         MW::renameLibraryFolder, MW::moveLibraryFolder, MW::trashLibraryFolder. */
     void renameFolderRequested(const QString &folder);
+    // a Folders row's Reveal (either scope): MW::revealInFileBrowser
+    void revealFolderRequested(const QString &folder);
     void moveFolderRequested(const QString &folder);
     void trashFolderRequested(const QString &folder);
     /*  Cmd/Ctrl+Opt/Alt+click on an item: show only that item. MW clears every other
@@ -423,6 +425,10 @@ signals:
 
 public slots:
 
+    /*  Go > Sync Filters>Folder: expand the Folders category down to the row for folder
+        (or the deepest row above it) and scroll it to the centre. False, with reason,
+        when there is no row to show. See MW::syncFiltersFolder. */
+    bool syncToFolder(const QString &folder, QString &reason);
     bool isAnyFilter();
     bool isAnyFilterBut(const QTreeWidgetItem *category);
     void setEachCatTextColor();
@@ -724,13 +730,15 @@ private:
     QAction *addUnfiledAction(QMenu &menu);
     /*  "Match all checked keywords", appended beside the unfiled toggle. */
     QAction *addKeywordModeAction(QMenu &menu);
-    /*  Rename / Move / Move to trash, on a Folders row in Library scope -- where the
+    /*  Reveal in Finder/Explorer/File Manager, on any Folders row in either scope; then
+        Rename / Move / Move to trash, on a Folders row in Library scope only -- where the
         category is the user's real folder tree and the Source panel's FSTree, which has
         these for Folders scope, is not showing. Each is DISABLED WITH THE REASON when
         it cannot run (the Library is loading, the folder's drive is not connected, the
-        row is a whole drive). An empty struct when the row is not a Library folder. */
+        row is a whole drive). An empty struct when the row is not a folder. */
     struct FolderActions {
         QString path;
+        QAction *reveal = nullptr;
         QAction *rename = nullptr;
         QAction *move = nullptr;
         QAction *trash = nullptr;
