@@ -209,7 +209,12 @@ QString categorySql(int dmColumn)
     switch (dmColumn) {
     case G::RatingColumn:     expr = "CASE WHEN i.rating > 0 THEN CAST(i.rating AS TEXT)"
                                      " ELSE '' END"; break;
-    case G::LabelColumn:      expr = "i.label"; break;
+    /* Another application's label ("Winner") is no Winnow color class: it groups into
+       and is matched by the blank item, as FilterCategory::knownValues does in the
+       datamodel. G::labelColors are fixed words with no quote in them. */
+    case G::LabelColumn:      expr = "CASE WHEN i.label IN ('"
+                                     + G::labelColors.join("','")
+                                     + "') THEN i.label ELSE '' END"; break;
     case G::PickColumn:       expr = "CASE WHEN i.pick THEN 'Picked' ELSE 'Unpicked' END";
                               break;
     case G::TypeColumn:       expr = "UPPER(i.ext)"; break;

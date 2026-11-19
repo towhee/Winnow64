@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Utilities/editprogress.h"
 #include "Utilities/waitcursor.h"
 #include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
@@ -1480,6 +1481,10 @@ void MW::setRating()
         rows.append(dmRow);
     }
 
+    /*  A large selection is seconds of sidecar writes: the status bar says so once the
+        edit runs past a second (EditProgress), and stays up through the filter update. */
+    EditProgress editProgress("Rating", n);
+
     // set the rating in the datamodel
     QString src = "MW::setRating";
     for (int i = 0; i < n; ++i) {
@@ -1496,7 +1501,7 @@ void MW::setRating()
             the model change above. Never the file's xmp:Rating -- that is the master's. */
         if (VersionKey::isVersion(fPath)) {
             emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
-            G::popup->setProgress(i+1);
+            editProgress.step(i + 1);
             continue;
         }
         // check if combined raw+jpg and also set the rating for the hidden raw file
@@ -1520,7 +1525,7 @@ void MW::setRating()
         /*  And the catalog, so a rating set in Catalog scope is searchable
             without having to re-open the folder -- see MW::updateCatalogForRow. */
         updateCatalogForRow(dmRow);
-        G::popup->setProgress(i+1);
+        editProgress.step(i + 1);
     }
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
 
@@ -1535,6 +1540,7 @@ void MW::setRating()
        - update proxy (filterChange) */
 
     // update category list in filters
+    editProgress.phase("updating the filters");
     dm->sf->suspend(true, "MW::setRating");
     /*  runSync = TRUE because filterChange follows immediately. Without it the category
         tree is rebuilt on the BuildFilters worker thread while filterChange un-suspends
@@ -1717,6 +1723,9 @@ void MW::setColorClass()
         rows.append(dmRow);
     }
 
+    // a long write reports in the status bar -- see MW::setRating
+    EditProgress editProgress("Colour class", n);
+
     // update the data model
     QString src = "MW::setColorClass";
     for (int i = 0; i < n; ++i) {
@@ -1732,7 +1741,7 @@ void MW::setColorClass()
         if (VersionKey::isVersion(fPath)) {
             emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
                           Qt::EditRole);
-            G::popup->setProgress(i+1);
+            editProgress.step(i + 1);
             continue;
         }
         // check if combined raw+jpg and also set the rating for the hidden raw file
@@ -1759,7 +1768,7 @@ void MW::setColorClass()
         emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
                       Qt::EditRole);
         updateCatalogForRow(dmRow);
-        G::popup->setProgress(i+1);
+        editProgress.step(i + 1);
     }
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
 
@@ -1775,6 +1784,7 @@ void MW::setColorClass()
     */
 
     // update category list in filters
+    editProgress.phase("updating the filters");
     dm->sf->suspend(true, "MW::setColorClass");
     /*  runSync = TRUE: filterChange follows, and an asynchronous category rebuild racing
         it is the crash described in MW::setRating above and in

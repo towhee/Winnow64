@@ -590,7 +590,12 @@ public:
         /*  On column 2 (Avail): true when the count shown is what an EXCLUSION removes --
             the item or one above it is excluded -- drawn in the disabled colour and left
             out of any parent's sum. See updateFilteredCountPerItem. */
-        AvailExcludedRole
+        AvailExcludedRole,
+        /*  On an item beneath an excluded one (Folders, Keywords): it is excluded too --
+            the exclusion matches every descendant -- so it is DRAWN excluded, struck
+            through in red, though its own check state stays Unchecked and nothing is
+            added to the filter. Set by setEachCatTextColor, read by applyItemStyle. */
+        InheritedExclusionRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
@@ -833,6 +838,7 @@ private:
     void updateTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category);
     void refreshTypeGroups();
     void refreshDriveCounts();
+    void foldForeignLabels(QMap<QString, int> &itemMap);
     bool isEffectivelyExcluded(const QTreeWidgetItem *item,
                                const QTreeWidgetItem *category) const;
     void setAvailExcluded(QTreeWidgetItem *item, bool excluded);

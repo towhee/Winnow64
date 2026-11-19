@@ -274,6 +274,17 @@
        </item>
        <item>
         <property name="text">
+         <string>New Version</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + '</string>
+        </property>
+        <property name="text">
+         <string>A virtual copy of the current image, developed separately (Edit &gt; Versions)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Report metadata</string>
         </property>
         <property name="text">
@@ -1600,17 +1611,6 @@
         </property>
         <property name="text">
          <string>Cmd/Ctrl + Opt/Alt + V</string>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>New Version</string>
-        </property>
-        <property name="text">
-         <string>Cmd/Ctrl + '</string>
         </property>
         <property name="text">
          <string/>

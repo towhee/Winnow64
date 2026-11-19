@@ -2882,6 +2882,19 @@ void MW::createEditMenu()
     editMenu->addAction(duplicateOkAction);
     editMenu->addAction(showDuplicateTwinsAction);
     editMenu->addSeparator();
+    /*  Versions: in Edit, its own section (was Develop > Versions until 2026-11-19).
+        Shared with the thumbnail context menu (the same QMenu), enabled per the current
+        image as it opens (syncVersionsMenu). */
+    versionsMenu = new QMenu(tr("Versions"), this);
+    versionsMenu->addAction(newVersionAction);
+    versionsMenu->addAction(renameVersionAction);
+    versionsMenu->addAction(deleteVersionAction);
+    versionsMenu->addAction(setVersionAsMasterAction);
+    versionsMenu->addSeparator();
+    versionsMenu->addAction(showAllVersionsAction);
+    connect(versionsMenu, &QMenu::aboutToShow, this, &MW::syncVersionsMenu);
+    editMenu->addMenu(versionsMenu);
+    editMenu->addSeparator();
     editMenu->addAction(regenerateThumbsAction);
     editMenu->addSeparator();
     editMenu->addAction(rotateRightAction);
@@ -3097,18 +3110,6 @@ void MW::createDevelopMenu()
     developExportPresetMenu = developMenu->addMenu(tr("Export with preset"));
     connect(developExportPresetMenu, &QMenu::aboutToShow,
             this, &MW::buildDevelopExportPresetMenu);
-    developMenu->addSeparator();
-    /*  Versions: shared with the thumbnail context menu (the same QMenu), enabled per
-        the current image as it opens (syncVersionsMenu). */
-    versionsMenu = new QMenu(tr("Versions"), this);
-    versionsMenu->addAction(newVersionAction);
-    versionsMenu->addAction(renameVersionAction);
-    versionsMenu->addAction(deleteVersionAction);
-    versionsMenu->addAction(setVersionAsMasterAction);
-    versionsMenu->addSeparator();
-    versionsMenu->addAction(showAllVersionsAction);
-    connect(versionsMenu, &QMenu::aboutToShow, this, &MW::syncVersionsMenu);
-    developMenu->addMenu(versionsMenu);
     developMenu->addSeparator();
     developMenu->addAction(developCopySettingsAction);
     developMenu->addAction(developPasteSettingsAction);

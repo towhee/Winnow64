@@ -39,6 +39,8 @@ private slots:
     void foldersReachTheQueryByPath();
     void libraryFoldersGroupUnderTheirDrive();
     void anExcludedFolderShowsWhatItRemoves();
+    void foreignColorClassesAreNotOffered();
+    void beneathAnExclusionIsDrawnExcluded();
     void aNestedCategoryIsCountedAtEveryDepth();
     void keywordMatchModeTravelsAndResets();
     void flatOrderIsTheGroupOrder();
@@ -460,6 +462,57 @@ void tst_filters::anExcludedFolderShowsWhatItRemoves()
     QVERIFY(!greyed(photos) && !greyed(driveA));
     QCOMPARE(avail(driveA), 7);
     QVERIFY(!photos->data(2, Qt::ForegroundRole).isValid());
+}
+
+void tst_filters::beneathAnExclusionIsDrawnExcluded()
+{
+    /*  An exclusion matches every descendant, so the folders beneath an excluded one are
+        drawn excluded too -- struck through -- without their own check state changing. */
+    Filters f(nullptr);
+    f.setFolderAnchors({"/U/Photos"});
+    f.addCategoryItems(folderCounts(), f.folders);
+    QTreeWidgetItem *decade = findByValue(f.folders, "/U/Photos/2020-2029");
+    QTreeWidgetItem *dxo20 = findByValue(f.folders, "/U/Photos/2020-2029/2020/DxO");
+    QTreeWidgetItem *zen = findByValue(f.folders, "/U/Photos/Zen");
+
+    decade->setCheckState(0, Qt::PartiallyChecked);
+    f.setEachCatTextColor();
+    QVERIFY(decade->font(0).strikeOut());
+    QVERIFY(dxo20->font(0).strikeOut());
+    QVERIFY(dxo20->data(0, Filters::InheritedExclusionRole).toBool());
+    QCOMPARE(dxo20->checkState(0), Qt::Unchecked);
+    QVERIFY(!zen->font(0).strikeOut());
+
+    // and back when the exclusion goes
+    decade->setCheckState(0, Qt::Unchecked);
+    f.setEachCatTextColor();
+    QVERIFY(!decade->font(0).strikeOut());
+    QVERIFY(!dxo20->font(0).strikeOut());
+}
+
+void tst_filters::foreignColorClassesAreNotOffered()
+{
+    /* another application's xmp:Label ("Winner") is not a Winnow color class: it is
+       not an item, and its images count under the blank one */
+    Filters f(nullptr);
+    f.addCategoryItems({{"", 10}, {"Red", 3}, {"Winner", 2}}, f.labels);
+    QStringList names;
+    QTreeWidgetItem *blank = nullptr;
+    for (int i = 0; i < f.labels->childCount(); ++i) {
+        names << f.labels->child(i)->text(0);
+        if (f.labels->child(i)->text(0).isEmpty()) blank = f.labels->child(i);
+    }
+    QVERIFY(names.contains("Red"));
+    QVERIFY(blank);
+    QVERIFY(!names.contains("Winner"));
+    QCOMPARE(blank->data(3, Qt::EditRole).toInt(), 12);
+
+    // nor does an edit bring it in
+    f.updateCategoryItems({{"", 10}, {"Red", 3}, {"Winner", 2}, {"Blue", 1}}, f.labels);
+    names.clear();
+    for (int i = 0; i < f.labels->childCount(); ++i) names << f.labels->child(i)->text(0);
+    QVERIFY(names.contains("Blue"));
+    QVERIFY(!names.contains("Winner"));
 }
 
 void tst_filters::aNestedCategoryIsCountedAtEveryDepth()

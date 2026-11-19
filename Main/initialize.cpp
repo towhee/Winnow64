@@ -8,6 +8,7 @@
 #endif
 #include "Main/catalogenumerate.h"
 #include "Utilities/panelprobe.h"
+#include "Utilities/editprogress.h"
 #include "Utilities/displaycolor.h"
 #include "Utilities/titlebar.h"
 #include "Metadata/keywordpaths.h"
@@ -112,8 +113,6 @@ void MW::initialize()
     pickClick->setVolume(pickClickvolume);   // default value overridden in loadSettings
 
     prevCentralView = 0;
-    G::labelColors << "Red" << "Yellow" << "Green" << "Blue" << "Purple";
-    G::ratings << "1" << "2" << "3" << "4" << "5";
     pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
@@ -1602,6 +1601,13 @@ void MW::createStatusBar()
     progressDuplicatesRow = progress->addRow("Duplicates", 2, G::progressDuplicatesColor,
                                              Progress::Fill::FromStart);
     progress->setRowText(progressDuplicatesRow, "Duplicates");
+    /*  A rating, colour class, keyword or text-field edit writing the sidecars of a
+        large selection (Utilities/editprogress.h). Shown only once the edit has run, or
+        is projected to run, past a second; what and how many is the tooltip. */
+    progressEditRow = progress->addRow("Edit", 2, G::progressEditColor,
+                                       Progress::Fill::FromStart);
+    progress->setRowText(progressEditRow, "Saving metadata");
+    EditProgress::install(progress, progressEditRow, statusBar());
     connect(dm, &DataModel::catalogFillProgress, this, [this](int done, int total) {
         if (!progress) return;
         if (total <= 0) {

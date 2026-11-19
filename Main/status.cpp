@@ -258,6 +258,13 @@ void MW::updateStatusBar()
 
     G::isFilter = filters->isAnyFilter();
     filterStatusLabel->setVisible(G::isFilter);
+    /*  Clear filters (the action, its menu item and the Filters panel's button, which
+        follows it) is enabled only while there is something to clear. It was never
+        disabled: an edit that emptied the only checked item left the panel with nothing
+        checked and the button still lit. Set here, beside the status bar's own filtered
+        indicator, so the two cannot disagree. */
+    clearAllFiltersAction->setProperty("disabledReason", "no filters are set");
+    clearAllFiltersAction->setEnabled(G::isFilter);
 
     // deprecated when utilized opt + click on FSTree folder
     // subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);

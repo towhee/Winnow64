@@ -8315,6 +8315,8 @@ void SortFilter::compileFilters()
             cat.matchAll = item->data(0, Filters::MatchAllRole).toBool();
             // a "Filter on..." category compares as text -- see FilterCategory
             cat.compareAsText = item->data(0, Filters::SessionRole).toBool();
+            // another application's label is the blank item's -- see FilterCategory
+            if (cat.column == G::LabelColumn) cat.knownValues = G::labelColors;
             fresh->categories.append(cat);
         }
         ++it;
@@ -8326,7 +8328,18 @@ void SortFilter::compileFilters()
 
 bool SortFilter::filterReadsColumn(int column)
 {
+/*
+    THE APPLIED PREDICATE AS WELL AS THE CURRENT ONE. Filter on rating 1, select all,
+    press 1 to clear: MW::setRating's category rebuild removes the now-empty "1" item,
+    CHECKED, and the recompile from the tree has no rating filter at all. Asked only of
+    that, this said "nothing reads ratings", MW::editNeedsRefilter skipped filterChange,
+    and the proxy kept the rows the old filter chose -- the grid stayed on the 51 images,
+    the status bar said "Pos 939 of 51", Clear filters stayed enabled, while the Filters
+    panel showed nothing checked (2026-11-19). The rows on screen were chosen by
+    mAppliedPredicate, so whether an edit can change them is its question first.
+*/
     flushPendingCompile();
+    if (mAppliedPredicate && mAppliedPredicate->readsColumn(column)) return true;
     const FilterPredicatePtr pred = filterPredicate();
     return pred && pred->readsColumn(column);
 }
@@ -8639,6 +8652,7 @@ void SortFilter::filterChange(QString src)
         already off and does nothing. */
     G::A11ySuspend a11ySuspend;
     compileFilters();
+    mAppliedPredicate = filterPredicate();      // what the invalidate below filters by
 
     /*  invalidate() RATHER THAN invalidateRowsFilter(), which is the difference between
         telling the views once and telling them 348 times.

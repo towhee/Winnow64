@@ -460,6 +460,7 @@ set(WINNOW_SOURCES
     Utilities/rowtrail.cpp
     Utilities/inputdlg.cpp
     Utilities/performance.cpp
+    Utilities/editprogress.cpp
     Utilities/popup.cpp
     Utilities/zchunkdevice.cpp
     Utilities/progress.cpp
@@ -798,6 +799,7 @@ set(WINNOW_HEADERS
     Utilities/inputdlg.h
     Utilities/movingavg.h
     Utilities/performance.h
+    Utilities/editprogress.h
     Utilities/popup.h
     Utilities/titlebar.h
     Utilities/collapsiblesections.h

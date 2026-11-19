@@ -194,7 +194,7 @@ void MW::syncVersionModeButtons()
 }
 
 /* ---------------------------------------------------------------------------------
-   Version operations (Develop > Versions, thumbnail context menu)
+   Version operations (Edit > Versions, thumbnail context menu)
 
    Every one of them writes the MASTER's sidecar and never the image file. The flush
    comes first: a debounced Develop edit landing after the sidecar was rewritten would
@@ -417,7 +417,7 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
     Removes each version's RECORD from its master's sidecar, with its loupe preview and
     History. The image files, the masters and the other versions are untouched -- which
     the confirmation says, because "delete" next to a photograph otherwise reads as the
-    trash. Reached from Develop > Versions > Delete Version (the current image) and from
+    trash. Reached from Edit > Versions > Delete Version (the current image) and from
     Delete with versions selected (MW::deleteSelectedFiles, which has already asked).
 */
     if (G::isLogger) G::log("MW::deleteVersionRecords", keys.join(", "));

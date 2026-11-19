@@ -919,6 +919,7 @@ Q_NAMESPACE
     extern QColor progressCatalogLoadColor;         // status bar progress: catalog load
     extern QColor progressExportColor;              // status bar progress: Export
     extern QColor progressDuplicatesColor;          // progress row: duplicates check
+    extern QColor progressEditColor;                // progress row: metadata edit writes
     extern QColor mapPinColor;                      // Map: pin
     extern QColor mapPlaceColor;                    // Map: place outline
     extern QColor mapAxisHandleColor;               // Map: place axis handles

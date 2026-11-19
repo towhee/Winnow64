@@ -2465,6 +2465,7 @@ private:
     int progressExportRow = -1;
     /* The Library duplicates check (Cache/duplicates.h). */
     int progressDuplicatesRow = -1;
+    int progressEditRow = -1;           // EditProgress: rating/label/keyword writes
     int statusBarBaseHeight = 0;     // status bar height before Progress; never go below
     QLabel *centralLabel;
     QLabel *statusBarSpacer;
@@ -3935,7 +3936,7 @@ private:
     void setVersionMastersOnly(bool on);
     void syncVersionModeButtons();
     bool versionReconcilePending = false;
-    /*  The version operations (Develop > Versions, the thumbnail context menu). All
+    /*  The version operations (Edit > Versions, the thumbnail context menu). All
         write the master's sidecar (Metadata/versions.h) and then bring the grid in line;
         none ever touches the image file. */
     void newVersion();

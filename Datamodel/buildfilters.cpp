@@ -643,6 +643,11 @@ std::shared_ptr<const FilterSnapshot> BuildFilters::makeSnapshot() const
             so a checked item still matches the row -- which is what lets the item
             carry the padded text as its value the way focal length does. */
         r.v[FilterCat::Iso] = r.v[FilterCat::Iso].rightJustified(6, ' ');
+        /*  A label that is not one of Winnow's color classes ("Winner", written by
+            another application) counts as no color class -- the blank item, which
+            matches it too (FilterCategory::knownValues). */
+        if (!G::labelColors.contains(r.v[FilterCat::Label]))
+            r.v[FilterCat::Label].clear();
 
         /*  Availability is the one column whose value is a CODE, not a word -- see
             Catalog::Availability, and "Present is 0 and unset reads as 0", which is
@@ -756,10 +761,13 @@ void BuildFilters::addFacets(FilterSnapshot &snap) const
     it (FilterPredicate::soleRejectorColumn), so ONE predicate evaluation per rejected
     row answers every category -- recorded as snap.rescue[row] = that category's column.
 
-    The rows that would stay hidden whatever the checks are never rescued: the hidden
-    raw half of a raw+jpg pair and a version in a collapsed group. The latter skips
-    SortFilter's "unless its master is filtered out" refinement, which is a per-row
-    master lookup for an edge the count can afford to miss.
+    The hidden raw half of a raw+jpg pair stays hidden whatever the checks, so it is
+    never rescued. A version in a collapsed group is not rescued here either, but
+    counted by addVersionFacets, which applies SortFilter's "unless its master is shown
+    in its place" rule per category. It used to be skipped as an edge the count could
+    afford to miss; with no filter set, every such version then made Avail fall short of
+    All (a version rated 1 under an unrated master: Rating 1 read 0 / 1, though checking
+    it shows that version).
 
     The cells are read in one RowStore pass, EditRole, which is what filterAcceptsRow
     compares (DataModel::data serves covered columns straight from the store). A
@@ -780,6 +788,7 @@ void BuildFilters::addFacets(FilterSnapshot &snap) const
 
     dm->sf->flushPendingCompile();
     const FilterPredicatePtr pred = dm->sf->filterPredicate();
+    addVersionFacets(snap, pred);       // with or without a filter
     if (!pred || pred->acceptsEverything()) return;
 
     // every column a filtering category reads
@@ -840,6 +849,48 @@ void BuildFilters::addFacets(FilterSnapshot &snap) const
             if (i >= 0) return val.at(i);
             return dm->index(row, column).data(Qt::EditRole);
         });
+    }
+}
+
+void BuildFilters::addVersionFacets(FilterSnapshot &snap, const FilterPredicatePtr &pred) const
+{
+/*
+    The Avail of a version hidden in a collapsed group, per category: see
+    FilterPredicate::collapsedVersionCountsFor for the rule. GUI thread, from addFacets.
+
+    Collapsed versions are few, so they are found in one RowStore pass over two cells
+    and then judged through the model: two predicate evaluations per category each.
+*/
+    if (dm->sf->showAllVersions()) return;          // nothing is collapsed
+    QSet<int> columns;
+    for (int c : std::as_const(snap.facetColumn)) if (c > 0) columns.insert(c);
+    if (columns.isEmpty()) return;
+
+    const int rows = snap.inProxy.size();
+    const QVector<QPair<int, int>> cells{{G::PathColumn, G::VersionIdRole},
+                                         {G::PathColumn, G::KeyRole}};
+    QVector<QPair<int, QString>> hidden;            // row, master key
+    dm->rowStore.forEachRow(cells, [&](int row, const QVariant *val) {
+        if (row >= rows || snap.inProxy.at(row)) return;
+        if (val[0].toInt() <= 0) return;                            // not a version
+        if (row < snap.rowCount() && snap.row(row).hiddenRaw) return; // Masters only
+        const QString master = VersionKey::sourceOf(val[1].toString());
+        if (dm->sf->versionsExpanded(master)) return;  // open group: hidden by a filter
+        hidden.append({row, master});
+    });
+    if (hidden.isEmpty()) return;
+
+    static const FilterPredicate nothingFiltered;
+    const FilterPredicate &p = pred ? *pred : nothingFiltered;
+    for (const auto &h : std::as_const(hidden)) {
+        const int mRow = dm->rowFromKey(h.second);
+        if (mRow < 0) continue;
+        auto version = [&](int column) { return dm->index(h.first, column).data(Qt::EditRole); };
+        auto master = [&](int column) { return dm->index(mRow, column).data(Qt::EditRole); };
+        QSet<int> counts;
+        for (int c : std::as_const(columns))
+            if (p.collapsedVersionCountsFor(version, master, c)) counts.insert(c);
+        if (!counts.isEmpty()) snap.versionFacets.insert(h.first, counts);
     }
 }
 

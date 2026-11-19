@@ -105,6 +105,7 @@ void WidgetCSS::styleGlobals()
     G::progressCatalogLoadColor = QColor(106,143,208);       // #6a8fd0, blue, progress row: catalog load
     G::progressExportColor = QColor(95,174,95);              // #5fae5f, green, progress row: Export
     G::progressDuplicatesColor = QColor(220,70,70);          // #dc4646, red, duplicates row
+    G::progressEditColor = QColor(200,120,170);              // #c878aa, rose, progress row: metadata edit writes
     G::mapPinColor = QColor(232,116,44);                     // #e8742c, orange, Map: pin (Lightroom's orange)
     G::mapPlaceColor = QColor(74,163,255);                   // #4aa3ff, blue, Map: place outline (mask overlay blue)
     G::mapAxisHandleColor = QColor(74,163,255);              // #4aa3ff, blue, Map: place axis handles

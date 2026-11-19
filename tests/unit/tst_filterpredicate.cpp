@@ -37,6 +37,7 @@ private slots:
     void aCategoryOfOnlyExcludesDoesNotNarrow();
     void includeAllMatchesWithoutComparing();
     void keywordListsMatchByMembership();
+    void aForeignLabelIsTheBlankColorClass();
     void aCategoryIsReadOncePerRowNotOncePerItem();
     void foldersMatchTheirSubtreeByPathNotName();
     void matchAllNeedsEveryKeyword();
@@ -46,6 +47,7 @@ private slots:
     void mapPinIsBoolAndCanBeIgnored();
     void overlappingPlacesAreOrAndExcludable();
     void soleRejectorDrivesFacetedCounts();
+    void collapsedVersionCountsWhereItWouldShow();
 
 private:
     /*  A row as a column -> value map, standing in for what
@@ -320,6 +322,35 @@ void tst_filterpredicate::includeAllMatchesWithoutComparing()
     QVERIFY(!p.accepts(fetch(excluded)));
 }
 
+void tst_filterpredicate::aForeignLabelIsTheBlankColorClass()
+{
+    /*  Another application's label ("Winner") is no Winnow color class: the blank item
+        matches it, and an exclusion of the blank item leaves it out. */
+    FilterCategory c = cat(G::LabelColumn, { QString("") });
+    c.knownValues = G::labelColors;
+    FilterPredicate p;
+    p.categories << c;
+    Row winner { { G::LabelColumn, "Winner" } };
+    Row none   { { G::LabelColumn, QString("") } };
+    Row red    { { G::LabelColumn, "Red" } };
+    QVERIFY(p.accepts(fetch(winner)));
+    QVERIFY(p.accepts(fetch(none)));
+    QVERIFY(!p.accepts(fetch(red)));
+
+    p.categories[0] = cat(G::LabelColumn, {}, { QString("") });
+    p.categories[0].knownValues = G::labelColors;
+    QVERIFY(!p.accepts(fetch(winner)));
+    QVERIFY(p.accepts(fetch(red)));
+    bool byEx = false;
+    QCOMPARE(p.soleRejectorColumn(fetch(winner), &byEx), int(G::LabelColumn));
+    QVERIFY(byEx);
+
+    // a checked "Winner" could never have been offered, and matches nothing now
+    p.categories[0] = cat(G::LabelColumn, { "Winner" });
+    p.categories[0].knownValues = G::labelColors;
+    QVERIFY(!p.accepts(fetch(winner)));
+}
+
 void tst_filterpredicate::keywordListsMatchByMembership()
 {
     /*  A keyword column holds a QStringList, so a filter value matches when the
@@ -449,6 +480,45 @@ void tst_filterpredicate::readsColumnOnlyForActiveCategories()
     QVERIFY(!p.readsColumn(G::SearchColumn));
     p.categories.last().excludes.append("true");
     QVERIFY(p.readsColumn(G::SearchColumn));
+}
+
+void tst_filterpredicate::collapsedVersionCountsWhereItWouldShow()
+{
+/*
+    A version hidden in a collapsed group counts towards a category's Avail when
+    checking its value there would show it: it passes every OTHER category and its
+    master would not be shown in its place (BuildFilters::addVersionFacets). Reported
+    2026-11-19: no filter set, a version rated 1 under an unrated master, and Rating 1
+    read Avail 0 / All 1 although checking it shows that version.
+*/
+    const Row master  { { G::RatingColumn, "" },  { G::LabelColumn, "Red" },
+                        { G::KeywordsAllColumn, QStringList{ "Owl" } } };
+    const Row version { { G::RatingColumn, "1" }, { G::LabelColumn, "Red" },
+                        { G::KeywordsAllColumn, QStringList{ "Owl" } } };
+
+    // nothing filtered: counts exactly where its value differs from the master's
+    FilterPredicate none;
+    QVERIFY(none.collapsedVersionCountsFor(fetch(version), fetch(master), G::RatingColumn));
+    QVERIFY(!none.collapsedVersionCountsFor(fetch(version), fetch(master), G::LabelColumn));
+    QVERIFY(!none.collapsedVersionCountsFor(fetch(version), fetch(master),
+                                            G::KeywordsAllColumn));
+
+    // Red is checked: both pass it, so Rating still counts and Label still does not
+    FilterPredicate red;
+    red.categories << cat(G::RatingColumn) << cat(G::LabelColumn, { "Red" });
+    QVERIFY(red.collapsedVersionCountsFor(fetch(version), fetch(master), G::RatingColumn));
+    QVERIFY(!red.collapsedVersionCountsFor(fetch(version), fetch(master), G::LabelColumn));
+
+    // Blue is checked: the version fails another category, so it counts nowhere else
+    FilterPredicate blue;
+    blue.categories << cat(G::RatingColumn) << cat(G::LabelColumn, { "Blue" });
+    QVERIFY(!blue.collapsedVersionCountsFor(fetch(version), fetch(master), G::RatingColumn));
+
+    // the master fails another category the version passes: the version takes its place
+    const Row blueMaster { { G::RatingColumn, "1" }, { G::LabelColumn, "Blue" } };
+    const Row redVersion { { G::RatingColumn, "1" }, { G::LabelColumn, "Red" } };
+    QVERIFY(red.collapsedVersionCountsFor(fetch(redVersion), fetch(blueMaster),
+                                          G::RatingColumn));
 }
 
 QTEST_MAIN(tst_filterpredicate)

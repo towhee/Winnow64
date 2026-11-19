@@ -31,7 +31,7 @@ QList<FolderClick> folderClicks()
         {"Shift+click", "Include every folder from the last one checked to this one"},
         {solo, "Only this folder and its subfolders; every other filter is cleared"},
         {"Shift+" + solo, "Only this folder, not its subfolders; every other filter is "
-                          "cleared. Again to turn it off"},
+                          "cleared. Again, or a click, to turn it off"},
     };
 }
 
@@ -1362,9 +1362,32 @@ void Filters::setEachCatTextColor()
         }
         return any;
     };
+    /*  BENEATH AN EXCLUSION, drawn excluded: Shift+Opt+Cmd+click excludes a folder's
+        subfolders to show only the folder, and the folders under those are excluded
+        too -- the exclusion matches every descendant -- so they must not look
+        available. Only the look: their check state is untouched, so the filter, the
+        save and the query hold just the items the user excluded. Restyled only when
+        the mark changes, as above. */
+    std::function<void(QTreeWidgetItem *, bool)> markInherited =
+        [&](QTreeWidgetItem *parent, bool under) {
+        for (int i = 0; i < parent->childCount(); ++i) {
+            QTreeWidgetItem *child = parent->child(i);
+            if (isCategoryHeader(child)) continue;
+            if (child->data(0, InheritedExclusionRole).toBool() != under) {
+                child->setData(0, InheritedExclusionRole, under ? QVariant(true)
+                                                                : QVariant());
+                applyItemStyle(child);
+            }
+            markInherited(child, under || (!isDriveItem(child)
+                                           && child->checkState(0) == Qt::PartiallyChecked));
+        }
+    };
     QTreeWidgetItemIterator cats(this);
     while (*cats) {
-        if (isCategoryHeader(*cats) && (*cats) != search) anyBelow(*cats);
+        if (isCategoryHeader(*cats) && (*cats) != search) {
+            anyBelow(*cats);
+            markInherited(*cats, false);
+        }
         ++cats;
     }
 
@@ -1625,6 +1648,7 @@ void Filters::clearAll()
     while (*it) {
         if (isFilterItem(*it)) {
             (*it)->setCheckState(0, Qt::Unchecked);
+            (*it)->setData(0, InheritedExclusionRole, QVariant());
             styleFilterItem(*it);       // drop an exclusion's strikethrough too
             (*it)->setData(2, Qt::EditRole, "");
             setAvailExcluded(*it, false);
@@ -1728,7 +1752,8 @@ void Filters::applyItemStyle(QTreeWidgetItem *item)
     styles an item BEFORE attaching it: addFolderItems builds its nodes detached so that
     setting them up emits nothing, and a detached top-level node has no parent yet.
 */
-    const bool excluded = item->checkState(0) == Qt::PartiallyChecked;
+    const bool excluded = item->checkState(0) == Qt::PartiallyChecked
+                          || item->data(0, InheritedExclusionRole).toBool();
     const bool duplicate = item->data(0, DuplicateRole).toBool();
     const bool unfiled = item->data(0, UnfiledRole).toBool();
 
@@ -2369,7 +2394,11 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         if (isThisFolderOnly(item)) clearThisFolderOnly(item);
         else emit filterOnlyItemRequested(item, true);
     }
-    else if (chosen == clr) setItemFilterState(item, Qt::Unchecked);
+    // Clear undoes "this folder only" whole, as a plain click does
+    else if (chosen == clr) {
+        if (categoryOf(item) == folders && isThisFolderOnly(item)) clearThisFolderOnly(item);
+        else setItemFilterState(item, Qt::Unchecked);
+    }
     else if (merge != nullptr && chosen == merge)
         emit mergeUnfiledKeyword(item->data(1, Qt::EditRole).toString());
     else if (unfiled != nullptr && chosen == unfiled)
@@ -3723,6 +3752,7 @@ void Filters::uncheckAllFilters()
     while (*it) {
         if (isFilterItem(*it)) {
             (*it)->setCheckState(0, Qt::Unchecked);
+            (*it)->setData(0, InheritedExclusionRole, QVariant());
             /* Clears the strikethrough an exclusion left behind: unchecking the box is
                not enough, because exclusion is drawn on the FONT as well. */
             styleFilterItem(*it);
@@ -4530,6 +4560,7 @@ void Filters::updateCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *c
         updateTypeItems(itemMap, category);
         return;
     }
+    if (category == labels) foldForeignLabels(itemMap);
 
     if (G::isLogger) G::log("Filters::updateCategoryItems", category->text(0));
     if (debugFilters)
@@ -4781,6 +4812,24 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
     applyUnfiledVisibility(category);
 }
 
+void Filters::foldForeignLabels(QMap<QString, int> &itemMap)
+{
+/*
+    Color classes are Winnow's five (G::labelColors) and "" (none). Another application
+    can write its own word into xmp:Label ("Winner", "Approved"), which would otherwise
+    become an item here. Winnow cannot set or show such a label, so it is no color class:
+    its count goes to the blank item, which also matches it (FilterCategory::knownValues).
+    Both count sources already fold it (BuildFilters::makeSnapshot, Catalog's
+    categorySql); this keeps the panel right if one ever stops.
+*/
+    int foreign = 0;
+    for (auto it = itemMap.begin(); it != itemMap.end(); ) {
+        if (it.key().isEmpty() || G::labelColors.contains(it.key())) ++it;
+        else { foreign += it.value(); it = itemMap.erase(it); }
+    }
+    if (foreign) itemMap[QString()] += foreign;
+}
+
 void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *category)
 {
 /*
@@ -4816,6 +4865,7 @@ void Filters::addCategoryItems(QMap<QString, int> itemMap, QTreeWidgetItem *cate
         addTypeItems(itemMap, category);
         return;
     }
+    if (category == labels) foldForeignLabels(itemMap);
 
     QMutexLocker locker(&mutex);
 
@@ -5612,6 +5662,16 @@ void Filters::mousePressEvent(QMouseEvent *event)
         if (isAltModifier) {
             setItemFilterState(item, now == Qt::PartiallyChecked ? Qt::Unchecked
                                                                  : Qt::PartiallyChecked);
+            swallowNextRelease = true;
+            return;
+        }
+        /*  A PLAIN CLICK ALSO UNDOES "THIS FOLDER ONLY". Otherwise it would uncheck the
+            folder and leave each folder in it excluded -- a filter nobody asked for, and
+            the user would have to find and clear every one. Read from the checks, as
+            the Shift+Cmd+Opt toggle is, so a hand-built one clears the same way. */
+        if (!isShiftModifier && !isCtrlModifier && now == Qt::Checked
+            && categoryOf(item) == folders && isThisFolderOnly(item)) {
+            clearThisFolderOnly(item);
             swallowNextRelease = true;
             return;
         }

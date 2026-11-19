@@ -100,9 +100,9 @@ public:
        column silently reverses the model in descending order; treat invalid as -1 (no sort,
        source order). See the column-88 trace. */
     void sort(int column, Qt::SortOrder order = Qt::AscendingOrder) override;
-    /*  True when an active filter category reads this column, compiled from the
-        tree as it stands now (a pending coalesced compile is flushed first). GUI
-        thread. */
+    /*  True when an active filter category reads this column -- in the predicate the
+        proxy was last FILTERED with (mAppliedPredicate), or in the tree as it stands now
+        (a pending coalesced compile is flushed first). GUI thread. */
     bool filterReadsColumn(int column);
 
     /*  VERSIONS (virtual copies) COLLAPSE. A version row is hidden while its group is
@@ -191,6 +191,11 @@ private:
         filterPredicate() itself is public (BuildFilters' faceted counts). */
     mutable QMutex mPredicateMutex;
     FilterPredicatePtr mPredicate;
+    /*  The predicate the last filterChange invalidated with: what the visible rows were
+        actually chosen by. mPredicate can move on without a refilter (a category rebuild
+        that drops a checked item recompiles it), so "does the filter read this column"
+        has to ask this one too. GUI thread only. */
+    FilterPredicatePtr mAppliedPredicate;
 
     /*  The sort column's value for every DATAMODEL row, valid only inside a
         SortKeyScope (datamodel.cpp) on the GUI thread. */

@@ -1,4 +1,6 @@
 #include "Views/infoview.h"
+#include "Utilities/editprogress.h"
+#include <optional>
 #include "Metadata/keywordpaths.h"
 #include "Utilities/versionkey.h"
 #include "Main/global.h"
@@ -178,6 +180,9 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
     if (count == 0) {
         bool isEditable = ok->itemFromIndex(idx1)->isEditable();
         QString field;
+        /*  The status bar row for a write that runs past a second (EditProgress). Held
+            out here so it stays up through the filter update below. */
+        std::optional<EditProgress> editProgress;
         // dm->sf->suspend(true,  "InfoView::dataChanged count = 0");
         if (isEditable) {
             QModelIndexList selection = RowSelection::Rows(thumbView->selectionModel());
@@ -193,8 +198,7 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
             QModelIndex idx0 = ok->index(idx1.row(), 0, idx1.parent());
             field = idx0.data().toString();
 
-            G::popup->setProgressVisible(true);
-            G::popup->setProgressMax(n + 1);
+            editProgress.emplace(field.chopped(field.endsWith('*') ? 1 : 0), n);
 
             /*  Title, creator, copyright, email and url are the FILE's, shared by a
                 master and its versions: an edit on a version row is made on its master's
@@ -247,23 +251,18 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
                 metadata->writeXMP(fPath, "InfoView::dataChanged");
                 dm->syncSharedToVersions(fPath);
-                G::popup->setProgress(i+1);
+                editProgress->step(i + 1);
             }
 
             // Update embellished text fields - Embel::refreshTexts
             emit dataEdited();
 
-            /*
-            Close the edit-progress popup that this branch opened above
-            (setProgressVisible / setProgressMax / setProgress). Only reset the
-            popup here, not unconditionally at the end of dataChanged: this slot
-            also fires when the InfoView metadata panel merely repopulates (e.g.
-            when a new file is selected after a focus stack), and an
-            unconditional reset() would dismiss unrelated popups such as the
-            focus-stack "completed" message.
-            */
-            G::popup->setProgressVisible(false);
-            G::popup->reset();
+            /*  NO POPUP RESET HERE. This branch used to open the popup's progress bar
+                and reset() the popup after, which never showed anything (nothing
+                painted it) but could dismiss an unrelated popup such as the
+                focus-stack "completed" message. EditProgress resets the popup only when
+                it put it up itself. */
+            editProgress->phase("updating the filters");
         }
         dm->sf->suspend(false, "InfoView::dataChanged count = 0");
 

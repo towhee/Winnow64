@@ -1,8 +1,10 @@
 WHAT'S NEW
-
+- Fil
 
 BUGS / TO DO
-- Redo filters help with more examples
+- Review filters help for clarity and accuracy.  Add a Duplicates section.  Eliminate
+  redundancy.  Order by what a first time user whould need to see.  Suggest where
+  illustrations or screenshots would improve user understanding.
 - Revisit why library reread on almost every time Winoow compiles.
 - Review Develop shortcuts (N, M, X)
 - Review and refine develop replacement tools

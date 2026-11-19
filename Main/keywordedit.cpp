@@ -1,4 +1,6 @@
 #include "Main/mainwindow.h"
+#include "Utilities/editprogress.h"
+#include <optional>
 #include "Utilities/versionkey.h"
 #include "Utilities/fileops.h"
 #include "Dialogs/keyworddropdlg.h"
@@ -292,6 +294,12 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     G::popup->setProgressMax(rows.size());
     G::popup->setProgress(0);
 
+    /*  A STANDALONE TAG of a large selection reports in the status bar once it runs past
+        a second (EditProgress). A caller driving several passes (MW::applyKeywordMoves,
+        rebuildFilters false) has its own popup up and owns the feedback. */
+    std::optional<EditProgress> editProgress;
+    if (rebuildFilters) editProgress.emplace("Keywords", rows.size());
+
     for (int i = 0; i < rows.size(); ++i) {
         const int dmRow = rows.at(i);
         const QString fPath =
@@ -353,6 +361,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
             ++writePhases.skipped;
             G::popup->setProgress(i + 1);
             G::popup->pulse();
+            if (editProgress) editProgress->step(i + 1);
             continue;
         }
 
@@ -426,6 +435,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
             whole operation. Popup::pulse throttles itself; see it for why that matters. */
         G::popup->setProgress(i + 1);
         G::popup->pulse();
+        if (editProgress) editProgress->step(i + 1);
     }
 
     if (G::isLogger)
@@ -435,7 +445,10 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
     /*  HOISTED OUT WHEN THE CALLER IS LOOPING. Filing several checked keywords at once
         is one user action and must cost one rebuild, not one per keyword -- this deletes
         and recreates the entire keyword tree. See MW::applyKeywordMoves. */
-    if (rebuildFilters) rebuildKeywordFilters(src);
+    if (rebuildFilters) {
+        editProgress->phase("rebuilding the keyword filters");
+        rebuildKeywordFilters(src);
+    }
 }
 
 void MW::filterBuildCompleted()

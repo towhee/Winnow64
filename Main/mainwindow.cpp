@@ -8698,17 +8698,29 @@ void MW::restampCatalogAfterOwnWrite(const QString &fPath)
     if (!dm->catalogRowFor(dmRow, r)) return;
     if (!isCatalogScopeFolder(r.folder)) return;
 
+    /*  THROUGH setValDm, NEVER A BARE dm->setData. setData emits dataChanged NOW, and
+        the proxy filters dynamically, so it re-tested the row on the spot -- in the
+        middle of the caller's write loop. Filter on rating 1, select all, press 1 to
+        clear: each image left the proxy (and the selection) as its restamp landed, one
+        row removal and view relayout at a time, 3,106 of them, and the filterChange at
+        the end found no selection to keep and selected one stray image (EditProbe log,
+        2026-11-19). setValDm writes under a QSignalBlocker and repaints only the visible
+        rows, deferred -- the route every other column of an edit already takes. */
+    const QString src = "MW::restampCatalogAfterOwnWrite";
     const QFileInfo si(FileOps::existingSidecar(master));
     r.sidecarMtime = si.exists() ? si.lastModified().toSecsSinceEpoch() : 0;
-    if (r.sidecarMtime) dm->setData(dm->index(dmRow, G::SidecarColumn), true);
+    if (r.sidecarMtime)
+        emit setValDm(dmRow, G::SidecarColumn, true, dm->instance, src, Qt::EditRole);
     const QFileInfo fi(master);
     if (fi.exists()) {
         const qint64 size = fi.size();
         const QDateTime mtime = fi.lastModified();
         if (r.srcSize != size)
-            dm->setData(dm->index(dmRow, G::ByteSizeColumn), size);
+            emit setValDm(dmRow, G::ByteSizeColumn, size, dm->instance, src,
+                          Qt::EditRole);
         if (r.srcMtime != mtime.toSecsSinceEpoch())
-            dm->setData(dm->index(dmRow, G::ModifiedColumn), mtime);
+            emit setValDm(dmRow, G::ModifiedColumn, mtime, dm->instance, src,
+                          Qt::EditRole);
         r.srcSize = size;
         r.srcMtime = mtime.toSecsSinceEpoch();
     }

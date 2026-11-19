@@ -262,7 +262,7 @@ void MW::selfTestModelMutation(const QString &folder)
     refreshAfterRemoval({master});
     check("master removed with versions", {}, {"sample01.jpg", v1n}, {});
 
-    /*  V7  New Version (Develop > Versions, Ctrl+') on the current image: a copy of its
+    /*  V7  New Version (Edit > Versions, Ctrl+') on the current image: a copy of its
             recipe and values, shown and selected so the next edit goes to it. */
     const QString m2 = path("sample015.jpg");
     const QString m2v1 = VersionKey::make(m2, 1);

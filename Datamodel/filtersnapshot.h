@@ -126,6 +126,11 @@ struct FilterSnapshot {
         is counted separately, for the panel to show on the excluded item alone in the
         disabled colour (Filters::updateFilteredCountPerItem). */
     QVector<int> excluded;
+    /*  A version hidden in a collapsed group, and the category columns it counts for
+        (FilterPredicate::collapsedVersionCountsFor). Unlike rescue it can be several:
+        "would checking my value here show me" is asked per category. Sparse -- only
+        collapsed versions are in it. */
+    QHash<int, QSet<int>> versionFacets;
     QHash<const QTreeWidgetItem *, int> facetColumn;
 
     int rowCount() const { return values ? values->rows : 0; }
@@ -134,7 +139,11 @@ struct FilterSnapshot {
     bool admitted(int i) const { return i < inProxy.size() && inProxy.at(i); }
     bool countsFor(int i, int column) const
     {
-        return admitted(i) || (column >= 0 && rescue.value(i, -1) == column);
+        if (admitted(i)) return true;
+        if (column < 0) return false;
+        if (rescue.value(i, -1) == column) return true;
+        const auto v = versionFacets.constFind(i);
+        return v != versionFacets.cend() && v->contains(column);
     }
     bool excludedFor(int i, int column) const
     {

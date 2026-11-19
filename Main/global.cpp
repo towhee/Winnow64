@@ -208,6 +208,7 @@ QColor progressCatalogColor;
 QColor progressCatalogLoadColor;
 QColor progressExportColor;
 QColor progressDuplicatesColor;
+QColor progressEditColor;
 QColor mapPinColor;
 QColor mapPlaceColor;
 QColor mapAxisHandleColor;
@@ -296,7 +297,10 @@ QString cssRgba(const QColor &c)
 
 bool maskOverlayGrayscale = false;             // desaturate under the overlay (global.h)
 
-QStringList ratings, labelColors;
+/*  Initialised here rather than in MW::initialize, so code that runs without a main
+    window (unit tests, Filters::dropForeignLabels) never sees them empty. */
+QStringList ratings {"1", "2", "3", "4", "5"};
+QStringList labelColors {"Red", "Yellow", "Green", "Blue", "Purple"};
 
 double iconOpacity;                 // set in WidgetCSS::styleGlobals
 

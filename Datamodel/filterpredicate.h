@@ -97,6 +97,12 @@ struct FilterCategory
         categories were each made to agree with their column by hand; a column chosen at
         run time cannot be, so both sides are compared as trimmed text. */
     bool compareAsText = false;
+    /*  WHEN NOT EMPTY, A VALUE OUTSIDE IT COMPARES AS BLANK (''). Color classes: Winnow
+        has five, but xmp:Label is free text and another application can write its own
+        word ("Winner"). Such a label is no Winnow color class, so it is the blank item's
+        -- counted there (BuildFilters::makeSnapshot, Catalog's categorySql) and matched
+        there, here. */
+    QStringList knownValues;
     /*  QUERIES (Utilities/queryexpr.h): items whose test is an EXPRESSION rather than a
         value compare -- the Search row's query and each checked Query. Evaluated live,
         per row, with the same valueFor as everything else, so an edit to a column the
@@ -195,7 +201,7 @@ struct FilterPredicate
                 return cat.includeExprs.isEmpty() || exprHit;
         }
 
-        const QVariant dataValue = valueFor(cat.column);
+        const QVariant dataValue = knownOrBlank(cat, valueFor(cat.column));
 
         if (cat.compareAsText) {
             const QString text = dataValue.toString().trimmed();
@@ -233,6 +239,13 @@ struct FilterPredicate
         return false;                           // no match in category
     }
 
+    static QVariant knownOrBlank(const FilterCategory &cat, const QVariant &v)
+    {
+        if (cat.knownValues.isEmpty()) return v;
+        const QString s = v.toString();
+        return s.isEmpty() || cat.knownValues.contains(s) ? v : QVariant(QString(""));
+    }
+
     /*  DOES ONE OF THIS CATEGORY'S EXCLUSIONS HIT THE ROW? Asked only of a row the
         category alone rejects (soleRejectorColumn), so it repeats the exclusion tests of
         categoryAccepts rather than slowing that hot path down to report which test
@@ -245,7 +258,7 @@ struct FilterPredicate
             for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return true;
         }
         if (cat.excludes.isEmpty()) return false;
-        const QVariant dataValue = valueFor(cat.column);
+        const QVariant dataValue = knownOrBlank(cat, valueFor(cat.column));
         if (cat.compareAsText) {
             const QString text = dataValue.toString().trimmed();
             for (const QVariant &ex : cat.excludes)
@@ -278,6 +291,27 @@ struct FilterPredicate
             if (!categoryAccepts(cat, valueFor)) return false;
         }
         return true;
+    }
+
+    /*  DOES A VERSION HIDDEN IN A COLLAPSED GROUP COUNT TOWARDS CATEGORY column's AVAIL?
+        Avail is what checking the version's item would show, judged like every other
+        row over the categories other than this one. A collapsed version shows under a
+        filter unless its master is shown in its place (SortFilter::filterAcceptsRow), so
+        it counts when it passes every OTHER category and its master would not take its
+        place: the master fails another category, or holds a different value here.
+
+        With nothing filtered that is just "the master's value differs": a version rated
+        1 under an unrated master counts under Rating 1, because checking 1 shows it. One
+        holding the master's own value never counts there -- checking it shows the master
+        -- which is always the case for what the FILE carries (keywords, folder).
+        BuildFilters::addFacets, 2026-11-19; it used to skip collapsed versions, so with
+        no filter set Avail fell short of All by every such version. */
+    template <typename FetchV, typename FetchM>
+    bool collapsedVersionCountsFor(FetchV &&version, FetchM &&master, int column) const
+    {
+        if (!accepts(version, column)) return false;
+        if (!accepts(master, column)) return true;
+        return version(column) != master(column);
     }
 
     /*  WHICH CATEGORY ALONE KEEPS THIS ROW OUT. The Filters panel's Avail column is

@@ -188,6 +188,7 @@ private:
     /*  Faceted filtered counts: which category alone rejects each row outside the
         proxy, and each category header's column. GUI thread, from makeSnapshot. */
     void addFacets(FilterSnapshot &snap) const;
+    void addVersionFacets(FilterSnapshot &snap, const FilterPredicatePtr &pred) const;
     void time(QString msg);
     void setIdle();
     void setBusy();

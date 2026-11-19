@@ -7,12 +7,17 @@
 
 <h1>How filters work</h1>
 
-<p>The filter panel has categories that contain items. For example the category
-<span class="highlight">Ratings</span> can include the items 1, 2, 3, 4 and 5.</p>
+<p>When you filter on multiple categories the filter is <span
+class="highlight">AND</span>. When you select multiple items in a category the filter is
+<span class="highlight">OR</span>. You can also exclude items. In this example, the filter
+will include all images with a rating of 1 or 2 and color class red or blue, excluding
+images in Photos_to_be_curated. </p>
 
-<p>When you select multiple items in a category the filter is
-<span class="highlight">OR</span>. In the ratings example, if 1 and 2 were
-selected then the filter is all images with a rating of 1 or 2. Keywords are the one
+<p><img src="images/Filters_example.png"></p>
+
+<p><p><span class="highlight">Mouse click</span> selects an item.
+When you select multiple items in a category the filter is
+<span class="highlight">OR</span>. Keywords are the one
 exception you can change: see <span class="highlight">Any or all keywords</span>
 below.</p>
 
@@ -27,21 +32,12 @@ including the search text.</p>
 <p><span class="highlight">Shift+Opt+Cmd+click</span> (Shift+Alt+Ctrl+click on Windows)
 a folder in <span class="highlight">Folders</span> to filter on that folder only,
 without its subfolders: the folder is included, each folder directly in it is excluded,
-and every other filter is cleared. Shift+Opt+Cmd+click the same folder again to turn
-it off. Hover over the Folders heading for a table of all
+and every other filter is cleared. Shift+Opt+Cmd+click the same folder again, or just click it, to
+turn it off. Hover over the Folders heading for a table of all
 the folder clicks, or right-click a folder to choose any of them from the menu.</p>
 
 <p><span class="highlight">Opt+click</span> (Alt+click on Windows) an item to exclude
 it.</p>
-
-<p><img src="images/filters1.png"></p>
-
-<p>When you filter on multiple categories the filter is
-<span class="highlight">AND</span>. If you also selected the Color Classes red
-and blue, then the filter will include all images with a rating of 1 or 2 and
-color class red or blue.</p>
-
-<p><img src="images/filters2.png"></p>
 
 <h1>Groups</h1>
 
@@ -107,6 +103,9 @@ in the empty set of included colors".</p>
 number of images the exclusion is leaving out. Those images are not counted as available
 anywhere else, so a parent folder, a drive or a keyword branch above an excluded item
 shows only what is left.</p>
+
+<p>Everything beneath an excluded folder or keyword is excluded with it, so it is shown
+struck through in red as well, although its own box stays clear.</p>
 
 <h1>Filtering on any column</h1>
 
