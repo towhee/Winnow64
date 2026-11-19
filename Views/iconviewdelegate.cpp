@@ -1072,7 +1072,11 @@ textRect         = a rectangle below itemRect
         const bool isTwin = isDup && duplicateTwinGroup > 0 && !rowKey.isEmpty()
                             && Duplicates::instance().infoOf(rowKey).group
                                    == duplicateTwinGroup;
-        painter->setBrush(isTwin ? duplicateTextColor : badgeColor);
+        /*  A duplicate outside the current group: red (or okayed purple) number on the
+            cell's own background, as a plain number badge is drawn. */
+        const bool isOutline = !isTwin && isDup;
+        painter->setBrush(isTwin ? duplicateTextColor
+                          : isOutline ? labelColorToUse : badgeColor);
         QFont numberFont = painter->font();
         int pxSize = qMax(6, iconNumberSize);
         numberFont.setPixelSize(pxSize);
@@ -1082,9 +1086,10 @@ textRect         = a rectangle below itemRect
         QString labelNumber = QString::number(sfRow + 1);
         int numberWidth = fm.boundingRect(labelNumber).width() + 4;
         QRect numberRect(frameRect.left(), frameRect.top(), numberWidth + 4, iconNumberSize);
-        painter->setPen(isTwin ? QPen(badgeColor, 1.5) : QPen(Qt::transparent));
+        painter->setPen(Qt::NoPen);
         painter->drawRoundedRect(numberRect, 8, 8);
-        painter->setPen(isTwin ? badgeColor : isDup ? duplicateTextColor : numberTextColor);
+        painter->setPen(isTwin || isOutline ? badgeColor
+                        : isDup ? duplicateTextColor : numberTextColor);
         painter->drawText(numberRect, Qt::AlignCenter, labelNumber);
     }
 

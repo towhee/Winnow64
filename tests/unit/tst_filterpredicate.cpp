@@ -114,6 +114,22 @@ void tst_filterpredicate::soleRejectorDrivesFacetedCounts()
     ex.categories << cat(G::RatingColumn, {}, { "4" });
     QCOMPARE(ex.soleRejectorColumn(fetch(rated4)), int(G::RatingColumn));
 
+    /*  ...but it says it rejected BY EXCLUSION, because nothing else checked in the
+        category can bring that row back: the panel counts it only on the excluded
+        item, never as available. A row failing only the includes is not. */
+    bool byEx = false;
+    QCOMPARE(ex.soleRejectorColumn(fetch(rated4), &byEx), int(G::RatingColumn));
+    QVERIFY(byEx);
+    QCOMPARE(p.soleRejectorColumn(fetch(rated4), &byEx), int(G::RatingColumn));
+    QVERIFY(!byEx);
+    FilterPredicate mixed;
+    mixed.categories << cat(G::RatingColumn, { "5" }, { "4" });
+    Row rated3 { { G::RatingColumn, "3" } };
+    QCOMPARE(mixed.soleRejectorColumn(fetch(rated4), &byEx), int(G::RatingColumn));
+    QVERIFY(byEx);
+    QCOMPARE(mixed.soleRejectorColumn(fetch(rated3), &byEx), int(G::RatingColumn));
+    QVERIFY(!byEx);
+
     /*  Keywords in ALL mode AND their checks, so another check narrows: the category is
         not set aside, and a row it alone rejects is rescued by nothing. */
     FilterCategory kw = cat(G::KeywordsAllColumn, { "A", "B" });

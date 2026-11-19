@@ -312,7 +312,8 @@ public:
         share a leaf name and a label would collide them back together. */
     QString itemMapKey(const QTreeWidgetItem *category,
                        const QTreeWidgetItem *item) const;
-    void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
+    void updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category,
+                                    QMap<QString, int> excludedMap = {});
     void updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void updateZeroCountCheckedItems(QMap<QString, int> itemMap, QTreeWidgetItem *category);
     void setCategoryBackground();      // re-reads G::headerGradientTop/Bottom
@@ -585,7 +586,11 @@ public:
             See isTypeGroup. */
         TypeGroupRole,
         /*  On a DRIVE row in Folders: the volume's root path. See isDriveItem. */
-        DriveRole
+        DriveRole,
+        /*  On column 2 (Avail): true when the count shown is what an EXCLUSION removes --
+            the item or one above it is excluded -- drawn in the disabled colour and left
+            out of any parent's sum. See updateFilteredCountPerItem. */
+        AvailExcludedRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --
@@ -827,6 +832,11 @@ private:
     void addTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category);
     void updateTypeItems(const QMap<QString, int> &itemMap, QTreeWidgetItem *category);
     void refreshTypeGroups();
+    void refreshDriveCounts();
+    bool isEffectivelyExcluded(const QTreeWidgetItem *item,
+                               const QTreeWidgetItem *category) const;
+    void setAvailExcluded(QTreeWidgetItem *item, bool excluded);
+    int sumChildAvail(QTreeWidgetItem *parent, bool *allExcluded) const;
     QList<QTreeWidgetItem *> sessionCats;       // see addSessionCategory
     QList<QTreeWidgetItem *> retiredSessionCats;    // see removeSessionCategory
     /*  "Filter on...", appended to every menu by addFilterActions. Owned here rather

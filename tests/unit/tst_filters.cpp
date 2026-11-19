@@ -38,6 +38,7 @@ private slots:
     void folderCountsRollUpAndStateSurvivesARebuild();
     void foldersReachTheQueryByPath();
     void libraryFoldersGroupUnderTheirDrive();
+    void anExcludedFolderShowsWhatItRemoves();
     void aNestedCategoryIsCountedAtEveryDepth();
     void keywordMatchModeTravelsAndResets();
     void flatOrderIsTheGroupOrder();
@@ -395,6 +396,70 @@ void tst_filters::libraryFoldersGroupUnderTheirDrive()
     f.toggleDriveFilter(driveB, true);
     f.folderFilterState(inc, exc);
     QCOMPARE(exc, QStringList{b});
+}
+
+void tst_filters::anExcludedFolderShowsWhatItRemoves()
+{
+/*
+    Avail on an excluded item is what the exclusion removes, greyed; those rows are
+    available to nothing else, so neither the parent folder nor the drive counts them.
+    A drive row gets no count update of its own: it is re-summed from its folders.
+*/
+#if defined(Q_OS_WIN)
+    const QString a = "C:/Photos", b = "D:/Archive";
+#elif defined(Q_OS_LINUX)
+    const QString a = "/home/r/Photos", b = "/media/r/Yukon/Archive";
+#else
+    const QString a = "/Users/r/Photos", b = "/Volumes/Yukon/Archive";
+#endif
+    Filters f(nullptr);
+    f.setFolderAnchors({a, b});
+    f.setFolderDrives(true);
+    f.addCategoryItems({{a + "/2024", 3}, {a + "/2025", 4}, {b + "/Old", 5}}, f.folders);
+    QTreeWidgetItem *photos = findByValue(f.folders, a);
+    QTreeWidgetItem *y2024 = findByValue(f.folders, a + "/2024");
+    QTreeWidgetItem *y2025 = findByValue(f.folders, a + "/2025");
+    QTreeWidgetItem *driveA = photos->parent();
+    QTreeWidgetItem *driveB = findByValue(f.folders, b)->parent();
+    auto avail = [](QTreeWidgetItem *i) { return i->data(2, Qt::EditRole).toInt(); };
+    auto greyed = [](QTreeWidgetItem *i) {
+        return i->data(2, Filters::AvailExcludedRole).toBool();
+    };
+
+    // a filtered count reaches the drive (it used to keep its build-time total)
+    f.updateFilteredCountPerItem({{a + "/2024", 2}, {a + "/2025", 1}}, f.folders);
+    QCOMPARE(avail(driveA), 3);
+    QCOMPARE(avail(driveB), 0);
+
+    // one folder excluded: it shows what it removes, nothing above counts it
+    y2025->setCheckState(0, Qt::PartiallyChecked);
+    f.updateFilteredCountPerItem({{a + "/2024", 2}}, f.folders, {{a + "/2025", 4}});
+    QCOMPARE(avail(y2025), 4);
+    QVERIFY(greyed(y2025));
+    QCOMPARE(y2025->foreground(2).color(), G::disabledColor);
+    QCOMPARE(avail(y2024), 2);
+    QVERIFY(!greyed(y2024));
+    QCOMPARE(avail(photos), 2);
+    QCOMPARE(avail(driveA), 2);
+    QVERIFY(!greyed(driveA));
+
+    // the anchor excluded: everything beneath it is excluded, and so is the drive
+    y2025->setCheckState(0, Qt::Unchecked);
+    photos->setCheckState(0, Qt::PartiallyChecked);
+    f.updateFilteredCountPerItem({}, f.folders, {{a + "/2024", 3}, {a + "/2025", 4}});
+    QCOMPARE(avail(photos), 7);
+    QVERIFY(greyed(photos));
+    QCOMPARE(avail(y2024), 3);
+    QVERIFY(greyed(y2024));
+    QCOMPARE(avail(driveA), 7);
+    QVERIFY(greyed(driveA));
+
+    // excluded no more: the grey goes
+    photos->setCheckState(0, Qt::Unchecked);
+    f.updateFilteredCountPerItem({{a + "/2024", 3}, {a + "/2025", 4}}, f.folders);
+    QVERIFY(!greyed(photos) && !greyed(driveA));
+    QCOMPARE(avail(driveA), 7);
+    QVERIFY(!photos->data(2, Qt::ForegroundRole).isValid());
 }
 
 void tst_filters::aNestedCategoryIsCountedAtEveryDepth()

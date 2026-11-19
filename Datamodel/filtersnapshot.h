@@ -120,6 +120,12 @@ struct FilterSnapshot {
         is then over countsFor(row, its facetColumn): the rows every OTHER category
         admits. */
     QVector<int> rescue;
+    /*  excluded[row] is the column of the one category that keeps this row out BY AN
+        EXCLUSION, or -1. Such a row is never in rescue: an exclusion wins over anything
+        else checked in the category, so the row is not available to any item there. It
+        is counted separately, for the panel to show on the excluded item alone in the
+        disabled colour (Filters::updateFilteredCountPerItem). */
+    QVector<int> excluded;
     QHash<const QTreeWidgetItem *, int> facetColumn;
 
     int rowCount() const { return values ? values->rows : 0; }
@@ -129,6 +135,10 @@ struct FilterSnapshot {
     bool countsFor(int i, int column) const
     {
         return admitted(i) || (column >= 0 && rescue.value(i, -1) == column);
+    }
+    bool excludedFor(int i, int column) const
+    {
+        return column >= 0 && excluded.value(i, -1) == column;
     }
 };
 

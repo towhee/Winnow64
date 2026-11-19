@@ -233,6 +233,30 @@ struct FilterPredicate
         return false;                           // no match in category
     }
 
+    /*  DOES ONE OF THIS CATEGORY'S EXCLUSIONS HIT THE ROW? Asked only of a row the
+        category alone rejects (soleRejectorColumn), so it repeats the exclusion tests of
+        categoryAccepts rather than slowing that hot path down to report which test
+        failed. */
+    template <typename Fetch>
+    static bool categoryExcludes(const FilterCategory &cat, Fetch &&valueFor)
+    {
+        if (!cat.excludeExprs.isEmpty()) {
+            const std::function<QVariant(int)> fn = valueFor;
+            for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return true;
+        }
+        if (cat.excludes.isEmpty()) return false;
+        const QVariant dataValue = valueFor(cat.column);
+        if (cat.compareAsText) {
+            const QString text = dataValue.toString().trimmed();
+            for (const QVariant &ex : cat.excludes)
+                if (text == ex.toString().trimmed()) return true;
+            return false;
+        }
+        for (const QVariant &ex : cat.excludes)
+            if (excludeHit(dataValue, ex)) return true;
+        return false;
+    }
+
     /*  IS THIS ROW VISIBLE. Takes a callable rather than a model so the whole
         decision can be tested without one -- valueFor(column) returns what
         data(Qt::EditRole) would return for that column of the row.
@@ -265,17 +289,26 @@ struct FilterPredicate
 
         Returns -1 when the row is accepted, the rejecting category's column when
         exactly one rejects it and that one is ignorable(), and -2 otherwise (two or
-        more reject, or the one that does cannot be set aside). */
+        more reject, or the one that does cannot be set aside).
+
+        byExclusion, when given, says whether that one category rejects the row by an
+        EXCLUSION rather than by failing its includes. Such a row is not available
+        whatever else is checked in the category -- an exclusion wins -- so the panel
+        counts it only on the excluded item (BuildFilters::addFacets). */
     template <typename Fetch>
-    int soleRejectorColumn(Fetch &&valueFor) const
+    int soleRejectorColumn(Fetch &&valueFor, bool *byExclusion = nullptr) const
     {
         int sole = -1;
+        const FilterCategory *soleCat = nullptr;
+        if (byExclusion) *byExclusion = false;
         for (const FilterCategory &cat : categories) {
             if (!cat.isFiltering()) continue;
             if (categoryAccepts(cat, valueFor)) continue;
             if (sole != -1 || !ignorable(cat)) return -2;
             sole = cat.column;
+            soleCat = &cat;
         }
+        if (byExclusion && soleCat) *byExclusion = categoryExcludes(*soleCat, valueFor);
         return sole;
     }
 };

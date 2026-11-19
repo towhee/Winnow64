@@ -271,7 +271,9 @@ QVariant RowStore::valueLocked(const ImageRow &r, int column, int role) const
     case G::DimensionsColumn:      return mStrings.value(r.dimensionsId);
     case G::MegaPixelsColumn:      return mStrings.value(r.megaPixelsId);
     case G::GPSCoordColumn:        return mStrings.value(r.gpsId);
-    case G::CompareColumn:         return r.isCompare;
+    case G::CompareColumn:
+        return r.isCompare == 2 ? QVariant(ImageRow::kCompareOkayed())
+                                : QVariant(r.isCompare == 1);
     case G::SearchColumn:          return r.isSearch;
     case G::IngestedColumn:        return r.isIngested;
     case G::SearchTextColumn:      return r.searchText;
@@ -411,7 +413,11 @@ void RowStore::setValue(int row, int column, int role, const QVariant &v)
     case G::DimensionsColumn:      r.dimensionsId = mStrings.id(v.toString()); break;
     case G::MegaPixelsColumn:      r.megaPixelsId = mStrings.id(v.toString()); break;
     case G::GPSCoordColumn:        r.gpsId = mStrings.id(v.toString()); break;
-    case G::CompareColumn:         r.isCompare = v.toBool(); break;
+    case G::CompareColumn:
+        /* "Okayed" first: as a QVariant it is a non-empty string, so toBool() is true. */
+        r.isCompare = v.typeId() == QMetaType::QString && v.toString() == ImageRow::kCompareOkayed()
+                          ? 2 : v.toBool() ? 1 : 0;
+        break;
     case G::SearchColumn:          r.isSearch = v.toBool(); break;
     case G::IngestedColumn:        r.isIngested = v.toBool(); break;
     case G::SearchTextColumn:      r.searchText = v.toString(); break;

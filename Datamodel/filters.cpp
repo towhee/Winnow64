@@ -233,7 +233,8 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
         category admits (BuildFilters::addFacets) -- so it is what checking the item
         would make available, not what is showing. */
     headerItem()->setToolTip(2, "Images available for this item, based on the current "
-                                "filtration.");
+                                "filtration.\nOn an excluded item, greyed: the images the "
+                                "exclusion removes.");
     /* how to add pixmap to a header
     model()->setHeaderData(0, Qt::Horizontal, QVariant::fromValue(QIcon(":/images/branch-closed-winnow.png")), Qt::DecorationRole);
     */
@@ -1626,6 +1627,7 @@ void Filters::clearAll()
             (*it)->setCheckState(0, Qt::Unchecked);
             styleFilterItem(*it);       // drop an exclusion's strikethrough too
             (*it)->setData(2, Qt::EditRole, "");
+            setAvailExcluded(*it, false);
             (*it)->setData(3, Qt::EditRole, "");
             (*it)->setData(4, Qt::EditRole, "");
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
@@ -2895,8 +2897,10 @@ bool Filters::loadCatalogCategories()
             const int n = counts.value(itemMapKey(c.item, child), 0);
             child->setData(2, Qt::EditRole, n);
             child->setData(3, Qt::EditRole, n);
+            setAvailExcluded(child, false);
         }
         if (c.item == types) refreshTypeGroups();
+        if (c.item == folders) refreshDriveCounts();
         bool anyRealValue = false;
         for (auto it = map.constBegin(); it != map.constEnd(); ++it)
             if (!it.key().isEmpty()) { anyRealValue = true; break; }
@@ -3723,6 +3727,7 @@ void Filters::uncheckAllFilters()
                not enough, because exclusion is drawn on the FONT as well. */
             styleFilterItem(*it);
             (*it)->setData(2, Qt::EditRole, "");
+            setAvailExcluded(*it, false);
             (*it)->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
             (*it)->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
         }
@@ -4132,14 +4137,74 @@ void Filters::addFolderItems(const QMap<QString, int> &folderCounts,
     /*  A drive counts what its folders do -- summed once they are all attached, so a
         second call does not add its folders on top of the first's. Open, so the folders
         (the rows that filter) are what the category shows. */
-    for (QTreeWidgetItem *d : std::as_const(driveByRoot)) {
-        int count = 0;
-        for (int i = 0; i < d->childCount(); ++i)
-            count += d->child(i)->data(3, Qt::EditRole).toInt();
-        d->setData(2, Qt::EditRole, count);
-        d->setData(3, Qt::EditRole, count);
-        d->setExpanded(true);
+    refreshDriveCounts();
+    for (QTreeWidgetItem *d : std::as_const(driveByRoot)) d->setExpanded(true);
+}
+
+void Filters::refreshDriveCounts()
+{
+/*
+    Each drive row's counts: the sums of its folders'. A drive row is not a filter item
+    (itemsInCategory walks through it), so no count update ever reaches it -- this is
+    called after each one that touches Folders, as refreshTypeGroups is for File types.
+    Exact, because an image is in exactly one folder. Takes no lock.
+*/
+    if (!folders) return;
+    for (int i = 0; i < folders->childCount(); ++i) {
+        QTreeWidgetItem *d = folders->child(i);
+        if (!isDriveItem(d)) continue;
+        bool allExcluded = false;
+        const int avail = sumChildAvail(d, &allExcluded);
+        int all = 0;
+        for (int j = 0; j < d->childCount(); ++j)
+            all += d->child(j)->data(3, Qt::EditRole).toInt();
+        d->setData(2, Qt::EditRole, avail);
+        d->setData(3, Qt::EditRole, all);
+        setAvailExcluded(d, allExcluded);
     }
+}
+
+bool Filters::isEffectivelyExcluded(const QTreeWidgetItem *item,
+                                    const QTreeWidgetItem *category) const
+{
+/*
+    Excluded itself, or beneath an excluded item: an exclusion matches its descendants
+    too (G::FolderPathsAllColumn and G::KeywordsAllColumn hold every ancestor), so
+    nothing below one is available either.
+*/
+    for (const QTreeWidgetItem *up = item; up && up != category; up = up->parent())
+        if (!isDriveItem(up) && up->checkState(0) == Qt::PartiallyChecked) return true;
+    return false;
+}
+
+void Filters::setAvailExcluded(QTreeWidgetItem *item, bool excluded)
+{
+    /*  Cleared rather than set to the text colour, so a row that stops being excluded
+        goes back to whatever the palette draws. */
+    item->setData(2, AvailExcludedRole, excluded ? QVariant(true) : QVariant());
+    item->setData(2, Qt::ForegroundRole,
+                  excluded ? QVariant(QBrush(G::disabledColor)) : QVariant());
+}
+
+int Filters::sumChildAvail(QTreeWidgetItem *parent, bool *allExcluded) const
+{
+/*
+    A parent row's Avail from its children's. Children showing an excluded count are left
+    out -- they are not available -- unless the parent is itself excluded or EVERY child
+    is, in which case the parent shows what the exclusions remove (greyed, *allExcluded).
+*/
+    int avail = 0, removed = 0, nExcluded = 0;
+    const int n = parent->childCount();
+    for (int i = 0; i < n; ++i) {
+        const QTreeWidgetItem *c = parent->child(i);
+        const int v = c->data(2, Qt::EditRole).toInt();
+        if (c->data(2, AvailExcludedRole).toBool()) { removed += v; ++nExcluded; }
+        else avail += v;
+    }
+    const bool excluded = parent->checkState(0) == Qt::PartiallyChecked
+                          || (n > 0 && nExcluded == n);
+    if (allExcluded) *allExcluded = excluded;
+    return excluded ? removed : avail;
 }
 
 QString Filters::driveLabel(const QString &root) const
@@ -4421,16 +4486,18 @@ void Filters::refreshTypeGroups()
         QTreeWidgetItem *group = types->child(i);
         if (!isTypeGroup(group)) continue;
         QStringList values;
-        int filtered = 0, all = 0;
+        int all = 0;
         for (int j = 0; j < group->childCount(); ++j) {
             QTreeWidgetItem *t = group->child(j);
             values << t->data(1, Qt::EditRole).toString();
-            filtered += t->data(2, Qt::EditRole).toInt();
             all += t->data(3, Qt::EditRole).toInt();
         }
+        bool excluded = false;
+        const int filtered = sumChildAvail(group, &excluded);
         group->setData(1, Qt::EditRole, values);
         group->setData(2, Qt::EditRole, filtered);
         group->setData(3, Qt::EditRole, all);
+        setAvailExcluded(group, excluded);
     }
 }
 
@@ -4890,12 +4957,14 @@ void Filters::updateUnfilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidg
             item->setData(3, Qt::EditRole, itemMap.value(key));
     }
     if (category == types) refreshTypeGroups();
+    if (category == folders) refreshDriveCounts();
 
     // sort the result
     //category->sortChildren(0, Qt::AscendingOrder);
 }
 
-void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category)
+void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidgetItem *category,
+                                         QMap<QString, int> excludedMap)
 {
 /*
     All the unique values for a category are collected into a QMap object in
@@ -4909,8 +4978,17 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
     user may want to check another item in the same category.
 */
 
+    /*  EXCLUDED ITEMS SHOW WHAT THEY REMOVE, greyed. excludedMap counts the rows an
+        exclusion alone keeps out (BuildFilters::addFacets); those rows are NOT in itemMap,
+        so no other item -- a parent folder, a sibling keyword, the drive -- counts them
+        as available. An item beneath an excluded one is excluded too, and shows the
+        same way. */
+
     /*  Folder counts arrive PER FOLDER; a node shows everything beneath it. */
-    if (category == folders) itemMap = FolderTree::expandCounts(itemMap);
+    if (category == folders) {
+        itemMap = FolderTree::expandCounts(itemMap);
+        excludedMap = FolderTree::expandCounts(excludedMap);
+    }
     // if (G::isLogger || G::isFlowLogger) G::log("Filters::addFilteredCountPerItem", category->text(0));
     if (debugFilters)
         qDebug() << "Filters::updateFilteredCountPerItem"
@@ -4921,12 +4999,14 @@ void Filters::updateFilteredCountPerItem(QMap<QString, int> itemMap, QTreeWidget
 
     for (QTreeWidgetItem *item : itemsInCategory(category)) {
         if (G::stop) return;
-        item->setData(2, Qt::EditRole, 0);
         const QString key = itemMapKey(category, item);
-        if (itemMap.contains(key))
-            item->setData(2, Qt::EditRole, itemMap.value(key));
+        const bool excluded = isEffectivelyExcluded(item, category);
+        const QMap<QString, int> &m = excluded ? excludedMap : itemMap;
+        item->setData(2, Qt::EditRole, m.value(key, 0));
+        setAvailExcluded(item, excluded);
     }
     if (category == types) refreshTypeGroups();
+    if (category == folders) refreshDriveCounts();
 
     // sort the result
     //category->sortChildren(0, Qt::AscendingOrder);

@@ -33,6 +33,7 @@ private slots:
     void pathIsCoveredOnlyAtKeyRole();
     void coversOnlyValueRoles();
     void searchAndIngestedAreBoolsNow();
+    void compareHoldsTrueFalseOrOkayed();
     void variantComparisonIsTypeTolerant();
     void unwrittenFieldsReadBackAsInvalid();
     void conditionalColumnsStayUnsetUntilWritten();
@@ -130,6 +131,32 @@ void tst_imagerow::searchAndIngestedAreBoolsNow()
     QCOMPARE(s.value(0, G::IngestedColumn).typeId(), int(QMetaType::Bool));
     QCOMPARE(s.value(0, G::SearchColumn).toBool(), false);
     QCOMPARE(s.value(0, G::IngestedColumn).toBool(), true);
+}
+
+void tst_imagerow::compareHoldsTrueFalseOrOkayed()
+{
+    /*  G::CompareColumn ("Duplicates found"): a bool, or the text "Okayed" for an okayed
+        Library duplicate, its own item in the category. "Okayed" must not read back as
+        true -- toBool() of a non-empty string is true -- and must not compare equal to
+        either bool, or the Okayed item would match red rows. */
+    RowStore s;
+    s.resize(3);
+    s.setValue(0, G::CompareColumn, Qt::EditRole, true);
+    s.setValue(1, G::CompareColumn, Qt::EditRole, false);
+    s.setValue(2, G::CompareColumn, Qt::EditRole, ImageRow::kCompareOkayed());
+    QCOMPARE(s.value(0, G::CompareColumn).typeId(), int(QMetaType::Bool));
+    QCOMPARE(s.value(0, G::CompareColumn).toBool(), true);
+    QCOMPARE(s.value(1, G::CompareColumn).toBool(), false);
+    const QVariant ok = s.value(2, G::CompareColumn);
+    QCOMPARE(ok.typeId(), int(QMetaType::QString));
+    QCOMPARE(ok.toString(), ImageRow::kCompareOkayed());
+    QVERIFY(ok != QVariant(true));
+    QVERIFY(ok != QVariant(false));
+    QVERIFY(s.value(0, G::CompareColumn) == QVariant(QString("true")));   // the "true" item
+
+    s.setValue(2, G::CompareColumn, Qt::EditRole, false);                 // un-okayed
+    QCOMPARE(s.value(2, G::CompareColumn).typeId(), int(QMetaType::Bool));
+    QCOMPARE(s.value(2, G::CompareColumn).toBool(), false);
 }
 
 void tst_imagerow::variantComparisonIsTypeTolerant()

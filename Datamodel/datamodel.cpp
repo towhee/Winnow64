@@ -1207,9 +1207,9 @@ bool DataModel::setPlaceMembership(const QHash<QString, QStringList> &byPath)
 bool DataModel::setDuplicateStatus(const QHash<QString, int> &byPath)
 {
 /*
-    See the declaration. The CompareColumn writes are the DIFFERENCE between the old red
-    set and the new one, so a status change costs a setData per row that changed, not
-    one per duplicate in the Library.
+    See the declaration. The CompareColumn writes are the DIFFERENCE between the old
+    status table and the new one, so a status change costs a setData per row that
+    changed, not one per duplicate in the Library.
 */
     QHash<QString, int> old;
     {
@@ -1217,49 +1217,57 @@ bool DataModel::setDuplicateStatus(const QHash<QString, int> &byPath)
         if (duplicateByPath == byPath) return false;
         old = std::exchange(duplicateByPath, byPath);
     }
-    auto isRed = [](const QHash<QString, int> &h, const QString &k) {
-        return h.value(k) == DuplicateStatus::Duplicate;
+    /* Duplicate -> true, Okayed -> "Okayed", gone -> false. */
+    auto valueOf = [](int st) {
+        return st == DuplicateStatus::Duplicate ? QVariant(true)
+               : st == DuplicateStatus::Okayed  ? QVariant(ImageRow::kCompareOkayed())
+                                                : QVariant(false);
     };
-    QHash<QString, bool> write;
+    QHash<QString, QVariant> write;
     for (auto it = old.cbegin(); it != old.cend(); ++it)
-        if (it.value() == DuplicateStatus::Duplicate && !isRed(byPath, it.key()))
-            write.insert(it.key(), false);
+        if (!byPath.contains(it.key())) write.insert(it.key(), false);
     for (auto it = byPath.cbegin(); it != byPath.cend(); ++it)
-        if (it.value() == DuplicateStatus::Duplicate && !isRed(old, it.key()))
-            write.insert(it.key(), true);
+        if (old.value(it.key(), DuplicateStatus::None) != it.value())
+            write.insert(it.key(), valueOf(it.value()));
     for (auto it = write.cbegin(); it != write.cend(); ++it) {
         const int row = rowFromKey(it.key());
         if (row < 0) continue;
         const QModelIndex ci = index(row, G::CompareColumn);
-        if (ci.data().toBool() != it.value()) setData(ci, it.value());
+        if (ci.data() != it.value()) setData(ci, it.value());
     }
     return true;
 }
 
 int DataModel::reapplyDuplicateCompare()
 {
-    QStringList red;
+    QHash<QString, int> status;
     {
         QReadLocker lock(&duplicateLock);
-        for (auto it = duplicateByPath.cbegin(); it != duplicateByPath.cend(); ++it)
-            if (it.value() == DuplicateStatus::Duplicate) red << it.key();
+        status = duplicateByPath;
     }
     int n = 0;
-    for (const QString &path : std::as_const(red)) {
-        const int row = rowFromKey(path);
+    for (auto it = status.cbegin(); it != status.cend(); ++it) {
+        const int row = rowFromKey(it.key());
         if (row < 0) continue;
         const QModelIndex ci = index(row, G::CompareColumn);
-        if (!ci.data().toBool()) { setData(ci, true); ++n; }
+        const QVariant now = ci.data();
+        if (now.typeId() == QMetaType::Bool && now.toBool()) continue;  // Find's mark
+        const QVariant want = libraryCompareValue(row, false);
+        if (now != want) { setData(ci, want); ++n; }
     }
     return n;
 }
 
-bool DataModel::isLibraryDuplicateRow(int row) const
+QVariant DataModel::libraryCompareValue(int row, bool found) const
 {
     QReadLocker lock(&duplicateLock);
+    if (found) return true;
     if (duplicateByPath.isEmpty() || !rowStore.contains(row)) return false;
     const QString key = rowStore.value(row, G::PathColumn, G::KeyRole).toString();
-    return duplicateByPath.value(key) == DuplicateStatus::Duplicate;
+    const int st = duplicateByPath.value(key);
+    if (st == DuplicateStatus::Duplicate) return true;
+    if (st == DuplicateStatus::Okayed) return ImageRow::kCompareOkayed();
+    return false;
 }
 
 QVariant DataModel::data(const QModelIndex &idx, int role) const
@@ -3661,7 +3669,7 @@ void DataModel::addFileDataForRow(int row, QFileInfo fileInfo, const CatalogRow 
 
     /*  A Library duplicate is "Duplicates found" from the moment its row exists
         (DataModel::setDuplicateStatus). */
-    setData(index(row, G::CompareColumn), isLibraryDuplicateRow(row));
+    setData(index(row, G::CompareColumn), libraryCompareValue(row, false));
     /*  Created is the CAPTURE date for an indexed row, which is what the column ends up
         holding anyway once metadata arrives -- birthTime is the placeholder the file read
         uses until then, and it needs a stat. Modified comes from the same srcMtime the
@@ -4091,7 +4099,9 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.colorSpace = index(row, G::ICCSpaceColumn).data(Qt::EditRole).toInt();
 
     m.searchStr = index(row, G::SearchTextColumn).data().toString();
-    m.compare = index(row, G::CompareColumn).data().toBool();
+    /* "Okayed" is text, and toBool() of it is true: only a real true is "found". */
+    const QVariant cmp = index(row, G::CompareColumn).data();
+    m.compare = cmp.typeId() == QMetaType::Bool && cmp.toBool();
 
     if (updateInMetadata) metadata->m = m;
 
@@ -4713,7 +4723,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     setData(index(row, G::UrlColumn), m.url);
     search += m.url;
     setData(index(row, G::_UrlColumn), m._url);
-    setData(index(row, G::CompareColumn), m.compare || isLibraryDuplicateRow(row));
+    setData(index(row, G::CompareColumn), libraryCompareValue(row, m.compare));
     /*  THE DECODE GEOMETRY, and it is written only when it was actually READ.
         A row whose metadata came from the local index (m.fromIndex) has none of
         this -- the catalog stores what is displayed and searched, not what is
@@ -4750,7 +4760,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
     // setData(index(row, G::MetadataReadingColumn), m.metadataReading);
     setData(index(row, G::MetadataStatusColumn), m.metaStatus);
     // setData(index(row, G::MissingThumbColumn), m.isEmbeddedThumbMissing);
-    setData(index(row, G::CompareColumn), m.compare || isLibraryDuplicateRow(row));
+    setData(index(row, G::CompareColumn), libraryCompareValue(row, m.compare));
     setData(index(row, G::SearchTextColumn), search.toLower());
 
     // image cache helpers

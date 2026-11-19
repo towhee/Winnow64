@@ -130,15 +130,16 @@ void MW::updateDuplicateOkAction()
 {
 /*
     Duplicate Okay and Show Duplicates of This Image. Enabled when a selected image is in
-    a duplicates group; Okay is checked when every such image is okayed. The Edit menu's
+    a duplicates group; Okay is checked when every image in those groups is okayed --
+    the set toggleDuplicateOk acts on, so the tick says what a click will do. The Edit menu's
     are greyed with the reason otherwise -- the tooltip and the disabled-shortcut
     feedback both read it; the thumbnail context menu's copies are simply not there.
 */
     if (!duplicateOkAction || !showDuplicateTwinsAction || !dm) return;
     auto apply = [this](bool enabled, bool checked, const QString &why) {
         const QString okTip =
-            tr("Okay the selected duplicates: the duplicates check ignores them and "
-               "their number badge turns purple.\nChoose it again to undo.");
+            tr("Okay the selected duplicates and their twins: the duplicates check "
+               "ignores them and their numbers turn purple.\nChoose it again to undo.");
         const QString showTip =
             tr("Show only the selected duplicates and their twins (Filters > "
                "Duplicates of).\nUncheck that filter to show all images again.");
@@ -177,7 +178,12 @@ void MW::updateDuplicateOkAction()
         const int st = idx.sibling(idx.row(), G::DuplicateColumn).data(Qt::EditRole).toInt();
         if (st == DuplicateStatus::None) continue;
         ++inGroup;
-        if (DuplicateOk::IsOk(idx.data(G::KeyRole).toString())) ++okayed;
+        const QString key = idx.data(G::KeyRole).toString();
+        bool groupOk = DuplicateOk::IsOk(key);
+        if (groupOk)
+            for (const QString &t : Duplicates::instance().twinsOf(key))
+                if (!DuplicateOk::IsOk(t)) { groupOk = false; break; }
+        if (groupOk) ++okayed;
     }
     if (inGroup == 0) {
         apply(false, false, tr("no selected image is a Library duplicate (red or purple "
@@ -291,18 +297,22 @@ void MW::showDuplicateTwins()
 void MW::toggleDuplicateOk()
 {
 /*
-    The selected images that are in a duplicates group are okayed -- or, when every one
-    of them is okayed already, un-okayed, so the action twice is undone. An okayed image
-    is left out of the check (Cache/duplicateclassify.h), so okaying either of a pair
-    clears both.
+    THE WHOLE GROUP of each selected duplicate is okayed -- its twins too, loaded or
+    not -- or, when every one of them is okayed already, un-okayed, so the action twice
+    is undone. Selecting one copy of a pair (or of a focus stack's frame) is enough:
+    okaying only the selection left a third copy red, and un-okaying one of a purple
+    pair changed nothing, because its twin was still okayed.
 */
     if (G::isLogger) G::log("MW::toggleDuplicateOk");
     if (!dm) return;
     QStringList paths;
     for (const QModelIndex &idx : RowSelection::Rows(dm->selectionModel)) {
         const int st = idx.sibling(idx.row(), G::DuplicateColumn).data(Qt::EditRole).toInt();
-        if (st != DuplicateStatus::None) paths << idx.data(G::KeyRole).toString();
+        if (st == DuplicateStatus::None) continue;
+        const QString key = idx.data(G::KeyRole).toString();
+        paths << key << Duplicates::instance().twinsOf(key);
     }
+    paths.removeDuplicates();
     if (paths.isEmpty()) {
         if (G::popup)
             G::popup->showPopup(tr("None of the selected images is a Library duplicate."),
@@ -326,5 +336,5 @@ void MW::toggleDuplicateOk()
     if (G::popup)
         G::popup->showPopup(allOk ? tr("%n duplicate(s) no longer okayed.", "", paths.size())
                                   : tr("%n duplicate(s) okayed.", "", paths.size()),
-                            1500);
+                            1500);   // the group's count: twins that are not loaded too
 }

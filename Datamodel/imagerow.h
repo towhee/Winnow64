@@ -113,6 +113,9 @@ private:
     together so the padding is not paid twice. */
 struct ImageRow
 {
+    /* G::CompareColumn's value for an okayed Library duplicate (see isCompare). */
+    static QString kCompareOkayed() { return QStringLiteral("Okayed"); }
+
     // genuinely per-row text
     QString path;
     QString name;
@@ -165,7 +168,11 @@ struct ImageRow
     quint8 metaStatus = 0;
     bool   isVideo = false;
     bool   iconLoaded = false;
-    bool   isCompare = false;      // a BOOL in the model, read back as text
+    /*  G::CompareColumn ("Duplicates found"): 0 false, 1 true -- a BOOL in the model,
+        read back as text -- or 2, a Library duplicate the user okayed, which the model
+        holds as the text "Okayed" (ImageRow::kCompareOkayed) so the category lists it as
+        its own item. */
+    quint8 isCompare = 0;
 
     /*  --- the second batch of columns, moved off the items after the first
         deletion pass measured 31 of the 93 still there. Same rules as above:

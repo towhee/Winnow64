@@ -24,7 +24,7 @@ struct FilterOp {
         SearchCount,        // Filters::updateSearchCategoryCount(map, flag)
         AddItems,           // Filters::addCategoryItems(map, item)
         UnfilteredCount,    // Filters::updateUnfilteredCountPerItem(map, item)
-        FilteredCount,      // Filters::updateFilteredCountPerItem(map, item)
+        FilteredCount,      // Filters::updateFilteredCountPerItem(map, item, excluded)
         CategoryItems,      // Filters::updateCategoryItems(map, item)
         Update,             // Filters::update()
         TextColor,          // Filters::setEachCatTextColor()
@@ -36,6 +36,7 @@ struct FilterOp {
     QTreeWidgetItem *item = nullptr;
     bool flag = false;                  // SearchCount: isFiltered
     QString src;                        // MenuUpdate
+    QMap<QString,int> excluded;         // FilteredCount: rows each exclusion removes
 };
 typedef QVector<FilterOp> FilterOps;
 
@@ -160,10 +161,14 @@ private:
     std::shared_ptr<const FilterSnapshot> makeSnapshot() const;
     void publishSnapshot();
 
+    /*  excludedOnly counts instead the rows facetColumn's category keeps out by an
+        exclusion alone (FilterSnapshot::excluded) -- what each excluded item removes. */
     QMap<QString,int> countSlot(const FilterSnapshot &snap, int slot,
-                                bool filtered, int facetColumn = -1) const;
+                                bool filtered, int facetColumn = -1,
+                                bool excludedOnly = false) const;
     QMap<QString,int> countKeywords(const FilterSnapshot &snap,
-                                    bool filtered, int facetColumn = -1) const;
+                                    bool filtered, int facetColumn = -1,
+                                    bool excludedOnly = false) const;
 
     /*  dispatchOps hands the recorded ops to the GUI thread -- inline when the
         caller already IS the GUI thread (updateCategory's runSync path), else

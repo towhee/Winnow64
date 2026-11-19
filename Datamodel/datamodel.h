@@ -309,17 +309,19 @@ public:
         and read by data() under the lock, as the place table is. Answered by the row's
         KEY, so a version (whose key is not a file path) is never a duplicate.
 
-        THE RED ONES ARE ALSO "Duplicates found". G::CompareColumn is the row-store bool
-        the Filters category of that name counts (Find Duplicates writes it too), so a
-        row that becomes a Library duplicate has it set and one that stops being one has
-        it cleared -- only those rows, so a Find Duplicates result on other rows stands.
-        A row being filled or re-read keeps it (isLibraryDuplicateRow). Returns whether
-        the table changed; GUI thread. */
+        THEY ARE ALSO "Duplicates found". G::CompareColumn is the row-store value the
+        Filters category of that name counts (Find Duplicates writes it too): true for a
+        red one, "Okayed" for a purple one (its own item in the category), false once it
+        is neither -- written only on rows whose status changed, so a Find Duplicates
+        result on other rows stands. A row being filled or re-read keeps it
+        (libraryCompareValue). Returns whether the table changed; GUI thread. */
     bool setDuplicateStatus(const QHash<QString, int> &byPath);
-    /* Set G::CompareColumn again on every loaded Library duplicate (after Find
-       Duplicates cleared the column). Returns rows written. */
+    /* Set G::CompareColumn again on every loaded Library duplicate, red or okayed
+       (after Find Duplicates cleared the column). Returns rows written. */
     int reapplyDuplicateCompare();
-    bool isLibraryDuplicateRow(int row) const;
+    /* What G::CompareColumn holds for this row: true when found (by Find Duplicates)
+       or a red Library duplicate, "Okayed" for an okayed one, otherwise false. */
+    QVariant libraryCompareValue(int row, bool found) const;
     mutable QReadWriteLock duplicateLock;
     QHash<QString, int> duplicateByPath;
 
