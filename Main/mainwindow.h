@@ -1005,6 +1005,9 @@ public slots:
     void sortIndicatorChanged(int column, Qt::SortOrder sortOrder);
     void setProgress(int value);
     void setStatus(QString state);
+    /*  The live drag message (IconView::startDrag), painted at once: during a macOS drag
+        a queued repaint may wait until the drag ends. Empty restores the usual status. */
+    void setDragStatus(const QString &msg);
     void updateStatus(bool keepBase = true, QString s = "", QString source = "");
     void updateSidecarStatus(QString fPath);
     void dropOp(Qt::KeyboardModifiers keyMods, bool dirOp, QString cpMvDirPath);
@@ -1494,8 +1497,6 @@ private slots:
     void followCurrentAfterReorder();
     void toggleSortDirectionClick();
     void toggleSortDirection(Tog n = toggle);
-    void toggleIncludeSidecarsClick();
-    void toggleIncludeSidecars(Tog n = toggle);
     void toggleModifyImagesClick();
     void toggleModifyImages();
     void toggleUseRawClick();
@@ -1992,7 +1993,6 @@ private:
     QAction *ejectActionFromContextMenu;
     QAction *eraseUsbAction;
     QAction *eraseUsbActionFromContextMenu;
-    QAction *includeSidecarsAction;
     QAction *combineRawJpgAction;
     QAction *showAllVersionsAction = nullptr;
     QMenu *versionsMenu = nullptr;
@@ -2427,7 +2427,6 @@ private:
     QProgressBar *progressBar;
     QLabel *statusLabel;
     BarBtn *reverseSortBtn;
-    BarBtn *includeSidecarsToggleBtn;
     BarBtn *useRawBtn;
     /* Status-bar chip naming the picture on the loupe, and its menu (Show Edits, the
        compares, help). Amber while edits are hidden. See MW::syncPictureChip. */
@@ -3956,11 +3955,12 @@ private:
     void deleteSelectedFiles();
     void deleteRejectedFiles();
     void deleteFiles(QStringList paths);
-    /*  Thumbnails dropped on a Filters Folders row (Library scope): confirm, move each
-        image and its sidecars into folder, then refresh the model and the filters.
-        rowKeys are the dragged rows, to name a version dragged without its master. */
+    /*  Thumbnails dropped on a Filters Folders row (Library scope): confirm, move (or,
+        with copy, copy) each image and its sidecars into folder, then refresh the model
+        and the filters. rowKeys are the dragged rows, to name a version dragged without
+        its master. */
     void moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys,
-                            const QString &folder);
+                            const QString &folder, bool copy = false);
     /*  The context menu of a Filters Folders row in the Library
         (Filters::addFolderActions): rename the folder in place, move it under a folder
         the user picks, or send it to the trash. Rename and move go through

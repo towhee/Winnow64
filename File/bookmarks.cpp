@@ -1,5 +1,6 @@
 #include "File/bookmarks.h"
 #include "Utilities/fileops.h"
+#include "Utilities/dragintent.h"
 #include "Utilities/foldertree.h"
 #include <QSet>
 #include "Main/global.h"
@@ -545,7 +546,8 @@ void BookMarks::dragEnterEvent(QDragEnterEvent *event)
     // Accept the proposed action and start the drag
     event->acceptProposedAction();
 
-    emit status(false, "Add drag folder to bookmarks.");
+    // a thumbnail drag's status bar shows its own message (IconView::startDrag)
+    if (!DragIntent::thumbDragActive) emit status(false, "Add drag folder to bookmarks.");
 }
 
 void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
@@ -556,7 +558,7 @@ void BookMarks::dragLeaveEvent(QDragLeaveEvent *event)
     // QWidget::dragLeaveEvent(event);
     event->accept();
     G::popup->reset();
-    emit status(true);
+    if (!DragIntent::thumbDragActive) emit status(true);
 }
 
 void BookMarks::dragMoveEvent(QDragMoveEvent *event)
@@ -627,8 +629,9 @@ void BookMarks::dropEvent(QDropEvent *event)
        There are two types of source for the drag operation: Internal (Winnow) and External
        (another program ie finder/explorer).
 
-       1. Internal: Only image files are being dragged, sidecar files are inferred.  Popup
-          work.
+       1. Internal: thumbnails, plus their sidecars when the drag started with Shift.
+          FileOps carries each image's sidecars either way, and a sidecar also in the
+          drop is skipped (droppedCompanions). Popups work.
 
        2. External: Any file can be dragged: image, sidecar or other.  Popup messages do not work
           because the external program has the operating system window focus.
@@ -647,9 +650,10 @@ void BookMarks::dropEvent(QDropEvent *event)
     };
 
     // Copy or Move operation
-    QString operation;
-    if (event->dropAction() == Qt::MoveAction) operation = "Move";
-    else operation = "Copy";
+    /* A move only for a Winnow thumbnail drag without Opt/Alt (Utilities/dragintent.h).
+       Files dragged in from another application are always copied. */
+    const bool isMove = DragIntent::isMove(event);
+    const QString operation = isMove ? "Move" : "Copy";
 
     // Number of files (internal = images, external = all files selected)
     int count = event->mimeData()->urls().count();
@@ -701,6 +705,10 @@ void BookMarks::dropEvent(QDropEvent *event)
                      " already in destination folder";
         }
     }
+
+    /* The source (IconView::startDrag) trashes exactly these originals, and with them
+       their sidecars, once the drag returns. */
+    if (isMove) DragIntent::reportMoved(srcPaths);
 
     // count file categories
     foreach (srcPath, srcPaths) {

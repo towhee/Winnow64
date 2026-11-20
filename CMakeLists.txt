@@ -814,6 +814,7 @@ set(WINNOW_HEADERS
     Utilities/appinstaller.h
     Utilities/appupdate.h
     Utilities/volumeinfo.h
+    Utilities/dragintent.h
     Utilities/fileops.h
     Utilities/foldertree.h
     Utilities/pinnedcolumns.h

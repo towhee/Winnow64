@@ -588,7 +588,7 @@ QStringList Mac::listMountedVolumes()
 /*
     DRAG COUNT BADGE. A multi-file drag on macOS is one NSDraggingItem per URL (Qt's
     QCocoaDrag::maybeDragMultipleItems), and AppKit badges the cursor with that number.
-    A thumbnail drag carries each image's sidecars as URLs too (G::includeSidecars), so
+    A thumbnail drag carries each image's sidecars as URLs too when started with Shift, so
     over a target that only takes images -- the Collections panel -- the badge
     over-counts. AppKit lets the DESTINATION correct it through
     NSDraggingInfo.numberOfValidItemsForDrop, but Qt never touches it and does not
@@ -662,4 +662,111 @@ void Mac::installDragBadgeHook()
 void Mac::setDragBadgeCount(int n)
 {
     gDragBadgeRequest = n;
+}
+
+/*
+    DRAG OPERATION MASK. AppKit asks the drag SOURCE which operations it allows, once
+    for targets inside the application and once for targets outside it
+    (draggingSession:sourceOperationMaskForDraggingContext:). Qt answers both with the
+    QDrag's supported actions (qnsview_dragging.mm), so a thumbnail drag offering
+    Copy+Move -- needed for a real move cursor and MoveAction inside Winnow -- also let
+    Finder MOVE the files. The wrapper keeps Qt's answer inside the application and,
+    while a thumbnail drag has asked for it (setDragOutsideCopyOnly), narrows the
+    outside answer to Copy. If Qt ever renames the class or selector the hook is not
+    installed, installDragMaskHook returns false, and IconView falls back to a
+    Copy-only drag (Utilities/dragintent.h).
+*/
+namespace {
+bool gDragOutsideCopyOnly = false;
+IMP gOrigSourceMask = nullptr;
+
+NSDragOperation maskedSourceOperation(id self, SEL cmd, NSDraggingSession *session,
+                                      NSDraggingContext context)
+{
+    using Fn = NSDragOperation (*)(id, SEL, NSDraggingSession *, NSDraggingContext);
+    const NSDragOperation op = reinterpret_cast<Fn>(gOrigSourceMask)(self, cmd, session,
+                                                                     context);
+    if (gDragOutsideCopyOnly && context == NSDraggingContextOutsideApplication)
+        return op & NSDragOperationCopy;
+    return op;
+}
+}  // namespace
+
+bool Mac::installDragMaskHook()
+{
+    if (gOrigSourceMask) return true;
+    static bool failed = false;
+    if (failed) return false;
+    Class cls = NSClassFromString(@"QNSView");
+    SEL sel = @selector(draggingSession:sourceOperationMaskForDraggingContext:);
+    Method m = cls ? class_getInstanceMethod(cls, sel) : nullptr;
+    if (!m) {
+        failed = true;
+        G::issue("Warning",
+                 "QNSView drag source mask not found: thumbnail drags fall back to "
+                 "copy-only.", "Mac::installDragMaskHook");
+        return false;
+    }
+    gOrigSourceMask = method_setImplementation(m, reinterpret_cast<IMP>(maskedSourceOperation));
+    return true;
+}
+
+void Mac::setDragOutsideCopyOnly(bool on)
+{
+    gDragOutsideCopyOnly = on;
+}
+
+/*
+    DRAG MOVED. The live drag status (IconView::startDrag) needs to hear about the
+    pointer wherever it is. A QTimer is not dependable during a macOS drag: the Cocoa
+    dispatcher skips timer callbacks while code is inside a manual processEvents
+    (qcocoaeventdispatcher.mm, runLoopTimerCallback), and over a Winnow window no ticks
+    arrived at all (measured 2026-11-20). AppKit instead tells the drag SOURCE of every
+    move through NSDraggingSource's draggingSession:movedToPoint:, inside the
+    application and out. Qt's QNSView, the source of every Qt drag, does not implement
+    it, so it is added here; if a future Qt implements it, Qt's is wrapped and still
+    called.
+*/
+namespace {
+std::function<void()> gDragMoved;
+IMP gOrigMovedToPoint = nullptr;
+bool gMovedHookInstalled = false;
+
+void dragMovedToPoint(id self, SEL cmd, NSDraggingSession *session, NSPoint point)
+{
+    if (gOrigMovedToPoint) {
+        using Fn = void (*)(id, SEL, NSDraggingSession *, NSPoint);
+        reinterpret_cast<Fn>(gOrigMovedToPoint)(self, cmd, session, point);
+    }
+    if (gDragMoved) gDragMoved();
+}
+}  // namespace
+
+bool Mac::setDragMovedHandler(std::function<void()> onMoved)
+{
+    gDragMoved = std::move(onMoved);
+    if (gMovedHookInstalled) return true;
+    static bool failed = false;
+    if (failed) return false;
+    Class cls = NSClassFromString(@"QNSView");
+    SEL sel = @selector(draggingSession:movedToPoint:);
+    if (!cls) {
+        failed = true;
+        G::issue("Warning", "QNSView not found: the drag status cannot follow the pointer.",
+                 "Mac::setDragMovedHandler");
+        return false;
+    }
+    if (Method m = class_getInstanceMethod(cls, sel)) {
+        gOrigMovedToPoint = method_setImplementation(m, reinterpret_cast<IMP>(dragMovedToPoint));
+    }
+    else {
+        // void return, id self, SEL, NSDraggingSession *, NSPoint
+        if (!class_addMethod(cls, sel, reinterpret_cast<IMP>(dragMovedToPoint),
+                             "v@:@{CGPoint=dd}")) {
+            failed = true;
+            return false;
+        }
+    }
+    gMovedHookInstalled = true;
+    return true;
 }

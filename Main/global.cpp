@@ -439,7 +439,6 @@ bool isRunningColorAnalysis;
 bool isRunningStackOperation;
 bool isProcessingExportedImages;
 bool isEmbellish;
-bool includeSidecars;
 bool modifySourceFiles;
 bool backupBeforeModifying;
 bool autoAddMissingThumbnails;

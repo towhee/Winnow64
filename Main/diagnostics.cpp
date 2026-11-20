@@ -353,7 +353,6 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isRunningStackOperation = " << G::s(G::isRunningStackOperation);
     rpt << "\n" << "G::isProcessingExportedImages = " << G::s(G::isProcessingExportedImages);
     rpt << "\n" << "G::isEmbellish = " << G::s(G::isEmbellish);
-    rpt << "\n" << "G::includeSidecars = " << G::s(G::includeSidecars);
     rpt << "\n" << "colour management = always on, sRGB->display path "
         << int(ICC::pathFor(QByteArray())) << " (0 none, 1 identity, 2 fast, 3 lcms)";
     rpt << "\n" << "G::combineRawJpg = " << G::s(G::combineRawJpg);

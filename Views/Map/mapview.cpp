@@ -1315,7 +1315,7 @@ QList<int> MapView::dropRows(const QMimeData *mime) const
 {
 /*
     The datamodel rows of the loaded images the drag names. IconView puts each file's
-    source path in the urls (and, with G::includeSidecars, its companions, which match
+    source path in the urls (and, on a Shift drag, its companions, which match
     no row). A version is its file, so its row is not listed: MW::geotagRows sets every
     row of each file.
 */

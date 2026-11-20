@@ -798,7 +798,7 @@ void MW::addPathsToCollection(qint64 id, const QStringList &paths)
     of catalogued images, and a file the index does not know would be a member that
     never shows. The grid's own rows are catalogued by definition (the Library is what
     is loaded); anything else -- a Finder drag -- is asked of the catalog. Sidecars ride
-    along with a thumbnail drag when "include sidecars" is on, and are not images.
+    along with a thumbnail drag started with Shift, and are not images.
 */
     if (G::isLogger) G::log("MW::addPathsToCollection", QString::number(paths.size()));
     if (G::scope != G::Scope::Catalog) return;

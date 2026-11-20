@@ -296,14 +296,6 @@ void MW::createFileActions()
     connect(refreshBookmarkAction, &QAction::triggered, this, &MW::refreshBookmarks);
 
 
-    includeSidecarsAction = new QAction(tr("Include sidecars"), this);
-    includeSidecarsAction->setObjectName("includeSidecars");
-    includeSidecarsAction->setShortcutVisibleInContextMenu(true);
-    includeSidecarsAction->setCheckable(true);
-    includeSidecarsAction->setChecked(G::includeSidecars);
-    addAction(includeSidecarsAction);
-    connect(includeSidecarsAction, &QAction::triggered, this, &MW::toggleIncludeSidecarsClick);
-
     combineRawJpgAction = new QAction(tr("Combine Raw+Jpg"), this);
     combineRawJpgAction->setObjectName("combineRawJpg");
     combineRawJpgAction->setShortcutVisibleInContextMenu(true);
@@ -2790,7 +2782,6 @@ void MW::createFileMenu()
     fileMenu->addSeparator();
     fileMenu->addAction(combineRawJpgAction);
     fileMenu->addAction(showAllVersionsAction);
-    fileMenu->addAction(includeSidecarsAction);
     fileMenu->addSeparator();
     fileMenu->addAction(deleteImagesAction);
     fileMenu->addAction(deleteRejectedAction);

@@ -58,7 +58,7 @@ void acceptWithoutMoving(QDropEvent *event)
     event->accept();
 }
 
-/*  The images in a URL drag: its sidecars (G::includeSidecars) are not, and the drop
+/*  The images in a URL drag: its sidecars (a Shift drag) are not, and the drop
     skips them (MW::addPathsToCollection), so the drag cursor's count badge must too. */
 void showImageCountBadge(const QMimeData *m)
 {

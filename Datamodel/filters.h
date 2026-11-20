@@ -431,11 +431,12 @@ signals:
         that changes. MW colours the Filters title bar with it. */
     void filteringChanged(bool isFiltering);
     /*  Thumbnails were dropped on a Folders row in Library scope: move these images
-        (companions already filtered out) into that real folder. rowKeys are the dragged
+        (companions already filtered out) into that real folder, or copy them when the
+        drop was an Opt/Alt copy (DragIntent::isMove false). rowKeys are the dragged
         rows (VersionKey::kRowKeysMime), so MW can say when a version moves its master.
         MW confirms, moves and refreshes -- see MW::moveImagesToFolder. */
     void moveImagesToFolderRequested(const QStringList &paths, const QStringList &rowKeys,
-                                     const QString &folder);
+                                     const QString &folder, bool copy);
     /*  The context menu of a Folders row in Library scope (addFolderActions): rename,
         move or trash that real folder. MW asks, does it and refreshes -- see
         MW::renameLibraryFolder, MW::moveLibraryFolder, MW::trashLibraryFolder. */
@@ -689,6 +690,7 @@ private:
         scope, a drag from inside Winnow, a folder item (not a header) that exists on
         disk. dropHover is the row painted as the target while a drag is over it -- an
         index, not the item, so a rebuild mid-drag cannot leave it dangling. */
+    Qt::DropAction folderDropAction(const QDropEvent *event) const;
     QTreeWidgetItem *folderDropTarget(const QPoint &pos, const QDropEvent *event) const;
     void setDropHover(QTreeWidgetItem *item);
     QPersistentModelIndex dropHover;

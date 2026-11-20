@@ -1103,6 +1103,30 @@
        </item>
        <item>
         <property name="text">
+         <string>Move thumbnails to a Winnow folder (sidecars go too)</string>
+        </property>
+        <property name="text">
+         <string>Drag</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Copy thumbnails (to another app, always a copy)</string>
+        </property>
+        <property name="text">
+         <string>Opt/Alt + drag</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Include sidecars when dragging to another app</string>
+        </property>
+        <property name="text">
+         <string>Shift + drag (hold as the drag starts)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Rotate Image Clockwise</string>
         </property>
         <property name="text">

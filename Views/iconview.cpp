@@ -2,7 +2,11 @@
 #include <cmath>
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
+#include "Utilities/dragintent.h"
 #include "Main/mainwindow.h"
+#ifdef Q_OS_MAC
+#include "Utilities/mac.h"
+#endif
 
 /*  IconView Overview
 
@@ -1988,8 +1992,10 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
             //     if (event->modifiers() & Qt::ShiftModifier)  m2->sel->select(idx, event->modifiers(), "IconView::mouseMoveEvent");
             //     dragQueue.append(idx.row());
             // }
-            if (event->modifiers() & Qt::AltModifier) startDrag(Qt::CopyAction);
-            if (!event->modifiers()) startDrag(Qt::MoveAction);
+            /* No modifier moves, Opt/Alt copies, Shift adds the sidecars for another
+               application (DragIntent). Cmd/Ctrl drags nothing. */
+            const Qt::KeyboardModifiers dragMods = Qt::AltModifier | Qt::ShiftModifier;
+            if (!(event->modifiers() & ~dragMods)) startDrag(Qt::MoveAction);
         }
     }
 }
@@ -2345,6 +2351,104 @@ void IconView::zoomCursor(const QModelIndex &idx, QString src, bool forceUpdate,
     setCursor(QCursor(frame));
 }
 
+#ifndef Q_OS_MAC
+namespace {
+/*  Drag cursor art for a Copy-only drag (Windows/Linux, see startDrag), drawn to each
+    platform's convention so a move over a Winnow folder does not show "copy".
+
+    WINDOWS (Explorer): white arrow, black outline. Move is the bare arrow; copy adds a
+    small white box with a black "+" below-right. Both are drawn because the system's
+    own cursor cannot be put back mid-drag: GiveFeedback rebuilds only when a custom
+    cursor's cache key is non-zero and changed, so clearing it leaves the last custom
+    one showing.
+
+    LINUX: only the move arrow is drawn (black, white outline, as Adwaita and Breeze).
+    Copy clears the custom cursor (setDragCursor with a null pixmap), and
+    QBasicDrag::updateCursor falls back to the theme's own Qt::DragCopyCursor.
+
+    WHERE THE TIP GOES differs. Windows (createCursors) pastes the pixmap's top-left at
+    the pointer, in physical pixels, ignoring its device pixel ratio. xcb wraps it in
+    QCursor(pixmap), whose hotspot is the CENTRE and which honours the ratio. */
+QPixmap dragCursorPixmap(bool copy, qreal dpr)
+{
+    const int s = 32;
+#ifdef Q_OS_WIN
+    QPixmap pix(QSize(s, s) * dpr);         // physical pixels, ratio 1
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.scale(dpr, dpr);
+    const QColor fill = Qt::white, edge = Qt::black;
+#else
+    Q_UNUSED(copy)                          // Linux copy uses the theme cursor
+    QPixmap pix(QSize(2 * s, 2 * s) * dpr); // the tip at the centre
+    pix.setDevicePixelRatio(dpr);
+    pix.fill(Qt::transparent);
+    QPainter p(&pix);
+    p.translate(s, s);
+    const QColor fill = Qt::black, edge = Qt::white;
+#endif
+    p.setRenderHint(QPainter::Antialiasing);
+    const QPolygonF arrow({{1, 1}, {1, 18}, {5.5, 14}, {8.5, 20.5}, {11, 19.5},
+                           {8.2, 13}, {14, 13}});
+    p.setPen(QPen(edge, 1.2));
+    p.setBrush(fill);
+    p.drawPolygon(arrow);
+#ifdef Q_OS_WIN
+    if (copy) {
+        p.setRenderHint(QPainter::Antialiasing, false);
+        const QRect box(14, 18, 10, 10);
+        p.setPen(QPen(Qt::black, 1));
+        p.setBrush(Qt::white);
+        p.drawRect(box);
+        const QPoint c = box.center() + QPoint(1, 1);
+        p.drawLine(c.x() - 3, c.y(), c.x() + 3, c.y());
+        p.drawLine(c.x(), c.y() - 3, c.x(), c.y() + 3);
+    }
+#endif
+    return pix;
+}
+}  // namespace
+#endif
+
+namespace {
+/*  Application event filter for the drag status (IconView::startDrag): every DragEnter
+    and DragMove a Winnow widget is sent reports the modifiers, and the pointer is then
+    over Winnow. It never consumes the event. */
+class DragEventWatch : public QObject
+{
+public:
+    explicit DragEventWatch(std::function<void(Qt::KeyboardModifiers)> onDrag)
+        : onDrag(std::move(onDrag)) {}
+protected:
+    bool eventFilter(QObject *obj, QEvent *event) override
+    {
+        if (event->type() == QEvent::DragEnter || event->type() == QEvent::DragMove)
+            onDrag(static_cast<QDragMoveEvent *>(event)->modifiers());
+        return QObject::eventFilter(obj, event);
+    }
+private:
+    std::function<void(Qt::KeyboardModifiers)> onDrag;
+};
+
+/*  The Winnow window under global point pos, for the drag status: a visible, real window
+    (the main window, a floating dock, a dialog) whose frame holds the point. Not
+    QApplication::topLevelAt, which also answers for tool tips, popups and frameless
+    overlays that are "visible" without being anything the user would call a window,
+    so the status could keep saying "Moving" over Finder. */
+QWidget *winnowWindowAt(const QPoint &pos)
+{
+    for (QWidget *w : QApplication::topLevelWidgets()) {
+        if (!w->isVisible() || w->isMinimized()) continue;
+        const Qt::WindowType t = w->windowType();
+        if (t == Qt::ToolTip || t == Qt::Popup || t == Qt::SplashScreen) continue;
+        if (w->testAttribute(Qt::WA_TransparentForMouseEvents)) continue;
+        if (w->windowOpacity() <= 0.0) continue;
+        if (w->frameGeometry().contains(pos)) return w;
+    }
+    return nullptr;
+}
+}  // namespace
+
 void IconView::startDrag(Qt::DropActions)
 {
 /*
@@ -2375,6 +2479,13 @@ void IconView::startDrag(Qt::DropActions)
         return;
     }
 
+    /* SIDECARS LEAVE WINNOW ONLY WITH SHIFT, held as the drag starts: the url list is
+       fixed then (macOS writes it to the drag pasteboard), so it cannot be added
+       mid-drag. Winnow's own file targets carry each image's sidecars themselves
+       through FileOps, so inside Winnow they always travel. */
+    const bool withSidecars =
+        QGuiApplication::queryKeyboardModifiers() & Qt::ShiftModifier;
+
     QList<QUrl> urls;
     QList<QString>paths;
     QStringList rowKeys;                    // G::KeyRole: a version is its own key
@@ -2387,10 +2498,8 @@ void IconView::startDrag(Qt::DropActions)
         seenFiles.insert(fPath);
         urls << QUrl::fromLocalFile(fPath);
         paths << fPath;
-        /* FileOps::companions finds .txt sidecars and case variants (.XMP) that the old
-           hardcoded "<base>.xmp" probe missed. G::includeSidecars still decides whether
-           they leave the application at all. */
-        if (!G::includeSidecars) continue;
+        /* FileOps::companions finds .txt sidecars and case variants (.XMP) */
+        if (!withSidecars) continue;
         foreach (const QString &c, FileOps::companions(fPath))
             urls << QUrl::fromLocalFile(c);
     }
@@ -2399,6 +2508,7 @@ void IconView::startDrag(Qt::DropActions)
     QMimeData *mimeData = new QMimeData;
 
     mimeData->setUrls(urls);
+    mimeData->setData(DragIntent::kIntentMime, QByteArray("1"));
     /*  THE ROWS, not just the files. The URLs name each file once, so a version dragged
         without its master reads as the master. A Winnow target that cares (the Filters
         folder drop says the move takes every version) reads this; others ignore it. */
@@ -2449,41 +2559,109 @@ void IconView::startDrag(Qt::DropActions)
         drag->setPixmap(pix);
     }
 
-    Qt::KeyboardModifiers key = QApplication::queryKeyboardModifiers();
-    Qt::DropAction result;
-
-    // copy
-    if (key == Qt::AltModifier) {
-        result = drag->exec(Qt::CopyAction);
-    }
-
     /*
-        MOVE, BUT COPY IS OFFERED TOO, AND ONLY A MOVE DELETES.
+        ONLY WHAT A WINNOW TARGET SAYS IT MOVED IS DELETED (Utilities/dragintent.h).
 
-        This used to offer MoveAction alone and then delete the files whenever exec()
-        returned anything but IgnoreAction. That made the DELETION the default for every
-        drop target in the application: a target has to accept the drop to receive it, and
-        accepting a move-only drag says "the files are mine now, remove yours". The
-        Keywords dock accepts image drops to TAG them -- nothing moves -- and so it
-        tagged the image and trashed the file, six times, before anyone connected the two.
+        History. The drag once offered MoveAction alone and deleted the files whenever
+        exec() returned anything but IgnoreAction: accepting a move-only drag says "the
+        files are mine now", so the Keywords dock, which accepts image drops to TAG them,
+        trashed six files before anyone connected the two. It then offered Copy+Move and
+        trashed every dragged original when exec() returned MoveAction. That still
+        trashed originals the target had skipped as already in the destination, and when
+        Finder took the Move it moved the image and Winnow trashed its sidecars.
 
-        REFUSING IS NOT AN ANSWER FOR SUCH A TARGET. Setting IgnoreAction to avoid the
-        delete also tells Qt the target declines, and dropEvent is never delivered -- the
-        drag simply does nothing, which is what the first attempt at this fix did.
-
-        SO THE DRAG OFFERS BOTH ACTIONS and the target says which it performed. A file
-        destination (FSTree, BookMarks, the Finder) takes the proposed MoveAction and the
-        originals go, exactly as before -- MoveAction stays the DEFAULT so nothing about
-        those drops changes. A target that only reads the paths declares CopyAction, is
-        delivered its drop, and costs nothing. A new drop target that thinks about neither
-        gets the safe half of the bargain rather than the destructive one.
+        Now no other application can move: on macOS the mask hook narrows the outside
+        offer to Copy (Mac::installDragMaskHook), elsewhere the drag offers Copy alone.
+        FSTree and BookMarks decide a move themselves (DragIntent::isMove), copy, and
+        report the sources whose copy succeeded; only those are trashed here.
     */
-    if (key == Qt::NoModifier) {
-        result = drag->exec(Qt::CopyAction | Qt::MoveAction, Qt::MoveAction);
+#ifdef Q_OS_MAC
+    DragIntent::nativeMove = Mac::installDragMaskHook();
+#else
+    DragIntent::nativeMove = false;
+#endif
+    const Qt::DropActions offered = DragIntent::nativeMove
+        ? (Qt::CopyAction | Qt::MoveAction) : Qt::DropActions(Qt::CopyAction);
+    const Qt::DropAction proposed = DragIntent::nativeMove
+        ? Qt::MoveAction : Qt::CopyAction;
 
-        // moved, so remove drag items from datamodel unless drag onto self
-        if (result == Qt::MoveAction) m2->deleteFiles(paths);
-    }
+    /*  LIVE FEEDBACK. The status bar shows what a drop here would do and (off macOS) the
+        drag cursor swaps between move and copy, since a Copy-only drag would otherwise
+        show "copy" over a Winnow folder that moves.
+
+        THREE SOURCES, because a QTimer is not dependable during a macOS drag (no ticks
+        over a Winnow window, measured 2026-11-20; see Mac::setDragMovedHandler).
+        - macOS: AppKit reports every pointer move to the drag source, inside Winnow
+          and out (Mac::setDragMovedHandler), and tick decides by where the pointer is
+          (winnowWindowAt).
+        - Every platform: Winnow widgets under the pointer are sent DragEnter/DragMove
+          on each move and each modifier change, so an application event filter
+          catches Option pressed or released without moving.
+        - Windows/Linux: the 100 ms timer runs tick too; their drag loops pump timers.
+        The message is painted at once (MW::setDragStatus), not queued. */
+    const int n = paths.size();
+    const QString imgs = QString::number(n) + (n == 1 ? " image" : " images");
+    QString lastMsg;
+#ifndef Q_OS_MAC
+    int lastLook = -1;                      // 0 = move cursor, 1 = copy cursor
+    const qreal dpr = devicePixelRatioF();
+#endif
+    auto show = [&](bool inside, bool alt) {
+        const bool move = inside && !alt;
+        QString msg;
+        if (inside) msg = (move ? "Moving " : "Copying ") + imgs + " and sidecars";
+        else if (withSidecars) msg = "Copying " + imgs + " and sidecars";
+        else msg = "Copying " + imgs +
+                   " (start the drag with Shift to include sidecars)";
+        if (msg != lastMsg) {
+            lastMsg = msg;
+            m2->setDragStatus(msg);
+        }
+#ifndef Q_OS_MAC
+        // macOS draws its own cursors and badges (count, green "+") from the action
+        if (!DragIntent::nativeMove && lastLook != !move) {
+            lastLook = !move;
+#ifdef Q_OS_WIN
+            drag->setDragCursor(dragCursorPixmap(!move, dpr), Qt::CopyAction);
+#else
+            drag->setDragCursor(move ? dragCursorPixmap(false, dpr) : QPixmap(),
+                                Qt::CopyAction);
+#endif
+        }
+#endif
+    };
+    auto tick = [&] {
+        show(winnowWindowAt(QCursor::pos()) != nullptr,
+             QGuiApplication::queryKeyboardModifiers() & Qt::AltModifier);
+    };
+    DragEventWatch watch([&](Qt::KeyboardModifiers mods) {
+        show(true, mods & Qt::AltModifier);
+    });
+    qApp->installEventFilter(&watch);
+    QTimer feedback;
+    feedback.setInterval(100);
+    connect(&feedback, &QTimer::timeout, this, tick);
+    tick();
+    feedback.start();
+
+    DragIntent::takeMoved();                // nothing left over from an earlier drag
+#ifdef Q_OS_MAC
+    Mac::setDragOutsideCopyOnly(true);
+    Mac::setDragMovedHandler(tick);         // every pointer move, inside and out
+#endif
+    DragIntent::thumbDragActive = true;
+    drag->exec(offered, proposed);
+    DragIntent::thumbDragActive = false;
+#ifdef Q_OS_MAC
+    Mac::setDragMovedHandler(nullptr);
+    Mac::setDragOutsideCopyOnly(false);
+#endif
+    feedback.stop();
+    qApp->removeEventFilter(&watch);
+    m2->setDragStatus(QString());
+
+    const QStringList moved = DragIntent::takeMoved();
+    if (!moved.isEmpty()) m2->deleteFiles(moved);
 }
 
 void IconView::dragEnterEvent(QDragEnterEvent *event)

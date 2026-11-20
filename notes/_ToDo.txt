@@ -1,8 +1,8 @@
 WHAT'S NEW
--
+- Prevent accidental moving images out of library with drag operations
 
 BUGS / TO DO
-- File>Show all versions ??
+- Flash folder for 500 ms when 'Pan to current image folder'
 - File>Include sidecars ??
 - thumbnail help schematic.
 - Menu Window>History and Window>Preset ??

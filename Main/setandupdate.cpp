@@ -2077,6 +2077,16 @@ void MW::setProgress(int value)
     progressBar->repaint();
 }
 
+void MW::setDragStatus(const QString &msg)
+{
+    if (msg.isEmpty()) {
+        updateStatus(true, "", "MW::setDragStatus");
+        return;
+    }
+    statusLabel->setText("    " + msg + "    ");
+    statusLabel->repaint();
+}
+
 // not used rgh ??
 void MW::setStatus(QString state)
 {

@@ -18,6 +18,7 @@
 
 #include "Main/global.h"                // req'd by availableMemory
 #include <QtCore>
+#include <functional>
 #include <QColor>
 // #include <QStringList>
 
@@ -50,6 +51,16 @@ public:
        Finder-style count on the drag cursor read n while over it. See mac.mm. */
     static void installDragBadgeHook();
     static void setDragBadgeCount(int n);
+
+    /* DRAG OPERATION MASK. installDragMaskHook() returns true once QNSView's source
+       mask is wrapped; while setDragOutsideCopyOnly(true) is on, a drag offers Copy
+       alone to other applications and its full actions inside Winnow. See mac.mm. */
+    static bool installDragMaskHook();
+    static void setDragOutsideCopyOnly(bool on);
+    /* DRAG MOVED. While set, onMoved runs each time AppKit reports the drag pointer
+       moved, anywhere on screen (draggingSession:movedToPoint:). nullptr clears it.
+       Returns false if the hook could not be installed. See mac.mm. */
+    static bool setDragMovedHandler(std::function<void()> onMoved);
 
 private:
     typedef struct {

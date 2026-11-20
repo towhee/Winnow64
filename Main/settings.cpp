@@ -95,7 +95,6 @@ void MW::writeSettings()
     settings->setValue("infoOverlayFontSize", imageView->infoOverlayFontSize);
 
     // files
-    settings->setValue("includeSidecars", G::includeSidecars);
     settings->setValue("useRaw", G::useRaw);
     settings->setValue("decodeRawEngine", static_cast<int>(G::decodeRawEngine));
 #ifdef Q_OS_MAC
@@ -658,7 +657,6 @@ bool MW::loadSettings()
     if (settings->contains("useJitIconCache")) G::useJitIconCache = settings->value("useJitIconCache").toBool();
 
     // files
-    if (settings->contains("includeSidecars")) G::includeSidecars = settings->value("includeSidecars").toBool();
     /* "colorManage" in older settings files is ignored: colour management is always on
        (2026-10-26, notes/Documentation.md 15.2.2). */
     if (settings->contains("useRaw")) G::useRaw = settings->value("useRaw").toBool();

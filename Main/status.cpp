@@ -178,15 +178,6 @@ void MW::updateStatusBar()
         modifyImagesBtn->setToolTip("Modify image files is Off.  Click to toggle on/off");
     }
 
-    if (G::includeSidecars) {
-        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/sidecar.png"));
-        includeSidecarsToggleBtn->setToolTip("Include sidecars when dragging is On.  Click to toggle on/off");
-    }
-    else {
-        includeSidecarsToggleBtn->setIcon(QIcon(":/images/icon16/nosidecar.png"));
-        includeSidecarsToggleBtn->setToolTip("Include sidecars when dragging is Off.  Click to toggle on/off");
-    }
-
     if (panFocusToggleAction->isChecked()) {
         panToFocusToggleBtn->setIcon(QIcon(":/images/icon16/target.png"));
         panToFocusToggleBtn->setToolTip(
@@ -721,28 +712,6 @@ void MW::toggleModifyImages()
     // No menu item / action to toggle
     updateStatusBar();  // updates btn image and tooltip
     if (infoView) infoView->updateSaveNote();   // where edits go just changed
-}
-
-void MW::toggleIncludeSidecarsClick()
-{
-/*
-    This is called by connect signals from the menu action and the include sidecars
-    button. The call is redirected to toggleIncludeSidecars, which has a parameter which
-    is not supported by the action and button signals.
-*/
-    if (G::isLogger) G::log("MW::toggleIncludeSidecarsClick");
-    toggleIncludeSidecars(Tog::toggle);
-}
-
-void MW::toggleIncludeSidecars(Tog n)
-{
-    if (G::isLogger) G::log("MW::toggleIncludeSidecars");
-    if (n == Tog::toggle) G::includeSidecars = !G::includeSidecars;
-    if (n == Tog::off) G::includeSidecars = false;
-    if (n == Tog::on) G::includeSidecars = true;
-    includeSidecarsAction->setChecked(G::includeSidecars);
-
-    updateStatusBar();  // updates btn image and tooltip
 }
 
 void MW::refreshDevelopThumbs()

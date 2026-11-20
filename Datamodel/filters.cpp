@@ -9,6 +9,7 @@
 #include "Utilities/htmlwindow.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
+#include "Utilities/dragintent.h"
 #include <QStorageInfo>
 #include <QStyleFactory>
 #include <functional>
@@ -5494,12 +5495,28 @@ void Filters::setDropHover(QTreeWidgetItem *item)
     viewport()->update();
 }
 
+Qt::DropAction Filters::folderDropAction(const QDropEvent *event) const
+{
+/*
+    MOVE OR COPY, as the drag says, so the cursor tells the truth: no modifier moves
+    (macOS shows the count badge alone) and Opt/Alt copies (count plus the green "+").
+    Answering Move is safe since IconView::startDrag trashes only what a target reports
+    to DragIntent, and this one reports nothing: MW::moveImagesToFolder does the move.
+    Off macOS the drag offers Copy alone (Utilities/dragintent.h), so Copy is the only
+    answer Qt accepts there; IconView's cursor art and the status bar show the move.
+*/
+    if (DragIntent::nativeMove && DragIntent::isWinnowThumbDrag(event->mimeData()))
+        return event->proposedAction() == Qt::MoveAction ? Qt::MoveAction
+                                                         : Qt::CopyAction;
+    return Qt::CopyAction;
+}
+
 void Filters::dragEnterEvent(QDragEnterEvent *event)
 {
     /* Accepted here for any in-app URL drag in Library scope; dragMoveEvent decides row
-       by row. Always CopyAction -- see the header. */
+       by row. The action is the drag's own (folderDropAction). */
     if (G::scope == G::Scope::Catalog && event->source() && event->mimeData()->hasUrls()) {
-        event->setDropAction(Qt::CopyAction);
+        event->setDropAction(folderDropAction(event));
         event->accept();
         return;
     }
@@ -5515,7 +5532,7 @@ void Filters::dragMoveEvent(QDragMoveEvent *event)
         event->ignore();
         return;
     }
-    event->setDropAction(Qt::CopyAction);
+    event->setDropAction(folderDropAction(event));
     event->accept();
 }
 
@@ -5533,12 +5550,14 @@ void Filters::dropEvent(QDropEvent *event)
         event->ignore();
         return;
     }
-    // the action first, so no early return can leave the source believing it moved
-    event->setDropAction(Qt::CopyAction);
+    /* Decided BEFORE the action is set: on macOS isMove reads the drop action. Nothing
+       is reported to DragIntent, so the source deletes nothing; the move is MW's. */
+    const bool copy = !DragIntent::isMove(event);
+    event->setDropAction(folderDropAction(event));
     event->accept();
 
-    /* The drag carries the sidecars too when G::includeSidecars is on; moveFile takes
-       them along with their image, so only the images are asked for. */
+    /* A Shift drag carries the sidecars too (IconView::startDrag); moveFile and
+       copyFile take them along with their image, so only the images are asked for. */
     const QStringList &sidecar = FileOps::sidecarSuffixes();
     QStringList paths;
     for (const QUrl &u : event->mimeData()->urls()) {
@@ -5554,8 +5573,8 @@ void Filters::dropEvent(QDropEvent *event)
             .split('\n', Qt::SkipEmptyParts);
     /* Queued: MW shows a modal confirmation, which must not run inside the drag's own
        event loop (on macOS the source's exec() is still waiting). */
-    QMetaObject::invokeMethod(this, [this, paths, rowKeys, folder] {
-        emit moveImagesToFolderRequested(paths, rowKeys, folder);
+    QMetaObject::invokeMethod(this, [this, paths, rowKeys, folder, copy] {
+        emit moveImagesToFolderRequested(paths, rowKeys, folder, copy);
     }, Qt::QueuedConnection);
 }
 

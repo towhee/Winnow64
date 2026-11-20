@@ -71,11 +71,6 @@ void MW::initialize()
     modifyImagesBtn->setToolTip(msg);
     connect(modifyImagesBtn, &BarBtn::clicked, this, &MW::toggleModifyImagesClick);
 
-    includeSidecarsToggleBtn = new BarBtn();
-    msg = "Toggle on/off to include sidecars when dragging.";
-    includeSidecarsToggleBtn->setToolTip(msg);
-    connect(includeSidecarsToggleBtn, &BarBtn::clicked, this, &MW::toggleIncludeSidecarsClick);
-
     panToFocusToggleBtn = new BarBtn();
     msg = "Toggle \"Pan To Predicted Focus\" on/off.  Mouse click or shortcut Shift+Z";
     panToFocusToggleBtn->setToolTip(msg);
@@ -1724,7 +1719,6 @@ void MW::createStatusBar()
     statusBarSpacer1->setPixmap(QPixmap(1,5));
     statusBar()->addWidget(statusBarSpacer1);
     statusBar()->addWidget(modifyImagesBtn);
-    statusBar()->addWidget(includeSidecarsToggleBtn);
     statusBar()->addWidget(reverseSortBtn);
     /* useRawBtn removed from the status bar: raw-vs-preview decode is now owned by the Operation
        Mode (Preview=preview, Develop=raw; overridable in Develop via the "Edit source" selector).
