@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 32;
+constexpr int kSchemaVersion = 33;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -1954,6 +1954,23 @@ bool CacheDb::migrate(QSqlDatabase &db)
                        " ON image(captured, ext, width, height)")
             || !q.exec("CREATE INDEX IF NOT EXISTS image_fingerprinted ON image(captured)"
                        " WHERE pixelhash IS NOT NULL OR duration_ms IS NOT NULL")) {
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 33) {
+    /*
+        VERSION DISPLAY NUMBERS (Metadata/versions.h, ImageVersion::number): what a
+        version shows as "v<number>", no longer its id. 0 = not stored yet: the row is
+        numbered on read as its sidecar is (Versions::numberUnnumbered), and
+        MW::storeVersionNumbers writes the number back. ADDITIVE. Re-runnable.
+    */
+        bool has = false;
+        if (q.exec("PRAGMA table_info(image_version)"))
+            while (q.next()) if (q.value(1).toString() == "number") has = true;
+        if (!has && !q.exec("ALTER TABLE image_version"
+                            " ADD COLUMN number INTEGER NOT NULL DEFAULT 0")) {
             db.rollback();
             return false;
         }

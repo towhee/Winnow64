@@ -3,6 +3,7 @@
 #include "Utilities/fileops.h"
 #include "Metadata/versions.h"
 #include "Cache/devpreviewcache.h"
+#include "Cache/catalog.h"
 #include "Datamodel/collectionstore.h"
 #include "Dialogs/versioncollectionsdlg.h"
 
@@ -375,6 +376,41 @@ void MW::newVersion()
     });
 }
 
+void MW::storeVersionNumbers()
+{
+/*
+    VERSIONS FROM BEFORE DISPLAY NUMBERS (2026-11-20) get theirs STORED. Reading
+    already numbers them (Versions::numberUnnumbered, in id order: ids 2 and 5 read as
+    v1 and v2), so nothing on screen changes; this makes the sidecar and the catalog
+    say so, rather than leaving it to the next edit.
+
+    A no-op Versions::update does it: the record read back from the sidecar is
+    numbered, so what it writes differs from what it read, and update writes only
+    then. An image whose file is not there (an unmounted volume) or whose folder is
+    read-only is skipped quietly; its catalog rows keep number 0, so it is tried again
+    next session and the pass ends by itself once there is nothing left. Off the GUI
+    thread: a path may be on a slow or sleeping volume.
+*/
+    if (G::isLogger) G::log("MW::storeVersionNumbers");
+    if (versionNumbersStored || !Catalog::instance().isAvailable()) return;
+    versionNumbersStored = true;
+    (void)QtConcurrent::run([] {
+        const QHash<qint64, QString> images = Catalog::instance().unnumberedVersionImages();
+        for (auto it = images.cbegin(); it != images.cend(); ++it) {
+            const QString &src = it.value();
+            if (!QFileInfo::exists(src)
+                || !Utilities::folderIsWritable(QFileInfo(src).absolutePath()))
+                continue;
+            if (!Versions::update(src, [](VersionSet &) {})) continue;
+            VersionSet::Status status;
+            const VersionSet set = Versions::read(src, VersionSet::Detail::Recipe, &status);
+            if (status != VersionSet::Status::Ok) continue;
+            Catalog::instance().setVersionNumbers(it.key(),
+                                                  Versions::summaries(set, nullptr));
+        }
+    });
+}
+
 void MW::renameVersion()
 {
     if (G::isLogger) G::log("MW::renameVersion");
@@ -389,14 +425,17 @@ void MW::renameVersion()
     const QString name = QInputDialog::getText(
         this, tr("Rename Version"),
         tr("Name for this version of %1:").arg(QFileInfo(master).fileName()),
-        QLineEdit::Normal, old.isEmpty() ? QString("v%1").arg(id) : old, &ok).trimmed();
+        QLineEdit::Normal, old, &ok).trimmed();
     if (!ok || name == old) return;
 
-    /* "v<id>" is what an unnamed version shows, so typing it back means "no name". */
-    const QString stored = (name == QString("v%1").arg(id)) ? QString() : name;
+    /* "v<number>" is what an unnamed version shows, so typing it back (or clearing the
+       field) means "no name". */
     bool found = false;
     Versions::update(master, [&](VersionSet &set) {
-        if (ImageVersion *v = set.find(id)) { v->name = stored; found = true; }
+        if (ImageVersion *v = set.find(id)) {
+            v->name = (name.isEmpty() || name == v->defaultName()) ? QString() : name;
+            found = true;
+        }
     });
     if (!found) return;
     rereadVersionMasters({master}, "MW::renameVersion");
@@ -431,9 +470,8 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
         QString what;
         if (versions.size() == 1) {
             const QString k = versions.first();
-            QString name = dm->index(dm->rowFromKey(k), G::PathColumn)
-                               .data(G::VersionNameRole).toString();
-            if (name.isEmpty()) name = QString("v%1").arg(VersionKey::idOf(k));
+            const QString name = dm->index(dm->rowFromKey(k), G::PathColumn)
+                                     .data(G::VersionNameRole).toString();
             what = tr("Delete version \"%1\" of %2?")
                        .arg(name, QFileInfo(VersionKey::sourceOf(k)).fileName());
         }

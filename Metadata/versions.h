@@ -5,7 +5,9 @@
 #include <QDateTime>
 #include <QJsonObject>
 #include <QList>
+#include <QSet>
 #include <QString>
+#include <algorithm>
 #include <functional>
 
 /*
@@ -19,7 +21,7 @@
     ONE ATTRIBUTE, winnow:Versions, whose value is base64 of compact JSON:
 
       { "schema": 1, "nextId": 3,
-        "versions": [ { "id": 1, "name": "B&W", "created": "2026-09-27T10:00:00Z",
+        "versions": [ { "id": 1, "number": 1, "name": "B&W", "created": "2026-09-27T10:00:00Z",
                         "rating": 4, "label": "Red", "pick": "Picked",
                         "develop": "<EditStack::toBase64()>",
                         "previewKey": "<Metadata::devPreviewKey(develop)>",
@@ -36,6 +38,16 @@
     key-keyed cache (devPreview, history, icon) would otherwise hand the new version
     the old one's state. So deleting the LAST version does not remove the attribute:
     {"schema":1,"nextId":N,"versions":[]} stays behind as the id high-water mark.
+
+    DISPLAY NUMBERS ARE REUSED; IDS ARE NOT. What the user sees ("v2" until named) is
+    the version's NUMBER, not its id. add() stamps it once, as the lowest number no
+    current version of the image holds, and it never changes after that. So deleting
+    v1 of v1..v3 leaves v2 and v3 as they were, and the next version made is v1 again
+    -- the labels stay 1..N, matching the master's count, without ever relabelling a
+    version the user already knows. A record without "number" (written before
+    2026-11-20) is numbered on READ by the same rule, in id order
+    (Versions::numberUnnumbered): ids 2 and 5 read as v1 and v2. Any write stores
+    that, and MW::storeVersionNumbers writes it for every catalogued image once.
 
     UNKNOWN FIELDS SURVIVE. A newer build may add fields to a version or to the
     document; they are carried through a read-modify-write untouched (extra), so an
@@ -54,7 +66,8 @@
 struct ImageVersion
 {
     int id = 0;                 // > 0; 0 means "not a version" (the master)
-    QString name;               // user-visible; "" shows as "v<id>"
+    int number = 0;             // the "v<number>" label; stamped by add(), never changed
+    QString name;               // user-visible; "" shows as "v<number>"
     QDateTime created;          // UTC
     int rating = 0;             // 0 = unrated, 1..5
     QString label;              // "" or a colour name, as G::LabelColumn holds it
@@ -64,10 +77,11 @@ struct ImageVersion
     QByteArray preview;         // 256px JPEG as base64 text; empty unless asked for
     QJsonObject extra;          // fields this build does not know, carried through
 
-    QString displayName() const
+    QString defaultName() const
     {
-        return name.isEmpty() ? QStringLiteral("v%1").arg(id) : name;
+        return QStringLiteral("v%1").arg(number);
     }
+    QString displayName() const { return name.isEmpty() ? defaultName() : name; }
     bool isDeveloped() const { return !develop.isEmpty(); }
 };
 
@@ -76,6 +90,7 @@ struct ImageVersion
 struct VersionSummary
 {
     int id = 0;
+    int number = 0;             // ImageVersion::number; 0 only if never numbered
     QString name;
     int rating = 0;
     QString label;
@@ -86,6 +101,12 @@ struct VersionSummary
         ImageMetadata::cropFx/cropFy. Filled by Metadata::parseSidecar, which has the
         image's dimensions; summaries() leaves 1,1. */
     float cropFx = 1.0f, cropFy = 1.0f;
+
+    // what the grid shows: the name, else "v<number>" (G::VersionNameRole)
+    QString displayName() const
+    {
+        return name.isEmpty() ? QStringLiteral("v%1").arg(number) : name;
+    }
 };
 
 struct VersionSet
@@ -104,8 +125,9 @@ struct VersionSet
     int indexOf(int id) const;
     const ImageVersion *find(int id) const;
     ImageVersion *find(int id);
-    /* Appends v with a fresh id (nextId++) and a creation time if it has none.
-       Returns the stored copy. */
+    /* Appends v with a fresh id (nextId++), the lowest display number no current
+       version holds (whatever v carried -- a copy of a version is a new one), and a
+       creation time if it has none. Returns the stored copy. */
     ImageVersion &add(ImageVersion v);
     bool remove(int id);
 
@@ -118,6 +140,28 @@ struct VersionSet
 };
 
 namespace Versions {
+
+/* Gives every record without a display number (number <= 0) one, in id order, as add()
+   would have: the lowest number no other record holds. Numbered records keep theirs.
+   For ImageVersion (fromBase64) and VersionSummary (catalog rows from before schema
+   33), so both read a pre-number record the same way. */
+template <typename T> void numberUnnumbered(QList<T> &records)
+{
+    QSet<int> taken;
+    QList<int> unnumbered;
+    for (int i = 0; i < records.size(); ++i) {
+        if (records.at(i).number > 0) taken.insert(records.at(i).number);
+        else unnumbered << i;
+    }
+    std::sort(unnumbered.begin(), unnumbered.end(),
+              [&](int a, int b) { return records.at(a).id < records.at(b).id; });
+    int next = 1;
+    for (int i : std::as_const(unnumbered)) {
+        while (taken.contains(next)) ++next;
+        records[i].number = next;
+        taken.insert(next);
+    }
+}
 
 /* The versions in src's sidecar ("" / absent sidecar -> empty set). src must be a
    SOURCE path, never a version key. */

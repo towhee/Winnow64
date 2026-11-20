@@ -276,7 +276,7 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         image.pixelhash and image.duration_ms, the Library duplicates fingerprint
         (Cache/duplicates.h), filled lazily, plus the image_dupkey and
         image_fingerprinted indexes (tst_duplicates::schema32IsRerunnable). */
-    QCOMPARE(CacheDb::schemaVersion(), 32);
+    QCOMPARE(CacheDb::schemaVersion(), 33);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

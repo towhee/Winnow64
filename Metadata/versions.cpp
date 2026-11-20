@@ -20,7 +20,7 @@ namespace {
 // the keys this build owns; everything else in an object is carried in extra
 const QStringList &versionKeys()
 {
-    static const QStringList k = {"id", "name", "created", "rating", "label", "pick",
+    static const QStringList k = {"id", "number", "name", "created", "rating", "label", "pick",
                                   "develop", "previewKey", "preview"};
     return k;
 }
@@ -35,6 +35,7 @@ QJsonObject versionToJson(const ImageVersion &v)
 {
     QJsonObject o = v.extra;
     o["id"] = v.id;
+    if (v.number > 0) o["number"] = v.number;
     if (!v.name.isEmpty()) o["name"] = v.name;
     if (v.created.isValid())
         o["created"] = v.created.toUTC().toString(Qt::ISODate);
@@ -55,6 +56,7 @@ ImageVersion versionFromJson(const QJsonObject &o, VersionSet::Detail detail)
 {
     ImageVersion v;
     v.id = o.value("id").toInt();
+    v.number = o.value("number").toInt();       // <= 0: fromBase64 numbers it
     v.name = o.value("name").toString();
     v.created = QDateTime::fromString(o.value("created").toString(), Qt::ISODate);
     v.rating = qBound(0, o.value("rating").toInt(), 5);
@@ -93,6 +95,12 @@ ImageVersion *VersionSet::find(int id)
 ImageVersion &VersionSet::add(ImageVersion v)
 {
     v.id = nextId++;
+    v.number = 1;
+    for (bool taken = true; taken; ) {          // the lowest number no version holds
+        taken = false;
+        for (const ImageVersion &e : std::as_const(versions))
+            if (e.number == v.number) { taken = true; ++v.number; break; }
+    }
     if (!v.created.isValid()) v.created = QDateTime::currentDateTimeUtc();
     versions.append(v);
     return versions.last();
@@ -144,6 +152,7 @@ VersionSet VersionSet::fromBase64(const QString &b64, Detail detail, Status *sta
         if (v.id <= 0 || set.indexOf(v.id) >= 0) continue;      // unusable or duplicate
         set.versions.append(v);
     }
+    Versions::numberUnnumbered(set.versions);   // written before display numbers
     // nextId never falls to or below an id in use, whatever the document says
     int maxId = 0;
     for (const ImageVersion &v : std::as_const(set.versions)) maxId = qMax(maxId, v.id);
@@ -275,6 +284,7 @@ QList<VersionSummary> Versions::summaries(
     for (const ImageVersion &v : set.versions) {
         VersionSummary s;
         s.id = v.id;
+        s.number = v.number;
         s.name = v.name;
         s.rating = v.rating;
         s.label = v.label;

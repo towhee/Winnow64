@@ -1,6 +1,7 @@
 #include "Export/imageexporter.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
+#include "Metadata/versions.h"
 
 #include <QColorSpace>
 #include <QDebug>
@@ -267,7 +268,9 @@ QString ImageExporter::destinationBaseName(const QString &fPath,
             if (row >= 0)
                 version = dm->index(row, G::PathColumn).data(G::VersionNameRole).toString();
         }
-        if (version.isEmpty()) version = QString("v%1").arg(VersionKey::idOf(fPath));
+        if (version.isEmpty())                      // no row: the sidecar knows
+            version = Versions::readVersion(VersionKey::sourceOf(fPath),
+                                            VersionKey::idOf(fPath)).displayName();
         // a file name cannot carry every character a version name can
         static const QRegularExpression bad(R"([\\/:*?"<>|\x00-\x1F])");
         version.replace(bad, "_");

@@ -9115,6 +9115,8 @@ void MW::folderChangeCompleted()
 
     // offer stale embedded thumbnails an earlier session found (once a session)
     recallStaleThumbs();
+    // store display numbers on versions from before them (once a session)
+    storeVersionNumbers();
 
     // hide metadata read progress
     progress->clearProgress(progressMetaReadRow);

@@ -431,15 +431,13 @@ QString IconViewDelegate::versionBadgeText(const QModelIndex &sfIdx) const
 {
 /*
     A master with versions: its count and an arrow saying whether the group is open.
-    A version: its name ("v2" until named). Anything else: no badge.
+    A version: its name ("v2" until named -- VersionSummary::displayName). Anything
+    else: no badge.
 */
     if (!sfIdx.isValid()) return QString();
     const QModelIndex c0 = sfIdx.model()->index(sfIdx.row(), 0);
     const int id = c0.data(G::VersionIdRole).toInt();
-    if (id > 0) {
-        const QString name = c0.data(G::VersionNameRole).toString();
-        return name.isEmpty() ? QStringLiteral("v%1").arg(id) : name;
-    }
+    if (id > 0) return c0.data(G::VersionNameRole).toString();
     const int count = c0.data(G::VersionCountRole).toInt();
     if (count <= 0) return QString();
     const auto *sf = qobject_cast<const SortFilter *>(sfIdx.model());

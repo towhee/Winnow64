@@ -71,7 +71,7 @@ Q_NAMESPACE
         /* Versions (virtual copies), column 0 -- see Utilities/versionkey.h */
         VersionIdRole,                  // read-only: 0 for a master, else the version id
         VersionCountRole,               // a master: how many versions it has
-        VersionNameRole                 // a version: its name ("" shows as v<id>)
+        VersionNameRole                 // a version: its name, else "v<number>"
         /* An AmbiguousKeywordRole lived here, marking a keyword the catalog had seen
            under more than one parent. Catalog schema 10 made a keyword's identity its
            full path, so the two Vancouvers are two items with two counts and there is

@@ -1413,8 +1413,8 @@ void Catalog::writeVersionsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
     QSqlQuery ins(db);
     ins.prepare("INSERT OR REPLACE INTO image_version"
                 " (image_id, vid, name, rating, label, pick, developed, devpreviewkey,"
-                "  cropfx, cropfy)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                "  cropfx, cropfy, number)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
     for (const VersionSummary &v : r.versions) {
         if (v.id <= 0) continue;
         ins.addBindValue(imageId);
@@ -1427,6 +1427,7 @@ void Catalog::writeVersionsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
         ins.addBindValue(text(v.devPreviewKey));
         ins.addBindValue(v.cropFx);                 // schema 30
         ins.addBindValue(v.cropFy);
+        ins.addBindValue(v.number);                 // schema 33
         if (!ins.exec())
             G::issueDedup("Warning", "Catalog version write failed: "
                           + ins.lastError().text(), "Catalog::writeVersionsLocked", -1, r.path);
@@ -1447,7 +1448,7 @@ QHash<qint64, QList<VersionSummary>> Catalog::readVersionsLocked(QSqlDatabase &d
     const QSet<qint64> want(ids.cbegin(), ids.cend());
     QSqlQuery q(db);
     if (!q.exec("SELECT image_id, vid, name, rating, label, pick, developed, devpreviewkey,"
-                " cropfx, cropfy FROM image_version ORDER BY image_id, vid"))
+                " cropfx, cropfy, number FROM image_version ORDER BY image_id, vid"))
         return out;
     while (q.next()) {
         const qint64 id = q.value(0).toLongLong();
@@ -1462,8 +1463,11 @@ QHash<qint64, QList<VersionSummary>> Catalog::readVersionsLocked(QSqlDatabase &d
         v.devPreviewKey = q.value(7).toString();
         v.cropFx = q.value(8).toFloat();            // schema 30, -1 = not known
         v.cropFy = q.value(9).toFloat();
+        v.number = q.value(10).toInt();             // schema 33, 0 = not known
         out[id] << v;
     }
+    // a row from before schema 33 reads as its sidecar does (Versions::numberUnnumbered)
+    for (auto it = out.begin(); it != out.end(); ++it) Versions::numberUnnumbered(it.value());
     return out;
 }
 
@@ -2728,6 +2732,37 @@ QVector<DuplicateRow> Catalog::duplicateFingerprinted()
                   .arg(kDuplicateCols, kDuplicateExtras, kDuplicateEligible));
     if (!q.exec()) return {};
     return readDuplicateRowsLocked(q);
+}
+
+QHash<qint64, QString> Catalog::unnumberedVersionImages()
+{
+    QHash<qint64, QString> out;
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen()) return out;
+    QSqlQuery q(db);
+    if (!q.exec("SELECT DISTINCT i.id, i.path FROM image_version v"
+                " JOIN image i ON i.id = v.image_id WHERE v.number <= 0"))
+        return out;
+    while (q.next()) out.insert(q.value(0).toLongLong(), q.value(1).toString());
+    return out;
+}
+
+void Catalog::setVersionNumbers(qint64 imageId, const QList<VersionSummary> &versions)
+{
+    QMutexLocker lk(&mutex);
+    QSqlDatabase db = dbLocked();
+    if (!db.isOpen() || !db.transaction()) return;
+    QSqlQuery q(db);
+    q.prepare("UPDATE image_version SET number = ? WHERE image_id = ? AND vid = ?");
+    for (const VersionSummary &v : versions) {
+        if (v.number <= 0) continue;
+        q.addBindValue(v.number);
+        q.addBindValue(imageId);
+        q.addBindValue(v.id);
+        if (!q.exec()) { db.rollback(); return; }
+    }
+    db.commit();
 }
 
 int Catalog::setDuplicateFingerprints(const QVector<DuplicateRow> &rows)

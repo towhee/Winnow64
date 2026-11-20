@@ -7,298 +7,251 @@
 
 <h1>How filters work</h1>
 
-<p>When you filter on multiple categories the filter is <span
-class="highlight">AND</span>. When you select multiple items in a category the filter is
-<span class="highlight">OR</span>. You can also exclude items. In this example, the filter
-will include all images with a rating of 1 or 2 and color class red or blue, excluding
-images in Photos_to_be_curated. </p>
+<p>The Filters panel narrows what you see to the images that match what you check. It
+is made of <span class="highlight">categories</span>, such as Ratings or Keywords, and
+each category holds <span class="highlight">items</span>, such as the ratings 1 to 5.</p>
+
+<p>Checking several items in one category is <span class="highlight">OR</span>: rating 1
+or rating 2. Checking items in several categories is <span class="highlight">AND</span>:
+rating 1 or 2, and color class red or blue. Keywords are the one exception you can
+change: see <span class="highlight">Any or all keywords</span> below.</p>
+
+<p>You can also <span class="highlight">exclude</span> items. In this example the filter
+shows every image rated 1 or 2 with color class red or blue, leaving out the images in
+Photos_to_be_curated.</p>
 
 <p><img src="images/Filters_example.png"></p>
 
-<p><p><span class="highlight">Mouse click</span> selects an item.
-When you select multiple items in a category the filter is
-<span class="highlight">OR</span>. Keywords are the one
-exception you can change: see <span class="highlight">Any or all keywords</span>
-below.</p>
+<p>A category, its group heading and the <span class="highlight">Filters title</span>
+turn <span class="highlight">yellow</span> while they are filtering, so you can tell a
+filter is on even with its category closed.</p>
 
-<p><span class="highlight">Shift+click</span> selects a range: every item between the
-last item you checked and the one you Shift+click is included. If they are all included
-already the same Shift+click clears them. Ranges work within one category only.</p>
+<p>Each item shows two counts: how many images have it, and how many of those are left
+after the other filters.</p>
 
-<p><span class="highlight">Opt+Cmd+click</span> (Alt+Ctrl+click on Windows) an
-item to filter on that item only: it is included and every other filter is cleared,
-including the search text.</p>
+<p>To turn every filter off, press <span class="highlight">Shift+C</span> or right-click
+the panel and choose <span class="highlight">Clear all filters</span>.</p>
 
-<p><span class="highlight">Shift+Opt+Cmd+click</span> (Shift+Alt+Ctrl+click on Windows)
-a folder in <span class="highlight">Folders</span> to filter on that folder only,
-without its subfolders: the folder is included, each folder directly in it is excluded,
-and every other filter is cleared. Shift+Opt+Cmd+click the same folder again, or just click it, to
-turn it off. Hover over the Folders heading for a table of all
-the folder clicks, or right-click a folder to choose any of them from the menu.</p>
+<h1>Clicking items</h1>
 
-<p><span class="highlight">Opt+click</span> (Alt+click on Windows) an item to exclude
-it.</p>
+<table style="width: 620px;" border="silver">
+<tbody>
+<tr>
+    <th style="text-align: left;">Do this</th>
+    <th style="text-align: left;">To</th>
+</tr>
+<tr>
+    <td><span class="highlight">Click</span></td>
+    <td>include the item. Click it again to clear it.</td>
+</tr>
+<tr>
+    <td><span class="highlight">Opt+click</span><br>(Alt+click on Windows and
+    Linux)</td>
+    <td>exclude the item. It is shown struck through in red.</td>
+</tr>
+<tr>
+    <td><span class="highlight">Shift+click</span></td>
+    <td>include every item between the last one you checked and this one, within one
+    category. If they are all included already, the same Shift+click clears them.</td>
+</tr>
+<tr>
+    <td><span class="highlight">Opt+Cmd+click</span><br>(Alt+Ctrl+click on Windows and
+    Linux)</td>
+    <td>filter on this item only. Every other filter is cleared, including the search
+    text.</td>
+</tr>
+<tr>
+    <td><span class="highlight">Shift+Opt+Cmd+click</span> a folder<br>
+    (Shift+Alt+Ctrl+click on Windows and Linux)</td>
+    <td>filter on this folder only, without its subfolders. Do it again, or just click
+    the folder, to turn it off.</td>
+</tr>
+</tbody>
+</table>
 
-<h1>Groups</h1>
-
-<p>The <span class="highlight">groups</span> / <span class="highlight">flat</span> button
-in the Filters title bar (the stacked lines, beside the expand/collapse button) shows how
-the categories are arranged. Grouped (indented lines), they sit under six headings:
-<span class="highlight">Folders and files</span>, <span class="highlight">Time</span>,
-<span class="highlight">Selection</span>, <span class="highlight">Camera</span>,
-<span class="highlight">Metadata</span> and <span class="highlight">Status</span>. Flat
-(even lines), they are one list. Click the button to switch to the other.</p>
-
-<p>The order is the same either way, and nothing you have checked changes. You can also
-turn grouping on or off from the panel's right-click menu
-(<span class="highlight">Group categories</span>).</p>
-
-<p>When you group, any category you have open stays open under its heading, and the
-headings with no open category are closed.</p>
-
-<p>The <span class="highlight">Time</span> categories filter on the capture date.
-<span class="highlight">Years</span>, <span class="highlight">Months of year</span> and
-<span class="highlight">Days of month</span> can be combined. For example, check June
-under Months of year to see every June, or 15 under Days of month to see the 15th of
-every month.</p>
-
-<p>Click a heading to open or close it. In solo mode, opening a heading closes the other
-headings, and opening a category closes the other categories. Hold Cmd (Ctrl on
-Windows) while clicking to open one without closing the rest.</p>
-
-<p>A heading turns <span class="highlight">yellow</span> while any category in it is
-filtering, just as a category does, so you can see where the filter is with the heading
-closed. The <span class="highlight">Filters title</span> turns yellow too whenever
-anything is filtering.</p>
-
-<p>To see only what is filtering, right-click anywhere in the panel and choose
-<span class="highlight">Expand checked filters</span>. Every category is closed except
-the ones with a checked or excluded item, which are opened down to that item.</p>
-
-<p>Double-clicking the empty space below the filters does the same thing.</p>
+<p>Every one of these is also on the <span class="highlight">right-click</span> menu of
+an item, by name: <span class="highlight">Include</span>,
+<span class="highlight">Exclude</span>, <span class="highlight">Clear</span> and
+<span class="highlight">Filter only this</span>. Hover over the Folders heading for a
+table of all the folder clicks.</p>
 
 <h1>Excluding items</h1>
 
-<p>As well as choosing what to include, you can choose what to leave
-<span class="highlight">out</span>. <span class="highlight">Opt+click</span>
-(Alt+click on Windows) an item to exclude it &mdash; it is shown struck through in
-red. Right-click any item for <span class="highlight">Include</span>,
-<span class="highlight">Exclude</span> and <span class="highlight">Clear</span> by
-name. Clicking an excluded item again clears it.</p>
+<p>An exclusion always wins. An image that has an excluded item is left out whatever
+else it matches, in every category, not just the one you excluded from.</p>
 
-<p>To filter on <span class="highlight">only</span> one item,
-<span class="highlight">Opt+Cmd+click</span> it (Alt+Ctrl+click on Windows). That item is
-included and every other filter is cleared, including the search text. The right-click
-menu has the same thing as <span class="highlight">Filter only this</span>.</p>
+<p>A category holding only exclusions subtracts rather than narrows: excluding the color
+class red shows everything that is not red.</p>
 
-<p>An exclusion always wins. If an image carries an excluded item it is left out
-whatever else it matches, and that applies across every category, not just within
-the one you excluded from.</p>
+<p>Everything beneath an excluded folder or keyword is excluded with it. It is shown
+struck through in red too, although its own box stays clear.</p>
 
-<p>A category holding only exclusions subtracts rather than narrows: excluding the
-color class red shows everything that is not red, not "nothing, because no image is
-in the empty set of included colors".</p>
+<p>An excluded item's count is greyed: it is the number of images the exclusion leaves
+out. Those images are not counted anywhere else, so a parent folder, a drive or a keyword
+branch above an excluded item counts only what is left.</p>
 
-<p>An excluded item's <span class="highlight">Avail</span> count is greyed: it is the
-number of images the exclusion is leaving out. Those images are not counted as available
-anywhere else, so a parent folder, a drive or a keyword branch above an excluded item
-shows only what is left.</p>
+<!-- SCREENSHOT: Folders category with one subfolder excluded: the red strike-through
+     on it and its children, the greyed count, and the parent's reduced count. -->
 
-<p>Everything beneath an excluded folder or keyword is excluded with it, so it is shown
-struck through in red as well, although its own box stays clear.</p>
+<h1>Finding your way around the panel</h1>
 
-<h1>Filtering on any column</h1>
+<p>Click a category to open or close it. In <span class="highlight">Solo mode</span>
+(right-click the panel to turn it on or off), opening one closes the others. Hold Cmd
+(Ctrl on Windows and Linux) while clicking to open one without closing the rest.</p>
 
-<p>To filter on something that has no category, such as aspect ratio, aperture or
-camera make, right-click anywhere in the Filters panel and choose
-<span class="highlight">Filter on...</span>. Pick a column from the list, and a
-category for it is added at the bottom of the panel, built from the images that are
-loaded. It works like any other category, and it stays until you quit Winnow, even
-when you change folders.</p>
+<p>To see only what is filtering, right-click the panel and choose
+<span class="highlight">Expand checked filters</span>, or double-click the empty space
+below the filters. Every category is closed except those with a checked or excluded
+item, which are opened down to that item.</p>
 
-<p>Aspect Ratio is the aspect of the original file. To filter on how an image looks
-after you crop it in Develop, including a version with its own crop, use
-<span class="highlight">Cropped Aspect</span>.</p>
+<h2>Groups</h2>
 
-<p>To remove it, right-click the category and choose
-<span class="highlight">Remove</span>. This also clears any filter it was applying.
-These categories are available in the Folders scope only, because the catalog
-can't answer an arbitrary column.</p>
+<p>The <span class="highlight">groups</span> / <span class="highlight">flat</span> button
+in the Filters title bar (the stacked lines, beside the expand/collapse button) switches
+how the categories are arranged. Grouped, they sit under six headings:
+<span class="highlight">Folders and files</span>, <span class="highlight">Time</span>,
+<span class="highlight">Selection</span>, <span class="highlight">Camera</span>,
+<span class="highlight">Metadata</span> and <span class="highlight">Status</span>. Flat,
+they are one list. The right-click menu has the same switch as
+<span class="highlight">Group categories</span>.</p>
 
-<h1>Moving images to another folder</h1>
+<!-- SCREENSHOT: the title-bar groups/flat button, circled, with the panel grouped. -->
 
-<p>In the Library, you can move images into a different folder by dragging their
-thumbnails onto a folder in the <span class="highlight">Folders</span> category. Their
-sidecars go with them. The drop works only on a folder; anywhere else the cursor shows
-that it can't be dropped there.</p>
+<p>The order is the same either way, and nothing you have checked changes. When you
+switch to groups, a category you have open stays open under its heading, and headings
+with no open category are closed.</p>
 
-<p>Winnow asks before moving anything. If a file with the same name is already in that
-folder, it lists the names and offers <span class="highlight">Rename</span> (the moved
-image becomes name_1), <span class="highlight">Overwrite</span> (the existing file goes to
-the trash) or <span class="highlight">Cancel</span>.</p>
+<h1>Notes on some categories</h1>
 
-<p>A version is not a separate file: it is kept in its image's sidecar. Dragging a
-version therefore moves the image and all of its versions, and the confirmation says
-so.</p>
+<h2>Time</h2>
 
-<p>After the move the folder counts update, and the filters you have checked stay
-checked.</p>
+<p>The Time categories filter on the capture date. <span class="highlight">Years</span>,
+<span class="highlight">Months of year</span> and
+<span class="highlight">Days of month</span> combine: check June under Months of year to
+see every June, or 15 under Days of month to see the 15th of every month.</p>
 
-<h1>Renaming, moving and deleting folders</h1>
-
-<p>In the Library, right-click a folder in the <span class="highlight">Folders</span>
-category to rename it, move it, or send it to the trash.</p>
-
-<p><span class="highlight">Reveal folder in Finder</span> (Show folder in Explorer on
-Windows, Show folder in File Manager on Linux) opens the folder in your system's file
-browser. It is there for every folder row, in the Library and in Folders, and is greyed
-out only when the folder's drive is not connected.</p>
-
-<p><span class="highlight">Rename folder...</span> asks for a new name. The folder stays
-where it is.</p>
-
-<p><span class="highlight">Move folder...</span> asks which folder to move it into. It can
-only move to another folder on the same drive.</p>
-
-<p><span class="highlight">Move folder to trash</span> (recycle bin on Windows) asks first,
-then removes the folder's images from the Library and the folder from the Folders
-filter.</p>
-
-<p>If a folder you rename or move is checked in the Folders filter, it stays checked
-under its new name.</p>
-
-<p>When a folder is renamed or moved, its images keep their ratings, edits, collections,
-picks and history. If you move a folder outside the folders your Library covers, its
-images leave the Library, and Winnow tells you how many.</p>
-
-<p>These choices are greyed out, with the reason, while the Library is loading, when the
-folder's drive is not connected, or when the row is a whole drive.</p>
-
-<h1>Finding an image's folder</h1>
-
-<p>In the Library, <span class="highlight">Go &gt; Sync Filters&gt;Folder</span> opens the
-Filters panel and expands the <span class="highlight">Folders</span> category to the folder
-that holds the current image, scrolled into view.</p>
-
-<p>Right-click a thumbnail and choose <span class="highlight">Sync Filters&gt;Folder</span>
-to do the same for that thumbnail.</p>
-
-<p>This only shows the folder. It does not filter on it.</p>
-
-<h1>Images and videos</h1>
+<h2>File types</h2>
 
 <p><span class="highlight">File types</span> sorts the types under
-<span class="highlight">Images</span> and <span class="highlight">Videos</span>.</p>
+<span class="highlight">Images</span> and <span class="highlight">Videos</span>. Check
+Images to see every image type at once, or Videos for every video. You can still check
+single types, like JPG or MP4, underneath.</p>
 
-<p>Check Images to see every image type at once, or Videos for every video. Opt+click
-(Alt+click on Windows and Linux) to leave them all out instead.</p>
+<h2>Keywords</h2>
 
-<p>You can still check single types, like JPG or MP4, underneath.</p>
+<p>A keyword is its <span class="highlight">whole path</span>, so Keywords is shown as a
+tree. Each row shows the last part of the name; hover it to see the full path.</p>
 
-<h1>Keywords are a tree</h1>
+<p>Checking a branch finds everything filed beneath it: checking
+<span class="highlight">Canada</span> finds every image keyworded with anything under
+Canada, without opening the branch. A branch's count is the total of everything inside
+it.</p>
 
-<p>A keyword is its <span class="highlight">whole path</span>, so the Keywords category is
-shown as a tree rather than a list. Each row shows the last part of the name; hover it to
-see the full path.</p>
-
-<p>Every image is linked to each <span class="highlight">ancestor</span> of its keywords,
-so checking <span class="highlight">Canada</span> finds everything filed beneath it
-without opening the branch, and a branch's count is already the total of everything
-inside it.</p>
-
-<p>Two keywords with the same name are two different keywords. If you have filed
+<p>Two keywords with the same name in different places are different keywords.
 Location &gt; Canada &gt; BC &gt; Vancouver and
-Location &gt; USA &gt; Washington &gt; Vancouver, they appear as separate rows under their
-own parents, each with its own count, and checking one finds only its own images.</p>
+Location &gt; USA &gt; Washington &gt; Vancouver are separate rows, each with its own
+count, and checking one finds only its own images.</p>
 
-<p>To include a branch but leave part of it out, exclude the part you do not want:
+<p>To include a branch but leave part of it out, check the branch and exclude the part:
 check <span class="highlight">Location</span>, then Opt+click
-<span class="highlight">Location &gt; USA</span>.</p>
-
-<h2>Any or all keywords</h2>
-
-<p>An image can carry many keywords, so checking two of them can mean two things:
-images with <em>either</em>, or images with <em>both</em>. The Keywords header shows which,
-in its Avail column: <span class="highlight">any</span> (the default) or
-<span class="highlight">all</span>. Click it to switch, or right-click the category for
-<span class="highlight">Match all checked keywords</span>. To find photos keyworded both
-Family and Beach, check both and set the header to <span class="highlight">all</span>.</p>
-
-<p>The label is dimmed while fewer than two keywords are checked, because until then the
-choice makes no difference. A parent still stands for everything beneath it, so
-Location <em>and</em> Beach means "some Location keyword, and Beach". Exclusions work the
-same in both modes. Opening another folder, or the Library, sets it back to
-<span class="highlight">any</span>.</p>
+<span class="highlight">USA</span> beneath it.</p>
 
 <p>Use the <span class="highlight">Keywords panel</span> (Window &gt; Keywords Panel) to
 add, rename, move and delete keywords, and to tag the selected images.</p>
 
-<h1>Writing a query</h1>
+<h2>Any or all keywords</h2>
 
-<p>The <span class="highlight">Adhoc search</span> category at the top of the Filter panel is
-a filter like the others, except that you type it. Click its row &mdash; the one reading
-<i>Enter search query</i> &mdash; type your query and press
-<span class="highlight">Return</span> to run it. Nothing happens while you type: a query
-is run when you say it is finished, not on every keystroke.</p>
+<p>An image can carry many keywords, so checking two of them can mean images with
+<em>either</em>, or images with <em>both</em>. The Keywords heading shows which in its
+count column: <span class="highlight">any</span> (the default) or
+<span class="highlight">all</span>. Click it to switch, or right-click the category for
+<span class="highlight">Match all checked keywords</span>.</p>
 
-<p>Delete the text and press Return to remove the query; the row goes back to reading
-<i>Enter search query</i>. Unticking the row leaves the query in place but stops it
-filtering, and the <span class="highlight">No match</span> row beside it does the
-opposite &mdash; it shows the images the query did <b>not</b> find.</p>
+<p>To find photos keyworded both Family and Beach, check both and set the heading to
+<span class="highlight">all</span>.</p>
 
-<h1>Room to type, and queries worth keeping</h1>
+<!-- SCREENSHOT: Keywords heading with "all" in the count column, Family and Beach
+     checked. -->
 
-<p><span class="highlight">Right-click</span> the search row for three things the row
-itself cannot offer, above the usual filter commands:</p>
+<p>The label is dimmed while fewer than two keywords are checked, because until then the
+choice makes no difference. A branch still stands for everything beneath it, so Location
+<em>and</em> Beach means "any Location keyword, and Beach". Opening another folder, or the
+Library, sets it back to <span class="highlight">any</span>.</p>
 
-<ul>
-<li><span class="highlight">Larger query space...</span> &mdash; opens the query in a
-resizable window, with the operators listed beside it. Use it when a query has grown
-brackets and quoted phrases and no longer fits in the row.</li>
-<li><span class="highlight">Save query...</span> &mdash; give the current query a name
-and keep it. Saving under a name you have already used replaces it.</li>
-<li><span class="highlight">Load query</span> &mdash; picks a saved query and runs it.
-Hover a name to see the query it holds.</li>
-</ul>
+<h1>Duplicates</h1>
 
-<h1>The two scopes</h1>
+<p>The <span class="highlight">Status</span> group has two categories for duplicate
+images. A duplicate is another image in the Library with the same capture time, file
+type and pixels; see <span class="highlight">Manage Catalog</span> help for how they are
+found.</p>
 
-<p>The same row searches whichever scope you are in &mdash; the dock title says which,
-<span class="highlight">Filters (Folders)</span> or
-<span class="highlight">Filters (Catalog)</span> &mdash; and the words mean the same
-thing in both:</p>
+<p>Duplicates are found by <span class="highlight">File &gt; Manage Catalog &gt;
+Duplicates</span>. Until that has been run once, there is nothing for these categories to
+show.</p>
 
-<ul>
-<li><span class="highlight">Filters (Folders)</span> &mdash; searches the images that are
-loaded now.</li>
-<li><span class="highlight">Filters (Catalog)</span> &mdash; searches every image Winnow
-has catalogued, across all your folders.</li>
-</ul>
+<p><span class="highlight">Duplicates found</span> lists the images that are duplicates,
+and, under <span class="highlight">Okayed</span>, the ones you have marked as meant to be
+there with <span class="highlight">Edit &gt; Duplicate Okay</span>. Check the duplicates
+to review them all; their thumbnail numbers are bright red, and okayed ones are
+purple.</p>
 
-<p><b>F2</b> jumps to the search row of whichever scope you are in. To change scope, click
-the <span class="highlight">Catalog</span> subpanel of the
-<span class="highlight">Source</span> panel, or use
-<span class="highlight">File &gt; Open Catalog</span>.</p>
+<p><span class="highlight">Tools &gt; Find duplicates</span> also fills this category,
+with the images it found in the folders you chose.</p>
 
-<p>A search of the loaded folder that found nothing is one scope switch away from being
-asked of the whole library: the text carries across.</p>
+<p><span class="highlight">Duplicates of</span> appears when you select a duplicate and
+choose <span class="highlight">Show Duplicates of This Image</span> from the thumbnail
+right-click menu or the Edit menu. It shows only that image, its twins and their
+versions, so you can decide which copy to keep.</p>
 
-<h1>What is searched</h1>
+<p>Uncheck <span class="highlight">Duplicates of</span> to go back to the filters you had
+before. Trashing one of the copies from it goes back to them too.</p>
 
-<p>Everything Winnow holds as text for an image: its <b>full path</b> &mdash; folder and
-filename &mdash; plus keywords, title, creator, copyright, colour label, camera make and
-model, lens, dimensions, the shooting information, and any e-mail or URL. A query does
-not search the picture itself &mdash; for that, use the AI masks in Develop.</p>
+<!-- SCREENSHOT: grid filtered by "Duplicates of": two twins with white numbers, the
+     Status group open showing the checked "Duplicates of" item. -->
 
-<p>The path being searched is easy to forget and occasionally surprising: a word that
-happens to be in your user name or a drive name is in every image's text.</p>
+<p><span class="highlight">Duplicates found</span> describes the loaded images, so it
+does not appear in <span class="highlight">Filters (Catalog)</span>.</p>
 
-<p><span class="warn">Your own name is probably in most of your library.</span> Creator
-and copyright are searched, and most cameras stamp them into every file, so searching for
-your own name will match nearly everything rather than narrowing anything. The same is
-true of a camera body you have owned for years. Add a second word.</p>
+<h1>Searching</h1>
 
-<h1>The operators</h1>
+<p>The <span class="highlight">Adhoc search</span> category at the top of the panel is a
+filter like the others, except that you type it. Click the row reading
+<i>Enter search query</i>, type your query and press
+<span class="highlight">Return</span>. Nothing happens while you type: the query runs
+when you press Return. <b>F2</b> jumps to the row.</p>
+
+<!-- SCREENSHOT: the Adhoc search row being edited, with a query typed in. -->
+
+<p>A query and your checked items combine like any two categories (AND).</p>
+
+<p>Unchecking the search row leaves the query in place but stops it filtering. The
+<span class="highlight">No match</span> row beside it shows the images the query did
+<b>not</b> find.</p>
+
+<p>Delete the text and press Return to remove the query.</p>
+
+<h2>What is searched</h2>
+
+<p>Everything Winnow holds as text for an image: its <b>full path</b> (folder and
+filename), keywords, title, creator, copyright, colour label, camera make and model,
+lens, dimensions, the shooting information, and any e-mail or URL. A query does not
+search the picture itself; for that, use the AI masks in Develop.</p>
+
+<p>Because the path is searched, a word that is in your user name or a drive name is in
+every image's text.</p>
+
+<p><span class="warn">Your own name is probably in most of your library.</span> Most
+cameras stamp creator and copyright into every file, so searching for your own name
+matches nearly everything. The same is true of a camera body you have owned for years.
+Add a second word.</p>
+
+<p>A word matches anywhere inside a word: <code>eron</code> finds Heron. The exception
+is when <span class="highlight">Maximum search results</span> in Preferences is set to a
+limit. Images past that limit are found in the catalog index, which matches only from
+the <i>start</i> of a word, so there <code>her</code> finds Heron but <code>eron</code>
+does not.</p>
+
+<h2>The operators</h2>
 
 <table style="width: 620px;" border="silver">
 <tbody>
@@ -308,11 +261,8 @@ true of a camera body you have owned for years. Add a second word.</p>
 </tr>
 <tr>
     <td><code>heron nanaimo</code></td>
-    <td>images with <b>both</b> words. Space means AND, which is the default.</td>
-</tr>
-<tr>
-    <td><code>heron AND nanaimo</code></td>
-    <td>the same thing. <code>AND</code> is accepted because people type it.</td>
+    <td>images with <b>both</b> words. A space means AND, the default.
+    <code>heron AND nanaimo</code> is the same.</td>
 </tr>
 <tr>
     <td><code>heron OR eagle</code></td>
@@ -320,11 +270,7 @@ true of a camera body you have owned for years. Add a second word.</p>
 </tr>
 <tr>
     <td><code>-heron</code></td>
-    <td>images <b>without</b> the word.</td>
-</tr>
-<tr>
-    <td><code>NOT heron</code></td>
-    <td>the same thing, spelled out.</td>
+    <td>images <b>without</b> the word. <code>NOT heron</code> is the same.</td>
 </tr>
 <tr>
     <td><code>"great blue"</code></td>
@@ -332,54 +278,37 @@ true of a camera body you have owned for years. Add a second word.</p>
 </tr>
 <tr>
     <td><code>(heron OR eagle) tide</code></td>
-    <td>brackets <b>group</b> &mdash; see below.</td>
+    <td>brackets <b>group</b>: see below.</td>
 </tr>
 </tbody>
 </table>
 
-<p><span class="warn">OR, AND and NOT are operators only in capitals.</span> A photograph
-captioned "black or white" is searched for as written, because the lower-case <i>or</i>
-is just a word someone typed.</p>
+<p><span class="warn">OR, AND and NOT are operators only in capitals.</span> A
+photograph captioned "black or white" is searched for as written.</p>
 
-<h1>Brackets and what binds tightest</h1>
+<h2>Brackets</h2>
 
-<p>AND binds tighter than OR, which is the usual rule in search boxes and spreadsheets.
-So this:</p>
-
-<pre><code>heron OR eagle nanaimo</code></pre>
-
-<p>means <i>heron, or (eagle and nanaimo)</i> &mdash; every heron, plus the eagles at
-Nanaimo. Brackets say the other thing:</p>
-
-<pre><code>(heron OR eagle) nanaimo</code></pre>
-
-<p>which is <i>anything at Nanaimo that is either a heron or an eagle</i>. Brackets nest
-as deeply as you like:</p>
-
-<pre><code>((heron OR eagle) nanaimo) OR "great blue"</code></pre>
+<p>AND binds tighter than OR, as in most search boxes and spreadsheets. So
+<code>heron OR eagle nanaimo</code> means <i>every heron, plus the eagles at
+Nanaimo</i>. Brackets say the other thing: <code>(heron OR eagle) nanaimo</code> means
+<i>herons or eagles, at Nanaimo</i>. Brackets nest as deeply as you like.</p>
 
 <p>An unfinished bracket is not an error. A missing <code>)</code> is closed for you at
-the end of what you have typed, and a stray one is ignored, so a half-written query
-narrows rather than failing.</p>
+the end, and a stray one is ignored, so a half-written query narrows rather than
+failing.</p>
 
-<p>To search for a bracket as a character &mdash; a filename like <code>DSC(2)</code>
-&mdash; put it in quotes: <code>"DSC(2)"</code>.</p>
+<p>To search for a bracket as a character, such as the filename <code>DSC(2)</code>, put
+it in quotes: <code>"DSC(2)"</code>.</p>
 
-<h1>Leaving things out</h1>
+<h2>Leaving things out</h2>
 
-<p>A <code>-word</code> or <code>NOT word</code> excludes it from the whole result,
-wherever in the query you write it. These all mean the same:</p>
+<p><span class="warn">A NOT always applies to the whole query</span>, wherever you write
+it, even inside a bracket. <code>tide -(heron OR eagle)</code> excludes both birds, and
+<code>heron OR -tide</code> is read as <i>heron, and not tide</i>, because that is the
+only reading the catalog index can carry out. If you mean two different exclusions, run
+them as two queries.</p>
 
-<pre><code>tide -heron
-tide NOT heron
-tide -(heron OR eagle)      excludes both</code></pre>
-
-<p><span class="warn">A NOT inside a bracket still applies to the whole query.</span>
-<code>heron OR -tide</code> is read as <i>heron, and not tide</i> rather than as a
-choice, because that is the only reading the catalog index can carry out. If you mean two
-different exclusions, run them as two queries.</p>
-
-<h1>Examples</h1>
+<h2>Examples</h2>
 
 <pre><code>heron                         anything mentioning heron
 "great blue" -captive         the phrase, minus one word
@@ -387,23 +316,103 @@ different exclusions, run them as two queries.</p>
 Z9 (100-400mm OR 500mm)       one body, either of two lenses
 nanaimo NOT (fog OR rain)     a place, in decent weather</code></pre>
 
-<h1>Matching inside words</h1>
+<h2>Long queries and saved queries</h2>
 
-<p>A word matches anywhere inside a word, in both scopes: <code>eron</code> finds
-Heron.</p>
+<p>Right-click the search row for:</p>
 
-<p>The exception is if you have set a limit on search results in Preferences. The catalog
-then holds only the newest images up to that limit, so the rest have to be found in the
-index instead &mdash; and the index matches from the <i>start</i> of a word, where
-<code>eron</code> finds nothing and <code>her</code> finds Heron.</p>
+<ul>
+<li><span class="highlight">Larger query space...</span>: opens the query in a resizable
+window, with the operators listed beside it, for a query that no longer fits in the
+row.</li>
+<li><span class="highlight">Save query...</span>: keeps the current query under a name.
+Saving under a name you have already used replaces it.</li>
+<li><span class="highlight">Load query</span>: runs a saved query. Hover a name to see
+the query it holds.</li>
+</ul>
 
-<h1>The query and the ticks work together</h1>
+<h2>Searching a folder or the whole Library</h2>
 
-<p>The categories below Adhoc search do the other half of the filtering: tick a rating, a
-camera, a keyword or a colour label and the view narrows to it. A query and a tick are
-AND-ed like any two categories, and the tree is rebuilt for whichever scope you are in
-&mdash; a folder offers the three cameras in it, the library offers all forty.</p>
+<p>The panel's title says which scope you are in.
+<span class="highlight">Filters (Folders)</span> searches the images that are loaded
+now. <span class="highlight">Filters (Catalog)</span> searches every image Winnow has
+catalogued, across all your folders. A query means the same thing in both.</p>
 
+<p>To change scope, click the <span class="highlight">Catalog</span> subpanel of the
+<span class="highlight">Source</span> panel, or use
+<span class="highlight">File &gt; Open Catalog</span>. The search text carries across,
+so a search that found nothing in a folder is one switch away from being asked of the
+whole Library.</p>
+
+<p>The categories are rebuilt for the scope: a folder offers the three cameras in it,
+the Library offers all forty.</p>
+
+<h1>Filtering on any column</h1>
+
+<p>To filter on something that has no category, such as aperture or camera make,
+right-click the panel and choose <span class="highlight">Filter on...</span>. Pick a
+column, and a category for it is added at the bottom of the panel, built from the images
+that are loaded. It works like any other category, and stays until you quit Winnow, even
+when you change folders.</p>
+
+<p>Aspect Ratio is the shape of the original file. To filter on how an image looks after
+you crop it in Develop, including a version with its own crop, use
+<span class="highlight">Cropped Aspect</span>.</p>
+
+<p>To remove the category, right-click it and choose
+<span class="highlight">Remove</span>, which also clears any filter it was applying.
+These categories work in <span class="highlight">Filters (Folders)</span> only, because
+the catalog cannot answer an arbitrary column.</p>
+
+<h1>Working with folders in the Library</h1>
+
+<h2>Finding an image's folder</h2>
+
+<p><span class="highlight">Go &gt; Sync Filters&gt;Folder</span> opens the
+<span class="highlight">Folders</span> category to the folder that holds the current
+image, scrolled into view. Right-click a thumbnail and choose
+<span class="highlight">Sync Filters&gt;Folder</span> to do the same for that thumbnail.
+This only shows the folder; it does not filter on it.</p>
+
+<h2>Moving images to another folder</h2>
+
+<p>Drag thumbnails onto a folder in the <span class="highlight">Folders</span> category
+to move the images there. Their sidecars go with them. Anywhere other than a folder, the
+cursor shows that they can't be dropped.</p>
+
+<!-- SCREENSHOT: thumbnails being dragged onto a Folders row, with the drop highlight. -->
+
+<p>Winnow asks before moving anything. If a file with the same name is already there, it
+lists the names and offers <span class="highlight">Rename</span> (the moved image becomes
+name_1), <span class="highlight">Overwrite</span> (the existing file goes to the trash)
+or <span class="highlight">Cancel</span>.</p>
+
+<p>A version is not a separate file: it is kept in its image's sidecar. Dragging a
+version therefore moves the image and all its versions, and the confirmation says so.</p>
+
+<p>After the move the folder counts update, and your checked filters stay checked.</p>
+
+<h2>Renaming, moving and deleting folders</h2>
+
+<p>Right-click a folder in the <span class="highlight">Folders</span> category:</p>
+
+<ul>
+<li><span class="highlight">Rename folder...</span> asks for a new name. The folder stays
+where it is.</li>
+<li><span class="highlight">Move folder...</span> asks which folder to move it into, on
+the same drive.</li>
+<li><span class="highlight">Move folder to trash</span> (recycle bin on Windows) asks
+first, then removes the folder's images from the Library.</li>
+<li><span class="highlight">Reveal folder in Finder</span> (Show folder in Explorer on
+Windows, Show folder in File Manager on Linux) opens it in your file browser. This one is
+also there outside the Library.</li>
+</ul>
+
+<p>A renamed or moved folder stays checked if it was, and its images keep their ratings,
+edits, collections, picks and history. If you move a folder outside the folders your
+Library covers, its images leave the Library, and Winnow tells you how many.</p>
+
+<p>These choices are greyed out, with the reason, while the Library is loading, when the
+folder's drive is not connected, or when the row is a whole drive.</p>
 
 </body>
 </html>

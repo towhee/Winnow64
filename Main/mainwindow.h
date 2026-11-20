@@ -3947,6 +3947,10 @@ private:
     void syncVersionsMenu();
     void rereadVersionMasters(const QStringList &masters, const QString &src);
     void writeVersionValues(const QStringList &versionKeys);
+    /*  Writes the display number of every catalogued version that has none yet into
+        its sidecar and the catalog, once a session after the first load. */
+    void storeVersionNumbers();
+    bool versionNumbersStored = false;      // storeVersionNumbers ran this session
     void selfTestNavigate();            // WINNOW_SELFTEST_NAV, Main/selftestnav.cpp
     void insertFiles(QStringList fPaths);
     void deleteSelectedFiles();

@@ -1,6 +1,9 @@
 #include <QtTest>
 #include <QTemporaryDir>
 #include <QFile>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 
 #include "Metadata/versions.h"
 #include "Metadata/xmp.h"
@@ -52,6 +55,9 @@ private slots:
     void jsonRoundTripKeepsEveryField();
     void idsAreNeverReused();
     void nextIdIsRepairedFromTheIds();
+    void displayNumbersFillTheLowestGap();
+    void aRecordWithoutANumberIsNumberedOnRead();
+    void updateStoresTheNumbers();
     void corruptAndNewerAreReported();
     void updateKeepsTheRestOfTheSidecar();
     void updateCreatesASidecarWhenThereIsNone();
@@ -170,6 +176,90 @@ void tst_versions::nextIdIsRepairedFromTheIds()
     const VersionSet set = VersionSet::fromBase64(QString::fromLatin1(json.toBase64()));
     QCOMPARE(set.versions.size(), 2);           // duplicate and id 0 dropped
     QCOMPARE(set.nextId, 6);
+}
+
+void tst_versions::displayNumbersFillTheLowestGap()
+{
+    // v1 v2 v3; delete v1 -> v2 v3 keep their labels; the next one is v1 again
+    VersionSet set;
+    for (int i = 0; i < 3; ++i) set.add(ImageVersion());
+    QVERIFY(set.remove(1));
+    ImageVersion copy = *set.find(2);           // a copy of a version is a new one
+    const ImageVersion &fresh = set.add(copy);
+    QCOMPARE(fresh.id, 4);
+    QCOMPARE(fresh.number, 1);
+    QCOMPARE(fresh.displayName(), QString("v1"));
+    QCOMPARE(set.find(2)->displayName(), QString("v2"));
+    QCOMPARE(set.find(3)->displayName(), QString("v3"));
+    QCOMPARE(set.add(ImageVersion()).number, 4);    // no gap: after the highest
+
+    // the number survives the sidecar, and so into the folder-load summaries
+    const VersionSet back = VersionSet::fromBase64(set.toBase64());
+    QCOMPARE(back.find(4)->number, 1);
+    const QList<VersionSummary> sums = Versions::summaries(back, nullptr);
+    QCOMPARE(sums.size(), 4);
+    for (const VersionSummary &v : sums)
+        if (v.id == 4) QCOMPARE(v.displayName(), QString("v1"));
+}
+
+void tst_versions::aRecordWithoutANumberIsNumberedOnRead()
+{
+    // written before display numbers: numbered in id order, lowest free first
+    const QByteArray json =
+        R"({"schema":1,"nextId":6,"versions":[{"id":5},{"id":2,"name":"B&W"}]})";
+    VersionSet set = VersionSet::fromBase64(QString::fromLatin1(json.toBase64()));
+    QCOMPARE(set.find(2)->number, 1);
+    QCOMPARE(set.find(2)->displayName(), QString("B&W"));
+    QCOMPARE(set.find(5)->number, 2);
+    QCOMPARE(set.find(5)->displayName(), QString("v2"));
+    QCOMPARE(set.add(ImageVersion()).number, 3);
+
+    // a stored number is kept; the unnumbered ones fill around it
+    const QByteArray mixed =
+        R"({"schema":1,"nextId":5,"versions":[{"id":1,"number":2},{"id":3},{"id":4}]})";
+    const VersionSet m = VersionSet::fromBase64(QString::fromLatin1(mixed.toBase64()));
+    QCOMPARE(m.find(1)->number, 2);
+    QCOMPARE(m.find(3)->number, 1);
+    QCOMPARE(m.find(4)->number, 3);
+
+    // a catalog row from before schema 33 reads the same way
+    QList<VersionSummary> rows(2);
+    rows[0].id = 5;
+    rows[1].id = 2;
+    Versions::numberUnnumbered(rows);
+    QCOMPARE(rows[0].displayName(), QString("v2"));
+    QCOMPARE(rows[1].displayName(), QString("v1"));
+}
+
+void tst_versions::updateStoresTheNumbers()
+{
+    // an old record in the sidecar: a no-op update writes the numbers it read
+    const QByteArray old = R"({"schema":1,"nextId":6,"versions":[{"id":2},{"id":5}]})";
+    {
+        QFile f(sidecar);
+        QVERIFY(f.open(QIODevice::ReadWrite));
+        Xmp xmp(f, 0);
+        QVERIFY(xmp.setItem("versions", old.toBase64()));
+        QVERIFY(xmp.writeSidecar(f));
+    }
+    QVERIFY(Versions::update(image, [](VersionSet &) {}));
+    QString b64;
+    {
+        QFile f(sidecar);
+        QVERIFY(f.open(QIODevice::ReadOnly));
+        Xmp xmp(f, 0);
+        b64 = xmp.getItem("versions");
+    }
+    const QJsonArray stored = QJsonDocument::fromJson(
+        QByteArray::fromBase64(b64.toLatin1())).object().value("versions").toArray();
+    QCOMPARE(stored.size(), 2);
+    QCOMPARE(stored.at(0).toObject().value("number").toInt(), 1);
+    QCOMPARE(stored.at(1).toObject().value("number").toInt(), 2);
+
+    // and a second pass finds nothing to write
+    const QString before = readSidecar();
+    QVERIFY(Versions::update(image, [](VersionSet &) {}));
+    QCOMPARE(readSidecar(), before);
 }
 
 void tst_versions::corruptAndNewerAreReported()

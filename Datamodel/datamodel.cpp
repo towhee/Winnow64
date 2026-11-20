@@ -2166,7 +2166,7 @@ bool DataModel::fillVersionRow(int row)
     if (!addMetadataForItem(m, "DataModel::fillVersionRow")) return false;
 
     const QSignalBlocker b(this);
-    setData(index(row, G::PathColumn), v.name, G::VersionNameRole);
+    setData(index(row, G::PathColumn), v.displayName(), G::VersionNameRole);
     /*  THE RECORD'S PICK IS IGNORED (2026-10-25), a version's like any other row's: the
         saved picks hold it (Datamodel/savedpicks.h), applied in addFileDataForRow. A
         REFILL (a master re-read, MW::reconcileVersionRows) keeps the row's pick. */

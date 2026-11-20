@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Utilities/versionkey.h"
+#include "Metadata/versions.h"
 #include "Utilities/rowtrail.h"
 #include "Utilities/fileops.h"
 #include "Cache/devpreviewcache.h"
@@ -794,7 +795,8 @@ void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys
         QString name = row < 0 ? QString()
                                : dm->index(row, G::PathColumn)
                                      .data(G::VersionNameRole).toString();
-        if (name.isEmpty()) name = "v" + QString::number(VersionKey::idOf(k));
+        if (name.isEmpty())                         // no row: the sidecar knows
+            name = Versions::readVersion(master, VersionKey::idOf(k)).displayName();
         lonelyVersions[master] << name;
     }
     QString versionNote;

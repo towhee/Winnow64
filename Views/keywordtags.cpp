@@ -338,8 +338,8 @@ KeywordTags::KeywordTags(KeywordVocab *vocab, QWidget *parent)
         else emit addRequested(path);
     });
 
-    /*  Return with nothing chosen from the popup resolves the text against the keyword
-        list -- see commitTyped. It never CREATES a keyword: that is the Keyword list's
+    /*  Return with nothing chosen from the popup takes the popup's first row -- see
+        commitTyped. It never CREATES a keyword: that is the Keyword list's
         job, so every keyword this field puts on a photograph is one the list holds. */
     connect(addEdit, &QLineEdit::returnPressed, this, &KeywordTags::commitTyped);
 
@@ -355,41 +355,29 @@ QString KeywordTags::headerText() const
 void KeywordTags::commitTyped()
 {
 /*
+    Return with nothing chosen from the popup. (A row highlighted in the popup is taken
+    by QCompleter::activated before this runs, and that handler clears the field, so the
+    early return below catches it.)
+
     Add what was typed -- but ONLY AS A KEYWORD ALREADY IN THE LIST. Keywords are created
     in the Keyword list and nowhere else; an earlier version took unmatched text literally
     and put a new root keyword on the images, which is how stray unfiled (red) keywords
     were born.
 
-    Resolved in order: a full path ("Fauna|Bird|Heron"), then a name or synonym that
-    names exactly ONE node. Two nodes sharing a name (the two Vancouvers) are ambiguous
-    and the completer popup, which shows each one's branch, is how to choose. Anything
-    else is refused with a message saying where keywords are made; the text stays so it
-    can be corrected.
+    Resolved in order: the FIRST ROW OF THE DROP LIST, read from the completer's own
+    filtered model so it is exactly the row the user saw at the top; then, when the list
+    is empty, a full path ("Fauna|Bird|Heron"). Anything else is refused with a message
+    saying where keywords are made; the text stays so it can be corrected.
 */
     const QString typed = keywordNodes(addEdit->text()).join('|');
     if (typed.isEmpty()) return;
 
     QString path;
-    const QModelIndex exact = vocab->indexForPath(typed);
-    if (exact.isValid()) {
-        path = exact.data(KeywordVocab::PathRole).toString();
-    }
-    else {
-        const QString fold = keywordFold(typed);
-        QStringList matches;
-        for (const VocabNode *n : vocab->completions(typed, 0)) {
-            bool hit = keywordFold(n->name) == fold;
-            for (const QString &syn : n->synonyms)
-                if (keywordFold(syn) == fold) hit = true;
-            if (hit) matches << n->path;
-        }
-        if (matches.size() > 1) {
-            G::popup->showPopup(QString("\"%1\" is in your keyword list %2 times. Pick "
-                                        "the one you mean from the suggestions.")
-                                    .arg(typed).arg(matches.size()), 3000);
-            return;
-        }
-        if (matches.size() == 1) path = matches.first();
+    if (QAbstractItemModel *cm = completer->completionModel(); cm && cm->rowCount() > 0)
+        path = cm->index(0, 0).data(Qt::UserRole + 1).toString();
+    if (path.isEmpty()) {
+        const QModelIndex exact = vocab->indexForPath(typed);
+        if (exact.isValid()) path = exact.data(KeywordVocab::PathRole).toString();
     }
 
     if (path.isEmpty()) {

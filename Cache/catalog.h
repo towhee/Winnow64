@@ -723,6 +723,13 @@ public:
     QVector<DuplicateRow> duplicateFingerprinted();
     int setDuplicateFingerprints(const QVector<DuplicateRow> &rows);
 
+    /*  VERSION DISPLAY NUMBERS (Metadata/versions.h, schema 33). unnumberedVersionImages:
+        image id -> path of every image with a version row whose number is still 0 (a
+        row from before display numbers), for MW::storeVersionNumbers.
+        setVersionNumbers: store each version's number on that image's rows. */
+    QHash<qint64, QString> unnumberedVersionImages();
+    void setVersionNumbers(qint64 imageId, const QList<VersionSummary> &versions);
+
     /*  WHO HEARS ABOUT A CHANGE TO THE ROWS, for the duplicates check. Both are called
         with the catalog mutex RELEASED (a hook may call back in), on whatever thread made
         the change, so a hook must only queue work.
