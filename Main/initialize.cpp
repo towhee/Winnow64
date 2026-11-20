@@ -3834,6 +3834,7 @@ void MW::createModuleDock()
         (createDataModel), so the persisted setting goes straight onto it. */
     if (dm && dm->sf) {
         dm->sf->setMastersOnly(isSettings && settings->value("versionMastersOnly").toBool());
+        dm->sf->setShowAllVersions(isSettings && settings->value("showAllVersions").toBool());
         // the version groups left open last session (MW::writeSettings)
         if (isSettings)
             for (const QString &m : settings->value("expandedVersions").toStringList())

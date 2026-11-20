@@ -313,15 +313,16 @@ void MW::createFileActions()
     addAction(combineRawJpgAction);
     connect(combineRawJpgAction, &QAction::triggered, this, &MW::setCombineRawJpg);
 
-    /*  Versions (virtual copies): show every version row instead of collapsing each
-        group behind its master. A single group opens from its thumbnail's badge. */
+    /*  Versions (virtual copies): a command, not a switch -- it opens every version
+        group (re-opening any the user collapsed from a badge) and sets the mode to All.
+        A single group opens from its thumbnail's badge. */
     showAllVersionsAction = new QAction(tr("Show All Versions"), this);
     showAllVersionsAction->setObjectName("showAllVersions");
     showAllVersionsAction->setShortcutVisibleInContextMenu(true);
-    showAllVersionsAction->setCheckable(true);
-    showAllVersionsAction->setChecked(isSettings && settings->value("showAllVersions").toBool());
     addAction(showAllVersionsAction);
-    connect(showAllVersionsAction, &QAction::triggered, this, &MW::setShowAllVersions);
+    connect(showAllVersionsAction, &QAction::triggered, this, [this] {
+        setShowAllVersions(true);           // lifts Masters as well
+    });
 
     // Move to trash / recycle bin
     QString moveFilesToWhatever;

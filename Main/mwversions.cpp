@@ -45,8 +45,6 @@ void MW::reconcileVersionRows(const QString &src, bool atLoadEnd)
     if (!dm || G::stop || dm->loadingModel || G::isLoadRunning) return;
     if (!atLoadEnd && G::isModifyingDatamodel) return;
 
-    dm->sf->setShowAllVersions(showAllVersionsAction && showAllVersionsAction->isChecked());
-
     QStringList add, remove;
     dm->versionRowChanges(add, remove);
     if (!add.isEmpty() || !remove.isEmpty()) {
@@ -92,7 +90,6 @@ void MW::toggleVersionsExpanded(const QString &key)
     if (dm->sf->mastersOnly()) {
         dm->sf->clearVersionsExpanded();
         dm->sf->setShowAllVersions(false);
-        if (showAllVersionsAction) showAllVersionsAction->setChecked(false);
         if (isSettings) settings->setValue("showAllVersions", false);
         dm->sf->setVersionsExpanded(master, true);
         setVersionMastersOnly(false);       // re-filters and recounts
@@ -104,7 +101,6 @@ void MW::toggleVersionsExpanded(const QString &key)
     if (dm->sf->showAllVersions()) {
         dm->sf->clearVersionsExpanded();
         dm->sf->setShowAllVersions(false);
-        if (showAllVersionsAction) showAllVersionsAction->setChecked(false);
         if (isSettings) settings->setValue("showAllVersions", false);
         dm->sf->setVersionsExpanded(master, true);
         filterChange("MW::toggleVersionsExpanded");
@@ -117,8 +113,6 @@ void MW::setShowAllVersions(bool show)
 {
     if (G::isLogger) G::log("MW::setShowAllVersions", show ? "on" : "off");
     if (isSettings) settings->setValue("showAllVersions", show);
-    if (showAllVersionsAction && showAllVersionsAction->isChecked() != show)
-        showAllVersionsAction->setChecked(show);
     if (!dm) return;
     /*  Show All Versions is a view of the versions, so it cannot live under Masters:
         turning it on lifts Masters (one re-filter, below, covers both). */

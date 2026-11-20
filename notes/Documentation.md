@@ -8843,7 +8843,7 @@ Every sort tie breaks on source order (2026-10-01). SortFilter::lessThan gives t
 
 A master with versions shows a count and an arrow ("2 ▸" / "2 ▾") in amber text on a tag tucked into the top-right corner of its cell frame, mirroring the icon number in the top-left (bold, one point above the UI font; the tag is G::backgroundColor with a 1 px G::borderColor border, the text carrying the amber / blue). A plain click on it opens or closes the group (IconView::mousePressEvent -> IconViewDelegate::versionsBadgeHit -> MW::toggleVersionsExpanded). With the mouse over a master's badge it gets a white rounded outline, inset 2 px so the frame and selection borders do not cover it, so it reads as a button (IconView::mouseMoveEvent -> IconView::setVersionsBadgeHover, which sets IconViewDelegate::setHoverVersionsBadgeKey and repaints only the old and new cells; keyed by row key, cleared in leaveEvent and while a button is down). A version shows its name ("v2" until named) in blue text on the same tag in the same corner. Both have tooltips.
 
-File > Show All Versions (also in the thumbnail context menu, persisted as "showAllVersions") opens every group; clicking one badge while it is on turns it off and leaves that group open.
+File > Show All Versions (also in the thumbnail context menu) is a command, not a check item (2026-11-20): it always opens every group and sets the mode to All (MW::setShowAllVersions(true), which lifts Masters), so it re-opens groups collapsed from their badges. The proxy state is persisted as "showAllVersions" and put back in createModuleDock; clicking one badge while it is on turns it off and leaves that group open.
 
 #### 13.4.4 Masters | All
 
@@ -8851,7 +8851,7 @@ The Module dock's MASTERS | ALL pair (right side, mirroring Library | Folders on
 
 - MASTERS is the outermost scope: SortFilter::mastersOnly (persisted "versionMastersOnly") rejects every version row in acceptsRow, above the load test and the user's filters (like the raw+jpg hide), so no version appears under any filter, open group or Show All Versions. versionsExpanded() answers false under it (badge arrow, self-test, rescue pass), and BuildFilters folds version rows into FilterSnapshotRow::hiddenRaw so the unfiltered counts leave them out too (cache keyed on cachedValuesMastersOnly). An image with no versions is its own master.
 - ALL lifts it and turns Show All Versions on (every row).
-- Things that lift Masters (MW::setVersionMastersOnly(false) or inline): All, checking Show All Versions, a badge click (opens just that group), and New Version (opens just the new groups, or the new row would be hidden).
+- Things that lift Masters (MW::setVersionMastersOnly(false) or inline): All, Show All Versions, a badge click (opens just that group), and New Version (opens just the new groups, or the new row would be hidden).
 - Toggling Masters re-filters AND recounts (filterChange alone refreshes only the filtered side). MW::syncVersionModeButtons pushes the state to the buttons.
 
 ### 13.5 Develop per Version
