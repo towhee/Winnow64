@@ -452,7 +452,7 @@ signals:
 
 public slots:
 
-    /*  Go > Sync Filters>Folder: expand the Folders category down to the row for folder
+    /*  "Show current image folder": expand the Folders category down to the row for folder
         (or the deepest row above it) and scroll it to the centre. False, with reason,
         when there is no row to show. See MW::syncFiltersFolder. */
     bool syncToFolder(const QString &folder, QString &reason);

@@ -85,7 +85,7 @@
     - [3.4.2 In the Library, Drop Thumbnails on a Folder to Move Them](#342-in-the-library-drop-thumbnails-on-a-folder-to-move-them)
     - [3.4.3 In the Library, Folders Start at the Drive](#343-in-the-library-folders-start-at-the-drive)
     - [3.4.4 In the Library, Rename, Move and Delete Folders](#344-in-the-library-rename-move-and-delete-folders)
-    - [3.4.5 In the Library, Sync Filters>Folder](#345-in-the-library-sync-filtersfolder)
+    - [3.4.5 In the Library, Show Current Image Folder](#345-in-the-library-show-current-image-folder)
   - [3.5 Picks Are Saved as They Are Made](#35-picks-are-saved-as-they-are-made)
     - [3.5.1 Write-Through](#351-write-through)
     - [3.5.2 Restoring Picks When Rows Load](#352-restoring-picks-when-rows-load)
@@ -1989,12 +1989,12 @@ In the Library, right-clicking a row in the Filters panel's Folders category off
 - **Not done.** Not carried: image_embedding and audit_verdict rows (FileOps::onMoved does not carry them for single files either). An EXCLUDED subfolder that a move takes into an included place is not catalogued until the next scan.
 - Test: tst_fileops folderMoveCarriesPreviewsUnderItOnly.
 
-#### 3.4.5 In the Library, Sync Filters>Folder
+#### 3.4.5 In the Library, Show Current Image Folder
 
-**Go > Sync Filters>Folder**, also in the thumbnail context menu (2026-11-18, user request), opens the Filters panel and expands its Folders category to the folder holding an image, scrolled to the centre. It does not tick the row: it is navigation, not filtering.
+**Show current image folder** (MW::syncFiltersFolderAction; was Go > Sync Filters>Folder, moved to the Filters panel context menu and renamed 2026-11-20, user request), in the Filters panel and thumbnail context menus (2026-11-18, user request), opens the Filters panel and expands its Folders category to the folder holding an image, scrolled to the centre. It does not tick the row: it is navigation, not filtering.
 
 - **Library only, and HIDDEN in Folders**, not greyed (user request). There the Folders panel already shows the folder. MW::updateLibraryOnlyActions sets syncFiltersFolderAction's visibility.
-- **Which image.** From the thumbnail context menu it is the thumbnail right-clicked. MW::eventFilter's ContextMenu branch stores its SourcePathRole in MW::contextThumbPath. Anywhere else it is the current image: goMenu's aboutToShow clears contextThumbPath, so a right-click that was dismissed earlier does not leak into the Go menu. A right-click between thumbnails also falls back to the current image.
+- **Which image.** From the thumbnail context menu it is the thumbnail right-clicked. MW::eventFilter's ContextMenu branch stores its SourcePathRole in MW::contextThumbPath. From the Filters panel menu it is the current image: the ContextMenu branch clears contextThumbPath on every right-click before setting it for the thumbnail view, so a thumbnail right-click that was dismissed earlier does not leak into the Filters menu. A right-click between thumbnails also falls back to the current image.
 - **Filters::syncToFolder** picks the deepest Folders row at or above the folder (FolderTree::isAtOrUnder on normalized paths), expands its parents (drive row, category) and calls scrollToItem(PositionAtCenter). The tree is NoSelection, so nothing is selected. If it fails, a popup gives the reason: filters still building, no row for the folder, or the row is hidden by the Filters search.
 
 ### 3.5 Picks Are Saved as They Are Made
@@ -8841,7 +8841,7 @@ Every sort tie breaks on source order (2026-10-01). SortFilter::lessThan gives t
 
 #### 13.4.3 The Badges
 
-A master with versions shows a count and an arrow ("2 ▸" / "2 ▾") in amber text on a tag tucked into the top-right corner of its cell frame, mirroring the icon number in the top-left (bold, one point above the UI font; the tag is G::backgroundColor with a 1 px G::borderColor border, the text carrying the amber / blue). A plain click on it opens or closes the group (IconView::mousePressEvent -> IconViewDelegate::versionsBadgeHit -> MW::toggleVersionsExpanded). A version shows its name ("v2" until named) in blue text on the same tag in the same corner. Both have tooltips.
+A master with versions shows a count and an arrow ("2 ▸" / "2 ▾") in amber text on a tag tucked into the top-right corner of its cell frame, mirroring the icon number in the top-left (bold, one point above the UI font; the tag is G::backgroundColor with a 1 px G::borderColor border, the text carrying the amber / blue). A plain click on it opens or closes the group (IconView::mousePressEvent -> IconViewDelegate::versionsBadgeHit -> MW::toggleVersionsExpanded). With the mouse over a master's badge it gets a white rounded outline, inset 2 px so the frame and selection borders do not cover it, so it reads as a button (IconView::mouseMoveEvent -> IconView::setVersionsBadgeHover, which sets IconViewDelegate::setHoverVersionsBadgeKey and repaints only the old and new cells; keyed by row key, cleared in leaveEvent and while a button is down). A version shows its name ("v2" until named) in blue text on the same tag in the same corner. Both have tooltips.
 
 File > Show All Versions (also in the thumbnail context menu, persisted as "showAllVersions") opens every group; clicking one badge while it is on turns it off and leaves that group open.
 

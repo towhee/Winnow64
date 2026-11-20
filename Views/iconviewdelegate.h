@@ -22,6 +22,11 @@ public:
     QRect versionBadgeRect(const QRect &optionRect, const QString &text) const;
     bool versionsBadgeHit(const QModelIndex &sfIdx, const QRect &optionRect,
                           const QPoint &pos) const;
+    /*  The master whose versions badge the mouse is over (row key, "" for none), set by
+        IconView::mouseMoveEvent. paint() outlines that badge like a button so it reads
+        as clickable. */
+    void setHoverVersionsBadgeKey(const QString &key) { hoverVersionsBadgeKey = key; }
+    QString hoverVersionsBadge() const { return hoverVersionsBadgeKey; }
     // label and video text colour (MW::setTextShade)
     void setTextColor(const QColor &c) { labelTextColor = c; videoTextColor = c; }
     /*  THE CURRENT IMAGE'S DUPLICATES GROUP (DuplicateInfo::group), 0 for none. Every
@@ -150,6 +155,7 @@ private:
     QColor duplicateOkColor;           // number badge: an okayed duplicate
     QColor duplicateTextColor;
     int duplicateTwinGroup = 0;        // see setDuplicateTwinGroup
+    QString hoverVersionsBadgeKey;     // see setHoverVersionsBadgeKey
     QColor vp1Color;
     QColor vp2Color;
     QColor masterColor;

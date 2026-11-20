@@ -130,6 +130,7 @@ protected:
     void resizeEvent(QResizeEvent*) override;
     void enterEvent(QEnterEvent *event) override;
     void leaveEvent(QEvent *event) override;
+    void setVersionsBadgeHover(const QString &key);
     void paintEvent(QPaintEvent *event) override;
     bool viewportEvent(QEvent *event) override;
 

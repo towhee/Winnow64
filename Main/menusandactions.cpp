@@ -926,12 +926,13 @@ void MW::createGoActions()
     addAction(keyScrollCurrentAction);
     connect(keyScrollCurrentAction, &QAction::triggered, this, &MW::keyScrollCurrent);
 
-    /* Library only: hidden in Folders by updateLibraryOnlyActions. */
-    syncFiltersFolderAction = new QAction(tr("Sync Filters>Folder"), this);
+    /*  Library only: hidden in Folders by updateLibraryOnlyActions. In the Filters panel
+        and thumbnail context menus (not the Go menu). */
+    syncFiltersFolderAction = new QAction(tr("Show current image folder"), this);
     syncFiltersFolderAction->setObjectName("syncFiltersFolder");
     syncFiltersFolderAction->setShortcutVisibleInContextMenu(true);
-    syncFiltersFolderAction->setToolTip(tr("Expand the Filters panel's Folders category "
-                                           "to the folder holding this image."));
+    syncFiltersFolderAction->setToolTip(tr("Expand the Folders category to the folder "
+                                           "holding the image."));
     addAction(syncFiltersFolderAction);
     connect(syncFiltersFolderAction, &QAction::triggered, this, &MW::syncFiltersFolder);
 
@@ -2910,9 +2911,6 @@ void MW::createGoMenu()
     goGroupAct->setMenu(goMenu);
     goMenu->addAction(gotoFolderAction);
     goMenu->addAction(jumpAction);
-    goMenu->addAction(syncFiltersFolderAction);
-    /* From the Go menu it is the CURRENT image, not one right-clicked earlier. */
-    connect(goMenu, &QMenu::aboutToShow, this, [this] { contextThumbPath.clear(); });
     goMenu->addSeparator();
     // moved to MW::eventFilter
     goMenu->addAction(keyRightAction);
@@ -3510,6 +3508,7 @@ void MW::createFiltersContextMenu()
     filterActions->append(expandAllFiltersAction);
     filterActions->append(collapseAllFiltersAction);
     filterActions->append(expandCheckedFiltersAction);
+    filterActions->append(syncFiltersFolderAction);     // Library only
     filterActions->append(separatorAction1);
     filterActions->append(filterSoloAction);
     filterActions->append(filterGroupsAction);

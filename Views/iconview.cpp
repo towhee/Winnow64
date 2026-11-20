@@ -1394,7 +1394,27 @@ void IconView::leaveEvent(QEvent *event)
     mouseOverThumbView = false;
     setCursor(Qt::ArrowCursor);
     prevIdx = model()->index(-1, -1);
+    setVersionsBadgeHover(QString());
     QListView::leaveEvent(event);
+}
+
+void IconView::setVersionsBadgeHover(const QString &key)
+{
+/*
+    The row key of the master whose versions badge the mouse is over ("" = none). Keyed,
+    not by row, so a reorder under the mouse cannot outline the wrong cell. Repaints the
+    old and new cells only.
+*/
+    const QString old = iconViewDelegate->hoverVersionsBadge();
+    if (old == key) return;
+    iconViewDelegate->setHoverVersionsBadgeKey(key);
+    auto repaintKey = [this](const QString &k) {
+        if (k.isEmpty()) return;
+        const int sfRow = dm->proxyRowFromKey(k);
+        if (sfRow >= 0) viewport()->update(visualRect(model()->index(sfRow, 0)));
+    };
+    repaintKey(old);
+    repaintKey(key);
 }
 
 /* WHEELPROBE: wheel instrumentation (G::isWheelProbe, with the other probe switches in
@@ -1943,6 +1963,17 @@ void IconView::mouseMoveEvent(QMouseEvent *event)
              << "btn =" << event->button()
              << "modifiers =" << event->modifiers()
         ; //*/
+
+    /*  Hover feedback on a master's VERSIONS badge (it toggles the group on click): the
+        delegate outlines it like a button. Repaint only the cells that change. */
+    {
+        QString key;
+        const QModelIndex sfIdx = indexAt(event->pos());
+        if (event->buttons() == Qt::NoButton
+            && iconViewDelegate->versionsBadgeHit(sfIdx, visualRect(sfIdx), event->pos()))
+            key = sfIdx.data(G::KeyRole).toString();
+        setVersionsBadgeHover(key);
+    }
 
     if (event->buttons() & Qt::LeftButton) {
         // allow small 'jiggle' tolerance before start drag

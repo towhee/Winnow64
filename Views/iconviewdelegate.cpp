@@ -994,6 +994,15 @@ textRect         = a rectangle below itemRect
             const QString shown = QFontMetrics(vf).elidedText(vText, Qt::ElideRight,
                                                              vr.width() - 8);
             painter->drawText(vr, Qt::AlignCenter, shown);
+            /*  Mouse over a master's badge: a white button outline, inset so the frame
+                and selection borders do not stroke over it. */
+            if (!isVersionRow && !hoverVersionsBadgeKey.isEmpty()
+                && index.model()->index(sfRow, 0).data(G::KeyRole).toString()
+                       == hoverVersionsBadgeKey) {
+                painter->setPen(QPen(Qt::white, 1));
+                painter->setBrush(Qt::NoBrush);
+                painter->drawRoundedRect(QRectF(vr).adjusted(2.5, 2.5, -2.5, -2.5), 4, 4);
+            }
             painter->restore();
             painter->setFont(f);
         }

@@ -2850,9 +2850,11 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                 folder = QFileInfo(path).fileName()
             */
 
-            /*  ThumbView: the image under the click, for Sync Filters>Folder. Empty
-                when the click is between thumbnails (the slot then uses the current
-                image). */
+            /*  ThumbView: the image under the click, for "Show current image folder".
+                Empty when the click is between thumbnails, and cleared by any other
+                right-click (the Filters panel's menu), so the slot then uses the
+                current image, not a thumbnail right-clicked and dismissed earlier. */
+            contextThumbPath.clear();
             if (obj == thumbView->viewport()) {
                 QContextMenuEvent *e = static_cast<QContextMenuEvent *>(event);
                 const QModelIndex idx = thumbView->indexAt(e->pos());
@@ -19619,7 +19621,7 @@ void MW::revealFileFromContext()
 void MW::syncFiltersFolder()
 {
 /*
-    Go > Sync Filters>Folder, and the same item in the thumbnail context menu. Library
+    "Show current image folder", in the Filters panel and thumbnail context menus. Library
     only (updateLibraryOnlyActions hides it in Folders). Opens the Filters panel and
     expands its Folders category to the folder holding the image: the one right-clicked
     (contextThumbPath, set in MW::eventFilter), else the current image.
@@ -19630,7 +19632,7 @@ void MW::syncFiltersFolder()
     if (path.isEmpty() && dm && dm->sf && dm->currentSfRow >= 0)
         path = dm->sf->index(dm->currentSfRow, 0).data(G::SourcePathRole).toString();
     if (path.isEmpty()) {
-        G::popup->showPopup("Sync Filters>Folder: no image to sync to.", 2000);
+        G::popup->showPopup("Show current image folder: no current image.", 2000);
         return;
     }
     if (!filterDock->isVisible()) {
@@ -19640,7 +19642,7 @@ void MW::syncFiltersFolder()
     filterDock->raise();
     QString reason;
     if (!filters->syncToFolder(QFileInfo(path).absolutePath(), reason))
-        G::popup->showPopup("Sync Filters>Folder: " + reason + ".", 2500);
+        G::popup->showPopup("Show current image folder: " + reason + ".", 2500);
 }
 
 void MW::revealInFileBrowser(QString path)

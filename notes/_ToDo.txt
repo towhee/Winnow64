@@ -2,8 +2,11 @@ WHAT'S NEW
 -
 
 BUGS / TO DO
+- File>Show all versions ??
+- File>Include sidecars ??
+- thumbnail help schematic.
+- Menu Window>History and Window>Preset ??
 - Review Develop shortcuts (N, M, X)
-- Review and refine develop replacement tools
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (record, list, replay a series of steps)
