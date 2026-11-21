@@ -62,7 +62,8 @@ inline constexpr int kDenoiserRevision = 1;
 
 /*
     Revision of the shared MOSAIC stages the Winnow engine runs for every format --
-    hot-pixel suppression (hotpixel.cpp) and the demosaic (demosaic.cpp) -- folded into the devPreview / developed-thumbnail key
+    hot-pixel suppression (hotpixel.cpp), the demosaic (demosaic.cpp) and highlight
+    reconstruction (highlightrecon.cpp) -- folded into the devPreview / developed-thumbnail key
     for Winnow-engine renders only (Metadata::demosaicKeyPart): the Apple engine never
     runs it, so its previews keep their keys. BUMP when a demosaic change alters pixels.
     0 = never bumped (no key part).
@@ -72,8 +73,12 @@ inline constexpr int kDenoiserRevision = 1;
                      no zipper along edges. See demosaic.h.
       2  2026-11-20  hot photosites replaced in the mosaic before the demosaic
                      (ported from LightCraft). See hotpixel.h.
+      3  2026-11-20  clipped highlights reconstructed (HighlightRecon, ported from
+                     LightCraft) in place of NeutraliseClipped's cap: blown skies keep
+                     their colour into the clip, white fur no longer pink. See
+                     RawColor::ReconstructHighlights.
 */
-inline constexpr int kDemosaicRevision = 2;
+inline constexpr int kDemosaicRevision = 3;
 
 } // namespace RawDecoder
 

@@ -87,6 +87,24 @@ public:
         a little, which is invisible next to the pink this removes.
     */
     static void NeutraliseClipped(WorkingImage &img);
+
+    /*
+        CLIPPED HIGHLIGHTS -> RECONSTRUCTED. What the mosaic decode now runs instead of
+        NeutraliseClipped: partly clipped channels are rebuilt from the unclipped ones
+        with the colour of reliable bright content nearby, fully clipped pixels become
+        neutral at the brightest plausible level, and partly clipped ones fade into that
+        neutral as more channels clip (HighlightRecon, ported from LightCraft). Same
+        as-shot balance and mosaic-only scope as NeutraliseClipped; the clip is 0.97 of
+        the declared white (AHD's wobble around a clipped plateau -- see the .cpp), or
+        the measured pile-up when the camera saturates lower. Returns the number of
+        pixels with a clipped channel.
+
+        Where the colour lands: the white-balanced clipped neutral comes out at the
+        HIGHEST channel's ceiling (max asShotMul x clip), not NeutraliseClipped's lowest,
+        so blown areas keep their headroom for Highlights - to pull back. NeutraliseClipped
+        stays for reference and for any caller that wants the old cap.
+    */
+    static int ReconstructHighlights(WorkingImage &img);
 };
 
 #endif // RAWCOLOR_H

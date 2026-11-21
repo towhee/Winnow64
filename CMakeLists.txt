@@ -271,6 +271,7 @@ set(WINNOW_SOURCES
     ImageFormats/Raw/cameramodel.cpp
     ImageFormats/Raw/demosaic.cpp
     ImageFormats/Raw/hotpixel.cpp
+    ImageFormats/Raw/highlightrecon.cpp
     ImageFormats/Raw/losslessjpeg.cpp
     ImageFormats/Raw/rawcolor.cpp
     ImageFormats/Raw/pmrid.cpp
@@ -703,6 +704,7 @@ set(WINNOW_HEADERS
     ImageFormats/Raw/cameramodel.h
     ImageFormats/Raw/demosaic.h
     ImageFormats/Raw/hotpixel.h
+    ImageFormats/Raw/highlightrecon.h
     ImageFormats/Raw/losslessjpeg.h
     ImageFormats/Raw/rawcolor.h
     ImageFormats/Raw/pmrid.h

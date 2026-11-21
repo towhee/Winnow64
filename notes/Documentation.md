@@ -322,7 +322,7 @@
 - [10 Raw Decoding](#10-raw-decoding)
   - [10.1 Pipeline](#101-pipeline)
     - [10.1.1 Why the Decode Stops at Camera-Native](#1011-why-the-decode-stops-at-camera-native)
-    - [10.1.2 Clipped Highlights Are Neutralised at Decode](#1012-clipped-highlights-are-neutralised-at-decode)
+    - [10.1.2 Clipped Highlights Are Reconstructed at Decode](#1012-clipped-highlights-are-reconstructed-at-decode)
     - [10.1.3 Hot Pixels Are Removed Before the Demosaic](#1013-hot-pixels-are-removed-before-the-demosaic)
     - [10.1.4 Demosaic Algorithms (AHD)](#1014-demosaic-algorithms-ahd)
   - [10.2 Metadata Plumbing (RawSensorInfo)](#102-metadata-plumbing-rawsensorinfo)
@@ -4835,7 +4835,7 @@ ImageDecoder::load()
 2. HotPixel::Suppress(): shared. Hot photosites replaced in the mosaic, before black subtraction. See [10.1.3](#1013-hot-pixels-are-removed-before-the-demosaic).
 3. SubtractBlack(): shared per-2x2-position black subtraction + clip.
 4. Demosaic::Run(): shared, camera-agnostic. AHD for Bayer (PPG and Bilinear also available), XTransDirectional for Fuji X-Trans (XTransWindow, a 5x5 average, under Bilinear). It operates only on the CFA mosaic + pattern (Bayer) or raw.xtrans (the 6x6 map), so it is unit-testable. See [10.1.4](#1014-demosaic-algorithms-ahd).
-5. RawColor::ToCameraNative(): shared. CHARACTERISES the image (builds the camera -> working matrix and the as-shot multipliers into WorkingImage::cam) but does NOT apply them. Pixels stay in the sensor's own primaries, tagged ColorSpace::CameraNative, unclamped.
+5. RawColor::ToCameraNative(): shared. CHARACTERISES the image (builds the camera -> working matrix and the as-shot multipliers into WorkingImage::cam) but does NOT apply them. Pixels stay in the sensor's own primaries, tagged ColorSpace::CameraNative, unclamped. RawColor::ReconstructHighlights follows on the mosaic paths: see [10.1.2](#1012-clipped-highlights-are-reconstructed-at-decode).
 6. Develop::Apply(): stage 0 is the INPUT PROFILE (camera-native -> working space), then the parametric edits in linear space.
 7. OutputTransform::ToImage(): baseline tone curve (raw only) + primaries + gamma -> QImage.
 
@@ -4849,14 +4849,32 @@ The buffer RawColor produces is what WorkingImageCache stores, so anything baked
 
 It costs nothing per pixel: Develop::buildPointCoeffs folds the input profile, the white balance, exposure, the Colour RGB sliders and the Calibrate matrix into a SINGLE 3x3 (PointCoeffs::preMat). Develop::ToWorkingSpace is the standalone version, used only when the point pass cannot carry it: an identity edit (no point pass at all) and an active Denoise (op #1, which runs BEFORE the point pass and must see working-space pixels).
 
-#### 10.1.2 Clipped Highlights Are Neutralised at Decode
+#### 10.1.2 Clipped Highlights Are Reconstructed at Decode
 
-One exception to "nothing baked in": RawColor::NeutraliseClipped, run right after ToCameraNative on the two MOSAIC paths (clean and PMRID-denoised; never Linear Raw, whose values above 1 are real). A blown photosite reads 1.0 in every channel, and the as-shot white balance then scales R and B above G (Sony ~2x / ~1.5x), so a blown white is really magenta-white. The display clip hides it at default tone; Highlights -, Exposure - or Whites - pull it below white and it shows PINK (lichen, snow, skies; 2026-11-10, Little Qualicum 2026-01-09_0012.arw at Highlights -87).
+One exception to "nothing baked in": RawColor::ReconstructHighlights, run right after ToCameraNative on the two MOSAIC paths (clean and PMRID-denoised; never Linear Raw, whose values above 1 are real). A blown photosite reads 1.0 in every channel, and the as-shot white balance then scales R and B above G (Sony ~2x / ~1.5x), so a blown white is really magenta-white. The display clip hides it at default tone; Highlights -, Exposure - or Whites - pull it below white and it shows PINK (lichen, snow, skies; 2026-11-10, Little Qualicum 2026-01-09_0012.arw at Highlights -87).
 
-- Each channel's clip level is MEASURED: the channel maximum, if at least max(64, n/100000) pixels pile up within 0.5% of it and it is >= 0.5. Some cameras saturate below the declared white, so 1.0 cannot be assumed. No pile-up = that channel is not clipped anywhere, and an image with none is untouched.
+ImageFormats/Raw/highlightrecon.h (2026-11-20, ported from LightCraft's crates/raw/src/highlight.rs, reconstruct_with, MIT; credited in THIRD_PARTY_NOTICES.md). It replaced RawColor::NeutraliseClipped (below), which is kept but no longer called.
+
+- **What it does.** Where only some channels clipped, the clipped ones are rebuilt from the unclipped ones using the chromaticity of reliable content nearby. Fully clipped pixels become neutral at the HIGHEST channel's white-balanced ceiling (max asShotMul x clip), so blown areas keep headroom for Highlights - to pull back. Partly clipped pixels fade into that neutral on the way from the first channel clipping to the last.
+- **Where the colour comes from.** Only bright unclipped pixels lend colour (25-60% of the clip and up), not on strong edges and not next to clipped pixels. Their chromaticity is diffused into the clipped region by a half-resolution pull/push pyramid. It fades to neutral where there is little reliable content within a quarter of the long edge.
+- **Guards against the wrong colour.** Borrowed colour counts less as both the pixel's own unclipped channels and the "rim" (the clipped surface's own colour just below its clip, a quarter-resolution pyramid) contradict it, so bright foliage cannot turn a pale sky teal. Up to 0.03 stops past the rim a pixel takes the rim's colour, so a surface runs into clipping without a seam.
+- **Clip level: 0.97 of the declared white.** LightCraft uses 0.99. AHD's interpolation makes a clipped plateau wobble by 1-2% (A7R IV sky: samples clipped at 0.997, the demosaiced green 0.985 to 1.006). At 0.99 the pixels whose green landed low counted as unclipped and kept it, and the blown sky filled with dotted magenta lines along the interpolation direction. A real value between 0.97 and the clip only becomes a lower bound, so the margin costs nothing visible. The level drops further when the pile-up (MeasureClip, as below) shows a camera saturating lower. It never rises to the measured level, because the channel maximum there is that same AHD overshoot (1.013): a clip measured from it sits above the plateau, and the whole sky turned magenta.
+- Uses the AS-SHOT balance, and assumes the matrix maps the white-balanced neutral to neutral (LightCraft passes a colour-model white; Winnow passes 1,1,1). A later Temp change moves the neutral slightly.
+- Cost: ~41 ms for 24 MP (Release, M-series). Deterministic across thread counts.
+- Measured on _ThumbTest (2026-11-20; 25 mosaic raws, old vs new rendered through ToWorkingSpace at 0 and -1.5 EV):
+  - **A7R II**, backlit white dog: the old cap left the fur PINK (25,335 magenta pixels); now white (1).
+  - **A7R IV**, sky through branches: the old cap made a flat grey island with a green-yellow seam; now the sky's blue runs smoothly into the blown area.
+  - **D850 window**: the frame behind the glare comes back at -1.5 EV, where the old cap left flat grey.
+  - **Elsewhere**, the magenta count among changed pixels is at or near the old one.
+  - **Known residue:** noise flips pixels in and out of the clip at the edge of a large blown area, so that band looks mottled at -1.5 EV (A9 II sky). It is invisible at default tone.
+- Unit tests: tests/unit/tst_highlightrecon.cpp, LightCraft's suite ported (branches and fringes do not tint a sky; two clipped channels are not left at their clip levels; no step as channels clip; unclipped pixels exact), plus a thread-count check.
+
+RawColor::NeutraliseClipped, the previous pass (2026-11-10 to 2026-11-20), for reference:
+
+- Each channel's clip level is MEASURED: the channel maximum, if at least max(64, n/100000) pixels pile up within 0.5% of it and it is >= 0.5. Some cameras saturate below the declared white, so 1.0 cannot be assumed. No pile-up = that channel is not clipped anywhere, and an image with none is untouched. (MeasureClip, still shared.)
 - A channel's ceiling in white-balanced terms is clip_c x asShotMul_c. Every channel of a pixel is capped at the LOWEST ceiling among its clipped channels, so a blown neutral balances to white while a saturated red with only R clipped keeps its colour.
 - "Clipped" is a smoothstep over the top 10% of the clip level and the ceiling is divided by it, so the cap goes to infinity as a channel leaves the knee: continuous, no edge banding.
-- Uses the AS-SHOT balance; a later Temp change moves the neutral slightly. It is not reconstruction (blown areas become flat white, not recovered detail); a real reconstruction pass is still a ToDo.
+- Not reconstruction: blown areas became flat grey-white at the lowest ceiling, and any colour the cap missed (the A7R II fur) stayed pink.
 
 #### 10.1.3 Hot Pixels Are Removed Before the Demosaic
 
@@ -8595,11 +8613,11 @@ RawDecoder::kDenoiserRevision (same header). PMRID changes the pixels without to
 
 #### 12.5.3 Mosaic-Stage Fixes: kDemosaicRevision
 
-RawDecoder::kDemosaicRevision (same header, 2026-11-20). The shared mosaic stages, hot-pixel suppression and the demosaic, run for EVERY Winnow-engine raw whatever its format, so a change there is neither a per-format decoder fix (12.5.1) nor a denoiser fix (12.5.2).
+RawDecoder::kDemosaicRevision (same header, 2026-11-20). The shared mosaic stages, hot-pixel suppression, the demosaic and highlight reconstruction, run for EVERY Winnow-engine raw whatever its format, so a change there is neither a per-format decoder fix (12.5.1) nor a denoiser fix (12.5.2).
 
 - Metadata::demosaicKeyPart appends "|demosaic=N" inside the BASE key hash (devPreviewKey(blob) and defaultRenderKey) for Winnow-engine renders only; Apple-engine previews keep their keys. 0 = never bumped (no key part).
-- History: 1 = Bilinear -> AHD ([10.1.4](#1014-demosaic-algorithms-ahd)); 2 = hot pixels removed before the demosaic ([10.1.3](#1013-hot-pixels-are-removed-before-the-demosaic)).
-- Bump it when hotpixel.cpp or demosaic.cpp changes the pixels. Each bump misses every Winnow-engine raw preview once; they rebuild as images are viewed.
+- History: 1 = Bilinear -> AHD ([10.1.4](#1014-demosaic-algorithms-ahd)); 2 = hot pixels removed before the demosaic ([10.1.3](#1013-hot-pixels-are-removed-before-the-demosaic)); 3 = clipped highlights reconstructed ([10.1.2](#1012-clipped-highlights-are-reconstructed-at-decode)).
+- Bump it when hotpixel.cpp, demosaic.cpp or highlightrecon.cpp (or RawColor::ReconstructHighlights) changes the pixels. Each bump misses every Winnow-engine raw preview once; they rebuild as images are viewed.
 - Being in the base key, it shares 12.5.2's limitation: a row restored from the catalog without a sidecar re-read keeps the pre-bump key until the image is viewed in Develop or its sidecar is re-read.
 
 #### 12.5.4 devPreview Invalidation: What Makes One Stale

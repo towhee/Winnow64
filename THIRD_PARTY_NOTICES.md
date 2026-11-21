@@ -93,10 +93,12 @@ OpenCV and ONNX Runtime pull these in, and they ship inside the macOS applicatio
 
 ## Adapted source code
 
-- **[LightCraft](https://github.com/storytold/lightcraft)**. The PPG and AHD raw
-  demosaic algorithms in `ImageFormats/Raw/demosaic.cpp` and the hot-pixel suppression
-  in `ImageFormats/Raw/hotpixel.cpp` are ported from LightCraft's
-  `crates/raw/src/demosaic` and `crates/raw/src/hotpixel.rs`. Copyright (c) 2026 ArtCraft Team and the LightCraft
+- **[LightCraft](https://github.com/storytold/lightcraft)**. The PPG, AHD and X-Trans
+  raw demosaic algorithms in `ImageFormats/Raw/demosaic.cpp`, the hot-pixel suppression
+  in `ImageFormats/Raw/hotpixel.cpp` and the highlight reconstruction in
+  `ImageFormats/Raw/highlightrecon.cpp` are ported from LightCraft's
+  `crates/raw/src/demosaic`, `crates/raw/src/hotpixel.rs` and
+  `crates/raw/src/highlight.rs`. Copyright (c) 2026 ArtCraft Team and the LightCraft
   contributors. MIT: [lightcraft](licenses/lightcraft.txt).
 
 ## Data

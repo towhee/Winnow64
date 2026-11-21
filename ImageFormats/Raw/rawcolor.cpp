@@ -1,4 +1,5 @@
 #include "ImageFormats/Raw/rawcolor.h"
+#include "ImageFormats/Raw/highlightrecon.h"
 #include "Develop/whitebalance.h"
 #include "Develop/colorspace.h"
 #include <opencv2/core/utility.hpp>     // parallel_for_
@@ -171,11 +172,16 @@ void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
     WhiteBalance::resolveAsShot(out);
 }
 
-void RawColor::NeutraliseClipped(WorkingImage &img)
+/*
+    The measured per-channel sensor clip of a camera-native decode (0 for a channel with
+    no pile-up at its maximum). True when any channel clipped. Shared by
+    NeutraliseClipped and ReconstructHighlights; see the header.
+*/
+static bool MeasureClip(const WorkingImage &img, float clip[3])
 {
     const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
-    if (n == 0 || img.rgb.size() != n * 3) return;
-    float *px = img.rgb.data();
+    if (n == 0 || img.rgb.size() != n * 3) return false;
+    const float *px = img.rgb.data();
 
     constexpr int kRows = 64;
     const int W = img.width;
@@ -214,7 +220,6 @@ void RawColor::NeutraliseClipped(WorkingImage &img)
         }
     });
     const size_t minPile = std::max<size_t>(64, n / 100000);
-    float clip[3];
     bool any = false;
     for (int c = 0; c < 3; ++c) {
         size_t k = 0;
@@ -225,7 +230,18 @@ void RawColor::NeutraliseClipped(WorkingImage &img)
         clip[c] = clipped ? chMax[c] * kPile : 0.0f;
         any = any || clipped;
     }
-    if (!any) return;
+    return any;
+}
+
+void RawColor::NeutraliseClipped(WorkingImage &img)
+{
+    const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
+    float clip[3];
+    if (!MeasureClip(img, clip)) return;
+    float *px = img.rgb.data();
+    constexpr int kRows = 64;
+    const int W = img.width;
+    const int strips = (img.height + kRows - 1) / kRows;
 
     const float *mul = img.cam.asShotMul;
     float ceil[3], kneeLo[3], invKnee[3];
@@ -259,4 +275,42 @@ void RawColor::NeutraliseClipped(WorkingImage &img)
             }
         }
     });
+}
+
+int RawColor::ReconstructHighlights(WorkingImage &img)
+{
+    const size_t n = static_cast<size_t>(img.width) * static_cast<size_t>(img.height);
+    if (n == 0 || img.rgb.size() != n * 3) return 0;
+    /*
+        One clip for all channels, kClipShare of the declared white (Demosaic scaled every
+        channel by 1/white), or lower when the pile-up shows the camera saturating below
+        its white.
+
+        WHY 0.97, NOT LIGHTCRAFT'S 0.99. AHD's interpolation makes a clipped plateau
+        wobble by a percent or two either way (A7R IV sky: samples clipped at 0.997, the
+        demosaiced green 0.985..1.006). At 0.99 every pixel whose green landed at 0.985
+        counted as UNCLIPPED: its green was kept while its neighbours' was rebuilt, and the
+        blown sky filled with dotted magenta lines along the interpolation direction. A
+        real value between 0.97 and the clip only becomes a lower bound (the rebuild takes
+        the larger), so the margin costs nothing visible.
+
+        NEVER the measured level when that is higher: the channel maximum is that same
+        overshoot (1.013 there), and a clip measured from it sits above the plateau -- the
+        whole sky then counts as unclipped and white balance turns it magenta. kPile put
+        the measured clip at 0.995 of the pile.
+    */
+    constexpr float kClipShare = 0.97f;
+    float level = kClipShare;
+    float clip[3];
+    if (MeasureClip(img, clip))
+        for (float c : clip)
+            if (c > 0.0f) level = std::min(level, c * (kClipShare / 0.995f));
+    const float *mul = img.cam.asShotMul;
+    const float wb[3] = { mul[0], mul[1], mul[2] };
+    for (float v : wb)
+        if (!(v > 0.0f) || !std::isfinite(v)) return 0;
+    /* The camera matrix maps the white-balanced neutral to neutral, as NeutraliseClipped
+       assumes. */
+    const float white[3] = { 1.0f, 1.0f, 1.0f };
+    return HighlightRecon::Reconstruct(img.rgb.data(), img.width, img.height, wb, level, white);
 }

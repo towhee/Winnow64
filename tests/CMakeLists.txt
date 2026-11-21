@@ -309,6 +309,12 @@ winnow_add_unit_test(tst_hotpixel unit/tst_hotpixel.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/hotpixel.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/demosaic.cpp)
 winnow_test_link_opencv(tst_hotpixel PRIVATE opencv_core)
+# tst_highlightrecon tests ImageFormats/Raw/highlightrecon.cpp -- partly clipped channels
+# rebuilt from reliable colour nearby, fully clipped ones neutral, no tint from branches,
+# fringes or foliage, no step where a channel clips, unclipped pixels left exactly.
+winnow_add_unit_test(tst_highlightrecon unit/tst_highlightrecon.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/highlightrecon.cpp)
+winnow_test_link_opencv(tst_highlightrecon PRIVATE opencv_core)
 # tst_lensprofile tests Develop/lensdb.cpp + Develop/lensprofile.h -- lensfun lens profile
 # correction (distortion, TCA, vignetting) -- against liblensfun's own answers
 # (unit/lensprofile_oracle.h, from fixtures/lensfun_oracle.py): the database loads the
