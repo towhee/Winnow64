@@ -17,7 +17,11 @@
         LightCraft fixed with the blend);
       o the result does not depend on the thread count (AHD runs in independent tiles,
         PPG in independent rows) and tiles join without seams;
-      o tiny mosaics and an abort behave.
+      o tiny mosaics and an abort behave;
+      o X-Trans: Bilinear gives the 5x5 window, Ppg / Ahd give XTransDirectional, which
+        is exact on a constant colour at every pattern offset, keeps its samples, beats
+        the window on edges, and whose interior fast path matches a plain per-pixel
+        reference (reflection at every access) bit for bit.
 
     Set WINNOW_DEMOSAIC_BENCH=1 to also print 24 MP throughput.
 */
@@ -147,6 +151,93 @@ double Anisotropy(const Rgb &img)
     return sum / n;
 }
 
+/* Fuji X-Trans 6x6 colour map (0=R 1=G 2=B), and the same shifted by (sx, sy). */
+const uint8_t kXTrans[6][6] = {
+    {1, 1, 0, 1, 1, 2}, {1, 1, 2, 1, 1, 0}, {2, 0, 1, 0, 2, 1},
+    {1, 1, 2, 1, 1, 0}, {1, 1, 0, 1, 1, 2}, {0, 2, 1, 2, 0, 1} };
+
+RawImage XTransFromRgb(const Rgb &img, int sx = 0, int sy = 0)
+{
+    RawImage raw;
+    raw.width = img.w;
+    raw.height = img.h;
+    raw.pattern = CfaPattern::XTrans;
+    raw.white = kWhite;
+    for (int y = 0; y < 6; ++y)
+        for (int x = 0; x < 6; ++x) raw.xtrans[y][x] = kXTrans[(y + sy) % 6][(x + sx) % 6];
+    raw.cfa.resize(static_cast<size_t>(img.w) * img.h);
+    for (int y = 0; y < img.h; ++y)
+        for (int x = 0; x < img.w; ++x) {
+            const float v = img.at(x, y, raw.xtrans[y % 6][x % 6]);
+            raw.cfa[static_cast<size_t>(y) * img.w + x] =
+                static_cast<uint16_t>(std::lround(std::clamp(v, 0.0f, 1.0f) * kWhite));
+        }
+    return raw;
+}
+
+/* The straightforward per-pixel formulation of XTransDirectional: mirror reflection at
+   every access, no precomputed offsets. The production interior path must match it. */
+int RefReflect(int i, int n)
+{
+    if (i >= 0 && i < n) return i;
+    if (n == 1) return 0;
+    const int period = 2 * (n - 1);
+    i %= period;
+    if (i < 0) i += period;
+    return i >= n ? period - i : i;
+}
+
+std::vector<float> XTransReference(const RawImage &raw)
+{
+    const int W = raw.width, H = raw.height;
+    const float sc = 1.0f / raw.white, eps = 1e-3f;
+    auto get = [&](int x, int y) { return raw.cfa[static_cast<size_t>(RefReflect(y, H)) * W + RefReflect(x, W)] * sc; };
+    auto col = [&](int x, int y) { return int(raw.xtrans[RefReflect(y, H) % 6][RefReflect(x, W) % 6]); };
+    auto robust = [&](std::vector<float> v) {
+        std::vector<float> s = v;
+        std::sort(s.begin(), s.end());
+        const float med = s[s.size() / 2];
+        float a = 0, ws = 0;
+        for (float x : v) { const float wt = 1.0f / (eps + std::fabs(x - med)); a += wt * x; ws += wt; }
+        return a / ws;
+    };
+    std::vector<float> g(static_cast<size_t>(W) * H);
+    for (int y = 0; y < H; ++y)
+        for (int x = 0; x < W; ++x) {
+            float &o = g[static_cast<size_t>(y) * W + x];
+            if (col(x, y) == 1) { o = get(x, y); continue; }
+            std::vector<float> vals;
+            for (int r = 1; r <= 2 && vals.empty(); ++r)
+                for (int dy = -r; dy <= r; ++dy)
+                    for (int dx = -r; dx <= r; ++dx)
+                        if ((dx || dy) && col(x + dx, y + dy) == 1) vals.push_back(get(x + dx, y + dy));
+            o = vals.empty() ? get(x, y) : robust(vals);
+        }
+    auto gg = [&](int x, int y) { return g[static_cast<size_t>(RefReflect(y, H)) * W + RefReflect(x, W)]; };
+    std::vector<float> out(static_cast<size_t>(W) * H * 3);
+    for (int y = 0; y < H; ++y)
+        for (int x = 0; x < W; ++x) {
+            float *px = &out[(static_cast<size_t>(y) * W + x) * 3];
+            const int own = col(x, y);
+            const float gp = gg(x, y);
+            px[1] = gp;
+            for (int c : { 0, 2 }) {
+                if (c == own) { px[c] = get(x, y); continue; }
+                float s = 0, ws = 0;
+                for (int dy = -2; dy <= 2; ++dy)
+                    for (int dx = -2; dx <= 2; ++dx)
+                        if (col(x + dx, y + dy) == c) {
+                            const float gq = gg(x + dx, y + dy);
+                            const float wt = 1.0f / (float(dx * dx + dy * dy) * (eps + std::fabs(gq - gp)));
+                            s += wt * (get(x + dx, y + dy) - gq);
+                            ws += wt;
+                        }
+                px[c] = ws > 0 ? gp + s / ws : gp;
+            }
+        }
+    return out;
+}
+
 const CfaPattern kPhases[] = { CfaPattern::RGGB, CfaPattern::BGGR, CfaPattern::GRBG, CfaPattern::GBRG };
 const Demosaic::Algorithm kAlgos[] = { Demosaic::Bilinear, Demosaic::Ppg, Demosaic::Ahd };
 
@@ -164,6 +255,11 @@ private slots:
     void resultIsIndependentOfThreadCount();
     void tinyMosaicsFallBackAndStayFinite();
     void abortStopsTheRun();
+    void xtransConstantColourIsExactAtEveryOffset();
+    void xtransKnownSamplesArePreserved();
+    void xtransDirectionalBeatsTheWindow();
+    void xtransFastPathMatchesTheReference();
+    void xtransIsIndependentOfThreadCountAndTinyIsFinite();
     void throughput();
 };
 
@@ -307,6 +403,87 @@ void TestDemosaic::abortStopsTheRun()
     }
 }
 
+void TestDemosaic::xtransConstantColourIsExactAtEveryOffset()
+{
+    const Rgb img = Filled(31, 23, 0.3f, 0.55f, 0.8f);
+    float want[3];
+    for (int c = 0; c < 3; ++c) want[c] = std::lround(img.d[c] * kWhite) / float(kWhite);
+    for (int s = 0; s < 6; ++s) {
+        const RawImage raw = XTransFromRgb(img, s, (s * 5) % 6);
+        for (auto a : kAlgos) {
+            const Rgb out = Run(raw, a);
+            QCOMPARE(out.d.size(), img.d.size());
+            for (size_t i = 0; i < out.d.size(); ++i)
+                QVERIFY2(std::fabs(out.d[i] - want[i % 3]) < 1e-5f,
+                         qPrintable(QString("shift %1 algo %2 pixel %3").arg(s).arg(int(a)).arg(i / 3)));
+        }
+    }
+}
+
+void TestDemosaic::xtransKnownSamplesArePreserved()
+{
+    const RawImage raw = XTransFromRgb(EdgyScene(42, 36), 2, 3);
+    for (auto a : kAlgos) {
+        const Rgb out = Run(raw, a);
+        for (int y = 0; y < 36; ++y)
+            for (int x = 0; x < 42; ++x) {
+                const int c = raw.xtrans[y % 6][x % 6];
+                QVERIFY(std::fabs(out.at(x, y, c) - raw.cfa[y * 42 + x] / float(kWhite)) < 1e-6f);
+            }
+    }
+}
+
+void TestDemosaic::xtransDirectionalBeatsTheWindow()
+{
+    /* Edges are the point: directional must clearly win there. On a smooth gradient the
+       5x5 average is already nearly exact (as Bilinear is on smooth Bayer), so both just
+       have to stay far below visible error. */
+    const Rgb edgy = EdgyScene(96, 84), smooth = SmoothScene(96, 84);
+    const double ew = Psnr(edgy, Run(XTransFromRgb(edgy), Demosaic::Bilinear), 6);
+    const double ed = Psnr(edgy, Run(XTransFromRgb(edgy), Demosaic::Ahd), 6);
+    const double sw = Psnr(smooth, Run(XTransFromRgb(smooth), Demosaic::Bilinear), 6);
+    const double sd = Psnr(smooth, Run(XTransFromRgb(smooth), Demosaic::Ahd), 6);
+    qInfo("x-trans edgy: window %.1f directional %.1f dB; smooth: window %.1f directional %.1f dB",
+          ew, ed, sw, sd);
+    QVERIFY2(ed > ew + 6.0, "directional should beat the 5x5 window by > 6 dB on edges");
+    QVERIFY2(sw > 45.0 && sd > 45.0, "smooth scene error should be invisible");
+}
+
+void TestDemosaic::xtransFastPathMatchesTheReference()
+{
+    /* odd sizes and a shifted pattern, so every phase meets every border */
+    for (auto [w, h, sx, sy] : { std::tuple{37, 29, 1, 2}, std::tuple{40, 31, 4, 5}, std::tuple{5, 7, 3, 0} }) {
+        RawImage raw = XTransFromRgb(Filled(w, h, 0, 0, 0), sx, sy);
+        uint32_t seed = 12345u + w;
+        for (auto &v : raw.cfa) {
+            seed = seed * 1664525u + 1013904223u;
+            v = static_cast<uint16_t>((seed >> 8) % (kWhite + 1));
+        }
+        const Rgb got = Run(raw, Demosaic::Ahd);
+        const std::vector<float> want = XTransReference(raw);
+        QCOMPARE(got.d.size(), want.size());
+        QVERIFY2(std::memcmp(got.d.data(), want.data(), want.size() * sizeof(float)) == 0,
+                 qPrintable(QString("%1x%2 shift %3,%4 differs from the reference").arg(w).arg(h).arg(sx).arg(sy)));
+    }
+}
+
+void TestDemosaic::xtransIsIndependentOfThreadCountAndTinyIsFinite()
+{
+    const RawImage raw = XTransFromRgb(EdgyScene(300, 270), 1, 4);
+    const int saved = cv::getNumThreads();
+    cv::setNumThreads(1);
+    const Rgb one = Run(raw, Demosaic::Ahd);
+    cv::setNumThreads(saved);
+    const Rgb many = Run(raw, Demosaic::Ahd);
+    QVERIFY(std::memcmp(many.d.data(), one.d.data(), one.d.size() * sizeof(float)) == 0);
+
+    for (auto [w, h] : { std::pair{1, 1}, std::pair{2, 3}, std::pair{4, 4}, std::pair{7, 5} }) {
+        const Rgb out = Run(XTransFromRgb(Filled(w, h, 0.5f, 0.5f, 0.5f)), Demosaic::Ahd);
+        QCOMPARE(out.d.size(), static_cast<size_t>(w) * h * 3);
+        for (float v : out.d) QVERIFY(std::isfinite(v));
+    }
+}
+
 void TestDemosaic::throughput()
 {
     if (qEnvironmentVariableIsEmpty("WINNOW_DEMOSAIC_BENCH"))
@@ -320,6 +497,16 @@ void TestDemosaic::throughput()
         QVERIFY(dm.Run(raw, rgb, a));
         const double ms = t.nsecsElapsed() / 1e6;
         qInfo("algo %d: %.0f ms for 24 MP (%.1f MP/s)", int(a), ms, 24000.0 / ms);
+    }
+    const RawImage xt = XTransFromRgb(SmoothScene(6000, 4000));
+    for (auto a : { Demosaic::Bilinear, Demosaic::Ahd }) {
+        std::vector<float> rgb;
+        Demosaic dm;
+        QElapsedTimer t;
+        t.start();
+        QVERIFY(dm.Run(xt, rgb, a));
+        qInfo("x-trans %s: %.0f ms for 24 MP", a == Demosaic::Bilinear ? "window" : "directional",
+              t.nsecsElapsed() / 1e6);
     }
 }
 

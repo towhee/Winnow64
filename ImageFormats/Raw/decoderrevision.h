@@ -33,12 +33,17 @@ namespace RawDecoder {
       dng 4         2026-11-09  likewise: ProRAW's embedded curve now per channel
                                 (OutputLook::curvePerChannel).
       dng 5         2026-11-09  likewise: GamutClip in place of HighlightRolloff for it.
+      raf 1         2026-11-20  not a decoder change: X-Trans demosaic 5x5 window ->
+                                XTransDirectional (Demosaic). Bumped here, not
+                                kDemosaicRevision, to rebuild only Fuji previews (an
+                                X-Trans DNG keeps its old preview until re-edited).
 */
 inline int revision(const QString &ext)
 {
     const QString e = ext.toLower();
     if (e == "cr2" || e == "cr3") return 1;
     if (e == "dng") return 5;
+    if (e == "raf") return 1;
     return 0;
 }
 

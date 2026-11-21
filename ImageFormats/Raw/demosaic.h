@@ -19,8 +19,9 @@ class Demosaic
 {
 public:
     /*
-        Bayer algorithms. X-Trans always takes XTransWindow whatever is asked, and a mosaic
-        smaller than 4x4 always takes Bilinear (PPG / AHD read two photosites out).
+        Bayer algorithms. A Bayer mosaic smaller than 4x4 always takes Bilinear (PPG / AHD
+        read two photosites out). Fuji X-Trans has no H/V structure for PPG or AHD to use:
+        Bilinear gives XTransWindow there, and Ppg / Ahd give XTransDirectional.
 
         Bilinear  3x3 same-colour average. Fast and soft; zips colour along edges.
         Ppg       Patterned Pixel Grouping (Chuan-kai Lin): green from the flattest of four
@@ -30,7 +31,8 @@ public:
                   homogeneity. The quality default.
 
         PPG and AHD are ported from LightCraft (crates/raw/src/demosaic/{ppg,ahd}.rs, MIT,
-        see THIRD_PARTY_NOTICES.md), which implemented them from the published papers.
+        see THIRD_PARTY_NOTICES.md), which implemented them from the published papers;
+        XTransDirectional from its xtrans.rs, LightCraft's own design.
         Every algorithm reproduces a constant-colour mosaic exactly and keeps each
         photosite's own channel as measured.
     */
@@ -70,6 +72,12 @@ private:
 
     /* Fuji X-Trans: per-pixel average of same-colour photosites in a 5x5 window (the 6x6
        pattern guarantees all three colours in that window), native colour kept exact. */
+    /* Fuji X-Trans: LightCraft's edge-weighted colour-difference interpolation (see the
+       definition). The X-Trans quality path. */
+    bool XTransDirectional(const RawImage &raw, std::vector<float> &rgb,
+                           const QAtomicInt *abort,
+                           const std::function<void(int, int)> &progress);
+
     bool XTransWindow(const RawImage &raw, std::vector<float> &rgb,
                       const QAtomicInt *abort,
                       const std::function<void(int, int)> &progress);

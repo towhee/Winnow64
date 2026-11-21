@@ -98,7 +98,9 @@ bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo,
                    const QAtomicInt *abort, const std::function<void(int, int)> &progress)
 {
     if (!raw.isValid()) return false;
-    if (raw.pattern == CfaPattern::XTrans) return XTransWindow(raw, rgb, abort, progress);
+    if (raw.pattern == CfaPattern::XTrans)
+        return algo == Bilinear ? XTransWindow(raw, rgb, abort, progress)
+                                : XTransDirectional(raw, rgb, abort, progress);
     if (raw.pattern == CfaPattern::Unknown) return false;
 
     /* PPG and AHD read two photosites out; a sliver of a mosaic has nothing to choose. */
@@ -507,4 +509,190 @@ bool Demosaic::AhdBayer(const RawImage &raw, std::vector<float> &rgb,
         }
     });
     return !stop.load();
+}
+
+
+/* ---------------------------------------------------------------------------------------
+   X-Trans directional, ported from LightCraft (crates/raw/src/demosaic/xtrans.rs; MIT,
+   see THIRD_PARTY_NOTICES.md). Same maths and summation order; the interior fast path uses
+   precomputed offsets per pattern phase, the border reflects like everything else here.
+   --------------------------------------------------------------------------------------- */
+
+namespace {
+
+/* Robust-weight floor, in white-normalised units. */
+constexpr float kXtEps = 1e-3f;
+
+struct Offset2 { int dx, dy; };
+
+/* Read-only, white-normalised, mirror-reflected view of an X-Trans RawImage. */
+struct XtMosaic
+{
+    const uint16_t *data;
+    int W, H;
+    float scale;
+    const uint8_t (*xt)[6];
+
+    float Get(int x, int y) const {
+        return static_cast<float>(data[static_cast<size_t>(Reflect(y, H)) * W + Reflect(x, W)]) * scale;
+    }
+    int Color(int x, int y) const { return xt[Reflect(y, H) % 6][Reflect(x, W) % 6]; }
+};
+
+/* Same-colour offsets for each of the 36 phases, in scan order (dy outer, dx inner) so the
+   interior sums run in the same order as the border's plain 2-D loop. */
+struct XtOffsets
+{
+    struct Phase {
+        std::vector<Offset2> g1, g2;      // greens at radius 1, then radius 2 (whole 5x5)
+        std::vector<Offset2> rb[2];       // 5x5 reds, 5x5 blues
+    };
+    Phase phase[36];
+};
+
+XtOffsets MakeXtOffsets(const uint8_t (*xt)[6])
+{
+    XtOffsets o;
+    auto col = [&](int x, int y) { return xt[((y % 6) + 6) % 6][((x % 6) + 6) % 6]; };
+    for (int py = 0; py < 6; ++py)
+        for (int px = 0; px < 6; ++px) {
+            XtOffsets::Phase &p = o.phase[py * 6 + px];
+            for (int r = 1; r <= 2; ++r) {
+                auto &ring = (r == 1) ? p.g1 : p.g2;
+                for (int dy = -r; dy <= r; ++dy)
+                    for (int dx = -r; dx <= r; ++dx)
+                        if ((dx || dy) && col(px + dx, py + dy) == 1) ring.push_back({dx, dy});
+            }
+            for (int dy = -2; dy <= 2; ++dy)
+                for (int dx = -2; dx <= 2; ++dx) {
+                    const int c = col(px + dx, py + dy);
+                    if (c == 0) p.rb[0].push_back({dx, dy});
+                    else if (c == 2) p.rb[1].push_back({dx, dy});
+                }
+        }
+    return o;
+}
+
+/* Weighted mean of vals around their (upper) median, each weighted 1 / (eps + |v - med|). */
+float RobustMean(const float *vals, int n)
+{
+    float sorted[24];
+    std::copy(vals, vals + n, sorted);
+    std::sort(sorted, sorted + n);
+    const float med = sorted[n / 2];
+    float s = 0.0f, ws = 0.0f;
+    for (int k = 0; k < n; ++k) {
+        const float wt = 1.0f / (kXtEps + std::fabs(vals[k] - med));
+        s += wt * vals[k];
+        ws += wt;
+    }
+    return s / ws;
+}
+
+} // namespace
+
+bool Demosaic::XTransDirectional(const RawImage &raw, std::vector<float> &rgb,
+                                 const QAtomicInt *abort,
+                                 const std::function<void(int, int)> &progress)
+{
+/*
+    Edge-weighted colour-difference interpolation for X-Trans (LightCraft's own design):
+
+    1. Green at non-green sites: robust weighted mean of the greens in the 3x3
+       neighbourhood (5x5 if none), each weighted 1 / (eps + |g - median|), so samples
+       across an edge contribute little.
+    2. Red and blue everywhere: G(p) + sum w_q (C(q) - G(q)) / sum w_q over the same-colour
+       samples q in the 5x5 neighbourhood, w_q = 1 / (d^2(p,q) * (eps + |G(q) - G(p)|)):
+       close samples on the same side of an edge dominate.
+
+    Two passes (green plane, then the rest), each half of the progress bar.
+*/
+    const XtMosaic m{ raw.cfa.data(), raw.width, raw.height,
+                      raw.white > 0 ? 1.0f / static_cast<float>(raw.white) : 1.0f, raw.xtrans };
+    const int W = m.W, H = m.H;
+    const XtOffsets off = MakeXtOffsets(raw.xtrans);
+    auto phaseOf = [](int x, int y) { return (y % 6) * 6 + (x % 6); };
+    auto fast = [&](int x, int y) { return y >= 2 && y + 2 < H && x >= 2 && x + 2 < W; };
+    auto raw01 = [&](size_t i) { return static_cast<float>(m.data[i]) * m.scale; };
+
+    std::function<void(int, int)> p1, p2;
+    if (progress) {
+        p1 = [&progress](int d, int t) { progress(d, 2 * t); };
+        p2 = [&progress](int d, int t) { progress(t + d, 2 * t); };
+    }
+
+    /* 1. Green plane. */
+    std::vector<float> g(static_cast<size_t>(W) * H);
+    const bool ok = ParallelRows(H, abort, p1, [&](int y) {
+        float vals[24];
+        for (int x = 0; x < W; ++x) {
+            const size_t i = static_cast<size_t>(y) * W + x;
+            if (fast(x, y)) {
+                if (raw.xtrans[y % 6][x % 6] == 1) { g[i] = raw01(i); continue; }
+                const XtOffsets::Phase &p = off.phase[phaseOf(x, y)];
+                const std::vector<Offset2> &ring = p.g1.empty() ? p.g2 : p.g1;
+                if (ring.empty()) { g[i] = raw01(i); continue; }
+                int n = 0;
+                for (const Offset2 &o : ring)
+                    vals[n++] = raw01(static_cast<size_t>(static_cast<ptrdiff_t>(i) + static_cast<ptrdiff_t>(o.dy) * W + o.dx));
+                g[i] = RobustMean(vals, n);
+                continue;
+            }
+            if (m.Color(x, y) == 1) { g[i] = m.Get(x, y); continue; }
+            int n = 0;
+            for (int r = 1; r <= 2 && n == 0; ++r)
+                for (int dy = -r; dy <= r; ++dy)
+                    for (int dx = -r; dx <= r; ++dx)
+                        if ((dx || dy) && m.Color(x + dx, y + dy) == 1) vals[n++] = m.Get(x + dx, y + dy);
+            g[i] = n ? RobustMean(vals, n) : m.Get(x, y);
+        }
+    });
+    if (!ok) return false;
+
+    auto gg = [&](int x, int y) { return g[static_cast<size_t>(Reflect(y, H)) * W + Reflect(x, W)]; };
+
+    /* 2. Red and blue by weighted colour difference. */
+    rgb.assign(static_cast<size_t>(W) * H * 3, 0.0f);
+    return ParallelRows(H, abort, p2, [&](int y) {
+        for (int x = 0; x < W; ++x) {
+            const size_t i = static_cast<size_t>(y) * W + x;
+            float *px = rgb.data() + i * 3;
+            if (fast(x, y)) {
+                const int own = raw.xtrans[y % 6][x % 6];
+                const float gp = g[i];
+                px[1] = gp;
+                const XtOffsets::Phase &p = off.phase[phaseOf(x, y)];
+                for (int li = 0; li < 2; ++li) {
+                    const int c = li ? 2 : 0;
+                    if (c == own) { px[c] = raw01(i); continue; }
+                    float s = 0.0f, ws = 0.0f;
+                    for (const Offset2 &o : p.rb[li]) {
+                        const size_t j = static_cast<size_t>(static_cast<ptrdiff_t>(i) + static_cast<ptrdiff_t>(o.dy) * W + o.dx);
+                        const float gq = g[j];
+                        const float wt = 1.0f / (static_cast<float>(o.dx * o.dx + o.dy * o.dy) * (kXtEps + std::fabs(gq - gp)));
+                        s += wt * (raw01(j) - gq);
+                        ws += wt;
+                    }
+                    px[c] = ws > 0.0f ? gp + s / ws : gp;
+                }
+                continue;
+            }
+            const int own = m.Color(x, y);
+            const float gp = gg(x, y);
+            px[1] = gp;
+            for (int c : { 0, 2 }) {
+                if (c == own) { px[c] = m.Get(x, y); continue; }
+                float s = 0.0f, ws = 0.0f;
+                for (int dy = -2; dy <= 2; ++dy)
+                    for (int dx = -2; dx <= 2; ++dx) {
+                        if (m.Color(x + dx, y + dy) != c) continue;
+                        const float gq = gg(x + dx, y + dy);
+                        const float wt = 1.0f / (static_cast<float>(dx * dx + dy * dy) * (kXtEps + std::fabs(gq - gp)));
+                        s += wt * (m.Get(x + dx, y + dy) - gq);
+                        ws += wt;
+                    }
+                px[c] = ws > 0.0f ? gp + s / ws : gp;
+            }
+        }
+    });
 }
