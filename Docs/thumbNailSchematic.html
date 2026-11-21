@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="help.css">
+<style>
+    .sw   { font-size: 16px; }
+    td    { vertical-align: top; }
+    .num  { color: #02b0cf; font-weight: bold; text-align: center; }
+</style>
+</head>
+<body>
+
+<h1>Thumbnail Anatomy</h1>
+
+<p>Every thumbnail, in the grid and in the filmstrip, can carry outlines and badges
+that tell you about the image without opening it. The drawing below shows one
+thumbnail, enlarged three times, with everything turned on at once. In practice you
+only see the ones that apply to that image.</p>
+
+<p>Hover over any badge in Winnow and its tooltip says what it means for that image.
+Hover over the frame, outside the picture, for a reminder of the outline colours.</p>
+
+<p style="text-align: center;"><img src="images/ThumbnailSchematic.svg" width="1000"></p>
+
+<h2>Outlines</h2>
+
+<table cellspacing="0" border="0">
+<tr><th>#</th><th>Element</th><th>Meaning</th></tr>
+
+<tr><td class="num">2</td><td>Current image</td>
+<td><p><span class="sw" style="color: #ffff00;">&#9632;</span> Yellow, the thickest
+outline, around the whole cell. The image shown in the loupe.</p></td></tr>
+
+<tr><td class="num">3</td><td>Selected</td>
+<td><p><span class="sw" style="color: #ffffff;">&#9632;</span> White, on the frame. The
+image is part of the selection. The current image is usually selected as well, so
+it shows both outlines.</p></td></tr>
+
+<tr><td class="num">5</td><td>Pick border</td>
+<td><p>Drawn on the edge of the picture itself. Only one shows at a time, in this
+order of priority:</p>
+<p><span class="sw" style="color: #00ff00;">&#9632;</span> Green: picked.</p>
+<p><span class="sw" style="color: #0000ff;">&#9632;</span> Blue: ingested (copied
+off the card).</p>
+<p><span class="sw" style="color: #ff0000;">&#9632;</span> Red: rejected.</p></td></tr>
+
+<tr><td class="num">10</td><td>Frame and colour label</td>
+<td><p>The rounded frame around the thumbnail and its label. Its background is the
+image's colour label, darkened so the picture still stands out:</p>
+<p><span class="sw" style="color: #3c1414;">&#9632;</span> Red
+&nbsp; <span class="sw" style="color: #50370f;">&#9632;</span> Yellow
+&nbsp; <span class="sw" style="color: #142814;">&#9632;</span> Green
+&nbsp; <span class="sw" style="color: #14143c;">&#9632;</span> Blue
+&nbsp; <span class="sw" style="color: #321e46;">&#9632;</span> Purple</p>
+<p>With no colour label the frame is the app background.</p></td></tr>
+
+<tr><td class="num">4</td><td>Loupe viewport</td>
+<td><p>A white and black rectangle on the current image when the loupe is zoomed in.
+It shows which part of the image the loupe is showing.</p></td></tr>
+</table>
+
+<h2>Badges along the top</h2>
+
+<table cellspacing="0" border="0">
+<tr><th>#</th><th>Element</th><th>Meaning</th></tr>
+
+<tr><td class="num">1</td><td>Icon number</td>
+<td><p>Top-left corner. The image's position in the current sort and filter. Shown when
+icon numbers are turned on, and always for a Library duplicate:</p>
+<p><span class="sw" style="color: #ff1e1e;">&#9632;</span> Red number: a duplicate.
+Another image in the Library has the same capture time, file type and pixels.</p>
+<p><span class="sw" style="color: #9646d2;">&#9632;</span> Purple number: a duplicate
+you have okayed, so the duplicates check ignores it.</p>
+<p>White badge: while a duplicate is the current image, its twins' badges turn white
+so you can pick them out.</p></td></tr>
+
+<tr><td class="num">11</td><td>Versions</td>
+<td><p>Top-right corner.</p>
+<p><span class="sw" style="color: #6cc1e8;">&#9632;</span> Blue count and arrow: the
+original has this many versions (virtual copies). Click it to show or hide them. A
+white outline appears when the mouse is over it, because it is a button.</p>
+<p><span class="sw" style="color: #6e6e6e;">&#9632;</span> Grey name: this thumbnail is
+a version, and this is its name (v2, v3 ... until you name it).</p></td></tr>
+</table>
+
+<h2>Badges along the bottom</h2>
+
+<table cellspacing="0" border="0">
+<tr><th>#</th><th>Element</th><th>Meaning</th></tr>
+
+<tr><td class="num">9</td><td>Sidecar</td>
+<td><p><span class="sw" style="color: #055238;">&#9679;</span> Dark teal dot, bottom-left.
+The image has a sidecar file holding Winnow's edits and metadata.</p></td></tr>
+
+<tr><td class="num">8</td><td>Read-only lock</td>
+<td><p>A padlock. The image file is locked or read-only, so metadata cannot be written to
+it.</p></td></tr>
+
+<tr><td class="num">7</td><td>Develop edits</td>
+<td><p><span class="sw" style="color: #966e14;">&#9679;</span> Amber dot. The image has
+Develop edits. It shows in both Preview and Develop mode.</p></td></tr>
+
+<tr><td class="num">6</td><td>Availability</td>
+<td><p>Library only. The image cannot be opened right now:</p>
+<p><span class="sw" style="color: #5a82aa;">&#9679;</span> Slate blue: offline. It is on
+a drive that is not connected. Plug the drive in.</p>
+<p><span class="sw" style="color: #aa463c;">&#9679;</span> Dull red: missing. The drive
+is there but the file is not. It was moved or deleted outside Winnow.</p></td></tr>
+
+<tr><td class="num">12</td><td>Rating</td>
+<td><p>White stars, bottom centre. On small thumbnails the rating is shown as a single
+number instead. Shown when rating badges are turned on.</p>
+<p>For a video, the duration sits at the bottom centre, with the rating just above
+it.</p></td></tr>
+
+<tr><td class="num">14</td><td>RAW+JPG pair</td>
+<td><p>A chain link. This is the JPG half of a RAW+JPG pair, shown when Combine RAW+JPG
+is on.</p></td></tr>
+
+<tr><td class="num">13</td><td>Cache status</td>
+<td><p>Dot, bottom-right. What the loupe can show at once, without decoding the file:</p>
+<p><span class="sw" style="color: #00c800;">&#9679;</span> Green: a developed preview is
+ready.</p>
+<p><span class="sw" style="color: #ff8c00;">&#9679;</span> Orange: a developed preview
+is ready, at a reduced size. It turns green when the full size one is built.</p>
+<p><span class="sw" style="color: #be3cff;">&#9679;</span> Purple: the embedded preview
+or the original file is cached.</p>
+<p><span class="sw" style="color: #c80000;">&#9679;</span> Red: not cached yet.</p>
+<p>Videos have no cache dot.</p></td></tr>
+
+<tr><td class="num">15</td><td>Label</td>
+<td><p>Below the picture: the file name or the title, whichever you chose. Shown when
+thumbnail labels are turned on.</p></td></tr>
+</table>
+
+<h2>Notes</h2>
+
+<p>During a slideshow the dots and the versions badge are hidden.</p>
+
+<p>The colour label background and the rating are both controlled by the rating badges
+setting: turn it off and both disappear.</p>
+
+<p>Some cameras put black bars above and below their embedded thumbnail. Winnow ignores
+them when it draws the loupe viewport, so the rectangle lines up with the real
+picture.</p>
+
+</body>
+</html>

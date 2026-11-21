@@ -694,6 +694,10 @@ private:
     QTreeWidgetItem *folderDropTarget(const QPoint &pos, const QDropEvent *event) const;
     void setDropHover(QTreeWidgetItem *item);
     QPersistentModelIndex dropHover;
+    /*  The row syncToFolder just showed, painted like dropHover, flashing twice so
+        the eye finds it. flashSeq lets a later flash outlive an earlier one's timers. */
+    QPersistentModelIndex flashRow;
+    int flashSeq = 0;
 
     struct Group {
         QTreeWidgetItem *item = nullptr;

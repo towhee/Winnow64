@@ -2560,6 +2560,20 @@ bool Filters::syncToFolder(const QString &folder, QString &reason)
     }
     for (QTreeWidgetItem *p = best->parent(); p; p = p->parent()) p->setExpanded(true);
     scrollToItem(best, QAbstractItemView::PositionAtCenter);
+
+    /* Flash the row twice: on 300 ms, off 200 ms, on 300 ms (painted in paintEvent,
+       like dropHover). */
+    const QPersistentModelIndex row(indexFromItem(best, 0));
+    const int seq = ++flashSeq;
+    auto set = [this, seq, row](bool on) {
+        if (seq != flashSeq) return;
+        flashRow = on ? row : QPersistentModelIndex();
+        viewport()->update();
+    };
+    set(true);
+    QTimer::singleShot(300, this, [set] { set(false); });
+    QTimer::singleShot(500, this, [set] { set(true); });
+    QTimer::singleShot(800, this, [set] { set(false); });
     return true;
 }
 
@@ -5455,9 +5469,12 @@ void Filters::paintEvent(QPaintEvent *event)
     }
     else QTreeWidget::paintEvent(event);
 
-    // the Folders row a thumbnail drag would move into -- see dropEvent
-    if (dropHover.isValid()) {
-        QRect r = visualRect(dropHover);
+    /* The Folders row a thumbnail drag would move into (see dropEvent), and the row
+       syncToFolder is flashing. */
+    for (const QPersistentModelIndex &idx : {dropHover, flashRow}) {
+        if (!idx.isValid()) continue;
+        QRect r = visualRect(idx);
+        if (r.isEmpty()) continue;      // collapsed away
         r.setLeft(0);
         r.setRight(viewport()->width() - 1);
         QPainter p(viewport());
