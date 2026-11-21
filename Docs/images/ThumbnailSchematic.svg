@@ -1,102 +1,102 @@
-<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny" width="1000" height="560" viewBox="0 0 1000 560">
+<svg xmlns="http://www.w3.org/2000/svg" version="1.2" baseProfile="tiny" width="1000" height="580" viewBox="0 0 1000 580">
 <defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a6ea5"/><stop offset="1" stop-color="#a9c9e4"/></linearGradient><linearGradient id="land" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#4f6b3a"/><stop offset="1" stop-color="#2c3d22"/></linearGradient></defs>
-<rect x="0" y="0" width="1000" height="560" fill="#323232"/>
-<rect x="256" y="56" width="486" height="420" rx="24" fill="none" stroke="#ffff00" stroke-width="9"/>
-<rect x="262" y="62" width="474" height="408" rx="24" fill="#321e46"/>
-<text x="499.0" y="455" font-family="Helvetica" font-size="33" fill="#bebebe" text-anchor="middle">DSC01234.ARW</text>
-<rect x="274" y="89.0" width="450" height="300.0" fill="url(#sky)"/>
-<polygon points="274.0,305.0 328.0,233.0 373.0,269.0 445.0,179.0 508.0,254.0 557.5,215.0 625.0,275.0 679.0,239.0 724.0,287.0 724.0,389.0 274.0,389.0" fill="url(#land)"/>
-<circle cx="634.0" cy="149.0" r="21" fill="#fff2b0"/>
-<rect x="274" y="89.0" width="450" height="300.0" rx="18" fill="none" stroke="#00ff00" stroke-width="6"/>
-<rect x="355.0" y="155.0" width="135.0" height="90.0" fill="none" stroke="#ffffff" stroke-width="3"/>
-<rect x="358.0" y="158.0" width="129.0" height="84.0" fill="none" stroke="#000000" stroke-width="3"/>
-<text x="499.0" y="408" font-family="Helvetica" font-weight="bold" font-size="42" fill="#ffffff" text-anchor="middle">***</text>
-<circle cx="298" cy="392" r="9" fill="#055238" stroke="#464646" stroke-width="1.5"/>
-<circle cx="361" cy="392" r="9" fill="#966e14" stroke="#464646" stroke-width="1.5"/>
-<circle cx="424" cy="392" r="9" fill="#5a82aa" stroke="#464646" stroke-width="1.5"/>
-<circle cx="712" cy="392" r="9" fill="#00c800" stroke="#464646" stroke-width="1.5"/>
-<rect x="316" y="384.5" width="24" height="18" rx="3" fill="#d0d0d0"/>
-<path d="M 320.5 384.5 L 320.5 378.5 A 7.5 7.5 0 0 1 335.5 378.5 L 335.5 384.5" fill="none" stroke="#d0d0d0" stroke-width="4.199999999999999"/>
-<circle cx="676" cy="392" r="9" fill="#3c9be6" stroke="#464646" stroke-width="1.5"/>
-<rect x="262" y="62" width="78" height="42" rx="24" fill="#321e46"/>
-<text x="301" y="95" font-family="Helvetica" font-weight="bold" font-size="36" fill="#6e6e6e" text-anchor="middle">12</text>
-<rect x="622" y="62" width="114" height="60" rx="24" fill="#321e46"/>
-<text x="679.0" y="105.5" font-family="Helvetica" font-weight="bold" font-size="39" fill="#6cc1e8" text-anchor="middle">2 ▸</text>
-<rect x="629.5" y="69.5" width="99" height="45" rx="12" fill="none" stroke="#ffffff" stroke-width="3"/>
-<rect x="262" y="62" width="474" height="408" rx="24" fill="none" stroke="#ffffff" stroke-width="6"/>
-<line x1="214" y1="60" x2="280" y2="86" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="280" cy="86" r="3.5" fill="#cccccc"/>
+<rect x="0" y="0" width="1000" height="580" fill="#323232"/>
+<rect x="256" y="46" width="486" height="486" rx="24" fill="none" stroke="#ffff00" stroke-width="9"/>
+<rect x="262" y="52" width="474" height="474" rx="24" fill="#321e46"/>
+<text x="499.0" y="511" font-family="Helvetica" font-size="33" fill="#bebebe" text-anchor="middle">DSC01234.ARW</text>
+<rect x="274" y="112.0" width="450" height="300.0" fill="url(#sky)"/>
+<polygon points="274.0,328.0 328.0,256.0 373.0,292.0 445.0,202.0 508.0,277.0 557.5,238.0 625.0,298.0 679.0,262.0 724.0,310.0 724.0,412.0 274.0,412.0" fill="url(#land)"/>
+<circle cx="634.0" cy="172.0" r="21" fill="#fff2b0"/>
+<rect x="274" y="112.0" width="450" height="300.0" rx="18" fill="none" stroke="#00ff00" stroke-width="6"/>
+<rect x="355.0" y="178.0" width="135.0" height="90.0" fill="none" stroke="#ffffff" stroke-width="3"/>
+<rect x="358.0" y="181.0" width="129.0" height="84.0" fill="none" stroke="#000000" stroke-width="3"/>
+<text x="499.0" y="466.0" font-family="Helvetica" font-weight="bold" font-size="42" fill="#ffffff" text-anchor="middle">***</text>
+<circle cx="298" cy="442.0" r="9" fill="#055238" stroke="#464646" stroke-width="1.5"/>
+<circle cx="361" cy="442.0" r="9" fill="#966e14" stroke="#464646" stroke-width="1.5"/>
+<circle cx="424" cy="442.0" r="9" fill="#5a82aa" stroke="#464646" stroke-width="1.5"/>
+<circle cx="712" cy="442.0" r="9" fill="#00c800" stroke="#464646" stroke-width="1.5"/>
+<rect x="316" y="440.5" width="24" height="18" rx="3" fill="#d0d0d0"/>
+<path d="M 320.5 440.5 L 320.5 434.5 A 7.5 7.5 0 0 1 335.5 434.5 L 335.5 440.5" fill="none" stroke="#d0d0d0" stroke-width="4.199999999999999"/>
+<circle cx="676" cy="442.0" r="9" fill="#3c9be6" stroke="#464646" stroke-width="1.5"/>
+<rect x="262" y="52" width="78" height="55.5" rx="24" fill="#321e46"/>
+<text x="301" y="94" font-family="Helvetica" font-weight="bold" font-size="36" fill="#6e6e6e" text-anchor="middle">12</text>
+<rect x="622" y="52" width="114" height="55.5" rx="24" fill="#321e46"/>
+<text x="679.0" y="95.5" font-family="Helvetica" font-weight="bold" font-size="39" fill="#6cc1e8" text-anchor="middle">2 ▸</text>
+<rect x="629.5" y="59.5" width="99" height="40.5" rx="12" fill="none" stroke="#ffffff" stroke-width="3"/>
+<rect x="262" y="52" width="474" height="474" rx="24" fill="none" stroke="#ffffff" stroke-width="6"/>
+<line x1="214" y1="60" x2="280" y2="82" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="280" cy="82" r="3.5" fill="#cccccc"/>
 <circle cx="200" cy="60" r="14" fill="#02b0cf"/>
 <text x="200" y="66" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">1</text>
 <text x="178" y="65" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Icon number</text>
-<line x1="214" y1="110" x2="254" y2="140" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="254" cy="140" r="3.5" fill="#cccccc"/>
+<line x1="214" y1="110" x2="254" y2="130" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="254" cy="130" r="3.5" fill="#cccccc"/>
 <circle cx="200" cy="110" r="14" fill="#02b0cf"/>
 <text x="200" y="116" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">2</text>
 <text x="178" y="115" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Current image</text>
-<line x1="214" y1="160" x2="263" y2="215" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="263" cy="215" r="3.5" fill="#cccccc"/>
+<line x1="214" y1="160" x2="263" y2="205" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="263" cy="205" r="3.5" fill="#cccccc"/>
 <circle cx="200" cy="160" r="14" fill="#02b0cf"/>
 <text x="200" y="166" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">3</text>
 <text x="178" y="165" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Selected</text>
-<line x1="214" y1="210" x2="355.0" y2="200.0" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="355.0" cy="200.0" r="3.5" fill="#cccccc"/>
+<line x1="214" y1="210" x2="355.0" y2="223.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="355.0" cy="223.0" r="3.5" fill="#cccccc"/>
 <circle cx="200" cy="210" r="14" fill="#02b0cf"/>
 <text x="200" y="216" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">4</text>
 <text x="178" y="215" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Loupe viewport</text>
-<line x1="214" y1="255" x2="274" y2="239.0" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="274" cy="239.0" r="3.5" fill="#cccccc"/>
-<circle cx="200" cy="255" r="14" fill="#02b0cf"/>
-<text x="200" y="261" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">5</text>
-<text x="178" y="260" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Pick border</text>
-<line x1="214" y1="305" x2="424" y2="392" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="424" cy="392" r="3.5" fill="#cccccc"/>
-<circle cx="200" cy="305" r="14" fill="#02b0cf"/>
-<text x="200" y="311" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">6</text>
-<text x="178" y="310" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Availability</text>
-<line x1="214" y1="345" x2="361" y2="392" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="361" cy="392" r="3.5" fill="#cccccc"/>
-<circle cx="200" cy="345" r="14" fill="#02b0cf"/>
-<text x="200" y="351" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">7</text>
-<text x="178" y="350" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Develop edits</text>
-<line x1="214" y1="385" x2="328" y2="380" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="328" cy="380" r="3.5" fill="#cccccc"/>
-<circle cx="200" cy="385" r="14" fill="#02b0cf"/>
-<text x="200" y="391" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">8</text>
-<text x="178" y="390" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Read-only lock</text>
-<line x1="214" y1="425" x2="298" y2="392" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="298" cy="392" r="3.5" fill="#cccccc"/>
-<circle cx="200" cy="425" r="14" fill="#02b0cf"/>
-<text x="200" y="431" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">9</text>
-<text x="178" y="430" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Sidecar</text>
-<line x1="214" y1="500" x2="304" y2="446" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="304" cy="446" r="3.5" fill="#cccccc"/>
-<circle cx="200" cy="500" r="14" fill="#02b0cf"/>
-<text x="198.5" y="505" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">10</text>
-<text x="178" y="505" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Frame + colour label</text>
-<line x1="786" y1="80" x2="736" y2="86" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="736" cy="86" r="3.5" fill="#cccccc"/>
+<line x1="214" y1="260" x2="274" y2="262.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="274" cy="262.0" r="3.5" fill="#cccccc"/>
+<circle cx="200" cy="260" r="14" fill="#02b0cf"/>
+<text x="200" y="266" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">5</text>
+<text x="178" y="265" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Pick border</text>
+<line x1="214" y1="330" x2="424" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="424" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="200" cy="330" r="14" fill="#02b0cf"/>
+<text x="200" y="336" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">6</text>
+<text x="178" y="335" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Availability</text>
+<line x1="214" y1="390" x2="361" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="361" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="200" cy="390" r="14" fill="#02b0cf"/>
+<text x="200" y="396" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">7</text>
+<text x="178" y="395" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Develop edits</text>
+<line x1="214" y1="430" x2="328" y2="436.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="328" cy="436.0" r="3.5" fill="#cccccc"/>
+<circle cx="200" cy="430" r="14" fill="#02b0cf"/>
+<text x="200" y="436" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">8</text>
+<text x="178" y="435" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Read-only lock</text>
+<line x1="214" y1="470" x2="298" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="298" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="200" cy="470" r="14" fill="#02b0cf"/>
+<text x="200" y="476" font-family="Helvetica" font-weight="bold" font-size="16" fill="#1a1a1a" text-anchor="middle">9</text>
+<text x="178" y="475" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Sidecar</text>
+<line x1="214" y1="540" x2="304" y2="502" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="304" cy="502" r="3.5" fill="#cccccc"/>
+<circle cx="200" cy="540" r="14" fill="#02b0cf"/>
+<text x="198.5" y="545" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">10</text>
+<text x="178" y="545" font-family="Helvetica" font-size="15" fill="#c0c0c0" text-anchor="end">Frame + colour label</text>
+<line x1="786" y1="80" x2="736" y2="76" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="736" cy="76" r="3.5" fill="#cccccc"/>
 <circle cx="800" cy="80" r="14" fill="#02b0cf"/>
 <text x="798.5" y="85" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">11</text>
 <text x="822" y="85" font-family="Helvetica" font-size="15" fill="#c0c0c0">Versions</text>
-<line x1="786" y1="300" x2="535.0" y2="384" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="535.0" cy="384" r="3.5" fill="#cccccc"/>
-<circle cx="800" cy="300" r="14" fill="#02b0cf"/>
-<text x="798.5" y="305" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">12</text>
-<text x="822" y="305" font-family="Helvetica" font-size="15" fill="#c0c0c0">Rating</text>
-<line x1="786" y1="380" x2="712" y2="392" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="712" cy="392" r="3.5" fill="#cccccc"/>
-<circle cx="800" cy="380" r="14" fill="#02b0cf"/>
-<text x="798.5" y="385" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">13</text>
-<text x="822" y="385" font-family="Helvetica" font-size="15" fill="#c0c0c0">Cache status</text>
-<line x1="786" y1="430" x2="676" y2="392" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="676" cy="392" r="3.5" fill="#cccccc"/>
-<circle cx="800" cy="430" r="14" fill="#02b0cf"/>
-<text x="798.5" y="435" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">14</text>
-<text x="822" y="435" font-family="Helvetica" font-size="15" fill="#c0c0c0">RAW+JPG pair</text>
-<line x1="786" y1="510" x2="619.0" y2="440" stroke="#cccccc" stroke-width="1.5"/>
-<circle cx="619.0" cy="440" r="3.5" fill="#cccccc"/>
-<circle cx="800" cy="510" r="14" fill="#02b0cf"/>
-<text x="798.5" y="515" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">15</text>
-<text x="822" y="515" font-family="Helvetica" font-size="15" fill="#c0c0c0">Label</text>
+<line x1="786" y1="340" x2="535.0" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="535.0" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="800" cy="340" r="14" fill="#02b0cf"/>
+<text x="798.5" y="345" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">12</text>
+<text x="822" y="345" font-family="Helvetica" font-size="15" fill="#c0c0c0">Rating</text>
+<line x1="786" y1="420" x2="712" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="712" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="800" cy="420" r="14" fill="#02b0cf"/>
+<text x="798.5" y="425" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">13</text>
+<text x="822" y="425" font-family="Helvetica" font-size="15" fill="#c0c0c0">Cache status</text>
+<line x1="786" y1="470" x2="676" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="676" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="800" cy="470" r="14" fill="#02b0cf"/>
+<text x="798.5" y="475" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">14</text>
+<text x="822" y="475" font-family="Helvetica" font-size="15" fill="#c0c0c0">RAW+JPG pair</text>
+<line x1="786" y1="545" x2="619.0" y2="496" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="619.0" cy="496" r="3.5" fill="#cccccc"/>
+<circle cx="800" cy="545" r="14" fill="#02b0cf"/>
+<text x="798.5" y="550" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">15</text>
+<text x="822" y="550" font-family="Helvetica" font-size="15" fill="#c0c0c0">Label</text>
 </svg>

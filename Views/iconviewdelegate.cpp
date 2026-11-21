@@ -11,56 +11,66 @@
 
 IconViewDelegate Anatomy:
 
-    cell:  the entire icon shown be the delegate
-    frame: the cell border
-    item:  the "thumbnail" provided for the image
-    thumb: the item without any black borders
+    cell:     the entire icon shown by the delegate (option.rect)
+    frame:    the rounded border inside the cell; its fill is the colour label
+    top band: the strip of the frame above the item, for the badges anchored to the
+              frame's top edge (icon number, versions badge)
+    item:     the box the "thumbnail" is fitted into (thumbWidth x thumbHeight)
+    bot band: the strip of the frame below the item, for the status symbols and rating
+    text:     the label row (file name or title), only when labels are shown
+    thumb:    the picture inside the item, without any black borders
 
-0---- cellRect = option.rect --------------------------------|
-|                                                            |
-|           framePadding (fPad)                              |
-|                                                            |
-|     1-----frameRect----------------------------------+     |
-|     |                                                |     |
-|     |          thumbPadding (tPad)                   |     |
-|     |                                                |     |
-|     |     2----itemRect------------------------+  ^  |     |
-|     |     |                                    |  :  |     |
-|     |     5----outerItem-----------------------|  :  |     |
-|     |     |    horizontal black border         |  :  |     |
-|     |     6----thumbRect-----------------------|  t  |     |
-|     |     |                                    |  h  |     |
-|     |     |                                    |  u  |     |
-|     |     |                                    |  m  |     |
-|     |     |                                    |  b  |     |
-|     |     |                                    |     |     |
-|     |     |                                    |  H  |     |
-|     |     |                                    |  e  |     |
-|     |     |                                    |  i  |     |
-|     |     |----------------------------------- |  g  |     |
-|     |     |     horizontal black border        |  h  |     |
-|     |     4 -----------------------------------|  t  |     |
-|     |     |                                    |  :  |     |
-|     |     |                                    |  :  |     |
-|     |     |               *****                |  :  |     |
-|     3----textRect -----------------------------+--˅--|     |
-|     |                                                |     |
-|     |     <---------- thumbWidth -------------->     |     |
-|     |                                                |     |
-|     +------------------------------------------------+     |
-|                                                            |
-|                                                            |
-|                                                            |
-+------------------------------------------------------------+
+0---- cellRect = option.rect ---------------------------------------+
+|                                                                   |
+|          framePadding (fPad)                                      |
+|                                                                   |
+|     1----frameRect -----------------------------------------+     |
+|     | [icon number]                            [versions >] |     |
+|     |                top band (topBandHt)                   |     |
+|     |      2----itemRect ----------------------------+      |     |
+|     |      5----outerThumbRect ----------------------|      |     |
+|     |      |    horizontal black border              |      |     |
+|     |      6----thumbRect ---------------------------|      |     |
+|     |      |                                         |      |     |
+|     |      |               picture                   |      |     |
+|     |      |             (thumbHeight)               |      |     |
+|     |      |                                         |      |     |
+|     |      |-----------------------------------------|      |     |
+|     |      |    horizontal black border              |      |     |
+|     |      |           [video duration]              |      |     |
+|     |      4-----------------------------------------+      |     |
+|     |       S lock D  A        *****        link C          |     |
+|     |  S sidecar  D develop  A availability  C cache        |     |
+|     |             bottom band (botBandHt)                   |     |
+|     3----textRect ------------------------------------------|     |
+|     |             DSC01234.ARW (textHeight)                 |     |
+|     +-------------------------------------------------------+     |
+|      tPad  <------------ thumbWidth -----------------> tPad       |
++-------------------------------------------------------------------+
+
+BADGE BANDS: frameRect reserves topBandHt above itemRect and botBandHt below it, so no
+badge covers the picture. Both are always reserved, so every cell is the same height.
+Left and right of itemRect the gap is tPad. The bottom symbols and the rating are
+pre-computed in setThumbDimensions relative to itemRect.topLeft(), centred on the bottom
+band's middle line. See notes/Documentation.md 3.6.4 and Docs/thumbNailSchematic.html.
+
+Heights:
+frameSize.height = topBandHt + thumbHeight + botBandHt + textHeight
+cellSize.height  = frameSize.height + 2 * fPad
 
 Point coordinates:
 0 = option.rect.topLeft()
 1 = fPadOffset
-2 = fPadOffset + tPadOffset
+2 = fPadOffset + itemOffset (tPad, topBandHt)
 3 = frameRect.bottomLeft() - textHtOffset
-4 = info row (rating etc) = 1/6 thumbRect height
-5 = itemRect.topleft() + alignOff (based on aspect ratio)
-6 = outerThumbRect.topleft() + bboOff (black border offset)
+4 = itemRect.bottomLeft(): the bottom band starts here (y = itemSize.height() in the
+    pre-computed symbol rects)
+5 = itemRect.topLeft() + alignOffset (centres the pixmap by aspect ratio)
+6 = outerThumbRect.topLeft() + bboOffset (black border offset)
+
+Outlines, outermost first: current (yellow, inset from cellRect), selected (white, on
+frameRect), frame border (grey, on frameRect), pick / ingested / rejected (on
+outerThumbRect).
 
 IconView thumbDock Anatomy:
 
@@ -95,6 +105,8 @@ IconView thumbDock Anatomy:
 +-------------------------------------------------------------------------------->
 
 */
+
+static QFont versionBadgeFont();
 
 IconViewDelegate::IconViewDelegate(QObject *parent,
                                    bool &isRatingBadgeVisible,
@@ -228,22 +240,30 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
     tPad2 = tPad * 2;
     fPad2 = fPad * 2;
     pad = fPad + tPad;
-    pad2 = tPad2 + fPad2;
+    pad2 = tPad2 + fPad2;       // horizontal: the bands replace tPad only vertically
+
+    /*  BADGE BANDS. Top: as tall as the taller of the icon number and the versions
+        badge, both anchored to the frame's top edge. Bottom: room for the tallest
+        bottom symbol (the 14 px RAW+JPG link) or the rating text, whichever is taller.
+        Reserved whether or not a badge shows, so every cell is the same height. */
+    const int versionBadgeHt = QFontMetrics(versionBadgeFont()).height() + 6;
+    topBandHt = qMax(tPad, qMax(iconNumberSize, versionBadgeHt));
+    botBandHt = qMax(16, qRound(fontHt * 0.8)) + 4;
 
     itemSize.setWidth(thumbWidth);
     itemSize.setHeight(thumbHeight);
 
     frameSize.setWidth(thumbWidth + tPad2);
-    frameSize.setHeight(thumbHeight + tPad2 + textHeight);
+    frameSize.setHeight(thumbHeight + topBandHt + botBandHt + textHeight);
 
     cellSize.setWidth(thumbWidth + pad2);
-    cellSize.setHeight(thumbHeight + pad2 + textHeight);
+    cellSize.setHeight(frameSize.height() + fPad2);
 
 //    cellSpace = cellSize + QSize(thumbSpacing, thumbSpacing);
 
     // define some offsets
     fPadOffset = QPoint(fPad, fPad);
-    tPadOffset = QPoint(tPad, tPad);
+    itemOffset = QPoint(tPad, topBandHt);
 
     textHtOffset.setX(0);
     textHtOffset.setY(fPad + textHeight - textHeadroom);
@@ -256,43 +276,59 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
                 ;
                 //*/
 
-    // Pre-calculate symbol rectangles relative to a zero-based thumbRect
+    /*  Pre-calculate symbol rectangles relative to a zero-based itemRect. They sit in
+        the bottom band (y >= itemSize.height()), centred on its middle line. */
     int dotDiam = 6;
     int dotOffset = 1; //3;
+    const int bandMid = itemSize.height() + botBandHt / 2;
 
     // Cache Circle (Bottom Right)
     cacheRect.setRect(itemSize.width() - dotDiam - dotOffset,
-                      itemSize.height() - dotDiam - dotOffset /*+ 2*/,
+                      bandMid - dotDiam / 2,
                       dotDiam, dotDiam);
 
-    // Missing Thumb Circle (Bottom Left)
+    // Sidecar Circle (Bottom Left)
     sidecarRect.setRect(dotDiam - dotOffset,
-                             itemSize.height() - dotDiam - dotOffset /*+ 2*/,
-                             dotDiam, dotDiam);
+                        bandMid - dotDiam / 2,
+                        dotDiam, dotDiam);
 
     // Develop badge (to the right of the sidecar dot)
     developRect.setRect(sidecarRect.right() + 2 + 12 + 2,
-                        itemSize.height() - dotDiam - dotOffset,
+                        bandMid - dotDiam / 2,
                         dotDiam, dotDiam);
 
     /*  Availability badge, to the right of the develop badge and on the same
-        baseline as the other bottom-left dots. */
+        line as the other bottom-left dots. */
     availabilityRect.setRect(developRect.right() + 2 + 12 + 2,
-                             itemSize.height() - dotDiam - dotOffset,
+                             bandMid - dotDiam / 2,
                              dotDiam, dotDiam);
 
-    // Lock Icon (To the right of Missing Thumb)
+    // Lock Icon (To the right of the sidecar dot)
     int lockSize = 12; // Adjusted for SVG
     lockRect.setRect(sidecarRect.right() + 2,
-                     itemSize.height() - lockSize,
+                     bandMid - lockSize / 2,
                      lockSize, lockSize);
 
     // Combine RAW+JPG (To the left of Cache)
     int linkW = 14;
     int linkH = 14;
     combineRawJpgRect.setRect(cacheRect.left() - linkW - 2,
-                              itemSize.height() - 0.8 * linkH,
+                              bandMid - linkH / 2,
                               linkW, linkH);
+
+    /*  Rating, centred in the bottom band. Stars when they fit between the bottom-left
+        symbols and their mirror on the right, else the rating as a single number. */
+    const int sideRoom = availabilityRect.right() + 4;
+    ratingStars = starsWidth <= itemSize.width() - 2 * sideRoom;
+    if (ratingStars) {
+        ratingRect.setRect((itemSize.width() - starsWidth) / 2, itemSize.height(),
+                           starsWidth, botBandHt);
+    } else {
+        ratingNumberFont = font;
+        ratingNumberFont.setPixelSize(qMax(6, botBandHt - 4));
+        ratingRect.setRect((itemSize.width() - botBandHt) / 2, itemSize.height(),
+                           botBandHt, botBandHt);
+    }
 
     // When dimensions change, all cached pixmaps are the wrong size
     iconCache.clear();
@@ -351,7 +387,7 @@ QSize IconViewDelegate::getCellSize()
 
 QSize IconViewDelegate::getCellSize(QSize icon)
 {
-    return (icon + QSize(pad2, pad2 + textHeight));
+    return (icon + QSize(pad2, fPad2 + topBandHt + botBandHt + textHeight));
 }
 
 int IconViewDelegate::getCellWidthFromThumbWidth(int width)
@@ -361,7 +397,7 @@ int IconViewDelegate::getCellWidthFromThumbWidth(int width)
 
 int IconViewDelegate::getCellHeightFromThumbHeight(int height)
 {
-    return height + pad2 + textHeight + 2;
+    return height + fPad2 + topBandHt + botBandHt + textHeight + 2;
 }
 
 int IconViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
@@ -372,7 +408,7 @@ int IconViewDelegate::getThumbWidthFromCellWidth(int cellWidth)
 int IconViewDelegate::getThumbHeightFromAvailHeight(int availHeight)
 {
     // used to fit item (thumb with black borders) into the available viewport height
-    return availHeight - pad2 - textHeight - 2;
+    return availHeight - fPad2 - topBandHt - botBandHt - textHeight - 2;
 }
 
 void IconViewDelegate::setVpRectVisibility(bool isVisible)
@@ -483,7 +519,7 @@ QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &option
 {
     // Common geometry bases
     QRect frameRect(optionRect.topLeft() + fPadOffset, frameSize);
-    QRect thumbRect(frameRect.topLeft() + tPadOffset, itemSize);
+    QRect thumbRect(frameRect.topLeft() + itemOffset, itemSize);
     QPoint origin = thumbRect.topLeft();
 
     // 1. Static Symbols (Pre-calculated in setThumbDimensions)
@@ -504,39 +540,21 @@ QRect IconViewDelegate::getSymbolRect(const QString &symbol, const QRect &option
         return QRect(frameRect.left(), frameRect.top(), numberWidth + 4, iconNumberSize);
     }
 
-    // 2. Dynamic Symbols (Calculated based on Row Data)
-    if (symbol == "Duration" || symbol == "Rating") {
-        bool isVideo = index.model()->index(index.row(), G::VideoColumn).data().toBool();
-        int videoDurationHt = 0;
+    // 2. Rating, in the bottom band (pre-calculated)
+    if (symbol == "Rating") return ratingRect.translated(origin);
 
-        // Calculate Duration Rect first as it offsets the Rating
+    // 3. Dynamic Symbols (Calculated based on Row Data)
+    if (symbol == "Duration") {
+        bool isVideo = index.model()->index(index.row(), G::VideoColumn).data().toBool();
         if (isVideo) {
-            // Replicate the bRect logic from paint()
+            // Replicate the bRect logic from paint(): over the bottom of the picture
             QFont videoFont = QApplication::font();
             videoFont.setPixelSize(G::fontSize);
             QFontMetrics fm(videoFont);
             QRect bRect = fm.boundingRect("00:00:00"); // Standard duration width
-            // Center at bottom of thumbRect
             int x = thumbRect.left() + (thumbRect.width() - bRect.width()) / 2;
             int y = thumbRect.bottom() - bRect.height();
-            QRect durationRect(x, y, bRect.width(), bRect.height());
-
-            if (symbol == "Duration") return durationRect;
-            videoDurationHt = bRect.height();
-        }
-
-        if (symbol == "Rating") {
-            int infoHt = thumbRect.height() / 6;
-            if (infoHt > 14) {
-                // Star-based rating rect
-                int h = fontHt * 0.8;
-                int b = (thumbRect.width() - starsWidth) / 2;
-                return QRect(thumbRect.left() + b, thumbRect.bottom() - videoDurationHt - h, starsWidth, h);
-            } else {
-                // Single number rating rect
-                int h = infoHt;
-                return QRect(thumbRect.center().x() - h/2, thumbRect.bottom() - videoDurationHt - h + 3, h, h);
-            }
+            return QRect(x, y, bRect.width(), bRect.height());
         }
     }
     return QRect();
@@ -872,7 +890,7 @@ textRect         = a rectangle below itemRect
     // Calculate the standard Winnow cell geometry
     QRect cellRect(option.rect);
     QRect frameRect(cellRect.topLeft() + fPadOffset, frameSize);
-    QRect itemRect(frameRect.topLeft() + tPadOffset, itemSize);
+    QRect itemRect(frameRect.topLeft() + itemOffset, itemSize);
     QRect outerThumbRect;    // includes possible black border
     QRect thumbRect;         // inside black border
     QPoint origin = itemRect.topLeft();
@@ -937,8 +955,7 @@ textRect         = a rectangle below itemRect
         painter->setClipping(false);
     }
 
-    // Render video duration overlay if applicable
-    int videoDurationHt = 0;
+    // Render video duration overlay if applicable (over the bottom of the picture)
     if (isVideo && G::renderVideoThumb) {
         QFont videoFont = QApplication::font();
         videoFont.setPixelSize(G::fontSize);
@@ -949,25 +966,18 @@ textRect         = a rectangle below itemRect
         painter->fillRect(bRect, bgColor);
         painter->setPen(videoTextColor);
         painter->drawText(itemRect, Qt::AlignBottom | Qt::AlignHCenter, duration);
-        videoDurationHt = bRect.height();
     }
 
-    // Render rating stars or numerical badges
-    int infoHt = itemRect.height() / 6;
+    // Render rating stars or number, in the bottom band (see setThumbDimensions)
     if (isRatingBadgeVisible && G::ratings.contains(rating)) {
         painter->setPen(Qt::white);
-        if (infoHt > 14) {
-            QString stars(ratingNumber, '*');
-            int b = (itemRect.width() - starsWidth) / 2;
-            int h = fontHt * 0.8;
-            painter->drawText(QRect(itemRect.left() + b, itemRect.bottom() - videoDurationHt - h, starsWidth, h),
-                              Qt::AlignHCenter | Qt::AlignTop, stars);
+        const QRect rr = ratingRect.translated(origin);
+        if (ratingStars) {
+            painter->setFont(font);
+            painter->drawText(rr, Qt::AlignCenter, QString(ratingNumber, '*'));
         } else {
-            QFont starFont = painter->font();
-            starFont.setPixelSize(infoHt);
-            painter->setFont(starFont);
-            painter->drawText(QRect(itemRect.center().x() - infoHt/2, itemRect.bottom() - videoDurationHt - infoHt + 3, infoHt, infoHt),
-                              Qt::AlignBottom, QString::number(ratingNumber));
+            painter->setFont(ratingNumberFont);
+            painter->drawText(rr, Qt::AlignCenter, QString::number(ratingNumber));
         }
     }
 

@@ -96,6 +96,7 @@
     - [3.6.2 Tracking Icon Parameters](#362-tracking-icon-parameters)
     - [3.6.3 Thumbnail (Icon) Decoding](#363-thumbnail-icon-decoding)
       - [3.6.3.1 CR3 HDR PQ](#3631-cr3-hdr-pq)
+    - [3.6.4 The Icon Cell's Badge Bands (2026-11-21)](#364-the-icon-cells-badge-bands-2026-11-21)
   - [3.7 Flags and State Reference](#37-flags-and-state-reference)
   - [3.8 Investigations and Fixes](#38-investigations-and-fixes)
     - [3.8.1 Pick Counts Are Maintained, Not Counted (2026-09-24)](#381-pick-counts-are-maintained-not-counted-2026-09-24)
@@ -2205,6 +2206,19 @@ The THMB payload is a bare HEVC bitstream (no HEIF file header), so neither the 
 - Windows: loadFromImageIO returns Fail (no safe path: libheif rejects CR3 and Heic::decodeThumbnail does not guard read failures), so loadThumb falls through to loadFromEntireFile. A full Windows fix would need WIC plus the Canon raw codec.
 
 Being failure-driven is deliberate: standard CR3 files decode in loadFromJpgData and never reach loadFromImageIO, so their behaviour is unchanged, and it does not depend on the CR3 parser detecting the hvc1 codec.
+
+#### 3.6.4 The Icon Cell's Badge Bands (2026-11-21)
+
+IconViewDelegate's frame reserves a band above the item rect and one below it (user request), so no badge covers the picture. Before, the icon number and versions badge sat on the frame's top edge and the status dots, lock, RAW+JPG link and rating on the item's bottom edge, all over the image.
+
+- topBandHt = max(tPad, iconNumberSize, versions badge height). The icon number and versions badge are still anchored to the frame's top edge, so they now sit in the band.
+- botBandHt = max(16, 0.8 x label font height) + 4: room for the 14 px RAW+JPG link or the rating text. The dots, lock, link and rating are pre-computed in setThumbDimensions relative to the item's top-left, centred on the band's middle line (y >= itemSize.height()).
+- The rating is stars when they fit between the bottom-left symbols and their mirror on the right (ratingStars), else a single number (ratingNumberFont). It used to switch on item HEIGHT (infoHt = height / 6) and sat above a video's duration; the duration still overlays the bottom of the picture, and the rating no longer moves for it.
+- Both bands are always reserved, whether or not a badge shows, so every cell is the same height. Left and right of the item the gap is still tPad.
+- Everything outside the delegate gets the geometry through getCellSize, getCellHeightFromThumbHeight, getThumbHeightFromAvailHeight and thumbRectCache, which all include the bands. A thumb strip fitted to its dock height therefore shows a smaller picture than before at the same dock height.
+- itemOffset (tPad, topBandHt) replaces tPadOffset as the frame-to-item offset, in paint() and getSymbolRect (tooltips).
+
+The user-facing picture of the cell is Docs/thumbNailSchematic.html (Help > Thumbnail schematic help, and the bottom of the thumbnail context menu). Its diagram, Docs/images/ThumbnailSchematic.png, is rendered at 2x from ThumbnailSchematic.svg, which is not in the qrc.
 
 ### 3.7 Flags and State Reference
 
@@ -8924,7 +8938,7 @@ Every sort tie breaks on source order (2026-10-01). SortFilter::lessThan gives t
 
 #### 13.4.3 The Badges
 
-A master with versions shows a count and an arrow ("2 ▸" / "2 ▾") in amber text on a tag tucked into the top-right corner of its cell frame, mirroring the icon number in the top-left (bold, one point above the UI font; the tag is G::backgroundColor with a 1 px G::borderColor border, the text carrying the amber / blue). A plain click on it opens or closes the group (IconView::mousePressEvent -> IconViewDelegate::versionsBadgeHit -> MW::toggleVersionsExpanded). With the mouse over a master's badge it gets a white rounded outline, inset 2 px so the frame and selection borders do not cover it, so it reads as a button (IconView::mouseMoveEvent -> IconView::setVersionsBadgeHover, which sets IconViewDelegate::setHoverVersionsBadgeKey and repaints only the old and new cells; keyed by row key, cleared in leaveEvent and while a button is down). A version shows its name ("v2" until named) in blue text on the same tag in the same corner. Both have tooltips.
+A master with versions shows a count and an arrow ("2 ▸" / "2 ▾") in blue text (G::header1Color) on a tag tucked into the top-right corner of its cell frame, in the frame's top badge band (see [3.6.4 The Icon Cell's Badge Bands](#364-the-icon-cells-badge-bands-2026-11-21)), mirroring the icon number in the top-left (bold, one point above the UI font). Since 2026-11-21 the tag is filled with the frame's background, the colour label like the icon number badge, with no border; it used to be unfilled, its text drawn straight over the picture. A plain click on it opens or closes the group (IconView::mousePressEvent -> IconViewDelegate::versionsBadgeHit -> MW::toggleVersionsExpanded). With the mouse over a master's badge it gets a white rounded outline, inset 2 px so the frame and selection borders do not cover it, so it reads as a button (IconView::mouseMoveEvent -> IconView::setVersionsBadgeHover, which sets IconViewDelegate::setHoverVersionsBadgeKey and repaints only the old and new cells; keyed by row key, cleared in leaveEvent and while a button is down). A version shows its name ("v2" until named) in grey text (G::disabledColor) on the same tag in the same corner. Both have tooltips.
 
 File > Show All Versions (also in the thumbnail context menu) is a command, not a check item (2026-11-20): it always opens every group and sets the mode to All (MW::setShowAllVersions(true), which lifts Masters), so it re-opens groups collapsed from their badges. The proxy state is persisted as "showAllVersions" and put back in createModuleDock; clicking one badge while it is on turns it off and leaves that group open.
 

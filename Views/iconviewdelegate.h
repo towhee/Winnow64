@@ -197,15 +197,22 @@ private:
     int alignVertPad = 0;
     int alignHorPad = 0;
     int starsWidth = 0;
+    /*  BADGE BANDS (setThumbDimensions): the strip of the frame above the item, holding
+        the icon number and versions badge, and the strip below it, holding the status
+        dots, lock, RAW+JPG link and rating -- so no badge covers the picture. */
+    int topBandHt = 0;
+    int botBandHt = 0;
+    bool ratingStars = true;    // stars fit between the bottom symbols, else a number
+    QFont ratingNumberFont;
 
     QPoint fPadOffset;
-    QPoint tPadOffset;
+    QPoint itemOffset;      // frameRect.topLeft() to itemRect.topLeft(): (tPad, topBandHt)
     QPoint currOffset;
     QPoint textHtOffset;
 
     QPoint ratingTopLeft;
     QPoint ratingBottomRight;
-    QRect ratingRect;
+    QRect ratingRect;       // relative to itemRect.topLeft(), in the bottom band
     QPoint ratingTextTopLeft;
     QPoint ratingTextBottomRight;
     QPoint cacheTopLeft;
