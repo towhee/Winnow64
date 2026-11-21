@@ -971,10 +971,11 @@ textRect         = a rectangle below itemRect
         }
     }
 
-    /*  Versions (virtual copies): a master's count + arrow (amber text), a version's
-        name tag (blue text), in the frame's top-right corner, on the app background
-        with a 1px border. Drawn before the frame border so that border strokes over the
-        shared edges. */
+    /*  Versions (virtual copies): a master's count + arrow (blue text), a version's
+        name tag (grey text), in the frame's top-right corner, filled with the frame's
+        background (the colour label, like the icon number badge) so it reads over the
+        picture. Drawn before the frame border so that border strokes over the shared
+        edges. */
     if (!G::isSlideShow) {
         const QString vText = versionBadgeText(index);
         if (!vText.isEmpty()) {
@@ -986,10 +987,10 @@ textRect         = a rectangle below itemRect
             painter->save();
             painter->setRenderHint(QPainter::Antialiasing, true);
             painter->setFont(vf);
-            painter->setPen(QPen(G::borderColor, 1));
-            painter->setBrush(G::backgroundColor);
+            painter->setPen(Qt::NoPen);
+            painter->setBrush(labelColorToUse);
             // radius 8 = the frame's, so the shared corner follows the frame's curve
-            // painter->drawRoundedRect(QRectF(vr).adjusted(0.5, 0.5, -0.5, -0.5), 8, 8);
+            painter->drawRoundedRect(vr, 8, 8);
             painter->setPen(isVersionRow ? versionColor : masterColor);
             const QString shown = QFontMetrics(vf).elidedText(vText, Qt::ElideRight,
                                                              vr.width() - 8);

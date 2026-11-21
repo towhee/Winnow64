@@ -1130,6 +1130,7 @@ private slots:
     void setShowImageCount();
     void about();
     void helpThumbViewStatusBarSymbols();
+    void helpThumbnailSchematic();
     void ingest();
     void exportEmbelFromAction(QAction *embelExportAction);
     void exportEmbel();
@@ -2315,6 +2316,7 @@ private:
     QAction *helpPerformanceTipsAction;
     QAction *helpFocusStackingTipsAction;
     QAction *helpPicturesAction = nullptr;  // Developed / Original / Camera explained
+    QAction *helpThumbnailSchematicAction = nullptr;  // Thumbnail Anatomy: badges, outlines
     QAction *helpFilmStripAction;  // to be removed, not used
     QAction *helpRevealLogFileAction;
 

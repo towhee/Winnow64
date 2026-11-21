@@ -2384,6 +2384,13 @@ void MW::createHelpActions()
     addAction(helpPicturesAction);
     connect(helpPicturesAction, &QAction::triggered, this, &MW::helpPictures);
 
+    // Help menu and the bottom of the thumbnail context menu
+    helpThumbnailSchematicAction = new QAction(tr("Thumbnail schematic help"), this);
+    helpThumbnailSchematicAction->setObjectName("helpThumbnailSchematic");
+    addAction(helpThumbnailSchematicAction);
+    connect(helpThumbnailSchematicAction, &QAction::triggered,
+            this, &MW::helpThumbnailSchematic);
+
     helpRevealLogFileAction = new QAction("Send log files to Winnow", this);
     helpRevealLogFileAction->setObjectName("RevealLogFileAct");
     helpRevealLogFileAction->setShortcutVisibleInContextMenu(true);
@@ -3322,6 +3329,7 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpPerformanceTipsAction);
     helpMenu->addAction(helpFocusStackingTipsAction);
     helpMenu->addAction(helpPicturesAction);
+    helpMenu->addAction(helpThumbnailSchematicAction);
     helpMenu->addSeparator();
     logMenu = helpMenu->addMenu(tr("&Logs"));
     logMenu->addAction(viewLogAction);
@@ -3645,6 +3653,11 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction8);
     thumbViewActions->append(renameAction);
     thumbViewActions->append(deleteImagesAction);
+
+    QAction *separatorActionB = new QAction(this);
+    separatorActionB->setSeparator(true);
+    thumbViewActions->append(separatorActionB);
+    thumbViewActions->append(helpThumbnailSchematicAction);
     // thumbViewActions->append(separatorAction7);
     // thumbViewActions->append(diagnosticsSelectionAction);
     // thumbViewActions->append(diagnosticsCurrentAction);

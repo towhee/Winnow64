@@ -9909,6 +9909,19 @@ void MW::helpThumbViewStatusBarSymbols()
     openWindows.append(w);
 }
 
+void MW::helpThumbnailSchematic()
+{
+/*
+    Thumbnail Anatomy: every badge and outline a thumbnail can carry. Opened from the
+    bottom of the thumbnail context menu. Also a chapter of the general help.
+*/
+    if (G::isLogger) G::log("MW::helpThumbnailSchematic");
+    HtmlWindow *w = new HtmlWindow("Winnow - Thumbnail Anatomy",
+                                   ":/Docs/thumbNailSchematic.html",
+                                   QSize(1100, 800), geometry(), this);
+    openWindows.append(w);
+}
+
 void MW::allPreferences()
 {
     if (G::isLogger) G::log("MW::allPreferences");
