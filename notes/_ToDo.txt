@@ -1,6 +1,59 @@
 WHAT'S NEW
 - Prevent accidental moving images out of library with drag operations
 
+Yes. I cloned storytold/lightcraft (about 365k lines of Rust) and compared it with Winnow. Winnow already covers much of the same ground
+  (raw decoding, lens database, masks, AI fill, denoise), so only a few LightCraft algorithms would actually be improvements. Ranked by
+  expected value:
+
+  1. Demosaicing: biggest gain
+
+  - Winnow: ImageFormats/Raw/demosaic.h only has Bilinear, plus a simple 5×5 averaging for Fuji X-Trans. The comment there still says "AHD,
+    DCB, XTrans ... added in later phases." The in-house decoder uses it, and so does the PMRID "Denoise raw" path (rawformat.cpp:365).
+  - LightCraft (crates/raw/src/demosaic.rs, demosaic/xtrans.rs) has:
+    - PPG, a fast gradient-guided method.
+    - AHD, which is its quality default for most sensors.
+    - An edge-aware method for X-Trans and other non-standard sensors.
+    - A way to demosaic just a window that matches the full-image result exactly, which suits Winnow's detail preview.
+  - Its tests (synthetic mosaics with signal-to-noise scoring) map directly onto Winnow's design, which already demosaics synthetic mosaics
+    in tests.
+  - On macOS, Apple's decoder handles most files, so the visible gain is on Windows, Linux, cameras Apple doesn't support, and the denoise
+    path.
+
+  2. Hot pixel removal: Winnow has none
+
+  raw/src/hotpixel.rs (~580 lines):
+  - It estimates the image's own noise level, then flags photosites far brighter than all same-colour neighbours.
+  - It leaves real point lights alone, such as stars and specular highlights.
+  - It bails out if too many pixels would change.
+  - It runs before demosaicing and is self-contained. Most useful for Sony ARWs and other raws that don't list their defective pixels.
+
+  3. Highlight reconstruction: extends what Winnow already does
+
+  - Winnow's RawColor::NeutraliseClipped already does what LightCraft's clip_neutral and saturation.rs do: it caps clipped channels and
+    measures the real clip point.
+  - LightCraft goes one step further with reconstruct. Where only some channels are clipped, it rebuilds them from the colour of reliable
+    nearby areas. That lets pulling Highlights down recover colour instead of just neutral grey.
+
+  4. Focus-stack alignment: worth considering
+
+  - Winnow aligns each slice with one global ECC transform, chained from slice to slice (FocusStack/fsalign).
+  - LightCraft's merge/src/flow.rs adds a tile-by-tile correction after the global fit. It handles parallax that a single transform can't,
+    which helps handheld macro stacks.
+  - merge/src/refine.rs could also serve as a fallback when ECC fails to converge. It picks well-textured patches, matches them, and refits
+    the alignment, and it never makes an alignment worse than before.
+
+  5. Lower priority
+
+  - PatchMatch inpainting (crates/inpaint): a non-AI fill alternative to Winnow's LaMa/MI-GAN fill, keeping real texture at full resolution.
+  - White balance from the embedded preview (raw/src/wb_estimate.rs): for raws whose as-shot WB Winnow can't read.
+  - HDR merge and panorama stitching: Winnow doesn't have these, so they'd be new features rather than improvements.
+
+  Licensing: LightCraft is MIT OR Apache-2.0, and either can be used in GPLv3 Winnow. Keep their attribution, the way their own NOTICE
+  credits PhotoCraft. Everything would be a Rust → C++ rewrite, not a code copy.
+
+  I'd start with AHD and PPG in Demosaic, tested against synthetic mosaics in tests/. Want me to begin that, or look more closely at any of
+  the others first?
+
 BUGS / TO DO
 - thumbnail help schematic.
 - Menu Window>History and Window>Preset ??

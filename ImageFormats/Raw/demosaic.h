@@ -18,9 +18,26 @@
 class Demosaic
 {
 public:
+    /*
+        Bayer algorithms. X-Trans always takes XTransWindow whatever is asked, and a mosaic
+        smaller than 4x4 always takes Bilinear (PPG / AHD read two photosites out).
+
+        Bilinear  3x3 same-colour average. Fast and soft; zips colour along edges.
+        Ppg       Patterned Pixel Grouping (Chuan-kai Lin): green from the flattest of four
+                  directions, red/blue by colour difference. ~Bilinear's cost, far sharper.
+        Ahd       Adaptive Homogeneity-Directed (Hirakawa & Parks, IEEE TIP 2005):
+                  horizontal and vertical candidates chosen per pixel by CIELab
+                  homogeneity. The quality default.
+
+        PPG and AHD are ported from LightCraft (crates/raw/src/demosaic/{ppg,ahd}.rs, MIT,
+        see THIRD_PARTY_NOTICES.md), which implemented them from the published papers.
+        Every algorithm reproduces a constant-colour mosaic exactly and keeps each
+        photosite's own channel as measured.
+    */
     enum Algorithm {
-        Bilinear        // simple, fast; the only algorithm in the scaffold
-        // AHD, DCB, XTrans ... added in later phases
+        Bilinear,
+        Ppg,
+        Ahd
     };
 
     Demosaic() = default;
@@ -31,11 +48,22 @@ public:
        status bar -- the demosaic is a visible slice of a "Denoise raw" decode. */
     bool Run(const RawImage &raw,
              std::vector<float> &rgb,
-             Algorithm algo = Bilinear,
+             Algorithm algo = Ahd,
              const QAtomicInt *abort = nullptr,
              const std::function<void(int, int)> &progress = {});
 
+    /* Colour of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
+    static int BayerColorAt(CfaPattern pattern, int row, int col);
+
 private:
+    bool PpgBayer(const RawImage &raw, std::vector<float> &rgb,
+             const QAtomicInt *abort,
+             const std::function<void(int, int)> &progress);
+
+    bool AhdBayer(const RawImage &raw, std::vector<float> &rgb,
+             const QAtomicInt *abort,
+             const std::function<void(int, int)> &progress);
+
     bool Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
                      const QAtomicInt *abort,
                      const std::function<void(int, int)> &progress);
@@ -46,8 +74,6 @@ private:
                       const QAtomicInt *abort,
                       const std::function<void(int, int)> &progress);
 
-    /* Colour of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
-    static int BayerColorAt(CfaPattern pattern, int row, int col);
 };
 
 #endif // DEMOSAIC_H

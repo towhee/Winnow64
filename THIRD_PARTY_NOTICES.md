@@ -91,6 +91,13 @@ OpenCV and ONNX Runtime pull these in, and they ship inside the macOS applicatio
   BSD-3-Clause: [zstd](licenses/zstd.txt).
 - **[pugixml](https://pugixml.org/)**. MIT: [pugixml](licenses/pugixml.md).
 
+## Adapted source code
+
+- **[LightCraft](https://github.com/storytold/lightcraft)**. The PPG and AHD raw
+  demosaic algorithms in `ImageFormats/Raw/demosaic.cpp` are ported from LightCraft's
+  `crates/raw/src/demosaic`. Copyright (c) 2026 ArtCraft Team and the LightCraft
+  contributors. MIT: [lightcraft](licenses/lightcraft.txt).
+
 ## Data
 
 - **[lensfun](https://lensfun.github.io/) lens database**, data only, compiled in. Lens

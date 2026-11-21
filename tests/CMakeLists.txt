@@ -297,6 +297,12 @@ winnow_test_link_opencv(tst_maskrefine PRIVATE opencv_core opencv_imgproc)
 # alone, an axial fringe removed, clipped highlights untouched. OpenCV core + imgproc.
 winnow_add_unit_test(tst_lenscorrect unit/tst_lenscorrect.cpp)
 winnow_test_link_opencv(tst_lenscorrect PRIVATE opencv_core opencv_imgproc)
+# tst_demosaic tests ImageFormats/Raw/demosaic.cpp -- Bilinear, PPG and AHD on synthetic
+# Bayer mosaics (exact constant colour, PSNR ranking, no AHD maze, thread-count
+# independence). demosaic.cpp needs only RawImage and OpenCV core's thread pool.
+winnow_add_unit_test(tst_demosaic unit/tst_demosaic.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/demosaic.cpp)
+winnow_test_link_opencv(tst_demosaic PRIVATE opencv_core)
 # tst_lensprofile tests Develop/lensdb.cpp + Develop/lensprofile.h -- lensfun lens profile
 # correction (distortion, TCA, vignetting) -- against liblensfun's own answers
 # (unit/lensprofile_oracle.h, from fixtures/lensfun_oracle.py): the database loads the

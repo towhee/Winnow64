@@ -362,7 +362,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             std::vector<float> rgbDen;
             auto den = std::make_shared<WorkingImage>();
             const bool demosaiced =
-                demosaic.Run(mosaic, rgbDen, Demosaic::Bilinear, abort, denProg);
+                demosaic.Run(mosaic, rgbDen, Demosaic::Ahd, abort, denProg);
             dt.denDemosaicMs = lap();
             if (!demosaiced || !color.ToCameraNative(mosaic, rgbDen, *den)) return nullptr;
             RawColor::NeutraliseClipped(*den);
@@ -383,7 +383,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             if (denoiseRaw) demProg = [&stage](int d, int t) { stage(0, 250, d, t); };
             else if (denoiseProgress) demProg = [&stage](int d, int t) { stage(0, 1000, d, t); };
             lap();
-            if (!demosaic.Run(raw, rgb, Demosaic::Bilinear, abort, demProg)) {
+            if (!demosaic.Run(raw, rgb, Demosaic::Ahd, abort, demProg)) {
                 errMsg = aborted() ? "Aborted" : "Demosaic failed (unsupported CFA pattern?).";
                 return false;
             }

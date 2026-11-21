@@ -726,6 +726,17 @@ static QString denoiserKeyPart(const RawRender::Choice &render, const QString &b
     return wants ? QString("|denoiser=%1").arg(RawDecoder::kDenoiserRevision) : QString();
 }
 
+/*
+    The demosaic's revision (RawDecoder::kDemosaicRevision) as a key part, present only
+    for Winnow-engine renders (the Apple engine has its own demosaic), so a demosaic change
+    misses exactly the previews it changed.
+*/
+static QString demosaicKeyPart(const RawRender::Choice &render)
+{
+    if (RawDecoder::kDemosaicRevision == 0 || render.apple) return QString();
+    return QString("|demosaic=%1").arg(RawDecoder::kDemosaicRevision);
+}
+
 /*  The engine and Apple parts come from the RENDERER, per image since 2026-10-14
     (Develop/rawrender.h): the recipe's own choice, else the default. For a recipe that
     never chose, RawRender::engineKey / appleKeyPart produce exactly what the global
@@ -756,6 +767,7 @@ QString Metadata::devPreviewKey(const QString &blob)
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
                     + denoiseAmountsKeyPart()
                     + denoiserKeyPart(render, blob)
+                    + demosaicKeyPart(render)
                     + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(),
                                                   QCryptographicHash::Sha1);
@@ -825,6 +837,7 @@ QString Metadata::defaultRenderKey(const QString &fPath)
                     + (G::autoLensProfile ? QString("|autoLens=1") : QString())
                     + (G::autoRunDenoise ? denoiseAmountsKeyPart() : QString())
                     + denoiserKeyPart(render, QString())
+                    + demosaicKeyPart(render)
                     + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);

@@ -1,6 +1,8 @@
 #include "ImageFormats/Raw/demosaic.h"
 #include <opencv2/core.hpp>
+#include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <mutex>
 
 namespace {
@@ -46,6 +48,50 @@ bool ParallelRows(int H, const QAtomicInt *abort,
     return !stop.load();
 }
 
+/*
+    Mirror reflection of an index into 0..n-1 without repeating the edge sample
+    (-k -> k, n-1+k -> n-1-k). The offset is always even, so Bayer parity -- and with it
+    the CFA colour -- is preserved at the border.
+*/
+inline int Reflect(int i, int n)
+{
+    if (i >= 0 && i < n) return i;
+    if (n == 1) return 0;
+    const int period = 2 * (n - 1);
+    i %= period;
+    if (i < 0) i += period;
+    return i >= n ? period - i : i;
+}
+
+/* v clamped between a and b, in whichever order they come. */
+inline float ClampBetween(float v, float a, float b)
+{
+    const float lo = std::min(a, b), hi = std::max(a, b);
+    return v < lo ? lo : (v > hi ? hi : v);
+}
+
+/* Read-only, white-normalised, mirror-reflected view of a Bayer RawImage. */
+struct Mosaic
+{
+    const uint16_t *data;
+    int W, H;
+    float scale;
+    CfaPattern pattern;
+
+    float Get(int x, int y) const {
+        return static_cast<float>(data[static_cast<size_t>(Reflect(y, H)) * W + Reflect(x, W)]) * scale;
+    }
+    int Color(int x, int y) const {
+        return Demosaic::BayerColorAt(pattern, Reflect(y, H), Reflect(x, W));
+    }
+};
+
+Mosaic MakeMosaic(const RawImage &raw)
+{
+    return { raw.cfa.data(), raw.width, raw.height,
+             raw.white > 0 ? 1.0f / static_cast<float>(raw.white) : 1.0f, raw.pattern };
+}
+
 } // namespace
 
 bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo,
@@ -55,8 +101,13 @@ bool Demosaic::Run(const RawImage &raw, std::vector<float> &rgb, Algorithm algo,
     if (raw.pattern == CfaPattern::XTrans) return XTransWindow(raw, rgb, abort, progress);
     if (raw.pattern == CfaPattern::Unknown) return false;
 
+    /* PPG and AHD read two photosites out; a sliver of a mosaic has nothing to choose. */
+    if (raw.width < 4 || raw.height < 4) algo = Bilinear;
+
     switch (algo) {
     case Bilinear: return Bilinear3x3(raw, rgb, abort, progress);
+    case Ppg:      return PpgBayer(raw, rgb, abort, progress);
+    case Ahd:      return AhdBayer(raw, rgb, abort, progress);
     }
     return false;
 }
@@ -172,4 +223,288 @@ bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
                 static_cast<float>(raw.cfa[static_cast<size_t>(y) * W + x]) * scale;
         }
     });
+}
+
+
+/* ---------------------------------------------------------------------------------------
+   PPG and AHD, ported from LightCraft (github.com/storytold/lightcraft,
+   crates/raw/src/demosaic/ppg.rs and ahd.rs; MIT, Copyright (c) 2026 ArtCraft Team and the
+   LightCraft contributors -- see THIRD_PARTY_NOTICES.md). The maths is theirs, line for
+   line; the C++ reads Winnow's uint16 mosaic directly (scaled by 1/white as Bilinear3x3
+   does) and runs on OpenCV's pool like the rest of this file.
+   --------------------------------------------------------------------------------------- */
+
+bool Demosaic::PpgBayer(const RawImage &raw, std::vector<float> &rgb,
+                   const QAtomicInt *abort,
+                   const std::function<void(int, int)> &progress)
+{
+/*
+    Patterned Pixel Grouping (after Chuan-kai Lin's published description):
+
+    1. Green at red/blue sites: four directional gradients (same-colour difference x2
+       plus the green difference across the site); along the flattest, the nearer green
+       weighted 3:1 with the far one plus a same-colour Laplacian correction, clamped to
+       those two greens.
+    2. Red/blue at green sites: colour-difference (C - G) average of the two same-colour
+       neighbours.
+    3. Blue at red sites (and red at blue): colour-difference average along the diagonal
+       with the smaller gradient (both diagonals when equal).
+
+    Two passes (green plane, then the rest), each half of the progress bar.
+*/
+    const Mosaic m = MakeMosaic(raw);
+    const int W = m.W, H = m.H;
+
+    std::function<void(int, int)> p1, p2;
+    if (progress) {
+        p1 = [&progress](int d, int t) { progress(d, 2 * t); };
+        p2 = [&progress](int d, int t) { progress(t + d, 2 * t); };
+    }
+
+    std::vector<float> g(static_cast<size_t>(W) * H);
+    const bool ok = ParallelRows(H, abort, p1, [&](int y) {
+        float *row = g.data() + static_cast<size_t>(y) * W;
+        for (int x = 0; x < W; ++x) {
+            const float c = m.Get(x, y);
+            if (m.Color(x, y) == 1) { row[x] = c; continue; }
+            const float gn = m.Get(x, y - 1), gs = m.Get(x, y + 1);
+            const float gw = m.Get(x - 1, y), ge = m.Get(x + 1, y);
+            const float cn = m.Get(x, y - 2), cs = m.Get(x, y + 2);
+            const float cw = m.Get(x - 2, y), ce = m.Get(x + 2, y);
+            const float dv = std::fabs(gn - gs);
+            const float dh = std::fabs(gw - ge);
+            const float grads[4] = { std::fabs(cn - c) * 2.0f + dv, std::fabs(cs - c) * 2.0f + dv,
+                                     std::fabs(cw - c) * 2.0f + dh, std::fabs(ce - c) * 2.0f + dh };
+            int best = 0;
+            for (int i = 1; i < 4; ++i)
+                if (grads[i] < grads[best]) best = i;
+            float near_, far_, cfar;
+            switch (best) {
+            case 0:  near_ = gn; far_ = gs; cfar = cn; break;
+            case 1:  near_ = gs; far_ = gn; cfar = cs; break;
+            case 2:  near_ = gw; far_ = ge; cfar = cw; break;
+            default: near_ = ge; far_ = gw; cfar = ce; break;
+            }
+            const float est = (near_ * 3.0f + far_ + c - cfar) * 0.25f;
+            row[x] = ClampBetween(est, near_, far_);
+        }
+    });
+    if (!ok) return false;
+
+    auto gg = [&](int x, int y) {
+        return g[static_cast<size_t>(Reflect(y, H)) * W + Reflect(x, W)];
+    };
+
+    rgb.assign(static_cast<size_t>(W) * H * 3, 0.0f);
+    return ParallelRows(H, abort, p2, [&](int y) {
+        for (int x = 0; x < W; ++x) {
+            float *px = rgb.data() + (static_cast<size_t>(y) * W + x) * 3;
+            const int own = m.Color(x, y);
+            const float gv = gg(x, y);
+            px[1] = gv;
+            if (own == 1) {
+                /* horizontal neighbours carry one colour, vertical the other */
+                const int ch = m.Color(x + 1, y);
+                const int cv = m.Color(x, y + 1);
+                px[ch] = gv + ((m.Get(x - 1, y) - gg(x - 1, y)) + (m.Get(x + 1, y) - gg(x + 1, y))) * 0.5f;
+                px[cv] = gv + ((m.Get(x, y - 1) - gg(x, y - 1)) + (m.Get(x, y + 1) - gg(x, y + 1))) * 0.5f;
+            } else {
+                px[own] = m.Get(x, y);
+                const int other = 2 - own;
+                auto d = [&](int dx, int dy) { return m.Get(x + dx, y + dy) - gg(x + dx, y + dy); };
+                const float ne = std::fabs(m.Get(x + 1, y - 1) - m.Get(x - 1, y + 1))
+                               + std::fabs(gg(x + 1, y - 1) - gv) + std::fabs(gg(x - 1, y + 1) - gv);
+                const float nw = std::fabs(m.Get(x - 1, y - 1) - m.Get(x + 1, y + 1))
+                               + std::fabs(gg(x - 1, y - 1) - gv) + std::fabs(gg(x + 1, y + 1) - gv);
+                float diff;
+                if (ne < nw)      diff = (d(1, -1) + d(-1, 1)) * 0.5f;
+                else if (nw < ne) diff = (d(-1, -1) + d(1, 1)) * 0.5f;
+                else              diff = (d(1, -1) + d(-1, 1) + d(-1, -1) + d(1, 1)) * 0.25f;
+                px[other] = gv + diff;
+            }
+        }
+    });
+}
+
+namespace {
+
+/* AHD tiling: each TILE x TILE block of output is computed from the mosaic MARGIN pixels
+   around it -- the choice reads homogeneity 1 px out, which reads Lab 2 px out, the
+   candidates read the greens 3 px out, and those read the mosaic 5 px out. */
+constexpr int kAhdTile = 128;
+constexpr int kAhdMargin = 6;
+
+/* Difference of the two candidates' 3x3 homogeneity sums (each 0..36) at which the more
+   homogeneous one is taken alone; closer sums blend linearly. Picking outright let noise
+   alone decide in flat areas and drew a maze of short H/V strokes (LightCraft's finding;
+   12 keeps the outright pick's PSNR on edges). */
+constexpr float kAhdBlend = 12.0f;
+
+/* Linear camera RGB (treated as sRGB/D65 primaries for the homogeneity metric only) ->
+   CIELab. */
+inline void Lab(const float p[3], float out[3])
+{
+    const float X = (0.4124f * p[0] + 0.3576f * p[1] + 0.1805f * p[2]) / 0.95047f;
+    const float Y =  0.2126f * p[0] + 0.7152f * p[1] + 0.0722f * p[2];
+    const float Z = (0.0193f * p[0] + 0.1192f * p[1] + 0.9505f * p[2]) / 1.08883f;
+    auto f = [](float t) { return t > 0.008856f ? std::cbrt(t) : 7.787f * t + 16.0f / 116.0f; };
+    const float fx = f(X), fy = f(Y), fz = f(Z);
+    out[0] = 116.0f * fy - 16.0f;
+    out[1] = 500.0f * (fx - fy);
+    out[2] = 200.0f * (fy - fz);
+}
+
+/* One AHD tile: output pixels (x0..x0+tw, y0..y0+th) written straight into rgb (W wide). */
+void AhdTile(const Mosaic &m, int x0, int y0, int tw, int th, float *rgb)
+{
+    const int M = kAhdMargin;
+    const int bw = tw + 2 * M, bh = th + 2 * M;
+    const size_t n = static_cast<size_t>(bw) * bh;
+    const int ox = x0 - M, oy = y0 - M;
+
+    std::vector<float> mos(n);
+    std::vector<uint8_t> col(n);
+    for (int y = 0; y < bh; ++y) {
+        const int yy = oy + y;
+        const bool rowInside = yy >= 0 && yy < m.H && ox >= 0 && ox + bw <= m.W;
+        for (int x = 0; x < bw; ++x) {
+            const size_t i = static_cast<size_t>(y) * bw + x;
+            if (rowInside) {
+                mos[i] = static_cast<float>(m.data[static_cast<size_t>(yy) * m.W + ox + x]) * m.scale;
+                col[i] = static_cast<uint8_t>(Demosaic::BayerColorAt(m.pattern, yy, ox + x));
+            } else {
+                mos[i] = m.Get(ox + x, yy);
+                col[i] = static_cast<uint8_t>(m.Color(ox + x, yy));
+            }
+        }
+    }
+
+    /* Run fn(i) over the flat indices at least d from the buffer's edge. */
+    auto inner = [&](int d, auto fn) {
+        for (int y = d; y < bh - d; ++y)
+            for (int x = d; x < bw - d; ++x)
+                fn(static_cast<size_t>(y) * bw + x);
+    };
+    const size_t bws = static_cast<size_t>(bw);
+
+    /* 1. Directional greens: 5-tap [-1/4 1/2 1/2 1/2 -1/4], clamped to the two adjacent greens. */
+    std::vector<float> gh(n, 0.0f), gv(n, 0.0f);
+    inner(M - 3, [&](size_t i) {
+        const float c = mos[i];
+        if (col[i] == 1) { gh[i] = c; gv[i] = c; return; }
+        const float l = mos[i - 1], r = mos[i + 1];
+        gh[i] = ClampBetween((l + r) * 0.5f + (2.0f * c - mos[i - 2] - mos[i + 2]) * 0.25f, l, r);
+        const float u = mos[i - bws], d = mos[i + bws];
+        gv[i] = ClampBetween((u + d) * 0.5f + (2.0f * c - mos[i - 2 * bws] - mos[i + 2 * bws]) * 0.25f, u, d);
+    });
+
+    /* 2. Complete each candidate with red/blue by colour difference, and 3. its Lab. */
+    std::vector<float> rh(n * 3, 0.0f), rv(n * 3, 0.0f), lh(n * 3, 0.0f), lv(n * 3, 0.0f);
+    auto complete = [&](const std::vector<float> &g, std::vector<float> &out, std::vector<float> &lab) {
+        inner(M - 2, [&](size_t i) {
+            const int own = col[i];
+            const float gi = g[i];
+            auto d = [&](size_t j) { return mos[j] - g[j]; };
+            float *p = &out[i * 3];
+            p[0] = 0.0f; p[1] = gi; p[2] = 0.0f;
+            if (own == 1) {
+                p[col[i + 1]]   = gi + (d(i - 1) + d(i + 1)) * 0.5f;
+                p[col[i + bws]] = gi + (d(i - bws) + d(i + bws)) * 0.5f;
+            } else {
+                p[own] = mos[i];
+                p[2 - own] = gi + (d(i - bws - 1) + d(i - bws + 1) + d(i + bws - 1) + d(i + bws + 1)) * 0.25f;
+            }
+            Lab(p, &lab[i * 3]);
+        });
+    };
+    complete(gh, rh, lh);
+    complete(gv, rv, lv);
+
+    /* Homogeneity: how many of the 4 neighbours lie within the adaptive luminance and
+       chrominance tolerances (eps_L, eps_C from the paper). */
+    std::vector<uint8_t> hh(n, 0), hv(n, 0);
+    inner(M - 1, [&](size_t i) {
+        const size_t nb[4] = { i - 1, i + 1, i - bws, i + bws };   // left, right, up, down
+        const float *a = &lh[i * 3], *b = &lv[i * 3];
+        float dlh[4], dch[4], dlv[4], dcv[4];
+        for (int k = 0; k < 4; ++k) {
+            const float *qa = &lh[nb[k] * 3], *qb = &lv[nb[k] * 3];
+            dlh[k] = std::fabs(a[0] - qa[0]);
+            dch[k] = (a[1] - qa[1]) * (a[1] - qa[1]) + (a[2] - qa[2]) * (a[2] - qa[2]);
+            dlv[k] = std::fabs(b[0] - qb[0]);
+            dcv[k] = (b[1] - qb[1]) * (b[1] - qb[1]) + (b[2] - qb[2]) * (b[2] - qb[2]);
+        }
+        const float epsL = std::min(std::max(dlh[0], dlh[1]), std::max(dlv[2], dlv[3]));
+        const float epsC = std::min(std::max(dch[0], dch[1]), std::max(dcv[2], dcv[3]));
+        uint8_t sh = 0, sv = 0;
+        for (int k = 0; k < 4; ++k) {
+            sh += (dlh[k] <= epsL && dch[k] <= epsC) ? 1 : 0;
+            sv += (dlv[k] <= epsL && dcv[k] <= epsC) ? 1 : 0;
+        }
+        hh[i] = sh;
+        hv[i] = sv;
+    });
+
+    /* 4. Choose: 3x3 homogeneity sums, blended near a tie. */
+    for (int y = 0; y < th; ++y) {
+        float *dst = rgb + (static_cast<size_t>(y0 + y) * m.W + x0) * 3;
+        for (int x = 0; x < tw; ++x) {
+            const size_t i = static_cast<size_t>(y + M) * bw + (x + M);
+            int sh = 0, sv = 0;
+            for (int dy = -1; dy <= 1; ++dy)
+                for (int dx = -1; dx <= 1; ++dx) {
+                    const size_t j = i + dy * bws + dx;
+                    sh += hh[j];
+                    sv += hv[j];
+                }
+            const float wh = std::clamp(0.5f + static_cast<float>(sh - sv) / (2.0f * kAhdBlend), 0.0f, 1.0f);
+            const float *ph = &rh[i * 3], *pv = &rv[i * 3];
+            float *o = dst + static_cast<size_t>(x) * 3;
+            if (wh >= 1.0f)      { o[0] = ph[0]; o[1] = ph[1]; o[2] = ph[2]; }
+            else if (wh <= 0.0f) { o[0] = pv[0]; o[1] = pv[1]; o[2] = pv[2]; }
+            else for (int c = 0; c < 3; ++c) o[c] = ph[c] * wh + pv[c] * (1.0f - wh);
+        }
+    }
+}
+
+} // namespace
+
+bool Demosaic::AhdBayer(const RawImage &raw, std::vector<float> &rgb,
+                   const QAtomicInt *abort,
+                   const std::function<void(int, int)> &progress)
+{
+/*
+    Adaptive Homogeneity-Directed demosaic (Hirakawa & Parks 2005), in independent
+    overlapping tiles (bounded memory, one tile per OpenCV task). Each output pixel
+    depends only on the mosaic around it, so the result is the same whatever the thread
+    count or tile order. Progress is reported in tiles; abort is polled per tile.
+*/
+    const Mosaic m = MakeMosaic(raw);
+    const int W = m.W, H = m.H;
+    const int tx = (W + kAhdTile - 1) / kAhdTile;
+    const int ty = (H + kAhdTile - 1) / kAhdTile;
+    const int total = tx * ty;
+
+    rgb.assign(static_cast<size_t>(W) * H * 3, 0.0f);
+
+    std::atomic<bool> stop{false};
+    std::atomic<int> done{0};
+    std::mutex progressMutex;
+    cv::parallel_for_(cv::Range(0, total), [&](const cv::Range &r) {
+        for (int t = r.start; t < r.end; ++t) {
+            if (stop.load(std::memory_order_relaxed)) return;
+            if (abort && abort->loadAcquire()) {
+                stop.store(true, std::memory_order_relaxed);
+                return;
+            }
+            const int x0 = (t % tx) * kAhdTile, y0 = (t / tx) * kAhdTile;
+            AhdTile(m, x0, y0, std::min(kAhdTile, W - x0), std::min(kAhdTile, H - y0), rgb.data());
+            const int d = done.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (progress && progressMutex.try_lock()) {
+                progress(d, total);
+                progressMutex.unlock();
+            }
+        }
+    });
+    return !stop.load();
 }
