@@ -134,6 +134,15 @@ void TstFillSpot::kindsAndSourceRoundTrip()
     QCOMPARE(p.pts.size(), size_t(4));
     QVERIFY(usesSource(Heal) && usesSource(Clone) && !usesSource(Spot));
     QVERIFY(isPaintArea(Fill) && isPaintArea(Object) && !isPaintArea(Heal));
+
+    /* Content-Aware (appended 2026-11-21): a painted area, stored as "patch". An unknown
+       kind reads as Fill, which is what an older Winnow does with "patch". */
+    QVERIFY(isPaintArea(Patch) && !usesSource(Patch));
+    QCOMPARE(QString(kindName(Patch)), QString("patch"));
+    Stroke st; st.pts = {0.1, 0.1, 0.3, 0.3};
+    QCOMPARE(parse(toJson(50.0, Patch, {st})).kind, int(Patch));
+    QCOMPARE(parse("{\"kind\":\"future\",\"pts\":[0.5,0.5]}").kind, int(Fill));
+    QCOMPARE(int(kLastKind), int(Patch));
 }
 
 QTEST_GUILESS_MAIN(TstFillSpot)

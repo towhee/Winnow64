@@ -151,6 +151,7 @@ set(WINNOW_SOURCES
     Develop/whitebalance.cpp
     Develop/autotone.cpp
     Develop/workingimagecache.cpp
+    Develop/patchinpaint.cpp
     Develop/rawrender.cpp
     Develop/rawrender.h
     Develop/Properties/developproperties.cpp
@@ -239,6 +240,7 @@ set(WINNOW_SOURCES
     FocusStack/fsfusionreassign.cpp
     FocusStack/fsfusionwavelet.cpp
     FocusStack/fsloader.cpp
+    FocusStack/fslocalalign.cpp
     FocusStack/fsmerge.cpp
     FocusStack/fsphotometric.cpp
     FocusStack/fsutilities.cpp
@@ -580,6 +582,7 @@ set(WINNOW_HEADERS
     Develop/outputtransform.h
     Develop/rangemask.h
     Develop/whitebalance.h
+    Develop/patchinpaint.h
     Develop/autotone.h
     Develop/areashrink.h
     Develop/workingimage.h
@@ -673,6 +676,7 @@ set(WINNOW_HEADERS
     FocusStack/fsfusionreassign.h
     FocusStack/fsfusionwavelet.h
     FocusStack/fsloader.h
+    FocusStack/fslocalalign.h
     FocusStack/fsmerge.h
     FocusStack/fsphotometric.h
     FocusStack/fsutilities.h

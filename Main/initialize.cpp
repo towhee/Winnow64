@@ -3212,13 +3212,13 @@ void MW::createDevelopDock()
         }
     });
     /* Replace tools: the action-row Replace menu (MW::showDevelopReplaceMenu) chooses
-       the tool; the replace panel below Transform (Replace / Fill / Inpaint) shows
+       the tool; the replace panel below Transform (Replace / Fill / Content-Aware / Inpaint) shows
        what that tool offers while it is armed. Arming pushes the current tool to the
        loupe capture. */
     developSpotMode = qBound(int(FillSpotGeom::Spot),
                              settings->value("Develop/Replace/mode",
                                              int(FillSpotGeom::Spot)).toInt(),
-                             int(FillSpotGeom::Clone));
+                             int(FillSpotGeom::kLastKind));
     replacePanel = new ReplacePanel(developContainer);
     replacePanel->setMode(developSpotMode);
     replacePanel->setPreviewShown(developProperties->isSpotsShown());
@@ -3371,14 +3371,14 @@ void MW::createDevelopDock()
     developActionLayout->addWidget(developNewMaskBtn);
     developActionLayout->addSpacing(10);
 
-    /* Replace: a click pops the replace-tool menu (Spot, Heal, Clone, Fill, Inpaint,
+    /* Replace: a click pops the replace-tool menu (Spot, Heal, Clone, Fill, Content-Aware, Inpaint,
        Help -- MW::showDevelopReplaceMenu), as New mask pops the mask tools. Heals are
        recorded in EditStack::spots. DevelopProperties owns the armed state and drives
        the icon back via spotActiveChanged (full opacity armed, dimmed off). */
     developReplaceBtn = new BarBtn();
     developReplaceBtn->setSide(devActSide);
     developReplaceBtn->setIcon(devActIcons + "spot.png", G::iconOpacity);
-    developReplaceBtn->setToolTip("Replace using Spot, Heal, Clone, Fill or Inpaint  (S)");
+    developReplaceBtn->setToolTip("Replace using Spot, Heal, Clone, Fill, Content-Aware or Inpaint  (S)");
     connect(developReplaceBtn, &BarBtn::clicked, this, &MW::showDevelopReplaceMenu);
     connect(developProperties, &DevelopProperties::spotActiveChanged, developReplaceBtn,
             [this, devActIcons](bool active){

@@ -2343,7 +2343,7 @@ void DevelopProperties::copySpots()
     Fill Replace panel "Copy all spots": hold the current image's Spot-tool repairs for
     Paste. Only kind "spot" -- the click-to-heal dust tool, whose source is picked per
     image, so a copied spot heals from the right surroundings wherever it lands. Heal,
-    Clone, Fill and Object repairs fit the content of the image they were made on. The
+    Clone, Fill, Content-Aware and Object repairs fit the content of the image they were made on. The
     buffer lives for the session (like Copy Settings, which also starts empty).
 */
     if (G::isLogger) G::log("DevelopProperties::copySpots");

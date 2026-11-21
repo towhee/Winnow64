@@ -628,6 +628,10 @@ void Preferences::itemChange(QModelIndex idx)
         mw->writeSetting("focusStackRemoveTemp", v.toBool());  // also saved in MW::writeSettings
     }
 
+    if (source == "focusStackLocalAlign") {
+        mw->fsLocalAlign = v.toBool();
+        mw->writeSetting("focusStackLocalAlign", v.toBool());  // also saved in MW::writeSettings
+    }
     if (source == "focusStack8bit") {
         mw->fs8bit = v.toBool();
         mw->writeSetting("focusStack8bit", v.toBool());  // also saved in MW::writeSettings
@@ -2378,6 +2382,23 @@ void Preferences::addUtilities()
             i.captionIsEditable = false;
             i.value = mw->fs8bit;
             i.key = "focusStack8bit";
+            i.delegateType = DT_Checkbox;
+            i.type = "bool";
+            addItem(i);
+
+            // Local alignment (tile flow after the global ECC fit)
+            i.name = "focusStackLocalAlign";
+            i.parentName = "FocusStackHeader";
+            i.captionText = "Local alignment";
+            i.tooltip =
+                "After each slice is aligned as a whole, also correct small local\n"
+                "shifts (parallax, lens distortion that changes with focus) tile by\n"
+                "tile, so fine detail lines up across the stack.  Slower.  Turn it\n"
+                "off to get exactly the whole-frame alignment.\n";
+            i.hasValue = true;
+            i.captionIsEditable = false;
+            i.value = mw->fsLocalAlign;
+            i.key = "focusStackLocalAlign";
             i.delegateType = DT_Checkbox;
             i.type = "bool";
             addItem(i);

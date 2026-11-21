@@ -16,6 +16,9 @@
 #include <vector>
 
 #include <opencv2/core.hpp>
+#include "FocusStack/fsalign_types.h"
+#include "FocusStack/fsloader.h"
+#include "FocusStack/fslocalalign.h"
 
 class FS : public QObject
 {
@@ -45,6 +48,7 @@ public:
         bool removeTemp                 = true;
         bool isDebugging                = true;
         bool saveDiagnostics            = true;
+        bool localAlign                 = false;   // tile flow after ECC (fslocalalign.h)
     } o;
 
     QString statusGroupPrefix;
@@ -108,6 +112,8 @@ private:
 
     // Pipeline stages
     bool runDMap();
+    cv::Mat localAlignGray(const FSLoader::Image &img, const Result &global);
+    void localAlignLog(const FSLocalAlign::Chain::Decision &d);
     bool runPMax();
     QString save(QString fuseFolderPath);
     bool cleanup();

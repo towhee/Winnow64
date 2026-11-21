@@ -2,6 +2,7 @@
 #include "fs.h"
 #include "Main/global.h"
 #include "FocusStack/fsalign.h"
+#include "FocusStack/fslocalalign.h"
 #include "FocusStack/fsloader.h"
 #include "FocusStack/fsfocus.h"
 #include "FocusStack/fsdepth.h"
@@ -516,6 +517,27 @@ void FS::run()
     emit finished(success, aborted, failReason);
 }
 
+/*
+    Local alignment (o.localAlign; see FocusStack/fslocalalign.h): this slice's gray
+    through its global transform, as FSLocalAlign::Chain measures it.
+*/
+cv::Mat FS::localAlignGray(const FSLoader::Image &img, const Result &global)
+{
+    cv::Mat g;
+    FSAlign::applyTransform(img.gray, global.transform, g);
+    if (g.type() != CV_8U) g.convertTo(g, CV_8U);
+    return g;
+}
+
+void FS::localAlignLog(const FSLocalAlign::Chain::Decision &d)
+{
+    if (!G::FSLog) return;
+    G::log("FS::localAlign", QString("slice %1: step %2 (summed %3 px, k-2 check off by %4 px), "
+           "field max %5 px").arg(d.slice).arg(d.kept ? "kept" : "dropped")
+           .arg(d.signal, 0, 'f', 2).arg(d.disagreement, 0, 'f', 2)
+           .arg(d.field.maxShift(), 0, 'f', 2));
+}
+
 bool FS::runDMap()
 {
     QString srcFun = "FS::runDMap_Parallel";
@@ -546,6 +568,12 @@ bool FS::runDMap()
     std::vector<Result> globals;
     globals.reserve(grpSlices);
 
+    /* Local alignment (o.localAlign, off by default; see fslocalalign.h). With it on a
+       slice's warp waits one slice for its field (Chain), so its inputs wait here. */
+    struct PendingWarp { cv::Mat color, gray; Result global; };
+    QHash<int, PendingWarp> pendingWarps;
+    FSLocalAlign::Chain chain;
+
     FSAlign::Align align;
     FSFusionDMap fuse;
 
@@ -560,6 +588,64 @@ bool FS::runDMap()
 
     // Identify the Master ROI on the main thread to anchor the stack
     cv::Rect masterROI;
+
+    /* Warping and I/O for one slice, on the pool. sliceFlow is the local alignment field
+       (empty with o.localAlign off: the warp is then exactly FSAlign::applyTransform). */
+    auto dispatch = [&](int slice, cv::Mat colorForThread, cv::Mat grayForThread,
+                        Result currGlobal, FSLocalAlign::Flow sliceFlow)
+    {
+        futures.append(QtConcurrent::run(
+            QThreadPool::globalInstance(),
+            [slice, colorForThread, grayForThread, currGlobal, sliceFlow, masterROI,
+             paths = alignedColorPaths[slice], this]()
+            {
+                WarpResult res;
+                res.slice = slice;
+
+                // Exit immediately if aborted
+                if (abortRequested()) return res;
+
+                // A cv::Exception escaping a QtConcurrent worker calls
+                // std::terminate (hard crash). Contain it: leave res empty so
+                // the consumer skips this slice.
+                try {
+                    const QString wf = "FS::runDMap warp";
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) +
+                                         " warp color ch=" + QString::number(colorForThread.channels()));
+                    cv::Mat warpedColor, warpedGray;
+                    if (sliceFlow.empty()) {    // local alignment off (or nothing to correct)
+                        FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                        if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " warp gray");
+                        FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+                    } else {
+                        FSLocalAlign::Warp(colorForThread, currGlobal.transform, sliceFlow, warpedColor);
+                        if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " warp gray (local)");
+                        FSLocalAlign::Warp(grayForThread,  currGlobal.transform, sliceFlow, warpedGray);
+                    }
+
+                    // Exit before heavy allocations/disk writes if aborted
+                    if (abortRequested()) return res;
+
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " crop");
+                    res.color = warpedColor(masterROI).clone();
+                    res.gray  = warpedGray(masterROI).clone();
+
+                    if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " imwrite");
+                    cv::imwrite(paths.toStdString(), res.color);
+                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " done");
+                }
+                catch (const std::exception &e) {
+                    res.color.release();
+                    res.gray.release();
+                    qWarning().noquote() << "WARNING: FS::runDMap warp slice"
+                                         << slice << "failed:" << e.what();
+                }
+
+                return res;
+            }));
+    };
 
     for (int slice = 0; slice < grpSlices; ++slice)
     {
@@ -637,54 +723,26 @@ bool FS::runDMap()
         globals.push_back(currGlobal);
 
         // Parallel Part: Warping and I/O
-        futures.append(QtConcurrent::run(
-            QThreadPool::globalInstance(),
-            [slice, colorForThread, grayForThread, currGlobal, masterROI,
-             paths = alignedColorPaths[slice], this]()
-            {
-                WarpResult res;
-                res.slice = slice;
-
-                // Exit immediately if aborted
-                if (abortRequested()) return res;
-
-                // A cv::Exception escaping a QtConcurrent worker calls
-                // std::terminate (hard crash). Contain it: leave res empty so
-                // the consumer skips this slice.
-                try {
-                    const QString wf = "FS::runDMap warp";
-                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) +
-                                         " warp color ch=" + QString::number(colorForThread.channels()));
-                    cv::Mat warpedColor, warpedGray;
-                    FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
-                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " warp gray");
-                    FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
-
-                    // Exit before heavy allocations/disk writes if aborted
-                    if (abortRequested()) return res;
-
-                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " crop");
-                    res.color = warpedColor(masterROI).clone();
-                    res.gray  = warpedGray(masterROI).clone();
-
-                    if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
-
-                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " imwrite");
-                    cv::imwrite(paths.toStdString(), res.color);
-                    if (G::FSLog) G::log(wf, "slice " + QString::number(slice) + " done");
-                }
-                catch (const std::exception &e) {
-                    res.color.release();
-                    res.gray.release();
-                    qWarning().noquote() << "WARNING: FS::runDMap warp slice"
-                                         << slice << "failed:" << e.what();
-                }
-
-                return res;
-            }));
+        if (!o.localAlign) {
+            dispatch(slice, colorForThread, grayForThread, currGlobal, FSLocalAlign::Flow());
+        } else {
+            pendingWarps.insert(slice, {colorForThread, grayForThread, currGlobal});
+            for (const auto &d : chain.Add(localAlignGray(currImage, currGlobal))) {
+                localAlignLog(d);
+                const PendingWarp w = pendingWarps.take(d.slice);
+                dispatch(d.slice, w.color, w.gray, w.global, d.field);
+            }
+        }
 
         prevImage = currImage;
         prevGlobal = currGlobal;
+    }
+    if (o.localAlign && !abortRequested()) {
+        for (const auto &d : chain.Finish()) {
+            localAlignLog(d);
+            const PendingWarp w = pendingWarps.take(d.slice);
+            dispatch(d.slice, w.color, w.gray, w.global, d.field);
+        }
     }
 
     // // Diagnostic check for focus map range
@@ -798,6 +856,12 @@ bool FS::runPMax()
     std::vector<Result> globals;
     globals.reserve(grpSlices);
 
+    /* Local alignment (o.localAlign, off by default; see fslocalalign.h). With it on a
+       slice's warp waits one slice for its field (Chain), so its inputs wait here. */
+    struct PendingWarp { cv::Mat color, gray; Result global; };
+    QHash<int, PendingWarp> pendingWarps;
+    FSLocalAlign::Chain chain;
+
     FSAlign::Align align;
     FSFusionPMax   fuse;
 
@@ -809,6 +873,48 @@ bool FS::runPMax()
 
     QList<QFuture<WarpResult>> futures;
     cv::Rect masterROI;
+
+    /* Warping and I/O for one slice, on the pool. sliceFlow is the local alignment field
+       (empty with o.localAlign off: the warp is then exactly FSAlign::applyTransform). */
+    auto dispatch = [&](int slice, cv::Mat colorForThread, cv::Mat grayForThread,
+                        Result currGlobal, FSLocalAlign::Flow sliceFlow)
+    {
+        futures.append(QtConcurrent::run(QThreadPool::globalInstance(),
+            [slice, colorForThread, grayForThread, currGlobal, sliceFlow, masterROI,
+            paths = alignedColorPaths[slice]]()
+            {
+             WarpResult res;
+             res.slice = slice;
+
+             // Contain any cv::Exception: escaping a QtConcurrent worker calls
+             // std::terminate (hard crash). Leave res empty so it is skipped.
+             try {
+                 cv::Mat warpedColor, warpedGray;
+                 if (sliceFlow.empty()) {    // local alignment off (or nothing to correct)
+                     FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
+                     FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
+                 } else {
+                     FSLocalAlign::Warp(colorForThread, currGlobal.transform, sliceFlow, warpedColor);
+                     FSLocalAlign::Warp(grayForThread,  currGlobal.transform, sliceFlow, warpedGray);
+                 }
+
+                 res.color = warpedColor(masterROI).clone();
+                 res.gray  = warpedGray(masterROI).clone();
+
+                 if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
+
+                 cv::imwrite(paths.toStdString(), res.color);
+             }
+             catch (const std::exception &e) {
+                 res.color.release();
+                 res.gray.release();
+                 qWarning().noquote() << "WARNING: FS::runPMax warp slice"
+                                      << slice << "failed:" << e.what();
+             }
+
+             return res;
+            }));
+    };
 
     for (int slice = 0; slice < grpSlices; ++slice)
     {
@@ -853,39 +959,27 @@ bool FS::runPMax()
         }
         globals.push_back(currGlobal);
 
-        futures.append(QtConcurrent::run(QThreadPool::globalInstance(),
-            [slice, colorForThread, grayForThread, currGlobal, masterROI,
-            paths = alignedColorPaths[slice]]()
-            {
-             WarpResult res;
-             res.slice = slice;
-
-             // Contain any cv::Exception: escaping a QtConcurrent worker calls
-             // std::terminate (hard crash). Leave res empty so it is skipped.
-             try {
-                 cv::Mat warpedColor, warpedGray;
-                 FSAlign::applyTransform(colorForThread, currGlobal.transform, warpedColor);
-                 FSAlign::applyTransform(grayForThread,  currGlobal.transform, warpedGray);
-
-                 res.color = warpedColor(masterROI).clone();
-                 res.gray  = warpedGray(masterROI).clone();
-
-                 if (res.gray.type() != CV_8U) res.gray.convertTo(res.gray, CV_8U);
-
-                 cv::imwrite(paths.toStdString(), res.color);
-             }
-             catch (const std::exception &e) {
-                 res.color.release();
-                 res.gray.release();
-                 qWarning().noquote() << "WARNING: FS::runPMax warp slice"
-                                      << slice << "failed:" << e.what();
-             }
-
-             return res;
-            }));
+        // Parallel Part: Warping and I/O
+        if (!o.localAlign) {
+            dispatch(slice, colorForThread, grayForThread, currGlobal, FSLocalAlign::Flow());
+        } else {
+            pendingWarps.insert(slice, {colorForThread, grayForThread, currGlobal});
+            for (const auto &d : chain.Add(localAlignGray(currImage, currGlobal))) {
+                localAlignLog(d);
+                const PendingWarp w = pendingWarps.take(d.slice);
+                dispatch(d.slice, w.color, w.gray, w.global, d.field);
+            }
+        }
 
         prevImage = currImage;
         prevGlobal = currGlobal;
+    }
+    if (o.localAlign && !abortRequested()) {
+        for (const auto &d : chain.Finish()) {
+            localAlignLog(d);
+            const PendingWarp w = pendingWarps.take(d.slice);
+            dispatch(d.slice, w.color, w.gray, w.global, d.field);
+        }
     }
 
     // Process results as they finish

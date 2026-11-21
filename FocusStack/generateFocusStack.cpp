@@ -265,6 +265,7 @@ void MW::generateFocusStack(const QStringList paths,
     fs->o.method = method;
     fs->o.isLocal = isLocal;
     fs->o.enableOpenCL = true;
+    fs->o.localAlign = fsLocalAlign;    // Preferences > Focus Stack Utility
     // fs->o.removeTemp = fsRemoveTemp;    // for debugging (set in pref)
 
     // Group multiple stacks

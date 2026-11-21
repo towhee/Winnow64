@@ -4102,6 +4102,7 @@ private:
     QString fsMethod;
     bool fsRemoveTemp = true;
     bool fs8bit = true;
+    bool fsLocalAlign = false;      // focus stack tile flow after ECC (FocusStack/fslocalalign.h)
     void focusStackFromSelection();
     void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
     void generateFocusStack(const QStringList paths, QString method,

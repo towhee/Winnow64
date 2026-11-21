@@ -26,6 +26,7 @@ QString ReplacePanel::modeName(int mode)
     case FillSpotGeom::Heal:   return tr("Heal");
     case FillSpotGeom::Clone:  return tr("Clone");
     case FillSpotGeom::Fill:   return tr("Fill");
+    case FillSpotGeom::Patch:  return tr("Content-Aware");
     case FillSpotGeom::Object: return tr("Inpaint");
     default:                   return tr("Spot");
     }
@@ -43,6 +44,9 @@ QString ReplacePanel::modeHint(int mode)
     case FillSpotGeom::Fill:
         return tr("Paint over something thin or scattered -- a wire, a twig, a leash -- "
                   "to fill it from its surroundings.");
+    case FillSpotGeom::Patch:
+        return tr("Paint over an area to rebuild it from many small pieces of its "
+                  "surroundings, so lines and texture carry through it. No AI model.");
     case FillSpotGeom::Object:
         return tr("Paint over an object, with a little margin, to remove it with a "
                   "regenerative (AI) fill.");
@@ -55,6 +59,7 @@ QString ReplacePanel::panelTitle(int mode)
 {
     switch (mode) {
     case FillSpotGeom::Fill:   return tr("Fill");
+    case FillSpotGeom::Patch:  return tr("Content-Aware");
     case FillSpotGeom::Object: return tr("Inpaint");
     default:                   return tr("Replace");
     }
@@ -173,7 +178,7 @@ void ReplacePanel::buildUi()
     sr->addWidget(sizeValLbl);
     setBrushSize(brushSize);
 
-    /* -------- Fill / Object: the painted area waits for Return/Enter or Esc -------- */
+    /* -------- Fill / Content-Aware / Object: the painted area waits for Return/Enter or Esc -------- */
     paintKeys = new QWidget(this);
     paintKeys->setAttribute(Qt::WA_TranslucentBackground);
     QGridLayout *pk = new QGridLayout(paintKeys);
@@ -274,7 +279,7 @@ void ReplacePanel::setMode(int mode)
     currentMode = mode;
     const bool paintArea = FillSpotGeom::isPaintArea(mode);
     header->setText(panelTitle(mode));
-    /* Replace hosts three tools, so it names the one in use; Fill and Inpaint are
+    /* Replace hosts three tools, so it names the one in use; Fill, Content-Aware and Inpaint are
        one tool each and the header already names it. */
     modeLbl->setText(modeName(mode));
     modeLbl->setVisible(!paintArea);

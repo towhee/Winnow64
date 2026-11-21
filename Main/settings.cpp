@@ -246,6 +246,7 @@ void MW::writeSettings()
     settings->setValue("focusStackMethod", fsMethod);
     settings->setValue("focusStackRemoveTemp", fsRemoveTemp);
     settings->setValue("focusStack8bit", fs8bit);
+    settings->setValue("focusStackLocalAlign", fsLocalAlign);
 
     /* Docks are updated in DockWidget */
 
@@ -515,6 +516,7 @@ bool MW::loadSettings()
                    isNew);
     factorySetting(fsRemoveTemp, "focusStackRemoveTemp", true, isNew);
     factorySetting(fs8bit, "focusStack8bit", true, isNew);
+    factorySetting(fsLocalAlign, "focusStackLocalAlign", false, isNew);
 
     if (isNew) {
         // derived from the factory values above
@@ -879,6 +881,7 @@ bool MW::loadSettings()
     if (settings->contains("focusStackMethod")) fsMethod = settings->value("focusStackMethod").toString();
     if (settings->contains("focusStackRemoveTemp")) fsRemoveTemp = settings->value("focusStackRemoveTemp").toBool();
     fs8bit = settings->value("focusStack8bit", true).toBool();
+    fsLocalAlign = settings->value("focusStackLocalAlign", false).toBool();
 
     /* read external apps */
     /* moved to createActions as required to populate open with ... menu */
