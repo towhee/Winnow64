@@ -727,9 +727,9 @@ static QString denoiserKeyPart(const RawRender::Choice &render, const QString &b
 }
 
 /*
-    The demosaic's revision (RawDecoder::kDemosaicRevision) as a key part, present only
-    for Winnow-engine renders (the Apple engine has its own demosaic), so a demosaic change
-    misses exactly the previews it changed.
+    The revision of the shared mosaic stages (RawDecoder::kDemosaicRevision: hot pixels and
+    the demosaic) as a key part, present only for Winnow-engine renders (the Apple engine
+    runs neither), so a change there misses exactly the previews it changed.
 */
 static QString demosaicKeyPart(const RawRender::Choice &render)
 {

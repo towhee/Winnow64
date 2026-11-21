@@ -323,6 +323,8 @@
   - [10.1 Pipeline](#101-pipeline)
     - [10.1.1 Why the Decode Stops at Camera-Native](#1011-why-the-decode-stops-at-camera-native)
     - [10.1.2 Clipped Highlights Are Neutralised at Decode](#1012-clipped-highlights-are-neutralised-at-decode)
+    - [10.1.3 Hot Pixels Are Removed Before the Demosaic](#1013-hot-pixels-are-removed-before-the-demosaic)
+    - [10.1.4 Demosaic Algorithms (AHD)](#1014-demosaic-algorithms-ahd)
   - [10.2 Metadata Plumbing (RawSensorInfo)](#102-metadata-plumbing-rawsensorinfo)
   - [10.3 Colour: the Camera Matrix](#103-colour-the-camera-matrix)
     - [10.3.1 Canonical Camera Model](#1031-canonical-camera-model)
@@ -646,7 +648,8 @@
   - [12.5 Staleness Keys](#125-staleness-keys)
     - [12.5.1 Decoder Fixes: Per-Format Revision](#1251-decoder-fixes-per-format-revision)
     - [12.5.2 Denoiser Fixes: kDenoiserRevision](#1252-denoiser-fixes-kdenoiserrevision)
-    - [12.5.3 devPreview Invalidation: What Makes One Stale](#1253-devpreview-invalidation-what-makes-one-stale)
+    - [12.5.3 Mosaic-Stage Fixes: kDemosaicRevision](#1253-mosaic-stage-fixes-kdemosaicrevision)
+    - [12.5.4 devPreview Invalidation: What Makes One Stale](#1254-devpreview-invalidation-what-makes-one-stale)
   - [12.6 Read Paths](#126-read-paths)
     - [12.6.1 The Icon Grid](#1261-the-icon-grid)
     - [12.6.2 The Image Cache](#1262-the-image-cache)
@@ -4829,11 +4832,12 @@ ImageDecoder::load()
 ```
 
 1. UnpackCfa(): PER-FORMAT virtual, THE override point. Vendor packed/compressed bitstream -> normalised CFA mosaic (RawImage). Lives in the vendor .cpp (canon.cpp, nikon.cpp, ...) as a class SEPARATE from that file's metadata parser.
-2. SubtractBlack(): shared per-2x2-position black subtraction + clip.
-3. Demosaic::Run(): shared, camera-agnostic. Bilinear3x3 for Bayer, XTransWindow (5x5) for Fuji X-Trans; AHD/DCB later. It operates only on the CFA mosaic + pattern (Bayer) or raw.xtrans (the 6x6 map), so it is unit-testable.
-4. RawColor::ToCameraNative(): shared. CHARACTERISES the image (builds the camera -> working matrix and the as-shot multipliers into WorkingImage::cam) but does NOT apply them. Pixels stay in the sensor's own primaries, tagged ColorSpace::CameraNative, unclamped.
-5. Develop::Apply(): stage 0 is the INPUT PROFILE (camera-native -> working space), then the parametric edits in linear space.
-6. OutputTransform::ToImage(): baseline tone curve (raw only) + primaries + gamma -> QImage.
+2. HotPixel::Suppress(): shared. Hot photosites replaced in the mosaic, before black subtraction. See [10.1.3](#1013-hot-pixels-are-removed-before-the-demosaic).
+3. SubtractBlack(): shared per-2x2-position black subtraction + clip.
+4. Demosaic::Run(): shared, camera-agnostic. AHD for Bayer (PPG and Bilinear also available), XTransWindow (5x5) for Fuji X-Trans. It operates only on the CFA mosaic + pattern (Bayer) or raw.xtrans (the 6x6 map), so it is unit-testable. See [10.1.4](#1014-demosaic-algorithms-ahd).
+5. RawColor::ToCameraNative(): shared. CHARACTERISES the image (builds the camera -> working matrix and the as-shot multipliers into WorkingImage::cam) but does NOT apply them. Pixels stay in the sensor's own primaries, tagged ColorSpace::CameraNative, unclamped.
+6. Develop::Apply(): stage 0 is the INPUT PROFILE (camera-native -> working space), then the parametric edits in linear space.
+7. OutputTransform::ToImage(): baseline tone curve (raw only) + primaries + gamma -> QImage.
 
 Demosaic is deliberately NOT the override point: the algorithm is shared across cameras, and only the unpack/decompress step is vendor-specific (LibRaw's real structure). An earlier (2025) unused scaffold (ImageFormats/Base/rawbase.\* + ImageFormats/Tiff/tiffdecoder.\*) used the rejected demosaic()-as-override axis and has been removed.
 
@@ -4853,6 +4857,31 @@ One exception to "nothing baked in": RawColor::NeutraliseClipped, run right afte
 - A channel's ceiling in white-balanced terms is clip_c x asShotMul_c. Every channel of a pixel is capped at the LOWEST ceiling among its clipped channels, so a blown neutral balances to white while a saturated red with only R clipped keeps its colour.
 - "Clipped" is a smoothstep over the top 10% of the clip level and the ceiling is divided by it, so the cap goes to infinity as a channel leaves the knee: continuous, no edge banding.
 - Uses the AS-SHOT balance; a later Temp change moves the neutral slightly. It is not reconstruction (blown areas become flat white, not recovered detail); a real reconstruction pass is still a ToDo.
+
+#### 10.1.3 Hot Pixels Are Removed Before the Demosaic
+
+ImageFormats/Raw/hotpixel.h (2026-11-20, ported from LightCraft's crates/raw/src/hotpixel.rs, MIT; credited in THIRD_PARTY_NOTICES.md). A hot pixel is a single photosite that reads far too bright (a leaky or stuck cell), most visible at high ISO and in dark areas. The demosaic turns it into a small saturated red, green or blue dot, and colour noise reduction can only make that dot fainter. Most raws (ARW, NEF, CR3, ...) carry no list of them, so Winnow finds them itself. Before this, Winnow had no bad-pixel repair of any kind (it does not apply DNG FixBadPixels opcodes either).
+
+- Runs right after UnpackCfa on every Winnow-engine decode (clean and PMRID paths share it), BEFORE SubtractBlack, so the noise model sees the signal near black unclipped, and before PMRID and the demosaic, which would smear a hot cell into a coloured dot. The Apple engine never runs it.
+- Method: (1) fit the image's own noise, sigma^2 = a * level + b, from the median absolute deviation of each photosite against the median of its same-colour neighbours, on every 5th row and column, in 32 brightness bins; (2) a candidate is more than 5 sigma above EVERY same-colour neighbour (the nearest eight); (3) real light is kept: a candidate with at least two direct neighbours more than 4 sigma above their own surroundings is a star, spark or specular, not a defect (one lit neighbour is not enough, since hot cells come in adjacent pairs); (4) the rest take the median of their same-colour neighbours.
+- Safety valve: if more than 0.2% of the photosites (HotPixel::kMaxShare) would be replaced, the image does not fit the model and NOTHING changes. Real light kept in step 3 does not count, so a dense star field still loses its hot pixels.
+- Any CFA Winnow decodes: the four Bayer phases and X-Trans (6x6 period). An Unknown pattern (Linear Raw) is skipped. Photosites within 4 of the edge are left alone.
+- Cost: ~55 ms for 45 MP (Release, M-series). The count and time appear in RawFormat::DenoiseTiming::Summary ("hot pixels N (ms)").
+- Measured on _ThumbTest (2026-11-20): at high ISO (D850 6400, A9 II 12800) every replaced photosite inspected was a visible coloured dot, cleanly removed. At base ISO on AA-filterless bodies (Z9, E-M1, GFX 50S II) it replaces thousands of photosites at only ~1.1-1.5x their neighbours (the noise there is tiny, so 5 sigma is small); visually that changes nothing and loses no detail. If a base-ISO glint is ever seen to vanish, raise kHot for low noise rather than disabling the pass.
+- Always on; there is no preference or Develop control (LightCraft has an on/off option). Pinned by tests/unit/tst_hotpixel.cpp (flat noise untouched, single hot photosites and hot pairs replaced incl. in dark areas, stars and a dense star field kept, the share limit, X-Trans, thread-count independence; WINNOW_HOTPIXEL_BENCH=1 prints throughput).
+
+#### 10.1.4 Demosaic Algorithms (AHD)
+
+ImageFormats/Raw/demosaic.h. Demosaic::Algorithm is Bilinear, Ppg or Ahd; RawFormat::Decode uses Ahd for both the clean and the PMRID-denoised demosaic (2026-11-20; it was Bilinear until then). PPG and AHD are ported from LightCraft's crates/raw/src/demosaic (MIT; credited in THIRD_PARTY_NOTICES.md), which implemented them from the published papers.
+
+- Bilinear: 3x3 same-colour average. Fast and soft; zips colour along edges. Kept as the fallback for mosaics under 4x4.
+- PPG (Patterned Pixel Grouping, Chuan-kai Lin): green from the flattest of four directions, red/blue by colour difference. About Bilinear's cost and far sharper, but on real raws it leaves coloured speckle and cyan fringes along fine edges, worse at high ISO. Not used; kept for comparison.
+- AHD (Adaptive Homogeneity-Directed, Hirakawa & Parks, IEEE TIP 2005): horizontal and vertical candidates, chosen per pixel by CIELab homogeneity. LightCraft's refinement is kept: near a tie the two candidates are BLENDED (kAhdBlend = 12) instead of picked outright, because an outright pick lets noise decide in flat areas and draws a maze of short horizontal and vertical strokes.
+- AHD runs in independent 128 px tiles with a 6 px margin on OpenCV's pool, so the result is bit-identical whatever the thread count and there are no tile seams. Progress reports tiles; abort is polled per tile.
+- Every algorithm reproduces a constant colour exactly and keeps each photosite's own channel as measured. X-Trans always takes XTransWindow; LightCraft's directional X-Trans method is the next candidate port.
+- Measured (2026-11-20): synthetic edge scene PSNR Bilinear 26.2 dB, PPG 38.0, AHD 37.9; flat-noise anisotropy AHD 7.5x Bilinear (LightCraft's figure for the blend). 24 MP in Release: Bilinear ~21 ms, PPG ~31 ms, AHD ~79 ms. On 8 bodies in _ThumbTest (ISO 100-12800) AHD was clearly sharper than Bilinear on foliage, grass and fabric with no zipper, and no maze was visible in flat areas even at ISO 12800.
+- Pinned by tests/unit/tst_demosaic.cpp (exact constant colour on all four phases, known samples kept, PSNR ranking, no maze, thread-count independence and seams, tiny mosaics, abort; WINNOW_DEMOSAIC_BENCH=1 prints throughput).
+- Changing the demosaic or hot-pixel output: bump RawDecoder::kDemosaicRevision ([12.5.3](#1253-mosaic-stage-fixes-kdemosaicrevision)).
 
 ### 10.2 Metadata Plumbing (RawSensorInfo)
 
@@ -8561,14 +8590,23 @@ RawDecoder::kDenoiserRevision (same header). PMRID changes the pixels without to
 - Bump it when a PMRID change alters output. With Auto run on, that misses every Winnow-engine raw preview once, rebuilt as each image is viewed (the stale sidecar thumbnail falls back to the camera thumbnail in the grid until topUpDevPreviews rewrites it on the next Develop view).
 - Unlike the decoder revision it IS in the base key (it depends on the recipe, which renderKey does not see), so it lands in G::DevPreviewKeyColumn and the catalog. Consequence: a row restored from the catalog WITHOUT a sidecar re-read keeps the pre-bump base key and can go on serving the old loupe preview until the image is viewed in Develop (topUpDevPreviews -> MW::devPreviewUpdated rewrites the column) or its sidecar is re-read. The autoDenoise / engine parts of the base key share that limitation.
 
-#### 12.5.3 devPreview Invalidation: What Makes One Stale
+#### 12.5.3 Mosaic-Stage Fixes: kDemosaicRevision
+
+RawDecoder::kDemosaicRevision (same header, 2026-11-20). The shared mosaic stages, hot-pixel suppression and the demosaic, run for EVERY Winnow-engine raw whatever its format, so a change there is neither a per-format decoder fix (12.5.1) nor a denoiser fix (12.5.2).
+
+- Metadata::demosaicKeyPart appends "|demosaic=N" inside the BASE key hash (devPreviewKey(blob) and defaultRenderKey) for Winnow-engine renders only; Apple-engine previews keep their keys. 0 = never bumped (no key part).
+- History: 1 = Bilinear -> AHD ([10.1.4](#1014-demosaic-algorithms-ahd)); 2 = hot pixels removed before the demosaic ([10.1.3](#1013-hot-pixels-are-removed-before-the-demosaic)).
+- Bump it when hotpixel.cpp or demosaic.cpp changes the pixels. Each bump misses every Winnow-engine raw preview once; they rebuild as images are viewed.
+- Being in the base key, it shares 12.5.2's limitation: a row restored from the catalog without a sidecar re-read keeps the pre-bump key until the image is viewed in Develop or its sidecar is re-read.
+
+#### 12.5.4 devPreview Invalidation: What Makes One Stale
 
 The rule (2026-11-07). A devPreview depicts three things: the source file's PIXELS, put through the RECIPE, by the RENDERER. It goes stale exactly when one of them changes, and never for anything else.
 
 | Invalidates (changes the picture) | Mechanism |
 |---|---|
 | The recipe: any Develop edit, preset, Paste Settings | recipe hash in the key (12.5) |
-| The renderer: raw engine, Auto run denoise, a decoder or denoiser fix | renderer facts and revisions in the key (12.5, 12.5.1, 12.5.2) |
+| The renderer: raw engine, Auto run denoise, a decoder, denoiser or demosaic fix | renderer facts and revisions in the key (12.5, 12.5.1, 12.5.2, 12.5.3) |
 | Orientation: a rotation | dropped explicitly (DevelopProperties::rotateImageEdits) |
 | The source pixels: the file replaced or re-saved (a focus stack re-run under the same name, an outside editor, a path reused by another image) | source size + mtime stamp (12.7.5) |
 
@@ -8663,7 +8701,7 @@ The recipe hash identifies a RECIPE, not an image. Presets, Paste Settings and m
 
 - Nothing on disk at all is deliberately NOT a mismatch: a missing source is the sweep's demote case (the file is in the trash, or its volume is ejected), and the preview is still the right picture of it. Only a file that is present and DIFFERENT drops the entry.
 - Rows imported from the JSON index carry no stamp; they were grandfathered rather than discarded, and the first sweep (which stats every source image anyway) stamps them.
-- Winnow's own writes that leave the pixels alone (embedded metadata, a replaced embedded thumbnail) RE-STAMP the row rather than tripping this, and a drop of an edited image queues a rebuild. See [12.5.3 devPreview Invalidation](#1253-devpreview-invalidation-what-makes-one-stale).
+- Winnow's own writes that leave the pixels alone (embedded metadata, a replaced embedded thumbnail) RE-STAMP the row rather than tripping this, and a drop of an edited image queues a rebuild. See [12.5.4 devPreview Invalidation](#1254-devpreview-invalidation-what-makes-one-stale).
 
 Lookup is by a NORMALISED KEY, not the raw path. The same file reaches Winnow spelled several ways: DataModel stores QFileInfo::filePath() (the path AS CONSTRUCTED: not cleaned, not absolutised); drop and paste build destinations by concatenation (doubling the separator when the folder already ends in one); Finder and Explorer drags arrive through QUrl::toLocalFile(); Windows mixes '\\' and '/' and varies the drive letter's case; and the same folder can be reached through a symlink, a share mounted under another name, or as /Volumes/X and /System/Volumes/Data/X. A mismatch never showed the wrong picture, but a put under a second spelling INSERTED A SECOND ROW (the same image cached twice at several MB each), a get under a second spelling silently re-decoded the raw, and the FileOps hooks found nothing to update.
 

@@ -1,5 +1,6 @@
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/demosaic.h"
+#include "ImageFormats/Raw/hotpixel.h"
 #include "ImageFormats/Raw/rawcolor.h"
 #include "ImageFormats/Raw/pmrid.h"
 #include "ImageFormats/Raw/pmridcache.h"
@@ -90,20 +91,21 @@ QString RawFormat::DenoiseTiming::Summary() const
 {
     if (!valid) return "Denoise decode: not run this session";
     auto ms = [](double v) { return QString::number(v, 'f', 1); };
-    const double other = totalMs - (pmridWaitMs + unpackMs + blackMs + cleanDemosaicMs +
+    const double other = totalMs - (pmridWaitMs + unpackMs + hotPixelMs + blackMs + cleanDemosaicMs +
                                     cleanColorMs +
                                     mosaicCopyMs + pmridMs + denDemosaicMs + denColorMs +
                                     blendMs);
     const QString reuse = pmridReuse.isEmpty() ? QString("ran")
                                                : "reused, " + pmridReuse;
     return QString("Denoise decode (%1) %2: total %3 ms | cache wait %4, unpack %5, "
-                   "black %6, clean demosaic %7, clean color %8, mosaic copy %9, "
+                   "hot pixels %16 (%17 ms), black %6, clean demosaic %7, clean color %8, mosaic copy %9, "
                    "PMRID %10 (%11), denoised demosaic %12, denoised color %13, blend %14, "
                    "other %15")
         .arg(interactive ? "interactive" : "saved edit", file, ms(totalMs), ms(pmridWaitMs),
              ms(unpackMs), ms(blackMs), ms(cleanDemosaicMs), ms(cleanColorMs),
              ms(mosaicCopyMs))
-        .arg(ms(pmridMs), reuse, ms(denDemosaicMs), ms(denColorMs), ms(blendMs), ms(other));
+        .arg(ms(pmridMs), reuse, ms(denDemosaicMs), ms(denColorMs), ms(blendMs), ms(other))
+        .arg(hotPixels).arg(ms(hotPixelMs));
 }
 
 /* Publish a denoise-decode timing for the Develop diagnostics (not printed). */
@@ -326,6 +328,13 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         }
         if (aborted()) { errMsg = "Aborted"; return false; }
         dt.unpackMs = lap();
+
+        /* Hot photosites out of the mosaic before anything is developed from it -- before
+           SubtractBlack, so the noise model sees the signal near black unclipped, and
+           before PMRID and the demosaic, which would smear a hot cell into a coloured dot.
+           See hotpixel.h. */
+        dt.hotPixels = HotPixel::Suppress(raw);
+        dt.hotPixelMs = lap();
 
         SubtractBlack(raw);
         dt.blackMs = lap();

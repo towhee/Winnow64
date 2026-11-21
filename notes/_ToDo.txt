@@ -55,6 +55,7 @@ Yes. I cloned storytold/lightcraft (about 365k lines of Rust) and compared it wi
   the others first?
 
 BUGS / TO DO
+- A9 III files??
 - thumbnail help schematic.
 - Menu Window>History and Window>Preset ??
 - Review Develop shortcuts (N, M, X)

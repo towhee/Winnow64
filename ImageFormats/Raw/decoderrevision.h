@@ -56,8 +56,8 @@ inline int revision(const QString &ext)
 inline constexpr int kDenoiserRevision = 1;
 
 /*
-    Revision of the shared DEMOSAIC (ImageFormats/Raw/demosaic.cpp) used by the Winnow
-    engine for every Bayer format, folded into the devPreview / developed-thumbnail key
+    Revision of the shared MOSAIC stages the Winnow engine runs for every format --
+    hot-pixel suppression (hotpixel.cpp) and the demosaic (demosaic.cpp) -- folded into the devPreview / developed-thumbnail key
     for Winnow-engine renders only (Metadata::demosaicKeyPart): the Apple engine never
     runs it, so its previews keep their keys. BUMP when a demosaic change alters pixels.
     0 = never bumped (no key part).
@@ -65,8 +65,10 @@ inline constexpr int kDenoiserRevision = 1;
     History:
       1  2026-11-20  Bilinear -> AHD (Hirakawa & Parks, ported from LightCraft): sharper,
                      no zipper along edges. See demosaic.h.
+      2  2026-11-20  hot photosites replaced in the mosaic before the demosaic
+                     (ported from LightCraft). See hotpixel.h.
 */
-inline constexpr int kDemosaicRevision = 1;
+inline constexpr int kDemosaicRevision = 2;
 
 } // namespace RawDecoder
 

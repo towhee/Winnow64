@@ -303,6 +303,12 @@ winnow_test_link_opencv(tst_lenscorrect PRIVATE opencv_core opencv_imgproc)
 winnow_add_unit_test(tst_demosaic unit/tst_demosaic.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/demosaic.cpp)
 winnow_test_link_opencv(tst_demosaic PRIVATE opencv_core)
+# tst_hotpixel tests ImageFormats/Raw/hotpixel.cpp -- hot photosites found in the mosaic
+# and replaced, real light (stars, speculars) kept, the share limit honoured.
+winnow_add_unit_test(tst_hotpixel unit/tst_hotpixel.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/hotpixel.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/demosaic.cpp)
+winnow_test_link_opencv(tst_hotpixel PRIVATE opencv_core)
 # tst_lensprofile tests Develop/lensdb.cpp + Develop/lensprofile.h -- lensfun lens profile
 # correction (distortion, TCA, vignetting) -- against liblensfun's own answers
 # (unit/lensprofile_oracle.h, from fixtures/lensfun_oracle.py): the database loads the

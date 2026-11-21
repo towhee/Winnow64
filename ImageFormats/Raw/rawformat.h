@@ -108,6 +108,8 @@ public:
         QString file;               // fileName() of the decode
         bool interactive = false;   // denoiseRaw pass vs saved-edit pass
         double unpackMs = 0.0;      // UnpackCfa
+        double hotPixelMs = 0.0;    // HotPixel::Suppress
+        int hotPixels = 0;          // photosites it replaced
         double blackMs = 0.0;       // SubtractBlack
         double cleanDemosaicMs = 0.0, cleanColorMs = 0.0;    // clean base for the blend
         double mosaicCopyMs = 0.0;  // saved-edit pass: RawImage copy PMRID mutates
