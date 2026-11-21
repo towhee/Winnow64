@@ -1369,7 +1369,7 @@ private slots:
        Transform session is up. */
     void toggleDevelopWbSampler();
     /* Action-row pipette after the spot tool (and Develop > Screen Sampler): open the
-       Screen Sampler and arm it -- a 5x5 colour average from anywhere on screen, for
+       Screen Sampler and arm it -- a 5x5 color average from anywhere on screen, for
        comparing renders across apps. See Utilities/screensampler.h. */
     void toggleScreenSampler();
     void toggleMaskOverlay();     // "O": hide/show the active mask overlay tint
@@ -1395,9 +1395,9 @@ private slots:
        show something else). Safe to call when it is not up. */
     void clearDevelopCameraPreview();
     /* Repaint the tint swatch (it lives on the Mask band): it is filled with the overlay
-       colour and it carries the blue active border while the tint is shown. */
+       color and it carries the blue active border while the tint is shown. */
     void refreshDevelopMaskTintBtn();
-    /* Right-click on that button: pick the overlay colour / toggle the grayscale
+    /* Right-click on that button: pick the overlay color / toggle the grayscale
        background without opening the Mask panel. pos is in button coordinates. */
     void showDevelopMaskTintMenu(const QPoint &pos);
     void developNewScope();       // "N": add a scope to the current image's stack
@@ -3050,7 +3050,7 @@ private:
     /* The History dock's BODY: the two lists above under their collapsible section
        bands. It creates and owns both views; MW only binds them. */
     HistoryPanel *historyPanel = nullptr;
-    /* Alert rows, directly below the Develop action row: coloured text on the panel
+    /* Alert rows, directly below the Develop action row: colored text on the panel
        background, one row per live condition, refreshed from the selection by
        updateDevelopSelectionWarning. Conditions stack, each in its own row; the container
        hides when there is nothing to say.
@@ -3062,7 +3062,7 @@ private:
                       on ALL of them (DevelopProperties::flushPropagation), off-screen
                       and invisible. AMBER -- proceed, but know what you are doing.
        Show stoppers sort above warnings, so severity reads from position as well as
-       colour (which colour-blind users may not get). */
+       color (which color-blind users may not get). */
     /* Severity, least first (rows sort most severe to the top). AlertInfo is news, not
        a problem: the "Settings updated" row for a migrated recipe. */
     enum DevelopAlert { AlertInfo, AlertWarning, AlertShowStopper };
@@ -3300,7 +3300,7 @@ private:
        developed GLOBAL scope, registered by path (RangeMask::putRef) and sampled identically by
        the loupe overlay and the render. Global-only so a range mask cannot feed back on its own
        selection. Rebuilt only when the base params or the image change (range-slider ticks and
-       colour samples just re-threshold), tracked by path + a base-params signature. */
+       color samples just re-threshold), tracked by path + a base-params signature. */
     void ensureRangeRef(const QString &fPath, const WorkingImage &work,
                         const EditParams &base, int degrees);
     QString developRangeRefPath;
@@ -3322,7 +3322,7 @@ private:
     /* Rebuild (or clear) the whole-mask coverage tint shown in the loupe while a
        submask is being defined: composite the active scope's submasks -- INCLUDING
        the pending one, with the op the modifiers are previewing -- into a
-       single-colour veil and hand it to ImageView. Cheap (capped resolution); a
+       single-color veil and hand it to ImageView. Cheap (capped resolution); a
        no-op when nothing is being edited. */
     void updateMaskOverlayTint();
     /* Build (or clear) the SHARPENING mask preview: while Opt is held during a Masking
@@ -3636,7 +3636,7 @@ private:
     /*  The Module dock's look (Library | Folders and the modes, both styled by
         MW::styleWorkflowSwitcher): the
         selected option in G::selectedOptionColor (bold when boldSelected), the others in
-        the default text colour. fontPt <= 0 leaves the font size alone; vPad is the
+        the default text color. fontPt <= 0 leaves the font size alone; vPad is the
         buttons' top and bottom padding in px. */
     QString segmentedOptionCss(int fontPt, bool boldSelected = true, int vPad = 1) const;
     /*  A vocabulary node was renamed or re-parented: offer to bring the images that

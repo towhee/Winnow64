@@ -146,7 +146,7 @@ void TstCameraModel::spacesOutGluedNames_data()
     /*
         Canon's "mN" suffix. Without this the model falls to the LONGEST-PREFIX match on
         the base body -- "Canon EOS R6" -- and an R6 Mark II renders through the R6's
-        colour matrix, which is a different sensor. Silent: the image looks plausible,
+        color matrix, which is a different sensor. Silent: the image looks plausible,
         just wrong, and the white balance solved from that matrix is wrong with it.
     */
     QTest::newRow("EOS R6m2") << "Canon" << "Canon EOS R6m2"

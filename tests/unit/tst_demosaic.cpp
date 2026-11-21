@@ -8,8 +8,8 @@
 
     What is pinned, and why each matters:
 
-      o a constant colour comes back exactly, for every algorithm and all four Bayer
-        phases -- a phase mix-up or a colour-difference sign error shows here first;
+      o a constant color comes back exactly, for every algorithm and all four Bayer
+        phases -- a phase mix-up or a color-difference sign error shows here first;
       o every photosite keeps its own measured channel (no self-blur);
       o on a photo-like scene with sharp edges, PPG and AHD beat Bilinear by > 6 dB PSNR
         (the reason they exist), and nobody falls below a floor on a smooth scene;
@@ -19,7 +19,7 @@
         PPG in independent rows) and tiles join without seams;
       o tiny mosaics and an abort behave;
       o X-Trans: Bilinear gives the 5x5 window, Ppg / Ahd give XTransDirectional, which
-        is exact on a constant colour at every pattern offset, keeps its samples, beats
+        is exact on a constant color at every pattern offset, keeps its samples, beats
         the window on edges, and whose interior fast path matches a plain per-pixel
         reference (reflection at every access) bit for bit.
 
@@ -68,7 +68,7 @@ Rgb SmoothScene(int w, int h)
 }
 
 /* Sharp luminance structure (disc, stripes, diagonal edge, fine texture) modulating a
-   smoothly varying colour -- edges are mostly luminance edges, as in natural images. */
+   smoothly varying color -- edges are mostly luminance edges, as in natural images. */
 Rgb EdgyScene(int w, int h)
 {
     return FromFn(w, h, [=](int x, int y, float *p) {
@@ -151,7 +151,7 @@ double Anisotropy(const Rgb &img)
     return sum / n;
 }
 
-/* Fuji X-Trans 6x6 colour map (0=R 1=G 2=B), and the same shifted by (sx, sy). */
+/* Fuji X-Trans 6x6 color map (0=R 1=G 2=B), and the same shifted by (sx, sy). */
 const uint8_t kXTrans[6][6] = {
     {1, 1, 0, 1, 1, 2}, {1, 1, 2, 1, 1, 0}, {2, 0, 1, 0, 2, 1},
     {1, 1, 2, 1, 1, 0}, {1, 1, 0, 1, 1, 2}, {0, 2, 1, 2, 0, 1} };
@@ -248,14 +248,14 @@ class TestDemosaic : public QObject
     Q_OBJECT
 
 private slots:
-    void constantColourIsExactForAllAlgorithmsAndPhases();
+    void constantColorIsExactForAllAlgorithmsAndPhases();
     void knownSamplesArePreserved();
     void psnrThresholdsAndRanking();
     void flatNoiseDoesNotTurnIntoAMaze();
     void resultIsIndependentOfThreadCount();
     void tinyMosaicsFallBackAndStayFinite();
     void abortStopsTheRun();
-    void xtransConstantColourIsExactAtEveryOffset();
+    void xtransConstantColorIsExactAtEveryOffset();
     void xtransKnownSamplesArePreserved();
     void xtransDirectionalBeatsTheWindow();
     void xtransFastPathMatchesTheReference();
@@ -263,7 +263,7 @@ private slots:
     void throughput();
 };
 
-void TestDemosaic::constantColourIsExactForAllAlgorithmsAndPhases()
+void TestDemosaic::constantColorIsExactForAllAlgorithmsAndPhases()
 {
     /* 17x13 and 300x140: odd sizes, and wide enough for several AHD tiles. */
     for (auto [w, h] : { std::pair{17, 13}, std::pair{300, 140} }) {
@@ -403,7 +403,7 @@ void TestDemosaic::abortStopsTheRun()
     }
 }
 
-void TestDemosaic::xtransConstantColourIsExactAtEveryOffset()
+void TestDemosaic::xtransConstantColorIsExactAtEveryOffset()
 {
     const Rgb img = Filled(31, 23, 0.3f, 0.55f, 0.8f);
     float want[3];

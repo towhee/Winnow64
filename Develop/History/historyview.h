@@ -15,7 +15,7 @@ class DevelopHistory;
         Subject Mask: Hue                  -18
 
     The action reads left (elided if the dock is narrow), the value right-aligned in the
-    header colour. Three row states are painted: the CURRENT position (the state the image
+    header color. Three row states are painted: the CURRENT position (the state the image
     is actually in) gets the selection fill, rows AFTER the current position are dimmed
     (they only exist between a revert and the next edit, which discards them), and the
     HOVERED row gets a light fill because hovering previews that state in the loupe.

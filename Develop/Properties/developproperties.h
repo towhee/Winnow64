@@ -139,7 +139,7 @@ public:
     /* Whole-mask overlay: true when a mask tool is expanded on a mask (so MW should
        show the composited mask), plus the active scope's ordered mask tools to composite. */
     /* Hand the mask-overlay tint swatch to the MaskPanel, which places it on the "Mask"
-       band beside that band's [:]. MW owns the button (it is "O", the colour menu and
+       band beside that band's [:]. MW owns the button (it is "O", the color menu and
        the swatch repaint); this only gets it there, maskPanel being private here. */
     void placeMaskTintButton(QWidget *btn);
     bool maskOverlayActive() const;
@@ -188,7 +188,7 @@ public:
     bool activeScopeMaskInverted() const;
     /* Index into activeScopeComponents() of the tool whose settings are expanded (the one
        the user clicked in the scope panel), or -1. MW tints this component in its own
-       colour so the user can see the selected tool's share of the mask. */
+       color so the user can see the selected tool's share of the mask. */
     int  activeMaskIndex() const;
     /* Display name of a MaskTool (public so MW can label the on-canvas op chip). */
     static QString maskToolName(int tool);
@@ -567,7 +567,7 @@ protected:
 public slots:
     void itemChange(QModelIndex idx) override;
     /*
-        The image's scene-linear WorkingImage (and with it its colour characterisation,
+        The image's scene-linear WorkingImage (and with it its color characterisation,
         WorkingImage::cam) has landed in WorkingImageCache.
 
         WHY THIS EXISTS. The Temp/Tint row resolves through cam, but the dock is pointed
@@ -613,10 +613,10 @@ public slots:
     void syncSharpenMaskPreview();
     /* ImageView showed/hid the mask overlay tint; sync the scope menu's check state. */
     void setMaskOverlayShown(bool shown);
-    /* Set the overlay colour / grayscale-under-the-veil flag (the Mask band tint
+    /* Set the overlay color / grayscale-under-the-veil flag (the Mask band tint
        button's context menu): updates G::, persists and asks for the matching redraw --
-       a colour needs the veil rebuilt, grayscale is view-only. */
-    void setMaskOverlayColour(const QColor &c);
+       a color needs the veil rebuilt, grayscale is view-only. */
+    void setMaskOverlayColor(const QColor &c);
     void setMaskOverlayGrayscale(bool on);
 
     /* Regenerative spot fill. onSpotToolToggled arms/disarms spot-brush mode (from the
@@ -923,7 +923,7 @@ signals:
        this mode is NOT one-shot -- it stays armed until one of its conditions goes. */
     void curvePickBegin();
     void curvePickEnd();
-    /* Point Color eyedropper: arm/disarm ImageView's one-shot "click a colour" mode. */
+    /* Point Color eyedropper: arm/disarm ImageView's one-shot "click a color" mode. */
     void pointColorPickBegin();
     void pointColorPickEnd();
     /* The user dragged inside the preview: move the sample point by this many image
@@ -968,7 +968,7 @@ signals:
     /* A new submask was chosen in the mask tools menu -> ImageView shows the tint. Separate
        from maskTintShowRequested (the disconnected auto-show) so it is the one rule. */
     void maskOverlayShowRequested();
-    /* Rebuild the overlay tint ALONE (previewed op changed, overlay colour changed).
+    /* Rebuild the overlay tint ALONE (previewed op changed, overlay color changed).
        Deliberately NOT paramsChanged: nothing about the developed image has changed, and
        paramsChanged would pay a proxy + full-res re-render per modifier press. */
     void maskOverlayRefreshRequested();
@@ -1110,7 +1110,7 @@ private:
        A dropper toggle in the caption cell and the preset dropdown in the value cell,
        built with the same DT_None + setIndexWidget idiom as the Core rows. The named
        illuminants are offered for RAW only: a rendered JPEG has no camera-neutral
-       reference, so (like Lightroom) it gets As Shot / Auto / Custom. Full colour
+       reference, so (like Lightroom) it gets As Shot / Auto / Custom. Full color
        science lives in Develop/whitebalance.h -- this is only the UI. */
     void addWhiteBalanceRow(QModelIndex parIdx);
     void setWbPreset(int preset);      // apply a dropdown pick to the active scope
@@ -1200,7 +1200,7 @@ private:
     /* Double-click reset for the Temp / Tint rows: back to AS SHOT, not to the slider's
        0 default (see mouseDoubleClickEvent). */
     void resetWbAxisToAsShot(bool isTemp);
-    /* The current image's colour characterisation, from the cached pre-develop
+    /* The current image's color characterisation, from the cached pre-develop
        WorkingImage. Invalid when the image is not (yet) in the cache, which resolves
        temperatures to a D65 fallback and disables the dropper. */
     CameraColor currentCam() const;
@@ -1286,7 +1286,7 @@ private:
     void applyCurveMode();                  // show/hide the channel combo + split slider
     static QString curveBandKey(int band);  // band -> the Basic dock slider key it writes
 
-    /* ---- Color Grade (colour grading) ------------------------------------------------
+    /* ---- Color Grade (color grading) ------------------------------------------------
        The wheel is a directly-embedded index widget (setIndexWidget), NOT a delegate
        editor; it edits the ONE range the exclusive radio buttons select (gradeActiveMask,
        one bit of 0x1 shadow, 0x2 mid, 0x4 high, 0x8 global). The Hue / Saturation /
@@ -1322,7 +1322,7 @@ private:
 
     /* ---- Color Range mask wheel ------------------------------------------------------
        Embedded index widget (like colorGradeWheel) shown above the Color Range mask's
-       sliders. Shows the sampled colours + their hue/sat selection band and lets the user
+       sliders. Shows the sampled colors + their hue/sat selection band and lets the user
        drag the hue/sat bounds. Recreated on every tree rebuild that shows a Color Range
        tool; null otherwise. */
     QPointer<ColorRangeWheel> colorRangeWheel;
@@ -1804,7 +1804,7 @@ private:
        decides is the combine op, which the submask's row can still change afterwards.
        Return commits and closes early, Esc discards while still pending. The overlay
        composites the pending submask with pendingOp, so the veil shows the OUTCOME
-       rather than colouring the operand. maskPanelOpen tracks whether the strip is up,
+       rather than coloring the operand. maskPanelOpen tracks whether the strip is up,
        so Esc cancels the panel edit rather than collapsing a legacy tree tool. */
     MaskPanel *maskPanel = nullptr;
     int  pendingIdx = -1;                     // uncommitted submask's index, else -1

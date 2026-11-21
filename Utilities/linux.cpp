@@ -65,9 +65,9 @@ void Linux::useBradientDecoration()
 {
 /*
     On Wayland Qt draws the title bar itself (GNOME has no server-side decorations).
-    Its default there, the Adwaita decoration, has fixed colours: white, or #2e2e32 when
+    Its default there, the Adwaita decoration, has fixed colors: white, or #2e2e32 when
     the desktop prefers dark. The bradient decoration paints with the application
-    palette's Window colour instead, which setTitleBarColor makes the Winnow background.
+    palette's Window color instead, which setTitleBarColor makes the Winnow background.
     Read once when the QApplication is created, so it is set here, before that. An
     explicit QT_WAYLAND_DECORATION from the user wins. No effect under X11, where the
     window manager draws the title bar.

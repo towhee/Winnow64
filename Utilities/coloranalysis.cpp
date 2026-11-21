@@ -24,7 +24,7 @@ void ColorAnalysis::process(QStringList &fPathList)
     QString reportString;
     QTextStream rpt;
     rpt.setString(&reportString);
-    rpt << "Winnow Colour Analysis\n";
+    rpt << "Winnow Color Analysis\n";
     rpt << "\n";
     rpt << "Hue    Count      Total    File\n";
     for (int f = 0; f < count; f++) {

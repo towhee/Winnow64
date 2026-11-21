@@ -17,10 +17,10 @@
     deferred. See notes/Documentation.txt "DEVELOP / IMAGE EDIT".
 */
 struct EditParams {
-    /* White balance, ABSOLUTE (Lightroom-style), resolved against the source's own colour
+    /* White balance, ABSOLUTE (Lightroom-style), resolved against the source's own color
        characterisation -- see Develop/whitebalance.h.
 
-         temp  correlated colour temperature in KELVIN (2000..50000). The sentinel 0 means
+         temp  correlated color temperature in KELVIN (2000..50000). The sentinel 0 means
                "as shot": the image has no white-balance edit, so it stays at its decoded
                balance and reads as identity. It does NOT mean 0 K.
          tint  green/magenta offset (-150..+150, positive = magenta), absolute like temp.
@@ -113,14 +113,14 @@ struct EditParams {
     float clarity = 0.0f;
     float dehaze  = 0.0f;
 
-    /* Colour -- RGB. Per-channel scene-linear gain (-100..100). Folded into the fused point
+    /* Color -- RGB. Per-channel scene-linear gain (-100..100). Folded into the fused point
        pass's per-channel gain alongside white balance + exposure, so they cost nothing extra.
        0 = no change; positive lifts that channel, negative attenuates it. */
     float red   = 0.0f;
     float green = 0.0f;
     float blue  = 0.0f;
 
-    /* Colour -- HSL (global, -100..100). Cross-channel point op applied after the tone
+    /* Color -- HSL (global, -100..100). Cross-channel point op applied after the tone
        curve in the same fused pass. hue = rotation about the neutral (gray) axis;
        saturation = chroma scale about luma (-100 -> grayscale, +100 -> 2x); vibrance =
        saturation weighted by how muted each pixel already is (boosts low-chroma pixels,
@@ -195,7 +195,7 @@ struct EditParams {
 
        A PROFILE'S TONE CURVE IS ONE OF THESE CHOICES, not an override. The Camera *
        profiles carry a ProfileToneCurve; it applies only when this is ProfileCurve, and
-       otherwise the profile contributes its colour (matrices, HueSatMap, LookTable) under
+       otherwise the profile contributes its color (matrices, HueSatMap, LookTable) under
        whichever tone mapping is chosen. Adobe Standard and Winnow Standard carry no
        curve -- Lightroom supplies its own baseline curve in exactly that case, and
        Standard roll-off is Winnow's. CameraContrast is the camera-style middle ground: a
@@ -265,7 +265,7 @@ struct EditParams {
 
 
     /* Point Color (the Point Color panel, Lightroom's Color Mixer > Point Color) -- up to
-       PointColor::kMaxPts sampled colours, each shifting the hue / saturation / lightness
+       PointColor::kMaxPts sampled colors, each shifting the hue / saturation / lightness
        of the pixels near it. A fixed array for the same reasons as the tone curve
        (defaulted operator==, cheap copies); slots past pointColorN are ALWAYS default, so
        the comparison never sees stale data -- PointColor::decode and the panel's delete
@@ -287,7 +287,7 @@ struct EditParams {
         return PointColor::isIdentity(pointColorN, pointColor);
     }
 
-    /* Colour grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
+    /* Color grading (Color Grade panel) -- tonal-range tinting, the Lightroom "teal
        shadows / orange highlights" look. Three ranges (shadows / midtones / highlights);
        each ADDS a chroma tint of the given hue at the given saturation and NUDGES that
        range's luminance. Applied as a point op after HSL in the fused pass, weighted by
@@ -410,7 +410,7 @@ struct EditParams {
            1  on     corrected (the radial R/B scale is estimated from the image).
         Read it through wantsRemoveCA().
 
-        defringePurple / defringeGreen -- edge colour fringing, 0..1, 0 = off. Purple
+        defringePurple / defringeGreen -- edge color fringing, 0..1, 0 = off. Purple
         covers cyan-blue through magenta (the Dempster ridge line was cyan-blue); green is
         off by default in practice, as Lightroom's is.
     */
@@ -496,7 +496,7 @@ struct EditParams {
     /* Local (maskable) NR -- Develop SPATIAL ops layered on TOP of the global baseline, operating
        on the already-decoded WorkingImage (see Develop::Denoise and notes/Documentation.txt
        "Scope & masking model"). localDenoiseLuma = luminance NR (ratio-preserving); localDenoise-
-       Chroma = colour/chroma NR (opponent-chroma blur, luma kept exact). 0 = off. Range 0..1. */
+       Chroma = color/chroma NR (opponent-chroma blur, luma kept exact). 0 = off. Range 0..1. */
     float localDenoiseLuma = 0.0f;
     float localDenoiseChroma = 0.0f;
 
@@ -650,7 +650,7 @@ struct EditParams {
        localDenoiseLuma ("Denoise", local post-demosaic NR) is under Detail. denoiseLuma/denoiseChroma
        are decode-time global NR (the Global scope's "Denoise raw", baked before Develop runs) so they
        are in NO group and cannot be previewed/reset via params. */
-    /* ColorGrade = the nine colour-grading fields, Calibrate = the six primary fields;
+    /* ColorGrade = the nine color-grading fields, Calibrate = the six primary fields;
        each is its own group so its panel's Preview/Reset are independent of the Color
        panel's RGB/HSL group. */
     /* Detail = sharpening + the local (post-demosaic) NR pair. The two fight each other

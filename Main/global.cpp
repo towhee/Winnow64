@@ -129,7 +129,7 @@ int fontSize = 12;                  // kept in step with strFontSize
 qreal dpi;                          // current logical screen dots per inch
 qreal ptToPx;                       // font points to pixels conversion factor
 
-/*  Application colours and UI style values. ALL are ASSIGNED in WidgetCSS::styleGlobals
+/*  Application colors and UI style values. ALL are ASSIGNED in WidgetCSS::styleGlobals
     (Main/widgetcss.cpp) -- the one place to experiment with the app's look. */
 int textShade = 190;                // app text luminousity (settings), 155 + pref value
 int backgroundShade;                // app background luminousity (settings)
@@ -270,7 +270,7 @@ QColor labelBlueColor;
 QColor labelPurpleColor;
 QColor maskOverlayColor;           // Develop mask overlay (see global.h)
 
-/*  Colour helpers: see global.h */
+/*  Color helpers: see global.h */
 QString keyHtml(const QString &text, bool bold)
 {
     const QString t = bold ? "<b>" + text + "</b>" : text;

@@ -51,7 +51,7 @@ bool ParallelRows(int H, const QAtomicInt *abort,
 /*
     Mirror reflection of an index into 0..n-1 without repeating the edge sample
     (-k -> k, n-1+k -> n-1-k). The offset is always even, so Bayer parity -- and with it
-    the CFA colour -- is preserved at the border.
+    the CFA color -- is preserved at the border.
 */
 inline int Reflect(int i, int n)
 {
@@ -119,10 +119,10 @@ bool Demosaic::XTransWindow(const RawImage &raw, std::vector<float> &rgb,
                             const std::function<void(int, int)> &progress)
 {
 /*
-    Simple Fuji X-Trans demosaic. The 6x6 colour map (raw.xtrans) is tiled across the sensor.
+    Simple Fuji X-Trans demosaic. The 6x6 color map (raw.xtrans) is tiled across the sensor.
     For each pixel the measured channel is exact; the two missing channels are the average of
-    the same-colour photosites in a 5x5 window -- which, for X-Trans, always contains at least
-    one of every colour. Soft but obviously correct (the X-Trans analogue of the bilinear Bayer
+    the same-color photosites in a 5x5 window -- which, for X-Trans, always contains at least
+    one of every color. Soft but obviously correct (the X-Trans analogue of the bilinear Bayer
     path); a higher-quality algorithm can replace it later.
 */
     const int W = raw.width;
@@ -160,7 +160,7 @@ bool Demosaic::XTransWindow(const RawImage &raw, std::vector<float> &rgb,
 
 int Demosaic::BayerColorAt(CfaPattern pattern, int row, int col)
 {
-    /* Colour code (0=R 1=G 2=B) for each of the 4 positions in the 2x2 cell,
+    /* Color code (0=R 1=G 2=B) for each of the 4 positions in the 2x2 cell,
        indexed by ((row & 1) << 1) | (col & 1). */
     static const int RGGB[4] = {0, 1, 1, 2};
     static const int BGGR[4] = {2, 1, 1, 0};
@@ -182,10 +182,10 @@ bool Demosaic::Bilinear3x3(const RawImage &raw, std::vector<float> &rgb,
                            const std::function<void(int, int)> &progress)
 {
 /*
-    Generic 3x3 bilinear demosaic. For every pixel the native colour is taken from the
-    sample itself; the two missing colours are the average of the same-colour samples in
+    Generic 3x3 bilinear demosaic. For every pixel the native color is taken from the
+    sample itself; the two missing colors are the average of the same-color samples in
     the surrounding 3x3 neighbourhood (edge-clamped). A Bayer 3x3 window always contains
-    at least one sample of each colour, so this handles all positions, including both
+    at least one sample of each color, so this handles all positions, including both
     green types, without special cases. Simple and obviously correct — good enough to
     prove the pipeline; AHD/DCB replace it in a later phase.
 */
@@ -243,13 +243,13 @@ bool Demosaic::PpgBayer(const RawImage &raw, std::vector<float> &rgb,
 /*
     Patterned Pixel Grouping (after Chuan-kai Lin's published description):
 
-    1. Green at red/blue sites: four directional gradients (same-colour difference x2
+    1. Green at red/blue sites: four directional gradients (same-color difference x2
        plus the green difference across the site); along the flattest, the nearer green
-       weighted 3:1 with the far one plus a same-colour Laplacian correction, clamped to
+       weighted 3:1 with the far one plus a same-color Laplacian correction, clamped to
        those two greens.
-    2. Red/blue at green sites: colour-difference (C - G) average of the two same-colour
+    2. Red/blue at green sites: color-difference (C - G) average of the two same-color
        neighbours.
-    3. Blue at red sites (and red at blue): colour-difference average along the diagonal
+    3. Blue at red sites (and red at blue): color-difference average along the diagonal
        with the smaller gradient (both diagonals when equal).
 
     Two passes (green plane, then the rest), each half of the progress bar.
@@ -305,7 +305,7 @@ bool Demosaic::PpgBayer(const RawImage &raw, std::vector<float> &rgb,
             const float gv = gg(x, y);
             px[1] = gv;
             if (own == 1) {
-                /* horizontal neighbours carry one colour, vertical the other */
+                /* horizontal neighbours carry one color, vertical the other */
                 const int ch = m.Color(x + 1, y);
                 const int cv = m.Color(x, y + 1);
                 px[ch] = gv + ((m.Get(x - 1, y) - gg(x - 1, y)) + (m.Get(x + 1, y) - gg(x + 1, y))) * 0.5f;
@@ -400,7 +400,7 @@ void AhdTile(const Mosaic &m, int x0, int y0, int tw, int th, float *rgb)
         gv[i] = ClampBetween((u + d) * 0.5f + (2.0f * c - mos[i - 2 * bws] - mos[i + 2 * bws]) * 0.25f, u, d);
     });
 
-    /* 2. Complete each candidate with red/blue by colour difference, and 3. its Lab. */
+    /* 2. Complete each candidate with red/blue by color difference, and 3. its Lab. */
     std::vector<float> rh(n * 3, 0.0f), rv(n * 3, 0.0f), lh(n * 3, 0.0f), lv(n * 3, 0.0f);
     auto complete = [&](const std::vector<float> &g, std::vector<float> &out, std::vector<float> &lab) {
         inner(M - 2, [&](size_t i) {
@@ -539,7 +539,7 @@ struct XtMosaic
     int Color(int x, int y) const { return xt[Reflect(y, H) % 6][Reflect(x, W) % 6]; }
 };
 
-/* Same-colour offsets for each of the 36 phases, in scan order (dy outer, dx inner) so the
+/* Same-color offsets for each of the 36 phases, in scan order (dy outer, dx inner) so the
    interior sums run in the same order as the border's plain 2-D loop. */
 struct XtOffsets
 {
@@ -596,12 +596,12 @@ bool Demosaic::XTransDirectional(const RawImage &raw, std::vector<float> &rgb,
                                  const std::function<void(int, int)> &progress)
 {
 /*
-    Edge-weighted colour-difference interpolation for X-Trans (LightCraft's own design):
+    Edge-weighted color-difference interpolation for X-Trans (LightCraft's own design):
 
     1. Green at non-green sites: robust weighted mean of the greens in the 3x3
        neighbourhood (5x5 if none), each weighted 1 / (eps + |g - median|), so samples
        across an edge contribute little.
-    2. Red and blue everywhere: G(p) + sum w_q (C(q) - G(q)) / sum w_q over the same-colour
+    2. Red and blue everywhere: G(p) + sum w_q (C(q) - G(q)) / sum w_q over the same-color
        samples q in the 5x5 neighbourhood, w_q = 1 / (d^2(p,q) * (eps + |G(q) - G(p)|)):
        close samples on the same side of an edge dominate.
 
@@ -651,7 +651,7 @@ bool Demosaic::XTransDirectional(const RawImage &raw, std::vector<float> &rgb,
 
     auto gg = [&](int x, int y) { return g[static_cast<size_t>(Reflect(y, H)) * W + Reflect(x, W)]; };
 
-    /* 2. Red and blue by weighted colour difference. */
+    /* 2. Red and blue by weighted color difference. */
     rgb.assign(static_cast<size_t>(W) * H * 3, 0.0f);
     return ParallelRows(H, abort, p2, [&](int y) {
         for (int x = 0; x < W; ++x) {

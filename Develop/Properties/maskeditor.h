@@ -33,7 +33,7 @@ public:
        submask's real op is the caller's pendingOp rather than m.op, and the first
        submask cannot Remove (there is nothing above it to remove from). */
     void showTool(const MaskComponent &m, bool firstSubmask = false, int effectiveOp = -1);
-    /* Color Range: push the pipette-sampled colours into the wheel (hue 0..360, sat
+    /* Color Range: push the pipette-sampled colors into the wheel (hue 0..360, sat
        0..1). No-op unless a Color Range tool is showing. */
     void setWheelSamples(const QVector<QPointF> &samples);
     /* Build + seed the MASK-level rows -- Feather, which softens the whole folded mask,

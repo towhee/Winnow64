@@ -621,7 +621,7 @@ void ExportDlg::buildUi()
     spaceCombo->addItem("Display P3", int(OutputSpace::DisplayP3));
     spaceCombo->addItem("Adobe RGB", int(OutputSpace::AdobeRGB));
     spaceCombo->setToolTip(tr("sRGB is safest for the web and print labs. Display P3 and "
-                              "Adobe RGB hold more colour; use 16-bit with them."));
+                              "Adobe RGB hold more color; use 16-bit with them."));
     fmt->addWidget(spaceCombo, 1, 1);
     compressionCapLab = cap(tr("Compression:"), capCol2);
     fmt->addWidget(compressionCapLab, 1, 2);
@@ -1222,12 +1222,12 @@ void ExportDlg::updateEnabledStates()
     if (!embel)
         embelNoteLab->clear();
     else if (tmplOut)
-        embelNoteLab->setText(tr("Size, bit depth and colour space are set by the "
+        embelNoteLab->setText(tr("Size, bit depth and color space are set by the "
                                  "template, and so are the destination, name, file type "
                                  "and metadata (its Export settings in the Embellish "
                                  "editor)."));
     else
-        embelNoteLab->setText(tr("Size, bit depth and colour space are set by the "
+        embelNoteLab->setText(tr("Size, bit depth and color space are set by the "
                                  "template."));
     embelNoteLab->setVisible(embel);
 }

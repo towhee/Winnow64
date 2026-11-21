@@ -43,7 +43,7 @@ CatalogView::CatalogView(QWidget *parent)
     keywordTree->setColumnCount(1);
     keywordTree->setUniformRowHeights(true);
     /* Match the Filters panel: a category list has no notion of a "current" row, and the
-       selection highlight only competed with the include/exclude colouring that carries
+       selection highlight only competed with the include/exclude coloring that carries
        the actual meaning. */
     keywordTree->setSelectionMode(QAbstractItemView::NoSelection);
     keywordTree->setFocusPolicy(Qt::NoFocus);
@@ -275,7 +275,7 @@ void CatalogView::styleKeywordItem(QTreeWidgetItem *item) const
 {
 /*
     One row's appearance, from its state. Exclusion is a font (strikethrough) rather than
-    a colour; it used to have to compose with an amber "ambiguous" colour, which path
+    a color; it used to have to compose with an amber "ambiguous" color, which path
     identity removed the need for.
 */
     const bool excluded = item->checkState(0) == Qt::PartiallyChecked;

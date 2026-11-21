@@ -521,7 +521,7 @@ QColorSpace Thumb::sourceColorSpace(const QImage &image, const QString &fPath,
 
     THE SAME RULE AS THE LOUPE (ImageDecoder::colorManage / sourceIcc): the file's
     embedded profile, for formats in Metadata::iccFormats, otherwise sRGB. A profile-less
-    file is NOT converted by its colour-space id, because the loupe does not do that
+    file is NOT converted by its color-space id, because the loupe does not do that
     either and the two must agree.
 
       1. A decoder that tagged the image (Qt's JPEG / PNG / TIFF readers read the

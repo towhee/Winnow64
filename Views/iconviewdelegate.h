@@ -27,7 +27,7 @@ public:
         as clickable. */
     void setHoverVersionsBadgeKey(const QString &key) { hoverVersionsBadgeKey = key; }
     QString hoverVersionsBadge() const { return hoverVersionsBadgeKey; }
-    // label and video text colour (MW::setTextShade)
+    // label and video text color (MW::setTextShade)
     void setTextColor(const QColor &c) { labelTextColor = c; videoTextColor = c; }
     /*  THE CURRENT IMAGE'S DUPLICATES GROUP (DuplicateInfo::group), 0 for none. Every
         image in it has its number badge inverted -- white, with the red or purple

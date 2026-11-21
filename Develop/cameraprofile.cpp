@@ -84,7 +84,7 @@ bool resolve(const Dcp::Profile &p, float kelvin, Resolved &out)
     out.warmKelvin = (warm == 0) ? k0 : k1;
     out.coolKelvin = (cool == 0) ? k0 : k1;
 
-    /* INTERPOLATE IN MIRED, not in kelvin: 1/T is the scale on which a step of colour
+    /* INTERPOLATE IN MIRED, not in kelvin: 1/T is the scale on which a step of color
        temperature is perceptually even, and it is what the DNG specification specifies.
        In kelvin the weighting would be badly skewed -- halfway between 2856 K and 6504 K
        is 4680 K by kelvin but 3982 K by mired, and the second is the one that looks
@@ -106,7 +106,7 @@ bool resolve(const Dcp::Profile &p, float kelvin, Resolved &out)
                            cc.haveCalibration ? toMatrix3(cc.calibration) : kIdentity3, g);
 
     /* ForwardMatrix is used only when BOTH calibrations have one. Mixing a fitted forward
-       matrix with one derived from the inverse of a colour matrix would put a seam in the
+       matrix with one derived from the inverse of a color matrix would put a seam in the
        middle of the temperature range, where the two disagree by more than either is
        worth; deriving both is consistent, if slightly less accurate. */
     if (cw.haveForward && cc.haveForward) {
@@ -180,10 +180,10 @@ bool camToWorking(const Dcp::Profile &p, float kelvin, float tint, float out[3][
         camToXyzD50 = multiply(r.forward, multiply(diag(invRef), invAbcc));
     } else {
         /* NO ForwardMatrix -- legal, and common on older and third-party profiles. Invert
-           the colour matrix instead, then adapt from the white the camera neutral actually
+           the color matrix instead, then adapt from the white the camera neutral actually
            lands on to D50. The adaptation carries that white EXACTLY onto D50 by
            construction, so this path anchors exposure identically to the one above; it is
-           less accurate in the colours away from neutral, not in the neutral itself. */
+           less accurate in the colors away from neutral, not in the neutral itself. */
         Matrix3 camToXyz;
         if (!inverse(multiply(abcc, r.color), camToXyz)) return false;
         double w[3];

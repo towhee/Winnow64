@@ -15,7 +15,7 @@
     later phase; the three spaces below are done with a fixed 3x3 and a known curve, which
     covers what export offers.
 
-    COLOUR SPACE. The pipeline works in scene-linear with sRGB (Rec.709) primaries, D65.
+    COLOR SPACE. The pipeline works in scene-linear with sRGB (Rec.709) primaries, D65.
     Space picks what comes out:
 
       sRGB        primaries unchanged, sRGB piecewise transfer -- the display/loupe path
@@ -43,7 +43,7 @@
 class OutputTransform
 {
 public:
-    /* Output colour space. Deliberately NOT Export/exportsettings.h's OutputSpace: that
+    /* Output color space. Deliberately NOT Export/exportsettings.h's OutputSpace: that
        one is a published preset key owned by the export layer, and Develop must not
        depend on Export. ImageExporter maps between them. */
     enum class Space { sRGB, DisplayP3, AdobeRGB };
@@ -57,7 +57,7 @@ public:
 
             view transform  ->  output primaries  ->  transfer function
 
-        Only the first is a creative decision; the other two are colour management.
+        Only the first is a creative decision; the other two are color management.
 
         SCENE-REFERRED ONLY. A view transform tone-maps; a display-referred file (a JPEG)
         already carries its camera's tone curve, so applying one would tone-map twice.
@@ -89,7 +89,7 @@ public:
         ProfileCurve   = 4,
         /* "Standard roll-off (hue-preserving)": Filmic's curve, applied the way the DNG
            SDK applies a tone curve (CameraCurve::ApplyRGBTone) rather than per channel,
-           so a bright saturated colour keeps its hue -- Lightroom's behaviour. Appended:
+           so a bright saturated color keeps its hue -- Lightroom's behaviour. Appended:
            the values are a published sidecar format. */
         FilmicHue      = 5,
         /* "Auto": THE IMAGE'S OWN DEFAULT, resolved against the image (Resolve):
@@ -111,7 +111,7 @@ public:
        render rather than refuse.
 
        NOT to EditParams::kDefaultViewTransform, and the difference is deliberate twice
-       over. Colour management does not get to invent a look, so when this stage cannot
+       over. Color management does not get to invent a look, so when this stage cannot
        tell what was asked for it does nothing; and reaching for that constant would make
        the output stage depend on EditParams, which is the dependency backwards. The
        repair that DOES restore the default happens a layer up, at load, where the
@@ -154,7 +154,7 @@ public:
         not 128. Without this the handles do not sit where they are drawn.
 
         The primaries are deliberately NOT applied: this is a position on a tone axis, and
-        the histogram's x-axis is likewise tone, not colour. Cheap enough to call per LUT
+        the histogram's x-axis is likewise tone, not color. Cheap enough to call per LUT
         entry (1024 of them per render), never per pixel.
     */
     static float DisplayPosition(float perceptual, ViewTransform view);

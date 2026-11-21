@@ -4,7 +4,7 @@
 #include <cmath>
 
 /*
-    Pure colour-grading math, shared by the Develop point-op pipeline (Develop::build /
+    Pure color-grading math, shared by the Develop point-op pipeline (Develop::build /
     applyPointOps) and its unit test. No Qt, no OpenCV, so it stays header-only and
     testable in isolation.
 

@@ -40,7 +40,7 @@
 namespace BrushStamp {
 
 /* ---- Auto-mask guide ----
-   A small COLOUR map of the displayed image (output-normalized orientation), shared between the
+   A small COLOR map of the displayed image (output-normalized orientation), shared between the
    ImageView live preview and the develop render so auto-masked strokes evaluate identically. Built
    once per image (ImageView::ensureAutoGuide) and registered by path.
 
@@ -102,7 +102,7 @@ inline std::shared_ptr<const Guide> getGuide(const QString &path)
         the core (kSmoothFrac), with the leftover per-pixel deviation kept as a TEXTURE
         plane -- averaged, a texture's noise collapses to a steady local mean, and sharp
         detail against an out-of-focus background differs in texture even where it does
-        not in colour. Features: Y, sqrt(2) x Cb/Cr, and texture on a LOG scale
+        not in color. Features: Y, sqrt(2) x Cb/Cr, and texture on a LOG scale
         (kTexLogK x log2(1 + tex/kTexLogT)). Texture contrast is a ratio: smooth-vs-
         textured (1 vs 7) must read far apart while rough-vs-rougher (12 vs 18) is one
         surface. A linear texture weight could not do both -- measured over noise seeds,
@@ -115,7 +115,7 @@ inline std::shared_ptr<const Guide> getGuide(const QString &path)
         a cluster with the transition pixels on the ridge, whose centre then merged into
         the subject and painted one dab's worth of sky. Only FLAT pixels vote (feature
         gradient <= kGradK x the disc median): the blur turns a hard edge into a band of
-        in-between colours whose own clusters chained the merge across a plain lightness
+        in-between colors whose own clusters chained the merge across a plain lightness
         edge (light wall / dark wall, 2026-10-14). The SUBJECT is every cluster
         holding kShareMin of the seed disc at the centre, plus the one nearest it, closed
         under a
@@ -136,7 +136,7 @@ inline std::shared_ptr<const Guide> getGuide(const QString &path)
    The result is a 0..1 field over the dab's box, bilinearly sampled by the dab's pixel
    loop, so the preview and the full-res render confine identically. Prototyped in Python
    on the gravel screenshot and synthetic cases (equal-lightness brown/grey, silhouette,
-   texture vs smooth of one colour, blurred edge, sky gradient, uniform texture) before
+   texture vs smooth of one color, blurred edge, sky gradient, uniform texture) before
    this port. */
 constexpr double kChromaW2   = 2.0;     // chroma weight in the squared feature distance
 constexpr double kTexLogK    = 10.0;    // texture = kTexLogK * log2(1 + tex/kTexLogT)
@@ -373,7 +373,7 @@ inline void buildDabField(const Guide &g, double gcx, double gcy, double rg, dou
 
     /* The classes are learned from FLAT pixels only: a pixel whose feature gradient is
        above kGradK x the disc's median sits on a boundary, not in a class. The analysis
-       blur turns a hard edge into a band of in-between colours, and k-means gave that
+       blur turns a hard edge into a band of in-between colors, and k-means gave that
        band clusters of its own, close enough to each side to CHAIN the merge across a
        plain lightness edge (a light wall against a dark one painted both). The
        transition pixels are still classified below; they just do not vote. A sky

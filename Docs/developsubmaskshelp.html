@@ -9,7 +9,7 @@
 
 <h2>What it does</h2>
 <p>A mask scope selects part of the image, and it is built out of <b>submasks</b>: a
-gradient, a brush stroke, a colour range, an AI selection.  Each one is a shape or a
+gradient, a brush stroke, a color range, an AI selection.  Each one is a shape or a
 selection in its own right, and the submask list under the <b>Mask</b> band is where they
 are combined into the one mask the scope applies.</p>
 
@@ -31,7 +31,7 @@ to change the feather, as on the Radial Gradient.</li>
 <li><b>Brush</b> &mdash; paint the selection by hand; Opt/Alt erases.  Its Size, Feather,
 Flow and Auto Mask settings are remembered, so a new Brush submask starts with the
 brush you last used.</li>
-<li><b>Color Range</b> and <b>Luminance Range</b> &mdash; content-based: sample a colour
+<li><b>Color Range</b> and <b>Luminance Range</b> &mdash; content-based: sample a color
 or set a band of tones and the selection follows the picture, not a shape.</li>
 <li><b>Subject</b>, <b>Sky</b>, <b>Background</b>, <b>Depth Range</b> and <b>Object</b>
 &mdash; AI selections.  Subject / Sky / Background need nothing but a click; Depth Range
@@ -58,7 +58,7 @@ band's <b>[&#8942;]</b> menu, do the same.</li>
 survives.</li>
 </ul>
 
-<p>The tools are grouped: drawn (gradients, beam and the brush), by content (colour and
+<p>The tools are grouped: drawn (gradients, beam and the brush), by content (color and
 luminance ranges), automatic (subject, sky, background, depth, object, segmenter) and the
 Refine Brush.  An empty mask has nothing to subtract from or intersect with, so
 <b>[-]</b> and <b>[&#8745;]</b> stay greyed until it has its first submask.</p>
@@ -108,7 +108,7 @@ instead.</p>
 
 <h2>Feather, Edge, Halo and Invert</h2>
 <p>The selected submask's own settings appear below the list &mdash; Feather, Edge, Invert,
-and whatever else the tool needs (size for a brush, the sampled colours for a Color Range).
+and whatever else the tool needs (size for a brush, the sampled colors for a Color Range).
 <b>Feather</b> softens that submask's edge, and every mask in Winnow uses the same
 calibrated falloff, so a feather of 50 means the same thing whichever tool drew it.
 <b>Invert</b> flips that one submask, which is often quicker than describing the opposite:
@@ -192,7 +192,7 @@ way so you can see the edit.  Press <b>O</b> at any point to override it either 
 override lasts until your attention moves again.</p>
 
 <p>With a submask open, the overlay also shows <b>which part of the mask is that
-submask</b>, using three densities of the one tint colour plus a white outline:</p>
+submask</b>, using three densities of the one tint color plus a white outline:</p>
 
 <ul>
 <li><b>Normal</b> &mdash; mask, but not the open submask.</li>
@@ -203,13 +203,13 @@ submask</b>, using three densities of the one tint colour plus a white outline:<
 
 <p>The outline is what finds a <b>Subtract</b> submask: it takes area away, so it
 contributes nothing to the mask and has no denser region at all &mdash; it is entirely
-faint, inside its outline.  On a Colour or Luminance Range submask, whose edges are
+faint, inside its outline.  On a Color or Luminance Range submask, whose edges are
 scattered over the whole frame rather than being a boundary, the outline is left off and
 the densities tell the story on their own.</p>
 
 <p>The swatch at the right-hand end of the <b>Mask</b> band is the veil's switch:
 click it to show or hide the overlay (the same as <b>O</b>), and right-click it to pick
-the tint colour or turn on the grayscale backdrop.  Those two describe the veil as a
+the tint color or turn on the grayscale backdrop.  Those two describe the veil as a
 whole rather than any one submask, which is why they sit on the mask's own band and not
 on a submask's row.</p>
 

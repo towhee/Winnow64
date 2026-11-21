@@ -85,7 +85,7 @@ double winWeight(const ChunkWin &w, int x, int y)
     Pinned source offsets. The template match runs on DEVELOPED pixels, so re-matching
     every render could flip the chosen source mid-slider-drag (heal-content shimmer) --
     the first successful match per (image, render size, spot, chunk) is pinned and
-    reused: the blend still re-runs on the current pixels, so exposure/colour edits
+    reused: the blend still re-runs on the current pixels, so exposure/color edits
     track, but the heal GEOMETRY is stable. Also removes the per-render match cost.
     "No source found" is pinned too (kNoSource) so failing chunks don't re-search every
     render. Mutex-guarded: full-res renders run off the GUI thread.
@@ -159,7 +159,7 @@ InferenceSession *SharedSession()
 }
 
 /*
-    Reduce the low-frequency luminance/colour mismatch a large fill leaves against a
+    Reduce the low-frequency luminance/color mismatch a large fill leaves against a
     smooth surround (the visible "patch" artifact). All mats are net-res: `model` and
     `orig` are 32FC3 in [0,255]; `hard` is 32F, 1.0 inside the hole. Returns the corrected
     fill to use INSIDE the hole. mode 0 = none (raw model); 1 = Poisson (cv::seamlessClone
@@ -600,8 +600,8 @@ bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
                 } else {
                     /* Distance penalty: a far source must be ~2x better (at the search
                        edge) to beat a near one -- keeps the heal inside the local
-                       colour/lighting zone (stalk test cloned from 2000px away into a
-                       different colour gradient). Multiplicative, so scale-free. */
+                       color/lighting zone (stalk test cloned from 2000px away into a
+                       different color gradient). Multiplicative, so scale-free. */
                     r[x] *= 1.0f + float((double(dx) * dx + double(dy) * dy)
                                          / (double(R) * R));
                 }
@@ -915,7 +915,7 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
             /* Chunk size from the painted THICKNESS (max inscribed radius), like the
                feather -- NOT the brush diameter: a big brush previously made 640px
                chunks whose interiors sit far from any boundary, and nothing matches a
-               smoothly varying background at that scale (bad colour drift, 2000px
+               smoothly varying background at that scale (bad color drift, 2000px
                offsets; stalk test). 3x thickness keeps every chunk source-matchable;
                thin strokes stay at the 96px floor. */
             cv::Mat covB(by1 - by0 + 3, bx1 - bx0 + 3, CV_8U, cv::Scalar(0));

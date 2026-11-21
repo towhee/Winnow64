@@ -65,7 +65,7 @@ KeywordMergeDlg::KeywordMergeDlg(const QString &unfiledPath, int observedCount,
     /*  ONE OPENING SENTENCE, AND IT NAMES WHAT MOVES.
 
         It used to open with "USA is not in your keyword list", which is true and is not
-        the point: the user right-clicked a keyword drawn in the unfiled colour, so being
+        the point: the user right-clicked a keyword drawn in the unfiled color, so being
         unfiled is what they already know and is why they are here. Saying it back reads
         as the dialog's subject, and it pushed the one fact this dialog can give that the
         panel behind it cannot -- that the whole BRANCH travels with the node that was

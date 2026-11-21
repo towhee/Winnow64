@@ -11,7 +11,7 @@
     macOS Core Image (CIRAWFilter) RAW front-end -- engine A.
 
     Decodes a RAW file DIRECTLY to the shared scene-linear WorkingImage (Apple's GPU demosaic +
-    global colour / baseline luminance NR + as-shot white balance), the alternative to the
+    global color / baseline luminance NR + as-shot white balance), the alternative to the
     in-house UnpackCfa -> Demosaic -> RawColor path (engine B). Both converge on WorkingImage,
     so everything downstream (Develop, local luminance NR, OutputTransform) is engine-agnostic.
 
@@ -24,7 +24,7 @@
     sharpening and detail enhancement are OFF, so the output is scene-linear and
     unsharpened like engine B's -- the look comes from OutputTransform, sharpening from
     Develop's Detail section. EXCEPT iPhone ProRAW (UsesAppleLook): it keeps Apple's tone
-    boost, contrast and local tone map, and is marked WorkingImage::decoderToneMapped. Apple's luminance and colour noise reduction are LEFT at
+    boost, contrast and local tone map, and is marked WorkingImage::decoderToneMapped. Apple's luminance and color noise reduction are LEFT at
     Core Image's per-image defaults: that is the reason to choose this engine (much
     improved in decoder 9).
 */

@@ -88,7 +88,7 @@ public:
     QList<qint64> expandedIds() const;
     void setExpandedIds(const QList<qint64> &ids);
 
-    // Re-apply palette-derived colours; MW::setBackgroundShade calls it.
+    // Re-apply palette-derived colors; MW::setBackgroundShade calls it.
     void updateStyle();
 
 signals:

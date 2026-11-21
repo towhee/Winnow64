@@ -30,7 +30,7 @@
 
     VERIFIED 2026-11-09 against Core Image's own application (CIRAWFilter local tone map
     on vs off, an iPhone 17 Pro DNG): shadows agree to ~0.05 EV, which pins the
-    coordinate convention (rows top-down), the colour space and the index. t * N versus
+    coordinate convention (rows top-down), the color space and the index. t * N versus
     t * (N - 1) measured indistinguishable. Apple departs from the bare spec above the
     shadows by an amount that depends on its EDR setting, so Apple is not a bit-exact
     reference for the mid-tones.

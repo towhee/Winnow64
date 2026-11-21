@@ -569,7 +569,7 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    /* Levels / pattern / colour. FIRST CUT: 12-bit Olympus scheme -> white 4095; E-M1-validated
+    /* Levels / pattern / color. FIRST CUT: 12-bit Olympus scheme -> white 4095; E-M1-validated
        black 255 and BGGR pattern; matrix by model. As-shot WB (MakerNote 0x2040->0x0100) and
        per-model black/pattern are a refinement -> RawColor uses the matrix-derived neutral WB. */
     raw.pattern = CfaPattern::BGGR;
@@ -578,7 +578,7 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 
     /* CFA phase. Olympus bodies differ (the older E-M1 is BGGR, the OM-1 is RGGB), so the BGGR
        default above is not safe to assume. Read the EXIF CFAPattern (0xA302): a 2x2 repeat-dim
-       header (two SHORTs) followed by the plane-colour bytes (0=R,1=G,2=B). Fall back to BGGR
+       header (two SHORTs) followed by the plane-color bytes (0=R,1=G,2=B). Fall back to BGGR
        when the tag is absent. Without this an OM-1 renders with red and blue swapped. */
     if (haveIfd0 && ifd0.contains(0x8769)) {
         Ifd exif; QList<quint32> es; quint32 en = 0;
@@ -609,7 +609,7 @@ bool OlympusRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 }
 
 /*
-    ORF colour without a decode. Olympus is the vendor where this matters most: the
+    ORF color without a decode. Olympus is the vendor where this matters most: the
     matrix-derived neutral renders badly GREEN, so an ORF with no as-shot WB looks broken
     rather than merely a little warm. Split out of UnpackCfa for the Apple Core Image
     engine -- see RawFormat::ReadAsShotColor.

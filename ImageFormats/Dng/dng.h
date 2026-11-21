@@ -31,8 +31,8 @@ private:
 /*
     Sensor unpack for Adobe DNG (the per-format override of RawFormat). Self-contained: it walks
     the DNG's TIFF/EP IFDs itself (via TiffWalk) to find the CFA image, reads its geometry,
-    strips/tiles, CFA pattern, levels, and the embedded colour (ColorMatrix2 + AsShotNeutral),
-    and decodes the sensor data. Because DNG carries its own colour, no per-model matrix table is
+    strips/tiles, CFA pattern, levels, and the embedded color (ColorMatrix2 + AsShotNeutral),
+    and decodes the sensor data. Because DNG carries its own color, no per-model matrix table is
     needed and nothing is plumbed at parse time -- the decode reads everything from the file.
 
     Handles UNCOMPRESSED (Compression 1) and LOSSLESS-JPEG (Compression 7) DNG, in either strip

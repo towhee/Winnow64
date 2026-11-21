@@ -5,7 +5,7 @@
 #include "Lcms2/lcms2.h"
 
 /*
-    ColorSpaces classifies an image's colour space into the published lookup table that
+    ColorSpaces classifies an image's color space into the published lookup table that
     G::ICCSpaceColumn, the catalog index and the "colorspace" query share. These pin the
     ids (a published format), that an embedded profile is identified by its colorants
     whatever it calls itself, that sRGB additionally needs sRGB's curve (the readers DROP

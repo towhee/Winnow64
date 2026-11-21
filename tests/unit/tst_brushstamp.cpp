@@ -5,7 +5,7 @@
     its search inside the CORE ring only; see the Auto-mask section of brushstamp.h. These
     pin the behaviours that were each a field failure once: a soft edge between two real
     classes must stop the dab (the defocused-gravel case, 2026-10-14), a single textured
-    surface must fill without holes, equal-lightness colours must still separate (the
+    surface must fill without holes, equal-lightness colors must still separate (the
     brown cone on grey), and the feather band must never add area past an edge the core
     did not see. Synthetic images, a fixed noise seed, so every number is reproducible.
 */
@@ -18,7 +18,7 @@ namespace {
 
 struct Rgb { double r, g, b; };
 
-/* A w x h image split at row `edge` (top colour above, bottom below), the split
+/* A w x h image split at row `edge` (top color above, bottom below), the split
    softened by a box blur of radius `soft` (0 = hard), plus per-half luminance noise of
    amplitude nTop / nBot, lightly smoothed so it reads as texture rather than as single
    hot pixels. Converted to the guide's YCbCr exactly as ImageView::ensureAutoGuide
@@ -131,7 +131,7 @@ void TestBrushStamp::equalLightnessSeparates()
 /* A light wall against a dark one: a pure lightness step, no chroma, both sides smooth,
    the dark side brightening gently away from the edge. The fill must reach the edge.
    The field case (2026-10-14) stopped 10-30 px short: the analysis blur smeared the
-   step into a band that read as TEXTURE, and its in-between colours formed clusters that
+   step into a band that read as TEXTURE, and its in-between colors formed clusters that
    either rejected the dark side's own rim or chained the merge across. */
 void TestBrushStamp::lightnessStepReachesEdge()
 {
@@ -159,7 +159,7 @@ void TestBrushStamp::silhouetteSeparates()
     QVERIFY(meanIn(f, 100, 115, 42, 104, 200) > 0.95);
 }
 
-/* One colour, sharp texture below and smooth above (sharp detail against bokeh): only
+/* One color, sharp texture below and smooth above (sharp detail against bokeh): only
    the texture plane tells them apart. */
 void TestBrushStamp::textureSeparatesFromSmooth()
 {

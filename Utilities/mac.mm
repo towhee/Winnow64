@@ -273,8 +273,8 @@ void Mac::setTitleBarColor(WId wId, const QColor &bgColor)
 /*
     The macOS counterpart of Win::setTitleBarColor (see TitleBar, which calls it for
     every window as it is shown). A transparent title bar shows the NSWindow's own
-    background colour, which Qt leaves alone for an opaque window: its content view
-    covers the rest, so only the title bar takes the colour. The window's appearance
+    background color, which Qt leaves alone for an opaque window: its content view
+    covers the rest, so only the title bar takes the color. The window's appearance
     follows the shade so the title text and traffic lights stay readable on it.
 */
     NSView *view = reinterpret_cast<NSView *>(wId);

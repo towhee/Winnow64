@@ -676,7 +676,7 @@ void MW::runSelfTest(const QString &folderPath, int settleMs)
     const bool recurse = qEnvironmentVariableIntValue("WINNOW_SELFTEST_RECURSE") == 1;
     const int navMs = qEnvironmentVariableIntValue("WINNOW_SELFTEST_NAV_MS");
 
-    /* What colour management does on this machine: the display profile, and the path an
+    /* What color management does on this machine: the display profile, and the path an
        sRGB image takes to it (ICC::Path -- 0 none, 1 identity, 2 fast, 3 lcms). */
     fprintf(stderr, "SELFTEST: display=\"%s\" sRGB->display path=%d\n",
             qPrintable(G::winOutProfilePath), int(ICC::pathFor(QByteArray())));
@@ -1231,7 +1231,7 @@ void MW::runMetaTest(const QString &filePath)
     // stays generic and the fixture's identity lives in the test registration.
     const QByteArray expMake  = qgetenv("WINNOW_METATEST_MAKE");
     const QByteArray expModel = qgetenv("WINNOW_METATEST_MODEL");
-    // the colour space NAME (Metadata/colorspaces.h), e.g. "Adobe RGB"
+    // the color space NAME (Metadata/colorspaces.h), e.g. "Adobe RGB"
     const QByteArray expSpace = qgetenv("WINNOW_METATEST_COLORSPACE");
     const bool pass = ok
         && m.width > 0 && m.height > 0
@@ -8624,7 +8624,7 @@ void MW::releaseHeldDevelopIcons()
 void MW::updateCatalogForRow(int dmRow)
 {
 /*
-    Keep the catalog in step with a rating or colour label the user has just set.
+    Keep the catalog in step with a rating or color label the user has just set.
 
     WHY IT IS NEEDED AT ALL. An edit writes the sidecar, which is the source of
     truth, and the catalog notices on the NEXT visit to that folder: writeXMP
@@ -10060,11 +10060,11 @@ void MW::setTextShade(int shade)
     const QColor to = G::textColor;
     if (to == from) return;
 
-    /* STRAGGLERS: widgets that copied the text colour when they were built, which the app
-       stylesheet rebuild above does not reach. Swap the old colour for the new one in
+    /* STRAGGLERS: widgets that copied the text color when they were built, which the app
+       stylesheet rebuild above does not reach. Swap the old color for the new one in
        widget stylesheets (Develop labels, property editors, the segmented options ...),
        in tree and table item foregrounds (Filters, Catalog keywords) and in property
-       editor item data, then refresh the delegates that cache it. A colour is matched by
+       editor item data, then refresh the delegates that cache it. A color is matched by
        value, so a different element that happens to share the exact text grey changes
        too; the greys derived from the background stay below the text range. */
     const QString fromName = from.name();
@@ -10145,7 +10145,7 @@ void MW::setBackgroundShade(int shade)
         tree->verticalScrollBar()->setStyleSheet(G::css);
         tree->updateStyle();
     }
-    if (collectionTree) updateCollectionsAvailability();    // the reason lines' colour
+    if (collectionTree) updateCollectionsAvailability();    // the reason lines' color
     styleWorkflowSwitcher();
 //    if (G::useInfoView) infoView->setStyleSheet(G::css);
     imageView->setBackgroundColor(widgetCSS.widgetBackgroundColor);
@@ -11264,7 +11264,7 @@ struct CompDesc {
     int    rangeTool = 0;                                 // ColorRange / LuminanceRange
     double rlo = 0, rhi = 1, hueLo = 20, hueHi = 20, satLo = 0.25, satHi = 0.25, feather = 0;
     bool   rangeValid = false;
-    std::vector<RangeMask::ColorSample> samples;          // colour samples (opponent space)
+    std::vector<RangeMask::ColorSample> samples;          // color samples (opponent space)
     /* Subject (AI saliency) component -- coverage is the shared SubjectRef; feather/inverted above. */
 
     /* Edge slider, as a signed radius in THIS BUFFER's pixels (pixelScale already
@@ -11474,7 +11474,7 @@ void buildHaloGuide(const WorkingImage &src, std::vector<float> &guide)
 
     THE UNDEVELOPED IMAGE, for the reason buildHaloGuide gives: a guide that moved with the
     sliders would make the mask chase the adjustment it masks. But MaskRefine compares
-    COLOURS against thresholds tuned on display sRGB, so unlike the halo's luminance this
+    COLORS against thresholds tuned on display sRGB, so unlike the halo's luminance this
     has to look like a picture: camera-native pixels are taken through toWorkingColor (the
     as-shot white balance + camera matrix Develop's stage 0 applies), scaled so `white` is
     1, and given the display gamma. No tone curve -- that would move with the edits.
@@ -12987,7 +12987,7 @@ QImage developCompositeStack(const WorkingImage &src,
                 break;
             }
         }
-        /* Same rule for the Refine Brush's colour guide. */
+        /* Same rule for the Refine Brush's color guide. */
         std::vector<float> refineGuide;
         for (int i = 0; i < job.scopes.size(); ++i) {
             if (componentsHaveRefine(job.scopes.at(i).components)) {
@@ -13293,7 +13293,7 @@ bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
 }
 
 /* True if any enabled scope carries a Brush mask with an auto-mask stroke -- it needs the
-   colour guide registered (ImageView::ensureAutoGuide) before the composite, else the
+   color guide registered (ImageView::ensureAutoGuide) before the composite, else the
    stroke rasterizes unconfined. */
 bool stackHasAutoMaskBrush(const DevelopProperties::StackRenderJob &job)
 {
@@ -13339,7 +13339,7 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
     sample the identical map. It is the developed GLOBAL scope only (Global params + OutputTransform +
     EXIF orientation), capped in size -- range selection does not need full resolution, and base-
     only keeps a range mask from feeding back on its own selection. Cheap no-op when already
-    current (keyed on path + a base-params signature), so range-slider drags and colour samples
+    current (keyed on path + a base-params signature), so range-slider drags and color samples
     never rebuild it -- they only re-threshold the cached reference.
 */
     if (G::isLogger) G::log("MW::ensureRangeRef");
@@ -13362,7 +13362,7 @@ void MW::ensureRangeRef(const QString &fPath, const WorkingImage &work,
     int fw = lowRes.width, fh = lowRes.height;
     if (degrees == 90 || degrees == 270) std::swap(fw, fh);
     /* Point Color's Visualize Range is a VIEW of the loupe; a range mask must threshold
-       the real colours, not the greyed-out preview of them. */
+       the real colors, not the greyed-out preview of them. */
     const EditParams refBase = guideParams(base);
     const QImage img = developComposite(lowRes, refBase, degrees, /*fullRes*/true, fw, fh);
     if (img.isNull()) return;
@@ -13471,7 +13471,7 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
     mask samples and register it by path, from the developed GLOBAL scope (output-
     oriented) so it lines up with what the user sees. Cached by path only.
 
-    Two models plus a colour matte (Utilities/skypredictor + skyrefine.h), at up to
+    Two models plus a color matte (Utilities/skypredictor + skyrefine.h), at up to
     kSkyMatteLongEdge px -- the matte's edge detail is the point, so it is built near
     render resolution rather than at the 1024 the other AI masks use. ~1.5-2 s on the
     CPU, once per image, so it says so (progress over one second) -- synchronous on the
@@ -14153,12 +14153,12 @@ void MW::updateMaskOverlayTint()
 {
 /*
     While a submask is being defined, the loupe shows the WHOLE mask (all the scope's
-    submasks composited) as a single-colour coverage veil, under the active submask's
+    submasks composited) as a single-color coverage veil, under the active submask's
     handles. The veil shows the OUTCOME: the pending submask is composited with the op the
     held modifier is previewing (Opt = Subtract, Shift+Opt = Intersect), so holding Opt
     makes the veil retreat where that submask would be removed. That is why the overlay
-    needs only ONE colour (G::maskOverlayColor) -- the op is read off the result, not
-    off a colour key. Rebuild when the selection, geometry or previewed op changes (wired to
+    needs only ONE color (G::maskOverlayColor) -- the op is read off the result, not
+    off a color key. Rebuild when the selection, geometry or previewed op changes (wired to
     maskEditBegin/End + paramsChanged), or clear it when nothing is being edited. The
     composite reuses the render-path buildMaskBuffer, so the veil is pixel-consistent with
     the developed result.
@@ -14182,7 +14182,7 @@ void MW::updateMaskOverlayTint()
        (ImageView::maskBrushVeilStale, cleared by setScopeMaskTint), so the coverage does
        not blink back to the pre-stroke veil at mouse-up.
        A SUBTRACT/INTERSECT stroke is the opposite case and must pay for the rebuild: its
-       local preview paints coverage in the overlay colour exactly where the mask is being
+       local preview paints coverage in the overlay color exactly where the mask is being
        REMOVED, which reads as adding. Keeping the real veil live there shows the outcome
        -- the veil retreating under the brush -- matching the develop render. */
     /* focusSubmaskOp, NOT pendingMaskOp: once a submask has landed pendingMaskOp reads
@@ -14366,15 +14366,15 @@ void MW::updateMaskOverlayTint()
     }
 
     /* RESULT VEIL: the whole-mask composite as a coverage tint in the one overlay
-       colour, alpha by coverage. This is the TRUE resulting mask -- Subtract holes stay
+       color, alpha by coverage. This is the TRUE resulting mask -- Subtract holes stay
        holes -- so the veil alone answers both "what does this scope affect?" and (with a
        modifier held) "what would this op do?".
 
        WITH A SUBMASK OPEN it answers a third question -- "which part of this is the one
-       I am editing?" -- by varying the DENSITY of that same colour rather than
+       I am editing?" -- by varying the DENSITY of that same color rather than
        introducing a second hue. One hue is what lets this survive all six configurable
-       overlay colours (including white) and the grayscale-backdrop mode; a fixed
-       contrast colour would collide with at least two of them.
+       overlay colors (including white) and the grayscale-backdrop mode; a fixed
+       contrast color would collide with at least two of them.
 
          mask only      kAlphaMask   the rest of the mask -- thinned (kAlphaRest) while
                                      a submask is open, so the open one stands out
@@ -14432,12 +14432,12 @@ void MW::updateMaskOverlayTint()
        it also meant the boundary vanished the moment the submask overlapped the mask,
        which is the common case and exactly where "how much of this is mine?" is hardest
        to answer. The density step above now carries the overlap, so the line is free to
-       be drawn everywhere. White-on-dark rather than the overlay colour, so it reads
-       over the veil, over the photo, over every configurable overlay colour and over the
+       be drawn everywhere. White-on-dark rather than the overlay color, so it reads
+       over the veil, over the photo, over every configurable overlay color and over the
        grayscale backdrop.
 
        TWO SAFEGUARDS against the case the old gate also protected: a content submask
-       (Colour/Luminance Range) has per-pixel "edges" everywhere and would fog the
+       (Color/Luminance Range) has per-pixel "edges" everywhere and would fog the
        subject with speckle. The boundary is taken from a 3x3 box average of the coverage
        rather than the raw buffer, which removes isolated pixels; and if the line still
        comes out covering more than kContourMaxFrac of the buffer then it is not a
@@ -14773,7 +14773,7 @@ void MW::renderDevelopPreview(bool fullRes)
     }
     if (!work) {
         /* The decode was tried and produced nothing for this file. There is no fallback:
-           the image cache's copy has been converted for the display (colour management
+           the image cache's copy has been converted for the display (color management
            is always on), so it is not the file's pixels and would be developed wrong. */
         return;
     }
@@ -15967,7 +15967,7 @@ bool MW::rawDenoiseCleanBaseOk(const std::shared_ptr<const WorkingImage> &w)
     May w be used as the CLEAN side of the "Denoise raw" blend? The denoised side always
     comes out of the raw decode as camera-native scene-linear pixels (RawColor::
     ToCameraNative), and Develop::BlendRawDenoise adds a difference of the two -- so the
-    clean side has to be in that same colour state.
+    clean side has to be in that same color state.
 
     The WorkingImageCache is keyed by path alone and, despite what its header promises,
     does not hold only camera-native raw decodes: Preview mode and the display-referred
@@ -16066,7 +16066,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
         (developPmridKey == pkey && developPmridFull) ? developPmridFull : nullptr;
 
     /* Clean base if the caller had one (may be null on select) -- but only when it is in
-       the colour state the PMRID base will be in. See rawDenoiseCleanBaseOk. */
+       the color state the PMRID base will be in. See rawDenoiseCleanBaseOk. */
     std::shared_ptr<const WorkingImage> src = rawDenoiseCleanBaseOk(clean) ? clean : nullptr;
     const EditParams b = base;
     developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
@@ -16406,7 +16406,7 @@ void MW::ensureWorkingImageNow(const QString &fPath)
 {
 /*
     Build the pre-develop WorkingImage for fPath NOW, for a Develop action that needs the
-    pixels (and the colour characterisation) before the image has been edited: the WB
+    pixels (and the color characterisation) before the image has been edited: the WB
     dropper and Auto white balance. Without this an untouched DISPLAY-REFERRED file has no
     cache entry at all -- ImageDecoder::applyDevelop skips identity params and
     applyDevelopPreviewIfEdited skips an unedited image -- so the dropper reported "not
@@ -16849,7 +16849,7 @@ void MW::toggleDevelopWbSampler()
 /*
     "W" in Develop mode (and the Develop menu): arm/disarm the Basic panel's white-
     balance dropper -- click a neutral to balance from it, Opt/Alt-click skin to correct
-    the skin colour. DevelopProperties owns the armed state, so this just flips it and
+    the skin color. DevelopProperties owns the armed state, so this just flips it and
     the dock button / cursor / loupe follow.
 
     W is claimed by an ACTIVE Transform session for Warp (developShortcutIntercept rule
@@ -17029,7 +17029,7 @@ void MW::toggleDevelopCameraPreview()
 {
 /*
     Latch the current image's camera preview (Pixmap::load: the embedded JPEG of a raw,
-    the file itself otherwise -- oriented and colour managed exactly as Preview mode shows
+    the file itself otherwise -- oriented and color managed exactly as Preview mode shows
     it) onto the loupe in place of the live render, or take it down again.
 
     The latch is a FLAG, not a render: both render completions (renderDevelopPreview's
@@ -17136,10 +17136,10 @@ void MW::toggleMaskOverlay()
 void MW::refreshDevelopMaskTintBtn()
 {
 /*
-    The tint button is a colour swatch rather than a glyph: it is filled with
-    the overlay colour in force (G::maskOverlayColor, picked from the Mask panel swatches)
-    so the row always shows which colour the veil speaks. Called on launch and whenever
-    the tint is toggled ("O", the scope menu, a slider auto-hide) or recoloured.
+    The tint button is a color swatch rather than a glyph: it is filled with
+    the overlay color in force (G::maskOverlayColor, picked from the Mask panel swatches)
+    so the row always shows which color the veil speaks. Called on launch and whenever
+    the tint is toggled ("O", the scope menu, a slider auto-hide) or recolored.
 
     The swatch is painted 12x12 inside the 16x16 button so BarBtn::setActive's blue border
     has room to read; dimmed to G::iconOpacity when the tint is off, matching the other
@@ -17147,7 +17147,7 @@ void MW::refreshDevelopMaskTintBtn()
 
     With no mask on display (the Global scope) there is nothing to toggle, so the swatch is
     dimmed further and hollowed out. The button stays ENABLED: its right-click menu (overlay
-    colour, grayscale background) is meant to be reachable without a mask, and a disabled
+    color, grayscale background) is meant to be reachable without a mask, and a disabled
     QToolButton would swallow that too -- the left-click explains itself with a popup.
 */
     if (G::isLogger) G::log("MW::refreshDevelopMaskTintBtn");
@@ -17176,32 +17176,32 @@ void MW::showDevelopMaskTintMenu(const QPoint &pos)
 {
 /*
     Right-click on the action-row tint button: the overlay's two APPEARANCE settings --
-    which colour the veil speaks and whether the image under it is desaturated -- without
+    which color the veil speaks and whether the image under it is desaturated -- without
     having to open the Mask panel to reach the same chips. Left-click stays the toggle.
 
-    Both settings are pushed through DevelopProperties (setMaskOverlayColour /
+    Both settings are pushed through DevelopProperties (setMaskOverlayColor /
     setMaskOverlayGrayscale), which persists them, repaints the Mask panel chips and asks
-    for the right redraw, so this menu and the panel can never disagree. The colours come
-    from MaskPanel::overlayColours() for the same reason.
+    for the right redraw, so this menu and the panel can never disagree. The colors come
+    from MaskPanel::overlayColors() for the same reason.
 */
     if (G::isLogger) G::log("MW::showDevelopMaskTintMenu");
     if (!developMaskTintBtn || !developProperties) return;
 
     QMenu menu(developMaskTintBtn);
-    const QVector<QColor> &colours = MaskPanel::overlayColours();
-    const QStringList &names = MaskPanel::overlayColourNames();
-    for (int i = 0; i < colours.size(); ++i) {
-        const QColor c = colours.at(i);
+    const QVector<QColor> &overlayColors = MaskPanel::overlayColors();
+    const QStringList &names = MaskPanel::overlayColorNames();
+    for (int i = 0; i < overlayColors.size(); ++i) {
+        const QColor c = overlayColors.at(i);
         QPixmap chip(16, 16);
         chip.fill(c);
         QAction *a = menu.addAction(QIcon(chip),
                                     i < names.size() ? names.at(i) : c.name());
         a->setCheckable(true);
         a->setChecked(c.rgb() == G::maskOverlayColor.rgb());
-        /* No repaint of the button here: setMaskOverlayColour emits
+        /* No repaint of the button here: setMaskOverlayColor emits
            maskOverlayRefreshRequested, which refreshDevelopMaskTintBtn is wired to. */
         connect(a, &QAction::triggered, this, [this, c]{
-            developProperties->setMaskOverlayColour(c);
+            developProperties->setMaskOverlayColor(c);
         });
     }
     menu.addSeparator();
@@ -17209,7 +17209,7 @@ void MW::showDevelopMaskTintMenu(const QPoint &pos)
     gray->setCheckable(true);
     gray->setChecked(G::maskOverlayGrayscale);
     gray->setToolTip(tr("Show the image in grayscale while the overlay is on,\n"
-                        "so the overlay colour is easier to see (view only)"));
+                        "so the overlay color is easier to see (view only)"));
     connect(gray, &QAction::triggered, this, [this](bool on){
         developProperties->setMaskOverlayGrayscale(on);
     });
@@ -17864,7 +17864,7 @@ bool MW::exportFromDevPreview(const QString &fPath, const ExportSettings &es,
     usually at full size but possibly capped (G::devPreviewMaxEdge) or REDUCED (~2560 px,
     an Auto batch). So:
 
-      sRGB, 8-bit       -- a wider space would only hold sRGB colours (gamut clipped
+      sRGB, 8-bit       -- a wider space would only hold sRGB colors (gamut clipped
                            before the conversion), and 16 bits would be padding.
       big enough        -- full size needs a full-size preview; a long edge needs one
                            at least that long; a percentage needs the full size to take
@@ -18629,11 +18629,11 @@ void MW::onPointColorPicked(double xFraction, double yFraction)
 {
 /*
     The Point Color eyedropper landed (ImageView::pointColorPicked). Average a 5x5 patch
-    of developShownImage around the click -- the colour the user is LOOKING AT, which is
+    of developShownImage around the click -- the color the user is LOOKING AT, which is
     what Point Color selects on (it works on the display axis) -- and let the dock add
     it as a new point, or (Shift held) as another sample of the selected point. Averaged
     like the WB dropper: one pixel of a noisy image is a poor estimate of the local
-    colour.
+    color.
 */
     if (G::isLogger) G::log("MW::onPointColorPicked");
     if (!developProperties) return;

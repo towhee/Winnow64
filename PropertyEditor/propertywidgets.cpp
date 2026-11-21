@@ -230,7 +230,7 @@ SliderEditor::SliderEditor(const QModelIndex &idx, QWidget *parent) : QWidget(pa
             "background:" + G::appleBlue.name() + ";"
          "}"
          /* Disabled (e.g. Preview operation mode): grey the vivid groove/handle so the whole
-            slider reads as deactivated. The coloured rules above set explicit backgrounds that
+            slider reads as deactivated. The colored rules above set explicit backgrounds that
             override the default disabled palette, so :disabled must be spelled out here. */
          "QSlider::groove:horizontal:disabled {"
             "background:#4b4b4b;"

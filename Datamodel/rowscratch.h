@@ -46,7 +46,7 @@
     INTERNING, for the field that would otherwise dominate. iccBuf is a real ICC
     profile, commonly 500 bytes to 4 KB, and a shoot shares ONE of them, so it is
     held once and referenced by a qint32. (ICCSpace was interned here too until it
-    became a persisted colour space id in ImageRow; the string interner remains for
+    became a persisted color space id in ImageRow; the string interner remains for
     the next text field that needs it.) decoderErrMsg is not
     interned: it is written only on a failure and can embed a row number, so
     interning it would grow a table that is never trimmed in exchange for

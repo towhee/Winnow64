@@ -43,7 +43,7 @@ enum Tag {
 /* A tag can be missing (legal), present and well formed, or present and wrong. The third
    case must not be reported as the first: a ColorMatrix with 8 values is a corrupt file,
    not a profile without a ColorMatrix, and silently leaving an identity matrix behind
-   would render as a strong colour cast with nothing to point at. */
+   would render as a strong color cast with nothing to point at. */
 enum class Got { Absent, Ok, Bad };
 
 /* Tables large enough to be an allocation attack rather than a profile. Adobe's largest
@@ -78,7 +78,7 @@ Got real1(TiffWalk::Reader &r, const TiffWalk::Ifd &tags, quint16 tag, float &ou
     A HueSatMap or a LookTable: three LONG dimensions in one tag, the data in another, an
     optional encoding in a third. The dims and the data are cross-checked against each
     other -- count must be exactly hue * sat * val * 3 -- because a table read with the
-    wrong dimensions does not fail, it shears the hue axis and produces colours that look
+    wrong dimensions does not fail, it shears the hue axis and produces colors that look
     deliberate.
 */
 Got table(TiffWalk::Reader &r, const TiffWalk::Ifd &tags,

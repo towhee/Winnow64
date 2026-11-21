@@ -409,7 +409,7 @@ bool CanonCR3Raw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 
 namespace {
 
-/* The moov box, read on its own: it sits at the front of a CR3 and is small, so the colour
+/* The moov box, read on its own: it sits at the front of a CR3 and is small, so the color
    read never pulls a 50 MB file into memory the way UnpackCfa's readAll does. */
 bool readMoov(QFile &file, Bytes &moov)
 {
@@ -485,9 +485,9 @@ inline uint32_t le32(const uint8_t *b) {
 } // namespace
 
 /*
-    CR3 colour without a decode. Unlike a CR2, a CR3's ColorData (0x4001) is NOT in the
+    CR3 color without a decode. Unlike a CR2, a CR3's ColorData (0x4001) is NOT in the
     CMT3 makernote at the front of the file: CMT3 carries the camera settings, and the
-    colour record rides in the CTMD timed-metadata track, which is written after the
+    color record rides in the CTMD timed-metadata track, which is written after the
     image data. Its sample is a run of little-endian records { u32 size, u16 type, 6
     bytes }; type 8 holds sub-records { u32 size, u32 tag } and its 0x927C sub-record is
     a plain embedded TIFF makernote whose IFD has 0x4001. (LibRaw reads it from the same

@@ -37,7 +37,7 @@ private:
     predictor with a 2-column running carry. Ported from dcraw's olympus_load_raw and validated
     byte-identical to libraw on an E-M1 ORF.
 
-    Colour matrix comes from the shared per-model table (cameramatrix.cpp). The as-shot white
+    Color matrix comes from the shared per-model table (cameramatrix.cpp). The as-shot white
     balance IS read (Olympus MakerNote ImageProcessing 0x2040 -> 0x0100 WB_RBLevels) -- essential,
     since matrix-neutral renders badly green for Olympus. FIRST CUT: white 4095 (12-bit scheme),
     and E-M1-validated black (255) and BGGR pattern (Olympus omits CFAPattern); per-model black/

@@ -651,7 +651,7 @@ void MW::createEditActions()
     addAction(rate5Action);
     connect(rate5Action, &QAction::triggered, this, &MW::setRating);
 
-    label0Action = new QAction(tr("Clear colour"), this);
+    label0Action = new QAction(tr("Clear color"), this);
     label0Action->setObjectName("Label0");
     label0Action->setShortcutVisibleInContextMenu(true);
     addAction(label0Action);

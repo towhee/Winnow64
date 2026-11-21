@@ -13,7 +13,7 @@
 #include <QScrollBar>
 #include <QStyleFactory>
 
-/*  THE LIBRARY ROW IS TEAL (G::libraryColor), the colour the retired Catalog row above
+/*  THE LIBRARY ROW IS TEAL (G::libraryColor), the color the retired Catalog row above
     the Folders tree was, so it reads as "not a folder on disk" against the blue folders
     macOS draws and the yellow ones Windows draws. Its folders beneath are ordinary folder
     icons: they ARE folders on disk, which is the whole point of showing them this way. */
@@ -196,9 +196,9 @@ void LibTree::syncFromFilters(const QStringList &inc, const QStringList &exc)
 void LibTree::styleItem(QTreeWidgetItem *item)
 {
 /*
-    Excluded is a strikeout in the Filters exclude colour -- the same marks the Filters
+    Excluded is a strikeout in the Filters exclude color -- the same marks the Filters
     panel draws, so the two views of one filter look like one filter. Offline is the
-    disabled colour and no strikeout: it is a fact about the disk, not a choice.
+    disabled color and no strikeout: it is a fact about the disk, not a choice.
 */
     const QString p = item->data(0, PathRole).toString();
     const bool excluded = !p.isEmpty() && excludes.contains(p);

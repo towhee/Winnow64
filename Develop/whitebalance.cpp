@@ -141,7 +141,7 @@ void locusXY(double T, double tint, double &x, double &y)
 
     This is the EXACT inverse of locusXY, so it is also the exact answer solve()'s
     bisection converges to for the neutral case; it is kept separate because solve() has
-    to work on an arbitrary rendered colour, not just a chromaticity.
+    to work on an arbitrary rendered color, not just a chromaticity.
 */
 void xyToTempTint(double x, double y, double &kelvin, double &tint)
 {
@@ -181,7 +181,7 @@ void xyToTempTint(double x, double y, double &kelvin, double &tint)
     kelvin = 6500.0; tint = 0.0;    // unreachable
 }
 
-/* The rendered linear-sRGB colour of a neutral surface under illuminant (K, tint),
+/* The rendered linear-sRGB color of a neutral surface under illuminant (K, tint),
    carried through the same chain the decode used. */
 bool renderIlluminant(const CameraColor &cam, double kelvin, double tint, double s[3])
 {
@@ -233,7 +233,7 @@ bool illuminantXYZ(float kelvin, float tint, double xyz[3])
 /*
     The ANALYTIC inverse of illuminantXYZ: the (kelvin, tint) whose illuminant sits at
     chromaticity (x, y). Exact, where solve() bisects -- but solve() is given a RENDERED
-    colour and has to walk the camera chain backwards, so the two are not
+    color and has to walk the camera chain backwards, so the two are not
     interchangeable. Used by the profile-aware as-shot solve and by the tests.
 */
 void tempTintFromXY(double x, double y, float &kelvin, float &tint)
@@ -422,7 +422,7 @@ SkinPick solveSkin(const CameraColor &cam, float r, float g, float b,
        drop the perpendicular error (the cast). */
     const double tw = along * ux, tgr = along * uy;
 
-    /* Back to a colour, green pinned to 1 -- the inverse of warmthOf/greenOf:
+    /* Back to a color, green pinned to 1 -- the inverse of warmthOf/greenOf:
            tw  = log(r/b)              -> log r - log b = tw
            tgr = log(1/sqrt(r*b))      -> log r + log b = -2*tgr                */
     const double tr = std::exp((tw - 2.0 * tgr) * 0.5);
@@ -432,7 +432,7 @@ SkinPick solveSkin(const CameraColor &cam, float r, float g, float b,
     /*
         Reduce to the neutral case. The correction that carries sample s onto target T
         is the one that NEUTRALISES the component-wise ratio s/T: the gains solve()
-        yields for a colour c are (c.g/c.r, 1, c.g/c.b), and substituting c = s/T makes
+        yields for a color c are (c.g/c.r, 1, c.g/c.b), and substituting c = s/T makes
         the corrected sample proportional to T. Picking a neutral is just T = (1,1,1).
     */
     if (!solve(cam, static_cast<float>(r / tr), g, static_cast<float>(b / tb),
@@ -465,12 +465,12 @@ bool autoWhiteBalance(const WorkingImage &img, float &kelvin, float &tint)
         A grey-world average over everything is easily dragged off by a large
         saturated subject (a red barn, a blue sky). Averaging only the BRIGHT,
         UNCLIPPED pixels is far more robust: highlights and near-whites carry the
-        illuminant's colour most faithfully. Two passes -- find the luminance
+        illuminant's color most faithfully. Two passes -- find the luminance
         threshold, then average what clears it.
     */
     const size_t n = static_cast<size_t>(img.width) * img.height;
     const float white = (img.white > 0.0f) ? img.white : 1.0f;
-    const float clip  = white * 0.98f;      // ignore blown pixels: they have no colour
+    const float clip  = white * 0.98f;      // ignore blown pixels: they have no color
 
     /* Subsample big images; the estimate does not need every pixel. */
     const size_t stride = std::max<size_t>(1, n / 200000);
@@ -509,7 +509,7 @@ bool autoWhiteBalance(const WorkingImage &img, float &kelvin, float &tint)
     if (count < 32) return false;
 
     /* The average is sampled from the PRE-develop image, which for a raw is still in
-       camera-native primaries; solve() expects a working-space colour. Converting the
+       camera-native primaries; solve() expects a working-space color. Converting the
        AVERAGE is exact because the transform is linear, and it is one matrix instead of
        one per sampled pixel. No-op for non-raw. */
     float ar = static_cast<float>(sum[0] / count);

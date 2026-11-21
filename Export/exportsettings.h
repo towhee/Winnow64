@@ -23,7 +23,7 @@
     in place. See Export/exportpresets.h for the versioning contract.
 */
 
-/* Output colour space. This is the export layer's PUBLISHED preset key -- kept separate
+/* Output color space. This is the export layer's PUBLISHED preset key -- kept separate
    from OutputTransform::Space (which does the actual conversion) because Develop must not
    depend on Export and these numbers can never be renumbered.
 

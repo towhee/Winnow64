@@ -54,7 +54,7 @@ void tst_rowscratch::coversTheScratchColumnsAndOnlyOnValueRoles()
         G::NSThumbColumn, G::NSImageColumn,
         G::LoadMsecPerMpColumn, G::RawRenderColumn
     };
-    /*  ICCSpace LEFT the scratch store (2026-10-26): it is a persisted colour space id
+    /*  ICCSpace LEFT the scratch store (2026-10-26): it is a persisted color space id
         in ImageRow now (Metadata/colorspaces.h), and a column held by both stores would
         be answered by whichever DataModel::data asks first. */
     QVERIFY(!ScratchStore::covers(G::ICCSpaceColumn, Qt::EditRole));

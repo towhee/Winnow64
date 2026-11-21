@@ -326,7 +326,7 @@ FindDuplicatesDlg::FindDuplicatesDlg(QWidget *parent, DataModel *dm) :
     );
 
     ui->helpBtn->setStyleSheet("background-color: " + G::helpColor.name() + ";");
-    // explanatory notes in the secondary (grey) text colour
+    // explanatory notes in the secondary (grey) text color
     ui->label_4->setStyleSheet(G::labelCss(G::secondaryTextColor));
     ui->subfoldersNoteLbl->setStyleSheet(G::labelCss(G::secondaryTextColor));
 

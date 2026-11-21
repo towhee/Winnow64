@@ -124,7 +124,7 @@ struct FilterSnapshot {
         EXCLUSION, or -1. Such a row is never in rescue: an exclusion wins over anything
         else checked in the category, so the row is not available to any item there. It
         is counted separately, for the panel to show on the excluded item alone in the
-        disabled colour (Filters::updateFilteredCountPerItem). */
+        disabled color (Filters::updateFilteredCountPerItem). */
     QVector<int> excluded;
     /*  A version hidden in a collapsed group, and the category columns it counts for
         (FilterPredicate::collapsedVersionCountsFor). Unlike rescue it can be several:

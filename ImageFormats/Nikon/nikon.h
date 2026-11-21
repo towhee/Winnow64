@@ -40,7 +40,7 @@ private:
     linearization curve. Ported from dcraw's nikon_load_raw and validated byte-identical to
     libraw on 12-bit and 14-bit lossless NEF.
 
-    Colour matrix comes from the shared per-model table (cameramatrix.cpp). The as-shot white
+    Color matrix comes from the shared per-model table (cameramatrix.cpp). The as-shot white
     balance is read from the UNENCRYPTED MakerNote tag 0x0C (WhiteBalanceRBLevels) -- the
     encrypted ColorBalance (0x97) carries the same values the hard way and is not needed. See
     notes/Documentation.txt "RAW DECODING".

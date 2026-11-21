@@ -59,7 +59,7 @@ def load_raw(path):
     m01[1::2, 1::2] = (cfa[1::2, 1::2] - blk[3])
     scale = white - black.mean()
     m01 = np.clip(m01 / scale, 0.0, 1.0)
-    # Colours of the 2x2 phase, to confirm RGGB (desc[pat]).
+    # Colors of the 2x2 phase, to confirm RGGB (desc[pat]).
     phase = "".join(desc[i] for i in [pat[0, 0], pat[0, 1], pat[1, 0], pat[1, 1]])
     return dict(m=m01, phase=phase, wb=wb, white=white, black=black)
 
@@ -170,7 +170,7 @@ def denoise(m01, cvt_k, cvt_b, tile=512, ov=32):
 
 # ------------------------------------------------------------- preview + metrics
 def demosaic_preview(m01, wb):
-    """Minimal RGGB bilinear + white balance + gamma. Colours approximate (no CCM);
+    """Minimal RGGB bilinear + white balance + gamma. Colors approximate (no CCM);
     the point is a fair noisy-vs-denoised visual, same pipeline both sides."""
     import cv2
     r = bayer2rggb(m01)

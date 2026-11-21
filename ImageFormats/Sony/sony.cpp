@@ -437,8 +437,8 @@ bool Sony::parse(MetadataParameters &p,
             }
         }
 
-        /* Colour: per-model XYZ->camera matrix for RawColor (combined with the as-shot WB
-           above to produce accurate colour). */
+        /* Color: per-model XYZ->camera matrix for RawColor (combined with the as-shot WB
+           above to produce accurate color). */
         ri.hasColorMatrix = xyzToCamForModel(m.model, ri.xyzToCam);
     }
 
@@ -724,7 +724,7 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
     QList<quint32> queue { g32(hdr, 4) };
     QSet<quint32> seen;
     QHash<quint16, RawTag> rawIfd;      // tags of the chosen raw IFD
-    QString model;                      // tag 272 (from IFD0) for the colour-matrix lookup
+    QString model;                      // tag 272 (from IFD0) for the color-matrix lookup
     quint64 bestPixels = 0;
 
     while (!queue.isEmpty()) {
@@ -739,7 +739,7 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
         for (quint32 s : subs) queue << s;
         if (next) queue << next;
 
-        if (model.isEmpty() && tags.contains(272))   // Model (IFD0), for the colour matrix
+        if (model.isEmpty() && tags.contains(272))   // Model (IFD0), for the color matrix
             model = "Sony " + readAscii(tags[272]);
 
         /* Raw CFA candidate: uncompressed, single-sample, with a strip. */
@@ -768,7 +768,7 @@ bool readSonyTiffSensorInfo(QFile &file, RawSensorInfo &info)
         for (int i = 0; i < 4; ++i) info.cfaPlaneColor[i] = quint8(rawIfd[33422].val[i]);
     if (rawIfd.contains(50717)) info.white = scalar(rawIfd[50717]);   // 0xC61D WhiteLevel
 
-    /* Colour, so the fallback path produces the SAME result as the plumbed path: BlackLevel
+    /* Color, so the fallback path produces the SAME result as the plumbed path: BlackLevel
        (0x7310), as-shot WB_RGGBLevels (0x7313, R G1 G2 B -> camMul R,G,B,G2), and the per-model
        XYZ->camera matrix. Without these the render would be the green-tinted identity result. */
     int v4[4];
@@ -988,7 +988,7 @@ void applySr2Levels(QFile &file, RawImage &raw)
 
 /*
     Sony "ARW Compressed" (Compression 32767, the lossy ARW2 scheme). Each 16-byte group encodes
-    16 photosites of one Bayer colour across 32 columns: an 11-bit max and min, the indices of
+    16 photosites of one Bayer color across 32 columns: an 11-bit max and min, the indices of
     the pixels holding them, then 7-bit deltas (shifted to fit max-min). The 11-bit values are
     expanded through a Sony tone curve (tag 0x7010, 4 control points). Ported from dcraw's
     sony_arw2_load_raw and validated BYTE-IDENTICAL to libraw on an A9 ARW. Returns 1 on success,
@@ -1089,7 +1089,7 @@ int decodeSonyArw2(QFile &file, RawImage &raw, QString &err)
         }
     }
 
-    /* Levels / pattern / colour. white 16383 is libraw's ARW2 saturation (see applySr2Levels);
+    /* Levels / pattern / color. white 16383 is libraw's ARW2 saturation (see applySr2Levels);
        black 512 is only the pedestal used if the SR2Private block cannot be read -- it is the
        real value on most E-mount bodies but NOT on all of them (RX100 = 800). */
     raw.pattern = CfaPattern::RGGB;
@@ -1105,7 +1105,7 @@ int decodeSonyArw2(QFile &file, RawImage &raw, QString &err)
 } // namespace
 
 /*
-    ARW colour without a decode.
+    ARW color without a decode.
 
     Sony is the awkward one: an ARW's as-shot WB_RGGBLevels (0x7313) are NOT in any
     plaintext IFD -- they live in the encrypted SR2Private block, which is why
@@ -1181,7 +1181,7 @@ bool SonyRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     raw.pattern = cfaPatternFromPlaneColor(info.cfaPlaneColor);
     if (raw.pattern == CfaPattern::Unknown) raw.pattern = CfaPattern::RGGB;
 
-    /* Colour data for RawColor (identity/1s when the parser did not fill it -> approx colour). */
+    /* Color data for RawColor (identity/1s when the parser did not fill it -> approx color). */
     for (int i = 0; i < 3; ++i)
         for (int j = 0; j < 3; ++j) raw.xyzToCam[i][j] = info.xyzToCam[i][j];
     for (int i = 0; i < 4; ++i) raw.camMul[i] = info.camMul[i];

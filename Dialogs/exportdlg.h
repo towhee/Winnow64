@@ -30,7 +30,7 @@ class ImageExporter;
     (Develop > Export with preset) reports through the same row.
 
     Mode::Preview hides the rows that only mean something for a develop render (bit depth,
-    colour space), so "Save Preview as" is not offering settings its pixel source cannot
+    color space), so "Save Preview as" is not offering settings its pixel source cannot
     honour.
 */
 class ExportDlg : public QDialog

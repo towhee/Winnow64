@@ -47,7 +47,7 @@ cmsHPROFILE CreateWorkingProfile()
 /* src (RGB888, the file's own encoding) through its embedded profile straight to the
    linear working space. False -- leaving out untouched -- if the profile is not an RGB
    profile lcms can use, so the caller falls back to sRGB. Float output is unbounded on
-   a matrix-shaper profile, so a colour outside the working gamut is carried, not
+   a matrix-shaper profile, so a color outside the working gamut is carried, not
    clipped. */
 bool FromIcc(const QImage &src, const QByteArray &icc, std::vector<float> &rgb)
 {

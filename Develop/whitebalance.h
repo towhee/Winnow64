@@ -5,8 +5,8 @@
 #include "Develop/workingimage.h"
 
 /*
-    Absolute white balance: a correlated colour temperature in Kelvin plus a
-    green/magenta tint, resolved against the source's own colour characterisation
+    Absolute white balance: a correlated color temperature in Kelvin plus a
+    green/magenta tint, resolved against the source's own color characterisation
     (WorkingImage::cam) rather than applied as a blind per-channel nudge.
 
     THE MODEL
@@ -14,7 +14,7 @@
     A white balance answers one question: "what illuminant was the scene lit by?"
     Given that illuminant we can say what a NEUTRAL surface under it looks like once
     it has been through the decode pipeline, and the correction is whatever gains
-    make that colour grey again.
+    make that color grey again.
 
     For a target (kelvin, tint) the forward chain is:
 
@@ -25,7 +25,7 @@
                   -> camera RGB              (cam.xyzToCam)
                   -> the as-shot WB the decode already baked in  (cam.asShotMul)
                   -> linear sRGB             (cam.camToWorking)
-                  = s, the rendered colour of that illuminant's neutral
+                  = s, the rendered color of that illuminant's neutral
 
     gains() then returns (s.g/s.r, 1, s.g/s.b): the per-channel scene-linear gains
     that make s neutral. Green is pinned to 1 so exposure does not drift with
@@ -34,7 +34,7 @@
 
     THE INVERSE
 
-    solve() goes the other way: given a colour in linear sRGB, find the (K, tint)
+    solve() goes the other way: given a color in linear sRGB, find the (K, tint)
     whose illuminant renders to that chromaticity. Two nested bisections -- K on the
     red/blue ratio (monotonic: hotter is bluer), then tint on the green residual --
     repeated a few times since the two axes are weakly coupled. This ONE function
@@ -90,7 +90,7 @@ bool       illuminantXYZ(float kelvin, float tint, double xyz[3]);
 /* The analytic inverse of illuminantXYZ: the (kelvin, tint) of the illuminant sitting at
    chromaticity (x, y), clamped to the slider range. Exact -- this is the Adobe/DNG
    Robertson mapping run backwards, not a fit. solve() is the one to use when the input is
-   a RENDERED colour rather than a chromaticity. */
+   a RENDERED color rather than a chromaticity. */
 void       tempTintFromXY(double x, double y, float &kelvin, float &tint);
 
 /* Per-channel scene-linear gains for an absolute (kelvin, tint), normalised so
@@ -107,7 +107,7 @@ void       resolve(const CameraColor &cam, float storedTemp, float storedTint,
                    float &kelvin, float &tint);
 
 /* Inverse: the (kelvin, tint) whose illuminant renders to the chromaticity of
-   linear-sRGB colour (r,g,b). Returns false if the colour is degenerate (a
+   linear-sRGB color (r,g,b). Returns false if the color is degenerate (a
    non-positive channel -- clipped or black). */
 bool       solve(const CameraColor &cam, float r, float g, float b,
                  float &kelvin, float &tint);
@@ -117,13 +117,13 @@ bool       solve(const CameraColor &cam, float r, float g, float b,
     is not neutral. Instead of driving the sample to grey, it is driven back onto the
     skin HUE LINE while its saturation and lightness are left alone.
 
-    Why the hue line and not a fixed reference skin colour: measured skin of very
+    Why the hue line and not a fixed reference skin color: measured skin of very
     different depths agrees almost exactly on HUE and differs mainly in SATURATION.
     The ColorChecker light- and dark-skin patches sit 0.3 degrees apart in the
     (warmth, green) plane below while their chroma magnitudes differ by 23%. Hue is
     therefore the part a white-balance error corrupts, and the part safe to correct;
     forcing a fixed chromaticity would desaturate deep skin by roughly a quarter and
-    push olive skin off its own colour.
+    push olive skin off its own color.
 
     Geometry: the same (warmth, green) log axes solve() already bisects on, in which
     NEUTRAL IS THE ORIGIN -- so a hue is a direction from the origin and saturation is
@@ -150,12 +150,12 @@ constexpr float kSkinMinChroma       = 0.05f;   // below this there is no hue to
 
 enum class SkinPick {
     Ok,
-    TooNeutral,     // no colour to read (grey/blown) -- use the neutral dropper
+    TooNeutral,     // no color to read (grey/blown) -- use the neutral dropper
     NotSkin,        // hue too far off the line (sky, foliage, a cool cast beyond rescue)
     Degenerate      // black / clipped channel, or no camera characterisation
 };
 
-/* Solve for the (kelvin, tint) that puts a sampled SKIN colour back on the skin hue
+/* Solve for the (kelvin, tint) that puts a sampled SKIN color back on the skin hue
    line. hueErrorDeg, when non-null, receives how far off the line the sample was
    BEFORE correction (filled even when the result is NotSkin, so callers can report
    it). kelvin/tint are only written on Ok. */

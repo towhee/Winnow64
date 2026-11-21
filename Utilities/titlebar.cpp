@@ -20,7 +20,7 @@ QColor TitleBar::color;
 /*
     SHELVED ON macOS 2026-10-24, kept for a revisit; both off. macOS shows the system's
     own title bar again, with the window title and file path. Windows (title bars were
-    Winnow-coloured long before TitleBar) and Linux keep the Winnow background.
+    Winnow-colored long before TitleBar) and Linux keep the Winnow background.
     isColorMacTitleBars: the Winnow background on macOS title bars (Mac::setTitleBarColor).
     isModesInTitleBar: the Module dock's buttons in the macOS title bar (TitleBarStrip).
 */

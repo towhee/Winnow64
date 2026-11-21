@@ -1571,7 +1571,7 @@
          <string>Opt/Alt + click</string>
         </property>
         <property name="text">
-         <string>Correct the skin colour instead of sampling a neutral</string>
+         <string>Correct the skin color instead of sampling a neutral</string>
         </property>
        </item>
        <item>

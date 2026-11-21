@@ -960,7 +960,7 @@ bool Nikon::parse(MetadataParameters &p,
         m.cameraSN = u.getString(p.file, ifd->ifdDataHash.value(29).tagValue + makerOffsetBase,
                                        ifd->ifdDataHash.value(29).tagCount);
         m.shutterCount = ifd->ifdDataHash.value(167).tagValue;
-        /* The camera's colour space SETTING, MakerNote 0x001E (1 = sRGB, 2 = Adobe RGB,
+        /* The camera's color space SETTING, MakerNote 0x001E (1 = sRGB, 2 = Adobe RGB,
            the EXIF codes). Nikon writes no EXIF ColorSpace, so without this every NEF
            was blank; it is what the embedded previews were encoded in. An embedded
            profile, if one turns up, still decides (Metadata/colorspaces.h). */
@@ -1265,7 +1265,7 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     /* CFA phase. Most Nikon bodies are RGGB, but older sensors start the active area on a
        different Bayer phase (D100 is GRBG, D2H is GBRG); decoding those as RGGB swaps the
        green photosites into the red/blue channels and renders greens as magenta. The raw
-       SubIFD's CFAPattern (tag 0x828E, plane colours 0=R,1=G,2=B over the 2x2
+       SubIFD's CFAPattern (tag 0x828E, plane colors 0=R,1=G,2=B over the 2x2
        CFARepeatPatternDim) carries the true phase, so read it and fall back to RGGB only
        when it is absent or not one of the four Bayer phases. */
     raw.pattern = CfaPattern::RGGB;
@@ -1361,7 +1361,7 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 }
 
 /*
-    NEF colour without a decode: MakerNote tag 0x0C (or the older 0x97 ColorBalance
+    NEF color without a decode: MakerNote tag 0x0C (or the older 0x97 ColorBalance
     block) for the as-shot multipliers, plus the per-model XYZ->camera matrix.
 
     Split out of UnpackCfa so the Apple Core Image engine -- which never calls UnpackCfa

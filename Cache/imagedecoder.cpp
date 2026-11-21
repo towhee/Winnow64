@@ -1163,7 +1163,7 @@ void ImageDecoder::applyDevelop()
 /*
     Applies parametric develop adjustments (EditParams) to the decoded image, in the
     scene-linear working space: InputTransform (sRGB -> linear) -> Develop -> OutputTransform
-    (linear -> display). Runs after rotate() and before output colour management.
+    (linear -> display). Runs after rotate() and before output color management.
 
     No-op while editParams is identity (the common case until per-image edits are stored),
     and skipped for RAW, which develops internally in float (developApplied). This keeps the

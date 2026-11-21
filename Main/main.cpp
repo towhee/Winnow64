@@ -208,7 +208,7 @@ static int runDumpWorking(int argc, char *argv[], const QString &raw, const QStr
 /*
     Winnow --dumpwb <raw> [<raw> ...]
 
-    HEADLESS AS-SHOT WHITE BALANCE AUDIT: for each raw, read the colour characterisation
+    HEADLESS AS-SHOT WHITE BALANCE AUDIT: for each raw, read the color characterisation
     exactly as the decoders do (RawFormat::ReadAsShotColor, seeded from the parse-time
     rawInfo) and print the model, the as-shot multipliers and the Kelvin/tint the WB row
     would show. No decode, no window, runs beside an open Winnow. "neutral" in the output

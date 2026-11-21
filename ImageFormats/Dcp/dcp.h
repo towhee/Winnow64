@@ -100,7 +100,7 @@ struct Profile {
 };
 
 /*
-    The correlated colour temperature an EXIF LightSource code stands for, in kelvin, or 0
+    The correlated color temperature an EXIF LightSource code stands for, in kelvin, or 0
     when the code names no definite temperature. These are the CIE / EXIF standard values,
     and they are what the illuminant interpolation is keyed on.
 */

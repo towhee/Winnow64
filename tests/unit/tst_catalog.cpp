@@ -957,7 +957,7 @@ void tst_catalog::availabilityDistinguishesOfflineFromMissing()
 
 void tst_catalog::anEditedRowIsRewrittenNotJustMarkedStale()
 {
-    /*  A rating or colour edit writes the sidecar, which moves its mtime and so
+    /*  A rating or color edit writes the sidecar, which moves its mtime and so
         makes the catalog row STALE -- and in folder scope that is enough, because
         the next visit re-indexes it. In CATALOG scope the user may never open the
         containing folder again, so "stale" would mean "wrong, indefinitely": rate
@@ -1188,7 +1188,7 @@ void tst_catalog::sameLeafUnderTwoParentsIsTwoKeywords()
     THE CASE THE SCHEMA 10 REVERSAL IS FOR, and the exact inverse of what stood here
     before it. Under flat identity these two Vancouvers were ONE keyword: the vocabulary
     listed it once with a merged count, and telling them apart needed keyword_context, an
-    amber colour, a tooltip naming the parents and an exclusion filter. Under path
+    amber color, a tooltip naming the parents and an exclusion filter. Under path
     identity they are simply two rows.
 
     A real user vocabulary of 3,975 keywords had 59 names appearing in more than one
@@ -1520,7 +1520,7 @@ void tst_catalog::schema28RereadsOnlyBlankAndUncalibrated()
 {
 /*
     Schema 28 resolves "Uncalibrated" (Metadata/colorspaces.h), so only the rows whose
-    colour space it can change -- blank (0) and Uncalibrated (9) -- go stale; an sRGB or
+    color space it can change -- blank (0) and Uncalibrated (9) -- go stale; an sRGB or
     Adobe RGB row keeps its stamp and is not re-read.
 */
     QTemporaryDir dir;

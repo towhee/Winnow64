@@ -73,7 +73,7 @@ DevelopProperties::DevelopProperties(QWidget *parent, QSettings *setting) : Prop
     this->setting = setting;
     isDevelopTree = true;       // slider layout: the Develop override (before any row)
 
-    /* The mask overlay's single colour is a view preference owned by Develop, but read
+    /* The mask overlay's single color is a view preference owned by Develop, but read
        by ImageView (which has no settings handle), so it lives in G::. Seed it here,
        before any overlay can paint. */
     {
@@ -1160,8 +1160,8 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
     /* The cursor being in the mask panel is half of "the mask has the user's attention"
        (the other half is having just edited one) -- see maskVeilEngaged. */
     connect(maskPanel, &MaskPanel::hoverChanged, this, &DevelopProperties::setMaskPanelHovered);
-    /* The overlay's colour / grayscale controls are NOT in this panel (they are on the
-       Mask band tint swatch's context menu, which calls setMaskOverlayColour /
+    /* The overlay's color / grayscale controls are NOT in this panel (they are on the
+       Mask band tint swatch's context menu, which calls setMaskOverlayColor /
        setMaskOverlayGrayscale directly), so there is nothing to connect for them. */
 
     /* The panel's embedded tree edits the tool being built; route its changes into the
@@ -2899,7 +2899,7 @@ void DevelopProperties::deleteScope()
         Done     [checkbox]              <- ends the build (collapses the tool)
 
    Tool rows are header-style (single-line full-width caption + expand arrow) but flagged
-   UR_LeafSingleLine so they paint in the leaf colour, not category teal. The [+] glyph (UR_AddBtn,
+   UR_LeafSingleLine so they paint in the leaf color, not category teal. The [+] glyph (UR_AddBtn,
    hit-tested in mousePressEvent) pops showMaskMenu to append a tool (newMask); a new scope's first
    tool is offered automatically (newScope -> showMaskMenu). Subtract is offered only once a tool
    exists ("the first must be added"). Only the SELECTED tool carries its settings children (no duplicate tool-name
@@ -3279,7 +3279,7 @@ void DevelopProperties::showSectionMenu(int group)
                                                             : tr("Reset %1").arg(label));
     aReset->setEnabled(!currentImagePath.isEmpty());
     /* The layout switch, while the combined panel awaits sign-off: offered on every
-       colour section so either layout leads back to the other. */
+       color section so either layout leads back to the other. */
     QAction *aLayout = nullptr;
     if (group == PV_ColorPanel || group == PV_Color || group == PV_PointColor ||
         group == PV_Mixer || group == PV_Calibrate || group == PV_ColorGrade) {
@@ -4235,11 +4235,11 @@ void DevelopProperties::setMaskOverlayShown(bool shown)
     if (scopeHeader) scopeHeader->setMaskOverlayShown(shown);
 }
 
-void DevelopProperties::setMaskOverlayColour(const QColor &c)
+void DevelopProperties::setMaskOverlayColor(const QColor &c)
 {
-    /* The overlay colour, set from the Mask band tint swatch's context menu: persist it
-       and rebuild the veil so it repaints in the new colour. The image is untouched. */
-    if (G::isLogger) G::log("DevelopProperties::setMaskOverlayColour");
+    /* The overlay color, set from the Mask band tint swatch's context menu: persist it
+       and rebuild the veil so it repaints in the new color. The image is untouched. */
+    if (G::isLogger) G::log("DevelopProperties::setMaskOverlayColor");
     if (!c.isValid()) return;
     G::maskOverlayColor = c;
     setting->setValue("Develop/maskOverlayColor", G::maskOverlayColor.name());
@@ -4680,7 +4680,7 @@ void DevelopProperties::addCheckbox(const QString &key, const QString &caption, 
 CameraColor DevelopProperties::currentCam() const
 {
 /*
-    The current image's colour characterisation, with AS SHOT SOLVED THE WAY THE RENDER
+    The current image's color characterisation, with AS SHOT SOLVED THE WAY THE RENDER
     SOLVES IT. The cached image's asShotK/asShotTint were solved at decode against the
     built-in per-model matrix; when a camera profile is selected, the render re-solves
     them against the profile's matrices (WorkingImageCache's attachProfile) and renders
@@ -4714,7 +4714,7 @@ std::shared_ptr<const WorkingImage> DevelopProperties::ensureWorkingImage()
     first time it is DEVELOPED: ImageDecoder::applyDevelop skips identity params and
     MW::applyDevelopPreviewIfEdited skips an unedited image, so a freshly selected,
     untouched JPEG has no entry. The WB dropper and Auto white balance need the pixels
-    AND the colour characterisation (cam) before any edit exists, so they ask MW to build
+    AND the color characterisation (cam) before any edit exists, so they ask MW to build
     it rather than refusing the click.
 
     MW builds a display-referred file synchronously (an InputTransform over the decoded
@@ -4758,7 +4758,7 @@ QIcon DevelopProperties::dropperIcon(bool armed, int size)
     p.scale(S / 16.0, S / 16.0);
     /* Idle sits at G::iconOpacity like every other Develop tool button, so the row does
        not have one conspicuously brighter glyph in it. The ARMED ghost is drawn at full
-       opacity in the accent colour instead: dimming it as well would leave the empty
+       opacity in the accent color instead: dimming it as well would leave the empty
        socket a faint smudge indistinguishable from the idle glyph, and the accent ties
        it to the blue border BarBtn::setActive draws around the button. */
     if (!armed) p.setOpacity(G::iconOpacity);
@@ -4791,7 +4791,7 @@ QIcon DevelopProperties::detailTargetIcon(bool armed)
     ring with four tick marks, the universal aim glyph, and the same shape ImageView draws
     on the image at the sample point so the button and the marker read as one thing.
 
-    ARMED goes to the accent colour, matching the blue border BarBtn::setActive draws.
+    ARMED goes to the accent color, matching the blue border BarBtn::setActive draws.
     Unlike the dropper this stays SOLID when armed: the dropper's ghost says "the tool is
     in your hand", but here the marker on the image is what moves, and the button keeps
     standing for the location -- hollowing it out would suggest the point was lost.
@@ -4828,7 +4828,7 @@ QIcon DevelopProperties::curveSamplerIcon(bool armed)
     curve with a crosshair sitting on it -- "where the pointer is, on the curve", which is
     exactly the marker CurveEditor::drawSampleMarker puts on the plot.
 
-    ARMED goes SOLID in the accent colour rather than to a ghost outline. The dropper
+    ARMED goes SOLID in the accent color rather than to a ghost outline. The dropper
     hollows out because the tool leaves the button and becomes the cursor; this one does
     not -- the pointer is the ordinary pointer and the button keeps standing for a readout
     that is switched on.
@@ -5095,7 +5095,7 @@ void DevelopProperties::addWhiteBalanceRow(QModelIndex parIdx)
         drop->setIconSize(QSize(16, 16));
         drop->setToolTip("Click a neutral (grey/white) area of the image to set the "
                          "white balance from it.\nOpt/Alt-click a lit area of skin to "
-                         "correct the skin colour instead.");
+                         "correct the skin color instead.");
         /* Enabled whenever there IS an image -- deliberately NOT gated on the cached
            WorkingImage. The row is built by buildTree, which can run before the decode
            has populated WorkingImageCache, and the enabled state was only re-evaluated
@@ -5184,7 +5184,7 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
     there is often no neutral in the frame but there is always a face.
 
     A small patch is averaged rather than a single pixel, which is what Lightroom does:
-    on a noisy raw one pixel is a poor estimate of the local colour.
+    on a noisy raw one pixel is a poor estimate of the local color.
 */
     if (G::isLogger) G::log("DevelopProperties::onWbSampled");
     setWbDropperActive(false);              // auto-dismiss, like Lightroom
@@ -5234,7 +5234,7 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
             /* Say WHICH way it failed -- "pick somewhere else" is not actionable. */
             QString msg;
             if (res == WhiteBalance::SkinPick::TooNeutral)
-                msg = "That spot has almost no colour, so there is no skin hue to "
+                msg = "That spot has almost no color, so there is no skin hue to "
                       "correct. Use a plain click to balance it as a neutral.";
             else if (res == WhiteBalance::SkinPick::NotSkin)
                 msg = QString("That does not look like skin (%1%2 off the skin hue). "
@@ -5248,7 +5248,7 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
         }
     }
     else if (!WhiteBalance::solve(work->cam, sr, sg, sb, k, t)) {
-        /* A black or blown sample carries no colour to balance against. */
+        /* A black or blown sample carries no color to balance against. */
         if (G::popup)
             G::popup->showPopup("Cannot set white balance from that spot -- it is black "
                                 "or clipped. Pick a lighter neutral area.", 2000);
@@ -5565,7 +5565,7 @@ void DevelopProperties::addBasic()
     addGroupDivider(parIdx, "BasicHeader", "ProfileDivider");
 
     addWhiteBalanceRow(parIdx);
-    addSlider("temp",       "Temp",       "Colour temperature of the light, in Kelvin.",
+    addSlider("temp",       "Temp",       "Color temperature of the light, in Kelvin.",
               parIdx, "BasicHeader",
               int(WhiteBalance::kMinKelvin), int(WhiteBalance::kMaxKelvin), 0,
               G::lightblue, G::lightyellow, 0, /*logScale*/ true);
@@ -5584,7 +5584,7 @@ void DevelopProperties::addBasic()
     addSlider("clarity",    "Clarity",    "Midtone punch (+) or soft glow (-).", parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addSlider("dehaze",     "Dehaze",     "Remove or add atmospheric haze.",     parIdx, "BasicHeader", -100, 100, 0,   G::darkyellow, G::lightyellow);
     addGroupDivider(parIdx, "BasicHeader", "PresenceDevider");
-    addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colours.", parIdx, "BasicHeader", -100, 100, 0, G::darkgray, G::lightgray);
+    addSlider("vibrance",   "Vibrance",   "Saturation weighted toward muted colors.", parIdx, "BasicHeader", -100, 100, 0, G::darkgray, G::lightgray);
     addSlider("saturation", "Saturation", "Global saturation (grey at -100).",   parIdx, "BasicHeader", -100, 100, 0,   G::darkgray, G::lightgray);
     addGroupDivider(parIdx, "BasicHeader", "BasicEndDivider");
     // demo colors
@@ -5660,7 +5660,7 @@ void DevelopProperties::addCurves()
                          "Point: draw your own curve.");
         QComboBox *chan = new QComboBox(rw);
         chan->addItems({"RGB", "Red", "Green", "Blue"});
-        chan->setToolTip("The curve to edit: RGB for overall tone, or one colour "
+        chan->setToolTip("The curve to edit: RGB for overall tone, or one color "
                          "channel.");
         curveChannelCombo = chan;
         connect(mode, &QComboBox::currentIndexChanged, this, [this](int idx){
@@ -5722,7 +5722,7 @@ void DevelopProperties::addCurves()
         setIndexWidget(noteIdx, rw);
     }
 
-    /* The plot: a tall full-width spanned row, like the colour wheels. */
+    /* The plot: a tall full-width spanned row, like the color wheels. */
     clearItemInfo(i);
     i.name = "curvePlot";
     i.parIdx = parIdx;
@@ -6069,7 +6069,7 @@ void DevelopProperties::addCalibrate()
 {
     if (G::isLogger) G::log("DevelopProperties::addCalibrate");
     addHeader("CalibrateHeader", "???", "Calibrate",
-              "Fine-tune the camera's base colours, and the shadow tint.",
+              "Fine-tune the camera's base colors, and the shadow tint.",
               PV_Calibrate);
     QModelIndex parIdx = capIdx;
     addCalibrateBody(parIdx, "CalibrateHeader");
@@ -6191,15 +6191,15 @@ void DevelopProperties::addCameraProfileRow(const QModelIndex &parIdx)
     i.parentName = "BasicHeader";
     i.captionText = "Profile";
     i.tooltip = available
-        ? "The starting colour for this raw file.\n"
-          "Winnow Standard: Winnow's own colour. Camera Base: the camera maker's colour "
+        ? "The starting color for this raw file.\n"
+          "Winnow Standard: Winnow's own color. Camera Base: the camera maker's color "
           "with no added look. Other entries are camera profiles installed on this "
           "computer (Adobe's free DNG Converter installs them).\n\n"
           "Profiles are read from:"
           + profileRootsText() + ownRootText()
         : (raw ? "Apple's decoder uses its own profile. Choose Winnow as the decoder to "
                  "pick a profile here."
-               : "Raw files only. This file already has its camera's colour.");
+               : "Raw files only. This file already has its camera's color.");
     i.isIndent = true;
     i.hasValue = true;
     i.captionIsEditable = false;
@@ -6763,7 +6763,7 @@ void DevelopProperties::refreshViewTransformRow()
 /* Lowest checked primary: which one the Hue / Saturation sliders READ (they write all of
    them). Mirrors firstActiveGradeRange. */
 /* --------------------------------------------------------------------------------------
-   Color Grade (colour grading)
+   Color Grade (color grading)
 
    A minimalist take on Lightroom's Color Grading: ONE shared hue/saturation wheel driven
    by Dark / Mid / Light checkboxes (which tonal range the wheel edits -- check all three
@@ -6779,7 +6779,7 @@ void DevelopProperties::addColorGrade()
 {
     if (G::isLogger) G::log("DevelopProperties::addColorGrade");
     addHeader("ColorGradeHeader", "???", "Color Grade",
-              "Tonal-range colour grading (shadows / midtones / highlights).", PV_ColorGrade);
+              "Tonal-range color grading (shadows / midtones / highlights).", PV_ColorGrade);
     QModelIndex parIdx = capIdx;
     addColorGradeBody(parIdx, "ColorGradeHeader");
 }
@@ -6816,7 +6816,7 @@ void DevelopProperties::addColorGradeBody(const QModelIndex &parIdx, const QStri
         QRadioButton *glob  = new QRadioButton("Global",     rw);
         glob->setToolTip("Tint every pixel, whatever its tone.");
         /* The app QSS gives every QWidget the widget background, which paints a band
-           behind each caption on the tree's panel colour; the Raw and Fill Replace
+           behind each caption on the tree's panel color; the Raw and Fill Replace
            panels' radios clear it the same way. */
         for (QRadioButton *r : {dark, mid, light, glob})
             r->setStyleSheet("QRadioButton { background: transparent; }");
@@ -6878,7 +6878,7 @@ void DevelopProperties::addColorGradeBody(const QModelIndex &parIdx, const QStri
               "centre).",
               parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray);
 
-    /* Luminance for the checked range(s). Integer -100..100 like the colour sliders. */
+    /* Luminance for the checked range(s). Integer -100..100 like the color sliders. */
     addSlider("gradeLum", "Luminance",
               "Brighten / darken the selected tonal range.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
@@ -6998,7 +6998,7 @@ void DevelopProperties::refreshColorGradeRow()
 /* --------------------------------------------------------------------------------------
    The combined Color panel
 
-   One "Color" section in place of the separate colour panels: three radio buttons pick
+   One "Color" section in place of the separate color panels: three radio buttons pick
    which adjustment it shows -- Tone = Color Grade, Hue = Point Color, RGB = Calibrate.
    Only the selected body is BUILT (each body is the same builder its own section uses,
    under this header), so every key, widget pointer and refresh path is exactly as in
@@ -7099,7 +7099,7 @@ void DevelopProperties::addColorPanel()
 {
     if (G::isLogger) G::log("DevelopProperties::addColorPanel");
     addHeader("ColorPanelHeader", "???", "Color",
-              "Colour: Tone (grading by tonal range), Hue (adjust sampled colours), "
+              "Color: Tone (grading by tonal range), Hue (adjust sampled colors), "
               "Mix (adjust eight hue bands) and RGB (re-point the primaries).",
               PV_ColorPanel);
     QModelIndex parIdx = capIdx;
@@ -7108,11 +7108,11 @@ void DevelopProperties::addColorPanel()
                     {"Tone", "Hue", "Mix", "RGB"},
                     {"Grade by tonal range: tint the shadows, midtones, highlights or the "
                      "whole image.",
-                     "Sample colours in the image and shift their hue, saturation and "
+                     "Sample colors in the image and shift their hue, saturation and "
                      "luminance.",
-                     "Shift the hue, saturation and luminance of eight colour ranges "
+                     "Shift the hue, saturation and luminance of eight color ranges "
                      "(reds, oranges, ... magentas).",
-                     "Adjust the base red, green and blue colours.  Also called 'Calibration'"},
+                     "Adjust the base red, green and blue colors.  Also called 'Calibration'"},
                     colorPanelMode, colorPanelModesRow, colorPanelRadios,
                     [this](int id) {
         colorPanelMode = id;
@@ -7146,7 +7146,7 @@ void DevelopProperties::addMixer()
 {
     if (G::isLogger) G::log("DevelopProperties::addMixer");
     addHeader("MixerHeader", "???", "Color Mixer",
-              "Shift the hue, saturation and luminance of eight colour ranges.", PV_Mixer);
+              "Shift the hue, saturation and luminance of eight color ranges.", PV_Mixer);
     QModelIndex parIdx = capIdx;
     addMixerBody(parIdx, "MixerHeader");
 }
@@ -7157,9 +7157,9 @@ void DevelopProperties::addMixerBody(const QModelIndex &parIdx, const QString &p
 {
     addModeRadioRow(parIdx, parent, "mixerKinds",
                     {"Hue", "Saturation", "Luminance", "All"},
-                    {"Shift each colour range's hue toward its neighbours.",
-                     "Saturate or desaturate each colour range.",
-                     "Brighten or darken each colour range.",
+                    {"Shift each color range's hue toward its neighbours.",
+                     "Saturate or desaturate each color range.",
+                     "Brighten or darken each color range.",
                      "Show the hue, saturation and luminance sliders together."},
                     mixerKindMode, mixerKindRow, mixerKindRadios,
                     [this](int id) {
@@ -7168,7 +7168,7 @@ void DevelopProperties::addMixerBody(const QModelIndex &parIdx, const QString &p
     });
     addGroupDivider(parIdx, parent, "MixerKindsDivider");
 
-    /* The band colours the grooves are drawn from, in ColorMixer's band order. */
+    /* The band colors the grooves are drawn from, in ColorMixer's band order. */
     static const char *kBandColor[ColorMixer::kBands] = {
         "#e0403a", "#e8892f", "#e0d040", "#4fb040",
         "#3fc0c0", "#3a6ae0", "#8a4ad0", "#d040b0"};
@@ -7228,7 +7228,7 @@ void DevelopProperties::addMixerBody(const QModelIndex &parIdx, const QString &p
    Point Color
 
    Lightroom's Color Mixer > Point Color, without the Mixer. The eyedropper samples a
-   colour off the image (one-shot, like the WB dropper); each sample is a swatch, and the
+   color off the image (one-shot, like the WB dropper); each sample is a swatch, and the
    sliders below the PointColorWidget edit the SELECTED one (pointColorSel -- UI state,
    like gradeActiveMask). The sliders are not plain applyKeyToParams keys: they need the
    selection, so itemChange routes the pc* keys through setPointColorSlider. Maths and
@@ -7239,7 +7239,7 @@ void DevelopProperties::addPointColor()
 {
     if (G::isLogger) G::log("DevelopProperties::addPointColor");
     addHeader("PointColorHeader", "???", "Point Color",
-              "Sample colours from the image and shift each one's hue, saturation and "
+              "Sample colors from the image and shift each one's hue, saturation and "
               "luminance.", PV_PointColor);
     QModelIndex parIdx = capIdx;
     addPointColorBody(parIdx, "PointColorHeader");
@@ -7298,23 +7298,23 @@ void DevelopProperties::addPointColorBody(const QModelIndex &parIdx, const QStri
 
     /* The selected point's shifts. Integer -100..100, 0 = no change. */
     addSlider("pcHueShift", "Hue Shift",
-              "Rotate the hue of the selected colour.",
+              "Rotate the hue of the selected color.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
     addSlider("pcSatShift", "Sat. Shift",
-              "Saturate or desaturate the selected colour.",
+              "Saturate or desaturate the selected color.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
     addSlider("pcLumShift", "Lum. Shift",
-              "Brighten or darken the selected colour.",
+              "Brighten or darken the selected color.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
     addSlider("pcVariance", "Variance",
-              "Left evens out a colour (e.g. blotchy skin); right spreads it apart.",
+              "Left evens out a color (e.g. blotchy skin); right spreads it apart.",
               parIdx, parent, -100, 100, 0, G::darkgray, G::lightgray);
 
-    /* Which pixels count as "the selected colour". Range widens or narrows all three
+    /* Which pixels count as "the selected color". Range widens or narrows all three
        at once; the indented three refine one axis each. 50 = the nominal width. */
     addGroupDivider(parIdx, parent, "PointColorRangeDivider");
     addSlider("pcRange", "Range",
-              "How far from the sampled colour the adjustment reaches.",
+              "How far from the sampled color the adjustment reaches.",
               parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
     addSlider("pcHueRange", "   Hue",
               "How far in hue from the sample the adjustment reaches.",
@@ -7326,7 +7326,7 @@ void DevelopProperties::addPointColorBody(const QModelIndex &parIdx, const QStri
               "How far in luminance from the sample the adjustment reaches.",
               parIdx, parent, 0, 100, 0, G::darkgray, G::lightgray, 50);
     addCheckbox("pcVisualize", "Visualize Range",
-                "Show the pixels the selected point affects in colour and everything "
+                "Show the pixels the selected point affects in color and everything "
                 "else in grey. A view only: nothing is saved.",
                 parIdx, parent, pointColorVisualize);
     addGroupDivider(parIdx, parent, "PointColorEndDivider");
@@ -7358,7 +7358,7 @@ void DevelopProperties::setPointColorPickActive(bool on, bool addSample)
     pointColorPickActive = on;
     pointColorPickAdd = addSample;
     /* The dropper reads the DISPLAYED image, so it must not sample the grey of a
-       visualised range: showing the real colours again is the only sensible state. */
+       visualised range: showing the real colors again is the only sensible state. */
     if (on && pointColorVisualize) {
         pointColorVisualize = false;
         const bool wasPop = isPopulating;
@@ -7375,7 +7375,7 @@ void DevelopProperties::setPointColorPickActive(bool on, bool addSample)
 /* The eyedropper landed (MW::onPointColorPicked, from the DISPLAYED image). Append the
    sample with neutral shifts and select it, so the sliders immediately edit it -- or,
    from the add-sample dropper or on a Shift-click (extend), add it to the SELECTED
-   point's samples, widening the colours that point reaches. A Shift-click keeps the
+   point's samples, widening the colors that point reaches. A Shift-click keeps the
    dropper armed so several samples can be taken in a row. */
 void DevelopProperties::addPointColorFromPixel(float r, float g, float b, bool extend)
 {
@@ -7609,7 +7609,7 @@ void DevelopProperties::applyColorRangeHuePreset(int band)
     sample.append(c.greenF());
     sample.append(c.blueF());
 
-    /* REPLACE rather than append: a chip means "select this colour", so clicking Green
+    /* REPLACE rather than append: a chip means "select this color", so clicking Green
        after Red must not leave the reds selected too. Shift-clicking the image still
        adds further samples on top, as before. */
     QJsonObject o = QJsonDocument::fromJson(mm.paramsJson.toUtf8()).object();
@@ -7763,7 +7763,7 @@ void DevelopProperties::addDetail()
        exact) -- see Develop::Denoise. */
     addSlider("localDenoise", "Denoise:", "Reduce grainy noise.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
-    addSlider("localDenoiseChroma", "   Color", "Local colour (chroma) noise reduction.",
+    addSlider("localDenoiseChroma", "   Color", "Local color (chroma) noise reduction.",
               parIdx, "DetailHeader", 0, 100, 0, G::darkgray, G::lightgray);
 
     addGroupDivider(parIdx, "DetailHeader", "DetailEndDivider");
@@ -8539,7 +8539,7 @@ void DevelopProperties::addLens()
         return;
     }
     addHeader("LensHeader", "???", "Lens",
-              "Profile: correct distortion and vignetting.  Fringe: remove colour\n"
+              "Profile: correct distortion and vignetting.  Fringe: remove color\n"
               "fringes.  Blur: blur by depth, like a wide aperture.\n"
               "Global scope: it applies to the whole image.", PV_Lens);
     QModelIndex parIdx = capIdx;
@@ -8548,7 +8548,7 @@ void DevelopProperties::addLens()
        rows are built (lensPanelMode, persisted). */
     addModeRadioRow(parIdx, "LensHeader", "lensPanelModes", {"Profile", "Fringe", "Blur"},
                     {"Correct distortion and vignetting, with a lens profile or by eye.",
-                     "Remove chromatic aberration and the colour fringes along edges.",
+                     "Remove chromatic aberration and the color fringes along edges.",
                      "Blur the photo by depth, like a wide aperture (Lens Blur)."},
                     lensPanelMode, lensPanelModesRow, lensPanelRadios, [this](int id) {
         lensPanelMode = id;
@@ -8561,7 +8561,7 @@ void DevelopProperties::addLens()
     switch (lensPanelMode) {
     case 1:
         addCheckbox("removeCA", "Remove CA",
-                    "Remove the colour fringes that appear toward the corners of the\n"
+                    "Remove the color fringes that appear toward the corners of the\n"
                     "frame.",
                     parIdx, "LensHeader");
         addSlider("defringePurple", "Purple fringe",
@@ -9529,7 +9529,7 @@ void DevelopProperties::itemChange(QModelIndex idx)
         if (curveEditor) curveEditor->setParams(activeParams());
         /* History caption = the row's own caption ("Exposure"); the whole drag folds
            into one entry (mergeKey), so the list reads one step per slider. */
-        /* The Calibrate captions are a bare "Hue" / "Saturation" (the groove colour
+        /* The Calibrate captions are a bare "Hue" / "Saturation" (the groove color
            names the primary), which would read ambiguously in History. */
         static const QHash<QString, QString> kCalHistory = {
             {"calShadowTint", "Shadows tint"},
@@ -10287,7 +10287,7 @@ const PresetLeafDef kBasicLeaves[] = {
        carrying one only reproduces the look on a machine where that profile is installed
        -- and on a DIFFERENT CAMERA it will not resolve at all. That is the honest
        behaviour for a per-sensor characterisation: the alternative, silently dropping it,
-       would make the preset claim a colour rendering it did not deliver. */
+       would make the preset claim a color rendering it did not deliver. */
     {"cameraProfile", "Camera profile"},
     /* Then Tone mapping: it re-scopes everything below it. */
     {"viewTransform", "Tone mapping"},
@@ -10305,7 +10305,7 @@ const PresetLeafDef kBasicLeaves[] = {
     {"saturation",   "Saturation"},
 };
 /* Two leaves, not one: a look built on the composite curve is often wanted WITHOUT the
-   per-channel colour crossover that came with it. */
+   per-channel color crossover that came with it. */
 const PresetLeafDef kCurvesLeaves[] = {
     {"curveRgb",      "Tone curve (RGB)"},
     {"curveChannels", "Tone curve (Red / Green / Blue)"},
@@ -10318,7 +10318,7 @@ const PresetLeafDef kColorLeaves[] = {
     {"luminance",  "Luminance"},
 };
 /* ONE leaf: the samples are meaningless apart (a preset carrying them is a "move these
-   colours" look, e.g. a skin-tone fix), and applying it REPLACES the target's points. */
+   colors" look, e.g. a skin-tone fix), and applying it REPLACES the target's points. */
 const PresetLeafDef kPointColorLeaves[] = {
     {"pointColors", "Point colors"},
 };
@@ -11680,7 +11680,7 @@ void DevelopProperties::rotateImageEdits(const QString &fPath, int degrees)
     Every stored coordinate is re-expressed in the rotated frame (EditRotate::stack), and
     so is every History snapshot, so undo does not bring back masks in the old frame.
 
-    PREVIEWS GO EVEN WHEN NOTHING MOVED. A recipe of tone and colour alone is unchanged
+    PREVIEWS GO EVEN WHEN NOTHING MOVED. A recipe of tone and color alone is unchanged
     by a rotation, so its hash -- the only thing the stored previews are checked against
     -- is unchanged too, and the thumbnail and loupe previews rendered in the old
     orientation would be served as current. An unedited image has no recipe to flush,
@@ -11951,7 +11951,7 @@ constexpr const char *kLensIdField = "lensProfileId";
 
 /* Point Color's samples: a non-scalar field like the curves, so the same named
    pseudo-field + differs/copy pair. The whole point list travels as one: propagating
-   "point 2's hue shift" to an image whose point 2 is a different colour would be
+   "point 2's hue shift" to an image whose point 2 is a different color would be
    nonsense. */
 constexpr const char *kPointColorField = "pointColors";
 bool pointColorsDiffer(const EditParams &a, const EditParams &b)
@@ -12711,7 +12711,7 @@ void DevelopProperties::populateSlidersFromStack()
     }
     isPopulating = true;
     /* Temp/Tint are absolute and stored with 0 = "as shot", so they resolve through the
-       image's own colour characterisation rather than being pushed raw (refreshWbRow). */
+       image's own color characterisation rather than being pushed raw (refreshWbRow). */
     setSliderReal("exposure",   p.exposure);
     setSliderReal("contrast",   p.contrast);
     setSliderReal("highlights", p.highlights);

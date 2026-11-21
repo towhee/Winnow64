@@ -7,7 +7,7 @@
 #include "ImageFormats/Raw/rawimage.h"
 
 /*
-    Reconstructs a full-colour image from a single-channel CFA mosaic. The demosaicer
+    Reconstructs a full-color image from a single-channel CFA mosaic. The demosaicer
     is deliberately camera-agnostic: it sees only the mosaic and its CFA pattern
     (RawImage), never a vendor or file format. This lets it be unit tested on synthetic
     mosaics and shared by every RawFormat subclass.
@@ -23,9 +23,9 @@ public:
         read two photosites out). Fuji X-Trans has no H/V structure for PPG or AHD to use:
         Bilinear gives XTransWindow there, and Ppg / Ahd give XTransDirectional.
 
-        Bilinear  3x3 same-colour average. Fast and soft; zips colour along edges.
+        Bilinear  3x3 same-color average. Fast and soft; zips color along edges.
         Ppg       Patterned Pixel Grouping (Chuan-kai Lin): green from the flattest of four
-                  directions, red/blue by colour difference. ~Bilinear's cost, far sharper.
+                  directions, red/blue by color difference. ~Bilinear's cost, far sharper.
         Ahd       Adaptive Homogeneity-Directed (Hirakawa & Parks, IEEE TIP 2005):
                   horizontal and vertical candidates chosen per pixel by CIELab
                   homogeneity. The quality default.
@@ -33,7 +33,7 @@ public:
         PPG and AHD are ported from LightCraft (crates/raw/src/demosaic/{ppg,ahd}.rs, MIT,
         see THIRD_PARTY_NOTICES.md), which implemented them from the published papers;
         XTransDirectional from its xtrans.rs, LightCraft's own design.
-        Every algorithm reproduces a constant-colour mosaic exactly and keeps each
+        Every algorithm reproduces a constant-color mosaic exactly and keeps each
         photosite's own channel as measured.
     */
     enum Algorithm {
@@ -54,7 +54,7 @@ public:
              const QAtomicInt *abort = nullptr,
              const std::function<void(int, int)> &progress = {});
 
-    /* Colour of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
+    /* Color of photosite (row,col) for a Bayer pattern: 0=R, 1=G, 2=B. */
     static int BayerColorAt(CfaPattern pattern, int row, int col);
 
 private:
@@ -70,9 +70,9 @@ private:
                      const QAtomicInt *abort,
                      const std::function<void(int, int)> &progress);
 
-    /* Fuji X-Trans: per-pixel average of same-colour photosites in a 5x5 window (the 6x6
-       pattern guarantees all three colours in that window), native colour kept exact. */
-    /* Fuji X-Trans: LightCraft's edge-weighted colour-difference interpolation (see the
+    /* Fuji X-Trans: per-pixel average of same-color photosites in a 5x5 window (the 6x6
+       pattern guarantees all three colors in that window), native color kept exact. */
+    /* Fuji X-Trans: LightCraft's edge-weighted color-difference interpolation (see the
        definition). The X-Trans quality path. */
     bool XTransDirectional(const RawImage &raw, std::vector<float> &rgb,
                            const QAtomicInt *abort,

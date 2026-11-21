@@ -5,8 +5,8 @@
 #include <vector>
 
 /*
-    CFA (colour filter array) mosaic pattern of the sensor. The 2x2 codes name the
-    colour at (row0,col0),(row0,col1),(row1,col0),(row1,col1). XTrans is Fuji's 6x6
+    CFA (color filter array) mosaic pattern of the sensor. The 2x2 codes name the
+    color at (row0,col0),(row0,col1),(row1,col0),(row1,col1). XTrans is Fuji's 6x6
     pattern, handled separately by the demosaicer (not supported in the scaffold).
 */
 enum class CfaPattern {
@@ -19,7 +19,7 @@ enum class CfaPattern {
 };
 
 /*
-    Map the four 2x2 CFA colour codes (0=R, 1=G, 2=B) at (r0,c0)(r0,c1)(r1,c0)(r1,c1) -- the
+    Map the four 2x2 CFA color codes (0=R, 1=G, 2=B) at (r0,c0)(r0,c1)(r1,c0)(r1,c1) -- the
     TIFF/EP CFAPattern / RawSensorInfo::cfaPlaneColor convention -- to a CfaPattern. Shared by
     every vendor unpack so the mapping lives in one place. Returns Unknown for anything that
     is not one of the four Bayer phases.
@@ -36,10 +36,10 @@ inline CfaPattern cfaPatternFromPlaneColor(const uint8_t p[4]) {
 /*
     Normalised sensor data produced by RawFormat::UnpackCfa(). One uint16 sample per
     photosite (the mosaic), row-major over the active area, together with the metadata
-    the shared pipeline needs to turn the mosaic into a colour image.
+    the shared pipeline needs to turn the mosaic into a color image.
 
     This is the single hand-off point between the per-format unpack step (which knows
-    the vendor bitstream) and the shared demosaic/colour stages (which do not care
+    the vendor bitstream) and the shared demosaic/color stages (which do not care
     which camera produced the data).
 
     The four-element black[] / camMul[] arrays are indexed by 2x2 photosite position,
@@ -52,7 +52,7 @@ struct RawImage {
 
     CfaPattern pattern = CfaPattern::Unknown;
 
-    /* When pattern == XTrans, this is the 6x6 colour map (0=R, 1=G, 2=B) at the mosaic origin;
+    /* When pattern == XTrans, this is the 6x6 color map (0=R, 1=G, 2=B) at the mosaic origin;
        the demosaicer tiles it across the image. Unused for Bayer patterns. */
     uint8_t xtrans[6][6] = {{0}};
 

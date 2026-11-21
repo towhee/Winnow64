@@ -438,7 +438,7 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
        the optical-black margins -- otherwise the dark border shows as a black edge (most visible on
        Bayer GFX, which has ~190 black columns on the right). Preserve CFA phase: for Bayer the crop
        origin must stay even (RGGB unchanged); for X-Trans the 6x6 map is rolled by the crop origin
-       so the demosaicer, which tiles from (0,0), still sees the right colours. */
+       so the demosaicer, which tiles from (0,0), still sees the right colors. */
     if (cropW > 0 && cropH > 0 && cropTop >= 0 && cropLeft >= 0 &&
         cropLeft + cropW <= raw.width && cropTop + cropH <= raw.height) {
         int top = cropTop, left = cropLeft, cw = cropW, ch = cropH;
@@ -479,7 +479,7 @@ bool FujiRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 }
 
 /*
-    RAF colour without a decode: the as-shot white balance out of the CFA metadata
+    RAF color without a decode: the as-shot white balance out of the CFA metadata
     directory, plus the per-model XYZ->camera matrix.
 
     Only the metadata is read -- everything before cfaOff, which is exactly where the RAF
@@ -504,7 +504,7 @@ bool FujiRaw::ReadAsShotColor(QFile &file, const ImageMetadata &m, RawSensorInfo
         const quint32 cfaHdr = beh(92);             // CFA metadata directory offset
         const quint32 cfaOff = beh(100);            // raw CFA data -- end of metadata
 
-        /* Colour matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not in
+        /* Color matrix by model: TIFF tag 272 lives in the embedded JPEG's TIFF, not in
            the RAF header, so use the camera id text at 0x1C. The Make is not in the
            header either, but a RAF is a Fujifilm by definition. */
         const QString model = canonicalCameraModel("FUJIFILM",

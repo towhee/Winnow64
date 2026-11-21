@@ -10,8 +10,8 @@
     Every rendered image is sRGB (OutputTransform), and on a wide-gamut display sRGB
     numbers shown unconverted come out oversaturated -- reds most visibly. The Develop
     loupe was shown that way while Browse converted (ImageDecoder::colorManage), so the
-    same picture changed colour on the first slider tick, and a face measured ~25% redder
-    than Lightroom's with the same profile (see "15.2 Display Colour Management of
+    same picture changed color on the first slider tick, and a face measured ~25% redder
+    than Lightroom's with the same profile (see "15.2 Display Color Management of
     Rendered Frames" in notes/Documentation.md).
 
     WHY AT THE DISPLAY BOUNDARY and not by rendering into the display's space: the
@@ -24,7 +24,7 @@
     in parallel strips: ~3-5 ms for a 6 MP proxy on 16 threads (measured 2026-10-26).
 
     Inactive -- ToDisplay returns its input untouched, no copy -- when no display profile
-    is known (Linux has none) or the display is effectively sRGB. Colour management is
+    is known (Linux has none) or the display is effectively sRGB. Color management is
     always on (2026-10-26); there is no toggle.
 */
 namespace DisplayColor

@@ -416,7 +416,7 @@ void Reader::readIcon()
             that was ever wrong for this row (a stale m, a model column not yet updated)
             stored the developed render as the camera thumb. Nothing invalidates it when
             the recipe is later reset -- the file's size and mtime never change -- so an
-            unedited image went on showing an old edit's crop and colour (seen on a D7200
+            unedited image went on showing an old edit's crop and color (seen on a D7200
             NEF, 2026-10-10). The source of the pixels is the only reliable answer. */
         if (!image.isNull() && !fromThumbCache && !isVersion && !thumb->lastWasDevThumb) {
             QElapsedTimer tCache;

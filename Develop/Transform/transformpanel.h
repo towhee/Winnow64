@@ -151,7 +151,7 @@ private:
 
     /* Placeholders for the group dividers above the Angle and Warp rows: they reserve
        the space in the grid and paintEvent draws the G::groupSeparator* line in them,
-       so the colour tracks theme changes. */
+       so the color tracks theme changes. */
     QList<QWidget*> rowRules;
 
     QComboBox    *aspectCombo    = nullptr;

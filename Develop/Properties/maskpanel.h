@@ -34,9 +34,9 @@ class MaskEditor;
     left of the overlay swatch, and its Show / Hide all moved into the Mask band's [:].
     The Mask band's arrow therefore folds the submask rows as well as Edge/Halo.
 
-    The overlay's APPEARANCE (colour, grayscale background) is NOT here: it describes the
+    The overlay's APPEARANCE (color, grayscale background) is NOT here: it describes the
     veil rather than any submask, and is edited from the tint swatch on the Mask band
-    (right-click). Only the palette still lives with this class -- overlayColours().
+    (right-click). Only the palette still lives with this class -- overlayColors().
 
     Terms: the MASK is what the scope applies; each SUBMASK is a building block folded
     into it, in list order. The submask's SETTINGS render in the embedded MaskEditor so
@@ -107,12 +107,12 @@ public:
     void showMaskLevel(bool show);   // also enables [-] [n]: they need a submask
     /* The mask's submasks. DevelopProperties pushes rows in and binds its signals. */
     SubmaskList *list() const { return submaskList; }
-    /* THE overlay-colour palette. Static because the Mask band's tint swatch
-       context menu offers the same colours: one list, so the two pickers cannot drift. */
-    static const QVector<QColor> &overlayColours();
-    /* Display names for overlayColours(), same order (a menu needs words, chips do
-       not). Kept beside the palette so adding a colour cannot leave a menu unlabelled. */
-    static const QStringList &overlayColourNames();
+    /* THE overlay-color palette. Static because the Mask band's tint swatch
+       context menu offers the same colors: one list, so the two pickers cannot drift. */
+    static const QVector<QColor> &overlayColors();
+    /* Display names for overlayColors(), same order (a menu needs words, chips do
+       not). Kept beside the palette so adding a color cannot leave a menu unlabelled. */
+    static const QStringList &overlayColorNames();
 
 signals:
     /* Mask band [:]: put the folded mask back to Feather 0 / Edge 0 / Halo 0. The panel holds no

@@ -190,7 +190,7 @@ void Metadata::initSupportedFiles()
                         << "tif"
                         /* HEIC was missing: iPhone files are Display P3 and were being
                            rendered as sRGB (visibly undersaturated) because nothing here
-                           opted them into colour management. Heic::colrBox now captures
+                           opted them into color management. Heic::colrBox now captures
                            the profile -- see the note there. */
                         << "heic"
                         << "hif"
@@ -2122,7 +2122,7 @@ bool Metadata::readMetadata(bool isReport, const QString &path, QString source)
         if (ext == "rw2")  parsed = parsePanasonic();
         if (ext == "tif")  parsed = parseTIF();
         if (ext == "png")  parsed = parsePNG();
-        /*  THE COLOUR SPACE. A parser that found an embedded profile (or a HEIC nclx
+        /*  THE COLOR SPACE. A parser that found an embedded profile (or a HEIC nclx
             box) has already set it; otherwise the EXIF ColorSpace tag, which IFD
             records whichever parser walked the EXIF directory -- 13 formats, one place.
             For a raw that is the camera's setting, i.e. what its embedded previews were

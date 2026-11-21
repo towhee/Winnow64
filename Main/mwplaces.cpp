@@ -322,7 +322,7 @@ void MW::applyPlaceFilter(const QVector<qint64> &ids)
 {
 /*
     A Places panel click -- the panel's whole selection. As a Collection click does,
-    it clears EVERY filter (all categories, the search text, the pick / rating / colour
+    it clears EVERY filter (all categories, the search text, the pick / rating / color
     actions) and then checks these places, in ONE filterChange: it means "show me the
     images taken here". An empty selection is Cancel, which clears only this category.
 

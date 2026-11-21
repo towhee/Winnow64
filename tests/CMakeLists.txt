@@ -292,13 +292,13 @@ winnow_test_link_opencv(tst_segmenter PRIVATE opencv_core opencv_imgproc opencv_
 winnow_add_unit_test(tst_maskrefine unit/tst_maskrefine.cpp)
 winnow_test_link_opencv(tst_maskrefine PRIVATE opencv_core opencv_imgproc)
 # tst_lenscorrect tests Develop/lenscorrect.h -- lateral CA correction (radial R/B scale
-# estimated from the image) and defringe (edge colour pulled to the two-sided linear mix)
-# -- on synthetic scenes with known truth: a known shift recovered, clean colour edges left
+# estimated from the image) and defringe (edge color pulled to the two-sided linear mix)
+# -- on synthetic scenes with known truth: a known shift recovered, clean color edges left
 # alone, an axial fringe removed, clipped highlights untouched. OpenCV core + imgproc.
 winnow_add_unit_test(tst_lenscorrect unit/tst_lenscorrect.cpp)
 winnow_test_link_opencv(tst_lenscorrect PRIVATE opencv_core opencv_imgproc)
 # tst_demosaic tests ImageFormats/Raw/demosaic.cpp -- Bilinear, PPG and AHD on synthetic
-# Bayer mosaics (exact constant colour, PSNR ranking, no AHD maze, thread-count
+# Bayer mosaics (exact constant color, PSNR ranking, no AHD maze, thread-count
 # independence). demosaic.cpp needs only RawImage and OpenCV core's thread pool.
 winnow_add_unit_test(tst_demosaic unit/tst_demosaic.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/demosaic.cpp)
@@ -316,7 +316,7 @@ winnow_add_unit_test(tst_fslocalalign unit/tst_fslocalalign.cpp
     ${CMAKE_SOURCE_DIR}/FocusStack/fslocalalign.cpp)
 winnow_test_link_opencv(tst_fslocalalign PRIVATE opencv_core opencv_imgproc)
 # tst_highlightrecon tests ImageFormats/Raw/highlightrecon.cpp -- partly clipped channels
-# rebuilt from reliable colour nearby, fully clipped ones neutral, no tint from branches,
+# rebuilt from reliable color nearby, fully clipped ones neutral, no tint from branches,
 # fringes or foliage, no step where a channel clips, unclipped pixels left exactly.
 winnow_add_unit_test(tst_highlightrecon unit/tst_highlightrecon.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/highlightrecon.cpp)
@@ -384,7 +384,7 @@ winnow_add_unit_test(tst_icc unit/tst_icc.cpp
     ${WINNOW_LCMS_SOURCES})
 winnow_test_link_opencv(tst_icc PRIVATE opencv_core)
 
-# tst_colorspaces pins the colour space lookup table (Metadata/colorspaces.h): published
+# tst_colorspaces pins the color space lookup table (Metadata/colorspaces.h): published
 # ids, profiles identified by colorants (synthetic and macOS's own), sRGB needing its
 # curve, and the EXIF / HEIC nclx fallbacks.
 winnow_add_unit_test(tst_colorspaces unit/tst_colorspaces.cpp
@@ -461,7 +461,7 @@ target_link_libraries(tst_dcp PRIVATE winnow_test_color)
 # and the white balance it shares an illuminant definition with. It pins the mired (not
 # kelvin) interpolation, the warm-first ordering, and the exposure anchor -- a camera
 # neutral must render to exactly (1,1,1), or selecting a profile moves every raw's
-# brightness as well as its colour.
+# brightness as well as its color.
 # tst_huesatmap pins the profile's 3-D HSV table: its STORAGE ORDER (value, hue,
 # saturation -- established empirically against 279 installed tables, pinned here by
 # construction), that the value axis is indexed clamped but scaled UNCLAMPED so

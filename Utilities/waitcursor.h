@@ -10,7 +10,7 @@
     and hands it to CGImageCreate WITHOUT a null check, so whenever CoreGraphics
     declines the profile the app dies in CGColorSpaceGetType (EXC_BREAKPOINT inside
     QGuiApplication::setOverrideCursor -- seen from Auto tone, filterChange and
-    loadEntireMetadataCache). The cursor built here is the same image with its colour
+    loadEntireMetadataCache). The cursor built here is the same image with its color
     space cleared, which sends toCGImage down its plain sRGB branch. Elsewhere it is
     just the Qt shape.
 */

@@ -27,7 +27,7 @@ class Filters;
 
     THE CATEGORY TREE IS THE Filters WIDGET ITSELF, not a copy of it. Both scopes render
     the same categories, the same checkboxes, the same include/exclude gestures, the same
-    colours -- only where the values came from changes. Anything else would drift, which
+    colors -- only where the values came from changes. Anything else would drift, which
     is the failure the two panels had already demonstrated.
 
     IN BOTH SCOPES THE PANEL FILTERS; ONLY THE SET DIFFERS. Checking an item re-runs the

@@ -244,7 +244,7 @@ void TableView::setDefaultColumnWidths()
     defaultColumnWidth[G::NSImageColumn] = fm.boundingRect("==NS Image==").width();
     defaultColumnWidth[G::PickColumn] = fm.boundingRect("===Pick===").width();
     defaultColumnWidth[G::IngestedColumn] = fm.boundingRect("=Ingested=").width();
-    defaultColumnWidth[G::LabelColumn] = fm.boundingRect("=Colour=").width();
+    defaultColumnWidth[G::LabelColumn] = fm.boundingRect("=Color=").width();
     defaultColumnWidth[G::RatingColumn] = fm.boundingRect("=Rating=").width();
     defaultColumnWidth[G::SearchColumn] = fm.boundingRect("=false=").width();
     defaultColumnWidth[G::TypeColumn] = fm.boundingRect("=JPG+NEF=").width();

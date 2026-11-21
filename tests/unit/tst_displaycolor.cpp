@@ -10,8 +10,8 @@
     DisplayColor converts the sRGB frames Winnow renders itself (the Develop loupe) for a
     wide-gamut display. These pin the three things the loupe depends on: it is a no-op
     (the SAME image, no copy) whenever there is nothing to convert (no display profile,
-    or an sRGB one -- colour management is always on, so there is no "off" case); on a wide-gamut
-    display saturated colours come back less saturated, which is the whole fix; and every
+    or an sRGB one -- color management is always on, so there is no "off" case); on a wide-gamut
+    display saturated colors come back less saturated, which is the whole fix; and every
     pixel layout the render paths produce converts identically, alpha and row padding
     included, across the parallel strips.
 */

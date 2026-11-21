@@ -99,7 +99,7 @@ image looks mushy, reach for Sharpening; if it looks flat, reach for Texture.</p
 <ul>
 <li><b>Denoise</b> is <b>luminance</b> noise reduction &mdash; the speckle in a high-ISO
 frame.  It preserves ratios between the channels, so it smooths grain without shifting
-colour.  It also costs detail: every luminance NR is a trade, and the useful range is
+color.  It also costs detail: every luminance NR is a trade, and the useful range is
 usually far lower than it looks at 100&nbsp;%.</li>
 <li><b>Denoise Color</b> is <b>chroma</b> noise reduction &mdash; the blotchy red / green
 mottling in deep shadows.  It blurs the opponent-chroma channels and leaves luminance
@@ -124,7 +124,7 @@ again &mdash; Opt-drag the slider to watch them turn black in the mask.</li>
 </ol>
 
 <h2>Where it sits in the pipeline</h2>
-<p>Noise reduction runs <b>first</b>, before the tone and colour work, so nothing
+<p>Noise reduction runs <b>first</b>, before the tone and color work, so nothing
 downstream amplifies noise you were going to remove anyway.  Sharpening runs near the
 <b>end</b>, after the vignette (so darkened corners are not detail-boosted) and before
 grain (so film grain is never itself sharpened).</p>

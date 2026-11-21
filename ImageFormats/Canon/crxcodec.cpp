@@ -2602,7 +2602,7 @@ int crxSetupImageData(crx_data_header_t *hdr, CrxImage *img, int16_t *outBuf, in
   img->medianBits = hdr->medianBits;
 
   // The encoding type 3 needs all 4 planes to be decoded to generate row of
-  // RGGB values. It seems to be using some other colour space for raw encoding
+  // RGGB values. It seems to be using some other color space for raw encoding
   // It is a massive buffer so ideallly it will need a different approach:
   // decode planes line by line and convert single line then without
   // intermediate plane buffer. At the moment though it's too many changes so

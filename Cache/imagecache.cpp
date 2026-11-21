@@ -2680,7 +2680,7 @@ void ImageCache::clearForReload(const QString &src)
 {
 /*
     A reload: every cached image was decoded by settings that just changed (operation
-    mode, Decode Raw, preview source, colour management).
+    mode, Decode Raw, preview source, color management).
 
     - The generation moves on, so a decode already running -- it chose its pixels by
       the old settings -- is superseded when it lands instead of being cached over the
@@ -2713,7 +2713,7 @@ void ImageCache::reloadImageCacheSeeded(QString fPath, QImage image, bool colorM
     through to the file) during which Browse waited on pixels it already had.
 
     The image is the develop render's output, which is sRGB -- the same pixels a devPreview
-    holds -- so it is colour-managed exactly as ImageDecoder::colorManage treats a
+    holds -- so it is color-managed exactly as ImageDecoder::colorManage treats a
     devPreview: an empty profile, i.e. "from sRGB". Done here, on the ImageCache thread,
     to keep a full-resolution transform off the GUI thread. setTargetRange skips a key
     icd already holds, so no decoder is dispatched for it.

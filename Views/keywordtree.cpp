@@ -34,9 +34,9 @@
 
 namespace {
 
-/*  Draws an "on this image" keyword in dull yellow (G::appliedKeywordColor). A colour
+/*  Draws an "on this image" keyword in dull yellow (G::appliedKeywordColor). A color
     rather than a mark before the name: a mark cost indent on every applied row and was
-    easy to miss at a glance, where a coloured name reads the way the red unfiled
+    easy to miss at a glance, where a colored name reads the way the red unfiled
     keywords in the tag zone and Filters do. */
 class AppliedKeywordDelegate : public QStyledItemDelegate
 {
@@ -51,9 +51,9 @@ public:
         answered that with a filled row everywhere else a drop lands on something, so this
         does not invent a second visual language for it.
 
-        HERE RATHER THAN IN File/hoverdelegate.h, because this tree also colours the
-        applied keywords and a view has one delegate. Sharing the colour is what matters;
-        sharing the class would cost the applied colour. */
+        HERE RATHER THAN IN File/hoverdelegate.h, because this tree also colors the
+        applied keywords and a view has one delegate. Sharing the color is what matters;
+        sharing the class would cost the applied color. */
     void setDropRow(const QModelIndex &idx)
     {
         const QModelIndex row = idx.isValid()

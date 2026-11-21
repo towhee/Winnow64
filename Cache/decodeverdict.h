@@ -7,7 +7,7 @@
 
     A decode can finish long after the request that started it. By then the model may
     be a new instance (folder, filter, sort, version), the cache may have been reloaded
-    for a new mode (Preview / Develop, Decode Raw, preview source, colour management),
+    for a new mode (Preview / Develop, Decode Raw, preview source, color management),
     or the file may have been invalidated (edited outside Winnow, a new Develop recipe,
     rewritten in place). Each of those makes the pixels wrong, and each used to be
     checked -- or not -- in a different place: a reload superseded nothing, so the old

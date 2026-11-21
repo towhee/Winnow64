@@ -3,7 +3,7 @@
 
     WHY THIS TEST EXISTS. A DCP is a bag of optional tags, and every way of getting one
     wrong is SILENT: a table read with the wrong dimensions shears the hue axis into
-    colours that look deliberate, a ForwardMatrix swapped for a ColorMatrix renders a
+    colors that look deliberate, a ForwardMatrix swapped for a ColorMatrix renders a
     plausible-looking cast, and a missing tag left as an identity matrix is
     indistinguishable from a profile that legitimately omits it. None of that fails
     loudly enough to notice from a picture, so it is pinned here instead.

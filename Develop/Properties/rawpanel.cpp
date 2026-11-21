@@ -137,7 +137,7 @@ void RawPanel::buildUi()
     rawRadio  = new QRadioButton(tr("Raw"), editRow);
     prevRadio = new QRadioButton(tr("Embedded Preview"), editRow);
     /* Transparent like the captions beside them: an opaque control would slab the panel's
-       lifted background. The app-wide checked colour (cadetblue, WidgetCSS::radioButton)
+       lifted background. The app-wide checked color (cadetblue, WidgetCSS::radioButton)
        is overridden to plain caption text: the indicator already shows the choice. */
     for (QRadioButton *r : {rawRadio, prevRadio})
         r->setStyleSheet("QRadioButton { background: transparent; color: "
@@ -335,7 +335,7 @@ void RawPanel::buildUi()
     denoiseEditor->addSlider("denoiseLuma", "Lum",
                              "Reduce grainy noise.", 0, 100);
     denoiseEditor->addSlider("denoiseChroma", "Color",
-                             "Raw colour (chroma) noise reduction.", 0, 100);
+                             "Raw color (chroma) noise reduction.", 0, 100);
     denoiseEditor->fitHeight();
     connect(denoiseEditor, &PanelEditor::settingChanged, this,
             [this](const QString &key, const QVariant &v){

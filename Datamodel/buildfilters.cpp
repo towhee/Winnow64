@@ -526,7 +526,7 @@ QVector<BuildFilters::Sink> BuildFilters::sinks(const FilterSnapshot &snap) cons
     (FilterCategory::compareAsText), so the padding never affects a match. */
 static QString sessionValueText(const QVariant &value, int column)
 {
-    /*  The colour space column holds an ID; its category shows the NAME, and
+    /*  The color space column holds an ID; its category shows the NAME, and
         Filters::filterValueFor maps the checked name back to the ID the predicate
         compares (as Availability does with its codes). Metadata/colorspaces.h. */
     if (column == G::ICCSpaceColumn) return ColorSpaces::name(value.toInt());

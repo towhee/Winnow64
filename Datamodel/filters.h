@@ -96,7 +96,7 @@ public:
 
         A GROUP IS ONLY AN ORGANISER. It has no column and no check state, filters
         nothing, and is skipped by SortFilter::compileFilters. It is lit in the filtering
-        colour while any category inside it is filtering, so a collapsed group still says
+        color while any category inside it is filtering, so a collapsed group still says
         where the filter is.
 
         CATEGORIES ARE NO LONGER ALWAYS TOP-LEVEL. Code that needs "is this a category
@@ -427,8 +427,8 @@ signals:
     /*  "Save as a query..." -- EVERY active filter as one query (activeFiltersAsQuery).
         notSaved names the filtering categories a query has no field for. */
     void saveFiltersAsQueryRequested(const QString &queryText, const QStringList &notSaved);
-    /*  Whether any category header is lit in the filtering colour -- emitted only when
-        that changes. MW colours the Filters title bar with it. */
+    /*  Whether any category header is lit in the filtering color -- emitted only when
+        that changes. MW colors the Filters title bar with it. */
     void filteringChanged(bool isFiltering);
     /*  Thumbnails were dropped on a Folders row in Library scope: move these images
         (companions already filtered out) into that real folder, or copy them when the
@@ -446,7 +446,7 @@ signals:
     void moveFolderRequested(const QString &folder);
     void trashFolderRequested(const QString &folder);
     /*  Cmd/Ctrl+Opt/Alt+click on an item: show only that item. MW clears every other
-        filter -- categories, search text, pick/rating/colour actions -- then includes
+        filter -- categories, search text, pick/rating/color actions -- then includes
         it. See MW::filterOnlyItem. With Shift on a Folders row, thisFolderOnly: the
         folders inside it are excluded as well, so only its own images show. */
     void filterOnlyItemRequested(QTreeWidgetItem *item, bool thisFolderOnly = false);
@@ -589,7 +589,7 @@ public:
         /*  On a DRIVE row in Folders: the volume's root path. See isDriveItem. */
         DriveRole,
         /*  On column 2 (Avail): true when the count shown is what an EXCLUSION removes --
-            the item or one above it is excluded -- drawn in the disabled colour and left
+            the item or one above it is excluded -- drawn in the disabled color and left
             out of any parent's sum. See updateFilteredCountPerItem. */
         AvailExcludedRole,
         /*  On an item beneath an excluded one (Folders, Keywords): it is excluded too --

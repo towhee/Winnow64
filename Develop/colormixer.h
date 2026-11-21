@@ -10,10 +10,10 @@
     Point Color, a band selects by HUE ALONE: every pixel of that hue moves, whatever
     its lightness or saturation (near-neutrals excepted, whose hue is noise).
 
-    THE BANDS. Lightroom names its bands by the HSV hue of a fully saturated colour (Red
+    THE BANDS. Lightroom names its bands by the HSV hue of a fully saturated color (Red
     0, Orange 30, Yellow 60, Green 120, Aqua 180, Blue 240, Purple 270, Magenta 300
     degrees). Those centres are converted ONCE to OKLab hue (bandHue) -- the space the
-    work is done in -- so a band still sits on the colour its name says, while the
+    work is done in -- so a band still sits on the color its name says, while the
     adjustment is perceptually even across it.
 
     THE BLEND. A pixel between two neighbouring centres takes a raised-cosine mix of
@@ -32,7 +32,7 @@
 
     WHERE IT RUNS: the fused point pass, after HSL and BEFORE Point Color, on the same
     display axis (gradeFwd / gradeInv) and in the same OKLab as Point Color -- so a Point
-    Color sample taken off the displayed image sees the mixed colour, as in Lightroom.
+    Color sample taken off the displayed image sees the mixed color, as in Lightroom.
 
     NOT YET CALIBRATED against Lightroom: kHueReach, kSatUpMax, kLumMax and the gate are
     first estimates (the Point Color tuning was the starting point).
@@ -71,7 +71,7 @@ inline QString key(int kind, int band)
            QLatin1String(kindName(kind));
 }
 
-/* Lightroom's band centres, HSV hue of the saturated colour, degrees. */
+/* Lightroom's band centres, HSV hue of the saturated color, degrees. */
 constexpr float kHsvCentreDeg[kBands] = {0, 30, 60, 120, 180, 240, 270, 300};
 
 /* ---- Tuning ----------------------------------------------------------------------- */
@@ -191,7 +191,7 @@ inline float lookup(const float t[kHueN], float h)
     return t[i] + (t[j] - t[i]) * u;
 }
 
-/* The chroma gate: 0 at a neutral, 1 once the colour is clearly a colour. */
+/* The chroma gate: 0 at a neutral, 1 once the color is clearly a color. */
 inline float gate(float C)
 {
     float g = (C - kGateC0) / (kGateC1 - kGateC0);
@@ -199,7 +199,7 @@ inline float gate(float C)
     return g * g * (3.0f - 2.0f * g);
 }
 
-/* Mix one OKLab colour in place through the baked tables. False = untouched (a
+/* Mix one OKLab color in place through the baked tables. False = untouched (a
    neutral), so the caller can skip the trip back. */
 inline bool adjust(const float rot[kHueN], const float satMul[kHueN],
                    const float lumF[kHueN], float lab[3])

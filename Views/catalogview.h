@@ -27,7 +27,7 @@
     THE KEYWORD LIST IS FLAT, not a tree, because the vocabulary is
     (Metadata/keywordpaths.h): a hierarchical path contributes each of its node names as
     an ordinary keyword. A name seen under more than one parent is AMBIGUOUS --
-    "Vancouver" under both Canada and USA -- and is coloured, with its parents in the
+    "Vancouver" under both Canada and USA -- and is colored, with its parents in the
     tooltip. It is resolved by EXCLUDING: include Vancouver, exclude USA. Opt+click or
     the context menu sets an exclusion, the same gesture the Filters dock uses.
 

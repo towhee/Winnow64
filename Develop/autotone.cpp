@@ -55,7 +55,7 @@ constexpr float kBlacksBase    = -24.0f;
 constexpr float kBlacksDark    = 27.0f;
 
 /* Vibrance / Saturation: Lightroom's Auto is Vibrance ~+15 (a little less on a JPEG)
-   and Saturation ~0 whatever the colour content, monochrome frames included. */
+   and Saturation ~0 whatever the color content, monochrome frames included. */
 constexpr float kVibranceRaw     = 15.0f;
 constexpr float kVibranceDisplay = 13.0f;
 constexpr float kSaturation      = 0.0f;

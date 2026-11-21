@@ -3,6 +3,9 @@
 - **Framework:** Qt 6 (using signal-slot mechanisms)
 - **Libraries:** OpenCV 4.x, ExifTool (via CLI)
 - **Style:** PascalCase for methods. Use block comments `/* ... */` for multi-line comments, not stacked `//` lines (single-line comments may use `//`).
+- **Spelling:** US English: "color", never "colour", in UI text, help docs, comments,
+  identifiers and notes. A persisted key (settings, sidecar, preset) that ever needs a
+  spelling change gets a migration, not a silent rename.
 - **Build System:** CMake (CMakeLists.txt + CMakePresets.json; migrated from QMake — winnow64.pro is legacy)
 - **Core Goal:** Fast image browsing and high-performance focus stacking.
 - **Cross-platform:** All changes must work effectively on macOS, Windows and Linux,

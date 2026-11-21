@@ -137,7 +137,7 @@ void VectorscopeView::paintEvent(QPaintEvent *)
     if (!hasData) { drawZoomLabel(p); return; }
 
     /* Log-scaled intensity: chroma counts span a huge range (the neutral cluster
-       dominates), so log keeps faint coloured excursions visible. */
+       dominates), so log keeps faint colored excursions visible. */
     quint32 peak = 1;
     for (int j = 0; j < ScopeData::VN; ++j)
         for (int i = 0; i < ScopeData::VN; ++i)
@@ -157,8 +157,8 @@ void VectorscopeView::paintEvent(QPaintEvent *)
             const double px = cx + ux * pr;
             const double py = cy - uy * pr;
             const int a = qBound(0, static_cast<int>(255.0 * std::log(n + 1.0) / logPeak), 255);
-            /* Colour each point by its own hue (angle), so the trace paints the
-               familiar coloured vectorscope rather than a monochrome blob. */
+            /* Color each point by its own hue (angle), so the trace paints the
+               familiar colored vectorscope rather than a monochrome blob. */
             constexpr double kTwoPi = 6.283185307179586;   // M_PI is not portable (MSVC)
             QColor col = QColor::fromHsvF(
                 std::fmod(std::atan2(uy, ux) / kTwoPi + 1.0, 1.0),

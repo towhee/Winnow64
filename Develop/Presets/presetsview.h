@@ -11,7 +11,7 @@ class DevelopPresets;
 /*
     PresetDelegate -- paints the three kinds of row: a category HEADER (disclosure arrow,
     bold name, preset count, no fill), a PRESET (name indented under its header,
-    elided if the dock is narrow) and the empty-list PLACEHOLDER (disabled colour, never
+    elided if the dock is narrow) and the empty-list PLACEHOLDER (disabled color, never
     highlights). The HOVERED preset gets a light fill because hovering is live (the loupe
     is showing that preset applied); a header that is the target of a drag is outlined.
 */

@@ -829,7 +829,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
             /* Which parents a keyword name has been seen under. This is all that remains
                of the hierarchy, and it exists for one purpose: a name recorded under more
                than one parent is AMBIGUOUS ("Vancouver" under both Canada and USA), which
-               the docks colour and the user resolves with an exclude filter. */
+               the docks color and the user resolves with an exclude filter. */
             "CREATE TABLE IF NOT EXISTS keyword_context ("
             "  keyword_id INTEGER NOT NULL REFERENCES keyword(id) ON DELETE CASCADE,"
             "  parent_id  INTEGER NOT NULL REFERENCES keyword(id) ON DELETE CASCADE,"
@@ -1777,7 +1777,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
 
     if (version < 27) {
     /*
-        THE COLOUR SPACE, as an ID into the lookup table in Metadata/colorspaces.h
+        THE COLOR SPACE, as an ID into the lookup table in Metadata/colorspaces.h
         (0 = nothing known, 1 = sRGB, 2 = Adobe RGB, ...; the ids are published).
 
         Stored because it is a fact about the image a person filters on ("everything not

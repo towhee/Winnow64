@@ -99,7 +99,7 @@ private:
         QSortFilterProxyModelPrivate::Mapping. Touching it then segfaults inside
         proxy_to_source, which isValid() cannot protect against.
 
-        Setting a colour or a rating calls MW::filterChange, so the ordinary cull sequence
+        Setting a color or a rating calls MW::filterChange, so the ordinary cull sequence
         -- press 1, then Shift+Left -- was a crash: Selection::prev asks
         sm->isSelected(shiftExtendIndex) and dereferences the dead mapping
         (Winnow-2026-09-10-105705.ips).

@@ -13,7 +13,7 @@ the app font size; if you change these, update HtmlWindow too. Body text is set
 to the app font size (G::strFontSize) by HtmlWindow, so the body font-size below
 is only a fallback.
 
-The h1/h2/h3 colours below are overridden at load time by HtmlWindow with the
+The h1/h2/h3 colors below are overridden at load time by HtmlWindow with the
 theme-tied G::header1/2/3Color; the values here are fallbacks for viewing this
 file outside the app.
 */
@@ -26,8 +26,8 @@ body {
     color: silver;
     font-size: 14px;
 }
-/* h1/h2/h3 colours and font-sizes here are fallbacks: HtmlWindow overrides the
-   colours with G::header1/2/3Color and scales the sizes by G::fontSize/12. */
+/* h1/h2/h3 colors and font-sizes here are fallbacks: HtmlWindow overrides the
+   colors with G::header1/2/3Color and scales the sizes by G::fontSize/12. */
 /* SPACING, so a page never reads as one dense block (the "crowded" look).
    em here is the element's own LINE HEIGHT in Qt's rich text (qcssparser.cpp
    lengthValueFromData), not its font size. A section heading gets clearly more

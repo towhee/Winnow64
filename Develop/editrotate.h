@@ -41,7 +41,7 @@
       kaleidoscope angle                          + the turn (y-down degrees, so clockwise
                                                   is +90), wrapped to -180..180; the source
                                                   angle is relative to it, so unchanged
-      colour / luminance / depth ranges, AI masks unchanged (not positional)
+      color / luminance / depth ranges, AI masks unchanged (not positional)
 
     Pure and header-only, so tst_editrotate can pin it.
 */
@@ -245,7 +245,7 @@ inline bool blur(EditParams &p, int degrees)
 }
 
 /* The whole recipe. Returns whether anything positional was there to move, so the
-   caller can skip a sidecar write for a recipe that is only tone and colour. */
+   caller can skip a sidecar write for a recipe that is only tone and color. */
 inline bool stack(EditStack &s, int degrees)
 {
     if (!isRotation(degrees)) return false;

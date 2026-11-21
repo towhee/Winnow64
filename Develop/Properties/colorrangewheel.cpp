@@ -104,7 +104,7 @@ void ColorRangeWheel::paintEvent(QPaintEvent *)
 
     if (m_samples.isEmpty()) {
         p.setPen(QColor(210, 210, 210, 200));
-        p.drawText(rect(), Qt::AlignCenter, "Sample a colour on the image");
+        p.drawText(rect(), Qt::AlignCenter, "Sample a color on the image");
         return;
     }
 
@@ -157,7 +157,7 @@ void ColorRangeWheel::paintEvent(QPaintEvent *)
 
     /* Absolute hue (degrees) at each rim hue handle -- the low/high edges of the selected
        hue range. Drawn in a small dark pill just OUTSIDE the rim (discMargin reserves
-       the space) so it never sits over the disc colours. */
+       the space) so it never sits over the disc colors. */
     float ah, as;
     if (anchor(ah, as)) {
         auto wrap360 = [](float d){ while (d < 0.0f) d += 360.0f;

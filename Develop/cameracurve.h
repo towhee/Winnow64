@@ -67,7 +67,7 @@
     APPLIED HUE-PRESERVINGLY (ApplyRGBTone), the way the DNG SDK applies a
     ProfileToneCurve (RefBaselineRGBTone): the curve is evaluated on the largest and
     smallest channels and the middle one is interpolated between them, so hue is held
-    while saturation falls as the shoulder compresses the top -- bright colours desaturate
+    while saturation falls as the shoulder compresses the top -- bright colors desaturate
     toward white rather than marching in hue the way a per-channel curve makes them.
 */
 namespace CameraCurve {

@@ -3,7 +3,7 @@
 #include "Develop/whitebalance.h"
 
 /*
-    White balance colour science (Develop/whitebalance.h).
+    White balance color science (Develop/whitebalance.h).
 
     These guard the parts that are easy to get subtly wrong and hard to spot by eye:
     the TEMPERATURE CONVENTION (which sets what an untouched file READS as, and whether
@@ -247,7 +247,7 @@ private slots:
         QVERIFY(gp[0] > 1.0f && gp[2] > 1.0f);
     }
 
-    /* solve() is the inverse of gains(): feed back the colour that gains() neutralises
+    /* solve() is the inverse of gains(): feed back the color that gains() neutralises
        and the original pair must come out. Covers strong tints, where an alternating
        (rather than nested) bisection drifts badly -- +80 tint at 3400 K once came back
        as 2742 K / +42. */
@@ -277,7 +277,7 @@ private slots:
             did: 3400 K at +150 is off the chromaticity triangle entirely (z < 0), and
             20000 K at +150 is a cyan-green well outside the SYNTHETIC sRGB camera used
             here (a real camera matrix is wider). renderIlluminant clamps the dead
-            channel to 1e-9, and inverting a gain that large gives back a colour with a
+            channel to 1e-9, and inverting a gain that large gives back a color with a
             channel at or below solve()'s own 1e-9 floor -- which it is documented to
             refuse, because the clamp destroyed the information.
 
@@ -322,7 +322,7 @@ private slots:
         QVERIFY(std::fabs(k - c.asShotK) / c.asShotK < 0.01f);
     }
 
-    /* A black or blown sample carries no colour: rejected, not silently wrong. */
+    /* A black or blown sample carries no color: rejected, not silently wrong. */
     void degenerateSamplesRejected()
     {
         const CameraColor c = srgbCam();
@@ -341,7 +341,7 @@ private slots:
     }
 
     /* The locus is a 31-row TABLE interpolated between rows, so every row boundary is a
-       potential seam -- and a seam shows as a colour jump mid-drag. The old code had a
+       potential seam -- and a seam shows as a color jump mid-drag. The old code had a
        crossfade between two loci across 4000-5000 K to watch here; the DNG table has row
        boundaries at 200 and 250 mired (5000 K and 4000 K), which is the same stretch of
        slider, so the case still lands where it is needed.
@@ -376,7 +376,7 @@ private slots:
 
     /* Skin sampling drives the sample onto the skin HUE LINE while leaving its
        saturation alone -- so light and deep skin both land on the line rather than
-       both being forced to one colour. Chroma is measured in the same (warmth, green)
+       both being forced to one color. Chroma is measured in the same (warmth, green)
        plane the solver uses, where neutral is the origin. */
     void skinLandsOnTheHueLine_data()
     {
@@ -477,7 +477,7 @@ private slots:
     {
         const CameraColor c = srgbCam();
         float k1 = 0, t1 = 0, k2 = 0, t2 = 0;
-        /* A colour exactly ON the skin line: the projection is a no-op, so solveSkin
+        /* A color exactly ON the skin line: the projection is a no-op, so solveSkin
            must agree with solving for the residual s/T directly. */
         const float r = 1.769f, g = 1.0f, b = 0.732f;
         QCOMPARE(WhiteBalance::solveSkin(c, r, g, b, k1, t1), WhiteBalance::SkinPick::Ok);

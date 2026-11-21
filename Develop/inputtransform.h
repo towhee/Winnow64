@@ -12,10 +12,10 @@
 
     THE PIXELS MUST BE THE FILE'S OWN: decoded, oriented, never display-converted. An
     image-cache image has been through ImageDecoder::colorManage (file profile -> DISPLAY
-    profile) when colour management is on, and is NOT a valid input -- read as sRGB, its
+    profile) when color management is on, and is NOT a valid input -- read as sRGB, its
     numbers were then converted for the display a second time on the way out. Only
     ImageDecoder builds a display-referred WorkingImage, before colorManage(); see
-    ImageDecoder::applyDevelop and "15.2 Display Colour Management of Rendered Frames" in
+    ImageDecoder::applyDevelop and "15.2 Display Color Management of Rendered Frames" in
     notes/Documentation.md.
 
     icc is the file's embedded profile (the one colorManage would use). Empty = sRGB, the

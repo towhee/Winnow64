@@ -17,7 +17,7 @@ namespace {
        drag from the bottom to the top of the plot sweeps the whole -100..100 range. */
     constexpr double kBandRange = 200.0;
 
-    /* Per-channel curve colour: white for the RGB composite, the channel's own hue
+    /* Per-channel curve color: white for the RGB composite, the channel's own hue
        otherwise, matching the histogram's fills. */
     QColor curveColor(int channel)
     {

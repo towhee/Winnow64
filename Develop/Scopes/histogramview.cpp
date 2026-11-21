@@ -98,7 +98,7 @@ void HistogramView::paintEvent(QPaintEvent *)
     /* Split the additive histogram into two parts so the white can be dimmed independently:
          - the NEUTRAL CORE = the per-bin min of R,G,B (0..m), where all three channels overlap
            and would blend to solid white; drawn once at whiteOpacity.
-         - the COLOUR EXCESS = each channel as a BAND from m up to its own height, blended
+         - the COLOR EXCESS = each channel as a BAND from m up to its own height, blended
            additively; where a channel IS the minimum its band is zero-height and adds nothing.
        whiteOpacity 1.0 reproduces the classic full-white core, 0.0 hides it. */
     auto neutralAt = [&](int v) {
@@ -131,7 +131,7 @@ void HistogramView::paintEvent(QPaintEvent *)
         p.drawPath(core);
     }
 
-    /* Colour excess above the neutral core, additive ("lighten") blend on the dark ground. */
+    /* Color excess above the neutral core, additive ("lighten") blend on the dark ground. */
     p.setCompositionMode(QPainter::CompositionMode_Plus);
     const QColor fill[3] = { QColor(200, 50, 50), QColor(50, 190, 50), QColor(60, 90, 220) };
     for (int c = 0; c < 3; ++c) {

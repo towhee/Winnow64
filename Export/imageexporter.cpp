@@ -378,7 +378,7 @@ bool ImageExporter::save(const QImage &img, const QString &dstPath,
         out = out.convertToFormat(QImage::Format_RGB888);
 
     /*
-        Colour space. The file must be TAGGED, or every viewer guesses -- exports used to
+        Color space. The file must be TAGGED, or every viewer guesses -- exports used to
         be untagged entirely.
 
         Two kinds of pixels arrive here and they need opposite treatment:

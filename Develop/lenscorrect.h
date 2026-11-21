@@ -2,12 +2,12 @@
 #define LENSCORRECT_H
 
 /*
-    LENS CORRECTIONS: lateral chromatic aberration and edge colour fringing.
+    LENS CORRECTIONS: lateral chromatic aberration and edge color fringing.
 
     WHY (2026-10-07). After the sky-mask halo work, a thin cyan line stayed along
     Dempster's ridge at -2 EV. The edge pixels were not a mix of sky and ridge -- red too
     low, blue too high -- so no mask could fix them. Two separate lens defects cause
-    that kind of edge colour, and this header handles both:
+    that kind of edge color, and this header handles both:
 
       LATERAL CA -- red and blue imaged at slightly different SIZES than green, so they
       are offset RADIALLY by an amount that grows with distance from the centre. Fixed
@@ -15,17 +15,17 @@
       image itself (estimateCA). Measured on Dempster (Nikon D810): R +1.1 px / B -0.4 px
       at the corners; an in-camera-corrected JPEG: ~0, correctly reported as none.
 
-      EDGE FRINGING (axial CA, blooming) -- a coloured rim along high-contrast edges
+      EDGE FRINGING (axial CA, blooming) -- a colored rim along high-contrast edges
       ANYWHERE in the frame. It was the bigger part of Dempster's line: the ridge is
       mid-frame, where lateral CA predicts only ~0.25 px. Fixed by defringe().
 
-    DEFRINGE MODEL. An edge pixel's colour should be the mix of its two sides, in
+    DEFRINGE MODEL. An edge pixel's color should be the mix of its two sides, in
     proportion to where its brightness sits between them -- in LINEAR light, since light
     mixes linearly (a Lab-space mix flagged every vivid edge against shadow). Each pixel
     near a strong edge samples the two sides along the brightness gradient, predicts the
-    mixed colour, and its chroma is pulled toward that prediction -- but only where the
+    mixed color, and its chroma is pulled toward that prediction -- but only where the
     DEVIATION has a fringe hue (purple group: cyan-blue, purple, magenta; green group:
-    green), so a real coloured edge is never touched. Lightness is never changed.
+    green), so a real colored edge is never touched. Lightness is never changed.
     A first version compared chroma with the neighbourhood average instead and FAILED:
     a bluish sky hid the fringe that spills onto the dark side of the edge.
 
@@ -406,7 +406,7 @@ inline void defringe(cv::Mat &rgb, float purple, float green, float scale = 1.0f
     cv::Mat outRgb;
     cv::cvtColor(outLab, outRgb, cv::COLOR_Lab2RGB);
     /* Only pixels that were corrected change, and a clipped highlight is left alone: its
-       true colour is unknown, and writing the clamped value back would flatten it. */
+       true color is unknown, and writing the clamped value back would flatten it. */
     forRows(h, [&](int y) {
         const cv::Vec3f *src = rgb.ptr<cv::Vec3f>(y), *nw = outRgb.ptr<cv::Vec3f>(y),
                         *lb = outLab.ptr<cv::Vec3f>(y), *la = lab.ptr<cv::Vec3f>(y);

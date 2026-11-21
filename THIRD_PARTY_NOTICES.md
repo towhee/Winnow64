@@ -33,7 +33,7 @@ from the upstream project linked below, or on request from the Winnow author.
   libtiff license (BSD-like): [libtiff](licenses/libtiff.md).
 - **[zlib](https://zlib.net/)**. Compression.
   Zlib: [zlib](licenses/zlib.txt).
-- **[Little CMS 2](https://www.littlecms.com/)**, source included in `Lcms2/`. Colour
+- **[Little CMS 2](https://www.littlecms.com/)**, source included in `Lcms2/`. Color
   management. MIT: [lcms2](licenses/lcms2.txt).
 - **[libheif](https://github.com/strukturag/libheif)** (Windows). HEIF/HEIC decoding.
   LGPL-3.0-or-later: [LGPL-3.0](licenses/LGPL-3.0.txt).

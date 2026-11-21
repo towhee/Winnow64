@@ -268,9 +268,9 @@ void tst_queryexpr::textOperators()
 
 void tst_queryexpr::unknownFieldIsAnErrorAndAWord()
 {
-    const Query::Expr e = Query::Expr::parse("colour:red");
+    const Query::Expr e = Query::Expr::parse("color:red");
     QVERIFY(!e.error().isEmpty());
-    QVERIFY(hit("colour:red", words("x colour:red y")));
+    QVERIFY(hit("color:red", words("x color:red y")));
     // not a plain name: simply a word, no error
     QVERIFY(Query::Expr::parse("10:30").error().isEmpty());
     QVERIFY(hit("10:30", words("at 10:30 am")));

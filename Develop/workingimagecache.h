@@ -23,8 +23,8 @@ class QImage;
     Develop + OutputTransform. That is what render() does, fed from this cache:
 
     WHAT IS CACHED IS CAMERA-NATIVE, NOT WORKING-SPACE. RawColor deliberately does not
-    apply the white balance or the colour matrix (see rawcolor.h), so the cached pixels
-    are still in the sensor's own primaries and every colour decision -- input profile,
+    apply the white balance or the color matrix (see rawcolor.h), so the cached pixels
+    are still in the sensor's own primaries and every color decision -- input profile,
     white balance, calibration -- happens DOWNSTREAM of this cache, in Develop. That is
     what makes changing a camera profile or the temperature a re-render instead of a full
     re-decode. Anything baked in before put() could only be undone by decoding again.
@@ -148,7 +148,7 @@ public:
        8 bits is the sole place precision is lost. */
     enum class OutDepth { Eight, Sixteen };
 
-    /* Output colour space of the final OutputTransform, defaulting to sRGB so every
+    /* Output color space of the final OutputTransform, defaulting to sRGB so every
        interactive caller is unaffected. Only the EXPORT path passes anything else; note
        that whatever writes the resulting QImage must TAG it to match (see
        OutputTransform::ColorSpaceOf). */

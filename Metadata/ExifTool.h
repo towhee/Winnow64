@@ -11,7 +11,7 @@ public:
     ExifTool();
     int execute(QStringList &args);
     /* -TagsFromFile src -all:all dst. excludeIcc adds --icc_profile:all, for a dst whose
-       pixels are NOT in the source's colour space: the caller has already embedded the
+       pixels are NOT in the source's color space: the caller has already embedded the
        right profile and must not have the source's copied over it. upright sets
        Orientation = 1 IN THE SAME WRITE, for a dst whose pixels are already rotated.
        extra goes into the same command, before dst, as in copyAll. */

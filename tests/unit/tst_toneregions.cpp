@@ -71,9 +71,9 @@ namespace {
 
 /* A NEUTRAL ramp, in the working space, display-referred. Neutral because the output
    stage's primaries conversion has rows summing to 1, so a grey stays grey and an 8-bit
-   readback measures tone alone rather than tone plus a colour shift. Display-referred so
+   readback measures tone alone rather than tone plus a color shift. Display-referred so
    ViewTransform::None is legitimate (a view transform is forced off for such data anyway,
-   per OutputTransform::EffectiveView) and the ACES shoulder cannot colour the result --
+   per OutputTransform::EffectiveView) and the ACES shoulder cannot color the result --
    the shoulder is a real difference from Lightroom, but it is not the one under test. */
 constexpr int kRampN = 256;
 

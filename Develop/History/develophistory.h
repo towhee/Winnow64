@@ -55,7 +55,7 @@
     while pos is not the last entry DISCARDS everything after pos -- editing from an
     earlier state truncates, exactly like an undo stack.
 
-    COALESCING: a continuous gesture (a slider drag, a colour-wheel drag) commits many
+    COALESCING: a continuous gesture (a slider drag, a color-wheel drag) commits many
     times. A non-empty mergeKey that matches the top entry's REPLACES that entry instead
     of appending, so a whole drag reads as one "Global: Exposure  +0.35" step.
 

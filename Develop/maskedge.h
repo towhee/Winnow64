@@ -11,7 +11,7 @@
 
     WHY THIS EXISTS. Feather softens an edge; it does not move one. And feather is not a
     pixel distance for any tool -- it is a fraction of a radius (Radial), of the p1->p2
-    length (Linear), of a value band (Luminance/Colour/Depth Range) or a threshold band on
+    length (Linear), of a value band (Luminance/Color/Depth Range) or a threshold band on
     an alpha (Subject/Sky/Object). So there was no way to say "this cutout lands two
     pixels inside the subject, push it out two pixels", which is the single most common
     fix an AI mask needs. That is Photoshop's Select > Modify > Expand/Contract, and it

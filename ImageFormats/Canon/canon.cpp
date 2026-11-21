@@ -268,7 +268,7 @@ bool Canon::parse(MetadataParameters &p,
         p.offset = makerOffset;
         p.hash = &canonMakerHash;
         ifd->readIFD(p);
-        /* The camera's colour space setting, MakerNote 0x00B4 (1 = sRGB, 2 = Adobe RGB,
+        /* The camera's color space setting, MakerNote 0x00B4 (1 = sRGB, 2 = Adobe RGB,
            the EXIF codes). Canon writes EXIF Uncalibrated and InteropIndex "R98" in Adobe
            RGB mode, so this is the only place a CR2 says it (Metadata/colorspaces.h). */
         if (ifd->ifdDataHash.contains(0x00B4))
@@ -518,7 +518,7 @@ int CanonAsShotIndex(const QVector<quint32> &cd)
 }
 
 /*
-    CR2 colour without a decode: Canon ColorData (MakerNote 0x4001) for the as-shot
+    CR2 color without a decode: Canon ColorData (MakerNote 0x4001) for the as-shot
     WB_RGGBLevels, plus the per-model XYZ->camera matrix. Split out of UnpackCfa so the
     Apple Core Image engine can characterise the image too -- see
     RawFormat::ReadAsShotColor.

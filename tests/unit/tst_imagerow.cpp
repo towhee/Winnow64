@@ -90,7 +90,7 @@ void tst_imagerow::coversOnlyValueRoles()
         G::OrientationOffsetColumn, G::RotationDegreesColumn,
         G::ShootingInfoColumn, G::ErrColumn, G::DevelopColumn,
         G::DevPreviewKeyColumn,
-        // moved here from the scratch store: a persisted colour space id
+        // moved here from the scratch store: a persisted color space id
         G::ICCSpaceColumn
     };
     for (int c : held) {
@@ -285,7 +285,7 @@ void tst_imagerow::numericColumnsComeBackNumeric()
     QVERIFY(s.value(0, G::PermissionsColumn).typeId()  != QMetaType::QString);
     QCOMPARE(s.value(0, G::PermissionsColumn).toUInt(), 0x6666u);
     QCOMPARE(s.value(0, G::FocusXColumn).toFloat(), 0.5f);
-    /*  The colour space is an ID; the NAME is DataModel::data's DisplayRole, not the
+    /*  The color space is an ID; the NAME is DataModel::data's DisplayRole, not the
         store's (Metadata/colorspaces.h). */
     QCOMPARE(s.value(0, G::ICCSpaceColumn).toInt(), 3);
     QVERIFY(s.value(0, G::ICCSpaceColumn).typeId() != QMetaType::QString);

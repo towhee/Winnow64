@@ -482,7 +482,7 @@ bool Tiff::parse(MetadataParameters &p,
     it and it will take up space in the datamodel. If iccBuf is null then sRGB is assumed. */
     if (m.iccSegmentOffset && m.iccSegmentLength) {
         /* Classified (Metadata/colorspaces.h). Byte 16 was read here as the space, but
-           that is the DATA colour space signature -- "RGB " for every RGB profile, never
+           that is the DATA color space signature -- "RGB " for every RGB profile, never
            "sRGB" -- so every TIFF carried its profile and reported "RGB". */
         p.file.seek(m.iccSegmentOffset);
         const QByteArray icc = p.file.read(m.iccSegmentLength);

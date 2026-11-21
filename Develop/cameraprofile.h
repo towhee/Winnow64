@@ -45,7 +45,7 @@ struct CameraColor;
     ForwardMatrix because a well-formed one has rows summing to the D50 white, and without
     one because the adaptation is built to carry that white onto D50 exactly. The existing
     rawcolor.cpp path anchors the same point the same way (it row-normalises so camera
-    (1,1,1) -> working (1,1,1)). So switching a raw onto a profile re-points its colour
+    (1,1,1) -> working (1,1,1)). So switching a raw onto a profile re-points its color
     WITHOUT moving its brightness.
 
     NOTHING HERE IS PER-PIXEL. The lookup tables (HueSatMap, LookTable) are slice 3 and 4
@@ -68,7 +68,7 @@ struct Resolved {
     float coolKelvin = 0.0f;        // caller can report what it interpolated between
 };
 
-/* Interpolate the profile's calibrations for a colour temperature. False when the profile
+/* Interpolate the profile's calibrations for a color temperature. False when the profile
    carries no usable ColorMatrix at all. A single-illuminant profile succeeds with
    weight == 0 whatever the temperature -- there is nothing to interpolate towards. */
 bool resolve(const Dcp::Profile &p, float kelvin, Resolved &out);

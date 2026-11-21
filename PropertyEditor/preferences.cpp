@@ -677,7 +677,7 @@ QWidget *Preferences::addSlider(ItemInfo &i)
 /*
     Adds a DT_Slider item with the groove of the Develop Basic panel's Exposure slider
     (G::darkgray to G::lightgray) rather than the text-shade-to-white default. The item's
-    colours are restored afterwards: the shared ItemInfo carries them on to later items,
+    colors are restored afterwards: the shared ItemInfo carries them on to later items,
     where UR_Color is LineEdit/LabelEdit text.
 */
     const QString color = i.color;
@@ -1158,7 +1158,7 @@ void Preferences::addUserInterface()
     // Loupe classification badge
     i.name = "classificationBadgeInImageDiameter";
     i.parentName = "BadgeSizeHeader";
-    i.tooltip = "The image badge is a circle showing the colour classification, rating and pick\n"
+    i.tooltip = "The image badge is a circle showing the color classification, rating and pick\n"
                 "status.  It is located in the lower right corner of the image.  This property \n"
                 "allows you to adjust its size.";
     i.captionText = "Loupe  classification badge size";
@@ -1177,7 +1177,7 @@ void Preferences::addUserInterface()
     // Thumbnail classification badge
     i.name = "classificationBadgeSizeFactor";
     i.parentName = "BadgeSizeHeader";
-    i.tooltip = "The icon badge is a small bar showing the colour classification and rating\n"
+    i.tooltip = "The icon badge is a small bar showing the color classification and rating\n"
                 "status.  It is located in the top right corner of the thumbnail in the thumb \n"
                 "and grid views.  This property adjusts the size of the badge.\n\n"
                 "Note that the badge size is also proportional to the font size."
@@ -1681,7 +1681,7 @@ void Preferences::addDevPreviews()
     i.name = "autoRemoveCA";
     i.parentName = "DevPreviewHeader";
     i.captionText = "Remove chromatic aberration on raw files";
-    i.tooltip = "Turn on Remove CA for raw files by default, to remove colour\n"
+    i.tooltip = "Turn on Remove CA for raw files by default, to remove color\n"
                 "fringes near the corners. Your own setting on an image is kept.";
     i.hasValue = true;
     i.captionIsEditable = false;

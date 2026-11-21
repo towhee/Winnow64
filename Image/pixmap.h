@@ -30,7 +30,7 @@ public:
 
        colorManage is opt-in: leave it off
        for comparison thumbnails so they stay apples-to-apples with the datamodel's non
-       colour-managed icons; turn it on for previews shown to the user.
+       color-managed icons; turn it on for previews shown to the user.
     */
     bool loadIndependent(QString &fPath, QImage &image, int longSide, QString src = "",
                          bool colorManage = false);

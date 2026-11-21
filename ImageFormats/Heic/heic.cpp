@@ -959,7 +959,7 @@ bool Heic::urnBox(quint32 &offset, quint32 &length)
 }
 
 /*
-    The colr box -- the file's colour space. HEIC carries it in a box inside the item
+    The colr box -- the file's color space. HEIC carries it in a box inside the item
     properties (ipco), NOT in a JPEG-style APP2 segment, which is why the segment-based
     ICC read copied from the JPEG parser could never have worked here and sat commented
     out instead.

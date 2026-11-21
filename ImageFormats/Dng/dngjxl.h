@@ -28,8 +28,8 @@ bool Available();
 /*
     Decode one codestream to interleaved float samples in [0,1] of the stored range, i.e.
     stored value = sample * (2^bitsPerSample - 1). Requests channels samples per pixel
-    (1 or 3); a codestream with a different colour channel count fails. libjxl returns the
-    stored samples, not a colour-converted rendering: with no preferred output profile it
+    (1 or 3); a codestream with a different color channel count fails. libjxl returns the
+    stored samples, not a color-converted rendering: with no preferred output profile it
     decodes to the encoding the file signals.
 */
 bool Decode(const uint8_t *data, size_t size, int channels,

@@ -20,7 +20,7 @@
     second white balance. Different maths, different pipeline slot, and they coexist.
 
     WHERE IT RUNS. Before the tone curve, in linear light -- unlike the Color panel's HSL
-    hue rotation, which runs after it. Rotating primaries is a change of colour space and
+    hue rotation, which runs after it. Rotating primaries is a change of color space and
     belongs upstream of anything perceptual.
 
     UNITS. hue and sat are both -100..100 (the slider range). hue maps to +/-kMaxHueDeg of
@@ -44,7 +44,7 @@ using ColorSpaceMath::kLumG;
 using ColorSpaceMath::kLumB;
 
 /* Rodrigues rotation of v about the neutral axis (1,1,1)/sqrt(3) by angle radians, the
-   same construction Develop's HSL hue slider uses. Neutral colours lie ON the axis and so
+   same construction Develop's HSL hue slider uses. Neutral colors lie ON the axis and so
    are fixed points, and the rotation preserves v's component ALONG that axis -- i.e. the
    equal-weight sum r+g+b, NOT the Rec.709 luma (those differ, and assuming otherwise is
    an easy mistake: see tst_calibrate::hueShiftPreservesNeutralComponent). */
@@ -138,7 +138,7 @@ inline bool isIdentity(float redHue, float redSat, float greenHue, float greenSa
    SHADOWS only -- the correction for a camera whose blacks lean green or magenta. Per
    pixel, in the same linear slot as the primaries: green is scaled by (1 - a) and red +
    blue by (1 + b), with b chosen so a GREY keeps its luma; applyShadowTint then rescales
-   so every pixel keeps its OWN luma (the cast moves colour, not brightness).
+   so every pixel keeps its OWN luma (the cast moves color, not brightness).
    a = kShadowTintMax * tint/100 * w, where w is a smooth shadow window over the
    pixel's perceptual luma s = (Y / white)^(1/2.2): 1 at black, falling to
    0 at kShadowTintEnd.

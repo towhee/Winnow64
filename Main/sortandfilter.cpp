@@ -961,7 +961,7 @@ void MW::filterOnKeyword(const QString &path)
 {
 /*
     Show only the images carrying this keyword: every other filter -- categories, the
-    search text, the pick/rating/colour actions -- is cleared, then the keyword is
+    search text, the pick/rating/color actions -- is cleared, then the keyword is
     included, then ONE filterChange runs.
 
     NO ITEM, NO CHANGE. A keyword in the list that nothing loaded carries has no Filters
@@ -987,7 +987,7 @@ void MW::filterOnlyItem(QTreeWidgetItem *item, bool thisFolderOnly)
 {
 /*
     Show only the images matching this Filters item: every other filter -- categories,
-    the search text, the pick/rating/colour actions -- is cleared, then the item is
+    the search text, the pick/rating/color actions -- is cleared, then the item is
     included. setItemFilterState emits the ONE filterChange.
 
     thisFolderOnly (Shift+Cmd+Opt+click on a Folders row): the folders directly inside
@@ -1008,7 +1008,7 @@ void MW::applyMapPinFilter(const QList<int> &dmRows, bool add)
 {
 /*
     Show only the images in a Map module pin. A plain click REPLACES every filter --
-    categories, the search text, the pick / rating / colour actions -- with the Filters
+    categories, the search text, the pick / rating / color actions -- with the Filters
     "Map pin" category, in ONE filterChange, as a Collection, Query or Bookmark click
     does: it means "show me these", not "narrow what I am looking at".
 
@@ -1701,7 +1701,7 @@ void MW::setColorClass()
 
     QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
     if (G::isIngestProbe)
-        IngestProbe::Instance().BeginEdit("colour", selection.count());
+        IngestProbe::Instance().BeginEdit("color", selection.count());
     // check if selection is entirely label color already - if so set no label
     bool isAlreadyLabel = true;
     for (int i = 0; i < selection.count(); ++i) {
@@ -1724,7 +1724,7 @@ void MW::setColorClass()
     }
 
     // a long write reports in the status bar -- see MW::setRating
-    EditProgress editProgress("Colour class", n);
+    EditProgress editProgress("Color class", n);
 
     // update the data model
     QString src = "MW::setColorClass";

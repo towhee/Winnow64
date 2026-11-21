@@ -292,7 +292,7 @@ void DataModel::setModelProperties()
         { G::NSImageColumn,              "NS Image",                 false },
         { G::PickColumn,                 "Pick",                     false },
         { G::IngestedColumn,             "Ingested",                 false },
-        { G::LabelColumn,                "Colour",                   false },
+        { G::LabelColumn,                "Color",                    false },
         { G::RatingColumn,               "Rating",                   false },
         { G::SearchColumn,               "Search",                   false },
         { G::TypeColumn,                 "Type",                     false },
@@ -1297,7 +1297,7 @@ QVariant DataModel::data(const QModelIndex &idx, int role) const
         RowStore::covers(idx.column(), role) &&
         rowStore.contains(idx.row()))
     {
-        /*  THE ONE COLUMN WHOSE TWO ROLES DIFFER. ICCSpace holds a colour space ID
+        /*  THE ONE COLUMN WHOSE TWO ROLES DIFFER. ICCSpace holds a color space ID
             (Metadata/colorspaces.h); EditRole returns it -- the catalog, imMetadata and
             the query evaluator read that -- and DisplayRole its name, which is what the
             table view, sorting and "Filter on..." show. 0 (nothing known) is blank. */
@@ -4094,7 +4094,7 @@ ImageMetadata DataModel::imMetadata(QString fPath, bool updateInMetadata)
     m.iccSegmentLength = index(row, G::ICCSegmentLengthColumn).data().toUInt();
     m.iccBuf = index(row, G::ICCBufColumn).data().toByteArray();
     /* ICCSpaceColumn, not ICCSegmentOffsetColumn (that slip once returned the segment's
-       file position as the colour space). EditRole: the ID, not the name DisplayRole
+       file position as the color space). EditRole: the ID, not the name DisplayRole
        gives. */
     m.colorSpace = index(row, G::ICCSpaceColumn).data(Qt::EditRole).toInt();
 
@@ -4750,7 +4750,7 @@ bool DataModel::addMetadataForItem(ImageMetadata m, QString src)
         setData(index(row, G::ICCSegmentLengthColumn), m.iccSegmentLength);
         setData(index(row, G::ICCBufColumn), m.iccBuf);
     }
-    /*  OUTSIDE the block above: the colour space is a fact about the image that the
+    /*  OUTSIDE the block above: the color space is a fact about the image that the
         catalog stores (schema 27), so a row hydrated from the index has it too. */
     setData(index(row, G::ICCSpaceColumn), m.colorSpace);
     setData(index(row, G::OrientationOffsetColumn), m.orientationOffset);
@@ -6729,7 +6729,7 @@ void DataModel::setCached(int sfRow, QString fPath, int cacheSource, int instanc
     if (!dmIdx.isValid()) return;
     {
         const QSignalBlocker blocker(this);
-        setData(dmIdx, cacheSource);       // G::CacheSource: the thumbnail badge colour
+        setData(dmIdx, cacheSource);       // G::CacheSource: the thumbnail badge color
     }
     if (iconRowVisible(dmIdx)) scheduleVisibleEmit(dmIdx.row());
 

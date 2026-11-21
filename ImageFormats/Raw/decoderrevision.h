@@ -75,7 +75,7 @@ inline constexpr int kDenoiserRevision = 1;
                      (ported from LightCraft). See hotpixel.h.
       3  2026-11-20  clipped highlights reconstructed (HighlightRecon, ported from
                      LightCraft) in place of NeutraliseClipped's cap: blown skies keep
-                     their colour into the clip, white fur no longer pink. See
+                     their color into the clip, white fur no longer pink. See
                      RawColor::ReconstructHighlights.
 */
 inline constexpr int kDemosaicRevision = 3;

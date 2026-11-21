@@ -75,7 +75,7 @@ public:
         return boundingRect().contains(point);
     }
 
-    /* Draw the image desaturated (Develop's mask-overlay "Gray" chip: the coloured veil
+    /* Draw the image desaturated (Develop's mask-overlay "Gray" chip: the colored veil
        reads better over a grey picture). Set by ImageView::paintEvent just before the
        scene is rendered -- deliberately NO update() call, since the view has already
        scheduled the repaint and an update() from inside a paint pass would spin. */

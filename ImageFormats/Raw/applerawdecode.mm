@@ -340,13 +340,13 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
                highlight headroom (>1.0) intact.
 
                IT WAS LINEAR sRGB, tagged kWorking, from before the working space became
-               Rec.2020: every colour read as far more saturated than it was and greens
+               Rec.2020: every color read as far more saturated than it was and greens
                swung to cyan (a grey-green background rendered teal). The assert makes a
                future change of working space fail here rather than in a picture.
 
                THE WORKING SPACE STAYS CORE IMAGE'S OWN, extended linear sRGB (extended,
                so nothing is clipped). Measured 2026-10-13 on a D850 NEF: decoder 9 with a
-               Rec.2020 WORKING space renders wrong colour (centre pixel blue 0.245 ->
+               Rec.2020 WORKING space renders wrong color (centre pixel blue 0.245 ->
                0.162, red negative), while decoder 8 does not care; with an sRGB working
                space and Rec.2020 output, both versions match the BT.2087 sRGB->Rec.2020
                matrix to four places. */
@@ -360,7 +360,7 @@ bool Decode(const QString &path, WorkingImage &out, QString &err, int pin)
             if (workCs == nullptr || outCs == nullptr) {
                 if (workCs) CGColorSpaceRelease(workCs);
                 if (outCs) CGColorSpaceRelease(outCs);
-                err = QStringLiteral("Could not create the linear colour spaces.");
+                err = QStringLiteral("Could not create the linear color spaces.");
                 return false;
             }
             CIContext *ctx = [CIContext contextWithOptions:@{

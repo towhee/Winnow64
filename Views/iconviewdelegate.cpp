@@ -12,7 +12,7 @@
 IconViewDelegate Anatomy:
 
     cell:     the entire icon shown by the delegate (option.rect)
-    frame:    the rounded border inside the cell; its fill is the colour label
+    frame:    the rounded border inside the cell; its fill is the color label
     top band: the strip of the frame above the item, for the badges anchored to the
               frame's top edge (icon number, versions badge)
     item:     the box the "thumbnail" is fitted into (thumbWidth x thumbHeight)
@@ -748,7 +748,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     else {
         tooltip = "Borders:\n  Yellow:\t Current \n  White:\t Selected \n  Green:\t Picked\n  Blue:\t Ingested\n  Red:\t Rejected";
         if (labelVisible)
-            tooltip = "Colour label: " + colorClass + "\n\n" + tooltip;
+            tooltip = "Color label: " + colorClass + "\n\n" + tooltip;
     }
 
     if (!tooltip.isEmpty()) {
@@ -983,7 +983,7 @@ textRect         = a rectangle below itemRect
 
     /*  Versions (virtual copies): a master's count + arrow (blue text), a version's
         name tag (grey text), in the frame's top-right corner, filled with the frame's
-        background (the colour label, like the icon number badge) so it reads over the
+        background (the color label, like the icon number badge) so it reads over the
         picture. Drawn before the frame border so that border strokes over the shared
         edges. */
     if (!G::isSlideShow) {
@@ -1029,7 +1029,7 @@ textRect         = a rectangle below itemRect
        (devPreview, sensor-decoded raw, edited non-raw) or a built devPreview on disk.
        ONE RULE IN BOTH OPERATION MODES: the badge describes the image, not the mode, so
        a built devPreview reads green in Browse as well as Develop, and switching modes
-       never repaints the grid in different colours (Develop trims ImageCache to the
+       never repaints the grid in different colors (Develop trims ImageCache to the
        current image, so without the devPreview test every other thumbnail read red).
        The tooltip shows the legend. */
     /* ORANGE = developed, but the devPreview is a REDUCED stand-in (an Auto-settings

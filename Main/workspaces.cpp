@@ -405,7 +405,7 @@ void MW::invokeWorkspace(const WorkspaceData &w)
     gridView->rejustify();
     gridView->setThumbParameters();
     // ImageView: see the Info overlay note above -- w.isImageInfoVisible is not applied.
-    /*  COLOUR MANAGEMENT IS NOT PART OF A LAYOUT (removed 2026-10-26). It belongs to the
+    /*  COLOR MANAGEMENT IS NOT PART OF A LAYOUT (removed 2026-10-26). It belongs to the
         screen, not the workflow, and the shipped defaults.json carried false for every
         workspace, so switching to Develop or Library silently turned it off -- the
         oversaturated Develop loupe of notes/Documentation.md 15.2.2. Settings files from
@@ -2581,9 +2581,9 @@ void MW::styleWorkflowSwitcher()
     splitter against the central widget, and a strip of buttons has no use for being
     dragged taller.
 */
-    /* THE MODULE COLOURS, for the modes and for Library | Folders beside them (all in
+    /* THE MODULE COLORS, for the modes and for Library | Folders beside them (all in
        the dock's content, so one sheet styles both). Appended after the shared CSS so
-       they win; the selected (yellow) and disabled colours still come from
+       they win; the selected (yellow) and disabled colors still come from
        segmentedOptionCss. */
     int l = G::textShade - 40;
     int m = G::backgroundShade + 20;
@@ -2599,7 +2599,7 @@ void MW::styleWorkflowSwitcher()
     for (QToolButton *btn : std::as_const(workflowBtns))
         if (btn) btn->setStyleSheet(css);
 
-    /* The title bar copy (macOS): the Module dock's size and colours, with no vertical
+    /* The title bar copy (macOS): the Module dock's size and colors, with no vertical
        padding. The strip grows the bar if the text is taller (TitleBarStrip::place). */
     if (titleModeBar) {
         titleModeBar->setStyleSheet(

@@ -23,7 +23,7 @@
 # 1.29 for arm64 needs 14.0; 1.23.2 measured the same pmrid output and speed).
 # macdeployqt copies the dylib into the bundle.
 #
-# libjxl (JPEG XL tiles in DNG 1.7) is built with its own skcms for colour management,
+# libjxl (JPEG XL tiles in DNG 1.7) is built with its own skcms for color management,
 # on Highway and Brotli built here, at the commits/versions libjxl 0.12.0 expects.
 #
 # One-time, ~15 minutes per arch. Needs cmake, Qt Creator's ninja, and for x86_64 nasm

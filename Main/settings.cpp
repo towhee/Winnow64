@@ -659,7 +659,7 @@ bool MW::loadSettings()
     if (settings->contains("useJitIconCache")) G::useJitIconCache = settings->value("useJitIconCache").toBool();
 
     // files
-    /* "colorManage" in older settings files is ignored: colour management is always on
+    /* "colorManage" in older settings files is ignored: color management is always on
        (2026-10-26, notes/Documentation.md 15.2.2). */
     if (settings->contains("useRaw")) G::useRaw = settings->value("useRaw").toBool();
     if (settings->contains("decodeRawEngine")) {

@@ -22,7 +22,7 @@ class Metadata;
         file naming: token template, suffix, overwrite / unique / skip
         resizing to the requested long edge or percentage
         saving at the requested format, bit depth and quality/compression
-        tagging the output colour space
+        tagging the output color space
         copying metadata + ICC + thumbnail from the source with ExifTool
         progress reporting and abort
         collecting what was written, skipped and failed
@@ -106,7 +106,7 @@ public:
        develop source renders 8- or 16-bit to match the chosen format). */
     const ExportSettings &activeSettings() const { return s; }
 
-    /* The export layer's published OutputSpace -> the render layer's colour space. The
+    /* The export layer's published OutputSpace -> the render layer's color space. The
        two enums are deliberately separate (Develop must not depend on Export), so this
        is the one place they are tied together -- a PixelSource that renders through
        OutputTransform asks here, and save() tags with the matching QColorSpace. */

@@ -166,7 +166,7 @@ inline float FilmicTone(float v)
     AgX -- a wide-latitude view transform whose point is HIGHLIGHT HUE INTEGRITY.
 
     THE PROBLEM IT SOLVES. A per-channel filmic curve (Filmic above) compresses each
-    channel independently, so a saturated colour loses its channels one at a time as it
+    channel independently, so a saturated color loses its channels one at a time as it
     brightens: a saturated red marches to orange, a blue to purple. That is where the
     "notorious six" skews come from, and it is also why a brightened radial mask clips to
     a flat patch -- the falloff calibrated in maskfalloff.h becomes invisible in the core.
@@ -175,7 +175,7 @@ inline float FilmicTone(float v)
 
     THE SHAPE. Inset the primaries toward the achromatic axis, apply the curve in that
     compressed space over a wide log2 window, then outset back. Because the curve runs in
-    a space where the primaries are pulled together, a bright saturated colour desaturates
+    a space where the primaries are pulled together, a bright saturated color desaturates
     smoothly toward white over many stops instead of clipping channel by channel.
 
         working -> sRGB primaries -> INSET -> log2 window -> sigmoid -> OUTSET -> working
@@ -355,7 +355,7 @@ inline bool IsCameraCurve(OutputTransform::ViewTransform vt)
 }
 
 /*
-    THE VIEW TRANSFORM'S OWN COLOUR SPACE.
+    THE VIEW TRANSFORM'S OWN COLOR SPACE.
 
     A per-channel curve is not the whole story for the interesting transforms. AgX and
     its relatives are: pull the primaries toward the achromatic axis (an INSET matrix),
@@ -454,7 +454,7 @@ ViewMatrices ViewMatricesFor(OutputTransform::ViewTransform vt,
     channels clip one at a time the hue swings on the way out.
 
     Instead the energy the peak channel loses to the clip is bled into the other two, so
-    an over-range colour desaturates toward white the way Lightroom's does: pushing a
+    an over-range color desaturates toward white the way Lightroom's does: pushing a
     saturated green past white lifts red and blue instead of pinning green at 255 and
     freezing the pixel. Measured on the green test frame that puts the mask core at
     ~(154,255,151) against Lightroom's ~(172,255,164), and it removes the flat plateau --
@@ -478,7 +478,7 @@ inline void HighlightRolloff(float &r, float &g, float &b)
 /*
     GamutClip: the output step for iPhone ProRAW's embedded curve (CameraPath::perChannel)
     in place of HighlightRolloff. That curve is applied per channel and tops out below
-    white, so nothing reaching here is OVER-EXPOSED -- a channel over 1.0 means a colour
+    white, so nothing reaching here is OVER-EXPOSED -- a channel over 1.0 means a color
     more saturated than the output gamut, and the bleed then lifts the other two channels
     toward white as if it were light. On IMG_1106 (2026-11-09, candle-lit pumpkins) that
     drew a pink-white halo round every cut-out: 4.8% of pixels went over 1.0 in sRGB and
@@ -487,7 +487,7 @@ inline void HighlightRolloff(float &r, float &g, float &b)
         bleed (HighlightRolloff)          7.0 / 0.377   face |error| 0.063  the halo
         per-channel clip                  8.0 / 0.322                0.016
         this: luma-held desaturate, clip 11.9 / 0.350                0.023
-    So: pull the colour toward the grey of its own luminance (output primaries) just far
+    So: pull the color toward the grey of its own luminance (output primaries) just far
     enough to lift the negative channel to 0, then clip. Hue and brightness hold; only
     the part of the saturation the output cannot show is given up, as Apple's renderer
     does. The bleed stays everywhere else: it was matched to Lightroom on Winnow's own
@@ -513,12 +513,12 @@ inline void GamutClip(const ColorSpaceMath::Luma &lw, float &r, float &g, float 
     DisplayGamutClip: the output step for a DISPLAY-REFERRED image (a JPEG / TIFF / HEIC,
     a raw's embedded preview, Apple's ProRAW rendering) in place of HighlightRolloff
     (2026-11-12). Its Exposure is a curve that tops out at white (develop.cpp,
-    buildExposureCurve), so a channel over 1.0 after a push is mostly a colour the output
+    buildExposureCurve), so a channel over 1.0 after a push is mostly a color the output
     cannot show, not light, and the bleed lifted it toward white: a pink dress pushed
     +1.75 EV rendered G 194 where Lightroom's export reads 149.
 
     GamutClip's rule at BOTH ends: hold the luminance (output primaries) and pull the
-    colour toward the grey of it just far enough that no channel is under 0 or over 1.
+    color toward the grey of it just far enough that no channel is under 0 or over 1.
     Luminance itself at or over 1 (Whites +, a white-balance push) can only be white,
     which is what the bleed gave there too; it gets there continuously, with no hue swing
     from channels clipping one at a time. Against the Lightroom exposure exports (Rec.2020
@@ -1138,7 +1138,7 @@ float OutputTransform::DisplayPosition(float perceptual, ViewTransform view)
     if (v < 0.0f) v = 0.0f;
     if (v > 1.0f) v = 1.0f;
     /* sRGB's transfer: the histogram is drawn on an sRGB-encoded image, and the
-       output primaries do not change where a TONE lands, only its colour. */
+       output primaries do not change where a TONE lands, only its color. */
     return Transfer(v, 0.0f);
 }
 

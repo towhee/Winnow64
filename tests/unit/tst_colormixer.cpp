@@ -9,7 +9,7 @@
     Color Mixer (Develop/colormixer.h) -- the 8-band HSL mixer behind the Color panel's
     Mix mode. These pin what is easy to break and invisible in review: all-zero is the
     identity (the pipeline skips the stage on it), greys are never moved, a band's slider
-    reaches its own colour and not the far side of the wheel, and the 24 fields round
+    reaches its own color and not the far side of the wheel, and the 24 fields round
     trip through the sidecar under their published key names.
 */
 class tst_colormixer : public QObject
@@ -25,7 +25,7 @@ class tst_colormixer : public QObject
         ColorMixer::buildTables(hue, sat, lum, t.rot, t.sat, t.lum);
         return t;
     }
-    /* A saturated OKLab colour at band b's centre. */
+    /* A saturated OKLab color at band b's centre. */
     static void bandLab(int b, float lab[3])
     {
         float c[8];

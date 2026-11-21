@@ -2,7 +2,7 @@
     Develop's STAGE 0 -- the camera-native -> working-space input profile.
 
     WHY THIS TEST EXISTS. RawColor deliberately stops at the sensor's own primaries so
-    that the WorkingImageCache boundary sits UPSTREAM of every colour decision: changing a
+    that the WorkingImageCache boundary sits UPSTREAM of every color decision: changing a
     camera profile or the white balance is then a re-render, not a re-decode. The
     conversion it no longer does became Develop's first stage, and that stage has two
     implementations which MUST agree:
@@ -13,18 +13,18 @@
                                 BEFORE the point pass and must see working-space pixels).
 
       PointCoeffs::preMat       the same transform folded into one 3x3 together with the
-                                white balance, exposure, the Colour RGB sliders and the
+                                white balance, exposure, the Color RGB sliders and the
                                 Calibrate matrix, so the conversion costs nothing on the
                                 path virtually every render takes.
 
     THE LOAD-BEARING PROPERTY is that the FOLD EQUALS THE SEQUENCE. A fused matrix that
     quietly disagrees with applying the stages one at a time would make an image render
     differently depending on whether Denoise happened to be switched on -- the kind of
-    bug that looks like "the denoise slider changes my colours".
+    bug that looks like "the denoise slider changes my colors".
 
     The other thing pinned here is that the conversion is NOT OPTIONAL: it must run even
     when the edit is identity, because it is not an edit. Miss that and an untouched raw
-    renders in sensor primaries, which looks like a strong colour cast.
+    renders in sensor primaries, which looks like a strong color cast.
 */
 
 #include <QtTest>
@@ -47,7 +47,7 @@ namespace {
 
 /*
     A deliberately NON-symmetric stand-in for a camera matrix, with row sums of 1 so a
-    neutral sensor reading maps to a neutral working colour (the property a real
+    neutral sensor reading maps to a neutral working color (the property a real
     camera->working matrix has after white balance). Asymmetric so a transposed or
     mis-indexed matrix cannot pass by accident.
 */
@@ -258,7 +258,7 @@ void TestInputProfile::toWorkingSpaceMatchesReference()
 }
 
 /* Calling it twice must not convert twice -- the tag is what stops it, and a double
-   conversion would be a hard-to-spot colour error rather than a crash. */
+   conversion would be a hard-to-spot color error rather than a crash. */
 void TestInputProfile::toWorkingSpaceIsIdempotent()
 {
     WorkingImage once = makeCameraNative(8, 8);
@@ -336,7 +336,7 @@ void TestInputProfile::foldEqualsSequenceWithCalibrate()
 
 /*
     Denoise runs BEFORE the point pass, so Apply() converts up front instead of folding.
-    Both routes must still agree -- otherwise switching denoise on would shift colour,
+    Both routes must still agree -- otherwise switching denoise on would shift color,
     which no user would attribute to the denoise slider.
 */
 void TestInputProfile::denoisePathAgreesWithFoldedPath()
@@ -455,7 +455,7 @@ void TestInputProfile::cameraProfileReplacesTheInputMatrix()
 
     Under DNG the chosen temperature sets diag(1/referenceNeutral) INSIDE the profile's
     matrix, so buildPointCoeffs must drop the per-channel gains it applies on the built-in
-    path. The test feeds the camera the exact colour a neutral surface under the chosen
+    path. The test feeds the camera the exact color a neutral surface under the chosen
     illuminant produces: if the white balance runs once it renders neutral, and if it runs
     twice the correction is squared and the pixel comes out visibly tinted.
 */
@@ -676,7 +676,7 @@ void TestInputProfile::cameraBaseRendersWithoutTheLook()
 
 /*
     THE PROFILE'S CURVE IS A TONE MAPPING CHOICE, NOT AN OVERRIDE. It applies under
-    "Profile curve" and only there; every other choice renders the profile's colour with
+    "Profile curve" and only there; every other choice renders the profile's color with
     Winnow's own tone. A profile without a curve renders "Profile curve" as Standard
     roll-off rather than as unmapped data.
 */

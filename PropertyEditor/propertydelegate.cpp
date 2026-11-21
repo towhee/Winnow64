@@ -572,9 +572,9 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
         QModelIndex capIndex = index.sibling(index.row(), CapColumn);
         const QString capText = capIndex.data().toString();
         /* Header caption pen. UR_LeafSingleLine rows want the header's single-line full-width
-           layout but the ordinary LEAF text colour (not category teal). */
+           layout but the ordinary LEAF text color (not category teal). */
         QPen capPen = capIndex.data(UR_LeafSingleLine).toBool() ? regPen : catPen;
-        /* Optional per-row caption colour (e.g. a mask tool row tinted by its
+        /* Optional per-row caption color (e.g. a mask tool row tinted by its
            Add/Subtract role). Overrides the leaf/category pen when set. */
         const QVariant capColorV = capIndex.data(UR_CaptionColor);
         if (capColorV.isValid()) capPen = QPen(capColorV.value<QColor>());
@@ -583,7 +583,7 @@ void PropertyDelegate::paint(QPainter *painter, const QStyleOptionViewItem &opti
            widget's enabled state, so without this a greyed Develop panel kept teal
            "Basic / Color / Calibrate / ..." headers over dead rows. Tested only when the
            role is actually set: trees that never set it (Preferences, Embellish) must
-           keep their normal colour, and an unset QVariant is false. */
+           keep their normal color, and an unset QVariant is false. */
         const QVariant capEnabledV = capIndex.data(UR_isEnabled);
         if (viewDisabled || (capEnabledV.isValid() && !capEnabledV.toBool()))
             capPen = disPen;

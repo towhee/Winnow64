@@ -249,7 +249,7 @@ Filters::Filters(QWidget *parent) : QTreeWidget(parent)
     hdrIsEmptyColor = G::disabledColor;
     /* Red reads as "taken out", and does not collide with the yellow a filtering
        category header uses, which sits on a different row. (An amber "ambiguous keyword"
-       colour lived here too, until path identity made ambiguity impossible.) */
+       color lived here too, until path identity made ambiguity impossible.) */
     itemIsExcludedColor = G::excludedColor;
     itemIsUnfiledColor = G::unfiledKeywordColor;
 
@@ -807,7 +807,7 @@ void Filters::setSearchDefaultTextColor()
 {
 /*
     The tint of the "Enter search query" prompt, derived from G::textShade. Called at
-    construction and when the user changes the text shade in preferences, which recolours
+    construction and when the user changes the text shade in preferences, which recolors
     the prompt if it is showing.
 */
     const QColor was = searchDefaultTextColor;
@@ -1215,9 +1215,9 @@ void Filters::disableAllItems(bool disable)
 
     /*  RE-ENABLING RESTYLES A FILTER ITEM FROM ITS STATE, never paints it textColor.
         enable() runs on every switch to Loupe, Grid or Table, and a flat textColor wiped
-        the unfiled red, the exclusion colour and a branch's filtering colour -- none of
+        the unfiled red, the exclusion color and a branch's filtering color -- none of
         which came back, because applyVocabMarking and setEachCatTextColor restyle only
-        an item whose role CHANGED. The Search row keeps the plain colour: applyItemStyle
+        an item whose role CHANGED. The Search row keeps the plain color: applyItemStyle
         would also drop its placeholder italic. */
     QTreeWidgetItemIterator it(this);
     while (*it) {
@@ -1345,7 +1345,7 @@ void Filters::setEachCatTextColor()
 
     /*  BRANCH ITEMS lit like headers: a collection folder, folder or keyword with a
         checked item anywhere beneath it. Restyled only when the mark changes, so the
-        colours other passes set (zero counts) are not churned on every check. */
+        colors other passes set (zero counts) are not churned on every check. */
     std::function<bool(QTreeWidgetItem *)> anyBelow = [&](QTreeWidgetItem *parent) {
         bool any = false;
         for (int i = 0; i < parent->childCount(); ++i) {
@@ -1738,8 +1738,8 @@ void Filters::styleFilterItem(QTreeWidgetItem *item)
     One item's appearance, from its state.
 
     TWO SIGNALS THAT MUST COMPOSE rather than compete: exclusion is a FONT (struck
-    through) and ambiguity is a COLOUR, so an excluded ambiguous keyword still reads as
-    both. Had both been colours, one would have had to win and the user would lose the
+    through) and ambiguity is a COLOR, so an excluded ambiguous keyword still reads as
+    both. Had both been colors, one would have had to win and the user would lose the
     other fact exactly when they need it -- while resolving the ambiguity.
 */
     if (!isFilterItem(item)) return;
@@ -1767,7 +1767,7 @@ void Filters::applyItemStyle(QTreeWidgetItem *item)
     f.setItalic(duplicate);
     item->setFont(0, f);
 
-    /*  UNFILED WINS THE COLOUR when both apply, because exclusion still has the strikeout
+    /*  UNFILED WINS THE COLOR when both apply, because exclusion still has the strikeout
         to say it with and "this keyword is not in your list" has nothing else. */
     if (unfiled)        item->setForeground(0, QBrush(itemIsUnfiledColor));
     else if (excluded)  item->setForeground(0, QBrush(itemIsExcludedColor));
@@ -2189,7 +2189,7 @@ void Filters::setKeywordCategoryToolTip()
     THERE IS NO AMBIGUITY MARKING ANY MORE, and there is nothing left to mark: a keyword's
     identity is its full path (catalog schema 10), so "Vancouver" under Canada and
     "Vancouver" under USA are two separate items with two separate counts rather than one
-    amber item meaning both. What used to need a colour, a role, a shared QSet and a
+    amber item meaning both. What used to need a color, a role, a shared QSet and a
     catalog lookup is now simply two rows.
 */
     if (G::isLogger) G::log("Filters::setKeywordCategoryToolTip");
@@ -2474,7 +2474,7 @@ void Filters::updateKeywordModeLabel()
     "any" or "all" in the Avail column of the Keywords header -- where the header row
     has room, and above the column that counts what passes. Always SHOWN, so the choice
     can be found; DIMMED while it changes nothing (fewer than two keywords included), and
-    lit in the filtering colour when "all" is actually narrowing.
+    lit in the filtering color when "all" is actually narrowing.
 */
     if (!keywords) return;
     const bool all = keywordsMatchAll();
@@ -2873,7 +2873,7 @@ bool Filters::loadCatalogCategories()
     Catalog half of the scope switch.
 
     THE SAME TREE, THE SAME ITEMS, THE SAME GESTURES. Nothing about how a category item is
-    checked, excluded, coloured or counted changes with the scope; only where the values
+    checked, excluded, colored or counted changes with the scope; only where the values
     came from. That is the whole reason the two docks were merged, and it is why this
     fills the existing categories through addCategoryItems rather than building a parallel
     widget that would drift.
@@ -3624,7 +3624,7 @@ void Filters::restore(bool keepMissing)
     // the mode goes back with the checks it combines; the caller re-applies both
     if (keywords) keywords->setData(0, MatchAllRole, savedKeywordsMatchAll);
     updateKeywordModeLabel();
-    /*  The title bar's "filtering" colour follows the checks just restored -- a filter
+    /*  The title bar's "filtering" color follows the checks just restored -- a filter
         history step (MW::stepFilterHistory) can land on an unfiltered state. */
     notifyFilteringState();
     // emit filterChange("Filters::restore");
@@ -4224,7 +4224,7 @@ bool Filters::isEffectivelyExcluded(const QTreeWidgetItem *item,
 
 void Filters::setAvailExcluded(QTreeWidgetItem *item, bool excluded)
 {
-    /*  Cleared rather than set to the text colour, so a row that stops being excluded
+    /*  Cleared rather than set to the text color, so a row that stops being excluded
         goes back to whatever the palette draws. */
     item->setData(2, AvailExcludedRole, excluded ? QVariant(true) : QVariant());
     item->setData(2, Qt::ForegroundRole,
@@ -4760,7 +4760,7 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         /*  STYLED AT CREATION. Every other category's items are styled by
             addCategoryItems as it makes them; a keyword node made here was not styled at
             all until something happened to it, so an unfiled keyword drew in the ordinary
-            colour until the first time it was clicked. */
+            color until the first time it was clicked. */
         node->setData(0, UnfiledRole, isUnfiled(path));
         applyItemStyle(node);       // never a header, and may not have a parent yet
         byPath.insert(fold, node);
@@ -4957,7 +4957,7 @@ QVariant Filters::filterValueFor(const QTreeWidgetItem *category, const QString 
     two sites that build items.
 */
     if (category == availability) return Catalog::availabilityCode(label);
-    /*  A "Filter on..." category over the colour space shows names and the column holds
+    /*  A "Filter on..." category over the color space shows names and the column holds
         IDs (Metadata/colorspaces.h); blank is 0. Text, because a session category
         compares as text (FilterCategory::compareAsText). */
     if (category && category->data(0, SessionRole).toBool()

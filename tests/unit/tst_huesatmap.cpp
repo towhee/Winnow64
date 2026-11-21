@@ -2,7 +2,7 @@
     HueSatMap -- the 3-D HSV correction table a DNG camera profile carries.
 
     WHY THIS TEST EXISTS. A lookup table misapplied does not fail, it renders: a table read
-    with its axes transposed shears hue against saturation and produces colours that look
+    with its axes transposed shears hue against saturation and produces colors that look
     deliberate, and a value axis clamped at 1.0 silently flattens every specular highlight
     the moment a profile is selected. Neither shows up as an error anywhere.
 
@@ -84,7 +84,7 @@ void TstHueSatMap::identityTableChangesNothing()
 /*
     THE STORAGE ORDER: index = ((val * hueDivs + hue) * satDivs + sat) * 3.
 
-    Every entry is given a value that identifies WHICH entry it is, then one colour whose
+    Every entry is given a value that identifies WHICH entry it is, then one color whose
     hue, saturation and value land exactly on a known grid node is pushed through. If the
     axes were ordered any other way a different entry would be fetched and the three
     returned numbers would not be the ones this node holds.
@@ -236,7 +236,7 @@ void TstHueSatMap::srgbEncodedTableRoundTrips()
 
 /*
     END TO END ON REAL PROFILES: a camera neutral must still render neutral AFTER the
-    HueSatMap, and the table must actually do something to a colour that is not neutral.
+    HueSatMap, and the table must actually do something to a color that is not neutral.
 
     The first half is a real invariant, not a coincidence: the saturation == 0 slice of
     every installed HueSatMap is exactly (sat 1.0, val 1.0), because a profile that tinted
@@ -260,7 +260,7 @@ void TstHueSatMap::neutralSurvivesARealProfile()
     paths.sort();
 
     const int stride = qMax(1, paths.size() / 120);
-    int withTable = 0, movedAColour = 0;
+    int withTable = 0, movedAColor = 0;
     double worstNeutral = 0.0;
 
     for (int i = 0; i < paths.size(); i += stride) {
@@ -290,24 +290,24 @@ void TstHueSatMap::neutralSurvivesARealProfile()
                 worstNeutral = qMax(worstNeutral, qAbs(double(out[c]) - double(grey)));
         }
 
-        float colour[3] = {0.62f, 0.21f, 0.17f}, moved[3];      // a saturated red
-        through(colour, moved);
+        float color[3] = {0.62f, 0.21f, 0.17f}, moved[3];      // a saturated red
+        through(color, moved);
         double d = 0.0;
-        for (int c = 0; c < 3; ++c) d = qMax(d, qAbs(double(moved[c]) - double(colour[c])));
-        if (d > 1e-4) ++movedAColour;
+        for (int c = 0; c < 3; ++c) d = qMax(d, qAbs(double(moved[c]) - double(color[c])));
+        if (d > 1e-4) ++movedAColor;
     }
 
     qInfo() << "profiles with a HueSatMap:" << withTable << "; worst neutral drift"
-            << worstNeutral << "; moved a saturated colour:" << movedAColour;
+            << worstNeutral << "; moved a saturated color:" << movedAColor;
 
     QVERIFY2(withTable > 0, "no installed profile carried a HueSatMap -- nothing was tested");
     QVERIFY2(worstNeutral < 1e-5,
              qPrintable(QString("a real profile tinted a neutral by %1").arg(worstNeutral)));
-    /* If NO profile moved a saturated colour the table is being read but not applied,
+    /* If NO profile moved a saturated color the table is being read but not applied,
        which the neutral test above would happily pass. */
-    QVERIFY2(movedAColour > withTable / 2,
-             qPrintable(QString("only %1 of %2 profiles changed a saturated colour")
-                            .arg(movedAColour).arg(withTable)));
+    QVERIFY2(movedAColor > withTable / 2,
+             qPrintable(QString("only %1 of %2 profiles changed a saturated color")
+                            .arg(movedAColor).arg(withTable)));
 }
 
 /*
@@ -329,7 +329,7 @@ void TstHueSatMap::srgbTransferTableMatchesTheExactCurve()
         worstDec = qMax(worstDec, qAbs(double(HueSatMap::SrgbDecode(v))
                                      - double(HueSatMap::SrgbDecodeExact(v))));
     }
-    /* THE BAR IS ONE 16-BIT LEVEL (1.53e-5) -- the accuracy the rest of Develop's colour
+    /* THE BAR IS ONE 16-BIT LEVEL (1.53e-5) -- the accuracy the rest of Develop's color
        invariants are asserted at -- not a number chosen to fit the result. Measured at the
        table's current size: 2.4e-6 encoding, and less decoding. At 4096 samples encoding
        measured 1.6e-5 and would fail this, which is how the size was chosen. */

@@ -133,7 +133,7 @@ QImage applyKaleidoscope(const QImage &src, const Kaleido &k);
     The MASKED fold (a mask scope's kaleidoscope): only the masked pixels are folded --
     the unmasked part of the frame is treated as transparent -- and the result is laid
     over the frame. mask is the scope's coverage in the SAME (cropped) frame, any format
-    (read as grey, 0..255), the same size as frame. Folding colour and coverage with the
+    (read as grey, 0..255), the same size as frame. Folding color and coverage with the
     one map and blending by the folded coverage is lerp(frame, fold(frame), fold(mask)),
     which equals fold(frame x mask) over the frame except within a bilinear tap of a hard
     mask edge. The opacity scales the folded coverage. Returns frame unchanged when off or when the mask does not match.

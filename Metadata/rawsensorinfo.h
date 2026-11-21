@@ -12,10 +12,10 @@
 
     Deliberately dependency-free (plain ints, no Qt) so it can sit on ImageMetadata, be stored
     in the DataModel, and be consumed by the ImageFormats/Raw pipeline without coupling those
-    layers. White-balance multipliers and the colour matrix are intentionally NOT here yet --
-    they come from the makernote and belong with the colour stage (see task: real RawColor).
+    layers. White-balance multipliers and the color matrix are intentionally NOT here yet --
+    they come from the makernote and belong with the color stage (see task: real RawColor).
 
-    cfaPlaneColor holds the 2x2 mosaic colour codes (0=R, 1=G, 2=B) at (r0,c0)(r0,c1)(r1,c0)
+    cfaPlaneColor holds the 2x2 mosaic color codes (0=R, 1=G, 2=B) at (r0,c0)(r0,c1)(r1,c0)
     (r1,c1); default is RGGB. black[] is indexed the same 2x2 way, ((row&1)<<1)|(col&1).
 */
 struct RawSensorInfo {
@@ -28,11 +28,11 @@ struct RawSensorInfo {
     int compression = 0;                // TIFF Compression tag (1 = uncompressed)
     int samplesPerPixel = 1;            // 1 for a CFA mosaic
     bool littleEndianSamples = true;    // byte order of the packed 16-bit CFA samples
-    uint8_t cfaPlaneColor[4] = {0, 1, 1, 2};   // 2x2 colour codes, default RGGB
+    uint8_t cfaPlaneColor[4] = {0, 1, 1, 2};   // 2x2 color codes, default RGGB
     uint32_t white = 0;                 // saturation level (0 = unknown -> derive from bps)
     uint32_t black[4] = {0, 0, 0, 0};   // per-2x2-position black level
 
-    /* Colour. xyzToCam is the CIE XYZ(D65) -> camera-RGB matrix (DNG ColorMatrix / libraw
+    /* Color. xyzToCam is the CIE XYZ(D65) -> camera-RGB matrix (DNG ColorMatrix / libraw
        adobe_coeff convention); RawColor builds the camera->sRGB transform from it and derives
        a neutral white balance. camMul is the as-shot WB (R,G,B,G2); left at 1s when not read
        from the makernote, in which case RawColor uses the matrix-derived neutral WB. Filled at

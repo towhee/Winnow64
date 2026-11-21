@@ -321,7 +321,7 @@ THE JPEG ENCODER STEPS
 
 
 
-1) The afine transformation in colour space :  [R G B] -> [Y Cb Cr]
+1) The afine transformation in color space :  [R G B] -> [Y Cb Cr]
 
 ---------------------------------------------------------------------
 
@@ -345,9 +345,9 @@ THE JPEG ENCODER STEPS
 
 The new value Y = 0.299*R + 0.587*G + 0.114*B  is called the luminance.
 
-It is the value used by the monochrome monitors to represent an RGB colour.
+It is the value used by the monochrome monitors to represent an RGB color.
 
-Physiologically, it represents the intensity of an RGB colour perceived by
+Physiologically, it represents the intensity of an RGB color perceived by
 
 the eye.
 
@@ -365,9 +365,9 @@ The values Cb =  - 0.1687*R - 0.3313*G + 0.5   *B + 128
 
 are called the chromimance values and represent 2 coordinates in a system
 
-which measures the nuance and saturation of the colour ([Approximately], these
+which measures the nuance and saturation of the color ([Approximately], these
 
-values indicate how much blue and how much red is in that colour).
+values indicate how much blue and how much red is in that color).
 
 These 2 coordinates are called shortly the chrominance.
 
@@ -403,11 +403,11 @@ white to the darkest black and cells for the day view which perceive the color
 
 nuance.
 
-The first cells, given an RGB colour, detect a gray level similar to that given
+The first cells, given an RGB color, detect a gray level similar to that given
 
 by the luminance value.
 
-The second cells, responsible for the perception of the colour nuance, are the
+The second cells, responsible for the perception of the color nuance, are the
 
 cells which detects a value related to that of the chrominance.
 
@@ -423,7 +423,7 @@ cells which detects a value related to that of the chrominance.
 
 The JPEG standard takes into account the fact that the eye seems to be more
 
-sensitive at the luminance of a colour than at the nuance of that colour.
+sensitive at the luminance of a color than at the nuance of that color.
 
 (the white-black view cells have more influence than the day view cells)
 
@@ -739,7 +739,7 @@ smaller is the visual quality.
 
 
 
-Another important fact is that in most images the colour varies slow from one
+Another important fact is that in most images the color varies slow from one
 
 pixel to another, so most images will have a small quantity of high detail
 
@@ -2062,7 +2062,7 @@ SOF0: Start Of Frame 0:
 
   - JFIF uses either 1 component (Y, greyscaled) or 3 components (YCbCr,
 
-    sometimes called YUV, colour).
+    sometimes called YUV, color).
 
 
 

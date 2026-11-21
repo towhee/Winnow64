@@ -6,7 +6,7 @@
 #include <QStringList>
 
 /*
-    THE COLOUR SPACE LOOKUP TABLE. G::ICCSpaceColumn holds one of these ids, and the
+    THE COLOR SPACE LOOKUP TABLE. G::ICCSpaceColumn holds one of these ids, and the
     table view, the "colorspace" query field and the catalog index all go through it.
 
     THE IDS ARE A PUBLISHED FORMAT: they are stored in the catalog index
@@ -71,7 +71,7 @@ namespace ColorSpaces
     /* The EXIF ColorSpace tag value; -1 when the tag was absent. */
     int fromExif(int tag);
 
-    /* A HEIC nclx box's colour primaries code (ITU-T H.273). */
+    /* A HEIC nclx box's color primaries code (ITU-T H.273). */
     int fromNclx(int primaries);
 
     /* A DNG's PreviewColorSpace (50970): 1 Gray, 2 sRGB, 3 Adobe RGB, 4 ProPhoto; -1 or

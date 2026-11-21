@@ -299,7 +299,7 @@ private:
     QSet<QString> inFlightKeys() const;
 
     /*  THE CACHE'S GENERATION. Bumped by every reload (operation mode, Decode Raw,
-        preview source, colour management): a decode started under an older generation
+        preview source, color management): a decode started under an older generation
         chose its pixels by the old settings, so okToCache supersedes it (C26).
         decoderGeneration[id] is the generation a decoder was dispatched under.
         ImageCache thread only. */

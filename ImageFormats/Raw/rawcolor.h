@@ -9,7 +9,7 @@
     Wraps demosaiced camera-RGB (interleaved floats, 0..1) into a WorkingImage tagged
     CameraNative, and CHARACTERISES it -- it does not convert it.
 
-    WHAT IT COMPUTES. Colour follows dcraw/libraw: from the model's XYZ->camera matrix
+    WHAT IT COMPUTES. Color follows dcraw/libraw: from the model's XYZ->camera matrix
     (raw.xyzToCam) it builds the camera->working transform and a neutral white balance.
     Both go into WorkingImage::cam, along with the as-shot multipliers (raw.camMul when
     the file provides them, else the matrix-derived neutral). An identity xyzToCam
@@ -22,8 +22,8 @@
     WHY. This buffer is what WorkingImageCache holds. Anything baked in here can only be
     undone by decoding the raw again, so a camera profile or white-balance change would
     cost a full re-decode instead of a re-render. Keeping the pixels sensor-native puts
-    the cache boundary UPSTREAM of every colour decision. The dropped clamp matters for
-    the same reason in the other direction: out-of-gamut sensor colour now survives to
+    the cache boundary UPSTREAM of every color decision. The dropped clamp matters for
+    the same reason in the other direction: out-of-gamut sensor color now survives to
     the output stage instead of being destroyed before the user sees the image.
 
     The convergence point with the non-raw path (InputTransform, which arrives already in
@@ -69,10 +69,10 @@ public:
 
         Fix, dcraw-style but soft: each channel's ceiling in white-balanced terms is
         clip_c x asShotMul_c, and a pixel whose channel c is clipped cannot be brighter
-        than that ceiling in ANY channel without its colour being invented. So every
+        than that ceiling in ANY channel without its color being invented. So every
         channel is capped at the lowest ceiling among the clipped channels. A blown
         neutral therefore balances to (1,1,1) -- white -- while a saturated red with only
-        R clipped keeps its colour (its ceiling is R's own). "Clipped" is a smoothstep
+        R clipped keeps its color (its ceiling is R's own). "Clipped" is a smoothstep
         over the top kKnee of each channel's clip level, and the ceiling is divided by
         it, so the cap rises to infinity as the channel leaves the knee: continuous, no
         banding at the clip edge.
@@ -91,7 +91,7 @@ public:
     /*
         CLIPPED HIGHLIGHTS -> RECONSTRUCTED. What the mosaic decode now runs instead of
         NeutraliseClipped: partly clipped channels are rebuilt from the unclipped ones
-        with the colour of reliable bright content nearby, fully clipped pixels become
+        with the color of reliable bright content nearby, fully clipped pixels become
         neutral at the brightest plausible level, and partly clipped ones fade into that
         neutral as more channels clip (HighlightRecon, ported from LightCraft). Same
         as-shot balance and mosaic-only scope as NeutraliseClipped; the clip is 0.97 of
@@ -99,7 +99,7 @@ public:
         the measured pile-up when the camera saturates lower. Returns the number of
         pixels with a clipped channel.
 
-        Where the colour lands: the white-balanced clipped neutral comes out at the
+        Where the color lands: the white-balanced clipped neutral comes out at the
         HIGHEST channel's ceiling (max asShotMul x clip), not NeutraliseClipped's lowest,
         so blown areas keep their headroom for Highlights - to pull back. NeutraliseClipped
         stays for reference and for any caller that wants the old cap.

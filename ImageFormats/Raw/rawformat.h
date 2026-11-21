@@ -20,7 +20,7 @@
     file's packed/compressed bitstream into a normalised CFA mosaic — is the pure-virtual
     UnpackCfa() hook that subclasses (CanonRaw, NikonRaw, ...) override.
 
-    Demosaic and colour conversion are deliberately NOT virtual: they operate on the
+    Demosaic and color conversion are deliberately NOT virtual: they operate on the
     normalised RawImage and are identical across cameras.
 
     Threading: construct one RawFormat per decode (see ImageDecoder). Each decoder thread
@@ -52,7 +52,7 @@ public:
        HeightOrigPreview columns; 0 (unknown) is false. */
     static bool PreviewTooSmall(const QString &ext, int previewW, int previewH);
 
-    /* Full sensor decode: file -> demosaiced, colour-managed display QImage. When edit is
+    /* Full sensor decode: file -> demosaiced, color-managed display QImage. When edit is
        non-null and non-identity, develop adjustments are applied in the linear working space
        (before the output transform). abort (when non-null) is polled between stages and inside
        the demosaic loop so a long decode can bail promptly on shutdown / navigation; an aborted
@@ -125,7 +125,7 @@ public:
     static DenoiseTiming LastDenoiseTiming();
 
     /*
-        The COLOUR half of a decode on its own: the model's XYZ->camera matrix and the
+        The COLOR half of a decode on its own: the model's XYZ->camera matrix and the
         file's as-shot white-balance multipliers, with no sensor unpack and no pixels.
 
         Exists for the APPLE CORE IMAGE engine. That engine never calls UnpackCfa, so
@@ -164,7 +164,7 @@ protected:
         camera RGB -- a DNG "Linear Raw" (Photometric 34892), which is what Lightroom's
         pano/HDR merges and "Linear DNG" conversions write. Decode() asks this first;
         NotLinear (the default, and every CFA file) takes the UnpackCfa path. Ok fills
-        raw's geometry and colour (width/height/camMul/xyzToCam; cfa stays EMPTY) and rgb
+        raw's geometry and color (width/height/camMul/xyzToCam; cfa stays EMPTY) and rgb
         with W*H*3 floats, black-subtracted and normalised to 0..1, ready for
         RawColor::ToCameraNative -- demosaic and PMRID (a mosaic denoiser) do not apply.
         Failed sets errMsg.

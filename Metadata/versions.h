@@ -70,7 +70,7 @@ struct ImageVersion
     QString name;               // user-visible; "" shows as "v<number>"
     QDateTime created;          // UTC
     int rating = 0;             // 0 = unrated, 1..5
-    QString label;              // "" or a colour name, as G::LabelColumn holds it
+    QString label;              // "" or a color name, as G::LabelColumn holds it
     QString pick;               // "", "Picked" or "Rejected", as G::PickColumn holds it
     QString develop;            // EditStack::toBase64(); "" = identity
     QString previewKey;         // devPreviewKey of the recipe the preview shows

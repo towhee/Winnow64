@@ -3,16 +3,16 @@
 
 /*
     Pins Develop/maskrefine.h, the Refine Brush: a painted region in which the mask folded
-    so far is re-matted against the photo's own colours. Each case is a synthetic scene
+    so far is re-matted against the photo's own colors. Each case is a synthetic scene
     built to provoke the failure one rule was added for (the rules were found on real
     pictures in the Python prototype, 2026-10-07):
 
-      - Remove takes out what does NOT look like the mask colour, and leaves real sky
+      - Remove takes out what does NOT look like the mask color, and leaves real sky
         under the stroke alone (painting over sky must change nothing);
       - Remove keeps sky that is PALER than the reference sky above the stroke -- a fixed
         threshold removed it on Joffrey Lake, which is why the split is adaptive (Otsu);
-      - Add fills holes that look like the mask colour, never the foreground around them;
-      - Add fills holes PALER than the mask colour (sky through branches, Paradise
+      - Add fills holes that look like the mask color, never the foreground around them;
+      - Add fills holes PALER than the mask color (sky through branches, Paradise
         Meadows) with no masked pixel near the stroke, and leaves trees AND snow out --
         a fixed 0.08 "looks like the mask" added nothing there, which is why the split
         is relative (k-means in chroma space);
@@ -112,7 +112,7 @@ void TstMaskRefine::removeKeepsPalerHorizonSky()
     QVERIFY2(paleA > 0.9f, qPrintable(QString("pale sky alpha %1").arg(paleA)));
 }
 
-/* Upper half sky (masked), lower half trees (unmasked) with sky-coloured holes the mask
+/* Upper half sky (masked), lower half trees (unmasked) with sky-colored holes the mask
    missed. A stroke across the treeline adds the holes and leaves the trees out. */
 void TstMaskRefine::addFillsHolesNotTrees()
 {

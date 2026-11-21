@@ -80,7 +80,7 @@ public:
     QStringList expandedPaths() const;
     void setExpandedPaths(const QStringList &paths);
 
-    // Re-apply the palette-derived colours; MW::setBackgroundShade calls it.
+    // Re-apply the palette-derived colors; MW::setBackgroundShade calls it.
     void updateStyle();
 
 signals:

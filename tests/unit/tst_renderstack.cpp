@@ -113,7 +113,7 @@ class TestRenderStack : public QObject
     Q_OBJECT
 
 private slots:
-    void downscaledPreservesColourState();
+    void downscaledPreservesColorState();
     void capturingDoesNotChangeOutput();
     void maskOnlyEditResumesIdentically();
     void paramsEditAtHotScopeRebuildsLayer();
@@ -335,7 +335,7 @@ void TestRenderStack::scratchSurvivesRepeatedTicks()
 }
 
 /*
-    A PROXY MUST CARRY THE SOURCE'S COLOUR STATE.
+    A PROXY MUST CARRY THE SOURCE'S COLOR STATE.
 
     WorkingImageCache::downscaled builds the interactive proxy. It copies the non-pixel
     fields by hand, and a field added to WorkingImage but missed there does NOT fail to
@@ -344,11 +344,11 @@ void TestRenderStack::scratchSurvivesRepeatedTicks()
     That shipped once: `space` was missed, so the proxy claimed to be in the working space
     while holding camera-native sensor pixels. Develop skipped its input-profile stage and
     every interactive render came out strongly green (camera-native green is ~2x the other
-    channels), snapping to the correct colour on the full-res settle pass, which still had
+    channels), snapping to the correct color on the full-res settle pass, which still had
     the tag. Both fields are asserted here because both have exactly this failure mode:
-    wrong colour, no error, only while dragging.
+    wrong color, no error, only while dragging.
 */
-void TestRenderStack::downscaledPreservesColourState()
+void TestRenderStack::downscaledPreservesColorState()
 {
     WorkingImage src = makeWork(400, 300);
     src.space         = ColorSpaceMath::ColorSpace::CameraNative;

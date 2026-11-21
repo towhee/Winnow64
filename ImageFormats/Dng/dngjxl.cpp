@@ -48,7 +48,7 @@ bool Decode(const uint8_t *data, size_t size, int channels,
             if (JxlDecoderGetBasicInfo(dec, &info) != JXL_DEC_SUCCESS)
                 return fail("JxlDecoderGetBasicInfo failed");
             if (int(info.num_color_channels) != channels)
-                return fail(QString("codestream has %1 colour channels, expected %2")
+                return fail(QString("codestream has %1 color channels, expected %2")
                             .arg(info.num_color_channels).arg(channels));
             width = int(info.xsize);
             height = int(info.ysize);

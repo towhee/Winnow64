@@ -6,7 +6,7 @@
 /*
     Linux counterparts of the Mac (mac.mm) and Win (win.cpp) platform helpers. Only
     what the shared code needs a Linux value for: memory figures from /proc and the
-    title bar colour.
+    title bar color.
 */
 
 class Linux

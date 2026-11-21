@@ -477,7 +477,7 @@ bool Pixmap::loadIndependent(QString &fPath, QImage &image, int longSide, QStrin
         if (metadata->rotateFormats.contains(ext))
             applyOrientation(image, m->orientation, m->rotationDegrees);
 
-        /* Optional colour management (opt-in per call). An EMPTY iccBuf is sRGB and is
+        /* Optional color management (opt-in per call). An EMPTY iccBuf is sRGB and is
            converted too -- it used to be skipped, so an sRGB image shown this way (the
            Develop camera preview) was never converted for a wide-gamut display;
            ICC::transform returns at once when the display is sRGB. */

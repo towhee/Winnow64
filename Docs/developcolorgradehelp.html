@@ -8,7 +8,7 @@
 <h1>Color Grade</h1>
 
 <h2>What it does</h2>
-<p>Color Grade tints the image <b>by tonal range</b>: one colour into the shadows, another
+<p>Color Grade tints the image <b>by tonal range</b>: one color into the shadows, another
 into the midtones, a third into the highlights, and a fourth over everything.  It is the
 modern form of split toning, and it is how most "looks" are actually built &mdash; cool
 shadows and warm highlights, or the reverse, in amounts small enough that you notice the
@@ -23,7 +23,7 @@ picture.</p>
 
 <p>The <b>wheel</b> is the adjustment.  Each range has its own dot; the angle is the
 <b>hue</b> and the distance from the centre is the <b>strength</b>.  Drag a dot out and
-that range takes on that colour; drag it back to the middle and the range is untouched.
+that range takes on that color; drag it back to the middle and the range is untouched.
 <b>Double-click</b> the wheel to return the selected range to neutral.</p>
 
 <p>The <b>Hue</b> and <b>Saturation</b> sliders under the wheel are the same adjustment
@@ -42,9 +42,9 @@ rather than per-range:</p>
 <ul>
 <li><b>Blending</b> (default 50) is how much the windows overlap.  Low values give three
 distinct zones with visible transitions; high values smear them into each other so the
-grade reads as one continuous drift from shadow colour to highlight colour.</li>
+grade reads as one continuous drift from shadow color to highlight color.</li>
 <li><b>Balance</b> (default 0) slides the split between the ranges.  Push it right and the
-highlight colour claims more of the image; pull it left and the shadow colour does.</li>
+highlight color claims more of the image; pull it left and the shadow color does.</li>
 </ul>
 
 <p>The defaults reproduce the fixed split the panel used before these existed, so leaving
@@ -52,7 +52,7 @@ them alone is a perfectly good answer.</p>
 
 <h2>How to use it</h2>
 <ul>
-<li>Work <b>small</b>.  A grade that is obvious as colour has usually gone too far; the
+<li>Work <b>small</b>.  A grade that is obvious as color has usually gone too far; the
 effect you want is usually visible only in the before / after.</li>
 <li>Set the tone first.  The ranges are defined by tone, so re-doing exposure or the curve
 afterwards moves the grade around underneath you.</li>
@@ -69,7 +69,7 @@ neutral: it changes what red means.  Color Grade deliberately <i>does</i> tint n
 
 <h2>Where it sits in the pipeline</h2>
 <p>Grading runs after the tone curve and is measured on the image as it is
-<b>displayed</b>: the ranges follow the tones you can see, and the colour is added in a
+<b>displayed</b>: the ranges follow the tones you can see, and the color is added in a
 perceptual space, so a grade is as strong in the shadows as it looks in the midtones
 rather than flooding the dark areas.  Its strength, ranges and hues were measured against
 Lightroom's Color Grading, so the same settings give a closely matching result.</p>

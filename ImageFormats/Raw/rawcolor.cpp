@@ -55,7 +55,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
     if (W <= 0 || H <= 0) return false;
     if (rgb.size() != static_cast<size_t>(W) * static_cast<size_t>(H) * 3) return false;
 
-    /* Colour characterisation -- the matrix, the as-shot white balance and the Kelvin
+    /* Color characterisation -- the matrix, the as-shot white balance and the Kelvin
        it resolves to. Shared with the Apple Core Image engine, which has no RawImage
        to hand; see RawColor::Characterise. */
     Characterise(raw.xyzToCam, raw.camMul, out.cam, raw.asShotStated);
@@ -69,7 +69,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
     /*
         THE PIXELS PASS THROUGH UNCHANGED.
 
-        The white balance and the colour matrix used to be applied right here. They are
+        The white balance and the color matrix used to be applied right here. They are
         now Develop's stage 0 (Develop::ToWorkingSpace, normally folded into
         PointCoeffs::preMat), for one reason: this buffer is what WorkingImageCache
         stores, so anything baked in here can only be changed by DECODING THE RAW AGAIN.
@@ -77,7 +77,7 @@ bool RawColor::ToCameraNative(const RawImage &raw,
         white balance is a re-render off pixels we already have.
 
         Nothing is clamped either. The old code clamped negatives to zero, which threw
-        away every colour outside the working gamut before the user had touched the
+        away every color outside the working gamut before the user had touched the
         image -- irrecoverably, since a later stage cannot invent data that was zeroed.
         Out-of-gamut values now survive to the output stage, which is the only place that
         knows what gamut it is rendering into.
@@ -155,7 +155,7 @@ void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
             m[i][j] = static_cast<float>(s);
         }
 
-    /* Hand the colour characterisation to the Develop stage. It needs it for two jobs
+    /* Hand the color characterisation to the Develop stage. It needs it for two jobs
        now: the ABSOLUTE white balance (Kelvin + tint solved against the model matrix),
        and the INPUT PROFILE ITSELF -- because this function no longer applies the
        matrix. resolveAsShot back-solves the temperature the shot was balanced for,

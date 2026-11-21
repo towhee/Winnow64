@@ -233,7 +233,7 @@ public slots:
        while dragging the slider. */
     void previewSpotBrushSize(double size);
     /* White-balance dropper: arm/disarm "click a neutral". A click emits wbSampled with
-       the normalized image point and the tool disarms itself (the dock does the colour
+       the normalized image point and the tool disarms itself (the dock does the color
        solve -- ImageView only reports where). */
     void beginWbPick();
     void endWbPick();
@@ -250,7 +250,7 @@ public slots:
        indexed); MW turns it into a focus depth. */
     void beginLensFocusPick();
     void endLensFocusPick();
-    /* Point Color eyedropper: arm/disarm "click a colour to adjust". One-shot like the WB
+    /* Point Color eyedropper: arm/disarm "click a color to adjust". One-shot like the WB
        dropper -- a click emits pointColorPicked with the DISPLAYED normalized point (the
        space developShownImage is indexed in, as for the Curves picker) and the dock
        disarms us. */
@@ -830,7 +830,7 @@ private:
     bool    maskEditMode = false;       // a spatial mask tool is the active edit target
     bool    maskHover    = false;       // cursor is over the view (overlay shown only then)
     int     maskTool     = 0;           // 0 Linear, 1 Radial (MaskTool enum value)
-    int     maskOp       = 0;           // MaskOp: 0 = Add, 1 = Subtract (tint colour)
+    int     maskOp       = 0;           // MaskOp: 0 = Add, 1 = Subtract (tint color)
     bool    maskInverted = false;       // flip the ramp
     double  maskFeather  = 50.0;        // 0..100, ramp softness
     /* Linear: endpoints in normalized image coords. The ramp runs over the middle
@@ -845,7 +845,7 @@ private:
        Develop/beammask.h. 0.12 = BeamMask::kDefaultWidth. */
     double  maskBeamWidth = 0.12, maskBeamTaper = 0.0;
     /* The Beam's tint, rasterized in mask space and rebuilt only when its key (geometry,
-       feather, invert, colour, frame) changes. */
+       feather, invert, color, frame) changes. */
     QImage  maskBeamTint;
     QString maskBeamTintKey;
     /* Brush current settings (0..100; for the cursor + the next stroke). */
@@ -873,7 +873,7 @@ private:
     /* Wheel = a wheel / two-finger resize of the Radial ellipse: there is no mouse
        button held, so it has no `live` flag of its own -- see maskEmitLiveGeometry. */
     enum class LiveEmit { Brush, Handle, Wheel };       // which gesture is emitting
-    std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask colour guide (this image)
+    std::shared_ptr<const BrushStamp::Guide> maskGuide;   // auto-mask color guide (this image)
     /* Guide pixels the brush DIAMETER should span; ensureAutoGuide sizes the guide from it
        and the current brush, so a small brush gets a finer guide (see there). */
     static constexpr double kGuidePxPerDab = 96.0;
@@ -935,7 +935,7 @@ private:
     bool    maskHandlesEditable() const { return maskEditMode && maskHover && pmItem && pmItem->isVisible(); }
     /* Show the image desaturated? Only while an overlay is actually being shown (a tool
        is expanded or a committed mask's veil is up, and "M"/"O" has not hidden it), so
-       hiding the overlay brings the colour back and nothing outside Develop is affected.
+       hiding the overlay brings the color back and nothing outside Develop is affected.
        Read by paintEvent, which pushes it to pmItem. */
     bool    maskGrayscaleActive() const
             { return G::maskOverlayGrayscale && !maskTintHidden && pmItem
@@ -1091,12 +1091,12 @@ private:
     bool    maskLegendHint = false;                 // show the Opt/Shift+Opt reminder
     void    drawMaskLegend(QPainter *painter);
     void    drawRenderingHint(QPainter &painter);      // op-indicator chip (viewport)
-    void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + colour swatches
+    void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + color swatches
     void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef
     void    buildSkyPreview();                      // rebuild the tint from the shared SkyRef
     void    buildDepthPreview();                    // rebuild the tint from the shared DepthRef (band)
-    void    rangeSwatchRects(QVector<QRectF> &out) const;   // on-image colour swatches
+    void    rangeSwatchRects(QVector<QRectF> &out) const;   // on-image color swatches
     void    rangeSampleAt(QPoint vp, bool add);     // eyedropper: sample into samples
     QPoint  rangeLoupeVp;                           // Color Range sampler cursor pos
     bool    rangeLoupeOn = false;                   // cursor over image -> draw the loupe

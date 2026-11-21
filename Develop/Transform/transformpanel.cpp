@@ -140,7 +140,7 @@ void TransformPanel::buildUi()
 
     /* Landscape / Portrait: the flip as an explicit choice of orientation. Styled like
        RawPanel's radios: transparent, and plain caption text when checked (the indicator
-       already shows the choice; the app-wide checked colour would only add noise). */
+       already shows the choice; the app-wide checked color would only add noise). */
     landscapeRadio = new QRadioButton(tr("Landscape"), this);
     portraitRadio  = new QRadioButton(tr("Portrait"),  this);
     for (QRadioButton *r : {landscapeRadio, portraitRadio})

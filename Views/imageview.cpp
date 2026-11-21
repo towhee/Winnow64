@@ -1351,7 +1351,7 @@ void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
     the tip magnified into a 5x5 grid, with their average as an RGB readout. Modelled on
     Lightroom's, restyled to Winnow's dark overlay look. Used by BOTH the white-balance
     "pick a target neutral" dropper and the Color Range mask sampler; the caller supplies
-    the title, the footer tip, and whether the accent (modifier) colour is active.
+    the title, the footer tip, and whether the accent (modifier) color is active.
 
     The grid is EXACTLY the 5x5 patch the samplers read, so what the user sees is what
     gets sampled -- the panel is a preview of the measurement, not a decorative
@@ -1406,7 +1406,7 @@ void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
     p.setRenderHint(QPainter::Antialiasing, true);
 
     /* Panel: near-black with a subtle light border, like the other Winnow overlays.
-       When the accent (modifier) mode is active the border picks up the accent colour, so
+       When the accent (modifier) mode is active the border picks up the accent color, so
        the alternate action the click will take is unmistakable. */
     QPainterPath bg;
     bg.addRoundedRect(QRectF(panel), 7, 7);
@@ -1530,12 +1530,12 @@ void ImageView::drawSampleLoupe(QPainter &p, QPoint vp, const QString &title,
 void ImageView::paintEvent(QPaintEvent *event)
 {
     /* Grayscale backdrop for the mask overlay ("Gray" chip on the Mask panel's swatch
-       row): no overlay colour reads well over every subject, so the other half of the
-       answer is to take the colour out of the PICTURE. Decided here, immediately before
+       row): no overlay color reads well over every subject, so the other half of the
+       answer is to take the color out of the PICTURE. Decided here, immediately before
        the scene renders, because the item paints itself grey (Qt has no saturation blend
        mode, so it cannot be done over the top in drawForeground) -- and this is the one
        place every state it depends on is settled. The veil, handles and legend are drawn
-       afterwards and keep their colour. VIEW ONLY: the render, the sidecar and the
+       afterwards and keep their color. VIEW ONLY: the render, the sidecar and the
        export are untouched. */
     if (pmItem) pmItem->setGrayscale(maskGrayscaleActive());
     QGraphicsView::paintEvent(event);
@@ -1550,7 +1550,7 @@ void ImageView::paintEvent(QPaintEvent *event)
     }
     else if (maskEditMode && maskTool == 3 && rangeLoupeOn) {
         QPainter p(viewport());
-        drawSampleLoupe(p, rangeLoupeVp, "Sample a colour:", "Shift-click: add a colour", false);
+        drawSampleLoupe(p, rangeLoupeVp, "Sample a color:", "Shift-click: add a color", false);
     }
     /* Where the Detail panel's 1:1 preview is looking. Painted here, in viewport coords
        and after the scene, for the same reason the loupe is: drawForeground returns early
@@ -2042,7 +2042,7 @@ void ImageView::drawMaskLegend(QPainter *painter)
     A compact chip, top-left of the view, naming the operation the overlay is CURRENTLY
     previewing -- "Add: Brush Mask" with no modifier held, "Subtract: ..." while Opt is
     held, "Intersect: ..." while Shift+Opt is. The veil itself shows the outcome (one
-    colour, G::maskOverlayColor), so there is no colour key to give; with the commit
+    color, G::maskOverlayColor), so there is no color key to give; with the commit
     button gone this chip is the ONLY place the op is named in words, which is why it
     also carries the modifier reminder below. A dim second line reminds the user of
     the two modifiers, suppressed on the first submask (nothing to combine with). Drawn in
@@ -2210,9 +2210,9 @@ void ImageView::setMaskRangeParams(const QString &paramsJson)
 QColor ImageView::maskTintColor() const
 {
     /* The submask's own live preview (mid-drag / mid-stroke, before the composite
-       rebuilds). The overlay speaks ONE colour: the op is read off the veil, which
+       rebuilds). The overlay speaks ONE color: the op is read off the veil, which
        previews the OUTCOME (MW::updateMaskOverlayTint), and off the op-indicator chip --
-       never off the colour. Same colour as the veil so nothing flickers on release. */
+       never off the color. Same color as the veil so nothing flickers on release. */
     return G::maskOverlayColor;
 }
 
@@ -3754,7 +3754,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        show the coverage instead. It must NOT blink back to the pre-stroke veil at mouse-up:
        the user reads the mask he just painted while placing the next stroke.
        NOT for a SUBTRACT/INTERSECT stroke (maskLegendOp > 0): that preview paints the
-       overlay colour where the mask is being REMOVED, which reads as adding, so the real
+       overlay color where the mask is being REMOVED, which reads as adding, so the real
        veil -- rebuilt live by MW for exactly this case -- stays on and shows the outcome
        instead. maskLegendOp is -1 when nothing is pending: suppress, as for Add. */
     const bool brushStroking = maskBrushOwnsTint();
@@ -3946,7 +3946,7 @@ void ImageView::drawSegmenter(QPainter *painter, bool drawTint)
     to the photo like every mask raster. Pens are cosmetic, so line widths hold at any
     zoom.
 
-      selected   overlay-colour outline; filled too unless the whole-mask veil is
+      selected   overlay-color outline; filled too unless the whole-mask veil is
                  already painted (drawTint false), which would double the tint
       hover      white outline on a dark halo and a light wash: a click ADDS it
       hover over a selected one: dashed outline on a dark wash: a click REMOVES it
@@ -4057,7 +4057,7 @@ void ImageView::drawLinearMask(QPainter *painter, const QRectF &br, bool drawTin
        (drawTint=false): only the handles are drawn. */
     if (drawTint) {
         const double sigma = MaskFalloff::gradientSigma(maskFeather);
-        const QColor base = maskTintColor();        // the one overlay colour
+        const QColor base = maskTintColor();        // the one overlay color
         QColor clear = base; clear.setAlpha(0);     // mask 0% -> no tint
         QColor full  = base; full.setAlpha(150);    // mask 100% -> tinted
         /* Invert swaps which end of the ramp is covered. */
@@ -4458,7 +4458,7 @@ void ImageView::drawRadialMask(QPainter *painter, const QRectF &br, bool drawTin
        when the whole-mask composite tint is already shown (drawTint=false): only the
        handles are drawn. */
     if (drawTint) {
-        const QColor base = maskTintColor();        // the one overlay colour
+        const QColor base = maskTintColor();        // the one overlay color
         QColor clear = base; clear.setAlpha(0);
         QColor full  = base; full.setAlpha(150);
         const QColor cIn   = maskInverted ? clear : full;   // at the centre
@@ -4614,7 +4614,7 @@ void ImageView::brushRebuildPreview(QRect region)
     if (region.isNull()) region = QRect(0, 0, maskBrushW, maskBrushH);
     region &= QRect(0, 0, maskBrushW, maskBrushH);
     if (region.isEmpty()) return;
-    const QColor base = maskTintColor();            // the one overlay colour
+    const QColor base = maskTintColor();            // the one overlay color
     const int R = base.red(), Gc = base.green(), B = base.blue();
     const double tint = 150.0 / 255.0;
     const double flow = qBound(0.0, maskBrushFlow, 100.0) / 100.0;
@@ -4724,7 +4724,7 @@ void ImageView::adjustMaskFeather(double delta)
 
 void ImageView::ensureAutoGuide()
 {
-    /* Build the auto-mask colour guide (YCbCr, see BrushStamp) from the displayed image and
+    /* Build the auto-mask color guide (YCbCr, see BrushStamp) from the displayed image and
        register it by path so the develop render samples the SAME guide as this preview. The
        guide is sampled in MASK space (BrushStamp works in the geometry stage's input coords),
        so a cropped/straightened/warped display is placed back into that frame first -- else
@@ -4733,7 +4733,7 @@ void ImageView::ensureAutoGuide()
 
        RESOLUTION FOLLOWS THE BRUSH. A fixed 1024px guide was the second half of the auto-mask
        failure: it is the whole FRAME, so a small brush on a big file covered ~10 guide pixels
-       and every decision -- reference colour, tolerance, the flood fill -- was made on a
+       and every decision -- reference color, tolerance, the flood fill -- was made on a
        handful of mush. The guide long edge is chosen so the brush DIAMETER spans at least
        kGuidePxPerDab guide pixels, clamped to [1024, 3072] (a 3072px YCbCr guide is ~19 MB). */
     /* The SMALLEST brush the guide has to serve: the one loaded now, and any auto-masked
@@ -5022,7 +5022,7 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
         const QColor cur = eraseNow           ? QColor(255, 170, 170, 235)   // erase
                          : maskBrushAutoMask  ? QColor(150, 255, 150, 235)   // auto-mask
                                               : QColor(255, 255, 255, 235);
-        /* Draw each ring twice: a dark halo underneath then the coloured line on top, so the cursor
+        /* Draw each ring twice: a dark halo underneath then the colored line on top, so the cursor
            stays visible on light AND dark images (the plain white line vanished on white). Mirrors
            the crop Level tool's halo idiom. */
         const bool dash = maskBrushAutoMask;
@@ -5045,7 +5045,7 @@ void ImageView::drawBrushMask(QPainter *painter, const QRectF &br, bool drawTint
         if (maskFeather > 0.0)
             ring(rVp * MaskFalloff::shapeFor(maskFeather).h, cur, 1.4, dash);
         /* Centre glyph naming what the pending work will do: a plus (in the ring's
-           colour) when adding, a red minus when subtracting/erasing, a red cross when
+           color) when adding, a red minus when subtracting/erasing, a red cross when
            intersecting. Same dark-halo idiom as the rings. Skipped for a tiny brush,
            where the glyph would swamp the circle. */
         if (rVp >= 7.0) {
@@ -5250,7 +5250,7 @@ void ImageView::buildDepthPreview()
 
 void ImageView::rangeSwatchRects(QVector<QRectF> &out) const
 {
-    /* A row of colour swatches along the bottom-left of the viewport (constant on-screen size). */
+    /* A row of color swatches along the bottom-left of the viewport (constant on-screen size). */
     out.clear();
     if (maskTool != 3) return;
     const QJsonArray sa = QJsonDocument::fromJson(maskRangeParams.toUtf8())
@@ -5262,7 +5262,7 @@ void ImageView::rangeSwatchRects(QVector<QRectF> &out) const
 
 void ImageView::rangeSampleAt(QPoint vp, bool add)
 {
-    /* Eyedropper: read the display-referred colour under the cursor from the RangeRef and store it
+    /* Eyedropper: read the display-referred color under the cursor from the RangeRef and store it
        as a sample. add=false replaces the set (plain click), add=true appends (shift-click). The
        updated paramsJson goes back to the dock via the existing geometry handshake. */
     if (maskTool != 3 || currentImagePath.isEmpty() || !pmItem) return;
@@ -5290,7 +5290,7 @@ void ImageView::drawRangeMask(QPainter *painter, const QRectF &br, bool drawTint
     /* heal if the ref arrived after beginMaskEdit */
     if (drawTint && maskRangePreview.isNull()) rebuildContentPreview();
     if (drawTint && !maskRangePreview.isNull()) maskDrawSpaceImage(painter, maskRangePreview);
-    /* 2) Color Range: the sampled-colour swatches (viewport coords). Click a swatch to remove it. */
+    /* 2) Color Range: the sampled-color swatches (viewport coords). Click a swatch to remove it. */
     if (maskTool == 3) {
         QVector<QRectF> rects;
         rangeSwatchRects(rects);
@@ -6168,7 +6168,7 @@ void ImageView::setShootingInfo(QString text)
 /*
     Locate and format the info label, which currently displays the shooting
     information in the top left corner of the image.  The text has a drop shadow
-    to help make it visible against different coloured backgrounds.
+    to help make it visible against different colored backgrounds.
 
     window (w) and view (v) sizes are updated during resize
 
@@ -6708,7 +6708,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
 
     /* White-balance dropper: a left click reports the normalized point and consumes the
        event so the canvas cannot pan. Checked FIRST -- while the dropper is armed it owns
-       the click, ahead of any crop or mask tool. The dock does the colour solve and
+       the click, ahead of any crop or mask tool. The dock does the color solve and
        disarms us. Space (spacePanOverride) still yields to the pan gesture. */
     if (!spacePanOverride && wbPickMode && event->button() == Qt::LeftButton) {
         /* Latch a one-shot zoom suppression for the RELEASE that follows. The dropper
@@ -6849,7 +6849,7 @@ void ImageView::mousePressEvent(QMouseEvent *event)
         return;
     }
 
-    /* Color Range eyedropper: a left click samples the colour under the cursor (shift = add another
+    /* Color Range eyedropper: a left click samples the color under the cursor (shift = add another
        sample); clicking an on-image swatch removes it. Consumes the event so it does not pan. The
        Luminance Range tool has no canvas interaction -- clicks fall through to normal pan/zoom. */
     if (!spacePanOverride && maskEditMode && maskTool == 3 && event->button() == Qt::LeftButton) {

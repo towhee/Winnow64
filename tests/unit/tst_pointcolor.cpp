@@ -17,7 +17,7 @@ class tst_pointcolor : public QObject
 {
     Q_OBJECT
 
-    /* A sample's colour as the pipeline sees it: display-linear, working primaries. */
+    /* A sample's color as the pipeline sees it: display-linear, working primaries. */
     static void sampleToWorking(const PointColor::Point &p, float v[3])
     {
         const float lin[3] = {PointColor::srgbDecode(p.r), PointColor::srgbDecode(p.g),

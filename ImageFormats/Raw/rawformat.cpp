@@ -134,8 +134,8 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
         OutputTransform::ToImage() view transform + primaries + gamma         (shared)
 
     NOTE the decode deliberately stops at CAMERA-NATIVE primaries: no white balance, no
-    colour matrix, no clamp. Those moved into Develop so that the buffer cached by
-    WorkingImageCache sits UPSTREAM of every colour decision -- changing a profile or the
+    color matrix, no clamp. Those moved into Develop so that the buffer cached by
+    WorkingImageCache sits UPSTREAM of every color decision -- changing a profile or the
     white balance is then a re-render, not a re-decode. See rawcolor.h.
 
     abort is polled between stages (and inside the demosaic loop) so a long decode bails
@@ -233,7 +233,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             dt.unpackMs = lap();
             RawColor color;
             if (!color.ToCameraNative(linRaw, std::move(linRgb), *work)) {
-                errMsg = "Colour conversion failed.";
+                errMsg = "Color conversion failed.";
                 return false;
             }
             work->cam.cameraModel = m.model;
@@ -331,7 +331,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
 
         /* Hot photosites out of the mosaic before anything is developed from it -- before
            SubtractBlack, so the noise model sees the signal near black unclipped, and
-           before PMRID and the demosaic, which would smear a hot cell into a coloured dot.
+           before PMRID and the demosaic, which would smear a hot cell into a colored dot.
            See hotpixel.h. */
         dt.hotPixels = HotPixel::Suppress(raw);
         dt.hotPixelMs = lap();
@@ -398,7 +398,7 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
             }
             dt.cleanDemosaicMs = lap();
             if (!color.ToCameraNative(raw, rgb, *work)) {
-                errMsg = "Colour conversion failed.";
+                errMsg = "Color conversion failed.";
                 return false;
             }
             RawColor::ReconstructHighlights(*work);   // blown highlights rebuilt / neutral

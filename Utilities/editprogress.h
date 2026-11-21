@@ -10,7 +10,7 @@ class QWidget;
 /*
     FEEDBACK FOR A METADATA EDIT THAT TAKES MORE THAN A SECOND.
 
-    A rating, colour class, keyword or text-field edit is a synchronous GUI-thread loop
+    A rating, color class, keyword or text-field edit is a synchronous GUI-thread loop
     over the selection, writing each image's sidecar (Metadata::writeXMP) and its catalog
     row. One image is instant; a few thousand on a slow or network drive is many seconds
     with the window frozen and nothing to say why. EditProgress is that loop's status bar
@@ -43,7 +43,7 @@ class EditProgress
 public:
     static void install(Progress *progress, int rowId, QWidget *statusBar);
 
-    /*  what names the edit in the tooltip ("Rating", "Colour class", "Keywords").
+    /*  what names the edit in the tooltip ("Rating", "Color class", "Keywords").
         total is the number of steps the caller will report. */
     EditProgress(const QString &what, int total);
     ~EditProgress();

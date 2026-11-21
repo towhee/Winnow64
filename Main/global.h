@@ -340,7 +340,7 @@ Q_NAMESPACE
     enum class FolderOp : quint8 { Add, Remove, Toggle };
     Q_ENUM_NS(FolderOp)    // optional, enables nice string conversion via QMetaEnum
 
-    /* Which engine decodes a RAW file to the shared WorkingImage (demosaic + global colour /
+    /* Which engine decodes a RAW file to the shared WorkingImage (demosaic + global color /
        baseline luminance NR + start WB / black / white). Both converge on WorkingImage, so
        everything downstream (Develop, masked luminance NR, OutputTransform) is engine-agnostic.
 
@@ -825,19 +825,19 @@ Q_NAMESPACE
     extern QColor header1Color;
     extern QColor header2Color;
     extern QColor header3Color;
-    /*  Caption colour for the subpanel headers inside a Develop scope (Basic, Color,
+    /*  Caption color for the subpanel headers inside a Develop scope (Basic, Color,
         Mask, Submasks, ...). Not the Scope or Raw bands, which sit above the scope and
         keep header2Color. Separate from header2Color so these can differ from the rest
         of the app's property editors (Preferences, Embellish). */
     extern QColor scopeSubheaderColor;
     extern QColor borderColor;
     extern QColor tabWidgetBorderColor;
-    /*  A keyword an image carries that is NOT in the keyword list. One colour so the
+    /*  A keyword an image carries that is NOT in the keyword list. One color so the
         Filters Keywords items and the Keywords dock tags read as the same thing. */
     extern QColor unfiledKeywordColor;
     /*  A Keywords dock keyword-list row the current image carries (dull yellow). */
     extern QColor appliedKeywordColor;
-    /*  THE FRAMELINE: the 1px line in colour mb (backgroundShade + 15) that borders every
+    /*  THE FRAMELINE: the 1px line in color mb (backgroundShade + 15) that borders every
         panel and the central widget. Set by WidgetCSS::css(); WidgetCSS::frameLine() is
         the same line as a stylesheet border value. See FrameLineBox (dockwidget.h).
         frameLineRadius rounds the panel corners and is the button radius too: WidgetCSS
@@ -851,7 +851,7 @@ Q_NAMESPACE
     extern QColor selectionColor;
     extern QColor mouseOverColor;
     extern QColor appleBlue;
-    /*  Shared semantic colours. Values in WidgetCSS::styleGlobals. */
+    /*  Shared semantic colors. Values in WidgetCSS::styleGlobals. */
     extern QColor developColor;         // amber: image has develop edits
     extern QColor excludedColor;        // red: excluded filter item, invalid query value
     extern QColor overLimitColor;       // orange: folder over the subfolder limit
@@ -869,7 +869,7 @@ Q_NAMESPACE
     QColor withAlpha(const QColor &c, int alpha);
     /*  c as a stylesheet "rgba(r, g, b, a)", alpha 0-255 */
     QString cssRgba(const QColor &c);
-    /*  Status, alert and error colours. Values in WidgetCSS::styleGlobals. */
+    /*  Status, alert and error colors. Values in WidgetCSS::styleGlobals. */
     extern QColor errorColor;                       // red: error text (cssError), input errors
     extern QColor warningColor;                     // yellow: warning text (cssWarning), token warning
     extern QColor okColor;                          // green: ok status (cssOk)
@@ -952,12 +952,12 @@ Q_NAMESPACE
     extern QString lightmagenta;
     extern QString darkmagenta;
 
-    /* The ONE colour the Develop mask overlay is painted in (veil + per-submask
+    /* The ONE color the Develop mask overlay is painted in (veil + per-submask
        preview). User-pickable from the Mask panel's swatch row; persisted as
        "Develop/maskOverlayColor" and seeded by the DevelopProperties ctor. */
     extern QColor maskOverlayColor;
 
-    /* Show the image desaturated while the mask overlay is painted, so the coloured
+    /* Show the image desaturated while the mask overlay is painted, so the colored
        veil separates from the picture (a red veil over a red subject reads as noise).
        Toggled from the Mask panel's swatch row, persisted as
        "Develop/maskOverlayGrayscale" and seeded by the DevelopProperties ctor. It is a
@@ -1074,12 +1074,12 @@ Q_NAMESPACE
         return static_cast<int>(strFontSize.toInt() * 0.5 * ptToPx);
     }
 
-    /* Stylesheet for a label that needs an EXPLICIT colour (panel captions, scope names,
+    /* Stylesheet for a label that needs an EXPLICIT color (panel captions, scope names,
        hints ...). Use this instead of a bare "color: x" string: a per-widget stylesheet
        OVERRIDES the app stylesheet, including its "QLabel:disabled" rule, so a hand-
        rolled "color: x" leaves the text at full strength when its panel is greyed -- the
        "disabled panel with live-looking captions". This emits both states, so every
-       explicitly coloured label greys with its panel (Develop greys wholesale on a video
+       explicitly colored label greys with its panel (Develop greys wholesale on a video
        selection; see MW::setDevelopPanelEnabled).
        ptSize 0 leaves the font size to the widget. The background is transparent so the
        label sits on whatever its panel paints (gradient band, selection fill, rail). */
@@ -1101,8 +1101,8 @@ Q_NAMESPACE
     extern QColor headerGradientTop;    // section header band gradient, top
     extern QColor headerGradientBottom; // ditto, bottom
 
-    /* A colour blended halfway into the panel background: he DISABLED form of anything
-       that carries meaning through colour rather than text (a selection band, a hue
+    /* A color blended halfway into the panel background: he DISABLED form of anything
+       that carries meaning through color rather than text (a selection band, a hue
        chip, the scope rail). Still identifiable, visibly dead. Text does not use this --
        it has disabledColor. */
     inline QColor dimmed(const QColor &c) {
@@ -1112,7 +1112,7 @@ Q_NAMESPACE
     }
 
     /* Panel captions that ACCENT their shortcut letter ("Crop", "Spot") do it with inline
-       HTML, and an inline colour is not a stylesheet: ":disabled" cannot reach it, so the
+       HTML, and an inline color is not a stylesheet: ":disabled" cannot reach it, so the
        letter stays bright on a greyed panel while the rest of the caption dims. The pair
        below fixes that. setAccentCaption remembers the two halves on the label, and
        restyleAccentLabels re-renders every such label in a panel for its CURRENT enabled

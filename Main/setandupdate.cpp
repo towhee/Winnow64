@@ -2016,7 +2016,7 @@ void MW::showHistoryDock() {
 
 void MW::showPresetsDock() {
 /*
-    "P", the View menu's Presets item and the Develop action row's colour-wheel button.
+    "P", the View menu's Presets item and the Develop action row's color-wheel button.
     Presets is a SECTION of the History panel, not a dock of its own, so this raises that
     panel and opens the section.
 */

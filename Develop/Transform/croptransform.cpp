@@ -588,7 +588,7 @@ struct MipSampler {
     }
 };
 
-/* A mip fold, whole frame (mask == nullptr) or masked: the masked form folds colour
+/* A mip fold, whole frame (mask == nullptr) or masked: the masked form folds color
    and coverage with the same map and blends by the folded coverage, exactly as
    applyKaleidoscopeMasked does. Every row on its own task; no maps. */
 template <typename Fold>
@@ -607,7 +607,7 @@ QImage applyMipFold(const QImage &frame, const QImage *mask, const CropTransform
     cv::Mat dst(H, W, deep ? CV_16UC4 : CV_8UC4, out.bits(), out.bytesPerLine());
 
     const Fold fold(k, W, H);
-    const MipSampler colour(in, fold.maxLevel);
+    const MipSampler color(in, fold.maxLevel);
     const MipSampler cover(mask ? m : cv::Mat(1, 1, CV_8U, cv::Scalar(255)),
                            mask ? fold.maxLevel : 0);
     const float op = float(std::clamp(k.opacity, 0.0, 1.0));
@@ -617,8 +617,8 @@ QImage applyMipFold(const QImage &frame, const QImage *mask, const CropTransform
             for (int x = 0; x < W; ++x) {
                 double px, py, foot;
                 fold.map(x + 0.5, y + 0.5, px, py, foot);
-                colour.sample(px, py, foot, c);
-                /* A fold may shade what it shows (fluted glass): colour, not alpha. */
+                color.sample(px, py, foot, c);
+                /* A fold may shade what it shows (fluted glass): color, not alpha. */
                 if constexpr (requires { fold.gain(0.0, 0.0); }) {
                     const float gn = fold.gain(x + 0.5, y + 0.5);
                     for (int ch = 0; ch < 3; ++ch) c[ch] *= gn;
@@ -859,7 +859,7 @@ QImage CropTransform::applyKaleidoscopeMasked(const QImage &frame, const QImage 
     QImage out(W, H, deep ? QImage::Format_RGBA64 : QImage::Format_ARGB32);
     cv::Mat dst(H, W, deep ? CV_16UC4 : CV_8UC4, out.bits(), out.bytesPerLine());
 
-    /* Same strips as applyKaleidoscope; each folds its rows of colour AND coverage with
+    /* Same strips as applyKaleidoscope; each folds its rows of color AND coverage with
        one map pair, then blends: out = frame + (fold(frame) - frame) * fold(mask). */
     const KaleidoFold fold(k, W, H);
     /* The opacity scales the folded coverage: 0..255 as an integer weight. */

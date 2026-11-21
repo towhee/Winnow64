@@ -141,13 +141,13 @@ void HtmlWindow::applyStyle()
         QString css = cssFile.readAll();
         cssFile.close();
         // Render help text in the app (OS system) font and override help.css's
-        // fixed sizes/colours with theme-tied ones (later equal-specificity rule
+        // fixed sizes/colors with theme-tied ones (later equal-specificity rule
         // wins). Qt's HTML importer styles block text from per-element rules, not
         // the "body" selector (which styles only the unused root frame), so we set
         // the actual text tags (p, li, td, th, div) plus the headings — the same
         // mechanism that scales them. Spans inherit from their block parent;
-        // code/pre keep help.css's monospace family. Heading colours come from
-        // G::header1/2/3Color and override help.css's static h1/h2/h3 colours.
+        // code/pre keep help.css's monospace family. Heading colors come from
+        // G::header1/2/3Color and override help.css's static h1/h2/h3 colors.
         // Keep sizes in sync with help.css.
         const QString family = QApplication::font().family();
         css += QString(

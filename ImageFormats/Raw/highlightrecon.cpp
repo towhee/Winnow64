@@ -31,7 +31,7 @@ constexpr float kEdgeHi = 0.4f;
 constexpr int kMargin = 1;
 /* Weight of the coarser estimate against a cell's own sources when pushing down. */
 constexpr float kPrior = 0.01f;
-/* The rebuilt colour fades to neutral where reliable content covers less than SUPPORT of
+/* The rebuilt color fades to neutral where reliable content covers less than SUPPORT of
    the surroundings at every scale up to REACH of the long edge. */
 constexpr float kReach = 1.0f / 4.0f;
 constexpr float kSupport = 0.05f;
@@ -39,14 +39,14 @@ constexpr float kSupport = 0.05f;
    is about to become. */
 constexpr float kFloorLo = 0.75f;
 /* The rim: unclipped pixels above RIM_LO of the clip, weighted towards it. Up to
-   NEAR_RIM stops past it a pixel takes its colour, then over DEPTH stops goes over to the
+   NEAR_RIM stops past it a pixel takes its color, then over DEPTH stops goes over to the
    estimate. */
 constexpr float kRimLo = 0.85f;
 constexpr float kNearRim = 0.03f;
 constexpr float kDepth = 0.2f;
-/* Borrowed colour counts less as pixel and rim contradict it by AGREE0..AGREE1 stops. */
+/* Borrowed color counts less as pixel and rim contradict it by AGREE0..AGREE1 stops. */
 constexpr float kAgree0 = 0.15f, kAgree1 = 0.4f;
-/* Saturation below PALE0 fades its colour to neutral from the first clip; above PALE1
+/* Saturation below PALE0 fades its color to neutral from the first clip; above PALE1
    only in the second half of the way. */
 constexpr float kPale0 = 0.2f, kPale1 = 0.4f;
 
@@ -328,7 +328,7 @@ float Contradiction(const V3 &p, const V3 &q, const std::array<bool, 3> &cl, con
     return (hi > 0.0f && lo > 0.0f && std::isfinite(lo)) ? std::max(std::log2(hi / lo), 0.0f) : 0.0f;
 }
 
-/* The white-balanced colour of a partly clipped pixel estimated at chromaticity r:
+/* The white-balanced color of a partly clipped pixel estimated at chromaticity r:
    clipped channels rebuilt, unclipped kept. False when no unclipped channel can tell the
    level. */
 bool Rebuild(const V3 &p, const V3 &q, const std::array<bool, 3> &cl, const V3 &r, float clip,
@@ -376,7 +376,7 @@ int HighlightRecon::Reconstruct(float *rgb, int w, int h, const float wbIn[3], f
     });
     if (count == 0) return 0;
 
-    /* a white far from the camera's neutral (or not a number) is a broken colour model */
+    /* a white far from the camera's neutral (or not a number) is a broken color model */
     bool plausible = true;
     for (int c = 0; c < 3; ++c)
         plausible = plausible && std::isfinite(whiteIn[c]) && whiteIn[c] >= 1.0f / 16.0f && whiteIn[c] <= 16.0f;
@@ -384,7 +384,7 @@ int HighlightRecon::Reconstruct(float *rgb, int w, int h, const float wbIn[3], f
     const float total = white[0] + white[1] + white[2];
     const V3 neutral = { white[0] / total, white[1] / total, white[2] / total };
 
-    /* The colour field: half-resolution sources diffused coarse to fine. */
+    /* The color field: half-resolution sources diffused coarse to fine. */
     std::vector<char> near;
     std::vector<Level<3>> levels = Pyramid(Sources(img, wb, clip, near));
     const int cw = (w + 1) / 2, ch = (h + 1) / 2;
@@ -441,7 +441,7 @@ int HighlightRecon::Reconstruct(float *rgb, int w, int h, const float wbIn[3], f
                 if (!Any(cl)) continue;
                 const V3 q = { p[0] * wb[0], p[1] * wb[1], p[2] * wb[2] };
 
-                /* rebuilt with the colour of the reliable content around, and with
+                /* rebuilt with the color of the reliable content around, and with
                    neutral, blended by how much of it there is and how well the pixel
                    agrees with it */
                 const auto e = Sample(field, 2.0f, x, y);
@@ -464,7 +464,7 @@ int HighlightRecon::Reconstruct(float *rgb, int w, int h, const float wbIn[3], f
                 }
 
                 /* either applies only as far as the pixel lies past the rim nearest its
-                   clip; nearer, the pixel is rebuilt with the rim's colour */
+                   clip; nearer, the pixel is rebuilt with the rim's color */
                 bool atRim = false;
                 V3 rimA{};
                 float rimK = 0.0f;
@@ -523,19 +523,19 @@ int HighlightRecon::Reconstruct(float *rgb, int w, int h, const float wbIn[3], f
                 const float below = std::max(std::log2(clip / std::max(lowest, 1e-6f)), 0.0f);
                 const float way = (above > 0.0f && lowest < clip) ? above / (above + below) : 0.0f;
                 /* brightness goes over in the second half of the way, and so does the
-                   colour of a strongly coloured pixel; a pale one's from the start */
+                   color of a strongly colored pixel; a pale one's from the start */
                 const V3 u = { out[0] / white[0], out[1] / white[1], out[2] / white[2] };
                 const float lo = std::min(u[0], std::min(u[1], u[2]));
                 const float hi = Max3(u);
                 const float saturation = (hi > 0.0f && std::isfinite(hi)) ? 1.0f - std::max(lo, 0.0f) / hi : 1.0f;
                 const float start = 0.5f * Smoothstep(kPale0, kPale1, saturation);
                 const float tLevel = Smoothstep(0.5f, 1.0f, way);
-                const float tColour = Smoothstep(start, start + 0.5f, way);
-                if (tColour > 0.0f) {
+                const float tColor = Smoothstep(start, start + 0.5f, way);
+                if (tColor > 0.0f) {
                     const float level = (out[0] + out[1] + out[2]) / total;
                     const float full = std::max(Max3(q), maxLevel);
                     const float v = level + (full - level) * tLevel;
-                    for (int c = 0; c < 3; ++c) out[c] = out[c] + (white[c] * v - out[c]) * tColour;
+                    for (int c = 0; c < 3; ++c) out[c] = out[c] + (white[c] * v - out[c]) * tColor;
                 }
                 for (int c = 0; c < 3; ++c) rgb[i * 3 + c] = out[c] / wb[c];
             }

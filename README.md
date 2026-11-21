@@ -29,7 +29,7 @@ Get the latest version from the
 ### Ingest and cull
 - Browse a memory card or folder at full speed. Images are cached ahead of you, so
   moving to the next image is immediate.
-- Pick, reject, rate and colour-label with single keys, then copy only the picks to your
+- Pick, reject, rate and color-label with single keys, then copy only the picks to your
   computer, renamed and filed into folders by a template.
 - **Pan to focus:** zoom in to check focus, and as you move from image to image Winnow
   pans straight to the subject (an eye, for example), so you see the critical detail
@@ -41,16 +41,16 @@ Get the latest version from the
   everything else in Winnow works without it.
 - Catalogs index your choice of folders, so you can search and filter hundreds of
   thousands of images without reopening folders.
-- Filter by date, camera, lens, focal length, ISO, rating, colour class, keywords, GPS
+- Filter by date, camera, lens, focal length, ISO, rating, color class, keywords, GPS
   and more. Combine filters with Collections and saved Queries.
 - Hierarchical keywording with drag-and-drop filing.
 - **Versions:** virtual copies, so one master can have several developed looks.
 
 ### Develop
-- Non-destructive raw and image editing: white balance, exposure, tone, curves, colour
-  grading, point colour, texture, clarity, dehaze, lens corrections, crop and
+- Non-destructive raw and image editing: white balance, exposure, tone, curves, color
+  grading, point color, texture, clarity, dehaze, lens corrections, crop and
   perspective.
-- Local adjustments with masks: brush, linear gradient, luminance and colour range, plus
+- Local adjustments with masks: brush, linear gradient, luminance and color range, plus
   AI masks for subject, sky, background, depth and individual objects.
 - AI models install automatically, just in time: each one downloads the first time you
   use a tool that needs it, so the app download is minimized.

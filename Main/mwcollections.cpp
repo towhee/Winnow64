@@ -579,7 +579,7 @@ void MW::applySetFilter(Kind kind, const QVector<qint64> &ids, bool withSub)
 {
 /*
     A panel click: clear EVERY filter -- all categories, the search text, the pick /
-    rating / colour actions, as Clear All does -- then set this category to these nodes
+    rating / color actions, as Clear All does -- then set this category to these nodes
     (and, with withSub, every node inside them), in ONE filterChange. A click means "show
     me this collection / query", not "narrow what I am looking at". An empty set (Cmd+click
     off the last node) is Cancel, which clears only this category.

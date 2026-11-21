@@ -75,7 +75,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
 
     /*  THE PENDING LINE. Edits are a draft (see the header), so something has to say so
         where the eye already is -- directly under the table it describes -- and say what
-        to do about it. Tinted in the colour the info table uses for "press Scan", the
+        to do about it. Tinted in the color the info table uses for "press Scan", the
         one other place this window asks for an action. Its link is the Scan button. */
     pendingLabel = new QLabel;
     pendingLabel->setWordWrap(true);
@@ -99,7 +99,7 @@ CatalogRootsDlg::CatalogRootsDlg(QWidget *parent)
         word-wrapped rich-text QLabel under-reports its height -- the last line (the
         disk-space folder) was clipped. Unwrapped, its size hint is exact. */
     statusLabel->setWordWrap(false);
-    /* MW composes this one, and colours the clause that says a scan is owed. */
+    /* MW composes this one, and colors the clause that says a scan is owed. */
     statusLabel->setTextFormat(Qt::RichText);
     /* Its one link, "See which", opens the Catalog Diagnostics report, not a URL. */
     statusLabel->setOpenExternalLinks(false);

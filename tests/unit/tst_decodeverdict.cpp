@@ -5,7 +5,7 @@
 /*
     Pins Cache/decodeverdict.h: what ImageCache does with a finished decode
     (Documentation 4.4.13). The order is the point. A decode started before a cache
-    reload (the D key, Decode Raw, preview source, colour management) must never be
+    reload (the D key, Decode Raw, preview source, color management) must never be
     cached, however good its pixels: it was accepted, and the right decode that landed
     next was then thrown away as "already cached" (C26).
 */

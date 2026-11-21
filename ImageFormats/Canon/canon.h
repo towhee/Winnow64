@@ -40,7 +40,7 @@ int CanonAsShotIndex(const QVector<quint32> &colorData);
     walks the CR2's TIFF IFDs (via TiffWalk), decodes the lossless-JPEG raw in the last
     IFD, reassembles the Canon vertical SLICES (tag 0xC640) into the full sensor mosaic,
     crops to the active area from the Canon makernote SensorInfo (0xE0), and reads the
-    as-shot white balance from ColorData (0x4001). The colour matrix comes from the
+    as-shot white balance from ColorData (0x4001). The color matrix comes from the
     shared per-model table (cameramatrix.cpp).
 
     Handles the common lossless-JPEG CR2 (Compression 6). CR3 is a different container --

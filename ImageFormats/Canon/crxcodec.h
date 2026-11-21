@@ -13,7 +13,7 @@
     and length -- and returns the FULL sensor mosaic (no crop, no black subtraction): one
     uint16 per photosite, `outW` x `outH`, CFA phase per CMP1's cfaLayout. The caller owns
     everything after that: the IAD1 active-area crop, black calibration, white level, white
-    balance and the colour matrix.
+    balance and the color matrix.
 
     Handles level-0 (lossless RAW) as well as levels 1-3 (C-RAW), so it is a superset of
     crx.cpp's clean-room decoder; crx.cpp nonetheless keeps that decoder for level 0, which

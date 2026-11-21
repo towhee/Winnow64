@@ -12,7 +12,7 @@
 /*
     Sky segmentation for the Develop "Select Sky" mask. Runs TWO models through OpenCV's
     DNN module -- the same runtime as FocusPredictor / SubjectPredictor, so Select Sky
-    works in builds without ONNX Runtime -- and fuses them with the colour matte in
+    works in builds without ONNX Runtime -- and fuses them with the color matte in
     Utilities/skyrefine.h:
 
       skyseg.onnx         U^2-Net sky net, 320x320 in, d0 = sigmoid sky probability.

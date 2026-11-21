@@ -19,7 +19,7 @@
     raw_width x raw_height sensor area (the same layout the uncompressed path produces).
 
     'data' points at the whole RAF mapped in memory; 'dataOffset' is the absolute offset of the
-    16-byte header (cfaOff + FujiIFD StripOffset 0xf007). 'xtrans' is the 6x6 colour map
+    16-byte header (cfaOff + FujiIFD StripOffset 0xf007). 'xtrans' is the 6x6 color map
     (0=R,1=G,2=B) for X-Trans bodies; 'bayer' is the 2x2 FC map for Bayer bodies (e.g. GFX).
     On success out is sized rawW*rawH and rawW/rawH are set from the header. Returns false with
     err set on malformed input.

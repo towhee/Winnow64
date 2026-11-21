@@ -26,8 +26,8 @@ class tst_filters : public QObject
     Q_OBJECT
 
 private slots:
-    /*  The colours are G:: globals the app sets at startup (WidgetCSS::styleGlobals);
-        unset, every one is black and a colour check cannot tell states apart. */
+    /*  The colors are G:: globals the app sets at startup (WidgetCSS::styleGlobals);
+        unset, every one is black and a color check cannot tell states apart. */
     void initTestCase() { WidgetCSS().styleGlobals(); }
     void keywordsBuildAsATree();
     void savedNestedStateSurvivesARebuild();

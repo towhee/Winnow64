@@ -18,7 +18,7 @@
     oriented and capped in size. It is BASE-ONLY (not the full composite) on purpose: a range
     mask that shifts its own tones must not feed back into its own selection (which would
     oscillate). Coverage is measured on what the user sees: luminance uses the same Rec.601
-    weights as the brush guide; colour distance is a cheap luma/chroma opponent-space metric.
+    weights as the brush guide; color distance is a cheap luma/chroma opponent-space metric.
 
     onx/ony are OUTPUT-normalized (0..1 of the oriented image) -- the same space the geometric
     tools and buildMaskBuffer's degrees mapping already use, so a range component drops into
@@ -105,14 +105,14 @@ inline float lumCoverage(const RangeRef &ref, double onx, double ony,
 
 /* ---- Color Range ----
    A HUE + SATURATION band selection in HSV (value is ignored -- brightness stays with the
-   Luminance Range mask). Each sampled colour fixes a centre (hue angle, sat radius); the
+   Luminance Range mask). Each sampled color fixes a centre (hue angle, sat radius); the
    mask selects pixels whose HUE lies in [centre - hueLo, centre + hueHi] AND whose SAT
    lies in [centre - satLo, centre + satHi] of ANY sample (union), each edge eased by a
    tapered feather band. hueLo/hueHi are degrees; satLo/satHi are sat fractions
    (0..1) measured from the sample's own saturation, so the band tracks the sample.
    A tiny absolute saturation floor drops near-neutral pixels, whose hue is noise.
 
-   This matches the dock's colour WHEEL exactly (same HSV hue angle + sat radius), so the
+   This matches the dock's color WHEEL exactly (same HSV hue angle + sat radius), so the
    pick dots and band sector the user drags are a faithful picture of the selection. */
 struct ColorSample { float hue, sat; };    // hue degrees 0..360, sat 0..1 (HSV)
 

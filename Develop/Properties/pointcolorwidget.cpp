@@ -160,7 +160,7 @@ int PointColorWidget::swatchAt(const QPoint &pos) const
 }
 
 /* Chroma at the top of the field: room for Sat Shift +100 (x2) on the centre and for
-   every sample, with a floor so a muted sample still shows a useful spread of colour. */
+   every sample, with a floor so a muted sample still shows a useful spread of color. */
 float PointColorWidget::fieldCMax() const
 {
     return qMax(0.12f, qMax(Cs * (1.0f + PointColor::kSatUpMax), env.Cmax) * 1.1f);
@@ -221,7 +221,7 @@ void PointColorWidget::paintEvent(QPaintEvent *)
     QPainter p(this);
     p.setRenderHint(QPainter::Antialiasing, true);
     /* A greyed panel (no image, or Develop disabled) dims the whole picture: its
-       colours carry meaning, so they fade rather than vanish. */
+       colors carry meaning, so they fade rather than vanish. */
     if (!isEnabled()) p.setOpacity(0.45);
     const QColor frame(120, 120, 120);
     const QColor text(170, 170, 170);
@@ -299,8 +299,8 @@ void PointColorWidget::paintEvent(QPaintEvent *)
         p.drawRoundedRect(QRectF(f.united(s)).adjusted(0.5, 0.5, -0.5, -0.5), 4, 4);
         p.setPen(text);
         p.drawText(f.united(s).adjusted(12, 0, -12, 0), Qt::AlignCenter | Qt::TextWordWrap,
-                   tr("Click the eyedropper, then click a colour in the image to "
-                      "adjust it.  You can select multiple colours."));
+                   tr("Click the eyedropper, then click a color in the image to "
+                      "adjust it.  You can select multiple colors."));
         return;
     }
 
@@ -472,13 +472,13 @@ bool PointColorWidget::event(QEvent *e)
             tip = n >= PointColor::kMaxPts
                       ? tr("All %1 points are in use -- delete one to sample another.")
                             .arg(PointColor::kMaxPts)
-                      : tr("Sample a colour as a new point: click here, then click the "
+                      : tr("Sample a color as a new point: click here, then click the "
                            "image. Shift-click the image to add the sample to the "
                            "selected point instead.");
         else if (hasSel() && addSampleRect().contains(pos))
             tip = canAddSample()
                       ? tr("Add a sample to the selected point: click here, then click "
-                           "the image. Its colours widen the hue, saturation and "
+                           "the image. Its colors widen the hue, saturation and "
                            "luminance the point adjusts. Shift-click the image to keep "
                            "adding samples.")
                       : tr("This point already has %1 samples -- remove one (right-click "
@@ -492,12 +492,12 @@ bool PointColorWidget::event(QEvent *e)
             tip = tr("Delete the selected point.");
         else if (hasSel() && fieldRect().contains(pos))
             tip = tr("Drag to shift hue (across) and saturation (up / down). The small "
-                     "rings are the sampled colours, the large one where they are "
+                     "rings are the sampled colors, the large one where they are "
                      "going.");
         else if (hasSel() && stripRect().contains(pos))
             tip = tr("Drag to shift luminance.");
         else if (hasSel() && barRect().contains(pos))
-            tip = tr("The sampled colours, and the colours they become.");
+            tip = tr("The sampled colors, and the colors they become.");
         if (tip.isEmpty()) QToolTip::hideText();
         else QToolTip::showText(he->globalPos(), tip, this);
         return true;

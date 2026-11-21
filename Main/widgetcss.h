@@ -8,7 +8,7 @@ class WidgetCSS
 public:
     // Aggregate
     QString css();
-    /*  Assigns every G:: UI style value (colours, Develop panel metrics, separators).
+    /*  Assigns every G:: UI style value (colors, Develop panel metrics, separators).
         THE one place to experiment with the app's look. Called first thing by css(),
         so it re-runs on a font size or background brightness change. */
     void styleGlobals();

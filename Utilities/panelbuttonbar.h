@@ -40,7 +40,7 @@
 
     The bar carries the same panel separator rule as every other Develop panel boundary
     (G::panelBorderHeight in G::panelSeparatorColor), on the side facing the panel
-    contents. That colour is derived from G::backgroundShade, and a per-widget stylesheet is
+    contents. That color is derived from G::backgroundShade, and a per-widget stylesheet is
     NOT regenerated when the Preferences brightness slider moves, so MW::setBackgroundShade
     calls Restyle().
 
@@ -176,7 +176,7 @@ namespace PanelButtonBar
         return Add(panel, buttons, edge);
     }
 
-    /*  Re-apply the separator colour to every bar under root. Called from
+    /*  Re-apply the separator color to every bar under root. Called from
         MW::setBackgroundShade, where G::panelSeparatorColor changes. */
     inline void Restyle(QWidget *root)
     {

@@ -137,7 +137,7 @@ inline quint32 kernelPixel(const Transform &t, quint32 p)
            | t.enc[2][b];
 }
 
-/* Saturated colours, a skin tone and a grey ramp -- where a gamut or tone difference
+/* Saturated colors, a skin tone and a grey ramp -- where a gamut or tone difference
    shows first. Used both to call a transform an identity and to vet the kernel. */
 const quint32 kProbe[] = {
     0xffff0000, 0xff00ff00, 0xff0000ff, 0xffffff00, 0xff00ffff, 0xffff00ff, 0xffc08070,

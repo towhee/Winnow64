@@ -165,7 +165,7 @@ private:
         qint64 atMs = 0;
         qint64 totalMs = 0;
         int    n = 0;               // images in the selection
-        QString what;               // "colour", "rating", "pick"
+        QString what;               // "color", "rating", "pick"
         QString phases;
     };
 

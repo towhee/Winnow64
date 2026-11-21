@@ -12,9 +12,9 @@
 
     Linux: app-wide already (Linux::setTitleBarColor sets the palette the bradient
     decoration paints from).
-    Windows and macOS: the colour is a property of each native window
-    (Win::setTitleBarColor, Mac::setTitleBarColor), so setColor recolours the windows
-    that are open and an application event filter colours every window that opens
+    Windows and macOS: the color is a property of each native window
+    (Win::setTitleBarColor, Mac::setTitleBarColor), so setColor recolors the windows
+    that are open and an application event filter colors every window that opens
     later, as it is shown. No dialog has to remember to do it.
 */
 

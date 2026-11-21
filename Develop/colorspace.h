@@ -4,7 +4,7 @@
 #include <cmath>
 
 /*
-    Pure colour-space math: the primaries of every space the pipeline knows about, the
+    Pure color-space math: the primaries of every space the pipeline knows about, the
     3x3 conversions between them, and the luma weights that belong to each. No Qt, no
     OpenCV, so it stays header-only and testable in isolation -- the same shape as
     Develop/calibrate.h and Develop/colorgrade.h.
@@ -14,7 +14,7 @@
       1. The Rec.709 luma weights (0.2126 / 0.7152 / 0.0722) were written out at ~15
          sites in Develop -- develop.cpp, calibrate.h, colorgrade.h, whitebalance.cpp --
          and rangemask.h used the Rec.601 weights instead, which was an inconsistency
-         rather than a decision. Luma is a property OF A COLOUR SPACE: hardcoding one
+         rather than a decision. Luma is a property OF A COLOR SPACE: hardcoding one
          space's weights is exactly the thing that makes widening the working space
          expensive.
 
@@ -59,7 +59,7 @@ enum class ColorSpace {
     that move were provably not the space.
 
     Why it widened. Rec.709 is narrower than every camera's own gamut, so a saturated
-    sensor colour was being clipped at decode, before the user had touched the image and
+    sensor color was being clipped at decode, before the user had touched the image and
     irrecoverably. The pipeline now carries it through to the output stage, which is the
     only stage that knows what gamut it is rendering INTO.
 
@@ -67,7 +67,7 @@ enum class ColorSpace {
     compresses it gracefully on the way out; otherwise it just clips per-channel at the
     output matrix instead of at the decode, which is the hue-shift failure mode with extra
     steps. AgX's inset/outset is that compression. Filmic still clips per-channel -- an
-    out-of-gamut colour is no worse than before under it, just no better.
+    out-of-gamut color is no worse than before under it, just no better.
 */
 constexpr ColorSpace kWorking = ColorSpace::LinearRec2020;
 
@@ -164,7 +164,7 @@ constexpr Matrix3 multiply(const Matrix3 &a, const Matrix3 &b)
     return out;
 }
 
-/* The 3x3 taking a colour FROM one space TO another. Both D65, so this is a pure
+/* The 3x3 taking a color FROM one space TO another. Both D65, so this is a pure
    primaries change with no adaptation. */
 constexpr Matrix3 matrix(ColorSpace from, ColorSpace to)
 {

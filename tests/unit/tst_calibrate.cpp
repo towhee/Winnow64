@@ -181,7 +181,7 @@ private slots:
         QVERIFY(dB < dR);
     }
 
-    /* Shadows Tint moves colour, not brightness: the gains keep working-space luma, a
+    /* Shadows Tint moves color, not brightness: the gains keep working-space luma, a
        positive tint is MAGENTA (green down, red + blue up), and the window confines it
        to the shadows -- full at black, nothing from kShadowTintEnd up. */
     void shadowTintIsLumaPreservingAndShadowOnly()

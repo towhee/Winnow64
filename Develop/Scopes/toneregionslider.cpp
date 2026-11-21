@@ -113,7 +113,7 @@ void ToneRegionSlider::paintEvent(QPaintEvent *)
     g.setColorAt(0.0, QColor(0, 0, 0));
     g.setColorAt(1.0, QColor(235, 235, 235));
     /* No outline: a grey frame round the track (it had one, in 70 grey) is nearly the
-       panel colour at the light end, so the gradient read as shorter than the dark
+       panel color at the light end, so the gradient read as shorter than the dark
        handle bar under it. Unframed, the two share exactly the same left/right edges. */
     p.fillRect(track, g);
 

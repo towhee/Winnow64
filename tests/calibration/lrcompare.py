@@ -12,7 +12,7 @@ FOR PUSHED HIGHLIGHTS"), runnable without the Winnow UI:
      with the case's BASELINE and TARGET recipes (16-bit sRGB TIFFs).
   3. Each app's change is measured against its OWN baseline -- pull = Y(baseline) -
      Y(target), in levels of 255 on the display axis -- so the two apps' different
-     profiles and colour drop out, and the Winnow pull is compared with Lightroom's,
+     profiles and color drop out, and the Winnow pull is compared with Lightroom's,
      pixel for pixel after alignment, at 1/4 resolution.
 
 Exact for a profile with no look (Winnow Standard). Lightroom exports: 16-bit sRGB TIFF,

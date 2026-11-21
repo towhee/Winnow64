@@ -3,7 +3,7 @@
 
 /*
     REFINE BRUSH: re-matte the mask folded so far, inside a painted region, against the
-    photo's own colours.
+    photo's own colors.
 
     THE PROBLEM. Every automatic mask (Select Sky, Subject, Object, ...) gets some areas
     semantically wrong -- a glacier or a moon counted as sky, snow on branches counted as
@@ -12,19 +12,19 @@
     skyline by hand is tedious and never lands on the pixel boundary.
 
     WHAT THIS DOES. The user paints a REGION (a Refine Brush submask,
-    MaskTool::RefineBrush). Inside it, the mask is re-matted with colour models taken only
+    MaskTool::RefineBrush). Inside it, the mask is re-matted with color models taken only
     from the neighbourhood of the stroke -- where sky and foreground are separable even
     when they are not across the whole frame. Three modes:
 
       ADD     the unmasked pixels under the stroke are split RELATIVELY (k-means in a
-              chroma-weighted space; the cluster nearest the mask colour is the mask's),
+              chroma-weighted space; the cluster nearest the mask color is the mask's),
               the mask-like ones seed a LOCAL S and the rest F, and the matte between
               them adds the holes (sky through branches) but not the branches or snow.
-              The mask colour comes from masked pixels near the stroke, or the nearest
+              The mask color comes from masked pixels near the stroke, or the nearest
               masked pixels anywhere when none are near. A fixed "looks like S"
               distance (0.08) added nothing on Paradise Meadows, where the sky through
               the trees is hazier and paler than the open sky (0.13-0.31 away).
-      REMOVE  the TRUE mask colour is learned from masked pixels OUTSIDE the stroke;
+      REMOVE  the TRUE mask color is learned from masked pixels OUTSIDE the stroke;
               masked pixels under the stroke that are clearly unlike it are the
               intruders (glacier, moon, foreground snow) and are matted out. Painting
               over real sky changes nothing. "Clearly unlike" is adaptive -- Otsu on the
@@ -69,7 +69,7 @@ namespace detail {
 using SkyRefine::smoothstep;
 using SkyRefine::forRows;
 
-/* A smooth colour field filled in from the pixels where `wt` is solid, at half
+/* A smooth color field filled in from the pixels where `wt` is solid, at half
    resolution (a local mean is all the projection needs). count = solid pixels used. */
 inline cv::Mat fill(const cv::Mat &img, const cv::Mat &wt, int &count)
 {
@@ -106,7 +106,7 @@ inline void project(const cv::Mat &rgb, const cv::Mat &S, const cv::Mat &F,
     });
 }
 
-/* Per-pixel colour distance |rgb - S|. */
+/* Per-pixel color distance |rgb - S|. */
 inline cv::Mat distTo(const cv::Mat &rgb, const cv::Mat &S)
 {
     cv::Mat d(rgb.size(), CV_32F);
@@ -118,8 +118,8 @@ inline cv::Mat distTo(const cv::Mat &rgb, const cv::Mat &S)
     return d;
 }
 
-/* The colour alpha snapped beyond half the photo's edge width; lerped toward `fallback`
-   (0/1 by "looks like the mask colour") where the projection is not trusted. */
+/* The color alpha snapped beyond half the photo's edge width; lerped toward `fallback`
+   (0/1 by "looks like the mask color") where the projection is not trusted. */
 inline cv::Mat matte(const cv::Mat &rgb, const cv::Mat &S, const cv::Mat &F,
                      const cv::Mat &likeMask, int L, bool decon)
 {
@@ -137,7 +137,7 @@ inline cv::Mat matte(const cv::Mat &rgb, const cv::Mat &S, const cv::Mat &F,
     return t;
 }
 
-/* ADD's colour space: Y plus chroma weighted kChromaW times. Pale horizon sky and lit
+/* ADD's color space: Y plus chroma weighted kChromaW times. Pale horizon sky and lit
    snow have nearly the same RGB (and the same Y); they differ in chroma, and in plain RGB
    k-means put them in one cluster and added the snowy treetops. The brush Auto mask
    weights chroma for the same reason. */
@@ -148,12 +148,12 @@ inline cv::Vec3f chroma(const cv::Vec3f &c)
     return {Y, kChromaW * 0.564f * (c[2] - Y), kChromaW * 0.713f * (c[0] - Y)};
 }
 
-/* Mean colour of the masked pixels nearest the stroke's box (sx0..sx1, sy0..sy1), for an
+/* Mean color of the masked pixels nearest the stroke's box (sx0..sx1, sy0..sy1), for an
    Add stroke with no masked pixel in its own context. The search widens (2M, 4M, ...)
    until it finds some, then keeps the K nearest -- NOT every masked pixel in reach: on
    Paradise Meadows that mean was the deep zenith blue, not the nearer sky. False if the
    mask is empty. */
-inline bool nearestMaskColour(const std::vector<float> &m, const cv::Mat &rgb, int w, int h,
+inline bool nearestMaskColor(const std::vector<float> &m, const cv::Mat &rgb, int w, int h,
                               int sx0, int sy0, int sx1, int sy1, int M, cv::Vec3f &out)
 {
     const int L = std::max(w, h);
@@ -186,11 +186,11 @@ inline bool nearestMaskColour(const std::vector<float> &m, const cv::Mat &rgb, i
 
 /*
     ADD's split of the unmasked pixels under the stroke into "mask-like" and foreground.
-    A fixed distance from the mask colour (0.08, the old rule) failed in the field: sky
+    A fixed distance from the mask color (0.08, the old rule) failed in the field: sky
     seen through branches is hazier and paler than the sky the reference comes from
     (0.13-0.31 away on Paradise Meadows), so the holes counted as foreground and nothing
     was added. The split is RELATIVE instead: k-means (k = 4, chroma space) on the
-    pixels under the stroke, the cluster nearest the mask colour s0 is the mask's (merged
+    pixels under the stroke, the cluster nearest the mask color s0 is the mask's (merged
     with any cluster within kMerge of it -- a sky gradient is one class), and each pixel
     goes to whichever side's nearest centre is closer. A nearest cluster more than kGuard
     from s0 means nothing under the stroke looks like the mask: returns false. (The guard
@@ -268,7 +268,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
     if (w <= 0 || h <= 0 || m.size() != size_t(w) * h || roi.size() != m.size()
         || rgb.cols != w || rgb.rows != h || rgb.type() != CV_32FC3) return;
 
-    /* The stroke's bounding box, widened by a context margin the colour models are drawn
+    /* The stroke's bounding box, widened by a context margin the color models are drawn
        from. Everything below runs on that crop only -- a stroke costs its own area. */
     int x0 = w, y0 = h, x1 = -1, y1 = -1;
     for (int y = 0; y < h; ++y) {
@@ -304,7 +304,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
         }
         else {
             const cv::Mat dist = distTo(ic, Sref);
-            /* Adaptive "clearly unlike the mask colour": at least tau, at least twice
+            /* Adaptive "clearly unlike the mask color": at least tau, at least twice
                how far the reference itself strays from its local estimate, and at least
                the Otsu split of the masked pixels UNDER the stroke. */
             std::vector<float> refD, inD;
@@ -339,7 +339,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
             int nF = 0;
             const cv::Mat F = fill(ic, toF(inside & (rc > 0.5f) & distant), nF);
             if (nF < 20) {
-                result = mc.clone();                    // all of it IS mask colour
+                result = mc.clone();                    // all of it IS mask color
             }
             else {
                 const cv::Mat a = matte(ic, Sref, F, ~distant, L, /*decon*/false);
@@ -350,7 +350,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
     else if (mode == Mode::Add) {
         int nS = 0;
         const cv::Mat S = fill(ic, toF(inside), nS);
-        cv::Vec3f s0;                                    // the mask colour, chroma space
+        cv::Vec3f s0;                                    // the mask color, chroma space
         bool haveS = nS >= 20;
         if (haveS) {
             cv::Vec3d acc(0, 0, 0); int n = 0;
@@ -366,7 +366,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
         }
         if (!haveS) {
             cv::Vec3f c;
-            if (nearestMaskColour(m, rgb, w, h, sx0, sy0, sx1, sy1, M, c)) {
+            if (nearestMaskColor(m, rgb, w, h, sx0, sy0, sx1, sy1, M, c)) {
                 s0 = chroma(c); haveS = true;
             }
         }
@@ -377,7 +377,7 @@ inline void apply(std::vector<float> &m, const std::vector<float> &roi, const cv
                 result = mc.clone();                     // nothing mask-like under it
             }
             else {
-                /* The LOCAL mask colour: masked context plus the clearly mask-like
+                /* The LOCAL mask color: masked context plus the clearly mask-like
                    pixels under the stroke -- the hole's own sky, not the reference. */
                 int nS2 = 0, nF = 0;
                 const cv::Mat S2 = fill(ic, toF(inside | (outside & (rc > 0.5f) & clear)), nS2);

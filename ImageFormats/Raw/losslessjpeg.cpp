@@ -3,7 +3,7 @@
 /*
     Implementation note: this is a direct port of a reference decoder validated end-to-end
     against a real lossless-JPEG DNG (Leica M10 CFA: SOF3, 14-bit, 2 components, predictor 1) --
-    the decoded mosaic demosaiced/colour-converted to a coherent, correctly-coloured image,
+    the decoded mosaic demosaiced/color-converted to a coherent, correctly-colored image,
     confirming the Huffman tables, bit reader and predictors are correct.
 */
 

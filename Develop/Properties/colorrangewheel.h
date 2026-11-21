@@ -12,7 +12,7 @@
     angle, 0 deg = red at 3 o'clock growing anticlockwise; saturation = radius); this
     class visualises a SELECTION rather than a grade:
 
-      * a small dot for every sampled colour (the pipette picks), at its hue/sat;
+      * a small dot for every sampled color (the pipette picks), at its hue/sat;
       * a band SECTOR around each sample -- hue [sample - hueLo, sample + hueHi], sat
         [sample - satLo, sample + satHi] -- the region RangeMask::colorCoverage keeps;
       * four GRAB HANDLES on the anchor (first) sample: the two hue edges and the

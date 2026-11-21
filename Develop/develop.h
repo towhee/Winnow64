@@ -80,7 +80,7 @@ public:
     */
     static bool InputMatrix(const WorkingImage &img, const EditParams *p,
                             float m[3][3], bool &wbIncluded);
-    /* InputMatrix without the camera's BaselineExposure -- the colour transform alone. */
+    /* InputMatrix without the camera's BaselineExposure -- the color transform alone. */
     static bool InputMatrixUnexposed(const WorkingImage &img, const EditParams *p,
                                      float m[3][3], bool &wbIncluded);
 
@@ -138,7 +138,7 @@ public:
 private:
     /* Spatial op: local (maskable) NR, owns a full-image pass, run BEFORE the fused point pass
        (fixed pipeline order). Two independent strengths: EditParams::localDenoiseLuma = luminance
-       NR (ratio-preserving, chroma untouched); EditParams::localDenoiseChroma = colour/chroma NR
+       NR (ratio-preserving, chroma untouched); EditParams::localDenoiseChroma = color/chroma NR
        (downscaled opponent-chroma blur, luminance kept exact). Luma runs first, then chroma on the
        result. This is the GLOBAL (no-mask) case; the planned scope compositor calls it per scope,
        bounded to the mask bbox and blended by the scope's alpha (see notes/Documentation.txt
@@ -214,7 +214,7 @@ private:
     struct PointCoeffs {
         bool  active        = false;
         /* Per-channel scene-linear gain = white balance (temp/tint) folded with exposure (2^EV)
-           AND the Colour RGB sliders (red/green/blue). All are pure linear multiplies, so they
+           AND the Color RGB sliders (red/green/blue). All are pure linear multiplies, so they
            commute and combine into one per-channel factor applied before the perceptual tone
            curve. {1,1,1} = identity. */
         float channelGain[3] = {1.0f, 1.0f, 1.0f};
@@ -265,7 +265,7 @@ private:
             Every one of those is a matrix or a diagonal, so the product is a single 3x3
             computed once here. The hot loop does 9 multiplies instead of a matrix, three
             gains and a second matrix -- fewer than TODAY's per-pixel cost, even though it
-            now does the colour conversion the decoder used to do.
+            now does the color conversion the decoder used to do.
 
             When this is active, channelGain and calMat have been folded in and must NOT
             be applied again. It is inactive for input that is already in the working
@@ -277,7 +277,7 @@ private:
         /* Set when the CALIBRATE matrix was one of the stages folded in. The standalone
            calibrate block clamps its output to >= 0, so the fold has to clamp too or the
            two routes disagree -- and which route runs depends on whether Denoise is on,
-           which would make the denoise slider appear to shift colour. Only set when
+           which would make the denoise slider appear to shift color. Only set when
            calibrate actually folded: with no calibration there is no clamp in the
            sequence either, and inventing one would throw away the out-of-gamut sensor
            values the decode deliberately stopped clamping. */
@@ -308,7 +308,7 @@ private:
         float vibAmount  = 0.0f;
         float lumGain    = 1.0f;
 
-        /* Colour grading (Color Grade panel), applied after HSL in the same fused pass,
+        /* Color grading (Color Grade panel), applied after HSL in the same fused pass,
            on the DISPLAY axis the way Lightroom does it (Develop/colorgrade.h has the
            model and its measurement). Per pixel: each channel goes scene-linear ->
            display-linear through the active view transform (gradeFwd), the pixel's L*

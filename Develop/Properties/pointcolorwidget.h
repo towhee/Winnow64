@@ -12,7 +12,7 @@
 
       o the eyedropper button, then one swatch per point (the SELECTED one is outlined;
         a point with several samples shows them as stripes), then, at the right, the
-        ADD-SAMPLE dropper (adds a sample to the selected point, broadening the colours
+        ADD-SAMPLE dropper (adds a sample to the selected point, broadening the colors
         it reaches -- see MULTIPLE SAMPLES in pointcolor.h) and a delete cross for the
         selected point. Right-click a swatch for Delete / Delete All and the sample
         removals.
@@ -25,7 +25,7 @@
 
     The sliders below it in the panel (Hue / Sat / Lum Shift, Variance, the ranges) are
     ordinary addSlider rows; this widget owns no params. DevelopProperties pushes the
-    points in (setPoints) and acts on the signals. Coordinates and colours all go
+    points in (setPoints) and acts on the signals. Coordinates and colors all go
     through Develop/pointcolor.h, so the rings sit exactly where the render puts them.
 */
 class PointColorWidget : public QWidget
@@ -72,7 +72,7 @@ private:
     int   swatchAt(const QPoint &pos) const;
     bool  hasSel() const { return sel >= 0 && sel < n; }
 
-    /* Field / strip <-> colour. The field spans the point's centre hue +/- hueSpan
+    /* Field / strip <-> color. The field spans the point's centre hue +/- hueSpan
        (wide enough for every sample) and chroma 0 .. fieldCMax(); the strip is L 0
        (bottom) .. 1 (top). */
     float fieldCMax() const;

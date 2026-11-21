@@ -107,11 +107,11 @@ void MaskPanel::buildUi()
        Return finishes it early, Esc discards one that has not landed yet, and a landed
        submask is removed from its row's [:] menu.
 
-       The overlay's APPEARANCE (colour + grayscale background) is not edited here
+       The overlay's APPEARANCE (color + grayscale background) is not edited here
        either: it belongs to the veil, not to a submask, and lives on the Develop action
-       row's tint button (left-click toggles the veil, right-click picks the colour /
+       row's tint button (left-click toggles the veil, right-click picks the color /
        flips grayscale). The palette itself still lives with this class --
-       overlayColours(). */
+       overlayColors(). */
 
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
 
@@ -126,8 +126,8 @@ void MaskPanel::setTintButton(QWidget *btn)
     Adopt the mask-overlay tint swatch onto the "Mask" band, at its right-hand end
     beside the band's [:].
 
-    MW still owns it -- it builds it, wires "O" and the right-click colour/grayscale
-    menu, and repaints the swatch -- because the veil's visibility and colour are
+    MW still owns it -- it builds it, wires "O" and the right-click color/grayscale
+    menu, and repaints the swatch -- because the veil's visibility and color are
     application state, not the panel's. This only decides WHERE it sits, which is the
     panel's business: the swatch tints THIS mask, and it used to sit in the Develop
     action row at the top of the dock, among the Scope / Transform / Spot buttons, with
@@ -379,18 +379,18 @@ void MaskPanel::showLevelMenu()
         QTimer::singleShot(0, this, [this]{ emit helpRequested(); });
 }
 
-const QVector<QColor> &MaskPanel::overlayColours()
+const QVector<QColor> &MaskPanel::overlayColors()
 {
-    /* The overlay speaks ONE colour and this is the choice: red first (the default),
-       then colours far enough apart in hue to survive most subjects, ending in white
+    /* The overlay speaks ONE color and this is the choice: red first (the default),
+       then colors far enough apart in hue to survive most subjects, ending in white
        for dark ones. Shared with the Mask band tint swatch's context menu. */
-    static const QVector<QColor> colours = {
+    static const QVector<QColor> colors = {
         QColor(220, 40, 40),   QColor(70, 200, 90),  QColor(60, 150, 255),
         QColor(240, 200, 40),  QColor(225, 70, 210), QColor(240, 240, 240)};
-    return colours;
+    return colors;
 }
 
-const QStringList &MaskPanel::overlayColourNames()
+const QStringList &MaskPanel::overlayColorNames()
 {
     static const QStringList names = {
         tr("Red"), tr("Green"), tr("Blue"), tr("Yellow"), tr("Magenta"), tr("White")};

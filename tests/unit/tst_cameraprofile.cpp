@@ -10,8 +10,8 @@
 
     THE INVARIANT THAT MATTERS MOST is the last one: the camera neutral must render to
     exactly (1,1,1) in the working space. It is what makes a profile change re-point
-    colour WITHOUT moving exposure, and it must hold on BOTH paths -- with a
-    ForwardMatrix and with one derived from the inverse of the colour matrix.
+    color WITHOUT moving exposure, and it must hold on BOTH paths -- with a
+    ForwardMatrix and with one derived from the inverse of the color matrix.
 */
 
 #include <QtTest>
@@ -149,7 +149,7 @@ void TstCameraProfile::interpolatesInMiredNotKelvin()
 
     /* ...and NOT at the kelvin midpoint, which is where a plain lerp would put it. This is
        the regression: kelvin and mired disagree by 13 points of weight in the middle of
-       the range, which is a visible shift in the colour of every mixed-light shot. */
+       the range, which is a visible shift in the color of every mixed-light shot. */
     const float kelvinMid = (2856.0f + 6504.0f) / 2.0f;
     QVERIFY(CameraProfile::resolve(p, kelvinMid, r));
     QVERIFY2(qAbs(r.weight - 0.5f) > 0.1f,
@@ -256,7 +256,7 @@ void TstCameraProfile::neutralRendersNeutral()
         rgb[i] = double(m[i][0]) * n[0] + double(m[i][1]) * n[1] + double(m[i][2]) * n[2];
 
     /* THE anchor: the illuminant's own neutral renders to white, at unit brightness.
-       Neutral-ness is the colour half (a profile that tints greys is unusable) and the
+       Neutral-ness is the color half (a profile that tints greys is unusable) and the
        1.0 is the exposure half (a profile change must not brighten the picture).
 
        EXACT ON BOTH PATHS, to well below a 16-bit level. With a ForwardMatrix that is
@@ -353,12 +353,12 @@ void TstCameraProfile::publishedForwardMatrixIsWithinItsOwnRounding()
 void TstCameraProfile::profileChangeDoesNotMoveExposure()
 {
     /*
-        Two profiles for the same camera that disagree about colour must still agree about
-        BRIGHTNESS. Here the second is the first with its colour matrices perturbed -- a
+        Two profiles for the same camera that disagree about color must still agree about
+        BRIGHTNESS. Here the second is the first with its color matrices perturbed -- a
         different fit of the same sensor, which is what a second profile is.
 
         This is the property that lets the Profile control be offered at all: a user trying
-        profiles is comparing colour renderings, and a control that also nudged exposure
+        profiles is comparing color renderings, and a control that also nudged exposure
         would be read as one of the two being "better" for the wrong reason.
     */
     Dcp::Profile a = canon77D();

@@ -8,7 +8,7 @@ void WidgetCSS::styleGlobals()
     auto shade = [](int s) { return QColor(s, s, s); };
 
     /* ---------------------------------------------------------------------------------
-       TEXT AND HEADER COLOURS
+       TEXT AND HEADER COLORS
        --------------------------------------------------------------------------------- */
     // G::textShade is the user's "Application text luminousity" (settings)
     G::textColor = shade(G::textShade);                      // derived, grey, text
@@ -18,7 +18,7 @@ void WidgetCSS::styleGlobals()
     G::header2Color = QColor(81,141,169);                    // #518da9, blue, property editor root rows, help h2
     G::header3Color = QColor(66,115,138);                    // #42738a, dark blue, property editor headers, help h3
     // G::header3Color = QColor(50,82,98);
-    /* Caption colour for the subpanel headers inside a Develop scope (Basic, Color, Mask,
+    /* Caption color for the subpanel headers inside a Develop scope (Basic, Color, Mask,
        Submasks, ...). Not the Scope or Raw bands, which keep header2Color. */
     G::scopeSubheaderColor = G::textColor;                   // derived, grey, Develop subpanel captions
     G::helpColor = QColor(37,65,40);                         // #254128, dark green, help buttons
@@ -27,7 +27,7 @@ void WidgetCSS::styleGlobals()
     G::appliedKeywordColor = QColor(180,164,90);             // #b4a45a, dull yellow, Keywords dock: on this image
 
     /* ---------------------------------------------------------------------------------
-       SHARED SEMANTIC COLOURS (each used in more than one place)
+       SHARED SEMANTIC COLORS (each used in more than one place)
        --------------------------------------------------------------------------------- */
     G::developColor = QColor(150,110,20);                    // #966e14, amber, develop edits: thumb badge, hidden chip
     G::excludedColor = QColor(208,96,96);                    // #d06060, red, excluded Filters/LibTree/Catalog item, bad query
@@ -40,7 +40,7 @@ void WidgetCSS::styleGlobals()
     G::secondaryTextColor = QColor(128,128,128);             // #808080, grey, notes, table labels, inactive status
 
     /* ---------------------------------------------------------------------------------
-       STATUS, ALERT AND ERROR COLOURS
+       STATUS, ALERT AND ERROR COLORS
        --------------------------------------------------------------------------------- */
     G::errorColor = QColor(255,0,0);                         // #ff0000, red, error text (cssError), input dialog
     G::warningColor = QColor(255,255,0);                     // #ffff00, yellow, warning text (cssWarning), token warning
@@ -128,7 +128,7 @@ void WidgetCSS::styleGlobals()
     G::mouseOverColor = QColor(40,54,66);                    // #283642, dark slate, hover
     G::iconOpacity = 0.5;                                    // 0.0 - 1.0 (higher is brighter)
 
-    /* Pick label colours */
+    /* Pick label colors */
     const int transparency = 50;
     G::labelNoneColor = QColor(85,85,85,transparency);       // #555555, grey, no label (translucent)
     G::labelRedColor = QColor(60,20,20);                     // #3c1414, dark red, Red label
@@ -187,7 +187,7 @@ void WidgetCSS::styleGlobals()
        the Mask panel's rule above Submasks. Brighter than the lifted content it sits on
        (panelContentBg + 20), so a group break reads inside a panel without competing
        with the panel separator below.
-         Color   line colour
+         Color   line color
          Width   line thickness, px
          Height  vertical space the separator occupies (the line is centred in it)
          Inset   clear space from each side of the panel to the line's ends */

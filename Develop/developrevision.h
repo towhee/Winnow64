@@ -30,7 +30,7 @@
                              Unedited ProRAW renders are covered by dng revision 3.
       kEdited 2  2026-11-09  ProRAW's embedded profile curve applied per channel, not
                              hue-preserving (OutputLook::curvePerChannel). dng rev 4.
-      kEdited 3  2026-11-09  ...and its out-of-gamut colours GamutClip'd, not bled to
+      kEdited 3  2026-11-09  ...and its out-of-gamut colors GamutClip'd, not bled to
                              white (the IMG_1106 pumpkin halo). dng rev 5.
       kEdited 4  2026-11-09  a DCP's ProfileToneCurve back to the 0.60 knee (kEdited 1
                              moved it to 0.80; only ProRAW's curve keeps 0.80).

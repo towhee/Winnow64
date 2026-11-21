@@ -32,7 +32,7 @@ public:
         const QStyleOptionViewItem &option, const QModelIndex &index) const override;
     bool submitted;
     bool isAlternatingRows;
-    /* Caption colour for header (root) rows. Invalid (the default) uses G::header2Color;
+    /* Caption color for header (root) rows. Invalid (the default) uses G::header2Color;
        the Develop editors set G::scopeSubheaderColor. */
     QColor headerColor;
 

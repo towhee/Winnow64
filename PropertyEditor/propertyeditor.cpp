@@ -478,9 +478,9 @@ void PropertyEditor::recolorText(const QColor &from, const QColor &to)
 {
 /*
     The user changed the text shade (MW::setTextShade). Items built with the old default
-    text colour (clearItem) carry it in UR_Color, which an editor reads when it is created,
-    so swap it for the new one. Custom item colours are left alone. The editors already
-    showing have the colour in their stylesheets, which MW::setTextShade sweeps.
+    text color (clearItem) carry it in UR_Color, which an editor reads when it is created,
+    so swap it for the new one. Custom item colors are left alone. The editors already
+    showing have the color in their stylesheets, which MW::setTextShade sweeps.
 */
     if (G::isLogger) G::log("PropertyEditor::recolorText");
     if (propertyDelegate->headerColor == from) propertyDelegate->headerColor = to;

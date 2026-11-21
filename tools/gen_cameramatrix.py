@@ -2,9 +2,9 @@
 """
 Regenerate ImageFormats/Raw/cameramatrix.cpp from libraw's adobe_coeff table.
 
-cameramatrix.cpp holds the per-model XYZ(D65)->camera colour matrices RawColor needs.
+cameramatrix.cpp holds the per-model XYZ(D65)->camera color matrices RawColor needs.
 It is a verbatim port of libraw's adobe_coeff table (src/tables/colordata.cpp), filtered
-to the mainstream still-camera makers and to 3-colour (Bayer) sensors. Re-run this whenever
+to the mainstream still-camera makers and to 3-color (Bayer) sensors. Re-run this whenever
 you bump the bundled libraw / want newly added camera bodies: it rebuilds the WHOLE table,
 so new libraw entries and matrix corrections are picked up automatically.
 
@@ -15,7 +15,7 @@ Usage:
     python3 tools/gen_cameramatrix.py --check         # regenerate to stdout, don't write
 
 Only the 9-integer (3x3) matrix is emitted; black/white levels, white balance and CFA phase
-are read from each file at decode time, not stored here. 4-colour (CMYG/RGBE) sensors and
+are read from each file at decode time, not stored here. 4-color (CMYG/RGBE) sensors and
 phone/action/cinema/bare-sensor makers are skipped (Winnow's Bayer pipeline cannot use them).
 """
 
@@ -63,7 +63,7 @@ HEADER = '''#include "ImageFormats/Raw/cameramatrix.h"
     Model -> XYZ(D65)->camera matrix, stored as nine integers = matrix * 10000, exactly as in
     libraw/dcraw's adobe_coeff table. This is a full port of that table for the mainstream
     still-camera makers (interchangeable-lens and compact raw cameras); phone, action-cam,
-    cinema and bare-sensor entries are omitted, as are 4-colour (CMYG/RGBE) sensors Winnow's
+    cinema and bare-sensor entries are omitted, as are 4-color (CMYG/RGBE) sensors Winnow's
     Bayer pipeline cannot demosaic. Each row also carries libraw's adobe_coeff t_black and
     t_maximum (the per-model black pedestal and sensor saturation), used as a fallback white/black
     by decoders that otherwise only guess (e.g. Canon, whose saturation is below the bit-depth
@@ -148,15 +148,15 @@ def parse(src):
 
     seen = {}
     rows = []
-    skipped_4colour = 0
+    skipped_4color = 0
     for m in ENTRY.finditer(src):
         maker, model = m.group(1), m.group(2).strip()
         black, maximum, ints = num(m.group(3)), num(m.group(4)), m.group(5)
         if maker not in PREFIX:
             continue
         vals = [int(x) for x in ints.split(",") if x.strip()]
-        if len(vals) != 9:                       # 4-colour (CMYG/RGBE) sensor -> not usable
-            skipped_4colour += 1
+        if len(vals) != 9:                       # 4-color (CMYG/RGBE) sensor -> not usable
+            skipped_4color += 1
             continue
         key = f"{PREFIX[maker]} {model}"
         if '"' in key or "\\" in key:            # would break the C string literal
@@ -168,7 +168,7 @@ def parse(src):
             continue
         seen[kl] = (black, maximum, vals)
         rows.append((maker, key, black, maximum, vals))
-    return rows, skipped_4colour
+    return rows, skipped_4color
 
 
 def emit(rows):
@@ -213,7 +213,7 @@ def main():
             src = r.read().decode("utf-8")
 
     rows, skipped = parse(src)
-    sys.stderr.write(f"parsed {len(rows)} models (skipped {skipped} 4-colour sensors)\n")
+    sys.stderr.write(f"parsed {len(rows)} models (skipped {skipped} 4-color sensors)\n")
     text = emit(rows)
 
     if args.check:

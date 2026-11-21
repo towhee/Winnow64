@@ -61,7 +61,7 @@ public:
         if (partial) text += " *";
         QLabel *name = new QLabel(text, this);
         /*  A stylesheet, not the palette: the app stylesheet (widgetcss.cpp) sets a
-            colour on every QWidget, and a stylesheet beats a palette silently. */
+            color on every QWidget, and a stylesheet beats a palette silently. */
         if (unfiled)
             name->setStyleSheet("color:" + G::unfiledKeywordColor.name() + ";");
         /*  The full path in the tooltip is how two tags showing the same leaf are told
@@ -526,7 +526,7 @@ void KeywordTags::setSuggestions(const QVector<VisualAudit::Suggestion> &suggest
         keywords have moved on. Appended if a translation drops the name. */
     if (status.isEmpty()) { suggestStatus->clear(); return; }
     const QString name = tr("Audit keywords");
-    // Colour set on the anchor: it would otherwise inherit the span's grey
+    // Color set on the anchor: it would otherwise inherit the span's grey
     const QString link = QString("<a href='audit' style='color:%1; "
                                  "text-decoration:none'>%2</a>")
                              .arg(suggestStatus->palette().color(QPalette::Link).name(),

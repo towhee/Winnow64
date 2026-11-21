@@ -17,7 +17,7 @@
 #include "Lcms2/lcms2.h"                // little color management system
 
 /*
-    Colour management of decoded images for the screen: source profile (the file's
+    Color management of decoded images for the screen: source profile (the file's
     embedded ICC, empty = sRGB) -> the display profile (setOutProfile).
 
     Built for riffling, where every decoded image passes through here (2026-10-26, see

@@ -5,7 +5,7 @@
     POINT COLOR -- Lightroom's Color Mixer > Point Color (the Mixer half is
     Develop/colormixer.h, the Color panel's Mix mode).
 
-    The user samples a colour from the image with the eyedropper (up to kMaxPts of them)
+    The user samples a color from the image with the eyedropper (up to kMaxPts of them)
     and, for each sample, shifts the hue, saturation and luminance of every pixel that
     is CLOSE to it. Unlike the 8-band HSL mixer (colormixer.h), which selects by hue
     alone, a point is a 3-D target -- hue AND
@@ -33,14 +33,14 @@
     kMaxExtra added ones). Together they define an ENVELOPE in OKLCh -- the shortest hue
     arc covering every chromatic sample, and the chroma and lightness intervals covering
     them all -- and each distance above is measured from the envelope rather than from a
-    single colour: zero inside, the usual falloff beyond its edges. So a second sample
+    single color: zero inside, the usual falloff beyond its edges. So a second sample
     of the same skin in shadow widens the hue (and lightness) a point reaches without
     widening the falloff, which a bigger Range would. A one-sample point's envelope is
     the sample itself, so it selects exactly as before. A near-neutral sample adds to the
     chroma and lightness extent only: its hue is noise.
 
     THE ADJUSTMENT. Variance first spreads (positive) or pulls together (negative) the
-    selected colours about the envelope's centre in hue and chroma -- negative is the
+    selected colors about the envelope's centre in hue and chroma -- negative is the
     "even out skin" control. Then Hue Shift rotates, Saturation Shift scales chroma and Luminance
     Shift moves L. The pixel moves toward that target by w. Every point's weight is
     measured on the INCOMING pixel and the deltas summed, so points do not depend on
@@ -69,7 +69,7 @@ constexpr int kMaxSamples = 1 + kMaxExtra;
    calibration may change, and an sRGB triple stays meaningful whatever it becomes.
    Slider values are stored exactly as the panel shows them. */
 struct Point {
-    float r = 0.0f, g = 0.0f, b = 0.0f;     // sampled colour, sRGB-encoded 0..1
+    float r = 0.0f, g = 0.0f, b = 0.0f;     // sampled color, sRGB-encoded 0..1
     float hueShift = 0.0f;                  // -100..100
     float satShift = 0.0f;                  // -100..100
     float lumShift = 0.0f;                  // -100..100
@@ -211,7 +211,7 @@ inline float srgbEncode(float v)
     return v <= 0.0031308f ? v * 12.92f : 1.055f * std::pow(v, 1.0f / 2.4f) - 0.055f;
 }
 
-/* An sRGB-encoded colour as OKLCh: L, C, h (radians). */
+/* An sRGB-encoded color as OKLCh: L, C, h (radians). */
 inline void rgbLch(float r, float g, float b, float &L, float &C, float &h)
 {
     const float lin[3] = {srgbDecode(r), srgbDecode(g), srgbDecode(b)};
@@ -305,7 +305,7 @@ inline float wrapPi(float a)
     return a;
 }
 
-/* Where Hue / Sat / Lum Shift take a colour (L, C, h). Variance is NOT applied here: it
+/* Where Hue / Sat / Lum Shift take a color (L, C, h). Variance is NOT applied here: it
    acts on a pixel's distance from the sample, so it has no effect on the sample itself.
    Shared by the render and the panel's target dot and after-swatch. */
 inline float shiftedHue(const Point &p, float h)

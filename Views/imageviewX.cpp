@@ -802,7 +802,7 @@ void ImageView::moveShootingInfo(QString infoString)
 {
 /* Locate and format the info label, which currently displays the shooting
 information in the top left corner of the image.  The text has a drop shadow
-to help make it visible against different coloured backgrounds. */
+to help make it visible against different colored backgrounds. */
     {
     #ifdef ISDEBUG
     G::track(__FUNCTION__);

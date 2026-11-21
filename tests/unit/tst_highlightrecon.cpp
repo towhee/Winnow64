@@ -1,6 +1,6 @@
 /*
     HighlightRecon::Reconstruct -- partly clipped channels rebuilt, fully clipped ones
-    neutral, no colour borrowed from the wrong place, no step where a channel clips.
+    neutral, no color borrowed from the wrong place, no step where a channel clips.
 
     Ported with the algorithm from LightCraft's suite (crates/raw/src/highlight/tests.rs,
     MIT). Scenes are built in WHITE-BALANCED terms and turned into sensor values (divided by
@@ -9,13 +9,13 @@
     What is pinned, and why each matters:
 
       o fringes and dark branches do not tint a clipped sky (LightCraft #523): beside a
-        branch the clipped sky is the same as away from it, the sky's colour on its way
+        branch the clipped sky is the same as away from it, the sky's color on its way
         to neutral;
       o two clipped channels are not left at their clip levels (that reads magenta/red);
-      o fully clipped pixels follow the colour model's white, a white that can't be right
+      o fully clipped pixels follow the color model's white, a white that can't be right
         falls back to camera neutral, nothing overflows;
-      o the rebuilt colour has no step as more channels clip, along a ramp, or along a
-        thin line with no reliable colour around;
+      o the rebuilt color has no step as more channels clip, along a ramp, or along a
+        thin line with no reliable color around;
       o a pale sky by dark branches and bright foliage is not tinted (#523, Highlights -75);
       o unclipped pixels are left EXACTLY, and the count is the clipped pixels;
       o a clipped channel of a warm gradient is restored near its unclipped part;
@@ -126,10 +126,10 @@ class TestHighlightRecon : public QObject
 private slots:
     void fringesAndDarkBranchesDoNotTintAClippedSky();
     void twoClippedChannelsAreNotLeftAtTheirClipLevels();
-    void fullyClippedPixelsFollowTheColourModelWhite();
-    void rebuiltColourIsContinuousAsMoreChannelsClip();
+    void fullyClippedPixelsFollowTheColorModelWhite();
+    void rebuiltColorIsContinuousAsMoreChannelsClip();
     void rebuiltRampIsContinuousFromTheFirstClipToTheLast();
-    void thinLineWithoutReliableColourIsContinuousWhereItClips();
+    void thinLineWithoutReliableColorIsContinuousWhereItClips();
     void paleSkyByDarkBranchesAndFoliageIsNotTinted();
     void unclippedPixelsAreLeftExactly();
     void reconstructRestoresAClippedChannel();
@@ -176,7 +176,7 @@ void TestHighlightRecon::twoClippedChannelsAreNotLeftAtTheirClipLevels()
     QVERIFY2(ratio >= 0.6f && ratio <= 1.05f, qPrintable(QString("green/red %1: not a warm white").arg(ratio)));
 }
 
-void TestHighlightRecon::fullyClippedPixelsFollowTheColourModelWhite()
+void TestHighlightRecon::fullyClippedPixelsFollowTheColorModelWhite()
 {
     const float white[3] = { 1.03f, 0.98f, 1.06f };
     Img img = FromFn(8, 8, [](int x, int y) -> V3 { return (x == 0 && y == 0) ? V3{ 0.3f, 0.6f, 0.4f } : V3{ 1, 1, 1 }; });
@@ -198,7 +198,7 @@ void TestHighlightRecon::fullyClippedPixelsFollowTheColourModelWhite()
     }
 }
 
-void TestHighlightRecon::rebuiltColourIsContinuousAsMoreChannelsClip()
+void TestHighlightRecon::rebuiltColorIsContinuousAsMoreChannelsClip()
 {
     /* red rises through its clip across a sky whose green and blue clipped */
     const V3 blue = { 1.0f, 1.3f, 1.9f };
@@ -226,7 +226,7 @@ void TestHighlightRecon::rebuiltRampIsContinuousFromTheFirstClipToTheLast()
     AssertContinuous(row, first, 0.002f, "full ramp");
 }
 
-void TestHighlightRecon::thinLineWithoutReliableColourIsContinuousWhereItClips()
+void TestHighlightRecon::thinLineWithoutReliableColorIsContinuousWhereItClips()
 {
     for (int height : { 32, 512, 1024 })
         for (int width : { 1, 4, 16 }) {

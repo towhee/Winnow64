@@ -13,9 +13,9 @@
     The fixture case is EVIDENCE, not a mock: fixtures/sky/oak.png is a real photograph
     of a bare oak against blue sky (640 px), and oak_skyseg.png / oak_segformer.png are
     the two models' REAL outputs on it at their native 320x320 and 128x128 -- the exact
-    inputs the app hands refine(). Ground truth comes from colour (clearly blue = sky,
+    inputs the app hands refine(). Ground truth comes from color (clearly blue = sky,
     red >= blue = branch), scored only over the canopy, where the halo lives. Measured
-    after the 2026-10-07 halo passes (spread-aware colours, half-width edge snaps,
+    after the 2026-10-07 halo passes (spread-aware colors, half-width edge snaps,
     decontaminated alpha): canopy error 0.154 refined vs 0.223 for the raw upsampled
     skyseg map, sky mean alpha 0.83, branch 0.14, 49% fractional. Bounds leave a margin.
 */

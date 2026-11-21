@@ -293,7 +293,7 @@ void tst_editrotate::fourQuarterTurnsComeFullCircle()
 void tst_editrotate::toneOnlyRecipeReportsNothingMoved()
 {
 /*
-    A recipe of tone and colour has nothing positional -- but its developed previews are
+    A recipe of tone and color has nothing positional -- but its developed previews are
     still stale, which is why DevelopProperties::rotateImageEdits drops them regardless
     of this result.
 */

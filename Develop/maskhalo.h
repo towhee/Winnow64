@@ -11,7 +11,7 @@
 /*
     REMOVE THE HALO a misregistered Develop mask leaves along a subject's edge.
 
-    THE PROBLEM. A masked tone or colour adjustment is composited as a per-pixel lerp,
+    THE PROBLEM. A masked tone or color adjustment is composited as a per-pixel lerp,
     acc = acc*(1-m) + scope*m (WorkingImageCache::renderStack). Where the mask's
     transition band does not sit exactly on the subject's real boundary, every pixel in
     that band gets a share of the adjustment whether it belongs to the subject or to the

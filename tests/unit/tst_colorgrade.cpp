@@ -3,7 +3,7 @@
 #include "Develop/colorgrade.h"
 
 /*
-    Colour-grading math (Develop/colorgrade.h) -- the measured Lightroom model behind the
+    Color-grading math (Develop/colorgrade.h) -- the measured Lightroom model behind the
     Color Grade panel. These guard the properties the calibration established and that a
     later "tidy" could silently break: the push direction is zero-sum and points the right
     way, saturation scales it linearly, each window peaks in its own tonal region, and

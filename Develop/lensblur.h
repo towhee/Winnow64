@@ -31,7 +31,7 @@
     every cheap fake shows). So the frame is split into SLICES of signed CoC (tent
     memberships, so a slope blends smoothly between neighbours), each slice is blurred
     with the bokeh kernel at its radius, and the slices are composited back to front
-    with "over" -- premultiplied, colour and coverage together. Background slices never
+    with "over" -- premultiplied, color and coverage together. Background slices never
     contain the subject, so it cannot bleed into them; a blurred foreground spreads over
     whatever is behind it, as a real lens does. Where the slices leave a pixel partly
     uncovered (behind an occluder, which a photo never recorded) the result is

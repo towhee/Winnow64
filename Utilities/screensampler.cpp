@@ -133,7 +133,7 @@ protected:
                 p.fillRect(1 + (i + half) * kLoupeZoom, 1 + (j + half) * kLoupeZoom,
                            kLoupeZoom, kLoupeZoom, col);
             }
-        /* The averaged block, in two contrasting strokes so it reads on any colour. */
+        /* The averaged block, in two contrasting strokes so it reads on any color. */
         const int b0 = 1 + (half - kBlock / 2) * kLoupeZoom;
         const QRect box(b0, b0, kBlock * kLoupeZoom, kBlock * kLoupeZoom);
         p.setPen(QPen(Qt::black, 3));
@@ -185,7 +185,7 @@ ScreenSampler::ScreenSampler(QWidget *parent)
     });
 
     /* One row per sample, oldest first so the numbering reads down. The Sample cell
-       carries a chip of the colour. */
+       carries a chip of the color. */
     table = new QTableWidget(0, 7);
     table->setHorizontalHeaderLabels({"Sample", "R", "G", "B", "H", "S", "L"});
     table->verticalHeader()->setVisible(false);

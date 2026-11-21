@@ -177,7 +177,7 @@ void TstCameraProfileStore::aBaseCarriesNoLook()
                  "a base kept its exposure offset -- it would render brighter than the "
                  "characterisation it claims to be");
         /* ...and it is still a usable profile. */
-        QVERIFY2(p->cal[0].haveColor, "a base lost its colour matrix");
+        QVERIFY2(p->cal[0].haveColor, "a base lost its color matrix");
         QCOMPARE(p->name, e.name);
     }
     QVERIFY(checked > 0);

@@ -353,7 +353,7 @@ QString MW::diagnostics()
     rpt << "\n" << "G::isRunningStackOperation = " << G::s(G::isRunningStackOperation);
     rpt << "\n" << "G::isProcessingExportedImages = " << G::s(G::isProcessingExportedImages);
     rpt << "\n" << "G::isEmbellish = " << G::s(G::isEmbellish);
-    rpt << "\n" << "colour management = always on, sRGB->display path "
+    rpt << "\n" << "color management = always on, sRGB->display path "
         << int(ICC::pathFor(QByteArray())) << " (0 none, 1 identity, 2 fast, 3 lcms)";
     rpt << "\n" << "G::combineRawJpg = " << G::s(G::combineRawJpg);
     rpt << "\n" << "combineRawJpg = " << G::s(combineRawJpg);
@@ -2134,7 +2134,7 @@ static QString normaliseKeyText(const QString &text)
 static QStringList expandHelpShortcutCell(const QString &cell)
 {
     QStringList out;
-    /*  The digit ring, so "6 to 0" is 6 7 8 9 0 (the colour labels) as well as "1 to 5"
+    /*  The digit ring, so "6 to 0" is 6 7 8 9 0 (the color labels) as well as "1 to 5"
         being 1 2 3 4 5. */
     static const QString ring = "1234567890";
 

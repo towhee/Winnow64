@@ -4,8 +4,8 @@
     The constants are fitted to Lightroom's Auto and will be refitted, so these tests pin
     BEHAVIOUR rather than numbers: a dark frame is brightened, a bright one darkened, a
     flat one gains contrast and full clip points, a frame that stays dark gets more
-    Shadows lift, a raw a stronger Highlights pull than a JPEG, the colour push does not
-    depend on the colour content (Lightroom's does not), and the answer does not depend
+    Shadows lift, a raw a stronger Highlights pull than a JPEG, the color push does not
+    depend on the color content (Lightroom's does not), and the answer does not depend
     on where the tone sliders were left.
 */
 
@@ -19,7 +19,7 @@
 
 namespace {
 
-/* A display-referred (JPEG-like) scene: a smooth luminance field with a coloured
+/* A display-referred (JPEG-like) scene: a smooth luminance field with a colored
    gradient over it, every value scaled by `gain` (linear), so one scene can be shot
    "under" or "over". chroma 0 makes it grey. */
 WorkingImage makeScene(float gain, float chroma = 0.25f, float lo = 0.02f, float hi = 0.9f)
@@ -65,12 +65,12 @@ private slots:
     void brightFrameIsDarkened();
     void exposureOrdersWithGain();
     void flatFrameGetsContrastAndClipPoints();
-    void colourPushIgnoresContent();
+    void colorPushIgnoresContent();
     void darkFrameGetsMoreShadowLift();
     void rawGetsStrongerHighlightPull();
     void independentOfCurrentSliders();
     void presetAutoToneMatchesSolve();
-    void presetAutoWbNeedsCameraColour();
+    void presetAutoWbNeedsCameraColor();
     void benchmarkFullFrame();
 };
 
@@ -120,7 +120,7 @@ void TstAutoTone::flatFrameGetsContrastAndClipPoints()
     QVERIFY(r.blacks < 0.0f);                           // and the bottom to black
 }
 
-void TstAutoTone::colourPushIgnoresContent()
+void TstAutoTone::colorPushIgnoresContent()
 {
     /* Lightroom's Auto gives Vibrance ~+15 and Saturation ~0 to a grey frame and a
        saturated one alike. */
@@ -201,7 +201,7 @@ void TstAutoTone::presetAutoToneMatchesSolve()
 /* Auto white balance solves through the camera characterisation; without one (this
    synthetic frame has none) it must fail CLEANLY: WB left as merged, reported, and Auto
    tone still run. */
-void TstAutoTone::presetAutoWbNeedsCameraColour()
+void TstAutoTone::presetAutoWbNeedsCameraColor()
 {
     const WorkingImage img = makeScene(0.3f);
     EditParams p;

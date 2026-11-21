@@ -310,13 +310,13 @@ bool CanonCR3::colrBox(quint32 &offset, quint32 &length)
     qDebug() << "CanonCR3::colrBox" << "colrType =" << colrType;
     QByteArray colorProfile;
     if (colrType == "nclx") {
-        quint16 colour_primaries = u.get16(p->file.read(2));
+        quint16 color_primaries = u.get16(p->file.read(2));
         quint16 transfer_characteristics = u.get16(p->file.read(2));
         quint16 matrix_coefficients = u.get16(p->file.read(2));
         quint8 x = u.get8(p->file.read(1));
         quint8 full_range_flag = (x & 0b10000000) >> 7;             // first 1 bit
         qDebug() << "CanonCR3::colrBox"
-                 << "colour_primaries =" << colour_primaries
+                 << "color_primaries =" << color_primaries
                  << "transfer_characteristics =" << transfer_characteristics
                  << "matrix_coefficients =" << matrix_coefficients
                  << "full_range_flag =" << full_range_flag;

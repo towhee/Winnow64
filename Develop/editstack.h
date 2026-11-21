@@ -36,7 +36,7 @@
     with a tool (gradient/brush/range/AI-select), contributes (Add) or removes (Subtract) area,
     and may be inverted/feathered. The whole scope combines its Add components by MaskCombine
     (Union = any, Intersect = overlap); Subtract components are removed from that result. Tool
-    geometry (gradient line, brush strokes, sampled colours) lives in paramsJson, kept opaque here
+    geometry (gradient line, brush strokes, sampled colors) lives in paramsJson, kept opaque here
     so the sidecar format does not change as tools gain parameters. tool/op/combine are stored as
     int for trivial, forward-tolerant JSON.
 */
@@ -45,7 +45,7 @@ enum class MaskTool {
     ColorRange, LuminanceRange, Subject, Sky, Background, Depth,
     Object,                             // APPEND ONLY (tool is serialized as int; keep order stable)
     /* Refine Brush: a painted REGION in which the mask folded so far is re-matted against
-       the photo's own colours (Develop/maskrefine.h). Brush strokes on the canvas; its
+       the photo's own colors (Develop/maskrefine.h). Brush strokes on the canvas; its
        mode is the op (Add = add, Subtract/Intersect = remove) unless paramsJson says
        "mode":"edge" (Fix Edge). */
     RefineBrush,
@@ -744,7 +744,7 @@ struct EditStack {
             l.showCurves = lo.value("showCurves").toBool(l.showCurves);
             l.showColor = lo.value("showColor").toBool(l.showColor);
             l.showCalibrate = lo.value("showCalibrate").toBool(l.showCalibrate);
-            /* The colour-grading section was called "Color Mix" until its rename, so
+            /* The color-grading section was called "Color Mix" until its rename, so
                sidecars written before that carry the old key. Read the legacy spelling
                first, then let the current one win if both are present. */
             l.showColorGrade = lo.value("showColorMix").toBool(l.showColorGrade);
@@ -911,7 +911,7 @@ struct EditStack {
             ++fixed;
         }
 
-        /* Colour grading: hue degrees wrap, sat 0..1, lum -100..100. */
+        /* Color grading: hue degrees wrap, sat 0..1, lum -100..100. */
         float *hues[] = {&p.gradeShadowHue, &p.gradeMidHue, &p.gradeHighHue,
                          &p.gradeGlobalHue};
         float *sats[] = {&p.gradeShadowSat, &p.gradeMidSat, &p.gradeHighSat,

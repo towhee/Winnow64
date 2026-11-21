@@ -15,7 +15,7 @@
 
 namespace {
 
-/* A candidate stands more than this many sigma above the brightest of its same-colour
+/* A candidate stands more than this many sigma above the brightest of its same-color
    neighbours (pure noise hardly reaches 4.5 sigma above the brightest of eight). */
 constexpr float kHot = 5.0f;
 /* A direct neighbour this many sigma above its own surroundings means the light is real... */
@@ -32,7 +32,7 @@ constexpr int kMargin = 4;
 
 struct Offset { int dx, dy; };
 
-/* For one position in the CFA period: the nearest same-colour photosites (at most 8,
+/* For one position in the CFA period: the nearest same-color photosites (at most 8,
    within two photosites). */
 struct Phase {
     Offset same[8];
@@ -66,7 +66,7 @@ struct View {
     float At(int x, int y) const { return static_cast<float>(d[static_cast<size_t>(y) * w + x]); }
     const Phase &PhaseAt(int x, int y) const { return (*phases)[(y % ph) * pw + (x % pw)]; }
 
-    /* Same-colour neighbours of (x,y) into buf (returns their count); max gets the largest. */
+    /* Same-color neighbours of (x,y) into buf (returns their count); max gets the largest. */
     int Neighbours(int x, int y, float *buf, float &max) const {
         const Phase &p = PhaseAt(x, y);
         max = -1e30f;
@@ -107,7 +107,7 @@ std::vector<Phase> MakePhases(const RawImage &raw, int pw, int ph)
     return out;
 }
 
-/* Fit sigma^2 = a * level + b to the spread of (photosite - median of its same-colour
+/* Fit sigma^2 = a * level + b to the spread of (photosite - median of its same-color
    neighbours) on a sparse sample. False when no bin has enough samples. */
 bool NoiseModel(const View &v, int x0, int x1, int y0, int y1, float black, float range, Noise &out)
 {
@@ -172,7 +172,7 @@ bool NoiseModel(const View &v, int x0, int x1, int y0, int y1, float black, floa
 
 struct Fix { int x, y; uint16_t value; };
 
-/* Photosites far above every same-colour neighbour, with the value to replace them by. */
+/* Photosites far above every same-color neighbour, with the value to replace them by. */
 std::vector<Fix> Candidates(const View &v, int x0, int x1, int y0, int y1, float black, const Noise &noise)
 {
     std::vector<std::vector<Fix>> perRow(y1 - y0);
@@ -201,7 +201,7 @@ std::vector<Fix> Candidates(const View &v, int x0, int x1, int y0, int y1, float
     return out;
 }
 
-/* Are at least kMinLit direct neighbours of (x,y) clearly above their own same-colour
+/* Are at least kMinLit direct neighbours of (x,y) clearly above their own same-color
    surroundings (real light)? A single one is not enough: hot photosites come in pairs. */
 bool LitAround(const View &v, int x, int y, float black, const Noise &noise)
 {

@@ -15,7 +15,7 @@ class SamplerOverlay;
 class SamplerLoupe;
 
 /*
-    SCREEN SAMPLER -- a 5x5 colour average from ANYWHERE on screen, not just in Winnow.
+    SCREEN SAMPLER -- a 5x5 color average from ANYWHERE on screen, not just in Winnow.
 
     WHAT IT IS FOR: comparing renders across apps. Sample a spot in Lightroom's window,
     then the same spot in Winnow's, and the two readings sit side by side in the
@@ -34,7 +34,7 @@ class SamplerLoupe;
     hidden; the live preview tolerates it.
 
     WHAT IT READS: the display's own values, 0..255, averaged over 5x5 PHYSICAL pixels (on
-    a 2x screen that is 2.5x2.5 logical points). They are in the display's colour space
+    a 2x screen that is 2.5x2.5 logical points). They are in the display's color space
     (Display P3 on most Macs), not sRGB -- two windows on one display compare exactly,
     which is the point; a number copied out is not an sRGB value.
 

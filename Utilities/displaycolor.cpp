@@ -86,7 +86,7 @@ void Rebuild()
             s->rgba = make(TYPE_RGBA_8);
             s->rgbaPremul = make(TYPE_RGBA_8_PREMUL);
             if (!s->complete())
-                G::issue("Warning", "Could not build the display colour transform.",
+                G::issue("Warning", "Could not build the display color transform.",
                          "DisplayColor::Rebuild", -1, G::winOutProfilePath);
             else if (!isIdentity(s->bgra))
                 next = s;

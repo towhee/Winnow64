@@ -5,7 +5,7 @@
     Model -> XYZ(D65)->camera matrix, stored as nine integers = matrix * 10000, exactly as in
     libraw/dcraw's adobe_coeff table. This is a full port of that table for the mainstream
     still-camera makers (interchangeable-lens and compact raw cameras); phone, action-cam,
-    cinema and bare-sensor entries are omitted, as are 4-colour (CMYG/RGBE) sensors Winnow's
+    cinema and bare-sensor entries are omitted, as are 4-color (CMYG/RGBE) sensors Winnow's
     Bayer pipeline cannot demosaic. Each row also carries libraw's adobe_coeff t_black and
     t_maximum (the per-model black pedestal and sensor saturation), used as a fallback white/black
     by decoders that otherwise only guess (e.g. Canon, whose saturation is below the bit-depth

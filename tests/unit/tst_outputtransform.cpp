@@ -117,7 +117,7 @@ private slots:
     void displayReferredMatchesExactWithinOne();
     void blackAndWhiteAreExact();
     void overRangeSaturatesToWhite();
-    void displayReferredOutOfGamutKeepsItsColour();
+    void displayReferredOutOfGamutKeepsItsColor();
     void wideGamutSplitPathMatchesExactWithinOne();
     void viewTransformNoneIsPassThrough();
     void filmicDomainCoversSaturation();
@@ -288,13 +288,13 @@ void TestOutputTransform::overRangeSaturatesToWhite()
 }
 
 /*
-    A display-referred colour OUTSIDE the output gamut but not over-bright keeps its colour
+    A display-referred color OUTSIDE the output gamut but not over-bright keeps its color
     (DisplayGamutClip, 2026-11-12). The bleed lifted it toward white: Lightroom's export
     of a pink dress pushed +1.75 EV reads G 149 where the bleed rendered 194. Luminance is
-    held and the colour pulled toward its grey only as far as fits, so the over-range
+    held and the color pulled toward its grey only as far as fits, so the over-range
     channel lands at 255, the others stay well below it, and the luminance is unchanged.
 */
-void TestOutputTransform::displayReferredOutOfGamutKeepsItsColour()
+void TestOutputTransform::displayReferredOutOfGamutKeepsItsColor()
 {
     WorkingImage img;
     img.width = 2;
@@ -542,7 +542,7 @@ void TestOutputTransform::agxIsMonotonic()
 }
 
 /*
-    THE POINT OF AgX. A saturated colour driven up in exposure must desaturate toward
+    THE POINT OF AgX. A saturated color driven up in exposure must desaturate toward
     WHITE, with its other two channels rising together. Per-channel filmic instead pins
     the hot channel and leaves the others behind, which is the hue march (saturated red ->
     orange) AgX exists to avoid.
@@ -558,7 +558,7 @@ void TestOutputTransform::agxIsMonotonic()
     1. NEUTRALS ARE UNTOUCHED. On a grey the three channels are equal, so RGBTone IS the
        per-channel curve: every grey must render exactly as under Standard roll-off.
 
-    2. HUE HOLDS AS A COLOUR BRIGHTENS. Measured against a Lightroom render of a snow
+    2. HUE HOLDS AS A COLOR BRIGHTENS. Measured against a Lightroom render of a snow
        scene, per-channel Filmic turned bright blues 11-19 degrees toward cyan (the
        shoulder compresses blue more than green). A sky blue pushed up three stops must
        drift less than half as far under FilmicHue as under Filmic.

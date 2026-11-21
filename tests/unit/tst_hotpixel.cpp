@@ -9,7 +9,7 @@
 
       o flat noise is left alone, bit for bit -- the thresholds must sit above what noise
         reaches, or every image would lose real texture;
-      o a single hot photosite of each colour is replaced by ~its surroundings, and so is
+      o a single hot photosite of each color is replaced by ~its surroundings, and so is
         an adjacent hot pair (hot cells come in pairs; one lit neighbour isn't "real");
       o a hot photosite in a dark area is found (read noise there is smaller: the noise
         model must follow the level);
@@ -73,7 +73,7 @@ class TestHotPixel : public QObject
 
 private slots:
     void flatNoiseIsLeftAlone();
-    void singleHotPhotositesOfEachColourAreReplaced();
+    void singleHotPhotositesOfEachColorAreReplaced();
     void anAdjacentHotPairIsReplaced();
     void aSmallStarIsKept();
     void aHotPhotositeInADarkAreaIsReplaced();
@@ -94,7 +94,7 @@ void TestHotPixel::flatNoiseIsLeftAlone()
     QVERIFY(r.cfa == before);
 }
 
-void TestHotPixel::singleHotPhotositesOfEachColourAreReplaced()
+void TestHotPixel::singleHotPhotositesOfEachColorAreReplaced()
 {
     RawImage r = Mosaic(256, 256);
     /* red (even, even), green (odd, even), blue (odd, odd) */
@@ -175,7 +175,7 @@ void TestHotPixel::tooManyCandidatesChangeNothing()
 
 void TestHotPixel::xtransIsHandled()
 {
-    /* Fuji X-Trans 6x6 colour map (0=R 1=G 2=B) */
+    /* Fuji X-Trans 6x6 color map (0=R 1=G 2=B) */
     static const uint8_t kXT[6][6] = {
         {1, 1, 0, 1, 1, 2}, {1, 1, 2, 1, 1, 0}, {2, 0, 1, 0, 2, 1},
         {1, 1, 2, 1, 1, 0}, {1, 1, 0, 1, 1, 2}, {0, 2, 1, 2, 0, 1} };

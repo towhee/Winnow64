@@ -7,8 +7,8 @@
 /*
     A live RGB + luma histogram of the image currently shown in the loupe. setData()
     copies the 256-bin counts and repaints; clear() blanks it (no image). The three
-    colour channels are drawn as filled polylines with an additive blend on a dark
-    ground so overlaps read as the mixed colour, with luma as a faint outline.
+    color channels are drawn as filled polylines with an additive blend on a dark
+    ground so overlaps read as the mixed color, with luma as a faint outline.
 
     Counts come from MW::updateDevelopScopes (a strided sample of the displayed image),
     so cost is independent of the file's resolution.
@@ -45,8 +45,8 @@ private:
     int marker[3] = { 0, 0, 0 };   // cursor pixel R,G,B
     bool hasMarker = false;
     /* Opacity of the neutral core -- the per-bin min of R,G,B, where all three channels overlap
-       and blend to white. 1.0 = the classic full-white core, 0.0 = hidden (only the colour
-       excess shows), 0.5 = a dimmed grey core. The colour bands above the core are unaffected. */
+       and blend to white. 1.0 = the classic full-white core, 0.0 = hidden (only the color
+       excess shows), 0.5 = a dimmed grey core. The color bands above the core are unaffected. */
     double whiteOpacity = 0.5;
 };
 

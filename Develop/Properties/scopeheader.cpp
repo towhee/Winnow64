@@ -126,7 +126,7 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
                            "Esc to cancel). Global cannot be renamed.");
     /* The scope name (Global, Subject, Mask 1 ...) is yellow so the thing the panel below
        is editing reads apart from the section headers and slider captions under it. Only
-       the text colour is set: every other QComboBox property still comes from
+       the text color is set: every other QComboBox property still comes from
        WidgetCSS::comboBox(), and the disabled rule is repeated here because a widget's
        own stylesheet outranks the application one. */
     scopeCombo->setStyleSheet("QComboBox { color: " + G::attentionColor.name() + "; }"

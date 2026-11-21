@@ -8,14 +8,14 @@
 <h1>Calibrate</h1>
 
 <h2>What it does</h2>
-<p>Calibrate re-points the three <b>primaries</b> of the working colour space.  Each of
+<p>Calibrate re-points the three <b>primaries</b> of the working color space.  Each of
 Red, Green and Blue gets a hue shift and a saturation scale, and the three results become
 the columns of a 3&times;3 matrix that is applied to every pixel.  In effect you are
 telling Winnow &ldquo;this camera's red is a little more orange than I want&rdquo;, and the
 whole image responds to that new definition of red.</p>
 
 <p>The matrix is built so that <b>grey stays grey</b>.  Whatever you do to the primaries,
-a neutral pixel comes out neutral &mdash; calibration re-points colour without tinting the
+a neutral pixel comes out neutral &mdash; calibration re-points color without tinting the
 image or shifting the white balance.</p>
 
 <p>The one deliberate exception is <b>Tint</b>, whose whole job is to tint the
@@ -32,12 +32,12 @@ only</b>.  It is the fix for a camera whose blacks lean green or magenta while t
 midtones are right.  Brightness is held steady, and the effect fades out above the
 shadows.</li>
 <li>Then a <b>Hue</b> and <b>Saturation</b> pair for each primary, red, green and blue
-from the top.  The slider colours show which primary a pair belongs to.</li>
+from the top.  The slider colors show which primary a pair belongs to.</li>
 <li><b>Hue</b> shifts that primary's hue, up to &plusmn;30&deg; at full scale.  The
-slider's colours show which way it goes: red moves toward magenta or orange, green toward
+slider's colors show which way it goes: red moves toward magenta or orange, green toward
 yellow or cyan, blue toward cyan or purple.</li>
 <li><b>Saturation</b> scales that primary's saturation.  +100 doubles it and &minus;100 removes it.  Brightness is held
-steady, so this is a colour control, not a second exposure.</li>
+steady, so this is a color control, not a second exposure.</li>
 </ul>
 
 <p>The section's <b>[&#8942;]</b> menu has <b>Reset</b>, and its eye is a before/after
@@ -52,7 +52,7 @@ direction: a primary you have not touched keeps pointing where it did.</p>
 
 <h2>Where it sits in the pipeline</h2>
 <p>Calibration runs in <b>linear light, before the tone curve</b>, because re-pointing
-primaries is a change of colour space and belongs upstream of anything perceptual.  That
+primaries is a change of color space and belongs upstream of anything perceptual.  That
 is why it feels different from the Color panel's Hue and Saturation, which run after the
 tone curve and act on the pixels you can already see.</p>
 
@@ -64,23 +64,23 @@ neutrals alone.  Different maths, different place in the pipeline; both are avai
 
 <h2>When to use it</h2>
 <ul>
-<li><b>The camera's colour is off in a way white balance cannot fix.</b>  Skies are
+<li><b>The camera's color is off in a way white balance cannot fix.</b>  Skies are
 cyan-ish, foliage too yellow, skin too orange &mdash; but the greys are already neutral.
 That is a primaries problem, and this is the panel for it.</li>
 <li><b>Matching two cameras.</b>  Shoot the same scene on both, neutralise each with
 white balance, then nudge the primaries of one until they agree.  Save the result as a
 preset and apply it to every file from that body.</li>
-<li><b>Deepening or opening up a colour globally.</b>  Pulling blue's saturation up
+<li><b>Deepening or opening up a color globally.</b>  Pulling blue's saturation up
 enriches skies and shadows together, more naturally than a global saturation push,
-because it works on the definition of blue rather than on every colour at once.</li>
+because it works on the definition of blue rather than on every color at once.</li>
 <li><b>A look.</b>  Small hue shifts on all three primaries are how a lot of film
 emulations get their character, and being upstream of the tone curve they stay coherent
 through highlights and shadows.</li>
 </ul>
 
-<p>Work in small amounts, and judge it on a neutral reference or a colour target if you
+<p>Work in small amounts, and judge it on a neutral reference or a color target if you
 have one.  Because everything downstream inherits the new primaries, calibration is worth
-setting <b>before</b> the tone and colour work, not after.</p>
+setting <b>before</b> the tone and color work, not after.</p>
 
 <h2>What is saved</h2>
 <p>The seven values (the shadows tint, and hue and saturation for each primary) are part of the develop recipe,

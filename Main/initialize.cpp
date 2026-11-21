@@ -998,6 +998,9 @@ void MW::createTableView()
                      << "Table field =" << setField
                      << "okToShow =" << okToShow
                 ; //*/
+            /* The color class column's header was "Colour" until 2026-11-21 (Winnow
+               uses US spelling). MW::writeSettings rewrites the group, so this maps it once. */
+            if (setField == "Colour") setField = "Color";
             itemList = tableView->ok->findItems(setField);
             if (itemList.length()) {
                 int row = itemList[0]->row();
@@ -1596,7 +1599,7 @@ void MW::createStatusBar()
     progressDuplicatesRow = progress->addRow("Duplicates", 2, G::progressDuplicatesColor,
                                              Progress::Fill::FromStart);
     progress->setRowText(progressDuplicatesRow, "Duplicates");
-    /*  A rating, colour class, keyword or text-field edit writing the sidecars of a
+    /*  A rating, color class, keyword or text-field edit writing the sidecars of a
         large selection (Utilities/editprogress.h). Shown only once the edit has run, or
         is projected to run, past a second; what and how many is the tooltip. */
     progressEditRow = progress->addRow("Edit", 2, G::progressEditColor,
@@ -1882,7 +1885,7 @@ QString MW::segmentedOptionCss(int fontPt, bool boldSelected, int vPad) const
     One look for every "A | B | C" choice in the chrome: no button frames, the selected
     option in G::selectedOptionColor (bold when boldSelected -- Library | Folders is, the
     Module dock is not), the others in G::textColor, and the " | " separators (QLabels)
-    in the same text colour. The weight is set on the unchecked state too, so a
+    in the same text color. The weight is set on the unchecked state too, so a
     stylesheet rule, not the inherited font, decides it.
 */
     const QString size = fontPt > 0 ? QString(" font-size:%1pt;").arg(fontPt) : QString();
@@ -2046,7 +2049,7 @@ void MW::createFilterDock()
     // Spacer
     filterTitleLayout->addSpacing(5);
 
-    /*  THE TITLE IS LIT WHILE ANYTHING FILTERS, in the colour a filtering category's
+    /*  THE TITLE IS LIT WHILE ANYTHING FILTERS, in the color a filtering category's
         header uses -- so a panel scrolled or collapsed away from the lit category, or a
         docked-but-tabbed panel, still says the view is filtered. */
     connect(filters, &Filters::filteringChanged, this, [this](bool on){
@@ -2916,7 +2919,7 @@ void MW::createDevelopDock()
        coalescing proxy render timer below instead. */
     connect(developProperties, &DevelopProperties::maskEditBegin, this, &MW::updateMaskOverlayTint);
     connect(developProperties, &DevelopProperties::maskEditEnd,   this, &MW::updateMaskOverlayTint);
-    /* Veil-only rebuild: the previewed combine op or the overlay colour changed, so the
+    /* Veil-only rebuild: the previewed combine op or the overlay color changed, so the
        image itself is untouched (no re-render). */
     connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested,
             this, &MW::updateMaskOverlayTint);
@@ -3088,7 +3091,7 @@ void MW::createDevelopDock()
     /* Alert rows, directly BELOW the action row: one row per condition the user needs to
        know about before editing (multiple images selected, a video that Develop cannot
        touch, ...). Each is bright red text on the panel background rather than a filled
-       banner -- the panel reads as one surface and the colour alone carries the alarm.
+       banner -- the panel reads as one surface and the color alone carries the alarm.
        setDevelopAlerts fills the rows; the container hides itself when there is nothing
        to say. It is NOT greyed with the rest of the panel (setDevelopPanelEnabled greys
        the panel and the action row individually) -- an alert must stay readable
@@ -3361,7 +3364,7 @@ void MW::createDevelopDock()
 
     /* New mask: the Scope header's [+] (DevelopProperties::newScope: name dialog, then
        the mask-tool chooser), one click from the top of the panel. newmask_yellow.png is
-       the coloured alternative (Documentation.md 11.13.1). */
+       the colored alternative (Documentation.md 11.13.1). */
     BarBtn *developNewMaskBtn = new BarBtn();
     developNewMaskBtn->setSide(devActSide);
     developNewMaskBtn->setIcon(devActIcons + "newmask.png", G::iconOpacity);
@@ -3388,28 +3391,28 @@ void MW::createDevelopDock()
     developActionLayout->addWidget(developReplaceBtn);
     developActionLayout->addSpacing(10);
 
-    /* Screen Sampler: a 5x5 colour average from ANYWHERE on screen -- another app's
+    /* Screen Sampler: a 5x5 color average from ANYWHERE on screen -- another app's
        window included -- into a readout with a recent list, for comparing renders across
        apps. The WB dropper's pipette glyph, ghosted while armed like that dropper. */
     developSamplerBtn = new BarBtn();
     developSamplerBtn->setSide(devActSide);
     developSamplerBtn->setIcon(DevelopProperties::dropperIcon(false, devActSide));
-    developSamplerBtn->setToolTip("Read the colour of any point on screen, even in "
+    developSamplerBtn->setToolTip("Read the color of any point on screen, even in "
                                   "another app.");
     connect(developSamplerBtn, &BarBtn::clicked, this, &MW::toggleScreenSampler);
     developActionLayout->addWidget(developSamplerBtn);
     developActionLayout->addSpacing(10);
 
     /* Mask overlay tint on/off ("O"). The button has no glyph: it IS the swatch -- its
-       icon is filled with the current overlay colour (G::maskOverlayColor, picked in the
-       Mask panel), so the row shows at a glance which colour the veil speaks and whether
+       icon is filled with the current overlay color (G::maskOverlayColor, picked in the
+       Mask panel), so the row shows at a glance which color the veil speaks and whether
        it is on (blue active border, same as the other action buttons). Repainted by
-       refreshDevelopMaskTintBtn on both the visibility and the colour signals. */
+       refreshDevelopMaskTintBtn on both the visibility and the color signals. */
     developMaskTintBtn = new BarBtn();
     developMaskTintBtn->setToolTip("Show or hide the mask overlay  (O)\n"
-                                   "Right-click for colour options.");
+                                   "Right-click for color options.");
     connect(developMaskTintBtn, &BarBtn::clicked, this, &MW::toggleMaskOverlay);
-    /* Right-click picks the colour and flips the grayscale background -- the Mask panel's
+    /* Right-click picks the color and flips the grayscale background -- the Mask panel's
        chips, reachable without opening (or even having) a mask. */
     developMaskTintBtn->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(developMaskTintBtn, &BarBtn::customContextMenuRequested,
@@ -3420,7 +3423,7 @@ void MW::createDevelopDock()
        swatch shows hollow + extra-dim while there is no mask to tint (Global scope). */
     connect(imageView, &ImageView::maskTintAvailabilityChanged, this,
             [this](bool){ refreshDevelopMaskTintBtn(); });
-    /* A swatch in the Mask panel recoloured the overlay. */
+    /* A swatch in the Mask panel recolored the overlay. */
     connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested, this,
             &MW::refreshDevelopMaskTintBtn);
     refreshDevelopMaskTintBtn();
@@ -3432,7 +3435,7 @@ void MW::createDevelopDock()
 
     /* Preset: show / raise the Presets dock, where a click applies a saved preset (P).
        Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title
-       bar. The colour-wheel glyph matches the Scope / Transform action-row button style,
+       bar. The color-wheel glyph matches the Scope / Transform action-row button style,
        and like them it carries the blue active border while its panel is the front tab
        (driven from the History panel's presetsExpandedChanged). */
     developPresetBtn = new BarBtn();
@@ -3454,7 +3457,7 @@ void MW::createDevelopDock()
     }
 
     /* Export the developed image. STUB for now (MW::developExport is not built yet).
-       lightning_white.png is the orange lightning.png recoloured white for the row. */
+       lightning_white.png is the orange lightning.png recolored white for the row. */
     BarBtn *developExportBtn = new BarBtn();
     developExportBtn->setSide(devActSide);
     developExportBtn->setIcon(devActIcons + "lightning_white.png", G::iconOpacity);
@@ -4612,15 +4615,15 @@ void MW::developAlertLink(const QString &link)
 void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
 {
 /*
-    Fill the alert rows below the Develop action row: one row per alert, coloured text on
+    Fill the alert rows below the Develop action row: one row per alert, colored text on
     the panel background (no fill -- the panel stays one surface). RED = show stopper
     (Develop cannot run on this selection), AMBER = warning (it runs, but on more than the
     visible image), plain text = info (news, e.g. settings migrated on load; it may carry
     links, routed to developAlertLink). Show stoppers are sorted to the top, so severity
-    reads from position as well as colour. An empty list hides the whole block.
+    reads from position as well as color. An empty list hides the whole block.
 
     Rows are pooled: labels are reused and the surplus hidden, so a selection change does
-    not churn widgets. The colour therefore has to be re-applied to every reused row -- a
+    not churn widgets. The color therefore has to be re-applied to every reused row -- a
     row that carried a show stopper last time may carry a warning now.
 */
     if (!developAlertRows || !developAlertRowsLayout) return;
@@ -4653,10 +4656,10 @@ void MW::setDevelopAlerts(const QList<QPair<DevelopAlert, QString>> &alerts)
         }
         // red = show stopper, amber = warning, plain panel text = info
         const DevelopAlert sev = ordered.at(i).first;
-        const QString colour = sev == AlertShowStopper ? G::alertShowStopperColor.name()
+        const QString rowColor = sev == AlertShowStopper ? G::alertShowStopperColor.name()
                              : sev == AlertWarning     ? G::alertWarningColor.name()
                                                        : G::textColor.name();
-        row->setStyleSheet("QLabel { color: " + colour + "; font-weight: " +
+        row->setStyleSheet("QLabel { color: " + rowColor + "; font-weight: " +
                            (sev == AlertInfo ? "normal" : "bold") +
                            "; background: transparent; }");
         row->setToolTip(sev == AlertInfo ? developAlertInfoTip : QString());

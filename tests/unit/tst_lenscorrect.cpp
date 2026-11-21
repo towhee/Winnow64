@@ -13,9 +13,9 @@
         image with no scale is reported as having none (a camera JPEG must not be moved);
       - defringe leaves CLEAN edges alone -- sky/trees, yellow leaf/blue sky, green leaf/
         shadow, red/grey, white/navy, every channel blurred identically -- which is what
-        keeps it from eating real colour;
+        keeps it from eating real color;
       - defringe removes an axial (blue blurred wider) fringe whose hue is in its band;
-      - a clipped highlight is never modified (its true colour is unknown);
+      - a clipped highlight is never modified (its true color is unknown);
       - the RECIPE: an untouched image serializes exactly as before (the JSON is also
         the devPreview key and the render-cache key, so writing defaults would re-key
         every image ever edited), set values round-trip, damaged ones are clamped, and
@@ -26,7 +26,7 @@ namespace {
 
 float lin(float v) { return std::pow(v, 2.2f); }
 
-/* A two-colour scene with a wavy edge, blurred in LINEAR light like a lens. fringe:
+/* A two-color scene with a wavy edge, blurred in LINEAR light like a lens. fringe:
    0 = clean, 1 = blue blurred wider (axial CA). Returned display-referred. */
 cv::Mat edgeScene(const cv::Vec3f &c1, const cv::Vec3f &c2, int fringe)
 {

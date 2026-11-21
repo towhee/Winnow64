@@ -80,7 +80,7 @@ public:
     QWidget* addItem(ItemInfo &i); // abstract addItem
     /* Add a non-interactive divider/spacer row: a full-width band `height` px tall with
        an optional centred horizontal rule `lineHeight` px thick in `lineColor` (a fully
-       transparent colour or lineHeight 0 draws a plain gap). Drawn by PropertyDelegate;
+       transparent color or lineHeight 0 draws a plain gap). Drawn by PropertyDelegate;
        the row is spanned, unselectable and has no value editor. Pass parIdx OR parentName
        to nest it (default = a root row). name is optional (for findCaptionIndex). */
     void addDivider(int height, int lineHeight, QColor lineColor,

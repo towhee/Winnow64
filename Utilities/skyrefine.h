@@ -2,7 +2,7 @@
 #define SKYREFINE_H
 
 /*
-    SKY MATTE: fuse two sky models and matte the result against the photo's colours.
+    SKY MATTE: fuse two sky models and matte the result against the photo's colors.
 
     The Select Sky mask runs TWO models (Utilities/skypredictor) and this header turns
     their outputs into one full-resolution 0..1 alpha. Header-only (all inline), OpenCV
@@ -26,35 +26,35 @@
          SegFormer's blob ate the sky between branches.
       3. SMALL GAPS. Regions under 1% of the frame (sky between branches) are below
          SegFormer's resolution, so its mean says nothing; they are kept when a kept large
-         region is near, and colour decides them pixel by pixel.
+         region is near, and color decides them pixel by pixel.
       4. DISPUTED PIXELS (skyseg yes, SegFormer firmly no) fall back to the lower model
          ONLY where the pixel also looks unlike the nearby sky. Without that test a
          uniform bokeh background was punched full of blotches -- worse than leaving it.
-      5. COLOUR MATTE in the uncertain band: local sky colour S and local foreground
-         colour F are filled in from the confident pixels (push-pull pyramid), and alpha
+      5. COLOR MATTE in the uncertain band: local sky color S and local foreground
+         color F are filled in from the confident pixels (push-pull pyramid), and alpha
          is the pixel's projection on the F->S line. That is what removes the halo --
          leaf gaps and branch tips get real fractional alpha instead of a smeared ramp.
          Trusted only where S and F are well separated AND the pixel lies near the line.
       6. RECOVERY. Where SegFormer sees sky that skyseg missed, next to kept sky, strong
-         colour evidence may PROMOTE pixels to sky (snowy branches, canopy). Never demote.
+         color evidence may PROMOTE pixels to sky (snowy branches, canopy). Never demote.
 
     THE HALO PASS (2026-10-07, from the user's ridgeline halos -- Joffrey Lake, Dempster):
     sky just above a ridge is usually darker, paler or hazier than the sky further up,
-    and step 5's single sky colour read it as "part ridge", leaving a band of half-
-    darkened sky hugging the skyline. Colour alone cannot separate that sky from a real
+    and step 5's single sky color read it as "part ridge", leaving a band of half-
+    darkened sky hugging the skyline. Color alone cannot separate that sky from a real
     ridge/sky mix -- DISTANCE can: a real mix only exists within the edge's own width.
-      5a. SPREAD-AWARE colours: the local sky (and foreground) is a RANGE along the F->S
+      5a. SPREAD-AWARE colors: the local sky (and foreground) is a RANGE along the F->S
           axis, measured from the confident pixels; inside the sky's spread is sky.
-      5b. Snap the colour alpha to 0/1 beyond its own edge width (from its steepness).
+      5b. Snap the color alpha to 0/1 beyond its own edge width (from its steepness).
       7.  Snap the FINAL alpha beyond the PHOTO's edge width (contrast / steepest local
           gradient), everywhere -- tightens the soft fallback too, but a hazy ridge (low
           gradient, wide width) stays soft and a defocused branch keeps its soft edge.
     Measured at 4096 px against the matte without it: halo pixels -49% / -34% / -29%
     (Joffrey Lake / Dempster / Manning Park), over-masking on Dempster -75%, canopy
-    error vs colour ground truth 0.177 -> 0.135, the false-sky set unchanged.
+    error vs color ground truth 0.177 -> 0.135, the false-sky set unchanged.
 
     SECOND PASS (same day, from the user's in-app -2 EV screenshots: a 1-2 px bright
-    line ON the edge). A per-pixel profile across the ridge showed sky-coloured pixels
+    line ON the edge). A per-pixel profile across the ridge showed sky-colored pixels
     1-4 px above it still at alpha 0.77-0.94 -- the snap allowed the WHOLE ramp width on
     each side of the 0.5 contour, where a mixed pixel can only be within HALF of it --
     and, where the rock is about as bright as the darkened sky, properly mixed pixels
@@ -113,9 +113,9 @@ inline cv::Mat ellipse(int r)
 }
 
 /*
-    Colour guided filter (He et al.), "fast" variant: the per-window linear coefficients
+    Color guided filter (He et al.), "fast" variant: the per-window linear coefficients
     are solved at 1/s resolution and applied at full resolution. I is CV_32FC3, p CV_32F.
-    The colour guide is what the luma-only SegRefine filter lacked -- blue sky and green
+    The color guide is what the luma-only SegRefine filter lacked -- blue sky and green
     leaves of equal luma have no edge in luma.
 */
 inline cv::Mat guidedFilterRgbFast(const cv::Mat &I, const cv::Mat &p, int r, float eps, int s)
@@ -184,10 +184,10 @@ inline cv::Mat guidedFilterRgbFast(const cv::Mat &I, const cv::Mat &p, int r, fl
 }
 
 /*
-    Push-pull fill: estimate a smooth colour field everywhere from the pixels where wt is
+    Push-pull fill: estimate a smooth color field everywhere from the pixels where wt is
     1 -- each level trusts its own data where its weight is solid and the coarser level
     elsewhere. val CV_32FC3, wt CV_32F (0/1). Sky is low-frequency, which is why a local
-    average is a good sky colour; for the foreground it is a local mean, which is enough
+    average is a good sky color; for the foreground it is a local mean, which is enough
     for the projection to point the right way.
 */
 inline cv::Mat pushPull(const cv::Mat &val, const cv::Mat &wt)
@@ -286,7 +286,7 @@ inline cv::Mat gradMag(const cv::Mat &m)
     width of the 0.5 contour; further out, a value between 0 and 1 is a darker / paler sky
     or a lighter foreground, not a mix, so it is snapped to 0/1. width (px) is per pixel.
     This is what removed the ridgeline halo: sky just above a ridge is usually darker or
-    hazier than the sky further up, and a colour model read it as "part ridge".
+    hazier than the sky further up, and a color model read it as "part ridge".
 */
 inline void snapBeyondEdgeWidth(cv::Mat &a, const cv::Mat &width)
 {
@@ -309,8 +309,8 @@ inline void snapBeyondEdgeWidth(cv::Mat &a, const cv::Mat &width)
     });
 }
 
-/* The PHOTO's local edge width (px) for snapBeyondEdgeWidth: the colour contrast across
-   the edge (sep, the local F->S separation) over the steepest local colour gradient. A
+/* The PHOTO's local edge width (px) for snapBeyondEdgeWidth: the color contrast across
+   the edge (sep, the local F->S separation) over the steepest local color gradient. A
    crisp ridge gives ~1-2 px, a hazy ridge or a defocused branch a wide one. */
 inline cv::Mat photoEdgeWidth(const cv::Mat &rgb, const cv::Mat &sep, int L)
 {
@@ -487,13 +487,13 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
 
     const int guideR = std::max(4, L / 256);
     if (cv::countNonZero(skyC) < 50 || cv::countNonZero(fgC) < 50) {
-        /* No sky, or nothing but sky: no colour model to fit. */
+        /* No sky, or nothing but sky: no color model to fit. */
         cv::Mat a = guidedFilterRgbFast(rgb, p, guideR, 1e-4f, 4);
         clamp01(a);
         return a;
     }
 
-    /* Step 5: local colour models at quarter resolution, from eroded confident sets so
+    /* Step 5: local color models at quarter resolution, from eroded confident sets so
        mixed edge pixels cannot pollute them. */
     cv::Mat lowRes, ws, wf;
     cv::resize(rgb, lowRes, qs, 0, 0, cv::INTER_AREA);
@@ -532,7 +532,7 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
     });
     cv::Mat base = guidedFilterRgbFast(rgb, pBase, guideR, 1e-4f, 4);
 
-    /* Step 5: the colour alpha -- the pixel's projection t on the local F->S line --
+    /* Step 5: the color alpha -- the pixel's projection t on the local F->S line --
        with the line's separation and the pixel's distance off it. */
     cv::Mat alphaC(full, CV_32F), sep(full, CV_32F), resid(full, CV_32F), tRaw(full, CV_32F);
     forRows(h, [&](int y) {
@@ -552,7 +552,7 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
         }
     });
 
-    /* Step 5a, SPREAD-AWARE: the sky is a range of colours, not a point. Measure locally
+    /* Step 5a, SPREAD-AWARE: the sky is a range of colors, not a point. Measure locally
        how far the confident sky spreads along the F->S axis (t) and off it (r), and the
        same for the foreground; a pixel inside the sky's own spread is sky. */
     {
@@ -611,7 +611,7 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
         });
     }
 
-    /* Step 5b: snap the colour alpha beyond ITS OWN edge width (from its steepness), so
+    /* Step 5b: snap the color alpha beyond ITS OWN edge width (from its steepness), so
        only genuinely mixed pixels stay fractional. */
     {
         cv::Mat sm;
@@ -628,7 +628,7 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
         snapBeyondEdgeWidth(alphaC, wE);
     }
 
-    /* Steps 5-6: colour alpha in the band; promote-only recovery. */
+    /* Steps 5-6: color alpha in the band; promote-only recovery. */
     cv::Mat out(full, CV_32F);
     forRows(h, [&](int y) {
         const float *ap = alphaC.ptr<float>(y), *sq = sep.ptr<float>(y),
@@ -653,7 +653,7 @@ inline cv::Mat refine(const cv::Mat &rawSky, const cv::Mat &rawSeg, const cv::Ma
 
     /* Step 7: snap the FINAL alpha beyond the PHOTO's edge width (contrast across the
        edge / steepest local gradient), everywhere. This also tightens the soft fallback
-       where the colour test backed off, but leaves a genuinely hazy ridge soft. */
+       where the color test backed off, but leaves a genuinely hazy ridge soft. */
     snapBeyondEdgeWidth(out, photoEdgeWidth(rgb, sep, L));
     clamp01(out);
 

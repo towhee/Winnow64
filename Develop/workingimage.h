@@ -44,18 +44,18 @@ struct StatSampleSlot {
     exposure, tone recovery and dehaze need this linear headroom; the display gamma / ICC
     transform is applied last, by OutputTransform.
 
-    COLOUR SPACE. `space` says which primaries the pixels are in RIGHT NOW; it is not an
+    COLOR SPACE. `space` says which primaries the pixels are in RIGHT NOW; it is not an
     assumption any more. A raw decode hands over CameraNative (sensor primaries, described
     by `cam`) and Develop's first stage converts to ColorSpaceMath::kWorking. A non-raw
     decode converts on the way in and arrives already in the working space.
 
     The working space is linear Rec.2020 / D65 -- wide enough that a saturated sensor
-    colour survives to the view transform instead of being clipped at decode, and D65 so
+    color survives to the view transform instead of being clipped at decode, and D65 so
     no chromatic adaptation hides between the camera matrix and the white-balance solver.
     See Develop/colorspace.h for why not ACEScg.
 */
 /*
-    The colour characterisation of the source, carried with the pixels so Develop can
+    The color characterisation of the source, carried with the pixels so Develop can
     compute an ABSOLUTE white balance (a Kelvin temperature + green/magenta tint)
     rather than a blind relative nudge. See Develop/whitebalance.h.
 
@@ -135,7 +135,7 @@ struct WorkingImage {
     int width = 0;
     int height = 0;
 
-    CameraColor cam;            // colour characterisation for absolute white balance
+    CameraColor cam;            // color characterisation for absolute white balance
 
     float white = 1.0f;         // linear value that maps to display white (1.0)
 
@@ -145,7 +145,7 @@ struct WorkingImage {
        other value means the pixels are in that space's primaries, D65.
 
        Ops that ask for luma weights must pass this through
-       ColorSpaceMath::lumaWeights(space): luma belongs to a colour space, and an op
+       ColorSpaceMath::lumaWeights(space): luma belongs to a color space, and an op
        assuming Rec.709 while running on Rec.2020 data quietly stops preserving luma. */
     ColorSpaceMath::ColorSpace space = ColorSpaceMath::ColorSpace::LinearSRGB;
 
@@ -167,7 +167,7 @@ struct WorkingImage {
        InputTransform): it already carries the camera's tone curve, so the output stage
        only re-applies the display gamma.
 
-       Orthogonal to `space`: together they are the full colour state -- WHICH primaries
+       Orthogonal to `space`: together they are the full color state -- WHICH primaries
        (space) and WHICH referring (this). Both needed; neither implies the other. */
     bool sceneReferred = false;
 
@@ -222,7 +222,7 @@ struct WorkingImage {
 
       - luminance    the mask halo guide, the raw-denoise blend: they weight channels by
                      how much each contributes to brightness.
-      - colour       the white-balance dropper and Auto WB: they hand a sampled colour to
+      - color        the white-balance dropper and Auto WB: they hand a sampled color to
                      WhiteBalance::solve, whose forward chain ENDS in the working space,
                      so a camera-native sample would be solved against the wrong space
                      and return the wrong temperature.
@@ -258,7 +258,7 @@ inline float lumaOf(const WorkingImage &img, float r, float g, float b)
     return w.r * r + w.g * g + w.b * b;
 }
 
-/* Convert ONE colour sampled from img.rgb into the WORKING space -- the same transform
+/* Convert ONE color sampled from img.rgb into the WORKING space -- the same transform
    Develop's stage 0 applies to every pixel. A no-op when img is already converted. */
 inline void toWorkingColor(const WorkingImage &img, float &r, float &g, float &b)
 {
@@ -287,7 +287,7 @@ inline void toWorkingColor(const WorkingImage &img, float &r, float &g, float &b
     here, so a downscaled proxy claimed to be in the working space while still holding
     sensor pixels. Develop then skipped its input-profile stage and the interactive render
     came out strongly green (camera-native green is ~2x the other channels), snapping to
-    the right colour on the full-res settle pass that still had the tag. Add new fields
+    the right color on the full-res settle pass that still had the tag. Add new fields
     HERE and both callers get them.
 */
 inline void copyMetadata(WorkingImage &dst, const WorkingImage &src)

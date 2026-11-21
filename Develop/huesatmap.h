@@ -219,7 +219,7 @@ inline void FromHsv(float h, float s, float v, float &r, float &g, float &b)
 }
 
 /*
-    Apply the table to one RGB triple, IN THE TABLE'S OWN COLOUR SPACE -- the caller
+    Apply the table to one RGB triple, IN THE TABLE'S OWN COLOR SPACE -- the caller
     brackets this with the matrices that get there and back (CameraProfile::Tables).
 
     THE VALUE AXIS IS INDEXED CLAMPED AND SCALED UNCLAMPED, which is a deliberate

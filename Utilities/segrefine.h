@@ -5,7 +5,7 @@
     Shared edge refinement for the AI segmentation masks (Select Subject = U^2-Net, Object
     Mask = SAM 2). Both models emit a coarse low-res single-channel map; this turns it into
     a full-resolution 0..1 coverage that hugs the photo's real edges. Select Sky USED this
-    too until 2026-10-07; it now has its own two-model colour matte, Utilities/skyrefine.h.
+    too until 2026-10-07; it now has its own two-model color matte, Utilities/skyrefine.h.
     Header-only (all inline), no build-system entry.
 
     Pipeline: min-max normalize the raw output -> upsample to the guide image's native size (this un-

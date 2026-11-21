@@ -475,7 +475,7 @@ bool PanasonicRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 }
 
 /*
-    RW2 colour without a decode: Panasonic keeps everything in IFD0, so the as-shot WB
+    RW2 color without a decode: Panasonic keeps everything in IFD0, so the as-shot WB
     levels (0x24 R / 0x25 G / 0x26 B, green == 256) and the model are one IFD read away.
     Split out of UnpackCfa for the Apple Core Image engine -- see
     RawFormat::ReadAsShotColor.

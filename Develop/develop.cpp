@@ -51,24 +51,24 @@ constexpr float kContrastFullScale  = 100.0f;
 
 /* White balance is a per-channel gain in SCENE-LINEAR (the physically correct domain: it
    rescales the light before any tone curve). The gains are ABSOLUTE: p.temp is a Kelvin
-   temperature and p.tint a green/magenta offset, resolved against the image's own colour
+   temperature and p.tint a green/magenta offset, resolved against the image's own color
    characterisation (WorkingImage::cam) by WhiteBalance::relativeGains -- so "5500 K"
    means the same light on every camera body. See Develop/whitebalance.h. */
 
-/* Colour -- RGB sliders (red/green/blue). Per-channel scene-linear gain, normalised -1..1 by
+/* Color -- RGB sliders (red/green/blue). Per-channel scene-linear gain, normalised -1..1 by
    kRgbFullScale and folded into the same per-channel factor as WB + exposure (free; no extra
    pass). Gentle creative range: full slider = +/-50% on that channel. */
 constexpr float kRgbFullScale = 100.0f;
 constexpr float kRgbGain      = 0.5f;
 
-/* Colour -- HSL sliders (hue/saturation/luminance), normalised -1..1 by kHslFullScale. Hue is a
+/* Color -- HSL sliders (hue/saturation/luminance), normalised -1..1 by kHslFullScale. Hue is a
    rotation about the neutral (1,1,1) axis: full slider = +/-kHueMaxRad. Saturation scales chroma
    about Rec.709 luma: -1 -> grayscale, +1 -> 2x. Luminance is a uniform gain: -1 -> black,
    +1 -> 2x. Applied as a cross-channel block after the tone curve (see applyPointOps). */
 constexpr float kHslFullScale = 100.0f;
 constexpr float kHueMaxRad    = 1.04719755f;   // 60 degrees at full slider
 
-/* Colour grading (Color Grade panel): the whole model -- push space, windows, strength,
+/* Color grading (Color Grade panel): the whole model -- push space, windows, strength,
    Luminance, Blending / Balance -- is the measured Lightroom one in Develop/colorgrade.h.
    The Luminance slider's -100..100 is normalised by this. */
 constexpr float kGradeLumFullScale = 100.0f;
@@ -423,7 +423,7 @@ inline float linearToDisplay(float v)
 
     Rec.2020 is the working space, so it is used as it stands (no conversion). Through
     the real pipeline (developrender): 3.7 2.5 1.4 2.3 3.4 3.6 3.0 3.5. That needed the
-    output stage to stop bleeding out-of-gamut colour toward white on these files (a pink
+    output stage to stop bleeding out-of-gamut color toward white on these files (a pink
     dress washed out; outputtransform.cpp, DisplayGamutClip): with the bleed the positive
     pushes read 2.7 4.6 6.1 6.1 6.6 6.6.
 
@@ -988,7 +988,7 @@ void Develop::ApplyProfileTables(WorkingImage &img, const EditParams &p)
     }
 
     /* THE CHARACTERISATION STAYS HERE: the HueSatMap is a correction to the camera's
-       colour, so it runs before anything is adjusted on top of it. */
+       color, so it runs before anything is adjusted on top of it. */
     if (t.hueSatMap.isEmpty()) return;
     /* The table is defined in a space reached FROM the working space; camera-native
        pixels have not got there yet. Apply() guarantees this by forcing the early
@@ -1613,10 +1613,10 @@ void Develop::Denoise(WorkingImage &img, const EditParams &p)
         });
     }
 
-    /* COLOUR/CHROMA NR (localDenoiseChroma): smooth the opponent chroma (R-Y, B-Y) while keeping
-       luminance EXACT, so colour blotches wash out without touching luma detail. Chroma noise is
+    /* COLOR/CHROMA NR (localDenoiseChroma): smooth the opponent chroma (R-Y, B-Y) while keeping
+       luminance EXACT, so color blotches wash out without touching luma detail. Chroma noise is
        low-frequency, so we blur a downscaled copy (fast, O(1)-ish -- see the Develop perf note in
-       Documentation.txt) and upsample; mild colour bleed at edges is acceptable for chroma. Runs
+       Documentation.txt) and upsample; mild color bleed at edges is acceptable for chroma. Runs
        after the luma pass, on the luma-denoised RGB. */
     if (chrAmt > 0.0f) {
         cv::Mat chroma(h, w, CV_32FC3);          // (Cr, Cb, 0), white-normalised linear
@@ -1676,7 +1676,7 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
     out = clean;                            // dims/white/space/sceneReferred + fallback
     if (clean.width != den.width || clean.height != den.height) return;
 
-    /* Both sides must be in the SAME colour state. den always comes from the raw decode
+    /* Both sides must be in the SAME color state. den always comes from the raw decode
        (camera-native, scene-linear); clean can come from the WorkingImageCache, which --
        despite what its header promises -- also holds display-referred working-space
        entries built from the 8-bit decode (InputTransform::FromImage, what Preview mode
@@ -1686,7 +1686,7 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
        goes magenta/green. A caller that hands over mismatched buffers gets the clean
        image back, not a cast. */
     if (clean.space != den.space || clean.sceneReferred != den.sceneReferred) {
-        qWarning("Develop::BlendRawDenoise: colour-state mismatch (space %d vs %d, "
+        qWarning("Develop::BlendRawDenoise: color-state mismatch (space %d vs %d, "
                  "sceneReferred %d vs %d) -- serving the clean base",
                  int(clean.space), int(den.space), int(clean.sceneReferred),
                  int(den.sceneReferred));
@@ -2085,7 +2085,7 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
 
     /* White balance: per-channel scene-linear gains for the absolute (Kelvin, tint),
        taken RELATIVE to the as-shot rendering so an untouched image (p.temp == 0) is
-       an exact no-op. Folded with the uniform exposure gain AND the Colour RGB
+       an exact no-op. Folded with the uniform exposure gain AND the Color RGB
        sliders (per-channel gain, kRgbGain) into a single per-channel factor -- all
        are linear multiplies, so they commute and the fused pass applies one multiply
        per channel. */
@@ -2151,7 +2151,7 @@ std::shared_ptr<const Develop::PointCoeffs> Develop::buildPointCoeffs(const Edit
         Calibrate::buildMatrix(p.calRedHue, p.calRedSat, p.calGreenHue, p.calGreenSat,
                                p.calBlueHue, p.calBlueSat, c.calMat);
 
-    /* Colour grading (see PointCoeffs and Develop/colorgrade.h). Each range's hue + sat
+    /* Color grading (see PointCoeffs and Develop/colorgrade.h). Each range's hue + sat
        becomes a push vector in gamma-2.2 ProPhoto, amp * sat * (dir - offset); the amp
        comes from the range's measured window at the pixel's L*, so the four ranges fold
        into ONE table of summed push by luminance. The transfer tables follow the active
@@ -2684,7 +2684,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
     const bool  doVib = (vibA != 0.0f);
     const float lumG = c.lumGain;
 
-    /* Colour grading: the tables live in c (see PointCoeffs); the two matrices and the
+    /* Color grading: the tables live in c (see PointCoeffs); the two matrices and the
        table scales are hoisted so they fold into the inner loop. lerpU reads a table
        indexed by u in [0,1] (sqrt-spaced tables pass sqrt of their argument). */
     const float *gFwd = c.gradeFwd, *gInv = c.gradeInv;
@@ -2832,7 +2832,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
 
                        The clamp fires only when CALIBRATE was folded in, because that is
                        the only stage in the sequence that clamps. Without it, negatives
-                       are KEPT: an out-of-gamut sensor colour is real data, and the
+                       are KEPT: an out-of-gamut sensor color is real data, and the
                        output stage is what decides how to bring it back, not a clamp
                        buried mid-pipeline. */
                     const float r = px[0], g = px[1], b = px[2];
@@ -2933,7 +2933,7 @@ void Develop::applyPointOps(WorkingImage &img, const PointCoeffs &c,
                 if (doMix || doPoint) {
                     /* Display-linear (through the view), OKLab, the Color Mixer's
                        per-hue change, then the summed weighted change of every point
-                       (measured on the MIXED colour, as a sample off the display would
+                       (measured on the MIXED color, as a sample off the display would
                        be), and the CHANGE back to scene-linear -- the Color Grade route,
                        see PointCoeffs::pcActive / mixActive. */
                     float n[3], v[3];

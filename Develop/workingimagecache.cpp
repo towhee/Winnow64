@@ -254,7 +254,7 @@ bool WorkingImageCache::render(const WorkingImage &work, const EditParams &edit,
     if (!work.isValid()) return false;
 
     OutputTransform output;
-    /* One place decides the final quantisation, colour space AND view transform, for both
+    /* One place decides the final quantisation, color space AND view transform, for both
        paths below. The view transform is a whole-image property, so it comes from the
        params being rendered rather than from any per-mask scope. */
     const OutputTransform::ViewTransform view =
@@ -595,7 +595,7 @@ WorkingImage WorkingImageCache::downscaled(const WorkingImage &src, int targetLo
     dst.width = dw;
     dst.height = dh;
     /* Every non-pixel field, from the one place that lists them (workingimage.h) -- the
-       white balance must resolve identically on the proxy, and so must the COLOUR SPACE:
+       white balance must resolve identically on the proxy, and so must the COLOR SPACE:
        a proxy that loses its space tag renders as raw sensor data. renderScale is set
        below, after this, because the downscale is exactly what changes it. */
     copyMetadata(dst, src);

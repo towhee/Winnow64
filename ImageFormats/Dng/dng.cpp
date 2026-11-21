@@ -611,7 +611,7 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     /* NoiseProfile (var = scale*x + offset, x in the black-subtracted white-normalised
        [0,1] domain) -- exactly PMRID's (k,b), so hand it straight through. Skip when a
        LinearizationTable is present: it remaps the domain the profile was measured in.
-       Values are paired (scale, offset) per colour plane in CFAPlaneColor order; for
+       Values are paired (scale, offset) per color plane in CFAPlaneColor order; for
        Bayer that is R,G,B, so the green plane is index 1 (else the single/first pair). */
     if (!(cfaIfd.contains(LinearizationTable) ||
           (haveIfd0 && ifd0.contains(LinearizationTable)))) {
@@ -627,7 +627,7 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         }
     }
 
-    /* Colour: DNG carries its own (ColorMatrix + AsShotNeutral, both in IFD0). One
+    /* Color: DNG carries its own (ColorMatrix + AsShotNeutral, both in IFD0). One
        definition, shared with the Apple Core Image engine -- see
        RawFormat::ReadAsShotColor. The rare DNG with no IFD0 falls back to the CFA IFD's
        own copy of the tags. */
@@ -667,7 +667,7 @@ bool DngRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
 }
 
 /*
-    DNG colour without a decode. A DNG carries its own characterisation, so this needs no
+    DNG color without a decode. A DNG carries its own characterisation, so this needs no
     model lookup at all: ColorMatrix2 (D65) when present, else ColorMatrix1, and the WB
     from AsShotNeutral (camMul = 1 / neutral). Both live in IFD0.
 

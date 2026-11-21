@@ -306,7 +306,7 @@ void DockTitleBar::setSubtitle(const QString &text)
         subtitleLabel = new QLabel(this);
         subtitleLabel->setTextFormat(Qt::PlainText);
         subtitleLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
-        /* Plain text colour, not the title blue that WidgetCSS gives DockTitleBar's
+        /* Plain text color, not the title blue that WidgetCSS gives DockTitleBar's
            QLabels; no left padding, so it centres on the bar. */
         subtitleLabel->setStyleSheet("QLabel { color: " + G::textColor.name() + ";"
                                      " padding-left: 0px; }");

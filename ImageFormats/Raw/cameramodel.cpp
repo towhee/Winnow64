@@ -79,7 +79,7 @@ bool startsWithAMaker(const QString &model, QString *maker = nullptr)
     "mN": Canon writes "EOS R6m2" and "EOS R5m2" where both tables carry "EOS R6 Mark II"
     and "EOS R5 Mark II". Without this the model falls to the LONGEST-PREFIX match on the
     base body -- "Canon EOS R6" -- and silently renders an R6 Mark II through the R6's
-    colour matrix, which is a different sensor. Canon-only and anchored at the END of the
+    color matrix, which is a different sensor. Canon-only and anchored at the END of the
     string so it cannot fire inside a lens or body name that happens to contain "m2", and
     limited to 2..4 because that is the range Canon ships.
 */
