@@ -1618,7 +1618,7 @@ void ImageView::drawRenderingHint(QPainter &p)
 
 void ImageView::setSpotReplaceMode(int mode)
 {
-    spotReplaceMode = qBound(0, mode, int(FillSpotGeom::kLastKind));
+    spotReplaceMode = qBound(0, mode, int(FillSpotGeom::Clone));
     spotPainting = false;               // a mode switch cancels any stroke in progress
     spotStrokePts.clear();
     spotPending.clear();                // and discards uncommitted Fill paint

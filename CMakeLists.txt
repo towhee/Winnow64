@@ -151,7 +151,6 @@ set(WINNOW_SOURCES
     Develop/whitebalance.cpp
     Develop/autotone.cpp
     Develop/workingimagecache.cpp
-    Develop/patchinpaint.cpp
     Develop/rawrender.cpp
     Develop/rawrender.h
     Develop/Properties/developproperties.cpp
@@ -582,7 +581,6 @@ set(WINNOW_HEADERS
     Develop/outputtransform.h
     Develop/rangemask.h
     Develop/whitebalance.h
-    Develop/patchinpaint.h
     Develop/autotone.h
     Develop/areashrink.h
     Develop/workingimage.h

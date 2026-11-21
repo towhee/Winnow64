@@ -315,12 +315,6 @@ winnow_test_link_opencv(tst_hotpixel PRIVATE opencv_core)
 winnow_add_unit_test(tst_fslocalalign unit/tst_fslocalalign.cpp
     ${CMAKE_SOURCE_DIR}/FocusStack/fslocalalign.cpp)
 winnow_test_link_opencv(tst_fslocalalign PRIVATE opencv_core opencv_imgproc)
-# tst_patchinpaint tests Develop/patchinpaint.cpp -- the Replace tool's Content-Aware
-# fill (PatchMatch completion): texture and structure rebuilt, outside untouched,
-# deterministic whatever the thread count, hostile inputs return cleanly.
-winnow_add_unit_test(tst_patchinpaint unit/tst_patchinpaint.cpp
-    ${CMAKE_SOURCE_DIR}/Develop/patchinpaint.cpp)
-winnow_test_link_opencv(tst_patchinpaint PRIVATE opencv_core opencv_imgproc)
 # tst_highlightrecon tests ImageFormats/Raw/highlightrecon.cpp -- partly clipped channels
 # rebuilt from reliable colour nearby, fully clipped ones neutral, no tint from branches,
 # fringes or foliage, no step where a channel clips, unclipped pixels left exactly.

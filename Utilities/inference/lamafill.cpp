@@ -1,7 +1,6 @@
 #include "Utilities/inference/lamafill.h"
 #include "Utilities/inference/inferencesession.h"
 #include "Develop/fillspot.h"
-#include "Develop/patchinpaint.h"
 #include "Main/global.h"
 #include "Utilities/modelstore.h"
 #include <QMutex>
@@ -699,69 +698,6 @@ bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
     return true;
 }
 
-/*
-    Content-Aware (FillSpotGeom::Patch): rebuild the coverage from patches of its own
-    surroundings (PatchInpaint::Complete, PatchMatch completion). The tile is the
-    coverage bbox plus a context margin as wide as the bbox (capped), so the patches come
-    from nearby and lighting agrees. The hole is the hard coverage dilated by the same
-    thickness-based band as a clone heal. The composite alpha is 1 over EVERYTHING
-    painted and ramps to 0 across that band OUTSIDE it (a smoothstep on the distance to
-    the coverage). The clone heal's blurred alpha is 0.5 on the painted edge, so half of
-    what was painted over survives there; a ground-truth bench on real photos measured
-    that ring as most of the fill's error. No source to copy from at all (a hole covering
-    the tile): the membrane fill, so the area is never left as it was. Needs no model.
-*/
-void patchFillOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
-                  int bx0, int by0, int bx1, int by1)
-{
-    const int W = full.cols, H = full.rows;
-    const int bw = bx1 - bx0 + 1, bh = by1 - by0 + 1;
-    const int m = std::clamp(std::max(bw, bh), 48, 1024);
-    cv::Rect C(bx0 - m, by0 - m, bw + 2 * m, bh + 2 * m);
-    C &= cv::Rect(0, 0, W, H);
-
-    cv::Mat alpha(C.height, C.width, CV_32F);
-    for (int y = 0; y < C.height; ++y) {
-        float *a = alpha.ptr<float>(y);
-        for (int x = 0; x < C.width; ++x) a[x] = cov.at(C.x + x, C.y + y);
-    }
-    cv::Mat hole8;
-    cv::threshold(alpha, hole8, 0.05, 255.0, cv::THRESH_BINARY);
-    hole8.convertTo(hole8, CV_8U);
-    if (cv::countNonZero(hole8) < 1) return;
-    const double feather = featherFromHole(hole8);
-    const int fk = 2 * int(std::ceil(feather)) + 1;
-    cv::Mat outside, dist;
-    cv::bitwise_not(hole8, outside);
-    cv::distanceTransform(outside, dist, cv::DIST_L2, 3);
-    for (int y = 0; y < C.height; ++y) {
-        float *a = alpha.ptr<float>(y);
-        const float *d = dist.ptr<float>(y);
-        for (int x = 0; x < C.width; ++x) {
-            const float t = std::clamp(1.0f - d[x] / float(feather), 0.0f, 1.0f);
-            a[x] = std::max(a[x], t * t * (3.0f - 2.0f * t));
-        }
-    }
-    cv::dilate(hole8, hole8, cv::getStructuringElement(cv::MORPH_ELLIPSE, {fk, fk}));
-
-    cv::Mat tile;
-    full(C).convertTo(tile, CV_32FC3, 1.0 / 255.0);
-    if (!PatchInpaint::Complete(tile, hole8)) PatchInpaint::Membrane(tile, hole8);
-
-    cv::Mat out = full(C);
-    for (int y = 0; y < C.height; ++y) {
-        cv::Vec3b *o = out.ptr<cv::Vec3b>(y);
-        const cv::Vec3f *f = tile.ptr<cv::Vec3f>(y);
-        const float *a = alpha.ptr<float>(y);
-        for (int x = 0; x < C.width; ++x) {
-            const float aa = std::clamp(a[x], 0.0f, 1.0f);
-            if (aa <= 0.0f) continue;
-            for (int c = 0; c < 3; ++c)
-                o[x][c] = cv::saturate_cast<uchar>(o[x][c] * (1.0f - aa) + f[x][c] * 255.0f * aa);
-        }
-    }
-}
-
 /* Heal one spot's (or one chunk's windowed share of a) coverage `cov` (frame
    coordinates, 0..1) into RGB888 `full`, in place, with the model. */
 void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
@@ -944,13 +880,6 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
            in brush-scale CHUNKS, each cloning from its own local source (see ChunkWin);
            chunks run in scan order, so later chunks blend over earlier heals. */
         bool done = false;
-        /* Content-Aware: PatchMatch completion, no model, never falls through. */
-        if (p.kind == FillSpotGeom::Patch) {
-            patchFillOne(full, cov, bx0, by0, bx1, by1);
-            applied = true;
-            ++healed;
-            continue;
-        }
         /* Pinned-offset key: engine version + image path + render size + this spot's
            geometry (see lookupPinnedOffset -- keeps heal geometry stable across
            re-renders; the version tag retires pins from older chunking/matching). */

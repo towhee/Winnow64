@@ -20,14 +20,14 @@
     paramsJson schema (opaque in EditStack::FillSpot):
       { "size": <double diameter / long edge, 0..1>,
         "feather": <double 0..100>,
-        "kind": "spot" | "heal" | "clone" | "fill" | "patch" | "object",  // Replace tool mode
+        "kind": "spot" | "heal" | "clone" | "fill" | "object",  // Replace tool mode
         "pts": [x0,y0, x1,y1, ...],           // single stroke, output-normalized 0..1
         "strokes": [ { "size": <double>, "erase": <bool>,
                        "pts": [x0,y0, ...] }, ... ],
         "src": [dx, dy] }                     // heal/clone source offset, normalized
 
     Two geometry forms: "pts" is one brush stroke (Spot click, Heal / Clone drag, and
-    legacy spots); "strokes" is a PAINTED AREA (Fill, Content-Aware and Object) -- an ordered list of
+    legacy spots); "strokes" is a PAINTED AREA (Fill and Object) -- an ordered list of
     strokes, each with its own brush size and an erase flag (Opt/Alt while painting),
     composited in order: add = max, erase = multiply by (1 - alpha). When both are
     present "strokes" wins.
@@ -40,9 +40,6 @@
                no Poisson), for when the tone must come across too.
       fill   : painted area; chunked exemplar heal, each chunk from its own local
                source, the model as fallback.
-      patch  : painted area; Content-Aware fill (PatchMatch completion, Develop/
-               patchinpaint.h): rebuilt from many small patches of its own surroundings.
-               No model, every platform.
       object : painted area; regenerative model fill (an object leaves no clean source).
     "src" is the source offset (dx as a fraction of the frame width, dy of the height)
     from the stroke's centroid. Heal/Clone store it once the engine has chosen one
@@ -51,11 +48,8 @@
 */
 namespace FillSpotGeom {
 
-/* Values are the Replace panel / ImageView mode ids; Heal, Clone and Patch were appended.
-   An older Winnow reads an unknown kind ("patch") as Fill, so a Content-Aware repair still
-   heals there, by the clone engine. */
-enum Kind { Spot = 0, Fill = 1, Object = 2, Heal = 3, Clone = 4, Patch = 5 };
-constexpr int kLastKind = Patch;
+/* Values are the Replace panel / ImageView mode ids; Heal and Clone were appended. */
+enum Kind { Spot = 0, Fill = 1, Object = 2, Heal = 3, Clone = 4 };
 
 inline const char *kindName(int k)
 {
@@ -64,14 +58,12 @@ inline const char *kindName(int k)
     case Object: return "object";
     case Heal:   return "heal";
     case Clone:  return "clone";
-    case Patch:  return "patch";
     default:     return "fill";
     }
 }
 
-/* Fill, Content-Aware and Object accumulate a painted area (Enter commits); the rest commit
-   a stroke. */
-inline bool isPaintArea(int k) { return k == Fill || k == Patch || k == Object; }
+/* Fill and Object accumulate a painted area (Enter commits); the rest commit a stroke. */
+inline bool isPaintArea(int k) { return k == Fill || k == Object; }
 /* Heal and Clone have one user-movable source. */
 inline bool usesSource(int k) { return k == Heal || k == Clone; }
 
@@ -105,8 +97,7 @@ inline Parsed parse(const QString &paramsJson)
     p.featherPct = o.value("feather").toDouble(p.featherPct);
     const QString k = o.value("kind").toString();
     p.kind = (k == "spot")  ? Spot  : (k == "object") ? Object
-           : (k == "heal")  ? Heal  : (k == "clone")  ? Clone
-           : (k == "patch") ? Patch : Fill;
+           : (k == "heal")  ? Heal  : (k == "clone")  ? Clone : Fill;
     const QJsonArray src = o.value("src").toArray();
     if (src.size() == 2) {
         p.hasSrc = true;
