@@ -1894,7 +1894,7 @@ private:
     bool spotsShown = true;             // Replace preview eye: heals rendered or bypassed
     QStringList spotClipboard;          // Copy all spots: paramsJson, session only
     void emitSpotPins();                       // push the current image's spots to ImageView
-    /* A repair's History step name, from its kind: Spot, Heal, Clone, Fill, Content-Aware, Inpaint. */
+    /* A repair's History step name, from its kind: Spot, Heal, Clone, Fill, Inpaint. */
     static QString spotStepName(const QString &paramsJson);
     ScopeHeader *scopeHeader = nullptr;     // scope combo + buttons, band above tree
     static constexpr int UR_MaskIndex = Qt::UserRole + 100;

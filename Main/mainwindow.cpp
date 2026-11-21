@@ -16778,7 +16778,7 @@ void MW::showDevelopReplaceMenu()
 
     /* Names and tips come from ReplacePanel so the menu and the panel never disagree. */
     const int modes[] = {FillSpotGeom::Spot, FillSpotGeom::Heal, FillSpotGeom::Clone,
-                         FillSpotGeom::Fill, FillSpotGeom::Patch, FillSpotGeom::Object};
+                         FillSpotGeom::Fill, FillSpotGeom::Object};
     QMenu menu(this);
     menu.setToolTipsVisible(true);
     for (const int m : modes) {

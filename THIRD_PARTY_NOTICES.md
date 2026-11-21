@@ -97,11 +97,10 @@ OpenCV and ONNX Runtime pull these in, and they ship inside the macOS applicatio
   the PPG, AHD and X-Trans raw demosaic algorithms in `ImageFormats/Raw/demosaic.cpp`
   (`crates/raw/src/demosaic`), the hot-pixel suppression in `ImageFormats/Raw/hotpixel.cpp`
   (`crates/raw/src/hotpixel.rs`), the highlight reconstruction in
-  `ImageFormats/Raw/highlightrecon.cpp` (`crates/raw/src/highlight.rs`), the focus
-  stacker's local alignment in `FocusStack/fslocalalign.cpp` (`crates/merge/src/flow.rs`,
-  `refine.rs`) and the Content-Aware fill in `Develop/patchinpaint.cpp`
-  (`crates/inpaint/src/patchmatch.rs`, `membrane.rs`). Copyright (c) 2026 ArtCraft Team
-  and the LightCraft contributors. MIT: [lightcraft](licenses/lightcraft.txt).
+  `ImageFormats/Raw/highlightrecon.cpp` (`crates/raw/src/highlight.rs`) and the
+  focus stacker's local alignment in `FocusStack/fslocalalign.cpp`
+  (`crates/merge/src/flow.rs`, `refine.rs`). Copyright (c) 2026 ArtCraft Team and the
+  LightCraft contributors. MIT: [lightcraft](licenses/lightcraft.txt).
 
 ## Data
 
