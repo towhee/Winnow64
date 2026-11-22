@@ -7,6 +7,8 @@ WHAT'S NEW
 
 
 BUGS / TO DO
+- validate highlight reconstruction against Lightroom/libraw on a sensor-clipped frame;
+  fix the edge mottling
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (record, list, replay a series of steps)
@@ -23,19 +25,7 @@ BUGS / TO DO
 - HDR
 - Add all help items to the main menu Help.
 - Render devPreviews in background (entire catalog??)
-- RAW-STAGE CLIPPED-HIGHLIGHT RECONSTRUCTION (separate feature, not the Highlights
-  slider): rebuild colour where the SENSOR clipped one or more channels, before white
-  balance / demosaic (today a clipped sky or specular can go magenta/cyan or flat, and
-  Sony clipped highlights can show a tint). Study first: RawTherapee "Color Propagation"
-  (and its Inpaint Opposed), darktable "highlight reconstruction" (inpaint opposed,
-  segmentation, guided laplacians) and "color reconstruction". Validate against libraw /
-  Lightroom on a frame with real sensor clipping (Horne Lake is NOT one: its +2.5 push is
-  digital, the raw data is intact).
-- One possible colour problem in Embellish export, not checked: after writing the file it
-  still copies the source file's colour profile into it. The new render is sRGB, so a
-  source JPEG with a different profile, such as Adobe RGB, could end up wrongly tagged.
 - Can we cache raw denoise? What does LR do?
-- Fine tune overlay tint - when active
 - Fine-tune keywords managing
 - Remove the catalog panel code not being used?
 - Do we need backups when edit, and if so, should they be in the catalog?

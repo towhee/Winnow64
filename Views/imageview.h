@@ -373,6 +373,16 @@ public slots:
         return G::useBrushEraseStroke && maskEditMode
             && (maskIsBrush() || maskIsObject()) && !maskBrushStrokesJson.isEmpty();
     }
+    /* Edit > Undo (Cmd+Z) while a Brush or Object mask is painted takes back its last
+       stroke rather than a History step: MW::undoEdit tries this first and falls back
+       to History when it returns false (no tool armed, or no stroke left). Works
+       wherever the focus is, unlike the keyPressEvent path it supersedes. */
+    bool hasMaskStrokeToUndo() const
+    {
+        return maskEditMode && (maskIsBrush() || maskIsObject())
+            && !maskBrushStrokesJson.isEmpty();
+    }
+    bool undoMaskStroke();
     /* "M": hide/show the mask overlay tint (both the whole-mask composite and the per-tool preview)
        while editing a mask -- handles/cursor stay so editing continues. No-op outside mask editing. */
     void toggleMaskTint();

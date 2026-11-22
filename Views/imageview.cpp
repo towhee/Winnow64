@@ -4975,6 +4975,14 @@ void ImageView::objRebuildPreview()
     }
 }
 
+bool ImageView::undoMaskStroke()
+{
+    if (!hasMaskStrokeToUndo()) return false;
+    if (maskIsObject()) objUndoStroke();
+    else                brushUndoStroke();
+    return true;
+}
+
 void ImageView::objUndoStroke()
 {
     if (maskBrushStrokesJson.isEmpty()) return;

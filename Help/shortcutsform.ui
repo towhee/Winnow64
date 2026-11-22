@@ -376,6 +376,28 @@
        </item>
        <item>
         <property name="text">
+         <string>Undo</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Z</string>
+        </property>
+        <property name="text">
+         <string>Browse: undo the last change. Develop: step History back (or the last brush stroke)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Redo</string>
+        </property>
+        <property name="text">
+         <string>Cmd/Ctrl + Shift + Z</string>
+        </property>
+        <property name="text">
+         <string>Redo the last undone change (Ctrl + Y also works on Windows)</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>Select All</string>
         </property>
         <property name="text">

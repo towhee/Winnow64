@@ -10284,6 +10284,33 @@ void DevelopProperties::applyHistoryEntry(int index)
         debounceWriteTimer->start(kDebounceWriteMs);
 }
 
+bool DevelopProperties::canStepHistory(int delta) const
+{
+    if (!history || currentImagePath.isEmpty() || delta == 0) return false;
+    const int p = history->pos(currentImagePath);
+    if (p < 0) return false;
+    const int target = p + delta;
+    return target >= 0 && target < history->count(currentImagePath);
+}
+
+QString DevelopProperties::historyStepText(int delta) const
+{
+    if (!canStepHistory(delta)) return QString();
+    const int p = history->pos(currentImagePath);
+    /* Undo names the step being taken back (the current one); redo the one re-applied. */
+    const HistoryEntry *e = history->at(currentImagePath, delta < 0 ? p : p + delta);
+    return e ? e->action : QString();
+}
+
+bool DevelopProperties::stepHistory(int delta)
+{
+    if (G::isLogger) G::log("DevelopProperties::stepHistory", QString::number(delta));
+    if (!canStepHistory(delta)) return false;
+    /* applyHistoryEntry also ends a hover preview and the Before / After latch. */
+    applyHistoryEntry(history->pos(currentImagePath) + delta);
+    return true;
+}
+
 void DevelopProperties::revertSelectionToMatch(int index)
 {
 /*

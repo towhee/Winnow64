@@ -65,14 +65,18 @@
     - [2.13.4 Packaging (AppImage)](#2134-packaging-appimage)
     - [2.13.5 Not Yet Done on Linux](#2135-not-yet-done-on-linux)
   - [2.14 Above/Below Sliders](#214-abovebelow-sliders)
-  - [2.15 Investigations and Fixes](#215-investigations-and-fixes)
-    - [2.15.1 Two Aborts From Holding What the Model Threw Away](#2151-two-aborts-from-holding-what-the-model-threw-away)
-      - [2.15.1.1 A Proxy Index Does Not Survive a Filter Change](#21511-a-proxy-index-does-not-survive-a-filter-change)
-      - [2.15.1.2 An Invalid QVariant Is Not Equal to 0](#21512-an-invalid-qvariant-is-not-equal-to-0)
-    - [2.15.2 Two Aborts on the Way In, and a Column Resize](#2152-two-aborts-on-the-way-in-and-a-column-resize)
-      - [2.15.2.1 Opening an Image Directly Crashed](#21521-opening-an-image-directly-crashed)
-      - [2.15.2.2 The Icon Delegate Painted From Uninitialised Members](#21522-the-icon-delegate-painted-from-uninitialised-members)
-      - [2.15.2.3 A Column Width Was Measured From a Thousand Rows](#21523-a-column-width-was-measured-from-a-thousand-rows)
+  - [2.15 Undo (Edit > Undo / Redo)](#215-undo-edit--undo--redo)
+    - [2.15.1 Routing by Mode](#2151-routing-by-mode)
+    - [2.15.2 The App Stack (UndoManager)](#2152-the-app-stack-undomanager)
+    - [2.15.3 What Can Be Undone](#2153-what-can-be-undone)
+  - [2.16 Investigations and Fixes](#216-investigations-and-fixes)
+    - [2.16.1 Two Aborts From Holding What the Model Threw Away](#2161-two-aborts-from-holding-what-the-model-threw-away)
+      - [2.16.1.1 A Proxy Index Does Not Survive a Filter Change](#21611-a-proxy-index-does-not-survive-a-filter-change)
+      - [2.16.1.2 An Invalid QVariant Is Not Equal to 0](#21612-an-invalid-qvariant-is-not-equal-to-0)
+    - [2.16.2 Two Aborts on the Way In, and a Column Resize](#2162-two-aborts-on-the-way-in-and-a-column-resize)
+      - [2.16.2.1 Opening an Image Directly Crashed](#21621-opening-an-image-directly-crashed)
+      - [2.16.2.2 The Icon Delegate Painted From Uninitialised Members](#21622-the-icon-delegate-painted-from-uninitialised-members)
+      - [2.16.2.3 A Column Width Was Measured From a Thousand Rows](#21623-a-column-width-was-measured-from-a-thousand-rows)
 - [3 Folder Loading](#3-folder-loading)
   - [3.1 Overview](#31-overview)
     - [3.1.1 Phase 1: Build the DataModel (GUI Thread)](#311-phase-1-build-the-datamodel-gui-thread)
@@ -1750,13 +1754,57 @@ Develop has its own override: "Above:below sliders" in the Scope header [:] menu
 - PropertyEditor::developSliderLayout: -1 = follow the preference (the default, until the menu item is first used), 0 = single line, 1 = above/below. Settings key Develop/sliderAboveBelow, absent = -1, read in MW::loadSettings so it is set before any Develop tree is built.
 - The menu tick shows the Develop sliders' current layout, whether inherited or set. Setting it re-lays only the Develop trees (refreshAllSliderLayouts(true)).
 
-### 2.15 Investigations and Fixes
+### 2.15 Undo (Edit > Undo / Redo)
 
-#### 2.15.1 Two Aborts From Holding What the Model Threw Away
+Edit > Undo and Redo use the platform's standard keys: Cmd+Z and Cmd+Shift+Z on macOS, Ctrl+Z and Ctrl+Y (or Ctrl+Shift+Z) on Windows and Linux. They are set in MW::loadShortcuts after the customizable table, so a saved shortcut profile cannot drop them, and they are not customizable. The menu text names the step ("Undo Exposure", "Undo Rating"). With nothing to undo the item is disabled, and its disabledReason says why (MW::actionDisabledReason).
+
+A focused text field keeps its own undo: QLineEdit and QTextEdit claim these keys through ShortcutOverride before the window-level actions see them.
+
+#### 2.15.1 Routing by Mode
+
+MW::undoEdit / redoEdit (Main/mwundo.cpp) route by G::operationMode:
+
+- Develop, step 1: a Brush or Object mask being painted takes back its last stroke (ImageView::undoMaskStroke). This used to work only while ImageView had the focus, through its keyPressEvent; it now works wherever the focus is. With no stroke left, Undo falls through to step 2.
+- Develop, step 2: the current image's History moves one entry back or forward (DevelopProperties::stepHistory). This is the same revert a click on that History row makes (applyHistoryEntry), so linked multi-image steps revert with it. Redo exists only until the next edit, which truncates History as before (see [11.37 Develop History](#1137-develop-history)).
+- Preview: the app-wide stack, MW::undoManager.
+
+MW::refreshUndoActions sets the text and enabled state. It runs on UndoManager::changed, on DevelopHistory::changed, at the end of enableSelectionDependentMenus (mode switches and image changes) and when the Edit menu opens (a canvas stroke changes nothing MW listens to).
+
+#### 2.15.2 The App Stack (UndoManager)
+
+Undo/undomanager.h wraps a QUndoStack, capped at 200 steps. It lasts for the session and is not persisted.
+
+- **Record after the fact.** Winnow's operations run first (they have their own dialogs, progress and error handling) and then push a command describing what they did. So UndoCommand skips its first redo(), the one QUndoStack::push makes; subclasses implement doUndo and doRedo.
+- **No re-recording.** Undo and redo usually re-run the same setters the user's action ran, and those setters record. While a command is applied, UndoManager::isApplying() is true and push() discards whatever it is offered.
+- **Groups.** beginMacro / endMacro (or the RAII UndoMacro) make several pushes one step, for example a rating applied to 12 images. These are not QUndoStack's own macros, which push a step even when nothing was recorded. An empty group records nothing, and a group of one is pushed as that command.
+- **Key by path, not row.** Rows move with sort, filter and folder changes. A command finds its images by file path and must cope with an image that is no longer loaded.
+
+#### 2.15.3 What Can Be Undone
+
+Operations are wired in by phase:
+
+- P0: the framework, the menu items and the mode routing.
+- P1: per-image metadata (pick, rating, color label, InfoView text, rotate, keywords on the selection, Duplicate OK, geotag). This phase replaces "Recover prior pick state" (Cmd+Opt+Z).
+- P2: collections, queries, places, versions and keyword vocabulary edits.
+- P3: file operations. A deleted file comes back from the Trash together with the store rows its delete purged.
+- P4: catalog-wide keyword rewrites (rename, merge, tidy, audit, remove everywhere).
+
+These are not undoable:
+
+- Erase memory card: the deletion is permanent.
+- Ingest.
+- Export and Embellish export, including overwrite.
+- Embedded-thumbnail repair.
+- Catalog scope changes, which need a rescan.
+- View state: sort, filter, workspaces and preferences.
+
+### 2.16 Investigations and Fixes
+
+#### 2.16.1 Two Aborts From Holding What the Model Threw Away
 
 Both are the same mistake: keeping a value the model has since invalidated, and being told about it by an assert Qt only added in 6.9.
 
-##### 2.15.1.1 A Proxy Index Does Not Survive a Filter Change
+##### 2.16.1.1 A Proxy Index Does Not Survive a Filter Change
 
 Selection held shiftAnchorIndex and shiftExtendIndex as QModelIndex members across operations. SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits layoutChanged WITHOUT a persistent-index remapping (its own comment says so). A stored index then keeps reporting isValid() TRUE, because row, column and model are all still set, while its internalPointer() is a freed QSortFilterProxyModelPrivate::Mapping. isValid() cannot protect against that; the next read segfaults inside proxy_to_source.
 
@@ -1764,7 +1812,7 @@ Setting a color or a rating calls MW::filterChange, so an ordinary cull sequence
 
 Fix: they are ints now (shiftAnchorRow / shiftExtendRow), and Selection::shiftIdx(row) rebuilds an index against the proxy as it currently is, returning an invalid one when the row no longer exists. A row that has gone out of range is a recoverable answer; a dangling pointer is not.
 
-##### 2.15.1.2 An Invalid QVariant Is Not Equal to 0
+##### 2.16.1.2 An Invalid QVariant Is Not Equal to 0
 
 InfoView::updateInfo guarded its shutter-speed reciprocal with `if (value == 0)`, which compares a QVariant against QVariant(int 0). An invalid QVariant (a row whose metadata has not landed; the info panel updates on every selection, including during a load or a re-sort) is not equal to it, so the guard passed, toDouble() returned 0.0, and 1 / 0.0 is +inf. Qt 6.9 made qRound's conversion checked, so that is now qCheckedFPConversionToInteger asserting; before, it was a garbage shutter speed in the panel.
 
@@ -1772,23 +1820,23 @@ Fix: the guard tests the DOUBLE now.
 
 It was caught by the --selftest stress pass (WINNOW_SELFTEST_STRESS=1), which re-sorts mid-load and so selects rows whose metadata is still in flight. That is the pass that finds this shape of bug.
 
-#### 2.15.2 Two Aborts on the Way In, and a Column Resize
+#### 2.16.2 Two Aborts on the Way In, and a Column Resize
 
 Three things that happen at or near startup, all found while planning the ingest follow-ups rather than from a user report.
 
-##### 2.15.2.1 Opening an Image Directly Crashed
+##### 2.16.2.1 Opening an Image Directly Crashed
 
 MW::handleStartupArgs documents its argument convention as arg[0] = srcProgram, arg[1+] = paths. That is Winnets' convention. It does not hold for `Winnow <file>`, for Finder's Open With, or for a drop on the app icon: those send ONE element, which main.cpp joins into an args string with no delimiter, so argList has length 1, arg[0] IS the path, and the final else branch's unguarded argList.at(1) read past the end (an ASSERT in QList::at in a debug build, an out-of-bounds read in a release one). Every other branch guards its indexing (FocusStack tests &lt; 3, Embellish tests &lt; 2) and the function-wide guard above it is commented out.
 
 Fix: it takes arg[1] when there is one and arg[0] otherwise, and hands the path to folderAndFileSelectionChange, which is what that function is for. Opening an image now lands ON the image rather than merely in its folder.
 
-##### 2.15.2.2 The Icon Delegate Painted From Uninitialised Members
+##### 2.16.2.2 The Icon Delegate Painted From Uninitialised Members
 
 IconViewDelegate held a block of int members with no in-class initialiser (labelFontSize, fontHt, textHeadroom, textHeight, badgeSize, iconNumberSize, ratingDiam, ratingTextSize, alignVertPad, alignHorPad, starsWidth), assigned in exactly one place, setThumbDimensions, and read by paint(). Before that first call they held whatever was on the heap. Qt 6.9 made QRect's constructor compute x2 = x + w - 1 with CHECKED arithmetic, so a garbage starsWidth going into the rating badge's QRect became an abort rather than a wrong rectangle: qt_assert_x -> QCheckedInt operator+ -> QRect -> IconViewDelegate::paint (captured 2026-09-06, debug build).
 
 Fix: all are zero-initialised, which turns the worst case back into an empty rect. The file already carried a scar from the same class of bug (see the setPixelSize note in setThumbDimensions).
 
-##### 2.15.2.3 A Column Width Was Measured From a Thousand Rows
+##### 2.16.2.3 A Column Width Was Measured From a Thousand Rows
 
 MW::folderChangeCompleted measured 809 ms on a 3,404-row card folder, although almost everything in its body is one-shot, queued or O(1). The outlier was tableView->resizeColumns(), which is unconditional and calls resizeColumnToContents for each of the \~78 columns. That goes to sizeHintForColumn, which samples up to QHeaderView::resizeContentsPrecision() rows per column, and nothing had set it, so it was Qt's default of 1000: up to 78,000 delegate sizeHint() calls, each pulling a cell through the proxy, on the GUI thread.
 
@@ -2329,7 +2377,7 @@ MW::scrollToCurrentRowIfNotVisible
 
 SortFilter::filterChange calls invalidate(), which clears the proxy's mapping and emits ONE layoutAboutToBeChanged / layoutChanged pair; the mapping is rebuilt lazily and once. The incremental invalidateRowsFilter() emits one begin/endInsertRows per CONTIGUOUS RUN of rows changing visibility, and a filter over a photo library is scattered by nature: 348 signal pairs for one action, each splicing the proxy's mapping vectors and reaching three views.
 
-The price is persistent indexes. layoutChanged carries no remapping, so the selection model and any open editor are invalidated rather than moved. That is acceptable only because of what surrounds it: MW::filterChange saves the selection before and restores it after (Selection::recoverVisible, or a fresh select when the current row was filtered out), as it has always done around a sort. Nothing else in the app listens to the proxy's rowsInserted, and the snapshot rebuild is wired to layoutChanged as well, so the workers are still told. A QModelIndex held across a filter change is a dangling pointer (see [2.15.1.1 A Proxy Index Does Not Survive a Filter Change](#21511-a-proxy-index-does-not-survive-a-filter-change)).
+The price is persistent indexes. layoutChanged carries no remapping, so the selection model and any open editor are invalidated rather than moved. That is acceptable only because of what surrounds it: MW::filterChange saves the selection before and restores it after (Selection::recoverVisible, or a fresh select when the current row was filtered out), as it has always done around a sort. Nothing else in the app listens to the proxy's rowsInserted, and the snapshot rebuild is wired to layoutChanged as well, so the workers are still told. A QModelIndex held across a filter change is a dangling pointer (see [2.16.1.1 A Proxy Index Does Not Survive a Filter Change](#21611-a-proxy-index-does-not-survive-a-filter-change)).
 
 #### 4.1.2 No Re-Sort Unless the Sort Is Wrong
 
@@ -4099,7 +4147,7 @@ Both the pump and the guard are gone. The export is now a chain of steps run fro
 - startNext asks pixelSource (MW::developPixelSource) for the develop render. Its GUI-thread steps (the recipe, the metadata, the mask prerequisites) run as ordinary events between the worker steps, as that function was written to. `done` is delivered through qApp and checked against a QPointer, so a render that lands after a quit is dropped.
 - onPixels puts the render on the scene, or falls back to the image cache, else the file (loadImage).
 - compose builds the embellishment and renders the scene to a QImage. This is the one step left on the GUI thread, because the scene is a QGraphicsScene of QPixmap items.
-- EmbelWriter, on its own thread, encodes the file and the thumbnail and runs the ExifTool tag, ICC and thumbnail copies. ExifTool is a stay-open QProcess driven with blocking waits, so it is created on that thread and lives for the batch. The render runs ahead of the writer by at most two images, since each one queued is a full-size image held.
+- EmbelWriter, on its own thread, encodes the file and the thumbnail and runs the ExifTool tag and thumbnail copies. The source's ICC profile is NOT copied: the composed image is sRGB and QImage::save embeds that. The develop render is already sRGB; loadImage's fallback converts to sRGB (toSRgb) from the display profile for an image-cache hit, or from the file's embedded profile for a decode. ExifTool is a stay-open QProcess driven with blocking waits, so it is created on that thread and lives for the batch. The render runs ahead of the writer by at most two images, since each one queued is a full-size image held.
 
 With the UI live, the export depends on nothing the user can change:
 

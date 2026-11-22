@@ -2576,6 +2576,9 @@ void MW::createDevelopDock()
 {
     if (G::isLogger) G::log("MW::createDevelopDock");
     developProperties = new DevelopProperties(this, settings);
+    /* Edit > Undo in Develop follows the current image's History (Main/mwundo.cpp). */
+    if (DevelopHistory *h = developProperties->historyModel())
+        connect(h, &DevelopHistory::changed, this, &MW::refreshUndoActions);
 
     /* Every file operation flushes debounced Develop edits through this hook before it
        touches a file, so a pending sidecar write cannot land at the old path after a

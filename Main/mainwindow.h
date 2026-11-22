@@ -156,6 +156,7 @@ struct KeywordMove;
 
 class PlaceList;
 class PlaceDlg;
+class UndoManager;
 class QNetworkAccessManager;
 namespace LensDb { struct Shot; }
 namespace Segmenter { class Job; struct Segmentation; }
@@ -1640,6 +1641,12 @@ private slots:
     void restoreSavedPicks();
     void pushPick(QString fPath, QString status = "true");
     void popPick();
+    /* Edit > Undo / Redo (Cmd+Z / Cmd+Shift+Z). Routed by mode: Develop steps the
+       current image's History (a painting Brush/Object mask takes back a stroke
+       first); Preview uses the app-wide undoManager. See Undo/undomanager.h. */
+    void undoEdit();
+    void redoEdit();
+    void refreshUndoActions();
     void updatePickFromHistory(QString fPath, QString status);
     void updateClassification();
     void refreshFolders();
@@ -2030,6 +2037,8 @@ private:
     // Open with menu in File menu
 
     // Edit menu
+    QAction *undoAction = nullptr;
+    QAction *redoAction = nullptr;
     QAction *selectAllAction;
     QAction *invertSelectionAction;
     QAction *copyFilesAction;
@@ -3026,6 +3035,8 @@ private:
     EmbelCompose *embelCompose = nullptr;
     EmbelProperties *embelProperties;
     DevelopProperties *developProperties = nullptr;
+    /* App-wide undo stack (Preview mode). Develop uses its own History. */
+    UndoManager *undoManager = nullptr;
     /* Live Develop scopes (histogram + vectorscope) shown above the property tree in the
        Develop dock. Fed by updateDevelopScopes() from the displayed image / preview render;
        toggled by a button on the Develop action row and persisted

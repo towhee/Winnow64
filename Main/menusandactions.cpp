@@ -1,6 +1,7 @@
 #include "Main/mainwindow.h"
 #include "Cache/devpreviewcache.h"
 #include "Utilities/panelbuttonbar.h"
+#include "Undo/undomanager.h"
 
 void MW::createActions()
 {
@@ -488,6 +489,27 @@ void MW::createIngestActions()
 void MW::createEditActions()
 {
     // Edit Menu
+
+    /* Undo / Redo: platform keys (Cmd+Z / Cmd+Shift+Z on macOS, Ctrl+Z / Ctrl+Y on
+       Windows), set in loadShortcuts outside the customizable table. Text, enabled
+       state and its reason come from refreshUndoActions (Main/mwundo.cpp). A text
+       field with the focus keeps its own undo: QLineEdit and QTextEdit claim these
+       keys through ShortcutOverride. */
+    if (!undoManager) {
+        undoManager = new UndoManager(this);
+        connect(undoManager, &UndoManager::changed, this, &MW::refreshUndoActions);
+    }
+    undoAction = new QAction(tr("Undo"), this);
+    undoAction->setObjectName("undo");
+    undoAction->setShortcutVisibleInContextMenu(true);
+    addAction(undoAction);
+    connect(undoAction, &QAction::triggered, this, &MW::undoEdit);
+
+    redoAction = new QAction(tr("Redo"), this);
+    redoAction->setObjectName("redo");
+    redoAction->setShortcutVisibleInContextMenu(true);
+    addAction(redoAction);
+    connect(redoAction, &QAction::triggered, this, &MW::redoEdit);
 
     selectAllAction = new QAction(tr("Select All"), this);
     selectAllAction->setObjectName("selectAll");
@@ -2833,6 +2855,12 @@ void MW::createEditMenu()
     editMenu = new QMenu(this);
     editGroupAct = new QAction("Edit", this);
     editGroupAct->setMenu(editMenu);
+    editMenu->addAction(undoAction);
+    editMenu->addAction(redoAction);
+    /* Develop's History or a mask stroke can change without a signal MW hears (a
+       stroke painted on the canvas), so the items are re-read as the menu opens. */
+    connect(editMenu, &QMenu::aboutToShow, this, &MW::refreshUndoActions);
+    editMenu->addSeparator();
     editMenu->addAction(selectAllAction);
     editMenu->addAction(invertSelectionAction);
     editMenu->addSeparator();
@@ -4072,6 +4100,10 @@ void MW::enableSelectionDependentMenus()
 
     /* Depends on WHICH images are selected, not just how many (mwduplicates.cpp). */
     updateDuplicateOkAction();
+
+    /* Mode switches and image changes land here; in Develop, Undo follows the current
+       image's History. */
+    refreshUndoActions();
 }
 
 void MW::loadShortcuts(bool defaultShortcuts)
@@ -4396,6 +4428,11 @@ void MW::loadShortcuts(bool defaultShortcuts)
     }
 
     settings->endGroup();
+
+    /* Undo / Redo use the platform's standard keys and are not customizable, so they
+       are set whichever branch above ran (a saved profile has no entry for them). */
+    undoAction->setShortcuts(QKeySequence::Undo);
+    redoAction->setShortcuts(QKeySequence::Redo);
 
     loadDevelopShortcuts();
     updateShowHideBarTips();

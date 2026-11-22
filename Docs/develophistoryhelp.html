@@ -27,6 +27,17 @@ that state, and the entries above it are dimmed.</li>
 the dimmed entries are discarded &mdash; like undo, a new edit starts a new branch.</li>
 </ul>
 
+<h2>Undo and Redo keys</h2>
+<p><b>Cmd+Z</b> (Ctrl+Z) steps back one entry, the same as clicking the entry below the
+current one.  <b>Cmd+Shift+Z</b> (Ctrl+Y on Windows) steps forward again.  Edit &gt; Undo
+names the step it will take back.</p>
+
+<p>While you paint a Brush or Object mask, Cmd+Z takes back your last stroke first.  Once
+there are no strokes left, it steps back through History.</p>
+
+<p>When the cursor is in a text field, such as a mask name, Cmd+Z undoes your typing
+instead.</p>
+
 <h2>Before / After</h2>
 <p>Press <b>\</b> (Develop menu &gt; Before / After) to flip the image to <b>Before</b>
 &mdash; the Original entry &mdash; and press it again for <b>After</b>, where you are

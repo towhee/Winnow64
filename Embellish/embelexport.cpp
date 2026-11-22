@@ -2,6 +2,18 @@
 #include "Main/global.h"
 #include "Utilities/fileops.h"
 
+/*  The fallback pixels from loadImage, moved into sRGB, the space Embel draws in and the
+    export is tagged with.  `from` is the space they are encoded in; an invalid one (no
+    embedded profile, or one QColorSpace cannot parse) is taken to be sRGB already. */
+static void toSRgb(QImage &im, const QColorSpace &from)
+{
+    if (from.isValid() && from != QColorSpace(QColorSpace::SRgb)) {
+        im.setColorSpace(from);
+        im.convertToColorSpace(QColorSpace::SRgb);
+    }
+    im.setColorSpace(QColorSpace::SRgb);
+}
+
 /*  AN ASYNCHRONOUS EXPORT.  Each image is a chain of steps run from the event loop, the
     same shape as ImageExporter: startNext asks pixelSource for the develop render,
     onPixels puts it on the scene, compose builds the embellishment and renders the scene
@@ -37,8 +49,8 @@ void EmbelWriter::write(const QImage &image, const QString &src, const QString &
                         const QString &dstThumb, const QString &extension)
 {
 /*
-    Save the embellished image, then copy the source's tags and ICC into it and embed a
-    thumbnail.  The thumbnail file is only a vehicle for ExifTool and is removed after.
+    Save the embellished image, then copy the source's tags (not its ICC) into it and
+    embed a thumbnail.  The thumbnail file is only a vehicle for ExifTool and is removed after.
 */
     QString srcFun = "EmbelWriter::write";
     if (G::embelLog) G::log(srcFun, dst);
@@ -59,11 +71,11 @@ void EmbelWriter::write(const QImage &image, const QString &src, const QString &
             et = new ExifTool;
             et->setOverWrite(true);
         }
-        // copy all metadata tags from src to dst
-        // embellished pixels are upright: the source's Orientation must not follow
-        et->copyAllTags(src, dst, /*excludeIcc*/ false, /*upright*/ true);
-        // copy ICC from src to dst
-        et->copyICC(src, dst);
+        /* Copy all metadata tags from src to dst.  Embellished pixels are upright, so the
+           source's Orientation must not follow.  Nor may its ICC profile: the pixels are
+           sRGB (compose tags the image, and QImage::save embeds that), so a source in
+           Adobe RGB would leave the export wrongly tagged. */
+        et->copyAllTags(src, dst, /*excludeIcc*/ true, /*upright*/ true);
         // add thumbnail to dst
         if (hasThumb) {
             et->addThumb(dstThumb, dst);
@@ -397,6 +409,9 @@ void EmbelExport::compose(const QString &fPath)
     scene->render(&painter);
     painter.end();
     pmItem->setPixmap(QPixmap());       // release the full-size source
+    /* Everything on the scene is sRGB (the develop render, or loadImage's fallback, and
+       Embel's own drawing), and QImage::save embeds this as the export's profile. */
+    image.setColorSpace(QColorSpace::SRgb);
 
     const QString extension = embelProperties->exportFileType;
     const QString baseName = QFileInfo(fPath).baseName() + embelProperties->exportSuffix;
@@ -477,7 +492,9 @@ bool EmbelExport::loadImage(QString fPath)
 {
 /*
     The fallback when there is no develop render: the image cache, else the file decoded
-    by Qt (color managed on Windows).  Puts the image on pmItem.
+    by Qt.  Either is converted to sRGB (see toSRgb) and put on pmItem.  A cached image
+    has been color managed for the monitor (ImageDecoder::colorManage), so it is in the
+    display profile; a decoded file is in its own embedded profile.
 
     If Winnow has been launched remotely via a winnet then no folder has been loaded so
     no point in looking for an existing QImage or loading metadata.  Nor for an image
@@ -493,6 +510,11 @@ bool EmbelExport::loadImage(QString fPath)
             than exporting a blank frame.  See ImageCacheData::get. */
         QImage cached;
         if (icd->get(fPath, cached) && !cached.isNull()) {
+            QColorSpace display;
+            QFile f(G::winOutProfilePath);
+            if (!G::winOutProfilePath.isEmpty() && f.open(QIODevice::ReadOnly))
+                display = QColorSpace::fromIccProfile(f.readAll());
+            toSRgb(cached, display);
             pmItem->setPixmap(QPixmap::fromImage(cached));
             return true;
         }
@@ -513,14 +535,13 @@ bool EmbelExport::loadImage(QString fPath)
     if (im.isNull()) {
         return false;
     }
-    // color manage if available
-    #ifdef Q_OS_WIN
-    QString ext = metadata->m.type.toLower();
-    if (metadata->iccFormats.contains(ext)) {
-        QByteArray ba = dm->index(dmRow, G::ICCBufColumn).data().toByteArray();
-        ICC::transform(ba, im);
-    }
-    #endif
+    /* Qt reads the embedded profile into colorSpace() for JPEG, PNG and TIFF; where it
+       did not, fall back to the one Winnow's own parser keeps in the datamodel. */
+    QColorSpace source = im.colorSpace();
+    if (!source.isValid() && dmRow >= 0)
+        source = QColorSpace::fromIccProfile(
+            dm->index(dmRow, G::ICCBufColumn).data().toByteArray());
+    toSRgb(im, source);
     // convert QImage to QGraphicsPixmapItem
     pmItem->setPixmap(QPixmap::fromImage(im));
     return true;

@@ -401,6 +401,16 @@ public:
        panel, mark the sidecar dirty and re-render. Steps after it are discarded by the
        NEXT edit (see DevelopHistory::record). */
     void applyHistoryEntry(int index);
+    /* Edit > Undo / Redo in Develop (Cmd+Z, Cmd+Shift+Z): step the current image's
+       History one entry back (delta -1) or forward (+1) -- exactly the revert a click on
+       that row makes, linked multi-image steps included. historyStepText names the step
+       that would be undone (the current entry) or redone (the next one); empty when
+       there is none. */
+    bool canStepHistory(int delta) const;
+    QString historyStepText(int delta) const;
+    bool stepHistory(int delta);
+    /* The History model, for MW to refresh Edit > Undo when it changes. */
+    DevelopHistory *historyModel() const { return history; }
 
     /*
         BEFORE / AFTER ("\" in Develop mode, Develop > Before / After).
