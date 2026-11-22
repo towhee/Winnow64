@@ -77,8 +77,12 @@ inline constexpr int kDenoiserRevision = 1;
                      LightCraft) in place of NeutraliseClipped's cap: blown skies keep
                      their color into the clip, white fur no longer pink. See
                      RawColor::ReconstructHighlights.
+      4  2026-11-22  a pale pixel with only one channel clipped keeps its measured
+                     color instead of fading to neutral from the first clip: faint
+                     stains on blown white paint survive, as in Lightroom. See
+                     highlightrecon.cpp.
 */
-inline constexpr int kDemosaicRevision = 3;
+inline constexpr int kDemosaicRevision = 4;
 
 } // namespace RawDecoder
 

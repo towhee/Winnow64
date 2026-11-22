@@ -17,6 +17,7 @@
       o the rebuilt color has no step as more channels clip, along a ramp, or along a
         thin line with no reliable color around;
       o a pale sky by dark branches and bright foliage is not tinted (#523, Highlights -75);
+      o faint color on a white whose green alone clipped is kept (Winnow: Lightroom does);
       o unclipped pixels are left EXACTLY, and the count is the clipped pixels;
       o a clipped channel of a warm gradient is restored near its unclipped part;
       o the result does not depend on the thread count.
@@ -131,6 +132,7 @@ private slots:
     void rebuiltRampIsContinuousFromTheFirstClipToTheLast();
     void thinLineWithoutReliableColorIsContinuousWhereItClips();
     void paleSkyByDarkBranchesAndFoliageIsNotTinted();
+    void faintColorOnAGreenClippedWhiteIsKept();
     void unclippedPixelsAreLeftExactly();
     void reconstructRestoresAClippedChannel();
     void fullyClippedAndNoClipping();
@@ -262,14 +264,38 @@ void TestHighlightRecon::paleSkyByDarkBranchesAndFoliageIsNotTinted()
         const float step = MaxDiff(at(first - 1, y), at(first, y));
         QVERIFY2(step < 0.001f, qPrintable(QString("row %1: step of %2 where green clips").arg(y).arg(step)));
         for (int x = first; x < w; ++x) {
+            /* 0.0065, LightCraft 0.005: where the foliage guard rejects the borrowed
+               color, green is rebuilt at the neutral ratio (the mean of red and blue),
+               3% above this sky's. Fading pale pixels to neutral from the first clip hid
+               that (worst 0.0048); keeping measured color longer shows it (0.0059). */
             const float off = OffTheWayToNeutral(at(x, y), Chroma(sky));
-            QVERIFY2(onBranch(x) || off < 0.005f, qPrintable(QString("row %1 x %2 off the sky's way by %3").arg(y).arg(x).arg(off)));
+            QVERIFY2(onBranch(x) || off < 0.0065f,qPrintable(QString("row %1 x %2 off the sky's way by %3").arg(y).arg(x).arg(off)));
             const float beside = MaxDiff(at(x, y), at(x, 20));
             QVERIFY2(onBranch(x) || beside < 0.005f, qPrintable(QString("row %1 x %2 beside a branch differs by %3").arg(y).arg(x).arg(beside)));
         }
         const V3 end = at(w - 1, y);
         for (float v : end) QVERIFY2(std::fabs(v - 1.0f / 3.0f) < 0.002f, qPrintable(QString("row %1: end not neutral").arg(y)));
     }
+}
+
+void TestHighlightRecon::faintColorOnAGreenClippedWhiteIsKept()
+{
+    /* A white wall in sun, green clipped, red and blue well below their clips, with a
+       faint warm stain on it; an unclipped strip of the wall in shade along the top.
+       Red and blue are measured, so the stain's warmth is real and Lightroom keeps it
+       (2026-11-22 ferry). Fading pale pixels to neutral from the first clip kept 71%. */
+    const V3 wall = { 1.2f, 1.2f, 1.2f }, stain = { 1.3f, 1.2f, 1.02f };
+    Img img = FromFn(256, 128, [&](int x, int y) {
+        if (y < 24) return Sensor({ wall[0] * 0.6f, wall[1] * 0.6f, wall[2] * 0.6f });
+        if (x >= 96 && x < 160 && y >= 56 && y < 104) return Sensor(stain);
+        return Sensor(wall);
+    });
+    QVERIFY(Recon(img) > 0);
+    auto warmth = [](const V3 &q) { return (q[0] - q[2]) / (q[0] + q[2]); };
+    const float kept = warmth(Balanced(img.Get(128, 80))) / warmth(stain);
+    QVERIFY2(kept > 0.95f && kept < 1.05f, qPrintable(QString("stain keeps %1 of its warmth").arg(kept)));
+    const V3 w = Chroma(Balanced(img.Get(40, 80)));
+    for (float v : w) QVERIFY2(std::fabs(v - 1.0f / 3.0f) < 0.002f, "the clipped white wall is not white");
 }
 
 void TestHighlightRecon::unclippedPixelsAreLeftExactly()

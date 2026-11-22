@@ -522,13 +522,26 @@ int HighlightRecon::Reconstruct(float *rgb, int w, int h, const float wbIn[3], f
                 }
                 const float below = std::max(std::log2(clip / std::max(lowest, 1e-6f)), 0.0f);
                 const float way = (above > 0.0f && lowest < clip) ? above / (above + below) : 0.0f;
-                /* brightness goes over in the second half of the way, and so does the
-                   color of a strongly colored pixel; a pale one's from the start */
+                /* Brightness goes over in the second half of the way, and so does the
+                   color of a strongly colored pixel, or of one whose OWN color is still
+                   measured: only one channel clipped and the higher unclipped one well
+                   below its clip (white paint with green clipped; a faint rust stain
+                   on it is real R:B data). Otherwise a pale pixel's color goes over
+                   from the start. "Measured" fades out as that channel nears its clip,
+                   so nothing steps when a second channel clips (Winnow, not
+                   LightCraft: Lightroom keeps that color, 2026-11-22 ferry, see
+                   Documentation 10.1.2). */
                 const V3 u = { out[0] / white[0], out[1] / white[1], out[2] / white[2] };
                 const float lo = std::min(u[0], std::min(u[1], u[2]));
                 const float hi = Max3(u);
                 const float saturation = (hi > 0.0f && std::isfinite(hi)) ? 1.0f - std::max(lo, 0.0f) / hi : 1.0f;
-                const float start = 0.5f * Smoothstep(kPale0, kPale1, saturation);
+                float measured = 0.0f;
+                if (int(cl[0]) + int(cl[1]) + int(cl[2]) == 1) {
+                    float second = 0.0f;
+                    for (int c = 0; c < 3; ++c) if (!cl[c]) second = std::max(second, p[c]);
+                    measured = 1.0f - Smoothstep(kFloorLo, 1.0f, second / clip);
+                }
+                const float start = 0.5f * std::max(Smoothstep(kPale0, kPale1, saturation), measured);
                 const float tLevel = Smoothstep(0.5f, 1.0f, way);
                 const float tColor = Smoothstep(start, start + 0.5f, way);
                 if (tColor > 0.0f) {
