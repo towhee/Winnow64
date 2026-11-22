@@ -83,7 +83,7 @@ struct MaskComponent {
 };
 
 struct EditScope {
-    QString    name    = "Global";      // index 0 = Global; masks are "Mask 1", "Mask 2", ...
+    QString    name    = "Global";      // index 0 = Global; masks are named for their tool
     QString    mask;                    // empty = global; reserved (legacy single-mask slot)
     /* Mask OPACITY, 0..1 (the Mask band's "Opacity", under Halo): scales the folded
        coverage, so the scope's adjustment lands at that strength everywhere its mask

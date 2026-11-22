@@ -667,7 +667,7 @@ public slots:
        crop/warp geometry and the spot heals -- then clear the history and the sidecar
        record, for EVERY selected image. Destructive and confirmed. */
     void resetAllEdits();
-    void newScope();                              // [+] tools menu, then a "Mask n" scope
+    void newScope();                              // [+] tools menu, then a scope named for the tool
     void deleteScope();                           // [-] remove the selected scope (not Global)
     /* Pop the mask tools menu and begin the chosen tool, combining with the mask by op
        (MaskOp; the Mask band's [+] [-] [n] pass theirs, everything else adds). */

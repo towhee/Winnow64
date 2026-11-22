@@ -2835,11 +2835,16 @@ void DevelopProperties::newScope()
 
     /* The tool first: a new mask exists to carry a masked adjustment, so it is made only
        once there is something to mask with -- dismissing the menu creates nothing. No
-       name is asked: it is "Mask n" (the first above Global is "Mask 1", since Global is
-       index 0 and the new scope's index equals the pre-append size), renamed in place by
-       typing over it in the Edits bar combo. */
+       name is asked: it is the tool's menu label ("Radial Gradient", "Embedded Sky"), with
+       a numeric suffix when an unrenamed mask already has it ("Radial Gradient 2"), and is
+       renamed in place by typing over it in the Edits bar combo. Taken now, while
+       chosenEmbeddedMatte still holds the menu's pick. */
     const int tool = chooseMaskTool(true);
     if (tool < 0) return;
+    QString autoName = maskToolName(tool);
+    if (tool == int(MaskTool::Embedded) && !chosenEmbeddedMatte.isEmpty())
+        autoName = "Embedded " + EmbeddedMask::label(chosenEmbeddedMatte);
+    if (autoName.endsWith(" Mask")) autoName.chop(5);
 
     /* Adding a scope switches to it, so it leaves any pending submask behind on the
        current scope just as picking one does -- land it first. */
@@ -2850,7 +2855,7 @@ void DevelopProperties::newScope()
     s.scopes[0].name = "Global";                    // index 0 is always the Global scope
 
     EditScope l;
-    l.name = uniqueScopeName("Mask " + QString::number(s.scopes.size()));
+    l.name = uniqueScopeName(autoName);
     s.scopes.append(l);
     activeScopeIndex = s.scopes.size() - 1;                   // edit the new scope
     noteScopeEdit(l.name, "New mask scope");
@@ -10095,8 +10100,9 @@ QString DevelopProperties::historyScopeLabel() const
     if (activeScopeIndex < 0 || activeScopeIndex >= s.scopes.size())
         return QStringLiteral("Global");
     const EditScope &l = s.scopes.at(activeScopeIndex);
-    /* An unrenamed mask scope ("Mask 2") reads better as what it actually selects, so
-       an edit on a Subject mask logs as "Subject Mask: Hue". A user-chosen name wins. */
+    /* A legacy unrenamed mask scope ("Mask 2", the auto name before 2026-11-22) reads
+       better as what it actually selects, so an edit on a Subject mask logs as "Subject
+       Mask: Hue". New masks are already named for their tool. A user-chosen name wins. */
     static const QRegularExpression autoName("^Mask \\d+$");
     if (!l.components.isEmpty() && autoName.match(l.name).hasMatch())
         return maskToolName(l.components.first());

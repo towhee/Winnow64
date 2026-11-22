@@ -10,8 +10,8 @@
 <h2>What it does</h2>
 <p>Edits is the top of the Develop dock, and it answers one question: <b>what do the
 sliders below apply to?</b>  Every image starts with a single scope called <b>Global</b>,
-which covers the whole frame.  Add a mask and you get a second scope &mdash; Mask 1
-&mdash; with its own complete set of Basic, Curves, Color, Calibrate, Color Grade and
+which covers the whole frame.  Add a mask and you get a second scope, named for the
+mask tool you picked (Radial Gradient, Subject ...), with its own complete set of Basic, Curves, Color, Calibrate, Color Grade and
 Effects values, applied only where the mask says.</p>
 
 <p>Selecting a scope in the dropdown is what points the panels below at it.  The section
@@ -21,13 +21,14 @@ headers do not change; their values do.</p>
 <p>One line carries the whole scope control:</p>
 
 <ul>
-<li>The <b>dropdown</b> lists every scope on the image &mdash; Global, or Mask 1,
-Mask 2 ... .  Picking one makes it active, and everything below the bar then edits it.</li>
+<li>The <b>dropdown</b> lists every scope on the image &mdash; Global, or Radial
+Gradient, Subject ... .  Picking one makes it active, and everything below the bar then edits it.</li>
 <li>To <b>rename</b> a mask to something meaningful (Sky, Face, Foreground), type over
 its name in the dropdown and press <b>Enter</b> (<b>Esc</b> cancels).  Global cannot
 be renamed, and no mask can be named Global.</li>
 <li><b>[+]</b> adds a new mask: pick a mask tool from the menu and the mask is made
-with it, named Mask 1, Mask 2 ... (type over the name in the dropdown to rename
+with it, named for the tool: Radial Gradient, then Radial Gradient 2 for a second
+one while the first still has that name (type over the name in the dropdown to rename
 it).</li>
 <li>The <b>eye</b> shows or hides the selected scope's whole contribution &mdash; a
 one-click before / after of everything in it, with no values lost.</li>
