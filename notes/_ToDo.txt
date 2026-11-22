@@ -7,7 +7,6 @@ WHAT'S NEW
 
 
 BUGS / TO DO
-- A minus submask overlay tint should only erase tint, not add
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (record, list, replay a series of steps)

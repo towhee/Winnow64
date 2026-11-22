@@ -2,6 +2,7 @@
 #include "Utilities/waitcursor.h"
 #include "Develop/subjectmask.h"     // autoSubmaskIsNull: the AI refs' "found nothing"
 #include "Develop/skymask.h"
+#include "Develop/embeddedmask.h"   // camera mattes in the file (iPhone ProRAW)
 #include "Develop/beammask.h"      // kDefaultWidth: the Beam's default + panel sync
 #include "Develop/cameraprofilestore.h"
 #include "ImageFormats/Dng/dng.h"
@@ -1242,7 +1243,7 @@ void DevelopProperties::syncMaskPanel()
         /* "Brush Submask", not "Brush Mask": each row is a submask of the mask the
            Mask band above names. maskToolName stays "... Mask" for the history, the
            canvas legend and the add dialog. */
-        r.toolName = maskToolName(m.tool);
+        r.toolName = maskToolName(m);
         if (r.toolName.endsWith(" Mask"))
             r.toolName = r.toolName.chopped(5) + " Submask";
         /* An auto (AI) submask whose model found nothing to select says so, or it reads
@@ -1374,7 +1375,7 @@ void DevelopProperties::setSubmaskEnabled(int index, bool on)
     if (!scope || index < 0 || index >= scope->components.size()) return;
     if (scope->components[index].enabled == on) return;
     scope->components[index].enabled = on;
-    noteEdit((on ? "Show " : "Hide ") + maskToolName(scope->components.at(index).tool));
+    noteEdit((on ? "Show " : "Hide ") + maskToolName(scope->components.at(index)));
     buildTree();
     emit paramsChanged();       // the fold skips a disabled component -> re-composite
     noteMaskInteraction();
@@ -1394,7 +1395,7 @@ void DevelopProperties::setSubmaskOp(int index, int op)
        and the render would keep showing the old op until commit. */
     if (index == pendingIdx) { pendingOp = op; latchedMaskOp = op; }
     noteEdit(SubmaskList::opName(op) + " "
-             + maskToolName(scope->components.at(index).tool));
+             + maskToolName(scope->components.at(index)));
     buildTree();
     emit paramsChanged();
     noteMaskInteraction();
@@ -1406,7 +1407,7 @@ void DevelopProperties::toggleSubmaskInverted(int index)
     if (!scope || index < 0 || index >= scope->components.size()) return;
     MaskComponent &m = scope->components[index];
     m.inverted = !m.inverted;
-    noteEdit("Invert " + maskToolName(m.tool), m.inverted ? "On" : "Off");
+    noteEdit("Invert " + maskToolName(m), m.inverted ? "On" : "Off");
     /* The panel's Invert checkbox shows the same flag when this submask is the open one;
        buildTree -> syncMaskPanel repaints the row, so only the editor needs seeding. */
     if (index == selectedMaskIndex && maskPanel && maskPanel->editor())
@@ -1432,7 +1433,7 @@ void DevelopProperties::moveSubmask(int from, int to)
     if      (pendingIdx == from) pendingIdx = to;
     else if (pendingIdx > from && pendingIdx <= to) pendingIdx--;
     else if (pendingIdx < from && pendingIdx >= to) pendingIdx++;
-    noteEdit("Reorder " + maskToolName(scope->components.at(to).tool));
+    noteEdit("Reorder " + maskToolName(scope->components.at(to)));
     buildTree();
     emit paramsChanged();
     noteMaskInteraction();
@@ -1448,7 +1449,7 @@ void DevelopProperties::duplicateSubmask(int index)
     scope->components.insert(index + 1, copy);
     if (selectedMaskIndex > index) selectedMaskIndex++;
     if (pendingIdx > index) pendingIdx++;
-    noteEdit("Duplicate " + maskToolName(copy.tool));
+    noteEdit("Duplicate " + maskToolName(copy));
     buildTree();
     emit paramsChanged();
     noteMaskInteraction();
@@ -1504,7 +1505,7 @@ QString DevelopProperties::maskAttributeScopeText()
     if (!mm) return QString();
     if (!isStrokeTool(mm->tool))
         return tr("Attribute adjustment applies to this %1 submask")
-                   .arg(maskToolName(mm->tool));
+                   .arg(maskToolName(*mm));
 
     const int n = brushStrokeCount(mm->paramsJson);
     /* ADDING. With nothing painted yet there is no last stroke to name, so Shift or not
@@ -1771,6 +1772,8 @@ void DevelopProperties::beginMaskTool(int tool, int op)
     m.op   = int(MaskOp::Add);   // the real op is written on commit, from pendingOp
     m.tool = tool;
     m.paramsJson = defaultMaskParams(tool);
+    if (tool == int(MaskTool::Embedded))         // which of the file's mattes
+        m.paramsJson = EmbeddedMask::paramsFor(chosenEmbeddedMatte);
     if (tool == int(MaskTool::Brush)) loadBrushSettings(m);   // last-used brush
     /* The AI masks start CRISP: their cutout or matte is the result, and Feather is a
        real spatial blur on top of it (Develop/maskfeather.h) -- at the old default of 50
@@ -1779,7 +1782,7 @@ void DevelopProperties::beginMaskTool(int tool, int op)
        region ends.) */
     if (tool == int(MaskTool::Sky) || tool == int(MaskTool::Segmenter)
         || tool == int(MaskTool::Subject) || tool == int(MaskTool::Background)
-        || tool == int(MaskTool::Object))
+        || tool == int(MaskTool::Object) || tool == int(MaskTool::Embedded))
         m.feather = 0.0f;
 
     /* Append the submask; its settings render in the panel's embedded MaskEditor. EVERY
@@ -1808,7 +1811,7 @@ void DevelopProperties::beginMaskTool(int tool, int op)
         }
     }
 
-    noteEdit("Add " + maskToolName(tool));
+    noteEdit("Add " + maskToolName(m));
     buildTree();                 // emits maskEditBegin for the on-canvas overlay
     /* Adding a submask engages the mask panel, so the veil comes up (maskVeilEngaged).
        A second or later submask used to start HIDDEN, on the grounds that the tool's own
@@ -1983,7 +1986,7 @@ void DevelopProperties::commitPendingMask(bool keepVeil)
     int op = (pendingIdx == 0) ? int(MaskOp::Add)   // nothing to combine the first with
                                : pendingOp;
     scope->components[pendingIdx].op = op;        // fold the submask in (sequential)
-    const QString toolName = maskToolName(scope->components[pendingIdx].tool);
+    const QString toolName = maskToolName(scope->components[pendingIdx]);
     pendingIdx = -1;
     pendingOp = int(MaskOp::Add);
     latchedMaskOp = int(MaskOp::Add);
@@ -2925,8 +2928,18 @@ QString DevelopProperties::maskToolName(int tool)
     case MaskTool::RefineBrush:     return "Refine Brush";
     case MaskTool::Segmenter:       return "Segmenter";
     case MaskTool::Beam:            return "Beam Gradient Mask";
+    case MaskTool::Embedded:        return "Embedded Mask";
     }
     return "Mask";
+}
+
+QString DevelopProperties::maskToolName(const MaskComponent &m)
+{
+    if (m.tool == int(MaskTool::Embedded)) {
+        const QString urn = EmbeddedMask::urnOf(m.paramsJson);
+        if (!urn.isEmpty()) return "Embedded " + EmbeddedMask::label(urn) + " Mask";
+    }
+    return maskToolName(m.tool);
 }
 
 QString DevelopProperties::opName(int op)
@@ -3803,12 +3816,20 @@ int DevelopProperties::chooseMaskTool(bool firstMask)
     -1 when the menu is dismissed.
 
     Grouped by separators in the order the tools answer different questions: draw it,
-    pick it by content, let a model find it, refine what is there. A list rather than an
-    enum range: tools are APPENDED to MaskTool (it is serialized), so a group's members
-    need not be contiguous -- the Segmenter sits with the Automatic ones.
+    pick it by content, let a model find it, use a mask the camera stored in the file,
+    refine what is there. A list rather than an enum range: tools are APPENDED to MaskTool
+    (it is serialized), so a group's members need not be contiguous -- the Segmenter sits
+    with the Automatic ones.
+
+    The Embedded group is per image: one entry per matte the file carries (an iPhone
+    ProRAW's person, skin, sky, ...; Develop/embeddedmask.h), and absent when it has none.
+    They all return MaskTool::Embedded; the matte picked is left in chosenEmbeddedMatte.
 */
     QMenu menu(this);
     menu.setToolTipsVisible(true);
+    chosenEmbeddedMatte.clear();
+    const QStringList mattes = currentImagePath.isEmpty()
+        ? QStringList() : EmbeddedMask::list(currentImagePath);
     const QVector<QVector<int>> groups = {
         {int(MaskTool::LinearGradient), int(MaskTool::RadialGradient),
          int(MaskTool::Beam), int(MaskTool::Brush)},
@@ -3818,6 +3839,17 @@ int DevelopProperties::chooseMaskTool(bool firstMask)
         {int(MaskTool::RefineBrush)}};
     for (int g = 0; g < groups.size(); ++g) {
         if (g) menu.addSeparator();
+        /* The camera's own mattes, just above the Refine Brush (the last group). */
+        if (g == groups.size() - 1 && !mattes.isEmpty()) {
+            for (const QString &urn : mattes) {
+                QAction *a = menu.addAction("Embedded " + EmbeddedMask::label(urn));
+                a->setData(int(MaskTool::Embedded));
+                a->setProperty("matte", urn);
+                a->setToolTip("A mask the camera stored in this file -- no model needed.\n"
+                              + urn);
+            }
+            menu.addSeparator();
+        }
         for (int t : groups.at(g)) {
             // "Linear Gradient Mask" -> "Linear Gradient": every entry here is a mask
             QString name = maskToolName(t);
@@ -3843,7 +3875,9 @@ int DevelopProperties::chooseMaskTool(bool firstMask)
         }
     }
     QAction *chosen = menu.exec(QCursor::pos());
-    return chosen ? chosen->data().toInt() : -1;
+    if (!chosen) return -1;
+    chosenEmbeddedMatte = chosen->property("matte").toString();
+    return chosen->data().toInt();
 }
 
 void DevelopProperties::showMaskMenu(int op)
@@ -3876,7 +3910,7 @@ void DevelopProperties::deleteMask(int index)
 {
     EditScope *scope = activeScope();
     if (!scope || index < 0 || index >= scope->components.size()) return;
-    const QString goneTool = maskToolName(scope->components.at(index).tool);
+    const QString goneTool = maskToolName(scope->components.at(index));
     scope->components.removeAt(index);
     if      (selectedMaskIndex == index) selectedMaskIndex = -1;   // its settings close
     else if (selectedMaskIndex >  index) selectedMaskIndex--;      // follow the tool
@@ -4294,7 +4328,8 @@ void DevelopProperties::updateMaskEdit()
             m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange) ||
             m.tool == int(MaskTool::Subject) || m.tool == int(MaskTool::Sky) ||
             m.tool == int(MaskTool::Background) || m.tool == int(MaskTool::Depth) ||
-            m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter)) {
+            m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter) ||
+            m.tool == int(MaskTool::Embedded)) {
             emit maskEditBegin(m.tool, m.op, m.inverted, m.paramsJson, m.feather);
             return;
         }
@@ -4347,7 +4382,7 @@ void DevelopProperties::setActiveMaskParams(const QString &paramsJson)
         syncMaskSlider("maskBeamTaper", o.value("taper").toDouble(0.0));
     }
     /* One entry per tool being shaped, not per drag tick / per brush stroke. */
-    noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex].tool),
+    noteEdit("Edit " + maskToolName(scope->components[selectedMaskIndex]),
              QString(), QString("mask/geom/%1").arg(selectedMaskIndex));
     /* A Color Range pipette pick/remove arrives here too -> refresh the wheel dots
        (bounds unchanged). No tree rebuild, so the wheel survives and just repaints.
@@ -10064,7 +10099,7 @@ QString DevelopProperties::historyScopeLabel() const
        an edit on a Subject mask logs as "Subject Mask: Hue". A user-chosen name wins. */
     static const QRegularExpression autoName("^Mask \\d+$");
     if (!l.components.isEmpty() && autoName.match(l.name).hasMatch())
-        return maskToolName(l.components.first().tool);
+        return maskToolName(l.components.first());
     return l.name;
 }
 

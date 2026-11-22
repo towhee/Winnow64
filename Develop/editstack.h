@@ -55,13 +55,16 @@ enum class MaskTool {
     Segmenter,
     /* Beam Gradient: a band along a spine, feathered on both sides, optionally tapered
        (Develop/beammask.h). paramsJson {x1,y1,x2,y2,width,taper}. */
-    Beam
+    Beam,
+    /* Embedded: a matte the camera stored in the file -- an iPhone ProRAW semantic mask
+       (person, skin, hair, sky, ...; Develop/embeddedmask.h). paramsJson {"name": urn}. */
+    Embedded
 };
 /* The last MaskTool. A loaded mask whose tool is past it is dropped as "unknown tool"
    (sanitize). MOVE THIS when appending a tool: it was left at RefineBrush when Segmenter
    was added, so every Segmenter mask was dropped on load -- and a preview top-up then
    wrote the stripped stack back to the sidecar. */
-constexpr MaskTool kLastMaskTool = MaskTool::Beam;
+constexpr MaskTool kLastMaskTool = MaskTool::Embedded;
 enum class MaskOp      { Add, Subtract, Intersect };   // APPEND ONLY (serialized as int)
 enum class MaskCombine { Union, Intersect };
 

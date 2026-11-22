@@ -192,6 +192,8 @@ public:
     int  activeMaskIndex() const;
     /* Display name of a MaskTool (public so MW can label the on-canvas op chip). */
     static QString maskToolName(int tool);
+    /* As above, but names an Embedded submask by its matte ("Embedded Person Mask"). */
+    static QString maskToolName(const MaskComponent &m);
 
     /* The current image's stored geometry (for loading the crop overlay), and a setter the crop
        tool calls on commit (writes it into the image's EditStack + marks the sidecar dirty). */
@@ -1851,6 +1853,9 @@ private:
     /* The mask tools menu at the cursor, grouped by separators; the MaskTool picked, or
        -1. firstMask greys the Refine Brush (it needs a mask above it). */
     int chooseMaskTool(bool firstMask);
+    /* The matte URN picked when chooseMaskTool returns MaskTool::Embedded; beginMaskTool
+       writes it into the new submask's params. */
+    QString chosenEmbeddedMatte;
     void cancelMaskTool();                   // [x]/Esc: discard the pending submask
     MaskComponent *editingMaskComp();        // the tool being built, or null
 

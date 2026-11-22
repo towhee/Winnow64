@@ -3413,6 +3413,12 @@ private:
                                const EditParams &base, int degrees, int longEdge);
     void ensureSegmenterMask(const QString &fPath, const WorkingImage &work,
                              const EditParams &base, int degrees, const QString &paramsJson);
+    /* The coverage of one Embedded submask: the camera's matte read from the file
+       (Develop/embeddedmask.h), rotated to the output orientation and registered in the
+       Object Mask's store under embeddedRefKey. No model, ~10 ms; rebuilt when the
+       orientation changes (embeddedMaskDegrees). */
+    void ensureEmbeddedMask(const QString &fPath, const QString &paramsJson);
+    QHash<QString, int> embeddedMaskDegrees;    // embeddedRefKey -> degrees it was built at
     Segmenter::Job *segmenterJob = nullptr;
     QTimer *segmenterProgressTimer = nullptr;
     QHash<QString, std::shared_ptr<const Segmenter::Segmentation>> segmenterCache;

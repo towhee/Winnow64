@@ -457,6 +457,7 @@
     - [11.15.19 Select Subject](#111519-select-subject)
     - [11.15.20 Select Sky](#111520-select-sky)
     - [11.15.21 Refine Brush](#111521-refine-brush)
+    - [11.15.22 Embedded Masks](#111522-embedded-masks)
   - [11.16 Model Inference](#1116-model-inference)
     - [11.16.1 More AI Masks](#11161-more-ai-masks)
       - [11.16.1.1 Select Background](#111611-select-background)
@@ -6425,7 +6426,7 @@ Committed submasks re-open (2026-08-13). commitPendingMask() used to set selecte
 
 #### 11.15.9 The Mask Tools Menu
 
-DevelopProperties::chooseMaskTool (2026-10-31; it replaced the Create Submask dialog, SubmaskDialog, 2026-09-21, which is deleted). A QMenu at the cursor listing the mask tools, grouped by separators: Drawn (Linear / Radial Gradient, Beam, Brush), Content (Color / Luminance Range), Automatic (Subject, Sky, Background, Depth, Object, Segmenter), Refine (Refine Brush). Names drop maskToolName()'s " Mask" suffix. Returns the MaskTool, or -1 when dismissed.
+DevelopProperties::chooseMaskTool (2026-10-31; it replaced the Create Submask dialog, SubmaskDialog, 2026-09-21, which is deleted). A QMenu at the cursor listing the mask tools, grouped by separators: Drawn (Linear / Radial Gradient, Beam, Brush), Content (Color / Luminance Range), Automatic (Subject, Sky, Background, Depth, Object, Segmenter), Embedded (one "Embedded <matte>" entry per camera matte in the file, absent when it has none; see [11.15.22 Embedded Masks](#111522-embedded-masks)), Refine (Refine Brush). Names drop maskToolName()'s " Mask" suffix. Returns the MaskTool, or -1 when dismissed.
 
 - The OP is not asked in the menu: it is the button that raised it. The Mask band carries [+] [-] [n] (MaskPanel levelAddBtn / levelSubtractBtn / levelIntersectBtn, glyphs from SubmaskList::opIcon, so the op picked is the glyph the row wears) -> addSubmaskRequested(op) -> showMaskMenu(op) -> beginMaskTool(tool, op). Everything else adds: New mask, M (MW::developAddToMask), the scope menu's "Modify &lt;mask> mask", the band [:] "Add submask" and the tree's legacy add rows.
 - New mask (DevelopProperties::newScope: N, the Edits bar [+], the action row button) pops the menu FIRST and makes the scope only once a tool is picked, named "Mask n" with no dialog -- dismissing the menu creates nothing. Rename it in place in the Edits bar combo ([11.13.3](#11133-the-edits-bar-scopeheader)).
@@ -6681,6 +6682,15 @@ Modes (Add / Remove ARE the op: Add = add, Subtract or Intersect = remove, so th
 - On the canvas it IS a brush: DevelopProperties::updateMaskEdit hands ImageView the Brush tool, so painting, size, flow, auto-mask, cursor, undo and shortcuts are the Brush's own; setActiveMaskParams carries the "mode" key across (ImageView's brush JSON has none); editrotate rotates its strokes; isBrushCanvasTool / isStrokeTool cover it.
 - The guide: MW::buildRefineGuide, the UNDEVELOPED working image through toWorkingColor (as-shot WB + camera matrix), / white, display gamma, clamped 0..1, built once per render tick only when a scope carries a Refine Brush (componentsHaveRefine), on the proxy grid for the veil. Undeveloped for Halo's reason (a guide that moved with the sliders would make the mask chase the adjustment). With no guide (the veil before a proxy exists) it degrades to the plain brush it looks like; the veil's focus-submask footprint rasterises it as a Brush.
 - Proof: prototyped in Python on the user's "Sky Mask Test Images" (foreground snow and snow clumps removed with the sky between untouched; a glacier removed without the paler sky above it; ridge halos under a Fix Edge stroke -66% Dempster / -36% Joffrey); the C++ diffed against the prototype on six real cases (exact); tests/unit/tst_maskrefine.cpp pins the rules on synthetic scenes (intruder out / sky kept; paler horizon sky kept, which caught an Otsu off-by-one; holes added / trees not; pale holes added far from any masked pixel with trees and snow left out; lit snow left out beside pale horizon sky; Add deterministic; a mis-registered edge snapped; outside the region bit-identical). Cost: \~20-40 ms per stroke region at 2048 px (crop-local).
+
+#### 11.15.22 Embedded Masks
+
+MaskTool::Embedded (2026-11-22, untested in-app): a submask whose coverage is a matte the CAMERA stored in the file. Today that is iPhone ProRAW: DNG 1.6 "Semantic Mask" SubIFDs (PhotometricInterpretation 52527), 8-bit, one JPEG strip, quarter raw size, SENSOR-oriented, named by tag SemanticName (0xCD2E), e.g. urn:com:apple:photo:2018:aux:portraiteffectsmatte (person), 2019:aux:semanticskinmatte / hair / teeth / glasses / sky. A matte is present only when the phone found that content.
+
+- Reader: Develop/embeddedmask.h (header-only, TiffWalk). list(key) walks IFD0, its chain and SubIFDs and returns the URNs (cached per path); decode(key, urn) reads and JPEG-decodes the strip(s). label(urn) gives the short name (Person, Skin, Hair, Teeth, Glasses, Sky; else the URN's last segment). A version key is resolved to its source file (VersionKey::sourceOf).
+- Menu: chooseMaskTool adds one "Embedded <label>" entry per matte in its own group just above the Refine Brush; each returns MaskTool::Embedded and leaves the URN in chosenEmbeddedMatte, which beginMaskTool writes as paramsJson {"name": urn}. Starts at Feather 0, like the AI masks. Editor rows: the default Feather / Edge / Invert. Submask rows and History name it "Embedded <label> Mask" (maskToolName(const MaskComponent &)).
+- Coverage: MW::ensureEmbeddedMask decodes the matte, rotates it by developOrientationDegrees (EXIF orientation + user rotation; output space is the oriented frame whether the work is scene- or display-referred) and registers it full-frame in ObjectMask's store under embeddedRefKey (path + "|emb|" + urn), recording the degrees so a rotation rebuilds it. buildMaskBuffer samples it through the Object branch, so Feather, Edge, invert and the fold cache behave as for an object cutout. Built from onAiMaskEditBegin (no model, no download gate) and from every place that builds Object / Segmenter refs (stackHasObjectMask covers Embedded).
+- Not handled: mirrored orientations (2, 4, 5, 7, as developOrientationDegrees), a DefaultCrop smaller than the matte's frame, and any lens warp Develop applies to the raw that Apple's matte does not share. Not portable across a multi-image selection (isPortableScope) and not part of the AI-mask probe.
 
 ### 11.16 Model Inference
 

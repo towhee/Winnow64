@@ -49,6 +49,7 @@
 #include "Develop/depthmask.h"
 #include "Develop/lensblur.h"       // Lens > Lens Blur, on the composited frame
 #include "Develop/objectmask.h"
+#include "Develop/embeddedmask.h"
 #include "Develop/develop.h"
 #include "Utilities/screensampler.h"
 #include "Develop/sharpen.h"        // updateSharpenMaskPreview: the edge gate
@@ -11339,6 +11340,13 @@ QString objectRefKey(const QString &fPath, const QString &paramsJson)
     return fPath + "|obj|" + QString::number(qHash(paramsJson));
 }
 
+/* ObjectRef store key for an Embedded submask: path + the matte's URN. Registered by
+   MW::ensureEmbeddedMask, looked up by buildMaskBuffer. */
+QString embeddedRefKey(const QString &fPath, const QString &paramsJson)
+{
+    return fPath + "|emb|" + EmbeddedMask::urnOf(paramsJson);
+}
+
 /* ---- Mask FOLD-PREFIX cache ----
 
    The component fold is SEQUENTIAL per pixel (m = max(m,c) / m *= 1-c / m *= c), so the
@@ -12031,7 +12039,8 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             d.rhi       = o.value("hi").toDouble(0.5);
             comps.append(d);
         }
-        else if (m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter)) {
+        else if (m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter)
+                 || m.tool == int(MaskTool::Embedded)) {
             /* A Segmenter with nothing selected has no coverage, and will have none
                until a click: not "a ref still being built", so it must not mark the
                refs unready (that keeps the result out of the fold cache). Skip it. */
@@ -12040,7 +12049,11 @@ std::vector<float> buildMaskBuffer(const QVector<MaskComponent> &components, int
             /* Per-brush ref (keyed path+brush), built by MW::ensureObjectMask -- or for
                a Segmenter, per selection, by ensureSegmenterMask. Absent (not yet
                decoded, or this brush empty) => no effect, like an unbuilt SubjectRef. */
-            auto objRef = ObjectMask::getRef(objectRefKey(fPath, m.paramsJson));
+            /* An Embedded submask's ref is the camera's matte (MW::ensureEmbeddedMask),
+               full frame, sampled the same way. */
+            auto objRef = ObjectMask::getRef(m.tool == int(MaskTool::Embedded)
+                                             ? embeddedRefKey(fPath, m.paramsJson)
+                                             : objectRefKey(fPath, m.paramsJson));
             if (!objRef || !objRef->valid()) {            // object not ready -> no effect
                 refsHereReady = false;
                 continue;
@@ -13281,13 +13294,15 @@ bool stackHasDepthMask(const DevelopProperties::StackRenderJob &job)
     return false;
 }
 
-/* True if any enabled scope carries an AI Object mask or a Segmenter -- each needs its
-   own ObjectRef (MW::ensureObjectMask / ensureSegmenterMask) before the composite. */
+/* True if any enabled scope carries an AI Object mask, a Segmenter or an Embedded matte --
+   each needs its own ObjectRef (MW::ensureObjectMask / ensureSegmenterMask /
+   ensureEmbeddedMask) before the composite. */
 bool stackHasObjectMask(const DevelopProperties::StackRenderJob &job)
 {
     for (const DevelopProperties::StackRenderJob::Scope &L : job.scopes)
         for (const MaskComponent &m : L.components)
-            if (m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter))
+            if (m.tool == int(MaskTool::Object) || m.tool == int(MaskTool::Segmenter)
+                || m.tool == int(MaskTool::Embedded))
                 return true;
     return false;
 }
@@ -14004,6 +14019,51 @@ void MW::ensureSegmenterMask(const QString &fPath, const WorkingImage &work,
     ObjectMask::putRef(refKey, r);
 }
 
+void MW::ensureEmbeddedMask(const QString &fPath, const QString &paramsJson)
+{
+/*
+    The camera's matte (Develop/embeddedmask.h) is SENSOR-oriented, like the raw. Output
+    space is the oriented frame whatever the working image is -- a scene-referred work is
+    rotated by the render, a display-referred one already is -- so the matte is turned by
+    the image's own orientation + user rotation (developOrientationDegrees ignores its work
+    argument; reads the model, GUI thread). Registered full-frame in ObjectMask's store.
+    A missing or undecodable matte registers nothing: the submask then has no effect, as
+    an unbuilt AI ref.
+*/
+    if (G::isLogger) G::log("MW::ensureEmbeddedMask");
+    const QString urn = EmbeddedMask::urnOf(paramsJson);
+    if (fPath.isEmpty() || urn.isEmpty()) return;
+    const QString refKey = embeddedRefKey(fPath, paramsJson);
+    int degrees = developOrientationDegrees(WorkingImage(), fPath) % 360;
+    if (degrees < 0) degrees += 360;
+    if (ObjectMask::getRef(refKey) && embeddedMaskDegrees.value(refKey, -1) == degrees)
+        return;                                             // built, same orientation
+
+    cv::Mat1b matte;
+    if (!EmbeddedMask::decode(fPath, urn, matte)) {
+        qWarning("Embedded mask: could not read %s from %s", qUtf8Printable(urn),
+                 qUtf8Printable(fPath));
+        return;
+    }
+    if      (degrees == 90)  cv::rotate(matte, matte, cv::ROTATE_90_CLOCKWISE);
+    else if (degrees == 180) cv::rotate(matte, matte, cv::ROTATE_180);
+    else if (degrees == 270) cv::rotate(matte, matte, cv::ROTATE_90_COUNTERCLOCKWISE);
+
+    auto r = std::make_shared<ObjectMask::ObjectRef>();
+    r->w = matte.cols;
+    r->h = matte.rows;
+    r->cov.resize(size_t(r->w) * size_t(r->h));
+    for (int y = 0; y < r->h; ++y) {
+        const uchar *src = matte.ptr<uchar>(y);
+        float *dst = r->cov.data() + size_t(y) * r->w;
+        for (int x = 0; x < r->w; ++x) dst[x] = src[x] * (1.0f / 255.0f);
+    }
+    r->x0 = 0.0; r->y0 = 0.0; r->x1 = 1.0; r->y1 = 1.0;     // the whole frame
+    if (!r->valid()) return;
+    ObjectMask::putRef(refKey, r);
+    embeddedMaskDegrees.insert(refKey, degrees);
+}
+
 void MW::onSpotEditBegin()
 {
 /*
@@ -14035,6 +14095,13 @@ void MW::onAiMaskEditBegin(int tool, int /*op*/, bool /*inverted*/,
 */
     /* Any other tool opening closes the Segmenter's claim on the image. */
     if (tool != int(MaskTool::Segmenter)) segmenterWanted = false;
+    /* An Embedded matte is read from the file: no model, no download gate, no working
+       image needed. Build it now so the veil shows on add/select. */
+    if (tool == int(MaskTool::Embedded)) {
+        if (!dm->currentKey.isEmpty()) ensureEmbeddedMask(dm->currentKey, paramsJson);
+        imageView->viewport()->update();
+        return;
+    }
     /* The Segmenter finds every object up front, on a worker -- not a reference built
        here and now like the others. */
     if (tool == int(MaskTool::Segmenter)) {
@@ -14303,6 +14370,8 @@ void MW::updateMaskOverlayTint()
             ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
         else if (m.tool == int(MaskTool::Segmenter))
             ensureSegmenterMask(fPath, *work, base, degrees, m.paramsJson);
+        else if (m.tool == int(MaskTool::Embedded))
+            ensureEmbeddedMask(fPath, m.paramsJson);
     }
 
     /* Composite at a capped resolution (geometry is normalized, so any size is faithful) -- the tint
@@ -14868,6 +14937,8 @@ void MW::renderDevelopPreview(bool fullRes)
                     ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
                 else if (m.tool == int(MaskTool::Segmenter))
                     ensureSegmenterMask(fPath, *work, mj.global, degrees, m.paramsJson);
+                else if (m.tool == int(MaskTool::Embedded))
+                    ensureEmbeddedMask(fPath, m.paramsJson);
             }
     /* Brush luminance auto-mask: guarantee the guide is registered (built from the loupe,
        the same one the overlay samples) so proxy and settle confine identically -- else a
@@ -15478,6 +15549,8 @@ void MW::renderDevelopFullResAsync()
                     ensureObjectMask(fPath, *work, mj.global, degrees, m.paramsJson);
                 else if (m.tool == int(MaskTool::Segmenter))
                     ensureSegmenterMask(fPath, *work, mj.global, degrees, m.paramsJson);
+                else if (m.tool == int(MaskTool::Embedded))
+                    ensureEmbeddedMask(fPath, m.paramsJson);
             }
     /* Register the brush luminance auto-mask guide (GUI thread) before dispatching the
        worker, so the off-thread render confines the stroke the same as the proxy did. */
@@ -17792,6 +17865,8 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                         else if (c.tool == int(MaskTool::Segmenter))
                             ensureSegmenterMask(fPath, *work, mj.global, degrees,
                                                 c.paramsJson);
+                        else if (c.tool == int(MaskTool::Embedded))
+                            ensureEmbeddedMask(fPath, c.paramsJson);
                     }
 
             /* Step 3 (worker): the composite itself. src is the raw-denoised base when
