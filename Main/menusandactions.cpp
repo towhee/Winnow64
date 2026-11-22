@@ -1336,7 +1336,7 @@ void MW::createUtilActions()
     addAction(developNewScopeAction);
     connect(developNewScopeAction, &QAction::triggered, this, &MW::developNewScope);
 
-    developAddToMaskAction = new QAction(tr("Tweak Mask\tM"), this);
+    developAddToMaskAction = new QAction(tr("New Submask\tM"), this);
     developAddToMaskAction->setObjectName("developAddToMask");
     developAddToMaskAction->setShortcutVisibleInContextMenu(true);
     addAction(developAddToMaskAction);
@@ -1348,8 +1348,9 @@ void MW::createUtilActions()
     addAction(developSpotAction);
     connect(developSpotAction, &QAction::triggered, this, &MW::developReplaceShortcut);
 
-    screenSamplerAction = new QAction(tr("Screen Sampler"), this);
+    screenSamplerAction = new QAction(tr("Screen Sampler\tC"), this);
     screenSamplerAction->setObjectName("screenSampler");
+    screenSamplerAction->setShortcutVisibleInContextMenu(true);
     addAction(screenSamplerAction);
     connect(screenSamplerAction, &QAction::triggered, this, &MW::toggleScreenSampler);
 
@@ -4427,10 +4428,13 @@ void MW::loadDevelopShortcuts()
     developShortcuts.clear();
     developShortcuts[Qt::Key_R] = developTransformAction;   // global: unbound
     developShortcuts[Qt::Key_N] = developNewScopeAction;    // global: unbound
-    developShortcuts[Qt::Key_M] = developAddToMaskAction;     // global: unbound
+    developShortcuts[Qt::Key_M] = developAddToMaskAction;   // global: unbound
     developShortcuts[Qt::Key_O] = toggleMaskOverlayAction;  // global: Open folder
     developShortcuts[Qt::Key_S] = developSpotAction;        // global: Slideshow
     developShortcuts[Qt::Key_W] = developWbSamplerAction;   // global: New Workspace
+    /* C is free in Develop: Compare needs two images and is disabled there (see
+       enableSelectionDependentMenus), so the arbiter claims it for the Screen Sampler. */
+    developShortcuts[Qt::Key_C] = screenSamplerAction;      // global: Compare
     /* Lightroom's Before/After key. The only NON-LETTER in this table, which is why the
        arbiter's value-editor guard tests the table rather than the A-Z range -- focus
        sits on a Develop dock slider for most of a session and a slider has no more use
@@ -4472,7 +4476,7 @@ void MW::syncDevelopMenuEnabled()
         developTransformAction->setEnabled(inDevelop || operationModeAction->isEnabled());
     const QList<QAction *> modeLocal {
         developNewScopeAction, developAddToMaskAction, toggleMaskOverlayAction,
-        developSpotAction, developWbSamplerAction,
+        developSpotAction, developWbSamplerAction, screenSamplerAction,
         developBeforeAfterAction,
         developSavePresetAction, developCopySettingsAction, developPasteSettingsAction
     };

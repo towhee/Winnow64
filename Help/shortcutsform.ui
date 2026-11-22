@@ -1565,6 +1565,17 @@
        </item>
        <item>
         <property name="text">
+         <string>Screen Sampler</string>
+        </property>
+        <property name="text">
+         <string>C</string>
+        </property>
+        <property name="text">
+         <string>Reads the color of any point on screen, even in another app</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
          <string>White Balance from Skin</string>
         </property>
         <property name="text">

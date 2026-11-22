@@ -234,7 +234,7 @@ void MaskPanel::buildMaskLevel(QVBoxLayout *outer)
         return b;
     };
     levelAddBtn       = opBtn(int(MaskOp::Add));
-    levelAddBtn->setToolTip("Add to this mask: pick a mask tool (M)");
+    levelAddBtn->setToolTip("New submask: add to this mask, pick a mask tool  (M)");
     levelSubtractBtn  = opBtn(int(MaskOp::Subtract));
     levelIntersectBtn = opBtn(int(MaskOp::Intersect));
     syncOpButtons();

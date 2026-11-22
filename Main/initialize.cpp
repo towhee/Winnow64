@@ -3368,7 +3368,7 @@ void MW::createDevelopDock()
     BarBtn *developNewMaskBtn = new BarBtn();
     developNewMaskBtn->setSide(devActSide);
     developNewMaskBtn->setIcon(devActIcons + "newmask.png", G::iconOpacity);
-    developNewMaskBtn->setToolTip("New mask: add a masked scope and choose its mask tool");
+    developNewMaskBtn->setToolTip("New mask: add a masked scope and choose its mask tool  (N)");
     connect(developNewMaskBtn, &BarBtn::clicked, developProperties,
             &DevelopProperties::newScope);
     developActionLayout->addWidget(developNewMaskBtn);
@@ -3398,7 +3398,7 @@ void MW::createDevelopDock()
     developSamplerBtn->setSide(devActSide);
     developSamplerBtn->setIcon(DevelopProperties::dropperIcon(false, devActSide));
     developSamplerBtn->setToolTip("Read the color of any point on screen, even in "
-                                  "another app.");
+                                  "another app.  (C)");
     connect(developSamplerBtn, &BarBtn::clicked, this, &MW::toggleScreenSampler);
     developActionLayout->addWidget(developSamplerBtn);
     developActionLayout->addSpacing(10);
@@ -3461,7 +3461,8 @@ void MW::createDevelopDock()
     BarBtn *developExportBtn = new BarBtn();
     developExportBtn->setSide(devActSide);
     developExportBtn->setIcon(devActIcons + "lightning_white.png", G::iconOpacity);
-    developExportBtn->setToolTip("Export the developed image  (X)");
+    developExportBtn->setToolTip("Export the developed image  (" +
+        QKeySequence("Ctrl+Shift+E").toString(QKeySequence::NativeText) + ")");
     connect(developExportBtn, &BarBtn::clicked, this, &MW::developExport);
     developActionLayout->addWidget(developExportBtn);
 

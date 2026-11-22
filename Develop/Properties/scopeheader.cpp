@@ -154,7 +154,7 @@ void ScopeHeader::buildScopeBar(QVBoxLayout *outer)
     });
 
     barAddBtn = new BarBtn();
-    barAddBtn->setToolTip("New mask");
+    barAddBtn->setToolTip("New mask  (N)");
     /* new.png: the same [+] glyph SubmaskList's band uses for "add a submask", so the
        two "add" affordances in the Develop dock read alike. */
     barAddBtn->setIcon(":/images/icon16/new.png", G::iconOpacity);

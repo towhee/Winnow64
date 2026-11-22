@@ -4255,15 +4255,16 @@ A playing video is paused first: the video's own Esc handler sits AFTER the chai
 
 ### 7.5 Develop Mode Local Shortcuts
 
-Ten keys mean something different in Develop mode than in Preview mode:
+Eleven keys mean something different in Develop mode than in Preview mode:
 
 ```
 R   Crop / Transform panel      developTransformAction   (Preview: enters Develop + opens it)
 N   New Mask                    developNewScopeAction    (Preview: unbound)
-M   Tweak Mask                  developAddToMaskAction   (Preview: unbound)
+M   New Submask                 developAddToMaskAction   (Preview: unbound)
 O   Mask overlay tint on/off    toggleMaskOverlayAction  (Preview: Open folder)
 S   Replace tool                developSpotAction        (Preview: Slideshow)
 W   White balance sampler       developWbSamplerAction   (Preview: New workspace)
+C   Screen Sampler              screenSamplerAction      (Preview: Compare)
 H   History panel               historyDockVisibleAction (Preview: unbound)
 P   History panel, Presets open presetsDockVisibleAction (Preview: Pick)
 \   Before / After              developBeforeAfterAction (Browse: compare the current image)
@@ -4334,7 +4335,7 @@ The bare Left/Right navigation intercept further down MW::eventFilter bypasses t
 
 #### 7.5.7 The View Keys Are the Way Out of Develop Mode
 
-Develop edits a single image, so it always runs in Loupe: MW::setOperationMode forces Loupe on entry. Compare (C) is the one view unavailable in Develop: MW::enableSelectionDependentMenus disables asCompareAction there, which greys its menu item AND stops its C shortcut; the reason ("not available in Develop mode") surfaces via Disabled Shortcut Feedback.
+Develop edits a single image, so it always runs in Loupe: MW::setOperationMode forces Loupe on entry. Compare (C) is the one view unavailable in Develop: MW::enableSelectionDependentMenus disables asCompareAction there, which greys its menu item AND stops its C shortcut. Since 2026-11-21 the arbiter claims C in Develop for the Screen Sampler (developShortcuts), so the key no longer reaches Compare's Disabled Shortcut Feedback there.
 
 Loupe (E), Grid (G) and Table (T) stay enabled in Develop, because they are the way OUT: D only enters Develop, and each view key leaves it (setOperationMode(Preview)), applies the Browse layout and shows that view. None of the three is arbitrated in developShortcutIntercept, so they mean the same thing in both modes.
 
@@ -6166,7 +6167,7 @@ Develop/Properties/scopeheader.cpp: ONE gradient-headed line carrying the whole 
 - The combo carries every scope on the image, index 0 always Global, and only a USER pick selects one (QComboBox::activated; updateScopeBar refills with signals blocked) -> scopeSelected -> onScopeSelected: switch activeScopeIndex, open NO submask (selectedMaskIndex = -1) and latch the scope's COMBINED mask (red, no handles) when it has one. Its submasks are listed in the Mask panel below, and clicking one re-opens it.
 - [+] -> addScopeRequested -> newScope, promoted out of the menu because it is the primary action. It pops the mask tools menu ([11.15.9](#11159-the-mask-tools-menu)) and only then makes the scope, named "Mask n" with no dialog, and begins the picked tool on it: a new scope exists to carry a masked adjustment. Escape creates nothing.
 - [eye] -> scopeEnabledToggled(activeIndex, !on) -> onScopeEnabledToggled (EditScope::enabled; the compositor skips a disabled scope, so Global off renders with no develop adjustments).
-- [:] -> showScopeMenu, the ONLY menu in the panel, so it carries both the active scope's actions and the panel-wide ones: Global gets "New mask" + "Reset Global"; a mask scope gets "Modify &lt;mask> mask" (M) / Reset / Rename / Duplicate / Delete; then, always, a checkable "Hide global image" (any scope; its own connect -> hideGlobalImageToggled -> DevelopProperties::setGlobalImageHidden, ticked from refreshPreviewButtons via setGlobalImageHidden), "Reset all edits" (see [11.38 Reset All Edits](#1138-reset-all-edits)) and "Edits help".
+- [:] -> showScopeMenu, the ONLY menu in the panel, so it carries both the active scope's actions and the panel-wide ones: Global gets "New mask" (N) + "Reset Global"; a mask scope gets "Modify &lt;mask> mask" (M) / Reset / Rename / Duplicate / Delete; then, always, a checkable "Hide global image" (any scope; its own connect -> hideGlobalImageToggled -> DevelopProperties::setGlobalImageHidden, ticked from refreshPreviewButtons via setGlobalImageHidden), "Reset all edits" (see [11.38 Reset All Edits](#1138-reset-all-edits)) and "Edits help".
 
 "Hide global image" (2026-10-20) is EditScope::hideImage on the GLOBAL scope: a recipe setting like the eyes (written to the sidecar only when true, joins EditStack::isIdentity, cleared by "Reset all" on Global; one History row per toggle, no merge key; not propagated by multi-image editing). buildStackJob carries it as StackRenderJob::hideGlobal and, while it is on, KEEPS a mask scope with no visible adjustment (normally skipped as identity) unless that scope's own eye (showScope) is shut, because such a mask still decides what shows. MW::developCompositeStack applies it LAST, after the geometry and the kaleidoscopes: it keeps every mask scope's coverage buffer (foldMasks), carries each into the frame (kaleidoMaskInFrame), unions them (unionCoverage, a + b - ab; a scope with no placed mask covers everything) -- a folding scope contributes its FOLDED coverage, and Global's kaleidoscope folds the union -- and cuts the frame out to it (cutOutToCoverage: PREMULTIPLIED ARGB32 / RGBA64, so a format without alpha gets black, not the hidden photo). The masked pixels are the full render's, Global's adjustments included. It changes nothing before the cut, so no develop cache is invalidated. The choice is read as an int code while the menu is alive and fired on the NEXT TICK, after re-selecting the scope it was raised on. A select can be REFUSED (a pending submask prompts; Cancel keeps the old scope), so the code re-checks currentScopeName() before acting, or "Delete Mask 2" would delete Mask 1.
 - Every emission from this widget is DEFERRED a tick, since each loops back through setScopeRows and refills the combo the click came from.
