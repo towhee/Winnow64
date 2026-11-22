@@ -9,6 +9,7 @@
 #include <functional>
 
 class QLabel;
+class QTimer;
 class QVBoxLayout;
 class BarBtn;
 
@@ -85,6 +86,11 @@ public:
        band directly: no separator. */
     void setTopRule(bool on);
 
+    /* The submask row under the cursor, or -1. A hover is a VIEW request: the veil
+       shows that submask's own footprint while the cursor stays on its row (see
+       hoveredChanged). */
+    int  hoveredRow() const { return hoveredEmitted; }
+
 signals:
     void submaskSelected(int index);              // row click: re-open it for editing
     void enabledToggled(int index, bool on);      // row eye (or setAllEnabled, per row)
@@ -93,10 +99,15 @@ signals:
     void deleteRequested(int index);
     void moveRequested(int from, int to);
     void duplicateRequested(int index);
+    /* The cursor settled on a submask row (index), or left the rows (-1). Entering is
+       debounced (kHoverDelayMs) so sweeping down the list does not build a footprint per
+       row passed; leaving is immediate, so the outcome veil comes straight back. */
+    void hoveredChanged(int index);
 
 protected:
     void paintEvent(QPaintEvent *) override;      // surface + the top rule
-    bool eventFilter(QObject *watched, QEvent *event) override;   // row clicks
+    bool eventFilter(QObject *watched, QEvent *event) override;   // row clicks, hover
+    void hideEvent(QHideEvent *e) override;       // a Leave that never arrives
 
 private:
     void buildUi();
@@ -106,6 +117,15 @@ private:
     static void setEyeIcon(BarBtn *b, bool shown);      // eye.png / eye_off.png
     /* Fire on the next tick: the handler rebuilds these rows (see the class comment). */
     void emitDeferred(std::function<void()> fn);
+
+    /* Recompute the hovered row from the global cursor position: rows are rebuilt
+       wholesale, so the receiver of an Enter/Leave may already be gone. */
+    void syncHovered();
+    void emitHovered(int index);
+    static constexpr int kHoverDelayMs = 80;
+    QTimer *hoverTimer     = nullptr;
+    int     hoverCandidate = -1;          // row under the cursor, waiting on the timer
+    int     hoveredEmitted = -1;          // last index sent by hoveredChanged
 
     bool         topRule       = false;
     QWidget     *rowsContainer = nullptr;

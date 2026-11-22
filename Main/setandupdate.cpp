@@ -345,13 +345,12 @@ void MW::setDevelopDockVisibility()
 {
     if (G::isLogger) G::log("MW::setDevelopDockVisibility");
     const bool on = developDockVisibleAction->isChecked();
-    /* The History panel is part of the Develop tool -- it follows the Develop dock,
-       action and all, so a later setHistoryDockVisibility() agrees rather than fighting
-       it. Shown before Develop so Develop, not History, is the front tab of the group. */
-    if (historyDock && historyDockVisibleAction) {
-        historyDockVisibleAction->setChecked(on);
-        historyDock->setVisible(on);
-    }
+    /* History has its own Window menu item and its own workspace flag, so it is NOT
+       forced to follow Develop (that coupling made the History item impossible to turn
+       off). It is shown here, ahead of Develop, only so Develop rather than History ends
+       up the front tab of the group; setHistoryDockVisibility applies it either way. */
+    if (historyDock && historyDockVisibleAction && historyDockVisibleAction->isChecked())
+        historyDock->setVisible(true);
     developDock->setVisible(on);
     if (on) developDock->raise();
 }
@@ -362,6 +361,7 @@ void MW::setHistoryDockVisibility()
     if (!historyDock || !historyDockVisibleAction) return;
     historyDock->setVisible(historyDockVisibleAction->isChecked());
 }
+
 
 void MW::setMetadataDockFixedSize()
 {
@@ -1967,19 +1967,35 @@ void MW::showEmbelDock() {
     }
 }
 
+bool MW::dockIsBehindTab(QDockWidget *dock)
+{
+/*
+    A tabified dock that is not the front tab is still isVisible(), so its Window menu
+    item reads checked. Choosing the item then should bring the panel forward, not hide
+    a panel the user cannot see. See showDevelopDock / showHistoryDock.
+*/
+    return dock && dock->isVisible() && isDockTabified(dock) && !isSelectedDockTab(dock);
+}
+
 void MW::showDevelopDock() {
-    if (G::isLogger) G::log("MW::toggleDevelopDockVisibility");
+/*
+    Window > Develop Editor Panel. A TOGGLE: the triggered action has already flipped its
+    checked state, so unchecked hides the panel and checked shows and raises it. A panel
+    hidden behind a sibling tab is raised instead of hidden (dockIsBehindTab). The
+    Recipes panel is its own menu item and is no longer shown or hidden with this one.
+*/
+    if (G::isLogger) G::log("MW::showDevelopDock");
     if (G::isInitializing) return;
     QDockWidget *dock = developDock;
+    if (!developDockVisibleAction->isChecked()) {
+        if (!dockIsBehindTab(dock)) {
+            developDock->setVisible(false);
+            return;
+        }
+        developDockVisibleAction->setChecked(true);     // raise it instead
+    }
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
     else dockOption = SetVisible;
-
-    /* Bring History up with Develop, BEFORE it: showing a tabified dock makes it the
-       front tab, so it must be shown first and Develop raised last. */
-    if (historyDock && !historyDock->isVisible()) {
-        historyDock->setVisible(true);
-        historyDockVisibleAction->setChecked(true);
-    }
 
     switch (dockOption) {
     case SetFocus:
@@ -1994,9 +2010,22 @@ void MW::showDevelopDock() {
 }
 
 void MW::showHistoryDock() {
+/*
+    Window > Recipes Panel. A TOGGLE, like showDevelopDock: unchecked hides the panel
+    (all its sections), checked shows and raises it with the History section open.
+    A panel behind a sibling tab is raised rather than hidden.
+*/
     if (G::isLogger) G::log("MW::showHistoryDock");
     if (G::isInitializing) return;
     QDockWidget *dock = historyDock;
+    if (!dock) return;
+    if (!historyDockVisibleAction->isChecked()) {
+        if (!dockIsBehindTab(dock)) {
+            historyDock->setVisible(false);
+            return;
+        }
+        historyDockVisibleAction->setChecked(true);     // raise it instead
+    }
     if (isDockTabified(dock) && !isSelectedDockTab(dock)) dockOption = SetFocus;
     else dockOption = SetVisible;
 
@@ -2016,9 +2045,9 @@ void MW::showHistoryDock() {
 
 void MW::showPresetsDock() {
 /*
-    "P", the View menu's Presets item and the Develop action row's color-wheel button.
-    Presets is a SECTION of the History panel, not a dock of its own, so this raises that
-    panel and opens the section.
+    The Develop action row's (hidden) color-wheel button. Presets is a SECTION of the
+    Recipes panel, not a dock of its own, so this raises that panel and opens the
+    section. It only ever shows.
 */
     if (G::isLogger) G::log("MW::showPresetsDock");
     if (G::isInitializing) return;

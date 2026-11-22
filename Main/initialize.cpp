@@ -2921,6 +2921,10 @@ void MW::createDevelopDock()
     connect(developProperties, &DevelopProperties::maskEditEnd,   this, &MW::updateMaskOverlayTint);
     /* Veil-only rebuild: the previewed combine op or the overlay color changed, so the
        image itself is untouched (no re-render). */
+    /* A submask row hover: the veil draws through a hidden toggle while it lasts.
+       Emitted before maskOverlayRefreshRequested, so the rebuild below sees the peek. */
+    connect(developProperties, &DevelopProperties::maskTintPeekRequested,
+            imageView, &ImageView::setMaskTintPeek);
     connect(developProperties, &DevelopProperties::maskOverlayRefreshRequested,
             this, &MW::updateMaskOverlayTint);
     /* View-only change (overlay grayscale): no veil rebuild, just a repaint. */
@@ -3433,7 +3437,8 @@ void MW::createDevelopDock()
        button and all its behaviour. */
     developProperties->placeMaskTintButton(developMaskTintBtn);
 
-    /* Preset: show / raise the Presets dock, where a click applies a saved preset (P).
+    /* Preset: show the Recipes panel's Presets section, where a click applies a saved
+       preset.
        Saving one is Cmd+Shift+N, the dock context menu, or the [+] in that dock's title
        bar. The color-wheel glyph matches the Scope / Transform action-row button style,
        and like them it carries the blue active border while its panel is the front tab
@@ -3441,7 +3446,7 @@ void MW::createDevelopDock()
     developPresetBtn = new BarBtn();
     developPresetBtn->setSide(devActSide);
     developPresetBtn->setIcon(devActIcons + "colorwheel.png", G::iconOpacity);
-    developPresetBtn->setToolTip("Develop presets: apply a saved preset  (P)");
+    developPresetBtn->setToolTip("Develop presets: apply a saved preset");
     connect(developPresetBtn, &BarBtn::clicked, this, &MW::showPresetsDock);
     /* HIDDEN (2026-09-26): the Presets dock stays reachable via P and the View menu. The
        button is still built so its active-border refresh keeps working; to restore it,
@@ -3542,7 +3547,11 @@ void MW::createHistoryDock()
 */
     if (G::isLogger) G::log("MW::createHistoryDock");
 
-    historyDockTabText = "History";
+    /* "Recipes": the panel holds the develop History and the saved Presets (and any
+       later section), all of them recipes. Only the user-facing name changed
+       (2026-11-22); the objectName "HistoryDock", the settings keys and the code names
+       stay, as saved layouts key on them. */
+    historyDockTabText = "Recipes";
     dockTextNames << historyDockTabText;
     historyDock = new DockWidget(historyDockTabText, "HistoryDock", this);
     historyDock->setObjectName("HistoryDock");
@@ -3577,11 +3586,9 @@ void MW::createHistoryDock()
     QHBoxLayout *historyTitleLayout = new QHBoxLayout();
     historyTitleLayout->setContentsMargins(0, 0, 0, 0);
     historyTitleLayout->setSpacing(0);
-    /*  "Develop", not "History": the panel is the develop tool's, and its two sections
-        name themselves. The TAB still reads "History" (historyDockTabText) because the
-        Develop dock's tab already claims "Develop" -- same split as that dock, whose title
-        bar reads "Develop Editor". */
-    historyTitleBar = new DockTitleBar("Develop", historyTitleLayout);
+    /*  "Recipes" on the title bar and the tab alike; its sections (History, Presets)
+        name themselves. */
+    historyTitleBar = new DockTitleBar(historyDockTabText, historyTitleLayout);
     /* Second row: the current image's exposure (MW::updateExposureSubtitle). Created
        now, empty, so the bar is its full height before the first image is selected. */
     historyTitleBar->setSubtitle("");
@@ -3612,7 +3619,7 @@ void MW::createHistoryDock()
     // close button
     BarBtn *historyCloseBtn = new BarBtn();
     historyCloseBtn->setIcon(":/images/icon16/close.png", G::iconOpacity);
-    historyCloseBtn->setToolTip("Hide the History Panel");
+    historyCloseBtn->setToolTip("Hide the Recipes Panel");
     connect(historyCloseBtn, &BarBtn::clicked, this, &MW::closeHistoryDock);
     historyTitleLayout->addWidget(historyCloseBtn);
 
@@ -4189,21 +4196,32 @@ void MW::setDevelopPanelEnabled(bool visible, bool usable)
        readable precisely when the rest is disabled -- it says why. */
     if (transformPanel) transformPanel->setEnabled(live && !replaceArmed);
     if (replacePanel) replacePanel->setEnabled(live);       // same reason as Transform
-    /* The History panel is part of the Develop tool: it comes and goes with it. Show it
-       FIRST -- showing a tabified dock makes it the front tab, so Develop must be shown
-       last (and raised) or the group would open on the History tab. */
+    /* The History panel is part of the Develop tool: it is never shown outside it. Inside
+       it, each panel shows only if its Window menu item is ticked -- this runs on every
+       selection change, so forcing them visible here undid the user's Window > History
+       Panel / Develop Editor Panel choice on the next image. Show History FIRST: showing
+       a tabified dock makes it the front tab, so Develop must be shown last (and raised)
+       or the group would open on the History tab.
+       Outside Develop mode the History action is unticked as the dock hides, so a
+       Preview workspace snapshot or the side show/hide bar (which both read the
+       actions) never brings it back in Preview. */
     if (historyDock) {
         historyDock->setEnabled(live);
-        historyDock->setVisible(visible);
-        if (historyDockVisibleAction) historyDockVisibleAction->setChecked(visible);
+        const bool historyOn = visible && historyDockVisibleAction
+                               && historyDockVisibleAction->isChecked();
+        historyDock->setVisible(historyOn);
+        if (historyDockVisibleAction && G::operationMode != G::OperationMode::Develop)
+            historyDockVisibleAction->setChecked(false);
     }
     /* raise() ONLY on an actual hidden -> visible transition. This runs on every file
        selection change in Develop mode (the usable state follows the selection), and an
        unconditional raise would yank Develop to the front tab every time the user
        navigated with History or Presets selected. */
+    const bool developOn = visible && developDockVisibleAction
+                           && developDockVisibleAction->isChecked();
     const bool wasVisible = developDock->isVisible();
-    developDock->setVisible(visible);
-    if (visible && !wasVisible) developDock->raise();
+    developDock->setVisible(developOn);
+    if (developOn && !wasVisible) developDock->raise();
 }
 
 void MW::syncDevelopPanelEnabled()
@@ -4276,10 +4294,24 @@ void MW::setOperationMode(G::OperationMode mode)
     const bool inDevelop = (mode == G::OperationMode::Develop);
     /* Not shown into a side the show/hide bar holds collapsed (the Develop workspace
        may have been captured that way): the bar brings the panels back with the side. */
+    /* Each panel follows its Window menu item, which the Develop workflow layout has
+       just set (D applies it before calling here). A route into Develop that applied no
+       layout can arrive with both unticked (startup's closeDevelopDock unticks them):
+       never open an empty Develop -- tick both. */
+    if (inDevelop && G::operationMode != G::OperationMode::Develop
+        && developDockVisibleAction && historyDockVisibleAction
+        && !developDockVisibleAction->isChecked() && !historyDockVisibleAction->isChecked()) {
+        developDockVisibleAction->setChecked(true);
+        historyDockVisibleAction->setChecked(true);
+    }
     if (!inDevelop || !isDockAreaCollapsed(dockWidgetArea(developDock))) {
-        if (historyDock) historyDock->setVisible(inDevelop);
-        developDock->setVisible(inDevelop);
-        if (inDevelop) developDock->raise();
+        const bool historyOn = inDevelop && historyDockVisibleAction
+                               && historyDockVisibleAction->isChecked();
+        const bool developOn = inDevelop && developDockVisibleAction
+                               && developDockVisibleAction->isChecked();
+        if (historyDock) historyDock->setVisible(historyOn);
+        developDock->setVisible(developOn);
+        if (developOn) developDock->raise();
     }
 
     /* The mode changes the TAB COUNT of whatever dock area holds Develop / History /

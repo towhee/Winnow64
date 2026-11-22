@@ -22,6 +22,10 @@ SubmaskList::SubmaskList(QWidget *parent) : QWidget(parent)
 {
     if (G::isLogger) G::log("SubmaskList::SubmaskList");
     buildUi();
+    hoverTimer = new QTimer(this);
+    hoverTimer->setSingleShot(true);
+    hoverTimer->setInterval(kHoverDelayMs);
+    connect(hoverTimer, &QTimer::timeout, this, [this]{ emitHovered(hoverCandidate); });
 }
 
 void SubmaskList::buildUi()
@@ -142,6 +146,50 @@ void SubmaskList::rebuild()
     if (QLayoutItem *first = rowsLayout->itemAt(0))
         pad = qMax(0, (G::propertyRowHeight() - first->sizeHint().height()) / 2);
     rowsLayout->setContentsMargins(0, pad, 0, 0);
+    /* The rows under the cursor were just replaced, and a new widget under a still
+       cursor gets no Enter. Re-hit-test once the layout has placed them. */
+    QTimer::singleShot(0, this, [this]{ syncHovered(); });
+}
+
+void SubmaskList::syncHovered()
+{
+    int now = -1;
+    if (isVisible()) {
+        for (int i = 0; i < rowsLayout->count(); ++i) {
+            QWidget *w = rowsLayout->itemAt(i)->widget();
+            if (!w || !w->isVisible()) continue;
+            if (w->rect().contains(w->mapFromGlobal(QCursor::pos()))) {
+                now = w->property("submaskIndex").toInt();
+                break;
+            }
+        }
+    }
+    if (now == hoverCandidate && (now == hoveredEmitted || hoverTimer->isActive()))
+        return;
+    hoverCandidate = now;
+    if (now < 0) {
+        hoverTimer->stop();
+        emitHovered(-1);
+    }
+    else if (now != hoveredEmitted) {
+        hoverTimer->start();
+    }
+    else {
+        hoverTimer->stop();
+    }
+}
+
+void SubmaskList::emitHovered(int index)
+{
+    if (index == hoveredEmitted) return;
+    hoveredEmitted = index;
+    emit hoveredChanged(index);
+}
+
+void SubmaskList::hideEvent(QHideEvent *e)
+{
+    QWidget::hideEvent(e);
+    syncHovered();
 }
 
 QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
@@ -204,6 +252,7 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
        nowhere. */
     if (index == 0)
         nameTip += tr("\n\nThe first submask starts the mask, so it always adds.");
+    nameTip += tr("\n\nHover over this row to see this submask on the image.");
     name->setToolTip(nameTip);
     hb->addWidget(name);
 
@@ -251,6 +300,12 @@ QWidget *SubmaskList::makeRow(int index, const SubmaskRowInfo &r, bool selected)
 
 bool SubmaskList::eventFilter(QObject *watched, QEvent *event)
 {
+    /* Hover: a row's Enter/Leave is a chance for the cursor to have crossed a row
+       boundary. Moving onto a row's own button does not Leave the row. Never consumed. */
+    if (event->type() == QEvent::Enter || event->type() == QEvent::Leave) {
+        syncHovered();
+        return QWidget::eventFilter(watched, event);
+    }
     /* A click on a row body selects that submask; the op chip / eye / menu button
        consume their own clicks. */
     if (event->type() == QEvent::MouseButtonRelease) {

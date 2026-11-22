@@ -1954,10 +1954,10 @@ void ImageView::setScopeMaskTint(const QImage &tint)
 
 void ImageView::setScopeMaskOutline(const QImage &outline, bool flash)
 {
-    /* Flash, not steady: full strength for ~0.7 s, then a ~0.5 s fade. The steady cue
-       for the selected submask is the veil's DENSITY (MW::updateMaskOverlayTint); the
-       line only marks the moment the selection changes, so it is not left sitting on the
-       edge being painted. */
+    /* Flash, not steady: full strength for ~0.7 s, then a ~0.5 s fade. The veil shows
+       only the outcome (MW::updateMaskOverlayTint), so this line marks the moment the
+       selection changes, and hovering a submask's row shows its footprint; the line is
+       not left sitting on the edge being painted. */
     if (!outlineFade) {
         outlineFade = new QVariantAnimation(this);
         outlineFade->setDuration(1200);
@@ -2126,6 +2126,14 @@ void ImageView::showMaskTint()
     if (!maskTintHidden) return;
     maskTintHidden = false;
     emit maskTintVisibilityChanged(true);
+    viewport()->update();
+    syncUnfoldedFrameNeed();
+}
+
+void ImageView::setMaskTintPeek(bool on)
+{
+    if (maskTintPeek == on) return;
+    maskTintPeek = on;
     viewport()->update();
     syncUnfoldedFrameNeed();
 }
@@ -3758,7 +3766,7 @@ void ImageView::drawForeground(QPainter *painter, const QRectF &rect)
        veil -- rebuilt live by MW for exactly this case -- stays on and shows the outcome
        instead. maskLegendOp is -1 when nothing is pending: suppress, as for Add. */
     const bool brushStroking = maskBrushOwnsTint();
-    const bool showTint = !maskTintHidden;                  // "M"/"O" toggles the tint
+    const bool showTint = maskTintShown();     // "M"/"O" toggles; a row hover peeks
     /* The tint is drawn whenever MW has pushed one (its presence == "overlay wanted"), so
        it survives past maskEditMode -- e.g. the combined result stays visible after a
        commit. Edit handles/cursor below stay gated on maskEditMode. */

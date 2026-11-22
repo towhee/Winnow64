@@ -75,7 +75,7 @@ paint or drag to override the chosen op with Subtract, <b>Shift+Opt/Alt</b> for 
 The override sticks once you shape with it held, and letting the key go returns to the op
 of the button you added it with.  Once the submask has landed its op is changed on its own row
 instead, and changing your mind about the whole thing is <b>[&#8942;]</b> &rarr;
-<b>Delete</b> on the row (or Cmd+Z / the History panel).</p>
+<b>Delete</b> on the row (or Cmd+Z / History in the Recipes panel).</p>
 
 <h2>The list</h2>
 <p>Each row shows the tool, its combine op and whether it is inverted.  Click the row to
@@ -191,21 +191,19 @@ an adjustment instead &mdash; Exposure, a curve, Transform &mdash; and it gets o
 way so you can see the edit.  Press <b>O</b> at any point to override it either way; the
 override lasts until your attention moves again.</p>
 
-<p>With a submask open, the overlay also shows <b>which part of the mask is that
-submask</b>, using three densities of the one tint color plus a white outline:</p>
+<p>The overlay shows <b>only the mask itself</b>: the area your adjustments affect.
+A <b>Subtract</b> or <b>Intersect</b> submask can only take tint away, never add it.</p>
 
-<ul>
-<li><b>Normal</b> &mdash; mask, but not the open submask.</li>
-<li><b>Denser</b> &mdash; where the open submask contributes to the mask.</li>
-<li><b>Faint</b> &mdash; the open submask where it falls <i>outside</i> the mask.</li>
-<li><b>White outline</b> &mdash; the open submask's edge, drawn over all of it.</li>
-</ul>
+<p>To see one submask on its own, <b>hover the cursor over its row</b> in the Mask panel.
+While the cursor stays there, that submask's area shows in full-strength tint over a
+faint copy of the mask, so you can see where the two meet.  This works on a Subtract
+submask, whose area adds nothing to the mask, and on a submask whose eye is off.  It
+works even when the overlay is turned off with <b>O</b>.  Move off the row and the mask
+comes back.</p>
 
-<p>The outline is what finds a <b>Subtract</b> submask: it takes area away, so it
-contributes nothing to the mask and has no denser region at all &mdash; it is entirely
-faint, inside its outline.  On a Color or Luminance Range submask, whose edges are
-scattered over the whole frame rather than being a boundary, the outline is left off and
-the densities tell the story on their own.</p>
+<p>When you open a submask, a white outline flashes briefly along its edge to show which
+one you are working on.  On a Color or Luminance Range submask, whose edges are scattered
+over the whole frame, the outline is left off.  Hover its row instead.</p>
 
 <p>The swatch at the right-hand end of the <b>Mask</b> band is the veil's switch:
 click it to show or hide the overlay (the same as <b>O</b>), and right-click it to pick

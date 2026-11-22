@@ -1185,6 +1185,7 @@ void DevelopProperties::bindMaskPanel(MaskPanel *panel)
         connect(sl, &SubmaskList::moveRequested,     this, &DevelopProperties::moveSubmask);
         connect(sl, &SubmaskList::duplicateRequested, this, &DevelopProperties::duplicateSubmask);
         connect(sl, &SubmaskList::deleteRequested,   this, &DevelopProperties::deleteMask);
+        connect(sl, &SubmaskList::hoveredChanged,    this, &DevelopProperties::setHoveredSubmask);
     }
 
     /* The Mask band: its [+] (and [:] "Add submask") appends a submask, and its arrow
@@ -3078,6 +3079,28 @@ void DevelopProperties::setMaskPanelHovered(bool hovered)
     if (hovered == maskPanelHovered) return;
     maskPanelHovered = hovered;
     syncMaskVeilEngagement();
+}
+
+int DevelopProperties::hoveredSubmaskIndex() const
+{
+    if (hoveredSubmask < 0 || activeScopeIndex <= 0) return -1;
+    return hoveredSubmask < activeScopeComponents().size() ? hoveredSubmask : -1;
+}
+
+void DevelopProperties::setHoveredSubmask(int index)
+{
+/*
+    Hovering a submask row is how a submask is SEEN: the veil at rest shows only the
+    outcome (the folded mask), where a Subtract or Intersect submask can only take tint
+    away. So the row is the request, and it overrides a hidden overlay for as long as
+    the cursor stays on it. Veil-only rebuild: the image is unchanged.
+*/
+    if (index == hoveredSubmask) return;
+    const bool wasPeek = hoveredSubmask >= 0;
+    hoveredSubmask = index;
+    const bool peek = index >= 0;
+    if (peek != wasPeek) emit maskTintPeekRequested(peek);
+    emit maskOverlayRefreshRequested();
 }
 
 void DevelopProperties::noteMaskInteraction()

@@ -2066,7 +2066,7 @@ bool MW::developShortcutIntercept(QEvent *event)
     accept the ShortcutOverride (which is what frees the key from the global QAction --
     Qt sends it before the shortcut system runs), then act on the KeyPress that follows.
     Doing the work on the KeyPress rather than the override matters twice over. It is the
-    only event Qt guarantees for keys NO global action owns (R/N/M/H), and consuming it
+    only event Qt guarantees for keys NO global action owns (R/N/M), and consuming it
     makes rule 2 a real "ignore": accepting only the override would free an arrow from
     keyDownAction and then let it reach the loupe, where QGraphicsView scrolls on arrows.
 
@@ -14209,7 +14209,14 @@ void MW::updateMaskOverlayTint()
         imageView->clearScopeMaskTint();
         return;
     }
-    if (!developProperties->maskOverlayActive()) { imageView->clearScopeMaskTint(); return; }
+    /* A hovered submask row is its own request to see the mask (see the HOVER PREVIEW
+       below), so it stands in for an active overlay: hovering a row of a mask nobody
+       has opened yet still shows that submask. */
+    const int hoverSrcIdx = developProperties->hoveredSubmaskIndex();
+    if (!developProperties->maskOverlayActive() && hoverSrcIdx < 0) {
+        imageView->clearScopeMaskTint();
+        return;
+    }
 
     const QString fPath = dm->currentKey;
     if (fPath.isEmpty() || currentIsVideo()) { imageView->clearScopeMaskTint(); return; }
@@ -14244,7 +14251,10 @@ void MW::updateMaskOverlayTint()
         if (i == focusSrcIdx) focusIdx = masks.size();
         masks.append(components.at(i));
     }
-    if (masks.isEmpty()) { imageView->clearScopeMaskTint(); return; }
+    /* All submasks disabled is an empty outcome, but a hovered (disabled) row still has
+       a footprint to show. */
+    if (masks.isEmpty() && hoverSrcIdx < 0) { imageView->clearScopeMaskTint(); return; }
+    const bool hovering = hoverSrcIdx >= 0;
     /* There IS a mask to tint, so the tint toggle must work even though the veil may
        not be built yet -- it starts hidden, and the hidden early-out below never builds
        it. Report that before the early-out, or "O" / the tint button refuse with the
@@ -14257,7 +14267,7 @@ void MW::updateMaskOverlayTint()
        The stored QImage is deliberately left alone rather than cleared: it is not drawn,
        and re-showing rebuilds it (MW listens to maskTintVisibilityChanged), so there is
        no flash of an empty overlay in between. */
-    if (!imageView->maskTintVisible()) return;
+    if (!imageView->maskTintShown()) return;
     const bool hasPending = (pendIdx >= 0);
     const bool hasFocus   = (focusIdx >= 0);
     if (hasPending) masks[pendIdx].op = developProperties->pendingMaskOp();
@@ -14271,7 +14281,12 @@ void MW::updateMaskOverlayTint()
        building its (costly, AI) reference would be waste -- re-checking it rebuilds on
        the next tick. */
     bool needRange = false, needSubject = false, needSky = false, needDepth = false;
-    for (const MaskComponent &m : masks) {
+    /* The hovered submask is sampled even when its row's eye is off, so its references
+       are needed too. */
+    QVector<MaskComponent> needed = masks;
+    if (hovering && !components.at(hoverSrcIdx).enabled)
+        needed.append(components.at(hoverSrcIdx));
+    for (const MaskComponent &m : needed) {
         if      (m.tool == int(MaskTool::ColorRange) || m.tool == int(MaskTool::LuminanceRange)) needRange = true;
         else if (m.tool == int(MaskTool::Subject)    || m.tool == int(MaskTool::Background))     needSubject = true;
         else if (m.tool == int(MaskTool::Sky))        needSky = true;
@@ -14283,7 +14298,7 @@ void MW::updateMaskOverlayTint()
     if (needDepth)   ensureDepthMask(fPath, *work, base, degrees);
     /* Object and Segmenter components are per-brush / per-selection, so build each one
        from its own component params. */
-    for (const MaskComponent &m : masks) {
+    for (const MaskComponent &m : needed) {
         if (m.tool == int(MaskTool::Object))
             ensureObjectMask(fPath, *work, base, degrees, m.paramsJson);
         else if (m.tool == int(MaskTool::Segmenter))
@@ -14336,8 +14351,9 @@ void MW::updateMaskOverlayTint()
         buildRefineGuide(*developProxy, veilRefineGuide);
 
     MaskBuildStats tintStats;
-    std::vector<float> buf =
-        buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
+    std::vector<float> buf = masks.isEmpty()
+        ? std::vector<float>(size_t(bw) * size_t(bh), 0.0f)
+        : buildMaskBuffer(masks, bw, bh, degrees, fPath, nullptr,
                         G::isReportDevelopTime ? &tintStats : nullptr,
                         edgeScale, developProperties->activeScopeMaskEdge(),
                         veilHalo, developProperties->activeScopeMaskFeather(),
@@ -14353,8 +14369,18 @@ void MW::updateMaskOverlayTint()
        signed contribution: op forced to Add so a Subtract submask still rasterizes as
        the area it occupies, and the mask-level Edge deliberately not passed -- this must
        track the submask being edited, not the assembled mask. */
+    /* Needed only for the selection-change outline flash, which a hover does not draw.
+       While a row is hovered, cov is THAT submask's footprint instead. */
     std::vector<float> cov;
-    if (hasFocus) {
+    if (hovering) {
+        MaskComponent c = components.at(hoverSrcIdx);
+        c.op = int(MaskOp::Add);
+        if (c.tool == int(MaskTool::RefineBrush)) c.tool = int(MaskTool::Brush);
+        cov = buildMaskBuffer({c}, bw, bh, degrees, fPath, nullptr,
+                              G::isReportDevelopTime ? &tintStats : nullptr,
+                              edgeScale, 0.0f);
+    }
+    else if (hasFocus) {
         MaskComponent c = masks[focusIdx];
         c.op = int(MaskOp::Add);
         /* A Refine Brush's footprint is its stroke region: rasterize it as the plain
@@ -14370,31 +14396,25 @@ void MW::updateMaskOverlayTint()
        holes -- so the veil alone answers both "what does this scope affect?" and (with a
        modifier held) "what would this op do?".
 
-       WITH A SUBMASK OPEN it answers a third question -- "which part of this is the one
-       I am editing?" -- by varying the DENSITY of that same color rather than
-       introducing a second hue. One hue is what lets this survive all six configurable
-       overlay colors (including white) and the grayscale-backdrop mode; a fixed
-       contrast color would collide with at least two of them.
+       OUTCOME ONLY (2026-11-22). At rest the veil is the folded mask and nothing else,
+       whether or not a submask is open: a Subtract or Intersect submask can only take
+       tint AWAY. The density scheme it replaced (2026-10-23: the rest of the mask
+       thinned to 85, the overlap at 215, and a 55 "ghost" where the open submask fell
+       outside the mask) made a Subtract submask ADD tint where nothing is affected.
+       Which submask is open is told by the outline flash below and the tool's own
+       handles.
 
-         mask only      kAlphaMask   the rest of the mask -- thinned (kAlphaRest) while
-                                     a submask is open, so the open one stands out
-         overlap        kAlphaOver   denser: the submask contributes here
-         submask only   kAlphaSub    a ghost: the submask falls outside the result
-
-       This density step is the STEADY cue for which submask is selected. The boundary
-       line below only flashes when the selection changes (2026-10-23): drawn all the
-       time it sat on the very edge being painted.
-
-       Written as a blend, not as three branches, because coverage is FEATHERED: m and s
-       are weights in 0..1, not memberships, and a gradient's ramp has to stay a ramp.
-       With s == 0 the first term is all that survives and this reduces exactly to the
-       no-selection veil. */
+       HOVER PREVIEW. A submask is SEEN by resting the cursor on its row in the Mask
+       panel (DevelopProperties::hoveredSubmaskIndex): for as long as it stays there,
+       the veil is that submask's own footprint (cov: op forced to Add, its own Invert,
+       no mask-level Edge) at kAlphaHover over a faint copy of the outcome at kAlphaFaint,
+       so it shows where the two meet. Written as a blend, not as branches, because
+       coverage is FEATHERED: m and s are weights in 0..1, and a ramp must stay a ramp. */
     QImage tint(bw, bh, QImage::Format_ARGB32_Premultiplied);
-    const float kAlphaRest = 85.0f;          // the rest of the mask, a submask open
-    const float kAlphaMask = (hasFocus && cov.size() == size_t(bw) * size_t(bh))
-                             ? kAlphaRest : 150.0f;
-    const float kAlphaOver = 215.0f;
-    const float kAlphaSub  =  55.0f;
+    const bool hoverCov = hovering && cov.size() == size_t(bw) * size_t(bh);
+    const float kAlphaMask  = 150.0f;         // the outcome, at rest
+    const float kAlphaFaint =  55.0f;         // the outcome behind a hovered submask
+    const float kAlphaHover = 190.0f;         // the hovered submask's footprint
     const QColor ovc = G::maskOverlayColor;
     const int ovR = ovc.red(), ovG = ovc.green(), ovB = ovc.blue();
     /* Row-parallel, and the scanline base is taken ONCE: this runs at the proxy's full
@@ -14404,7 +14424,7 @@ void MW::updateMaskOverlayTint()
        from several threads, hence bits()/bytesPerLine() hoisted out. */
     uchar *const tintBits0 = tint.bits();
     const qsizetype tintBpl0 = tint.bytesPerLine();
-    const float *const covData = cov.empty() ? nullptr : cov.data();
+    const float *const covData = hoverCov ? cov.data() : nullptr;
     developParallelRows(bw, bh, [&](int y0, int y1) {
         for (int y = y0; y < y1; ++y) {
             QRgb *row = reinterpret_cast<QRgb*>(tintBits0 + qsizetype(y) * tintBpl0);
@@ -14413,9 +14433,8 @@ void MW::updateMaskOverlayTint()
             for (int x = 0; x < bw; ++x) {
                 const float m = qBound(0.0f, mrow[x], 1.0f);
                 const float sv = srow ? qBound(0.0f, srow[x], 1.0f) : 0.0f;
-                const float af = kAlphaMask * m * (1.0f - sv)
-                               + kAlphaOver * m * sv
-                               + kAlphaSub  * (1.0f - m) * sv;
+                const float af = srow ? kAlphaFaint * m * (1.0f - sv) + kAlphaHover * sv
+                                      : kAlphaMask * m;
                 const int a = int(af + 0.5f);
                 row[x] = a ? qRgba(ovR * a / 255, ovG * a / 255, ovB * a / 255, a) : 0;
             }
@@ -14431,19 +14450,18 @@ void MW::updateMaskOverlayTint()
        existed so a Subtract submask lying outside the mask could be seen at all -- but
        it also meant the boundary vanished the moment the submask overlapped the mask,
        which is the common case and exactly where "how much of this is mine?" is hardest
-       to answer. The density step above now carries the overlap, so the line is free to
-       be drawn everywhere. White-on-dark rather than the overlay color, so it reads
-       over the veil, over the photo, over every configurable overlay color and over the
-       grayscale backdrop.
+       to answer. The line is drawn everywhere. White-on-dark rather than the overlay
+       color, so it reads over the veil, over the photo, over every configurable overlay
+       color and over the grayscale backdrop.
 
        TWO SAFEGUARDS against the case the old gate also protected: a content submask
        (Color/Luminance Range) has per-pixel "edges" everywhere and would fog the
        subject with speckle. The boundary is taken from a 3x3 box average of the coverage
        rather than the raw buffer, which removes isolated pixels; and if the line still
        comes out covering more than kContourMaxFrac of the buffer then it is not a
-       boundary, so it is dropped and the density step carries the distinction alone. */
+       boundary, so it is dropped (hovering the submask's row still shows it). */
     QImage outline;
-    if (hasFocus && cov.size() == size_t(bw) * size_t(bh)) {
+    if (!hovering && hasFocus && cov.size() == size_t(bw) * size_t(bh)) {
         const float T = 0.5f;
         const double kContourMaxFrac = 0.08;
         /* Smoothed membership, computed once: the 3x3 average is read up to nine times
@@ -14527,15 +14545,24 @@ void MW::updateMaskOverlayTint()
     if (degrees != 0 && !outline.isNull())
         outline = outline.transformed(QTransform().rotate(degrees));
     imageView->setScopeMaskTint(tint);
+    /* A hover leaves the outline and its focus key alone: the hovered footprint is the
+       whole picture for the moment, and ending the hover must not re-flash the open
+       submask's outline. */
+    if (hovering) {
+        imageView->setScopeMaskOutline(QImage(), false);
+        veilDrawn = true;
+    }
     /* Flash the outline only when the focus (image, scope, submask) changed. */
     const QString focusKey = hasFocus
         ? fPath + "|" + QString::number(developProperties->activeScopeNumber())
               + "|" + QString::number(focusSrcIdx)
         : QString();
     const bool flash = hasFocus && focusKey != developVeilFocusKey;
-    imageView->setScopeMaskOutline(outline, flash);
-    developVeilFocusKey = focusKey;
-    veilDrawn = true;
+    if (!hovering) {
+        imageView->setScopeMaskOutline(outline, flash);
+        developVeilFocusKey = focusKey;
+        veilDrawn = true;
+    }
 
     /* Op indicator: tell ImageView which submask is being defined and which op the
        veil previews, so the on-canvas chip can name it (see ImageView::setMaskLegend). The
@@ -14549,8 +14576,8 @@ void MW::updateMaskOverlayTint()
                            << " morph" << tintStats.morphMs << tintStats.morphs;
 
     /* A submask that has already landed gets the chip too, naming its committed op --
-       the veil is drawing its boundary and density either way, so the chip has to say
-       whose boundary it is. Only a PENDING one shows the modifier hint: the modifiers
+       the veil flashes its boundary either way, so the chip has to say whose boundary
+       it is. Only a PENDING one shows the modifier hint: the modifiers
        are inert on a landed submask (its op is changed on its row). */
     if (hasFocus)
         imageView->setMaskLegend(DevelopProperties::maskToolName(masks[focusIdx].tool),

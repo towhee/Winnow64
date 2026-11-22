@@ -346,6 +346,10 @@ public slots:
        it: the veil is a full-resolution overlay rebuilt on every drag tick, and while
        it is hidden drawForeground ignores it, so building it is pure cost. */
     bool maskTintVisible() const { return !maskTintHidden; }
+    /* Whether the veil is DRAWN: the toggle's state, or a submask-row hover peeking
+       through a hidden toggle (setMaskTintPeek). MW builds the veil when this is true.
+       maskTintVisible() stays the toggle's own state, for "O" and the swatch. */
+    bool maskTintShown() const { return !maskTintHidden || maskTintPeek; }
     /* Whether there is anything to tint at all: a mask tool is expanded, or the active
        scope has a committed mask (scopeHasMask, pushed by MW::updateMaskOverlayTint).
        False on the Global scope (no mask), where the tint toggle has nothing to act on
@@ -379,6 +383,10 @@ public slots:
     /* Force the mask overlay tint shown again (e.g. another scope was selected, so its
        combined mask should be visible). No-op if it is already showing. */
     void showMaskTint();
+    /* A submask row in the Mask panel is hovered (true) or the hover ended: draw the
+       veil for the duration even when the toggle has it hidden. maskTintHidden is not
+       touched, so the toggle's state is exactly what it was when the hover ends. */
+    void setMaskTintPeek(bool on);
     void setMaskFeather(double feather);
     /* Rotation slider: turn the Linear Gradient about its centre to `deg` (see
        maskLinearAngle), keeping its feather; persists via maskGeometryChanged. */
@@ -486,7 +494,7 @@ public slots:
        committed mask's tint, the spot brush): the kaleidoscope's fold cannot be mapped
        through, so MW renders without it until this goes false again. */
     bool   needsUnfoldedFrame() const
-           { return maskEditMode || spotEditMode || (scopeHasMask && !maskTintHidden); }
+           { return maskEditMode || spotEditMode || (scopeHasMask && maskTintShown()); }
 
 signals:
     void togglePick();
@@ -938,7 +946,7 @@ private:
        hiding the overlay brings the color back and nothing outside Develop is affected.
        Read by paintEvent, which pushes it to pmItem. */
     bool    maskGrayscaleActive() const
-            { return G::maskOverlayGrayscale && !maskTintHidden && pmItem
+            { return G::maskOverlayGrayscale && maskTintShown() && pmItem
                      && pmItem->isVisible()
                      && (maskEditMode || !scopeMaskTint.isNull()); }
     /* Shift + wheel / two-finger drag over a gradient or brush mask; clamps + syncs
@@ -1075,6 +1083,7 @@ private:
        tint button, "M"/"O", the scope menu) -- by request, 2026-10-07: the automatic
        re-show on scope selection got in the way. When to auto-show is to be decided. */
     bool    maskTintHidden = true;
+    bool    maskTintPeek   = false;         // a submask row is hovered (maskTintShown)
     /* The active scope has a committed mask to tint, whether or not its veil is built
        (see maskTintAvailable). */
     bool    scopeHasMask = false;

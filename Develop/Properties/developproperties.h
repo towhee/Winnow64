@@ -436,12 +436,19 @@ public:
        overlay shows the outcome. -1 when nothing is being defined. */
     int pendingMaskIndex() const { return pendingIdx; }
     /* Index (into activeScopeComponents()) of the submask the user is WORKING ON -- the
-       pending one if there is one, else the one re-opened from the list. The veil
-       distinguishes it from the rest of the mask (denser where the two overlap, a ghost
-       where the submask falls outside the mask, a contour flashed along its boundary when
-       it is selected), which is the only way a Subtract submask -- contributing nothing
-       to the folded mask -- can be seen at all. -1 when nothing is open. */
+       pending one if there is one, else the one re-opened from the list. The veil shows
+       only the outcome; this index drives the contour flashed along the submask's
+       boundary when it is selected and the on-canvas op chip. Its footprint is seen
+       by hovering its row (hoveredSubmaskIndex). -1 when nothing is open. */
     int focusSubmaskIndex() const { return pendingIdx >= 0 ? pendingIdx : selectedMaskIndex; }
+    /* The submask row the cursor rests on in the Mask panel
+       (SubmaskList::hoveredChanged), or -1. While it is set, the veil shows THAT
+       submask's own footprint at full strength over a faint copy of the outcome, even
+       with the overlay toggled off.
+       A view only: no selection change, no history, no engagement. Index into the
+       active scope's components, validated here so a stale row cannot reach MW. */
+    int hoveredSubmaskIndex() const;
+    void setHoveredSubmask(int index);        // SubmaskList::hoveredChanged
     /* The scope the dock is editing (0 = Global). MW keys the veil's outline flash on
        (image, scope, focus submask), so a change of any of them shows the outline again. */
     int activeScopeNumber() const { return activeScopeIndex; }
@@ -972,6 +979,10 @@ signals:
        Deliberately NOT paramsChanged: nothing about the developed image has changed, and
        paramsChanged would pay a proxy + full-res re-render per modifier press. */
     void maskOverlayRefreshRequested();
+    /* A submask row hover started (true) or ended: ImageView draws the veil for the
+       duration even when "O" has it hidden, without touching the toggle's state.
+       Emitted BEFORE maskOverlayRefreshRequested, so the rebuild sees the peek. */
+    void maskTintPeekRequested(bool on);
     /* Repaint the view alone: neither the image nor the veil changed, only how the view
        draws them (the overlay grayscale toggle). Cheaper again than a veil rebuild. */
     void maskOverlayRepaintRequested();
@@ -1822,6 +1833,7 @@ private:
     bool maskLatched = false;
     /* ---- Veil engagement state (see maskVeilEngaged) -------------------------------- */
     bool maskPanelHovered = false;
+    int  hoveredSubmask = -1;                 // hoveredSubmaskIndex()
     bool lastInteractionWasMask = false;
     /* The veil's state as far as engagement is concerned -- what was last pushed at it,
        or what "O" last made it. Only a DISAGREEMENT with maskVeilEngaged() emits, which

@@ -1214,28 +1214,6 @@
        </item>
        <item>
         <property name="text">
-         <string>Develop History Panel</string>
-        </property>
-        <property name="text">
-         <string>H</string>
-        </property>
-        <property name="text">
-         <string>Shows / raises the develop history panel; in Develop mode</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
-         <string>Develop Presets Panel</string>
-        </property>
-        <property name="text">
-         <string>P</string>
-        </property>
-        <property name="text">
-         <string>Shows / raises the develop presets panel; in Develop mode</string>
-        </property>
-       </item>
-       <item>
-        <property name="text">
          <string>Application Statusbar</string>
         </property>
         <property name="text">

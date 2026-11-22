@@ -2181,12 +2181,12 @@ void MW::createWindowActions()
     addAction(developDockVisibleAction);
     connect(developDockVisibleAction, &QAction::triggered, this, &MW::showDevelopDock);
 
-    /* "H" (Develop mode only) shows/raises the History panel (develop history AND the
-       saved presets, each in its own section). The dock only
-       exists alongside the Develop dock, so the key is Develop mode local: it carries no
-       QKeySequence and loadDevelopShortcuts owns it, with the tab in the text rendering
-       the hint. The other panel toggles have no key; F5-F8 hide/show a whole side. */
-    historyDockVisibleAction = new QAction(tr("History Panel\tH"), this);
+    /* Window > Recipes Panel shows / hides the Recipes panel (historyDock): the develop
+       History and the saved Presets, each in its own section, and any later section.
+       Like the other panel toggles it has no key (F5-F8 hide/show a whole side); H was
+       its Develop-local key until 2026-11-22. The objectName, the settings key and the
+       workspace field keep the "History" name: they are a saved format. */
+    historyDockVisibleAction = new QAction(tr("Recipes Panel"), this);
     historyDockVisibleAction->setObjectName("toggleHistoryDock");
     historyDockVisibleAction->setShortcutVisibleInContextMenu(true);
     historyDockVisibleAction->setCheckable(true);
@@ -2195,11 +2195,10 @@ void MW::createWindowActions()
     addAction(historyDockVisibleAction);
     connect(historyDockVisibleAction, &QAction::triggered, this, &MW::showHistoryDock);
 
-    /* "P" (Develop mode only) shows/raises the History panel with its PRESETS section
-       expanded -- the same deal as "H" above, and P is globally Pick, so a real
-       QKeySequence("P") would clash with it; loadDevelopShortcuts owns the key. The
-       checked state mirrors that section, not a dock of its own. */
-    presetsDockVisibleAction = new QAction(tr("Develop Presets\tP"), this);
+    /* Not in any menu and no key (Window > Develop Presets and P were removed
+       2026-11-22). It survives because its checked state mirrors the Recipes panel's
+       Presets SECTION, and is saved as the workspace field isPresetsDockVisible. */
+    presetsDockVisibleAction = new QAction(tr("Develop Presets"), this);
     presetsDockVisibleAction->setObjectName("togglePresetsDock");
     presetsDockVisibleAction->setShortcutVisibleInContextMenu(true);
     presetsDockVisibleAction->setCheckable(true);
@@ -3297,8 +3296,7 @@ void MW::createWindowMenu()
     windowMenu->addAction(thumbDockVisibleAction);
     if (!hideEmbellish) windowMenu->addAction(embelDockVisibleAction);
     windowMenu->addAction(developDockVisibleAction);
-    windowMenu->addAction(historyDockVisibleAction);
-    windowMenu->addAction(presetsDockVisibleAction);
+    windowMenu->addAction(historyDockVisibleAction);     // "Recipes Panel"
     windowMenu->addSeparator();
     windowMenu->addAction(toggleTopPanelsAction);
     windowMenu->addAction(toggleBottomPanelsAction);
@@ -4443,10 +4441,8 @@ void MW::loadDevelopShortcuts()
     /* No Develop-local G: the scopes strip is chosen from its right-click menu and the
        Develop menu's Scopes submenu, so G keeps its global meaning -- and in Develop that
        meaning is the way out: Preview mode, Grid view (see asGridAction). */
-    developShortcuts[Qt::Key_H] = historyDockVisibleAction; // global: unbound
-    /* "P" opens the History panel with its Presets section expanded (there is no
-       Presets panel of its own any more). */
-    developShortcuts[Qt::Key_P] = presetsDockVisibleAction; // global: Pick
+    /* No H or P (2026-11-22): the Recipes panel (History + Presets) is shown and hidden
+       with Window > Recipes Panel only, and H / P keep their global meanings (P = Pick). */
 }
 
 void MW::syncDeveloperTestMenu()

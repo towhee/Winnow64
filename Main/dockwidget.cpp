@@ -958,13 +958,8 @@ QString MW::dockTabToolTip(const QString &tabText)
     if (tabText == metadataDockTabText) return tip(metadataDockTabText, "Metadata Panel");
     if (tabText == thumbDockTabText)    return tip(thumbDockTabText,    "Film strip Panel");
     if (tabText == embelDockTabText)    return tip(embelDockTabText,    "Embellish Panel");
-    if (tabText == developDockTabText)  return tip(developDockTabText,  "Develop Panel");
-    /* History is Develop-only, so its keys are Develop mode local ("H" for the panel,
-       "P" for its Presets section, dispatched by the arbiter) -- the tab is only ever
-       seen in Develop mode, where H and P work. */
-    if (tabText == historyDockTabText)
-        return QString("<nobr><b>%1</b> panel &nbsp;(H, or P for presets)</nobr>")
-               .arg(historyDockTabText);
+    if (tabText == developDockTabText)  return tip(developDockTabText,  "Develop Editor Panel");
+    if (tabText == historyDockTabText)  return tip(historyDockTabText,  "Recipes Panel");
     return QString();
 }
 

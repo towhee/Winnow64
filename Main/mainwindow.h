@@ -1701,6 +1701,7 @@ private slots:
     void closeEmbelDock();
     void closeDevelopDock();
     void closeHistoryDock();
+    bool dockIsBehindTab(QDockWidget *dock);
     /* The History dock title bar's second row: the current image's exposure, "f/8,
        1/50 sec, ISO 800". row -1 (or no image) blanks it. */
     void updateExposureSubtitle(int row);
@@ -2182,7 +2183,7 @@ private:
     ScreenSampler *screenSampler = nullptr;   // built on first use
     QAction *screenSamplerAction = nullptr;
     BarBtn *developMaskTintBtn = nullptr;  // mask overlay tint on/off (O)
-    BarBtn *developPresetBtn = nullptr;    // shows/raises the Presets dock (P)
+    BarBtn *developPresetBtn = nullptr;    // shows the Recipes panel's Presets section
     /* Scopes-strip "choice" = a ScopesView::ScopeLayout, or this sentinel for hidden. */
     static constexpr int kDevelopScopesHidden = -1;
     /* Scopes strip choice: one exclusive checkable action per state. They fill both the
@@ -2284,11 +2285,11 @@ private:
     QAction *thumbDockVisibleAction;
     QAction *embelDockVisibleAction;
     QAction *developDockVisibleAction;
-    QAction *historyDockVisibleAction = nullptr;   // "H": develop-mode local (arbiter)
+    QAction *historyDockVisibleAction = nullptr;   // Window > Recipes Panel
     QAction *moduleDockVisibleAction = nullptr;    // the top Module dock
-    /* "P": opens the History panel with its Presets SECTION expanded. Checked mirrors
-       that section, not a dock of its own (there is no Presets dock any more). */
-    QAction *presetsDockVisibleAction = nullptr;   // "P": develop-mode local (arbiter)
+    /* Mirrors the Recipes panel's Presets SECTION (no menu item, no key); persisted as
+       the workspace field isPresetsDockVisible. */
+    QAction *presetsDockVisibleAction = nullptr;
     /* F5-F8, as in Lightroom: hide/show every panel on one side of the window, exactly
        as clicking that side's ShowHideBar triangle does (MW::toggleDockArea). */
     QAction *toggleTopPanelsAction = nullptr;      // F5
