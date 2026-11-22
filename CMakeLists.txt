@@ -347,6 +347,7 @@ set(WINNOW_SOURCES
     Main/navigate.cpp
     Main/mwversions.cpp
     Main/mwundo.cpp
+    Main/mwfileundo.cpp
     Main/mwstalethumbs.cpp
     Main/mwcollections.cpp
     Main/mwplaces.cpp
@@ -831,6 +832,8 @@ set(WINNOW_HEADERS
     Utilities/versionkey.h
     Utilities/waitcursor.h
     Undo/undomanager.h
+    Undo/undocommands.h
+    Undo/fileundo.h
     Utilities/winnets.h
 
     Views/compareImages.h

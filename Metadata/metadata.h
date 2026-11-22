@@ -155,6 +155,18 @@ public:
         only, so the camera's own GPS block is never overwritten. parseSidecar reads it
         back over the file's. */
     bool writeGpsToSidecar(const QString &fPath, double lat, double lon);
+    /*  UNDO'S WRITER FOR IMAGES THE DATAMODEL DOES NOT HOLD. Set the given XMP items
+        (name -> value; an empty value removes the item) and nothing else, in place, as
+        writeKeywordsToSidecar does. With allowEmbed and "Permit image file modification"
+        on, an embeddable image takes them into the file (as writeXMP would have);
+        otherwise the sidecar, created if need be. Used by Edit > Undo, which may restore
+        a rating or a title on an image whose folder is no longer loaded. */
+    bool writeItemsToSidecar(const QString &fPath, const QList<QPair<QByteArray,
+                             QByteArray>> &items, bool allowEmbed, const QString &src);
+    /*  The raw values of the given items in fPath's sidecar; "" for an item it lacks,
+        or for every item when there is no sidecar. */
+    static QHash<QByteArray, QString> readSidecarItems(const QString &fPath,
+                                                       const QList<QByteArray> &items);
     static void writeOrientation(QString fPath, QString orientationNumber);
     /*  The XMP packet INSIDE an image (JPEG/TIFF/PNG/DNG), used by writeXMP and
         writeKeywordsToSidecar when "Permit image file modification" is on. See

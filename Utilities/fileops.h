@@ -1,6 +1,9 @@
 #ifndef FILEOPS_H
 #define FILEOPS_H
 
+#include <QHash>
+#include <QList>
+#include <QPair>
 #include <QString>
 #include <QStringList>
 #include <functional>
@@ -125,6 +128,11 @@ public:
         QStringList missing;        // already gone from disk -- issued, not trashed
         QStringList failed;         // protected, locked, refused -- each already issued
         bool cancelled = false;
+        /*  Where each trashed image's files went: image path -> (original, path in the
+            trash), the image first, then its sidecars. What Edit > Undo restores from
+            (restoreFromTrash). A path in the trash is empty when the platform did not
+            report one, and that file cannot be restored. */
+        QHash<QString, QList<QPair<QString, QString>>> inTrash;
     };
     static TrashResult trashFiles(const QStringList &paths,
                                   const std::function<bool(int done)> &progress = {});
@@ -132,8 +140,17 @@ public:
     /* Test seam: what actually moves one file to the trash. Defaults to
        QFile::moveToTrash; the unit tests point it at a temp folder so the batch can be
        exercised without filling the user's real Trash. Pass an empty function to
-       restore the default. */
-    static void setTrashHook(std::function<bool(const QString &)> hook);
+       restore the default. The hook sets inTrash to where the file went, as
+       QFile::moveToTrash does, so restoreFromTrash can be tested too. */
+    static void setTrashHook(std::function<bool(const QString &, QString *inTrash)> hook);
+
+    /* EDIT > UNDO OF A DELETE: move one file back from the trash to where it was.
+       Refuses when inTrash is gone (the trash was emptied, or the user restored it
+       already) or original is taken; why says which. Removes the trash's record of
+       it: the .trashinfo file on Linux, the $I file beside the $R one on Windows.
+       macOS keeps none. Touches no store: the caller restores those. */
+    static bool restoreFromTrash(const QString &inTrash, const QString &original,
+                                 QString *why = nullptr);
 
     /* Notifications, for callers that move the bytes themselves. These do NOT touch the
        image or its companions -- they only bring the caches into line. */
@@ -194,9 +211,9 @@ public:
 
 private:
     static std::function<void()> flushHook;
-    static std::function<bool(const QString &)> trashHook;
+    static std::function<bool(const QString &, QString *)> trashHook;
     static std::function<void(const QStringList &)> createdHook;
-    static bool moveOneToTrash(const QString &path);
+    static bool moveOneToTrash(const QString &path, QString *inTrash = nullptr);
 };
 
 #endif // FILEOPS_H

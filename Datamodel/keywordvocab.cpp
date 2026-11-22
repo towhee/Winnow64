@@ -5,11 +5,14 @@
 #include "Main/global.h"
 #include "Metadata/keywordpaths.h"
 #include "Metadata/lrkeywords.h"
+#include "Undo/undocommands.h"
 
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
 #include <QFile>
+#include <QPointer>
+#include <QSet>
 #include <QSaveFile>
 #include <QTextStream>
 #include <algorithm>
@@ -28,6 +31,183 @@ QString joinPath(const QString &parentPath, const QString &leaf)
 }
 
 }   // namespace
+
+/* ---------------------------------------------------------------------------------
+   Edit > Undo (see the header): the outermost Step records the rows that changed.
+   --------------------------------------------------------------------------------- */
+
+class KeywordVocab::Step
+{
+public:
+    Step(KeywordVocab *v, const QString &text) : v(v), text(text)
+    {
+        if (v->stepDepth++ > 0) return;         // inside another step: that one records
+        UndoManager *m = UndoManager::app();
+        v->stepRecording = m && !m->isApplying() && !UndoManager::isSuspended();
+        if (v->stepRecording) v->stepBefore = v->undoRows();
+    }
+    ~Step()
+    {
+        if (--v->stepDepth > 0 || !v->stepRecording) return;
+        v->stepRecording = false;
+        QHash<qint64, UndoRow> before;
+        before.swap(v->stepBefore);
+        const QHash<qint64, UndoRow> after = v->undoRows();
+
+        QList<UndoRow> undoPut, redoPut;
+        QList<qint64> undoDrop, redoDrop;
+        for (auto it = before.cbegin(); it != before.cend(); ++it) {
+            const auto a = after.constFind(it.key());
+            if (a == after.cend()) {                    // the step deleted it
+                undoPut << it.value();
+                redoDrop << it.key();
+            }
+            else if (!(*a == it.value())) {             // the step changed it
+                undoPut << it.value();
+                redoPut << *a;
+            }
+        }
+        for (auto it = after.cbegin(); it != after.cend(); ++it) {
+            if (before.contains(it.key())) continue;    // the step created it
+            undoDrop << it.key();
+            redoPut << it.value();
+        }
+        if (undoPut.isEmpty() && undoDrop.isEmpty()) return;
+
+        QPointer<KeywordVocab> vocab(v);
+        UndoManager::record(new ActionCommand(
+            text,
+            [vocab, undoPut, undoDrop] {
+                if (vocab) vocab->applyUndoRows(undoPut, undoDrop);
+            },
+            [vocab, redoPut, redoDrop] {
+                if (vocab) vocab->applyUndoRows(redoPut, redoDrop);
+            }));
+    }
+
+private:
+    KeywordVocab *v;
+    QString text;
+};
+
+QHash<qint64, KeywordVocab::UndoRow> KeywordVocab::undoRows() const
+{
+    QHash<qint64, UndoRow> out;
+    QSqlDatabase db = UserDb::instance().db();
+    if (!db.isOpen()) return out;
+    QSqlQuery q(db);
+    if (!q.exec("SELECT id, name, namefold, path, pathfold, IFNULL(parent, 0), synonyms,"
+                " exportable, sort FROM vocab"))
+        return out;
+    while (q.next()) {
+        UndoRow r;
+        r.id = q.value(0).toLongLong();
+        r.name = q.value(1).toString();
+        r.namefold = q.value(2).toString();
+        r.path = q.value(3).toString();
+        r.pathfold = q.value(4).toString();
+        r.parent = q.value(5).toLongLong();
+        r.synonyms = q.value(6).toString();
+        r.exportable = q.value(7).toInt();
+        r.sort = q.value(8).toInt();
+        out.insert(r.id, r);
+    }
+    return out;
+}
+
+bool KeywordVocab::applyUndoRows(const QList<UndoRow> &put, const QList<qint64> &drop)
+{
+/*
+    One undo or redo of a Step, in one transaction, in this order:
+      1. UPDATE the rows that are there -- first, so a child moved under a node that is
+         about to go is back under its old parent before 2 (ON DELETE CASCADE);
+      2. DELETE drop -- refused if a row not in this step is still beneath one: it was
+         put there by something not on the stack (a re-parent), and cascading it away
+         would lose the user's keyword;
+      3. INSERT the rows that are not there, under their own ids, parents first.
+    DEFERRED FOREIGN KEYS, so a row may name a parent that 3 puts back. Any failure rolls
+    everything back and says so; the tree is reloaded either way.
+*/
+    if (G::isLogger) G::log("KeywordVocab::applyUndoRows",
+                            QString::number(put.size()) + " put, "
+                            + QString::number(drop.size()) + " drop");
+    QSqlDatabase db = UserDb::instance().db();
+    if (!db.isOpen()) return false;
+    // never NULL: the columns are NOT NULL (see writeNode on null QStrings)
+    auto text = [](const QString &t) { return t.isNull() ? QString::fromLatin1("") : t; };
+    auto bindRow = [&](QSqlQuery &w, const UndoRow &r) {
+        w.addBindValue(text(r.name));
+        w.addBindValue(text(r.namefold));
+        w.addBindValue(text(r.path));
+        w.addBindValue(text(r.pathfold));
+        w.addBindValue(r.parent > 0 ? QVariant(r.parent) : QVariant());
+        w.addBindValue(text(r.synonyms));
+        w.addBindValue(r.exportable);
+        w.addBindValue(r.sort);
+        w.addBindValue(r.id);
+    };
+
+    QList<UndoRow> rows = put;                          // parents first
+    std::stable_sort(rows.begin(), rows.end(), [](const UndoRow &a, const UndoRow &b) {
+        return a.path.count('|') < b.path.count('|');
+    });
+
+    QString why;
+    db.transaction();
+    QSqlQuery q(db);
+    q.exec("PRAGMA defer_foreign_keys = ON");
+    bool ok = true;
+
+    // 1. update
+    QList<UndoRow> missing;
+    q.prepare("UPDATE vocab SET name = ?, namefold = ?, path = ?, pathfold = ?,"
+              " parent = ?, synonyms = ?, exportable = ?, sort = ? WHERE id = ?");
+    for (const UndoRow &r : std::as_const(rows)) {
+        bindRow(q, r);
+        if (!q.exec()) { ok = false; why = q.lastError().text(); break; }
+        if (q.numRowsAffected() == 0) missing << r;
+    }
+
+    // 2. delete, unless it would take a keyword this step did not make with it
+    if (ok && !drop.isEmpty()) {
+        const QSet<qint64> going(drop.cbegin(), drop.cend());
+        QSqlQuery c(db);
+        c.prepare("SELECT id FROM vocab WHERE parent = ?");
+        for (qint64 id : drop) {
+            c.addBindValue(id);
+            if (!c.exec()) { ok = false; why = c.lastError().text(); break; }
+            while (c.next()) {
+                if (going.contains(c.value(0).toLongLong())) continue;
+                ok = false;
+                why = tr("a keyword has been moved inside one this would remove");
+                break;
+            }
+            if (!ok) break;
+        }
+        q.prepare("DELETE FROM vocab WHERE id = ?");
+        for (int i = 0; ok && i < drop.size(); ++i) {
+            q.addBindValue(drop.at(i));
+            if (!q.exec()) { ok = false; why = q.lastError().text(); }
+        }
+    }
+
+    // 3. insert
+    q.prepare("INSERT INTO vocab (name, namefold, path, pathfold, parent, synonyms,"
+              " exportable, sort, id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    for (int i = 0; ok && i < missing.size(); ++i) {
+        bindRow(q, missing.at(i));
+        if (!q.exec()) { ok = false; why = q.lastError().text(); }
+    }
+
+    if (ok && !db.commit()) { ok = false; why = db.lastError().text(); }
+    if (!ok) {
+        db.rollback();
+        G::issue("Warning", "Could not undo the keyword list change: " + why,
+                 "KeywordVocab::applyUndoRows");
+    }
+    reload();
+    return ok;
+}
 
 KeywordVocab::KeywordVocab(QObject *parent)
     : QAbstractItemModel(parent)
@@ -683,6 +863,7 @@ QModelIndex KeywordVocab::insertChild(const QModelIndex &parent, const QString &
     for (VocabNode *sib : p->children)
         if (keywordFold(sib->name) == keywordFold(leaf)) return indexOf(sib);
 
+    Step step(this, tr("Add Keyword"));
     beginResetModel();
     VocabNode *n = ensureChild(p, leaf);
     if (n) sortChildren(p);
@@ -706,6 +887,7 @@ int KeywordVocab::insertPaths(const QStringList &paths)
     endResetModel, because a reset cannot be nested inside another one.
 */
     if (paths.isEmpty()) return 0;
+    Step step(this, tr("Add Keywords"));
 
     QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return 0;
@@ -760,6 +942,10 @@ QModelIndex KeywordVocab::insertParentAbove(const QModelIndex &idx, const QStrin
 {
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
     if (!n) return QModelIndex();
+    /*  NOT A STEP YET: the re-parent below can retag files (pathChanged), which Edit >
+        Undo cannot take back until keyword rewrites keep a file log. Suspended rather
+        than left alone, or insertChild's own Step would record the new parent alone. */
+    UndoSuspend notYetAStep;
 
     VocabNode *oldParent = n->parent ? n->parent : root;
     const QModelIndex parentIdx = oldParent == root ? QModelIndex() : indexOf(oldParent);
@@ -777,6 +963,7 @@ bool KeywordVocab::remove(const QModelIndex &idx)
 {
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
     if (!n) return false;
+    Step step(this, tr("Delete Keyword"));
 
     QSqlDatabase db = UserDb::instance().db();
     if (!db.isOpen()) return false;
@@ -824,6 +1011,7 @@ int KeywordVocab::removeUnusedRoots(const QStringList &names)
     invalidates every index taken before it.
 */
     if (G::isLogger) G::log("KeywordVocab::removeUnusedRoots");
+    Step step(this, tr("Delete Keywords"));
 
     int gone = 0;
     for (const QString &name : names) {
@@ -844,6 +1032,7 @@ bool KeywordVocab::setSynonyms(const QModelIndex &idx, const QStringList &synony
 {
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
     if (!n) return false;
+    Step step(this, tr("Synonyms"));
     n->synonyms = synonyms;
     if (!writeNode(n)) return false;
     emit dataChanged(idx, idx, {SynonymsRole});
@@ -854,6 +1043,7 @@ bool KeywordVocab::setExportable(const QModelIndex &idx, bool exportable)
 {
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
     if (!n) return false;
+    Step step(this, tr("Include on Export"));
     n->exportable = exportable;
     if (!writeNode(n)) return false;
     emit dataChanged(idx, idx, {ExportableRole});
@@ -874,6 +1064,7 @@ int KeywordVocab::buildFromCatalog()
     ordering the schema 10 migration uses, for the same reason.
 */
     if (G::isLogger) G::log("KeywordVocab::buildFromCatalog");
+    Step step(this, tr("Build Keyword List"));
 
     QStringList paths;
     for (const CatalogKeyword &k : Catalog::instance().keywords())
@@ -925,6 +1116,7 @@ int KeywordVocab::importLightroom(const QString &filePath, QStringList *skipped)
     node's synonyms would be a replace by the back door.
 */
     if (G::isLogger) G::log("KeywordVocab::importLightroom", filePath);
+    Step step(this, tr("Import Keywords"));
 
     QFile f(filePath);
     if (!f.open(QIODevice::ReadOnly)) {

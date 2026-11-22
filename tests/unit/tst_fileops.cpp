@@ -38,6 +38,7 @@ private slots:
     void trashFilesCarriesSidecarsNotPairs();
     void trashFilesSortsMissingAndProtected();
     void trashFilesCancelsBetweenChunks();
+    void trashedFilesComeBackFromTheTrash();
     void sidecarPathByFormat();
     void legacySidecarReadWhenAlone();
     void legacySidecarBelongsToTheRaw();
@@ -89,8 +90,10 @@ void tst_fileops::useFakeTrash()
     QDir t(trashTmp.path());
     for (const QString &f : t.entryList(QDir::Files | QDir::Hidden)) t.remove(f);
     const QString dir = trashTmp.path();
-    FileOps::setTrashHook([dir](const QString &path) {
-        return QFile::rename(path, QDir(dir).absoluteFilePath(QFileInfo(path).fileName()));
+    FileOps::setTrashHook([dir](const QString &path, QString *inTrash) {
+        const QString to = QDir(dir).absoluteFilePath(QFileInfo(path).fileName());
+        if (inTrash) *inTrash = to;
+        return QFile::rename(path, to);
     });
 }
 
@@ -659,6 +662,42 @@ void tst_fileops::folderMoveCarriesPreviewsUnderItOnly()
 
     QDir(from).removeRecursively();
     QDir(d.absoluteFilePath("b raw")).removeRecursively();
+}
+
+void tst_fileops::trashedFilesComeBackFromTheTrash()
+{
+/*
+    EDIT > UNDO OF A DELETE (MW::restoreTrashed): trashFiles reports where the image
+    and each sidecar went, and restoreFromTrash puts each back -- and refuses, without
+    touching anything, when the name has been taken since or the trash no longer holds
+    the file.
+*/
+    useFakeTrash();
+    touch("UNDO_1.NEF", "raw");
+    touch("UNDO_1.xmp", "side");
+    const FileOps::TrashResult r = FileOps::trashFiles({p("UNDO_1.NEF")});
+    QCOMPARE(r.trashed, QStringList{p("UNDO_1.NEF")});
+    const auto where = r.inTrash.value(p("UNDO_1.NEF"));
+    QCOMPARE(where.size(), 2);
+    QCOMPARE(where.at(0).first, p("UNDO_1.NEF"));       // the image first
+    QVERIFY(!QFileInfo::exists(p("UNDO_1.NEF")));
+
+    // a name taken since: refused, both files left where they are
+    touch("UNDO_1.NEF", "new");
+    QString why;
+    QVERIFY(!FileOps::restoreFromTrash(where.at(0).second, where.at(0).first, &why));
+    QVERIFY(!why.isEmpty());
+    QVERIFY(QFileInfo::exists(where.at(0).second));
+    QVERIFY(QFile::remove(p("UNDO_1.NEF")));
+
+    for (const auto &f : where) QVERIFY(FileOps::restoreFromTrash(f.second, f.first));
+    QFile back(p("UNDO_1.NEF"));
+    QVERIFY(back.open(QIODevice::ReadOnly));
+    QCOMPARE(back.readAll(), QByteArray("raw"));
+    QVERIFY(QFileInfo::exists(p("UNDO_1.xmp")));
+
+    // gone from the trash: refused
+    QVERIFY(!FileOps::restoreFromTrash(where.at(0).second, p("UNDO_2.NEF"), &why));
 }
 
 QTEST_MAIN(tst_fileops)

@@ -228,7 +228,7 @@ void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
         if (existBase == oldBase) {
             QString oldPath = inf.at(i).filePath();
             QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).completeSuffix();
-            QFile(oldPath).rename(newPath);
+            if (QFile(oldPath).rename(newPath)) renamed << qMakePair(oldPath, newPath);
             FileOps::onMoved(oldPath, newPath);
             if (isDebug) qDebug() << "RenameFileDlg::renameFileBase Renamed file oldPath ="
                                   << oldPath << "to newPath =" << newPath;
@@ -682,7 +682,7 @@ void RenameFileDlg::renameInFolder(const QStringList &paths, QStringList &sideca
         }
 
         // File rename oldPath to newPath
-        QFile(oldPath).rename(newPath);
+        if (QFile(oldPath).rename(newPath)) renamed << qMakePair(oldPath, newPath);
         /* Keep the cached develop preview with the file. The sidecar (and with it the
            thumbnail preview) is carried by the basename scan above. */
         FileOps::onMoved(oldPath, newPath);
@@ -977,6 +977,7 @@ bool RenameFileDlg::renameSingleManual(const QString &newBase)
                 QString::fromLocal8Bit(std::strerror(errno)));
             return false;
         }
+        renamed << qMakePair(oldPath, newPath);
         FileOps::onMoved(oldPath, newPath);
         if (dm->fPathRow.contains(oldPath)) {
             renameDatamodel(oldPath, newPath, newName);
@@ -1050,11 +1051,13 @@ bool RenameFileDlg::renameOnlySelected(const QString &newBase)
             QString::fromLocal8Bit(std::strerror(errno)));
         return false;
     }
+    renamed << qMakePair(src, dst);
     QStringList failed;
     for (const QString &c : comps) {
         const QString d = FileOps::companionDest(c, src, dst);
         if (std::rename(c.toUtf8().constData(), d.toUtf8().constData()) != 0)
             failed << QFileInfo(c).fileName();
+        else renamed << qMakePair(c, d);
     }
     FileOps::onMoved(src, dst);
     if (dm->fPathRow.contains(src)) renameDatamodel(src, dst, QFileInfo(dst).fileName());

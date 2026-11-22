@@ -1,5 +1,6 @@
 #include "Main/mainwindow.h"
 #include "Datamodel/savedpicks.h"
+#include "Undo/undocommands.h"
 
 void MW::togglePickUnlessRejected()
 {
@@ -7,7 +8,7 @@ void MW::togglePickUnlessRejected()
     If the selection has any images that are not picked then pick them all.
     If the entire selection was already picked then unpick them all.
     If the entire selection is unpicked then pick them all.
-    Push the changes onto the pick history stack.
+    The change is one Edit > Undo step (recordPickUndo).
 */
     if (G::isLogger) G::log("MW::togglePickUnlessRejected");
     QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
@@ -34,23 +35,19 @@ void MW::togglePickUnlessRejected()
     }
     foundFalse ? newPickStatus = "Picked" : newPickStatus = "Unpicked";
 
-    // add multiple selection flag to pick history
-    if (n > 1) pushPick("Begin multiple select");
-
-    // set pick status for selection
+    // set pick status for selection, recording each change for Edit > Undo
+    PathValues before, after;
     foreach (dmRow, rows) {
-        // save pick history
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
-        QString priorPickStatus = dm->index(dmRow, G::PickColumn).data().toString();
-        pushPick(fPath, priorPickStatus);
-        // set pick status
         QModelIndex pickIdx = dm->index(dmRow, G::PickColumn);
         pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
         if (pickStatus != "Rejected") {
+            before.append({fPath, pickStatus});
+            after.append({fPath, newPickStatus});
             emit setValDm(dmRow, G::PickColumn, newPickStatus, dm->instance, "MW::togglePickUnlessRejected", Qt::EditRole);
         }
     }
-    if (n > 1) pushPick("End multiple select");
+    recordPickUndo(newPickStatus == "Picked" ? "Pick" : "Unpick", before, after);
 
     // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
@@ -89,8 +86,8 @@ void MW::clearPicks()
 /*
     Unpick every picked image in the datamodel -- the UNFILTERED model, like isAnyPick
     and pickCount, so a pick hidden by the current filter is cleared too. Rejects are left
-    alone. The change goes onto the pick history stack as one multiple-select group, so
-    "Recover prior pick state" restores the whole set. DataModel::setData writes each
+    alone. The change is one Edit > Undo step, which restores the whole set.
+    DataModel::setData writes each
     unpick through to the saved picks (Datamodel/savedpicks.h).
 
     THE LOADED IMAGES ONLY. A saved pick in a folder that is not loaded stays picked;
@@ -114,14 +111,15 @@ void MW::clearPicks()
         }
     }
 
-    if (rows.count() > 1) pushPick("Begin multiple select");
+    PathValues before, after;
     for (int dmRow : rows) {
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
-        pushPick(fPath, "Picked");
+        before.append({fPath, QString("Picked")});
+        after.append({fPath, QString("Unpicked")});
         emit setValDm(dmRow, G::PickColumn, "Unpicked", dm->instance, "MW::clearPicks",
                       Qt::EditRole);
     }
-    if (rows.count() > 1) pushPick("End multiple select");
+    recordPickUndo("Clear Picks", before, after);
 
     // same refresh tail as togglePick (see the suspension comment there)
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
@@ -150,8 +148,8 @@ void MW::rejectUnpickedClearPicks()
     of picking. Rejected and Ingested images are left alone.
 
     THE FILTERED DATASET ONLY (dm->sf), unlike clearPicks: images hidden by the current
-    filter keep their pick status. The change goes onto the pick history stack as one
-    multiple-select group, so "Recover prior pick state" restores the whole set.
+    filter keep their pick status. The change is one Edit > Undo step, which restores
+    the whole set.
 
     Triggered by rejectUnpickedClearPicksAction (Ingest menu and the thumbnail context
     menu), which updatePickDependentActions enables only while a VISIBLE image is
@@ -194,16 +192,17 @@ void MW::rejectUnpickedClearPicks()
     const int toReject = priors.count("Unpicked");
     if (!okToRejectUnpicked(toReject, priors.count() - toReject)) return;
 
-    if (rows.count() > 1) pushPick("Begin multiple select");
+    PathValues before, after;
     for (int i = 0; i < rows.count(); ++i) {
         const int dmRow = rows.at(i);
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
-        pushPick(fPath, priors.at(i));
         QString newStatus = priors.at(i) == "Picked" ? "Unpicked" : "Rejected";
+        before.append({fPath, priors.at(i)});
+        after.append({fPath, newStatus});
         emit setValDm(dmRow, G::PickColumn, newStatus, dm->instance,
                       "MW::rejectUnpickedClearPicks", Qt::EditRole);
     }
-    if (rows.count() > 1) pushPick("End multiple select");
+    recordPickUndo("Reject Unpicked", before, after);
 
     // same refresh tail as togglePick (see the suspension comment there)
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
@@ -283,7 +282,7 @@ bool MW::okToRejectUnpicked(int toReject, int toUnpick)
                    ? QString("1 picked image will be unpicked.")
                    : QString("%1 picked images will be unpicked.").arg(toUnpick);
     info += "\n\nOnly images in the filtered view are changed. "
-            "Undo with Ingest > Recover prior pick state.";
+            "Undo with Edit > Undo.";
     msgBox.setInformativeText(info);
     QPushButton *rejectBtn = msgBox.addButton(toReject == 0 ? QString("Clear Picks")
                                                             : QString("Reject"),
@@ -354,8 +353,12 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     int sfRow = idx.row();
     QModelIndex pickIdx = dm->sf->index(sfRow, G::PickColumn);
     QString pickStatus = qvariant_cast<QString>(pickIdx.data(Qt::EditRole));
+    const QString priorStatus = pickStatus;
+    const QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::KeyRole).toString();
     pickStatus == "Unpicked" ? pickStatus = "Picked" : pickStatus = "Unpicked";
     emit setValSf(sfRow, G::PickColumn, pickStatus, dm->instance, "MW::togglePickMouseOverItem", Qt::EditRole);
+    recordPickUndo(pickStatus == "Picked" ? "Pick" : "Unpick", {{fPath, priorStatus}},
+                   {{fPath, pickStatus}});
 
     updateClassification();
     thumbView->refreshIcons("MW::togglePickMouseOverItem");
@@ -385,7 +388,7 @@ void MW::togglePick()
     If the selection has any images that are not picked then pick them all.
     If the entire selection was already picked then unpick them all.
     If the entire selection is unpicked then pick them all.
-    Push the changes onto the pick history stack.
+    The change is one Edit > Undo step (recordPickUndo).
 
     The pick status is a string in dm->sf->index(idx.row(), G::PickColumn)
         - "Unpicked"
@@ -433,20 +436,17 @@ void MW::togglePick()
         pickClick->play();
     }
 
-    // add multiple selection flag to pick history
-    if (n > 1) pushPick("Begin multiple select");
-
-    // set pick status for selection
+    // set pick status for selection, recording each change for Edit > Undo
+    PathValues before, after;
     foreach (dmRow, rows) {
-        // save pick history
         QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
-        QString priorPickStatus = dm->index(dmRow, G::PickColumn).data().toString();
-        pushPick(fPath, priorPickStatus);
-        // set pick status
+        QString priorPickStatus = dm->index(dmRow, G::PickColumn).data(Qt::EditRole).toString();
+        before.append({fPath, priorPickStatus});
+        after.append({fPath, pickStatus});
         emit setValDm(dmRow, G::PickColumn, pickStatus, dm->instance, "MW::togglePick",
                       Qt::EditRole);
     }
-    if (n > 1) pushPick("End multiple select");
+    recordPickUndo(pickStatus == "Picked" ? "Pick" : "Unpick", before, after);
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model");
 
     // avoid null proxy filter
@@ -502,9 +502,6 @@ void MW::toggleReject()
     QModelIndexList idxList = RowSelection::Rows(dm->selectionModel);
     QString pickStatus;
 
-    // add multiple selection flag to pick history
-    if (idxList.length() > 1) pushPick("Begin multiple select");
-
     bool foundFalse = false;
     // check if any images are not rejected in the selection
     foreach (idx, idxList) {
@@ -524,17 +521,24 @@ void MW::toggleReject()
         pickClick->play();
     }
 
-    // set pick status for selection
-    foreach (idx, idxList) {
-        // save pick history
-        int sfRow = idx.row();
-        QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::KeyRole).toString();
-        QString priorPickStatus = dm->sf->index(sfRow, G::PickColumn).data().toString();
-        pushPick(fPath, priorPickStatus);
-        // set pick status
-        emit setValSf(sfRow, G::PickColumn, pickStatus, dm->instance, "MW::toggleReject", Qt::EditRole);
+    /*  set pick status for selection, recording each change for Edit > Undo. By KEY,
+        captured before any write: setValSf re-filters the proxy as it goes, so a proxy
+        row read after the first write can name a different image. */
+    PathValues before, after;
+    for (const QModelIndex &i : std::as_const(idxList)) {
+        const int sfRow = i.row();
+        const QString fPath = dm->sf->index(sfRow, G::PathColumn).data(G::KeyRole).toString();
+        before.append({fPath, dm->sf->index(sfRow, G::PickColumn).data(Qt::EditRole)
+                                  .toString()});
+        after.append({fPath, pickStatus});
     }
-    if (idxList.length() > 1) pushPick("End multiple select");
+    for (const auto &pv : std::as_const(after)) {
+        const int dmRow = dm->rowFromKey(pv.first);
+        if (dmRow < 0) continue;
+        emit setValDm(dmRow, G::PickColumn, pickStatus, dm->instance, "MW::toggleReject",
+                      Qt::EditRole);
+    }
+    recordPickUndo(pickStatus == "Rejected" ? "Reject" : "Unreject", before, after);
 
     // refresh filtration if any filter pick items (picked, unpicked, rejected) are selected
     bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
@@ -567,52 +571,61 @@ void MW::toggleReject()
     updateClassification();
 }
 
-void MW::pushPick(QString fPath, QString status)
+void MW::recordPickUndo(const QString &what, const PathValues &before,
+                        const PathValues &after)
 {
 /*
-    Adds a pick action (either to pick or unpick) to the pickStack history. This is used to
-    recover a prior pick history state if the picks have been lost due to an accidental
-    erasure.
+    One pick edit as one Edit > Undo step. Replaces the pick history stack and
+    "Recover prior pick state" (Cmd+Opt+Z): the same restore, now on the app-wide
+    undo with redo, and for every pick path. Rows whose status did not change are
+    dropped, so a step never claims images it did not touch.
 */
-    if (G::isLogger) G::log("MW::pushPick");
-    pick.path = fPath;
-    pick.status = status;
-    pickStack->push(pick);
+    if (!undoManager || undoManager->isApplying()) return;
+    PathValues b = before, a = after;
+    pruneUnchanged(b, a);
+    if (b.isEmpty()) return;
+    undoManager->push(new PathValuesCommand(undoStepText(what, int(b.size())), b, a,
+                      [this](const PathValues &v) { applyPickStates(v); }));
 }
 
-void MW::popPick()
+void MW::applyPickStates(const PathValues &statusByPath)
 {
-    if (G::isLogger) G::log("MW::popPick");
-    if (pickStack->isEmpty()) return;
-    pick = pickStack->pop();
-    if (pick.path != "End multiple select") {
-        updatePickFromHistory(pick.path, pick.status);
-    }
-    else {
-        while (!pickStack->isEmpty()) {
-            pick = pickStack->pop();
-            if (pick.path == "Begin multiple select") break;
-            updatePickFromHistory(pick.path, pick.status);
+/*
+    Edit > Undo / Redo of a pick edit: set each image's pick status back. A loaded image
+    goes through the model, which writes the saved picks (DataModel::setData). An image
+    no longer loaded has only its saved pick to restore, and only Picked is saved -- a
+    reject lives in the model alone, as it always has.
+*/
+    if (G::isLogger) G::log("MW::applyPickStates");
+    if (!dm) return;
+    const QString src = "MW::applyPickStates";
+    for (const auto &pv : statusByPath) {
+        const QString status = pv.second.toString();
+        const int dmRow = dm->rowFromKey(pv.first);
+        if (dmRow >= 0) {
+            emit setValDm(dmRow, G::PickColumn, status, dm->instance, src, Qt::EditRole);
+        }
+        else if (SavedPicks::IsOpen()) {
+            SavedPicks::Set(pv.first, status == "Picked");
         }
     }
-}
 
-void MW::updatePickFromHistory(QString fPath, QString status)
-{
-    if (G::isLogger) G::log("MW::updatePickFromHistory");
-    int dmRow = dm->rowFromKey(fPath);
-    if (dmRow == -1) return;
-
-    emit setValDm(dmRow, G::PickColumn, status, dm->instance, "MW::updatePickFromHistory", Qt::EditRole);
-    thumbView->refreshIcons("MW::updatePickFromHistory");
-    gridView->refreshIcons("MW::updatePickFromHistory");
-
+    // same refresh tail as togglePick (see the suspension comment there)
+    bool picksBeingFiltered = filters->isAnyCatItemChecked(filters->picks);
+    buildFilters->updateCategory(BuildFilters::PickEdit, BuildFilters::NoAfterAction,
+                                 picksBeingFiltered);
+    if (picksBeingFiltered) {
+        filterChange(src);
+    }
+    else {
+        dm->sf->suspend(false, "MW::applyPickStates: no filter change");
+        thumbView->refreshIcons(src);
+        gridView->refreshIcons(src);
+    }
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updatePickDependentActions();
-    updateStatus(true, "", "MW::updatePickFromHistory");
-
-    // update filter counts
-    buildFilters->updateCategory(BuildFilters::PickEdit);
+    updateStatus(true, "", src);
+    updateClassification();
 }
 
 qulonglong MW::memoryReqdForPicks()

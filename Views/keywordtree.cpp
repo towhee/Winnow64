@@ -5,8 +5,10 @@
 #include "Metadata/keywordpaths.h"
 #include "Utilities/inputdlg.h"
 #include "Utilities/popup.h"
+#include "Undo/undomanager.h"
 
 #include <QAction>
+#include <optional>
 #include <QApplication>
 #include <QTimer>
 #include <QDrag>
@@ -633,6 +635,10 @@ void KeywordTree::deleteSelected()
     /*  The list first, then the files: the retag ends by refreshing the vocabulary's
         counts and the filters' unfiled marking, which should see the node gone. Without
         the children the node stays -- it is their parent. */
+    /*  Remove everywhere also rewrites files (Undo plan P4), so until then only Remove
+        from list is a step: a half-undo would bring back a keyword the images lost. */
+    std::optional<UndoSuspend> filesToo;
+    if (clicked == everywhere) filesToo.emplace();
     if (wholeBranch && !vocab->remove(idx)) {
         QMessageBox::warning(this, "Delete keyword",
             "Could not delete \"" + name + "\" from your keyword list.");
@@ -908,6 +914,8 @@ void KeywordTree::dropEvent(QDropEvent *event)
 
         QModelIndex node = vocab->indexForPath(filed);
         if (!node.isValid()) {
+            // the tag swap on the images follows (tagFiled): not undoable until P4
+            UndoSuspend filesToo;
             node = vocab->insertChild(target, leaf);
             if (!node.isValid()) {
                 QMessageBox::warning(this, "Add keyword",

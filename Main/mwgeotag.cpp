@@ -83,6 +83,13 @@ void MW::geotagRows(const QList<int> &dmRows, double lat, double lon)
         if (box.clickedButton() != replace) return;
     }
 
+    /*  For Edit > Undo: each file's OWN sidecar GPS items (empty when the location is
+        the camera's, or there is none) and the location its rows show. Undo puts those
+        items back -- removing them lets the camera's location show again. */
+    PathValues before;
+    for (const QString &f : std::as_const(files))
+        before.append({f, geotagState(f)});
+
     // the sidecars first: a row is changed only when its file's sidecar took the write
     QSet<QString> written;
     QStringList failed;
@@ -101,19 +108,18 @@ void MW::geotagRows(const QList<int> &dmRows, double lat, double lon)
         ++changed;
     }
 
-    /*  What reads the column: the GPS category's counts, a filter or sort on it, the
-        Places membership (which refilters itself if it changed), and the map's pins --
-        setValDm only notifies the rows on screen, so the map is told directly. */
-    if (changed) {
-        if (buildFilters && filters && !filters->buildingFilters) buildFilters->recount();
-        if (editNeedsRefilter(G::GPSCoordColumn) || editNeedsRefilter(G::HasGPSColumn))
-            filterChange(src);
-        refreshPlaceMembership();
-        if (mapView && mapView->isVisible()) mapView->activate();
-        /*  The Metadata panel reads the model, but only when the selection changes --
-            and a drop does not change it. The current image is usually one dropped. */
-        if (G::useInfoView && infoView && dm->currentSfRow >= 0)
-            infoView->updateInfo(dm->currentSfRow);
+    if (changed) refreshAfterGeotag(src);
+
+    PathValues b, a;
+    for (const auto &pv : std::as_const(before)) {
+        if (!written.contains(pv.first)) continue;
+        b.append(pv);
+        a.append({pv.first, geotagState(pv.first)});
+    }
+    if (undoManager && !b.isEmpty()) {
+        undoManager->push(new PathValuesCommand(
+            undoStepText("Set Location", int(b.size())), b, a,
+            [this](const PathValues &v) { applyGeotag(v); }));
     }
 
     if (!failed.isEmpty()) {
@@ -128,4 +134,73 @@ void MW::geotagRows(const QList<int> &dmRows, double lat, double lon)
             ? tr("Location set: %1").arg(where)
             : tr("Location set for %1 images: %2").arg(changed).arg(where), 2500);
     }
+}
+
+void MW::refreshAfterGeotag(const QString &src)
+{
+/*
+    What reads the GPS column: the GPS category's counts, a filter or sort on it, the
+    Places membership (which refilters itself if it changed), and the map's pins --
+    setValDm only notifies the rows on screen, so the map is told directly.
+*/
+    if (buildFilters && filters && !filters->buildingFilters) buildFilters->recount();
+    if (editNeedsRefilter(G::GPSCoordColumn) || editNeedsRefilter(G::HasGPSColumn))
+        filterChange(src);
+    refreshPlaceMembership();
+    if (mapView && mapView->isVisible()) mapView->activate();
+    /*  The Metadata panel reads the model, but only when the selection changes -- and a
+        drop does not change it. The current image is usually one dropped. */
+    if (G::useInfoView && infoView && dm->currentSfRow >= 0)
+        infoView->updateInfo(dm->currentSfRow);
+}
+
+QVariant MW::geotagState(const QString &file) const
+{
+/*
+    A file's location as Edit > Undo restores it: its sidecar's own three GPS items, raw,
+    and the location string its rows show (G::GPSCoordColumn, which may be the camera's).
+*/
+    static const QList<QByteArray> items = {"gpslatitude", "gpslongitude", "gpsversionid"};
+    const QHash<QByteArray, QString> v = Metadata::readSidecarItems(file, items);
+    QString coord;
+    if (dm) {
+        const int r = dm->rowFromKey(file);
+        if (r >= 0) coord = dm->index(r, G::GPSCoordColumn).data().toString();
+    }
+    return QVariantList{v.value("gpslatitude"), v.value("gpslongitude"),
+                        v.value("gpsversionid"), coord};
+}
+
+void MW::applyGeotag(const PathValues &states)
+{
+/*
+    Edit > Undo / Redo of a geotag: each file's sidecar GPS items written back exactly
+    (an empty one removed, so a camera location shows through again), and every loaded
+    row of the file -- versions too -- given the location it showed. The sidecar only,
+    never the image file, as for the geotag itself.
+*/
+    if (G::isLogger) G::log("MW::applyGeotag");
+    if (!dm || !metadata) return;
+    const QString src = "MW::applyGeotag";
+    QHash<QString, QString> coordByFile;
+    for (const auto &pv : states) {
+        const QVariantList v = pv.second.toList();
+        metadata->writeItemsToSidecar(pv.first,
+                                      {{"gpslatitude", v.value(0).toString().toLatin1()},
+                                       {"gpslongitude", v.value(1).toString().toLatin1()},
+                                       {"gpsversionid", v.value(2).toString().toLatin1()}},
+                                      /*allowEmbed*/ false, src);
+        coordByFile.insert(pv.first, v.value(3).toString());
+    }
+    int changed = 0;
+    const int n = dm->rowCount();
+    for (int r = 0; r < n; ++r) {
+        const QString f = dm->index(r, G::PathColumn).data(G::SourcePathRole).toString();
+        auto it = coordByFile.constFind(f);
+        if (it == coordByFile.constEnd()) continue;
+        emit setValDm(r, G::GPSCoordColumn, it.value(), dm->instance, src, Qt::EditRole);
+        updateCatalogForRow(r);
+        ++changed;
+    }
+    if (changed) refreshAfterGeotag(src);
 }

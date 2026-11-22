@@ -82,6 +82,36 @@ public:
         QString definition;
     };
 
+    /*  EDIT > UNDO. A node and everything beneath it, ids and all, with every
+        membership in it: what remove() destroys and restore() puts back. Ids are
+        restored as they were, so the filters, the panels and every later step that
+        names a node find it again. */
+    struct Row
+    {
+        Node node;
+        qint64 created = 0;
+        qint64 modified = 0;
+    };
+    struct Member
+    {
+        qint64 node = 0;
+        QString pathkey;
+        QString path;
+        qint64 added = 0;
+    };
+    struct Subtree
+    {
+        QVector<Row> rows;          // parents before children
+        QVector<Member> members;
+    };
+    /*  Where each node of a kind sits: what move() and reparent() change. */
+    struct Placement
+    {
+        qint64 id = 0;
+        qint64 parent = 0;
+        int position = 0;
+    };
+
     static CollectionStore &instance();
 
     /*  The file is UserDb's (Datamodel/userdb.h); these forward to it. setPath closes
@@ -135,8 +165,9 @@ public:
     /*  The distinct member paths of these nodes. */
     QStringList memberPaths(const QVector<qint64> &ids);
     /*  The collections (Kind::Collection) a row key -- a path, or a version key -- is
-        DIRECTLY in, in tree order. Empty when the store is unavailable. */
-    QVector<qint64> collectionsOf(const QString &key);
+        DIRECTLY in, in tree order (treeOrder false: any order, without reading the
+        tree -- what a bulk caller wants). Empty when the store is unavailable. */
+    QVector<qint64> collectionsOf(const QString &key, bool treeOrder = true);
 
     /*  EVERY MEMBERSHIP OF THIS KIND, as image key (Cache/pathkey.h) -> the ids, as
         text, of the nodes it is in, directly OR THROUGH A CHILD: an image in B, inside
@@ -144,6 +175,15 @@ public:
         G::CollectionsColumn is built from (MW::refreshCollectionMembership). One
         statement. */
     QHash<QString, QStringList> membershipByKey(Kind kind);
+
+    /*  Edit > Undo's half of the mutators above, which record themselves on the app's
+        stack (UndoManager::record): create, rename, setDefinition, duplicate, remove,
+        reparent, move, addMembers and removeMembers. Each step is undone through these
+        and the same mutators, never by hand. */
+    Subtree snapshot(qint64 id);
+    bool restore(const Subtree &tree);
+    QVector<Placement> placements(Kind kind);
+    bool setPlacements(Kind kind, const QVector<Placement> &where);
 
     /*  FileOps notifications: a file Winnow moved or deleted. */
     void onMoved(const QString &srcPath, const QString &dstPath);
@@ -165,6 +205,8 @@ private:
     QSqlDatabase db();
     bool isOpen() const;
     int nextPosition(QSqlDatabase &d, qint64 parent, Kind kind);
+    /*  The kinds as a step names them: "Collection", "Query", "Place". */
+    static QString kindName(Kind kind);
 };
 
 #endif // COLLECTIONSTORE_H

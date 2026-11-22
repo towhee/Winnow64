@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Undo and Redo</h1>
+
+<p><b>Edit &gt; Undo</b> (Cmd+Z on a Mac, Ctrl+Z on Windows and Linux) takes back your
+last change.  <b>Edit &gt; Redo</b> (Cmd+Shift+Z, or Ctrl+Y on Windows) puts it back.
+The menu item names the step, for example "Undo Rating (12 images)".</p>
+
+<p>A change made to several images at once is one step.  Undo puts every one of those
+images back the way it was.</p>
+
+<h2>What you can undo while browsing</h2>
+<ul>
+<li>Pick, reject, unpick, Clear all picks, and Reject unpicked, clear picks.</li>
+<li>Ratings and color labels.</li>
+<li>Title, creator, copyright, email and URL typed in the Metadata panel.</li>
+<li>Rotate left and rotate right.</li>
+<li>Keywords added to or removed from images, including images dropped on a keyword.</li>
+<li>Duplicate OK.</li>
+<li>A location set by dropping images on the map.  Undo puts back the location the
+images had before, including the camera's own.</li>
+</ul>
+
+<h2>Collections, places, versions and keywords</h2>
+<ul>
+<li>Collections and queries: new, rename, duplicate, delete, move, edit a query, and
+adding or removing images.  A deleted collection comes back with everything inside it
+and all its images.</li>
+<li>Places on the map: new, edit, rename and delete.</li>
+<li>Versions: new, rename, delete and Set Version as Master.  A deleted version comes
+back with its develop settings, its History and its collections.</li>
+<li>The Keyword list: adding keywords, Remove from list, synonyms, Include on Export,
+Build from catalog and Import.</li>
+</ul>
+
+<h2>Files</h2>
+<ul>
+<li>Delete and Delete rejected: undo brings the images back from the Trash (Recycle
+Bin on Windows) with their sidecars, collections, picks, rejects and Develop History.
+If you empty the Trash first, they cannot come back.</li>
+<li>Paste: undo moves the pasted files to the Trash.</li>
+<li>Rename: undo gives every renamed file its old name back.</li>
+<li>In the Library: moving or copying images onto a folder in the Filters panel, and
+renaming or moving a folder.</li>
+</ul>
+
+<p>If a file is not where the step left it, or its old name is now taken, Winnow says
+so and the step stays in the Edit menu.  Deleting a folder, creating a folder, and
+dragging files between folders in the Folders or Bookmarks panels cannot be undone
+yet.</p>
+
+<p>Renaming or moving a keyword in the Keyword list, Remove everywhere, Tidy, and
+merging an unfiled keyword change keywords in your image files too.  These cannot be
+undone yet.</p>
+
+<p>Undo writes the earlier value back to the sidecar (or into the image file when
+"Permit image file modification" is on), exactly as the change was written.</p>
+
+<h2>After you change folders</h2>
+<p>Undo still works after you open another folder.  The images are found by their file,
+and their sidecars are changed directly.  A rotation is the exception: it is undone only
+while its images are loaded, and Winnow tells you if any were skipped.</p>
+
+<h2>In Develop</h2>
+<p>In Develop, Cmd+Z steps back through the image's History, and Cmd+Shift+Z steps
+forward.  While you paint a Brush or Object mask, Cmd+Z takes back your last stroke
+first.  See the History page.</p>
+
+<h2>Typing</h2>
+<p>When the cursor is in a text field, Cmd+Z undoes your typing instead.</p>
+
+<h2>What is kept</h2>
+<p>The last 200 steps are kept until you quit.  Undo is not saved between sessions.</p>
+
+<p>Making a new change after an undo discards the steps you could have redone.</p>
+
+</body>
+</html>

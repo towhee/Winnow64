@@ -220,6 +220,78 @@ QMap<QString, int> MW::keywordsInSelection() const
     return out;
 }
 
+bool MW::writeKeywordRow(int dmRow, const QString &fPath, const QStringList &subject,
+                         const QStringList &hierarchical, const QString &src)
+{
+/*
+    One image's keywords, written the one way they are written: the file, then the
+    model's three columns, then the hidden half of a raw+jpg pair, then the catalog and
+    the image's versions. The per-row body of applyKeywordsToSelection, shared with
+    Edit > Undo (applyKeywordLists). Returns whether the file was written.
+*/
+    QElapsedTimer stopwatch;
+    /*  THE FILE FIRST. See the note at the top of this file: with no shadow column,
+        updating the model before this would hide the edit from writeXMP. */
+    stopwatch.restart();
+    dm->imMetadata(fPath, true);        // true = load metadata->m AND its shadows
+    metadata->setKeywords(subject, hierarchical);
+    writePhases.readMeta += stopwatch.nsecsElapsed();
+
+    stopwatch.restart();
+    const bool wroteFile = metadata->writeXMP(fPath, src);
+    writePhases.writeFile += stopwatch.nsecsElapsed();
+    if (wroteFile) ++writePhases.written;
+
+    /*  THEN THE MODEL, all three columns. The two source columns hold what the file
+        now holds; the third is the prefix expansion the filters and the catalog read,
+        and it is derived here exactly as DataModel::addMetadataForItem derives it so
+        an edited row and a freshly read one cannot disagree. */
+    stopwatch.restart();
+    const QStringList expanded =
+        keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
+    emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src, Qt::EditRole);
+    emit setValDm(dmRow, G::KeywordPathsColumn, hierarchical, dm->instance, src,
+                  Qt::EditRole);
+    emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
+                  Qt::EditRole);
+    writePhases.writeModel += stopwatch.nsecsElapsed();
+
+    /*  A raw+jpg pair is ONE picture with two files, and the hidden half has to carry
+        the same keywords or a keyword filter would hide one of them. Its sidecar is
+        written too -- the hidden row is a real file the user may later see on its
+        own. Mirrors what MW::setRating does for the rating. */
+    stopwatch.restart();
+    if (combineRawJpg) {
+        const int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
+        if (rowDup >= 0) {
+            const QString dupPath =
+                dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
+            if (!dupPath.isEmpty()) {
+                dm->imMetadata(dupPath, true);
+                metadata->setKeywords(subject, hierarchical);
+                metadata->writeXMP(dupPath, src);
+            }
+            emit setValDm(rowDup, G::KeywordsColumn, subject, dm->instance, src,
+                          Qt::EditRole);
+            emit setValDm(rowDup, G::KeywordPathsColumn, hierarchical, dm->instance,
+                          src, Qt::EditRole);
+            emit setValDm(rowDup, G::KeywordsAllColumn, expanded, dm->instance, src,
+                          Qt::EditRole);
+            updateCatalogForRow(rowDup);
+        }
+    }
+    writePhases.dupPair += stopwatch.nsecsElapsed();
+
+    /*  And the index, so a keyword set in Catalog scope is searchable without
+        reopening the folder. Scope-gated inside updateCatalogForRow: an EDIT must not
+        be what puts an out-of-scope image into the catalog. */
+    stopwatch.restart();
+    updateCatalogForRow(dmRow);
+    writePhases.writeCatalog += stopwatch.nsecsElapsed();
+    dm->syncSharedToVersions(fPath);            // the group shows the file's keywords
+    return wroteFile;
+}
+
 void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &remove,
                                  bool rebuildFilters, bool replace)
 {
@@ -280,8 +352,7 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         checked keyword, and the interesting number there is images -- not passes. */
     if (rebuildFilters) writePhases.reset();
     writePhases.rows += rows.size();
-    QElapsedTimer stopwatch;
-    stopwatch.start();
+    PathValues before, after;           // each file's keyword lists, for Edit > Undo
 
     /*  THE BAR NEEDS A MAXIMUM OR ITS VALUE MEANS NOTHING. The setProgress calls below
         have been here from the start and had never moved anything: no caller set a
@@ -370,65 +441,9 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         QStringList subject, hierarchical;
         composeKeywordWrite(next, subject, hierarchical);
 
-        /*  THE FILE FIRST. See the note at the top of this file: with no shadow column,
-            updating the model before this would hide the edit from writeXMP. */
-        stopwatch.restart();
-        dm->imMetadata(fPath, true);        // true = load metadata->m AND its shadows
-        metadata->setKeywords(subject, hierarchical);
-        writePhases.readMeta += stopwatch.nsecsElapsed();
-
-        stopwatch.restart();
-        const bool wroteFile = metadata->writeXMP(fPath, src);
-        writePhases.writeFile += stopwatch.nsecsElapsed();
-        if (wroteFile) { ++written; ++writePhases.written; }
-
-        /*  THEN THE MODEL, all three columns. The two source columns hold what the file
-            now holds; the third is the prefix expansion the filters and the catalog read,
-            and it is derived here exactly as DataModel::addMetadataForItem derives it so
-            an edited row and a freshly read one cannot disagree. */
-        stopwatch.restart();
-        const QStringList expanded =
-            keywordPrefixExpand(keywordEffectivePaths(subject, hierarchical));
-        emit setValDm(dmRow, G::KeywordsColumn, subject, dm->instance, src, Qt::EditRole);
-        emit setValDm(dmRow, G::KeywordPathsColumn, hierarchical, dm->instance, src,
-                      Qt::EditRole);
-        emit setValDm(dmRow, G::KeywordsAllColumn, expanded, dm->instance, src,
-                      Qt::EditRole);
-        writePhases.writeModel += stopwatch.nsecsElapsed();
-
-        /*  A raw+jpg pair is ONE picture with two files, and the hidden half has to carry
-            the same keywords or a keyword filter would hide one of them. Its sidecar is
-            written too -- the hidden row is a real file the user may later see on its
-            own. Mirrors what MW::setRating does for the rating. */
-        stopwatch.restart();
-        if (combineRawJpg) {
-            const int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
-            if (rowDup >= 0) {
-                const QString dupPath =
-                    dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
-                if (!dupPath.isEmpty()) {
-                    dm->imMetadata(dupPath, true);
-                    metadata->setKeywords(subject, hierarchical);
-                    metadata->writeXMP(dupPath, src);
-                }
-                emit setValDm(rowDup, G::KeywordsColumn, subject, dm->instance, src,
-                              Qt::EditRole);
-                emit setValDm(rowDup, G::KeywordPathsColumn, hierarchical, dm->instance,
-                              src, Qt::EditRole);
-                emit setValDm(rowDup, G::KeywordsAllColumn, expanded, dm->instance, src,
-                              Qt::EditRole);
-                updateCatalogForRow(rowDup);
-            }
-        }
-        writePhases.dupPair += stopwatch.nsecsElapsed();
-
-        /*  And the index, so a keyword set in Catalog scope is searchable without
-            reopening the folder. Scope-gated inside updateCatalogForRow: an EDIT must not
-            be what puts an out-of-scope image into the catalog. */
-        stopwatch.restart();
-        updateCatalogForRow(dmRow);
-        writePhases.writeCatalog += stopwatch.nsecsElapsed();
-        dm->syncSharedToVersions(fPath);            // the group shows the file's keywords
+        if (writeKeywordRow(dmRow, fPath, subject, hierarchical, src)) ++written;
+        before.append({fPath, QVariantList{literal, paths}});
+        after.append({fPath, QVariantList{subject, hierarchical}});
 
         /*  THE BAR IS ACTUALLY DRAWN NOW. setProgress only writes the value, and nothing
             in this loop turns the event loop, so on a long rewrite it sat at zero for the
@@ -442,6 +457,17 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         G::log("MW::applyKeywordsToSelection", QString("wrote %1 of %2 rows")
                                                    .arg(written).arg(rows.size()));
 
+    /*  One Edit > Undo step: each changed file's subject and hierarchical lists as they
+        were and as written. A keyword move (applyKeywordMoves) runs several passes
+        inside one UndoMacro, so they undo together. */
+    if (undoManager && !before.isEmpty()) {
+        const QString what = add.isEmpty() ? "Remove Keyword"
+                           : remove.isEmpty() ? "Add Keyword" : "Keywords";
+        undoManager->push(new PathValuesCommand(
+            undoStepText(what, int(before.size())), before, after,
+            [this](const PathValues &v) { applyKeywordLists(v); }));
+    }
+
     /*  HOISTED OUT WHEN THE CALLER IS LOOPING. Filing several checked keywords at once
         is one user action and must cost one rebuild, not one per keyword -- this deletes
         and recreates the entire keyword tree. See MW::applyKeywordMoves. */
@@ -449,6 +475,34 @@ void MW::applyKeywordsToSelection(const QStringList &add, const QStringList &rem
         editProgress->phase("rebuilding the keyword filters");
         rebuildKeywordFilters(src);
     }
+}
+
+void MW::applyKeywordLists(const PathValues &lists)
+{
+/*
+    Edit > Undo / Redo of a keyword edit: each file's subject and hierarchical lists
+    (a QVariantList of the two) written back as they were. A loaded image goes through
+    writeKeywordRow, exactly as the edit did; one no longer loaded takes the lists
+    straight into its sidecar (writeKeywordsToSidecar, the retag's writer for unloaded
+    folders), and the catalog catches up on the next visit.
+*/
+    if (G::isLogger) G::log("MW::applyKeywordLists");
+    if (!dm || !metadata) return;
+    const QString src = "MW::applyKeywordLists";
+    EditProgress editProgress("Keywords", int(lists.size()));
+    for (int i = 0; i < lists.size(); ++i) {
+        const QString fPath = lists.at(i).first;
+        const QVariantList v = lists.at(i).second.toList();
+        const QStringList subject = v.value(0).toStringList();
+        const QStringList hierarchical = v.value(1).toStringList();
+        const int dmRow = dm->rowFromKey(fPath);
+        if (dmRow >= 0) writeKeywordRow(dmRow, fPath, subject, hierarchical, src);
+        else metadata->writeKeywordsToSidecar(fPath, subject, hierarchical);
+        editProgress.step(i + 1);
+    }
+    editProgress.phase("rebuilding the keyword filters");
+    rebuildKeywordFilters(src);
+    refreshKeywordsDock();
 }
 
 void MW::filterBuildCompleted()
@@ -873,6 +927,10 @@ void MW::tidyKeywords()
     the files about to change. This rewrites metadata in thousands of photographs, and it
     is not undoable from inside Winnow.
 */
+    /*  Not an Edit > Undo step yet: it rewrites files across the catalog, which needs
+        the per-file keyword log of Undo plan P4. Suspended so the keyword list's own
+        steps inside it are not recorded as a partial undo. */
+    UndoSuspend notYetAStep;
     if (G::isLogger) G::log("MW::tidyKeywords");
 
     Catalog &cat = Catalog::instance();
@@ -1624,6 +1682,10 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
                            "filter", 0);
     movePhases.mark("popup");
 
+    /*  One Edit > Undo step for the whole drop, however many passes it takes. The new
+        vocabulary nodes are not part of it: undo restores the images' keywords. */
+    std::optional<UndoMacro> undoStep;
+    undoStep.emplace(undoManager, undoStepText("File Keywords", int(rows.size())));
     for (const KeywordMove &m : moves) {
         const QString fromFold = keywordFold(m.from);
 
@@ -1646,6 +1708,7 @@ int MW::applyKeywordMoves(const QString &targetNodePath, const QStringList &imag
         applyKeywordsToSelection({m.to}, {m.from}, /*rebuildFilters*/ false);
         filed += m.images;
     }
+    undoStep.reset();                   // closes the Edit > Undo step
     movePhases.mark("write loop");
 
     /*  THE BAR GOES BEFORE THE PHASE MESSAGES. What follows is a rebuild and four
@@ -1795,6 +1858,10 @@ void MW::mergeUnfiledKeyword(const QString &unfiledPath)
     the targets and the nodes each would add are COMPUTED, shown, and only then inserted.
     Cancelling leaves the keyword list exactly as it was, not merely the photographs.
 */
+    /*  Not an Edit > Undo step yet: it rewrites files across the catalog, which needs
+        the per-file keyword log of Undo plan P4. Suspended so the keyword list's own
+        steps inside it are not recorded as a partial undo. */
+    UndoSuspend notYetAStep;
     if (G::isLogger) G::log("MW::mergeUnfiledKeyword", unfiledPath);
     if (unfiledPath.isEmpty() || !filters) return;
 

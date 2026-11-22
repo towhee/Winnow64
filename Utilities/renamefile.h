@@ -31,8 +31,14 @@ public:
                                               const QStringList &selection);
     static QString lockedFilesMsg(const QStringList &names);
 
+    /*  Every file the dialog renamed, in the order it did -- images, sidecars and the
+        other files sharing a base name, through every intermediate name. Edit > Undo
+        replays it backwards (MW::applyFileRenames). */
+    QList<QPair<QString, QString>> renamedLog() const { return renamed; }
+
 private:
     Ui::RenameFiles *ui;
+    QList<QPair<QString, QString>> renamed;     // see renamedLog
     void renameFileBase(QString oldBase, QString newBase);
     void makeExistingBaseUnique(QString newBase);
     void renameDatamodel(QString oldPath, QString newPath, QString newName);

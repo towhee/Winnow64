@@ -9,6 +9,7 @@
 #include "Datamodel/buildfilters.h"
 #include "Views/iconview.h"
 #include "Utilities/utilities.h"
+#include "Undo/undocommands.h"
 
 class InfoDelegate : public QStyledItemDelegate
 {
@@ -115,6 +116,10 @@ signals:
     void setValDm(int dmRow, int dmCol, QVariant value, int instance, QString src,
                     int role = Qt::EditRole);
     void dataEdited();
+    /* A text field ("Title*", "Creator*", ...) was edited on these files: each file's
+       value before and after, for Edit > Undo (MW::applyInfoField). */
+    void fieldEdited(const QString &field, const PathValues &before,
+                     const PathValues &after);
     void updateFilter(BuildFilters::Category category, BuildFilters::AfterAction afterAction);
     void filterChange(QString source);
     // void addToImageCache(ImageMetadata m);

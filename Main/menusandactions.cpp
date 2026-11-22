@@ -497,6 +497,7 @@ void MW::createEditActions()
        keys through ShortcutOverride. */
     if (!undoManager) {
         undoManager = new UndoManager(this);
+        UndoManager::setApp(undoManager);   // CollectionStore, KeywordVocab record here
         connect(undoManager, &UndoManager::changed, this, &MW::refreshUndoActions);
     }
     undoAction = new QAction(tr("Undo"), this);
@@ -541,19 +542,13 @@ void MW::createEditActions()
     connect(filterPickAction, &QAction::triggered, filters,
             [this](){filters->setPicksState(filterPickAction->isChecked());});
 
-    popPickHistoryAction = new QAction(tr("Recover prior pick state"), this);
-    popPickHistoryAction->setObjectName("togglePick");
-    popPickHistoryAction->setShortcutVisibleInContextMenu(true);
-    addAction(popPickHistoryAction);
-    connect(popPickHistoryAction, &QAction::triggered, this, &MW::popPick);
-
     clearPicksAction = new QAction(tr("Clear all picks"), this);
     clearPicksAction->setObjectName("clearPicks");
     clearPicksAction->setShortcutVisibleInContextMenu(true);
     clearPicksAction->setToolTip(tr("Unpick every loaded picked image, including picks "
                                     "hidden by the filters. Picks in folders not loaded "
                                     "are kept, and so are rejects. Undo with "
-                                    "Ingest > Recover prior pick state."));
+                                    "Edit > Undo."));
     addAction(clearPicksAction);
     connect(clearPicksAction, &QAction::triggered, this, &MW::clearPicks);
 
@@ -563,8 +558,7 @@ void MW::createEditActions()
     rejectUnpickedClearPicksAction->setToolTip(tr("Reject every unpicked image in the "
                                                   "filtered view and unpick every picked "
                                                   "one, like Lightroom's Refine Photos. "
-                                                  "Undo with Ingest > Recover prior pick "
-                                                  "state."));
+                                                  "Undo with Edit > Undo."));
     addAction(rejectUnpickedClearPicksAction);
     connect(rejectUnpickedClearPicksAction, &QAction::triggered,
             this, &MW::rejectUnpickedClearPicks);
@@ -2835,7 +2829,6 @@ void MW::createIngestMenu()
     ingestMenu->addAction(rejectAction);
     ingestMenu->addAction(pickUnlessRejectedAction);
     //    editMenu->addAction(filterPickAction);
-    ingestMenu->addAction(popPickHistoryAction);
     ingestMenu->addAction(clearPicksAction);
     ingestMenu->addAction(rejectUnpickedClearPicksAction);
     ingestMenu->addSeparator();
@@ -2879,7 +2872,6 @@ void MW::createEditMenu()
     // editMenu->addAction(rejectAction);
     // editMenu->addAction(pickUnlessRejectedAction);
     // //    editMenu->addAction(filterPickAction);
-    // editMenu->addAction(popPickHistoryAction);
     // editMenu->addSeparator();
     editMenu->addAction(tokenTemplateEditorAction);
     editMenu->addAction(auditKeywordsAction);
@@ -3975,7 +3967,6 @@ void MW::enableSelectionDependentMenus()
     gate(pickMouseOverAction, dmHasRows, needFolder);
     gate(rejectAction, dmHasRows, needFolder);
     gate(pickUnlessRejectedAction, dmHasRows, needFolder);
-    gate(popPickHistoryAction, dmHasRows, needFolder);
     gate(tokenTemplateEditorAction, dmHasRows, needFolder);
     /* Develop writes the recipe to the image's sidecar, so it is refused in the cache
        folder like every other write. Gating the action greys the Develop menu item AND
@@ -4255,7 +4246,6 @@ void MW::loadShortcuts(bool defaultShortcuts)
         pickAction->setText(pickActionText);
 
         pickUnlessRejectedAction->setShortcut(QKeySequence("Shift+Ctrl+`"));
-        popPickHistoryAction->setShortcut(QKeySequence("Alt+Ctrl+Z"));
         /* Lightroom's Refine Photos: Cmd+Opt+R on macOS (Qt Ctrl = Cmd), Ctrl+Alt+R
            on Windows and Linux. */
         rejectUnpickedClearPicksAction->setShortcut(QKeySequence("Alt+Ctrl+R"));

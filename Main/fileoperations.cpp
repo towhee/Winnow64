@@ -1,3 +1,5 @@
+#include "Undo/fileundo.h"
+#include <memory>
 #include "Main/mainwindow.h"
 #include "Utilities/versionkey.h"
 #include "Metadata/versions.h"
@@ -122,10 +124,12 @@ void MW::pasteFiles(QString folderPath)
     }
 
     QSet<QString> handled;
+    QStringList pasted;             // what Edit > Undo trashes: images, then other files
     foreach (const QString &srcPath, srcImages) {
         const QString destPath = folderPath + "/" + QFileInfo(srcPath).fileName();
         if (!FileOps::copyFile(srcPath, destPath)) continue;
         newPaths << destPath;
+        pasted << destPath;         // its sidecars go with it
         foreach (const QString &c, FileOps::companions(srcPath)) {
             handled.insert(c);
             newPaths << folderPath + "/" + QFileInfo(c).fileName();
@@ -135,8 +139,12 @@ void MW::pasteFiles(QString folderPath)
     foreach (const QString &srcPath, srcOthers) {
         if (handled.contains(srcPath)) continue;
         const QString destPath = folderPath + "/" + QFileInfo(srcPath).fileName();
-        if (QFile::copy(srcPath, destPath)) newPaths << destPath;
+        if (QFile::copy(srcPath, destPath)) {
+            newPaths << destPath;
+            pasted << destPath;
+        }
     }
+    recordNewFilesStep(tr("Paste"), pasted);
 
     // dynamically update datamodel etc
     int imageCount = 0;
@@ -242,6 +250,20 @@ void MW::renameSelectedFiles()
     RenameFileDlg rf(this, selection, filenameTemplates,
                      dm, metadata, imageCache);
     rf.exec();
+
+    /*  Edit > Undo retraces the dialog's own log backwards, through every intermediate
+        name (a clash resolved by renaming the other file first), so the files end where
+        they began. */
+    const QList<QPair<QString, QString>> log = rf.renamedLog();
+    if (!log.isEmpty()) {
+        QList<QPair<QString, QString>> back;
+        for (auto it = log.crbegin(); it != log.crend(); ++it)
+            back << qMakePair(it->second, it->first);
+        undoManager->push(new CheckedCommand(
+            undoStepText(tr("Rename"), selection.size()),
+            [this, back] { return applyFileRenames(back); },
+            [this, log] { return applyFileRenames(log); }));
+    }
 
     // may have renamed current image
     titleFilePath = dm->currentSourcePath();
@@ -657,6 +679,9 @@ void MW::deleteFiles(QStringList paths)
         progress->setValue(0);
     }
 
+    /*  What the trash will not keep -- the stores' rows for each image -- so Edit > Undo
+        can bring the images back whole (Main/mwfileundo.cpp). */
+    const QList<TrashedImage> kept = keepForTrashUndo(paths);
     FileOps::TrashResult result = FileOps::trashFiles(paths, [&](int done) {
         if (!progress) return true;
         progress->setLabelText("Moving images to the " + G::trash + ": " +
@@ -678,6 +703,7 @@ void MW::deleteFiles(QStringList paths)
        its row goes too. */
     refreshAfterRemoval(result.trashed + result.missing);
     const qint64 refreshMs = t.elapsed();
+    recordTrashStep(tr("Delete"), kept, result.inTrash);
 
     // TEMPORARY: bulk delete timing, until the 7,000 image case is measured in the app
     qDebug() << "MW::deleteFiles" << total << "requested" << result.trashed.size()
@@ -728,6 +754,37 @@ QStringList moveClashes(const QString &src, const QString &dst)
     return clashes;
 }
 }  // namespace
+
+void MW::afterImagesRelocated(const QStringList &moved, const QStringList &added,
+                              const QStringList &removed, bool copy, const QString &src)
+{
+/*
+    The model and Library after images moved or copied onto a Folders row -- the drop
+    (moveImagesToFolder) and its Edit > Undo and Redo (relocateImages). moved and added
+    are parallel; removed are destination rows an Overwrite trashed.
+*/
+    /* The rows come back under new keys, so what was keyed on the old path must
+       follow, as DataModel::rekeyVersions does for a rename: an open version group
+       would otherwise return closed (its versions hidden behind a "1 >" badge), and
+       the current image -- a master or one of its versions -- would be lost. */
+    for (int i = 0; !copy && i < moved.size(); ++i) {
+        const QString &from = moved.at(i);
+        const QString &to = added.at(i);
+        if (dm->sf->expandedVersions().contains(from)) {
+            dm->sf->setVersionsExpanded(from, false);
+            dm->sf->setVersionsExpanded(to, true);
+        }
+        if (VersionKey::sourceOf(dm->currentKey) == from)
+            dm->currentKey = VersionKey::isVersion(dm->currentKey)
+                ? VersionKey::make(to, VersionKey::idOf(dm->currentKey)) : to;
+    }
+    // a copy leaves its original's row where it is
+    applyModelChange(added, copy ? removed : removed + moved, src);
+    // a moved master's versions were dropped with its old row; bring them back
+    reconcileVersionRows(src);
+    if (copy) catalogCreatedFilesThenRefreshLibrary();   // the copies are new files
+    else refreshLibraryAfterCatalogChange();
+}
 
 void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys,
                             const QString &folder, bool copy)
@@ -897,6 +954,7 @@ void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys
     }
 
     QStringList moved, added, removed, failed;
+    QList<TrashedImage> overwritten;        // Overwrite's trashed files, for Edit > Undo
     bool cancelled = false;
     for (int i = 0; i < n; ++i) {
         if (progress) {
@@ -912,11 +970,23 @@ void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys
                 /* The existing image goes with its own sidecars and caches; a stray
                    sidecar with no image is trashed by itself. Either way recoverable. */
                 if (QFileInfo::exists(dst)) {
-                    if (!FileOps::trashFile(dst)) { failed << src; continue; }
+                    const QList<TrashedImage> kept = keepForTrashUndo({dst});
+                    const FileOps::TrashResult res = FileOps::trashFiles({dst});
+                    if (res.trashed.isEmpty()) { failed << src; continue; }
+                    for (TrashedImage k : kept) {
+                        k.files = res.inTrash.value(k.path);
+                        overwritten << k;
+                    }
                     removed << dst;         // it may be a loaded Library row
                 }
-                for (const QString &c : moveClashes(src, dst))
-                    QFile::moveToTrash(c);
+                for (const QString &c : moveClashes(src, dst)) {
+                    QString where;
+                    if (!QFile::moveToTrash(c, &where)) continue;
+                    TrashedImage k;         // a stray sidecar: no rows of its own
+                    k.path = c;
+                    k.files << qMakePair(c, where);
+                    overwritten << k;
+                }
                 if (!moveClashes(src, dst).isEmpty()) { failed << src; continue; }
             }
             else {
@@ -943,28 +1013,57 @@ void MW::moveImagesToFolder(const QStringList &paths, const QStringList &rowKeys
         qApp->processEvents(QEventLoop::ExcludeUserInputEvents);
     }
 
-    if (!moved.isEmpty() || !removed.isEmpty()) {
-        /* The rows come back under new keys, so what was keyed on the old path must
-           follow, as DataModel::rekeyVersions does for a rename: an open version group
-           would otherwise return closed (its versions hidden behind a "1 >" badge), and
-           the current image -- a master or one of its versions -- would be lost. */
-        for (int i = 0; !copy && i < moved.size(); ++i) {
-            const QString &from = moved.at(i);
-            const QString &to = added.at(i);
-            if (dm->sf->expandedVersions().contains(from)) {
-                dm->sf->setVersionsExpanded(from, false);
-                dm->sf->setVersionsExpanded(to, true);
-            }
-            if (VersionKey::sourceOf(dm->currentKey) == from)
-                dm->currentKey = VersionKey::isVersion(dm->currentKey)
-                    ? VersionKey::make(to, VersionKey::idOf(dm->currentKey)) : to;
+    if (!moved.isEmpty() || !removed.isEmpty())
+        afterImagesRelocated(moved, added, removed, copy, "MW::moveImagesToFolder");
+    if (!moved.isEmpty()) {
+        /*  EDIT > UNDO. A move goes back where it came from; a copy goes to the trash.
+            Files Overwrite sent to the trash come back after either. Only in the
+            Library, where the drop is. */
+        QList<QPair<QString, QString>> there, back;
+        for (int i = 0; i < moved.size(); ++i) {
+            there << qMakePair(moved.at(i), added.at(i));
+            back << qMakePair(added.at(i), moved.at(i));
         }
-        // a copy leaves its original's row where it is
-        applyModelChange(added, copy ? removed : removed + moved, "MW::moveImagesToFolder");
-        // a moved master's versions were dropped with its old row; bring them back
-        reconcileVersionRows("MW::moveImagesToFolder");
-        if (copy) catalogCreatedFilesThenRefreshLibrary();   // the copies are new files
-        else refreshLibraryAfterCatalogChange();
+        auto over = std::make_shared<QList<TrashedImage>>(overwritten);
+        auto inLibrary = [] {
+            if (G::scope == G::Scope::Catalog) return true;
+            G::popup->showPopup("Return to the Library to undo or redo this.", 2500);
+            return false;
+        };
+        const QString what = undoStepText(verb, moved.size());
+        if (copy) {
+            auto copies = std::make_shared<QList<TrashedImage>>();
+            for (const QString &a : std::as_const(added)) {
+                TrashedImage t;
+                t.path = a;
+                *copies << t;
+            }
+            undoManager->push(new CheckedCommand(what,
+                [this, copies, over, inLibrary] {
+                    if (!inLibrary() || !trashForUndo(*copies)) return false;
+                    if (!over->isEmpty()) restoreTrashed(*over);
+                    return true;
+                },
+                [this, copies, over, inLibrary] {
+                    if (!inLibrary()) return false;
+                    if (!over->isEmpty()) trashForUndo(*over);
+                    return restoreTrashed(*copies);
+                }));
+        }
+        else {
+            undoManager->push(new CheckedCommand(what,
+                [this, back, over] {
+                    if (!relocateImages(back, false, "MW::moveImagesToFolder undo"))
+                        return false;
+                    if (!over->isEmpty()) restoreTrashed(*over);
+                    return true;
+                },
+                [this, there, over, inLibrary] {
+                    if (!inLibrary()) return false;
+                    if (!over->isEmpty()) trashForUndo(*over);
+                    return relocateImages(there, false, "MW::moveImagesToFolder redo");
+                }));
+        }
     }
 
     // reset LAST, after every phase
@@ -1057,7 +1156,17 @@ void MW::renameLibraryFolder(const QString &folder)
     }
     if (name == "." || name == "..") return;
 
-    relocateLibraryFolder(folder, info.dir().filePath(name), "Rename");
+    const QString to = info.dir().filePath(name);
+    if (!relocateLibraryFolder(folder, to, "Rename")) return;
+    undoManager->push(new CheckedCommand(tr("Rename Folder"),
+        [this, folder, to] {
+            return libraryFolderOpAllowed(to, "rename")
+                   && relocateLibraryFolder(to, folder, "Rename");
+        },
+        [this, folder, to] {
+            return libraryFolderOpAllowed(folder, "rename")
+                   && relocateLibraryFolder(folder, to, "Rename");
+        }));
 }
 
 void MW::moveLibraryFolder(const QString &folder)
@@ -1087,7 +1196,17 @@ void MW::moveLibraryFolder(const QString &folder)
         G::popup->showPopup(tr("A folder cannot be moved into itself."), 3000);
         return;
     }
-    relocateLibraryFolder(folder, QDir(dest).filePath(name), "Move");
+    const QString to = QDir(dest).filePath(name);
+    if (!relocateLibraryFolder(folder, to, "Move")) return;
+    undoManager->push(new CheckedCommand(tr("Move Folder"),
+        [this, folder, to] {
+            return libraryFolderOpAllowed(to, "move")
+                   && relocateLibraryFolder(to, folder, "Move");
+        },
+        [this, folder, to] {
+            return libraryFolderOpAllowed(folder, "move")
+                   && relocateLibraryFolder(folder, to, "Move");
+        }));
 }
 
 void MW::trashLibraryFolder(const QString &folder)
@@ -1103,7 +1222,7 @@ void MW::trashLibraryFolder(const QString &folder)
     deleteFolderPath(folder);
 }
 
-void MW::relocateLibraryFolder(const QString &from, const QString &to, const QString &verb)
+bool MW::relocateLibraryFolder(const QString &from, const QString &to, const QString &verb)
 {
 /*
     Rename or move a folder in the Library, and bring everything that knows it by path
@@ -1136,9 +1255,9 @@ void MW::relocateLibraryFolder(const QString &from, const QString &to, const QSt
     if (!caseOnly && QFileInfo::exists(to)) {
         G::popup->showPopup(tr("There is already a folder called \"%1\" in %2.")
                                 .arg(newName, QDir::toNativeSeparators(toParent)), 4000);
-        return;
+        return false;
     }
-    if (refuseCacheFolder(to)) return;
+    if (refuseCacheFolder(to)) return false;
     if (!caseOnly) {
         const QStorageInfo a(from);
         const QStorageInfo b(toParent);
@@ -1146,7 +1265,7 @@ void MW::relocateLibraryFolder(const QString &from, const QString &to, const QSt
             G::popup->showPopup(tr("\"%1\" is on a different drive. A folder can only be "
                                    "moved to another folder on the same drive.")
                                     .arg(QDir::toNativeSeparators(toParent)), 4000);
-            return;
+            return false;
         }
     }
 
@@ -1184,7 +1303,7 @@ void MW::relocateLibraryFolder(const QString &from, const QString &to, const QSt
                                 .arg(verb.toLower(), name);
         G::issue("Warning", msg, "MW::relocateLibraryFolder", -1, from);
         G::popup->showPopup(msg, 4000);
-        return;
+        return false;
     }
 
     // everything keyed on the old paths
@@ -1290,6 +1409,7 @@ void MW::relocateLibraryFolder(const QString &from, const QString &to, const QSt
     int sfRow = dm->currentSfRow;
     if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
     if (dm->sf->rowCount() > 0) sel->select(sfRow);
+    return true;
 }
 
 void MW::currentFolderDeletedExternally(QString path)

@@ -330,11 +330,34 @@ void MW::toggleDuplicateOk()
     bool allOk = true;
     for (const QString &p : std::as_const(paths))
         if (!DuplicateOk::IsOk(p)) { allOk = false; break; }
-    for (const QString &p : std::as_const(paths)) DuplicateOk::Set(p, !allOk);
-    Duplicates::instance().requestRebuild();
-    updateDuplicateOkAction();
+    PathValues before, after;           // for Edit > Undo
+    for (const QString &p : std::as_const(paths)) {
+        before.append({p, DuplicateOk::IsOk(p)});
+        after.append({p, !allOk});
+    }
+    applyDuplicateOk(after);
+    pruneUnchanged(before, after);
+    if (undoManager && !before.isEmpty()) {
+        undoManager->push(new PathValuesCommand(
+            undoStepText(allOk ? "Duplicate Not OK" : "Duplicate OK", int(before.size())),
+            before, after, [this](const PathValues &v) { applyDuplicateOk(v); }));
+    }
     if (G::popup)
         G::popup->showPopup(allOk ? tr("%n duplicate(s) no longer okayed.", "", paths.size())
                                   : tr("%n duplicate(s) okayed.", "", paths.size()),
                             1500);   // the group's count: twins that are not loaded too
+}
+
+void MW::applyDuplicateOk(const PathValues &okByPath)
+{
+/*
+    Set each image's okayed-duplicate flag (userdata.db), then rebuild the duplicate
+    badges. Shared by toggleDuplicateOk and its Edit > Undo / Redo. The flag is keyed by
+    path, so an image that is not loaded is set all the same.
+*/
+    if (G::isLogger) G::log("MW::applyDuplicateOk");
+    if (!DuplicateOk::IsOpen()) return;
+    for (const auto &pv : okByPath) DuplicateOk::Set(pv.first, pv.second.toBool());
+    Duplicates::instance().requestRebuild();
+    updateDuplicateOkAction();
 }

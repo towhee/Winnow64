@@ -485,6 +485,7 @@ void MW::finishPlaceDlg(bool accepted)
     const bool isNew = id == 0;
     if (isNew) id = store.create(Kind::Place, 0, name, json);
     else {
+        UndoMacro step(undoManager, tr("Edit Place"));     // name and area: one step
         store.rename(id, name);
         store.setDefinition(id, json);
     }

@@ -67,6 +67,7 @@ class ScreenSampler;
 class TitleBarStrip;
 #include "Embellish/Properties/embelproperties.h"
 #include "Develop/Properties/developproperties.h"
+#include "Undo/undocommands.h"
 #include "Develop/workingimage.h"
 #include "Develop/developstackcache.h"   // MW::developStackCache (interactive proxy)
 #include "Develop/Scopes/scopesview.h"
@@ -157,6 +158,8 @@ struct KeywordMove;
 class PlaceList;
 class PlaceDlg;
 class UndoManager;
+struct VersionSnapshot;
+struct TrashedImage;
 class QNetworkAccessManager;
 namespace LensDb { struct Shot; }
 namespace Segmenter { class Job; struct Segmentation; }
@@ -1201,6 +1204,7 @@ private slots:
     QMap<QString, int> keywordsInSelection() const;
 
     void setRotation(int degrees);
+    void rotateFiles(const QStringList &files, int degrees);   // + Edit > Undo
     /* A Develop dock slider changed: schedule a coalesced proxy re-render now and (re)arm the
        full-resolution settle render. Connected to DevelopProperties::paramsChanged. */
     void developParamsChange();
@@ -1639,15 +1643,29 @@ private slots:
     void rejectUnpickedClearPicks();
     void loadSavedPicks();
     void restoreSavedPicks();
-    void pushPick(QString fPath, QString status = "true");
-    void popPick();
+    /* Edit > Undo for pick edits (Main/pick.cpp); replaced the pick history stack. */
+    void recordPickUndo(const QString &what, const PathValues &before,
+                        const PathValues &after);
+    void applyPickStates(const PathValues &statusByPath);
+    /* Rating or color label per image, + filters; shared by the edit and its undo. */
+    bool applyClassification(int column, const PathValues &values, const QString &src);
+    /* A Metadata panel text field ("Title*" ...) per file: Edit > Undo of InfoView. */
+    void applyInfoField(const QString &field, const PathValues &values);
+    /* Keywords: one image's write (shared by edit and undo), and undo's restore. */
+    bool writeKeywordRow(int dmRow, const QString &fPath, const QStringList &subject,
+                         const QStringList &hierarchical, const QString &src);
+    void applyKeywordLists(const PathValues &lists);
+    void applyDuplicateOk(const PathValues &okByPath);
+    /* Geotag (Main/mwgeotag.cpp): undo state, its restore, and the shared refresh. */
+    QVariant geotagState(const QString &file) const;
+    void applyGeotag(const PathValues &states);
+    void refreshAfterGeotag(const QString &src);
     /* Edit > Undo / Redo (Cmd+Z / Cmd+Shift+Z). Routed by mode: Develop steps the
        current image's History (a painting Brush/Object mask takes back a stroke
        first); Preview uses the app-wide undoManager. See Undo/undomanager.h. */
     void undoEdit();
     void redoEdit();
     void refreshUndoActions();
-    void updatePickFromHistory(QString fPath, QString status);
     void updateClassification();
     void refreshFolders();
     void setFontSize(int fontPixelSize);
@@ -2052,7 +2070,6 @@ private:
     QAction *rejectAction;
     QAction *pickAction;                // shortcut "`" or "P"
     QAction *pickMouseOverAction;       // shortcut mouse forward/back buttons
-    QAction *popPickHistoryAction;
     QAction *clearPicksAction;
     QAction *rejectUnpickedClearPicksAction;
     QAction *pickUnlessRejectedAction;
@@ -3509,13 +3526,6 @@ private:
     QHash<QString, bool> stopped;
     bool allIdle() const;
 
-    // pick history
-    struct Pick {
-        QString path;
-        QString status;
-    } pick;
-    QStack<Pick> *pickStack;
-
     // focus stack
     QPointer<FS> fsPipeline;   // current running pipeline (null when inactive)
     QThread *fsThread;
@@ -3963,6 +3973,15 @@ private:
     void deleteVersion();
     void deleteVersionRecords(const QStringList &keys, bool confirm = true);
     void setVersionAsMaster();
+    /*  EDIT > UNDO OF THE VERSION OPERATIONS (Main/mwversions.cpp). A version taken away
+        -- deleted, or a New Version undone -- is snapshotted whole first: record with
+        its preview, saved History, loupe preview and collections. */
+    QList<VersionSnapshot> snapshotVersions(const QStringList &keys);
+    bool removeVersions(const QStringList &keys, const QString &src);
+    void restoreVersions(const QList<VersionSnapshot> &snaps);
+    bool setVersionName(const QString &key, const QString &name);
+    bool swapVersionWithMaster(const QString &key);
+    void rereadLoadedMasters(const QStringList &masters, const QString &src);
     void syncVersionsMenu();
     void rereadVersionMasters(const QStringList &masters, const QString &src);
     void writeVersionValues(const QStringList &versionKeys);
@@ -3975,6 +3994,23 @@ private:
     void deleteSelectedFiles();
     void deleteRejectedFiles();
     void deleteFiles(QStringList paths);
+    /*  EDIT > UNDO OF FILE OPERATIONS (Main/mwfileundo.cpp). The trash is the undo
+        buffer: a delete keeps where each file went and what the stores purged. */
+    QList<TrashedImage> keepForTrashUndo(const QStringList &paths);
+    bool trashForUndo(QList<TrashedImage> &items);
+    bool restoreTrashed(const QList<TrashedImage> &items);
+    void showRestoredFiles(const QStringList &paths, const QString &src);
+    void recordTrashStep(const QString &what, const QList<TrashedImage> &kept,
+                         const QHash<QString, QList<QPair<QString, QString>>> &inTrash);
+    void recordNewFilesStep(const QString &what, const QStringList &paths);
+    void renameModelRow(const QString &oldPath, const QString &newPath);
+    bool applyFileRenames(const QList<QPair<QString, QString>> &renames);
+    bool relocateImages(const QList<QPair<QString, QString>> &moves, bool copy,
+                        const QString &src);
+    /*  The model and Library tail of a move or copy onto a Folders row, shared with its
+        undo: moved -> added (parallel), removed = destination rows overwritten. */
+    void afterImagesRelocated(const QStringList &moved, const QStringList &added,
+                              const QStringList &removed, bool copy, const QString &src);
     /*  Thumbnails dropped on a Filters Folders row (Library scope): confirm, move (or,
         with copy, copy) each image and its sidecars into folder, then refresh the model
         and the filters. rowKeys are the dragged rows, to name a version dragged without
@@ -3991,7 +4027,7 @@ private:
     /*  Rename or move a Library folder from -> to on disk, then carry everything keyed
         on its paths (FileOps::onFolderMoved), the scope table rows, bookmarks and the
         loaded rows. verb ("Rename" / "Move") words the messages. */
-    void relocateLibraryFolder(const QString &from, const QString &to,
+    bool relocateLibraryFolder(const QString &from, const QString &to,
                                const QString &verb);
     void deleteFolder();
     // the body of deleteFolder, for a path already chosen

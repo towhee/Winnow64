@@ -768,6 +768,7 @@ void MW::editQuery(qint64 id)
     dlg.setName(n.name);
     dlg.setExpr(Query::Expr::fromJsonText(n.definition));
     if (dlg.exec() != QDialog::Accepted) return;
+    UndoMacro step(undoManager, tr("Edit Query"));     // name and definition: one step
     store.rename(id, dlg.name());
     store.setDefinition(id, dlg.expr().toJsonText());
 }
@@ -783,6 +784,7 @@ void MW::migrateSavedSearchQueries()
     if (settings->value("SavedSearchQueriesMigrated", false).toBool()) return;
     if (!CollectionStore::instance().isAvailable()) return;     // try again next launch
     const auto legacy = Filters::legacySavedSearchQueries();
+    UndoSuspend notAStep;               // housekeeping, not something the user did
     for (const auto &q : legacy)
         CollectionStore::instance().create(Kind::Query, 0, q.first,
                                            Query::Expr::parse(q.second).toJsonText());

@@ -205,6 +205,37 @@ signals:
     void pathChanged(const QString &oldPath, const QString &newPath);
 
 private:
+    /*  EDIT > UNDO. A vocabulary-only mutator (insertChild, insertPaths, remove,
+        setSynonyms, setExportable, buildFromCatalog, importLightroom) holds a Step for
+        its length; the outermost one compares the rows before and after and records the
+        DIFFERENCE on the app's stack (UndoManager::record). A diff, not the whole
+        table: undoing one step must not also undo an unrecorded change made since --
+        rename, re-parent and merge retag files (pathChanged), so they wait for the
+        file log that keyword rewrites need (Undo plan P4). */
+    class Step;
+    struct UndoRow
+    {
+        qint64 id = 0;
+        QString name, namefold, path, pathfold;
+        qint64 parent = 0;
+        QString synonyms;
+        int exportable = 1;
+        int sort = 0;
+        bool operator==(const UndoRow &o) const {
+            return id == o.id && name == o.name && namefold == o.namefold
+                   && path == o.path && pathfold == o.pathfold && parent == o.parent
+                   && synonyms == o.synonyms && exportable == o.exportable
+                   && sort == o.sort;
+        }
+    };
+    QHash<qint64, UndoRow> undoRows() const;
+    /*  Delete drop, then write put (update, or insert when absent), parents first, in
+        one transaction; then reload. */
+    bool applyUndoRows(const QList<UndoRow> &put, const QList<qint64> &drop);
+    int stepDepth = 0;
+    bool stepRecording = false;
+    QHash<qint64, UndoRow> stepBefore;
+
     VocabNode *node(const QModelIndex &idx) const;
     QModelIndex indexOf(VocabNode *n, int column = 0) const;
     void clearTree();

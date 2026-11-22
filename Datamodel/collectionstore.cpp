@@ -3,6 +3,7 @@
 #include "Cache/pathkey.h"
 #include "Utilities/versionkey.h"
 #include "Main/global.h"
+#include "Undo/undocommands.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
@@ -12,6 +13,8 @@
 #include <QSqlQuery>
 #include <QThread>
 #include <QVariant>
+
+#include <memory>
 
 namespace {
 
@@ -168,6 +171,13 @@ qint64 CollectionStore::create(Kind kind, qint64 parent, const QString &name,
     if (!q.exec()) return 0;
     const qint64 id = q.lastInsertId().toLongLong();
     emit nodesChanged(kind);
+    /*  Undo takes the node away and keeps what it held by then (a collection may have
+        gained members, a duplicate's copies), so redo brings it back whole, same id. */
+    auto gone = std::make_shared<Subtree>();
+    UndoManager::record(new ActionCommand(
+        tr("New %1").arg(kindName(kind)),
+        [this, id, gone] { *gone = snapshot(id); remove(id); },
+        [this, gone] { restore(*gone); }));
     return id;
 }
 
@@ -186,6 +196,10 @@ bool CollectionStore::rename(qint64 id, const QString &name)
     q.addBindValue(id);
     if (!q.exec()) return false;
     emit nodesChanged(n.kind);
+    const QString old = n.name;
+    UndoManager::record(new ActionCommand(
+        tr("Rename %1").arg(kindName(n.kind)),
+        [this, id, old] { rename(id, old); }, [this, id, nm] { rename(id, nm); }));
     return true;
 }
 
@@ -203,6 +217,11 @@ bool CollectionStore::setDefinition(qint64 id, const QString &definition)
     q.addBindValue(id);
     if (!q.exec()) return false;
     emit nodesChanged(n.kind);
+    const QString old = n.definition;
+    UndoManager::record(new ActionCommand(
+        tr("Edit %1").arg(kindName(n.kind)),
+        [this, id, old] { setDefinition(id, old); },
+        [this, id, definition] { setDefinition(id, definition); }));
     return true;
 }
 
@@ -212,6 +231,8 @@ qint64 CollectionStore::duplicate(qint64 id)
     if (!d.isOpen()) return 0;
     const Node n = node(id);
     if (n.id == 0) return 0;
+    // one step: create's own undo snapshots the copy, members included
+    UndoMacro step(UndoManager::app(), tr("Duplicate %1").arg(kindName(n.kind)));
     const qint64 copy = create(n.kind, n.parent, n.name + tr(" copy"), n.definition);
     if (copy == 0 || n.kind != Kind::Collection) return copy;
     QSqlQuery q(d);
@@ -230,6 +251,7 @@ bool CollectionStore::remove(qint64 id)
     if (!d.isOpen()) return false;
     const Node n = node(id);
     if (n.id == 0) return false;
+    const Subtree before = snapshot(id);
     // ON DELETE CASCADE takes the subtree and every membership in it
     QSqlQuery q(d);
     q.prepare("DELETE FROM node WHERE id = ?");
@@ -237,6 +259,9 @@ bool CollectionStore::remove(qint64 id)
     if (!q.exec()) return false;
     emit nodesChanged(n.kind);
     emit membersChanged();
+    UndoManager::record(new ActionCommand(
+        tr("Delete %1").arg(kindName(n.kind)),
+        [this, before] { restore(before); }, [this, id] { remove(id); }));
     return true;
 }
 
@@ -275,6 +300,7 @@ bool CollectionStore::reparent(qint64 id, qint64 newParent)
         if (p.id == 0 || p.kind != n.kind) return false;
         if (wouldCycle(id, newParent)) return false;
     }
+    const QVector<Placement> before = placements(n.kind);
     QSqlQuery q(d);
     q.prepare("UPDATE node SET parent = ?, position = ?, modified = ? WHERE id = ?");
     q.addBindValue(parentBind(newParent));
@@ -283,6 +309,12 @@ bool CollectionStore::reparent(qint64 id, qint64 newParent)
     q.addBindValue(id);
     if (!q.exec()) return false;
     emit nodesChanged(n.kind);
+    const QVector<Placement> after = placements(n.kind);
+    const Kind kind = n.kind;
+    UndoManager::record(new ActionCommand(
+        tr("Move %1").arg(kindName(kind)),
+        [this, kind, before] { setPlacements(kind, before); },
+        [this, kind, after] { setPlacements(kind, after); }));
     return true;
 }
 
@@ -301,6 +333,7 @@ bool CollectionStore::move(qint64 id, qint64 newParent, qint64 beforeId)
         if (wouldCycle(id, newParent)) return false;
     }
 
+    const QVector<Placement> before = placements(n.kind);
     // the new siblings in their current order, without the node being moved
     QVector<qint64> order;
     QSqlQuery q(d);
@@ -336,6 +369,12 @@ bool CollectionStore::move(qint64 id, qint64 newParent, qint64 beforeId)
     if (!u.exec()) { d.rollback(); return false; }
     if (!d.commit()) return false;
     emit nodesChanged(n.kind);
+    const QVector<Placement> after = placements(n.kind);
+    const Kind kind = n.kind;
+    UndoManager::record(new ActionCommand(
+        tr("Move %1").arg(kindName(kind)),
+        [this, kind, before] { setPlacements(kind, before); },
+        [this, kind, after] { setPlacements(kind, after); }));
     return true;
 }
 
@@ -348,6 +387,7 @@ int CollectionStore::addMembers(qint64 id, const QStringList &paths)
     if (n.id == 0 || n.kind != Kind::Collection) return 0;
 
     int added = 0;
+    QStringList joined;                     // the images that were not members already
     d.transaction();
     QSqlQuery q(d);
     q.prepare("INSERT OR IGNORE INTO member (node, pathkey, path, added)"
@@ -360,10 +400,19 @@ int CollectionStore::addMembers(qint64 id, const QStringList &paths)
         q.addBindValue(key);
         q.addBindValue(QDir::cleanPath(QDir::fromNativeSeparators(p)));
         q.addBindValue(now);
-        if (q.exec()) added += q.numRowsAffected();
+        if (q.exec() && q.numRowsAffected() > 0) {
+            ++added;
+            joined << p;
+        }
     }
     d.commit();
-    if (added) emit membersChanged();
+    if (added) {
+        emit membersChanged();
+        UndoManager::record(new ActionCommand(
+            undoStepText(tr("Add to Collection"), added),
+            [this, id, joined] { removeMembers(id, joined); },
+            [this, id, joined] { addMembers(id, joined); }));
+    }
     return added;
 }
 
@@ -373,16 +422,39 @@ int CollectionStore::removeMembers(qint64 id, const QStringList &paths)
     QSqlDatabase d = db();
     if (!d.isOpen() || paths.isEmpty()) return 0;
     int removed = 0;
+    Subtree left;                           // the rows deleted, as they were, for undo
     d.transaction();
+    QSqlQuery read(d);
+    read.prepare("SELECT path, added FROM member WHERE node = ? AND pathkey = ?");
     QSqlQuery q(d);
     q.prepare("DELETE FROM member WHERE node = ? AND pathkey = ?");
     for (const QString &p : paths) {
+        const QString key = cachePathKey(p);
+        read.addBindValue(id);
+        read.addBindValue(key);
+        if (!read.exec() || !read.next()) continue;
+        Member m;
+        m.node = id;
+        m.pathkey = key;
+        m.path = read.value(0).toString();
+        m.added = read.value(1).toLongLong();
         q.addBindValue(id);
-        q.addBindValue(cachePathKey(p));
-        if (q.exec()) removed += q.numRowsAffected();
+        q.addBindValue(key);
+        if (q.exec() && q.numRowsAffected() > 0) {
+            ++removed;
+            left.members << m;
+        }
     }
     d.commit();
-    if (removed) emit membersChanged();
+    if (removed) {
+        emit membersChanged();
+        QStringList keys;
+        for (const Member &m : std::as_const(left.members)) keys << m.path;
+        UndoManager::record(new ActionCommand(
+            undoStepText(tr("Remove from Collection"), removed),
+            [this, left] { restore(left); },
+            [this, id, keys] { removeMembers(id, keys); }));
+    }
     return removed;
 }
 
@@ -417,7 +489,7 @@ QStringList CollectionStore::memberPaths(const QVector<qint64> &ids)
     return out;
 }
 
-QVector<qint64> CollectionStore::collectionsOf(const QString &key)
+QVector<qint64> CollectionStore::collectionsOf(const QString &key, bool treeOrder)
 {
     QVector<qint64> out;
     QSqlDatabase d = db();
@@ -430,6 +502,7 @@ QVector<qint64> CollectionStore::collectionsOf(const QString &key)
     if (!q.exec()) return out;
     QSet<qint64> in;
     while (q.next()) in.insert(q.value(0).toLongLong());
+    if (!treeOrder) return QVector<qint64>(in.cbegin(), in.cend());
     // tree order, so a list built from it reads as the Collections panel does
     for (const Node &n : nodes(Kind::Collection))
         if (in.contains(n.id)) out << n.id;
@@ -449,6 +522,142 @@ QHash<QString, QStringList> CollectionStore::membershipByKey(Kind kind)
     if (!q.exec()) return out;
     while (q.next()) out[q.value(0).toString()] << q.value(1).toString();
     return out;
+}
+
+QString CollectionStore::kindName(Kind kind)
+{
+    switch (kind) {
+    case Kind::Query: return tr("Query");
+    case Kind::Place: return tr("Place");
+    default:          return tr("Collection");
+    }
+}
+
+CollectionStore::Subtree CollectionStore::snapshot(qint64 id)
+{
+    Subtree t;
+    QSqlDatabase d = db();
+    if (!d.isOpen() || id <= 0) return t;
+    QSqlQuery q(d);
+    q.prepare("SELECT id, IFNULL(parent, 0), kind, name, position, definition, created,"
+              " modified FROM node WHERE id = ?");
+    QSqlQuery m(d);
+    m.prepare("SELECT pathkey, path, added FROM member WHERE node = ?");
+    // subtree() walks breadth first: parents come before their children
+    for (qint64 n : subtree(id)) {
+        q.addBindValue(n);
+        if (!q.exec() || !q.next()) continue;
+        Row r;
+        r.node.id = q.value(0).toLongLong();
+        r.node.parent = q.value(1).toLongLong();
+        r.node.kind = static_cast<Kind>(q.value(2).toInt());
+        r.node.name = q.value(3).toString();
+        r.node.position = q.value(4).toInt();
+        r.node.definition = q.value(5).toString();
+        r.created = q.value(6).toLongLong();
+        r.modified = q.value(7).toLongLong();
+        t.rows << r;
+        m.addBindValue(n);
+        if (!m.exec()) continue;
+        while (m.next()) {
+            Member mem;
+            mem.node = n;
+            mem.pathkey = m.value(0).toString();
+            mem.path = m.value(1).toString();
+            mem.added = m.value(2).toLongLong();
+            t.members << mem;
+        }
+    }
+    return t;
+}
+
+bool CollectionStore::restore(const Subtree &t)
+{
+/*
+    Put back what snapshot() took, ids and all, in one transaction. A plain INSERT, not
+    OR REPLACE: an id that is somehow taken again means the stack and the file disagree,
+    and overwriting a node the user has would be worse than refusing (said in Issues).
+    Memberships are OR IGNORE: one already there is the same fact.
+*/
+    if (G::isLogger) G::log("CollectionStore::restore", QString::number(t.rows.size()));
+    QSqlDatabase d = db();
+    if (!d.isOpen() || (t.rows.isEmpty() && t.members.isEmpty())) return false;
+    d.transaction();
+    QSqlQuery q(d);
+    q.prepare("INSERT INTO node (id, parent, kind, name, position, definition, created,"
+              " modified) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    bool kinds[3] = {false, false, false};
+    for (const Row &r : t.rows) {
+        q.addBindValue(r.node.id);
+        q.addBindValue(parentBind(r.node.parent));
+        q.addBindValue(static_cast<int>(r.node.kind));
+        q.addBindValue(r.node.name);
+        q.addBindValue(r.node.position);
+        q.addBindValue(r.node.definition);
+        q.addBindValue(r.created);
+        q.addBindValue(r.modified);
+        if (!q.exec()) {
+            d.rollback();
+            G::issue("Warning", "Could not undo: \"" + r.node.name + "\" could not be put "
+                     "back.", "CollectionStore::restore");
+            return false;
+        }
+        const int k = static_cast<int>(r.node.kind);
+        if (k >= 0 && k < 3) kinds[k] = true;
+    }
+    int added = 0;
+    q.prepare("INSERT OR IGNORE INTO member (node, pathkey, path, added)"
+              " VALUES (?, ?, ?, ?)");
+    for (const Member &m : t.members) {
+        q.addBindValue(m.node);
+        q.addBindValue(m.pathkey);
+        q.addBindValue(m.path);
+        q.addBindValue(m.added);
+        if (q.exec()) added += q.numRowsAffected();
+    }
+    if (!d.commit()) return false;
+    for (int k = 0; k < 3; ++k) if (kinds[k]) emit nodesChanged(static_cast<Kind>(k));
+    if (added) emit membersChanged();
+    return true;
+}
+
+QVector<CollectionStore::Placement> CollectionStore::placements(Kind kind)
+{
+    QVector<Placement> out;
+    QSqlDatabase d = db();
+    if (!d.isOpen()) return out;
+    QSqlQuery q(d);
+    q.prepare("SELECT id, IFNULL(parent, 0), position FROM node WHERE kind = ?");
+    q.addBindValue(static_cast<int>(kind));
+    if (!q.exec()) return out;
+    while (q.next())
+        out << Placement{q.value(0).toLongLong(), q.value(1).toLongLong(),
+                         q.value(2).toInt()};
+    return out;
+}
+
+bool CollectionStore::setPlacements(Kind kind, const QVector<Placement> &where)
+{
+/*
+    Undo or redo of a move: every node of the kind back where it was. A node deleted
+    since (not through this stack) is simply not there to update.
+*/
+    if (G::isLogger) G::log("CollectionStore::setPlacements");
+    QSqlDatabase d = db();
+    if (!d.isOpen()) return false;
+    d.transaction();
+    QSqlQuery q(d);
+    q.prepare("UPDATE node SET parent = ?, position = ? WHERE id = ? AND kind = ?");
+    for (const Placement &p : where) {
+        q.addBindValue(parentBind(p.parent));
+        q.addBindValue(p.position);
+        q.addBindValue(p.id);
+        q.addBindValue(static_cast<int>(kind));
+        if (!q.exec()) { d.rollback(); return false; }
+    }
+    if (!d.commit()) return false;
+    emit nodesChanged(kind);
+    return true;
 }
 
 void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)

@@ -33,6 +33,9 @@ set(WINNOW_CORE_TEST_SOURCES
     # ...whose file is UserDb's (userdata.db, the user's own work), shared with the
     # keyword vocabulary.
     ${CMAKE_SOURCE_DIR}/Datamodel/userdb.cpp
+    # The collection store and the keyword vocabulary record their edits on the app's
+    # Edit > Undo stack (UndoManager::record), so the closure carries the stack.
+    ${CMAKE_SOURCE_DIR}/Undo/undomanager.cpp
     # Picks carried between sessions (MW::savePicks), the file's smallest tenant.
     ${CMAKE_SOURCE_DIR}/Datamodel/savedpicks.cpp
     # ...and the okayed Library duplicates (Datamodel/duplicateok.h), kept the same way.
@@ -599,6 +602,9 @@ winnow_add_unit_test(tst_historystore unit/tst_historystore.cpp
 # Query is a published format), and every operator compares the way its column stores
 # the value (dates as text, blank ratings as 0, keywords with every ancestor).
 winnow_add_unit_test(tst_queryexpr unit/tst_queryexpr.cpp)
+# tst_undo pins Undo/undomanager.h (the app-wide Edit > Undo stack): a recorded edit is
+# not re-applied on push, nothing records while a command is applied, macros group.
+winnow_add_unit_test(tst_undo unit/tst_undo.cpp)
 
 # tst_querybuilder opens the Query Builder headless, in both modes, and loads nested
 # queries into it -- the first build crashed on exactly that (a completer freed twice).

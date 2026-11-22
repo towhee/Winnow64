@@ -1474,56 +1474,118 @@ void MW::setRating()
 
     int n = selection.count();
 
-    // copy selection to list of dm rows (proxy filter changes during iteration when change datamodel)
-    QList<int> rows;
+    /*  copy selection to (key, rating) pairs first: the proxy filter changes during
+        iteration when the datamodel changes. Keys, not rows, so the same list is the
+        Edit > Undo step. */
+    PathValues before, after;
     for (int i = 0; i < n; ++i) {
-        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
-        rows.append(dmRow);
+        const int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        if (dmRow < 0) continue;
+        const QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
+        before.append({fPath, dm->index(dmRow, G::RatingColumn).data(Qt::EditRole)
+                                  .toString()});
+        after.append({fPath, rating});
     }
+
+    const bool refilter = applyClassification(G::RatingColumn, after, "MW::setRating");
+    if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
+    if (G::isPerfProbe)
+        qDebug().noquote() << "[PERF] MW::setRating" << editTimer.elapsed() << "ms  images ="
+                           << n << " refilter =" << (refilter ? "yes" : "no");
+
+    pruneUnchanged(before, after);
+    if (undoManager && !before.isEmpty()) {
+        undoManager->push(new PathValuesCommand(
+            undoStepText("Rating", int(before.size())), before, after,
+            [this](const PathValues &v) {
+                applyClassification(G::RatingColumn, v, "MW::undoRating");
+            }));
+    }
+
+    // auto advance
+    if (G::autoAdvance) sel->next();
+}
+
+bool MW::applyClassification(int column, const PathValues &values, const QString &src)
+{
+/*
+    Write a rating (column = G::RatingColumn) or a color label (G::LabelColumn) per
+    image, then bring the thumbnails, the filters and the proxy up to date. The body of
+    MW::setRating / MW::setColorClass, shared with Edit > Undo / Redo, which passes each
+    image's earlier value. Returns whether the proxy was refiltered.
+
+    PER ROW, as the edit always has: the crash-recovery log, the model, the hidden raw of
+    a combined raw+jpg pair, the sidecar (or the file, when permitted), the shadow column
+    writeXMP compares against, and the catalog.
+
+    A VERSION row's rating and label are its own and live in its record in the master's
+    sidecar; DataModel::noteVersionValueWrite queues that write from the model change.
+    Never the file's xmp:Rating -- that is the master's.
+
+    AN IMAGE THAT IS NOT LOADED (an undo after a folder change) has no row: its sidecar
+    takes the value directly (Metadata::writeItemsToSidecar), and the catalog catches up
+    on the next visit to its folder, as for any sidecar edited outside the model. A
+    version that is not loaded is skipped: its value lives in a record of the master's
+    sidecar that only the model knows how to rewrite.
+*/
+    if (G::isLogger) G::log("MW::applyClassification", src);
+    const bool isRating = column == G::RatingColumn;
+    const int shadowColumn = isRating ? G::_RatingColumn : G::_LabelColumn;
+    const QByteArray xmpItem = isRating ? "rating" : "label";
+    auto log = [this, isRating](const QString &path, const QString &v) {
+        if (isRating) updateRatingLog(path, v);
+        else updateColorClassLog(path, v);
+    };
 
     /*  A large selection is seconds of sidecar writes: the status bar says so once the
         edit runs past a second (EditProgress), and stays up through the filter update. */
-    EditProgress editProgress("Rating", n);
+    const int n = int(values.size());
+    EditProgress editProgress(isRating ? "Rating" : "Color class", n);
 
-    // set the rating in the datamodel
-    QString src = "MW::setRating";
+    int notLoaded = 0;
     for (int i = 0; i < n; ++i) {
-        int dmRow = rows.at(i);
-        // update rating crash log
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
-        updateRatingLog(fPath, rating);
-        // update datamodel
-        QModelIndex ratingIdx = dm->index(dmRow, G::RatingColumn);
-        emit setValDm(dmRow, G::RatingColumn, rating, dm->instance, src,
-                      Qt::EditRole);
-        /*  A VERSION row's rating is its own and lives in its record in the master's
-            sidecar; DataModel::noteVersionValueWrite has already queued that write from
-            the model change above. Never the file's xmp:Rating -- that is the master's. */
-        if (VersionKey::isVersion(fPath)) {
-            emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
+        const QString fPath = values.at(i).first;
+        const QString value = values.at(i).second.toString();
+        const int dmRow = dm->rowFromKey(fPath);
+        if (dmRow < 0) {
+            if (VersionKey::isVersion(fPath)) { ++notLoaded; continue; }
+            log(fPath, value);
+            if (!metadata->writeItemsToSidecar(fPath, {{xmpItem, value.toUtf8()}},
+                                               /*allowEmbed*/ true, src))
+                ++notLoaded;
             editProgress.step(i + 1);
             continue;
         }
-        // check if combined raw+jpg and also set the rating for the hidden raw file
+        // update crash log
+        log(fPath, value);
+        // update datamodel
+        emit setValDm(dmRow, column, value, dm->instance, src, Qt::EditRole);
+        if (VersionKey::isVersion(fPath)) {
+            emit setValDm(dmRow, shadowColumn, value, dm->instance, src, Qt::EditRole);
+            editProgress.step(i + 1);
+            continue;
+        }
+        // check if combined raw+jpg and also set the value for the hidden raw file
         if (combineRawJpg) {
-            // is this part of a raw+jpg pair
-            int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
+            /* rowDup is a DATAMODEL row -- and when combineRawJpg is on the hidden raw
+               row is filtered out of the proxy, so reading it through dm->sf named a
+               different image (or none). */
+            const int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
             if (rowDup >= 0) {
-                // update rating crash log
-                QString jpgPath  = dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
-                updateRatingLog(jpgPath, rating);
-                // set rating for raw file row as well
-                emit setValDm(rowDup, G::RatingColumn, rating, dm->instance, src, Qt::EditRole);
+                const QString dupPath =
+                    dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
+                log(dupPath, value);
+                emit setValDm(rowDup, column, value, dm->instance, src, Qt::EditRole);
             }
         }
         // write to sidecar
         dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-        metadata->writeXMP(fPath, "MW::setRating");
-        // update _Rating (used to check what metadata has changed in metadata->writeXMP)
-        QModelIndex _ratingIdx = dm->index(dmRow, G::_RatingColumn);
-        emit setValDm(dmRow, G::_RatingColumn, rating, dm->instance, src, Qt::EditRole);
-        /*  And the catalog, so a rating set in Catalog scope is searchable
-            without having to re-open the folder -- see MW::updateCatalogForRow. */
+        metadata->writeXMP(fPath, src);
+        /*  update the shadow AFTER the write: writeXMP decides what changed by comparing
+            the value with it, so setting it first would skip the write. */
+        emit setValDm(dmRow, shadowColumn, value, dm->instance, src, Qt::EditRole);
+        /*  And the catalog, so a value set in Catalog scope is searchable without
+            having to re-open the folder -- see MW::updateCatalogForRow. */
         updateCatalogForRow(dmRow);
         editProgress.step(i + 1);
     }
@@ -1538,33 +1600,30 @@ void MW::setRating()
        - update filter category
        - if cat checked clear selection
        - update proxy (filterChange) */
-
-    // update category list in filters
     editProgress.phase("updating the filters");
-    dm->sf->suspend(true, "MW::setRating");
+    dm->sf->suspend(true, src);
     /*  runSync = TRUE because filterChange follows immediately. Without it the category
         tree is rebuilt on the BuildFilters worker thread while filterChange un-suspends
         the proxy and re-runs filterAcceptsRow over it -- the use-after-free MW::togglePick
         was fixed for, and which crashed a 2.05 cull at
         SortFilter::filterAcceptsRow via MW::setColorClass on 2026-09-09. See the
         contract in BuildFilters::updateCategory. */
-    buildFilters->updateCategory(BuildFilters::RatingEdit, BuildFilters::NoAfterAction,
-                                 /*runSync*/ true);
+    buildFilters->updateCategory(isRating ? BuildFilters::RatingEdit
+                                          : BuildFilters::LabelEdit,
+                                 BuildFilters::NoAfterAction, /*runSync*/ true);
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
-    const bool refilter = editNeedsRefilter(G::RatingColumn);
-    if (refilter) filterChange("MW::setRating");
-    else dm->sf->suspend(false, "MW::setRating: nothing active reads ratings");
+    const bool refilter = editNeedsRefilter(column);
+    if (refilter) filterChange(src);
+    else dm->sf->suspend(false, src + ": nothing active reads this column");
     if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
 
     // update ImageView classification badge
     updateClassification();
-    if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
-    if (G::isPerfProbe)
-        qDebug().noquote() << "[PERF] MW::setRating" << editTimer.elapsed() << "ms  images ="
-                           << n << " refilter =" << (refilter ? "yes" : "no");
 
-    // auto advance
-    if (G::autoAdvance) sel->next();
+    if (notLoaded && G::popup)
+        G::popup->showPopup(tr("%n image(s) could not be changed: not loaded, and not "
+                               "writable here.", "", notLoaded), 2500);
+    return refilter;
 }
 
 int MW::ratingLogCount()
@@ -1713,102 +1772,33 @@ void MW::setColorClass()
     }
     if (isAlreadyLabel) colorClass = "";     // invert the label
 
-    int n = selection.count();
+    const int n = selection.count();
 
-    /* copy selection to list of dm rows (proxy filter changes during iteration when
-       change datamodel)  */
-    QList<int> rows;
+    // (key, label) pairs first, as MW::setRating does: they are also the undo step
+    PathValues before, after;
     for (int i = 0; i < n; ++i) {
-        int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
-        rows.append(dmRow);
+        const int dmRow = dm->modelRowFromProxyRow(selection.at(i).row());
+        if (dmRow < 0) continue;
+        const QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
+        before.append({fPath, dm->index(dmRow, G::LabelColumn).data(Qt::EditRole)
+                                  .toString()});
+        after.append({fPath, colorClass});
     }
 
-    // a long write reports in the status bar -- see MW::setRating
-    EditProgress editProgress("Color class", n);
-
-    // update the data model
-    QString src = "MW::setColorClass";
-    for (int i = 0; i < n; ++i) {
-        int dmRow = rows.at(i);
-        // update color class crash log
-        QString fPath = dm->index(dmRow, G::PathColumn).data(G::KeyRole).toString();
-        updateColorClassLog(fPath, colorClass);
-        // update datamodel
-        QModelIndex labelIdx = dm->index(dmRow, G::LabelColumn);
-        emit setValDm(dmRow, G::LabelColumn, colorClass, dm->instance, src,
-                      Qt::EditRole);
-        // a VERSION's label is its record's, not the file's -- see MW::setRating
-        if (VersionKey::isVersion(fPath)) {
-            emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
-                          Qt::EditRole);
-            editProgress.step(i + 1);
-            continue;
-        }
-        // check if combined raw+jpg and also set the rating for the hidden raw file
-        if (combineRawJpg) {
-            // is this part of a raw+jpg pair
-            int rowDup = dm->isDupJpg(dmRow) ? dm->dupOtherRow(dmRow) : -1;
-            if (rowDup >= 0) {
-                // update color class crash log
-                /* rowDup is a DATAMODEL row -- and when combineRawJpg is on the
-                   hidden raw row is filtered out of the proxy, so reading it
-                   through dm->sf named a different image (or none). */
-                QString jpgPath = dm->index(rowDup, G::PathColumn).data(G::KeyRole).toString();
-                updateColorClassLog(jpgPath, colorClass);
-                // set color class (label) for raw file row as well
-                QString src = "MW::setColorClass";
-                emit setValDm(rowDup, G::LabelColumn, colorClass, dm->instance, src,
-                              Qt::EditRole);
-            }
-        }
-        // write to sidecar
-        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
-        metadata->writeXMP(fPath, "MW::setColorClass");
-        // update _Label (used to check what metadata has changed in metadata->writeXMP)
-        emit setValDm(dmRow, G::_LabelColumn, colorClass, dm->instance, src,
-                      Qt::EditRole);
-        updateCatalogForRow(dmRow);
-        editProgress.step(i + 1);
-    }
-    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("model+sidecar");
-
-    // update thumbnail appearance to show classification
-    repaintIconViews();
-    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("refreshIcons");
-
-    /* must execute in order:
-       - suspend proxy updates
-       - update filter category
-       - if cat checked clear selection
-       - update proxy (filterChange)
-    */
-
-    // update category list in filters
-    editProgress.phase("updating the filters");
-    dm->sf->suspend(true, "MW::setColorClass");
-    /*  runSync = TRUE: filterChange follows, and an asynchronous category rebuild racing
-        it is the crash described in MW::setRating above and in
-        BuildFilters::updateCategory. */
-    buildFilters->updateCategory(BuildFilters::LabelEdit, BuildFilters::NoAfterAction,
-                                 /*runSync*/ true);
-    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("buildFilters");
-    const bool refilter = editNeedsRefilter(G::LabelColumn);
-    if (refilter) filterChange("MW::setColorClass");
-    else dm->sf->suspend(false, "MW::setColorClass: nothing active reads labels");
-    if (G::isIngestProbe) IngestProbe::Instance().MarkEdit("filterChange");
-
-    // // // was this rating filtered
-    // if (filters->isLabelChecked(colorClass)) {
-    //     sel->clear();
-    //     filterChange("MW::setColorClass");
-    // }
-
-    // update ImageView classification badge
-    updateClassification();
+    const bool refilter = applyClassification(G::LabelColumn, after, "MW::setColorClass");
     if (G::isIngestProbe) IngestProbe::Instance().EndEdit();
     if (G::isPerfProbe)
         qDebug().noquote() << "[PERF] MW::setColorClass" << editTimer.elapsed()
                            << "ms  refilter =" << (refilter ? "yes" : "no");
+
+    pruneUnchanged(before, after);
+    if (undoManager && !before.isEmpty()) {
+        undoManager->push(new PathValuesCommand(
+            undoStepText("Color Label", int(before.size())), before, after,
+            [this](const PathValues &v) {
+                applyClassification(G::LabelColumn, v, "MW::undoColorClass");
+            }));
+    }
 
     // auto advance
     if (G::autoAdvance) sel->next();

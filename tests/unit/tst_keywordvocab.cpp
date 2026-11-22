@@ -11,6 +11,7 @@
 #include "Datamodel/userdb.h"
 #include "Metadata/keywordpaths.h"
 #include "Main/global.h"
+#include "Undo/undomanager.h"
 
 /*
     THE AUTHORED VOCABULARY'S TREE SURGERY, and above all the MERGE.
@@ -43,6 +44,7 @@ private slots:
     void mergeIsRefusedIntoItsOwnDescendant();
     void reparentWithNoCollisionIsStillAPlainMove();
     void aMoveWithNoSynonymsReachesTheDatabase();
+    void undoTakesBackListEditsByDiff();
 
 private:
     /*  Create a path a node at a time, as the dock's own "add child" walk does. Returns
@@ -288,6 +290,56 @@ void tst_keywordvocab::aMoveWithNoSynonymsReachesTheDatabase()
              "the rename must survive a reload");
     QVERIFY2(paths.contains("Location|Canada|British Columbia|Nanaimo"),
              "a descendant rewritten by rewritePaths must survive a reload");
+}
+
+void tst_keywordvocab::undoTakesBackListEditsByDiff()
+{
+/*
+    EDIT > UNDO of the list-only edits (KeywordVocab::Step). Each step is the DIFFERENCE
+    it made, so undoing it puts back exactly those rows, under the same ids -- and
+    refuses rather than cascade away a keyword something unrecorded moved under a node
+    the undo would remove.
+*/
+    UndoManager m;
+    UndoManager::setApp(&m);
+    KeywordVocab v;
+    v.reload();
+
+    make(v, "Birds|Hawks");                     // two steps: Birds, then Hawks
+    QCOMPARE(m.undoText(), QString("Add Keyword"));
+    const qint64 hawks = v.indexForPath("Birds|Hawks").data(KeywordVocab::IdRole)
+                             .toLongLong();
+    m.undo();
+    QCOMPARE(allPaths(v), QStringList({"Birds"}));
+    m.redo();
+    QCOMPARE(v.indexForPath("Birds|Hawks").data(KeywordVocab::IdRole).toLongLong(),
+             hawks);
+
+    // synonyms
+    QVERIFY(v.setSynonyms(v.indexForPath("Birds"), {"Aves"}));
+    m.undo();
+    QVERIFY(v.indexForPath("Birds").data(KeywordVocab::SynonymsRole)
+                .toStringList().isEmpty());
+
+    // a branch deleted comes back whole, ids and all
+    QVERIFY(v.remove(v.indexForPath("Birds")));
+    QVERIFY(allPaths(v).isEmpty());
+    m.undo();
+    QCOMPARE(allPaths(v), QStringList({"Birds", "Birds|Hawks"}));
+    QCOMPARE(v.indexForPath("Birds|Hawks").data(KeywordVocab::IdRole).toLongLong(),
+             hawks);
+
+    // an unrecorded move under a recorded node: the undo refuses, nothing is lost
+    make(v, "Kites");
+    {
+        UndoSuspend quiet;
+        make(v, "Owls");
+        QVERIFY(v.reparent(v.indexForPath("Owls"), v.indexForPath("Kites")));
+    }
+    m.undo();                                   // "Add Keyword" Kites
+    QVERIFY(allPaths(v).contains("Kites|Owls"));
+
+    UndoManager::setApp(nullptr);
 }
 
 QTEST_MAIN(tst_keywordvocab)

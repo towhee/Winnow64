@@ -1,15 +1,20 @@
 #include "Undo/undomanager.h"
 
+#include <QPointer>
 #include <QUndoStack>
 
 void UndoCommand::redo()
 {
     if (!done) { done = true; return; }     // the push: the action already ran
+    if (skipNext) { skipNext = false; return; }
+    refused = false;
     doRedo();
 }
 
 void UndoCommand::undo()
 {
+    if (skipNext) { skipNext = false; return; }
+    refused = false;
     doUndo();
 }
 
@@ -46,6 +51,27 @@ struct FlagGuard {
 };
 
 } // namespace
+
+// QPointer: nulls itself when MW's manager goes, before the singletons that record
+static QPointer<UndoManager> appManager;
+
+UndoManager *UndoManager::app() { return appManager; }
+
+void UndoManager::setApp(UndoManager *m) { appManager = m; }
+
+static int suspendDepth = 0;      // GUI thread only, as every recorder is
+
+UndoSuspend::UndoSuspend() { ++suspendDepth; }
+
+UndoSuspend::~UndoSuspend() { --suspendDepth; }
+
+bool UndoManager::isSuspended() { return suspendDepth > 0; }
+
+void UndoManager::record(UndoCommand *cmd)
+{
+    if (appManager && suspendDepth == 0) appManager->push(cmd);
+    else delete cmd;
+}
 
 UndoManager::UndoManager(QObject *parent)
     : QObject(parent),
@@ -109,7 +135,15 @@ void UndoManager::undo()
     if (applying || !stack->canUndo()) return;
     {
         FlagGuard g(applying);
+        auto *cmd = const_cast<UndoCommand *>(
+            static_cast<const UndoCommand *>(stack->command(stack->index() - 1)));
         stack->undo();
+        /* Refused: step the index forward again without re-applying anything, so the
+           step is still the one Undo offers. */
+        if (cmd && cmd->refused) {
+            cmd->skipNext = true;
+            stack->redo();
+        }
     }
     emit changed();
 }
@@ -119,7 +153,13 @@ void UndoManager::redo()
     if (applying || !stack->canRedo()) return;
     {
         FlagGuard g(applying);
+        auto *cmd = const_cast<UndoCommand *>(
+            static_cast<const UndoCommand *>(stack->command(stack->index())));
         stack->redo();
+        if (cmd && cmd->refused) {
+            cmd->skipNext = true;
+            stack->undo();
+        }
     }
     emit changed();
 }

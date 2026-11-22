@@ -10810,11 +10810,49 @@ void MW::setRotation(int degrees)
     XMP sidecar so the rotation survives a reload.
 */
     if (G::isLogger) G::log("MW::setRotation");
-    qDebug() << "MW::setRotation degrees =" << degrees;
+    QStringList files;
+    {
+        QSet<QString> seen;
+        const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
+        for (const QModelIndex &sfIdx : selection) {
+            const int r = dm->modelRowFromProxyRow(sfIdx.row());
+            if (r < 0) continue;
+            const QString file = VersionKey::sourceOf(
+                dm->index(r, G::PathColumn).data(G::KeyRole).toString());
+            if (file.isEmpty() || seen.contains(file)) continue;
+            seen.insert(file);
+            files << file;
+        }
+    }
+    if (files.isEmpty()) return;
+    rotateFiles(files, degrees);
 
-    // rotate current loupe view image unless it is a video
+    /*  Edit > Undo turns the same files back by the opposite rotation, which also
+        re-expresses every version's recipe back into the old frame. */
+    if (undoManager) {
+        const QString what = degrees == 90 ? "Rotate Right" : "Rotate Left";
+        undoManager->push(new ActionCommand(
+            undoStepText(what, int(files.size())),
+            [this, files, degrees] { rotateFiles(files, (360 - degrees) % 360); },
+            [this, files, degrees] { rotateFiles(files, degrees); }));
+    }
+}
+
+void MW::rotateFiles(const QStringList &files, int degrees)
+{
+/*
+    Rotate these FILES by degrees (90 = right, 270 = left): the body of setRotation,
+    shared with Edit > Undo / Redo. A file the datamodel does not hold (an undo after a
+    folder change) is skipped and reported: its orientation and every version's recipe
+    are rotated through rows only.
+*/
+    if (G::isLogger) G::log("MW::rotateFiles", QString::number(degrees));
+    if (!dm || files.isEmpty() || degrees % 360 == 0) return;
+
+    // rotate current loupe view image unless it is a video or not one of the files
+    const QString currentFile = VersionKey::sourceOf(dm->currentKey);
     bool isVideo = dm->sf->index(dm->currentSfRow, G::VideoColumn).data().toBool();
-    if (!isVideo) {
+    if (!isVideo && files.contains(currentFile)) {
         imageView->rotateImage(degrees);
     }
 
@@ -10825,17 +10863,11 @@ void MW::setRotation(int degrees)
         in the new frame (rotateImageEdits), since every version's masks and crop sit on
         the same pixels. */
     QList<int> rows;
+    int notLoaded = 0;
     {
         QSet<int> seen;
-        QSet<QString> files;
-        const QModelIndexList selection = RowSelection::Rows(dm->selectionModel);
-        for (const QModelIndex &sfIdx : selection) {
-            const int r = dm->modelRowFromProxyRow(sfIdx.row());
-            if (r < 0) continue;
-            const QString file = VersionKey::sourceOf(
-                dm->index(r, G::PathColumn).data(G::KeyRole).toString());
-            if (file.isEmpty() || files.contains(file)) continue;
-            files.insert(file);
+        for (const QString &file : files) {
+            if (dm->rowFromKey(file) < 0) { ++notLoaded; continue; }
             QStringList group{file};
             group << dm->versionKeysOf(file);
             for (const QString &k : std::as_const(group)) {
@@ -10844,6 +10876,9 @@ void MW::setRotation(int degrees)
             }
         }
     }
+    if (notLoaded && G::popup)
+        G::popup->showPopup(tr("%n image(s) not rotated: their folder is not loaded.", "",
+                               notLoaded), 2500);
     QSet<QString> orientationWritten;
     for (int dmRow : std::as_const(rows)) {
         // update rotation amount in the data model

@@ -1152,6 +1152,77 @@ bool Metadata::writeGpsToSidecar(const QString &fPath, double lat, double lon)
     return true;
 }
 
+bool Metadata::writeItemsToSidecar(const QString &fPath,
+                                   const QList<QPair<QByteArray, QByteArray>> &items,
+                                   bool allowEmbed, const QString &src)
+{
+/*
+    See metadata.h. The same narrow, in-place edit as writeKeywordsToSidecar and
+    writeGpsToSidecar: every property not named is left exactly as the file has it.
+
+    A STRIPPED SIDECAR IS LEFT STRIPPED. When the image took its metadata into the file
+    (metadataembedded = True) the sidecar's copy of a scalar is ignored on read; clearing
+    the flag here would make the sidecar's ABSENT keywords read as every keyword removed.
+    Such an image is written through embedXmp when allowEmbed permits, as writeXMP does.
+*/
+    if (G::isLogger) G::log("Metadata::writeItemsToSidecar", fPath);
+    if (items.isEmpty()) return true;
+    if (FileOps::refuseVersionKey(fPath, src)) return false;
+    if (isPreviewCachePath(fPath, src)) return false;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
+
+    if (allowEmbed && G::modifySourceFiles && XmpEmbed::canEmbed(fPath)) {
+        auto edit = [&](Xmp &xmp) {
+            for (const auto &it : items) xmp.setItem(it.first, it.second);
+            xmp.setItem("modifydate", xmpNow());
+        };
+        if (embedXmp(fPath, edit, src)) {
+            markSidecarEmbedded(fPath);
+            return true;
+        }
+    }
+
+    const QString sPath = FileOps::prepareSidecarForWrite(fPath);
+    if (QFileInfo(fPath).isSymLink() || QFileInfo(sPath).isSymLink()) {
+        G::issue("Warning", "Refusing to write sidecar: path is a symlink.", src, -1,
+                 sPath);
+        return false;
+    }
+    QFile sidecarFile(sPath);
+    if (!sidecarFile.open(QIODevice::ReadWrite)) {
+        G::issue("Warning", "Failed to open sidecar to write metadata.", src, -1, sPath);
+        return false;
+    }
+    Xmp xmp(sidecarFile, G::dmInstance);
+    if (!xmp.isValid) xmp.fix();
+    for (const auto &it : items) xmp.setItem(it.first, it.second);
+    xmp.setItem("modifydate", xmpNow());
+    const bool ok = xmp.writeSidecar(sidecarFile);
+    sidecarFile.close();
+    if (!ok) {
+        G::issue("Warning", "Failed to write metadata to the sidecar.", src, -1, sPath);
+        return false;
+    }
+    emit updateSidecarStatus(fPath);
+    return true;
+}
+
+QHash<QByteArray, QString> Metadata::readSidecarItems(const QString &fPath,
+                                                      const QList<QByteArray> &items)
+{
+    QHash<QByteArray, QString> out;
+    for (const QByteArray &i : items) out.insert(i, QString());
+    const QString sPath = FileOps::existingSidecar(fPath);
+    if (sPath.isEmpty()) return out;
+    QMutexLocker sidecarLocker(&FileOps::sidecarLock(fPath));
+    QFile f(sPath);
+    if (!f.open(QIODevice::ReadOnly)) return out;
+    Xmp xmp(f, G::dmInstance);
+    if (!xmp.isValid) return out;
+    for (const QByteArray &i : items) out[i] = xmp.getItem(i);
+    return out;
+}
+
 QByteArray Metadata::xmpNow()
 {
     const QDateTime now = QDateTime::currentDateTime();

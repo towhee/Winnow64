@@ -108,7 +108,6 @@ void MW::initialize()
     pickClick->setVolume(pickClickvolume);   // default value overridden in loadSettings
 
     prevCentralView = 0;
-    pickStack = new QStack<Pick>;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;
     sortColumn = G::NameColumn;
@@ -1327,6 +1326,17 @@ void MW::createInfoView()
             });
 
     connect(infoView, &InfoView::filterChange, this, &MW::filterChange);
+
+    /* A title, creator ... typed in the Metadata panel is an Edit > Undo step. */
+    connect(infoView, &InfoView::fieldEdited, this,
+            [this](const QString &field, const PathValues &before, const PathValues &after) {
+        if (!undoManager) return;
+        QString what = field;
+        what.remove('*');
+        undoManager->push(new PathValuesCommand(
+            undoStepText(what, int(before.size())), before, after,
+            [this, field](const PathValues &v) { applyInfoField(field, v); }));
+    });
 }
 
 void MW::createEmbel()

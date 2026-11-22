@@ -53,6 +53,59 @@ void MW::redoEdit()
     refreshUndoActions();
 }
 
+void MW::applyInfoField(const QString &field, const PathValues &values)
+{
+/*
+    Edit > Undo / Redo of a Metadata panel text edit (InfoView::dataChanged): write each
+    file's value back the way the edit wrote it -- model (edit and tooltip roles), then
+    the sidecar or file (writeXMP), then the file's versions -- and refresh what reads
+    the field. A file no longer loaded takes the value straight into its sidecar.
+*/
+    if (G::isLogger) G::log("MW::applyInfoField", field);
+    if (!dm || !metadata) return;
+    struct Field { int column; QByteArray xmpItem; };
+    static const QHash<QString, Field> fields = {
+        {"Title*",     {G::TitleColumn,     "title"}},
+        {"Creator*",   {G::CreatorColumn,   "creator"}},
+        {"Copyright*", {G::CopyrightColumn, "rights"}},
+        {"Email*",     {G::EmailColumn,     "email"}},
+        {"Url*",       {G::UrlColumn,       "url"}}};
+    if (!fields.contains(field)) return;
+    const Field f = fields.value(field);
+    const QString src = "MW::applyInfoField";
+
+    for (const auto &pv : values) {
+        const QString fPath = pv.first;
+        const QString s = pv.second.toString();
+        const int dmRow = dm->rowFromKey(fPath);
+        if (dmRow < 0) {
+            metadata->writeItemsToSidecar(fPath, {{f.xmpItem, s.toUtf8()}},
+                                          /*allowEmbed*/ true, src);
+            continue;
+        }
+        emit setValDm(dmRow, f.column, s, dm->instance, src, Qt::EditRole);
+        emit setValDm(dmRow, f.column, s, dm->instance, src, Qt::ToolTipRole);
+        dm->imMetadata(fPath, true);    // true = update metadata->m struct for image
+        metadata->writeXMP(fPath, src);
+        dm->syncSharedToVersions(fPath);
+    }
+
+    // the Title and Creator filter categories read these (see InfoView::dataChanged)
+    if (f.column == G::TitleColumn || f.column == G::CreatorColumn) {
+        dm->sf->suspend(true, src);
+        // runSync: filterChange follows -- see BuildFilters::updateCategory
+        buildFilters->updateCategory(f.column == G::TitleColumn
+                                         ? BuildFilters::TitleEdit
+                                         : BuildFilters::CreatorEdit,
+                                     BuildFilters::NoAfterAction, /*runSync*/ true);
+        filterChange(src);
+    }
+    if (G::useInfoView && infoView) {
+        if (dm->currentSfRow >= 0) infoView->updateInfo(dm->currentSfRow);
+        emit infoView->dataEdited();        // Embel texts and the loupe's info overlay
+    }
+}
+
 void MW::refreshUndoActions()
 {
     if (!undoAction || !redoAction) return;

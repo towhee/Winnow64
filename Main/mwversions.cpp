@@ -6,6 +6,25 @@
 #include "Cache/catalog.h"
 #include "Datamodel/collectionstore.h"
 #include "Dialogs/versioncollectionsdlg.h"
+#include "Develop/History/historystore.h"
+#include "Undo/undocommands.h"
+#include <memory>
+
+/*  A version as Edit > Undo keeps it once it is gone (MW::snapshotVersions): everything
+    deleteVersionRecords takes away, so restoreVersions can put it back as it was. */
+struct VersionSnapshot
+{
+    QString key;                    // master path + "/#v" + id
+    ImageVersion record;            // with its preview (Versions::readVersion)
+    bool hasHistory = false;        // its saved History (HistoryStore), when it had one
+    QVector<HistoryEntry> history;
+    int historyPos = -1;
+    QString historyStamp;
+    QByteArray loupeHash;           // its full-size loupe preview (DevPreviewCache)
+    QByteArray loupeJpg;
+    bool loupeReduced = false;
+    QVector<qint64> collections;    // the collections it was directly in
+};
 
 /*
     VERSIONS (VIRTUAL COPIES) IN THE GRID.
@@ -300,6 +319,7 @@ void MW::newVersion()
     FileOps::flushPendingEdits();
 
     QStringList masters;
+    QStringList newKeys;
     QString selectKey;
     QHash<qint64, QStringList> joining;                 // collection id -> new keys
     for (const QString &key : std::as_const(keys)) {
@@ -321,6 +341,7 @@ void MW::newVersion()
             || id <= 0)
             continue;                               // refused; the reason is issued
         const QString newKey = VersionKey::make(master, id);
+        newKeys << newKey;
 
         /* The loupe preview too, so the new version opens looking like its origin
            instead of decoding. Same recipe, same hash. */
@@ -357,8 +378,24 @@ void MW::newVersion()
     /*  Memberships BEFORE the rows go in: with the grid filtered to a collection, the
         new rows must already be members when applyModelChange's re-filter sees them.
         (membersChanged -> refreshCollectionMembership: the column, counts, refilter.) */
-    for (auto it = joining.cbegin(); it != joining.cend(); ++it)
-        store.addMembers(it.key(), it.value());
+    {
+        // part of the version: its snapshot carries them (see the step below)
+        UndoSuspend notOwnStep;
+        for (auto it = joining.cbegin(); it != joining.cend(); ++it)
+            store.addMembers(it.key(), it.value());
+    }
+
+    /*  EDIT > UNDO takes the new versions away, keeping each whole at that moment (it
+        may have been edited, renamed or rated since), so Redo brings back the same
+        versions, same ids, rather than fresh copies. */
+    auto taken = std::make_shared<QList<VersionSnapshot>>();
+    undoManager->push(new ActionCommand(
+        undoStepText(tr("New Version"), newKeys.size()),
+        [this, newKeys, taken] {
+            *taken = snapshotVersions(newKeys);
+            removeVersions(newKeys, "MW::newVersion undo");
+        },
+        [this, taken] { restoreVersions(*taken); }));
 
     /*  The expand state was set above, so the re-filter inside applyModelChange shows
         the new rows. Select the new version AFTER it: filterChange recovers the
@@ -422,8 +459,30 @@ void MW::renameVersion()
         QLineEdit::Normal, old, &ok).trimmed();
     if (!ok || name == old) return;
 
+    const QString oldName = Versions::readVersion(master, id).name;     // "" = unnamed
     /* "v<number>" is what an unnamed version shows, so typing it back (or clearing the
-       field) means "no name". */
+       field) means "no name" (setVersionName). */
+    if (!setVersionName(key, name)) return;
+    const QString newName = Versions::readVersion(master, id).name;
+    undoManager->push(new ActionCommand(
+        tr("Rename Version"),
+        [this, key, oldName] { setVersionName(key, oldName); },
+        [this, key, newName] { setVersionName(key, newName); }));
+    QTimer::singleShot(0, this, [this, key] {
+        const QModelIndex idx = dm->proxyIndexFromKey(key);
+        if (idx.isValid()) sel->select(idx, Qt::NoModifier, "MW::renameVersion");
+    });
+}
+
+bool MW::setVersionName(const QString &key, const QString &name)
+{
+/*
+    The name of one version, in its master's sidecar; "" or "v<number>" clears it. The
+    rename's work and its undo's.
+*/
+    if (G::isLogger) G::log("MW::setVersionName", key);
+    const QString master = VersionKey::sourceOf(key);
+    const int id = VersionKey::idOf(key);
     bool found = false;
     Versions::update(master, [&](VersionSet &set) {
         if (ImageVersion *v = set.find(id)) {
@@ -431,12 +490,9 @@ void MW::renameVersion()
             found = true;
         }
     });
-    if (!found) return;
-    rereadVersionMasters({master}, "MW::renameVersion");
-    QTimer::singleShot(0, this, [this, key] {
-        const QModelIndex idx = dm->proxyIndexFromKey(key);
-        if (idx.isValid()) sel->select(idx, Qt::NoModifier, "MW::renameVersion");
-    });
+    if (!found) return false;
+    rereadLoadedMasters({master}, "MW::setVersionName");
+    return true;
 }
 
 void MW::deleteVersion()
@@ -489,10 +545,69 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
     }
 
     FileOps::flushPendingEdits();
+    const QList<VersionSnapshot> snaps = snapshotVersions(versions);
+    if (!removeVersions(versions, "MW::deleteVersionRecords")) return;
+    undoManager->push(new ActionCommand(
+        undoStepText(tr("Delete Version"), versions.size()),
+        [this, snaps] { restoreVersions(snaps); },
+        [this, versions] { removeVersions(versions, "MW::deleteVersionRecords redo"); }));
+}
+
+QList<VersionSnapshot> MW::snapshotVersions(const QStringList &keys)
+{
+    if (G::isLogger) G::log("MW::snapshotVersions", keys.join(", "));
+    QList<VersionSnapshot> out;
+    FileOps::flushPendingEdits();       // the recipe and History as last edited
+    CollectionStore &store = CollectionStore::instance();
+    const bool collections = store.isAvailable();
+    for (const QString &key : keys) {
+        if (!VersionKey::isVersion(key)) continue;
+        VersionSnapshot v;
+        v.key = key;
+        v.record = Versions::readVersion(VersionKey::sourceOf(key), VersionKey::idOf(key));
+        if (v.record.id <= 0) continue;                 // already gone
+        v.hasHistory = HistoryStore::load(key, v.history, v.historyPos, v.historyStamp);
+        if (!v.record.develop.isEmpty()) {
+            v.loupeHash = Metadata::devPreviewKey(v.record.develop, key).toLatin1();
+            v.loupeJpg = DevPreviewCache::instance().get(key, v.loupeHash,
+                                                         &v.loupeReduced);
+        }
+        if (collections) v.collections = store.collectionsOf(key);
+        out << v;
+    }
+    return out;
+}
+
+void MW::rereadLoadedMasters(const QStringList &masters, const QString &src)
+{
+/*
+    rereadVersionMasters for the masters the grid holds. An undo may come after a folder
+    change: a master not loaded has only its sidecar to change, and one loaded mid-load
+    is reconciled when the load ends (MW::metadataComplete).
+*/
+    if (!dm) return;
+    QStringList loaded;
+    for (const QString &m : masters) if (dm->rowFromKey(m) >= 0) loaded << m;
+    if (loaded.isEmpty() || dm->loadingModel || G::isLoadRunning
+        || G::isModifyingDatamodel)
+        return;
+    rereadVersionMasters(loaded, src);
+}
+
+bool MW::removeVersions(const QStringList &versions, const QString &src)
+{
+/*
+    Delete Version's work, without the question: the records leave their masters'
+    sidecars, with each one's loupe preview, History and collections. Also Edit > Undo
+    of New Version. False when nothing was removed.
+*/
+    if (G::isLogger) G::log("MW::removeVersions", versions.join(", "));
+    if (!dm) return false;
+    FileOps::flushPendingEdits();
     // land on the master first, as a collapse does
     if (versions.contains(dm->currentKey)) {
         const QModelIndex m = dm->proxyIndexFromKey(VersionKey::sourceOf(dm->currentKey));
-        if (m.isValid()) sel->select(m, Qt::NoModifier, "MW::deleteVersionRecords");
+        if (m.isValid()) sel->select(m, Qt::NoModifier, src);
     }
 
     // one sidecar write per master, however many of its versions go
@@ -517,8 +632,59 @@ void MW::deleteVersionRecords(const QStringList &keys, bool confirm)
             CollectionStore::instance().onDeleted(k);  // its own memberships only
         }
     }
-    if (imageCache) imageCache->invalidate(deadKeys, "MW::deleteVersionRecords");
-    rereadVersionMasters(masters, "MW::deleteVersionRecords");
+    if (imageCache) imageCache->invalidate(deadKeys, src);
+    rereadLoadedMasters(masters, src);
+    return !masters.isEmpty();
+}
+
+void MW::restoreVersions(const QList<VersionSnapshot> &snaps)
+{
+/*
+    Edit > Undo of Delete Version (and Redo of New Version): each record goes back into
+    its master's sidecar under its own id -- ids are never reused (Metadata/versions.h),
+    so nothing can have taken it -- then its History, loupe preview and collections.
+    History goes back to the store only: forgetImage dropped it from memory, and the
+    History dock seeds from the store when the version is next shown.
+*/
+    if (G::isLogger) G::log("MW::restoreVersions", QString::number(snaps.size()));
+    if (snaps.isEmpty()) return;
+    FileOps::flushPendingEdits();
+    QHash<QString, QList<const VersionSnapshot *>> byMaster;
+    for (const VersionSnapshot &v : snaps) byMaster[VersionKey::sourceOf(v.key)] << &v;
+
+    QStringList masters;
+    CollectionStore &store = CollectionStore::instance();
+    for (auto it = byMaster.cbegin(); it != byMaster.cend(); ++it) {
+        const QList<const VersionSnapshot *> list = it.value();
+        int back = 0;
+        const bool ok = Versions::update(it.key(), [&](VersionSet &set) {
+            for (const VersionSnapshot *v : list) {
+                if (set.find(v->record.id)) continue;   // there already
+                set.versions.append(v->record);
+                if (set.nextId <= v->record.id) set.nextId = v->record.id + 1;
+                ++back;
+            }
+            std::sort(set.versions.begin(), set.versions.end(),
+                      [](const ImageVersion &a, const ImageVersion &b) {
+                          return a.id < b.id; });
+        });
+        if (!ok || !back) continue;
+        masters << it.key();
+        if (dm) dm->sf->setVersionsExpanded(it.key(), true);
+        for (const VersionSnapshot *v : list) {
+            if (v->hasHistory)
+                HistoryStore::save(v->key, v->history, v->historyPos, v->historyStamp);
+            if (!v->loupeJpg.isEmpty())
+                DevPreviewCache::instance().put(v->key, v->loupeHash, v->loupeJpg,
+                                                v->loupeReduced);
+            for (qint64 cid : v->collections) store.addMembers(cid, {v->key});
+        }
+    }
+    if (masters.isEmpty()) {
+        G::popup->showPopup(tr("The version could not be restored."), 2000);
+        return;
+    }
+    rereadLoadedMasters(masters, "MW::restoreVersions");
 }
 
 void MW::setVersionAsMaster()
@@ -534,6 +700,32 @@ void MW::setVersionAsMaster()
     const QString key = dm ? dm->currentKey : QString();
     if (!VersionKey::isVersion(key)) return;
     const QString master = VersionKey::sourceOf(key);
+    if (!swapVersionWithMaster(key)) return;
+    // the swap is its own inverse: undo and redo swap again
+    undoManager->push(new ActionCommand(
+        tr("Set Version as Master"),
+        [this, key] { swapVersionWithMaster(key); },
+        [this, key] { swapVersionWithMaster(key); }));
+
+    /*  THE SELECTION FOLLOWS THE EDIT. The recipe the user was looking at now lives in
+        the master's row; staying on the version row would silently put them on the
+        OLD master's settings, so the next adjustment edits the wrong one. Selecting
+        the master also reloads the Develop panel from the swapped recipe. */
+    if (dm->currentKey == key) {
+        const QModelIndex m = dm->proxyIndexFromKey(master);
+        if (m.isValid()) sel->select(m, Qt::NoModifier, "MW::setVersionAsMaster");
+    }
+}
+
+bool MW::swapVersionWithMaster(const QString &key)
+{
+/*
+    Swap the recipes (and their previews) of a version and its master -- Set Version as
+    Master, and its undo and redo. False when there is nothing to swap.
+*/
+    if (G::isLogger) G::log("MW::swapVersionWithMaster", key);
+    if (!VersionKey::isVersion(key)) return false;
+    const QString master = VersionKey::sourceOf(key);
 
     FileOps::flushPendingEdits();
 
@@ -543,7 +735,7 @@ void MW::setVersionAsMaster()
     const QByteArray versionThumb = Metadata::readDevThumb(key);
     if (masterRecipe == versionRecipe) {
         G::popup->showPopup("This version already has the master's settings.", 1500);
-        return;
+        return false;
     }
 
     // loupe previews, swapped with their recipes (each keeps its own hash)
@@ -570,15 +762,7 @@ void MW::setVersionAsMaster()
     // badge, devPreview key, icon and cached full-size image, for both rows
     devPreviewUpdated(master, jpgImage(versionThumb));
     devPreviewUpdated(key, jpgImage(masterThumb));
-
-    /*  THE SELECTION FOLLOWS THE EDIT. The recipe the user was looking at now lives in
-        the master's row; staying on the version row would silently put them on the
-        OLD master's settings, so the next adjustment edits the wrong one. Selecting
-        the master also reloads the Develop panel from the swapped recipe. */
-    if (dm->currentKey == key) {
-        const QModelIndex m = dm->proxyIndexFromKey(master);
-        if (m.isValid()) sel->select(m, Qt::NoModifier, "MW::setVersionAsMaster");
-    }
+    return true;
 }
 
 void MW::writeVersionValues(const QStringList &versionKeys)

@@ -22,7 +22,7 @@
 #include <QThread>
 
 std::function<void()> FileOps::flushHook;
-std::function<bool(const QString &)> FileOps::trashHook;
+std::function<bool(const QString &, QString *)> FileOps::trashHook;
 std::function<void(const QStringList &)> FileOps::createdHook;
 
 void FileOps::setFlushHook(std::function<void()> hook)
@@ -355,15 +355,60 @@ bool FileOps::trashFile(const QString &fPath)
     return trashFiles({fPath}).trashed.size() == 1;
 }
 
-void FileOps::setTrashHook(std::function<bool(const QString &)> hook)
+void FileOps::setTrashHook(std::function<bool(const QString &, QString *)> hook)
 {
     trashHook = std::move(hook);
 }
 
-bool FileOps::moveOneToTrash(const QString &path)
+bool FileOps::moveOneToTrash(const QString &path, QString *inTrash)
 {
-    if (trashHook) return trashHook(path);
-    return retryWhileHeld(path, [&] { return QFile::moveToTrash(path); });
+    QString where;
+    bool ok;
+    if (trashHook) ok = trashHook(path, &where);
+    else ok = retryWhileHeld(path, [&] { return QFile::moveToTrash(path, &where); });
+    if (inTrash) *inTrash = ok ? where : QString();
+    return ok;
+}
+
+bool FileOps::restoreFromTrash(const QString &inTrash, const QString &original,
+                               QString *why)
+{
+/*
+    QFile::moveToTrash reports where a file went on all three platforms; this is the way
+    back. A plain rename: the trash is on the file's own volume (macOS .Trashes, the
+    freedesktop $topdir/.Trash-uid or the home trash for the home volume, Windows'
+    per-drive $Recycle.Bin), so nothing is copied.
+*/
+    if (G::isLogger) G::log("FileOps::restoreFromTrash", original);
+    auto fail = [why](const QString &reason) {
+        if (why) *why = reason;
+        return false;
+    };
+    if (inTrash.isEmpty()) return fail("the system did not say where it went");
+    if (!QFileInfo::exists(inTrash)) return fail("it is no longer in the " + G::trash);
+    if (QFileInfo::exists(original)) return fail("a file of that name is there now");
+    const QString folder = QFileInfo(original).absolutePath();
+    if (!QDir().mkpath(folder)) return fail("its folder could not be made again");
+    if (!retryWhileHeld(inTrash, [&] { return QFile::rename(inTrash, original); }))
+        return fail("it could not be moved back");
+
+    // the trash's own record of the file, or the trash would list a ghost
+#if defined(Q_OS_WIN)
+    /*  $Recycle.Bin\<sid>\$Rxxxxxx.ext holds the file; $Ixxxxxx.ext beside it holds its
+        name and date. */
+    const QFileInfo t(inTrash);
+    if (t.fileName().startsWith("$R"))
+        QFile::remove(t.dir().filePath("$I" + t.fileName().mid(2)));
+#elif defined(Q_OS_LINUX)
+    /*  freedesktop.org trash: <trash>/files/<name> and <trash>/info/<name>.trashinfo. */
+    const QFileInfo t(inTrash);
+    QDir trash = t.dir();
+    if (trash.dirName() == "files" && trash.cdUp())
+        QFile::remove(trash.filePath("info/" + t.fileName() + ".trashinfo"));
+#else
+    // macOS keeps no record beside the file (Finder's "Put Back" data is its own)
+#endif
+    return true;
 }
 
 FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
@@ -400,7 +445,8 @@ FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
                 it = folders.insert(folder, folderIndex(info.absoluteDir()));
             const QStringList sidecars = companionsFrom(it.value(), info);
 
-            if (!moveOneToTrash(fPath)) {
+            QString imageInTrash;
+            if (!moveOneToTrash(fPath, &imageInTrash)) {
                 QString msg = info.isWritable() ? "Unable to move to trash."
                                                 : "File is locked. Unable to move to trash.";
                 G::issue("Warning", msg, "FileOps::trashFiles", -1, fPath);
@@ -409,11 +455,16 @@ FileOps::TrashResult FileOps::trashFiles(const QStringList &paths,
             else {
                 /* Only once the image is gone -- a sidecar whose image survived would
                    lose every develop edit for an image still in the folder. */
+                QList<QPair<QString, QString>> &where = result.inTrash[fPath];
+                where << qMakePair(fPath, imageInTrash);
                 for (const QString &s : sidecars) {
-                    if (QFile::exists(s) && !moveOneToTrash(s)) {
+                    QString sidecarInTrash;
+                    if (!QFile::exists(s)) continue;
+                    if (!moveOneToTrash(s, &sidecarInTrash)) {
                         QString msg = "Trashed the image but could not trash its sidecar.";
                         G::issue("Warning", msg, "FileOps::trashFiles", -1, s);
                     }
+                    else where << qMakePair(s, sidecarInTrash);
                 }
                 chunkTrashed << fPath;
             }

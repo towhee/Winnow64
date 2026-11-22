@@ -7,8 +7,6 @@ WHAT'S NEW
 
 
 BUGS / TO DO
-- validate highlight reconstruction against Lightroom/libraw on a sensor-clipped frame;
-  fix the edge mottling
 - Implement undo
 - Help > Report bugs / feedback
 - Add Actions (record, list, replay a series of steps)

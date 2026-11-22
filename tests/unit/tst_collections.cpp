@@ -13,6 +13,7 @@
 #include "Datamodel/collectionstore.h"
 #include "Datamodel/savedpicks.h"
 #include "Datamodel/userdb.h"
+#include "Undo/undomanager.h"
 
 /*
     tst_collections pins the store behind the Collections panel (Datamodel/
@@ -55,6 +56,7 @@ private slots:
     void anOldCollectionsDbIsRenamedNotLost();
     void theVocabularyIsImportedFromTheIndexOnce();
     void savedPicksWriteThroughAndFollowFiles();
+    void undoPutsEveryEditBack();
 
 private:
     using Kind = CollectionStore::Kind;
@@ -611,6 +613,91 @@ void tst_collections::savedPicksWriteThroughAndFollowFiles()
     reopen();
     QVERIFY(SavedPicks::Keys().isEmpty());
     SavedPicks::Close();
+}
+
+void tst_collections::undoPutsEveryEditBack()
+{
+/*
+    Edit > Undo of the store's own mutators (they record on UndoManager::app()). The
+    property that matters is the delete's: undo brings back the whole subtree and its
+    members UNDER THE SAME IDS, which the filters, the panels and every later step on
+    the stack name the nodes by.
+*/
+    UndoManager m;
+    UndoManager::setApp(&m);
+    CollectionStore &s = CollectionStore::instance();
+
+    const qint64 a = s.create(Kind::Collection, 0, "A");
+    const qint64 b = s.create(Kind::Collection, a, "B");
+    QCOMPARE(s.addMembers(b, {img("1.nef"), img("2.nef")}), 2);
+    QCOMPARE(s.addMembers(b, {img("1.nef")}), 0);          // nothing new: no step
+    QCOMPARE(m.undoText(), QString("Add to Collection (2 images)"));
+
+    // delete, undo, redo, undo
+    QVERIFY(s.remove(a));
+    QCOMPARE(m.undoText(), QString("Delete Collection"));
+    m.undo();
+    QCOMPARE(s.node(a).name, QString("A"));
+    QCOMPARE(s.node(b).parent, a);
+    QCOMPARE(s.memberPaths({b}).size(), 2);
+    m.redo();
+    QCOMPARE(s.node(a).id, qint64(0));
+    m.undo();
+    QCOMPARE(s.node(b).id, b);
+
+    // rename and move
+    QVERIFY(s.rename(a, "Z"));
+    m.undo();
+    QCOMPARE(s.node(a).name, QString("A"));
+    QVERIFY(s.move(b, 0, 0));
+    QCOMPARE(s.node(b).parent, qint64(0));
+    m.undo();
+    QCOMPARE(s.node(b).parent, a);
+    m.redo();
+    QCOMPARE(s.node(b).parent, qint64(0));
+    m.undo();
+
+    // remove members: back with their own paths
+    QCOMPARE(s.removeMembers(b, {img("1.nef")}), 1);
+    QCOMPARE(s.memberPaths({b}).size(), 1);
+    m.undo();
+    QCOMPARE(s.memberPaths({b}).size(), 2);
+
+    // a new node undone and redone keeps its id and what it held
+    const qint64 c = s.create(Kind::Collection, 0, "C");
+    QCOMPARE(s.addMembers(c, {img("3.nef")}), 1);
+    m.undo();                                   // the member
+    m.undo();                                   // the node
+    QCOMPARE(s.node(c).id, qint64(0));
+    m.redo();
+    QCOMPARE(s.node(c).id, c);
+    m.redo();
+    QCOMPARE(s.memberPaths({c}).size(), 1);
+
+    // a duplicate is one step, its copied members included
+    const qint64 copy = s.duplicate(b);
+    QVERIFY(copy);
+    QCOMPARE(m.undoText(), QString("Duplicate Collection"));
+    m.undo();
+    QCOMPARE(s.node(copy).id, qint64(0));
+    m.redo();
+    QCOMPARE(s.memberPaths({copy}).size(), 2);
+
+    // a query's definition
+    const qint64 q = s.create(Kind::Query, 0, "Q", "{\"old\":1}");
+    QVERIFY(s.setDefinition(q, "{\"new\":1}"));
+    QCOMPARE(m.undoText(), QString("Edit Query"));
+    m.undo();
+    QCOMPARE(s.node(q).definition, QString("{\"old\":1}"));
+
+    // housekeeping does not record: a push would have dropped the redo step
+    {
+        UndoSuspend quiet;
+        s.create(Kind::Collection, 0, "Quiet");
+    }
+    QVERIFY(m.canRedo());
+    QCOMPARE(m.redoText(), QString("Edit Query"));
+    UndoManager::setApp(nullptr);
 }
 
 QTEST_MAIN(tst_collections)

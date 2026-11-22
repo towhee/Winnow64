@@ -43,10 +43,17 @@ public:
 protected:
     virtual void doRedo() {}
     virtual void doUndo() {}
+    /*  Called from doUndo / doRedo when the change could NOT be made -- a file op
+        refused because a load is running, the file left the trash. UndoManager then
+        puts the stack back, so the step stays where it was and the menu still offers
+        it; the command has said why (a popup). */
+    void refuse() { refused = true; }
 
 private:
     friend class UndoManager;
     bool done = false;      // the action ran before push(); the first redo() is a no-op
+    bool refused = false;   // the last doUndo / doRedo refused (see refuse())
+    bool skipNext = false;  // UndoManager is stepping back over a refusal: do nothing
 };
 
 class UndoManager : public QObject
@@ -78,6 +85,18 @@ public:
 
     bool isApplying() const { return applying; }
 
+    /*  THE APP'S STACK, for recorders that are not MW's: CollectionStore, KeywordVocab,
+        the collection and keyword trees. MW sets it when it creates its manager; null
+        before that and in tests, when record() simply deletes the command. */
+    static UndoManager *app();
+    static void setApp(UndoManager *m);
+    /* app()->push(cmd), or delete cmd when there is no app stack or recording is
+       suspended (UndoSuspend). */
+    static void record(UndoCommand *cmd);
+    /* Housekeeping the user did not do (a one-time migration, a rebuild) runs inside
+       an UndoSuspend, so it never becomes a step. */
+    static bool isSuspended();
+
 signals:
     /* The stack changed: a push, an undo/redo or a clear. MW refreshes Edit > Undo. */
     void changed();
@@ -103,6 +122,16 @@ public:
     UndoMacro &operator=(const UndoMacro &) = delete;
 private:
     UndoManager *mgr;
+};
+
+/* RAII: nothing UndoManager::record()s while one is alive. Nestable. */
+class UndoSuspend
+{
+public:
+    UndoSuspend();
+    ~UndoSuspend();
+    UndoSuspend(const UndoSuspend &) = delete;
+    UndoSuspend &operator=(const UndoSuspend &) = delete;
 };
 
 #endif // UNDOMANAGER_H

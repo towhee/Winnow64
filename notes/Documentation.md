@@ -69,6 +69,9 @@
     - [2.15.1 Routing by Mode](#2151-routing-by-mode)
     - [2.15.2 The App Stack (UndoManager)](#2152-the-app-stack-undomanager)
     - [2.15.3 What Can Be Undone](#2153-what-can-be-undone)
+    - [2.15.4 Per-Image Metadata (P1)](#2154-per-image-metadata-p1)
+    - [2.15.5 Collections, Places, Versions and the Keyword List (P2)](#2155-collections-places-versions-and-the-keyword-list-p2)
+    - [2.15.6 File Operations (P3)](#2156-file-operations-p3)
   - [2.16 Investigations and Fixes](#216-investigations-and-fixes)
     - [2.16.1 Two Aborts From Holding What the Model Threw Away](#2161-two-aborts-from-holding-what-the-model-threw-away)
       - [2.16.1.1 A Proxy Index Does Not Survive a Filter Change](#21611-a-proxy-index-does-not-survive-a-filter-change)
@@ -1778,15 +1781,18 @@ Undo/undomanager.h wraps a QUndoStack, capped at 200 steps. It lasts for the ses
 - **No re-recording.** Undo and redo usually re-run the same setters the user's action ran, and those setters record. While a command is applied, UndoManager::isApplying() is true and push() discards whatever it is offered.
 - **Groups.** beginMacro / endMacro (or the RAII UndoMacro) make several pushes one step, for example a rating applied to 12 images. These are not QUndoStack's own macros, which push a step even when nothing was recorded. An empty group records nothing, and a group of one is pushed as that command.
 - **Key by path, not row.** Rows move with sort, filter and folder changes. A command finds its images by file path and must cope with an image that is no longer loaded.
+- **Recorders outside MW.** UndoManager::app() is MW's stack (set when MW creates it, a QPointer so it nulls itself at teardown). UndoManager::record(cmd) pushes there, or deletes the command when there is no app stack, as in most tests. The stores that record themselves (CollectionStore, KeywordVocab) use it.
+- **A step can refuse.** A command whose change cannot be made now calls UndoCommand::refuse() inside doUndo / doRedo; CheckedCommand does it when its function returns false. UndoManager then steps the QUndoStack back over it without re-applying anything (skipNext), so Edit > Undo still offers the same step. File operations use it: a load in progress, a file gone from the trash, a destination taken, or the Library not showing. The command has already said why in a popup.
+- **Housekeeping is not a step.** Code the user did not ask for (a one-time migration) runs inside an UndoSuspend, and record() discards everything while one is alive. Operations that are not undoable yet but call recording mutators are suspended the same way, so they never leave a partial step.
 
 #### 2.15.3 What Can Be Undone
 
 Operations are wired in by phase:
 
 - P0: the framework, the menu items and the mode routing.
-- P1: per-image metadata (pick, rating, color label, InfoView text, rotate, keywords on the selection, Duplicate OK, geotag). This phase replaces "Recover prior pick state" (Cmd+Opt+Z).
-- P2: collections, queries, places, versions and keyword vocabulary edits.
-- P3: file operations. A deleted file comes back from the Trash together with the store rows its delete purged.
+- P1 (done): per-image metadata. See [2.15.4 Per-Image Metadata (P1)](#2154-per-image-metadata-p1).
+- P2 (done): collections, queries, places, versions and keyword list edits. See [2.15.5](#2155-collections-places-versions-and-the-keyword-list-p2).
+- P3 (done): file operations. See [2.15.6](#2156-file-operations-p3).
 - P4: catalog-wide keyword rewrites (rename, merge, tidy, audit, remove everywhere).
 
 These are not undoable:
@@ -1797,6 +1803,140 @@ These are not undoable:
 - Embedded-thumbnail repair.
 - Catalog scope changes, which need a rescan.
 - View state: sort, filter, workspaces and preferences.
+
+#### 2.15.4 Per-Image Metadata (P1)
+
+Each edit records one PathValuesCommand (Undo/undocommands.h): the field's value per image BEFORE and AFTER, keyed by path, plus an apply function. Undo calls apply(before) and redo calls apply(after). The apply function is the edit's own write path, factored out so the edit and its undo cannot drift apart. pruneUnchanged drops images the edit did not change, so a step never claims, or rewrites on undo, an image it did not touch.
+
+| Edit | Recorded in | Apply (shared with the edit) | Image not loaded at undo |
+|---|---|---|---|
+| Pick, reject, clear picks, refine | Main/pick.cpp, MW::recordPickUndo | MW::applyPickStates | SavedPicks::Set; a reject has nothing to restore (rejects are model-only) |
+| Rating, color label | MW::setRating / setColorClass | MW::applyClassification | Metadata::writeItemsToSidecar; a version is skipped and reported |
+| Title, creator, copyright, email, URL | InfoView::dataChanged emits fieldEdited | MW::applyInfoField | Metadata::writeItemsToSidecar |
+| Rotate | MW::setRotation (ActionCommand) | MW::rotateFiles, opposite angle | skipped and reported (orientation and recipes are rotated through rows) |
+| Keywords on images | MW::applyKeywordsToSelection | MW::writeKeywordRow per image, MW::applyKeywordLists | Metadata::writeKeywordsToSidecar |
+| Duplicate OK | MW::toggleDuplicateOk | MW::applyDuplicateOk | path-keyed in userdata.db, so the same |
+| Geotag (map drop) | MW::geotagRows | MW::applyGeotag | the sidecar's GPS items are restored; no row to update |
+
+Notes:
+
+- **Pick history is gone.** The pickStack, pushPick / popPick / updatePickFromHistory and "Recover prior pick state" (Cmd+Opt+Z) were replaced by recordPickUndo. A pick on the mouse-over thumbnail (togglePickMouseOverItem) is recorded too, which the old stack missed.
+- **Keyword moves are one step.** MW::applyKeywordMoves runs one applyKeywordsToSelection pass per checked keyword inside an UndoMacro. Since P2 the step also holds the keyword list changes it makes: the nodes it creates and the empty roots it removes.
+- **Geotag undo restores the sidecar's own GPS items.** MW::geotagState captures exif:GPSLatitude, exif:GPSLongitude and exif:GPSVersionID raw from the sidecar, plus the location the rows show. When the location was the camera's, the captured items are empty, so undo removes them and the camera's location shows through again. No separate "clear GPS" writer is needed.
+- **Metadata::writeItemsToSidecar** is the narrow writer for an image the model does not hold, in the same family as writeKeywordsToSidecar and writeGpsToSidecar: it sets the named items in place and leaves everything else alone. With allowEmbed and "Permit image file modification" on, an embeddable image takes the items into the file, as writeXMP would. A sidecar marked metadataembedded is left marked, because clearing the flag would make its absent keywords read as all removed.
+- Tests: tests/unit/tst_undo.cpp covers the UndoManager rules (no redo on push, no re-record while applying, macro grouping and order, pruneUnchanged).
+
+#### 2.15.5 Collections, Places, Versions and the Keyword List (P2)
+
+**Collections, queries and places record themselves.** Every user-facing CollectionStore mutator pushes its own step through UndoManager::record, so the Collections and Queries panels, the map's places and MW's callers are all covered without wiring each call site.
+
+| Mutator | Step | Undo | Redo |
+|---|---|---|---|
+| create | New Collection / Query / Place | snapshot the node, then remove it | restore the snapshot |
+| rename | Rename ... | rename to the old name | rename again |
+| setDefinition | Edit Query / Edit Place | the old definition | the new one |
+| duplicate | Duplicate ... (create inside an UndoMacro) | as create | as create |
+| remove | Delete ... | restore the snapshot taken before the delete | remove again |
+| reparent, move | Move ... | setPlacements(before) | setPlacements(after) |
+| addMembers | Add to Collection (n images) | remove the images that were not members already | add them again |
+| removeMembers | Remove from Collection (n images) | restore the deleted member rows, with their paths and added times | remove again |
+
+- **Ids are kept.** CollectionStore::snapshot(id) holds the node, everything beneath it (parents first) and every membership in it. restore() inserts them under their original ids, so the filters, the panels and every later step on the stack find them again. A plain INSERT, not OR REPLACE: if an id has somehow been taken, restore refuses and says so in Issues rather than overwrite a node.
+- **A placement is the whole kind.** placements(kind) is every node's parent and position. A move renumbers its new siblings, so restoring the move means restoring all of them.
+- **Multi-call edits are one step.** MW::editQuery and MW::finishPlaceDlg wrap rename + setDefinition in an UndoMacro ("Edit Query", "Edit Place"). A new collection typed over in place is two steps: New, then Rename.
+- **Not recorded:** onMoved, onDeleted and the folder forms (FileOps bookkeeping, part of P3), and MW::migrateSavedSearchQueries (UndoSuspend).
+
+**Versions** (Main/mwversions.cpp). Delete Version and Edit > Undo of New Version both take versions away, so they share MW::removeVersions. Before a version goes, MW::snapshotVersions keeps everything that goes with it, in a VersionSnapshot:
+
+- the record, with its preview (Versions::readVersion);
+- its saved History (HistoryStore::load);
+- its loupe preview (DevPreviewCache);
+- the collections it is directly in.
+
+MW::restoreVersions puts the record back into the master's sidecar under its own id. Ids are never reused (Metadata/versions.h), so nothing can have taken it. Then it restores the History to the store (the History dock seeds from there when the version is next shown), the loupe preview and the memberships.
+
+| Operation | Undo | Redo |
+|---|---|---|
+| New Version | snapshot the new versions, then removeVersions | restoreVersions: the same versions, same ids, as they were when undone |
+| Delete Version | restoreVersions | removeVersions |
+| Rename Version | MW::setVersionName(old raw name, "" = unnamed) | setVersionName(new) |
+| Set Version as Master | MW::swapVersionWithMaster again: the swap is its own inverse | the same |
+
+- New Version's collection memberships are added inside an UndoSuspend, because the version step's snapshot carries them.
+- MW::rereadLoadedMasters rereads only the masters the grid holds, and never during a load (MW::metadataComplete reconciles then). After a folder change an undo changes the sidecar alone; the catalog follows on the next index of that folder.
+- Set Version as Master still drops both images' Develop History (forgetImage), as it always has, so undoing it restores the recipes, not their History.
+
+**The keyword list** (Datamodel/keywordvocab.cpp). Each list-only mutator holds a KeywordVocab::Step for its length: insertChild, insertPaths, remove, removeUnusedRoots, setSynonyms, setExportable, buildFromCatalog and importLightroom. The outermost Step reads the vocab rows before and after and records only the rows that changed (KeywordVocab::UndoRow), not the whole table. A whole-table snapshot would also undo any unrecorded change made since. applyUndoRows writes a step back in one transaction, with deferred foreign keys:
+
+1. UPDATE the rows that exist, so a child moved under a node that is about to go is back under its old parent before step 2 can cascade it away.
+2. DELETE the rows the step created. If a row outside the step is still beneath one, something unrecorded put it there, so the undo is refused and reported in Issues rather than cascading the user's keyword away.
+3. INSERT the rows the step deleted, parents first, under their own ids.
+
+Then reload(), whose model reset refreshes the tree and the Filters marking.
+
+Not undoable until P4, because each also rewrites files:
+
+- rename, reparent and reparentMerging. Their pathChanged signal offers a retag.
+- insertParentAbove, which re-parents. It is suspended so that insertChild's own Step inside it does not record the new parent alone.
+- MW::tidyKeywords and MW::mergeUnfiledKeyword.
+- KeywordTree's "Remove everywhere".
+- Filing a red tag by dropping it on the tree (tagFiled).
+
+All of these run under UndoSuspend. "Remove from list" and adding a keyword are steps.
+
+Tests: tst_collections::undoPutsEveryEditBack covers delete, rename, move, members, create, duplicate, definition and suspend. tst_keywordvocab::undoTakesBackListEditsByDiff covers add, synonyms, branch delete with ids kept, and the refused cascade.
+
+#### 2.15.6 File Operations (P3)
+
+Main/mwfileundo.cpp, with Undo/fileundo.h. **The trash is the undo buffer.**
+
+- **Where each file went.** FileOps::trashFiles now records it: TrashResult::inTrash maps each image to (original, path in the trash) pairs, the image first and then its sidecars. QFile::moveToTrash reports the path on all three platforms.
+- **Putting a file back.** FileOps::restoreFromTrash renames the file back; the trash is always on the file's own volume. It refuses when the file has left the trash or its old name is taken. It also removes the trash's own record of the file, so the trash does not list a ghost:
+  - Linux: info/NAME.trashinfo;
+  - Windows: the $I file beside the $R one;
+  - macOS: keeps no record to remove.
+- **The test seam.** The trash hook now also reports where it put the file, so tst_fileops::trashedFilesComeBackFromTheTrash can run the round trip.
+
+**What a delete must keep.** The sidecar travels to the trash with the image, so its rating, keywords, recipe and versions come back with it. What does not come back is what FileOps::onDeleted purged from Winnow's stores. MW::keepForTrashUndo saves that in a TrashedImage just before the trash, for the image and each of its versions:
+
+- collection memberships (CollectionStore::collectionsOf with treeOrder false, which skips reading the tree for each key);
+- saved picks;
+- Duplicate OK;
+- saved Develop History;
+- the model's pick state, because a reject exists only in the model.
+
+Thumbnails, loupe previews and catalog rows are rebuildable, so they are rebuilt rather than kept.
+
+**MW::restoreTrashed** puts each image and its sidecars back, then the store rows. It then:
+
+- calls FileOps::onCreated, so the catalog picks the files up;
+- calls MW::showRestoredFiles, which brings the files into the model when the Library or a loaded folder includes them;
+- puts the pick states back with applyPickStates.
+
+An image that cannot come back is named and skipped; the rest still come back.
+
+**MW::trashForUndo** is the other direction: it trashes the images a list names and keeps what restoreTrashed needs. A Delete's Redo uses it, and so do a Paste's and a Copy's Undo.
+
+| Operation | Recorded in | Undo | Redo |
+|---|---|---|---|
+| Delete, Delete rejected | MW::deleteFiles (recordTrashStep) | restoreTrashed | trashForUndo |
+| Paste files | MW::pasteFiles (recordNewFilesStep) | trashForUndo the pasted files | restoreTrashed |
+| Move onto a Folders row | MW::moveImagesToFolder | relocateImages back, then restore any files Overwrite trashed | trash those again, then relocateImages |
+| Copy onto a Folders row (Opt) | MW::moveImagesToFolder | trashForUndo the copies, then restore any files Overwrite trashed | trash those again, then restoreTrashed the copies |
+| Rename files (dialog) | MW::renameSelectedFiles | applyFileRenames(the log reversed and swapped) | applyFileRenames(the log) |
+| Library folder rename or move | MW::renameLibraryFolder / moveLibraryFolder | relocateLibraryFolder(to, from) | relocateLibraryFolder(from, to) |
+
+- **Rename log.** RenameFileDlg::renamedLog lists every file the dialog renamed, in order: images, sidecars, other files sharing the base name, and the files renamed aside to clear a clash. Replaying it backwards retraces every intermediate name. MW::renameModelRow keeps the loaded rows in step, as renameDatamodel does in the dialog.
+- **Move and copy undo need the Library.** MW::afterImagesRelocated is the model and Library tail of a move or copy, shared by the drop and its undo. relocateImages refuses outside the Library.
+- **A selected version and its file are two steps.** Deleting both makes "Delete Version" and "Delete": two CheckedCommands are not grouped, because a group cannot refuse half of itself.
+- **A folder moved out of the Library** has its images forgotten by the catalog. Moving it back puts them in the Library again on the next scan.
+
+Not undoable yet:
+
+- Delete Folder and the Library's "Move folder to trash". The rows they purge are keyed by folder prefix (onFolderDeleted).
+- Create folder.
+- A drag between the Folders or Bookmarks panels: a copy plus a trash in File/fstree.cpp and File/bookmarks.cpp.
+- Thumbnails dragged out to another app: that app owns the move.
 
 ### 2.16 Investigations and Fixes
 
@@ -2063,7 +2203,7 @@ The QSettings PickLog (crash-recovery copy of the picks, and the picks line of t
 
 #### 3.5.1 Write-Through
 
-- ONE HOOK. DataModel::setData, G::PickColumn (Edit/Display role, GUI thread): on a crossing of "Picked" it calls SavedPicks::Set(key, nowPicked). Every writer goes through setData, so togglePick, togglePickUnlessRejected, toggleReject, togglePickMouseOverItem, MW::clearPicks, setIngested (Picked -> "Ingested" is an unpick), undo (updatePickFromHistory) and the selftest all reach it without knowing about it. A fresh row's first "Unpicked" is not a crossing.
+- ONE HOOK. DataModel::setData, G::PickColumn (Edit/Display role, GUI thread): on a crossing of "Picked" it calls SavedPicks::Set(key, nowPicked). Every writer goes through setData, so togglePick, togglePickUnlessRejected, toggleReject, togglePickMouseOverItem, MW::clearPicks, setIngested (Picked -> "Ingested" is an unpick), Edit > Undo (MW::applyPickStates) and the selftest all reach it without knowing about it. A fresh row's first "Unpicked" is not a crossing.
 - NOT in RowStore::setValue: a model clear, a row removal and the snapshot reader change rows there without the user unpicking anything.
 - A re-key (rename, version re-key) moves a saved key in the KeyRole branch of setData. FileOps::onMoved / onDeleted / onFolderDeleted call SavedPicks::OnMoved / OnDeleted / OnFolderDeleted for rows that are not loaded, versions included. Set is idempotent, so the two paths agree.
 - BATCHED, NOT DEBOUNCED. Set updates the in-memory set at once and queues the key; a 0 ms single-shot runs SavedPicks::Flush, which writes the queue in ONE transaction. Every toggle path changes its whole selection inside one call, so one event-loop turn is the whole batch, and a 500-image multi-select is one commit. closeEvent flushes too.
@@ -2078,7 +2218,7 @@ The QSettings PickLog (crash-recovery copy of the picks, and the picks line of t
 - AFTER FILL. MW::folderChanged (once per completed fill: folder, search, whole Library, parked Library put back) calls MW::restoreSavedPicks -> DataModel::syncSavedPicks, ahead of the filter build so the Picks counts include the result. It syncs BOTH WAYS: a parked Library (DataModel::restoreScope) and a Library snapshot come back with the picks they had when put away, and a pick made or cleared since, on the same image in a folder, must win. Step 1 (unpick rows no longer saved) is skipped when pickedCount() == 0 and stops once every picked row has been seen; step 2 walks the saved set against fPathRow. readLibrarySnapshot no longer unpicks the rows itself.
 - NO dataChanged PER ROW. syncSavedPicks writes with signals blocked and emits ONE dataChanged over the span touched: a per-row dataChanged rebuilds the macOS accessibility array (~27 ms each at 43,000 rows).
 - Clear all picks (MW::clearPicks) is model-scoped: it unpicks the LOADED images (filtered ones included), and the saved picks in other folders stay.
-- Reject unpicked, clear picks (MW::rejectUnpickedClearPicks, Cmd/Ctrl+Opt/Alt+R, Ingest menu and thumbnail context menu) is Lightroom's Library > Refine Photos, same shortcut: every Unpicked row becomes Rejected and every Picked row Unpicked; Rejected and Ingested rows are left alone. Unlike Clear all picks it is scoped to the FILTERED dataset (dm->sf): images hidden by the current filter keep their status. One multiple-select group on the pick history so Recover prior pick state undoes it, and the same refresh tail. Enabled by MW::updatePickDependentActions only while an image in the filtered view is picked (otherwise it would reject every visible image); greyed with the reason "no images in the filtered view are picked". That visible-pick test is cached in MW::isVisiblePick: recomputed by the pick paths and MW::filterChange, but not by enableSelectionDependentMenus, which runs on every selection change and passes recomputeVisiblePick = false. The function repeats the test itself in case the action state is stale. It is also refused when any picked image is hidden by the filter (dm->pickCount() exceeds the visible picks): MW::warnHiddenPicks shows a warning with the hidden count and nothing changes, since the hidden picks would otherwise stay Picked into the next round (test mode skips the dialog but still refuses). Before anything changes, MW::okToRejectUnpicked shows a confirmation with the counts ("N images will be rejected", "M picked images will be unpicked"); Reject is the default button, Cancel the escape button and changes nothing; test mode skips the dialog.
+- Reject unpicked, clear picks (MW::rejectUnpickedClearPicks, Cmd/Ctrl+Opt/Alt+R, Ingest menu and thumbnail context menu) is Lightroom's Library > Refine Photos, same shortcut: every Unpicked row becomes Rejected and every Picked row Unpicked; Rejected and Ingested rows are left alone. Unlike Clear all picks it is scoped to the FILTERED dataset (dm->sf): images hidden by the current filter keep their status. One Edit > Undo step (MW::recordPickUndo), and the same refresh tail. Enabled by MW::updatePickDependentActions only while an image in the filtered view is picked (otherwise it would reject every visible image); greyed with the reason "no images in the filtered view are picked". That visible-pick test is cached in MW::isVisiblePick: recomputed by the pick paths and MW::filterChange, but not by enableSelectionDependentMenus, which runs on every selection change and passes recomputeVisiblePick = false. The function repeats the test itself in case the action state is stale. It is also refused when any picked image is hidden by the filter (dm->pickCount() exceeds the visible picks): MW::warnHiddenPicks shows a warning with the hidden count and nothing changes, since the hidden picks would otherwise stay Picked into the next round (test mode skips the dialog but still refuses). Before anything changes, MW::okToRejectUnpicked shows a confirmation with the counts ("N images will be rejected", "M picked images will be unpicked"); Reject is the default button, Cancel the escape button and changes nothing; test mode skips the dialog.
 
 #### 3.5.3 The Close Reminder
 
@@ -4204,7 +4344,7 @@ Four state conditions drive enabling. Each must have a trigger that re-runs the 
 
 - dmHasRows (dm->rowCount() > 0, a folder is loaded). Triggers: fileSelectionChange (auto-select after load), selectionChanged (on clear), and view-mode switches, all of which call enableSelectionDependentMenus().
 - hasSelection / selection count (sel->count()). Trigger: the selection model's selectionChanged signal, connected directly to enableSelectionDependentMenus() in MW::createSelection() (`Main/initialize.cpp`). Essential: extending or shrinking a selection with Shift/Ctrl does NOT change the current index, so fileSelectionChange alone would never re-evaluate count-dependent actions (focusStack stuck disabled after growing the selection to two).
-- isAnyPick (dm->isAnyPick(), O(1)). Triggers: updatePickDependentActions(), called from every pick-toggle path in `Main/pick.cpp` (togglePick, togglePickUnlessRejected, togglePickMouseOverItem, toggleReject, updatePickFromHistory, restoreSavedPicks) and after ingest in MW::setIngested() (`Main/setandupdate.cpp`). enableSelectionDependentMenus() also calls it.
+- isAnyPick (dm->isAnyPick(), O(1)). Triggers: updatePickDependentActions(), called from every pick-toggle path in `Main/pick.cpp` (togglePick, togglePickUnlessRejected, togglePickMouseOverItem, toggleReject, applyPickStates, restoreSavedPicks) and after ingest in MW::setIngested() (`Main/setandupdate.cpp`). enableSelectionDependentMenus() also calls it.
 - isUpDown (gridView or tableView visible). Trigger: view-mode switches.
 
 #### 7.1.2 Rules by Action
@@ -4212,7 +4352,7 @@ Four state conditions drive enabling. Each must have a trigger that re-runs the 
 Requires dmHasRows (folder loaded):
 
 - File: revealFile (+context), reportMetadata, copyFolderPathFromContext, copyImagePathFromContext, rename, saveAsFile, refreshCurrent (needed to pick up files added externally).
-- Edit: selectAll, invertSelection, shareFiles, copyFiles, copyImage, deleteImages, pick, pickMouseOver, reject, pickUnlessRejected, popPickHistory, tokenTemplateEditor, rotateRight/Left, ratingsMenu + rate0..5, labelsMenu + label0..5, utilitiesMenu (mediaReadSpeed, visCmpImages).
+- Edit: selectAll, invertSelection, shareFiles, copyFiles, copyImage, deleteImages, pick, pickMouseOver, reject, pickUnlessRejected, undo, redo, tokenTemplateEditor, rotateRight/Left, ratingsMenu + rate0..5, labelsMenu + label0..5, utilitiesMenu (mediaReadSpeed, visCmpImages).
 - Go: jump, random, and all horizontal/home/end/page navigation (+AddToSelection), and the scroll family except up/down.
 - Filter: filterMenu + all filter\* children.
 - Sort: sortMenu + all sort\* children.
@@ -11445,7 +11585,7 @@ The same controls at the bottom of the Browse panels (2026-10-13; reworked 2026-
 - The FILTER NAV BAR branch of MW::eventFilter (a qApp filter) calls scheduleFilterNavBarPlacement on any Move / Resize / Show / Hide of a DockWidget child of MW; that coalesces each burst into one queued placeFilterNavBars after Qt settles the layout. Hiding or showing a copy can move the docks again, which re-runs placement once and settles on the same answer.
 - Previous / Next call filterHistoryBack / filterHistoryForward; syncFilterHistoryButtons sets the enabled state and tooltips of every copy (MW::filterNavBackBtns / filterNavForwardBtns). They REPLACED the Filters title bar's own arrows, so the filter history has one control, reachable from every panel in the group. The arrows are drawn as a vector at 22 px (filterNavArrowIcon in Main/sortandfilter.cpp) from the old bitmap's outline.
 - Width: all four buttons share the row equally until the two Clear buttons reach their text width; below that only the arrows shrink, down to their icon (22 px + padding). The row's minimum is then the dock's minimum width. MW::sizeFilterNavButtons sets the floors in each button's OWN stylesheet (min-width = content width, padding and border added): PanelButtonBar::Add's "min-width: 0" becomes an explicit 12 px minimumWidth when the stylesheet polishes, which overrode both size policies and setMinimumWidth (measured in a standalone test: a 235 px row split 51/52/51/51 and clipped the Clear text). The Clear floor is a text width, so MW::setFontSize calls it again (queued, after the app sheet repolish).
-- Clear picks follows clearPicksAction (also Ingest > Clear all picks), which MW::updatePickDependentActions enables only while something is picked. MW::clearPicks (Main/pick.cpp) unpicks every Picked row in the UNFILTERED model, so picks hidden by the current filter go too; rejects are kept. The whole set goes onto the pick history as one multiple-select group, so Ingest > Recover prior pick state brings it back, and each entry leaves the crash-recovery pick log. It then runs togglePick's refresh tail (updateCategory, filterChange or lift the proxy suspension). DataModel::clearPicks is NOT used: it walks proxy row numbers as model rows and bypasses the pick history and log.
+- Clear picks follows clearPicksAction (also Ingest > Clear all picks), which MW::updatePickDependentActions enables only while something is picked. MW::clearPicks (Main/pick.cpp) unpicks every Picked row in the UNFILTERED model, so picks hidden by the current filter go too; rejects are kept. The whole set is one Edit > Undo step (MW::recordPickUndo). It then runs togglePick's refresh tail (updateCategory, filterChange or lift the proxy suspension). DataModel::clearPicks is NOT used: it walks proxy row numbers as model rows and bypasses Edit > Undo.
 
 ### 18.8 Rebuild Filters Is an Escape Hatch
 

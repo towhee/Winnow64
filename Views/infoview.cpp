@@ -205,6 +205,12 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 row and file (written once per file), then copied to the whole group
                 (DataModel::syncSharedToVersions). */
             QSet<QString> filesWritten;
+            PathValues before, after;           // per file, for Edit > Undo
+            static const QHash<QString, int> fieldColumn = {
+                {"Title*", G::TitleColumn}, {"Creator*", G::CreatorColumn},
+                {"Copyright*", G::CopyrightColumn}, {"Email*", G::EmailColumn},
+                {"Url*", G::UrlColumn}};
+            const int editedColumn = fieldColumn.value(field, -1);
             for (int i = 0; i < n; i++) {
                 /*  rows, NOT selection.at(i).row(). That is a PROXY row, and using it
                     as a datamodel row named a different image whenever the two differ
@@ -220,6 +226,11 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
                 }
                 if (filesWritten.contains(fPath)) continue;     // a master and its version
                 filesWritten.insert(fPath);
+                if (editedColumn >= 0) {
+                    before.append({fPath, dm->index(dmRow, editedColumn).data(Qt::EditRole)
+                                              .toString()});
+                    after.append({fPath, idx1.data().toString()});
+                }
                 if (field == "Title*") {
                     QString s = idx1.data().toString();
                     emit setValDm(dmRow, G::TitleColumn, s, dm->instance, src, Qt::EditRole);
@@ -256,6 +267,8 @@ void InfoView::dataChanged(const QModelIndex &idx1, const QModelIndex&, const QV
 
             // Update embellished text fields - Embel::refreshTexts
             emit dataEdited();
+            pruneUnchanged(before, after);
+            if (!before.isEmpty()) emit fieldEdited(field, before, after);
 
             /*  NO POPUP RESET HERE. This branch used to open the popup's progress bar
                 and reset() the popup after, which never showed anything (nothing
