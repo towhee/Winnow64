@@ -338,6 +338,15 @@ void tst_keywordvocab::undoTakesBackListEditsByDiff()
     }
     m.undo();                                   // "Add Keyword" Kites
     QVERIFY(allPaths(v).contains("Kites|Owls"));
+    QVERIFY(m.canUndo() && !m.canRedo());       // refused: the step stays offered
+
+    // a rename rewrites the paths beneath it; undo puts every one back
+    QVERIFY(v.rename(v.indexForPath("Birds"), "Aves"));
+    QVERIFY(allPaths(v).contains("Aves|Hawks"));
+    QCOMPARE(m.undoText(), QString("Rename Keyword"));
+    m.undo();
+    QVERIFY(allPaths(v).contains("Birds|Hawks"));
+    QVERIFY(!allPaths(v).contains("Aves"));
 
     UndoManager::setApp(nullptr);
 }

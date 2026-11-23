@@ -59,6 +59,9 @@
         no prefix scan, no subtree walk in a loop that runs on every row on
         every filter change. A bare leaf therefore matches NOTHING, which is
         correct: a keyword's identity is its whole path.
+      o "NO KEYWORDS" IS THE KEYWORDS CATEGORY'S BLANK ITEM, and a list's blank is not
+        a value it can contain but the list being empty -- FilterCategory::includeEmpty
+        and excludeEmpty, set at compile time so no other compare pays for it.
       o An exclude must NOT make a category count as "filtering". A category
         holding only exclusions is not narrowing the set to those items, it is
         subtracting them; were it to count, every row lacking any of its items
@@ -90,6 +93,15 @@ struct FilterCategory
         values matches nothing. Excludes are untouched by it -- an exclusion rejects in
         either mode. */
     bool matchAll = false;
+    /*  THE BLANK ITEM OF A LIST COLUMN: "No keywords". A list column holds every value a
+        row carries, so its blank item cannot be a value to look for -- a contains("")
+        never hits -- it is "the list is empty". Flags rather than a "" in includes /
+        excludes, decided ONCE in SortFilter::compileFilters, so the per-row compares of
+        every other item are exactly what they were. includeEmpty is OR-ed with the
+        includes (AND-ed under matchAll, where with another keyword it matches nothing);
+        excludeEmpty rejects a row with no values, as any exclusion rejects. */
+    bool includeEmpty = false;
+    bool excludeEmpty = false;
     /*  COMPARE AS TEXT, for a session category ("Filter on..."). Its items are built from
         BuildFilters' snapshot, which holds every value as a trimmed -- and, when numeric,
         left-padded -- STRING; the column itself may hold a double or an int, and a Qt 6
@@ -122,8 +134,9 @@ struct FilterCategory
         sampled -- and acceptsEverything() never took its fast path. */
     bool isFiltering() const
     {
-        return !excludes.isEmpty() || !excludeExprs.isEmpty()
-               || (!includeAll && (!includes.isEmpty() || !includeExprs.isEmpty()));
+        return !excludes.isEmpty() || !excludeExprs.isEmpty() || excludeEmpty
+               || (!includeAll && (!includes.isEmpty() || !includeExprs.isEmpty()
+                                   || includeEmpty));
     }
 };
 
@@ -197,11 +210,17 @@ struct FilterPredicate
             for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return false;
             for (const auto &e : cat.includeExprs)
                 if (e->matches(fn)) { exprHit = true; break; }
-            if (cat.includes.isEmpty() && cat.excludes.isEmpty() && !cat.includeAll)
+            if (cat.includes.isEmpty() && cat.excludes.isEmpty() && !cat.includeAll
+                && !cat.includeEmpty && !cat.excludeEmpty)
                 return cat.includeExprs.isEmpty() || exprHit;
         }
 
         const QVariant dataValue = knownOrBlank(cat, valueFor(cat.column));
+
+        //  "No keywords": asked only when the blank item is checked either way
+        const bool blankChecked = cat.includeEmpty || cat.excludeEmpty;
+        const bool empty = blankChecked && isEmptyList(dataValue);
+        if (cat.excludeEmpty && empty) return false;
 
         if (cat.compareAsText) {
             const QString text = dataValue.toString().trimmed();
@@ -223,20 +242,30 @@ struct FilterPredicate
             isCategoryUnchecked, which an exclusion deliberately did not
             clear. */
         if (cat.includeAll || exprHit) return true;
-        if (cat.includes.isEmpty()) {
+        if (cat.includes.isEmpty() && !cat.includeEmpty) {
             // expressions were included and none matched
             return cat.includeExprs.isEmpty();
         }
 
         if (cat.matchAll) {
+            if (cat.includeEmpty && !empty) return false;
             for (const QVariant &in : cat.includes)
                 if (!includeHit(dataValue, in)) return false;   // missing one
             return true;
         }
 
+        if (cat.includeEmpty && empty) return true;
         for (const QVariant &in : cat.includes)
             if (includeHit(dataValue, in)) return true;
         return false;                           // no match in category
+    }
+
+    /*  A list cell with no values. A cell never written (no QStringList yet) reads as
+        empty too, as a blank cell does for the blank item of any other category. */
+    static bool isEmptyList(const QVariant &v)
+    {
+        if (v.typeId() == QMetaType::QStringList) return v.toStringList().isEmpty();
+        return v.toString().isEmpty();
     }
 
     static QVariant knownOrBlank(const FilterCategory &cat, const QVariant &v)
@@ -257,8 +286,9 @@ struct FilterPredicate
             const std::function<QVariant(int)> fn = valueFor;
             for (const auto &e : cat.excludeExprs) if (e->matches(fn)) return true;
         }
-        if (cat.excludes.isEmpty()) return false;
+        if (cat.excludes.isEmpty() && !cat.excludeEmpty) return false;
         const QVariant dataValue = knownOrBlank(cat, valueFor(cat.column));
+        if (cat.excludeEmpty && isEmptyList(dataValue)) return true;
         if (cat.compareAsText) {
             const QString text = dataValue.toString().trimmed();
             for (const QVariant &ex : cat.excludes)

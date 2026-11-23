@@ -3322,6 +3322,28 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* A TEXT FIELD WITH NOTHING TO UNDO PASSES Cmd+Z ON
+       QLineEdit claims Undo and Redo through ShortcutOverride whether or not it has
+       anything to undo, so a field left focused after use -- the Keywords dock's tag
+       field after adding a keyword, Find keyword -- swallowed Edit > Undo and nothing
+       happened. When the field's own history has nothing for the key, leave the event
+       unaccepted so the Edit menu action fires. Not in dialogs: their keys are theirs
+       (see the guard below).
+    */
+    if (event->type() == QEvent::ShortcutOverride) {
+        QLineEdit *le = qobject_cast<QLineEdit *>(QApplication::focusWidget());
+        if (le && obj == le && !qobject_cast<QDialog *>(le->window())) {
+            QKeyEvent *e = static_cast<QKeyEvent *>(event);
+            const bool undoKey = e->matches(QKeySequence::Undo);
+            const bool redoKey = e->matches(QKeySequence::Redo);
+            if ((undoKey && !le->isUndoAvailable())
+                || (redoKey && !le->isRedoAvailable())) {
+                e->ignore();
+                return true;
+            }
+        }
+    }
+
     /* MODELESS DIALOG SHORTCUT GUARD
        MW's single-key action shortcuts (rate "1", label "6", etc.) use the default
        Qt::WindowShortcut context.  Qt activates a WindowShortcut whenever the action's

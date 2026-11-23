@@ -191,6 +191,14 @@ public:
     {
         return item != nullptr && item->data(0, TypeGroupRole).isValid();
     }
+    /*  "No keywords", the Keywords category's blank item: data(1) is "", and it matches
+        the images that carry no keyword at all (FilterCategory::includeEmpty). It is NOT
+        a keyword -- nothing that files, renames, merges or drags keywords may see it,
+        which the empty path already keeps it out of almost everywhere. */
+    bool isNoKeywordsItem(const QTreeWidgetItem *item) const
+    {
+        return item != nullptr && item->data(0, NoKeywordsRole).toBool();
+    }
     /*  Keywords and Folders: categories whose items form a tree and are keyed on the
         PATH in data(1) rather than on their label. */
     bool isNestedCategory(const QTreeWidgetItem *category) const
@@ -596,7 +604,9 @@ public:
             the exclusion matches every descendant -- so it is DRAWN excluded, struck
             through in red, though its own check state stays Unchecked and nothing is
             added to the filter. Set by setEachCatTextColor, read by applyItemStyle. */
-        InheritedExclusionRole
+        InheritedExclusionRole,
+        /*  On the "No keywords" item in Keywords. See isNoKeywordsItem. */
+        NoKeywordsRole
     };
 
     /*  SESSION CATEGORIES ("Filter on..."). A column the panel has no category for --

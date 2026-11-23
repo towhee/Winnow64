@@ -1757,6 +1757,8 @@ void Filters::applyItemStyle(QTreeWidgetItem *item)
                           || item->data(0, InheritedExclusionRole).toBool();
     const bool duplicate = item->data(0, DuplicateRole).toBool();
     const bool unfiled = item->data(0, UnfiledRole).toBool();
+    //  italic like the other non-keyword rows a reader must not mistake for a keyword
+    const bool noKeywords = item->data(0, NoKeywordsRole).toBool();
 
     /*  BOTH FONT MARKS ARE REBUILT FROM font(), never from the item's current font, so
         the style cannot accumulate across calls. That is also why the duplicate italic is
@@ -1764,7 +1766,7 @@ void Filters::applyItemStyle(QTreeWidgetItem *item)
         it back off the font is exactly how it used to be lost on the next click. */
     QFont f = font();
     f.setStrikeOut(excluded);
-    f.setItalic(duplicate);
+    f.setItalic(duplicate || noKeywords);
     item->setFont(0, f);
 
     /*  UNFILED WINS THE COLOR when both apply, because exclusion still has the strikeout
@@ -1974,6 +1976,7 @@ int Filters::keywordItemCount(const QString &path, bool filtered) const
     keyword is not in the tree" and "the keyword is in the tree claiming no images" have
     different causes.
 */
+    if (path.trimmed().isEmpty()) return -1;    // not "No keywords": that is no keyword
     const QString fold = keywordFold(path);
     for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
         if (keywordFold(item->data(1, Qt::EditRole).toString()) != fold) continue;
@@ -1985,6 +1988,7 @@ int Filters::keywordItemCount(const QString &path, bool filtered) const
 bool Filters::checkKeywordItem(const QString &path)
 {
     if (G::isLogger) G::log("Filters::checkKeywordItem", path);
+    if (path.trimmed().isEmpty()) return false; // a keyword, never "No keywords"
     const QString fold = keywordFold(path);
     for (QTreeWidgetItem *item : itemsInCategory(keywords)) {
         if (keywordFold(item->data(1, Qt::EditRole).toString()) != fold) continue;
@@ -4027,7 +4031,11 @@ void Filters::updateKeywordItems(const QMap<QString, int> &pathCounts,
 
     QHash<QString, Qt::CheckState> stateByPath;
     QHash<QString, bool> expandedByPath;
+    /*  "No keywords" has no path to key on, so its check travels on its own -- losing
+        it would drop the filter the moment a keyword was added to a shown image. */
+    Qt::CheckState noKeywordsState = Qt::Unchecked;
     for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        if (isNoKeywordsItem(item)) { noKeywordsState = item->checkState(0); continue; }
         const QString path = item->data(1, Qt::EditRole).toString();
         if (path.isEmpty()) continue;
         if (item->checkState(0) != Qt::Unchecked)
@@ -4043,6 +4051,13 @@ void Filters::updateKeywordItems(const QMap<QString, int> &pathCounts,
     addKeywordItems(pathCounts, category);
 
     for (QTreeWidgetItem *item : itemsInCategory(category)) {
+        if (isNoKeywordsItem(item)) {
+            if (noKeywordsState != Qt::Unchecked) {
+                item->setCheckState(0, noKeywordsState);
+                styleFilterItem(item);
+            }
+            continue;
+        }
         const QString fold = keywordFold(item->data(1, Qt::EditRole).toString());
         const auto it = stateByPath.constFind(fold);
         if (it != stateByPath.constEnd()) {
@@ -4767,13 +4782,45 @@ void Filters::addKeywordItems(const QMap<QString, int> &pathCounts,
         return node;
     };
 
+    /*
+        "NO KEYWORDS", THE CATEGORY'S BLANK ITEM, FIRST. Its count is pathCounts[""] --
+        countKeywords and Catalog::categoryItems count a row with no keyword there -- and
+        its value is "", which SortFilter::compileFilters turns into
+        FilterCategory::includeEmpty / excludeEmpty rather than a value to look for.
+
+        SHOWN WHENEVER THE CATEGORY HAS ANYTHING, even at zero: it is how a user finds
+        out the filter exists, and a folder where every image is keyworded is a fact
+        worth reading as "No keywords 0". Never marked unfiled -- it is not a keyword.
+    */
+    if (!pathCounts.isEmpty()) {
+        QTreeWidgetItem *none = nullptr;
+        for (int i = 0; i < category->childCount() && !none; ++i)
+            if (isNoKeywordsItem(category->child(i))) none = category->child(i);
+        if (!none) {
+            none = new QTreeWidgetItem();
+            none->setText(0, tr("No keywords"));
+            none->setData(0, NoKeywordsRole, true);
+            none->setData(1, Qt::EditRole, QString(""));
+            none->setCheckState(0, Qt::Unchecked);
+            none->setTextAlignment(2, Qt::AlignRight | Qt::AlignVCenter);
+            none->setTextAlignment(3, Qt::AlignRight | Qt::AlignVCenter);
+            none->setToolTip(0, tr("Images without any keywords.\n\n"
+                                   "Click to include. Opt+click to exclude."));
+            applyItemStyle(none);
+            category->insertChild(0, none);
+        }
+        const int n = pathCounts.value(QString(), 0);
+        none->setData(2, Qt::EditRole, n);
+        none->setData(3, Qt::EditRole, n);
+    }
+
     for (auto it = pathCounts.constBegin(); it != pathCounts.constEnd(); ++it) {
         /*  ABORTED HALF-BUILT, which is allowed -- but the header must not go on
             describing a tree that is no longer there. updateKeywordCategoryHeader counts
             what is actually in the category, so calling it on the way out is what stops
             "Keywords (282 unfiled)" sitting above nothing at all. */
         if (G::stop) { attachPending(); updateKeywordCategoryHeader(); return; }
-        if (it.key().isEmpty()) continue;       // a blank path is a bad row, not a value
+        if (it.key().isEmpty()) continue;       // "No keywords", made above
         QTreeWidgetItem *node = ensureNode(it.key());
         node->setData(2, Qt::EditRole, it.value());
         node->setData(3, Qt::EditRole, it.value());

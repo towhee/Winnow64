@@ -938,6 +938,9 @@ QMap<QString,int> BuildFilters::countKeywords(const FilterSnapshot &snap,
         const FilterSnapshotRow &r = snap.row(i);
         if (excludedOnly) { if (!snap.excludedFor(i, facetColumn)) continue; }
         else if (filtered ? !snap.countsFor(i, facetColumn) : r.hiddenRaw) continue;
+        /*  A row with no keyword counts on "No keywords", whose key is "" -- see
+            Filters::addKeywordItems. */
+        if (r.keywords.isEmpty()) map[QString()]++;
         for (const QString &k : r.keywords) map[k]++;
     }
     return map;

@@ -100,6 +100,7 @@ private slots:
     void liveFolderCountsSkipDemotedRows();
     void demotedRowIsPromotedByTheNextScan();
     void keywordsMatchAllNeedsEveryOne();
+    void noKeywordsItemCountsAndFilters();
     void scopeFoldersHonourExcludesAndPhotosLibrary();
     void scopeFileCountUsesTheScannersNameRule();
     void gapAnalysisNamesEveryFileWithItsReason();
@@ -2523,6 +2524,55 @@ void tst_catalog::keywordsMatchAllNeedsEveryOne()
 
     all.excludeKeywords = {"Family"};
     QVERIFY(cat.search(all).isEmpty());
+}
+
+void tst_catalog::noKeywordsItemCountsAndFilters()
+{
+/*
+    "No keywords", the Keywords category's blank item: counted under "" and matched as
+    "has no keyword link", in each mode and as an exclusion.
+*/
+    Catalog &cat = Catalog::instance();
+    cat.commit({rowFor("nk-fam.jpg", {}, {"Family"}),
+                rowFor("nk-beach.jpg", {}, {"Place|Beach"}),
+                rowFor("nk-none1.jpg"),
+                rowFor("nk-none2.jpg")});
+
+    const QMap<QString, int> kw = cat.categoryItems(G::KeywordsAllColumn);
+    QCOMPARE(kw.value(QString()), 2);
+    QCOMPARE(kw.value("Family"), 1);
+
+    auto sorted = [&](const CatalogQuery &q) {
+        QStringList hits = cat.search(q);
+        hits.sort();
+        return hits;
+    };
+    const QStringList none {imagePath("nk-none1.jpg"), imagePath("nk-none2.jpg")};
+
+    CatalogQuery only;
+    only.keywords = {QString()};
+    QCOMPARE(sorted(only), none);
+
+    CatalogQuery orFamily;
+    orFamily.keywords = {QString(), "Family"};
+    QStringList want = none;
+    want << imagePath("nk-fam.jpg");
+    want.sort();
+    QCOMPARE(sorted(orFamily), want);
+
+    CatalogQuery allOnly = only;
+    allOnly.keywordsMatchAll = true;
+    QCOMPARE(sorted(allOnly), none);
+
+    CatalogQuery allFamily = orFamily;
+    allFamily.keywordsMatchAll = true;
+    QVERIFY(cat.search(allFamily).isEmpty());
+
+    CatalogQuery exclude;
+    exclude.excludeKeywords = {QString()};
+    QStringList kept {imagePath("nk-fam.jpg"), imagePath("nk-beach.jpg")};
+    kept.sort();
+    QCOMPARE(sorted(exclude), kept);
 }
 
 void tst_catalog::blankCategoryItemAccountsForEveryImage()

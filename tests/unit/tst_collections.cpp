@@ -697,6 +697,19 @@ void tst_collections::undoPutsEveryEditBack()
     }
     QVERIFY(m.canRedo());
     QCOMPARE(m.redoText(), QString("Edit Query"));
+
+    /*  New, then the name typed into it (CollectionTree suspends that rename): one
+        undo removes it, and redo brings it back under the typed name. */
+    const qint64 t = s.create(Kind::Collection, 0, "New Collection");
+    {
+        UndoSuspend partOfNew;
+        QVERIFY(s.rename(t, "Trip"));
+    }
+    QCOMPARE(m.undoText(), QString("New Collection"));
+    m.undo();
+    QCOMPARE(s.node(t).id, qint64(0));
+    m.redo();
+    QCOMPARE(s.node(t).name, QString("Trip"));
     UndoManager::setApp(nullptr);
 }
 

@@ -138,8 +138,8 @@ KeywordMergeDlg::KeywordMergeDlg(const QString &unfiledPath, int observedCount,
     }
 
     QLabel *note = new QLabel(
-        "The keywords are rewritten inside the images' own sidecar files. This cannot be "
-        "undone.", this);
+        "The keywords are rewritten inside the images' own sidecar files. Edit > Undo "
+        "puts them back.", this);
     note->setWordWrap(true);
     layout->addWidget(note);
     layout->addSpacing(6);

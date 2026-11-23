@@ -4,10 +4,13 @@ WHAT'S NEW
 - Tweak raw demosaic algorithms.
 - Improved highlight reconstruction.
 - Hot pixel removal.
-
+- Undo and redo.
 
 BUGS / TO DO
-- Implement undo
+- 'Location/Canada/BC/Southern BC/Jericho'
+- Copy keyword chain
+- Deleted keyword from image, image selection changed.
+
 - Help > Report bugs / feedback
 - Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location

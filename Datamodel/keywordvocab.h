@@ -205,13 +205,12 @@ signals:
     void pathChanged(const QString &oldPath, const QString &newPath);
 
 private:
-    /*  EDIT > UNDO. A vocabulary-only mutator (insertChild, insertPaths, remove,
-        setSynonyms, setExportable, buildFromCatalog, importLightroom) holds a Step for
-        its length; the outermost one compares the rows before and after and records the
-        DIFFERENCE on the app's stack (UndoManager::record). A diff, not the whole
-        table: undoing one step must not also undo an unrecorded change made since --
-        rename, re-parent and merge retag files (pathChanged), so they wait for the
-        file log that keyword rewrites need (Undo plan P4). */
+    /*  EDIT > UNDO. Every mutator holds a Step for its length; the outermost one
+        compares the rows before and after and records the DIFFERENCE on the app's stack
+        (UndoManager::record). A diff, not the whole table: undoing one step must not
+        also undo an unrecorded change made since. Rename, re-parent and merge hold
+        theirs across pathChanged, so a retag the user accepts lands in the same
+        UndoMacro (KeywordTree holds one) and undoes with the list. */
     class Step;
     struct UndoRow
     {

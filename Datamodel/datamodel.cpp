@@ -8299,8 +8299,13 @@ void SortFilter::compileFilters()
                         state == Qt::PartiallyChecked ? cat.excludes : cat.includes;
                     const QVariant v = item->data(1, Qt::EditRole);
                     /*  A File types Images / Videos node holds the list of its types
-                        (Filters::isTypeGroup); each is a value of its own. */
-                    if (filters->isTypeGroup(item))
+                        (Filters::isTypeGroup); each is a value of its own. "No
+                        keywords" is a flag, not a value -- see FilterCategory. */
+                    if (filters->isNoKeywordsItem(item)) {
+                        if (state == Qt::PartiallyChecked) cat.excludeEmpty = true;
+                        else                               cat.includeEmpty = true;
+                    }
+                    else if (filters->isTypeGroup(item))
                         for (const QString &t : v.toStringList()) values.append(t);
                     else values.append(v);
                 }

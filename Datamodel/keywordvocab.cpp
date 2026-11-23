@@ -75,13 +75,14 @@ public:
         if (undoPut.isEmpty() && undoDrop.isEmpty()) return;
 
         QPointer<KeywordVocab> vocab(v);
-        UndoManager::record(new ActionCommand(
+        // Checked: a refused write-back (applyUndoRows) leaves the step where it was
+        UndoManager::record(new CheckedCommand(
             text,
             [vocab, undoPut, undoDrop] {
-                if (vocab) vocab->applyUndoRows(undoPut, undoDrop);
+                return vocab && vocab->applyUndoRows(undoPut, undoDrop);
             },
             [vocab, redoPut, redoDrop] {
-                if (vocab) vocab->applyUndoRows(redoPut, redoDrop);
+                return vocab && vocab->applyUndoRows(redoPut, redoDrop);
             }));
     }
 
@@ -536,6 +537,9 @@ bool KeywordVocab::rename(const QModelIndex &idx, const QString &newName)
         create a node whose leaf silently disagreed with its own path. */
     if (name.isEmpty() || name.contains('|')) return false;
     if (name == n->name) return true;
+    /*  Held across the pathChanged emit below: a retag the user accepts there records
+        its files inside the same UndoMacro the caller (KeywordTree) holds. */
+    Step step(this, tr("Rename Keyword"));
 
     /*  A sibling with the same folded name would give two nodes one identity, which the
         unique index on pathfold would reject anyway -- better to refuse it here, where
@@ -590,6 +594,7 @@ bool KeywordVocab::reparent(const QModelIndex &idx, const QModelIndex &newParent
                        ? const_cast<VocabNode *>(nodeOf(newParent)) : root;
     if (!p) p = root;
     if (n->parent == p) return true;
+    Step step(this, tr("Move Keyword"));
 
     for (const VocabNode *sib : p->children)
         if (keywordFold(sib->name) == keywordFold(n->name)) return false;
@@ -744,6 +749,7 @@ QString KeywordVocab::reparentMerging(const QModelIndex &idx, const QModelIndex 
                        ? const_cast<VocabNode *>(nodeOf(newParent)) : root;
     if (!p) p = root;
     if (n->parent == p) return n->path;
+    Step step(this, tr("Merge Keyword"));
 
     VocabNode *twin = nullptr;
     for (VocabNode *sib : p->children) {
@@ -942,10 +948,9 @@ QModelIndex KeywordVocab::insertParentAbove(const QModelIndex &idx, const QStrin
 {
     VocabNode *n = nodeOf(idx) ? const_cast<VocabNode *>(nodeOf(idx)) : nullptr;
     if (!n) return QModelIndex();
-    /*  NOT A STEP YET: the re-parent below can retag files (pathChanged), which Edit >
-        Undo cannot take back until keyword rewrites keep a file log. Suspended rather
-        than left alone, or insertChild's own Step would record the new parent alone. */
-    UndoSuspend notYetAStep;
+    /*  One step for the new node and the move under it, or insertChild's own Step
+        would record the new parent alone. */
+    Step step(this, tr("Insert Parent"));
 
     VocabNode *oldParent = n->parent ? n->parent : root;
     const QModelIndex parentIdx = oldParent == root ? QModelIndex() : indexOf(oldParent);

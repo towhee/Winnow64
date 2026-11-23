@@ -41,6 +41,7 @@ private slots:
     void aCategoryIsReadOncePerRowNotOncePerItem();
     void foldersMatchTheirSubtreeByPathNotName();
     void matchAllNeedsEveryKeyword();
+    void noKeywordsMatchesAnEmptyList();
     void readsColumnOnlyForActiveCategories();
     void sessionCategoryComparesAsPaddedText();
     void queryExpressionsCombineLikeItems();
@@ -416,6 +417,58 @@ void tst_filterpredicate::foldersMatchTheirSubtreeByPathNotName()
     only.categories << cat(G::FolderPathsAllColumn, { "/P/2024" }, { "/P/2024/DxO" });
     QVERIFY(only.accepts(fetch(top)));
     QVERIFY(!only.accepts(fetch(inner)));
+}
+
+void tst_filterpredicate::noKeywordsMatchesAnEmptyList()
+{
+    /*  "No keywords" (FilterCategory::includeEmpty / excludeEmpty) is the list being
+        empty, OR-ed with the other checked keywords -- AND-ed under matchAll -- and as an
+        exclusion it rejects only the rows with none. */
+    const Row heron { { G::KeywordsAllColumn, QStringList{ "Heron" } } };
+    const Row eagle { { G::KeywordsAllColumn, QStringList{ "Eagle" } } };
+    const Row empty { { G::KeywordsAllColumn, QStringList{} } };
+
+    FilterPredicate only;
+    FilterCategory c = cat(G::KeywordsAllColumn);
+    c.includeEmpty = true;
+    only.categories << c;
+    QVERIFY(!only.acceptsEverything());
+    QVERIFY(only.readsColumn(G::KeywordsAllColumn));
+    QVERIFY(only.accepts(fetch(empty)));
+    QVERIFY(!only.accepts(fetch(heron)));
+
+    FilterPredicate orHeron;
+    FilterCategory h = cat(G::KeywordsAllColumn, { "Heron" });
+    h.includeEmpty = true;
+    orHeron.categories << h;
+    QVERIFY(orHeron.accepts(fetch(empty)));
+    QVERIFY(orHeron.accepts(fetch(heron)));
+    QVERIFY(!orHeron.accepts(fetch(eagle)));
+
+    FilterPredicate allHeron = orHeron;
+    allHeron.categories[0].matchAll = true;
+    QVERIFY(!allHeron.accepts(fetch(empty)));
+    QVERIFY(!allHeron.accepts(fetch(heron)));
+
+    FilterPredicate allOnly = only;
+    allOnly.categories[0].matchAll = true;
+    QVERIFY(allOnly.accepts(fetch(empty)));
+
+    FilterPredicate ex;
+    FilterCategory e = cat(G::KeywordsAllColumn);
+    e.excludeEmpty = true;
+    ex.categories << e;
+    QVERIFY(!ex.accepts(fetch(empty)));
+    QVERIFY(ex.accepts(fetch(heron)));
+    bool byExclusion = false;
+    QCOMPARE(ex.soleRejectorColumn(fetch(empty), &byExclusion), int(G::KeywordsAllColumn));
+    QVERIFY(byExclusion);
+
+    // with Heron excluded too, a Heron row is out for that, an empty one for this
+    FilterPredicate both = ex;
+    both.categories[0].excludes << QVariant("Heron");
+    QVERIFY(!both.accepts(fetch(heron)));
+    QVERIFY(both.accepts(fetch(eagle)));
 }
 
 void tst_filterpredicate::matchAllNeedsEveryKeyword()

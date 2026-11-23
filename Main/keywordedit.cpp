@@ -13,6 +13,7 @@
 #include "Metadata/keywordpaths.h"
 #include "Main/keywordsuggester.h"
 #include "Cache/pathkey.h"
+#include "Undo/keywordundo.h"
 
 #include <QApplication>
 #include <QElapsedTimer>
@@ -734,6 +735,7 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
 
     const QString oldFold = keywordFold(oldPath);
     int written = 0;
+    beginKeywordRewrite();          // every file written below is one Edit > Undo step
 
     /*  setProgressMax, WHICH WAS MISSING. Without it the bar ran against whatever
         maximum the last operation left -- QProgressBar's default 100 on a fresh session,
@@ -795,19 +797,19 @@ int MW::retagKeywordPath(const QString &oldPath, const QString &newPath,
         QStringList subject, hierarchical;
         composeKeywordWrite(next, subject, hierarchical);
 
-        if (metadata->writeKeywordsToSidecar(r.path, subject, hierarchical)) ++written;
-
-        /*  The model if the row is loaded, the index either way -- see
-            MW::publishKeywordWrite, which the tidy shares. Writing only the file would
-            leave the panel showing the old keyword until the folder was reopened, and
-            leave the catalog serving it to searches until the folder was rescanned. */
-        publishKeywordWrite(r, subject, hierarchical);
+        /*  The file, then the model if the row is loaded and the index either way --
+            see MW::publishKeywordWrite, which the tidy shares. Writing only the file
+            would leave the panel showing the old keyword until the folder was reopened,
+            and leave the catalog serving it to searches until the folder was rescanned.
+            rewriteKeywords also logs the file for Edit > Undo. */
+        if (rewriteKeywords(r, subject, hierarchical)) ++written;
 
         G::popup->setProgress(i + 1);
         G::popup->pulse();
     }
 
     G::popup->setProgressVisible(false);
+    endKeywordRewrite(removing ? tr("Remove Keyword") : tr("Retag Keyword"));
 
     if (keywordVocab) keywordVocab->refreshCounts();
 
@@ -902,6 +904,92 @@ void MW::publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
     Catalog::instance().commit({updated});
 }
 
+bool MW::rewriteKeywords(const CatalogRow &r, const QStringList &subject,
+                         const QStringList &hierarchical, bool publishAlways)
+{
+/*
+    The one write every catalog-wide keyword rewrite makes per file: the sidecar (or the
+    file, as permitted), then the model and the index (publishKeywordWrite). While a
+    rewrite is open the file is logged with the lists the catalog row held -- the ones
+    it was found by and computed from -- so Edit > Undo can write exactly those back.
+*/
+    const bool ok = metadata->writeKeywordsToSidecar(r.path, subject, hierarchical);
+    if (ok || publishAlways) publishKeywordWrite(r, subject, hierarchical);
+    if (ok && keywordRewriteDepth > 0 && keywordRewriteLog) {
+        KeywordRewrite e;
+        e.row = r;
+        e.oldSubject = r.keywordsLiteral;
+        e.oldHierarchical = r.keywordPaths;
+        e.newSubject = subject;
+        e.newHierarchical = hierarchical;
+        keywordRewriteLog->append(e);
+    }
+    return ok;
+}
+
+void MW::beginKeywordRewrite()
+{
+    if (keywordRewriteDepth++ > 0) return;
+    // nothing is logged while Edit > Undo is itself writing the files back
+    if (undoManager && !undoManager->isApplying() && !UndoManager::isSuspended())
+        keywordRewriteLog = std::make_shared<QList<KeywordRewrite>>();
+    else
+        keywordRewriteLog.reset();
+}
+
+void MW::endKeywordRewrite(const QString &what)
+{
+    if (keywordRewriteDepth == 0 || --keywordRewriteDepth > 0) return;
+    std::shared_ptr<QList<KeywordRewrite>> log;
+    log.swap(keywordRewriteLog);
+    if (!log || log->isEmpty()) return;
+    undoManager->push(new ActionCommand(
+        undoStepText(what, log->size()),
+        [this, log] { applyKeywordRewrite(*log, /*undo*/ true); },
+        [this, log] { applyKeywordRewrite(*log, /*undo*/ false); }));
+}
+
+void MW::applyKeywordRewrite(const QList<KeywordRewrite> &log, bool undo)
+{
+/*
+    Edit > Undo (the old lists, newest first, so a file written twice ends on what it
+    held before the first) or Redo (the new lists, in order) of a catalog-wide rewrite,
+    through the writer the rewrite used. The file need not be loaded: the catalog row
+    is enough, as it was for the rewrite. A popup with progress, as the rewrite had.
+*/
+    if (G::isLogger) G::log("MW::applyKeywordRewrite", undo ? "undo" : "redo");
+    if (!metadata || log.isEmpty()) return;
+    const QString total = QLocale().toString(log.size());
+    const QString verb = undo ? "Undoing" : "Redoing";
+    G::popup->showPopupNow(QString("%1 keyword changes: %2 of %2 images").arg(verb, total),
+                           0, true, 0.75);
+    G::popup->setProgressVisible(true);
+    G::popup->setProgressMax(log.size());
+    G::popup->setProgress(0);
+    int failed = 0;
+    for (int n = 0; n < log.size(); ++n) {
+        const KeywordRewrite &e = log.at(undo ? log.size() - 1 - n : n);
+        const QStringList &subject = undo ? e.oldSubject : e.newSubject;
+        const QStringList &hierarchical = undo ? e.oldHierarchical : e.newHierarchical;
+        if (!metadata->writeKeywordsToSidecar(e.row.path, subject, hierarchical)) {
+            ++failed;
+            continue;
+        }
+        publishKeywordWrite(e.row, subject, hierarchical);
+        G::popup->setProgress(n + 1);
+        G::popup->pulse(QString("%1 keyword changes: %2 of %3 images")
+                            .arg(verb, QLocale().toString(n + 1), total));
+    }
+    G::popup->setProgressVisible(false);
+    if (keywordVocab) keywordVocab->refreshCounts();
+    rebuildKeywordFilters("MW::applyKeywordRewrite");
+    refreshKeywordsDock();
+    G::popup->reset();
+    if (failed)
+        G::popup->showPopup(QString("%1 image(s) could not be written. See the Issues "
+                                    "log.").arg(failed), 4000);
+}
+
 void MW::tidyKeywords()
 {
 /*
@@ -924,13 +1012,12 @@ void MW::tidyKeywords()
     branch. The dialog shows what each row matched and pre-selects the deepest.
 
     NOTHING IS WRITTEN UNTIL IT IS CONFIRMED TWICE: the review list, and then a count of
-    the files about to change. This rewrites metadata in thousands of photographs, and it
-    is not undoable from inside Winnow.
+    the files about to change. This rewrites metadata in thousands of photographs; Edit >
+    Undo writes each one's old keywords back (rewriteKeywords' log).
 */
-    /*  Not an Edit > Undo step yet: it rewrites files across the catalog, which needs
-        the per-file keyword log of Undo plan P4. Suspended so the keyword list's own
-        steps inside it are not recorded as a partial undo. */
-    UndoSuspend notYetAStep;
+    /*  ONE Edit > Undo step: the files (applyKeywordTidyPlan's rewrite log) and the
+        keyword list's own changes (insertPaths, removeUnusedRoots). */
+    UndoMacro undoStep(undoManager, tr("Tidy Keywords"));
     if (G::isLogger) G::log("MW::tidyKeywords");
 
     Catalog &cat = Catalog::instance();
@@ -1000,8 +1087,8 @@ void MW::tidyKeywords()
     const int images = cat.tidyKeywordRows(vocabFold).size();
     const QString ask =
         QString("%1 keyword%2 will be changed in up to %3 image%4.\n\n"
-                "Winnow writes the change into each image's XMP sidecar or file. This "
-                "cannot be undone from inside Winnow.\n\nGo ahead?")
+                "Winnow writes the change into each image's XMP sidecar or file. Edit > "
+                "Undo puts every file back.\n\nGo ahead?")
             .arg(plan.size()).arg(plan.size() == 1 ? "" : "s")
             .arg(QLocale().toString(images)).arg(images == 1 ? "" : "s");
     if (QMessageBox::question(this, "Tidy Keywords", ask,
@@ -1110,6 +1197,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan,
     if (rows.isEmpty()) return 0;
 
     int written = 0;
+    beginKeywordRewrite();          // every file written below is one Edit > Undo step
     G::popup->setProgressVisible(true);
     G::popup->setProgressMax(rows.size());
     G::popup->setProgress(0);
@@ -1173,8 +1261,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan,
         QStringList subject, hierarchical;
         composeKeywordWrite(next, subject, hierarchical);
 
-        if (metadata->writeKeywordsToSidecar(r.path, subject, hierarchical)) ++written;
-        publishKeywordWrite(r, subject, hierarchical);
+        if (rewriteKeywords(r, subject, hierarchical)) ++written;
 
         /*  AND THE BAR HAS TO BE ALLOWED TO PAINT. This loop owns the GUI thread for the
             whole run -- thousands of sidecar writes -- so without this the progress bar is
@@ -1202,6 +1289,7 @@ int MW::applyKeywordTidyPlan(const QList<KeywordTidyAction> &plan,
     /*  NOT reset here: tidyKeywords still has the index and the vocabulary to tidy,
         and resets the popup after the last of them. */
     G::popup->setProgressVisible(false);
+    endKeywordRewrite(tr("Tidy Keywords"));
 
     if (G::isLogger)
         G::log("MW::applyKeywordTidyPlan", QString("wrote %1 of %2 rows")
@@ -1858,10 +1946,8 @@ void MW::mergeUnfiledKeyword(const QString &unfiledPath)
     the targets and the nodes each would add are COMPUTED, shown, and only then inserted.
     Cancelling leaves the keyword list exactly as it was, not merely the photographs.
 */
-    /*  Not an Edit > Undo step yet: it rewrites files across the catalog, which needs
-        the per-file keyword log of Undo plan P4. Suspended so the keyword list's own
-        steps inside it are not recorded as a partial undo. */
-    UndoSuspend notYetAStep;
+    /*  ONE Edit > Undo step: the nodes insertPaths adds and the retag's files. */
+    UndoMacro undoStep(undoManager, tr("Merge Keyword"));
     if (G::isLogger) G::log("MW::mergeUnfiledKeyword", unfiledPath);
     if (unfiledPath.isEmpty() || !filters) return;
 
@@ -2195,6 +2281,7 @@ int MW::applyKeywordAuditFixes(const QVector<KeywordAuditDlg::Fix> &fixes, int &
     G::popup->setProgress(0);
 
     int written = 0;
+    beginKeywordRewrite();          // every file written below is one Edit > Undo step
     for (int i = 0; i < order.size(); ++i) {
         const QString &path = order.at(i);
         const auto it = rows.constFind(path);
@@ -2221,18 +2308,16 @@ int MW::applyKeywordAuditFixes(const QVector<KeywordAuditDlg::Fix> &fixes, int &
 
         QStringList subject, hierarchical;
         composeKeywordWrite(next, subject, hierarchical);
-        if (metadata->writeKeywordsToSidecar(path, subject, hierarchical)) {
+        if (rewriteKeywords(r, subject, hierarchical, /*publishAlways*/ false))
             ++written;
-            publishKeywordWrite(r, subject, hierarchical);
-        }
-        else {
+        else
             ++failed;
-        }
 
         G::popup->setProgress(i + 1);
         G::popup->pulse();
     }
     G::popup->setProgressVisible(false);
+    endKeywordRewrite(tr("Fix Keywords"));
 
     if (keywordVocab) keywordVocab->refreshCounts();
     rebuildKeywordFilters("MW::applyKeywordAuditFixes");

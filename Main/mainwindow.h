@@ -5,6 +5,7 @@
 #include <QtWidgets>
 #include <QtConcurrent>
 #include <QJsonObject>
+#include <memory>
 #include <QJsonArray>
 #include <QJsonDocument>
 // #include <QThread>
@@ -160,6 +161,7 @@ class PlaceDlg;
 class UndoManager;
 struct VersionSnapshot;
 struct TrashedImage;
+struct KeywordRewrite;
 class QNetworkAccessManager;
 namespace LensDb { struct Shot; }
 namespace Segmenter { class Job; struct Segmentation; }
@@ -3739,6 +3741,19 @@ private:
         is published. */
     void publishKeywordWrite(const CatalogRow &r, const QStringList &subject,
                              const QStringList &hierarchical);
+    /*  EDIT > UNDO OF CATALOG-WIDE KEYWORD REWRITES (Undo plan P4). Every rewrite --
+        retag, remove everywhere, tidy, audit fixes -- writes each file through
+        rewriteKeywords (writeKeywordsToSidecar, then publishKeywordWrite when written
+        or publishAlways), which logs the file's old and new lists while a rewrite is
+        open. endKeywordRewrite pushes the log as one step; applyKeywordRewrite writes
+        it back. Nestable: the outermost begin/end owns the step. */
+    bool rewriteKeywords(const CatalogRow &r, const QStringList &subject,
+                         const QStringList &hierarchical, bool publishAlways = true);
+    void beginKeywordRewrite();
+    void endKeywordRewrite(const QString &what);
+    void applyKeywordRewrite(const QList<KeywordRewrite> &log, bool undo);
+    int keywordRewriteDepth = 0;
+    std::shared_ptr<QList<KeywordRewrite>> keywordRewriteLog;
     /*  AUDIT KEYWORDS: open the review (Dialogs/keywordauditdlg.h) of images whose
         keywords do not match how they look, compared with the user's own keyworded
         images (Utilities/visualaudit.h). */

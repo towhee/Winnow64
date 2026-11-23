@@ -72,6 +72,7 @@
     - [2.15.4 Per-Image Metadata (P1)](#2154-per-image-metadata-p1)
     - [2.15.5 Collections, Places, Versions and the Keyword List (P2)](#2155-collections-places-versions-and-the-keyword-list-p2)
     - [2.15.6 File Operations (P3)](#2156-file-operations-p3)
+    - [2.15.7 Catalog-Wide Keyword Rewrites (P4)](#2157-catalog-wide-keyword-rewrites-p4)
   - [2.16 Investigations and Fixes](#216-investigations-and-fixes)
     - [2.16.1 Two Aborts From Holding What the Model Threw Away](#2161-two-aborts-from-holding-what-the-model-threw-away)
       - [2.16.1.1 A Proxy Index Does Not Survive a Filter Change](#21611-a-proxy-index-does-not-survive-a-filter-change)
@@ -1771,6 +1772,8 @@ MW::undoEdit / redoEdit (Main/mwundo.cpp) route by G::operationMode:
 - Develop, step 2: the current image's History moves one entry back or forward (DevelopProperties::stepHistory). This is the same revert a click on that History row makes (applyHistoryEntry), so linked multi-image steps revert with it. Redo exists only until the next edit, which truncates History as before (see [11.37 Develop History](#1137-develop-history)).
 - Preview: the app-wide stack, MW::undoManager.
 
+A focused text field keeps Cmd+Z only while it has its own typing to undo. QLineEdit claims Undo/Redo in ShortcutOverride unconditionally, so MW::eventFilter leaves the override unaccepted when the field's isUndoAvailable / isRedoAvailable is false (not in dialogs), and Edit > Undo fires. The Keywords dock's tag field resets with setText, not clear(), after adding a keyword: clear() is itself undoable and kept the field claiming the key.
+
 MW::refreshUndoActions sets the text and enabled state. It runs on UndoManager::changed, on DevelopHistory::changed, at the end of enableSelectionDependentMenus (mode switches and image changes) and when the Edit menu opens (a canvas stroke changes nothing MW listens to).
 
 #### 2.15.2 The App Stack (UndoManager)
@@ -1793,7 +1796,7 @@ Operations are wired in by phase:
 - P1 (done): per-image metadata. See [2.15.4 Per-Image Metadata (P1)](#2154-per-image-metadata-p1).
 - P2 (done): collections, queries, places, versions and keyword list edits. See [2.15.5](#2155-collections-places-versions-and-the-keyword-list-p2).
 - P3 (done): file operations. See [2.15.6](#2156-file-operations-p3).
-- P4: catalog-wide keyword rewrites (rename, merge, tidy, audit, remove everywhere).
+- P4 (done): catalog-wide keyword rewrites (rename, merge, tidy, audit, remove everywhere). See [2.15.7](#2157-catalog-wide-keyword-rewrites-p4).
 
 These are not undoable:
 
@@ -1866,7 +1869,7 @@ MW::restoreVersions puts the record back into the master's sidecar under its own
 - MW::rereadLoadedMasters rereads only the masters the grid holds, and never during a load (MW::metadataComplete reconciles then). After a folder change an undo changes the sidecar alone; the catalog follows on the next index of that folder.
 - Set Version as Master still drops both images' Develop History (forgetImage), as it always has, so undoing it restores the recipes, not their History.
 
-**The keyword list** (Datamodel/keywordvocab.cpp). Each list-only mutator holds a KeywordVocab::Step for its length: insertChild, insertPaths, remove, removeUnusedRoots, setSynonyms, setExportable, buildFromCatalog and importLightroom. The outermost Step reads the vocab rows before and after and records only the rows that changed (KeywordVocab::UndoRow), not the whole table. A whole-table snapshot would also undo any unrecorded change made since. applyUndoRows writes a step back in one transaction, with deferred foreign keys:
+**The keyword list** (Datamodel/keywordvocab.cpp). Every mutator holds a KeywordVocab::Step for its length: insertChild, insertParentAbove, insertPaths, remove, removeUnusedRoots, rename, reparent, reparentMerging, setSynonyms, setExportable, buildFromCatalog and importLightroom. The step is a CheckedCommand, so a refused write-back leaves it in the menu. The outermost Step reads the vocab rows before and after and records only the rows that changed (KeywordVocab::UndoRow), not the whole table. A whole-table snapshot would also undo any unrecorded change made since. applyUndoRows writes a step back in one transaction, with deferred foreign keys:
 
 1. UPDATE the rows that exist, so a child moved under a node that is about to go is back under its old parent before step 2 can cascade it away.
 2. DELETE the rows the step created. If a row outside the step is still beneath one, something unrecorded put it there, so the undo is refused and reported in Issues rather than cascading the user's keyword away.
@@ -1874,15 +1877,9 @@ MW::restoreVersions puts the record back into the master's sidecar under its own
 
 Then reload(), whose model reset refreshes the tree and the Filters marking.
 
-Not undoable until P4, because each also rewrites files:
+**New Collection is one step with its name.** CollectionTree::createNode opens the name editor on the new node and sets namingNewId; the itemChanged rename for that node runs under UndoSuspend, and closeEditor clears it (Esc, or any later rename, is an ordinary Rename step). New's undo snapshots the node when it runs, so redo brings it back under the typed name.
 
-- rename, reparent and reparentMerging. Their pathChanged signal offers a retag.
-- insertParentAbove, which re-parents. It is suspended so that insertChild's own Step inside it does not record the new parent alone.
-- MW::tidyKeywords and MW::mergeUnfiledKeyword.
-- KeywordTree's "Remove everywhere".
-- Filing a red tag by dropping it on the tree (tagFiled).
-
-All of these run under UndoSuspend. "Remove from list" and adding a keyword are steps.
+The list edits that also rewrite files (rename, re-parent, merge, Remove everywhere, tidy) are grouped with their file log; see [2.15.7](#2157-catalog-wide-keyword-rewrites-p4).
 
 Tests: tst_collections::undoPutsEveryEditBack covers delete, rename, move, members, create, duplicate, definition and suspend. tst_keywordvocab::undoTakesBackListEditsByDiff covers add, synonyms, branch delete with ids kept, and the refused cascade.
 
@@ -1937,6 +1934,25 @@ Not undoable yet:
 - Create folder.
 - A drag between the Folders or Bookmarks panels: a copy plus a trash in File/fstree.cpp and File/bookmarks.cpp.
 - Thumbnails dragged out to another app: that app owns the move.
+
+#### 2.15.7 Catalog-Wide Keyword Rewrites (P4)
+
+Keyword rewrites reach images that are not loaded, so undo is driven by a per-file log, not by the model (Main/keywordedit.cpp, Undo/keywordundo.h).
+
+- MW::rewriteKeywords is the one per-file write: writeKeywordsToSidecar, then publishKeywordWrite (model if loaded, index either way). retagKeywordPath, applyKeywordTidyPlan and applyKeywordAuditFixes all call it.
+- beginKeywordRewrite / endKeywordRewrite bracket a rewrite. While open, rewriteKeywords appends a KeywordRewrite per file written: the CatalogRow it was found by, its old lists (the row's keywordsLiteral / keywordPaths) and the new ones. They nest; the outermost end pushes one ActionCommand ("Retag Keyword (n images)", "Tidy Keywords", "Fix Keywords", "Remove Keyword"). Nothing is logged while the stack is applying or suspended.
+- MW::applyKeywordRewrite is undo and redo: undo writes the old lists newest first (a file written twice ends on its first old value), redo the new ones in order. It shows a popup with progress, then refreshes vocab counts, keyword filters and the dock. Unwritable files are counted and reported.
+
+Grouping with the keyword list:
+
+- KeywordVocab::rename, reparent and reparentMerging hold their Step across the pathChanged emit, so the retag the user accepts in KeywordRetagDlg (pushed by MW::keywordPathChanged) lands in the same UndoMacro. KeywordTree opens that macro around rename, Insert parent, the node drag loop (all keywords dragged = one step) and Delete (Remove everywhere).
+- MW::tidyKeywords and MW::mergeUnfiledKeyword each hold an UndoMacro over the list's insertPaths / removeUnusedRoots and the file rewrite.
+- Filing a red tag: the new node is one step; the tag swap on the images runs queued (MW's tagFiled connection) through applyKeywordsToSelection, which records its own Keywords step.
+- The dialogs that said "cannot be undone" (tidy confirmation, KeywordMergeDlg) now name Edit > Undo.
+
+Known limits: the old lists are those the catalog indexed. If a file's sidecar was changed outside Winnow after it was last indexed, undo writes the indexed lists, not the outside edit. Catalog prune (pruneUnusedKeywords) is not reversed; the next index of the restored files re-adds the keyword rows.
+
+Tests: tst_keywordvocab::undoTakesBackListEditsByDiff covers the rename step and a refused cascade that stays offered. The file log needs MW and is checked in-app.
 
 ### 2.16 Investigations and Fixes
 
@@ -3130,6 +3146,7 @@ The semantics:
 - Two comparisons are kept deliberately different, because the old code made them differently. An INCLUDE on a QStringList column does .contains(filterValue) with filterValue still a QVariant (compared as variants); an EXCLUDE does .contains(filterValue.toString()). Every filter value on a keyword category is a QString, so they agree today; kept apart, a future change behaves where it always would have.
 - FilterCategory::isFiltering() does not count includeAll (the Search category's armed-but-empty state) unless the category also has an exclude, so acceptsEverything() can take its fast path.
 - A category that is not filtering is skipped with one inline isFiltering() test and its column is never read.
+- "No keywords" is the Keywords category's blank item (`data(1)` is "", marked by Filters::NoKeywordsRole). A list column's blank cannot be a value to `contains()`, so compileFilters turns it into FilterCategory::includeEmpty / excludeEmpty: OR-ed with the checked keywords (AND-ed under match all, where with another keyword it matches nothing), and as an exclusion it rejects rows with no keyword. Decided at compile time, so the per-row compares of every other item are unchanged. Counts: BuildFilters::countKeywords counts an empty row under "", and Catalog::categoryItems adds a `NOT EXISTS image_keyword` count (one primary-key seek per image). The catalog query (Catalog::buildQueryLocked) compiles an included blank as `NOT EXISTS`, OR-ed with an EXISTS over the checked paths in place of the usual join, and an excluded blank as `EXISTS`. Save as query needs nothing: Query::matchValues already writes a blank list value as "keyword has none". Filters::updateKeywordItems carries the item's check across a rebuild by itself, since it has no path to key on.
 - SortFilter::holdPredicate(true) keeps the current predicate through a pending filter restore (see [4.3.2 Rules That Keep It Correct](#432-rules-that-keep-it-correct)).
 
 The evaluation is a template taking a callable rather than a model, so tst_filterpredicate tests the whole decision without one, including that a category is read once per row and not once per item. Measured over the 50-row folder with a 200-item tree and three items checked: 228-467 microseconds walking the tree, 36-40 compiled. The shape matters more than the ratio: the compiled cost is proportional to the CHECKED items, the old cost to the whole tree.

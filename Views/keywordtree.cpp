@@ -215,10 +215,7 @@ void KeywordTree::restoreOpenBranches()
     THE WALK STOPS AT A CLOSED BRANCH, so the cost is the OPEN part of the tree rather
     than all of it -- a few dozen rows on a vocabulary of a few thousand.
 */
-    if (!vocab || openFold.isEmpty()) {
-        if (!currentFold.isEmpty()) restoreCurrent();
-        return;
-    }
+    if (!vocab) return;
 
     std::function<void(const QModelIndex &)> walk = [&](const QModelIndex &parent) {
         for (int i = 0; i < vocab->rowCount(parent); ++i) {
@@ -229,7 +226,14 @@ void KeywordTree::restoreOpenBranches()
             walk(idx);
         }
     };
-    walk(QModelIndex());
+    if (!openFold.isEmpty()) walk(QModelIndex());
+
+    /*  THE FILTER BOX TOO. A reset also drops every hidden row, so deleting a keyword
+        from a filtered list brought the whole vocabulary back while the filter text
+        still sat in the box. Re-applied after the expansion so it can open the branches
+        its matches live in, and before the current row so that one is not scrolled to
+        while hidden. */
+    if (!filterText.isEmpty()) applyFilter(QModelIndex(), keywordFold(filterText));
 
     restoreCurrent();
 }
@@ -502,6 +506,8 @@ void KeywordTree::renameSelected()
     name = name.trimmed();
     if (name.isEmpty() || name == was) return;
 
+    // the list and, if the retag is accepted, the files: one Edit > Undo step
+    UndoMacro undoStep(UndoManager::app(), tr("Rename Keyword"));
     if (!vocab->rename(idx, name)) {
         QMessageBox::warning(this, "Rename keyword",
             "Could not rename to \"" + name + "\".\n\n"
@@ -558,6 +564,7 @@ void KeywordTree::insertParentAboveSelected()
     name = name.trimmed();
     if (name.isEmpty()) return;
 
+    UndoMacro undoStep(UndoManager::app(), tr("Insert Parent"));   // and any retag
     const QModelIndex created = vocab->insertParentAbove(idx, name);
     if (!created.isValid()) {
         QMessageBox::warning(this, "Insert parent",
@@ -635,10 +642,10 @@ void KeywordTree::deleteSelected()
     /*  The list first, then the files: the retag ends by refreshing the vocabulary's
         counts and the filters' unfiled marking, which should see the node gone. Without
         the children the node stays -- it is their parent. */
-    /*  Remove everywhere also rewrites files (Undo plan P4), so until then only Remove
-        from list is a step: a half-undo would bring back a keyword the images lost. */
-    std::optional<UndoSuspend> filesToo;
-    if (clicked == everywhere) filesToo.emplace();
+    // the list and, for Remove everywhere, the files: one Edit > Undo step
+    UndoMacro undoStep(UndoManager::app(), clicked == everywhere
+                                               ? tr("Remove Keyword Everywhere")
+                                               : tr("Delete Keyword"));
     if (wholeBranch && !vocab->remove(idx)) {
         QMessageBox::warning(this, "Delete keyword",
             "Could not delete \"" + name + "\" from your keyword list.");
@@ -844,6 +851,8 @@ void KeywordTree::dropEvent(QDropEvent *event)
         const QString targetPath = target.data(KeywordVocab::PathRole).toString();
 
         const QByteArray data = event->mimeData()->data(kVocabNodeMime);
+        // every keyword dragged, and the retags accepted for them: one Edit > Undo step
+        UndoMacro undoStep(UndoManager::app(), tr("Move Keyword"));
         for (const QByteArray &raw : data.split('\n')) {
             const QModelIndex src = vocab->indexForPath(QString::fromUtf8(raw));
             if (!src.isValid()) continue;
@@ -912,10 +921,10 @@ void KeywordTree::dropEvent(QDropEvent *event)
         const QString filed = parent.isEmpty() ? leaf : parent + '|' + leaf;
         if (leaf.isEmpty() || keywordFold(filed) == keywordFold(tag)) return;
 
+        /*  The new node is its own Edit > Undo step; the tag swap on the images follows
+            QUEUED (MW's tagFiled connection) and records its own Keywords step. */
         QModelIndex node = vocab->indexForPath(filed);
         if (!node.isValid()) {
-            // the tag swap on the images follows (tagFiled): not undoable until P4
-            UndoSuspend filesToo;
             node = vocab->insertChild(target, leaf);
             if (!node.isValid()) {
                 QMessageBox::warning(this, "Add keyword",

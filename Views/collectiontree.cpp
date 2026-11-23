@@ -3,6 +3,7 @@
 #include "Main/global.h"
 #include "Utilities/queryexpr.h"
 #include "Utilities/fileops.h"
+#include "Undo/undomanager.h"
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #endif
@@ -21,6 +22,7 @@
 #include <QStyleFactory>
 
 #include <functional>
+#include <optional>
 
 namespace {
 
@@ -146,6 +148,14 @@ CollectionTree::CollectionTree(CollectionStore::Kind kind, const QString &countM
         if (reloading || col != 0) return;
         const qint64 id = idOf(item);
         const QString want = item->text(0).trimmed();
+        /*  THE NAME TYPED INTO A NEW NODE IS PART OF NEW, so it is not recorded: one
+            Cmd+Z removes the collection. New's undo snapshots the node when it runs,
+            so redo brings it back with this name. */
+        std::optional<UndoSuspend> partOfNew;
+        if (id == namingNewId) {
+            namingNewId = 0;
+            partOfNew.emplace();
+        }
         if (want.isEmpty() || !CollectionStore::instance().rename(id, want)) {
             reloading = true;
             item->setText(0, CollectionStore::instance().node(id).name);
@@ -377,8 +387,17 @@ void CollectionTree::createNode(qint64 parent)
     if (QTreeWidgetItem *item = itemFor(id)) {
         scrollToItem(item);
         setCurrentItem(item);
+        namingNewId = id;               // the name typed now is part of New
         editItem(item, 0);
     }
+}
+
+void CollectionTree::closeEditor(QWidget *editor, QAbstractItemDelegate::EndEditHint hint)
+{
+    /*  The commit (itemChanged) has run by now. Esc, or a later rename, is an ordinary
+        Rename step again. */
+    QTreeWidget::closeEditor(editor, hint);
+    namingNewId = 0;
 }
 
 QList<QTreeWidgetItem *> CollectionTree::visibleItems() const

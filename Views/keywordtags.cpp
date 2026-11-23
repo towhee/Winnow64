@@ -333,7 +333,7 @@ KeywordTags::KeywordTags(KeywordVocab *vocab, QWidget *parent)
         if (path.isEmpty()) return;
         const QString red = replacing;
         endReplace();
-        addEdit->clear();
+        addEdit->setText(QString());    // and its typing history: see commitTyped
         if (!red.isEmpty()) emit replaceRequested(red, {path});
         else emit addRequested(path);
     });
@@ -388,7 +388,11 @@ void KeywordTags::commitTyped()
     }
     const QString red = replacing;
     endReplace();
-    addEdit->clear();
+    /*  setText, not clear(): clear() is itself an undoable edit, so the field kept the
+        typed name in its history and claimed the next Cmd+Z to bring it back -- the
+        keyword just added was never undone. setText drops the history, and an empty
+        field with nothing to undo hands Cmd+Z to Edit > Undo (MW::eventFilter). */
+    addEdit->setText(QString());
     if (!red.isEmpty()) emit replaceRequested(red, {path});
     else emit addRequested(path);
 }

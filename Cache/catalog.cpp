@@ -1103,6 +1103,39 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
         binds << notFts;
     }
 
+    /*  "NO KEYWORDS" -- the blank keyword, "" -- is not a path to look for but the image
+        having no keyword link at all. Taken out of both lists first; the loops below
+        already skip a blank. Each test is one seek on image_keyword's primary key. */
+    const QString noKwSql = "NOT EXISTS (SELECT 1 FROM image_keyword nk"
+                            " WHERE nk.image_id = i.id)";
+    bool incNoKw = false, excNoKw = false;
+    for (const QString &k : cq.keywords) if (k.trimmed().isEmpty()) incNoKw = true;
+    for (const QString &k : cq.excludeKeywords)
+        if (k.trimmed().isEmpty()) excNoKw = true;
+    if (excNoKw) where << "EXISTS (SELECT 1 FROM image_keyword ek WHERE ek.image_id = i.id)";
+
+    if (incNoKw && cq.keywordsMatchAll) {
+        /*  ALL OF THEM, one being "no keyword": only an image with none, and with any
+            other keyword checked as well, nothing -- which is what that asks. The
+            per-keyword EXISTS below still apply. */
+        where << noKwSql;
+    }
+    else if (incNoKw) {
+        /*  OR-ed with the checked keywords, as an EXISTS rather than the join the plain
+            case uses: an image with no keyword has no row to join. */
+        QStringList marks;
+        for (const QString &k : cq.keywords) {
+            if (k.trimmed().isEmpty()) continue;
+            marks << "?";
+            binds << fold(k);
+        }
+        if (marks.isEmpty()) where << noKwSql;
+        else where << "(" + noKwSql + " OR EXISTS (SELECT 1 FROM image_keyword oik"
+                      " JOIN keyword ok ON ok.id = oik.keyword_id"
+                      " WHERE oik.image_id = i.id"
+                      " AND ok.pathfold IN (" + marks.join(",") + ")))";
+    }
+
     if (!cq.keywords.isEmpty() && cq.keywordsMatchAll) {
         /*  ALL OF THEM: one EXISTS per keyword rather than a join, which would need a
             GROUP BY ... HAVING COUNT to say "every one" and would multiply the rows on
@@ -1117,7 +1150,7 @@ void Catalog::buildQueryLocked(const CatalogQuery &cq, QString &from,
             binds << fold(k);
         }
     }
-    else if (!cq.keywords.isEmpty()) {
+    else if (!cq.keywords.isEmpty() && !incNoKw) {
         /* OR-ed, matching what checking several items in one Filters category does. No
            subtree walk and no LIKE: every image is linked to every ANCESTOR PREFIX of
            every path it carries, so checking "Fauna" reaches everything beneath it by
@@ -1692,6 +1725,19 @@ QMap<QString, int> Catalog::categoryItems(int dmColumn)
         /* A blank keyword name is not a value, it is a bad row. */
         if (isKeywords && v.isEmpty()) continue;
         out.insert(v, q.value(1).toInt());
+    }
+
+    /*  "NO KEYWORDS", the Keywords category's blank item (Filters::addKeywordItems),
+        keyed "" as every category's blank is. One seek per image on image_keyword's
+        (image_id, keyword_id) primary key. Inserted only when nonzero, so a catalog with
+        no keywords at all still comes back as nothing but blank and the category is
+        hidden (Filters::loadCatalogCategories). */
+    if (isKeywords && q.exec("SELECT COUNT(*) FROM image i WHERE i.live = 1"
+                             " AND NOT EXISTS (SELECT 1 FROM image_keyword nk"
+                             " WHERE nk.image_id = i.id)")
+        && q.next()) {
+        const int n = q.value(0).toInt();
+        if (n > 0) out.insert(QString(), n);
     }
     return out;
 }

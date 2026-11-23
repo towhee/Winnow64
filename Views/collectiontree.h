@@ -124,9 +124,13 @@ protected:
     void dragLeaveEvent(QDragLeaveEvent *event) override;
     void dropEvent(QDropEvent *event) override;
     void paintEvent(QPaintEvent *event) override;
+    void closeEditor(QWidget *editor, QAbstractItemDelegate::EndEditHint hint) override;
 
 private:
     enum Role { IdRole = Qt::UserRole + 1 };
+    /*  The node createNode just opened the name editor on, until that editor closes:
+        the name typed there is part of New, not a Rename step of its own. */
+    qint64 namingNewId = 0;
 
     static qint64 idOf(const QTreeWidgetItem *item);
     QTreeWidgetItem *itemFor(qint64 id) const;

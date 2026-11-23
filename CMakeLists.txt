@@ -834,6 +834,7 @@ set(WINNOW_HEADERS
     Undo/undomanager.h
     Undo/undocommands.h
     Undo/fileundo.h
+    Undo/keywordundo.h
     Utilities/winnets.h
 
     Views/compareImages.h
