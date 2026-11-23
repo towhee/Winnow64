@@ -2633,3 +2633,80 @@ void MW::updateWindowTitle()
     if (!titleFilePath.isEmpty()) title += "   " + titleFilePath;
     setWindowTitle(title);
 }
+
+void MW::noteWindowPlacement()
+{
+/*
+    Window > Restore Previous Size and Position. windowSettleTimer runs this 500 ms after
+    the last move or resize, so a drag is one placement, not dozens. When the window has
+    settled somewhere new, the placement it left becomes the previous one.
+
+    Restoring the previous placement moves the window too, and that move settles here as
+    well, so the two placements swap: choosing the item again goes back.
+
+    Full screen and minimised are not placements. Leaving full screen returns the window
+    to its settled placement, which then records nothing.
+*/
+    if (G::isLogger) G::log("MW::noteWindowPlacement");
+    if (isFullScreen() || isMinimized()) return;
+
+    WindowPlacement p;
+    p.isMaximised = isMaximized();
+    if (!p.isMaximised) p.geometry = geometry();
+    p.screenNumber = qMax(0, QGuiApplication::screens().indexOf(screen()));
+
+    if (!settledWindowPlacement.isValid()) {
+        settledWindowPlacement = p;             // startup: nothing to go back to yet
+    }
+    else if (!p.sameAs(settledWindowPlacement)) {
+        previousWindowPlacement = settledWindowPlacement;
+        settledWindowPlacement = p;
+    }
+    refreshRestoreWindowAction();
+}
+
+void MW::restorePreviousWindowPlacement()
+{
+/*
+    Put the window back where it was before the last move or resize. Maximised is
+    handled the way MW::invokeWorkspace handles it (restoreGeometry's maximised
+    handling is unreliable, especially on macOS): place on the saved screen, then
+    maximise. A placement on a monitor that has since gone is fitted to the screen the
+    window lands on (ScreenFit::fit).
+*/
+    if (G::isLogger) G::log("MW::restorePreviousWindowPlacement");
+    if (!previousWindowPlacement.isValid() || isFullScreen()) return;
+    const WindowPlacement p = previousWindowPlacement;
+
+    if (p.isMaximised) {
+        QScreen *target = QGuiApplication::screens().value(p.screenNumber);
+        if (target && QGuiApplication::screens().indexOf(screen()) != p.screenNumber) {
+            showNormal();
+            setGeometry(target->availableGeometry());
+        }
+        if (!isMaximized()) showMaximized();
+    }
+    else {
+        if (isMaximized()) showNormal();
+        setGeometry(p.geometry);
+        ScreenFit::fit(this);
+    }
+    // the move / resize this makes settles in noteWindowPlacement, which swaps the slots
+}
+
+void MW::refreshRestoreWindowAction()
+{
+    if (!restorePreviousWindowAction) return;
+    QString why;
+    if (isFullScreen())
+        why = tr("not available in full screen");
+    else if (!previousWindowPlacement.isValid())
+        why = tr("the window has not been moved or resized this session");
+    /* The reason first: setEnabled emits QAction::changed (see refreshUndoActions). */
+    restorePreviousWindowAction->setProperty("disabledReason", why);
+    restorePreviousWindowAction->setToolTip(why.isEmpty()
+        ? tr("Put the window back where it was before the last move or resize. "
+             "Choose it again to go back.")
+        : tr("Unavailable: %1.").arg(why));
+    restorePreviousWindowAction->setEnabled(why.isEmpty());
+}

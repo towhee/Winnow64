@@ -1089,6 +1089,10 @@ public slots:
     static QString workflowKeyFor(int wf);
     static int workflowFromKey(const QString &key);
     void syncWorkflowWorkspaceMenus();
+    /*  Window > Restore Previous Size and Position (Main/workspaces.cpp). */
+    void noteWindowPlacement();
+    void restorePreviousWindowPlacement();
+    void refreshRestoreWindowAction();
     bool writeWorkflowDefaultsJson(QString &path, QString &err) const;
     void requestView(int view);
     void invokeBrowseWorkflow();
@@ -2298,6 +2302,25 @@ private:
     QAction *mapWorkspaceAction = nullptr;          // the Map module; no key yet
     QAction *resetLayoutAction = nullptr;           // reapply the workflow's layout
     QAction *syncBrowseDevelopAction = nullptr;     // same side widths in Browse/Develop
+    /*  Window > Restore Previous Size and Position. One slot, not a stack: a move or
+        resize that has settled (windowSettleTimer) makes the placement before it the
+        previous one, so restoring it makes the current one previous and a second
+        choice goes back. Session only. See MW::noteWindowPlacement. */
+    struct WindowPlacement {
+        QRect geometry;             // unused when maximised
+        bool isMaximised = false;
+        int screenNumber = -1;      // -1 = nothing recorded
+        bool isValid() const { return screenNumber >= 0; }
+        bool sameAs(const WindowPlacement &o) const {
+            if (isMaximised || o.isMaximised)
+                return isMaximised == o.isMaximised && screenNumber == o.screenNumber;
+            return geometry == o.geometry;
+        }
+    };
+    WindowPlacement settledWindowPlacement;
+    WindowPlacement previousWindowPlacement;
+    QTimer *windowSettleTimer = nullptr;
+    QAction *restorePreviousWindowAction = nullptr;
     QAction *showLibrarySourceAction = nullptr;     // Source = Library
     QAction *showFoldersSourceAction = nullptr;     // Source = Folders
 
@@ -2363,6 +2386,7 @@ private:
     QAction *viewLogAction;
     QAction *clearLogAction;
     QAction *mailLogAction;
+    QAction *reportIssueAction;
     QAction *diagnosticsGridViewAction;
     QAction *diagnosticsFSTreeAction;
     QAction *diagnosticsThumbViewAction;
@@ -4157,6 +4181,8 @@ private:
     void sessionIssuesReport();
     void logReport();
     void mailLogs();
+    void reportIssue();               // Help > Report an Issue: GitHub or email
+    QString issueSystemInfo() const;  // version, OS, CPU, build date for a report
 
     // HTML Help
     void helpPerformanceTips();

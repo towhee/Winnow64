@@ -5,16 +5,14 @@ WHAT'S NEW
 - Improved highlight reconstruction.
 - Hot pixel removal.
 - Undo and redo.
+- Recover last workspace, including window size and location.
 
 BUGS / TO DO
-- 'Location/Canada/BC/Southern BC/Jericho'
-- Copy keyword chain
-- Deleted keyword from image, image selection changed.
-
 - Help > Report bugs / feedback
+- Rethink thumbnail badges
+- Redo Develop help
 - Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location
-- Rethink thumbnail badges
 
 - Consider a setting to turn the scaled-up thumbnail on or off.
 - Decide whether to do the full path-keyed cache queue.
@@ -24,7 +22,6 @@ BUGS / TO DO
 - Revisit the color sampler
 - Panos
 - HDR
-- Add all help items to the main menu Help.
 - Render devPreviews in background (entire catalog??)
 - Can we cache raw denoise? What does LR do?
 - Fine-tune keywords managing
@@ -33,26 +30,18 @@ BUGS / TO DO
 - Subject mask not working on 2021-05-16_0358-2.tif
 - Object mask needs some TLC
 - AI keywording
-- Redo Develop help
 - Customize Info (I) location/size.
 - Review Apple render (new raw engine)
 - Develop behavior when no image is selected
 - Test search in filter (Add entire keyword heirarchy ie Gloria + Family + People)
 - Tweak welcome screen re to get started incl Catalog ??
-- Tweak develop basic tone sliders
 - Tweak main menu (Library, Develop...)
-- Tweak preferences
-- Tweak workspaces - more sophicated default
 - Review activity log
 - Review issues log
-- Review window/panel shortcuts
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
 - Auto keyword generator (k shortcut?)
-- Review RapidRaw masks / inpainting / model usage
-- Does detail need Denoise / color?
 - Object mask post feather not working
-- Test DnD to Folders
 - Review menu disabled ie Go
 - Add Develop to Preferences dialog (cache cap and clear preview cache)
 - Eliminate Edits layouts except Minimal

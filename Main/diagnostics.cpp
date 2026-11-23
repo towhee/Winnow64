@@ -21,6 +21,10 @@
 #include "Cache/cachedb.h"
 #include "Datamodel/userdb.h"
 #include <QSqlQuery>
+#include <QDesktopServices>
+#include <QMessageBox>
+#include <QPushButton>
+#include <QSysInfo>
 #include "Metadata/keywordpaths.h"
 #include "ui_metadatareport.h"
 #include "ui_shortcutsform.h"
@@ -1979,8 +1983,13 @@ void MW::mailLogs()
         return;
     }
 
+    const QString sysInfo = issueSystemInfo();
+
 #if defined(Q_OS_MAC)
-    QString body = "The Winnow log files are attached. Please add a note describing the issue. Thanks. Rory";
+    QString body = "The Winnow log files are attached. Please add a note describing the "
+                   "issue. Thanks. Rory\n\n" + sysInfo;
+    // AppleScript string literal: escape backslash and quote, newline as \n
+    body.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     QStringList args;
     args << "-e" << "tell application \"Mail\"";
     args << "-e" << "set newMessage to make new outgoing message with properties "
@@ -2006,9 +2015,12 @@ void MW::mailLogs()
         revealInFileBrowser(logDir);
         QString body = "Please attach the log files shown in the file browser ("
                        + QStringList(logPaths).replaceInStrings(logDir + "/", "").join(" and ")
-                       + ") to this email, along with a note describing the issue. Thanks. Rory";
-        QDesktopServices::openUrl(QUrl("mailto:" + to + "?subject=" + subject + "&body=" + body,
-                                       QUrl::TolerantMode));
+                       + ") to this email, along with a note describing the issue. Thanks. Rory"
+                       + "\n\n" + sysInfo;
+        QByteArray url = "mailto:" + to.toUtf8()
+                       + "?subject=" + QUrl::toPercentEncoding(subject)
+                       + "&body=" + QUrl::toPercentEncoding(body);
+        QDesktopServices::openUrl(QUrl::fromEncoded(url));
     };
 
   #if defined(Q_OS_WIN)
@@ -2031,8 +2043,9 @@ void MW::mailLogs()
     QByteArray toAddrBuf = ("SMTP:" + to).toLocal8Bit();
     QByteArray toNameBuf = to.toLocal8Bit();
     QByteArray subjectBuf = subject.toLocal8Bit();
-    QByteArray bodyBuf = "The Winnow log files are attached. Please add a note "
-                         "describing the issue. Thanks. Rory";
+    QString body = "The Winnow log files are attached. Please add a note describing the "
+                   "issue. Thanks. Rory\n\n" + sysInfo;
+    QByteArray bodyBuf = body.replace("\n", "\r\n").toLocal8Bit();
 
     MapiRecipDesc recip = {};
     recip.ulRecipClass = MAPI_TO;
@@ -2069,6 +2082,75 @@ void MW::mailLogs()
     revealAndMailto();
   #endif
 #endif
+}
+
+QString MW::issueSystemInfo() const
+{
+/*
+    The lines a bug report needs before anything else: which Winnow, on what. Used by
+    reportIssue (GitHub form fields) and mailLogs (email body).
+*/
+    return "Winnow " + versionNumber + " (Qt " + QString(QT_VERSION_STR) + ", built for "
+           + QSysInfo::buildCpuArchitecture() + ")\n"
+           + QSysInfo::prettyProductName() + " (" + QSysInfo::currentCpuArchitecture() + ")";
+}
+
+void MW::reportIssue()
+{
+/*
+    Help > Report an Issue. GitHub only accepts issues from signed-in accounts, and many
+    users will not have one, so this offers two routes:
+
+        - GitHub: opens the repo's bug_report issue form (.github/ISSUE_TEMPLATE) with
+          the version and system fields pre-filled through the query string (an issue
+          form fills a field whose id matches a query key). Logs cannot ride in the URL
+          (GitHub caps it at about 8 KB), so the Log folder is revealed for the user to
+          drag the files into the form.
+        - Email: mailLogs(), which attaches the logs itself on macOS and Windows.
+*/
+    if (G::isLogger) G::log("MW::reportIssue");
+
+    const QString logDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+
+    QMessageBox msgBox(this);
+    msgBox.setWindowTitle("Report an Issue");
+    msgBox.setText("How would you like to report a problem or send feedback?");
+    msgBox.setInformativeText(
+        "Report on GitHub: needs a free GitHub account. Opens a form in your browser with "
+        "the Winnow version and your system filled in, and opens the folder with the "
+        "Winnow log files so you can drag them into the form. Everything posted on "
+        "GitHub is public.\n\n"
+        "Send by Email: no account needed. Opens a new email to the Winnow developer "
+        "with the log files attached.");
+    QPushButton *githubBtn = msgBox.addButton("Report on GitHub", QMessageBox::AcceptRole);
+    QPushButton *emailBtn = msgBox.addButton("Send by Email", QMessageBox::AcceptRole);
+    msgBox.addButton(QMessageBox::Cancel);
+    msgBox.setDefaultButton(githubBtn);
+    msgBox.setIcon(QMessageBox::Question);
+    msgBox.setStyleSheet(G::css);
+    msgBox.exec();
+    resetFocus();
+
+    if (msgBox.clickedButton() == emailBtn) {
+        mailLogs();
+        return;
+    }
+    if (msgBox.clickedButton() != githubBtn) return;
+
+    const QString version = versionNumber + " (Qt " + QString(QT_VERSION_STR) + ", "
+                            + QSysInfo::buildCpuArchitecture() + " build)";
+    const QString system = QSysInfo::prettyProductName() + " ("
+                           + QSysInfo::currentCpuArchitecture() + ")";
+    QByteArray url = "https://github.com/towhee/Winnow64/issues/new"
+                     "?template=bug_report.yml"
+                     "&version=" + QUrl::toPercentEncoding(version)
+                     + "&system=" + QUrl::toPercentEncoding(system);
+
+    // Reveal first, so the browser opens on top of the file browser window.
+    if (QDir(logDir).exists()) revealInFileBrowser(logDir);
+    if (!QDesktopServices::openUrl(QUrl::fromEncoded(url)))
+        G::popup->showPopup("Unable to open the web browser.", 3000);
 }
 
 /* ---------------------------------------------------------------------------

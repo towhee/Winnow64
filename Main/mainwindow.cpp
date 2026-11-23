@@ -1466,6 +1466,10 @@ void MW::showEvent(QShowEvent *event)
 
     G::isInitializing = false;
 
+    /*  The startup placement is the first settled one, so the first move or resize has
+        something to go back to (MW::noteWindowPlacement). */
+    if (windowSettleTimer) windowSettleTimer->start();
+
     /*  Seed the Library tree once the index can be asked. Not earlier: the
         catalog opens lazily and a count taken before that reads as "no index". */
     updateLibraryTree();
@@ -1815,6 +1819,8 @@ void MW::moveEvent(QMoveEvent *event)
         setDisplayResolution();
         updateDisplayResolution();
         emit resizeMW(this->geometry(), centralWidget->geometry());
+        // Window > Restore Previous Size and Position
+        if (windowSettleTimer) windowSettleTimer->start();
     }
 //    setWindowFlags(windowFlags() & (~Qt::WindowStaysOnTopHint));
 //    show();
@@ -1836,6 +1842,9 @@ void MW::resizeEvent(QResizeEvent *event)
 
     // update current workspace
     ws.isMaximised = isMaximized();
+
+    // Window > Restore Previous Size and Position
+    if (!G::isInitializing && windowSettleTimer) windowSettleTimer->start();
 
     /*  "thumbView half hidden after resizing" -- the window resize is the gesture, and
         the dock redistribution that follows it is what the probe has to catch, so this

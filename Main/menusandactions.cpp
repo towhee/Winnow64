@@ -2035,6 +2035,22 @@ void MW::createWindowActions()
     connect(menuBarVisibleAction, &QAction::triggered, this, &MW::setMenuBarVisibility);
     //*/
 
+    /*  One step back in the window's own position and size, separate from Edit > Undo
+        so a nudged window never stands between Cmd+Z and a real edit. The settle
+        timer turns a drag (dozens of move / resize events) into one placement. See
+        MW::noteWindowPlacement. */
+    restorePreviousWindowAction = new QAction(tr("Restore Previous Size and Position"), this);
+    restorePreviousWindowAction->setObjectName("restorePreviousWindow");
+    restorePreviousWindowAction->setShortcutVisibleInContextMenu(true);
+    addAction(restorePreviousWindowAction);
+    connect(restorePreviousWindowAction, &QAction::triggered,
+            this, &MW::restorePreviousWindowPlacement);
+    windowSettleTimer = new QTimer(this);
+    windowSettleTimer->setSingleShot(true);
+    windowSettleTimer->setInterval(500);
+    connect(windowSettleTimer, &QTimer::timeout, this, &MW::noteWindowPlacement);
+    refreshRestoreWindowAction();
+
     statusBarVisibleAction = new QAction(tr("Status Bar"), this);
     statusBarVisibleAction->setObjectName("toggleStatusBar");
     statusBarVisibleAction->setShortcutVisibleInContextMenu(true);
@@ -2462,6 +2478,12 @@ void MW::createHelpActions()
     mailLogAction->setShortcutVisibleInContextMenu(true);
     addAction(mailLogAction);
     connect(mailLogAction, &QAction::triggered, this, &MW::mailLogs);
+
+    reportIssueAction = new QAction(tr("Report an Issue..."), this);
+    reportIssueAction->setObjectName("reportIssueAction");
+    reportIssueAction->setShortcutVisibleInContextMenu(true);
+    addAction(reportIssueAction);
+    connect(reportIssueAction, &QAction::triggered, this, &MW::reportIssue);
 
     diagnosticsDevelopAction = new QAction(tr("Develop diagnostics"), this);
     diagnosticsDevelopAction->setObjectName("diagnosticsDevelop");
@@ -3299,6 +3321,9 @@ void MW::createWindowMenu()
             SLOT(invokeWorkspaceFromAction(QAction*)));
     syncWorkflowWorkspaceMenus();
 
+    windowMenu->addAction(restorePreviousWindowAction);
+    connect(windowMenu, &QMenu::aboutToShow, this, &MW::refreshRestoreWindowAction);
+
     windowMenu->addSeparator();
     windowMenu->addAction(moduleDockVisibleAction);
     windowMenu->addAction(folderDockVisibleAction);
@@ -3350,6 +3375,7 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpPicturesAction);
     helpMenu->addAction(helpThumbnailSchematicAction);
     helpMenu->addSeparator();
+    helpMenu->addAction(reportIssueAction);
     logMenu = helpMenu->addMenu(tr("&Logs"));
     logMenu->addAction(viewLogAction);
     logMenu->addAction(clearLogAction);

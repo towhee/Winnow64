@@ -1,0 +1,54 @@
+name: Bug report
+description: Something in Winnow does not work as it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. In Winnow, Help > Report an Issue
+        opens this form with the version and system already filled in.
+
+        No GitHub account? Use Help > Report an Issue > Send by Email instead.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Describe the problem, and what you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The steps that make it happen, if you know them.
+      placeholder: |
+        1. Open a folder of ...
+        2. Select ...
+        3. ...
+  - type: input
+    id: files
+    attributes:
+      label: Camera and file type
+      description: For example "Sony A9 II, ARW" or "iPhone 15 Pro, ProRAW DNG".
+  - type: input
+    id: version
+    attributes:
+      label: Winnow version
+      description: Help > About shows it.
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Operating system
+      description: For example "macOS 26.1 (arm64)" or "Windows 11 (x86_64)".
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log files and screenshots
+      description: |
+        Drag WinnowIssueLog.txt and WinnowLog.txt here (Help > Report an Issue opens the
+        folder that holds them), plus any screenshots. The logs can contain folder and file
+        names, and everything posted here is public.

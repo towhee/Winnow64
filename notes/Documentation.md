@@ -30,6 +30,7 @@
     - [2.3.6 Window Position and Size Are Optional](#236-window-position-and-size-are-optional)
     - [2.3.7 What a Workspace Does Not Restore](#237-what-a-workspace-does-not-restore)
     - [2.3.8 Sync Browse/Develop](#238-sync-browsedevelop)
+    - [2.3.9 Restore Previous Size and Position](#239-restore-previous-size-and-position)
   - [2.4 Dock Window State (Versioning)](#24-dock-window-state-versioning)
     - [2.4.1 Migration, Not Rejection](#241-migration-not-rejection)
     - [2.4.2 Keep the Fallback Layout Sane](#242-keep-the-fallback-layout-sane)
@@ -971,6 +972,7 @@
     - [22.4.4 Re-Selecting the Image Still Waiting](#2244-re-selecting-the-image-still-waiting)
   - [22.5 Panel Probe](#225-panel-probe)
   - [22.6 Auto-Mask Probe](#226-auto-mask-probe)
+  - [22.7 Reporting an Issue](#227-reporting-an-issue)
 
 ## 1 About This Document
 
@@ -1366,6 +1368,18 @@ With the sync on, each side gets the WIDER of the two layouts' widths and the fi
 - Not synced: a side that only one layout shows (there is nothing to widen on the other side), a side held collapsed by a show/hide bar, and any top or bottom panel other than the filmstrip.
 - Unticking re-applies the current layout's own widths and thumbnail size. Ticking applies the sync at once.
 - The widths come from the LAYOUTS, not the screen. A panel dragged during the session is dropped by the next E / D, the same as without the sync. Save Layout while synced saves the synced widths and thumbnail size into that layout.
+
+#### 2.3.9 Restore Previous Size and Position
+
+Window > Restore Previous Size and Position (MW::restorePreviousWindowAction, added 2026-11-23) puts the main window back where it was before the last move or resize. It is deliberately NOT on Edit > Undo: a nudged window would otherwise stand between Cmd+Z and the rating or edit the user meant to undo.
+
+- ONE SLOT, NOT A STACK. MW keeps two WindowPlacements, settled and previous. A placement is the window's geometry, or "maximised on screen N" (WindowPlacement::sameAs compares those, not geometry, for a maximised window).
+- A DRAG IS ONE PLACEMENT. MW::moveEvent and MW::resizeEvent restart windowSettleTimer (500 ms, single shot). When it fires, MW::noteWindowPlacement compares the window with the settled placement and, if it moved, makes the settled one previous. The timer is first started at the end of MW::showEvent's first pass, so the startup placement is the first settled one.
+- TOGGLES. Restoring moves the window, that move settles in noteWindowPlacement too, and the two slots swap. Choosing the item again goes back.
+- Maximised is restored the way MW::invokeWorkspace does it (place on the saved screen, then showMaximized), not with restoreGeometry. A normal placement goes through setGeometry then ScreenFit::fit, so one on a monitor that has gone lands on the usable area of the current screen.
+- Full screen and minimised are not recorded. Leaving full screen returns the window to its settled placement, which records nothing. In full screen the item is disabled with its reason.
+- A workspace that restores the window position and size (2.3.6) moves the window like any other move, so the item takes the window back to where it was before the workspace was applied.
+- Disabled with a reason (disabledReason and the tooltip, MW::refreshRestoreWindowAction) until the window has moved, and in full screen. Refreshed when a placement settles and when the Window menu opens. Session only, no shortcut.
 
 ### 2.4 Dock Window State (Versioning)
 
@@ -1806,6 +1820,7 @@ These are not undoable:
 - Embedded-thumbnail repair.
 - Catalog scope changes, which need a rescan.
 - View state: sort, filter, workspaces and preferences.
+- The window's position and size. Window > Restore Previous Size and Position covers it instead (see [2.3.9](#239-restore-previous-size-and-position)).
 
 #### 2.15.4 Per-Image Metadata (P1)
 
@@ -12215,3 +12230,14 @@ The probe is always on and has no switch: Develop/aimaskprobe.h is a mutex-guard
 - the render (developCompositeStack) and the veil (updateMaskOverlayTint) producing an EMPTY buffer (max < 0.001) for a scope with a model mask, with refsReady and the component tools.
 
 Read it in Help > Diagnostics > Develop diagnostics, section "AUTO-MASK PROBE", taken BEFORE leaving the image. The section also snapshots dm->currentKey vs the dock's and ImageView's paths, the current key's subject / sky / depth references, the subject store size, the lens geometry key, the active scope's components, the render job's scopes (an identity scope is dropped from the job), the tint visibility and the proxy path.
+
+### 22.7 Reporting an Issue
+
+Help > Report an Issue... (MW::reportIssue, `Main/diagnostics.cpp`) is the user-facing way to report bugs and feedback. GitHub accepts issues only from signed-in accounts and many users have none, so a dialog offers two routes:
+
+- Report on GitHub: opens https://github.com/towhee/Winnow64/issues/new?template=bug\_report.yml with the `version` and `system` fields filled from the query string (an issue form fills any field whose `id` matches a query key). The log files cannot travel in the URL (GitHub caps it at about 8 KB), so the Log folder (AppDataLocation/Log) is revealed first and the browser opens on top of it; the user drags WinnowIssueLog.txt and WinnowLog.txt into the form.
+- Send by Email: MW::mailLogs, which attaches both logs itself on macOS (Mail.app via AppleScript) and Windows (Simple MAPI), and on Linux reveals the folder and opens a pre-filled mailto: for a manual attach.
+
+MW::issueSystemInfo supplies the Winnow version, Qt version, build and running CPU architecture and the OS name; mailLogs puts it at the end of the email body. The mailto: URL is built percent-encoded (QUrl::toPercentEncoding), so newlines and punctuation in the body survive.
+
+The issue forms live in `.github/ISSUE_TEMPLATE`: bug\_report.yml (field ids `what`, `steps`, `files`, `version`, `system`, `logs`), feature\_request.yml, and config.yml, whose contact link points users without a GitHub account to the email address. Renaming bug\_report.yml or the `version` / `system` ids breaks the pre-fill: change MW::reportIssue in the same commit.

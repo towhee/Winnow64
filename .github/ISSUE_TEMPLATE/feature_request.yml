@@ -1,0 +1,20 @@
+name: Feature request or feedback
+description: Suggest an improvement, or tell us how Winnow works for you.
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+      description: Describe the feature or the change, and the problem it solves for you.
+    validations:
+      required: true
+  - type: textarea
+    id: workflow
+    attributes:
+      label: How do you work today?
+      description: How you handle this now, in Winnow or another app.
+  - type: input
+    id: version
+    attributes:
+      label: Winnow version
