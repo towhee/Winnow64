@@ -77,6 +77,32 @@ QVariant real(double v, double dflt)
 }
 
 /*
+    EVERY WRITE TRANSACTION BEGINS IMMEDIATE, never with QSqlDatabase::transaction().
+
+    transaction() issues a plain BEGIN, which is DEFERRED: the write lock is taken at the
+    first write, after the SELECTs that most of these transactions start with. In WAL
+    mode a reader that then needs to write while another connection holds the write lock
+    gets SQLITE_BUSY AT ONCE -- SQLite skips the busy handler, because waiting could
+    deadlock -- so busy_timeout (5 s) never applies. The UPDATE failed with "database is
+    locked" in about a millisecond, commit() skipped the row and returned 0, and the
+    restamp after a rotation was simply lost: the catalog kept the pre-write stamps, and
+    ScrollVerify then re-read Winnow's own write as an outside edit (found by ctest
+    rotate_stamp, about 1 run in 15 on the Linux VM, traced to code 5 on the UPDATE).
+
+    BEGIN IMMEDIATE takes the write lock up front, where busy_timeout does wait. The
+    matching COMMIT and ROLLBACK are still db.commit() / db.rollback(): Qt's SQLite
+    driver issues them as plain statements and keeps no transaction state of its own.
+    On failure the error is in *err when it is given.
+*/
+bool beginWrite(QSqlDatabase &db, QSqlError *err = nullptr)
+{
+    QSqlQuery q(db);
+    if (q.exec("BEGIN IMMEDIATE")) return true;
+    if (err) *err = q.lastError();
+    return false;
+}
+
+/*
     THE COLUMNS THAT MAKE A ROW, in one place because two queries return them.
 
     fetchFresh asks for one image by primary key; searchRows asks for every image the
@@ -548,9 +574,10 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
     const MountSnapshot mounts = MountSnapshot::take();
     const qint64 now = nowSecs();
 
-    if (!db.transaction()) {
+    QSqlError beginErr;
+    if (!beginWrite(db, &beginErr)) {
         G::issueDedup("Warning", "Catalog batch not written: could not start a "
-                      "transaction: " + db.lastError().text(), "Catalog::commit");
+                      "transaction: " + beginErr.text(), "Catalog::commit");
         return 0;
     }
 
@@ -2041,7 +2068,7 @@ int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present
     QMutexLocker lk(&mutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return 0;
-    if (!db.transaction()) return 0;
+    if (!beginWrite(db)) return 0;
     QSqlQuery u(db);
     u.prepare("UPDATE image SET live = 0 WHERE id = ?");
     for (qint64 id : gone) {
@@ -2097,7 +2124,7 @@ int Catalog::commitUnreadable(const QVector<CatalogRow> &rows)
     QMutexLocker lk(&mutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return 0;
-    if (!db.transaction()) return 0;
+    if (!beginWrite(db)) return 0;
 
     QSqlQuery sel(db);
     sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime, unreadable, live, path"
@@ -2254,7 +2281,7 @@ int Catalog::forgetUnder(const QString &folder, bool recurse)
     if (!db.isOpen()) return 0;
 
     const QString where = folderScopeClause(recurse);
-    db.transaction();
+    beginWrite(db);
     QSqlQuery f(db);
     f.prepare("DELETE FROM image_fts WHERE rowid IN"
               " (SELECT id FROM image WHERE " + where + ")");
@@ -2324,7 +2351,7 @@ int Catalog::forgetFolders(const QStringList &folders)
 
     constexpr int kChunk = 500;
     int gone = 0;
-    db.transaction();
+    beginWrite(db);
     for (int start = 0; start < folders.size(); start += kChunk) {
         const QStringList chunk = folders.mid(start, kChunk);
         QString marks;
@@ -2401,7 +2428,7 @@ int Catalog::sweep()
         QMutexLocker lk(&mutex);
         QSqlDatabase db = dbLocked();
         if (!db.isOpen()) return demoted;
-        if (!db.transaction()) continue;
+        if (!beginWrite(db)) continue;
         QSqlQuery u(db);
         u.prepare("UPDATE image SET live = 0 WHERE id = ?");
         for (qint64 id : gone) {
@@ -2477,7 +2504,7 @@ int Catalog::onFolderMoved(const QString &from, const QString &to)
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return 0;
     const qint64 seq = changeSeqLocked(db) + 1;
-    db.transaction();
+    beginWrite(db);
     QSqlQuery q(db);
     q.prepare("UPDATE image SET pathkey = ? || substr(pathkey, length(?) + 1),"
               " path = ? || substr(path, length(?) + 1),"
@@ -2515,7 +2542,7 @@ int Catalog::markStale(const QStringList &paths)
     if (!db.isOpen()) return 0;
 
     /* The same stamp the schema migrations clear: a size and mtime no file has. */
-    if (!db.transaction()) return 0;
+    if (!beginWrite(db)) return 0;
     QSqlQuery q(db);
     q.prepare("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
               " WHERE pathkey = ?");
@@ -2842,7 +2869,7 @@ void Catalog::setVersionNumbers(qint64 imageId, const QList<VersionSummary> &ver
 {
     QMutexLocker lk(&mutex);
     QSqlDatabase db = dbLocked();
-    if (!db.isOpen() || !db.transaction()) return;
+    if (!db.isOpen() || !beginWrite(db)) return;
     QSqlQuery q(db);
     q.prepare("UPDATE image_version SET number = ? WHERE image_id = ? AND vid = ?");
     for (const VersionSummary &v : versions) {
@@ -2861,7 +2888,7 @@ int Catalog::setDuplicateFingerprints(const QVector<DuplicateRow> &rows)
     QMutexLocker lk(&mutex);
     QSqlDatabase db = dbLocked();
     if (!db.isOpen()) return 0;
-    if (!db.transaction()) return 0;
+    if (!beginWrite(db)) return 0;
     QSqlQuery u(db);
     u.prepare("UPDATE image SET pixelhash = ?, duration_ms = ?"
               " WHERE pathkey = ? AND srcsize = ? AND srcmtime = ?");
