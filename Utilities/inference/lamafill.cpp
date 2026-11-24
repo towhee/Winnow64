@@ -138,22 +138,30 @@ InferenceSession *SharedSession()
     any download gate has run. std::call_once would latch that first miss for the life of
     the process and the model would stay "missing" even after the user downloaded it.
     A retry costs one QFile::exists (ModelStore caches the verified state), and spots are
-    rare, so the lock is uncontended.
+    rare, so the lock is uncontended. A file that is THERE but fails to load is a
+    different case: reloading 208 MB on every spot of every render to fail again, so
+    that one is latched until the file changes (InferenceSession::FileStamp).
 */
     static QMutex mutex;
     static std::unique_ptr<InferenceSession> session;
+    static QString failedStamp;                 // the model file that last failed to load
     QMutexLocker lock(&mutex);
     if (session && session->IsLoaded()) return session.get();
 
     const QString path = ModelStore::path(ModelStore::Model::Lama);
     if (path.isEmpty()) return nullptr;         // absent/stale -- try again next spot
 
+    // the same file failed before: not loaded again (a new download is a new stamp)
+    const QString stamp = InferenceSession::FileStamp(path);
+    if (stamp == failedStamp) return nullptr;
     session = std::make_unique<InferenceSession>(path, InferenceDevice::GPU);
     if (!session->IsLoaded()) {
-        /* OrtBackend logged why; this says what it costs. Tried again on the next
-           call, so once per session. */
+        /* OrtBackend logged why; this says what it costs. Not tried again until the
+           file changes (failedStamp). */
         G::issueDedup("Error", "Spot fill (LaMa) unavailable: its model did not load", "LamaFill",
                       -1, path);
+        failedStamp = stamp;
+        session.reset();                        // a failed session holds nothing useful
         return nullptr;
     }
     if (G::isLogger) G::log("LamaFill::SharedSession loaded", session->BackendName());
@@ -702,7 +710,7 @@ bool cloneHealOne(cv::Mat &full, const FillSpotGeom::Coverage &cov,
 
 /* Heal one spot's (or one chunk's windowed share of a) coverage `cov` (frame
    coordinates, 0..1) into RGB888 `full`, in place, with the model. */
-void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
+bool healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
              InferenceSession *s, const std::string &imgName, const std::string &maskName,
              const std::string &outName, const ChunkWin &win = {})
 {
@@ -753,18 +761,18 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
     }
 
     std::vector<Tensor> outs;
-    /* A spot the model could not fill stays unhealed but is still counted as healed by
-       the caller, so say so here (once per reason). Run's own failure is logged by
+    /* A spot the model could not fill stays unhealed: false, so the caller does not
+       count it, and said here once per reason. Run's own failure is logged by
        OrtBackend. */
     if (!s->Run({imgName, maskName}, {inImg, inMask}, {outName}, outs) || outs.empty()) {
         G::issueDedup("Warning", "LaMa fill did not run: a spot was left unhealed", "LamaFill::healOne");
-        return;
+        return false;
     }
     const Tensor &out = outs[0];
     if (int(out.data.size()) != 3 * P) {
         G::issueDedup("Warning", QString("LaMa fill returned %1 values, expected %2: a spot "
                       "was left unhealed").arg(out.data.size()).arg(3 * P), "LamaFill::healOne");
-        return;
+        return false;
     }
 
     /* Raw model fill (0..255) and the original tile as 32FC3, then optional correction
@@ -830,6 +838,7 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
                 d[x][c] = cv::saturate_cast<uchar>(d[x][c] * (1.0f - aa) + hp[x][c] * aa);
         }
     }
+    return true;
 }
 
 } // namespace
@@ -976,9 +985,9 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
                         if (cloneHealOne(full, cov, cx0, cy0, cx1, cy1, win, chunkKey)) {
                             ++nClone;
                             done = true;
-                        } else if (modelOk) {
-                            healOne(full, cov, cx0, cy0, cx1, cy1,
-                                    s, imgName, maskName, outName, win);
+                        } else if (modelOk && healOne(full, cov, cx0, cy0, cx1, cy1,
+                                                      s, imgName, maskName, outName,
+                                                      win)) {
                             ++nModel;
                             done = true;
                         }
@@ -994,7 +1003,8 @@ bool apply(QImage &img, const QVector<FillSpot> &spots, const QString &cachePath
             continue;
         }
         if (!modelOk) continue;             // no model: this spot stays unhealed
-        healOne(full, cov, bx0, by0, bx1, by1, s, imgName, maskName, outName);
+        if (!healOne(full, cov, bx0, by0, bx1, by1, s, imgName, maskName, outName))
+            continue;                       // logged there; not counted as healed
         applied = true;
         ++healed;
     }

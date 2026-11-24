@@ -33,6 +33,13 @@ public:
        than after a first failed run. False means every InferenceSession here is inert. */
     static bool BackendCompiledIn();
 
+    /* A model file's identity for latching a failed load: path, size and modified time.
+       A feature whose model is downloaded on demand cannot latch its first miss for the
+       life of the process (the user may download it next), but it must not reload a
+       file that already failed on every call either -- LaMa is 208 MB. Comparing stamps
+       does both: the same broken file is not tried again, a re-downloaded one is. */
+    static QString FileStamp(const QString &path);
+
     bool Run(const std::vector<std::string> &inNames,
              const std::vector<Tensor> &inputs,
              const std::vector<std::string> &outNames,

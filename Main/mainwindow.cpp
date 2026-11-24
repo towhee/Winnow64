@@ -554,6 +554,12 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     // create issue log used to report errors and issues.  If fails, show popup after
     // show main window
     G::newIssueLog();
+    /*  THE SESSION MARKER AT ONCE, so every issue from here on is filed under this
+        session; the ones raised before the log existed were held and follow the marker
+        (G::issueBeginSession). It was written from showEvent, and everything raised in
+        between (settings, docks, the first folder) landed above it, in the previous
+        session's report. */
+    G::issueBeginSession(issueSystemInfo().replace("\n", " | "));
 
     /* Simulate startup arguments for debugging. Format matches a winnet:
        arg[0] = "Embellish<Template>", arg[1+] = image path(s).
@@ -1531,7 +1537,7 @@ void MW::showEvent(QShowEvent *event)
 
     {
         const QString sessionInfo = issueSystemInfo().replace("\n", " | ");
-        G::issueBeginSession(sessionInfo);
+        // the issue log's session marker is written in the constructor, after newIssueLog
         // an update that failed after the last quit only said so in install.log
         const QString installFailure = AppInstaller::takeLastInstallFailure();
         if (!installFailure.isEmpty())
@@ -16371,6 +16377,8 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
            to the clean one. Publishing it would show "Denoised" and enabled amount sliders
            over an unchanged image, so the result is dropped instead (unavailable below). */
         bool denoiseApplied = false;
+        // a model failure during this decode, not a sensor PMRID skips (see below)
+        const int runFailuresBefore = PMRID::RunFailureCount();
         if (!pmrid || !cleanBase) {
             /* Reveal the progress row (EMPTY) as the decode starts; PMRID then fills it
                per tile. Must not updateProgress(0,1) here -- FromStart would paint the
@@ -16417,14 +16425,15 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
            good, and the render needs it) but publish no denoised base, so the render stays
            on clean and the dock reports "Denoise", not "Denoised". */
         if (!denoiseApplied) {
-            QMetaObject::invokeMethod(this, [this, freshClean, fPath]() {
+            const bool runFailed = PMRID::RunFailureCount() != runFailuresBefore;
+            QMetaObject::invokeMethod(this, [this, freshClean, fPath, runFailed]() {
                 developDenoiseInFlightKey.clear();
                 progress->clearProgress(progressRawDenoiseRow);
                 if (!dm || fPath != dm->currentKey) return;
                 if (freshClean && !rawDenoiseCleanBaseOk(
                                       WorkingImageCache::instance().get(fPath, RawRender::Choice().tag())))
                     WorkingImageCache::instance().put(fPath, freshClean);
-                reportRawDenoiseUnavailable(fPath);
+                reportRawDenoiseUnavailable(fPath, runFailed);
             });
             return;
         }
@@ -16476,7 +16485,7 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
     }));
 }
 
-void MW::reportRawDenoiseUnavailable(const QString &fPath)
+void MW::reportRawDenoiseUnavailable(const QString &fPath, bool runFailed)
 {
 /*
     PMRID decoded but changed nothing. Two different causes, and they must be remembered
@@ -16488,14 +16497,18 @@ void MW::reportRawDenoiseUnavailable(const QString &fPath)
         attempt, for every image.
       o the model is fine but THIS sensor is not a Bayer phase PMRID handles (X-Trans).
         Per image: remember the path only, so the next raw still gets its chance.
+      o the model loaded but failed while running on this image (runFailed: PMRID
+        counted a tile failure during the decode). Per image too, with its own reason:
+        it is not the sensor, and the cause is in the issue log.
 
     Either way the dock greys the whole denoise group and shows the reason in its place
     (DevelopProperties::updateDenoiseAvailability -> RawPanel::setDenoiseAvailable), rather
     than leaving live-looking controls that accept a click and change nothing.
 */
     if (G::isLogger) G::log("MW::reportRawDenoiseUnavailable");
-    if (PMRID::IsAvailable()) rawDenoiseUnsupported.insert(fPath);
-    else                      rawDenoiseUnavailable = true;
+    if (runFailed)                 rawDenoiseFailed.insert(fPath);
+    else if (PMRID::IsAvailable()) rawDenoiseUnsupported.insert(fPath);
+    else                           rawDenoiseUnavailable = true;
     if (developProperties) {
         developProperties->updateDenoiseRunState(false);
         developProperties->updateDenoiseAvailability();   // grey the group + say why
@@ -16523,6 +16536,11 @@ bool MW::rawDenoiseAvailable(const QString &fPath, QString *reason) const
     }
     if (rawDenoiseUnsupported.contains(fPath)) {
         if (reason) *reason = tr("Not available for this sensor (Bayer only).");
+        return false;
+    }
+    if (rawDenoiseFailed.contains(fPath)) {
+        if (reason) *reason = tr("The denoise model failed on this image. "
+                                 "See Help > Logs > View session issues.");
         return false;
     }
     if (reason) reason->clear();

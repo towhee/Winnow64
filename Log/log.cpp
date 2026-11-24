@@ -1,4 +1,10 @@
 #include "log.h"
+#include <QSaveFile>
+
+// global.h is heavy to include; this is the one call this file makes into it
+namespace G {
+void issue(QString type, QString msg, QString src, int sfRow, QString fPath);
+}
 
 // Logger temp until integrate
 Logger::Logger()
@@ -75,7 +81,7 @@ IssueLog::IssueLog(QObject* parent) : QThread(parent)
                          "to file";
         qWarning() << "IssueLog::IssueLog" << errMsg;
     } else {
-        trim(14);
+        trim(14);       // a failure to reopen after it sets failedToOpen
         start();
     }
 }
@@ -125,29 +131,42 @@ QString IssueLog::logText() {
 }
 
 void IssueLog::trim(int daysToKeep) {
-    if (issueLogFile.isOpen()) {
-        QString tempFilePath = issueLogPath + "temp";
-        QFile temp(tempFilePath);
-        QTextStream in(&issueLogFile);
-        in.seek(0);
-        QString line;
-        QDate currentDate = QDate::currentDate();
-        if (temp.open(QIODevice::ReadWrite)) {
-            QTextStream out(&temp);
-            while (!in.atEnd()) {
-                line = in.readLine() + "\n";
-                QDate date = QDate::fromString(line.left(10), "yyyy-MM-dd");
-                if (date.isValid() && date.daysTo(currentDate) <= daysToKeep) {
-                    out << line;
-                }
-            }
-            issueLogFile.close();
-            issueLogFile.remove();
-            temp.close();
-            temp.rename(issueLogPath);
-            open();
-        }
+/*
+    Keep the last daysToKeep days. The kept lines replace the log through QSaveFile, an
+    atomic replace: the old log stays whole until the new one is complete, so a failure
+    at any step leaves it as it was. It used to be deleted before the trimmed copy was
+    renamed in, and a failed rename lost it. A line with no date continues the dated
+    line above it (a multi-line message) and is kept or dropped with it.
+
+    A failure is an issue like any other. Raised here, in the constructor, before this
+    log is G::issueLog, it waits and is written after the session marker.
+*/
+    if (!issueLogFile.isOpen()) return;
+    issueLogFile.seek(0);
+    QTextStream in(&issueLogFile);
+    const QDate today = QDate::currentDate();
+    QString kept;
+    bool keep = false;
+    bool dropped = false;
+    while (!in.atEnd()) {
+        const QString line = in.readLine();
+        const QDate date = QDate::fromString(line.left(10), "yyyy-MM-dd");
+        if (date.isValid()) keep = date.daysTo(today) <= daysToKeep;
+        if (keep) kept += line + '\n';
+        else dropped = true;
     }
+    if (!dropped) return;                   // nothing to trim: the file is left alone
+
+    issueLogFile.close();                   // Windows cannot replace an open file
+    QSaveFile save(issueLogPath);
+    bool ok = save.open(QIODevice::WriteOnly | QIODevice::Text);
+    const QByteArray bytes = kept.toUtf8();
+    if (ok) ok = save.write(bytes) == bytes.size();
+    if (ok) ok = save.commit();
+    if (!ok)
+        G::issue("Warning", "The issue log could not be trimmed: " + save.errorString(),
+                 "IssueLog::trim", -1, issueLogPath);
+    if (!open()) failedToOpen = true;
 }
 
 void IssueLog::stop() {

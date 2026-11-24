@@ -288,6 +288,9 @@ KBSource resolveKB(const RawImage &raw, const QString &model, int iso, double &k
 namespace PMRID {
 
 /* Last resolution snapshot for the Develop diagnostics (see pmrid.h). */
+static std::atomic<int> g_runFailures{0};
+int RunFailureCount() { return g_runFailures.load(); }
+
 static std::mutex g_resMutex;
 static Resolution g_lastRes;
 
@@ -528,6 +531,7 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
             if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) {
                 G::issueDedup("Warning", "Raw denoise stopped: a tile did not run",
                               "PMRID::Apply");
+                ++g_runFailures;
                 return false;
             }
             const double inferMs = lap();
@@ -542,6 +546,7 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
             if (out.data.size() != 4 * tpp) {
                 G::issueDedup("Warning", "Raw denoise stopped: the model returned a tile of "
                               "the wrong size", "PMRID::Apply");
+                ++g_runFailures;
                 return false;
             }
 

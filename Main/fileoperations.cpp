@@ -1520,33 +1520,36 @@ void MW::deleteFolderPath(const QString &dirToDelete)
             if (!relocatedPath(key, dirToDelete, dirToDelete).isEmpty()) goneMasters << key;
         }
     }
-    else if (dm->folderList.contains(dirToDelete)) {
-        stop("deleteFolder");
-        // reset();
-        setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
-    }
+    /*  The open folder stops BEFORE the trash, which on Windows cannot move a folder
+        whose files are open. Its message waits for the result. */
+    const bool wasOpen = !library && dm->folderList.contains(dirToDelete);
+    if (wasOpen) stop("deleteFolder");
 
     // okay to delete
     QFile dirFile(dirToDelete);
     const bool isTrashed = dirFile.moveToTrash();
-    if (!isTrashed)
+    if (!isTrashed) {
         G::issue("Warning", "Delete folder failed: could not move it to the " + G::trash +
                  ": " + dirFile.errorString(), "MW::deleteFolderPath", -1, dirToDelete);
-    if (isTrashed) {
-        const int forgotten = FileOps::onFolderDeleted(dirToDelete);
-        if (!goneMasters.isEmpty()) {
-            /* A Folders check on the trashed folder goes with it; restore would
-               otherwise keep it, checked, on an empty item (Filters::restore). */
-            if (filters) filters->relocateFolderChecks(dirToDelete, QString());
-            G::ScrollSignalGuard scrollGuard;   // removing rows scrolls; not the user
-            applyModelChange(QStringList(), goneMasters, "MW::deleteFolderPath");
-        }
-        if (forgotten > 0 || !goneMasters.isEmpty()) refreshLibraryAfterCatalogChange();
-        if (!goneMasters.isEmpty()) {
-            int sfRow = dm->currentSfRow;
-            if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
-            if (dm->sf->rowCount() > 0) sel->select(sfRow);
-        }
+        const QString msg = dirToDelete + "\ncould not be moved to the " + G::trash;
+        if (wasOpen) setCentralMessage(msg);
+        else G::popup->showPopup(msg, 3000);
+        return;     // nothing was deleted: bookmarks and the Folders panel stay
+    }
+    if (wasOpen) setCentralMessage(dirToDelete + "\n has been sent to the " + G::trash);
+    const int forgotten = FileOps::onFolderDeleted(dirToDelete);
+    if (!goneMasters.isEmpty()) {
+        /* A Folders check on the trashed folder goes with it; restore would
+           otherwise keep it, checked, on an empty item (Filters::restore). */
+        if (filters) filters->relocateFolderChecks(dirToDelete, QString());
+        G::ScrollSignalGuard scrollGuard;   // removing rows scrolls; not the user
+        applyModelChange(QStringList(), goneMasters, "MW::deleteFolderPath");
+    }
+    if (forgotten > 0 || !goneMasters.isEmpty()) refreshLibraryAfterCatalogChange();
+    if (!goneMasters.isEmpty()) {
+        int sfRow = dm->currentSfRow;
+        if (sfRow < 0 || sfRow >= dm->sf->rowCount()) sfRow = 0;
+        if (dm->sf->rowCount() > 0) sel->select(sfRow);
     }
 
     // currentFolderDeletedExternally can check if internal folder deletion
@@ -1597,9 +1600,14 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     if (ret == QMessageBox::Cancel) return;
 
     // delete
-    if (!dcimDir.removeRecursively())
+    if (!dcimDir.removeRecursively()) {
+        /*  Partly removed: the catalog keeps the folder's rows, since some of the files
+            are still there (the rest show as missing until they are verified). */
         G::issue("Warning", "Delete All Images: some files on the card could not be "
                  "removed", "MW::deleteAllImageMemCard", -1, dcimPath);
+        G::popup->showPopup("Some images on " + name + " could not be removed", 3000);
+        return;
+    }
     if (FileOps::onFolderDeleted(dcimPath) > 0) refreshLibraryAfterCatalogChange();
 
     QString msg = "All images removed from " + name;

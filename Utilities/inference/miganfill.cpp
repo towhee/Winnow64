@@ -38,18 +38,24 @@ InferenceSession *SharedSession()
 */
     static QMutex mutex;
     static std::unique_ptr<InferenceSession> session;
+    static QString failedStamp;                 // the model file that last failed to load
     QMutexLocker lock(&mutex);
     if (session && session->IsLoaded()) return session.get();
 
     const QString path = ModelStore::path(ModelStore::Model::Migan);
     if (path.isEmpty()) return nullptr;         // absent/stale -- try again next spot
 
+    // the same file failed before: not loaded again (a new download is a new stamp)
+    const QString stamp = InferenceSession::FileStamp(path);
+    if (stamp == failedStamp) return nullptr;
     session = std::make_unique<InferenceSession>(path, InferenceDevice::Auto);
     if (!session->IsLoaded()) {
-        /* OrtBackend logged why; this says what it costs. Tried again on the next
-           call, so once per session. */
+        /* OrtBackend logged why; this says what it costs. Not tried again until the
+           file changes (failedStamp). */
         G::issueDedup("Error", "Spot fill (MI-GAN) unavailable: its model did not load", "MiganFill",
                       -1, path);
+        failedStamp = stamp;
+        session.reset();                        // a failed session holds nothing useful
         return nullptr;
     }
     if (G::isLogger) G::log("MiganFill::SharedSession loaded", session->BackendName());
@@ -58,7 +64,7 @@ InferenceSession *SharedSession()
 
 /* Heal one spot's coverage `cov` (frame coordinates, 0..1) into RGB888 `full`, in
    place. */
-void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
+bool healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0, int bx1, int by1,
              InferenceSession *s, const std::string &inName, const std::string &outName)
 {
     const int W = full.cols, H = full.rows;
@@ -103,18 +109,18 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
     }
 
     std::vector<Tensor> outs;
-    /* A spot the model could not fill stays unhealed but is still counted as healed by
-       the caller, so say so here (once per reason). Run's own failure is logged by
+    /* A spot the model could not fill stays unhealed: false, so the caller does not
+       count it, and said here once per reason. Run's own failure is logged by
        OrtBackend. */
     if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) {
         G::issueDedup("Warning", "MI-GAN fill did not run: a spot was left unhealed", "MiganFill::healOne");
-        return;
+        return false;
     }
     const Tensor &out = outs[0];
     if (int(out.data.size()) != 3 * P) {
         G::issueDedup("Warning", QString("MI-GAN fill returned %1 values, expected %2: a spot "
                       "was left unhealed").arg(out.data.size()).arg(3 * P), "MiganFill::healOne");
-        return;
+        return false;
     }
 
     /* net-res healed patch = original in keep, model out in hole. */
@@ -153,6 +159,7 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
                 d[x][c] = cv::saturate_cast<uchar>(d[x][c] * (1.0f - aa) + hp[x][c] * aa);
         }
     }
+    return true;
 }
 
 } // namespace
@@ -192,8 +199,8 @@ bool apply(QImage &img, const QVector<FillSpot> &spots)
         if (!p.valid()) continue;
         FillSpotGeom::rasterize(p, W, H, cov);
         if (cov.empty()) continue;                       // empty coverage
-        healOne(full, cov, cov.bx0, cov.by0, cov.bx1, cov.by1, s, inName, outName);
-        applied = true;
+        if (healOne(full, cov, cov.bx0, cov.by0, cov.bx1, cov.by1, s, inName, outName))
+            applied = true;                 // a failure is logged there
     }
 
     if (applied) img = work.convertToFormat(img.format());

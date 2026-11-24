@@ -1588,33 +1588,41 @@ checked to make sure there is valid data.
 }
 
 /*
-    A FORMAT PARSER THAT RETURNED FALSE. The wrappers below still return true: the rows
-    keep what was read before the stop (dates, exposure, offsets), and a false would mark
-    the image as failed to load. That trade is a follow-up; until then the stop is at
-    least logged, once per format, with the file.
+    A FORMAT PARSER THAT RETURNED FALSE. Most stop partway, after the fields that matter
+    have been read (a MakerNote they cannot follow, a short IFD): the row keeps what was
+    read, and a false would mark it MetaFailed, which Pixmap::load treats as an image it
+    cannot show. So a stop still succeeds when the image can be shown -- an embedded
+    preview, or the sensor size for a decode -- and is logged, once per format, with the
+    file. A stop before either fails the read ("Unable to parse metadata").
 */
-static void parseStoppedEarly(const char *format, const QString &fPath)
+bool Metadata::parseOutcome(const char *format, bool ok)
 {
+    if (ok) return true;
+    const bool usable = (m.offsetFull > 0 && m.lengthFull > 0)
+                        || (m.offsetThumb > 0 && m.lengthThumb > 0)
+                        || (m.width > 0 && m.height > 0);
+    if (!usable) return false;
     G::issueDedup("Warning", QString("%1 metadata read stopped early; some fields may be "
-                  "missing").arg(format), "Metadata::parse", -1, fPath);
+                  "missing").arg(format), "Metadata::parse", -1, p.fPath);
+    return true;
 }
 
 bool Metadata::parseNikon()
 {
     if (G::isLogger) G::log("Metadata::parseNikon");
     if (nikon == nullptr) nikon = new Nikon;
-    if (!nikon->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Nikon", p.fPath);
+    const bool ok = nikon->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Nikon", ok);
 }
 
 bool Metadata::parseCanon()
 {
     if (G::isLogger) G::log("Metadata::parseCanon");
     if (canon == nullptr) canon = new Canon;
-    if (!canon->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Canon", p.fPath);
+    const bool ok = canon->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Canon", ok);
 }
 
 bool Metadata::parseCanonCR3()
@@ -1623,36 +1631,36 @@ bool Metadata::parseCanonCR3()
 //    CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
 //    canonCR3.parse();
     if (canonCR3 == nullptr) canonCR3 = new CanonCR3;
-    if (!canonCR3->parse(&p, &m, ifd, exif, jpeg, gps)) parseStoppedEarly("Canon CR3", p.fPath);
+    const bool ok = canonCR3->parse(&p, &m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Canon CR3", ok);
 }
 
 bool Metadata::parseOlympus()
 {
     if (G::isLogger) G::log("Metadata::parseOlympus");
     if (olympus == nullptr) olympus = new Olympus;
-    if (!olympus->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Olympus", p.fPath);
+    const bool ok = olympus->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Olympus", ok);
 }
 
 bool Metadata::parseSony()
 {
     if (G::isLogger) G::log("Metadata::parseSony");
     if (sony == nullptr) sony = new Sony;
-    if (!sony->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Sony", p.fPath);
+    const bool ok = sony->parse(p, m, ifd, exif, jpeg, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Sony", ok);
 }
 
 bool Metadata::parseFuji()
 {
     if (G::isLogger) G::log("Metadata::parseFuji");
     if (fuji == nullptr) fuji = new Fuji;
-    if (!fuji->parse(p, m, ifd, exif, jpeg)) parseStoppedEarly("Fuji", p.fPath);
+    const bool ok = fuji->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Fuji", ok);
 }
 
 bool Metadata::parseDNG()
@@ -1660,9 +1668,9 @@ bool Metadata::parseDNG()
     if (G::isLogger) G::log("Metadata::parseDNG");
     if (dng == nullptr) dng = new DNG;
     if (iptc == nullptr) iptc = new IPTC;
-    if (!dng->parse(p, m, ifd, iptc, exif, jpeg, gps)) parseStoppedEarly("DNG", p.fPath);
+    const bool ok = dng->parse(p, m, ifd, iptc, exif, jpeg, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("DNG", ok);
 }
 
 bool Metadata::parseTIF()
@@ -1670,9 +1678,9 @@ bool Metadata::parseTIF()
     if (G::isLogger) G::log("Metadata::parseTIF");
     if (tiff == nullptr) tiff = new Tiff;
     if (irb == nullptr) irb = new IRB;
-    if (!tiff->parse(p, m, ifd, irb, iptc, exif, gps)) parseStoppedEarly("TIFF", p.fPath);
+    const bool ok = tiff->parse(p, m, ifd, irb, iptc, exif, gps);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("TIFF", ok);
 }
 
 bool Metadata::parsePNG()
@@ -1688,9 +1696,9 @@ bool Metadata::parsePanasonic()
 {
     if (G::isLogger) G::log("Metadata::parsePanasonic");
     if (panasonic == nullptr) panasonic = new Panasonic;
-    if (!panasonic->parse(p, m, ifd, exif, jpeg)) parseStoppedEarly("Panasonic", p.fPath);
+    const bool ok = panasonic->parse(p, m, ifd, exif, jpeg);
     if (p.report) reportMetadata();
-    return true;
+    return parseOutcome("Panasonic", ok);
 }
 
 bool Metadata::parseJPG(quint32 startOffset)

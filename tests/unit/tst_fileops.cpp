@@ -34,6 +34,7 @@ private slots:
     void copyCarriesCompanions();
     void copyRenamesCompanionsToDestinationBase();
     void moveCarriesCompanionsAndPreview();
+    void moveReplacesOnlyOnceTheMoveWorks();
     void refusesToWriteInThePreviewCacheFolder();
     void trashFilesCarriesSidecarsNotPairs();
     void trashFilesSortsMissingAndProtected();
@@ -229,6 +230,45 @@ void tst_fileops::moveCarriesCompanionsAndPreview()
 
     QCOMPARE(c.get(dst, "recipe1"), payload);
     QVERIFY(c.get(p("DSC_050.NEF"), "recipe1").isEmpty());
+}
+
+void tst_fileops::moveReplacesOnlyOnceTheMoveWorks()
+{
+/*
+    A file already at the destination is replaced, and its sidecar with it, with nothing
+    left beside them. A move that cannot happen (the source is gone) leaves the file it
+    would have replaced exactly as it was -- it used to be deleted first.
+*/
+    QDir(tmp.path()).mkdir("dest");
+    const QDir dest(QDir(tmp.path()).absoluteFilePath("dest"));
+    const QString dst = dest.absoluteFilePath("DSC_070.NEF");
+    const auto contents = [](const QString &path) {
+        QFile f(path);
+        return f.open(QIODevice::ReadOnly) ? f.readAll() : QByteArray();
+    };
+
+    touch("DSC_070.NEF", "new");
+    touch("DSC_070.xmp", "new recipe");
+    {
+        QFile f(dst);
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("old");
+    }
+    {
+        QFile f(dest.absoluteFilePath("DSC_070.xmp"));
+        QVERIFY(f.open(QIODevice::WriteOnly));
+        f.write("old recipe");
+    }
+    QVERIFY(FileOps::moveFile(p("DSC_070.NEF"), dst));
+    QCOMPARE(contents(dst), QByteArray("new"));
+    QCOMPARE(contents(dest.absoluteFilePath("DSC_070.xmp")), QByteArray("new recipe"));
+    QVERIFY(!QFile::exists(p("DSC_070.NEF")));
+    QCOMPARE(dest.entryList({"*.winnow-replaced*"}, QDir::Files).size(), 0);
+
+    // the source is gone now: this move fails, and the file at dst survives it
+    QVERIFY(!FileOps::moveFile(p("DSC_070.NEF"), dst));
+    QCOMPARE(contents(dst), QByteArray("new"));
+    QCOMPARE(dest.entryList({"*.winnow-replaced*"}, QDir::Files).size(), 0);
 }
 
 void tst_fileops::refusesToWriteInThePreviewCacheFolder()

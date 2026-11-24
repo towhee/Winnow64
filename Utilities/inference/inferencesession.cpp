@@ -1,6 +1,9 @@
 #include "Utilities/inference/inferencesession.h"
 #include "Utilities/inference/ortbackend.h"
 
+#include <QDateTime>
+#include <QFileInfo>
+
 /*
     Backend selection lives here and nowhere else (the escape-hatch seam). For now every model
     runs on ONNX Runtime via OrtBackend; a future native backend would be chosen per model here.
@@ -20,6 +23,13 @@ bool InferenceSession::IsLoaded() const { return backend && backend->IsLoaded();
    compiled in" is exactly "ORT is compiled in". A future per-model backend choice updates
    both together. */
 bool InferenceSession::BackendCompiledIn() { return OrtBackend::IsCompiledIn(); }
+
+QString InferenceSession::FileStamp(const QString &path)
+{
+    const QFileInfo fi(path);
+    return path + '|' + QString::number(fi.size()) + '|'
+           + QString::number(fi.lastModified().toMSecsSinceEpoch());
+}
 
 bool InferenceSession::Run(const std::vector<std::string> &inNames,
                            const std::vector<Tensor> &inputs,

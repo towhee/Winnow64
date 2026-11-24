@@ -185,6 +185,36 @@ bool renameFile(const QString &from, const QString &to)
     return retryWhileHeld(from, [&] { return QFile::rename(from, to); });
 }
 
+/*
+    RENAME, REPLACING A FILE ALREADY AT `to` ONLY ONCE THAT HAS WORKED. QFile::rename
+    does not replace, so the file in the way is moved aside first, the rename made, and
+    only then the old file deleted; a failed rename puts it back. Deleting it first lost
+    it whenever the rename then failed. `to` that is `from` under another spelling (a
+    case-only rename on a case-insensitive volume) is not a file in the way: removing
+    it would remove the source.
+*/
+bool renameReplacing(const QString &from, const QString &to)
+{
+    if (cachePathKey(from) == cachePathKey(to) || !QFile::exists(to))
+        return renameFile(from, to);
+    QString aside = to + ".winnow-replaced";
+    for (int i = 2; QFile::exists(aside); ++i)
+        aside = to + ".winnow-replaced-" + QString::number(i);
+    if (!renameFile(to, aside)) return false;  // could not move it aside: nothing lost
+    if (!renameFile(from, to)) {
+        if (!QFile::rename(aside, to))
+            G::issue("Error", "A move failed, and the file it was replacing could not be "
+                     "put back: it is beside the destination with .winnow-replaced added",
+                     "FileOps::renameReplacing", -1, aside);
+        return false;
+    }
+    if (!QFile::remove(aside))
+        G::issue("Warning", "Moved, but the file it replaced could not be deleted: it is "
+                 "beside the destination with .winnow-replaced added",
+                 "FileOps::renameReplacing", -1, aside);
+    return true;
+}
+
 }  // namespace
 
 bool FileOps::usesFullNameSidecar(const QString &fPath)
@@ -329,21 +359,15 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
        a companion whose image never moved is still findable at the source. */
     const auto sidecars = companions(srcPath);
 
-    /* The destination is removed BEFORE the rename, so a failed rename has already lost
-       the file it was replacing: the issue says so (renaming first is the follow-up). */
-    const bool replaced = QFile::exists(dstPath) && QFile::remove(dstPath);
-    if (!renameFile(srcPath, dstPath)) {
-        QString msg = replaced ? "Failed to move file; the file it was replacing at the "
-                                 "destination had already been deleted."
-                               : "Failed to move file.";
-        G::issue(replaced ? "Error" : "Warning", msg, "FileOps::moveFile", -1, srcPath);
+    // a file at the destination is replaced only once the move has worked
+    if (!renameReplacing(srcPath, dstPath)) {
+        G::issue("Warning", "Failed to move file.", "FileOps::moveFile", -1, srcPath);
         return false;
     }
 
     for (const QString &s : sidecars) {
         const QString dst = companionDest(s, srcPath, dstPath);
-        if (QFile::exists(dst)) QFile::remove(dst);
-        if (!renameFile(s, dst)) {
+        if (!renameReplacing(s, dst)) {
             QString msg = "Moved the image but failed to move its sidecar.";
             G::issue("Warning", msg, "FileOps::moveFile", -1, s);
         }

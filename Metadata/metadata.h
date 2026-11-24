@@ -297,6 +297,8 @@ private:
     void verifyEmbeddedJpg(quint32 &offset, quint32 &length);
     int getNewOrientation(int orientation, int rotation);
 
+    // a parser's false, kept as true when the image can still be shown (see .cpp)
+    bool parseOutcome(const char *format, bool ok);
     bool parseCanon();
     bool parseCanonCR3();
     bool parseDNG();

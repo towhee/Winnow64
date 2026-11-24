@@ -59,18 +59,24 @@ InferenceSession *SharedSession()
 */
     static QMutex mutex;
     static std::unique_ptr<InferenceSession> session;
+    static QString failedStamp;                 // the model file that last failed to load
     QMutexLocker lock(&mutex);
     if (session && session->IsLoaded()) return session.get();
 
     const QString path = ModelStore::path(ModelStore::Model::SigLipImage);
     if (path.isEmpty()) return nullptr;
 
+    // the same file failed before: not loaded again (a new download is a new stamp)
+    const QString stamp = InferenceSession::FileStamp(path);
+    if (stamp == failedStamp) return nullptr;
     session = std::make_unique<InferenceSession>(path, kDevice, compileCacheDir(true));
     if (!session->IsLoaded()) {
-        /* OrtBackend logged why; this says what it costs. Tried again on the next
-           call, so once per session. */
+        /* OrtBackend logged why; this says what it costs. Not tried again until the
+           file changes (failedStamp). */
         G::issueDedup("Error", "Audit Keywords unavailable: its model did not load", "ImageEmbedder",
                       -1, path);
+        failedStamp = stamp;
+        session.reset();                        // a failed session holds nothing useful
         return nullptr;
     }
     if (G::isLogger) G::log("ImageEmbedder::SharedSession loaded", session->BackendName());

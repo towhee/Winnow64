@@ -122,6 +122,12 @@ struct Resolution {
 };
 Resolution LastResolution();
 
+/* How many times Apply has stopped on a MODEL failure this session (a tile that did not
+   run, or came back the wrong size). A caller that saw Apply change nothing compares the
+   count before and after its own decode to tell a model failure from a sensor PMRID does
+   not handle -- Apply's single false cannot say which (MW::ensureRawDenoise). */
+int RunFailureCount();
+
 
 } // namespace PMRID
 

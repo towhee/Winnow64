@@ -635,18 +635,41 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
 
 IssueLog *issueLog = nullptr;
 
-/* ISSUES RAISED BEFORE THE LOG EXISTS. MW::applyPendingSettingsReset runs before
-   G::newIssueLog, so a failed reset used to reach issueList (memory) and never the disk
-   log, and so never a report. Those lines wait here (capped) and newIssueLog writes
-   them. Guarded by issueListMutex. */
+/* ISSUES RAISED BEFORE THE SESSION BEGINS. MW::applyPendingSettingsReset runs before
+   G::newIssueLog, so a failed reset used to reach issueList and never the disk log; and
+   once written, a line raised before the "New Session" marker sat ABOVE it, so a report
+   and "View session issues" filed it under the previous session. They wait here, and
+   issueBeginSession (called right after newIssueLog in MW's constructor) writes them
+   after its marker; a log torn down before any session began (deleteIssueLog) writes
+   them as they are. Capped: past the cap only a count is kept, and written as one line.
+   issuesBeforeSessionInList is how many of them are at the end of issueList, where the
+   marker goes in front of them. Guarded by issueListMutex. */
 static QStringList issuesBeforeLog;
+static int issuesBeforeLogDropped = 0;
+static qsizetype issuesBeforeSessionInList = 0;
+static bool issueSessionBegun = false;
+static const qsizetype kIssuesBeforeLogMax = 1000;
+
+/* Write the held lines to the log. Caller holds issueListMutex and has checked
+   issueLog. */
+static void flushIssuesBeforeLog()
+{
+    for (const QString &line : std::as_const(issuesBeforeLog)) issueLog->log(line);
+    if (issuesBeforeLogDropped > 0)
+        issueLog->log(QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ")
+                      + QString("%1 more issues raised at startup were not kept")
+                            .arg(issuesBeforeLogDropped));
+    issuesBeforeLog.clear();
+    issuesBeforeLogDropped = 0;
+}
 
 void newIssueLog()
 {
-    issueLog = new IssueLog();
+    IssueLog *log = new IssueLog();
     QMutexLocker locker(&issueListMutex);
-    for (const QString &line : std::as_const(issuesBeforeLog)) issueLog->log(line);
-    issuesBeforeLog.clear();
+    issueLog = log;
+    // held for issueBeginSession's marker, unless the session has already begun
+    if (issueSessionBegun) flushIssuesBeforeLog();
 }
 
 void deleteIssueLog()
@@ -662,10 +685,12 @@ void deleteIssueLog()
     IssueLog *log = nullptr;
     {
         QMutexLocker locker(&issueListMutex);
+        // a log that never saw a session (quit before the window showed) keeps them
+        if (issueLog) flushIssuesBeforeLog();
         log = issueLog;
         issueLog = nullptr;
     }
-    delete log;     // IssueLog::~IssueLog stops the thread
+    delete log;     // IssueLog::~IssueLog stops the thread, writing what is queued
 }
 
 static QObject *modelInstance = nullptr;
@@ -736,8 +761,12 @@ void issue(QString type, QString msg, QString src, int sfRow, QString fPath)
         issueList.removeFirst();
     }
 
-    if (issueLog) issueLog->log(line);
-    else if (issuesBeforeLog.size() < 200) issuesBeforeLog.append(line);
+    if (issueLog && issueSessionBegun) issueLog->log(line);
+    else {
+        if (issuesBeforeLog.size() < kIssuesBeforeLogMax) issuesBeforeLog.append(line);
+        else ++issuesBeforeLogDropped;
+        ++issuesBeforeSessionInList;
+    }
 }
 
 void issueDedup(QString type, QString msg, QString src, int sfRow, QString fPath)
@@ -784,11 +813,19 @@ void issueBeginSession(const QString &info)
     if (!info.isEmpty()) line += " " + info;
     if (showIssueInConsole) qDebug().noquote() << line;
     QMutexLocker locker(&issueListMutex);
-    issueList.append(line);
+    // in front of the issues raised while the session was starting (see issuesBeforeLog)
+    const qsizetype before = issueSessionBegun ? 0
+        : std::min(issuesBeforeSessionInList, issueList.size());
+    issueList.insert(issueList.size() - before, line);
     if (issueListMaxSize > 0 && issueList.size() > issueListMaxSize) {
         issueList.removeFirst();
     }
-    if (issueLog) issueLog->log(line);
+    issueSessionBegun = true;
+    issuesBeforeSessionInList = 0;
+    if (issueLog) {
+        issueLog->log(line);
+        flushIssuesBeforeLog();
+    }
 }
 
 bool instanceClash(int instance, QString src)

@@ -369,10 +369,15 @@ std::shared_ptr<const Dcp::Profile> CameraProfileStore::profile(const QString &c
        from a render thread while the GUI thread is asking for the menu. A second thread
        racing to parse the same profile wastes one parse and then agrees on the result --
        cheaper than serialising every reader behind file I/O. */
+    /*  A FILE THAT DOES NOT PARSE IS CACHED AS NULL, so a render does not read and fail
+        on it again (every render of the image asks). The cache lives for the session:
+        a profile replaced on disk is read again after a restart. */
     Dcp::Profile p;
     if (!Dcp::parseFile(path, p)) {
         G::issueDedup("Warning", "Camera profile could not be read, so the built-in look "
                       "is used", "CameraProfileStore::profile", -1, path);
+        QMutexLocker lock(&mutex);
+        parsed.insert(cacheKey, nullptr);
         return nullptr;
     }
     if (isBase) {
