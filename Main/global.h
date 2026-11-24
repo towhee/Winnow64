@@ -1205,7 +1205,7 @@ Q_NAMESPACE
                            int sfRow = -1, QString fPath = "");
     extern QStringList issueDedupReport();
     extern void issueDedupReset();
-    extern void issueBeginSession();
+    extern void issueBeginSession(const QString &info = QString());
 
     /*  SUSPEND THE macOS ACCESSIBILITY BRIDGE FOR THE LENGTH OF A BULK MODEL CHANGE.
 

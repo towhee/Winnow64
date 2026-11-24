@@ -169,7 +169,7 @@ bool CanonCR3::getHeifBox(QString &type, quint32 &offset, quint32 &length)
     if (type == "vmhd") return vmhdBox(offset, length);
 
     QString msg = "Box " + type + " is unknown.";
-    G::issue("Warning", msg, "CanonCR3::getHeifBox", m->row, m->fPath);
+    G::issueDedup("Warning", msg, "CanonCR3::getHeifBox", m->row, m->fPath);
     offset += length;
     return true;
 }

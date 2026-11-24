@@ -47,8 +47,7 @@ body:
   - type: textarea
     id: logs
     attributes:
-      label: Log files and screenshots
+      label: Winnow report and screenshots
       description: |
-        Drag WinnowIssueLog.txt and WinnowLog.txt here (Help > Report an Issue opens the
-        folder that holds them), plus any screenshots. The logs can contain folder and file
-        names, and everything posted here is public.
+        Drag WinnowReport.txt here (Help > Report an Issue shows it to you), plus any
+        screenshots. Everything posted here is public.

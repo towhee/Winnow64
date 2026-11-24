@@ -609,6 +609,10 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
         return;
     }
 
+    /* An empty call is a console spacer. In WinnowLog.txt it was a bare timestamp, about
+       5,000 of them, so it is not written to the file. */
+    if (functionName.isEmpty() && comment.isEmpty()) return;
+
     // save log as per Utilities::log
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
     QDir dir(path);
@@ -755,12 +759,15 @@ void issueDedupReset()
     issueDedupCounts.clear();
 }
 
-void issueBeginSession()
+void issueBeginSession(const QString &info)
 {
-    // Structural marker, not an issue. Bypasses severity gating and the
-    // datamodel route, writes a separator straight to the disk log.
+    /* Structural marker, not an issue. Bypasses severity gating and the datamodel
+       route, writes a separator straight to the disk log. info (version, OS) lets a
+       report tie each session's issues to a build. MW::prepareReport finds sessions
+       by the "----- New Session -----" text: keep it. */
     QString ts = QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss ");
     QString line = ts + "----- New Session -----";
+    if (!info.isEmpty()) line += " " + info;
     if (showIssueInConsole) qDebug().noquote() << line;
     QMutexLocker locker(&issueListMutex);
     issueList.append(line);

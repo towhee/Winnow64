@@ -44,6 +44,7 @@ public:
     static QString getDisplayProfileURL();
     static float getMouseCursorMagnification();
     static void share(QList<QUrl> &urls, WId wId);
+    static QString defaultMailAppId();      // bundle id of the mailto: handler
     static QStringList listMountedVolumes();
 
     /* DRAG COUNT BADGE. installDragBadgeHook() once at start-up; a drop target then

@@ -156,14 +156,24 @@ void IssueLog::stop() {
 }
 
 void IssueLog::run() {
-    while (!isInterruptionRequested()) {
-        if (!issueQueue.isEmpty()) {
+    /* Write everything queued on each wake. It used to write ONE issue per 2 s wake, so
+       a burst (hundreds of warnings while a folder loads) took hours to reach the file,
+       and whatever was still queued at quit was lost. The final drain after the loop
+       catches issues logged during shutdown. */
+    auto drain = [this] {
+        bool wrote = false;
+        while (!issueQueue.isEmpty()) {
             QString issue = issueQueue.dequeue();
             if (!issue.isEmpty() && issueLogFile.isOpen()) {
                 out << issue << '\n';
-                out.flush();
+                wrote = true;
             }
         }
+        if (wrote) out.flush();
+    };
+    while (!isInterruptionRequested()) {
+        drain();
         msleep(2000);
     }
+    drain();
 }

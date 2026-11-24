@@ -525,6 +525,41 @@ void Utilities::log(QString function, QString msg)
     }
 }
 
+void Utilities::trimLog(int daysToKeep)
+{
+/*
+    Drop WinnowLog.txt lines older than daysToKeep, as IssueLog::trim does for the issue
+    log. Nothing trimmed it before, and it reached 25 MB over eight months. Lines are in
+    time order, so the first line whose date is recent enough starts the part to keep.
+    The first line's date is checked first, so on most launches this reads ten bytes.
+*/
+    QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
+                   + "/Log/WinnowLog.txt";
+    QFile fLog(path);
+    if (!fLog.open(QIODevice::ReadOnly)) return;
+    const QDate cutoff = QDate::currentDate().addDays(-daysToKeep);
+    const QDate first = QDate::fromString(QString::fromLatin1(fLog.read(10)), "yyyy-MM-dd");
+    if (first.isValid() && first >= cutoff) return;
+
+    fLog.seek(0);
+    const QByteArray all = fLog.readAll();
+    fLog.close();
+    qsizetype keepFrom = -1;
+    for (QDate d = cutoff; d <= QDate::currentDate() && keepFrom < 0; d = d.addDays(1)) {
+        const QByteArray date = d.toString("yyyy-MM-dd").toLatin1();
+        if (all.startsWith(date)) keepFrom = 0;
+        else {
+            const qsizetype i = all.indexOf("\n" + date);
+            if (i >= 0) keepFrom = i + 1;
+        }
+    }
+    if (keepFrom == 0) return;
+    if (fLog.open(QIODevice::WriteOnly | QIODevice::Truncate)) {
+        if (keepFrom > 0) fLog.write(all.mid(keepFrom));
+        fLog.close();
+    }
+}
+
 void Utilities::clearLog()
 {
     QString path = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log/WinnowLog.txt";

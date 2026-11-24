@@ -22,12 +22,18 @@
 #include "Datamodel/userdb.h"
 #include <QSqlQuery>
 #include <QDesktopServices>
+#include <QCheckBox>
 #include <QMessageBox>
+#include <QRegularExpression>
 #include <QPushButton>
 #include <QSysInfo>
 #include "Metadata/keywordpaths.h"
 #include "ui_metadatareport.h"
 #include "ui_shortcutsform.h"
+
+#if defined(Q_OS_MAC)
+#include "Utilities/mac.h"
+#endif
 
 #if defined(Q_OS_WIN)
 #ifndef NOMINMAX
@@ -1951,79 +1957,297 @@ void MW::logReport()
 
 }
 
-void MW::mailLogs()
+/* ---------------------------------------------------------------------------
+   ISSUE REPORT
+
+   Help > Report an Issue sends ONE file, WinnowReport.txt, built from the logs rather
+   than the logs themselves. The raw logs were 25 MB (WinnowLog.txt) and 10 MB
+   (WinnowIssueLog.txt): mail servers refused them, and what mattered was a few dozen
+   lines among tens of thousands of repeats. The report holds:
+
+       1. Winnow version, Qt, CPU and OS (issueSystemInfo).
+       2. Issues from the last reportSessions sessions, each distinct issue once with
+          its repeat count.
+       3. The last reportActivityLines lines of WinnowLog.txt.
+       4. The newest Winnow crash report from the last reportCrashDays days, when the
+          platform keeps one (macOS DiagnosticReports, Windows Error Reporting).
+
+   The home folder is shown as "~". hideFolders also replaces the folders in every path
+   with "…", keeping file names (the file type is usually what matters).
+   --------------------------------------------------------------------------- */
+
+static QString reportIssues(const QString &logDir, int sessions, int maxLines)
+{
+    QFile f(logDir + "/WinnowIssueLog.txt");
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return "(No issue log.)\n";
+    const QStringList lines = QString::fromUtf8(f.readAll()).split('\n', Qt::SkipEmptyParts);
+
+    // Start at the sessions-th last "New Session" marker (or the top of the file).
+    qsizetype start = 0;
+    int found = 0;
+    for (qsizetype i = lines.size() - 1; i >= 0; --i) {
+        if (lines.at(i).contains("----- New Session -----") && ++found == sessions) {
+            start = i;
+            break;
+        }
+    }
+
+    /* Collapse repeats within each session. Issue::toString pads type, message and
+       source to fixed columns after the 20-character timestamp, so those columns are
+       the key; the row and path that follow differ from one repeat to the next. */
+    QStringList out;
+    QHash<QString, qsizetype> firstAt;      // key -> index in out
+    QHash<QString, int> counts;
+    auto flushCounts = [&] {
+        for (auto it = counts.constBegin(); it != counts.constEnd(); ++it)
+            if (it.value() > 1)
+                out[firstAt.value(it.key())] += QString("   (repeated %1 times)").arg(it.value());
+        counts.clear();
+        firstAt.clear();
+    };
+    for (qsizetype i = start; i < lines.size(); ++i) {
+        const QString &line = lines.at(i);
+        if (line.contains("----- New Session -----")) {
+            flushCounts();
+            out << "" << line;
+            continue;
+        }
+        const QString key = line.mid(20, 109);
+        if (counts.contains(key)) { ++counts[key]; continue; }
+        counts.insert(key, 1);
+        firstAt.insert(key, out.size());
+        out << line;
+    }
+    flushCounts();
+    if (out.size() > maxLines) {
+        const qsizetype dropped = out.size() - maxLines;
+        out = out.mid(dropped);
+        out.prepend(QString("(%1 earlier lines omitted)").arg(dropped));
+    }
+    return out.join('\n') + '\n';
+}
+
+static QString reportActivity(const QString &logDir, int maxLines)
+{
+    QFile f(logDir + "/WinnowLog.txt");
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return "(No activity log.)\n";
+    const qint64 tailBytes = 512 * 1024;            // far more than maxLines needs
+    if (f.size() > tailBytes) f.seek(f.size() - tailBytes);
+    QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
+    if (f.size() > tailBytes && !lines.isEmpty()) lines.removeFirst();   // partial line
+    QStringList out;
+    for (const QString &line : lines) {
+        if (line.mid(19).trimmed().isEmpty()) continue;  // bare timestamp (old spacers)
+        out << line;
+    }
+    return out.mid(qMax<qsizetype>(0, out.size() - maxLines)).join('\n') + '\n';
+}
+
+static QString reportCrash(int days, qint64 maxBytes)
+{
+    const QDateTime since = QDateTime::currentDateTime().addDays(-days);
+    QFileInfo newest;
+#if defined(Q_OS_MAC)
+    QDir dir(QDir::homePath() + "/Library/Logs/DiagnosticReports");
+    const QFileInfoList list = dir.entryInfoList({"Winnow*.ips", "Winnow*.crash"},
+                                                 QDir::Files, QDir::Time);
+    if (!list.isEmpty()) newest = list.first();
+#elif defined(Q_OS_WIN)
+    // Windows Error Reporting: one folder per crash, holding a UTF-16 Report.wer.
+    const QString wer = qEnvironmentVariable("LOCALAPPDATA") + "/Microsoft/Windows/WER";
+    for (const QString &sub : {QStringLiteral("/ReportArchive"), QStringLiteral("/ReportQueue")}) {
+        const QFileInfoList dirs = QDir(wer + sub).entryInfoList({"AppCrash_Winnow*"},
+                                                                 QDir::Dirs, QDir::Time);
+        for (const QFileInfo &d : dirs) {
+            QFileInfo report(d.filePath() + "/Report.wer");
+            if (report.exists() && (!newest.exists() ||
+                                    report.lastModified() > newest.lastModified())) {
+                newest = report;
+                break;
+            }
+        }
+    }
+#else
+    Q_UNUSED(maxBytes)
+    return "(Crash reports are not collected on this platform.)\n";
+#endif
+#if defined(Q_OS_MAC) || defined(Q_OS_WIN)
+    if (!newest.exists() || newest.lastModified() < since)
+        return QString("(No Winnow crash in the last %1 days.)\n").arg(days);
+    QFile f(newest.filePath());
+    if (!f.open(QIODevice::ReadOnly)) return "(Crash report could not be read.)\n";
+    QByteArray data = f.read(maxBytes);
+    QString text;
+    if (data.startsWith("\xFF\xFE"))            // Report.wer is UTF-16LE with a BOM
+        text = QString::fromUtf16(reinterpret_cast<const char16_t *>(data.constData() + 2),
+                                  (data.size() - 2) / 2);
+    else
+        text = QString::fromUtf8(data);
+    QString header = newest.fileName() + "  "
+                     + newest.lastModified().toString("yyyy-MM-dd hh:mm:ss");
+    if (f.size() > maxBytes) header += QString("  (first %1 KB)").arg(maxBytes / 1024);
+    return header + "\n" + text + "\n";
+#endif
+}
+
+QString MW::prepareReport(bool hideFolders)
 {
 /*
-    Compose an email to the Winnow developer with the two log files attached:
-    WinnowIssueLog.txt and WinnowLog.txt, both located in
-    QStandardPaths::AppDataLocation + "/Log".
-
-    A mailto: URL cannot attach files (clients ignore the attachment
-    parameter), so each platform uses a native mechanism for real attachments:
-        - macOS:   drive Mail.app via AppleScript.
-        - Windows: Simple MAPI (MAPISendMail) attaches to the default client.
-    On any other platform (or if MAPI is unavailable) we fall back to revealing
-    the log folder and opening a pre-filled mailto: that asks the user to attach
-    the files manually.
+    Write <AppData>/Log/Report/WinnowReport.txt (see ISSUE REPORT above) and return its
+    path, or an empty string when it cannot be written.
 */
-    if (G::isLogger) G::log("MW::mailLogs");
+    if (G::isLogger) G::log("MW::prepareReport");
+
+    const int reportSessions = 3;
+    const int reportIssueLines = 600;
+    const int reportActivityLines = 200;
+    const int reportCrashDays = 7;
+    const qint64 reportCrashBytes = 256 * 1024;
+
+    const QString logDir =
+        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
+    const QString reportDir = logDir + "/Report";
+    QDir(reportDir).removeRecursively();
+    QDir().mkpath(reportDir);
+
+    const QString rule = QString(78, '=');
+    QString r;
+    r += "WINNOW ISSUE REPORT  "
+         + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + "\n"
+         + issueSystemInfo() + "\n\n";
+    r += rule + "\nISSUES (last " + QString::number(reportSessions)
+         + " sessions, repeats collapsed)\n" + rule + "\n";
+    r += reportIssues(logDir, reportSessions, reportIssueLines) + "\n";
+    r += rule + "\nRECENT ACTIVITY (last " + QString::number(reportActivityLines)
+         + " lines)\n" + rule + "\n";
+    r += reportActivity(logDir, reportActivityLines) + "\n";
+    r += rule + "\nCRASH REPORT\n" + rule + "\n";
+    r += reportCrash(reportCrashDays, reportCrashBytes);
+
+    // Privacy: home folder as "~", and optionally no folder names at all.
+    const QString home = QDir::homePath();
+    r.replace(home, "~");
+    r.replace(QDir::toNativeSeparators(home), "~");
+    if (hideFolders) {
+        /* From a path start (~, a drive letter, or a root like /Volumes) through the
+           last separator on the line, so "~/Photos/2021/Lake/0866.HEIC" becomes
+           "~/…/0866.HEIC". Folder names may contain spaces, hence "to the last
+           separator" rather than a word match. */
+        static const QRegularExpression folders(
+            R"((~|[A-Za-z]:|/(?:Users|home|Volumes|media|mnt|private|tmp))[/\\][^\n]*[/\\])");
+        r.replace(folders, "\\1/" + QString(QChar(0x2026)) + "/");   // "…"
+    }
+
+    const QString path = reportDir + "/WinnowReport.txt";
+    QFile f(path);
+    if (!f.open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text)) return QString();
+    f.write(r.toUtf8());
+    return path;
+}
+
+void MW::mailLogs()
+{
+    // Help > Logs > Mail logs: the report, folder names kept (it goes to the developer)
+    mailReport(false);
+}
+
+void MW::mailReport(bool hideFolders)
+{
+/*
+    Compose an email to the Winnow developer with the issue report (WinnowReport.txt,
+    from prepareReport) attached. The email
+    opens in the user's mail app for them to add a note and send; nothing is sent
+    automatically.
+
+    A mailto: URL cannot attach files (clients ignore the attachment parameter), so
+    attachments need a native path:
+        - macOS:   AppleScript, but ONLY for the default mail app, when it is Apple Mail
+                   or Microsoft Outlook. Driving Mail regardless sent reports from
+                   whatever account Mail had (someone else's) or left them in an
+                   unconfigured Mail's Outbox.
+        - Windows: Simple MAPI (MAPISendMail) attaches in the default client.
+    Otherwise (another default mail app on macOS, Linux, MAPI unavailable) the report
+    folder is revealed and a pre-filled mailto: asks the user to attach the file.
+*/
+    if (G::isLogger) G::log("MW::mailReport");
 
     const QString to = "winnowimageviewer@outlook.com";
-    const QString subject = "Winnow log files";
-    const QString logDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
-
-    // Only attach logs that actually exist.
-    QStringList logPaths;
-    for (const QString &name : {QStringLiteral("WinnowIssueLog.txt"), QStringLiteral("WinnowLog.txt")}) {
-        QString path = logDir + "/" + name;
-        if (QFile::exists(path)) logPaths << path;
+    const QString subject = "Winnow issue report";
+    const QString reportPath = prepareReport(hideFolders);
+    if (reportPath.isEmpty()) {
+        G::popup->showPopup("Unable to write the Winnow issue report.", 3000);
+        return;
     }
-    if (logPaths.isEmpty()) {
-        G::popup->showPopup("No log files were found in " + logDir, 3000);
+    const QStringList logPaths{reportPath};
+    const QString sysInfo = issueSystemInfo();
+
+    // Reveal the report folder and open a pre-filled email in the default mail app,
+    // asking the user to attach the files.
+    auto revealAndMailto = [&] {
+        revealInFileBrowser(reportPath);
+        QString body = "Please attach the file WinnowReport.txt, shown in the file browser, "
+                       "to this email, and add a note describing the issue. Thanks. Rory"
+                       "\n\n" + sysInfo;
+        QByteArray url = "mailto:" + to.toUtf8()
+                       + "?subject=" + QUrl::toPercentEncoding(subject)
+                       + "&body=" + QUrl::toPercentEncoding(body);
+        if (!QDesktopServices::openUrl(QUrl::fromEncoded(url)))
+            G::popup->showPopup("Unable to open your mail app. Please email the file in "
+                                "the folder shown to " + to, 5000);
+    };
+
+#if defined(Q_OS_MAC)
+    /* Apple Mail and Microsoft Outlook (classic and New Outlook, verified on 16.115)
+       can be scripted to attach the file; any other default mail app gets mailto:. */
+    const QString mailApp = Mac::defaultMailAppId();
+    const bool isMail = mailApp.compare("com.apple.mail", Qt::CaseInsensitive) == 0;
+    const bool isOutlook = mailApp.compare("com.microsoft.Outlook", Qt::CaseInsensitive) == 0;
+    if (!isMail && !isOutlook) {
+        revealAndMailto();
         return;
     }
 
-    const QString sysInfo = issueSystemInfo();
-
-#if defined(Q_OS_MAC)
-    QString body = "The Winnow log files are attached. Please add a note describing the "
+    QString body = "The Winnow issue report is attached. Please add a note describing the "
                    "issue. Thanks. Rory\n\n" + sysInfo;
     // AppleScript string literal: escape backslash and quote, newline as \n
     body.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     QStringList args;
-    args << "-e" << "tell application \"Mail\"";
-    args << "-e" << "set newMessage to make new outgoing message with properties "
-                    "{subject:\"" + subject + "\", content:\"" + body + "\", visible:true}";
-    args << "-e" << "tell newMessage";
-    args << "-e" << "make new to recipient at end of to recipients with properties "
-                    "{address:\"" + to + "\"}";
-    for (const QString &path : logPaths) {
-        args << "-e" << "make new attachment with properties {file name:(POSIX file \"" + path +
-                        "\")} at after the last paragraph of content";
+    if (isMail) {
+        args << "-e" << "tell application \"Mail\"";
+        args << "-e" << "set newMessage to make new outgoing message with properties "
+                        "{subject:\"" + subject + "\", content:\"" + body + "\", visible:true}";
+        args << "-e" << "tell newMessage";
+        args << "-e" << "make new to recipient at end of to recipients with properties "
+                        "{address:\"" + to + "\"}";
+        for (const QString &path : logPaths) {
+            args << "-e" << "make new attachment with properties {file name:(POSIX file \""
+                            + path + "\")} at after the last paragraph of content";
+        }
+        args << "-e" << "end tell";
+        args << "-e" << "activate";
+        args << "-e" << "end tell";
     }
-    args << "-e" << "end tell";
-    args << "-e" << "activate";
-    args << "-e" << "end tell";
+    else {
+        args << "-e" << "tell application \"Microsoft Outlook\"";
+        args << "-e" << "set newMessage to make new outgoing message with properties "
+                        "{subject:\"" + subject + "\", plain text content:\"" + body + "\"}";
+        args << "-e" << "make new to recipient at newMessage with properties "
+                        "{email address:{address:\"" + to + "\"}}";
+        for (const QString &path : logPaths) {
+            args << "-e" << "make new attachment at newMessage with properties "
+                            "{file:(POSIX file \"" + path + "\")}";
+        }
+        args << "-e" << "open newMessage";
+        args << "-e" << "activate";
+        args << "-e" << "end tell";
+    }
 
     if (QProcess::execute("/usr/bin/osascript", args) != 0)
-        G::popup->showPopup("Unable to open Mail to send the log files.", 3000);
-#else
-    // Reveal the log folder and open a pre-filled email asking the user to
-    // attach the files manually. Used as the fallback on platforms without a
-    // native attach path, or when MAPI is unavailable on Windows.
-    auto revealAndMailto = [&] {
-        revealInFileBrowser(logDir);
-        QString body = "Please attach the log files shown in the file browser ("
-                       + QStringList(logPaths).replaceInStrings(logDir + "/", "").join(" and ")
-                       + ") to this email, along with a note describing the issue. Thanks. Rory"
-                       + "\n\n" + sysInfo;
-        QByteArray url = "mailto:" + to.toUtf8()
-                       + "?subject=" + QUrl::toPercentEncoding(subject)
-                       + "&body=" + QUrl::toPercentEncoding(body);
-        QDesktopServices::openUrl(QUrl::fromEncoded(url));
-    };
-
-  #if defined(Q_OS_WIN)
+        revealAndMailto();
+    else
+        G::popup->showPopup("Add a note describing the issue, check the From address, "
+                            "then click Send.", 4000);
+#elif defined(Q_OS_WIN)
     // Simple MAPI attaches the logs to a new message in the default mail
     // client. mapi32.dll is loaded dynamically so the build needs no extra
     // link dependency; if it is missing we fall back to the manual path.
@@ -2043,7 +2267,7 @@ void MW::mailLogs()
     QByteArray toAddrBuf = ("SMTP:" + to).toLocal8Bit();
     QByteArray toNameBuf = to.toLocal8Bit();
     QByteArray subjectBuf = subject.toLocal8Bit();
-    QString body = "The Winnow log files are attached. Please add a note describing the "
+    QString body = "The Winnow issue report is attached. Please add a note describing the "
                    "issue. Thanks. Rory\n\n" + sysInfo;
     QByteArray bodyBuf = body.replace("\n", "\r\n").toLocal8Bit();
 
@@ -2077,10 +2301,9 @@ void MW::mailLogs()
     FreeLibrary(hMapi);
 
     if (rc != SUCCESS_SUCCESS && rc != MAPI_E_USER_ABORT)
-        G::popup->showPopup("Unable to open the mail client to send the log files.", 3000);
-  #else
+        G::popup->showPopup("Unable to open the mail client to send the report.", 3000);
+#else
     revealAndMailto();
-  #endif
 #endif
 }
 
@@ -2104,25 +2327,31 @@ void MW::reportIssue()
         - GitHub: opens the repo's bug_report issue form (.github/ISSUE_TEMPLATE) with
           the version and system fields pre-filled through the query string (an issue
           form fills a field whose id matches a query key). Logs cannot ride in the URL
-          (GitHub caps it at about 8 KB), so the Log folder is revealed for the user to
-          drag the files into the form.
-        - Email: mailLogs(), which attaches the logs itself on macOS and Windows.
+          (GitHub caps it at about 8 KB), so the report file (prepareReport) is revealed
+          for the user to drag into the form.
+        - Email: mailReport(), which attaches the report itself where it can.
+
+    "Hide folder names" (default on, since GitHub is public) passes hideFolders to the
+    report for either route.
 */
     if (G::isLogger) G::log("MW::reportIssue");
-
-    const QString logDir =
-        QStandardPaths::writableLocation(QStandardPaths::AppDataLocation) + "/Log";
 
     QMessageBox msgBox(this);
     msgBox.setWindowTitle("Report an Issue");
     msgBox.setText("How would you like to report a problem or send feedback?");
     msgBox.setInformativeText(
         "Report on GitHub: needs a free GitHub account. Opens a form in your browser with "
-        "the Winnow version and your system filled in, and opens the folder with the "
-        "Winnow log files so you can drag them into the form. Everything posted on "
-        "GitHub is public.\n\n"
+        "the Winnow version and your system filled in, and opens the folder with "
+        "WinnowReport.txt so you can drag it into the form. Everything posted on GitHub "
+        "is public.\n\n"
         "Send by Email: no account needed. Opens a new email to the Winnow developer "
-        "with the log files attached.");
+        "with WinnowReport.txt attached.\n\n"
+        "WinnowReport.txt holds recent Winnow warnings and activity, and any recent "
+        "crash report. It names the image files involved.");
+    QCheckBox *hideFoldersBox = new QCheckBox("Hide folder names in the report "
+                                              "(file names are kept)");
+    hideFoldersBox->setChecked(true);
+    msgBox.setCheckBox(hideFoldersBox);
     QPushButton *githubBtn = msgBox.addButton("Report on GitHub", QMessageBox::AcceptRole);
     QPushButton *emailBtn = msgBox.addButton("Send by Email", QMessageBox::AcceptRole);
     msgBox.addButton(QMessageBox::Cancel);
@@ -2132,8 +2361,9 @@ void MW::reportIssue()
     msgBox.exec();
     resetFocus();
 
+    const bool hideFolders = hideFoldersBox->isChecked();
     if (msgBox.clickedButton() == emailBtn) {
-        mailLogs();
+        mailReport(hideFolders);
         return;
     }
     if (msgBox.clickedButton() != githubBtn) return;
@@ -2148,7 +2378,8 @@ void MW::reportIssue()
                      + "&system=" + QUrl::toPercentEncoding(system);
 
     // Reveal first, so the browser opens on top of the file browser window.
-    if (QDir(logDir).exists()) revealInFileBrowser(logDir);
+    const QString reportPath = prepareReport(hideFolders);
+    if (!reportPath.isEmpty()) revealInFileBrowser(reportPath);
     if (!QDesktopServices::openUrl(QUrl::fromEncoded(url)))
         G::popup->showPopup("Unable to open the web browser.", 3000);
 }

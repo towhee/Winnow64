@@ -110,8 +110,8 @@ Report bugs and request features on
 [GitHub Issues](https://github.com/towhee/Winnow64/issues). In Winnow,
 Help > Report an Issue opens the bug form with your version and system filled in.
 
-No GitHub account? Use Help > Report an Issue > Send by Email, which attaches the
-Winnow log files, or write to winnowimageviewer@outlook.com.
+No GitHub account? Use Help > Report an Issue > Send by Email, which attaches a
+short Winnow report, or write to winnowimageviewer@outlook.com.
 
 More information: [winnow.ca](http://winnow.ca)
 

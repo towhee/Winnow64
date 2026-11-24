@@ -973,6 +973,8 @@
   - [22.5 Panel Probe](#225-panel-probe)
   - [22.6 Auto-Mask Probe](#226-auto-mask-probe)
   - [22.7 Reporting an Issue](#227-reporting-an-issue)
+    - [22.7.1 WinnowReport.txt](#2271-winnowreporttxt)
+    - [22.7.2 Log Hygiene](#2272-log-hygiene)
 
 ## 1 About This Document
 
@@ -12233,11 +12235,33 @@ Read it in Help > Diagnostics > Develop diagnostics, section "AUTO-MASK PROBE", 
 
 ### 22.7 Reporting an Issue
 
-Help > Report an Issue... (MW::reportIssue, `Main/diagnostics.cpp`) is the user-facing way to report bugs and feedback. GitHub accepts issues only from signed-in accounts and many users have none, so a dialog offers two routes:
+Help > Report an Issue... (MW::reportIssue, `Main/diagnostics.cpp`) is the user-facing way to report bugs and feedback. GitHub accepts issues only from signed-in accounts and many users have none, so a dialog offers two routes, plus a "Hide folder names in the report" checkbox (default on, since GitHub is public):
 
-- Report on GitHub: opens https://github.com/towhee/Winnow64/issues/new?template=bug\_report.yml with the `version` and `system` fields filled from the query string (an issue form fills any field whose `id` matches a query key). The log files cannot travel in the URL (GitHub caps it at about 8 KB), so the Log folder (AppDataLocation/Log) is revealed first and the browser opens on top of it; the user drags WinnowIssueLog.txt and WinnowLog.txt into the form.
-- Send by Email: MW::mailLogs, which attaches both logs itself on macOS (Mail.app via AppleScript) and Windows (Simple MAPI), and on Linux reveals the folder and opens a pre-filled mailto: for a manual attach.
+- Report on GitHub: opens https://github.com/towhee/Winnow64/issues/new?template=bug\_report.yml with the `version` and `system` fields filled from the query string (an issue form fills any field whose `id` matches a query key). The report cannot travel in the URL (GitHub caps it at about 8 KB), so WinnowReport.txt is revealed first and the browser opens on top of it; the user drags it into the form.
+- Send by Email: MW::mailReport attaches WinnowReport.txt itself on macOS (AppleScript, only for the default mail app per Mac::defaultMailAppId, when it is Apple Mail or Microsoft Outlook; New Outlook 16.115 verified) and Windows (Simple MAPI). Otherwise (another default mail app on macOS, Linux, MAPI unavailable) it reveals the file and opens a pre-filled mailto: in the default mail app for a manual attach. Nothing is sent automatically. Help > Logs > Mail logs uses the same path with folder names kept.
 
-MW::issueSystemInfo supplies the Winnow version, Qt version, build and running CPU architecture and the OS name; mailLogs puts it at the end of the email body. The mailto: URL is built percent-encoded (QUrl::toPercentEncoding), so newlines and punctuation in the body survive.
+#### 22.7.1 WinnowReport.txt
+
+MW::prepareReport(hideFolders) writes AppData/Log/Report/WinnowReport.txt (the folder is cleared each time). The raw logs are not sent: the first email reports were 36 MB, sat in Mail's Outbox, and would have gone from whichever account Mail had (the user's default mail app was Outlook); and the relevant lines were a few dozen among tens of thousands of repeats. The report holds:
+
+- MW::issueSystemInfo: Winnow version, Qt, build and running CPU architecture, OS.
+- Issues from the last 3 sessions of WinnowIssueLog.txt, each distinct issue once per session with "(repeated N times)". The key is the fixed type/message/source columns of Issue::toString (characters 20 to 129), so repeats that differ only in row or path collapse. Capped at 600 lines.
+- The last 200 lines of WinnowLog.txt, skipping bare-timestamp lines.
+- The newest Winnow crash report from the last 7 days, first 256 KB: macOS `~/Library/Logs/DiagnosticReports/Winnow*.ips|.crash`; Windows `%LOCALAPPDATA%/Microsoft/Windows/WER/ReportArchive|ReportQueue/AppCrash_Winnow*/Report.wer` (UTF-16). Linux has no standard per-user location, so the section says so.
+
+Privacy: the home folder becomes "~"; hideFolders also replaces everything from a path start through the last separator on the line with "…" (`~/…/0866.HEIC`), keeping file names. Measured on a real profile: 35 MB of logs became a 28 KB report.
+
+The session marker (G::issueBeginSession) carries issueSystemInfo, and prepareReport finds sessions by its "----- New Session -----" text: keep that text.
+
+#### 22.7.2 Log Hygiene
+
+Fixed at the source when the report was built:
+
+- WinnowLog.txt was never trimmed (25 MB over eight months). Utilities::trimLog(14) runs at startup, like IssueLog::trim(14); it reads only the first date unless something is old enough to drop.
+- G::log("") (a console spacer, e.g. in MW::stop) wrote a bare timestamp to the file about 5,000 times. Empty calls no longer reach the file.
+- MW::developPixelSource logged every develop base under G::FSLog (the focus stack log, on by default): 57% of WinnowLog.txt. Now G::isLogger.
+- CanonCR3::getHeifBox "Box X is unknown" uses issueDedup, as Heic already did.
+- IssueLog::run wrote one issue per 2 s wake, so a burst took hours to reach the file and the rest was lost at quit. It now drains the queue on each wake and once more on stop.
+- Each session writes "Session  Winnow &lt;version> ..." to WinnowLog.txt and the version on the issue log's New Session line.
 
 The issue forms live in `.github/ISSUE_TEMPLATE`: bug\_report.yml (field ids `what`, `steps`, `files`, `version`, `system`, `logs`), feature\_request.yml, and config.yml, whose contact link points users without a GitHub account to the email address. Renaming bug\_report.yml or the `version` / `system` ids breaks the pre-fill: change MW::reportIssue in the same commit.

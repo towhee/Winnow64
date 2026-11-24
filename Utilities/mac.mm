@@ -418,6 +418,20 @@ static NSMutableArray *gSharingItems = nil;
 static NSSharingServicePicker *gSharingPicker = nil;
 static SharingDelegate *gSharingDelegate = nil;
 
+QString Mac::defaultMailAppId()
+{
+/*
+    Bundle id of the app that opens mailto: links (e.g. "com.apple.mail",
+    "com.microsoft.Outlook"), or empty. MW::mailReport scripts only the default mail
+    app: driving Mail regardless used whatever account Mail had, or none.
+*/
+    NSURL *mailto = [NSURL URLWithString:@"mailto:"];
+    NSURL *app = [[NSWorkspace sharedWorkspace] URLForApplicationToOpenURL:mailto];
+    if (!app) return QString();
+    NSString *bundleId = [[NSBundle bundleWithURL:app] bundleIdentifier];
+    return bundleId ? QString::fromNSString(bundleId) : QString();
+}
+
 void Mac::share(QList<QUrl> &urls, WId wId)
 {
     if (G::isLogger) G::log("Mac::share");

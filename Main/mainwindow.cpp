@@ -1523,7 +1523,12 @@ void MW::showEvent(QShowEvent *event)
         restoreFoldersState();
     }
 
-    G::issueBeginSession();
+    {
+        const QString sessionInfo = issueSystemInfo().replace("\n", " | ");
+        G::issueBeginSession(sessionInfo);
+        Utilities::trimLog(14);
+        G::log("Session", sessionInfo);
+    }
 
     if (G::issueLog->failedToOpen) {
         QString popupMsg = "The issue log file failed to open, preventing Winnow<br>"
@@ -17865,7 +17870,7 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
             return;
         }
         times->decode = times->t.restart();
-        if (G::FSLog) {
+        if (G::isLogger) {      // was G::FSLog (on by default): 57% of WinnowLog.txt
             G::log("MW::developPixelSource",
                    QString("base %1x%2 sceneReferred=%3 decodedHere=%4 %5")
                        .arg(work->width).arg(work->height)
