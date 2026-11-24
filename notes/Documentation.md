@@ -12298,6 +12298,7 @@ The issue logging sweep (2026-11-23) moved failures that were swallowed, or went
 - Issues raised before G::newIssueLog runs are held in `issuesBeforeLog` (`Main/global.cpp`, cap 200) and written when the log opens, so early startup failures (settings reset, update install) are not lost. They land before the session marker, since issueBeginSession runs later.
 - A header that cannot afford `Main/global.h` forward-declares `namespace G { void issueDedup(QString, QString, QString, int, QString); }` (xmpapply.h, framedecoder\_mac.mm).
 - Unit tests link `Main/global.cpp` (tests/CMakeLists.txt), so a tested source file may call G::issue.
+- A pool-thread job must not let an exception reach QThreadPool (std::terminate). Develop's render, decode and denoise jobs in mainwindow.cpp are passed through `guardedJob(ctx, task, src, fPath, body, onFail)`: an exception is logged and onFail runs on the GUI thread to do what the job's completion does for a failed result (clear the in-flight flag, re-arm a pending render, or `done(false, ...)`). A new worker job uses it too. OrtBackend catches std::exception (bad_alloc as well as Ort::Exception) in its constructor and Run, so a model that cannot load or run is an unloaded backend, never a throw.
 
 Reasons for the message, by source:
 

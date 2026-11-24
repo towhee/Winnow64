@@ -323,142 +323,106 @@ heif_error readContext(As... as)
 
 }  // namespace
 
+namespace {
+
+/*  LIBHEIF OBJECTS, FREED ON EVERY PATH. The decoders used to free nothing: the context,
+    the handles and the decoded image all leaked, a full-size image per decode. */
+struct HeifRefs {
+    heif_context *ctx = nullptr;
+    heif_image_handle *primary = nullptr;
+    heif_image_handle *thumb = nullptr;
+    heif_image *img = nullptr;
+    ~HeifRefs()
+    {
+        if (img) heif_image_release(img);
+        if (thumb) heif_image_handle_release(thumb);
+        if (primary) heif_image_handle_release(primary);
+        if (ctx) heif_context_free(ctx);
+    }
+};
+
+bool heifFailed(const heif_error &e, const char *what, const QString &src,
+                const QString &fPath)
+{
+    if (e.code == heif_error_Ok) return false;
+    G::issueDedup("Error", QString("HEIC %1 failed: ").arg(what) + e.message, src, -1, fPath);
+    return true;
+}
+
+/*  Open fPath and get its primary image handle into r. */
+bool heifOpen(HeifRefs &r, const QString &fPath, const QString &src)
+{
+    r.ctx = heif_context_alloc();
+    if (!r.ctx) {
+        G::issueDedup("Error", "HEIC heif_context_alloc failed", src, -1, fPath);
+        return false;
+    }
+    if (heifFailed(heif_context_read_from_file(r.ctx, fPath.toLatin1().data(), nullptr),
+                   "heif_context_read_from_file", src, fPath)) return false;
+    return !heifFailed(heif_context_get_primary_image_handle(r.ctx, &r.primary),
+                       "heif_context_get_primary_image_handle", src, fPath);
+}
+
+/*  Decode handle to RGB888 into image. A COPY: the pixels belong to r.img, which is
+    released when r goes out of scope, so a QImage wrapping them would dangle. */
+bool heifDecode(HeifRefs &r, heif_image_handle *handle, QImage &image, const QString &src,
+                const QString &fPath)
+{
+    if (heifFailed(heif_decode_image(handle, &r.img, heif_colorspace_RGB,
+                                     heif_chroma_interleaved_RGB, nullptr),
+                   "heif_decode_image", src, fPath)) return false;
+    if (!r.img) {
+        G::issueDedup("Error", "HEIC heif_decode_image returned no image", src, -1, fPath);
+        return false;
+    }
+    const int w = heif_image_get_width(r.img, heif_channel_interleaved);
+    const int h = heif_image_get_height(r.img, heif_channel_interleaved);
+    int stride = 0;
+    const uint8_t *data = heif_image_get_plane_readonly(r.img, heif_channel_interleaved,
+                                                        &stride);
+    if (!data || w <= 0 || h <= 0 || stride < w * 3) {
+        G::issueDedup("Warning", "HEIC decoded image has no usable pixel data", src, -1,
+                      fPath);
+        return false;
+    }
+    image = QImage(data, w, h, stride, QImage::Format_RGB888).copy();
+    if (image.isNull()) {
+        G::issueDedup("Error", "HEIC image could not be allocated (out of memory?)", src,
+                      -1, fPath);
+        return false;
+    }
+    return true;
+}
+
+}   // namespace
+
 bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
 {
-    heif_context* ctx = heif_context_alloc();
-    auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
-    if (error.code) {
-        G::issueDedup("Error", QString("HEIC heif_context_read_from_file failed: ") + error.message,
-                      "Heic::decodePrimaryImage", -1, fPath);
-        heif_context_free(ctx);
-        return false;
-    }
-
-    // get a handle to the primary image
-    heif_image_handle* handle = nullptr;
-    error = heif_context_get_primary_image_handle(ctx, &handle);
-    if (error.code) {
-        G::issueDedup("Error", QString("HEIC heif_context_get_primary_image_handle failed: ") + error.message,
-                      "Heic::decodePrimaryImage", -1, fPath);
-        heif_context_free(ctx);
-        return false;
-    }
-
-    // decode the image and convert colorspace to RGB, saved as 24bit interleaved
-    heif_image* img = nullptr;
-    error = heif_decode_image(handle,
-                      &img,
-                      heif_colorspace_RGB,
-                      heif_chroma_interleaved_RGB,
-                      nullptr);
-    if (error.code || !img) {
-        G::issueDedup("Error", QString("HEIC heif_decode_image failed: ") + error.message,
-                      "Heic::decodePrimaryImage", -1, fPath);
-        heif_image_handle_release(handle);
-        heif_context_free(ctx);
-        return false;
-    }
-
-    int w = heif_image_get_width(img, heif_channel_interleaved);
-    int h = heif_image_get_height(img, heif_channel_interleaved);
-//    m.width = w;
-//    m.height = h;
-//    m.widthOrigPreview = w;
-//    m.heightOrigPreview = h;
-
-    int stride = 0;
-    const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
-    if (!data) {
-        QString msg = "No pixel data.";
-        G::issueDedup("Warning", msg, "Heic::heic", m->row, m->fPath);
-        return false;
-    }
-
-    if (stride <= 0) {
-        QString msg = "Invalid stride = " + QString::number(stride) + ".";
-        G::issueDedup("Warning", msg, "Heic::heic", m->row, m->fPath);
-        return false;
-    }
-    /*
-    qDebug() << "Heic::decodePrimaryImage" << fPath
-             << "w =" << w << "h =" << h
-             << "stride =" << stride;
-//             */
-    image = QImage(data, w, h, stride, QImage::Format_RGB888);
-    return true;
-    /*
-    heif_image* srcImagePtr = nullptr;
-    heif_decode_image(handle,
-                      &srcImagePtr,
-                      heif_colorspace_RGB,
-                      heif_chroma_interleaved_RGB,
-                      nullptr);
-    auto srcImage = wrapPointer(srcImagePtr, heif_image_release);
-    auto channel = heif_channel_interleaved;
-    int w = heif_image_get_width(srcImage.get(), channel);
-    int h = heif_image_get_height(srcImage.get(), channel);
-    m.width = w;
-    m.height = h;
-    m.widthFull = w;
-    m.heightFull = h;
-    QSize imgSize(w, h);
-    int stride;
-    const uint8_t* data = heif_image_get_plane_readonly(srcImage.get(),
-                                                        heif_channel_interleaved,
-                                                        &stride);
-    qDebug() << "Heic::decodePrimaryImage" << fPath
-             << "imgSize =" << imgSize
-             << "stride =" << stride;
-    // move data ownership to QImage
-    heif_image* dataImage = srcImage.release();
-    image = QImage(
-                data, imgSize.width(), imgSize.height(),
-                stride, QImage::Format_RGBA8888,
-                [](void* img) { heif_image_release(static_cast<heif_image*>(img)); },
-    dataImage
-    );
-    return true;
-    */
+    /*  Called on a fresh Heic (no parseHeic), so m is null here: report by fPath. */
+    const QString src = "Heic::decodePrimaryImage";
+    HeifRefs r;
+    if (!heifOpen(r, fPath, src)) return false;
+    return heifDecode(r, r.primary, image, src, fPath);
 }
 
 bool Heic::decodeThumbnail(QString &fPath, QImage &image)
 {
-    heif_context* ctx = heif_context_alloc();
-    heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
+    const QString src = "Heic::decodeThumbnail";
+    HeifRefs r;
+    if (!heifOpen(r, fPath, src)) return false;
 
-    // get a handle to the primary image
-    heif_image_handle* handle = nullptr;
-    heif_context_get_primary_image_handle(ctx, &handle);
-
-    // get a handle to the primary image thumbnail
-    heif_image_handle* thumbHandle = nullptr;
-    int count = heif_image_handle_get_number_of_thumbnails(handle);
-    if (count > 0) {
-        heif_item_id ids[1];
-        heif_image_handle_get_list_of_thumbnail_IDs(handle, ids, count);
-//        qDebug() << "Heic::decodeThumbnail" << ids[0];
-        heif_image_handle_get_thumbnail(handle, ids[0], &thumbHandle);
-        handle = thumbHandle;
+    /*  The first thumbnail, else the primary image. ONE id is asked for: the list call
+        writes as many ids as it is told to, and this array holds one -- passing the
+        thumbnail count overran the stack for a file with several thumbnails. */
+    heif_image_handle *handle = r.primary;
+    if (heif_image_handle_get_number_of_thumbnails(r.primary) > 0) {
+        heif_item_id id = 0;
+        if (heif_image_handle_get_list_of_thumbnail_IDs(r.primary, &id, 1) == 1
+            && !heifFailed(heif_image_handle_get_thumbnail(r.primary, id, &r.thumb),
+                           "heif_image_handle_get_thumbnail", src, fPath))
+            handle = r.thumb;
     }
-
-    // decode the image and convert colorspace to RGB, saved as 24bit interleaved
-    heif_image* img = nullptr;
-    heif_decode_image(handle,
-                      &img,
-                      heif_colorspace_RGB,
-                      heif_chroma_interleaved_RGB,
-                      nullptr);
-
-    int w = heif_image_get_width(img, heif_channel_interleaved);
-    int h = heif_image_get_height(img, heif_channel_interleaved);
-    int stride;
-    const uint8_t* data = heif_image_get_plane_readonly(img, heif_channel_interleaved, &stride);
-    /*
-    qDebug() << "Heic::decodeThumbnail" << fPath
-             << "w =" << w << "h =" << h
-             << "stride =" << stride;   //*/
-    image = QImage(data, w, h, stride, QImage::Format_RGB888);
-    return true;
+    return heifDecode(r, handle, image, src, fPath);
 }
 #endif
 

@@ -14939,6 +14939,34 @@ bool MW::developKaleidoSuppressed() const
     return imageView && imageView->needsUnfoldedFrame();
 }
 
+/*  A DEVELOP WORKER THAT THROWS DROPS ITS RESULT, NOT THE APP. The render, decode and
+    denoise jobs run on pool threads, where an exception (bad_alloc on a huge image,
+    cv::Exception from a stage, Ort::Exception) reached QThreadPool and ended in
+    std::terminate. guardedJob wraps one job: body runs inside try/catch, and on an
+    exception the job is logged and onFail is posted to the GUI thread to do what the
+    job's own completion would have done for a failed result -- clear its in-flight
+    flag, re-arm a pending render, or tell the caller (done(false, ...)) -- so nothing
+    waits for a result that is never coming. onFail must not assume body got anywhere. */
+template <class Body, class OnFail>
+static auto guardedJob(QObject *ctx, const char *task, const char *src,
+                       const QString &fPath, Body body, OnFail onFail)
+{
+    return [ctx, task, src, fPath, body = std::move(body),
+            onFail = std::move(onFail)]() mutable {
+        QString why;
+        try {
+            body();
+            return;
+        }
+        catch (const std::bad_alloc &) { why = "out of memory"; }
+        catch (const std::exception &e) { why = QString::fromUtf8(e.what()); }
+        catch (...) { why = "unknown exception"; }
+        G::issueDedup("Error", QString("%1 failed and was dropped: %2").arg(task, why),
+                      src, -1, fPath);
+        QMetaObject::invokeMethod(ctx, std::move(onFail));
+    };
+}
+
 void MW::renderDevelopPreview(bool fullRes)
 {
 /*
@@ -15207,7 +15235,9 @@ void MW::renderDevelopPreview(bool fullRes)
 
     /* CA is measured at full resolution, so the worker gets the full base too. */
     const std::shared_ptr<const WorkingImage> lensFull = base;
-    developProxyPool->start([this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
+    developProxyPool->start(guardedJob(this, "Develop proxy render",
+                                       "MW::renderDevelopPreview", fPath,
+                            [this, proxySrc, mj, degrees, fullRes, fw, fh, fPath, cache,
                             reqGen, geomGen, wantTime, tProxyCap, cacheSurvived,
                             baseKey, faithful, recipe, roiJob, roiHold, lensFull,
                             lensShot]() mutable {
@@ -15363,7 +15393,13 @@ void MW::renderDevelopPreview(bool fullRes)
                 developTintCount = 0;
             }
         });
-    });
+    }, [this]() {
+        developProxyInFlight = false;
+        if (developProxyPending) {
+            developProxyPending = false;
+            developProxyRenderTimer->start(0);
+        }
+    }));
 }
 
 void MW::invalidateDevelopAfterRotation(const QString &fPath)
@@ -15696,7 +15732,9 @@ void MW::renderDevelopFullResAsync()
     std::shared_ptr<const WorkingImage> src = base;   // denoised base when set, else clean; kept alive
     std::shared_ptr<const WorkingImage> clean = work; // un-denoised base for verify
     const LensDb::Shot lensShot = lensShotFor(fPath);     // GUI thread: reads the model
-    developRenderPool->start([this, src, clean, mj, degrees, fPath, gen, faithful,
+    developRenderPool->start(guardedJob(this, "Develop render",
+                                        "MW::renderDevelopFullResAsync", fPath,
+                             [this, src, clean, mj, degrees, fPath, gen, faithful,
                               recipe, lensShot]() {
         QElapsedTimer t;
         WorkingImageCache::RenderTimings rt;
@@ -15795,7 +15833,9 @@ void MW::renderDevelopFullResAsync()
             }
             onDevelopFullResReady(out, shown, fPath, gen, faithful, recipe, appliedGeom);
         });
-    });
+    }, [this, fPath, gen, faithful, recipe, mj]() {
+        onDevelopFullResReady(QImage(), QImage(), fPath, gen, faithful, recipe, mj.geometry);
+    }));
 }
 
 void MW::onDepthWanted()
@@ -16304,7 +16344,9 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
        the color state the PMRID base will be in. See rawDenoiseCleanBaseOk. */
     std::shared_ptr<const WorkingImage> src = rawDenoiseCleanBaseOk(clean) ? clean : nullptr;
     const EditParams b = base;
-    developRenderPool->start([this, src, b, key, pkey, fPath, m, pmridCached]() {
+    developRenderPool->start(guardedJob(this, "Raw denoise",
+                                        "MW::ensureRawDenoise", fPath,
+                             [this, src, b, key, pkey, fPath, m, pmridCached]() {
         /* Resolve both bases. The PMRID base and the clean base come from ONE decode
            (shared UnpackCfa) when either is missing; a pure amount change (both cached)
            skips the decode and just re-blends. clean is taken from the caller, else
@@ -16428,7 +16470,10 @@ void MW::ensureRawDenoise(const QString &fPath, const EditParams &base,
             renderDevelopPreview(false);   // repaint the proxy now
             developFullResTimer->start(kDevelopSettleMs);   // and a crisp full-res
         });
-    });
+    }, [this]() {
+        developDenoiseInFlightKey.clear();
+        progress->clearProgress(progressRawDenoiseRow);
+    }));
 }
 
 void MW::reportRawDenoiseUnavailable(const QString &fPath)
@@ -16600,7 +16645,9 @@ void MW::ensureDevelopWork(const QString &fPath)
     const bool showDemosaic = !G::autoRunDenoise && G::useRaw && isFileRaw(fPath)
         && !render.apple;
 
-    developRenderPool->start([this, fPath, m, gen, showDemosaic, render]() mutable {
+    developRenderPool->start(guardedJob(this, "Develop decode",
+                                        "MW::ensureDevelopWork", fPath,
+                             [this, fPath, m, gen, showDemosaic, render]() mutable {
         ImageDecoder dec(0, dm, metadata);
         dec.buildWork = true;   // a display-referred WorkingImage, from the file's pixels
         std::function<void(int, int)> prog;
@@ -16634,7 +16681,16 @@ void MW::ensureDevelopWork(const QString &fPath)
             if (gen == developParamsGen)                       // no newer edit arrived; settle a crisp one
                 developFullResTimer->start(kDevelopSettleMs);
         });
-    });
+    }, [this, fPath, showDemosaic]() {
+        /* As a decode that produced nothing: marked tried, so the re-render uses the
+           fallback instead of looping the decode. */
+        if (showDemosaic) progress->clearProgress(progressDemosaicRow);
+        developWorkInFlight.clear();
+        updateDevelopRenderingHint();
+        if (!dm || fPath != dm->currentKey) return;
+        developWorkTriedPath = fPath;
+        renderDevelopPreview(false);
+    }));
 }
 
 void MW::ensureWorkingImageNow(const QString &fPath)
@@ -17747,7 +17803,9 @@ void MW::developPresetAutoSolve(const QString &fPath, const EditParams &base, bo
         const bool sensorRaw = developWantsSensor(m, /*requireSensor*/false);
         const RawRender::Choice render = RawRender::resolve(base);
 
-        developRenderPool->start([this, fPath, m, base, wb, tone, sensorRaw, render,
+        developRenderPool->start(guardedJob(this, "Preset Auto solve",
+                                            "MW::developPresetAutoSolve", fPath,
+                                 [this, fPath, m, base, wb, tone, sensorRaw, render,
                                   done]() mutable {
             std::shared_ptr<const WorkingImage> work;
             bool decodedHere = false;
@@ -17794,7 +17852,7 @@ void MW::developPresetAutoSolve(const QString &fPath, const EditParams &base, bo
                     if (gen == presetAutoThumbGen) releasePresetAutoThumb();
                 });
             });
-        });
+        }, [done, base]() { done(false, base); }));
     };
 
     /* The previous image's base is held (or about to be) for its devPreview: start
@@ -17926,7 +17984,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
     /* Step 1 (worker): make sure the scene-linear WorkingImage exists (developBaseFor).
        decodeIndependent caches it as a side effect, so an image already visited is a
        cache hit. */
-    developRenderPool->start([this, fPath, m, mj, depth, space, outSpace, wantDenoise,
+    developRenderPool->start(guardedJob(this, "Develop decode for export",
+                                        "MW::developPixelSource", fPath,
+                             [this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, degreesSnap, sensorRaw, requireSensor,
                               lensShot, render, maxEdge, done, times,
                               reportTime]() mutable {
@@ -18030,7 +18090,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                "Denoise raw" is set, else the clean one. work is kept alive alongside it
                because the mask fields registered above are keyed to those pixels. */
             times->masks = times->t.restart();
-            developRenderPool->start([this, fPath, work, src, mj, degrees, depth, space,
+            developRenderPool->start(guardedJob(this, "Develop render for export",
+                                                "MW::developPixelSource", fPath,
+                                     [this, fPath, work, src, mj, degrees, depth, space,
                                       outSpace, decodedHere, lensShot, maxEdge,
                                       done, times, reportTime, wantDenoise]() {
                 times->t.restart();
@@ -18067,9 +18129,9 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                 QMetaObject::invokeMethod(this, [done, out]() {
                     done(!out.isNull(), out);
                 });
-            });
+            }, [done]() { done(false, QImage()); }));
         });
-    });
+    }, [done]() { done(false, QImage()); }));
 }
 
 void MW::previewPixelSource(const QString &fPath,
@@ -18155,7 +18217,9 @@ bool MW::exportFromDevPreview(const QString &fPath, const ExportSettings &es,
     const bool qualityOk = fmt.hasQuality && es.quality <= G::devPreviewQuality;
 
     QPointer<MW> self(this);
-    QThreadPool::globalInstance()->start([self, fPath, key, es, sensorLong, fullPref,
+    QThreadPool::globalInstance()->start(guardedJob(qApp, "Export from the develop preview",
+                                                    "MW::exportFromDevPreview", fPath,
+                                         [self, fPath, key, es, sensorLong, fullPref,
                                           qualityOk, done]() {
         QElapsedTimer t;
         t.start();
@@ -18208,7 +18272,13 @@ bool MW::exportFromDevPreview(const QString &fPath, const ExportSettings &es,
                                      ImageExporter::renderSpace(es.space), done,
                                      nullptr, -1, false, 0, ImageExporter::reportTime);
         });
-    });
+    }, [self, fPath, es, done]() {
+        // the render it would have fallen back to anyway
+        if (!self) { done(false, QImage()); return; }
+        self->developPixelSource(fPath, es.wants16Bit(),
+                                 ImageExporter::renderSpace(es.space), done,
+                                 nullptr, -1, false, 0, ImageExporter::reportTime);
+    }));
     return true;
 }
 

@@ -94,8 +94,8 @@ private:
     bool irotBox(quint32 &offset, quint32 &length);  // Color Information Box
     bool pixiBox(quint32 &offset, quint32 &length);  // Color Information Box
 
-    QFile *file;        // temp until decide what to do with constructor
-    ImageMetadata *m;
+    QFile *file = nullptr;      // temp until decide what to do with constructor
+    ImageMetadata *m = nullptr; // set by parseHeic; null in the decoders
     QString fPath;
     qint64 eof;
     int exifItemID;

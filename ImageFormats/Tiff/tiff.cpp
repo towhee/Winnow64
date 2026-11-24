@@ -1239,6 +1239,13 @@ bool Tiff::encodeThumbnail(QString fPath, QImage &thumb)
 
     IFD *ifd = new IFD;
 
+    // before the first write: sample() gives no thumbnail size for a 0 x 0 image
+    if (width <= 0 || height <= 0) {
+        G::issue("Warning", "Thumbnail not embedded: the TIFF reports no image size",
+                 "Tiff::encodeThumbnail", -1, m.fPath);
+        return false;
+    }
+
     // go to last main IFD offset and replace with offset to new IFD at end of file
     m.offsetThumb = p.file.size();
     p.file.seek(lastIFDOffsetPosition);
@@ -1357,6 +1364,13 @@ bool Tiff::encodeThumbnail(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         return false;
     }
     p.file.open(QIODevice::ReadWrite);
+
+    // before the first write: sample() gives no thumbnail size for a 0 x 0 image
+    if (width <= 0 || height <= 0) {
+        G::issue("Warning", "Thumbnail not embedded: the TIFF reports no image size",
+                 "Tiff::encodeThumbnail", -1, m.fPath);
+        return false;
+    }
 
     // go to last main IFD offset and replace with offset to new IFD at end of file
     m.offsetThumb = p.file.size();
@@ -1496,6 +1510,13 @@ bool Tiff::encodeThumbnailOld(MetadataParameters &p, ImageMetadata &m, IFD *ifd)
         return false;
     }
     p.file.open(QIODevice::ReadWrite);
+
+    // before the first write: sample() gives no thumbnail size for a 0 x 0 image
+    if (width <= 0 || height <= 0) {
+        G::issue("Warning", "Thumbnail not embedded: the TIFF reports no image size",
+                 "Tiff::encodeThumbnail", -1, m.fPath);
+        return false;
+    }
 
     // go to last main IFD offset and replace with offset to new IFD at end of file
     m.offsetThumb = p.file.size();
@@ -1702,20 +1723,26 @@ void Tiff::sample(ImageMetadata &m, int newLongside, int &nth, int &w, int &h)
     w = width;                      // width of thumb to create
     h = height;                     // height of thumb to create
     nth = 1;
+    /* NO DIVISION BY ZERO. A missing ImageWidth / ImageHeight tag reads as 0, and a
+       very long, thin image rounded its short side to 0, so width / w was SIGFPE. The
+       encoders refuse a zero-size image before their first write; this keeps sample
+       itself safe for any caller. */
+    if (width <= 0 || height <= 0) { w = h = 0; return; }
     if (!newLongside) return;
     if (width > height) {
         if (newLongside > width) newLongside = width;
         w = newLongside;
-        h = w * height / width;
+        h = std::max(1, int(qint64(w) * height / width));
     }
     else {
         if (newLongside > height) newLongside = height;
         h = newLongside;
-        w = h * width / height;
+        w = std::max(1, int(qint64(h) * width / height));
     }
     int nthW = width / w;
     int nthH = height / h;
     nthW < nthH ? nth = nthW : nth = nthH;
+    if (nth < 1) nth = 1;
     /*
     if (isDebug)
     qDebug() << "Tiff::sample"

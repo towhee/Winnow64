@@ -44,6 +44,10 @@ struct OrtBackend::Impl {
     QString backend = "none";
     bool loaded = false;
     QString path;               // the model, for the issue log (Run has no other name)
+
+    // the constructor's work, in a try there: see OrtBackend::OrtBackend
+    void load(const QString &onnxPath, InferenceDevice pref,
+              const QString &compileCacheDir, const FixedDims &fixedDims);
 };
 
 OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
@@ -53,6 +57,23 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
     if (G::isLogger) G::log("OrtBackend::OrtBackend", onnxPath);
     d->path = onnxPath;
 
+    /*  NOTHING ESCAPES THE CONSTRUCTOR. Its callers build it inside std::call_once on a
+        decode or develop thread, where a throw is std::terminate. The Env, the session
+        options and the dimension overrides all throw Ort::Exception, and any allocation
+        can throw bad_alloc: each leaves an unloaded backend, which every caller already
+        handles as a missing model. */
+    try {
+        d->load(onnxPath, pref, compileCacheDir, fixedDims);
+    } catch (const std::exception &e) {
+        G::issueDedup("Error", QString("Model runtime could not be set up: ") + e.what(),
+                      "OrtBackend", -1, onnxPath);
+        d->loaded = false;
+    }
+}
+
+void OrtBackend::Impl::load(const QString &onnxPath, InferenceDevice pref,
+                            const QString &compileCacheDir, const FixedDims &fixedDims)
+{
     /* Create the Env FIRST: it initializes ORT's logging manager, which the CoreML EP's
        HasNeuralEngine() probe consults via DefaultLogger(). Appending the EP before any Env
        exists makes ORT throw (OnnxRuntimeException) from inside the provider factory -- a raw
@@ -88,7 +109,7 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
                     {"ModelFormat", "MLProgram"},
                     {"MLComputeUnits", "CPUAndGPU"},
                     {"ModelCacheDirectory", compileCacheDir.toStdString()}});
-                d->backend = "CoreML/GPU (cached)";
+                backend = "CoreML/GPU (cached)";
             }
             else {
                 uint32_t coremlFlags = 0;
@@ -99,14 +120,14 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
                 }
                 Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_CoreML(so,
                                                                                   coremlFlags));
-                d->backend = coremlName;
+                backend = coremlName;
             }
 #elif defined(Q_OS_WIN)
             /* DirectML requires sequential execution and no memory pattern. */
             so.DisableMemPattern();
             so.SetExecutionMode(ORT_SEQUENTIAL);
             Ort::ThrowOnError(OrtSessionOptionsAppendExecutionProvider_DML(so, 0));
-            d->backend = "DirectML";
+            backend = "DirectML";
 #endif
         } catch (const std::exception &e) {
             /* Every ONNX model (raw denoise, LaMa, MI-GAN, depth, SigLIP) passes here:
@@ -114,31 +135,31 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
                runs it, only slower. */
             G::issueDedup("Info", QString("Model runs on the CPU, the GPU/NPU was not "
                           "available: ") + e.what(), "OrtBackend", -1, onnxPath);
-            d->backend = "none";
+            backend = "none";
         }
     }
 
     try {
         const auto p = nativePath(onnxPath);
-        d->session = Ort::Session(env, p.c_str(), so);
+        session = Ort::Session(env, p.c_str(), so);
 
         Ort::AllocatorWithDefaultOptions alloc;
-        const size_t nIn = d->session.GetInputCount();
+        const size_t nIn = session.GetInputCount();
         for (size_t i = 0; i < nIn; ++i) {
-            auto name = d->session.GetInputNameAllocated(i, alloc);
-            d->inNames.emplace_back(name.get());
+            auto name = session.GetInputNameAllocated(i, alloc);
+            inNames.emplace_back(name.get());
         }
-        const size_t nOut = d->session.GetOutputCount();
+        const size_t nOut = session.GetOutputCount();
         for (size_t i = 0; i < nOut; ++i) {
-            auto name = d->session.GetOutputNameAllocated(i, alloc);
-            d->outNames.emplace_back(name.get());
+            auto name = session.GetOutputNameAllocated(i, alloc);
+            outNames.emplace_back(name.get());
         }
-        if (d->backend == "none") d->backend = "CPU";
-        d->loaded = true;
-    } catch (const Ort::Exception &e) {
+        if (backend == "none") backend = "CPU";
+        loaded = true;
+    } catch (const std::exception &e) {         // Ort::Exception, bad_alloc
         G::issueDedup("Error", QString("Model could not be loaded: ") + e.what(),
                       "OrtBackend", -1, onnxPath);
-        d->loaded = false;
+        loaded = false;
     }
 }
 
@@ -192,7 +213,12 @@ bool OrtBackend::Run(const std::vector<std::string> &inNames,
         outputs.clear();
         outputs.resize(outVals.size());
         for (size_t i = 0; i < outVals.size(); ++i) {
-            if (!outVals[i].IsTensor()) return false;
+            if (!outVals[i].IsTensor()) {
+                G::issueDedup("Error", "Model run failed: an output is not a tensor",
+                              "OrtBackend::Run", -1, d->path);
+                outputs.clear();
+                return false;
+            }
             const auto info = outVals[i].GetTensorTypeAndShapeInfo();
             outputs[i].shape = info.GetShape();
             const size_t n = static_cast<size_t>(info.GetElementCount());
@@ -200,9 +226,10 @@ bool OrtBackend::Run(const std::vector<std::string> &inNames,
             outputs[i].data.assign(src, src + n);
         }
         return true;
-    } catch (const Ort::Exception &e) {
+    } catch (const std::exception &e) {         // Ort::Exception, bad_alloc
         G::issueDedup("Error", QString("Model run failed: ") + e.what(), "OrtBackend::Run",
                       -1, d->path);
+        outputs.clear();
         return false;
     }
 }
