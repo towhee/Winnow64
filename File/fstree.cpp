@@ -921,7 +921,14 @@ void FSTree::updateWatchedFolders()
     QStringList toAdd;
     for (const QString &p : wanted)
         if (!current.contains(p)) toAdd << p;
-    if (!toAdd.isEmpty()) folderWatcher.addPaths(toAdd);
+    if (!toAdd.isEmpty()) {
+        /* addPaths returns those it could NOT watch (a removed folder, or the per-process
+           watch limit, usually on Linux): their changes are not seen until a refresh. */
+        const QStringList notWatched = folderWatcher.addPaths(toAdd);
+        if (!notWatched.isEmpty())
+            G::issueDedup("Info", "Folders panel: some folders are not watched for changes",
+                          "FSTree::updateWatchedFolders", -1, notWatched.first());
+    }
 }
 
 void FSTree::onWatchedDirectoryChanged(const QString &path)

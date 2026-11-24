@@ -139,10 +139,13 @@ void MW::pasteFiles(QString folderPath)
     foreach (const QString &srcPath, srcOthers) {
         if (handled.contains(srcPath)) continue;
         const QString destPath = folderPath + "/" + QFileInfo(srcPath).fileName();
-        if (QFile::copy(srcPath, destPath)) {
+        QFile src(srcPath);
+        if (src.copy(destPath)) {
             newPaths << destPath;
             pasted << destPath;
         }
+        else G::issue("Warning", "Paste: a file was not copied: " + src.errorString(),
+                      "MW::pasteFiles", -1, srcPath);
     }
     recordNewFilesStep(tr("Paste"), pasted);
 

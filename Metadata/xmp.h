@@ -82,6 +82,8 @@ public:
     QString srcToString();
     bool writeJPG(QByteArray &buffer);
     bool writeSidecar(QFile &sidecarFile);
+    // why the last writeSidecar failed (QSaveFile's errorString), for the caller's issue
+    QString writeError;
 
     QString docToQString();
     QByteArray docToByteArray();

@@ -4041,6 +4041,12 @@ void MW::handleStartupArgs(const QString &args)
             }
         }
 
+        /* A droplet that finds nothing to embellish: the files were not modified in the
+           cutoff window (a slow copy, a clock skew), so the drop does nothing at all. */
+        if (pathList.isEmpty())
+            G::issue("Warning", "Embellish droplet: no recently copied images were found",
+                     "MW::handleStartupArgs", -1, folderPath);
+
         /* embellish src images (pathList).  The export runs from the event loop; the
            embellished paths arrive with finished. */
         /* A winnet sent while an export is running (this is also the running instance's
@@ -11722,6 +11728,12 @@ LensProfileState lensProfileState(const LensDb::Shot &shot, const EditParams &g,
             st.coeffs = r.coeffs;
             id = r.lens->id();
         }
+        /* A profile the user PICKED that this machine cannot find (a recipe from another
+           computer, a removed user lens file): rendered and exported without it. An
+           unknown lens under Auto is normal and not logged. */
+        else if (!g.lensProfileId.isEmpty())
+            G::issueDedup("Warning", "Chosen lens profile not found, rendered without it: " +
+                          g.lensProfileId, "lensProfileState");
     }
     st.amounts.distortion = g.lensDistortion;
     st.amounts.vignetting = g.lensVignetting;

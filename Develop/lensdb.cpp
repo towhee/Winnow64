@@ -1,4 +1,5 @@
 #include "Develop/lensdb.h"
+#include "Main/global.h"
 
 #include <QDir>
 #include <QMutex>
@@ -189,7 +190,10 @@ void Database::load()
                                               QDir::Name);
         for (const QString &f : files) {
             QFile file(d.filePath(f));
-            if (file.open(QIODevice::ReadOnly)) parseXml(file.readAll());
+            if (file.open(QIODevice::ReadOnly)) parseXml(file.readAll(), file.fileName());
+            else G::issueDedup("Warning", "Lens profile file could not be opened: " +
+                               file.errorString(), "LensDb::Database", -1,
+                               file.fileName());
         }
     };
     readDir(QStringLiteral(":/lensfun"));
@@ -198,7 +202,7 @@ void Database::load()
     finish();
 }
 
-void Database::parseXml(const QByteArray &xml)
+void Database::parseXml(const QByteArray &xml, const QString &source)
 {
     QXmlStreamReader r(xml);
     /* The current element's text; lang= variants of <maker>/<model> are kept apart. */
@@ -352,6 +356,12 @@ void Database::parseXml(const QByteArray &xml)
             else { lensIndex.insert(id, lenses.size()); lenses.append(L); }
         }
     }
+    /* A user lens file with an XML error: the lenses after the error are not loaded,
+       so a profile the user added can look missing. */
+    if (r.hasError())
+        G::issueDedup("Warning", QString("Lens profile file has an XML error at line %1: %2")
+                      .arg(r.lineNumber()).arg(r.errorString()), "LensDb::parseXml", -1,
+                      source);
 }
 
 void Database::finish()

@@ -104,6 +104,12 @@ Conn *threadConn()
     return tlsConn.localData();
 }
 
+/*  WHY THE LAST MIGRATION FAILED. migrate's queries are its own, so the connection's
+    lastError(), which the caller used to report, was empty: the issue said the index
+    was rebuilt but not why. Each failure point records its query's error here. Per
+    thread, as connections are. */
+static thread_local QString gMigrateError;
+
 /* Move a database that cannot be opened or migrated out of the way, with its WAL
    sidecars, so the next open creates a healthy one. Best effort: if the rename fails
    there is nothing further to try, and the caller degrades to "no cache". */
@@ -355,6 +361,8 @@ QSqlDatabase CacheDb::db()
         }
 
         err = d.lastError().text();
+        if (err.trimmed().isEmpty() && !gMigrateError.isEmpty())
+            err = "schema migration failed: " + gMigrateError;
         {
             QSqlDatabase dead = d;
             dead.close();
@@ -610,10 +618,18 @@ bool CacheDb::migrate(QSqlDatabase &db)
 
     int version = 0;
     if (q.exec("PRAGMA user_version") && q.next()) version = q.value(0).toInt();
-    if (version > kSchemaVersion) return false;
+    if (version > kSchemaVersion) {
+        gMigrateError = QString("the index is schema %1, newer than this Winnow's %2")
+                            .arg(version).arg(kSchemaVersion);
+        return false;
+    }
     if (version == kSchemaVersion) return true;
 
-    if (!db.transaction()) return false;
+    gMigrateError.clear();
+    if (!db.transaction()) {
+        gMigrateError = db.lastError().text();
+        return false;
+    }
 
     if (version < 1) {
         /* devpreview: the develop-preview index. One row per image that has a cached
@@ -643,6 +659,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -661,6 +678,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         const char *addCol =
             "ALTER TABLE devpreview ADD COLUMN pathkey TEXT NOT NULL DEFAULT ''";
         if (!q.exec(QString::fromLatin1(addCol))) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -669,6 +687,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         {
             QSqlQuery sel(db);
             if (!sel.exec("SELECT id, path FROM devpreview")) {
+                gMigrateError = sel.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -682,6 +701,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                 upd.addBindValue(cachePathKey(r.second));
                 upd.addBindValue(r.first);
                 if (!upd.exec()) {
+                    gMigrateError = upd.lastError().text();
                     db.rollback();
                     return false;
                 }
@@ -698,6 +718,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
             "DELETE FROM devpreview WHERE id NOT IN"
             " (SELECT MAX(id) FROM devpreview GROUP BY pathkey)";
         if (!q.exec(QString::fromLatin1(dedupe))) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -705,6 +726,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec("DROP INDEX IF EXISTS devpreview_path")
             || !q.exec("CREATE UNIQUE INDEX IF NOT EXISTS devpreview_pathkey"
                        " ON devpreview(pathkey)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -807,6 +829,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -891,6 +914,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -938,6 +962,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -985,6 +1010,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -1042,6 +1068,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -1101,6 +1128,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         for (int pass = 0; pass < 4; ++pass) {
             for (const char *sql : repair) {
                 if (!q.exec(QString::fromLatin1(sql))) {
+                    gMigrateError = q.lastError().text();
                     db.rollback();
                     return false;
                 }
@@ -1128,6 +1156,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
     fine" -- is exactly true of every row that exists.
 */
         if (!q.exec("ALTER TABLE image ADD COLUMN unreadable INTEGER NOT NULL DEFAULT 0")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1240,12 +1269,14 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
         }
 
         if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ true)) {
+            gMigrateError = "the keyword table rebuild failed";
             db.rollback();
             return false;
         }
@@ -1260,6 +1291,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : after) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -1303,15 +1335,18 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
         }
         if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ true)) {
+            gMigrateError = "the keyword table rebuild failed";
             db.rollback();
             return false;
         }
         if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1360,15 +1395,18 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
         }
         if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ false)) {
+            gMigrateError = "the keyword table rebuild failed";
             db.rollback();
             return false;
         }
         if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1404,6 +1442,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (hasDevPreview) {
             if (!q.exec("ALTER TABLE devpreview"
                         " ADD COLUMN demoted INTEGER NOT NULL DEFAULT 0")) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -1438,6 +1477,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -1450,6 +1490,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         }
         if (hasThumb) {
             if (!q.exec("DELETE FROM thumb")) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
@@ -1488,15 +1529,18 @@ bool CacheDb::migrate(QSqlDatabase &db)
         };
         for (const char *sql : ddl) {
             if (!q.exec(QString::fromLatin1(sql))) {
+                gMigrateError = q.lastError().text();
                 db.rollback();
                 return false;
             }
         }
         if (!rebuildPathKeyedKeywords(db, /*seedVocab*/ false)) {
+            gMigrateError = "the keyword table rebuild failed";
             db.rollback();
             return false;
         }
         if (!q.exec("DROP TABLE IF EXISTS kw_carry")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1522,6 +1566,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec("UPDATE image SET captured ="
                     " CAST(strftime('%s', captured, 'unixepoch', 'localtime') AS INTEGER)"
                     " WHERE captured IS NOT NULL")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1558,6 +1603,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  developed     INTEGER NOT NULL DEFAULT 0,"
                     "  devpreviewkey TEXT NOT NULL DEFAULT '',"
                     "  PRIMARY KEY (image_id, vid)) WITHOUT ROWID")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1581,6 +1627,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  saved   INTEGER NOT NULL)")
             || !q.exec("CREATE INDEX IF NOT EXISTS develop_history_saved"
                        " ON develop_history(saved)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1604,6 +1651,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("UPDATE image SET srcmtime = 0 WHERE gpscoord <> ''"
                     " AND lower(ext) IN ('jpg', 'jpeg', 'jpe', 'png')")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1635,6 +1683,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
             || !q.exec("CREATE TABLE IF NOT EXISTS catalog_meta ("
                        "  key   TEXT PRIMARY KEY,"
                        "  value TEXT NOT NULL)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1652,6 +1701,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         Re-runnable.
     */
         if (!q.exec("UPDATE image SET pick = 0 WHERE pick <> 0")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1676,6 +1726,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  srcsize  INTEGER NOT NULL DEFAULT 0,"
                     "  srcmtime INTEGER NOT NULL DEFAULT 0,"
                     "  vec      BLOB    NOT NULL)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1700,6 +1751,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("DELETE FROM thumb WHERE pathkey IN"
                     " (SELECT pathkey FROM develop_history)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1724,6 +1776,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("UPDATE image SET srcmtime = 0"
                     " WHERE lower(ext) IN ('jpg', 'jpeg', 'jpe')")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1746,6 +1799,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                     "  path     TEXT    NOT NULL,"
                     "  srcsize  INTEGER NOT NULL,"
                     "  srcmtime INTEGER NOT NULL)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1773,6 +1827,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if (!q.exec(QString("DELETE FROM thumb WHERE pathkey IN"
                             " (SELECT pathkey FROM image WHERE %1)").arg(damaged))
             || !q.exec(QString("UPDATE image SET srcmtime = 0 WHERE %1").arg(damaged))) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1800,6 +1855,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         if ((!has && !q.exec("ALTER TABLE image ADD COLUMN colorspace INTEGER"
                              " NOT NULL DEFAULT 0"))
             || !q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1817,6 +1873,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
                     " WHERE colorspace IN (0, 9) OR lower(ext) = 'dng'")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1838,6 +1895,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
     */
         if (!q.exec("DELETE FROM thumb WHERE pathkey IN"
                     " (SELECT pathkey FROM image WHERE colorspace NOT IN (0, 1, 9))")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1870,6 +1928,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                 if (hasColumn(table, column)) continue;
                 if (!q.exec(QString("ALTER TABLE %1 ADD COLUMN %2 REAL NOT NULL DEFAULT -1")
                                 .arg(table, column))) {
+                    gMigrateError = q.lastError().text();
                     db.rollback();
                     return false;
                 }
@@ -1877,6 +1936,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
         }
         if (!q.exec("UPDATE image SET srcsize = -1, srcmtime = -1, sidecarmtime = -1"
                     " WHERE developed = 1 OR id IN (SELECT image_id FROM image_version)")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1920,6 +1980,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
             || !q.exec(QString("UPDATE image_fts SET title = '' WHERE rowid IN"
                                " (SELECT id FROM image WHERE %1)").arg(junkTitle))
             || !q.exec(QString("UPDATE image SET title = '' WHERE %1").arg(junkTitle))) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1957,6 +2018,7 @@ bool CacheDb::migrate(QSqlDatabase &db)
                        " ON image(captured, ext, width, height)")
             || !q.exec("CREATE INDEX IF NOT EXISTS image_fingerprinted ON image(captured)"
                        " WHERE pixelhash IS NOT NULL OR duration_ms IS NOT NULL")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
@@ -1974,12 +2036,14 @@ bool CacheDb::migrate(QSqlDatabase &db)
             while (q.next()) if (q.value(1).toString() == "number") has = true;
         if (!has && !q.exec("ALTER TABLE image_version"
                             " ADD COLUMN number INTEGER NOT NULL DEFAULT 0")) {
+            gMigrateError = q.lastError().text();
             db.rollback();
             return false;
         }
     }
 
     if (!q.exec(QString("PRAGMA user_version = %1").arg(kSchemaVersion))) {
+        gMigrateError = q.lastError().text();
         db.rollback();
         return false;
     }

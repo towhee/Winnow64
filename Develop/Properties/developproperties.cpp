@@ -11024,8 +11024,13 @@ EditStack DevelopProperties::mergePreset(const DevelopPreset &preset, EditStack 
     /* Preset values are QVariants from QSettings and reach EditParams as a bare toFloat()
        (DevelopPresets::assignParam), so a hand-edited or damaged store can inject values
        no slider could produce. Range-check the MERGED stack for the same reason the
-       sidecar load does -- this covers the hover preview as well as the click. */
-    EditStack::sanitize(s);
+       sidecar load does -- this covers the hover preview as well as the click. A clamp
+       means the stored preset is damaged, so it is logged (once per kind). */
+    QStringList fixes;
+    EditStack::sanitize(s, &fixes);
+    for (const QString &f : std::as_const(fixes))
+        G::issueDedup("Info", "Develop preset value out of range, limited: " + f,
+                      "DevelopProperties::mergePreset");
     return s;
 }
 

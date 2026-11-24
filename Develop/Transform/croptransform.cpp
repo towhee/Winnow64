@@ -1,4 +1,5 @@
 #include "Develop/Transform/croptransform.h"
+#include "Main/global.h"
 
 #include <opencv2/core.hpp>
 #include <opencv2/imgproc.hpp>
@@ -704,6 +705,9 @@ QImage CropTransform::rectifyPerspective(const QImage &src, const QPointF quad[4
     /* Clamp the output canvas so an extreme/near-degenerate warp can't blow up memory. */
     const int outW = std::min(20000, std::max(2, int(std::ceil(maxX - minX))));
     const int outH = std::min(20000, std::max(2, int(std::ceil(maxY - minY))));
+    if (outW == 20000 || outH == 20000)
+        G::issueDedup("Info", "Perspective warp limited to 20000 px: the quad is nearly "
+                      "degenerate", "CropTransform::rectifyPerspective");
 
     cv::Mat T = (cv::Mat_<double>(3, 3) << 1, 0, -double(minX),
                                             0, 1, -double(minY),
@@ -780,6 +784,8 @@ QImage CropTransform::applyGeometry(const QImage &src, const Geometry &g)
         QRectF ignore;
         const QImage warped = rectifyPerspective(img, quadPx, ignore);
         if (!warped.isNull()) img = warped;
+        else G::issueDedup("Info", "Perspective warp skipped: its quad is too small or "
+                           "the warp failed", "CropTransform::applyGeometry");
     }
 
     /* 3) Crop: g.crop is normalized in the post-warp output space. */

@@ -976,6 +976,7 @@
     - [22.7.1 WinnowReport.txt](#2271-winnowreporttxt)
     - [22.7.2 Log Hygiene](#2272-log-hygiene)
     - [22.7.3 Issue Line Layout](#2273-issue-line-layout)
+    - [22.7.4 Where Failures Are Logged](#2274-where-failures-are-logged)
 
 ## 1 About This Document
 
@@ -12287,3 +12288,24 @@ An unknown type string shows as "Other". Issue::collapseKey is the type + source
 Every issue message says what failed and why: include `lastError().text()`, `errorString()` or `e.what()`. Keep the message text stable and pass the file as fPath, so G::issueDedup still collapses repeats across files. Session Issues (Help > Diagnostics) lists issueDedup counts the same way, right-aligned.
 
 The issue forms live in `.github/ISSUE_TEMPLATE`: bug\_report.yml (field ids `what`, `steps`, `files`, `version`, `system`, `logs`), feature\_request.yml, and config.yml, whose contact link points users without a GitHub account to the email address. Renaming bug\_report.yml or the `version` / `system` ids breaks the pre-fill: change MW::reportIssue in the same commit.
+
+#### 22.7.4 Where Failures Are Logged
+
+The issue logging sweep (2026-11-23) moved failures that were swallowed, or went only to qDebug, into G::issue / G::issueDedup. The rules it settled on:
+
+- Failure branches only. A hot path (thumbnail cache writes, decoders, per-tile inference) uses issueDedup, which costs nothing until something fails and then logs each reason once. Nothing is logged per pixel or per row in a loop: a batch logs one count at the end (Ingest, Embellish export).
+- Severity: Error = data was lost or a feature cannot work; Warning = one operation failed and the user may notice; Info = expected degradation worth knowing in a report (no raw decoder for an extension, a read-only folder, a lens profile not found under Auto is NOT logged).
+- Issues raised before G::newIssueLog runs are held in `issuesBeforeLog` (`Main/global.cpp`, cap 200) and written when the log opens, so early startup failures (settings reset, update install) are not lost. They land before the session marker, since issueBeginSession runs later.
+- A header that cannot afford `Main/global.h` forward-declares `namespace G { void issueDedup(QString, QString, QString, int, QString); }` (xmpapply.h, framedecoder\_mac.mm).
+- Unit tests link `Main/global.cpp` (tests/CMakeLists.txt), so a tested source file may call G::issue.
+
+Reasons for the message, by source:
+
+- Image decode: DecodeReason::fromFile / fromData (`Image/decodereason.h`) re-reads with QImageReader ON FAILURE ONLY and returns its errorString, since QImage::load gives none.
+- libtiff: the TIFFSetErrorHandler in main.cpp stores the last error per thread (Tiff::noteLibTiffError); Tiff::takeLibTiffError returns and clears it ("libtiff gave no reason" when empty). Tiff::read clears it first.
+- ExifTool: ExifTool::drainReplies waits for every outstanding command's "{ready}" and logs stderr lines starting "Error". addThumb drains before returning, because every caller deletes the thumbnail file at once (exports used to lose their thumbnail); readTag, replaceEmbeddedImages and close drain first, so an earlier command's "{ready}" is not taken as theirs.
+- Sidecar writes: Xmp::writeError holds QSaveFile's errorString after a failed writeSidecar; every caller appends it. XmpEmbed::writeAtomically logs its own cause.
+- A sidecar that does not parse: Xmp::parseError (with the byte offset) and Xmp::fix, which keeps the old file as NAME.xmp.corrupt (a timestamped name if that exists) before the sidecar is rewritten, and refuses (returns false, caller writes nothing) when it cannot make that copy.
+- CacheDb migration: the per-thread gMigrateError records the failing query's error, since the connection's lastError() was empty after a failed migrate.
+- An app update that failed to install: AppInstaller::takeLastInstallFailure reads the last block of install.log once, at the next start.
+- Map tiles: MapTileSource::setError cuts URLs to the host (`https://host/…`), so an API key in a tile URL cannot reach a public report.

@@ -876,17 +876,29 @@ bool Xmp::writeSidecar(QFile &sidecarFile)
        document must not depend on a file this function has already shut. */
     const QByteArray doc = docToQString().toUtf8();
 
+    writeError.clear();
     const QString path = sidecarFile.fileName();
-    if (path.isEmpty()) return false;
+    if (path.isEmpty()) {
+        writeError = "no file name";
+        return false;
+    }
     sidecarFile.close();
 
     QSaveFile f(path);
-    if (!f.open(QIODevice::WriteOnly)) return false;
+    if (!f.open(QIODevice::WriteOnly)) {
+        writeError = f.errorString();
+        return false;
+    }
     if (f.write(doc) != doc.size()) {
+        writeError = "short write: " + f.errorString();
         f.cancelWriting();
         return false;
     }
-    return f.commit();
+    if (!f.commit()) {
+        writeError = f.errorString();
+        return false;
+    }
+    return true;
 }
 
 //QString Xmp::getItem(QByteArray item)

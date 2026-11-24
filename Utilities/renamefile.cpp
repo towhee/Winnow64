@@ -228,7 +228,7 @@ void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
         if (existBase == oldBase) {
             QString oldPath = inf.at(i).filePath();
             QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).completeSuffix();
-            // only a file that really moved is re-keyed (see RenameFileDlg::renameInFolder)
+            // only a file that really moved is re-keyed (RenameFileDlg::renameInFolder)
             QFile f(oldPath);
             if (!f.rename(newPath)) {
                 G::issue("Error", "Rename failed, the file keeps its name: " +

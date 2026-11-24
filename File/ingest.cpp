@@ -349,6 +349,8 @@ void Ingest::run()
             G::isRunningBackgroundIngest true for good -- which made a quit hang in
             MW::closeEvent's old wait loop, and would now decline every quit (closeEvent
             defers a quit until MW::ingestFinished). */
+        G::issue("Warning", "Ingest stopped: no file name template was found",
+                 "Ingest::run");
         emit updateProgress(-1);
         emit ingestFinished();
         return;

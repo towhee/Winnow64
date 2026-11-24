@@ -795,10 +795,14 @@ QString KeywordVocab::reparentMerging(const QModelIndex &idx, const QModelIndex 
 
     if (!ok) {
         if (inTransaction) db.rollback();
+        G::issue("Warning", "Keyword merge failed; the list was left as it was",
+                 "KeywordVocab::reparentMerging");
         reload();
         return QString();
     }
     if (inTransaction && !db.commit()) {
+        G::issue("Warning", "Keyword merge was not saved: " + db.lastError().text(),
+                 "KeywordVocab::reparentMerging");
         reload();
         return QString();
     }
@@ -952,6 +956,8 @@ int KeywordVocab::insertPaths(const QStringList &paths)
         return 0;
     }
     if (inTransaction && !db.commit()) {
+        G::issue("Warning", "New keywords were not saved: " + db.lastError().text(),
+                 "KeywordVocab::insertPaths");
         reload();
         return 0;
     }

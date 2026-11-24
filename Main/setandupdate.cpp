@@ -1023,6 +1023,10 @@ void MW::saveLibrarySnapshot()
     QString why;
     const QString file = librarySnapshotPath();
     const bool ok = dm->saveLibrarySnapshot(file, meta, &why);
+    // the next start then loads the Library from the index (slower), so say why
+    if (!ok)
+        G::issueDedup("Warning", "Library snapshot not saved: " + why,
+                      "MW::saveLibrarySnapshot", -1, file);
     if (G::isPerfProbe || !ok)
         qDebug().noquote() << "[PERF] library snapshot" << (ok ? "written" : "NOT written:")
                            << why << " rows =" << (dm->hasParkedScope()

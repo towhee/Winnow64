@@ -41,6 +41,18 @@ bool sameRecipe(const DevelopPreset &a, const DevelopPreset &b)
 }
 }
 
+/* A preset that did not reach settings.ini is gone at the next start, so a failed flush
+   is logged (once per status). */
+static void syncPresets(QSettings *setting)
+{
+    setting->sync();
+    if (setting->status() != QSettings::NoError)
+        G::issueDedup("Warning", QString("Develop presets were not saved: settings.ini "
+                      "could not be written (QSettings status %1)")
+                      .arg(int(setting->status())), "DevelopPresets", -1,
+                      setting->fileName());
+}
+
 DevelopPresets::DevelopPresets(QSettings *setting, QObject *parent)
     : QObject(parent), setting(setting)
 {
@@ -350,7 +362,7 @@ bool DevelopPresets::write(const DevelopPreset &p, const QString &category)
             winnow.append(q);
         }
         saveWinnow();
-        setting->sync();
+        syncPresets(setting);
         emit changed();
         return true;
     }
@@ -375,7 +387,7 @@ bool DevelopPresets::write(const DevelopPreset &p, const QString &category)
             saveLayout(cats);
         }
     }
-    setting->sync();                    // flush now (QSettings otherwise defers it)
+    syncPresets(setting);                    // flush now (QSettings otherwise defers it)
     emit changed();
     return true;
 }
@@ -434,7 +446,7 @@ void DevelopPresets::writeClipboard(const DevelopPreset &p)
     DevelopPreset buf = p;
     buf.name = kClipName;
     writeGroup(kClipRoot, buf);
-    setting->sync();
+    syncPresets(setting);
 }
 
 bool DevelopPresets::hasClipboard() const
@@ -458,7 +470,7 @@ void DevelopPresets::clearClipboard()
     setting->beginGroup(kClipRoot);
     setting->remove("");
     setting->endGroup();
-    setting->sync();
+    syncPresets(setting);
 }
 
 bool DevelopPresets::rename(const QString &from, const QString &to)
@@ -512,7 +524,7 @@ void DevelopPresets::remove(const QString &name)
     for (PresetCategory &c : cats) c.presets.removeAll(name);
     removeUser(name);
     saveLayout(cats);
-    setting->sync();
+    syncPresets(setting);
     emit changed();
 }
 
@@ -599,7 +611,7 @@ void DevelopPresets::saveLayout(const QVector<PresetCategory> &cats)
     }
     setting->endArray();
     setting->endGroup();
-    setting->sync();
+    syncPresets(setting);
 }
 
 QStringList DevelopPresets::categoryNames() const

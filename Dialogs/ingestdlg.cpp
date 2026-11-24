@@ -553,7 +553,7 @@ void IngestDlg::ingest()
     Finally the source file is copied to the renamed destination.
 */
 
-    if (G::isLogger) G::log("IngestDlg::ingest");
+    if (G::isLogger) G::log("IngestDlg::on_okBtn_clicked");
 
     QString key = ui->filenameTemplatesCB->currentText();
     QString tokenString  = filenameTemplatesMap[key];
@@ -641,13 +641,13 @@ void IngestDlg::ingest()
 
         if (!copyOk) {
             G::issueDedup("Error", "Ingest could not copy the image: " +
-                          sourceFile.errorString(), "IngestDlg::ingest", -1, sourcePath);
+                          sourceFile.errorString(), "IngestDlg::on_okBtn_clicked", -1, sourcePath);
             failedToCopy << sourcePath + " to " + destinationPath;
         }
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourcePath, destinationPath)) {
                 G::issueDedup("Error", "Ingest integrity check: the copy differs from "
-                              "the card", "IngestDlg::ingest", -1, destinationPath);
+                              "the card", "IngestDlg::on_okBtn_clicked", -1, destinationPath);
                 integrityFailure << thumbNum +  sourcePath + " not same as " + destinationPath;
             }
         }
@@ -660,14 +660,14 @@ void IngestDlg::ingest()
             if (backupCopyOk) created << backupPath;
             if (!backupCopyOk) {
                 G::issueDedup("Error", "Ingest could not copy the image to the backup "
-                              "folder: " + backupSource.errorString(), "IngestDlg::ingest", -1,
+                              "folder: " + backupSource.errorString(), "IngestDlg::on_okBtn_clicked", -1,
                               sourcePath);
                 failedToCopy << thumbNum + sourcePath + " to " + backupPath;
             }
             if (backupCopyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(sourcePath, backupPath)) {
                     G::issueDedup("Error", "Ingest integrity check: the backup copy "
-                                  "differs from the card", "IngestDlg::ingest", -1, backupPath);
+                                  "differs from the card", "IngestDlg::on_okBtn_clicked", -1, backupPath);
                     integrityFailure << thumbNum + sourcePath + " not same as " + backupPath;
                 }
             }
@@ -689,7 +689,7 @@ void IngestDlg::ingest()
 
             if (!QFile::copy(companion, destSidecarPath)) {
                 QString msg = "Failed to copy " + companion + " to " + destSidecarPath + ".";
-                G::issue("Warning", msg, "IngestDlg::ingest");
+                G::issue("Warning", msg, "IngestDlg::on_okBtn_clicked");
                 failedToCopy << thumbNum + companion + " to " + destSidecarPath;
                 continue;
             }
@@ -700,7 +700,7 @@ void IngestDlg::ingest()
             if (integrityCheck && !Utilities::integrityCheck(companion, destSidecarPath)) {
                 QString msg = "Integrity failure, " + companion +
                               " not same as " + destSidecarPath + ".";
-                G::issue("Warning", msg, "IngestDlg::ingest");
+                G::issue("Warning", msg, "IngestDlg::on_okBtn_clicked");
                 integrityFailure << thumbNum + companion + " not same as " + destSidecarPath;
             }
 
@@ -710,7 +710,7 @@ void IngestDlg::ingest()
                    filed this under integrity, and against the wrong pair of paths. */
                 QString msg = "Failed to copy " + destSidecarPath +
                               " to " + backupSidecarPath + ".";
-                G::issue("Warning", msg, "IngestDlg::ingest");
+                G::issue("Warning", msg, "IngestDlg::on_okBtn_clicked");
                 failedToCopy << thumbNum + destSidecarPath + " to " + backupSidecarPath;
                 continue;
             }
@@ -718,7 +718,7 @@ void IngestDlg::ingest()
                 !Utilities::integrityCheck(destSidecarPath, backupSidecarPath)) {
                 QString msg = "Integrity failure, " + destSidecarPath +
                               " not same as " + backupSidecarPath + ".";
-                G::issue("Warning", msg, "IngestDlg::ingest");
+                G::issue("Warning", msg, "IngestDlg::on_okBtn_clicked");
                 integrityFailure << thumbNum + destSidecarPath +
                                     " not same as " + backupSidecarPath;
             }
@@ -758,13 +758,13 @@ void IngestDlg::ingest()
     // update ingest count for Winnow session
     G::ingestCount += pickList.size();
     G::ingestLastSeqDate = seqDate;
-    //qDebug() << "IngestDlg::ingest" << seqDate<< G::ingestCount << G::ingestLastSeqDate;
+    //qDebug() << "IngestDlg::on_okBtn_clicked" << seqDate<< G::ingestCount << G::ingestLastSeqDate;
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
         G::issue("Error", QString("Ingest finished with %1 failed copies and %2 integrity "
                  "failures (each is logged above)").arg(failedToCopy.length())
-                 .arg(integrityFailure.length()), "IngestDlg::ingest");
+                 .arg(integrityFailure.length()), "IngestDlg::on_okBtn_clicked");
         IngestErrors ingestErrors(failedToCopy, integrityFailure);
         ingestErrors.exec();
     }
@@ -1645,6 +1645,8 @@ void IngestDlg::on_okBtn_clicked()
     QDir dir(folderPath);
     if (!dir.exists()) {
         if(!dir.mkpath(folderPath)) {
+            G::issue("Warning", "Ingest: the destination folder could not be created",
+                     "IngestDlg::on_okBtn_clicked", -1, folderPath);
             QMessageBox::critical(nullptr, tr("Error"),
                  "The folder \"" + folderPath + "\" was not created.");
             return;
@@ -1655,6 +1657,8 @@ void IngestDlg::on_okBtn_clicked()
     if (backup) {
         QDir dir2(folderPath2);
         if (!dir2.mkpath(folderPath2)) {
+            G::issue("Warning", "Ingest: the backup folder could not be created",
+                     "IngestDlg::on_okBtn_clicked", -1, folderPath2);
             QMessageBox::warning(nullptr, tr("Error"),
                  "The folder \"" + folderPath2 + "\" was not created.");
             return;

@@ -10,6 +10,7 @@
 #undef max
 #endif
 #include <QDir>
+#include "Main/global.h"
 #include <memory>
 #include <vector>
 #include <winrt/Windows.Foundation.h>
@@ -212,13 +213,18 @@ void Win::share(QList<QUrl> &urls, WId wId)
             auto data = request.Data();
             data.Properties().Title(L"Winnow images");
             auto items = single_threaded_vector<IStorageItem>();
+            int skipped = 0;
             for (const auto &p : *pathsLocal) {
                 try {
                     StorageFile f = co_await StorageFile::GetFileFromPathAsync(p);
                     items.Append(f);
                 }
-                catch (...) { /* skip files that can't be opened */ }
+                catch (...) { ++skipped; }      // skip files that can't be opened
             }
+            if (skipped > 0)
+                G::issue("Warning", QString("Share: %1 of %2 files could not be opened "
+                         "and were left out").arg(skipped).arg(qsizetype(pathsLocal->size())),
+                         "Win::share");
             if (items.Size() > 0) data.SetStorageItems(items);
             deferral.Complete();
         });
@@ -226,7 +232,8 @@ void Win::share(QList<QUrl> &urls, WId wId)
         check_hresult(interop->ShowShareUIForWindow(hwnd));
     }
     catch (const hresult_error &e) {
-        qWarning() << "Win::share failed:" << QString::fromWCharArray(e.message().c_str());
+        G::issue("Warning", "Share failed: " +
+                 QString::fromWCharArray(e.message().c_str()), "Win::share");
     }
 }
 

@@ -120,7 +120,8 @@ void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
     double rgbCam[3][3];
     if (!Invert3x3(camRgb, rgbCam)) {
         /* Singular matrix (bad data): fall back to identity so the image still renders,
-           with a color cast. Once per session; the matrix is per camera, not per pixel. */
+           with a color cast. Once per session; the matrix is per camera, not per
+           pixel. */
         G::issueDedup("Warning", "Camera color matrix is singular, using identity (colors "
                       "will be off)", "RawColor");
         for (int i = 0; i < 3; ++i)

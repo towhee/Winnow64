@@ -1,5 +1,6 @@
 #include "Develop/outputtransform.h"
 #include "Develop/outputlook.h"
+#include "Main/global.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QFuture>
@@ -903,7 +904,12 @@ bool OutputTransform::ToImage(const WorkingImage &img, QImage &out, Space space,
     const float scale = img.white > 0.0f ? 1.0f / img.white : 1.0f;
 
     out = QImage(W, H, QImage::Format_RGB888);
-    if (out.isNull()) return false;
+    if (out.isNull()) {
+        // QImage returns null when it cannot allocate: out of memory, or too large
+        G::issueDedup("Error", "Render output image could not be allocated (out of "
+                      "memory?)", "OutputTransform::ToImage");
+        return false;
+    }
 
     const OutputTransform::ViewTransform vt = EffectiveView(view, img);
     const bool clampsToWhite = ViewClampsToWhite(vt);
@@ -1069,7 +1075,11 @@ bool OutputTransform::ToImage16(const WorkingImage &img, QImage &out, Space spac
     const float scale = img.white > 0.0f ? 1.0f / img.white : 1.0f;
 
     out = QImage(W, H, QImage::Format_RGBX64);
-    if (out.isNull()) return false;
+    if (out.isNull()) {
+        G::issueDedup("Error", "Render output image (16-bit) could not be allocated (out "
+                      "of memory?)", "OutputTransform::ToImage16");
+        return false;
+    }
 
     const OutputTransform::ViewTransform vt = EffectiveView(view, img);
     Encoding enc = EncodingFor(space, img.space);

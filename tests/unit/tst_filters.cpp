@@ -95,8 +95,9 @@ void tst_filters::keywordsBuildAsATree()
     Filters f(nullptr);
     f.addCategoryItems(vocabulary(), f.keywords);
 
-    /*  Two roots, not nine flat rows. */
-    QCOMPARE(f.keywords->childCount(), 2);
+    /*  Two roots, not nine flat rows, after "No keywords", which is always first. */
+    QCOMPARE(f.keywords->childCount(), 3);
+    QVERIFY(f.keywords->child(0)->data(0, Filters::NoKeywordsRole).toBool());
 
     QTreeWidgetItem *location = findByValue(f.keywords, "Location");
     QVERIFY(location);
@@ -475,7 +476,10 @@ void tst_filters::beneathAnExclusionIsDrawnExcluded()
     QTreeWidgetItem *dxo20 = findByValue(f.folders, "/U/Photos/2020-2029/2020/DxO");
     QTreeWidgetItem *zen = findByValue(f.folders, "/U/Photos/Zen");
 
-    decade->setCheckState(0, Qt::PartiallyChecked);
+    /*  setItemFilterState, as Opt+click does: it styles the item itself. A bare
+        setCheckState styles nothing, and setEachCatTextColor restyles only the
+        descendants whose inherited mark changes. */
+    f.setItemFilterState(decade, Qt::PartiallyChecked);
     f.setEachCatTextColor();
     QVERIFY(decade->font(0).strikeOut());
     QVERIFY(dxo20->font(0).strikeOut());
@@ -484,7 +488,7 @@ void tst_filters::beneathAnExclusionIsDrawnExcluded()
     QVERIFY(!zen->font(0).strikeOut());
 
     // and back when the exclusion goes
-    decade->setCheckState(0, Qt::Unchecked);
+    f.setItemFilterState(decade, Qt::Unchecked);
     f.setEachCatTextColor();
     QVERIFY(!decade->font(0).strikeOut());
     QVERIFY(!dxo20->font(0).strikeOut());
@@ -603,7 +607,7 @@ static const QStringList kFlatOrder {
     "Picks", "Ratings", "Color classes",
     "Camera models", "Lenses", "Focal lengths", "ISO",
     "Titles", "Creators", "GPS", "Places", "Map pin", "Keywords",
-    "Availability", "Duplicates found"
+    "Availability", "Duplicates found", "Duplicates of"
 };
 
 void tst_filters::flatOrderIsTheGroupOrder()

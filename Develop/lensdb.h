@@ -132,7 +132,8 @@ public:
 
     /* Parse one lensfun XML document into this database (later definitions replace
        earlier ones with the same identity). Public for the tests. */
-    void parseXml(const QByteArray &xml);
+    // source names the file for the issue log when its XML does not parse
+    void parseXml(const QByteArray &xml, const QString &source = QString());
     void finish();                           // sort calibrations, derive focal ranges
 
     /* lensfun's word split, exposed for the tests. */

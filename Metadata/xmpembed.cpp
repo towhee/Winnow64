@@ -1,4 +1,5 @@
 #include "Metadata/xmpembed.h"
+#include "Main/global.h"
 
 #include <QFile>
 #include <QFileInfo>
@@ -62,13 +63,26 @@ Result xmpmetaOf(const QByteArray &pkt, QByteArray &xmpmeta)
 
 bool writeAtomically(const QString &fPath, const QByteArray &bytes)
 {
+    /* The caller's issue says only "write failed" (Result::IoError); the cause is
+       logged here, once per reason. */
     QSaveFile f(fPath);
-    if (!f.open(QIODevice::WriteOnly)) return false;
+    if (!f.open(QIODevice::WriteOnly)) {
+        G::issueDedup("Warning", "Could not write into the image: " + f.errorString(),
+                      "XmpEmbed::writeAtomically", -1, fPath);
+        return false;
+    }
     if (f.write(bytes) != bytes.size()) {
+        G::issueDedup("Warning", "Could not write into the image (short write): " +
+                      f.errorString(), "XmpEmbed::writeAtomically", -1, fPath);
         f.cancelWriting();
         return false;
     }
-    return f.commit();
+    if (!f.commit()) {
+        G::issueDedup("Warning", "Could not write into the image: " + f.errorString(),
+                      "XmpEmbed::writeAtomically", -1, fPath);
+        return false;
+    }
+    return true;
 }
 
 Result readWhole(const QString &fPath, QByteArray &bytes)

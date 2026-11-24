@@ -40,7 +40,11 @@ void Winnets::sync(const QStringList &embellishDropletNames)
                           || srcDll.lastModified() > dstDll.lastModified();
         if (refreshDll && srcDll.exists()) {
             QFile::remove(dllPath);
-            QFile::copy(dllSourcePath, dllPath);
+            QFile dll(dllSourcePath);
+            if (!dll.copy(dllPath))
+                G::issueDedup("Warning", "Droplets: Qt6Core.dll was not copied, droplets "
+                              "may not start: " + dll.errorString(), "Winnets::sync",
+                              -1, dllPath);
         }
     #endif
     #ifdef Q_OS_MAC
@@ -67,7 +71,12 @@ void Winnets::sync(const QStringList &embellishDropletNames)
             QProcess::execute("rm", {"-rf", dstPath});
             QProcess copy;
             copy.start("cp", {"-R", srcPath, dstPath});
-            copy.waitForFinished();
+            if (!copy.waitForFinished() || copy.exitStatus() != QProcess::NormalExit
+                || copy.exitCode() != 0)
+                G::issueDedup("Warning", "Droplets: QtCore.framework was not copied, "
+                              "droplets may not start: " +
+                              QString::fromUtf8(copy.readAllStandardError()).trimmed(),
+                              "Winnets::sync", -1, dstPath);
         }
     #endif
     #ifdef Q_OS_LINUX
@@ -119,7 +128,8 @@ void Winnets::sync(const QStringList &embellishDropletNames)
 
         // validate source
         if (!srcInfo.exists() || !srcInfo.isFile()) {
-            qDebug() << "ERROR: Source Winnet missing:" << winnetPath;
+            G::issueDedup("Warning", "Droplets: the master droplet is missing",
+                          "Winnets::sync", -1, winnetPath);
             continue;
         }
 
@@ -132,10 +142,10 @@ void Winnets::sync(const QStringList &embellishDropletNames)
         }
 
         // copy
-        bool ok = QFile::copy(winnetPath, newWinnetPath);
-        if (!ok) {
-            qWarning() << "Copy error: src=" << winnetPath
-                       << "dst=" << newWinnetPath;
+        QFile master(winnetPath);
+        if (!master.copy(newWinnetPath)) {
+            G::issueDedup("Warning", "Droplets: a droplet could not be updated: " +
+                          master.errorString(), "Winnets::sync", -1, newWinnetPath);
             continue;
         }
 

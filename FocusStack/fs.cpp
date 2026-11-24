@@ -1125,7 +1125,9 @@ QString FS::save(QString fuseFolderPath)
     Xmp xmp(f, 0);
     xmp.setItem("Label", color.toLatin1());
     xmp.setItem("ModifyDate", modifyDate.toLatin1());
-    xmp.writeSidecar(f);
+    if (!xmp.writeSidecar(f))
+        G::issue("Warning", "Focus stack: the sidecar label was not saved: " +
+                 xmp.writeError, srcFun, -1, f.fileName());
     f.close();
 
     msg = "Save completed";

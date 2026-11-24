@@ -615,7 +615,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
             if (xmp.isValid && !xmp.getItem("orientation").isEmpty()) {
                 xmp.setItem("orientation", "");
                 if (!xmp.writeSidecar(f))
-                    G::issue("Warning", "Failed to clear the sidecar's orientation.",
+                    G::issue("Warning", "Failed to clear the sidecar's orientation: " + xmp.writeError,
                              src, -1, sc);
             }
             f.close();
@@ -648,7 +648,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     xmp.setItem("modifydate", modifyDate.toLatin1());
     if (!xmp.writeSidecar(sidecarFile)) {
-        QString msg = "Failed to write orientation to sidecar.";
+        QString msg = "Failed to write orientation to sidecar: " + xmp.writeError;
         G::issue("Warning", msg, "Metadata::writeOrientation", -1, sidecarPath);
     }
     sidecarFile.close();
@@ -926,6 +926,9 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
     if (!Utilities::folderIsWritable(info.absoluteDir().path())) {
         if (G::isLogger)
             G::log("Metadata::writeDevelopSidecar", "read-only volume, declined " + sidecarPath);
+        // once per folder: the panel already tells the user, this is for the report
+        G::issueDedup("Info", "Develop settings not saved: the folder is read-only",
+                      "Metadata::writeDevelopSidecar", -1, info.absoluteDir().path());
         return;
     }
 
@@ -951,7 +954,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
     xmp.setItem("modifydate", modifyDate.toLatin1());
     if (!xmp.writeSidecar(sidecarFile)) {
-        QString msg = "Failed to write develop settings to sidecar.";
+        QString msg = "Failed to write develop settings to sidecar: " + xmp.writeError;
         G::issue("Warning", msg, "Metadata::writeDevelopSidecar", -1, sidecarPath);
     }
     sidecarFile.close();
@@ -1106,7 +1109,7 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
 
     const bool ok = xmp.writeSidecar(sidecarFile);
     if (!ok) {
-        G::issue("Warning", "Failed to write keywords to sidecar.",
+        G::issue("Warning", "Failed to write keywords to sidecar: " + xmp.writeError,
                  "Metadata::writeKeywordsToSidecar", -1, sPath);
     }
     sidecarFile.close();
@@ -1155,7 +1158,8 @@ bool Metadata::writeGpsToSidecar(const QString &fPath, double lat, double lon)
     const bool ok = xmp.writeSidecar(sidecarFile);
     sidecarFile.close();
     if (!ok) {
-        G::issue("Warning", "Failed to write the location to the sidecar.", srcFun, -1,
+        G::issue("Warning", "Failed to write the location to the sidecar: " +
+                 xmp.writeError, srcFun, -1,
                  sPath);
         return false;
     }
@@ -1211,7 +1215,8 @@ bool Metadata::writeItemsToSidecar(const QString &fPath,
     const bool ok = xmp.writeSidecar(sidecarFile);
     sidecarFile.close();
     if (!ok) {
-        G::issue("Warning", "Failed to write metadata to the sidecar.", src, -1, sPath);
+        G::issue("Warning", "Failed to write metadata to the sidecar: " + xmp.writeError,
+                 src, -1, sPath);
         return false;
     }
     emit updateSidecarStatus(fPath);
@@ -1316,7 +1321,7 @@ void Metadata::markSidecarEmbedded(const QString &fPath)
     xmp.setItemList("hierarchicalsubject", {});
     xmp.setItem("metadataembedded", "True");
     if (!xmp.writeSidecar(f)) {
-        G::issue("Warning", "Failed to mark sidecar metadata embedded.",
+        G::issue("Warning", "Failed to mark sidecar metadata embedded: " + xmp.writeError,
                  "Metadata::markSidecarEmbedded", -1, sPath);
     }
     f.close();
@@ -1520,7 +1525,8 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         failure here was silent -- and with keywords in the payload a silent failure is a
         user losing tagging work they can see on screen and believe is saved. */
     if (!xmp.writeSidecar(p.file)) {
-        G::issue("Warning", "Failed to write sidecar.", "Metadata::writeXMP", -1, fPath);
+        G::issue("Warning", "Failed to write sidecar: " + xmp.writeError,
+                 "Metadata::writeXMP", -1, fPath);
         p.file.close();
         return false;
     }

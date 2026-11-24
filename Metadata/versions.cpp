@@ -271,7 +271,8 @@ bool Versions::update(const QString &src, const std::function<void(VersionSet &)
     const bool ok = xmp.writeSidecar(f);
     f.close();
     if (!ok) {
-        G::issue("Warning", "Failed to write versions to sidecar.", fun, -1, writePath);
+        G::issue("Warning", "Failed to write versions to sidecar: " + xmp.writeError,
+                 fun, -1, writePath);
     }
     return ok;
 }
