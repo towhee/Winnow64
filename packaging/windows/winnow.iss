@@ -30,6 +30,10 @@
 AppId={{2663CS48-9R00-4000-8000-77696E6E6F77}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
+; "Winnow 3.0" in Apps & Features and the installer title. AppName, the install
+; folder, the shortcuts and Winnow.exe stay "Winnow": the updater relaunches
+; Winnow.exe, and a per-version folder or shortcut would be left behind on upgrade.
+AppVerName={#MyAppName} {#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}

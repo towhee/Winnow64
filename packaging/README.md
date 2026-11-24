@@ -363,7 +363,17 @@ What this requires of a release:
   **Never re-publish a lower version as "latest"** — nobody would be offered it, and
   anyone already on the higher one stays there.
 - The assets keep their names: `Winnow<ver>.dmg` (with the signed, notarized
-  `Winnow<ver>.app` inside) and `WinnowSetup-<ver>.exe`.
+  `Winnow <ver>.app` inside) and `WinnowSetup-<ver>.exe`.
+- **Display name vs file names.** The user sees "Winnow <ver>": the bundle in the DMG
+  and in /Applications, the DMG volume, and the Windows Apps & Features entry
+  (`AppVerName` in winnow.iss). Every FILE name stays space-free and unchanged
+  (`Winnow<ver>.dmg`, the zip, `WinnowSetup-<ver>.exe`, the AppImages), because
+  release.sh and older updaters match assets by name. Unchanged too: the executable
+  (`Winnow`, `Winnow.exe`), CFBundleName (menu bar, Cmd-Tab), the bundle id, the
+  Windows install folder and shortcuts, and the Linux `.desktop` Name. Settings,
+  caches and macOS permissions are keyed on the app name "Winnow" and the bundle id,
+  so renaming the bundle loses nothing. A Dock icon or Finder alias points at the old
+  bundle path and has to be re-added after each update.
 - The release stays a draft until all three assets are attached (see above). If you
   force it public with an asset missing, users on that platform are told nothing
   (silent check), or that the release is "not yet available for this computer"
@@ -379,7 +389,7 @@ What this requires of a release:
       --target "$(git rev-parse HEAD)" --title "Update test" --notes "Test only" \
       out/DMG/Winnow3_beta.dmg
   WINNOW_UPDATE_TAG=v3_beta-test WINNOW_UPDATE_AS_VERSION=2.0 \
-      /Applications/Winnow3_beta.app/Contents/MacOS/Winnow
+      "/Applications/Winnow 3_beta.app/Contents/MacOS/Winnow"
   ```
   `WINNOW_UPDATE_TAG` checks that one tag (pre-releases allowed);
   `WINNOW_UPDATE_AS_VERSION` makes the running copy pretend to be older. Delete the

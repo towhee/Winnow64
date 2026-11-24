@@ -16,6 +16,3 @@
 **Windows:** run the installer. The installer is not code-signed yet, so Windows SmartScreen may show a warning. Click **More info → Run anyway**.
 
 **Linux:** this build needs **Ubuntu 26.04 or later**, or another distribution with glibc 2.43 or newer (check with `ldd --version`). It will not start on Ubuntu 24.04, 22.04, Debian 12 or other older releases. Make the AppImage executable and run it (`chmod +x Winnow-*.AppImage`, then double-click it or run `./Winnow-*.AppImage`). Nothing is installed; keep the file wherever you like. Writing metadata into files needs Perl, which most distributions include.
-
-> [!WARNING]
-> Winnow 3 is in **beta**. Back up your images before trying any feature that writes files.

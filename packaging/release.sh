@@ -160,7 +160,7 @@ function job_mac() {
     WINNOW_ARCH=$arch "$MAC_DEPLOY" --steps 0,1,2,3,4,V || return 1
     local sub="" suffix="" preset=mac-release
     [[ $arch == x86_64 ]] && { sub="x86_64/"; suffix="_Intel"; preset=mac-release-x86_64; }
-    local app="$REPO_ROOT/out/${sub}Notarized/Winnow$LABEL$suffix.app"
+    local app="$REPO_ROOT/out/${sub}Notarized/Winnow $LABEL$suffix.app"   # deploy.command
     local dmg="$REPO_ROOT/out/${sub}DMG/Winnow$LABEL$suffix.dmg"
     [[ -d "$app" && -f "$dmg" ]] || { echo "❌ expected $app and $dmg"; return 1; }
     cp -f "$dmg" "$RDIR/" || return 1

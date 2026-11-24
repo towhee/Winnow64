@@ -103,6 +103,7 @@ VERIFY_SCRIPT="${SCRIPT_DIR}/verify_bundle.command"
 # Version + names are derived AFTER build/stage by reading the built bundle.
 WINNOW_VERSION=""
 WINNOW_VERSION_NAME=""
+WINNOW_APP_NAME=""
 NOTARIZED_APP_PATH=""
 NOTARIZED_ZIP_PATH=""
 DMG_PATH=""
@@ -123,8 +124,14 @@ function resolve_version() {
         echo "⚠️  Bundle version is '$WINNOW_VERSION' — expected the project version."
         echo "    Ensure CMakeLists project(VERSION ...) is set and the app was rebuilt."
     fi
+    # Two names. WINNOW_VERSION_NAME (no space) names FILES: the zip, the DMG and the
+    # release assets that release.sh and older updaters match by name. WINNOW_APP_NAME
+    # ("Winnow 3.0") is what the user sees: the bundle in the DMG and in /Applications,
+    # and the DMG volume. Settings, permissions and the updater's signature check are
+    # keyed on the app name "Winnow" and the bundle id, never on the bundle's file name.
     WINNOW_VERSION_NAME="Winnow${WINNOW_VERSION}${NAME_SUFFIX}"
-    NOTARIZED_APP_PATH="${NOTARIZED_DIR}/${WINNOW_VERSION_NAME}.app"
+    WINNOW_APP_NAME="Winnow ${WINNOW_VERSION}${NAME_SUFFIX}"
+    NOTARIZED_APP_PATH="${NOTARIZED_DIR}/${WINNOW_APP_NAME}.app"
     NOTARIZED_ZIP_PATH="${NOTARIZED_DIR}/${WINNOW_VERSION_NAME}.zip"
     DMG_PATH="${DMG_DIR}/${WINNOW_VERSION_NAME}.dmg"
 }
@@ -417,14 +424,14 @@ function disk_image() {
 
     local tmp="${OUT_DIR}/dmg_tmp"
     rm -rf "$tmp"; mkdir -p "$tmp"
-    # Place the app in the DMG under its version-stamped name (e.g. Winnow2.05.app)
+    # Place the app in the DMG under its version-stamped name (e.g. "Winnow 3.0.app")
     # rather than the generic Winnow.app, so the bundle the user drags out is
-    # version-identifiable. NOTARIZED_APP_PATH is already named ${WINNOW_VERSION_NAME}.app.
-    cp -R "$NOTARIZED_APP_PATH" "$tmp/${WINNOW_VERSION_NAME}.app"
+    # version-identifiable. NOTARIZED_APP_PATH is already named ${WINNOW_APP_NAME}.app.
+    cp -R "$NOTARIZED_APP_PATH" "$tmp/${WINNOW_APP_NAME}.app"
     ln -s /Applications "$tmp/Applications"
 
     echo "📦 Creating DMG: $DMG_PATH"
-    hdiutil create -volname "$WINNOW_VERSION_NAME" \
+    hdiutil create -volname "$WINNOW_APP_NAME" \
         -srcfolder "$tmp" -ov -format UDZO "$DMG_PATH" || { rm -rf "$tmp"; return 1; }
     rm -rf "$tmp"
     echo "   ✓ DMG: $DMG_PATH"
@@ -435,7 +442,7 @@ function archive() {
     ensure_version   # set NOTARIZED_APP_PATH/WINNOW_VERSION when run standalone
     [[ -d "$NOTARIZED_APP_PATH" ]] || { echo "❌ No notarized app."; return 1; }
     [[ -n "$ARCHIVE_DIR" ]] || { echo "⚠️  ARCHIVE_DIR unset; skipping."; return 0; }
-    local dated="${ARCHIVE_DIR}/Winnow${WINNOW_VERSION}_$(date +%Y-%m-%d).app"
+    local dated="${ARCHIVE_DIR}/Winnow ${WINNOW_VERSION}_$(date +%Y-%m-%d).app"
     mkdir -p "$ARCHIVE_DIR"
     rm -rf "$dated"
     cp -R "$NOTARIZED_APP_PATH" "$dated" && echo "   ✓ Archived: $dated"
@@ -725,7 +732,7 @@ function macos_requirement() {
     [[ $arch == x86_64 ]] && { v="$WINNOW_MACOS_INTEL_MIN"; sub="x86_64/"; suffix="_Intel"; } \
                           || v="$WINNOW_MACOS_ARM_MIN"
     if [[ -z "$v" ]]; then
-        local app="$REPO_ROOT/out/${sub}Notarized/Winnow${WINNOW_VERSION}${suffix}.app"
+        local app="$REPO_ROOT/out/${sub}Notarized/Winnow ${WINNOW_VERSION}${suffix}.app"
         [[ -d "$app" ]] || { echo "❌ cannot state the $arch macOS requirement: no $app" >&2; return 1; }
         v=$("${SCRIPT_DIR}/bundle_minos.sh" "$app" "$arch")
     fi
