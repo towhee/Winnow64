@@ -11,7 +11,7 @@ sweep".
 
 Built 2026-11-23. Check `git log` / `git status` to see whether it is committed.
 
-Help > Report an Issue... (`MW::reportIssue`, Main/diagnostics.cpp) offers two routes:
+Help > Report issues or feedback... (`MW::reportIssue`, Main/diagnostics.cpp) offers two routes:
 - **Report on GitHub**: opens the towhee/Winnow64 `bug_report.yml` issue form with the
   `version` and `system` fields pre-filled from the URL, and reveals WinnowReport.txt
   so the user can drag it in. GitHub needs an account and is PUBLIC.

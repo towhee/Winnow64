@@ -2,4 +2,4 @@ blank_issues_enabled: true
 contact_links:
   - name: No GitHub account? Email the developer
     url: mailto:winnowimageviewer@outlook.com
-    about: In Winnow, Help > Report an Issue > Send by Email attaches the log files for you.
+    about: In Winnow, Help > Report issues or feedback > Send by Email attaches the log files for you.

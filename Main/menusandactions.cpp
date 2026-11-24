@@ -2479,7 +2479,7 @@ void MW::createHelpActions()
     addAction(mailLogAction);
     connect(mailLogAction, &QAction::triggered, this, &MW::mailLogs);
 
-    reportIssueAction = new QAction(tr("Report an Issue..."), this);
+    reportIssueAction = new QAction(tr("Report issues or feedback..."), this);
     reportIssueAction->setObjectName("reportIssueAction");
     reportIssueAction->setShortcutVisibleInContextMenu(true);
     addAction(reportIssueAction);

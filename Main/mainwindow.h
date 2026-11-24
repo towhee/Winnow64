@@ -4188,7 +4188,7 @@ private:
     void mailLogs();
     void mailReport(bool hideFolders);
     QString prepareReport(bool hideFolders);  // Log/Report/WinnowReport.txt
-    void reportIssue();               // Help > Report an Issue: GitHub or email
+    void reportIssue();               // Help > Report issues or feedback: GitHub or email
     QString issueSystemInfo() const;  // version, OS, CPU, build date for a report
 
     // HTML Help

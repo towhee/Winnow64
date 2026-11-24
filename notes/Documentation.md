@@ -12240,7 +12240,7 @@ Read it in Help > Diagnostics > Develop diagnostics, section "AUTO-MASK PROBE", 
 
 ### 22.7 Reporting an Issue
 
-Help > Report an Issue... (MW::reportIssue, `Main/diagnostics.cpp`) is the user-facing way to report bugs and feedback. GitHub accepts issues only from signed-in accounts and many users have none, so a dialog offers two routes, plus a "Hide folder names in the report" checkbox (default on, since GitHub is public):
+Help > Report issues or feedback... (MW::reportIssue, `Main/diagnostics.cpp`) is the user-facing way to report bugs and feedback. GitHub accepts issues only from signed-in accounts and many users have none, so a dialog offers two routes, plus a "Hide folder names in the report" checkbox (default on, since GitHub is public):
 
 - Report on GitHub: opens https://github.com/towhee/Winnow64/issues/new?template=bug\_report.yml with the `version` and `system` fields filled from the query string (an issue form fills any field whose `id` matches a query key). The report cannot travel in the URL (GitHub caps it at about 8 KB), so WinnowReport.txt is revealed first and the browser opens on top of it; the user drags it into the form.
 - Send by Email: MW::mailReport attaches WinnowReport.txt itself on macOS (AppleScript, only for the default mail app per Mac::defaultMailAppId, when it is Apple Mail or Microsoft Outlook; New Outlook 16.115 verified) and Windows (Simple MAPI). Otherwise (another default mail app on macOS, Linux, MAPI unavailable) it reveals the file and opens a pre-filled mailto: in the default mail app for a manual attach. Nothing is sent automatically. Help > Logs > Mail logs uses the same path with folder names kept.

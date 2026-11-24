@@ -1960,8 +1960,8 @@ void MW::logReport()
 /* ---------------------------------------------------------------------------
    ISSUE REPORT
 
-   Help > Report an Issue sends ONE file, WinnowReport.txt, built from the logs rather
-   than the logs themselves. The raw logs were 25 MB (WinnowLog.txt) and 10 MB
+   Help > Report issues or feedback sends ONE file, WinnowReport.txt, built from the
+   logs rather than the logs themselves. The raw logs were 25 MB (WinnowLog.txt) and 10 MB
    (WinnowIssueLog.txt): mail servers refused them, and what mattered was a few dozen
    lines among tens of thousands of repeats. The report holds:
 
@@ -2322,8 +2322,8 @@ QString MW::issueSystemInfo() const
 void MW::reportIssue()
 {
 /*
-    Help > Report an Issue. GitHub only accepts issues from signed-in accounts, and many
-    users will not have one, so this offers two routes:
+    Help > Report issues or feedback. GitHub only accepts issues from signed-in
+    accounts, and many users will not have one, so this offers two routes:
 
         - GitHub: opens the repo's bug_report issue form (.github/ISSUE_TEMPLATE) with
           the version and system fields pre-filled through the query string (an issue
@@ -2338,7 +2338,7 @@ void MW::reportIssue()
     if (G::isLogger) G::log("MW::reportIssue");
 
     QMessageBox msgBox(this);
-    msgBox.setWindowTitle("Report an Issue");
+    msgBox.setWindowTitle("Report issues or feedback");
     msgBox.setText("How would you like to report a problem or send feedback?");
     msgBox.setInformativeText(
         "Report on GitHub: needs a free GitHub account. Opens a form in your browser with "

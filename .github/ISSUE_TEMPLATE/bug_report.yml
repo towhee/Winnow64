@@ -5,10 +5,10 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to report a problem. In Winnow, Help > Report an Issue
+        Thanks for taking the time to report a problem. In Winnow, Help > Report issues or feedback
         opens this form with the version and system already filled in.
 
-        No GitHub account? Use Help > Report an Issue > Send by Email instead.
+        No GitHub account? Use Help > Report issues or feedback > Send by Email instead.
   - type: textarea
     id: what
     attributes:
@@ -49,5 +49,5 @@ body:
     attributes:
       label: Winnow report and screenshots
       description: |
-        Drag WinnowReport.txt here (Help > Report an Issue shows it to you), plus any
+        Drag WinnowReport.txt here (Help > Report issues or feedback shows it to you), plus any
         screenshots. Everything posted here is public.
