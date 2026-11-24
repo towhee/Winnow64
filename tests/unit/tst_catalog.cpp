@@ -1,3 +1,4 @@
+#include <limits>
 #include <QtTest>
 #include <QDir>
 #include <QElapsedTimer>
@@ -52,6 +53,7 @@ private slots:
     void searchRowsMatchesSearchExactly();
     void fetchFreshAndStaleOfAgreeExactly();
     void displayFieldsSurviveTheRoundTrip();
+    void nonFiniteNumbersStillCommit();
     void sweepDemotesMissingSource();
     void availabilityDistinguishesOfflineFromMissing();
     void anEditedRowIsRewrittenNotJustMarkedStale();
@@ -798,6 +800,35 @@ void tst_catalog::fetchFreshAndStaleOfAgreeExactly()
              "a re-saved sidecar must make the row stale on both sides");
     QVERIFY2(!fresh.contains(dResaved.path),
              "a re-saved sidecar must not be answered from the index");
+}
+
+void tst_catalog::nonFiniteNumbersStillCommit()
+{
+    /*  SQLite stores a bound NaN as NULL, and every REAL column is NOT NULL, so one NaN
+        failed the whole row ("NOT NULL constraint failed: image.focusx"). It came from a
+        Sony RX100 IV shot in manual focus: FocusLocation 0 0 0 0, focusX = 0/0. The row
+        must commit, each non-finite value stored as its column's default. */
+    Catalog &cat = Catalog::instance();
+
+    const double nan = std::numeric_limits<double>::quiet_NaN();
+    const double inf = std::numeric_limits<double>::infinity();
+    CatalogRow a = rowFor("nanfocus.arw", {"X"});
+    a.focusX = nan;
+    a.focusY = nan;
+    a.aperture = inf;
+    a.shutter = nan;
+    a.focalLength = -inf;
+    a.cropFx = std::numeric_limits<float>::quiet_NaN();
+    QCOMPARE(cat.commit({a}), 1);
+
+    const QHash<QString, CatalogRow> got = cat.fetchFresh({a});
+    QCOMPARE(got.size(), 1);
+    const CatalogRow &r = got.value(a.path);
+    QCOMPARE(r.focusX, -1.0);
+    QCOMPARE(r.focusY, -1.0);
+    QCOMPARE(r.aperture, 0.0);
+    QCOMPARE(r.shutter, 0.0);
+    QCOMPARE(r.focalLength, 0.0);
 }
 
 void tst_catalog::displayFieldsSurviveTheRoundTrip()

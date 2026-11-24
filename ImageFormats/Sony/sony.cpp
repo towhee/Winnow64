@@ -568,8 +568,12 @@ bool Sony::parse(MetadataParameters &p,
         int h = u.get16(p.file.read(2), isBigEnd);
         int x = u.get16(p.file.read(2), isBigEnd);
         int y = u.get16(p.file.read(2), isBigEnd);
-        m.focusX = x * 1.0 / w;
-        m.focusY = y * 1.0 / h;
+        /* Manual focus writes 0 0 0 0 (seen on a DSC-RX100M4): no focus point, and
+           0/0 is NaN, which failed the catalog row. Keep the -1 "none" default. */
+        if (w > 0 && h > 0) {
+            m.focusX = x * 1.0 / w;
+            m.focusY = y * 1.0 / h;
+        }
     }
 
     /* Decipher/encipher Sony tag 0x2010, 0x900b, 0x9050 and 0x940x data

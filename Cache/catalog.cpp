@@ -12,6 +12,7 @@
 #include <QDebug>
 #include <QDir>
 #include <algorithm>
+#include <cmath>
 #include <QFileInfo>
 #include <QJsonArray>
 #include <QJsonDocument>
@@ -61,6 +62,18 @@ QString fold(const QString &s)
 QVariant text(const QString &s)
 {
     return QVariant(s.isNull() ? QString("") : s);
+}
+
+/*
+    THE SAME TRAP FOR NUMBERS. SQLite stores a bound NaN as NULL, so a NaN in a REAL NOT
+    NULL column fails the row with "NOT NULL constraint failed". It arrived from a Sony
+    RX100 IV raw shot in manual focus: FocusLocation is 0 0 0 0, and 0/0 made focusX NaN.
+    Any parser that divides by a zero denominator (aperture, shutter) would do the same,
+    so every REAL binds through here, a non-finite value becoming the column's default.
+*/
+QVariant real(double v, double dflt)
+{
+    return QVariant(std::isfinite(v) ? v : dflt);
 }
 
 /*
@@ -643,9 +656,9 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(text(r.model));
         w.addBindValue(text(r.lens));
         w.addBindValue(r.iso);
-        w.addBindValue(r.aperture);
-        w.addBindValue(r.shutter);
-        w.addBindValue(r.focalLength);
+        w.addBindValue(real(r.aperture, 0));
+        w.addBindValue(real(r.shutter, 0));
+        w.addBindValue(real(r.focalLength, 0));
         w.addBindValue(r.width);
         w.addBindValue(r.height);
         w.addBindValue(text(r.gpsCoord));
@@ -654,8 +667,8 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
             one bind sequence serves both. */
         w.addBindValue(r.orientation);
         w.addBindValue(text(r.exposureComp));
-        w.addBindValue(r.focusX);
-        w.addBindValue(r.focusY);
+        w.addBindValue(real(r.focusX, -1));
+        w.addBindValue(real(r.focusY, -1));
         w.addBindValue(text(r.email));
         w.addBindValue(text(r.url));
         w.addBindValue(text(r._rating));
@@ -673,8 +686,8 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
         w.addBindValue(text(r.keywordsLiteral.join('\n')));
         w.addBindValue(seq);
         w.addBindValue(r.colorSpace);               // schema 27
-        w.addBindValue(r.cropFx);                   // schema 30
-        w.addBindValue(r.cropFy);
+        w.addBindValue(real(r.cropFx, -1));                   // schema 30
+        w.addBindValue(real(r.cropFy, -1));
         if (id) {
             w.addBindValue(clearFingerprint);       // schema 32
             w.addBindValue(clearFingerprint);

@@ -10222,6 +10222,7 @@ The full-text table is a PLAIN fts5, not contentless and not external-content: c
 - Negated text is a separate NOT EXISTS, not FTS5's NOT operator, which is binary: "-heron" has no left-hand side to subtract from. Excluded KEYWORDS are a NOT EXISTS too, over image_keyword: joining would multiply the rows and then need a DISTINCT to undo it.
 - Every value is BOUND, never interpolated, including the FTS expression. The search box is user text and the catalog shares its file with the preview index (tst_catalog::searchTextIsNotInjectable).
 - Text columns are NOT NULL and bind through a helper: a default-constructed QString is SQL NULL to QSqlQuery, not '', and an image with no title, lens or GPS is the ORDINARY case, so binding QString() directly aborted the whole folder's transaction on the first such row ("NOT NULL constraint failed: image.label"). Catalog's text() supplies the empty string.
+- Numeric (REAL) columns are NOT NULL too, and SQLite stores a bound NaN as NULL, so a NaN fails the row the same way ("NOT NULL constraint failed: image.focusx"). It came from a Sony DSC-RX100M4 raw shot in manual focus: FocusLocation (0x2027) is 0 0 0 0 and Sony's parser divided 0/0. The parser now keeps the -1 "no focus point" default when width or height is 0, and every REAL binds through Catalog's real(v, default), which stores the column default for NaN or infinity. Test: tst\_catalog::nonFiniteNumbersStillCommit.
 
 #### 17.1.4 Sharing a File With the Previews
 
