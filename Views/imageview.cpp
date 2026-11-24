@@ -444,7 +444,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             // set null pixmap
             QPixmap nullPm;
             pmItem->setPixmap(nullPm);
+            const LoupeShown::Kind before = loupeShown.state();
             loupeShown.clear();      // the slideshow load failed: nothing is up
+            placeholderChipCheck(before);
             isLoadingImage = false;
             return false;
         }
@@ -514,7 +516,9 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         has been chosen or the same image is being reloaded. It is also used by
         Embellish. */
         currentImagePath = fPath;
+        const LoupeShown::Kind before = loupeShown.state();
         loupeShown.noteHit(fPath);
+        placeholderChipCheck(before);
         pmItem->setVisible(true);
         // prevent the viewport scrolling outside the image
         setSceneRect(scene->itemsBoundingRect());
@@ -584,7 +588,10 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             gone from the cache -- an invalidation or a late refresh. Blanking it would
             show black until the decode lands, which repaints it. Any other miss shows
             nothing, and says so (LoupeShown). */
-        if (loupeShown.noteMiss(fPath)) {
+        const LoupeShown::Kind before = loupeShown.state();
+        const bool keepShown = loupeShown.noteMiss(fPath);
+        placeholderChipCheck(before);
+        if (keepShown) {
             isLoadingImage = false;
             return false;
         }
@@ -636,7 +643,9 @@ bool ImageView::loadImageInterim(QString fPath, const QImage &substitute)
     developCaptureLocked = true;
 
     currentImagePath = fPath;
+    const LoupeShown::Kind before = loupeShown.state();
     loupeShown.noteInterim(fPath);
+    placeholderChipCheck(before);
     pmItem->setPixmap(QPixmap::fromImage(preview));
     pmItem->setVisible(true);
     setSceneRect(scene->itemsBoundingRect());
@@ -699,7 +708,9 @@ bool ImageView::loadImagePlaceholder(const QString &fPath, const QImage &thumb,
         logical = thumb.size().scaled(longFull, longFull, Qt::KeepAspectRatio);
 
     currentImagePath = fPath;
+    const LoupeShown::Kind before = loupeShown.state();
     loupeShown.notePlaceholder(fPath);
+    placeholderChipCheck(before);
     pmItem->setTransformationMode(Qt::SmoothTransformation);
     pmItem->setPixmapScaled(QPixmap::fromImage(thumb), logical);
     pmItem->setVisible(true);
@@ -810,7 +821,11 @@ void ImageView::setDevelopPreviewPixmap(const QPixmap &pm, QSize displaySize)
     pmItem->setVisible(true);
     shownFrame = ShownFrame::Render;     // geometry: developGeom (setDevelopGeometry)
     // the render of the image whose stand-in was up: the loupe now shows the real thing
-    loupeShown.noteRender(currentImagePath);
+    {
+        const LoupeShown::Kind before = loupeShown.state();
+        loupeShown.noteRender(currentImagePath);
+        placeholderChipCheck(before);
+    }
     developShownPath = currentImagePath;
     developShownKey = pmItem->pixmap().cacheKey();
     if (sizeChanged) {
@@ -1561,9 +1576,10 @@ void ImageView::paintEvent(QPaintEvent *event)
     }
     /* Last, so it survives drawForeground's early returns (crop and spot modes each own
        the overlay and return before the mask chips are drawn). */
-    if (!renderingHint.isEmpty()) {
+    const QString chip = renderingChipText();
+    if (!chip.isEmpty()) {
         QPainter p(viewport());
-        drawRenderingHint(p);
+        drawRenderingHint(p, chip);
     }
 }
 
@@ -1586,7 +1602,36 @@ void ImageView::clearRenderingHint()
     setRenderingHint(QString());
 }
 
-void ImageView::drawRenderingHint(QPainter &p)
+QString ImageView::renderingChipText() const
+{
+/*
+    What the top-right chip says, if anything. MW's Develop hint (setRenderingHint) wins:
+    it names the slow stage that is running. Otherwise, while the loupe shows the
+    scaled-up thumbnail on a cache miss (LoupeShown::Placeholder, Documentation 4.4.14),
+    the chip says so. The thumbnail is soft at any zoom, and without a label it could be
+    taken for an out-of-focus image while culling. The chip goes when the real pixels
+    replace it (placeholderChipCheck).
+*/
+    if (!renderingHint.isEmpty()) return renderingHint;
+    if (loupeShown.state() == LoupeShown::Placeholder)
+        return tr("Thumbnail - loading full image");
+    return QString();
+}
+
+void ImageView::placeholderChipCheck(LoupeShown::Kind before)
+{
+/*
+    Called after every LoupeShown change. When the Placeholder state starts or ends,
+    the chip appears or goes, so the corner is repainted. A scene change repaints only
+    the pixmap's dirty region, which may not reach the top-right corner (a portrait image
+    letterboxed in a wide loupe).
+*/
+    const bool was = before == LoupeShown::Placeholder;
+    const bool is = loupeShown.state() == LoupeShown::Placeholder;
+    if (was != is) viewport()->update();
+}
+
+void ImageView::drawRenderingHint(QPainter &p, const QString &text)
 {
     /* TOP-RIGHT: the mask legend chip (drawMaskLegend) owns the top-left, and the two are
        shown together whenever a settle render lands during mask editing. */
@@ -1596,7 +1641,7 @@ void ImageView::drawRenderingHint(QPainter &p)
     p.setFont(f);
     const QFontMetrics fm(f);
     const int pad = 8, dot = 7;
-    const int textW = fm.horizontalAdvance(renderingHint);
+    const int textW = fm.horizontalAdvance(text);
     const QRect panel(viewport()->width() - (textW + dot + pad * 3) - 12, 12,
                       textW + dot + pad * 3, fm.height() + pad * 2 - 2);
 
@@ -1613,7 +1658,7 @@ void ImageView::drawRenderingHint(QPainter &p)
     p.setPen(QColor(235, 235, 235));
     p.drawText(QRect(panel.left() + pad * 2 + dot, panel.top() + pad - 1,
                      textW, fm.height()),
-               Qt::AlignVCenter | Qt::AlignLeft, renderingHint);
+               Qt::AlignVCenter | Qt::AlignLeft, text);
 }
 
 void ImageView::setSpotReplaceMode(int mode)
@@ -5338,7 +5383,9 @@ void ImageView::clear()
     QPixmap nullPm;
     pmItem->setPixmap(nullPm);
     pmItem->setVisible(false);
+    const LoupeShown::Kind before = loupeShown.state();
     loupeShown.clear();
+    placeholderChipCheck(before);
     shownFrame = ShownFrame::None;
 }
 

@@ -6,16 +6,14 @@ WHAT'S NEW
 - Hot pixel removal.
 - Undo and redo.
 - Recover last workspace, including window size and location.
+- Report bugs, feature requests
 
 BUGS / TO DO
-- Help > Report bugs / feedback
 - Rethink thumbnail badges
 - Redo Develop help
 - Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location
-
-- Consider a setting to turn the scaled-up thumbnail on or off.
-- Decide whether to do the full path-keyed cache queue.
+- Focus stack performance
 - Search for images with an Effect.
 - Figure out mask refine
 - Redo help preformance tips
@@ -24,6 +22,8 @@ BUGS / TO DO
 - Auto keyword generator (k shortcut?)
 - Panos
 - HDR
+- When fit screen moire /Users/roryhill/Photos/2010-2019 √/2013 √/201312 √/2013-12-10_Downstairs √/2013-12-10_0001-2.NEF
+- Decide whether to do the full path-keyed cache queue.
 - Render devPreviews in background (entire catalog??)
 - Can we cache raw denoise? What does LR do?
 - Fine-tune keywords managing

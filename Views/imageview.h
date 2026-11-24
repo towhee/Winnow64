@@ -316,7 +316,8 @@ public slots:
     /* "Still rendering" chip, top-right of the loupe. MW raises it while a SLOW develop
        stage is in flight -- the scene-linear RAW decode on an image switch, and the
        full-resolution settle render -- so the interim frame on screen is labelled as
-       such. Not used for the sub-second interactive proxy tick. */
+       such. Not used for the sub-second interactive proxy tick. With no MW hint, the
+       chip also labels the scaled-up thumbnail a cache miss shows (renderingChipText). */
     void setRenderingHint(const QString &msg);
     void clearRenderingHint();
     /* Op-indicator content for the on-canvas chip, pushed by MW when it rebuilds the
@@ -1109,7 +1110,9 @@ private:
     int     maskLegendOp = -1;                      // -1 none, 0 Add, 1 Sub, 2 Intersect
     bool    maskLegendHint = false;                 // show the Opt/Shift+Opt reminder
     void    drawMaskLegend(QPainter *painter);
-    void    drawRenderingHint(QPainter &painter);      // op-indicator chip (viewport)
+    void    drawRenderingHint(QPainter &painter, const QString &text);   // chip (viewport)
+    QString renderingChipText() const;              // MW hint, else the placeholder label
+    void    placeholderChipCheck(LoupeShown::Kind before);   // repaint if Placeholder came/went
     void    drawRangeMask(QPainter *p, const QRectF &br, bool drawTint = true);   // paint the tint + color swatches
     void    buildRangePreview();                    // rebuild the tint from the shared RangeRef + params
     void    buildSubjectPreview();                  // rebuild the tint from the shared SubjectRef
