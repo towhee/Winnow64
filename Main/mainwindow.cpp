@@ -14177,13 +14177,16 @@ void MW::ensureEmbeddedMask(const QString &fPath, const QString &paramsJson)
     if (degrees < 0) degrees += 360;
     if (ObjectMask::getRef(refKey) && embeddedMaskDegrees.value(refKey, -1) == degrees)
         return;                                             // built, same orientation
+    /*  A MATTE THAT DID NOT DECODE is not read again this session: the file does not
+        change under a render, and every render of the image asked (a raw re-read each
+        time). Orientation does not matter to a failure. */
+    if (embeddedMaskFailed.contains(refKey)) return;
 
     cv::Mat1b matte;
     if (!EmbeddedMask::decode(fPath, urn, matte)) {
-        /* Retried on every render (nothing is cached for a failure), so once per image
-           kind of matte. */
         G::issueDedup("Warning", "Embedded camera matte could not be read: " + urn,
                       "MW::ensureEmbeddedMask", -1, fPath);
+        embeddedMaskFailed.insert(refKey);
         return;
     }
     if      (degrees == 90)  cv::rotate(matte, matte, cv::ROTATE_90_CLOCKWISE);

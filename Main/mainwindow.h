@@ -3477,6 +3477,7 @@ private:
        orientation changes (embeddedMaskDegrees). */
     void ensureEmbeddedMask(const QString &fPath, const QString &paramsJson);
     QHash<QString, int> embeddedMaskDegrees;    // embeddedRefKey -> degrees it was built at
+    QSet<QString> embeddedMaskFailed;   // embeddedRefKeys whose matte did not decode
     Segmenter::Job *segmenterJob = nullptr;
     QTimer *segmenterProgressTimer = nullptr;
     QHash<QString, std::shared_ptr<const Segmenter::Segmentation>> segmenterCache;

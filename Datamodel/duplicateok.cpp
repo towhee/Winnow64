@@ -104,9 +104,17 @@ void Flush()
     const QHash<QString, bool> batch = std::exchange(dirty, {});
     QSqlDatabase d = UserDb::instance().db();
     if (!d.isOpen()) return;                // in memory only (see Open)
+    /*  A FAILED WRITE KEEPS THE BATCH: it goes back in the queue (behind anything newer
+        for the same key), so the next change, or Close at quit, writes it again. It
+        used to be dropped, and the change was lost at the next start. */
+    auto keep = [&batch](const QString &why) {
+        G::issueDedup("Warning", "Saving Duplicate OK marks failed; tried again on the "
+                      "next change: " + why, "DuplicateOk::Flush");
+        for (auto it = batch.cbegin(); it != batch.cend(); ++it)
+            if (!dirty.contains(it.key())) dirty.insert(it.key(), it.value());
+    };
     if (!d.transaction()) {
-        G::issueDedup("Warning", "Saving Duplicate OK marks failed (not retried this session): " +
-                      d.lastError().text(), "DuplicateOk::Flush");
+        keep(d.lastError().text());
         return;
     }
     QSqlQuery add(d), remove(d);
@@ -116,15 +124,17 @@ void Flush()
         QSqlQuery &q = it.value() ? add : remove;
         q.addBindValue(it.key());
         if (!q.exec()) {
-            G::issueDedup("Warning", "Saving Duplicate OK marks failed (not retried this session): " +
-                          q.lastError().text(), "DuplicateOk::Flush");
+            const QString why = q.lastError().text();
             d.rollback();
+            keep(why);
             return;
         }
     }
-    if (!d.commit())
-        G::issueDedup("Warning", "Saving Duplicate OK marks failed (not retried this session): " +
-                      d.lastError().text(), "DuplicateOk::Flush");
+    if (!d.commit()) {
+        const QString why = d.lastError().text();
+        d.rollback();             // a failed COMMIT leaves the transaction open
+        keep(why);
+    }
 }
 
 void OnMoved(const QString &srcPath, const QString &dstPath)
