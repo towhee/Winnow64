@@ -2183,15 +2183,13 @@ void MW::mailReport(bool hideFolders)
         return;
     }
     const QStringList logPaths{reportPath};
-    const QString sysInfo = issueSystemInfo();
+    const QString bodyText = "Replace this text with what's on your mind - thanks Rory.";
 
     // Reveal the report folder and open a pre-filled email in the default mail app,
     // asking the user to attach the files.
     auto revealAndMailto = [&] {
         revealInFileBrowser(reportPath);
-        QString body = "Please attach the file WinnowReport.txt, shown in the file browser, "
-                       "to this email, and add a note describing the issue. Thanks. Rory"
-                       "\n\n" + sysInfo;
+        const QString body = bodyText;
         QByteArray url = "mailto:" + to.toUtf8()
                        + "?subject=" + QUrl::toPercentEncoding(subject)
                        + "&body=" + QUrl::toPercentEncoding(body);
@@ -2211,8 +2209,7 @@ void MW::mailReport(bool hideFolders)
         return;
     }
 
-    QString body = "The Winnow issue report is attached. Please add a note describing the "
-                   "issue. Thanks. Rory\n\n" + sysInfo;
+    QString body = bodyText;
     // AppleScript string literal: escape backslash and quote, newline as \n
     body.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n");
     QStringList args;
@@ -2271,8 +2268,7 @@ void MW::mailReport(bool hideFolders)
     QByteArray toAddrBuf = ("SMTP:" + to).toLocal8Bit();
     QByteArray toNameBuf = to.toLocal8Bit();
     QByteArray subjectBuf = subject.toLocal8Bit();
-    QString body = "The Winnow issue report is attached. Please add a note describing the "
-                   "issue. Thanks. Rory\n\n" + sysInfo;
+    QString body = bodyText;
     QByteArray bodyBuf = body.replace("\n", "\r\n").toLocal8Bit();
 
     MapiRecipDesc recip = {};
@@ -2315,7 +2311,8 @@ QString MW::issueSystemInfo() const
 {
 /*
     The lines a bug report needs before anything else: which Winnow, on what. Used by
-    reportIssue (GitHub form fields) and mailLogs (email body).
+    reportIssue (GitHub form fields), prepareReport (WinnowReport.txt) and the issue log
+    session line.
 */
     return "Winnow " + versionNumber + " (Qt " + QString(QT_VERSION_STR) + ", built for "
            + QSysInfo::buildCpuArchitecture() + ")\n"

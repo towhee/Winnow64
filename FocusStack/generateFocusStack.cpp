@@ -50,17 +50,60 @@ void MW::focusStackFromSelection()
     generateFocusStack(inputPaths, fsMethod, /*isLocal*/true);
 }
 
-void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
+bool MW::askFocusStackGrouping(bool &autoGroup)
+{
+/*
+    Called by MW::generateFocusStack each time a focus stack is triggered, from the
+    menu or from an external launch (Lightroom). Asks how the images are to be split
+    into stacks:
+
+    - Auto Group: a new stack starts wherever the gap between exposures is 2 s or
+      more (MW::groupFocusStacks). Several fast stacks can be selected together;
+      stray single images are skipped.
+    - One Stack: every image is stacked as one group, however far apart the
+      exposures. This is how a slow stack (long exposures, flash recycle, manual
+      focusing) is processed, and why it has to be selected on its own.
+
+    The last choice is remembered (setting focusStackAutoGroup) as the default
+    button. Returns false if the user cancels.
+*/
+    autoGroup = settings->value("focusStackAutoGroup", true).toBool();
+
+    QMessageBox box(QMessageBox::Question, tr("Focus Stack"),
+                    tr("Group the images into stacks by the interval between "
+                       "exposures?"),
+                    QMessageBox::Cancel, this);
+    box.setInformativeText(
+        tr("<p><b>Auto Group</b>: a new stack starts wherever exposures are 2 seconds "
+           "or more apart. Select several stacks at once and each is processed in "
+           "turn. Images that are not part of a stack are skipped.</p>"
+           "<p><b>One Stack</b>: all the images are stacked together, however long "
+           "between exposures. Use this for a slow stack, and select only that "
+           "stack.</p>"));
+    QPushButton *autoBtn = box.addButton(tr("Auto Group"), QMessageBox::AcceptRole);
+    QPushButton *oneBtn = box.addButton(tr("One Stack"), QMessageBox::AcceptRole);
+    box.setDefaultButton(autoGroup ? autoBtn : oneBtn);
+    box.exec();
+
+    if (box.clickedButton() == autoBtn) autoGroup = true;
+    else if (box.clickedButton() == oneBtn) autoGroup = false;
+    else return false;
+
+    writeSetting("focusStackAutoGroup", autoGroup);
+    return true;
+}
+
+void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths,
+                          bool autoGroup)
 {
 /*
     Called by MW::generateFocusStack
 
     Rules:
-    - Build time-contiguous groups (gap >= 2000ms starts a new group)
+    - Sort by created time (images without a valid created time are skipped)
+    - autoGroup: build time-contiguous groups (gap >= 2000ms starts a new group)
+    - !autoGroup: one group of every image, whatever the gaps (a slow stack)
     - Only keep groups with 2+ items
-    - If a group has only 1 item:
-        * do NOT add it to groups
-        * remove that item from the FocusStack input folder (delete file)
 */
 
     const QString srcFun = "MW::groupFocusStacks";
@@ -143,7 +186,7 @@ void MW::groupFocusStacks(QList<QStringList> &groups, const QStringList &paths)
         }
 
         const qint64 gapMs = prevT.msecsTo(it.created);
-        if (gapMs >= groupGapMs) {
+        if (autoGroup && gapMs >= groupGapMs) {
             finalizeCurrent(current);
         }
 
@@ -208,6 +251,27 @@ void MW::generateFocusStack(const QStringList paths,
     QString srcFun = "MW::generateFocusStack";
     if (G::isLogger || G::FSLog) G::log(srcFun, "method = " + method);
 
+    // Auto group by interval between exposures, or one (slow) stack?
+    bool autoGroup = true;
+    if (!askFocusStackGrouping(autoGroup)) return;
+
+    /*
+        Group before the worker thread and FS exist, so finding no stack returns
+        without leaking them (or announcing that stacking has started).
+    */
+    QList<QStringList> groups;
+    groupFocusStacks(groups, paths, autoGroup);
+
+    // No stacks found
+    if (groups.empty()) {
+        QString msg = autoGroup
+            ? "Unable to find any focus stacks"
+            : "Unable to focus stack: at least two images with a created date are needed";
+        if (G::isLogger || G::FSLog) G::log(srcFun, msg);
+        G::popup->showPopup(msg);
+        return;
+    }
+
     QString msg =
         "<p>Focus stacking initiated.</p>"
         "View progress on the bottom status progress bar.<br>"
@@ -268,16 +332,8 @@ void MW::generateFocusStack(const QStringList paths,
     fs->o.localAlign = fsLocalAlign;    // Preferences > Focus Stack Utility
     // fs->o.removeTemp = fsRemoveTemp;    // for debugging (set in pref)
 
-    // Group multiple stacks
-    groupFocusStacks(fs->groups, paths);
-
-    // No stacks found
-    if (fs->groups.empty()) {
-        QString msg = "Unable to find any focus stacks";
-        if (G::isLogger || G::FSLog) G::log(srcFun, msg);
-        G::popup->showPopup(msg);
-        return;
-    }
+    // Stacks found above (MW::groupFocusStacks)
+    fs->groups = groups;
 
     /*
     Edits still batching across a multi-image selection have not reached the

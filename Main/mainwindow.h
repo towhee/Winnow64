@@ -4208,7 +4208,9 @@ private:
     bool fs8bit = true;
     bool fsLocalAlign = false;      // focus stack tile flow after ECC (FocusStack/fslocalalign.h)
     void focusStackFromSelection();
-    void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths);
+    bool askFocusStackGrouping(bool &autoGroup);
+    void groupFocusStacks(QList<QStringList> &groups, const QStringList &paths,
+                          bool autoGroup);
     void generateFocusStack(const QStringList paths, QString method,
                             const bool isLocal);
     void copyFocusStackWinnetPath();

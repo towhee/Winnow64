@@ -18,8 +18,10 @@ BUGS / TO DO
 - Decide whether to do the full path-keyed cache queue.
 - Search for images with an Effect.
 - Figure out mask refine
+- Redo help preformance tips
 - Review develop presets
 - Revisit the color sampler
+- Auto keyword generator (k shortcut?)
 - Panos
 - HDR
 - Render devPreviews in background (entire catalog??)
@@ -36,23 +38,10 @@ BUGS / TO DO
 - Test search in filter (Add entire keyword heirarchy ie Gloria + Family + People)
 - Tweak welcome screen re to get started incl Catalog ??
 - Tweak main menu (Library, Develop...)
-- Review activity log
-- Review issues log
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
-- Auto keyword generator (k shortcut?)
 - Object mask post feather not working
 - Review menu disabled ie Go
-- Add Develop to Preferences dialog (cache cap and clear preview cache)
-- Eliminate Edits layouts except Minimal
-- Check if libheif library is in Winnow (use for windows platform)
-- Develop copy / paste fine tuning
-- Add profiles (including AgX) to Calibrate
-- List stuff to disable in Develop Mode (menu items and shortcuts)
-- WB undo
-- Change submask feather, rebuild submask?
-- Spot fill quality issue (reassess)
-- Redo help preformance tips
 - Cannot use Embellish panel when in Develop mode
 - Review what is needed in ReleaseExtras
 - Drag dock tabify to the right (last) - WIP

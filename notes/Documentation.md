@@ -9369,6 +9369,8 @@ Since 2026-10-06 it renders through Develop too. EmbelExport::loadImage used the
 
 #### 14.2.4 The Focus Stacker
 
+Grouping (2026-11-24). MW::generateFocusStack first asks, through MW::askFocusStackGrouping, how to split the images into stacks: Auto Group (a new stack wherever the gap between exposures is 2 s or more) or One Stack (all the images, whatever the gaps, for a slow stack that must be selected on its own). Asked for both the menu and the external (Lightroom) launch; Cancel stacks nothing. The choice is saved as setting focusStackAutoGroup and becomes the default button. MW::groupFocusStacks(groups, paths, autoGroup) sorts by created time either way and keeps only groups of 2+. Grouping now runs before the FS worker and its QThread are created, so "no stacks found" no longer leaks them or shows the "Focus stacking initiated" popup first.
+
 The third caller (2026-09-27). A focus stack is built from each slice's develop rendering, not from the browse decode or the file on disk: the stack should look like what the user sees in Develop.
 
 - MW::generateFocusStack (FocusStack/generateFocusStack.cpp) picks the slices: every raw (and any format OpenCV cannot read), every version, and any other image with a stored recipe (developBlobFor non-empty); an image never developed renders with default settings. An unedited JPEG / TIFF / PNG is still read straight from disk by FSLoader::load, because its file already is its develop render and the direct read keeps a 16-bit TIFF at full depth.
