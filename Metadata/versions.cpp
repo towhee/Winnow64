@@ -239,7 +239,7 @@ bool Versions::update(const QString &src, const std::function<void(VersionSet &)
         return false;
     }
     Xmp xmp(f, G::dmInstance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return false;
 
     VersionSet::Status status;
     const QString before = xmp.isValid ? xmp.getItem("versions") : QString();

@@ -4,6 +4,7 @@
 #include "Utilities/versionkey.h"
 #include "Cache/devpreviewcache.h"
 #include "Main/global.h"
+#include "Image/decodereason.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Dng/dng.h"
 #include "Develop/develop.h"
@@ -593,7 +594,7 @@ bool ImageDecoder::load()
 
     // try to open image file
     if (!imFile.open(QIODevice::ReadOnly)) {
-        errMsg = "Unable to open file.";
+        errMsg = "Unable to open file: " + imFile.errorString();
         G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
         status = Status::FileOpen;
         return false;
@@ -711,7 +712,21 @@ bool ImageDecoder::load()
                time on the embedded-JPG fallback, whose result would be discarded anyway. */
             if (abort.loadAcquire()) { imFile.close(); return false; }
             errMsg = rawFormat->lastError();
+            /* The image still shows, from the embedded JPG, so nothing else would say
+               that the raw itself did not decode (Develop then edits the preview). */
+            G::issueDedup("Warning", "Raw decode failed, showing the embedded JPG: " +
+                          errMsg, "ImageDecoder::load", -1, fPath);
             imFile.seek(0);   // rewind for the embedded-JPG fallback below
+        }
+        else {
+            /* A raw with no sensor decoder yet: the embedded JPG is all Develop gets.
+               Info, once per extension. */
+            static const QSet<QString> kRaw = {"arw", "cr2", "cr3", "dng", "nef", "nrw",
+                "orf", "raf", "rw2", "sr2", "srf", "pef", "srw", "3fr", "iiq", "x3f",
+                "erf", "mef", "mos", "dcr", "kdc", "rwl"};
+            if (kRaw.contains(ext))
+                G::issueDedup("Info", "No raw decoder for ." + ext + " files: the embedded "
+                              "JPG is used", "ImageDecoder::load", -1, fPath);
         }
     }
 
@@ -799,6 +814,10 @@ bool ImageDecoder::load()
             status = Status::Invalid;
             return false;
         }
+        // a short read decodes as a grey or partial image, so it is said here
+        if (buf.length() < lengthFull)
+            G::issueDedup("Warning", "Embedded JPG is shorter than its stated length (the "
+                          "file may be truncated)", "ImageDecoder::load", sfRow, fPath);
 
         /*  NOT A JPEG AT THE STORED OFFSET: THE GEOMETRY IS WRONG, NOT THE FILE. Every
             JPEG starts FF D8, so bytes that do not were read from somewhere the row's
@@ -854,7 +873,7 @@ bool ImageDecoder::load()
 
         if (decoderToUse == QtImage) {
             if (!image.loadFromData(buf, "JPEG")) {
-                errMsg = "Could not read JPG because QImage::loadFromData failed.";
+                errMsg = "Could not read the embedded JPG: " + DecodeReason::fromData(buf, "JPEG");
                 G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
@@ -875,6 +894,9 @@ bool ImageDecoder::load()
             if (!ok) ok = macImageIOEmbeddedPreview(fPath, preview);
             #endif
             if (ok && preview.width() > image.width()) image = preview;
+            if (!ok)
+                G::issueDedup("Info", "DNG has only a small preview and its JPEG XL preview "
+                              "could not be decoded", "ImageDecoder::load", sfRow, fPath);
         }
     }
 
@@ -907,7 +929,7 @@ bool ImageDecoder::load()
         if (!ok) ok = image.load(fPath) && image.width() > 0;
 
         if (!ok) {
-            errMsg = "Could not read heic image (ImageIO and QImage::load failed).";
+            errMsg = "Could not read heic image: " + DecodeReason::fromFile(fPath);
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             status = Status::Invalid;
             return false;
@@ -975,7 +997,7 @@ bool ImageDecoder::load()
             // use Qt tiff decoder
             imFile.close();
             if (!image.load(fPath)) {
-                errMsg = "Could not read because Qt tiff decoder failed.";
+                errMsg = "Could not read the TIFF: " + DecodeReason::fromFile(fPath);
                 G::issue("Error", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
@@ -988,7 +1010,7 @@ bool ImageDecoder::load()
             Tiff tiff("ImageDecoder::load");
             // qDebug() << "ImageDecoder::load decoderToUse == QtTiff" << fPath;
             if (!tiff.read(fPath, &image)) {
-                errMsg = "Could not read because QTiff decoder failed.";
+                errMsg = "Could not read the TIFF: " + Tiff::takeLibTiffError();
                 G::issue("Error", errMsg, "ImageDecoder::load", sfRow, fPath);
                 imFile.close();
                 status = Status::Invalid;
@@ -1033,7 +1055,7 @@ bool ImageDecoder::load()
             imFile.close();
             image.load(fPath);  // crash 2024-11-23 EXC_BAD_ACCESS (SIGSEGV)
             if (image.isNull()) {
-                errMsg = "Could not read because Qt decoder failed.";
+                errMsg = "Could not read the JPG: " + DecodeReason::fromFile(fPath);
                 G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
                 // imFile.close();
                 status = Status::Invalid;
@@ -1057,7 +1079,7 @@ bool ImageDecoder::load()
         #endif
 
         if (!ok) {
-            errMsg = "Could not read image (decode failed).";
+            errMsg = "Could not read image: " + DecodeReason::fromFile(fPath);
             G::issue("Warning", errMsg, "ImageDecoder::load", sfRow, fPath);
             status = Status::Invalid;
             return false;
@@ -1292,7 +1314,12 @@ bool ImageDecoder::decodeIndependent(QImage &img, Metadata *metadata, ImageMetad
         img = image;
         return true;
     }
-    qDebug() << "ImageDecoder::decode failed" << fPath;
+    /* The export, full screen, duplicates and focus-stack decode: load() logs most of
+       its failures itself, but a missing file or an abort leaves only status. */
+    if (!abort.loadAcquire())
+        G::issueDedup("Warning", "Decode failed: " + (errMsg.isEmpty()
+                      ? QString("status %1").arg(int(status)) : errMsg),
+                      "ImageDecoder::decode", -1, fPath);
     return false;
 }
 
@@ -1315,7 +1342,11 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     if (!rawFormat) return nullptr;                     // no in-house decoder for this format
 
     QFile file(m.fPath);
-    if (!file.open(QIODevice::ReadOnly)) return nullptr;
+    if (!file.open(QIODevice::ReadOnly)) {
+        G::issueDedup("Warning", "Raw decode for Denoise raw: could not open the file: " +
+                      file.errorString(), "ImageDecoder::decodeRawWorking", -1, m.fPath);
+        return nullptr;
+    }
 
     QImage throwaway;                                    // develop skipped: identity edit
     const EditParams identity;
@@ -1325,5 +1356,8 @@ std::shared_ptr<const WorkingImage> ImageDecoder::decodeRawWorking(const ImageMe
     const bool ok = rawFormat->Decode(file, m, throwaway, &identity, &abort, &work, denoiseRaw,
                                       progress, outClean, outDenoiseApplied, &winnow);
     file.close();
+    if (!ok && !abort.loadAcquire())
+        G::issueDedup("Warning", "Raw decode for Denoise raw failed: " +
+                      rawFormat->lastError(), "ImageDecoder::decodeRawWorking", -1, m.fPath);
     return ok ? work : nullptr;
 }

@@ -39,7 +39,13 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
     IFDData ifdData;
     ifdDataHash.clear();
 
-    p.file.seek(p.offset);
+    /* An IFD past the end of the file reads as 0 tags: the image then has no exif,
+       offsets or dimensions from it, and nothing else would say why. */
+    if (!p.file.seek(p.offset) || p.offset + 2 > quint64(p.file.size())) {
+        G::issueDedup("Warning", "Metadata: an IFD offset points past the end of the file",
+                      "IFD::readIFD", -1, p.fPath);
+        return 0;
+    }
     int tags = static_cast<int>(Utilities::get16(p.file.read(2), isBigEnd));
 
     // iterate through IFD0, looking for the subIFD tag
@@ -128,8 +134,12 @@ quint32 IFD::readIFD(MetadataParameters &p, bool isBigEnd)
             p.rpt.reset();
             p.rpt << "\n";
         }
-        // quit if more than 200 tags - prob error
-        if (i>2000) break;
+        // quit if more than 2000 tags - prob error
+        if (i>2000) {
+            G::issueDedup("Warning", "Metadata: an IFD claims more than 2000 tags, read "
+                          "only the first 2000", "IFD::readIFD", -1, p.fPath);
+            break;
+        }
     }
     quint32 offset = p.file.pos();
     quint32 nextIFDOffset = Utilities::get32(p.file.read(4), isBigEnd);

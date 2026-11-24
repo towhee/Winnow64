@@ -150,8 +150,10 @@ InferenceSession *SharedSession()
 
     session = std::make_unique<InferenceSession>(path, InferenceDevice::GPU);
     if (!session->IsLoaded()) {
-        qWarning("LamaFill: %s failed to load at %s (LaMa spot fill disabled)",
-                 kModelFile, path.toUtf8().constData());
+        /* OrtBackend logged why; this says what it costs. Tried again on the next
+           call, so once per session. */
+        G::issueDedup("Error", "Spot fill (LaMa) unavailable: its model did not load", "LamaFill",
+                      -1, path);
         return nullptr;
     }
     if (G::isLogger) G::log("LamaFill::SharedSession loaded", session->BackendName());
@@ -751,9 +753,19 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
     }
 
     std::vector<Tensor> outs;
-    if (!s->Run({imgName, maskName}, {inImg, inMask}, {outName}, outs) || outs.empty()) return;
+    /* A spot the model could not fill stays unhealed but is still counted as healed by
+       the caller, so say so here (once per reason). Run's own failure is logged by
+       OrtBackend. */
+    if (!s->Run({imgName, maskName}, {inImg, inMask}, {outName}, outs) || outs.empty()) {
+        G::issueDedup("Warning", "LaMa fill did not run: a spot was left unhealed", "LamaFill::healOne");
+        return;
+    }
     const Tensor &out = outs[0];
-    if (int(out.data.size()) != 3 * P) return;
+    if (int(out.data.size()) != 3 * P) {
+        G::issueDedup("Warning", QString("LaMa fill returned %1 values, expected %2: a spot "
+                      "was left unhealed").arg(out.data.size()).arg(3 * P), "LamaFill::healOne");
+        return;
+    }
 
     /* Raw model fill (0..255) and the original tile as 32FC3, then optional correction
        (A/B via G::spotFillCorrectMode) to kill the large-fill luminance patch. */

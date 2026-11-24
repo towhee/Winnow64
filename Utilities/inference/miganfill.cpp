@@ -46,8 +46,10 @@ InferenceSession *SharedSession()
 
     session = std::make_unique<InferenceSession>(path, InferenceDevice::Auto);
     if (!session->IsLoaded()) {
-        qWarning("MiganFill: %s failed to load at %s (spot fill disabled)",
-                 kModelFile, path.toUtf8().constData());
+        /* OrtBackend logged why; this says what it costs. Tried again on the next
+           call, so once per session. */
+        G::issueDedup("Error", "Spot fill (MI-GAN) unavailable: its model did not load", "MiganFill",
+                      -1, path);
         return nullptr;
     }
     if (G::isLogger) G::log("MiganFill::SharedSession loaded", session->BackendName());
@@ -101,9 +103,19 @@ void healOne(cv::Mat &full, const FillSpotGeom::Coverage &cov, int bx0, int by0,
     }
 
     std::vector<Tensor> outs;
-    if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) return;
+    /* A spot the model could not fill stays unhealed but is still counted as healed by
+       the caller, so say so here (once per reason). Run's own failure is logged by
+       OrtBackend. */
+    if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) {
+        G::issueDedup("Warning", "MI-GAN fill did not run: a spot was left unhealed", "MiganFill::healOne");
+        return;
+    }
     const Tensor &out = outs[0];
-    if (int(out.data.size()) != 3 * P) return;
+    if (int(out.data.size()) != 3 * P) {
+        G::issueDedup("Warning", QString("MI-GAN fill returned %1 values, expected %2: a spot "
+                      "was left unhealed").arg(out.data.size()).arg(3 * P), "MiganFill::healOne");
+        return;
+    }
 
     /* net-res healed patch = original in keep, model out in hole. */
     cv::Mat healN(kNet, kNet, CV_8UC3);

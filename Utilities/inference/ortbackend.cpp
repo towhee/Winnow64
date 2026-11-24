@@ -43,6 +43,7 @@ struct OrtBackend::Impl {
     std::vector<std::string> outNames;
     QString backend = "none";
     bool loaded = false;
+    QString path;               // the model, for the issue log (Run has no other name)
 };
 
 OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
@@ -50,6 +51,7 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
     : d(std::make_unique<Impl>())
 {
     if (G::isLogger) G::log("OrtBackend::OrtBackend", onnxPath);
+    d->path = onnxPath;
 
     /* Create the Env FIRST: it initializes ORT's logging manager, which the CoreML EP's
        HasNeuralEngine() probe consults via DefaultLogger(). Appending the EP before any Env
@@ -107,7 +109,11 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
             d->backend = "DirectML";
 #endif
         } catch (const std::exception &e) {
-            qWarning("OrtBackend: accelerator EP unavailable (%s); using CPU", e.what());
+            /* Every ONNX model (raw denoise, LaMa, MI-GAN, depth, SigLIP) passes here:
+               the one place their load and run failures are logged. Info: the CPU still
+               runs it, only slower. */
+            G::issueDedup("Info", QString("Model runs on the CPU, the GPU/NPU was not "
+                          "available: ") + e.what(), "OrtBackend", -1, onnxPath);
             d->backend = "none";
         }
     }
@@ -130,8 +136,8 @@ OrtBackend::OrtBackend(const QString &onnxPath, InferenceDevice pref,
         if (d->backend == "none") d->backend = "CPU";
         d->loaded = true;
     } catch (const Ort::Exception &e) {
-        qWarning("OrtBackend: failed to load %s: %s",
-                 onnxPath.toUtf8().constData(), e.what());
+        G::issueDedup("Error", QString("Model could not be loaded: ") + e.what(),
+                      "OrtBackend", -1, onnxPath);
         d->loaded = false;
     }
 }
@@ -148,10 +154,18 @@ bool OrtBackend::Run(const std::vector<std::string> &inNames,
                      const std::vector<std::string> &outNames,
                      std::vector<Tensor> &outputs)
 {
-    if (!IsLoaded()) return false;
-    if (inNames.size() != inputs.size() || outNames.empty()) return false;
+    if (!IsLoaded()) return false;          // the load failure is already logged
+    if (inNames.size() != inputs.size() || outNames.empty()) {
+        G::issueDedup("Error", "Model run refused: the input names and tensors do not "
+                      "match (caller bug)", "OrtBackend::Run", -1, d->path);
+        return false;
+    }
     for (const Tensor &t : inputs)
-        if (!t.isConsistent()) return false;
+        if (!t.isConsistent()) {
+            G::issueDedup("Error", "Model run refused: an input tensor's shape and data "
+                          "disagree (caller bug)", "OrtBackend::Run", -1, d->path);
+            return false;
+        }
 
     try {
         const Ort::MemoryInfo mem =
@@ -187,7 +201,8 @@ bool OrtBackend::Run(const std::vector<std::string> &inNames,
         }
         return true;
     } catch (const Ort::Exception &e) {
-        qWarning("OrtBackend::Run failed: %s", e.what());
+        G::issueDedup("Error", QString("Model run failed: ") + e.what(), "OrtBackend::Run",
+                      -1, d->path);
         return false;
     }
 }

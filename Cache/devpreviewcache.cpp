@@ -296,10 +296,20 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
         payloadPath = filePathLocked(id);
     }
 
+    /* A preview that is not stored is rebuilt next time (slow, not lost), so these are
+       Warnings, once per reason. */
     QSaveFile f(payloadPath);
-    if (!f.open(QIODevice::WriteOnly)) return;
+    if (!f.open(QIODevice::WriteOnly)) {
+        G::issueDedup("Warning", "Develop preview not cached: " + f.errorString(),
+                      "DevPreviewCache::put", -1, fPath);
+        return;
+    }
     f.write(jpg);
-    if (!f.commit()) return;
+    if (!f.commit()) {
+        G::issueDedup("Warning", "Develop preview not cached: " + f.errorString(),
+                      "DevPreviewCache::put", -1, fPath);
+        return;
+    }
 
     /* Stamp the source image, so a later occupant of this path cannot inherit this
        preview. See STALENESS in the header. */
@@ -351,6 +361,8 @@ void DevPreviewCache::put(const QString &fPath, const QByteArray &blobHash,
     q.addBindValue(stamp.mtime);
     if (!q.exec()) {
         /* The payload is on disk with no row naming it. reconcile() will collect it. */
+        G::issueDedup("Warning", "Develop preview not indexed: " + q.lastError().text(),
+                      "DevPreviewCache::put", -1, fPath);
         QFile::remove(payloadPath);
         return;
     }

@@ -214,24 +214,15 @@ void FrameDecoder::getNextThumbNail(QString src)
         handleFrameChanged(frame);
     });
 
-    // Handle invalid media
-    connect(mediaPlayer, &QMediaPlayer::mediaStatusChanged, this, [=](QMediaPlayer::MediaStatus status) {
-        if (status == QMediaPlayer::InvalidMedia) {
-            qWarning() << "Invalid media:" << item.fPath;
-            mediaPlayer->stop();
-            if (item.source == "dmThumb" && item.dmRow >= 0)
-                emit videoFrameFailed(item.dmRow, item.dmInstance);
-            queue.removeFirst();
-            getNextThumbNail("invalid media");
-        }
-    });
-
-    // Handle invalid media
+    /* Handle invalid media. ONE handler: a second copy without the generation check was
+       connected too, and with one item left in the queue both ran -- the second called
+       queue.removeFirst() on the empty queue. */
     connect(mediaPlayer, &QMediaPlayer::mediaStatusChanged, this, [=](QMediaPlayer::MediaStatus status) {
         if (currentGeneration != playerGeneration) return;
 
         if (status == QMediaPlayer::InvalidMedia) {
-            qWarning() << "Invalid media:" << item.fPath;
+            G::issueDedup("Warning", "Video thumbnail: the file could not be opened as "
+                          "video", "FrameDecoder", -1, item.fPath);
             mediaPlayer->stop();
             if (item.source == "dmThumb" && item.dmRow >= 0)
                 emit videoFrameFailed(item.dmRow, item.dmInstance);
@@ -244,7 +235,8 @@ void FrameDecoder::getNextThumbNail(QString src)
     connect(mediaPlayer, &QMediaPlayer::errorOccurred, this, [=](QMediaPlayer::Error, const QString &errStr) {
         if (currentGeneration != playerGeneration) return;
 
-        qWarning() << "Playback error:" << errStr;
+        G::issueDedup("Warning", "Video thumbnail: playback error: " + errStr,
+                      "FrameDecoder", -1, item.fPath);
         mediaPlayer->stop();
         if (item.source == "dmThumb" && item.dmRow >= 0)
             emit videoFrameFailed(item.dmRow, item.dmInstance);
@@ -257,7 +249,8 @@ void FrameDecoder::getNextThumbNail(QString src)
         mediaPlayer->setSource(item.fPath);
         mediaPlayer->play();
     } catch (...) {
-        qWarning() << "Exception during play for" << item.fPath;
+        G::issueDedup("Warning", "Video thumbnail: exception during play", "FrameDecoder",
+                      -1, item.fPath);
         if (item.source == "dmThumb" && item.dmRow >= 0)
             emit videoFrameFailed(item.dmRow, item.dmInstance);
         queue.removeFirst();
@@ -279,7 +272,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
             return;
         }
 
-        qWarning() << "Invalid frame after retries:" << path;
+        G::issueDedup("Warning", "Video thumbnail: no valid frame after 10 tries",
+                      "FrameDecoder::handleFrameChanged", -1, path);
         if (item.source == "dmThumb" && item.dmRow >= 0)
             emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();
@@ -292,7 +286,8 @@ void FrameDecoder::handleFrameChanged(const QVideoFrame &frame)
 
     QImage im = frame.toImage();
     if (im.isNull()) {
-        qWarning() << "Null image frame:" << path;
+        G::issueDedup("Warning", "Video thumbnail: the frame did not convert to an image",
+                      "FrameDecoder::handleFrameChanged", -1, path);
         if (item.source == "dmThumb" && item.dmRow >= 0)
             emit videoFrameFailed(item.dmRow, item.dmInstance);
         cleanupPlayer();

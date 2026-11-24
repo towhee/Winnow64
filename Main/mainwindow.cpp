@@ -450,6 +450,12 @@ MW::MW(const QString args, QWidget *parent) : QMainWindow(parent)
     iniPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation)
             + "/settings.ini";
     settings = new QSettings(iniPath, QSettings::IniFormat);
+    /* An unreadable settings.ini (AccessError, FormatError) reads as no settings at all,
+       so Winnow starts as for a new user. Before G::newIssueLog: G::issue holds it. */
+    if (settings->status() != QSettings::NoError)
+        G::issue("Error", QString("settings.ini could not be read (QSettings status %1), "
+                 "so factory settings are used").arg(int(settings->status())),
+                 "MW::MW", -1, iniPath);
     /* Discard any .part left behind by a download interrupted by a crash or a force
        quit; ModelDownloadDlg cleans up its own aborts. */
     ModelStore::sweepPartials();
@@ -1526,6 +1532,11 @@ void MW::showEvent(QShowEvent *event)
     {
         const QString sessionInfo = issueSystemInfo().replace("\n", " | ");
         G::issueBeginSession(sessionInfo);
+        // an update that failed after the last quit only said so in install.log
+        const QString installFailure = AppInstaller::takeLastInstallFailure();
+        if (!installFailure.isEmpty())
+            G::issue("Error", "The last update did not install: " + installFailure,
+                     "AppInstaller", -1, AppInstaller::updateDir() + "/install.log");
         Utilities::trimLog(14);
         G::log("Session", sessionInfo);
     }
@@ -1753,6 +1764,10 @@ void MW::closeEvent(QCloseEvent *event)
         settings.ini still said hasCrashed=true after a clean quit, and the Library state
         saved at quit never reached the file. */
     settings->sync();
+    if (settings->status() != QSettings::NoError)
+        G::issue("Error", QString("Settings were not saved at quit: settings.ini could not "
+                 "be written (QSettings status %1)").arg(int(settings->status())),
+                 "MW::closeEvent", -1, settings->fileName());
     delete workspaces;
     delete recentFolders;
     delete ingestHistoryFolders;
@@ -3570,6 +3585,10 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
     const int status = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     if (reply->error() != QNetworkReply::NoError) {
+        /* Logged even when silent: the startup check fails with no popup, and a user who
+           never gets updates has nothing else to go on. Info: offline is normal. */
+        G::issueDedup("Info", QString("Update check failed (HTTP %1): ").arg(status) +
+                      reply->errorString(), srcFun);
         if (silent) return;
         QString msg = "Could not check for updates:<br>" + reply->errorString();
         const QString testTag = qEnvironmentVariable("WINNOW_UPDATE_TAG");
@@ -3588,6 +3607,8 @@ void MW::onUpdateCheckReply(QNetworkReply *reply)
     const bool allowPrerelease = !qEnvironmentVariable("WINNOW_UPDATE_TAG").isEmpty();
     if (!AppUpdate::parseLatestRelease(reply->readAll(), release, &parseError,
                                        allowPrerelease)) {
+        G::issueDedup("Warning", "Update check: the release information could not be "
+                      "read: " + parseError, srcFun);
         if (!silent) G::popup->showPopup("Could not check for updates:<br>" + parseError, 3000);
         return;
     }
@@ -3718,6 +3739,10 @@ void MW::downloadUpdate(const QString &assetUrl, qint64 size, const QByteArray &
             delete file;
             delete hash;
             isUpdatingApp = false;
+            QString text = msg;
+            text.replace("<br>", " ");
+            G::issue("Warning", "Update download abandoned: " + text.simplified(),
+                     "MW::downloadUpdate");
             G::popup->showPopup(msg, 4000);
         };
 
@@ -3742,8 +3767,11 @@ void MW::downloadUpdate(const QString &assetUrl, qint64 size, const QByteArray &
         delete hash;
 
         bool committed = file->commit();    // atomically publish destPath
+        const QString commitError = committed ? QString() : file->errorString();
         delete file;
         if (!committed) {
+            G::issue("Warning", "Update download could not be saved: " + commitError,
+                     "MW::downloadUpdate", -1, destPath);
             isUpdatingApp = false;
             G::popup->showPopup("Could not finish saving the update.", 3500);
             return;
@@ -3800,6 +3828,8 @@ void MW::installUpdate(const QString &installerPath)
         if (error.isEmpty()) AppInstaller::launchFinisher(installerPath, error);
         if (!error.isEmpty()) {
             isUpdatingApp = false;
+            G::issue("Error", "The update could not be installed: " + error,
+                     "MW::installUpdate", -1, installerPath);
             QMessageBox::warning(this, "Winnow Update",
                                  "The update could not be installed.\n\n" + error);
             return;
@@ -7298,7 +7328,15 @@ void MW::stop(QString src)
                             QEventLoop::WaitForMoreEvents, 50);
     }
 
-    if (!allIdle()) qWarning() << "NOT ALLIDLE! STOP FAILED";
+    if (!allIdle()) {
+        /* A subsystem still working on the folder being left: the next folder can get
+           its rows or a blank. Named so the report says which one. */
+        QStringList busy;
+        for (auto it = stopped.cbegin(); it != stopped.cend(); ++it)
+            if (!it.value()) busy << it.key();
+        G::issue("Error", "Folder change: " + busy.join(", ") + " did not stop within 3 s "
+                 "(caller " + src + ")", srcFun);
+    }
     const qint64 waitMs = waitTimer.elapsed();
 
     // Clean up connections
@@ -7580,6 +7618,9 @@ void MW::memoryWatchdogTick()
         // ImageCache thread.
         if (!memoryThrottleActive && imageCache) {
             memoryThrottleActive = true;
+            // Info, once a session: it explains slow caching, it is not a failure
+            G::issueDedup("Info", "Memory limit: image caching throttled",
+                          "MW::memoryWatchdogTick", -1);
             imageCache->setMemoryThrottled(true);
             QMetaObject::invokeMethod(imageCache, "memoryPause", Qt::QueuedConnection,
                                       Q_ARG(quint64, footprintMB), Q_ARG(quint64, cap));
@@ -7615,6 +7656,11 @@ void MW::onMemoryOverrun(quint64 footprintMB, quint64 capMB)
     // Suppress duplicate dialogs if multiple subsystems trip in close succession.
     if (memoryDialogActive) return;
     memoryDialogActive = true;
+
+    /* Every trigger (MetaRead, the watchdog tick) arrives here, so this is the one
+       place the hard abort is logged. */
+    G::issue("Error", QString("Memory limit: folder load stopped at %1 MB (cap %2 MB)")
+             .arg(footprintMB).arg(capMB), "MW::onMemoryOverrun");
 
     // Stop the watchdog while we tear down — no point re-firing during cleanup.
     if (memoryWatchdog) memoryWatchdog->stop();
@@ -13506,8 +13552,8 @@ void MW::ensureSubjectMask(const QString &fPath, const WorkingImage &work,
         if (modelPath.isEmpty()) { AiMaskProbe::note(probeTag + "NO MODEL file"); return; }
         subjectPredictor = new SubjectPredictor(modelPath, 320);
         if (!subjectPredictor->isLoaded())
-            qWarning("Select Subject: u2net.onnx failed to load at %s",
-                     modelPath.toUtf8().constData());
+            G::issueDedup("Error", "Subject/Background mask unavailable: the model did not "
+                          "load", "MW::ensureSubjectMask", -1, modelPath);
     }
     if (!subjectPredictor->isLoaded()) {
         AiMaskProbe::note(probeTag + "MODEL NOT LOADED");
@@ -13581,8 +13627,10 @@ void MW::ensureSkyMask(const QString &fPath, const WorkingImage &work,
         }
         skyPredictor = new SkyPredictor(skyPath, segPath);
         if (!skyPredictor->isLoaded())
-            qWarning("Select Sky: a sky model failed to load (%s, %s)",
-                     skyPath.toUtf8().constData(), segPath.toUtf8().constData());
+            G::issueDedup("Error", "Sky mask unavailable: a sky model did not load (" +
+                          QFileInfo(skyPath).fileName() + ", " +
+                          QFileInfo(segPath).fileName() + ")", "MW::ensureSkyMask", -1,
+                          skyPath);
     }
     if (!skyPredictor->isLoaded()) { AiMaskProbe::note(probeTag + "MODEL NOT LOADED"); return; }
 
@@ -13637,8 +13685,8 @@ void MW::ensureDepthMask(const QString &fPath, const WorkingImage &work,
         if (modelPath.isEmpty()) { AiMaskProbe::note(probeTag + "NO MODEL file"); return; }
         depthPredictor = new DepthPredictor(modelPath);
         if (!depthPredictor->isLoaded())
-            qWarning("Depth: depth_anything.onnx failed to load at %s",
-                     modelPath.toUtf8().constData());
+            G::issueDedup("Error", "Depth mask and Lens Blur unavailable: the depth model "
+                          "did not load", "MW::ensureDepthMask", -1, modelPath);
     }
     if (!depthPredictor->isLoaded()) { AiMaskProbe::note(probeTag + "MODEL NOT LOADED"); return; }
 
@@ -13845,8 +13893,8 @@ bool MW::ensureObjectEncoder(const QString &fPath, const WorkingImage &work,
         if (encPath.isEmpty() || decPath.isEmpty()) return false;
         objectMaskPredictor = new ObjectMaskPredictor(encPath, decPath, 1024);
         if (!objectMaskPredictor->isLoaded())
-            qWarning("Object Mask: sam2 encoder/decoder failed to load (%s)",
-                     ModelStore::dir().toUtf8().constData());
+            G::issueDedup("Error", "Object mask unavailable: the SAM 2 encoder or decoder did "
+                          "not load", "MW::ensureObjectMask", -1, encPath);
     }
     if (!objectMaskPredictor->isLoaded()) return false;
 
@@ -14042,6 +14090,8 @@ void MW::onSegmenterDone(const QString &key, std::shared_ptr<const Segmenter::Se
     /* A real failure for the image on screen is reported, not retried -- re-opening the
        submask tries again. */
     if (key == segmenterWantKey && !r && !error.isEmpty()) {
+        G::issueDedup("Warning", "Segmenter: the object search failed: " + error,
+                      "MW::onSegmenterDone");
         imageView->setSegmenterProgress(-1);
         segmenterNote(tr("The object search failed: %1").arg(error),
                       tr("Segmenter: the object search failed"));
@@ -14112,8 +14162,10 @@ void MW::ensureEmbeddedMask(const QString &fPath, const QString &paramsJson)
 
     cv::Mat1b matte;
     if (!EmbeddedMask::decode(fPath, urn, matte)) {
-        qWarning("Embedded mask: could not read %s from %s", qUtf8Printable(urn),
-                 qUtf8Printable(fPath));
+        /* Retried on every render (nothing is cached for a failure), so once per image
+           kind of matte. */
+        G::issueDedup("Warning", "Embedded camera matte could not be read: " + urn,
+                      "MW::ensureEmbeddedMask", -1, fPath);
         return;
     }
     if      (degrees == 90)  cv::rotate(matte, matte, cv::ROTATE_90_CLOCKWISE);
@@ -17838,12 +17890,15 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
        that would run PMRID on every image the exporter and the preview builder touch. EditParams::denoiseRaw carries the stored
        intent (falling back to the Auto run preference when the image says nothing), so
        this reads the same answer the interactive render does. */
-    const bool wantDenoise =
+    const bool askDenoise =
         mj.global.wantsDenoiseRaw(G::autoRunDenoise) &&
         (mj.global.denoiseLumaOr(G::denoiseLumaDefault) > 0.0f ||
          mj.global.denoiseChromaOr(G::denoiseChromaDefault) > 0.0f) &&
-        !RawRender::resolve(mj.global).apple &&
-        rawDenoiseAvailable(fPath);
+        !RawRender::resolve(mj.global).apple;
+    const bool wantDenoise = askDenoise && rawDenoiseAvailable(fPath);
+    if (askDenoise && !wantDenoise)
+        G::issueDedup("Warning", "Rendered without raw denoise: it is not available for "
+                      "this image", "MW::developPixelSource", -1, fPath);
     /* Reuse the live session's full-strength PMRID base when it belongs to THIS image, so
        exporting the image being edited does not re-run the model. It is amount-independent
        (keyed path+iso), so it is valid whatever the stored amounts are. Read here rather
@@ -17910,6 +17965,10 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                                          *blended);
                 src = blended;
             }
+            else {
+                G::issueDedup("Warning", "Rendered without raw denoise: the denoise model "
+                              "did not run", "MW::developPixelSource", -1, m.fPath);
+            }
         }
 
         times->denoise = times->t.restart();
@@ -17939,6 +17998,21 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                         else if (c.tool == int(MaskTool::Embedded))
                             ensureEmbeddedMask(fPath, c.paramsJson);
                     }
+
+            /* A mask whose model failed renders as no mask (0 coverage), and lens blur
+               without depth is skipped, so the file is written without them. Said once
+               per image and kind; the model's own failure is logged where it ran. */
+            auto missing = [&fPath](const char *what) {
+                G::issueDedup("Warning", QString("Rendered without the %1: it could not be "
+                              "built").arg(what), "MW::developPixelSource", -1, fPath);
+            };
+            if (stackHasSubjectMask(mj) && !SubjectMask::getRef(fPath))
+                missing("Subject/Background mask");
+            if (stackHasSkyMask(mj) && !SkyMask::getRef(fPath)) missing("Sky mask");
+            if (stackHasDepthMask(mj)) {
+                const auto ref = DepthMask::getRef(fPath);
+                if (!ref || !ref->valid()) missing("depth map (Depth mask, Lens Blur)");
+            }
 
             /* Step 3 (worker): the composite itself. src is the raw-denoised base when
                "Denoise raw" is set, else the clean one. work is kept alive alongside it

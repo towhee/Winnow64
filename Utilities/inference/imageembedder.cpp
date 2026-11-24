@@ -67,8 +67,10 @@ InferenceSession *SharedSession()
 
     session = std::make_unique<InferenceSession>(path, kDevice, compileCacheDir(true));
     if (!session->IsLoaded()) {
-        qWarning("ImageEmbedder: %s failed to load at %s (Audit Keywords disabled)",
-                 kModelFile, path.toUtf8().constData());
+        /* OrtBackend logged why; this says what it costs. Tried again on the next
+           call, so once per session. */
+        G::issueDedup("Error", "Audit Keywords unavailable: its model did not load", "ImageEmbedder",
+                      -1, path);
         return nullptr;
     }
     if (G::isLogger) G::log("ImageEmbedder::SharedSession loaded", session->BackendName());

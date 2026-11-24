@@ -1,5 +1,6 @@
 #include "ImageFormats/Raw/cameramatrix.h"
 #include <cstring>
+#include "Main/global.h"
 
 /*
     Model -> XYZ(D65)->camera matrix, stored as nine integers = matrix * 10000, exactly as in
@@ -888,7 +889,13 @@ const Entry *findEntry(const QString &model)
 bool xyzToCamForModel(const QString &model, float m[3][3])
 {
     const Entry *best = findEntry(model);
-    if (!best) return false;
+    if (!best) {
+        /* Once per model: a raw from this camera renders through an identity matrix
+           (a color cast) unless its file carries one of its own. */
+        G::issueDedup("Info", "No built-in color matrix for camera \"" + model + "\"",
+                      "xyzToCamForModel");
+        return false;
+    }
     for (int i = 0; i < 9; ++i)
         m[i / 3][i % 3] = best->c[i] / 10000.0f;
     return true;

@@ -13,6 +13,7 @@
 #include "ImageFormats/Jpeg/jpeg.h"
 #include <vector>
 #include <cstring>
+#include <cstdarg>
 
 #ifdef Q_OS_MAC
 #include "ImageFormats/Tiff/libtiff.h"
@@ -35,6 +36,12 @@ class Tiff : public QObject
 
 public:
     explicit Tiff(QString src = "");
+    /* libtiff's most recent ERROR on this thread, for the issue log: Main/main.cpp's
+       TIFFSetErrorHandler stores it (a vsnprintf into a thread_local buffer, so it costs
+       nothing until something fails) and a failed read appends it. take clears it, and
+       says "libtiff gave no reason" when there is none. */
+    static void noteLibTiffError(const char *module, const char *fmt, va_list ap);
+    static QString takeLibTiffError();
     bool parse(MetadataParameters &p,
                ImageMetadata &m,
                IFD *ifd,

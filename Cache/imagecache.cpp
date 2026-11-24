@@ -2961,6 +2961,9 @@ bool ImageCache::okToDecode(int sfRow, int id, QString &msg)
             dispatch, so counting calls measured how often it was looked at. */
         if (!capHitPaths.contains(fPath)) {
             capHitPaths.insert(fPath);
+            // the loupe stays blank for this image; the decoder's reason is logged there
+            G::issueDedup("Warning", QString("Image not cached: %1 decode attempts failed")
+                          .arg(maxAttemptsToCacheImage), "ImageCache::okToDecode", -1, fPath);
             attemptCapHitCount.fetch_add(1, std::memory_order_relaxed);
             PipelineCounters::attemptCapImages.fetch_add(1, std::memory_order_relaxed);
         }

@@ -975,6 +975,7 @@
   - [22.7 Reporting an Issue](#227-reporting-an-issue)
     - [22.7.1 WinnowReport.txt](#2271-winnowreporttxt)
     - [22.7.2 Log Hygiene](#2272-log-hygiene)
+    - [22.7.3 Issue Line Layout](#2273-issue-line-layout)
 
 ## 1 About This Document
 
@@ -12246,11 +12247,18 @@ Help > Report an Issue... (MW::reportIssue, `Main/diagnostics.cpp`) is the user-
 MW::prepareReport(hideFolders) writes AppData/Log/Report/WinnowReport.txt (the folder is cleared each time). The raw logs are not sent: the first email reports were 36 MB, sat in Mail's Outbox, and would have gone from whichever account Mail had (the user's default mail app was Outlook); and the relevant lines were a few dozen among tens of thousands of repeats. The report holds:
 
 - MW::issueSystemInfo: Winnow version, Qt, build and running CPU architecture, OS.
-- Issues from the last 3 sessions of WinnowIssueLog.txt, each distinct issue once per session with "(repeated N times)". The key is the fixed type/message/source columns of Issue::toString (characters 20 to 129), so repeats that differ only in row or path collapse. Capped at 600 lines.
+- Issues from the last 3 sessions of WinnowIssueLog.txt, each distinct issue once per session. The repeat count sits in a fixed 7-character column in front of the line ("  12x  "), so the counts line up and the issue lines keep their own columns. The key is Issue::collapseKey (type, source and message, without the row and path), so repeats that differ only in row or path collapse. Capped at 600 lines.
 - The last 200 lines of WinnowLog.txt, skipping bare-timestamp lines.
 - The newest Winnow crash report from the last 7 days, first 256 KB: macOS `~/Library/Logs/DiagnosticReports/Winnow*.ips|.crash`; Windows `%LOCALAPPDATA%/Microsoft/Windows/WER/ReportArchive|ReportQueue/AppCrash_Winnow*/Report.wer` (UTF-16). Linux has no standard per-user location, so the section says so.
 
-Privacy: the home folder becomes "~"; hideFolders also replaces everything from a path start through the last separator on the line with "…" (`~/…/0866.HEIC`), keeping file names. Measured on a real profile: 35 MB of logs became a 28 KB report.
+Each section is a 100-character rule, the title, and a rule. Measured on a real profile: 35 MB of logs became a 28 KB report.
+
+Privacy: the whole report passes through Issue::redactReport (`Log/issue.cpp`, REPORT PRIVACY; tested by tst_issuelog):
+
+- Always: the home folder becomes "~" in either separator and any letter case, as a whole folder name only (home /Users/al leaves /Users/alice alone). Crash-report device identifiers become "hidden": macOS .ips crashReporterKey, deviceIdentifierForVendor, bootSessionUUID, sleepWakeUUID; Windows Report.wer MachineID, ComputerName, UserName.
+- hideFolders: every path keeps its start and file name and loses the folders between: `~/…/0866.HEIC`, `/Volumes/…/A.ARW`, `C:\…\A.JPG`, `\\…\A.JPG` (UNC). A path starts at "~/", a drive letter, a UNC `\\` or `//`, or /Users, /home, /Volumes, /media, /mnt, /run, /srv, /private, /tmp, /var, /Network. A folder name may contain spaces but never two in a row (the issue log's column gap), a quote, or the start of another path, so two paths on one line stay two paths. URLs are left alone.
+- File names are kept (the dialog and help page say so). Metadata never reaches the logs: no GPS, creator, copyright, email, URL or serial numbers are logged, and keyword, collection and place text stays out of the issue log. KeywordVocab issues name the row as "keyword id N, depth D" (keywordRef), MW::verifyKeywordMoveCounts logs only the counts (the names go to the console), and CollectionStore::restore names the collection id. A new G::issue must follow the same rule: name a row by id, never by the user's text.
+- G::log can still carry keyword paths (e.g. MW::filterOnKeyword), but only with G::isLogger, a developer switch that is off for users.
 
 The session marker (G::issueBeginSession) carries issueSystemInfo, and prepareReport finds sessions by its "----- New Session -----" text: keep that text.
 
@@ -12264,5 +12272,18 @@ Fixed at the source when the report was built:
 - CanonCR3::getHeifBox "Box X is unknown" uses issueDedup, as Heic already did.
 - IssueLog::run wrote one issue per 2 s wake, so a burst took hours to reach the file and the rest was lost at quit. It now drains the queue on each wake and once more on stop.
 - Each session writes "Session  Winnow &lt;version> ..." to WinnowLog.txt and the version on the issue log's New Session line.
+
+#### 22.7.3 Issue Line Layout
+
+Issue::toString (one-line) puts the fixed columns first so a long message cannot push anything out of line (the catalog's "NOT NULL constraint failed" message used to run into "Src:"):
+
+    col 0   timestamp  "yyyy-MM-dd hh:mm:ss "   Issue::TimeWidth 20
+    col 20  type       "Warning: "              Issue::TypeWidth 9
+    col 29  source     "Catalog::commit"         Issue::SrcWidth 34
+    col 63  message, newlines folded to " | ", then "  Row: n" (only for a datamodel row), then "  Obj: path"
+
+An unknown type string shows as "Other". Issue::collapseKey is the type + source + message part and must change with the layout. Lines written before 3\_beta7 (message at col 29, then "Src: ") keep their old key, characters 20 to 129, so a report that spans the update still collapses them.
+
+Every issue message says what failed and why: include `lastError().text()`, `errorString()` or `e.what()`. Keep the message text stable and pass the file as fPath, so G::issueDedup still collapses repeats across files. Session Issues (Help > Diagnostics) lists issueDedup counts the same way, right-aligned.
 
 The issue forms live in `.github/ISSUE_TEMPLATE`: bug\_report.yml (field ids `what`, `steps`, `files`, `version`, `system`, `logs`), feature\_request.yml, and config.yml, whose contact link points users without a GitHub account to the email address. Renaming bug\_report.yml or the `version` / `system` ids breaks the pre-fill: change MW::reportIssue in the same commit.

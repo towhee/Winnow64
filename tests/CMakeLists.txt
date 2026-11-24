@@ -178,6 +178,9 @@ winnow_add_unit_test(tst_exportembellish unit/tst_exportembellish.cpp
     ${CMAKE_SOURCE_DIR}/Export/exportpresets.cpp
     ${CMAKE_SOURCE_DIR}/Export/exportpresets.h)
 winnow_add_unit_test(tst_rational  unit/tst_rational.cpp)
+# tst_issuelog tests Log/issue.cpp: the issue log's one-line columns, the repeat-collapse
+# key WinnowReport.txt uses, and the report's privacy pass (Issue::redactReport).
+winnow_add_unit_test(tst_issuelog unit/tst_issuelog.cpp)
 # tst_geo tests Utilities/geo.* (the Map module's pure math: no network, no widgets).
 winnow_add_unit_test(tst_geo unit/tst_geo.cpp ${CMAKE_SOURCE_DIR}/Utilities/geo.cpp)
 # tst_screenfit tests Utilities/screenfit.* (windows kept inside the usable screen area,

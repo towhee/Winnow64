@@ -1,8 +1,10 @@
 #include "Views/Map/maptilesource.h"
+#include "Main/global.h"
 
 #include <QCoreApplication>
 #include <QDateTime>
 #include <QDir>
+#include <QRegularExpression>
 #include <QNetworkAccessManager>
 #include <QNetworkDiskCache>
 #include <QNetworkReply>
@@ -229,5 +231,15 @@ void MapTileSource::setError(const QString &error)
 {
     if (error == mLastError) return;
     mLastError = error;
+    /* The banner is the only other place this shows. Logged with every URL cut to its
+       host: Qt puts the request URL in errorString, and a tile URL can carry the user's
+       API key (in the query or the path), which must not reach a report that may be
+       posted publicly. */
+    if (!error.isEmpty()) {
+        static const QRegularExpression url(R"((https?://)(?:[^/\s@]*@)?([^/\s]+)\S*)");
+        QString safe = error;
+        safe.replace(url, "\\1\\2/…");
+        G::issueDedup("Warning", "Map tiles: " + safe, "MapTileSource");
+    }
     emit errorChanged(error);
 }

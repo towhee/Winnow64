@@ -337,7 +337,12 @@ void MW::devPreviewBuildNext()
                 bumped here -- doing so would start the next render while this one was
                 still encoding, which is the one thing the queue exists to prevent. */
             if (ok && !out.isNull()) devPreviewStore(fPath, out, expectKey, reduced);
-            else devPreviewBuildStepDone();
+            else {
+                // the render's own failure is logged where it happened
+                G::issueDedup("Warning", "Develop preview not built: the render failed",
+                              "MW::devPreviewBuildNext", -1, fPath);
+                devPreviewBuildStepDone();
+            }
         }, nullptr, -1, /*requireSensor*/false, reduced ? kAutoBatchPreviewEdge : 0);
 }
 
@@ -475,7 +480,12 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
             a key that no longer describes them. */
         if (devPreviewBuildKey(fPath) != expectKey) { devPreviewBuildStepDone(); return; }
         if (devPreviewBuildCancelled) { devPreviewBuildStepDone(); return; }
-        if (r.thumbJpg.isEmpty() && r.previewJpg.isEmpty()) { devPreviewBuildStepDone(); return; }
+        if (r.thumbJpg.isEmpty() && r.previewJpg.isEmpty()) {
+            G::issueDedup("Warning", "Develop preview not built: the JPEG encode failed",
+                          "MW::devPreviewStore", -1, fPath);
+            devPreviewBuildStepDone();
+            return;
+        }
 
         /* Sidecar first: writeDevelopSidecar writes the recipe, the thumbnail and the key in
            ONE pass, so the three can never disagree. The recipe is passed through

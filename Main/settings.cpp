@@ -1300,25 +1300,56 @@ void MW::applyPendingSettingsReset()
             if (f.open(QIODevice::WriteOnly | QIODevice::Truncate)) f.close();
         };
 
+        /* SETTINGS.INI IS NEVER REMOVED UNTIL ITS COPY EXISTS. Each rename used to be
+           unchecked and settings.ini removed regardless, so a failed rename (a locked
+           file on Windows, a permission change) lost the user's settings with no copy
+           to restore from. keep() moves ini to `to`, falling back to a copy; when both
+           fail the step is not carried out and the issue says why. These run before
+           G::newIssueLog: G::issue holds the lines until the log exists. */
+        const QString fun = "MW::applyPendingSettingsReset";
+        auto keep = [&](const QString &to) {
+            if (!QFile::exists(ini)) return true;
+            QFile f(ini);
+            if (f.rename(to)) return true;
+            const QString why = f.errorString();
+            if (QFile::copy(ini, to)) return true;
+            G::issue("Error", "Settings " + step + " was not done: settings.ini could not "
+                     "be kept as " + QFileInfo(to).fileName() + ": " + why, fun);
+            return false;
+        };
+
         if (step == "reset") {
             /* During a test settings.ini is only the test's: the user's own settings
                stay in the test backup, so keep that and do not save the test's. */
+            bool kept = true;
             if (!QFile::exists(backup)) {
                 QFile::remove(settingsFile(kBeforeReset));
-                QFile::rename(ini, settingsFile(kBeforeReset));
+                kept = keep(settingsFile(kBeforeReset));
             }
-            QFile::remove(ini);
-            startEmpty();
+            if (kept) {
+                QFile::remove(ini);
+                startEmpty();
+            }
         }
         else if (step == "test") {
-            if (!QFile::exists(backup)) QFile::rename(ini, backup);
-            QFile::remove(ini);
-            startEmpty();
+            if (QFile::exists(backup) || keep(backup)) {
+                QFile::remove(ini);
+                startEmpty();
+            }
         }
         else if (step == "restore") {
             if (QFile::exists(backup)) {
+                /* The backup is removed only once settings.ini holds it, so a failure
+                   leaves the test running (isFactorySettingsTest) and Restore can be
+                   tried again. */
                 QFile::remove(ini);
-                QFile::rename(backup, ini);
+                QFile b(backup);
+                if (!b.rename(ini)) {
+                    const QString why = b.errorString();
+                    if (QFile::copy(backup, ini)) QFile::remove(backup);
+                    else G::issue("Error", "Settings restore failed: the saved settings "
+                                  "could not be put back: " + why, fun);
+                }
             }
         }
     }

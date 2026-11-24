@@ -1524,7 +1524,12 @@ void MW::deleteFolderPath(const QString &dirToDelete)
     }
 
     // okay to delete
-    if (QFile(dirToDelete).moveToTrash()) {
+    QFile dirFile(dirToDelete);
+    const bool isTrashed = dirFile.moveToTrash();
+    if (!isTrashed)
+        G::issue("Warning", "Delete folder failed: could not move it to the " + G::trash +
+                 ": " + dirFile.errorString(), "MW::deleteFolderPath", -1, dirToDelete);
+    if (isTrashed) {
         const int forgotten = FileOps::onFolderDeleted(dirToDelete);
         if (!goneMasters.isEmpty()) {
             /* A Folders check on the trashed folder goes with it; restore would
@@ -1589,8 +1594,9 @@ void MW::deleteAllImageMemCard(QString rootPath, QString name)
     if (ret == QMessageBox::Cancel) return;
 
     // delete
-    qDebug() << "MW::deleteAllImageMemCard   removed" << dcimPath;
-    dcimDir.removeRecursively();
+    if (!dcimDir.removeRecursively())
+        G::issue("Warning", "Delete All Images: some files on the card could not be "
+                 "removed", "MW::deleteAllImageMemCard", -1, dcimPath);
     if (FileOps::onFolderDeleted(dcimPath) > 0) refreshLibraryAfterCatalogChange();
 
     QString msg = "All images removed from " + name;

@@ -95,6 +95,7 @@ private:
     QStringList remoteTempFiles;        // a winnet's temp copies, removed when done
     int index = 0;                      // the image being rendered
     int pendingWrites = 0;              // handed to the writer, not yet written
+    int failedCount = 0;                // not loaded or not saved, for the issue log
     bool waitingForWriter = false;      // render paused: the writer is two behind
     bool remote = false;                // a winnet's files: no datamodel
     bool running = false;

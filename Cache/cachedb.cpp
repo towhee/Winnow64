@@ -113,7 +113,10 @@ void moveAside(const QString &dbPath)
     for (const QString &suffix : {QString(), QString("-wal"), QString("-shm")}) {
         const QString from = dbPath + suffix;
         if (!QFileInfo::exists(from)) continue;
-        QFile::rename(from, dbPath + suffix + ".corrupt." + stamp);
+        QFile f(from);
+        if (!f.rename(dbPath + suffix + ".corrupt." + stamp))
+            G::issue("Error", "Local index database could not be moved aside: " +
+                     f.errorString(), "CacheDb::moveAside", -1, from);
     }
     QString msg = "Local index database was unreadable; a new one was created.";
     G::issue("Warning", msg, "CacheDb::moveAside", -1, dbPath);

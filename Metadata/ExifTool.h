@@ -40,6 +40,13 @@ public:
 
 private:
     bool ensureRunning(const QString &where);
+    /* REPLIES NOT YET READ. Every -stay_open command answers "{ready}" on stdout when
+       it finishes, and most methods here write and move on. drainReplies waits for all
+       of them, so a caller knows the work is DONE (addThumb: before its thumbnail file
+       is removed) and ExifTool's errors reach the issue log. A reading method drains
+       first, or it would take an earlier command's "{ready}" for its own. */
+    bool drainReplies(const QString &where);
+    int unreadReplies = 0;
 
     QString exifToolPath;
     QProcess process;

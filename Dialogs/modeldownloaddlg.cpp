@@ -9,6 +9,7 @@
 #include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QRegularExpression>
 #include <QNetworkRequest>
 #include <QProgressBar>
 #include <QPushButton>
@@ -213,10 +214,12 @@ void ModelDownloadDlg::onFinished()
     }
 
     const bool committed = file->commit();
+    const QString why = committed ? QString() : file->errorString();
     delete file;
     file = nullptr;
     if (!committed) {
-        failWith(tr("Could not finish saving %1.").arg(QString::fromLatin1(mi.fileName)));
+        failWith(tr("Could not finish saving %1:<br>%2").arg(QString::fromLatin1(mi.fileName),
+                                                          why));
         return;
     }
 
@@ -238,6 +241,12 @@ void ModelDownloadDlg::onCancelClicked()
 
 void ModelDownloadDlg::failWith(const QString &message)
 {
+    /* Every failure ends here, so this is where it reaches the issue log: the dialog's
+       text without its markup. */
+    QString plain = message;
+    plain.replace("<br>", " ").remove(QRegularExpression("<[^>]*>"));
+    G::issue("Warning", "AI model download failed: " + plain.simplified(),
+             "ModelDownloadDlg");
     QMessageBox box(QMessageBox::Warning, tr("Download AI Model"), message,
                     QMessageBox::Ok, this);
     box.setTextFormat(Qt::RichText);

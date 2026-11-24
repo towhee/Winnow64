@@ -433,7 +433,11 @@ void Catalog::writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
     QSqlQuery del(db);
     del.prepare("DELETE FROM image_keyword WHERE image_id = ?");
     del.addBindValue(imageId);
-    del.exec();
+    /* A failed keyword or full-text write leaves the image out of keyword filters and
+       search until it is indexed again. Once per reason (issueDedup). */
+    if (!del.exec())
+        G::issueDedup("Warning", "Catalog keyword links not cleared: " +
+                      del.lastError().text(), "Catalog::writeKeywordsLocked");
 
     const QStringList expanded =
         keywordPrefixExpand(keywordEffectivePaths(r.keywordsLiteral, r.keywordPaths));
@@ -451,7 +455,9 @@ void Catalog::writeKeywordsLocked(QSqlDatabase &db, qint64 imageId, const Catalo
         for (qint64 id : ids) {
             ins.addBindValue(imageId);
             ins.addBindValue(id);
-            ins.exec();
+            if (!ins.exec())
+                G::issueDedup("Warning", "Catalog keyword link failed: " +
+                              ins.lastError().text(), "Catalog::writeKeywordsLocked");
         }
     }
 }
@@ -477,7 +483,9 @@ void Catalog::writeFtsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow 
     QSqlQuery del(db);
     del.prepare("DELETE FROM image_fts WHERE rowid = ?");
     del.addBindValue(imageId);
-    del.exec();
+    if (!del.exec())
+        G::issueDedup("Warning", "Catalog search text not cleared: " +
+                      del.lastError().text(), "Catalog::writeFtsLocked");
 
     QStringList kw;
     QSet<QString> kwSeen;
@@ -506,7 +514,9 @@ void Catalog::writeFtsLocked(QSqlDatabase &db, qint64 imageId, const CatalogRow 
     ins.addBindValue(text(r.copyright));
     ins.addBindValue(text(gear.join(' ')));
     ins.addBindValue(text(r.filename));
-    ins.exec();
+    if (!ins.exec())
+        G::issueDedup("Warning", "Catalog search text failed: " + ins.lastError().text(),
+                      "Catalog::writeFtsLocked", -1, r.path);
 }
 
 /* ---------------------------------------------------------------------------------
@@ -538,7 +548,11 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
     const MountSnapshot mounts = MountSnapshot::take();
     const qint64 now = nowSecs();
 
-    if (!db.transaction()) return 0;
+    if (!db.transaction()) {
+        G::issueDedup("Warning", "Catalog batch not written: could not start a "
+                      "transaction: " + db.lastError().text(), "Catalog::commit");
+        return 0;
+    }
 
     QSqlQuery sel(db);
     sel.prepare("SELECT id, srcsize, srcmtime, sidecarmtime, unreadable, live FROM image"
@@ -714,6 +728,8 @@ int Catalog::commit(const QVector<CatalogRow> &rows)
 
     if (written) setMetaLocked(db, "change_seq", QString::number(seq));
     if (!db.commit()) {
+        G::issueDedup("Warning", "Catalog batch not written: commit failed: " +
+                      db.lastError().text(), "Catalog::commit");
         db.rollback();
         return 0;
     }
@@ -2032,7 +2048,16 @@ int Catalog::reconcileFolder(const QString &folder, const QSet<QString> &present
         u.addBindValue(id);
         if (u.exec()) ++demoted;
     }
-    db.commit();
+    if (!db.commit())
+        G::issueDedup("Warning", "Catalog reconcile commit failed: " + db.lastError().text(),
+                      "Catalog::reconcileFolder");
+    /* "all" of a folder is the one that matters: a partial listing would look the same,
+       so it goes to the issue log too (Info: usually a folder emptied outside Winnow). */
+    if (demoted > 0 && demoted == live.size())
+        G::issue("Info", QString("Catalog reconcile took all %1 rows of a folder out of the "
+                 "Library (caller %2)").arg(demoted)
+                 .arg(caller.isEmpty() ? QString("?") : caller), "Catalog::reconcileFolder", -1,
+                 folder);
     /*  EVERY DEMOTION IS LOGGED, with who asked and how much of the folder it took. A
         wrong one is otherwise invisible: the rows just leave the Library, and by the time
         anyone looks a rescan may have promoted them again. "all" of a folder that is
@@ -2410,11 +2435,17 @@ void Catalog::onMoved(const QString &srcPath, const QString &dstPath)
     if (!q.exec()) {
         /* The destination may already be catalogued -- moving a file onto a path the
            catalog knows. The unique index refuses; drop the stale source row instead of
-           leaving two rows claiming the same image. */
+           leaving two rows claiming the same image. Any OTHER failure takes the same
+           branch, so its reason is logged: the moved image then leaves the catalog until
+           its folder is indexed again. */
+        G::issueDedup("Info", "Catalog move: the source row was dropped: " +
+                      q.lastError().text(), "Catalog::onMoved", -1, dstPath);
         QSqlQuery del(db);
         del.prepare("DELETE FROM image WHERE pathkey = ?");
         del.addBindValue(cachePathKey(srcPath));
-        del.exec();
+        if (!del.exec())
+            G::issueDedup("Warning", "Catalog move: the source row could not be dropped: "
+                          + del.lastError().text(), "Catalog::onMoved", -1, srcPath);
     }
     lk.unlock();
     notifyMembershipChanged();

@@ -3,10 +3,24 @@
 #include "Metadata/keywordpaths.h"
 
 #include <QDateTime>
+#include <QSqlError>
 #include <QSqlQuery>
+#include "Main/global.h"
 #include <QVariant>
 
 namespace KeywordAuditStore {
+
+namespace {
+/* A verdict or skip that was not saved comes back on the next audit. The keyword is
+   never in the message: the report can be public (see "Privacy" in Documentation.md). */
+bool execOrLog(QSqlQuery &q, const char *what)
+{
+    if (q.exec()) return true;
+    G::issueDedup("Warning", QString("Keyword audit: %1 not saved: %2")
+                  .arg(what, q.lastError().text()), "KeywordAuditStore");
+    return false;
+}
+}   // namespace
 
 QSet<QString> dismissed()
 {
@@ -61,7 +75,7 @@ bool setDismissed(const QString &pathKey, const QString &kind, const QString &ke
         q.addBindValue(kind);
         q.addBindValue(keywordFold(keyword));
     }
-    return q.exec();
+    return execOrLog(q, "verdict");
 }
 
 QHash<QString, QString> skipped()
@@ -91,7 +105,7 @@ bool setSkipped(const QString &keyword, bool on)
         q.prepare("DELETE FROM audit_skip WHERE keyword = ?");
         q.addBindValue(keywordFold(keyword));
     }
-    return q.exec();
+    return execOrLog(q, "skip");
 }
 
 QHash<QString, QString> vocabulary()

@@ -70,7 +70,10 @@ void CatalogScanner::shutdown(int maxWaitMs)
     stop();
     if (!scannerThread.isRunning()) return;
     scannerThread.quit();
-    scannerThread.wait(QDeadlineTimer(maxWaitMs));
+    /* Left running at quit: a crash on quit that follows points here. */
+    if (!scannerThread.wait(QDeadlineTimer(maxWaitMs)))
+        G::issue("Error", QString("The catalog scanner thread did not stop within %1 ms at "
+                 "quit").arg(maxWaitMs), "CatalogScanner::shutdown");
 }
 
 void CatalogScanner::stop()

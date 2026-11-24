@@ -11609,7 +11609,11 @@ void DevelopProperties::reportStackIssues(const QString &fPath, int status,
            delete or rewrite it here: the user may be able to recover it, and a silent
            overwrite is exactly the failure this whole path exists to prevent. It is
            replaced only if the user edits this image (flushImage), which is an explicit
-           act -- so say so plainly. */
+           act -- so say so plainly. The popup is once a session; the issue log has every
+           image, which is what "see the log" points to. */
+        G::issue("Error", "Develop settings in the sidecar could not be read and are "
+                 "ignored; editing this image will replace them",
+                 "DevelopProperties::reportStackIssues", -1, fPath);
         warnOnce("corruptSidecar",
                  "Develop settings for \"" + file + "\" could not be read and have been "
                  "ignored.\nThe file is unchanged until you edit this image; editing it "
@@ -11620,6 +11624,8 @@ void DevelopProperties::reportStackIssues(const QString &fPath, int status,
 
     /* Repairs: the stack loaded, but something in it was not renderable as stored. */
     for (const QString &issue : issues) {
+        G::issueDedup("Warning", "Develop settings repaired on load: " + issue,
+                      "DevelopProperties::reportStackIssues", -1, fPath);
         if (issue.startsWith("Written by a newer"))
             warnOnce("newerFormat",
                      "\"" + file + "\" was developed in a newer version of Winnow.\n"

@@ -599,8 +599,19 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
             const QString sc = FileOps::existingSidecar(fPath);
             if (sc.isEmpty() || QFileInfo(sc).isSymLink()) return;
             QFile f(sc);
-            if (!f.open(QIODevice::ReadWrite)) return;
+            /* A sidecar that cannot be opened or parsed keeps its tiff:Orientation, which
+               parseSidecar applies over the file's: the rotation is undone on the next
+               read. */
+            if (!f.open(QIODevice::ReadWrite)) {
+                G::issue("Warning", "Rotation will be undone on the next read: could not "
+                         "open the sidecar to clear its orientation: " + f.errorString(),
+                         src, -1, sc);
+                return;
+            }
             Xmp xmp(f, G::dmInstance);
+            if (!xmp.isValid)
+                G::issue("Warning", "Rotation may be undone on the next read: the sidecar "
+                         "could not be parsed to clear its orientation", src, -1, sc);
             if (xmp.isValid && !xmp.getItem("orientation").isEmpty()) {
                 xmp.setItem("orientation", "");
                 if (!xmp.writeSidecar(f))
@@ -631,7 +642,7 @@ void Metadata::writeOrientation(QString fPath, QString orientationNumber)
         return;
     }
     Xmp xmp(sidecarFile, G::dmInstance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return;
     xmp.setItem("orientation", orientationNumber.toLatin1());
     QString modifyDate = QDateTime::currentDateTime().toOffsetFromUtc
         (QDateTime::currentDateTime().offsetFromUtc()).toString(Qt::ISODate);
@@ -926,7 +937,7 @@ void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB
         return;
     }
     Xmp xmp(sidecarFile, G::dmInstance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return;
     xmp.setItem("develop", blob.toLatin1());        // "" removes the attribute
 
     /* The preview and its key are written in the same pass as the recipe, so the three
@@ -1083,7 +1094,7 @@ bool Metadata::writeKeywordsToSidecar(const QString &fPath, const QStringList &s
     }
 
     Xmp xmp(sidecarFile, G::dmInstance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return false;
 
     xmp.setItemList("subject", subject);
     xmp.setItemList("hierarchicalsubject", hierarchical);
@@ -1136,7 +1147,7 @@ bool Metadata::writeGpsToSidecar(const QString &fPath, double lat, double lon)
         return false;
     }
     Xmp xmp(sidecarFile, G::dmInstance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return false;
     xmp.setItem("gpsversionid", "2.2.0.0");
     xmp.setItem("gpslatitude", Geo::toXmpCoord(lat, true).toLatin1());
     xmp.setItem("gpslongitude", Geo::toXmpCoord(lon, false).toLatin1());
@@ -1194,7 +1205,7 @@ bool Metadata::writeItemsToSidecar(const QString &fPath,
         return false;
     }
     Xmp xmp(sidecarFile, G::dmInstance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return false;
     for (const auto &it : items) xmp.setItem(it.first, it.second);
     xmp.setItem("modifydate", xmpNow());
     const bool ok = xmp.writeSidecar(sidecarFile);
@@ -1259,7 +1270,7 @@ bool Metadata::embedXmp(const QString &fPath, const std::function<void(Xmp &)> &
     if (!xmp.isValid) {
         if (r == XmpEmbed::Result::Ok && xmp.err != Xmp::Err::NoRdfAbout)
             return fail("its existing XMP could not be parsed");
-        xmp.fix();
+        if (!xmp.fix()) return fail("its XMP could not be repaired");
     }
     edit(xmp);
 
@@ -1457,7 +1468,11 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
     }
 
     // data edited, open the sidecar
-    if (p.file.isOpen()) return false;
+    if (p.file.isOpen()) {
+        G::issueDedup("Warning", "Sidecar not written: the file handle was still open "
+                      "from another read", "Metadata::writeXMP", -1, fPath);
+        return false;
+    }
     sPath = FileOps::prepareSidecarForWrite(fPath);
     p.file.setFileName(sPath);
     // Refuse to write through a symlink so a planted sidecar can't redirect to a sensitive target.
@@ -1465,11 +1480,15 @@ bool Metadata::writeXMP(const QString &fPath, QString src)
         G::issue("Warning", "Refusing to write sidecar: path is a symlink.", "Metadata::writeXMP", -1, fPath);
         return false;
     }
-    if (!p.file.open(QIODevice::ReadWrite)) return false;
+    if (!p.file.open(QIODevice::ReadWrite)) {
+        G::issueDedup("Warning", "Could not open the sidecar to save the edit: " +
+                      p.file.errorString(), "Metadata::writeXMP", -1, sPath);
+        return false;
+    }
 
     // if current xmp is invalid then fix
     Xmp xmp(p.file, p.instance);
-    if (!xmp.isValid) xmp.fix();
+    if (!xmp.isValid && !xmp.fix()) return false;
 
     const bool wasEmbedded = xmp.getItem("metadataembedded") == "True";
     if (wasEmbedded) xmp.setItem("metadataembedded", "");
@@ -1562,11 +1581,23 @@ checked to make sure there is valid data.
     length = 0;
 }
 
+/*
+    A FORMAT PARSER THAT RETURNED FALSE. The wrappers below still return true: the rows
+    keep what was read before the stop (dates, exposure, offsets), and a false would mark
+    the image as failed to load. That trade is a follow-up; until then the stop is at
+    least logged, once per format, with the file.
+*/
+static void parseStoppedEarly(const char *format, const QString &fPath)
+{
+    G::issueDedup("Warning", QString("%1 metadata read stopped early; some fields may be "
+                  "missing").arg(format), "Metadata::parse", -1, fPath);
+}
+
 bool Metadata::parseNikon()
 {
     if (G::isLogger) G::log("Metadata::parseNikon");
     if (nikon == nullptr) nikon = new Nikon;
-    nikon->parse(p, m, ifd, exif, jpeg, gps);
+    if (!nikon->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Nikon", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1575,7 +1606,7 @@ bool Metadata::parseCanon()
 {
     if (G::isLogger) G::log("Metadata::parseCanon");
     if (canon == nullptr) canon = new Canon;
-    canon->parse(p, m, ifd, exif, jpeg, gps);
+    if (!canon->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Canon", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1586,7 +1617,7 @@ bool Metadata::parseCanonCR3()
 //    CanonCR3 canonCR3(p, m, ifd, exif, jpeg);
 //    canonCR3.parse();
     if (canonCR3 == nullptr) canonCR3 = new CanonCR3;
-    canonCR3->parse(&p, &m, ifd, exif, jpeg, gps);
+    if (!canonCR3->parse(&p, &m, ifd, exif, jpeg, gps)) parseStoppedEarly("Canon CR3", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1595,7 +1626,7 @@ bool Metadata::parseOlympus()
 {
     if (G::isLogger) G::log("Metadata::parseOlympus");
     if (olympus == nullptr) olympus = new Olympus;
-    olympus->parse(p, m, ifd, exif, jpeg, gps);
+    if (!olympus->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Olympus", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1604,7 +1635,7 @@ bool Metadata::parseSony()
 {
     if (G::isLogger) G::log("Metadata::parseSony");
     if (sony == nullptr) sony = new Sony;
-    sony->parse(p, m, ifd, exif, jpeg, gps);
+    if (!sony->parse(p, m, ifd, exif, jpeg, gps)) parseStoppedEarly("Sony", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1613,7 +1644,7 @@ bool Metadata::parseFuji()
 {
     if (G::isLogger) G::log("Metadata::parseFuji");
     if (fuji == nullptr) fuji = new Fuji;
-    fuji->parse(p, m, ifd, exif, jpeg);
+    if (!fuji->parse(p, m, ifd, exif, jpeg)) parseStoppedEarly("Fuji", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1623,7 +1654,7 @@ bool Metadata::parseDNG()
     if (G::isLogger) G::log("Metadata::parseDNG");
     if (dng == nullptr) dng = new DNG;
     if (iptc == nullptr) iptc = new IPTC;
-    dng->parse(p, m, ifd, iptc, exif, jpeg, gps);
+    if (!dng->parse(p, m, ifd, iptc, exif, jpeg, gps)) parseStoppedEarly("DNG", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1633,7 +1664,7 @@ bool Metadata::parseTIF()
     if (G::isLogger) G::log("Metadata::parseTIF");
     if (tiff == nullptr) tiff = new Tiff;
     if (irb == nullptr) irb = new IRB;
-    tiff->parse(p, m, ifd, irb, iptc, exif, gps);
+    if (!tiff->parse(p, m, ifd, irb, iptc, exif, gps)) parseStoppedEarly("TIFF", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1651,7 +1682,7 @@ bool Metadata::parsePanasonic()
 {
     if (G::isLogger) G::log("Metadata::parsePanasonic");
     if (panasonic == nullptr) panasonic = new Panasonic;
-    panasonic->parse(p, m, ifd, exif, jpeg);
+    if (!panasonic->parse(p, m, ifd, exif, jpeg)) parseStoppedEarly("Panasonic", p.fPath);
     if (p.report) reportMetadata();
     return true;
 }
@@ -1802,6 +1833,12 @@ bool Metadata::parseSidecar()
     }
 
     if (!xmp.isValid) {
+        /* Nothing in it is loaded (rating, label, keywords, develop settings), and the
+           next edit keeps a copy and starts a new one (Xmp::fix). */
+        QString why = xmp.errMsg.value(xmp.err);
+        if (!xmp.parseError.isEmpty()) why += ": " + xmp.parseError;
+        G::issueDedup("Warning", "Sidecar could not be read, nothing in it was loaded: " +
+                      why, "Metadata::parseSidecar", m.row, sidecarPath);
         sidecarFile.close();
         return false;
     }

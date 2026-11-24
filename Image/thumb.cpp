@@ -1,4 +1,5 @@
 #include "Image/thumb.h"
+#include "Image/decodereason.h"
 #include "Image/stalethumb.h"
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
@@ -308,19 +309,26 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
 
     if (imFile.open(QIODevice::ReadOnly)) {
         bool success = false;
+        QString why = "aborted";
         if (!abort) {
             if (imFile.seek(offsetThumb)) {
                 QByteArray buf = imFile.read(lengthThumb);
+                if (buf.size() < qsizetype(lengthThumb))
+                    G::issueDedup("Warning", "Embedded thumbnail is shorter than its stated "
+                                  "length (the file may be truncated)",
+                                  "Thumb::loadFromJpgData", dmRow, fPath);
                 success =  image.loadFromData(buf, "JPEG");
                 /* Embedded thumb is JPEG for all current formats; fall back to
                    Qt format auto-detection (content sniffing) in case a format
                    stores a non-JPEG thumb. */
                 if (!success) success = image.loadFromData(buf);
+                if (!success) why = DecodeReason::fromData(buf, nullptr);
             }
+            else why = "the thumbnail offset is past the end of the file";
         }
         imFile.close();
         if (image.isNull()) {
-            QString msg = "Null image.";
+            QString msg = "Null image: " + why;
             G::issue("Warning", msg, "Thumb::loadFromJpgData", dmRow, fPath);
             return Status::Fail;
         }
@@ -328,6 +336,10 @@ Thumb::Status Thumb::loadFromJpgData(QString &fPath, QImage &image)
         else return Status::Fail;
     }
     else {
+        /* Status::Open is retried as "busy" for about a second; a file that cannot be
+           opened at all (permission, offline volume) only looks busy, so say why. */
+        G::issueDedup("Warning", "Thumbnail: could not open the file: " +
+                      imFile.errorString(), "Thumb::loadFromJpgData", dmRow, fPath);
         return Status::Open;
     }
 }
@@ -376,7 +388,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
     // if no thumbnail then sample full image
     if (m.isEmbeddedThumbMissing) {
         if (!tiff.readSample(fPath, &image, G::maxIconSize, m.offsetFull)) {
-            QString errMsg = "Could not read because Tiff::readSample failed.";
+            QString errMsg = "Could not sample the TIFF: " + Tiff::takeLibTiffError();
             G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
             // qDebug() << fun << errMsg;
             return Status::Fail;
@@ -385,9 +397,8 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
     // read thumbnail
     else {
         if (!tiff.read(fPath, &image, m.offsetThumb)) {
-            QString errMsg = "Could not read because Tiff::read failed.";
+            QString errMsg = "Could not read the TIFF thumbnail: " + Tiff::takeLibTiffError();
             G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
-            qDebug() << fun << errMsg;
             return Status::Fail;
         }
     }

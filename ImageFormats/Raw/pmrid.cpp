@@ -379,11 +379,11 @@ static InferenceSession *SharedSession()
             runtime not vendored) loads nothing, and blaming the model file sent the
             reader looking for a file that was there all along. */
         if (!InferenceSession::BackendCompiledIn())
-            qWarning("PMRID: built without ONNX Runtime (WINNOW_ENABLE_ORT) -- "
-                     "raw denoise disabled");
+            G::issueDedup("Warning", "Raw denoise unavailable: this build has no ONNX "
+                          "Runtime", "PMRID::SharedSession");
         else if (!session->IsLoaded())
-            qWarning("PMRID: %s not found or failed to load at %s (raw denoise disabled)",
-                     kModelFile, path.toUtf8().constData());
+            G::issueDedup("Error", "Raw denoise unavailable: its model did not load",
+                          "PMRID::SharedSession", -1, path);
         else if (G::isLogger)
             G::log("PMRID::SharedSession loaded", session->BackendName());
         g_sessionLoadMs = loadT.nsecsElapsed() / 1e6;
@@ -523,7 +523,13 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
             tm.tileInMs += lap();
 
             std::vector<Tensor> outs;
-            if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) return false;
+            /* Run's own failure is logged by OrtBackend; this one says the raw was left
+               un-denoised (the caller reports it as unsupported). */
+            if (!s->Run({inName}, {in}, {outName}, outs) || outs.empty()) {
+                G::issueDedup("Warning", "Raw denoise stopped: a tile did not run",
+                              "PMRID::Apply");
+                return false;
+            }
             const double inferMs = lap();
             tm.inferMs += inferMs;
             if (tileDone == 0) {
@@ -533,7 +539,11 @@ bool Apply(RawImage &raw, int iso, const QString &model, const ProgressFn &progr
                 tm.inferMaxMs = std::max(tm.inferMaxMs, inferMs);
             }
             const Tensor &out = outs[0];
-            if (out.data.size() != 4 * tpp) return false;
+            if (out.data.size() != 4 * tpp) {
+                G::issueDedup("Warning", "Raw denoise stopped: the model returned a tile of "
+                              "the wrong size", "PMRID::Apply");
+                return false;
+            }
 
             for (int y = 0; y < th; ++y) {
                 const float wy = feather(y, th);

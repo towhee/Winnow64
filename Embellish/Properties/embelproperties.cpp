@@ -1087,9 +1087,10 @@ bool EmbelProperties::saveTemplateToFile()
         QFile file(dPath + "/" + tileName + ".tile");
         if (tileName != "Do not tile" && !file.exists()) {
             QSaveFile f(dPath + "/" + tileName + ".tile");
-            f.open(QIODevice::WriteOnly);
-            f.write(b[i].tile);
-            f.commit();
+            if (!f.open(QIODevice::WriteOnly) || f.write(b[i].tile) != b[i].tile.size()
+                || !f.commit())
+                G::issue("Warning", "Template export: a tile was not saved: " +
+                         f.errorString(), "EmbelProperties::saveTemplateToFile");
         }
     }
 
@@ -1100,9 +1101,10 @@ bool EmbelProperties::saveTemplateToFile()
         QFile file(dPath + "/" + graphicName + ".graphic");
         if (graphicName != "Do not tile" && !file.exists()) {
             QSaveFile f(dPath + "/" + graphicName + ".graphic");
-            f.open(QIODevice::WriteOnly);
-            f.write(g[i].graphic);
-            f.commit();
+            if (!f.open(QIODevice::WriteOnly) || f.write(g[i].graphic) != g[i].graphic.size()
+                || !f.commit())
+                G::issue("Warning", "Template export: a graphic was not saved: " +
+                         f.errorString(), "EmbelProperties::saveTemplateToFile");
         }
     }
 
@@ -1135,7 +1137,11 @@ bool EmbelProperties::saveTemplateToFile()
     QString compressed = locPath + "/" + templateName + ".embeltemplate";
     Utilities::uniqueFilePath(compressed);
     FolderCompressor fc;
-    fc.compressFolder(dPath, compressed);
+    /* Still returns true (the caller's contract is unchanged), but a template that was
+       not written is no longer silent. */
+    if (!fc.compressFolder(dPath, compressed))
+        G::issue("Warning", "Template export: the template file could not be written",
+                 "EmbelProperties::saveTemplateToFile", -1, compressed);
     dir.removeRecursively();
 
     return true;
@@ -1186,7 +1192,9 @@ bool EmbelProperties::readTemplateFromFile()
     FolderCompressor fc;
 
     // decompress template file into folder named after src name
-    fc.decompressFolder(srcPath, dstPath);
+    if (!fc.decompressFolder(srcPath, dstPath))
+        G::issue("Warning", "Template import: the template file could not be unpacked",
+                 "EmbelProperties::readTemplateFromFile", -1, srcPath);
 
     // Prep for filtering and reading template, tiles and graphics
     QDir dir(dstPath);

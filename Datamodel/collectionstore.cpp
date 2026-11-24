@@ -10,6 +10,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QSet>
+#include <QSqlError>
 #include <QSqlQuery>
 #include <QThread>
 #include <QVariant>
@@ -19,6 +20,20 @@
 namespace {
 
 qint64 nowSecs() { return QDateTime::currentSecsSinceEpoch(); }
+
+/*  A failed write to userdata.db: what it was and SQLite's reason. Once per distinct
+    reason (issueDedup), never with a collection's name: the report can go to a public
+    GitHub issue (see "Privacy" in notes/Documentation.md). */
+void sqlFail(const QString &what, const QSqlQuery &q, const QString &src)
+{
+    G::issueDedup("Warning", "Collections: " + what + " failed: " + q.lastError().text(),
+                  src);
+}
+void commitFail(const QString &what, QSqlDatabase &d, const QString &src)
+{
+    G::issueDedup("Warning", "Collections: " + what + " commit failed: " +
+                  d.lastError().text(), src);
+}
 
 /*  A top-level node is NULL in the table (so the foreign key has nothing to check) and
     0 in memory. */
@@ -168,7 +183,10 @@ qint64 CollectionStore::create(Kind kind, qint64 parent, const QString &name,
     q.addBindValue(definition.isNull() ? QString("") : definition);
     q.addBindValue(nowSecs());
     q.addBindValue(nowSecs());
-    if (!q.exec()) return 0;
+    if (!q.exec()) {
+        sqlFail("create", q, "CollectionStore::create");
+        return 0;
+    }
     const qint64 id = q.lastInsertId().toLongLong();
     emit nodesChanged(kind);
     /*  Undo takes the node away and keeps what it held by then (a collection may have
@@ -194,7 +212,10 @@ bool CollectionStore::rename(qint64 id, const QString &name)
     q.addBindValue(nm);
     q.addBindValue(nowSecs());
     q.addBindValue(id);
-    if (!q.exec()) return false;
+    if (!q.exec()) {
+        sqlFail("rename", q, "CollectionStore::rename");
+        return false;
+    }
     emit nodesChanged(n.kind);
     const QString old = n.name;
     UndoManager::record(new ActionCommand(
@@ -215,7 +236,10 @@ bool CollectionStore::setDefinition(qint64 id, const QString &definition)
     q.addBindValue(definition.isNull() ? QString("") : definition);
     q.addBindValue(nowSecs());
     q.addBindValue(id);
-    if (!q.exec()) return false;
+    if (!q.exec()) {
+        sqlFail("edit definition", q, "CollectionStore::setDefinition");
+        return false;
+    }
     emit nodesChanged(n.kind);
     const QString old = n.definition;
     UndoManager::record(new ActionCommand(
@@ -256,7 +280,10 @@ bool CollectionStore::remove(qint64 id)
     QSqlQuery q(d);
     q.prepare("DELETE FROM node WHERE id = ?");
     q.addBindValue(id);
-    if (!q.exec()) return false;
+    if (!q.exec()) {
+        sqlFail("delete", q, "CollectionStore::remove");
+        return false;
+    }
     emit nodesChanged(n.kind);
     emit membersChanged();
     UndoManager::record(new ActionCommand(
@@ -400,12 +427,16 @@ int CollectionStore::addMembers(qint64 id, const QStringList &paths)
         q.addBindValue(key);
         q.addBindValue(QDir::cleanPath(QDir::fromNativeSeparators(p)));
         q.addBindValue(now);
-        if (q.exec() && q.numRowsAffected() > 0) {
+        if (!q.exec()) {
+            sqlFail("add member", q, "CollectionStore::addMembers");
+            continue;
+        }
+        if (q.numRowsAffected() > 0) {
             ++added;
             joined << p;
         }
     }
-    d.commit();
+    if (!d.commit()) commitFail("add members", d, "CollectionStore::addMembers");
     if (added) {
         emit membersChanged();
         UndoManager::record(new ActionCommand(
@@ -440,12 +471,16 @@ int CollectionStore::removeMembers(qint64 id, const QStringList &paths)
         m.added = read.value(1).toLongLong();
         q.addBindValue(id);
         q.addBindValue(key);
-        if (q.exec() && q.numRowsAffected() > 0) {
+        if (!q.exec()) {
+            sqlFail("remove member", q, "CollectionStore::removeMembers");
+            continue;
+        }
+        if (q.numRowsAffected() > 0) {
             ++removed;
             left.members << m;
         }
     }
-    d.commit();
+    if (!d.commit()) commitFail("remove members", d, "CollectionStore::removeMembers");
     if (removed) {
         emit membersChanged();
         QStringList keys;
@@ -597,9 +632,11 @@ bool CollectionStore::restore(const Subtree &t)
         q.addBindValue(r.created);
         q.addBindValue(r.modified);
         if (!q.exec()) {
+            const QString why = q.lastError().text();
             d.rollback();
-            G::issue("Warning", "Could not undo: \"" + r.node.name + "\" could not be put "
-                     "back.", "CollectionStore::restore");
+            // the id, not the name: the issue log can reach a public report
+            G::issue("Warning", QString("Could not undo: collection id %1 could not be put "
+                     "back: %2").arg(r.node.id).arg(why), "CollectionStore::restore");
             return false;
         }
         const int k = static_cast<int>(r.node.kind);
@@ -691,7 +728,7 @@ void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)
             q.addBindValue(from);
             q.addBindValue(versions);
             q.addBindValue(versions);
-            q.exec();
+            if (!q.exec()) sqlFail("respell a moved image", q, "CollectionStore::onMoved");
         }
         return;
     }
@@ -711,14 +748,15 @@ void CollectionStore::onMoved(const QString &srcPath, const QString &dstPath)
     q.addBindValue(from);
     q.addBindValue(versions);
     q.addBindValue(versions);
-    q.exec();
+    // a failed UPDATE is logged, but the DELETE after it still runs (not rolled back)
+    if (!q.exec()) sqlFail("follow a moved image", q, "CollectionStore::onMoved");
     const bool changed = q.numRowsAffected() > 0;
     q.prepare("DELETE FROM member WHERE pathkey = ? OR substr(pathkey, 1, length(?)) = ?");
     q.addBindValue(from);
     q.addBindValue(versions);
     q.addBindValue(versions);
-    q.exec();
-    d.commit();
+    if (!q.exec()) sqlFail("drop a moved image's old key", q, "CollectionStore::onMoved");
+    if (!d.commit()) commitFail("move", d, "CollectionStore::onMoved");
     if (changed) emit membersChanged();
 }
 
@@ -776,15 +814,16 @@ void CollectionStore::onFolderMoved(const QString &from, const QString &to)
     q.addBindValue(QDir::cleanPath(QDir::fromNativeSeparators(from)));
     q.addBindValue(fromPrefix);
     q.addBindValue(fromPrefix);
-    q.exec();
+    if (!q.exec()) sqlFail("follow a moved folder", q, "CollectionStore::onFolderMoved");
     const bool changed = q.numRowsAffected() > 0;
     if (fromKey != toKey) {
         q.prepare("DELETE FROM member WHERE substr(pathkey, 1, length(?)) = ?");
         q.addBindValue(fromPrefix);
         q.addBindValue(fromPrefix);
-        q.exec();
+        if (!q.exec())
+            sqlFail("drop a moved folder's old keys", q, "CollectionStore::onFolderMoved");
     }
-    d.commit();
+    if (!d.commit()) commitFail("folder move", d, "CollectionStore::onFolderMoved");
     if (changed) emit membersChanged();
 }
 

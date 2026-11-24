@@ -342,27 +342,26 @@ void Xmp::initialize()
 
     // build xmlDoc
     enum {PARSE_FLAGS = rapidxml::parse_non_destructive};
+    /* parseError keeps the reason for Xmp::fix and the readers' issues. rapidxml
+       parses in place, so where() is turned into a byte offset here, while it still
+       points into xmpBa. */
+    parseError.clear();
     try {
         xmlDoc.parse<0>(xmpBa.data());    // 0 means default parse flags
     }
-    catch (const std::runtime_error& e) {
-        std::cerr << "Runtime error was: " << e.what() << std::endl;
-        err = Err::ParseFailed;
-        return;
-    }
-    catch (const rapidxml::parse_error& /*e*/) {
-//        std::cerr << "Parse error: " << e.what() << "  " << e.where<char>()
-//                  << "  " << filePath.toStdString() << std::endl;
+    catch (const rapidxml::parse_error& e) {
+        parseError = QString("%1 at byte %2").arg(e.what())
+                         .arg(e.where<char>() - xmpBa.constData());
         err = Err::ParseFailed;
         return;
     }
     catch (const std::exception& e) {
-        std::cerr << "Exception error: " << e.what() << std::endl;
+        parseError = e.what();
         err = Err::ParseFailed;
         return;
     }
     catch (...) {
-        std::cerr << "Unknown error" << std::endl;
+        parseError = "unknown exception";
         err = Err::ParseFailed;
         return;
     }
@@ -383,7 +382,10 @@ void Xmp::initialize()
         }
     }
     else {
+        // an empty document: nothing below can be walked (rootNode was dereferenced)
         err = Err::NoRoot;
+        isValid = false;
+        return;
     }
 
     // check for node = rdf:RDF
@@ -727,10 +729,20 @@ void Xmp::initialize()
     definedElements["rdfDescription"] = e;
 }
 
-void Xmp::fix()
+bool Xmp::fix()
 {
 /*
     Deal with errors before any updates ie Xmp::setItem
+
+    AN UNREADABLE SIDECAR IS KEPT, NOT REPLACED. The repair starts a new document from
+    the skeleton, and the next write puts it over the file. A sidecar is the only copy of
+    the develop recipe, the versions and whatever Lightroom or another app stored in it,
+    so the old bytes are copied to NAME.xmp.corrupt first (a timestamp is added when that
+    name is taken) and the issue log says so. If the copy fails, fix returns false and
+    the caller writes nothing: the user's edit is lost, but the old sidecar is not.
+
+    Only a sidecar is copied. A packet from inside an image (filePath is the image, or
+    empty) is not overwritten by the repair: the edit goes to a sidecar or a new packet.
 */
     if (G::isLogger) G::log("Xmp::fix");
 
@@ -742,12 +754,31 @@ void Xmp::fix()
     case Err::ParseFailed:
     case Err::NoRoot:
     case Err::NoRdf:
-    case Err::NoRdfDescription:
-        qDebug() << "Xmp::fix" << err << filePath;
+    case Err::NoRdfDescription: {
+        QString why = errMsg.value(err);
+        if (!parseError.isEmpty()) why += ": " + parseError;
+        const QFileInfo info(filePath);
+        if (info.suffix().compare("xmp", Qt::CaseInsensitive) == 0 && info.size() > 0) {
+            QString keep = filePath + ".corrupt";
+            if (QFileInfo::exists(keep))
+                keep = filePath + ".corrupt-" +
+                       QDateTime::currentDateTime().toString("yyyyMMdd-hhmmss");
+            if (!QFile::copy(filePath, keep)) {
+                G::issue("Error", "Sidecar is unreadable (" + why + ") and a copy could "
+                         "not be made, so the edit was not saved", "Xmp::fix", -1,
+                         filePath);
+                return false;
+            }
+            G::issue("Warning", "Sidecar was unreadable (" + why + "); kept it as " +
+                     QFileInfo(keep).fileName() + " and started a new one. Develop "
+                     "settings and versions in it are in the copy", "Xmp::fix", -1,
+                     filePath);
+        }
         xmpBa.clear();
         xmlDoc.clear();
         initialize();
         break;
+    }
     case Err::NoRdfAbout:
         QString aboutName = definedElements["about"].name;
         rapidxml::xml_attribute<> *attr =
@@ -755,6 +786,7 @@ void Xmp::fix()
         rdfDescriptionNode->append_attribute(attr);
         break;
     } // end switch
+    return true;
 }
 
 bool Xmp::includeSchemaNamespace(QString item)

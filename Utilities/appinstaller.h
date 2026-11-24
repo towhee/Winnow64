@@ -65,6 +65,15 @@ bool launchFinisher(const QString &installerPath, QString &error);
 */
 bool relaunchAfterExit(QString &error);
 
+/*
+    The finisher runs after Winnow has quit, so a failed install is written only to
+    install.log in updateDir() (macOS and Linux; the Windows installer keeps its own
+    log). Returns the FAILED line of the last install recorded there, once: the log is
+    marked as reported so the next start does not say it again. Empty when the last
+    install worked, or there is no log. Called at startup for the issue log.
+*/
+QString takeLastInstallFailure();
+
 } // namespace AppInstaller
 
 #endif // APPINSTALLER_H

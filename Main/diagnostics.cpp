@@ -1972,7 +1972,8 @@ void MW::logReport()
        4. The newest Winnow crash report from the last reportCrashDays days, when the
           platform keeps one (macOS DiagnosticReports, Windows Error Reporting).
 
-   The home folder is shown as "~". hideFolders also replaces the folders in every path
+   Issue::redactReport (Log/issue.cpp, REPORT PRIVACY) shows the home folder as "~" and
+   hides crash-report device IDs; hideFolders also replaces the folders in every path
    with "…", keeping file names (the file type is usually what matters).
    --------------------------------------------------------------------------- */
 
@@ -1992,16 +1993,23 @@ static QString reportIssues(const QString &logDir, int sessions, int maxLines)
         }
     }
 
-    /* Collapse repeats within each session. Issue::toString pads type, message and
-       source to fixed columns after the 20-character timestamp, so those columns are
-       the key; the row and path that follow differ from one repeat to the next. */
+    /* Collapse repeats within each session on Issue::collapseKey (type, source and
+       message; the row and path differ from one repeat to the next). The count goes in
+       a fixed column in front of the line, "  12x", so the counts line up and the
+       issue lines keep their own columns. A session marker gets no count column. */
+    const int countWidth = 7;
+    const QString noCount(countWidth, ' ');
     QStringList out;
     QHash<QString, qsizetype> firstAt;      // key -> index in out
     QHash<QString, int> counts;
     auto flushCounts = [&] {
-        for (auto it = counts.constBegin(); it != counts.constEnd(); ++it)
+        for (auto it = counts.constBegin(); it != counts.constEnd(); ++it) {
+            QString &line = out[firstAt.value(it.key())];
             if (it.value() > 1)
-                out[firstAt.value(it.key())] += QString("   (repeated %1 times)").arg(it.value());
+                line.replace(0, countWidth,
+                             (QString::number(it.value()) + "x").rightJustified(countWidth - 2)
+                                 + "  ");
+        }
         counts.clear();
         firstAt.clear();
     };
@@ -2012,11 +2020,11 @@ static QString reportIssues(const QString &logDir, int sessions, int maxLines)
             out << "" << line;
             continue;
         }
-        const QString key = line.mid(20, 109);
+        const QString key = Issue::collapseKey(line);
         if (counts.contains(key)) { ++counts[key]; continue; }
         counts.insert(key, 1);
         firstAt.insert(key, out.size());
-        out << line;
+        out << noCount + line;
     }
     flushCounts();
     if (out.size() > maxLines) {
@@ -2110,33 +2118,29 @@ QString MW::prepareReport(bool hideFolders)
     QDir(reportDir).removeRecursively();
     QDir().mkpath(reportDir);
 
-    const QString rule = QString(78, '=');
+    // Every section: a blank line, a rule, the title, a rule.
+    const QString rule = QString(100, '=');
+    auto section = [&](const QString &title) {
+        return "\n" + rule + "\n" + title + "\n" + rule + "\n";
+    };
     QString r;
-    r += "WINNOW ISSUE REPORT  "
+    r += rule + "\n"
+         + "WINNOW ISSUE REPORT   "
          + QDateTime::currentDateTime().toString("yyyy-MM-dd hh:mm:ss") + "\n"
-         + issueSystemInfo() + "\n\n";
-    r += rule + "\nISSUES (last " + QString::number(reportSessions)
-         + " sessions, repeats collapsed)\n" + rule + "\n";
-    r += reportIssues(logDir, reportSessions, reportIssueLines) + "\n";
-    r += rule + "\nRECENT ACTIVITY (last " + QString::number(reportActivityLines)
-         + " lines)\n" + rule + "\n";
-    r += reportActivity(logDir, reportActivityLines) + "\n";
-    r += rule + "\nCRASH REPORT\n" + rule + "\n";
+         + issueSystemInfo() + "\n"
+         + rule + "\n";
+    r += section("ISSUES   last " + QString::number(reportSessions) + " sessions; "
+                 "\"12x\" = the same issue 12 times (the first is shown)");
+    r += reportIssues(logDir, reportSessions, reportIssueLines);
+    r += section("RECENT ACTIVITY   last " + QString::number(reportActivityLines) + " lines");
+    r += reportActivity(logDir, reportActivityLines);
+    r += section("CRASH REPORT   newest Winnow crash in the last "
+                 + QString::number(reportCrashDays) + " days");
     r += reportCrash(reportCrashDays, reportCrashBytes);
 
-    // Privacy: home folder as "~", and optionally no folder names at all.
-    const QString home = QDir::homePath();
-    r.replace(home, "~");
-    r.replace(QDir::toNativeSeparators(home), "~");
-    if (hideFolders) {
-        /* From a path start (~, a drive letter, or a root like /Volumes) through the
-           last separator on the line, so "~/Photos/2021/Lake/0866.HEIC" becomes
-           "~/…/0866.HEIC". Folder names may contain spaces, hence "to the last
-           separator" rather than a word match. */
-        static const QRegularExpression folders(
-            R"((~|[A-Za-z]:|/(?:Users|home|Volumes|media|mnt|private|tmp))[/\\][^\n]*[/\\])");
-        r.replace(folders, "\\1/" + QString(QChar(0x2026)) + "/");   // "…"
-    }
+    /* Privacy: home folder as "~", crash-report device IDs hidden, and with hideFolders
+       no folder names at all (see REPORT PRIVACY in Log/issue.cpp). */
+    r = Issue::redactReport(r, QDir::homePath(), hideFolders);
 
     const QString path = reportDir + "/WinnowReport.txt";
     QFile f(path);
@@ -2345,9 +2349,14 @@ void MW::reportIssue()
         "WinnowReport.txt so you can drag it into the form. Everything posted on GitHub "
         "is public.\n\n"
         "Send by Email: no account needed. Opens a new email to the Winnow developer "
-        "with WinnowReport.txt attached.\n\n"
-        "WinnowReport.txt holds recent Winnow warnings and activity, and any recent "
-        "crash report. It names the image files involved.");
+        "with WinnowReport.txt attached. Nothing is sent until you click Send.\n\n"
+        "WinnowReport.txt is a short text file: your Winnow version and system, recent "
+        "Winnow warnings and activity, and Winnow's most recent crash report from the "
+        "past week. It names the image files involved, and file names can contain "
+        "people's names. "
+        "It never holds your photos, GPS locations, keywords, or copyright and "
+        "contact details. Your home folder shows as \"~\" and device IDs are hidden.\n\n"
+        "You can open WinnowReport.txt and read it before you send it.");
     QCheckBox *hideFoldersBox = new QCheckBox("Hide folder names in the report "
                                               "(file names are kept)");
     hideFoldersBox->setChecked(true);

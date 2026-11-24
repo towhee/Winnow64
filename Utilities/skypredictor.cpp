@@ -1,4 +1,5 @@
 #include "skypredictor.h"
+#include "Main/global.h"
 #include "Utilities/skyrefine.h"
 #include <algorithm>
 #include <cmath>
@@ -22,7 +23,8 @@ cv::dnn::Net loadNet(const QString &path, const char *what)
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
     } catch (const cv::Exception &e) {
-        qWarning("Failed to load %s: %s", what, e.what());
+        G::issueDedup("Error", QString("Sky model %1 did not load: %2").arg(what, e.what()),
+                      "SkyPredictor");
     }
     return net;
 }
@@ -94,7 +96,7 @@ bool SkyPredictor::predict(const QImage &image, std::vector<uint8_t> &alpha, int
         skyOut = forwardFirst(skyNet, blob(rgb, kSkysegSize));
         segOut = forwardFirst(segNet, blob(rgb, kSegformerSize));
     } catch (const cv::Exception &e) {
-        qWarning("Sky inference failed: %s", e.what());
+        G::issueDedup("Warning", QString("Sky mask failed: ") + e.what(), "SkyPredictor");
         return false;
     }
     if (skyOut.empty() || segOut.empty() || skyOut.dims < 3 || segOut.dims != 4) return false;

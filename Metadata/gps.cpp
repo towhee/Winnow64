@@ -1,4 +1,5 @@
 #include "gps.h"
+#include "Main/global.h"
 
 GPS::GPS()
 {
@@ -59,7 +60,13 @@ QString GPS::decode(QFile &file,
     if (gpsLatSec == 0) gpsLatSec = (gpsLatMin - static_cast<int>(gpsLatMin)) * 60;
     gpsCoord += (QString::number(gpsLatSec, 'f', 3) + secondSymbol);
     quint32 v = ifdDataHash.value(1).tagValue;
-    if (v >= 65536) return "Error";
+    /* A reference that is not a character: the coordinate is left blank. It used to be
+       the literal "Error", which the GPS column showed. */
+    if (v >= 65536) {
+        G::issueDedup("Info", "GPS latitude reference is not valid, location left blank",
+                      "GPS::decode", -1, file.fileName());
+        return QString();
+    }
     QString gpsLatRef = QChar(v);
     gpsCoord += " " + gpsLatRef + " ";
 
@@ -76,7 +83,11 @@ QString GPS::decode(QFile &file,
     if (gpsLongSec == 0) gpsLongSec = (gpsLongMin- static_cast<int>(gpsLongMin)) * 60;
     gpsCoord += (QString::number(gpsLongSec, 'f', 3) + secondSymbol);
     v = ifdDataHash.value(3).tagValue;
-    if (v >= 65536) return "Error";
+    if (v >= 65536) {
+        G::issueDedup("Info", "GPS longitude reference is not valid, location left blank",
+                      "GPS::decode", -1, file.fileName());
+        return QString();
+    }
     QString gpsLongRef = QChar(v);
     gpsCoord += " " + gpsLongRef;
 

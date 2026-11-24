@@ -30,7 +30,10 @@ void KeywordSuggester::shutdown(int maxWaitMs)
     ++latest;                               // anything still queued is now stale
     if (!thread.isRunning()) return;
     thread.quit();
-    thread.wait(QDeadlineTimer(maxWaitMs));
+    /* Left running at quit: a crash on quit that follows points here. */
+    if (!thread.wait(QDeadlineTimer(maxWaitMs)))
+        G::issue("Error", QString("The keyword suggester thread did not stop within %1 ms at "
+                 "quit").arg(maxWaitMs), "KeywordSuggester::shutdown");
 }
 
 void KeywordSuggester::setVocab(const QHash<QString, QString> &v)

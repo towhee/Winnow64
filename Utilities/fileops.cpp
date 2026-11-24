@@ -329,10 +329,14 @@ bool FileOps::moveFile(const QString &srcPath, const QString &dstPath)
        a companion whose image never moved is still findable at the source. */
     const auto sidecars = companions(srcPath);
 
-    if (QFile::exists(dstPath)) QFile::remove(dstPath);
+    /* The destination is removed BEFORE the rename, so a failed rename has already lost
+       the file it was replacing: the issue says so (renaming first is the follow-up). */
+    const bool replaced = QFile::exists(dstPath) && QFile::remove(dstPath);
     if (!renameFile(srcPath, dstPath)) {
-        QString msg = "Failed to move file.";
-        G::issue("Warning", msg, "FileOps::moveFile", -1, srcPath);
+        QString msg = replaced ? "Failed to move file; the file it was replacing at the "
+                                 "destination had already been deleted."
+                               : "Failed to move file.";
+        G::issue(replaced ? "Error" : "Warning", msg, "FileOps::moveFile", -1, srcPath);
         return false;
     }
 

@@ -2,6 +2,7 @@
 #include "ImageFormats/Raw/highlightrecon.h"
 #include "Develop/whitebalance.h"
 #include "Develop/colorspace.h"
+#include "Main/global.h"
 #include <opencv2/core/utility.hpp>     // parallel_for_
 #include <algorithm>
 #include <cmath>
@@ -118,7 +119,10 @@ void RawColor::Characterise(const float xyzToCam[3][3], const float camMul[4],
 
     double rgbCam[3][3];
     if (!Invert3x3(camRgb, rgbCam)) {
-        /* Singular matrix (bad data): fall back to identity so the image still renders. */
+        /* Singular matrix (bad data): fall back to identity so the image still renders,
+           with a color cast. Once per session; the matrix is per camera, not per pixel. */
+        G::issueDedup("Warning", "Camera color matrix is singular, using identity (colors "
+                      "will be off)", "RawColor");
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j) rgbCam[i][j] = (i == j) ? 1.0 : 0.0;
         preMul[0] = preMul[1] = preMul[2] = 1.0;

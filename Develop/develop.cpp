@@ -16,6 +16,7 @@
 #include "Develop/localcontrast.h"
 #include "Develop/artblur.h"
 #include "Develop/areashrink.h"
+#include "Main/global.h"
 #include <QtConcurrent>
 #include <QThreadPool>
 #include <QElapsedTimer>
@@ -1674,7 +1675,12 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
     through untouched.
 */
     out = clean;                            // dims/white/space/sceneReferred + fallback
-    if (clean.width != den.width || clean.height != den.height) return;
+    if (clean.width != den.width || clean.height != den.height) {
+        G::issueDedup("Warning", QString("Raw denoise not applied: the denoised image is "
+                      "%1x%2 and the image %3x%4").arg(den.width).arg(den.height)
+                      .arg(clean.width).arg(clean.height), "Develop::BlendRawDenoise");
+        return;
+    }
 
     /* Both sides must be in the SAME color state. den always comes from the raw decode
        (camera-native, scene-linear); clean can come from the WorkingImageCache, which --
@@ -1686,10 +1692,10 @@ void Develop::BlendRawDenoise(const WorkingImage &clean, const WorkingImage &den
        goes magenta/green. A caller that hands over mismatched buffers gets the clean
        image back, not a cast. */
     if (clean.space != den.space || clean.sceneReferred != den.sceneReferred) {
-        qWarning("Develop::BlendRawDenoise: color-state mismatch (space %d vs %d, "
-                 "sceneReferred %d vs %d) -- serving the clean base",
-                 int(clean.space), int(den.space), int(clean.sceneReferred),
-                 int(den.sceneReferred));
+        G::issueDedup("Warning", QString("Raw denoise not applied: color-state mismatch "
+                      "(space %1 vs %2, sceneReferred %3 vs %4)").arg(int(clean.space))
+                      .arg(int(den.space)).arg(int(clean.sceneReferred))
+                      .arg(int(den.sceneReferred)), "Develop::BlendRawDenoise");
         return;
     }
 

@@ -182,7 +182,12 @@ bool Canon::parse(MetadataParameters &p,
         double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
-        if (x < 1 ) {
+        /* 0, negative or NaN: 1/x would store "1/-2147483648 sec" */
+        if (!(x > 0)) {
+            G::issueDedup("Info", "Exposure time is zero or unreadable, left blank",
+                          "Canon::parse", -1, p.fPath);
+        }
+        else if (x < 1) {
             int t = qRound(1/x);
             m.exposureTime = "1/" + QString::number(t);
             m.exposureTimeNum = x;

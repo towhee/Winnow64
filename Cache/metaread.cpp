@@ -2092,8 +2092,8 @@ void MetaRead::dispatch(int id, bool isReturning)
         QString fPath = pathAt(nextRow);
 
         if (fPath.isEmpty())
-            qWarning() << fun << "Warning:" << "row"
-                       << nextRow << "fPath is empty";
+            G::issueDedup("Error", "Reading a row with no file path (invariant broken)",
+                          fun);
 
         if (isDebug)
         {

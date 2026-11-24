@@ -62,7 +62,11 @@ bool CanonCR3::parse(MetadataParameters *p,
         getHeifBox(type, offset, length);
         // No-progress / wraparound guard: a malformed box with length == 0 or one whose
         // length wraps offset past UINT32_MAX would otherwise loop forever.
-        if (offset <= prevOffset) break;
+        if (offset <= prevOffset) {
+            G::issueDedup("Warning", "Box structure is damaged (a box length does not "
+                          "advance), metadata after it was not read", "CanonCR3::parse", -1, p->fPath);
+            break;
+        }
     }
 
     if (p->report) p->rpt << "\n";
@@ -1058,7 +1062,12 @@ void CanonCR3::parseExif()
         double x = u.getReal(p->file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       false);
-        if (x < 1 ) {
+        /* 0, negative or NaN: 1/x would store "1/-2147483648 sec" */
+        if (!(x > 0)) {
+            G::issueDedup("Info", "Exposure time is zero or unreadable, left blank",
+                          "CanonCR3::parse", -1, p->fPath);
+        }
+        else if (x < 1) {
             int t = qRound(1/x);
             m->exposureTime = "1/" + QString::number(t);
             m->exposureTimeNum = x;

@@ -55,7 +55,10 @@ void KeywordAuditJob::shutdown(int maxWaitMs)
     stop();
     if (!jobThread.isRunning()) return;
     jobThread.quit();
-    jobThread.wait(QDeadlineTimer(maxWaitMs));
+    /* Left running at quit: a crash on quit that follows points here. */
+    if (!jobThread.wait(QDeadlineTimer(maxWaitMs)))
+        G::issue("Error", QString("The keyword audit thread did not stop within %1 ms at "
+                 "quit").arg(maxWaitMs), "KeywordAuditJob::shutdown");
 }
 
 void KeywordAuditJob::stop()

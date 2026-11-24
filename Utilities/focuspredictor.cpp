@@ -1,4 +1,5 @@
 #include "focuspredictor.h"
+#include "Main/global.h"
 
 /*
     Documentation: see FOCUS PREDICTOR at top of mainwindow.cpp
@@ -15,7 +16,8 @@ FocusPredictor::FocusPredictor(const QString& onnxPath, int inputSize)
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);  // or DNN_TARGET_OPENCL
     } catch (const cv::Exception& e) {
-        qWarning("Failed to load ONNX model: %s", e.what());
+        G::issueDedup("Error", QString("Focus model did not load: ") + e.what(),
+                      "FocusPredictor");
     }
 }
 

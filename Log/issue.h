@@ -38,7 +38,16 @@ public:
     QString fPath;
     QString timeStamp;
 
+    // One-line column widths (see ONE-LINE LAYOUT in issue.cpp)
+    static constexpr int TimeWidth = 20;
+    static constexpr int TypeWidth = 9;
+    static constexpr int SrcWidth = 34;
+
     QString toString(bool isOneLine = true, int newLineOffset = 0);
+    // The type + source + message of a one-line issue, for collapsing repeats
+    static QString collapseKey(const QString &line);
+    // Strip what a WinnowReport.txt should not carry (see REPORT PRIVACY in issue.cpp)
+    static QString redactReport(QString text, const QString &home, bool hideFolders);
 
 };
 

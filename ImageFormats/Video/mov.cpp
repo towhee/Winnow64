@@ -120,16 +120,22 @@ bool MOV::findAtom(QFile &file, const char *targetAtomType, quint32 &atomSize, q
 }
 
 QDateTime MOV::createDate(const QString &filePath) {
+    /* No date: the video then sorts and filters by its file date. Info, once per
+       reason. */
+    auto noDate = [&filePath](const QString &why) {
+        G::issueDedup("Info", "Video creation date not read: " + why, "MOV::createDate",
+                      -1, filePath);
+    };
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) {
-        qWarning() << "Failed to open file" << filePath;
+        noDate("could not open the file: " + file.errorString());
         return QDateTime();
     }
 
     // --- Find the moov atom ---
     quint32 moovSize = 0;
     if (!findAtom(file, "moov", moovSize)) {
-        qWarning() << "moov atom not found!";
+        noDate("no moov atom");
         return QDateTime();
     }
 
@@ -139,7 +145,7 @@ QDateTime MOV::createDate(const QString &filePath) {
     // --- Search for mvhd within moov bounds ---
     quint32 mvhdSize = 0;
     if (!findAtom(file, "mvhd", mvhdSize, moovEnd)) {
-        qWarning() << "mvhd atom not found!";
+        noDate("no mvhd atom");
         return QDateTime();
     }
 
@@ -148,7 +154,7 @@ QDateTime MOV::createDate(const QString &filePath) {
     // --- Read mvhd version to determine field sizes ---
     quint8 version = 0;
     if (file.read((char*)&version, 1) != 1) {
-        qWarning() << "Failed to read mvhd version";
+        noDate("mvhd is truncated");
         return QDateTime();
     }
 
@@ -169,7 +175,14 @@ QDateTime MOV::createDate(const QString &filePath) {
         creationTime = qFromBigEndian(ctime64);
     }
     else {
-        qWarning() << "Unknown mvhd version" << version;
+        noDate(QString("unknown mvhd version %1").arg(version));
+        return QDateTime();
+    }
+
+    /* 0 is "not set" (a camera without a clock, an edited export): it used to be stored
+       as 1904-01-01. */
+    if (creationTime == 0) {
+        noDate("the creation time is not set");
         return QDateTime();
     }
 

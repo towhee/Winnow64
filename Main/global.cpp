@@ -634,9 +634,19 @@ void log(QString functionName, QString comment, bool zeroElapsedTime)
 //*** ISSUES ******************************************************************************
 
 IssueLog *issueLog = nullptr;
+
+/* ISSUES RAISED BEFORE THE LOG EXISTS. MW::applyPendingSettingsReset runs before
+   G::newIssueLog, so a failed reset used to reach issueList (memory) and never the disk
+   log, and so never a report. Those lines wait here (capped) and newIssueLog writes
+   them. Guarded by issueListMutex. */
+static QStringList issuesBeforeLog;
+
 void newIssueLog()
 {
     issueLog = new IssueLog();
+    QMutexLocker locker(&issueListMutex);
+    for (const QString &line : std::as_const(issuesBeforeLog)) issueLog->log(line);
+    issuesBeforeLog.clear();
 }
 
 void deleteIssueLog()
@@ -727,6 +737,7 @@ void issue(QString type, QString msg, QString src, int sfRow, QString fPath)
     }
 
     if (issueLog) issueLog->log(line);
+    else if (issuesBeforeLog.size() < 200) issuesBeforeLog.append(line);
 }
 
 void issueDedup(QString type, QString msg, QString src, int sfRow, QString fPath)
@@ -747,7 +758,10 @@ QStringList issueDedupReport()
     QStringList out;
     for (auto it = issueDedupCounts.constBegin(); it != issueDedupCounts.constEnd(); ++it) {
         if (it.value() > 1) {
-            out.append(QString("repeated %1x  %2").arg(it.value()).arg(it.key()));
+            // key is "src \x1f type \x1f msg"; counts right-aligned so they line up
+            QString key = it.key();
+            key.replace(QChar(0x1f), "  ");
+            out.append((QString::number(it.value()) + "x").rightJustified(7) + "  " + key);
         }
     }
     return out;

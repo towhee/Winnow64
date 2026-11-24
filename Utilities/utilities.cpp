@@ -9,15 +9,32 @@
 
 bool Utilities::integrityCheck(const QString &path1, const QString &path2)
 {
+/*
+    A FILE THAT CANNOT BE OPENED FAILS THE CHECK. Both open() results used to be
+    ignored, so two unreadable files read as two empty arrays and compared equal: ingest
+    reported a copy as verified when neither the card nor the copy could be read, and the
+    user could then format the card.
+*/
     if (G::isLogger) G::log("Utilities::integrityCheck");
     QFile file1(path1);
-    file1.open(QIODevice::ReadOnly);
-    QByteArray ba1 = file1.readAll();
+    if (!file1.open(QIODevice::ReadOnly)) {
+        G::issueDedup("Error", "Integrity check failed: could not open the source: " +
+                      file1.errorString(), "Utilities::integrityCheck", -1, path1);
+        return false;
+    }
     QFile file2(path2);
-    file2.open(QIODevice::ReadOnly);
-    QByteArray ba2 = file2.readAll();
-    file1.close();
-    file2.close();
+    if (!file2.open(QIODevice::ReadOnly)) {
+        G::issueDedup("Error", "Integrity check failed: could not open the copy: " +
+                      file2.errorString(), "Utilities::integrityCheck", -1, path2);
+        return false;
+    }
+    const QByteArray ba1 = file1.readAll();
+    const QByteArray ba2 = file2.readAll();
+    if (ba1.size() != file1.size() || ba2.size() != file2.size()) {
+        G::issueDedup("Error", "Integrity check failed: a file could not be read to the "
+                      "end", "Utilities::integrityCheck", -1, path2);
+        return false;
+    }
     return ba1 == ba2;
 }
 

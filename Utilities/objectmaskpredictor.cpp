@@ -1,4 +1,5 @@
 #include "objectmaskpredictor.h"
+#include "Main/global.h"
 #include "Utilities/segrefine.h"
 #include "opencv2/imgproc.hpp"
 #include <algorithm>
@@ -30,7 +31,8 @@ ObjectMaskPredictor::ObjectMaskPredictor(const QString& encoderPath, const QStri
         encoder.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
         encoder.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
     } catch (const cv::Exception& e) {
-        qWarning("Failed to load Object Mask encoder ONNX: %s", e.what());
+        G::issueDedup("Error", QString("Object mask encoder did not load: ") + e.what(),
+                      "ObjectMaskPredictor");
     }
     try {
         decoder = cv::dnn::readNetFromONNX(decoderPath.toStdString());
@@ -38,7 +40,8 @@ ObjectMaskPredictor::ObjectMaskPredictor(const QString& encoderPath, const QStri
         decoder.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
     } catch (const cv::Exception& e) {
         /* Most likely the dynamic-shape decoder (see header): needs the fixed-shape re-export. */
-        qWarning("Failed to load Object Mask decoder ONNX (needs fixed-shape export?): %s", e.what());
+        G::issueDedup("Error", QString("Object mask decoder did not load (needs the "
+                      "fixed-shape export?): ") + e.what(), "ObjectMaskPredictor");
     }
 }
 
@@ -81,7 +84,8 @@ bool ObjectMaskPredictor::setImage(const QImage& image)
         encoder.setInput(blob, "image");
         encoder.forward(outs, names);
     } catch (const cv::Exception& e) {
-        qWarning("Object Mask encode failed: %s", e.what());
+        G::issueDedup("Warning", QString("Object mask encode failed: ") + e.what(),
+                      "ObjectMaskPredictor");
         return false;
     }
 
@@ -93,7 +97,8 @@ bool ObjectMaskPredictor::setImage(const QImage& image)
         else if (n == "high_res_feats_1") highResFeats1 = outs[i].clone();
     }
     if (imageEmbed.empty() || highResFeats0.empty() || highResFeats1.empty()) {
-        qWarning("Object Mask encode: missing expected encoder outputs");
+        G::issueDedup("Warning", "Object mask encode: the encoder outputs are missing",
+                      "ObjectMaskPredictor");
         return false;
     }
 
@@ -200,7 +205,8 @@ bool ObjectMaskPredictor::refine(const std::vector<float>& fillCov,
         decoder.setInput(has_mask_input, "has_mask_input");
         decoder.forward(outs, names);
     } catch (const cv::Exception& e) {
-        qWarning("Object Mask decode failed: %s", e.what());
+        G::issueDedup("Warning", QString("Object mask decode failed: ") + e.what(),
+                      "ObjectMaskPredictor");
         return false;
     }
 

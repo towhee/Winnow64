@@ -1,4 +1,5 @@
 #include "Datamodel/savedpicks.h"
+#include "Main/global.h"
 #include "Datamodel/userdb.h"
 #include "Utilities/versionkey.h"
 
@@ -118,7 +119,11 @@ void Flush()
     if (!d.isOpen()) return;                // in memory only (see Open)
     /*  One transaction: a failure part-way keeps the previous state, not half a
         multi-select. */
-    if (!d.transaction()) return;
+    if (!d.transaction()) {
+        G::issueDedup("Warning", "Saving picks failed (not retried this session): " +
+                      d.lastError().text(), "SavedPicks::Flush");
+        return;
+    }
     QSqlQuery add(d), remove(d);
     add.prepare("INSERT OR IGNORE INTO saved_pick (key) VALUES (?)");
     remove.prepare("DELETE FROM saved_pick WHERE key = ?");
@@ -126,12 +131,15 @@ void Flush()
         QSqlQuery &q = it.value() ? add : remove;
         q.addBindValue(it.key());
         if (!q.exec()) {
-            qWarning() << "SavedPicks::Flush:" << q.lastError().text();
+            G::issueDedup("Warning", "Saving picks failed (not retried this session): " +
+                          q.lastError().text(), "SavedPicks::Flush");
             d.rollback();
             return;
         }
     }
-    if (!d.commit()) qWarning() << "SavedPicks::Flush:" << d.lastError().text();
+    if (!d.commit())
+        G::issueDedup("Warning", "Saving picks failed (not retried this session): " +
+                      d.lastError().text(), "SavedPicks::Flush");
 }
 
 void ClearAll()
@@ -143,7 +151,8 @@ void ClearAll()
     if (!d.isOpen()) return;
     QSqlQuery q(d);
     if (!q.exec("DELETE FROM saved_pick"))
-        qWarning() << "SavedPicks::ClearAll:" << q.lastError().text();
+        G::issueDedup("Warning", "Clearing saved picks failed: " + q.lastError().text(),
+                      "SavedPicks::ClearAll");
 }
 
 void OnMoved(const QString &srcPath, const QString &dstPath)

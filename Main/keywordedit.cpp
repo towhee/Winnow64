@@ -1589,12 +1589,17 @@ void MW::verifyKeywordMoveCounts(const QList<KeywordMove> &moves)
         const int inCatalog = cat.imagesUnderKeyword(m.to);
         if (inFilters == inCatalog) continue;
 
-        const QString msg =
-            QString("Keyword count mismatch for \"%1\": Filters (datamodel) %2, "
-                    "catalog %3 (%4 images filed from \"%5\")")
-                .arg(m.to).arg(inFilters).arg(inCatalog).arg(m.images).arg(m.from);
-        qWarning().noquote() << msg;
-        G::issue("Warning", msg, "MW::verifyKeywordMoveCounts");
+        /* The keyword names go to the console only: the issue log reaches a report
+           that can be public (see REPORT PRIVACY in Log/issue.cpp). */
+        qWarning().noquote()
+            << QString("Keyword count mismatch for \"%1\": Filters (datamodel) %2, "
+                       "catalog %3 (%4 images filed from \"%5\")")
+                   .arg(m.to).arg(inFilters).arg(inCatalog).arg(m.images).arg(m.from);
+        G::issue("Warning",
+                 QString("Keyword count mismatch after a move: Filters (datamodel) %1, "
+                         "catalog %2 (%3 images filed)")
+                     .arg(inFilters).arg(inCatalog).arg(m.images),
+                 "MW::verifyKeywordMoveCounts");
     }
 }
 

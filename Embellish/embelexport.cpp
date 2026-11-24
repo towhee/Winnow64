@@ -63,6 +63,9 @@ void EmbelWriter::write(const QImage &image, const QString &src, const QString &
     QString msg = dst + (ok ? " saved" : " failed") +
                   " Image width: " + QString::number(image.width());
     if (G::embelLog) G::log(srcFun, msg);
+    if (!ok)
+        G::issueDedup("Warning", "Embellish export: the image could not be saved as " +
+                      extension, srcFun, -1, dst);
 
     if (ok) {
         QImage thumb = image.scaled(160, 160, Qt::KeepAspectRatio);
@@ -157,7 +160,10 @@ QString EmbelExport::exportSubfolderPath(QString fPath, bool allowOverride)
     QString exportFolder;
     exportFolder = fromFolderPath + "/" + embelProperties->exportSubfolder;
     QDir dir(fromFolderPath);
-    dir.mkdir(embelProperties->exportSubfolder);
+    if (!dir.exists(embelProperties->exportSubfolder) &&
+        !dir.mkdir(embelProperties->exportSubfolder))
+        G::issueDedup("Warning", "Embellish export: the export subfolder could not be "
+                      "created", "EmbelExport::exportSubfolderPath", -1, exportFolder);
     return exportFolder;
 
     /*
@@ -290,6 +296,7 @@ bool EmbelExport::exportImages(const QStringList &srcList, bool isRemote)
     reservedPaths.clear();
     index = 0;
     pendingWrites = 0;
+    failedCount = 0;
     waitingForWriter = false;
     abort = false;
     remote = embellish->isRemote;
@@ -384,6 +391,9 @@ void EmbelExport::onPixels(bool ok, const QImage &developed)
         return;
     }
     if (G::embelLog) G::log(srcFun, "Failed to load Image " + fPath);
+    G::issueDedup("Warning", "Embellish export skipped an image: it could not be loaded",
+                  srcFun, -1, fPath);
+    ++failedCount;
     ++index;
     QTimer::singleShot(0, this, &EmbelExport::startNext);
 }
@@ -453,6 +463,7 @@ void EmbelExport::onWritten(bool ok, const QString &dst)
         dstPaths << dst;
         FileOps::onCreated({dst});
     }
+    else ++failedCount;
     if (waitingForWriter || abort || index >= srcList.size()) {
         waitingForWriter = false;
         startNext();
@@ -485,6 +496,10 @@ void EmbelExport::finish()
 
     if (G::embelLog)
         G::log(srcFun, "Completed. " + QString::number(dstPaths.size()) + " exported");
+    // one line for the batch: each failure is logged above, this is the count
+    if (failedCount > 0)
+        G::issue("Warning", QString("Embellish export: %1 of %2 images were not exported")
+                 .arg(failedCount).arg(srcList.size()), srcFun);
     emit finished(dstPaths, abort);
 }
 

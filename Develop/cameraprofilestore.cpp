@@ -1,4 +1,5 @@
 #include "Develop/cameraprofilestore.h"
+#include "Main/global.h"
 #include "Develop/workingimage.h"
 #include "Develop/editparams.h"
 
@@ -339,7 +340,21 @@ std::shared_ptr<const Dcp::Profile> CameraProfileStore::profile(const QString &c
     bool isBase = false;
     for (const Entry &e : all)
         if (e.name == profileName) { path = e.path; isBase = e.isBase; break; }
-    if (path.isEmpty()) return nullptr;
+    if (path.isEmpty()) {
+        /* The recipe names a profile this machine does not have (Adobe's profiles not
+           installed, or a recipe from another computer): the render uses the built-in
+           look and the colors differ. Not while the store is still scanning. */
+        bool isReady;
+        {
+            QMutexLocker lock(&mutex);
+            isReady = ready;
+        }
+        if (isReady)
+            G::issueDedup("Warning", "Camera profile \"" + profileName + "\" not found for "
+                          + cameraModel + ", so the built-in look is used",
+                          "CameraProfileStore::profile");
+        return nullptr;
+    }
 
     /* A base is a DIFFERENT profile from the file it came from, so it cannot share that
        file's cache slot. */
@@ -355,7 +370,11 @@ std::shared_ptr<const Dcp::Profile> CameraProfileStore::profile(const QString &c
        racing to parse the same profile wastes one parse and then agrees on the result --
        cheaper than serialising every reader behind file I/O. */
     Dcp::Profile p;
-    if (!Dcp::parseFile(path, p)) return nullptr;
+    if (!Dcp::parseFile(path, p)) {
+        G::issueDedup("Warning", "Camera profile could not be read, so the built-in look "
+                      "is used", "CameraProfileStore::profile", -1, path);
+        return nullptr;
+    }
     if (isBase) {
         /* THE STRIP. Everything creative goes; the characterisation stays. Done here, so
            that the render path has no notion of a profile being partly applied -- it is

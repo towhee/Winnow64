@@ -28,6 +28,12 @@
     formats disagree: Panasonic also requires a non-zero offset and length) and its own
     p.xmpString report line (some call srcToString, Nikon calls docToQString).
 */
+/* Declared, not included: Main/global.h is too wide for a header every parser takes
+   (see above). Main/global.h has the defaults. */
+namespace G {
+void issueDedup(QString type, QString msg, QString src, int sfRow, QString fPath);
+}
+
 inline void applyXmp(Xmp &xmp, ImageMetadata &m, MetadataParameters &p)
 {
     /* getItem() keys are case sensitive: "Rating", "Label" and "SerialNumber" are
@@ -55,6 +61,13 @@ inline void applyXmp(Xmp &xmp, ImageMetadata &m, MetadataParameters &p)
            ie "Wildlife|Birds|Heron". A file can carry either, both or neither. */
         m.keywords = xmp.getItemList("subject");
         m.keywordPaths = xmp.getItemList("hierarchicalsubject");
+    }
+    else {
+        // the image's own XMP is damaged: its rating, label and keywords are not shown
+        QString why = xmp.errMsg.value(xmp.err);
+        if (!xmp.parseError.isEmpty()) why += ": " + xmp.parseError;
+        G::issueDedup("Warning", "The XMP inside the image could not be read: " + why,
+                      "applyXmp", m.row, m.fPath);
     }
 
     // save original values so can determine if edited when writing changes

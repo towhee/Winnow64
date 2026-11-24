@@ -156,7 +156,10 @@ void DuplicateChecker::shutdown(int maxWaitMs)
     stop();
     if (!checkerThread.isRunning()) return;
     checkerThread.quit();
-    checkerThread.wait(QDeadlineTimer(maxWaitMs));
+    /* Left running at quit: a crash on quit that follows points here. */
+    if (!checkerThread.wait(QDeadlineTimer(maxWaitMs)))
+        G::issue("Error", QString("The duplicate checker thread did not stop within %1 ms at "
+                 "quit").arg(maxWaitMs), "DuplicateChecker::shutdown");
 }
 
 void DuplicateChecker::stop()

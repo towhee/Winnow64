@@ -70,6 +70,11 @@ bool renderCGImageToQImage(CGImageRef cg, QImage &out)
     image generator fails — caller should fall back to FrameDecoder's
     QMediaPlayer pipeline in that case.
 */
+// declared, not included: Main/global.h has the defaults
+namespace G {
+void issueDedup(QString type, QString msg, QString src, int sfRow, QString fPath);
+}
+
 bool macAVFoundationVideoThumbnail(const QString &fPath, int longSide,
                                    QImage &out, qint64 &outDurationMs)
 {
@@ -116,6 +121,11 @@ bool macAVFoundationVideoThumbnail(const QString &fPath, int longSide,
         [gen release];
 
         if (!cg) {
+            // the caller falls back to QMediaPlayer, so this is the reason it had to
+            G::issueDedup("Info", "Video thumbnail (AVFoundation) failed: " +
+                          (err ? QString::fromNSString(err.localizedDescription)
+                               : QString("no image")),
+                          "macAVFoundationVideoThumbnail", -1, fPath);
             return false;
         }
 

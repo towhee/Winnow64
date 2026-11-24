@@ -491,7 +491,8 @@ void Reader::read(int dmRow, QString filePath, int instance,
     if (isDebug)
         qDebug().noquote() << fun << "instance =" << instance << "dmRow =" << dmRow << need;
     if (filePath.isEmpty()) {
-        qWarning().noquote() << fun << "EMPTY FILEPATH";
+        G::issueDedup("Error", "Reader dispatched with no file path (invariant broken)",
+                      fun);
     }
 
     t.restart();

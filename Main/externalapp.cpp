@@ -61,17 +61,43 @@ void MW::cleanupSender()
 {
 /*
    When the process responsible for running the external program is finished a signal is
-   received here to delete the process.
+   received here to delete the process. deleteLater, not delete: the process is still
+   inside its own finished() emission. A crash or a non-zero exit code goes to the issue
+   log; the external app may have refused the files without a word.
 */
     if (G::isLogger) G::log("MW::cleanupSender");
-    delete QObject::sender();
+    auto *process = qobject_cast<QProcess*>(QObject::sender());
+    if (!process) return;
+    if (process->exitStatus() == QProcess::CrashExit)
+        G::issue("Warning", "External app crashed: " + process->errorString(),
+                 "MW::cleanupSender", -1, process->program());
+    else if (process->exitCode() != 0)
+        G::issue("Info", QString("External app exited with code %1")
+                 .arg(process->exitCode()), "MW::cleanupSender", -1, process->program());
+    process->deleteLater();
 }
 
-void MW::externalAppError(QProcess::ProcessError /*err*/)
+void MW::externalAppError(QProcess::ProcessError err)
 {
+/*
+    QProcess::errorOccurred. A process that FAILED TO START never emits finished, so it
+    is deleted here; for any other error finished follows and cleanupSender deletes it.
+*/
     if (G::isLogger) G::log("MW::externalAppError");
+    auto *process = qobject_cast<QProcess*>(QObject::sender());
+    const QString why = process ? process->errorString() : QString();
+    const QString program = process ? process->program() : QString();
+    if (err != QProcess::FailedToStart) {
+        G::issue("Warning", "External app error: " + why, "MW::externalAppError", -1,
+                 program);
+        return;
+    }
+    G::issue("Warning", "External app failed to start: " + why, "MW::externalAppError",
+             -1, program);
+    if (process) process->deleteLater();
     QMessageBox msgBox;
-    msgBox.critical(this, tr("Error"), tr("Failed to start external application."));
+    msgBox.critical(this, tr("Error"), tr("Failed to start external application.") +
+                    "\n\n" + why);
 }
 
 void MW::runExternalApp()
@@ -144,10 +170,11 @@ void MW::runExternalApp()
     #endif
 
     QProcess *process = new QProcess();
-    connect(process, SIGNAL(finished(int, QProcess::ExitStatus)),
-            this, SLOT(cleanupSender()));
-    connect(process, SIGNAL(error(QProcess::ProcessError)),
-            this, SLOT(externalAppError(QProcess::ProcessError)));
+    /* Function-pointer connects so a wrong signature fails the build. The string form
+       named error(QProcess::ProcessError), which Qt 6 removed: that connect failed at
+       run time, so a launch failure was silent and the QProcess leaked. */
+    connect(process, &QProcess::finished, this, &MW::cleanupSender);
+    connect(process, &QProcess::errorOccurred, this, &MW::externalAppError);
 
     // Photoshop on macOS: invoke `open` via execve (no shell) so filenames or appName cannot inject commands.
     #ifdef Q_OS_MAC

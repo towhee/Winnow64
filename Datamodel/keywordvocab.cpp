@@ -30,6 +30,20 @@ QString joinPath(const QString &parentPath, const QString &leaf)
     return parentPath.isEmpty() ? leaf : parentPath + '|' + leaf;
 }
 
+/*  What an issue names instead of the keyword itself. Keyword text ("People|Harry")
+    is the user's own and the issue log reaches WinnowReport.txt, which can be posted
+    on a public GitHub issue (see REPORT PRIVACY in Log/issue.cpp). The row id and the
+    depth are enough to find the row in the user's userdata.db. */
+QString keywordRef(const VocabNode *n)
+{
+    if (!n) return "keyword (none)";
+    return QString("keyword id %1, depth %2").arg(n->id).arg(n->path.count('|') + 1);
+}
+QString keywordRef(const QString &path)
+{
+    return QString("new keyword, depth %1").arg(path.count('|') + 1);
+}
+
 }   // namespace
 
 /* ---------------------------------------------------------------------------------
@@ -501,7 +515,7 @@ bool KeywordVocab::writeNode(const VocabNode *n)
     q.addBindValue(n->id);
     if (!q.exec()) {
         G::issue("Warning", "Vocabulary write failed: " + q.lastError().text(),
-                 "KeywordVocab::writeNode", -1, n->path);
+                 "KeywordVocab::writeNode", -1, keywordRef(n));
         return false;
     }
     return true;
@@ -557,7 +571,7 @@ bool KeywordVocab::rename(const QModelIndex &idx, const QString &newName)
 
     if (!writeNode(n) || !rewritePaths(n)) {
         G::issue("Warning", "Keyword rename could not be saved", "KeywordVocab::rename",
-                 -1, n->path);
+                 -1, keywordRef(n));
         reload();
         return false;
     }
@@ -619,7 +633,7 @@ bool KeywordVocab::reparent(const QModelIndex &idx, const QModelIndex &newParent
         what the user sees is what they have. */
     if (!written) {
         G::issue("Warning", "Keyword move could not be saved", "KeywordVocab::reparent",
-                 -1, n->path);
+                 -1, keywordRef(n));
         reload();
         return false;
     }
@@ -660,7 +674,7 @@ bool KeywordVocab::deleteLeafNode(VocabNode *n)
     q.addBindValue(n->id);
     if (!q.exec()) {
         G::issue("Warning", "Vocabulary merge delete failed: " + q.lastError().text(),
-                 "KeywordVocab::deleteLeafNode", -1, n->path);
+                 "KeywordVocab::deleteLeafNode", -1, keywordRef(n));
         return false;
     }
 
@@ -820,7 +834,7 @@ VocabNode *KeywordVocab::ensureChild(VocabNode *p, const QString &leaf, bool *cr
     q.addBindValue(p == root ? QVariant() : QVariant(p->id));
     if (!q.exec()) {
         G::issue("Warning", "Vocabulary insert failed: " + q.lastError().text(),
-                 "KeywordVocab::ensureChild", -1, path);
+                 "KeywordVocab::ensureChild", -1, keywordRef(path));
         return nullptr;
     }
     /*  ON CONFLICT DO NOTHING IS A SUCCESSFUL exec() THAT INSERTED NOTHING, and
@@ -836,7 +850,7 @@ VocabNode *KeywordVocab::ensureChild(VocabNode *p, const QString &leaf, bool *cr
         only case it was ever going to see. */
     if (q.numRowsAffected() == 0) {
         G::issue("Warning", "Vocabulary insert refused: that path already exists",
-                 "KeywordVocab::ensureChild", -1, path);
+                 "KeywordVocab::ensureChild", -1, keywordRef(path));
         return nullptr;
     }
     const qint64 id = q.lastInsertId().toLongLong();
@@ -980,7 +994,7 @@ bool KeywordVocab::remove(const QModelIndex &idx)
     q.addBindValue(n->id);
     if (!q.exec()) {
         G::issue("Warning", "Vocabulary delete failed: " + q.lastError().text(),
-                 "KeywordVocab::remove", -1, n->path);
+                 "KeywordVocab::remove", -1, keywordRef(n));
         return false;
     }
 

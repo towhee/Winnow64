@@ -1,4 +1,5 @@
 #include "depthpredictor.h"
+#include "Main/global.h"
 #include "Utilities/inference/inferencesession.h"
 #include "Utilities/segrefine.h"
 #include <opencv2/imgproc.hpp>
@@ -14,7 +15,7 @@ DepthPredictor::DepthPredictor(const QString &onnxPath)
     if (G::isLogger) G::log("DepthPredictor::DepthPredictor", onnxPath);
     session = std::make_unique<InferenceSession>(onnxPath, InferenceDevice::CPU);
     if (!session->IsLoaded())
-        qWarning("DepthPredictor: failed to load %s", onnxPath.toUtf8().constData());
+        G::issueDedup("Error", "Depth model did not load", "DepthPredictor", -1, onnxPath);
 }
 
 DepthPredictor::~DepthPredictor() = default;
@@ -49,7 +50,8 @@ bool DepthPredictor::predict(const QImage &image, std::vector<float> &depth, int
 
     std::vector<Tensor> out;
     if (!session->Run({"pixels"}, {t}, {"depth"}, out) || out.empty()) {
-        qWarning("DepthPredictor: inference failed");
+        G::issueDedup("Warning", "Depth map failed (the model run did not finish)",
+                      "DepthPredictor");
         return false;
     }
     const Tensor &d = out[0];

@@ -683,6 +683,7 @@ set(WINNOW_HEADERS
     FocusStack/fsutilities.h
     FocusStack/fusionpyr.h
 
+    Image/decodereason.h
     Image/imagealign.h
     Image/pixmap.h
     Image/stack.h

@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "ImageFormats/Tiff/tiff.h"
 #include "Cache/catalogprobe.h"
 #include "Main/keywordauditprobe.h"
 #include <QApplication>
@@ -111,6 +112,12 @@ static void winnowTiffWarningHandler(const char *module, const char *fmt, va_lis
 
 static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list ap)
 {
+    /* Kept for the failed read's issue (Tiff::takeLibTiffError) whether or not the
+       console copy is suppressed. va_copy: ap is read twice. */
+    va_list keep;
+    va_copy(keep, ap);
+    Tiff::noteLibTiffError(module, fmt, keep);
+    va_end(keep);
     if (G::suppressTiffWarnings) return;
     if (module) fprintf(stderr, "%s: Error, ", module);
     vfprintf(stderr, fmt, ap);

@@ -19,7 +19,9 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     QElapsedTimer t; t.restart();
     auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
     if (error.code) {
-        qDebug() << "Heic::parseLibHeif" << "heif_context_read_from_file" << error.message;
+        G::issueDedup("Error", QString("HEIC heif_context_read_from_file failed: ") + error.message,
+                      "Heic::parseLibHeif", -1, fPath);
+        heif_context_free(ctx);
         return false;
     }
     /*
@@ -35,7 +37,9 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     heif_image_handle* handle = nullptr;
     error = heif_context_get_primary_image_handle(ctx, &handle);
     if (error.code) {
-        qDebug() << "Heic::parseLibHeif" << "heif_context_get_primary_image_handle" << error.message;
+        G::issueDedup("Error", QString("HEIC heif_context_get_primary_image_handle failed: ") + error.message,
+                      "Heic::parseLibHeif", -1, fPath);
+        heif_context_free(ctx);
         return false;
     }
 
@@ -63,7 +67,10 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
     QByteArray exifData(length, 0);
     error = heif_image_handle_get_metadata(handle, id, exifData.data());
     if (error.code) {
-        qDebug() << "Heic::parseLibHeif" << "heif_image_handle_get_metadata" << error.message;
+        G::issueDedup("Error", QString("HEIC heif_image_handle_get_metadata failed: ") + error.message,
+                      "Heic::parseLibHeif", -1, fPath);
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
         return false;
     }
     p.buf.setBuffer(&exifData);
@@ -162,7 +169,12 @@ bool Heic::parseLibHeif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif 
         double x = Utilities::getReal(p.buf,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
-        if (x < 1) {
+        /* 0, negative or NaN: 1/x would store "1/-2147483648 sec" */
+        if (!(x > 0)) {
+            G::issueDedup("Info", "Exposure time is zero or unreadable, left blank",
+                          "Heic::parse", -1, p.fPath);
+        }
+        else if (x < 1) {
             double recip = static_cast<double>(1 / x);
             if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));
             else m.exposureTime = "1/" + QString::number(recip, 'g', 2);
@@ -316,7 +328,9 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     heif_context* ctx = heif_context_alloc();
     auto error = heif_context_read_from_file(ctx, fPath.toLatin1().data(), nullptr);
     if (error.code) {
-        qDebug() << "Heic::decodePrimaryImage" << "heif_context_read_from_file" << error.message;
+        G::issueDedup("Error", QString("HEIC heif_context_read_from_file failed: ") + error.message,
+                      "Heic::decodePrimaryImage", -1, fPath);
+        heif_context_free(ctx);
         return false;
     }
 
@@ -324,7 +338,9 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
     heif_image_handle* handle = nullptr;
     error = heif_context_get_primary_image_handle(ctx, &handle);
     if (error.code) {
-        qDebug() << "Heic::decodePrimaryImage" << "heif_context_get_primary_image_handle" << error.message;
+        G::issueDedup("Error", QString("HEIC heif_context_get_primary_image_handle failed: ") + error.message,
+                      "Heic::decodePrimaryImage", -1, fPath);
+        heif_context_free(ctx);
         return false;
     }
 
@@ -336,7 +352,10 @@ bool Heic::decodePrimaryImage(QString &fPath, QImage &image)
                       heif_chroma_interleaved_RGB,
                       nullptr);
     if (error.code || !img) {
-        qDebug() << "Heic::decodePrimaryImage" << "heif_decode_image" << error.message;
+        G::issueDedup("Error", QString("HEIC heif_decode_image failed: ") + error.message,
+                      "Heic::decodePrimaryImage", -1, fPath);
+        heif_image_handle_release(handle);
+        heif_context_free(ctx);
         return false;
     }
 
@@ -476,7 +495,11 @@ bool Heic::parseHeic(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         if (!nextHeifBox(length, type)) break;
         getHeifBox(type, offset, length);
         // No-progress / wraparound guard against malformed box sizes.
-        if (offset <= prevOffset) break;
+        if (offset <= prevOffset) {
+            G::issueDedup("Warning", "Box structure is damaged (a box length does not "
+                          "advance), metadata after it was not read", "Heic::parseHeic", -1, info.filePath());
+            break;
+        }
     }
 
     if (isDebug) qDebug() << "Heic::parseHeic"
@@ -624,7 +647,12 @@ bool Heic::parseExif(MetadataParameters &p, ImageMetadata &m, IFD *ifd, Exif *ex
         double x = Utilities::getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue + startOffset,
                                       isBigEnd);
-        if (x < 1) {
+        /* 0, negative or NaN: 1/x would store "1/-2147483648 sec" */
+        if (!(x > 0)) {
+            G::issueDedup("Info", "Exposure time is zero or unreadable, left blank",
+                          "Heic::parse", -1, p.fPath);
+        }
+        else if (x < 1) {
             double recip = static_cast<double>(1 / x);
             if (recip >= 2) m.exposureTime = "1/" + QString::number(qRound(recip));
             else m.exposureTime = "1/" + QString::number(recip, 'g', 2);

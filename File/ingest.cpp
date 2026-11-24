@@ -415,7 +415,10 @@ void Ingest::run()
         }
 
         // copy source image to destination
-        bool copyOk = QFile::copy(sourcePath, destinationPath);
+        /* A QFile instance, not the static QFile::copy, so a failure can say why
+           (destination exists, permission, disk full). */
+        QFile sourceFile(sourcePath);
+        bool copyOk = sourceFile.copy(destinationPath);
         if (copyOk) created << destinationPath;
 
         /* for demonstration:
@@ -424,27 +427,33 @@ void Ingest::run()
         // */
 
         if (!copyOk) {
-            qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << destinationPath;
+            G::issueDedup("Error", "Ingest could not copy the image: " +
+                          sourceFile.errorString(), "Ingest::run", -1, sourcePath);
             failedToCopy << thumbNum + sourcePath + " to " + destinationPath;
         }
         if (copyOk && integrityCheck) {
             if (!Utilities::integrityCheck(sourcePath, destinationPath)) {
-                qDebug() << "Ingest::run" << "Integrity failure" << sourcePath << "not same as" << destinationPath;
+                G::issueDedup("Error", "Ingest integrity check: the copy differs from "
+                              "the card", "Ingest::run", -1, destinationPath);
                 integrityFailure << thumbNum + sourcePath + " not same as " + destinationPath;
             }
         }
 
         // copy source image to backup
         if (isBackup) {
-            bool backupCopyOk = QFile::copy(sourcePath, backupPath);
+            QFile backupSource(sourcePath);
+            bool backupCopyOk = backupSource.copy(backupPath);
             if (backupCopyOk) created << backupPath;
             if (!backupCopyOk) {
-                qDebug() << "Ingest::run" << "Failed to copy" << sourcePath << "to" << backupPath;
+                G::issueDedup("Error", "Ingest could not copy the image to the backup "
+                              "folder: " + backupSource.errorString(), "Ingest::run", -1,
+                              sourcePath);
                 failedToCopy << thumbNum + sourcePath + " to " + backupPath;
             }
             if (backupCopyOk && integrityCheck) {
                 if (!Utilities::integrityCheck(sourcePath, backupPath)) {
-                    qDebug() << "Ingest::run" << "Integrity failure" << sourcePath << "not same as" << backupPath;
+                    G::issueDedup("Error", "Ingest integrity check: the backup copy "
+                                  "differs from the card", "Ingest::run", -1, backupPath);
                     integrityFailure << thumbNum + sourcePath + " not same as " + backupPath;
                 }
             }
@@ -523,6 +532,9 @@ void Ingest::run()
 
     // show any ingest errors
     if (failedToCopy.length() || integrityFailure.length()) {
+        G::issue("Error", QString("Ingest finished with %1 failed copies and %2 integrity "
+                 "failures (each is logged above)").arg(failedToCopy.length())
+                 .arg(integrityFailure.length()), "Ingest::run");
         // Cannot show QDialog in non-gui thread, so message info to main thread
         // Note: difference from IngestDlg::ingest
         emit rptIngestErrors(failedToCopy, integrityFailure);

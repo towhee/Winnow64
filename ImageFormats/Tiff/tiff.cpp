@@ -411,7 +411,12 @@ bool Tiff::parse(MetadataParameters &p,
         double x = u.getReal(p.file,
                                       ifd->ifdDataHash.value(33434).tagValue,
                                       isBigEnd);
-        if (x < 1 ) {
+        /* 0, negative or NaN: 1/x would store "1/-2147483648 sec" */
+        if (!(x > 0)) {
+            G::issueDedup("Info", "Exposure time is zero or unreadable, left blank",
+                          "Tiff::parse", -1, p.fPath);
+        }
+        else if (x < 1) {
             int t = qRound(1 / x);
             m.exposureTime = "1/" + QString::number(t);
             m.exposureTimeNum = x;
@@ -2472,6 +2477,27 @@ bool Tiff::readHeaders(TIFF *tiff, QSize &size, QImage::Format &format,
     return true;
 }
 
+namespace {
+thread_local char libTiffError[256];
+thread_local bool hasLibTiffError = false;
+}
+
+void Tiff::noteLibTiffError(const char *module, const char *fmt, va_list ap)
+{
+    int n = 0;
+    if (module) n = std::snprintf(libTiffError, sizeof libTiffError, "%s: ", module);
+    if (n < 0 || n >= int(sizeof libTiffError)) n = 0;
+    std::vsnprintf(libTiffError + n, sizeof libTiffError - size_t(n), fmt, ap);
+    hasLibTiffError = true;
+}
+
+QString Tiff::takeLibTiffError()
+{
+    if (!hasLibTiffError) return QStringLiteral("libtiff gave no reason");
+    hasLibTiffError = false;
+    return QString::fromLocal8Bit(libTiffError);
+}
+
 bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
 {
 /*
@@ -2482,16 +2508,17 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     if (G::isLogger) G::log(fun, fPath);
     // qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
 
+    takeLibTiffError();     // a reason left by an earlier read is not this one's
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
         if (isDebug) qDebug() << "Tiff::read Failed to open TIFF file." << fPath;
         return false;
     }
 
-    // check if another directory offset
-    if (ifdOffset) {
-        TIFFSetSubDirectory(tiff, ifdOffset);
-    }
+    // check if another directory offset; a failure would read IFD0 instead
+    if (ifdOffset && !TIFFSetSubDirectory(tiff, ifdOffset))
+        G::issueDedup("Warning", "TIFF sub-IFD not found, reading the first image "
+                      "instead: " + takeLibTiffError(), "Tiff::read", -1, fPath);
 
     QSize size;
     QImage::Format format;
@@ -2501,6 +2528,7 @@ bool Tiff::read(QString fPath, QImage *image, quint32 ifdOffset)
     bool floatingPoint;
 
     if (!readHeaders(tiff, size, format, photometric, grayscale, floatingPoint, transformation)) {
+        TIFFClose(tiff); tiff = nullptr;    // was leaked on this path
         if (isDebug) qDebug() << "Tiff::read Failed to read headers." << fPath;
         return false;
     }
@@ -2724,15 +2752,16 @@ bool Tiff::readSample(QString fPath, QImage *image, int longSide, quint32 ifdOff
     if (G::isLogger) G::log(fun, fPath);
     // qDebug().noquote() << fun << "ifdOffset =" << ifdOffset << fPath;
 
+    takeLibTiffError();     // a reason left by an earlier read is not this one's
     TIFF *tiff = TIFFOpen(fPath.toStdString().c_str(), "r");
     if (!tiff) {
         if (isDebug) qDebug() << "Tiff::readSample Failed to open TIFF file." << fPath;
         return false;
     }
 
-    if (ifdOffset) {
-        TIFFSetSubDirectory(tiff, ifdOffset);
-    }
+    if (ifdOffset && !TIFFSetSubDirectory(tiff, ifdOffset))
+        G::issueDedup("Warning", "TIFF sub-IFD not found, sampling the first image "
+                      "instead: " + takeLibTiffError(), "Tiff::readSample", -1, fPath);
 
     QSize size;
     QImage::Format format;

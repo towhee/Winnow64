@@ -1,4 +1,5 @@
 #include "Datamodel/duplicateok.h"
+#include "Main/global.h"
 #include "Datamodel/userdb.h"
 
 #include <QCoreApplication>
@@ -103,7 +104,11 @@ void Flush()
     const QHash<QString, bool> batch = std::exchange(dirty, {});
     QSqlDatabase d = UserDb::instance().db();
     if (!d.isOpen()) return;                // in memory only (see Open)
-    if (!d.transaction()) return;
+    if (!d.transaction()) {
+        G::issueDedup("Warning", "Saving Duplicate OK marks failed (not retried this session): " +
+                      d.lastError().text(), "DuplicateOk::Flush");
+        return;
+    }
     QSqlQuery add(d), remove(d);
     add.prepare("INSERT OR IGNORE INTO duplicate_ok (path) VALUES (?)");
     remove.prepare("DELETE FROM duplicate_ok WHERE path = ?");
@@ -111,12 +116,15 @@ void Flush()
         QSqlQuery &q = it.value() ? add : remove;
         q.addBindValue(it.key());
         if (!q.exec()) {
-            qWarning() << "DuplicateOk::Flush:" << q.lastError().text();
+            G::issueDedup("Warning", "Saving Duplicate OK marks failed (not retried this session): " +
+                          q.lastError().text(), "DuplicateOk::Flush");
             d.rollback();
             return;
         }
     }
-    if (!d.commit()) qWarning() << "DuplicateOk::Flush:" << d.lastError().text();
+    if (!d.commit())
+        G::issueDedup("Warning", "Saving Duplicate OK marks failed (not retried this session): " +
+                      d.lastError().text(), "DuplicateOk::Flush");
 }
 
 void OnMoved(const QString &srcPath, const QString &dstPath)

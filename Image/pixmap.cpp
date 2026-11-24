@@ -1,4 +1,5 @@
 #include "Image/pixmap.h"
+#include "Image/decodereason.h"
 #include "Main/global.h"
 #include "Utilities/versionkey.h"
 
@@ -136,6 +137,9 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         }
 
         QByteArray buf = imFile.read(lengthFullJpg);
+        if (buf.size() < qsizetype(lengthFullJpg))
+            G::issueDedup("Warning", "Embedded JPG is shorter than its stated length (the "
+                          "file may be truncated)", "Pixmap::load", dmRow, fPath);
 
 //        tRead = readTime.elapsed();
 //        decodeTime.start();
@@ -147,7 +151,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         // try to decode the jpg data
         if (!image.loadFromData(buf, "JPEG")) {
             imFile.close();
-            QString msg = "Could not read jpeg from buffer.";
+            QString msg = "Could not read jpeg from buffer: " +
+                          DecodeReason::fromData(buf, "JPEG");
             G::issue("Error", msg, "Pixmap::load", dmRow, fPath);
             return false;
         }
@@ -224,9 +229,6 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
 //        /*
         if (!tiff.decode(m, srcPath, image)) {
             imFile.close();
-            qDebug() << "Pixmap::load"
-                     << "Could not decode using Winnow Tiff decoder.  "
-                        "Trying Qt tiff library to decode" + fPath + ". ";
             QString msg = "Winnow Tiff decoder failed, trying Qt decoder.";
             G::issue("Warning", msg, "Pixmap::load", dmRow, fPath);
 
@@ -234,7 +236,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
             decoderUsed = "Qt";
             if (!image.load(srcPath)) {
                 imFile.close();
-                QString msg = "Could not decode tiff using Qt.";
+                QString msg = "Could not decode tiff using Qt: " +
+                              DecodeReason::fromFile(srcPath);
                 G::issue("Error", msg, "Pixmap::load", dmRow, fPath);
                 return false;
             }
@@ -250,7 +253,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
         // try to decode
         if (!image.load(srcPath)) {
             imFile.close();
-            QString msg = "Could not decode using default decoder.";
+            QString msg = "Could not decode using default decoder: " +
+                          DecodeReason::fromFile(srcPath);
             G::issue("Error", msg, "Pixmap::load", dmRow, fPath);
             return false;
         }
@@ -280,7 +284,8 @@ bool Pixmap::load(QString &fPath, QImage &image, QString src)
     double mp = dm->index(dmRow, G::MegaPixelsColumn).data().toDouble();
     // qint64 msec = tDecode;
     qint64 msec = t.elapsed();
-    int msecPerMp = static_cast<int>(msec / mp);
+    // no megapixels (unread or zero): msec / 0 is inf, and inf to int is undefined
+    int msecPerMp = mp > 0 ? static_cast<int>(msec / mp) : 0;
     QString source = "Pixmap::load";
     emit setValDm(dmRow, G::LoadMsecPerMpColumn, msecPerMp, 0, source);
     /*
@@ -378,6 +383,8 @@ bool Pixmap::loadFromTiff(QString &fPath, QImage &image, ImageMetadata *m)
 
     Tiff tiff("Pixmap::loadFromTiff");
     if (tiff.read(fPath, &image)) return true;
+    G::issueDedup("Warning", "Could not read the TIFF: " + Tiff::takeLibTiffError(),
+                  fun, -1, fPath);
 
     // // try to decode tiff thumbnail by sampling tiff raw data
     // bool isThumbOffset = m->offsetThumb > 0;

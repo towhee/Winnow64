@@ -36,6 +36,8 @@ public:
         Count
     } err;
     QVector<QString> errMsg;
+    // Why the parse failed (rapidxml's message and byte offset); empty when it did not
+    QString parseError;
 
     /* The shape a property is WRITTEN in. xmlDocElement reports only Node or
        Attribute for what it finds; the others say what setItem builds.
@@ -73,7 +75,9 @@ public:
     QStringList getItemList(QByteArray item);
     bool setItem(QByteArray item, QByteArray value);
     bool setItemList(QByteArray item, const QStringList &values);
-    void fix();
+    /* Repair err before an update. False = an unreadable sidecar could not be kept
+       aside, so the caller must not write (see Xmp::fix). */
+    [[nodiscard]] bool fix();
 
     QString srcToString();
     bool writeJPG(QByteArray &buffer);

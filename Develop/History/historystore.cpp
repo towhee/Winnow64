@@ -5,7 +5,9 @@
 #include <QDateTime>
 #include <QDir>
 #include <QJsonDocument>
+#include <QSqlError>
 #include <QSqlQuery>
+#include "Main/global.h"
 #include <QVariant>
 
 namespace HistoryStore {
@@ -17,13 +19,21 @@ namespace {
 constexpr int kPruneEvery = 64;
 QAtomicInt saveCount;
 
+/* A failed index.db write: the History dock loses steps, or keeps a moved image's under
+   the old path. Once per distinct reason (issueDedup). */
+void sqlFail(const char *what, const QSqlQuery &q)
+{
+    G::issueDedup("Warning", QString("Develop history: %1 failed: %2")
+                  .arg(what, q.lastError().text()), "HistoryStore");
+}
+
 void prune(QSqlDatabase &db)
 {
     QSqlQuery q(db);
     q.prepare("DELETE FROM develop_history WHERE pathkey NOT IN"
               " (SELECT pathkey FROM develop_history ORDER BY saved DESC LIMIT ?)");
     q.addBindValue(kMaxImages);
-    q.exec();
+    if (!q.exec()) sqlFail("prune", q);
 }
 
 }   // namespace
@@ -42,11 +52,21 @@ bool load(const QString &path, QVector<HistoryEntry> &entries, int &pos,
     QSqlQuery q(db);
     q.prepare("SELECT pos, recipe, entries FROM develop_history WHERE pathkey = ?");
     q.addBindValue(key);
-    if (!q.exec() || !q.next()) return false;
+    if (!q.exec()) {
+        sqlFail("load", q);
+        return false;
+    }
+    if (!q.next()) return false;            // no history: not a failure
     pos = q.value(0).toInt();
     recipeStamp = q.value(1).toString();
     const QByteArray json = qUncompress(q.value(2).toByteArray());
-    const QJsonArray a = QJsonDocument::fromJson(json).array();
+    QJsonParseError jerr;
+    const QJsonArray a = QJsonDocument::fromJson(json, &jerr).array();
+    if (jerr.error != QJsonParseError::NoError) {
+        G::issueDedup("Warning", "Develop history could not be read: " + jerr.errorString(),
+                      "HistoryStore::load", -1, path);
+        return false;
+    }
     entries.reserve(a.size());
     for (const QJsonValue &v : a) entries.append(HistoryEntry::fromJson(v.toObject()));
     return !entries.isEmpty() && pos >= 0 && pos < entries.size();
@@ -74,7 +94,7 @@ void save(const QString &path, const QVector<HistoryEntry> &entries, int pos,
     q.addBindValue(recipeStamp);
     q.addBindValue(blob);
     q.addBindValue(QDateTime::currentSecsSinceEpoch());
-    q.exec();
+    if (!q.exec()) sqlFail("save", q);
 
     if (saveCount.fetchAndAddRelaxed(1) % kPruneEvery == kPruneEvery - 1) prune(db);
 }
@@ -88,7 +108,7 @@ void remove(const QString &path)
     QSqlQuery q(db);
     q.prepare("DELETE FROM develop_history WHERE pathkey = ?");
     q.addBindValue(key);
-    q.exec();
+    if (!q.exec()) sqlFail("remove", q);
 }
 
 void onMoved(const QString &srcPath, const QString &dstPath)
@@ -109,7 +129,10 @@ void onMoved(const QString &srcPath, const QString &dstPath)
     sel.addBindValue(from);
     sel.addBindValue(vPrefix.size());
     sel.addBindValue(vPrefix);
-    if (!sel.exec()) return;
+    if (!sel.exec()) {
+        sqlFail("find a moved image", sel);
+        return;
+    }
     QVector<QPair<QString, QString>> rows;
     while (sel.next()) rows.append({sel.value(0).toString(), sel.value(1).toString()});
     if (rows.isEmpty()) return;
@@ -120,15 +143,17 @@ void onMoved(const QString &srcPath, const QString &dstPath)
         QSqlQuery d(db);
         d.prepare("DELETE FROM develop_history WHERE pathkey = ?");
         d.addBindValue(to + suffix);
-        d.exec();
+        if (!d.exec()) sqlFail("clear a moved image's destination", d);
         QSqlQuery u(db);
         u.prepare("UPDATE develop_history SET pathkey = ?, path = ? WHERE pathkey = ?");
         u.addBindValue(to + suffix);
         u.addBindValue(dstPath + suffix);
         u.addBindValue(r.first);
-        u.exec();
+        if (!u.exec()) sqlFail("follow a moved image", u);
     }
-    db.commit();
+    if (!db.commit())
+        G::issueDedup("Warning", "Develop history: move commit failed: " +
+                      db.lastError().text(), "HistoryStore");
 }
 
 void onDeleted(const QString &path)
@@ -143,7 +168,7 @@ void onDeleted(const QString &path)
     q.addBindValue(key);
     q.addBindValue(vPrefix.size());
     q.addBindValue(vPrefix);
-    q.exec();
+    if (!q.exec()) sqlFail("delete", q);
 }
 
 void onFolderDeleted(const QString &folder)
@@ -156,7 +181,7 @@ void onFolderDeleted(const QString &folder)
     q.prepare("DELETE FROM develop_history WHERE substr(pathkey, 1, ?) = ?");
     q.addBindValue(prefix.size());
     q.addBindValue(prefix);
-    q.exec();
+    if (!q.exec()) sqlFail("delete a folder", q);
 }
 
 void onFolderMoved(const QString &from, const QString &to)
@@ -181,7 +206,7 @@ void onFolderMoved(const QString &from, const QString &to)
         q.prepare("DELETE FROM develop_history WHERE substr(pathkey, 1, length(?)) = ?");
         q.addBindValue(toPrefix);
         q.addBindValue(toPrefix);
-        q.exec();
+        if (!q.exec()) sqlFail("clear a moved folder's destination", q);
     }
     q.prepare("UPDATE develop_history SET pathkey = ? || substr(pathkey, length(?) + 1),"
               " path = ? || substr(path, length(?) + 1)"
@@ -192,8 +217,10 @@ void onFolderMoved(const QString &from, const QString &to)
     q.addBindValue(fromPath);
     q.addBindValue(fromPrefix);
     q.addBindValue(fromPrefix);
-    q.exec();
-    db.commit();
+    if (!q.exec()) sqlFail("follow a moved folder", q);
+    if (!db.commit())
+        G::issueDedup("Warning", "Develop history: folder move commit failed: " +
+                      db.lastError().text(), "HistoryStore");
 }
 
 }   // namespace HistoryStore

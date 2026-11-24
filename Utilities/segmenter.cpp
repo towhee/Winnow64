@@ -542,6 +542,9 @@ std::shared_ptr<const Segmentation> segment(const QImage &guide, const QString &
        the first workers are already decoding while the later ones wait their turn. */
     std::mutex loadMutex;
     std::atomic<bool> loadFailed{false};
+    std::string loadError;                  // OpenCV's reason, under loadMutex
+    std::atomic<int> promptFailures{0};     // forward() throws; logged once after the join
+    std::string promptError;                // the first one's reason, under loadMutex
     std::atomic<int> decoded{0};
     /* The grid is ~85% of the decodes; the gap rounds add up to 48 more. */
     const int expected = kGridPoints + kGapRounds * kGapPerRound / 2;
@@ -554,7 +557,7 @@ std::shared_ptr<const Segmentation> segment(const QImage &guide, const QString &
             if (d.empty()) {
                 std::lock_guard<std::mutex> lock(loadMutex);
                 try { d = cv::dnn::readNetFromONNX(decoderPath.toStdString()); }
-                catch (const cv::Exception &) {}
+                catch (const cv::Exception &e) { loadError = e.what(); }
                 if (d.empty()) { loadFailed = true; return; }
             }
             const std::vector<cv::String> outNames = d.getUnconnectedOutLayersNames();
@@ -585,7 +588,11 @@ std::shared_ptr<const Segmentation> segment(const QImage &guide, const QString &
                     d.setInput(mi, "mask_input");
                     d.setInput(hm, "has_mask_input");
                     d.forward(o, outNames);
-                } catch (const cv::Exception &) {
+                } catch (const cv::Exception &e) {
+                    if (promptFailures++ == 0) {
+                        std::lock_guard<std::mutex> lock(loadMutex);
+                        promptError = e.what();
+                    }
                     continue;                   // an empty candidate never qualifies
                 }
                 cv::Mat masks, iou;
@@ -614,6 +621,15 @@ std::shared_ptr<const Segmentation> segment(const QImage &guide, const QString &
     const int gw = std::max(1, int(std::lround(guide.width()  * ls)));
     const int gh = std::max(1, int(std::lround(guide.height() * ls)));
     auto seg = assemble(decode, gw, gh, progress, 90, 100);
+    /* After the joins: one line for the run, not one per prompt or per thread. Failed
+       prompts just yield fewer objects, which nothing else would explain. */
+    if (loadFailed)
+        G::issue("Error", "Segmenter: the SAM 2 decoder did not load: " +
+                 QString::fromStdString(loadError), "Segmenter", -1, decoderPath);
+    else if (promptFailures > 0)
+        G::issueDedup("Warning", QString("Segmenter: %1 prompts failed, so objects may be "
+                      "missing: %2").arg(promptFailures.load())
+                      .arg(QString::fromStdString(promptError)), "Segmenter");
     if (loadFailed) return fail(QObject::tr("The SAM 2 decoder failed to load."));
     return seg;
 }
@@ -752,6 +768,8 @@ void Job::shutdown(int maxWaitMs)
     ++generation;                           // a result still in the queue is dropped
     cancel();
     if (thread->wait(QDeadlineTimer(maxWaitMs))) delete thread;
+    else G::issue("Error", QString("The segmenter thread did not stop within %1 ms at "
+                  "quit").arg(maxWaitMs), "Segmenter::Job::shutdown");
     /* Not finished in time: quitting anyway, so the thread object is left to the OS
        rather than deleted while it runs. */
     thread = nullptr;

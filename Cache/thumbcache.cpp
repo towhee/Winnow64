@@ -10,6 +10,7 @@
 
 #include "Cache/cachedb.h"
 #include "Main/global.h"
+#include <QSqlError>
 #include "Cache/mountsnapshot.h"
 #include "Cache/pathkey.h"
 
@@ -93,7 +94,11 @@ void ThumbCache::putLocked(QSqlDatabase &db, const QString &fPath, const QByteAr
     q.addBindValue(MountSnapshot::take().rootOf(fPath));
     q.addBindValue(srcSize);
     q.addBindValue(srcMtime);
-    q.exec();
+    /* HOT PATH: the failure branch alone costs anything (issueDedup, once per reason).
+       A thumbnail not stored is decoded again on the next visit. */
+    if (!q.exec())
+        G::issueDedup("Warning", "Thumbnail not cached: " + q.lastError().text(),
+                      "ThumbCache::putLocked");
 }
 
 
@@ -232,7 +237,9 @@ void ThumbCache::writeBatch(const QList<QPair<QString, QImage>> &batch,
         putLocked(db, r.path, r.jpg, r.w, r.h, r.size, r.mtime);
         mWritten.fetchAndAddRelaxed(1);
     }
-    if (inTxn) db.commit();
+    if (inTxn && !db.commit())
+        G::issueDedup("Warning", "Thumbnail cache: commit failed: " +
+                      db.lastError().text(), "ThumbCache::writeBatch");
     if (G::isPerfProbe) {
         G::probeThumbWriterHoldNs.fetch_add(holdTimer.nsecsElapsed(),
                                             std::memory_order_relaxed);
@@ -446,7 +453,9 @@ void ThumbCache::writeStampBatch(const QStringList &keys)
         u.addBindValue(k);
         u.exec();
     }
-    if (inTxn) db.commit();
+    if (inTxn && !db.commit())
+        G::issueDedup("Warning", "Thumbnail cache: commit failed: " +
+                      db.lastError().text(), "ThumbCache::writeStampBatch");
     if (G::isPerfProbe)
         G::probeThumbWriterHoldNs.fetch_add(holdTimer.nsecsElapsed(),
                                             std::memory_order_relaxed);
@@ -575,7 +584,13 @@ QImage ThumbCache::getImage(const QString &fPath, bool hasDevelopRecipe,
 
     if (G::isPerfProbe) tcTimer.restart();
     QImage im;
-    if (!im.loadFromData(jpg, "JPG") || im.isNull()) return QImage();
+    if (!im.loadFromData(jpg, "JPG") || im.isNull()) {
+        /* A damaged cached thumbnail. The caller decodes the image again; whether the
+           bad row is then replaced is not known, so it is counted here. */
+        G::issueDedup("Warning", "Cached thumbnail did not decode", "ThumbCache::getImage",
+                      -1, fPath);
+        return QImage();
+    }
 
     /*  Stored at G::maxIconSize, but a row written by an older build or under a
         larger icon setting must not paint over its cell -- the same guard
@@ -683,7 +698,9 @@ void ThumbCache::markStale(const QStringList &paths)
         q.addBindValue(r.mtime);
         q.exec();
     }
-    if (inTxn) db.commit();
+    if (inTxn && !db.commit())
+        G::issueDedup("Warning", "Thumbnail cache: commit failed: " +
+                      db.lastError().text(), "ThumbCache::markStale");
 }
 
 void ThumbCache::clearStale(const QStringList &paths)
@@ -699,7 +716,9 @@ void ThumbCache::clearStale(const QStringList &paths)
         q.addBindValue(cachePathKey(p));
         q.exec();
     }
-    if (inTxn) db.commit();
+    if (inTxn && !db.commit())
+        G::issueDedup("Warning", "Thumbnail cache: commit failed: " +
+                      db.lastError().text(), "ThumbCache::clearStale");
 }
 
 QStringList ThumbCache::staleFiles()
@@ -806,7 +825,9 @@ void ThumbCache::onFolderMoved(const QString &from, const QString &to)
     q.addBindValue(fromPrefix);
     q.addBindValue(fromPrefix);
     q.exec();
-    if (inTxn) db.commit();
+    if (inTxn && !db.commit())
+        G::issueDedup("Warning", "Thumbnail cache: commit failed: " +
+                      db.lastError().text(), "ThumbCache::onFolderMoved");
 }
 
 int ThumbCache::sweep()

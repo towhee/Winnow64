@@ -1,4 +1,5 @@
 #include "subjectpredictor.h"
+#include "Main/global.h"
 #include "Utilities/segrefine.h"
 #include <algorithm>
 #include <cmath>
@@ -18,7 +19,7 @@ SubjectPredictor::SubjectPredictor(const QString& onnxPath, int inputSize)
         net.setPreferableBackend(cv::dnn::DNN_BACKEND_DEFAULT);
         net.setPreferableTarget(cv::dnn::DNN_TARGET_CPU);
     } catch (const cv::Exception& e) {
-        qWarning("Failed to load subject ONNX model: %s", e.what());
+        G::issueDedup("Error", QString("Subject model did not load: ") + e.what(), "SubjectPredictor");
     }
 }
 
@@ -74,7 +75,7 @@ bool SubjectPredictor::predict(const QImage& image, std::vector<float>& cov, int
         net.setInput(blob);
         net.forward(outs, outNames);
     } catch (const cv::Exception& e) {
-        qWarning("Subject inference failed: %s", e.what());
+        G::issueDedup("Warning", QString("Subject mask failed: ") + e.what(), "SubjectPredictor");
         return false;
     }
     if (outs.empty() || outs[0].empty()) return false;

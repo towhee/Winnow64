@@ -140,6 +140,8 @@ int ExifTool::close()
     /* Nothing to close if the -stay_open process never came up (construction
        already reported why); avoid a misleading "waitForFinished failed". */
     if (process.state() == QProcess::NotRunning) return -1;
+    // the commands still in flight: their errors are read before the pipe closes
+    drainReplies("ExifTool::close");
     QByteArray closeArgs;
     closeArgs += "-stay_open\n";
     closeArgs += "False\n";
@@ -176,6 +178,7 @@ void ExifTool::copyAllTags(QString src, QString dst, bool excludeIcc, bool uprig
     args += dst.toUtf8() + "\n";
     args += "-execute\n";
     process.write(args);
+    ++unreadReplies;
 }
 
 void ExifTool::copyICC(QString src, QString dst)
@@ -189,11 +192,13 @@ void ExifTool::copyICC(QString src, QString dst)
     args += dst.toUtf8() + "\n";
     args += "-execute\n";
     process.write(args);
+    ++unreadReplies;
 }
 
 QString ExifTool::readTag(QString src, QString tag)
 {
     if (!ensureRunning("ExifTool::readTag")) return "";
+    drainReplies("ExifTool::readTag");      // their "{ready}" is not this answer
     // Construct -stay_open compatible ExifTool command
     QByteArray args;
     args += "-" + tag.toUtf8() + "\n";   // the tag, e.g. -LensModel
@@ -265,6 +270,7 @@ void ExifTool::writeOrientation(QString src, QString orientation)
     args.append(src.toUtf8() + "\n");
     args.append("-execute\n");
     process.write(args);
+    ++unreadReplies;
 }
 
 // not used as ExifTool can only read results into a file, going to try using my own xmp.setItem
@@ -286,6 +292,7 @@ void ExifTool::writeXMP(QString dst, QString tag, QString val)
     args.append(dst.toUtf8() + "\n");
     args.append("-execute\n");
     process.write(args);
+    ++unreadReplies;
 }
 
 void ExifTool::addThumb(QString src, QString dst)
@@ -298,7 +305,39 @@ void ExifTool::addThumb(QString src, QString dst)
     args.append(dst.toUtf8() + "\n");
     args.append("-execute\n");
     process.write(args);
-    process.waitForBytesWritten(30000);
+    ++unreadReplies;
+    /* WAIT for ExifTool to finish, this and the copy before it: every caller removes
+       src as soon as this returns, and ExifTool used to read it after it was gone, so
+       the export got no thumbnail. */
+    drainReplies("ExifTool::addThumb");
+}
+
+bool ExifTool::drainReplies(const QString &where)
+{
+    if (unreadReplies <= 0) return true;
+    if (!process.waitForBytesWritten(30000)) {
+        G::issueDedup("Warning", "ExifTool did not take its commands (timed out)", where,
+                      -1, exifToolPath);
+        return false;
+    }
+    QByteArray out;
+    while (out.count("{ready}") < unreadReplies) {
+        if (!process.waitForReadyRead(30000)) break;
+        out += process.readAllStandardOutput();
+    }
+    const bool allAnswered = out.count("{ready}") >= unreadReplies;
+    unreadReplies = 0;
+    /* stderr holds "Error: ..." for a failed command and "Warning: ..." for a minor
+       one (an unparsed MakerNote); only the errors are failures. */
+    const QStringList lines =
+        QString::fromUtf8(process.readAllStandardError()).split('\n', Qt::SkipEmptyParts);
+    for (const QString &line : lines)
+        if (line.startsWith("Error"))
+            G::issueDedup("Warning", "ExifTool: " + line.trimmed(), where);
+    if (!allAnswered)
+        G::issueDedup("Warning", "ExifTool did not answer within 30 s", where, -1,
+                      exifToolPath);
+    return allAnswered;
 }
 
 bool ExifTool::replaceEmbeddedImages(const QString &thumbSrc, const QString &previewSrc,
@@ -321,6 +360,7 @@ bool ExifTool::replaceEmbeddedImages(const QString &thumbSrc, const QString &pre
         err = "ExifTool is not running.";
         return false;
     }
+    drainReplies("ExifTool::replaceEmbeddedImages");    // their "{ready}" is not this one
     QByteArray args;
     args += "-ThumbnailImage<=" + thumbSrc.toUtf8() + "\n";
     if (!previewSrc.isEmpty()) args += "-PreviewImage<=" + previewSrc.toUtf8() + "\n";

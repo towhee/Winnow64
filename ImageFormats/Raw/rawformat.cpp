@@ -208,7 +208,11 @@ bool RawFormat::Decode(QFile &file, const ImageMetadata &m, QImage &out,
                 work->cam.cameraModel = m.model;
             }
         }
-        /* else: aerr is a soft failure -- fall through to the in-house engine. */
+        /* else: aerr is a soft failure -- fall through to the in-house engine. The
+           image then looks like Winnow's engine, not the Apple one the recipe chose. */
+        else G::issueDedup("Info", "Apple raw engine could not decode, using Winnow's: " +
+                           (aerr.isEmpty() ? QString("no reason given") : aerr),
+                           "RawFormat::Decode", -1, file.fileName());
     }
 #endif
 

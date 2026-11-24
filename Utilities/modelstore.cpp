@@ -109,10 +109,18 @@ void saveSidecar()          // call with g_mutex held
         o.insert("mtime",  double(it.value().mtime));
         root.insert(it.key(), o);
     }
+    /* models.json records which downloads verified; when it is not written, every model
+       is hashed again (seconds for the large ones) at the next start. */
     QSaveFile f(sidecarPath());
-    if (!f.open(QIODevice::WriteOnly)) return;
+    if (!f.open(QIODevice::WriteOnly)) {
+        G::issueDedup("Warning", "models.json could not be written: " + f.errorString(),
+                      "ModelStore::saveSidecar", -1, sidecarPath());
+        return;
+    }
     f.write(QJsonDocument(root).toJson(QJsonDocument::Indented));
-    f.commit();
+    if (!f.commit())
+        G::issueDedup("Warning", "models.json could not be saved: " + f.errorString(),
+                      "ModelStore::saveSidecar", -1, sidecarPath());
 }
 
 /* Streamed so a 198 MB model is never held in memory. */
@@ -142,7 +150,11 @@ State computeState(const ModelInfo &mi)     // call with g_mutex held
     /* The app dir wins. That resolves the two bundled models, and it keeps a dev tree
        that still has every .onnx beside the binary working exactly as before. */
     if (QFile::exists(bundledPath(mi))) return State::Bundled;
-    if (mi.bundled) return State::Missing;          // should be impossible in a real build
+    if (mi.bundled) {                               // should be impossible in a real build
+        G::issueDedup("Error", "A model that ships with Winnow is missing from the app",
+                      "ModelStore", -1, bundledPath(mi));
+        return State::Missing;
+    }
 
     const QString p = downloadedPath(mi);
     QFileInfo fi(p);

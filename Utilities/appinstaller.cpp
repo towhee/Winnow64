@@ -34,6 +34,26 @@ QString updateDir()
     return dir;
 }
 
+QString takeLastInstallFailure()
+{
+    const QString log = QDir(updateDir()).filePath("install.log");
+    QFile f(log);
+    if (!f.open(QIODevice::ReadWrite | QIODevice::Text)) return QString();
+    const QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
+    // the last install is everything after the last "=== " line
+    int start = -1;
+    for (int i = lines.size() - 1; i >= 0; --i)
+        if (lines.at(i).startsWith("=== ")) { start = i; break; }
+    if (start < 0 || lines.at(start).startsWith("=== reported")) return QString();
+    QString failed;
+    for (int i = start + 1; i < lines.size(); ++i)
+        if (lines.at(i).startsWith("FAILED:")) failed = lines.at(i).mid(7).trimmed();
+    if (failed.isEmpty()) return QString();
+    f.seek(f.size());
+    f.write("=== reported\n");
+    return failed;
+}
+
 #ifdef Q_OS_MAC
 
 /* Designated requirement every update must satisfy: Winnow's bundle id, signed with a

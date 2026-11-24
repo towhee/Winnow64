@@ -228,7 +228,14 @@ void RenameFileDlg::renameFileBase(QString oldBase, QString newBase)
         if (existBase == oldBase) {
             QString oldPath = inf.at(i).filePath();
             QString newPath = inf.at(i).dir().path() + "/" + newBase + "." + inf.at(i).completeSuffix();
-            if (QFile(oldPath).rename(newPath)) renamed << qMakePair(oldPath, newPath);
+            // only a file that really moved is re-keyed (see RenameFileDlg::renameInFolder)
+            QFile f(oldPath);
+            if (!f.rename(newPath)) {
+                G::issue("Error", "Rename failed, the file keeps its name: " +
+                         f.errorString(), "RenameFileDlg::renameFileBase", -1, oldPath);
+                continue;
+            }
+            renamed << qMakePair(oldPath, newPath);
             FileOps::onMoved(oldPath, newPath);
             if (isDebug) qDebug() << "RenameFileDlg::renameFileBase Renamed file oldPath ="
                                   << oldPath << "to newPath =" << newPath;
@@ -568,9 +575,13 @@ void RenameFileDlg::renameInFolder(const QStringList &paths, QStringList &sideca
             Utilities::uniqueFilePath(uniquePath, "_");
         }
 
-        // temp unique rename file
-        QFile(oldPath).rename(uniquePath);
-        QFile(oldPath).close();
+        // temp unique rename file; on failure the file, datamodel and list keep oldPath
+        QFile tempFile(oldPath);
+        if (!tempFile.rename(uniquePath)) {
+            G::issue("Error", "Rename failed, the file keeps its name: " +
+                     tempFile.errorString(), "RenameFileDlg::renameInFolder", -1, oldPath);
+            continue;
+        }
         FileOps::onMoved(oldPath, uniquePath);
 
         // update datamodel
@@ -681,11 +692,22 @@ void RenameFileDlg::renameInFolder(const QStringList &paths, QStringList &sideca
                 ;
         }
 
-        // File rename oldPath to newPath
-        if (QFile(oldPath).rename(newPath)) renamed << qMakePair(oldPath, newPath);
-        /* Keep the cached develop preview with the file. The sidecar (and with it the
-           thumbnail preview) is carried by the basename scan above. */
-        FileOps::onMoved(oldPath, newPath);
+        /* File rename oldPath to newPath. A FAILED RENAME RE-KEYS NOTHING: the result
+           used to be ignored, so the catalog, thumbnails, history, collections and the
+           datamodel were all moved to a path that did not exist, and the image lost its
+           edits on the next load. onMoved keeps the cached develop preview with the
+           file; the sidecar (and its thumbnail preview) is carried by the basename scan
+           above. */
+        QFile oldFile(oldPath);
+        const bool isRenamed = oldFile.rename(newPath);
+        if (isRenamed) {
+            renamed << qMakePair(oldPath, newPath);
+            FileOps::onMoved(oldPath, newPath);
+        }
+        else {
+            G::issue("Error", "Rename failed, the file keeps its name: " +
+                     oldFile.errorString(), "RenameFileDlg::renameInFolder", -1, oldPath);
+        }
         /*
         // Update datamodel
 //        if (isDebug) debugShowDM("Check if dm->fPathRow contains " + oldPath);
@@ -703,8 +725,7 @@ void RenameFileDlg::renameInFolder(const QStringList &paths, QStringList &sideca
 //        if (isDebug) qDebug() << "found =" << found << oldPath;  */
 
         // update datamodel
-        FileOps::onMoved(oldPath, newPath);
-        if (dm->fPathRow.contains(oldPath)) {
+        if (isRenamed && dm->fPathRow.contains(oldPath)) {
             renameDatamodel(oldPath, newPath, newName);
         }
 
