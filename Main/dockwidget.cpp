@@ -963,12 +963,98 @@ QString MW::dockTabToolTip(const QString &tabText)
     return QString();
 }
 
+namespace {
+
+/*  THE FRONT TAB OF EACH TAB GROUP, read from QMainWindow::saveState.
+
+    The saved stream (format in workspaces.cpp, ReadDockAreaTree) records, for every
+    tabbed group, the index of the dock its tab bar has current.  That is the layout's
+    OWN record of the front tab, set synchronously by restoreState, so it is right before
+    the window has been laid out or even shown -- where a visible-region test is not:
+    straight after a restoreState the docks still have their old geometry and z-order,
+    and the dock that came out "on top" was not the one the tab bar shows.  That is how
+    Browse Folders opened on Bookmarks every launch: the remembered front tab was read
+    wrong in showEvent and the shipped layout's Bookmarks tab won.
+
+    front gets the objectName of each group's front dock; tabbed every dock in a tabbed
+    group, so a caller can tell "not front" from "not in a group this stream covers"
+    (a floating tab group is written after the dock areas and is not read here). */
+bool ReadFrontTabs(QDataStream &s, QStringList &front, QSet<QString> &tabbed, int depth)
+{
+    if (depth > 16) return false;
+    uchar marker = 0;
+    s >> marker;
+    int frontIndex = -1;
+    const bool isTabs = marker == 0xfa;
+    if (isTabs) s >> frontIndex;
+    else if (marker != 0xfc) return false;
+    uchar orientation = 0;
+    int count = 0;
+    s >> orientation >> count;
+    if (s.status() != QDataStream::Ok || count < 0 || count > 1024) return false;
+    for (int i = 0; i < count; ++i) {
+        uchar item = 0;
+        int a = 0, b = 0, c = 0, d = 0;
+        s >> item;
+        if (item == 0xfb) {
+            QString name;
+            uchar flags = 0;
+            s >> name >> flags >> a >> b >> c >> d;
+            if (isTabs && !name.isEmpty()) {
+                tabbed.insert(name);
+                if (i == frontIndex) front << name;
+            }
+        }
+        else if (item == 0xfc) {
+            s >> a >> b >> c >> d;
+            if (!ReadFrontTabs(s, front, tabbed, depth + 1)) return false;
+        }
+        else return false;
+        if (s.status() != QDataStream::Ok) return false;
+    }
+    return true;
+}
+
+bool SavedFrontTabs(const QByteArray &state, QStringList &front, QSet<QString> &tabbed)
+{
+    front.clear();
+    tabbed.clear();
+    if (state.isEmpty()) return false;
+    QDataStream s(state);
+    s.setVersion(QDataStream::Qt_5_0);      // what QMainWindow::saveState writes
+    int versionMarker = 0, version = 0, areaCount = 0;
+    uchar dockMarker = 0;
+    s >> versionMarker >> version >> dockMarker >> areaCount;
+    if (s.status() != QDataStream::Ok || versionMarker != 0xff || dockMarker != 0xfd
+        || areaCount < 0 || areaCount > 4) return false;
+    for (int i = 0; i < areaCount; ++i) {
+        int pos = -1;
+        QSize size;
+        s >> pos >> size;
+        if (!ReadFrontTabs(s, front, tabbed, 0)) return false;
+    }
+    return true;
+}
+
+} // namespace
+
 bool MW::isSelectedDockTab(QDockWidget *dock)
 {
-    // The front (selected) tab in a tabified group is the only one not
-    // occluded by its siblings, so its visible region is non-empty. This is
-    // determined from the dock object, independent of the tab's label.
-    return dock && dock->isVisible() && !dock->visibleRegion().isEmpty();
+/*
+    Whether dock is the front (selected) tab of its tab group, or -- not tabbed -- simply
+    on screen.  A tabbed dock is answered from the layout's own tab state (see
+    SavedFrontTabs).  The visible-region test is the fallback for what that cannot see,
+    a dock in a floating tab group: the front tab there is the only one not occluded by
+    its siblings, so its visible region is non-empty.
+*/
+    if (!dock || dock->isHidden()) return false;
+    if (isDockTabified(dock)) {
+        QStringList front;
+        QSet<QString> tabbed;
+        if (SavedFrontTabs(saveState(), front, tabbed) && tabbed.contains(dock->objectName()))
+            return front.contains(dock->objectName());
+    }
+    return dock->isVisible() && !dock->visibleRegion().isEmpty();
 }
 
 void MW::folderDockVisibilityChange()
@@ -1194,9 +1280,8 @@ void MW::toggleDockArea(Qt::DockWidgetArea area)
                of a group still reports not-hidden and "the front tab" came out as
                whichever happened to be last in findChildren order -- which is why
                re-opening a group the user had never clicked in came back on Bookmarks.
-               isSelectedDockTab asks whether the dock has a non-empty visible region,
-               which is true of exactly the one on top, and is what frontDockTabs()
-               already uses for the per-workspace tab memory. */
+               isSelectedDockTab asks the layout's own tab state (see SavedFrontTabs),
+               which is what frontDockTabs() uses for the per-workspace tab memory. */
             if (!isSelectedDockTab(d)) continue;
             front << d->objectName();
             extent = qMax(extent, horizontal ? d->width() : d->height());
@@ -1542,7 +1627,13 @@ void MW::embelDockActivated(QDockWidget *dockWidget)
 
 QStringList MW::frontDockTabs()
 {
+    /* From the layout's own tab state -- see SavedFrontTabs.  This runs in showEvent,
+       straight after the startup restoreState, where the visible-region test below read
+       the wrong front tab.  The loop is the fallback for a stream it cannot parse. */
     QStringList front;
+    QSet<QString> tabbed;
+    if (SavedFrontTabs(saveState(), front, tabbed)) return front;
+    front.clear();
     QSet<QDockWidget*> seen;
     const QList<QDockWidget*> docks = findChildren<QDockWidget*>();
     for (QDockWidget *dock : docks) {
@@ -1592,7 +1683,9 @@ void MW::restoreDockTabSelection(const QString &wsName)
         for (QDockWidget *d : group) seen.insert(d);
         group.prepend(dock);
         for (QDockWidget *d : group) {
-            if (!d->isVisible()) continue;      // a hidden dock has no tab
+            /* isHidden, not isVisible: a hidden dock has no tab, but before the window
+               is shown every dock reports not visible. */
+            if (d->isHidden()) continue;
             if (!front.contains(d->objectName())) continue;
             d->raise();
             break;

@@ -4730,7 +4730,7 @@ void MW::developDockVisibilityChange()
     if (!imageView || !developProperties) return;
     if (developDock->isVisible()) {
         /* A TABIFIED dock keeps isVisible() == true even when a sibling tab is selected
-           (that is why isSelectedDockTab tests the visible REGION instead). So an
+           (that is why isSelectedDockTab asks the layout's tab state instead). So an
            unconditional raise() here yanked Develop straight back to the front the
            instant the user clicked a sibling tab -- clicking the History tab appeared to
            do nothing. Only raise when Develop really is the front tab, where raise() is
