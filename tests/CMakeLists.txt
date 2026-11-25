@@ -742,6 +742,11 @@ winnow_add_unit_test(tst_foldertree unit/tst_foldertree.cpp)
 # out-of-order and holed ranges -- and stay linear on a fragmented 150,000-row selection.
 winnow_add_unit_test(tst_rowselection unit/tst_rowselection.cpp)
 
+# tst_thumbsizesteps pins Views/thumbsizesteps.h (header-only): the discrete thumbnail
+# sizes [ ] and the status bar slider share. Every wrapping step fills the row with a
+# cell between ICON_MIN and maxIconSize, and the filmstrip ladder round-trips.
+winnow_add_unit_test(tst_thumbsizesteps unit/tst_thumbsizesteps.cpp)
+
 # tst_thumbcache covers the thumbnail index -- the layer that makes scrolling an
 # unvisited region of a 250k catalog a database read rather than a file open per
 # row. The cases are the ones where a cache can be WRONG rather than empty: a

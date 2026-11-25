@@ -249,6 +249,7 @@
     - [6.2.4 The Develop Panel: Vertical Swipes Always Scroll](#624-the-develop-panel-vertical-swipes-always-scroll)
   - [6.3 Resizing Icons or the Viewport](#63-resizing-icons-or-the-viewport)
     - [6.3.1 Persisted Icon Size](#631-persisted-icon-size)
+    - [6.3.2 Thumbnail Size Steps (2026-11-25)](#632-thumbnail-size-steps-2026-11-25)
   - [6.4 Investigations and Fixes](#64-investigations-and-fixes)
     - [6.4.1 Removing the G::wait Pumps](#641-removing-the-gwait-pumps)
       - [6.4.1.1 The Wait in scrollToCurrentRowIfNotVisible](#6411-the-wait-in-scrolltocurrentrowifnotvisible)
@@ -4281,6 +4282,24 @@ Where the rules are applied:
 - MW::writeSettings / MW::createGridView: between-session save/restore. writeSettings saves gridView->assignedIconWidth as thumbWidthGrid; createGridView loads it into iconWidth, then copies it to assignedIconWidth.
 - MW::snapshotWorkspace / MW::invokeWorkspace: per-workspace save/restore for thumbView and gridView (Main/workspaces.cpp). A WORKFLOW layout does not apply the grid size (2026-10-27): see [2.3.7 What a Workspace Does Not Restore](#237-what-a-workspace-does-not-restore).
 - MW::builtInDefaultWorkspace sets assignedIconWidth = iconWidth before rejustify(), so the hard-coded filmstrip default (thumb 100) is honoured. It no longer sets a grid size.
+
+#### 6.3.2 Thumbnail Size Steps (2026-11-25)
+
+The thumbnail size changes in discrete steps, and the [ and ] keys and the status bar's thumbnail sizer (a 100 px slider at the far right) step through the same ones. One slider tick is one key press. The step math is header-only in Views/thumbsizesteps.h and pinned by tests/unit/tst_thumbsizesteps.cpp.
+
+- Wrapping views (the grid, and the thumbnails docked left or right) fill each row exactly, so a step is one tpr (thumbs per row) and the cell is justifyRowWidth() / tpr. The range is every tpr from tprMin (the fewest per row with the cell <= G::maxIconSize, the ceiling rejustify uses) to tprMax (the most per row with the thumb >= ICON_MIN). Only a tpr whose cell fits exactly tpr times is a step (wrapTprs). With small cells in a wide row, tpr and tpr + 1 can share a cell width (wRow 4289: tpr 66 gives cell 64, and 64 fits 67 times), and that used to get ] stuck. The range depends on the width, so the slider re-reads it whenever the view resizes.
+- The non-wrapping filmstrip (thumbnails docked top or bottom) has no row to fill. Its steps form a ladder on the thumb's long side: ICON_MIN x 1.1^k, ending exactly at G::maxIconSize (a top step under 5% is dropped). This replaced x 1.1 / x 0.9, which did not round-trip, so ] then [ drifted. The thumb's shape (width : height) is kept. A thumb dock drag still sets any size (thumbsFitTopOrBottom). The slider shows the nearest step, and [ ] go to the next step below or above.
+
+IconView::justify (wrapping) and IconView::thumbsEnlarge / thumbsShrink (filmstrip) are one step through IconView::setSizeStep, which the slider also calls. Fixed on the way:
+
+- [ in the grid had no floor. tpr kept rising and the thumbs shrank toward zero. Now the thumb stays >= ICON_MIN.
+- justify's ceiling was a single if where rejustify loops, so ] could overshoot G::maxIconSize until the next resize corrected it.
+- justify did not refresh the icon range. A slider jump of several steps could leave the loaded icon chunk short. applyTpr calls updateIconRange.
+- justify re-centered on dm->scrollToIcon. applyTpr now anchors as rejustify does: a view at the top stays at the top, else the center row is kept. A slider drag captures that anchor once at sliderPressed (IconView::beginSizeDrag), as resizeEvent does for a resize burst, so it cannot drift step by step.
+
+ThumbSizeControl (Main/thumbsizecontrol.*) drives the grid when it is visible, else the thumbnails. It finds out by watching both views' Show/Hide events, deferred one event-loop turn so a view switch has settled. With neither visible it stays visible but disabled, and the tooltip gives the reason. It re-syncs on IconView::thumbSizeChanged, which setThumbParameters emits, so every size change reaches it: keys, resize, rejustify, dock drag, workspace restore. The slider (WedgeSlider, in thumbsizecontrol.cpp) is drawn as a wedge, thin and dark at the left (small) to fat and light at the right (large), with a round knob. It does its own mouse handling, because QSlider hit-tests the style's handle, which is not where this knob is drawn: a press jumps to the step under the cursor and a drag follows it. It takes no keyboard focus, so arrow keys stay with the views. Tooltip: "Thumbnail sizer.  Shortcuts [ and ]." It is pinned, not laid out (ThumbSizeControl::pinToRightEdge): as a QStatusBar permanent widget it wandered across the bar while Winnow opened, because the bar re-lays out whenever a widget changes width (the progress bar, labels filling in). It is a plain child of the bar, placed 8 px in from the right edge on every resize, and the bar's right contents margin reserves its width so the layout never puts anything under it. The status bar's size grip (Windows, Linux) is turned off, since it would have sat beside the sizer instead of in the corner. The window edges still resize.
+
+The cache running lights (metadataThreadRunningLabel, imageThreadRunningLabel) that used to sit there are set aside: still built and updated, but with MW::showCacheLights = false they are not added to the status bar, so they reserve no room in it.
 
 ### 6.4 Investigations and Fixes
 

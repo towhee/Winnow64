@@ -336,6 +336,7 @@ set(WINNOW_SOURCES
     Main/diagnostics.cpp
     Main/dockwidget.cpp
     Main/showhidebar.cpp
+    Main/thumbsizecontrol.cpp
     Main/draganddrop.cpp
     Main/externalapp.cpp
     Main/fileoperations.cpp
@@ -743,6 +744,7 @@ set(WINNOW_HEADERS
 
     Main/dockwidget.h
     Main/showhidebar.h
+    Main/thumbsizecontrol.h
     Main/global.h
     Main/catalogenumerate.h
     Main/catalogscanner.h
@@ -841,6 +843,7 @@ set(WINNOW_HEADERS
     Views/compareImages.h
     Views/compareview.h
     Views/iconview.h
+    Views/thumbsizesteps.h
     Views/iconviewdelegate.h
     Views/imageview.h
     Views/loupeshown.h

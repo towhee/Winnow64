@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/thumbsizecontrol.h"
 #ifdef Q_OS_LINUX
 #include "Utilities/linux.h"
 #endif
@@ -1668,7 +1669,9 @@ void MW::createStatusBar()
     // qDebug() << "charWidth =" << charWidth;
     // metadataThreadRunningLabel->setFixedWidth(charWidth);
     metadataThreadRunningLabel->setObjectName("MetadataCacheStatus");
-    statusBar()->addPermanentWidget(metadataThreadRunningLabel);
+    /* The cache lights are set aside (MW::showCacheLights): built and kept updated, but
+       not added to the status bar, so they reserve no room in it. */
+    if (showCacheLights) statusBar()->addPermanentWidget(metadataThreadRunningLabel);
     QString tip = "Metadata and Icon caching:\n";
     tip += "\n";
     tip += "  • Green:    \tAll cached\n";
@@ -1679,7 +1682,7 @@ void MW::createStatusBar()
 
     // label to show imageThreadRunning status
     imageThreadRunningLabel = new QLabel;
-    statusBar()->addPermanentWidget(imageThreadRunningLabel);
+    if (showCacheLights) statusBar()->addPermanentWidget(imageThreadRunningLabel);
     bool isAutoSize = imageCache->getAutoMaxMB();
     quint64 maxMB = imageCache->getMaxMB();
     imageThreadRunningLabel->setObjectName("ImageCacheStatus");
@@ -1688,6 +1691,17 @@ void MW::createStatusBar()
     // imageThreadRunningLabel->setFixedWidth(charWidth);
 
     setCacheRunningLightsWidth();
+
+    /* THUMBNAIL SIZER pinned to the right edge of the status bar, 8 px in: a wedge slider
+       taking the same steps as [ and ]. Pinned rather than added as a permanent widget,
+       which wandered across the bar during startup (ThumbSizeControl::pinToRightEdge).
+       The size grip (Windows, Linux) would sit beside it, not in the corner, so it is
+       off; the window edges still resize. It follows the grid and the thumbnails being
+       shown or hidden itself (ThumbSizeControl::setViews). */
+    statusBar()->setSizeGripEnabled(false);
+    thumbSizeControl = new ThumbSizeControl;
+    thumbSizeControl->pinToRightEdge(statusBar(), 8);
+    thumbSizeControl->setViews(gridView, thumbView);
 
     /* THE STATUS-BAR WORKFLOW SWITCHER -- HIDDEN. The Module dock across the top of the
        window (MW::createModuleDock) is now where the workflow is chosen. It is still

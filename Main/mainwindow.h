@@ -159,6 +159,7 @@ struct KeywordMove;
 class PlaceList;
 class PlaceDlg;
 class UndoManager;
+class ThumbSizeControl;
 struct VersionSnapshot;
 struct TrashedImage;
 struct KeywordRewrite;
@@ -2535,6 +2536,11 @@ private:
     QLabel *metadataThreadRunningLabel = new QLabel;
     QLabel *thumbThreadRunningLabel;
     QLabel *imageThreadRunningLabel;
+    /* The cache running lights are SET ASIDE: built and kept updated, but not added to
+       the status bar. Its far right holds the thumbnail sizer instead. Flip to
+       reinstate. */
+    static constexpr bool showCacheLights = false;
+    ThumbSizeControl *thumbSizeControl = nullptr;
     QLabel *cacheAmountLabel;
     DockWidget *folderDock;
     DockWidget *favDock;

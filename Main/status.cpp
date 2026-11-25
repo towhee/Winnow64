@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Main/thumbsizecontrol.h"
 
 /*
     Builds the "Decode Raw is On" toolbar icon: a 2px white border surrounding a
@@ -267,8 +268,8 @@ void MW::updateStatusBar()
        current image with the read-ahead trimmed, so the lights are meaningless there:
        show them in Preview, hide them in Develop. */
     bool inPreview = G::operationMode == G::OperationMode::Preview;
-    metadataThreadRunningLabel->setVisible(inPreview);
-    imageThreadRunningLabel->setVisible(inPreview);
+    metadataThreadRunningLabel->setVisible(inPreview && showCacheLights);
+    imageThreadRunningLabel->setVisible(inPreview && showCacheLights);
 }
 
 int MW::availableSpaceForProgressBar()
@@ -289,6 +290,8 @@ int MW::availableSpaceForProgressBar()
     if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
     if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();
     if (statusBarSpacer->isVisible()) w += s + statusBarSpacer->width();
+    // the room the pinned thumbnail sizer reserves (ThumbSizeControl::pinToRightEdge)
+    w += statusBar()->contentsMargins().right();
     w += s;
     return statusBar()->width() - w - 30;
 }

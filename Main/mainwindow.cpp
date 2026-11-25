@@ -1,4 +1,5 @@
 ﻿#include "Main/mainwindow.h"
+#include "Main/thumbsizecontrol.h"
 #include "Utilities/waitcursor.h"
 #include "Datamodel/savedpicks.h"
 #include "Datamodel/duplicateok.h"

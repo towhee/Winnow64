@@ -1,4 +1,5 @@
 #include "Views/iconview.h"
+#include "Views/thumbsizesteps.h"
 #include <cmath>
 #include "Utilities/fileops.h"
 #include "Utilities/versionkey.h"
@@ -448,6 +449,11 @@ void IconView::setThumbParameters()
     iconViewDelegate->setThumbDimensions(iconWidth, iconHeight, labelFontSize,
                                          showIconLabels, labelChoice,
                                          badgeSize, iconNumberSize);
+
+    /* Every size change (justify, rejustify, setThumbSize, a dock drag, a workspace
+       restore, a resize) passes through here, so this is the one place that tells the
+       status bar's thumbnail size control to re-sync. */
+    emit thumbSizeChanged();
 }
 
 void IconView::setThumbParameters(int _thumbWidth, int _thumbHeight,
@@ -670,10 +676,16 @@ void IconView::setThumbSize()
        (gridView, floating/side thumbView) maintains assignedIconWidth via justify(). */
     assignedIconWidth = iconWidth;
 
-    // Capture the cell at the center of the current viewport before resizing
-    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
-    QModelIndex centerIdx = indexAt(centerPoint);
-    int centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+    // The cell to keep centered: the slider drag's anchor, else the one at the center now
+    int centerRow;
+    if (sizeDragAnchorRow >= 0 && sizeDragAnchorRow < dm->sf->rowCount()) {
+        centerRow = sizeDragAnchorRow;
+    }
+    else {
+        QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+        QModelIndex centerIdx = indexAt(centerPoint);
+        centerRow = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+    }
 
     G::ScrollSignalGuard scrollGuard;   // the resize scrolls; that is not the user
     setThumbParameters();
@@ -701,50 +713,175 @@ void IconView::thumbsEnlarge()
 {
 /*
    This function enlarges the size of the thumbnails in the thumbView, with the objectName
-   "Thumbnails", which either resides in a dock or a floating window.
+   "Thumbnails", when it does not wrap (docked top or bottom, or floating). The next
+   larger step on the filmstrip ladder (Views/thumbsizesteps.h) -- the same step the
+   status bar slider moves to -- so ] then [ returns to the same size.
 */
-    // if (isDebug || G::isLogger)
-        G::log("IconView::thumbsEnlarge", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsEnlarge", objectName());
 
-    if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
-    if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
-    if (iconWidth < G::maxIconSize && iconHeight < G::maxIconSize)
-    {
-        iconWidth *= 1.1;
-        iconHeight *= 1.1;
-        if (iconWidth > G::maxIconSize) iconWidth = G::maxIconSize;
-        if (iconHeight > G::maxIconSize) iconHeight = G::maxIconSize;
-    }
-
-    qDebug() << "IconView::thumbsEnlarge" << objectName()
-             << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight
-             << "G::maxIconSize =" << G::maxIconSize
-        ;
-    setThumbSize();
-    return;
+    int k = ThumbSizeSteps::ladderUp(qMax(iconWidth, iconHeight), ICON_MIN, G::maxIconSize);
+    if (k < 0) return;
+    applyFilmstripSize(ThumbSizeSteps::ladderSize(k, ICON_MIN, G::maxIconSize),
+                       "IconView::thumbsEnlarge");
 }
 
 void IconView::thumbsShrink()
 {
 /*
-   This function reduces the size of the thumbnails in the thumbView, with the objectName
-   "Thumbnails", which either resides in a dock or a floating window.
+   This function reduces the size of the thumbnails in the non-wrapping thumbView: the
+   next smaller step on the filmstrip ladder. See thumbsEnlarge.
 */
-    // if (isDebug || G::isLogger)
-        G::log("IconView::thumbsShrink", objectName());
+    if (isDebug || G::isLogger) G::log("IconView::thumbsShrink", objectName());
 
-    if (iconWidth > ICON_MIN  && iconHeight > ICON_MIN) {
-        iconWidth *= 0.9;
-        iconHeight *= 0.9;
-        if (iconWidth < ICON_MIN) iconWidth = ICON_MIN;
-        if (iconHeight < ICON_MIN) iconHeight = ICON_MIN;
+    int k = ThumbSizeSteps::ladderDown(qMax(iconWidth, iconHeight), ICON_MIN, G::maxIconSize);
+    if (k < 0) return;
+    applyFilmstripSize(ThumbSizeSteps::ladderSize(k, ICON_MIN, G::maxIconSize),
+                       "IconView::thumbsShrink");
+}
+
+void IconView::applyFilmstripSize(int longSide, QString src)
+{
+/*
+    Sets the non-wrapping thumbView's thumb so its long side is longSide, keeping the
+    current shape (width : height). setThumbSize then resizes the thumbDock to fit and
+    keeps the center cell centered.
+*/
+    if (isDebug || G::isLogger) G::log("IconView::applyFilmstripSize", objectName() + " " + src);
+    longSide = qBound(ICON_MIN, longSide, G::maxIconSize);
+    const int w = qMax(1, iconWidth);
+    const int h = qMax(1, iconHeight);
+    if (w >= h) {
+        iconWidth = longSide;
+        iconHeight = qMax(1, static_cast<int>(std::lround(double(longSide) * h / w)));
     }
-
-    qDebug() << "IconView::thumbsShrink" << objectName()
-             << "iconHeight =" << iconHeight;
+    else {
+        iconHeight = longSide;
+        iconWidth = qMax(1, static_cast<int>(std::lround(double(longSide) * w / h)));
+    }
     setThumbSize();
-    return;
+}
+
+int IconView::justifyRowWidth()
+{
+    // The row width justify() fills: QListView assumes a scrollbar plus an 8 px margin.
+    return width() - G::scrollBarThickness - 8;
+}
+
+int IconView::sizeStepCount()
+{
+    if (isWrapping()) {
+        return ThumbSizeSteps::wrapStepCount(justifyRowWidth(),
+                                             iconViewDelegate->getCellWidthFromThumbWidth(0),
+                                             ICON_MIN, G::maxIconSize);
+    }
+    return ThumbSizeSteps::ladderCount(ICON_MIN, G::maxIconSize);
+}
+
+int IconView::sizeStep()
+{
+    if (isWrapping()) {
+        const int wRow = justifyRowWidth();
+        const int tpr = ThumbSizeSteps::currentTpr(wRow, getCellSize().width());
+        return ThumbSizeSteps::wrapStepFromTpr(tpr, wRow,
+                                               iconViewDelegate->getCellWidthFromThumbWidth(0),
+                                               ICON_MIN, G::maxIconSize);
+    }
+    return ThumbSizeSteps::ladderNearest(qMax(iconWidth, iconHeight),
+                                         ICON_MIN, G::maxIconSize);
+}
+
+QString IconView::sizeStepText()
+{
+    // What the current size means to the user, for the slider's tooltip.
+    if (isWrapping()) {
+        const int tpr = ThumbSizeSteps::currentTpr(justifyRowWidth(), getCellSize().width());
+        return tpr == 1 ? QString("1 thumbnail per row")
+                        : QString("%1 thumbnails per row").arg(tpr);
+    }
+    return QString("%1 px").arg(qMax(iconWidth, iconHeight));
+}
+
+void IconView::setSizeStep(int step, QString src)
+{
+    if (isDebug || G::isLogger) G::log("IconView::setSizeStep", objectName() + " " + src);
+    step = qBound(0, step, sizeStepCount() - 1);
+    if (isWrapping()) {
+        if (step == sizeStep()) return;
+        const int tpr = ThumbSizeSteps::tprFromWrapStep(step, justifyRowWidth(),
+                                     iconViewDelegate->getCellWidthFromThumbWidth(0),
+                                     ICON_MIN, G::maxIconSize);
+        applyTpr(tpr, src);
+    }
+    else {
+        /* Compare sizes, not steps: after a dock drag the size can sit between steps,
+           and moving the slider to the nearest one must still apply it. */
+        const int size = ThumbSizeSteps::ladderSize(step, ICON_MIN, G::maxIconSize);
+        if (size == qMax(iconWidth, iconHeight)) return;
+        applyFilmstripSize(size, src);
+    }
+}
+
+void IconView::beginSizeDrag()
+{
+    // Hold the row at the centre (or the top) for the whole drag. See sizeDragAnchorRow.
+    sizeDragAnchorRow = -1;
+    int row;
+    bool atTop;
+    sizeAnchor(row, atTop);
+    sizeDragAnchorRow = row;
+    sizeDragAnchorAtTop = atTop;
+}
+
+void IconView::endSizeDrag()
+{
+    sizeDragAnchorRow = -1;
+}
+
+void IconView::sizeAnchor(int &row, bool &atTop)
+{
+    // The row a size change keeps in place: a drag's anchor, else the centre cell.
+    if (sizeDragAnchorRow >= 0 && sizeDragAnchorRow < dm->sf->rowCount()) {
+        row = sizeDragAnchorRow;
+        atTop = sizeDragAnchorAtTop;
+        return;
+    }
+    QPoint centerPoint(viewport()->width() / 2, viewport()->height() / 2);
+    QModelIndex centerIdx = indexAt(centerPoint);
+    row = centerIdx.isValid() ? centerIdx.row() : dm->currentSfRow;
+    atTop = verticalScrollBar()->value() == 0;
+}
+
+void IconView::applyTpr(int tpr, QString src)
+{
+/*
+    Sets a wrapping view to tpr thumbs per row, the cells filling the row exactly. The
+    caller has bounded tpr (Views/thumbsizesteps.h), so the cell is never larger than
+    maxIconSize and the thumb never smaller than ICON_MIN.
+
+    assignedIconWidth remembers the size so rejustify() keeps it through a window resize
+    or a preference change. The view stays at the top if it was there, else the anchor
+    row is re-centered, and the icon range is refreshed so a jump of several steps cannot
+    leave the loaded icon chunk short (blank thumbnails).
+*/
+    int anchorRow;
+    bool atTop;
+    sizeAnchor(anchorRow, atTop);
+
+    const int wRow = justifyRowWidth();
+    tpr = qMax(1, tpr);
+    const int wCell = wRow / tpr;
+
+    iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
+    iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
+    assignedIconWidth = iconWidth;
+    skipResize = true;      // prevent feedback loop
+
+    G::ScrollSignalGuard scrollGuard;   // the resize scrolls; that is not the user
+    setThumbParameters();
+    if (atTop) verticalScrollBar()->setValue(0);
+    else if (anchorRow >= 0) scrollToRow(anchorRow, src);
+
+    m2->updateIconRange(src);
 }
 
 int IconView::justifyMargin()
@@ -908,54 +1045,30 @@ void IconView::rejustify(/*int prevMidVisibleCell*/)
 void IconView::justify(JustifyAction action)
 {
 /*
-   This function enlarges or shrinks the grid cells while keeping the right hand side margin
-   minimized. To make this work it is critical to assign the correct value to the row width:
-   wRow. The superclass QListView uses a width that assumes there will always be a scrollbar
-   and also a "margin". The width of the QListView (width()) is reduced by the width of the
-   scrollbar and and additional "margin", determined by experimentation, to be 8 pixels.
+   This function enlarges or shrinks the grid cells while keeping the right hand side
+   margin minimized: one step of thumbs per row (Views/thumbsizesteps.h), the same step
+   the status bar's thumbnail size slider takes.
 
-   The variable assignedThumbWidth remembers the current grid cell size as a reference to
-   maintain the grid size during resizing and pad size changes in preferences.
+   It is critical to use the correct row width (justifyRowWidth): the superclass
+   QListView uses a width that assumes there will always be a scrollbar and also a
+   "margin", determined by experimentation to be 8 pixels.
+
+   The range is bounded both ways: no cell above G::maxIconSize (the same ceiling as
+   rejustify) and no thumb below ICON_MIN. Shrink used to have no floor, so repeated [
+   drove the thumbs toward zero. And every step changes the size: with small cells in a
+   wide row, tpr - 1 could give the same cell width and ] got stuck (see wrapTprs).
 
    JustifyAction:
         Shrink = 1,
         Enlarge = -1
-
 */
     QString src = "IconView::justify";
-    // if (isDebug || G::isLogger)
-        G::log(src, objectName());
-    // qDebug() << src << objectName();
+    if (isDebug || G::isLogger) G::log(src, objectName());
 
-    int wCell = iconViewDelegate->getCellSize().width();
-    int wRow = width() - G::scrollBarThickness - 8;    // always include scrollbar
-
-    // thumbs per row
-    int tpr = wRow / wCell + action;
-    if (tpr < 1) return;
-    wCell = wRow / tpr;
-
-    if (wCell > G::maxIconSize) wCell = wRow / ++tpr;
-
-    iconWidth = iconViewDelegate->getThumbWidthFromCellWidth(wCell);
-    iconHeight = static_cast<int>(iconWidth / bestAspectRatio);
-    /*
-    qDebug() << "IconView::justify"
-             << "wRow =" << wRow
-             << "tpr =" << tpr
-             << "wCell =" << wCell
-             << "iconWidth =" << iconWidth
-             << "iconHeight =" << iconHeight
-                ;
-                //*/
-
-    assignedIconWidth = iconWidth;
-    skipResize = true;      // prevent feedback loop
-
-    setThumbParameters();
-    scrollToRow(dm->scrollToIcon, src);
-
-    // m2->updateIconRange(true, src);
+    // Enlarge = -1 is one step up (fewer per row), Shrink = +1 one step down
+    const int step = sizeStep() - action;
+    if (step < 0 || step >= sizeStepCount()) return;    // already at the end
+    setSizeStep(step, src);
 }
 
 void IconView::updateThumbRectRole(const QModelIndex index, QRect iconRect)

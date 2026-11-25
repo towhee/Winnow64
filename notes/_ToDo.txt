@@ -9,7 +9,7 @@ WHAT'S NEW
 - Report bugs, feature requests
 
 BUGS / TO DO
-- Rethink thumbnail badges
+- Tweak main menu (Library, Develop...)
 - Redo Develop help
 - Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location
@@ -34,8 +34,6 @@ BUGS / TO DO
 - AI keywording
 - Customize Info (I) location/size.
 - Test search in filter (Add entire keyword heirarchy ie Gloria + Family + People)
-- Tweak welcome screen re to get started incl Catalog ??
-- Tweak main menu (Library, Develop...)
 - For jpg, png, tiff, dng: dev changes are written to source file, not an xmp in lightroom
   '201709 √/2017-09-27_Esquimalt Lagoon √' has dng files with keywords
 - Object mask post feather not working

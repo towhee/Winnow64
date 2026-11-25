@@ -90,6 +90,15 @@ public slots:
     int justifyMargin();
     void justify(JustifyAction action);
     void rejustify(/*int prevMidVisibleCell*/);
+    /* Thumbnail size as discrete steps (Views/thumbsizesteps.h): thumbs per row when
+       wrapping, the 1.1x ladder in the filmstrip. Step 0 is the smallest. [ ] and the
+       status bar slider both go through setSizeStep, so they cannot disagree. */
+    int sizeStepCount();
+    int sizeStep();
+    void setSizeStep(int step, QString src);
+    QString sizeStepText();
+    void beginSizeDrag();
+    void endSizeDrag();
     void thumbsFitTopOrBottom(QString src = "");
     void updateThumbRectRole(const QModelIndex index, QRect iconRect);
 
@@ -152,6 +161,7 @@ signals:
     // void displayLoupe(const QString src);
     void displayVideo();
     void updateThumbDockHeight();
+    void thumbSizeChanged();       // after any change to the cell size or view width
 
 private:
     DataModel *dm;
@@ -185,6 +195,15 @@ private:
     QTimer rejustifyTimer;
     int resizeAnchorRow = -1;
     bool resizeAnchorAtTop = false;
+    /*  A slider drag fires many size steps. The row to hold in place is captured once
+        when the drag starts (beginSizeDrag), as resizeEvent does for a window resize,
+        so it cannot drift step by step. -1 = no drag. */
+    int sizeDragAnchorRow = -1;
+    bool sizeDragAnchorAtTop = false;
+    int justifyRowWidth();
+    void sizeAnchor(int &row, bool &atTop);
+    void applyTpr(int tpr, QString src);
+    void applyFilmstripSize(int longSide, QString src);
     int prevResizeWidth = 0;
 
     // used when invert selection
