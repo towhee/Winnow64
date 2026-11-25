@@ -1921,7 +1921,68 @@ void MW::FitFilmstrip()
     const Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
     if (area != Qt::BottomDockWidgetArea && area != Qt::TopDockWidgetArea) return;
     if (isDockAreaCollapsed(area)) return;
+    filmstripFitRetries = 0;                // a fresh fit request: the guard may retry
     setThumbDockFeatures(area);
+}
+
+void MW::QueueFilmstripFitCheck()
+{
+/*
+    THE FILMSTRIP MUST HOLD A WHOLE CELL.
+
+    setThumbDockFeatures sizes a top or bottom strip with resizeDocks, which is a
+    REQUEST: QDockAreaLayout refuses it when the area has no room at that moment, and a
+    request made inside a layout pass (from a resizeEvent) can be overwritten by the
+    rest of that pass.  The strip's own minimum is the SMALLEST cell (ICON_MIN), not the
+    current one, so the layout is free to leave it shorter than a cell, and nothing
+    asked again: the thumbnails stayed cut through the middle until the user dragged
+    the splitter (2026-11-25 screenshot, at launch).
+
+    So every fit request, and every non-drag thumbDock resize, queues a check for the
+    NEXT event-loop turn, after the layout has settled.  Coalesced: a burst of resizes
+    checks once.
+*/
+    if (filmstripFitCheckQueued) return;
+    filmstripFitCheckQueued = true;
+    QTimer::singleShot(0, this, [this] {
+        filmstripFitCheckQueued = false;
+        CheckFilmstripFit();
+    });
+}
+
+void MW::CheckFilmstripFit()
+{
+/*
+    Refit a docked, visible top or bottom filmstrip whose viewport is shorter than one
+    thumbnail cell (2 px of rounding allowed, the panel probe's CLIPPED tolerance).
+
+    Not during a drag: the user is sizing the strip, and thumbsFitTopOrBottom fits the
+    thumbnails to it; the mouse release refits.  BOUNDED: when the area really has no
+    room the layout refuses every request, so after two retries the guard stops rather
+    than fight it.  filmstripFitRetries is reset by a fresh request (FitFilmstrip), a
+    window resize and the end of a drag, not by setThumbDockFeatures, which a retry
+    itself calls.
+*/
+    if (isMouseDrag || thumbView->thumbSplitDrag) return;
+    if (thumbDock->isFloating() || thumbDock->isHidden()) return;
+    const Qt::DockWidgetArea area = dockWidgetArea(thumbDock);
+    if (area != Qt::BottomDockWidgetArea && area != Qt::TopDockWidgetArea) return;
+    if (isDockAreaCollapsed(area)) return;
+
+    const int cellHt =
+        thumbView->iconViewDelegate->getCellHeightFromThumbHeight(thumbView->iconHeight);
+    const int viewportHt = thumbView->viewport()->height();
+    if (viewportHt + 2 >= cellHt) {
+        filmstripFitRetries = 0;
+        return;
+    }
+    if (filmstripFitRetries >= 2) return;
+    ++filmstripFitRetries;
+    if (G::isPanelProbe)
+        PanelProbe::Instance().NoteRequest("ThumbDock",
+            QString("fit guard retry %1: viewport %2 < cell %3")
+                .arg(filmstripFitRetries).arg(viewportHt).arg(cellHt), cellHt);
+    setThumbDockFeatures(area);             // queues the next check
 }
 
 void MW::focusKeywordsFilters()

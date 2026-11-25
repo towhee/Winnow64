@@ -62,6 +62,16 @@ void MW::setCentralProgressMessage(QString message)
         return;
     }
     if (centralLayout->currentIndex() != MessageTab) return;
+    /*  NOTHING LOADED, NOTHING TO NARRATE. A stage that follows the load (they all open
+        with loadedMsg) has no images to build filters or load for when the folder is
+        empty, and the last stage to arrive stuck: "0 images loaded. Building filters:
+        updating the panel ..." on a restart into an empty folder, because a recount's
+        applyOps reports that stage and no finishedBuildFilters follows to replace it.
+        Say what is true instead. */
+    if (dm->rowCount() == 0 && message.startsWith(loadedMsg())) {
+        showCentralMessageIfNoImages();
+        return;
+    }
     setCentralMessage(message);
 }
 
@@ -213,6 +223,8 @@ void MW::setThumbDockFeatures(Qt::DockWidgetArea area)
             probe.NoteRequest("ThumbDock", "resizeDocks vertical", newThumbDockHeight);
         }
         resizeDocks({thumbDock}, {newThumbDockHeight}, Qt::Vertical);
+        // a request, not a result: check it held (MW::QueueFilmstripFitCheck)
+        QueueFilmstripFitCheck();
         /*
         qDebug()
              << "MW::setThumbDockFeatures  dock area =" << area

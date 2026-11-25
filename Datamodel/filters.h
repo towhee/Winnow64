@@ -31,6 +31,9 @@ public:
         Filters) can equal the freshly allocated search item, sending dataChanged down
         the search-edit path into a stale searchFalse: an intermittent crash. */
     QTreeWidgetItem *search = nullptr;
+    /*  Is this folder bookmarked? Set by MW (BookMarks::bookmarkPaths), so the Library
+        Folders row's "Add Bookmark" can grey itself with the reason. Unset = no. */
+    std::function<bool(const QString &)> isBookmarked;
     QTreeWidgetItem *searchTrue = nullptr;
     QTreeWidgetItem *searchFalse = nullptr;
     QTreeWidgetItem *picks = nullptr;
@@ -453,6 +456,8 @@ signals:
     void revealFolderRequested(const QString &folder);
     void moveFolderRequested(const QString &folder);
     void trashFolderRequested(const QString &folder);
+    // a Library Folders row's "Add Bookmark" (addBookmarkAction): MW::addBookmark
+    void addBookmarkRequested(const QString &folder);
     /*  Cmd/Ctrl+Opt/Alt+click on an item: show only that item. MW clears every other
         filter -- categories, search text, pick/rating/color actions -- then includes
         it. See MW::filterOnlyItem. With Shift on a Folders row, thisFolderOnly: the
@@ -794,8 +799,12 @@ private:
         QAction *rename = nullptr;
         QAction *move = nullptr;
         QAction *trash = nullptr;
+        QAction *bookmark = nullptr;
     };
     FolderActions addFolderActions(QMenu &menu, QTreeWidgetItem *item);
+    /*  "Add Bookmark "name"" at the very bottom of a Library Folders row's menu, after
+        addFilterActions, matching the FSTree menu in Folders scope. */
+    void addBookmarkAction(QMenu &menu, FolderActions &fa);
     /*  Emit the request for chosen if it is one of fa's. Queued, so the dialogs MW
         opens run after the menu has gone and the tree may be rebuilt under them. */
     bool runFolderAction(const FolderActions &fa, QAction *chosen);

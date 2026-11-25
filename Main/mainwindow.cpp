@@ -1872,6 +1872,9 @@ void MW::resizeEvent(QResizeEvent *event)
     // Window > Restore Previous Size and Position
     if (!G::isInitializing && windowSettleTimer) windowSettleTimer->start();
 
+    // a new window size may give the filmstrip room a refused fit lacked
+    filmstripFitRetries = 0;
+
     /*  "thumbView half hidden after resizing" -- the window resize is the gesture, and
         the dock redistribution that follows it is what the probe has to catch, so this
         is a SETTLED mark (next event-loop turn), not an immediate one. */
@@ -3254,10 +3257,18 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
             if (e->button() == Qt::LeftButton) {
                 isLeftMouseBtnPressed = false;
                 isMouseDrag = false;
-                // if (thumbView->thumbSplitDrag) {
-                //    thumbView->scrollToRow(thumbView->midVisibleCell, "MW::eventFilter thumbSplitter");
-                //    thumbView->thumbSplitDrag = false;
-                // }
+                /*  END OF A THUMBDOCK SPLITTER DRAG.  thumbSplitDrag makes
+                    IconView::resizeEvent return early, so it must be cleared
+                    here: left set (this reset was once commented out) every
+                    later window resize or dock drag skipped the strip's refit for
+                    the rest of the session.  The strip is then fitted to a whole
+                    cell, since the drag may have left it between cell sizes or
+                    below the smallest (thumbsFitTopOrBottom's exceedsLimits).
+                    Queued, so the layout has settled from the release first. */
+                if (thumbView && thumbView->thumbSplitDrag) {
+                    thumbView->thumbSplitDrag = false;
+                    QTimer::singleShot(0, this, [this] { FitFilmstrip(); });
+                }
                 /*
                 qDebug() << "MW::eventFilter" << "MouseButtonRelease"
                          << "isLeftMouseBtnPressed =" << isLeftMouseBtnPressed
@@ -3315,6 +3326,9 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
                         }
                     }
                 }
+                /* Not a drag: the layout resized the strip (window resize, a neighbor
+                   shown or hidden).  Check it still holds a whole cell. */
+                else QueueFilmstripFitCheck();
             }
         }
     }

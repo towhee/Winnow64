@@ -2288,8 +2288,9 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
         QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
         QAction *removeSession = addRemoveSession(menu);
         // a folder row while the Library loads: shown, greyed with the reason
-        const FolderActions folderActs = addFolderActions(menu, item);
+        FolderActions folderActs = addFolderActions(menu, item);
         addFilterActions(menu);
+        addBookmarkAction(menu, folderActs);
         QAction *chosen = menu.exec(event->globalPos());
         if (runFolderAction(folderActs, chosen)) return;
         if (unfiled != nullptr && chosen == unfiled)
@@ -2386,8 +2387,9 @@ void Filters::contextMenuEvent(QContextMenuEvent *event)
     QAction *mode = inKeywords ? addKeywordModeAction(menu) : nullptr;
     if (sessionCat != nullptr) menu.addSeparator();
     QAction *removeSession = addRemoveSession(menu);
-    const FolderActions folderActs = addFolderActions(menu, item);
+    FolderActions folderActs = addFolderActions(menu, item);
     addFilterActions(menu);
+    addBookmarkAction(menu, folderActs);
 
     QAction *chosen = menu.exec(event->globalPos());
     if (runFolderAction(folderActs, chosen)) return;
@@ -2679,11 +2681,42 @@ bool Filters::runFolderAction(const FolderActions &fa, QAction *chosen)
     else if (chosen == fa.rename) request = &Filters::renameFolderRequested;
     else if (chosen == fa.move)   request = &Filters::moveFolderRequested;
     else if (chosen == fa.trash)  request = &Filters::trashFolderRequested;
+    else if (chosen == fa.bookmark) request = &Filters::addBookmarkRequested;
     if (!request) return false;
     const QString path = fa.path;
     QMetaObject::invokeMethod(this, [this, request, path] { emit (this->*request)(path); },
                               Qt::QueuedConnection);
     return true;
+}
+
+void Filters::addBookmarkAction(QMenu &menu, FolderActions &fa)
+{
+/*
+    LIBRARY SCOPE ONLY: in Folders scope the FSTree beside the panel has this. Last in
+    the menu, as it is in the FSTree's. Greyed with the reason when the folder is
+    already bookmarked or is not on disk.
+*/
+    if (fa.path.isEmpty() || G::scope != G::Scope::Catalog) return;
+    const QFileInfo info(fa.path);
+    QString name = info.fileName().isEmpty() ? fa.path : info.fileName();
+    menu.addSeparator();
+    fa.bookmark = menu.addAction("Add Bookmark " + Utilities::enquote(name));
+    if (isBookmarked && isBookmarked(fa.path)) {
+        fa.bookmark->setEnabled(false);
+        fa.bookmark->setText(fa.bookmark->text() + " - already bookmarked");
+        fa.bookmark->setToolTip("\"" + name + "\" is already in the Bookmarks panel.");
+    }
+    else if (!info.isDir()) {
+        fa.bookmark->setEnabled(false);
+        fa.bookmark->setText(fa.bookmark->text() + " - folder not available");
+        fa.bookmark->setToolTip(QDir::toNativeSeparators(fa.path) + " is not on disk. If "
+                                "it is on a drive that is not connected, connect the "
+                                "drive first.");
+    }
+    else {
+        fa.bookmark->setToolTip("Add \"" + name + "\" to the Bookmarks panel.");
+    }
+    menu.setToolTipsVisible(true);
 }
 
 void Filters::addFilterActions(QMenu &menu)

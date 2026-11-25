@@ -359,6 +359,10 @@ void MW::createDataModel()
     connect(filters, &Filters::revealFolderRequested, this, &MW::revealInFileBrowser);
     connect(filters, &Filters::moveFolderRequested, this, &MW::moveLibraryFolder);
     connect(filters, &Filters::trashFolderRequested, this, &MW::trashLibraryFolder);
+    connect(filters, &Filters::addBookmarkRequested, this, &MW::addBookmark);
+    filters->isBookmarked = [this](const QString &path) {
+        return bookmarks && bookmarks->bookmarkPaths.contains(path);
+    };
     connect(dm, &DataModel::updateClassification, this, &MW::updateClassification);
     // versions (virtual copies): a master re-read after the load -- see Main/mwversions.cpp
     connect(dm, &DataModel::versionsChanged, this, &MW::scheduleVersionReconcile);

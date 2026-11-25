@@ -1844,6 +1844,13 @@ private:
     void SetSideWidth(Qt::DockWidgetArea area, int width);
     void SetFilmstripThumbSize(int width, int height);
     void FitFilmstrip();
+    /* Filmstrip fit guard: a top/bottom strip shorter than one thumbnail cell is refit
+       on the next event-loop turn, a bounded number of times.  See
+       MW::QueueFilmstripFitCheck. */
+    void QueueFilmstripFitCheck();
+    void CheckFilmstripFit();
+    bool filmstripFitCheckQueued = false;
+    int filmstripFitRetries = 0;
     /* The layout workflow wf opens with now (user ?? Winnow default), or nullptr for
        the built-in layout, which has no state blob to read. */
     const WorkspaceData *ResolvedWorkflowLayout(int wf) const;
@@ -3064,7 +3071,7 @@ private:
     BuildFilters *buildFilters;
 //    QItemSelectionModel *selectionModel;
     Metadata *metadata;
-    IconView *thumbView;
+    IconView *thumbView = nullptr;
     IconView *gridView;
     TableView *tableView;
     ImageView *imageView;
