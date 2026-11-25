@@ -33,8 +33,6 @@ BUGS / TO DO
 - Object mask needs some TLC
 - AI keywording
 - Customize Info (I) location/size.
-- Review Apple render (new raw engine)
-- Develop behavior when no image is selected
 - Test search in filter (Add entire keyword heirarchy ie Gloria + Family + People)
 - Tweak welcome screen re to get started incl Catalog ??
 - Tweak main menu (Library, Develop...)

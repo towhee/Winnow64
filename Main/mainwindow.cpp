@@ -7722,8 +7722,8 @@ void MW::nullFiltration()
     QString msg;
     if (dm->rowCount()) msg = "No images in filter result.";
     else if (dm->folderList.count() == 1)
-        msg = "No images in the folder.";
-    else msg = "No images in the folders.";
+        msg = "There are no images in the folder.";
+    else msg = "There are no images in the folders.";
     updateStatus(false, msg, "MW::nullFiltration");
     setCentralMessage(msg);
     infoView->clearInfo();

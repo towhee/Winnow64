@@ -98,9 +98,9 @@ bool MW::showCentralMessageIfNoImages()
     else if (dm->rowCount())
         text = "No images in filter result.";
     else if (dm->folderList.count() == 1)
-        text = "No images in the folder.";
+        text = "There are no images in the folder.";
     else
-        text = "No images in the folders.";
+        text = "There are no images in the folders.";
 
     setCentralMessage(text);
     return true;

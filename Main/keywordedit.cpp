@@ -528,8 +528,9 @@ void MW::filterBuildCompleted()
         whichever category finished last, which reads as a stall in the filters. A no-op
         once the loupe is up. NOT WHEN THE FILTRATION IS EMPTY: there is nothing to load,
         and this overwrote MW::nullFiltration's message with a "Loading images ..." that
-        never finished (a restored filter that matches nothing in the Library). */
-    if (!loadCurtainUp && dm->rowCount() && dm->sf->rowCount() == 0) {
+        never finished (a restored filter that matches nothing in the Library, or a folder
+        with no images: "0 images loaded. Loading images ..."). */
+    if (!loadCurtainUp && dm->sf->rowCount() == 0) {
         showCentralMessageIfNoImages();
         return;
     }
