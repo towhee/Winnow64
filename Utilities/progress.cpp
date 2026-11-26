@@ -108,6 +108,18 @@ int Progress::barNudge() const
 #endif
 }
 
+int Progress::textNudge() const
+{
+    /* Pixels to move the row text vertically (negative = up) so its visual center
+       lines up with the bar. On macOS the font's descent space leaves the text
+       looking low beside the bar. */
+#ifdef Q_OS_MAC
+    return -2;
+#else
+    return 0;
+#endif
+}
+
 int Progress::singleProgressItemNudge() const
 {
     /* When only one progress row is visible the container is short, so shift the
@@ -399,7 +411,7 @@ void Progress::paintEvent(QPaintEvent * /*event*/)
             if (fs > 0) f.setPointSize(fs);
             p.setFont(f);
             p.setPen(Qt::lightGray);
-            QRect textRect(0, r.top + yOff, tw, r.height);
+            QRect textRect(0, r.top + yOff + textNudge(), tw, r.height);
             p.drawText(textRect, Qt::AlignVCenter | Qt::AlignLeft, r.text);
         }
     }

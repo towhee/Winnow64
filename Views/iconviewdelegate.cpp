@@ -309,10 +309,12 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
                      bandMid - lockSize / 2,
                      lockSize, lockSize);
 
-    // Combine RAW+JPG (To the left of Cache)
+    /* Combine RAW+JPG (to the left of Cache; takes the corner while the cache badge is
+       set aside) */
     int linkW = 14;
     int linkH = 14;
-    combineRawJpgRect.setRect(cacheRect.left() - linkW - 2,
+    const int linkRight = showCacheBadge ? cacheRect.left() - 2 : cacheRect.right() + 1;
+    combineRawJpgRect.setRect(linkRight - linkW,
                               bandMid - linkH / 2,
                               linkW, linkH);
 
@@ -595,7 +597,7 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     bool developVisible = sf->index(row, G::DevelopColumn).data().toBool() && !G::isSlideShow;
     bool lockVisible = !isReadWrite;
     bool combineRawJpgVisible = isCombineRawJpg;
-    bool cacheVisible = !isVideo && metaLoaded && !G::isSlideShow;
+    bool cacheVisible = showCacheBadge && !isVideo && metaLoaded && !G::isSlideShow;
     bool ratingVisible = isRatingBadgeVisible && G::ratings.contains(rating);
     bool durationVisible = isVideo && G::renderVideoThumb;
     const int avail = sf->index(row, G::AvailabilityColumn).data().toInt();
@@ -1037,7 +1039,7 @@ textRect         = a rectangle below itemRect
        preference, and the dot turns green when it lands). Asked of DevPreviewReady even
        when ImageCache holds a developed picture: it is the only place that knows the
        entry's size. */
-    if (!isVideo && metaLoaded && !G::isSlideShow) {
+    if (showCacheBadge && !isVideo && metaLoaded && !G::isSlideShow) {
         const QString baseKey = index.model()->index(sfRow, G::DevPreviewKeyColumn)
                                     .data().toString();
         bool reduced = false;

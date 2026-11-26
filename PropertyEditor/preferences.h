@@ -17,6 +17,8 @@ public slots:
     void rory();
 
 private:
+    // "Cache progress bar width" row is set aside; the bar is a fixed 300 px
+    static constexpr bool showProgressWidthPref = false;
     ItemInfo i;
     void addItems();
     QWidget *addSlider(ItemInfo &i);    // addItem with the Develop Exposure slider colors

@@ -1532,11 +1532,10 @@ void MW::createStatusBar()
 
     // cache status (Progress widget) on right side of status bar
 
-    // progress width (Progress is created in MW::createDataModel, where first req'd)
-    if (isSettings && settings->contains("cacheStatusWidth"))
-        cacheBarProgressWidth = settings->value("cacheStatusWidth").toInt();
-    else cacheBarProgressWidth = 300;
-    if (cacheBarProgressWidth < 100 || cacheBarProgressWidth > 1000) cacheBarProgressWidth = 300;
+    /* Progress width (Progress is created in MW::createDataModel, where first req'd).
+       Fixed at 300 px: the width preference is set aside (hidden in Preferences::rory),
+       so the old "cacheStatusWidth" setting is ignored. */
+    cacheBarProgressWidth = 300;
 
     // progress tooltip
     QString progressToolTip = "Cache status for current folder(s):\n";
@@ -3497,7 +3496,7 @@ void MW::createDevelopDock()
     BarBtn *developExportBtn = new BarBtn();
     developExportBtn->setSide(devActSide);
     developExportBtn->setIcon(devActIcons + "lightning_white.png", G::iconOpacity);
-    developExportBtn->setToolTip("Export the developed image  (" +
+    developExportBtn->setToolTip("Export the developed image(s)  (" +
         QKeySequence("Ctrl+Shift+E").toString(QKeySequence::NativeText) + ")");
     connect(developExportBtn, &BarBtn::clicked, this, &MW::developExport);
     developActionLayout->addWidget(developExportBtn);

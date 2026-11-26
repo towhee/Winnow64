@@ -39,10 +39,6 @@ void Preferences::rory()
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
     else setRowHidden(capIdx.row(), capIdx.parent(), true);
 
-    capIdx = findCaptionIndex("progressWidthSlider");
-    if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
-    else setRowHidden(capIdx.row(), capIdx.parent(), true);
-
     capIdx = findCaptionIndex("cacheMethod");
     if (G::isRory) setRowHidden(capIdx.row(), capIdx.parent(), false);
     else setRowHidden(capIdx.row(), capIdx.parent(), true);
@@ -1506,22 +1502,25 @@ void Preferences::addCaching()
     i.type = "bool";
     addItem(i);
 
-    // Set the width of the cache status progress bar
-    i.name = "progressWidthSlider";
-    i.parentName = "CachingHeader";
-    i.captionText = "Cache progress bar width";
-    i.tooltip = "Change the width of the cache progress bar in the status bar.";
-    i.hasValue = true;
-    i.captionIsEditable = false;
-    i.defaultValue = 300;
-    i.value = mw->cacheBarProgressWidth;
-    i.key = "progressWidthSlider";
-    i.delegateType = DT_Slider;
-    i.type = "int";
-    i.min = 100;
-    i.max = 2000;
-    i.fixedWidth = 50;
-    addSlider(i);
+    /* Set the width of the cache status progress bar. Set aside: the bar is a fixed
+       300 px (MW::createStatusBar), so the row is not added. Flip to reinstate. */
+    if (showProgressWidthPref) {
+        i.name = "progressWidthSlider";
+        i.parentName = "CachingHeader";
+        i.captionText = "Cache progress bar width";
+        i.tooltip = "Change the width of the cache progress bar in the status bar.";
+        i.hasValue = true;
+        i.captionIsEditable = false;
+        i.defaultValue = 300;
+        i.value = mw->cacheBarProgressWidth;
+        i.key = "progressWidthSlider";
+        i.delegateType = DT_Slider;
+        i.type = "int";
+        i.min = 100;
+        i.max = 2000;
+        i.fixedWidth = 50;
+        addSlider(i);
+    }
 
     i.name = "maxIconChunk";
     i.parentName = "CachingHeader";

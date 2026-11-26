@@ -1,12 +1,5 @@
 WHAT'S NEW
-- Prevent accidental moving images out of library with drag operations.
-- Improve hand held focus stacking alignment.
-- Tweak raw demosaic algorithms.
-- Improved highlight reconstruction.
-- Hot pixel removal.
-- Undo and redo.
-- Recover last workspace, including window size and location.
-- Report bugs, feature requests
+- Thumb size slider on status bar
 
 BUGS / TO DO
 - Tweak main menu (Library, Develop...)

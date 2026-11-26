@@ -190,6 +190,11 @@ private:
     int textHeight = 0;
     int badgeSize = 0;
     int iconNumberSize = 0;
+    /*  The cache badge (preview status light, bottom-right dot) is SET ASIDE: still
+        computed, never drawn, and its tooltip is off. Flip to reinstate, and restore
+        item 13 in Docs/images/ThumbnailSchematic.svg + thumbNailSchematic.html and the
+        cache circle section of pictureshelp.html. */
+    static constexpr bool showCacheBadge = false;
     int cacheDiam = 6;
     int cacheOffset = 3;
     int ratingDiam = 0;
