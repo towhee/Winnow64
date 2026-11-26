@@ -15,12 +15,12 @@
 
 **Windows:** the installer is not code-signed yet, so Microsoft Defender SmartScreen warns twice: once when you download it and once when you run it.
 
-1. **Downloading in Microsoft Edge.** Edge may say *"WinnowSetup-{{VERSION}}.exe isn't commonly downloaded"* and stop the download. Type `edge://downloads` in the address bar and click **Keep** under the file. If Edge warns again, click **Show more**, then **Keep anyway**. Chrome and Firefox do not block the download.
+1. **Downloading in Microsoft Edge.** Edge may say *"WinnowSetup-{{VERSION}}.exe isn't commonly downloaded"* and stop the download. Type `edge://downloads` in the address bar and click **Keep** under the file (some Edge versions then ask again: click **Show more**, then **Keep anyway**). Click **Open containing folder** and double-click the installer. Chrome and Firefox do not block the download.
 
    ![The Edge downloads page with the Keep button under WinnowSetup](https://raw.githubusercontent.com/{{REPO}}/master/.github/images/Windows_EdgeKeepAnyway.png)
 
 2. **Running the installer.** If a blue *"Windows protected your PC"* window appears, click **More info**, then **Run anyway**.
 
-On a work or school PC an administrator may have turned off **Keep anyway**; download Winnow on another PC or with another browser.
+On a work or school PC an administrator may have turned off **Keep**; download Winnow on another PC or with another browser.
 
 **Linux:** this build needs **Ubuntu 26.04 or later**, or another distribution with glibc 2.43 or newer (check with `ldd --version`). It will not start on Ubuntu 24.04, 22.04, Debian 12 or other older releases. Make the AppImage executable and run it (`chmod +x Winnow-*.AppImage`, then double-click it or run `./Winnow-*.AppImage`). Nothing is installed; keep the file wherever you like. Writing metadata into files needs Perl, which most distributions include.
