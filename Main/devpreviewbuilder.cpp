@@ -502,6 +502,7 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
         }
         if (!r.previewJpg.isEmpty()) {
             DevPreviewCache::instance().put(fPath, key.toLatin1(), r.previewJpg, reduced);
+            slideShowDevPreviewBuilt(fPath);    // a random slide decoded ahead: redo it
             /* A stand-in: rebuild it at the preference's size when the batch is over. */
             if (reduced) {
                 devPreviewReducedPending.insert(fPath);
@@ -569,6 +570,30 @@ void MW::devPreviewStore(const QString &fPath, const QImage &full,
 
         return r;
     }));
+}
+
+void MW::dropQueuedDevPreviews(const QSet<QString> &paths)
+{
+/*
+    Withdraw queued builds that are no longer wanted -- a slideshow's look-ahead for
+    slides it has already shown (MW::slideShowBuildAhead). Never the render in flight,
+    and never a multi-image edit target (a "sync" path), whose thumbnail waits on it.
+*/
+    if (paths.isEmpty() || devPreviewBuildQueue.isEmpty()) return;
+    int n = 0;
+    for (const QString &p : paths) {
+        if (devPreviewBuildSyncPaths.contains(p)) continue;
+        n += devPreviewBuildQueue.removeAll(p);
+    }
+    if (n == 0) return;
+    if (G::isLogger) G::log("MW::dropQueuedDevPreviews", QString::number(n));
+    devPreviewBuildTotal = qMax(devPreviewBuildDone, devPreviewBuildTotal - n);
+    if (devPreviewBuildQueue.isEmpty() && devPreviewBuildCurrent.isEmpty()
+        && devPreviewBuildTotal > 0) {
+        devPreviewBuildFinish();
+        return;
+    }
+    updateDevPreviewBuildProgress();
 }
 
 void MW::updateDevPreviewBuildProgress()

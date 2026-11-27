@@ -1693,6 +1693,18 @@ private slots:
     void setCombineRawJpg();
     void nextSlide();
     void slideShowSyncFolders();
+    void slideShowClearRandomAhead();
+    void slideShowTick();
+    void slideShowWaitCheck();
+    bool slideShowRunning() const;
+    QString slideShowNextKey();
+    bool slideShowNextReady();
+    int slideShowScreenLongEdge() const;
+    bool slideShowWantsDevPreview(const QString &key, int screenLong);
+    void slideShowFillRandomAhead();
+    void slideShowPrefetch(const QString &key);
+    void slideShowDevPreviewBuilt(const QString &fPath);
+    void slideShowBuildAhead();
     void prevRandomSlide();
     void refreshAfterImageCacheSizeChange();
     void selectAllThumbs();
@@ -2718,6 +2730,8 @@ private:
     void devPreviewStore(const QString &fPath, const QImage &full,
                          const QString &expectKey, bool reduced = false);
     void devPreviewBuildFinish(const QString &reason = QString());
+    /* Take paths out of the build queue before they start (not the one rendering). */
+    void dropQueuedDevPreviews(const QSet<QString> &paths);
     void updateDevPreviewBuildProgress();
     QStringList devPreviewBuildQueue;
     QString devPreviewBuildCurrent;      // the render in flight; not abortable
@@ -3597,6 +3611,33 @@ private:
     QHash<QString, QDateTime> slideShowFolderStamps;
     quint64 slideShowFolderGen = 0;
     bool slideShowFolderStampsValid = false;
+    /*  The show was started by S in Develop mode: it ran in Preview (a slideshow never
+        develops) and goes back to Develop when it stops. See MW::slideShow. */
+    bool slideShowLeftDevelop = false;
+    /*  Random order: the next kSlideShowAhead slides, picked in advance and shown in
+        this order, and their decoded images (MW::slideShowFillRandomAhead), since the
+        ImageCache is off in random order. The serial drops a superseded decode. */
+    QStringList slideShowRandomAhead;
+    QHash<QString, QImage> slideShowPrefetched;
+    QSet<QString> slideShowPrefetchedDev;       // prefetched from the devPreview
+    QHash<QString, quint64> slideShowPrefetchSerial;
+    quint64 slideShowPrefetchCounter = 0;
+    /*  The devPreviews the show queued for its next slides (MW::slideShowBuildAhead),
+        so the ones it has passed can be dropped from the build queue again. */
+    QSet<QString> slideShowDevPreviewAhead;
+    /*  Slides read ahead: random picks prefetched, and devPreviews queued (both orders;
+        the ImageCache reads further ahead than this in sequential order). */
+    static constexpr int kSlideShowAhead = 5;
+    /*  A slide is not shown before its picture is ready (MW::slideShowTick): the current
+        one stays up, polled every kSlideShowWaitPollMs, for at most kSlideShowMaxWaitMs.
+        slideShowWaitingFirst: the first slide is waiting, under a "Prefetching" popup;
+        slideShowStartMsg is the start popup shown once it is up. */
+    QTimer *slideShowWaitTimer = nullptr;
+    QElapsedTimer slideShowWaitClock;
+    bool slideShowWaitingFirst = false;
+    QString slideShowStartMsg;
+    static constexpr int kSlideShowWaitPollMs = 150;
+    static constexpr int kSlideShowMaxWaitMs = 30000;
 
     // used in visibility and focus setting for docks
     enum {SetFocus, SetVisible} dockOption;

@@ -163,6 +163,10 @@ public slots:
        replaces it. Returns false (shows nothing) without a thumbnail. Documentation
        4.4.14. */
     bool loadImagePlaceholder(const QString &fPath, const QImage &thumb, QSize fullSize);
+    /* A random-order slideshow's next slide, decoded ahead by MW::slideShowPrefetchRandom
+       (the ImageCache is off in random order). loadImage uses it once, on a cache miss. */
+    void setSlidePrefetch(const QString &key, const QImage &image)
+        { slidePrefetchKey = key; slidePrefetchImage = image; }
     bool isFullyShown(const QString &fPath) const { return loupeShown.isFull(fPath); }
     LoupeShown::Kind shownKind() const { return loupeShown.state(); }
     QString loupeShownName() const { return loupeShown.stateName(); }
@@ -637,6 +641,8 @@ protected:
     void drawForeground(QPainter *painter, const QRectF &rect) override;   // mask overlay
 
 private:
+    QString slidePrefetchKey;
+    QImage slidePrefetchImage;
     void noJpgAvailable();
     // forget a Browse compare WITHOUT restoring (a real load is replacing the pixels)
     void dropCompare();

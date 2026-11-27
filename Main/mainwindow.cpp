@@ -1980,7 +1980,7 @@ void MW::keyReleaseEvent(QKeyEvent *event)
     if (G::isSlideShow) {
         int n = event->key() - 48;
 
-        if (slideShowTimer->isActive()) {
+        if (slideShowRunning()) {
             if (event->key() == Qt::Key_X) {
                 slideShowNextAction->trigger();
             }

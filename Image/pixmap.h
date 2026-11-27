@@ -34,6 +34,8 @@ public:
     */
     bool loadIndependent(QString &fPath, QImage &image, int longSide, QString src = "",
                          bool colorManage = false);
+    /* EXIF orientation plus any user rotation. Static: also used by SlidePreview. */
+    static void applyOrientation(QImage &image, int orientation, int rotationDegrees);
 
 signals:
     void setValDm(int dmRow, int dmCol, QVariant value,
@@ -51,7 +53,6 @@ private:
     bool loadFromJpgData(QString &fPath, QImage &image, uint offset, uint length);
     bool loadFromTiff(QString &fPath, QImage &image, ImageMetadata *m);
     bool loadFromEntireFile(QString &fPath, QImage &image);
-    void applyOrientation(QImage &image, int orientation, int rotationDegrees);
 };
 
 #endif // PIXMAP_H

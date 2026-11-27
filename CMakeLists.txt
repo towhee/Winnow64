@@ -249,6 +249,7 @@ set(WINNOW_SOURCES
     # Image
     Image/imagealign.cpp
     Image/pixmap.cpp
+    Image/slidepreview.cpp
     Image/stack.cpp
     Image/thumb.cpp
 
@@ -688,6 +689,7 @@ set(WINNOW_HEADERS
     Image/decodereason.h
     Image/imagealign.h
     Image/pixmap.h
+    Image/slidepreview.h
     Image/stack.h
     Image/thumb.h
     Image/stalethumb.h

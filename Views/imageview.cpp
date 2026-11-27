@@ -5,6 +5,7 @@
 #include "Views/imageview.h"
 #include "Develop/Transform/croptransform.h"
 #include "Cache/devpreviewcache.h"
+#include "Image/slidepreview.h"
 #include "Utilities/ingestprobe.h"
 #include "Utilities/modelstore.h"
 
@@ -407,9 +408,17 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
        through it. A develop render pushes the real one back (MW::setDevelopGeometry). */
     setDevelopGeometry(Geometry(), QSize());     // no-op when already identity
 
-    // SLIDESHOW
-    if (G::isSlideShow) {
-        // load image without waiting for cache
+    /*  SLIDESHOW: NEVER A BLANK SLIDE, NEVER A DEVELOP.
+
+        A slide the ImageCache already holds is shown from it below, like any loupe load
+        -- the cache reads ahead in sequential order, and in Preview mode (MW::slideShow
+        leaves Develop for the show) it serves the devPreview or the embedded JPEG, never
+        a sensor decode. This branch is only the MISS: decode the best available preview
+        here and now rather than wait (random order runs with the cache off). It used to
+        run on every slide, a full synchronous decode even when the cache had the image,
+        and always from the camera JPEG, ignoring a devPreview. */
+    QImage slideCached;
+    if (G::isSlideShow && !(icd->get(fPath, slideCached) && !slideCached.isNull())) {
         // check metadata loaded for image (might not be if random slideshow)
         int dmRow = dm->rowFromKey(fPath);
         if (dmRow == -1) {
@@ -419,8 +428,6 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         if (dm->index(dmRow, G::MetadataStatusColumn).data().toInt() != G::MetaLoaded) {
             QFileInfo fileInfo(fPath);
             if (metadata->loadImageMetadata(fileInfo, dmRow, dm->instance, true, true, false, true, "ImageView::loadImage")) {
-                // metadata->m.row = dmRow;
-                // metadata->m.instance = dm->instance;
                 dm->addMetadataForItem(metadata->m, srcFun); // rgh investigate warning (QVariant issue probably)
             }
             else {
@@ -430,11 +437,23 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
             }
         }
 
-        QPixmap displayPixmap;
-        isLoaded = pixmap->load(fPath, displayPixmap, srcFun);
+        QImage slide;
+        if (fPath == slidePrefetchKey && !slidePrefetchImage.isNull())
+            slide = slidePrefetchImage;
+        else
+            slide = SlidePreview::decode(SlidePreview::gather(dm, metadata, fPath));
+        slidePrefetchKey.clear();
+        slidePrefetchImage = QImage();
+        if (slide.isNull()) pixmap->load(fPath, slide, srcFun);   // TIFF, HEIC, ...
+        isLoaded = !slide.isNull();
 
         if (isLoaded) {
-            pmItem->setPixmap(displayPixmap);
+            QSize logical;      // a reduced devPreview stands for the full image
+            const QStringList wh =
+                slide.text(DevPreviewCache::kDisplaySizeText).split('x');
+            if (wh.size() == 2) logical = QSize(wh.at(0).toInt(), wh.at(1).toInt());
+            pmItem->setTransformationMode(Qt::SmoothTransformation);
+            pmItem->setPixmapScaled(QPixmap::fromImage(slide), logical);
             isBusy = false;
         }
         else {
@@ -477,8 +496,10 @@ bool ImageView::loadImage(QString fPath, bool replace, QString src)
         ImageCache::nullInImCache, which exists to find and re-queue them -- so the null
         test is needed whether or not a trim raced. Treating it as a miss lets the normal
         repair path run. */
-    QImage cached;
-    if (icd->get(fPath, cached) && !cached.isNull()) {
+    /* A slideshow hit was already fetched above: reuse it, so a trim in between cannot
+       turn the hit the slideshow branch skipped on into a blank slide. */
+    QImage cached = slideCached;
+    if (!cached.isNull() || (icd->get(fPath, cached) && !cached.isNull())) {
         if (isDebug)
             qDebug() << srcFun + "  row =" << sfRow << fPath;
 
