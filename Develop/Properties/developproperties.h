@@ -292,6 +292,14 @@ public:
        the in-memory stack, which during the write debounce may be AHEAD of the sidecar --
        so a preview keyed on this is matched against what the user actually sees. */
     QString developBlobFor(const QString &fPath);
+    /* The devPreview key of an UNEDITED image's Develop render:
+       Metadata::defaultRenderKey when fPath (a version's source) is a raw Winnow
+       demosaics and the render really is the sensor decode (G::useRaw -- in Develop,
+       "Edit: Embedded Preview" turns it off and renders the camera JPEG, which is not
+       the default render). Empty otherwise: a JPEG's file is already its default render. Lets the
+       render shown in Develop become the devPreview Browse serves, instead of the
+       camera's (often small) embedded preview. */
+    static QString defaultRenderKeyFor(const QString &fPath);
     /* The ratio fPath's crop was made at (Geometry::cropAspect), 0 when free or uncropped.
        The exporter derives the short edge from it (ImageExporter::OutputSize). */
     double cropAspectFor(const QString &fPath);

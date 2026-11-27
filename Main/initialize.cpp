@@ -4480,8 +4480,9 @@ void MW::setOperationMode(G::OperationMode mode)
        encodes the same frame), so hand it to the image cache in place of a decode; the
        loupe repaints from it the moment it lands (identical pixels, so nothing visibly
        changes) and the rest of the cache refills behind it. Null when the frame is not
-       exactly what Browse would show -- Original chosen, unedited, a stale recipe, the
-       settle render not landed -- and then the reload decodes as before. */
+       exactly what Browse would show -- Original chosen, an unedited non-raw, a stale
+       recipe, the settle render not landed -- and then the reload decodes as before.
+       An unedited raw seeds too: its frame is the default render Browse serves. */
     const bool refreshCurrent = imageCache && dm && !dm->currentKey.isEmpty()
                                 && !currentIsVideo();
     QString seedRefused = "not a refresh";

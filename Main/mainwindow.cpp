@@ -8482,10 +8482,17 @@ QByteArray MW::developRecipeKey(const QString &fPath)
     render captures this when it is launched; the devPreview provider compares it against
     the recipe being flushed, so a frame rendered from an earlier recipe can never be
     written out as a preview of a later one. See MW::developFrameRecipe.
+
+    AN UNEDITED RAW has one too: its render is the DEFAULT RENDER, so it is tagged with
+    the key Browse looks that up by (DevelopProperties::defaultRenderKeyFor). Without
+    it the provider declined the frame, the leave did not seed Browse with it, and
+    Browse kept showing the camera's embedded preview after a visit to Develop. Still
+    empty for an unedited JPEG (its file is its default render) and for a raw rendered
+    from its embedded preview.
 */
     if (fPath.isEmpty() || !developProperties) return QByteArray();
     const QString blob = developProperties->developBlobFor(fPath);
-    if (blob.isEmpty()) return QByteArray();
+    if (blob.isEmpty()) return DevelopProperties::defaultRenderKeyFor(fPath).toLatin1();
     return Metadata::devPreviewKey(blob).toLatin1();
 }
 
@@ -8505,8 +8512,9 @@ QImage MW::developFrameForBrowse(const QString &fPath, QString *why)
     the build the flush queued for it re-caches the image when it lands.
 
     Null when Browse would show something else: Original chosen (the camera picture), or
-    an unedited image (its file, or a default render that is not this frame). See
-    MW::setOperationMode.
+    an image with no devPreview key (an unedited JPEG, or a raw rendered from its
+    embedded preview). An unedited raw's frame is its default render, so it seeds Browse
+    like an edited one. See MW::setOperationMode.
 */
     auto refuse = [why](const char *reason) {
         if (why) *why = reason;
@@ -8516,7 +8524,7 @@ QImage MW::developFrameForBrowse(const QString &fPath, QString *why)
     if (G::previewSource != G::PreviewSource::Developed)
         return refuse("preview source is not Developed");
     const QByteArray recipe = developRecipeKey(fPath);
-    if (recipe.isEmpty()) return refuse("unedited");
+    if (recipe.isEmpty()) return refuse("no devPreview key (unedited, not a raw render)");
     if (fPath == developFullFramePath && !developFullFrame.isNull()
         && developFullFrameFaithful && developFullFrameRecipe == recipe)
         return developFullFrame;
@@ -8550,7 +8558,7 @@ void MW::waitForDevelopFrame(const QString &fPath, int timeoutMs)
     if (G::isLogger) G::log("MW::waitForDevelopFrame", fPath);
     if (fPath.isEmpty() || currentIsVideo()) return;
     const QByteArray recipe = developRecipeKey(fPath);
-    if (recipe.isEmpty()) return;               // unedited: Browse shows the file itself
+    if (recipe.isEmpty()) return;               // no devPreview: Browse shows the file
     auto landed = [&] {
         return fPath == developFramePath && !developFrame.isNull()
                && developFrameFaithful && developFrameRecipe == recipe;

@@ -33,6 +33,7 @@
 #include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Utilities/versionkey.h"
+#include "ImageFormats/Raw/rawformat.h"   // HasSensorDecoder (defaultRenderKeyFor)
 #include "Dialogs/savedeveloppresetdlg.h"
 #include <QDir>
 #include <QUuid>
@@ -11669,6 +11670,18 @@ QString DevelopProperties::developBlobFor(const QString &fPath)
     return s.isIdentity() ? QString() : s.toBase64();
 }
 
+QString DevelopProperties::defaultRenderKeyFor(const QString &fPath)
+{
+    if (fPath.isEmpty()) return QString();
+    /* useRaw, NOT the mode: leaving Develop sets G::operationMode before it flushes and
+       seeds Browse (MW::setOperationMode), and only then turns useRaw off. In Develop,
+       useRaw off is "Edit: Embedded Preview" -- a render of the camera JPEG. */
+    if (!G::useRaw) return QString();
+    const QString src = VersionKey::sourceOf(fPath);
+    if (!RawFormat::HasSensorDecoder(QFileInfo(src).suffix().toLower())) return QString();
+    return Metadata::defaultRenderKey(fPath);
+}
+
 double DevelopProperties::cropAspectFor(const QString &fPath)
 {
     if (fPath.isEmpty()) return 0.0;
@@ -11730,7 +11743,27 @@ void DevelopProperties::topUpDevPreviews(const QString &fPath)
     if (fPath.isEmpty() || !devPreviewProvider) return;
 
     const QString blob = developBlobFor(fPath);
-    if (blob.isEmpty()) return;                       // unedited: camera render is correct
+    if (blob.isEmpty()) {
+        /* UNEDITED: the Develop render is the raw's DEFAULT RENDER, which is exactly what
+           ImageDecoder::loadDevPreview serves in Browse under defaultRenderKey. Save it,
+           or Browse keeps showing the camera's embedded preview -- for older raws a small
+           one -- however often the image is opened in Develop. Loupe tier only: an
+           unedited image keeps no thumbnail in its sidecar (writeDevelopSidecar stores a
+           preview only beside a recipe). A JPEG or a raw rendered from its embedded
+           preview has no default render (key empty), so nothing is written. */
+        const QByteArray key = defaultRenderKeyFor(fPath).toLatin1();
+        if (key.isEmpty()) return;
+        if (fPath == toppedUpPath && key == toppedUpKey) return;   // already handled
+        if (!DevPreviewCache::instance().contains(fPath, key)) {
+            QByteArray thumbJpg;
+            QImage loupe;
+            if (!devPreviewProvider(fPath, thumbJpg, loupe) || loupe.isNull()) return;
+            putDevPreviewAsync(fPath, key, loupe);
+        }
+        toppedUpPath = fPath;
+        toppedUpKey = key;
+        return;
+    }
 
     const QByteArray key = Metadata::devPreviewKey(blob, fPath).toLatin1();
     if (fPath == toppedUpPath && key == toppedUpKey) return;   // already handled
