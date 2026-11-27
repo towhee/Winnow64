@@ -137,10 +137,9 @@ IconViewDelegate::IconViewDelegate(QObject *parent,
     pickColor = G::pickColor;
     rejectColor = G::rejectColor;
     ingestedColor = G::ingestedColor;
-    uncachedColor = G::thumbUncachedColor;          // red: not in ImageCache
-    rawPreviewColor = G::thumbRawPreviewColor;      // purple: cached, embedded/original
-    devPreviewColor = G::thumbDevPreviewColor;      // green: cached, developed
-    reducedPreviewColor = G::thumbReducedPreviewColor;  // orange: reduced devPreview
+    uncachedColor = G::thumbUncachedColor;          // red: no preview
+    partialPreviewColor = G::thumbPartialPreviewColor;  // dark purple: reduced/embedded
+    devPreviewColor = G::thumbDevPreviewColor;      // green: full-size preview
     cacheBorderColor = QColor(l20,l20,l20);
     sidecarColor = G::sidecarColor;                 // dark teal
     developColor = G::developColor;                 // amber: image has develop edits
@@ -309,7 +308,7 @@ void IconViewDelegate::setThumbDimensions(int thumbWidth,
                      bandMid - lockSize / 2,
                      lockSize, lockSize);
 
-    /* Combine RAW+JPG (to the left of Cache; takes the corner while the cache badge is
+    /* Combine RAW+JPG (to the left of Cache; takes the corner if the cache badge is
        set aside) */
     int linkW = 14;
     int linkH = 14;
@@ -375,9 +374,8 @@ QString IconViewDelegate::diagnostics()
     rpt << "\n  " << "pickColor = " << G::s(pickColor);
     rpt << "\n  " << "ingestedColor = " << G::s(ingestedColor);
     rpt << "\n  " << "uncachedColor = " << G::s(uncachedColor);
-    rpt << "\n  " << "rawPreviewColor = " << G::s(rawPreviewColor);
+    rpt << "\n  " << "partialPreviewColor = " << G::s(partialPreviewColor);
     rpt << "\n  " << "devPreviewColor = " << G::s(devPreviewColor);
-    rpt << "\n  " << "reducedPreviewColor = " << G::s(reducedPreviewColor);
     rpt << "\n  " << "cacheBorderColor = " << G::s(cacheBorderColor);
     return reportString;
 }
@@ -653,21 +651,21 @@ bool IconViewDelegate::helpEvent(QHelpEvent *event, QAbstractItemView *view,
     else if (cacheVisible && hit("Cache", 2))
     {
         // Same rule as the paint() badge, in both operation modes
-        bool reduced = false;
-        const bool ready = dm->devPreviewReady->isReady(
+        const PreviewTier tier = previewTier(
             sf->index(row, 0).data(G::KeyRole).toString(),
-            sf->index(row, G::DevPreviewKeyColumn).data().toString(), &reduced);
-        const bool developed = cacheSource == G::CacheDeveloped || ready;
-        const QString now = developed ? (reduced ? "Orange" : "Green")
-                            : cacheSource == G::CacheOriginal ? "Purple" : "Red";
-        /* A table, not tabs: "Orange:" overruns the first tab stop, which pushed its
-           description out of line with the others. */
-        tooltip = "<p style='white-space:pre'>Cache status: " + now + "</p>"
+            sf->index(row, G::DevPreviewKeyColumn).data().toString(), cacheSource);
+        const QString now = tier == PreviewTier::Full    ? "Green"
+                            : tier == PreviewTier::Partial ? "Dark purple" : "Red";
+        /* A table, not tabs: "Dark purple:" overruns the first tab stop, which pushed
+           its description out of line with the others. */
+        tooltip = "<p style='white-space:pre'>Preview: " + now + "</p>"
                   "<table cellspacing='0' cellpadding='0' style='margin-left:8px'>"
-                  "<tr><td>Green:&nbsp;&nbsp;</td><td>Developed preview ready</td></tr>"
-                  "<tr><td>Orange:&nbsp;&nbsp;</td><td>Developed preview, reduced size</td></tr>"
-                  "<tr><td>Purple:&nbsp;&nbsp;</td><td>Cached embedded preview or original file</td></tr>"
-                  "<tr><td>Red:&nbsp;&nbsp;</td><td>Not cached</td></tr>"
+                  "<tr><td>Green:&nbsp;&nbsp;</td>"
+                  "<td>Developed preview, or a full-size non-raw image</td></tr>"
+                  "<tr><td>Dark purple:&nbsp;&nbsp;</td>"
+                  "<td>Reduced-size developed preview, or a raw file's embedded "
+                  "preview</td></tr>"
+                  "<tr><td>Red:&nbsp;&nbsp;</td><td>No preview</td></tr>"
                   "</table>";
     }
     else if (ratingVisible && hit("Rating"))
@@ -771,6 +769,36 @@ QSize IconViewDelegate::sizeHint(const QStyleOptionViewItem& option,
              << "cellSize =" << cellSize
                 ; //*/
     return cellSize;
+}
+
+IconViewDelegate::PreviewTier IconViewDelegate::previewTier(const QString &rowKey,
+                                                           const QString &baseKey,
+                                                           int cacheSource) const
+{
+/*
+    The cache badge (2026-11-27): how good a picture the loupe can show for this image
+    without decoding the file.
+
+      Full     green        a current full-size devPreview, anything ImageCache holds
+                            with the recipe in it (G::CacheDeveloped: a sensor-decoded
+                            raw, an edited non-raw), or a non-raw original cached at
+                            full size.
+      Partial  dark purple  a REDUCED devPreview (an Auto-settings batch's 2560 px
+                            stand-in), or a raw whose cached picture is the camera's
+                            embedded preview.
+      None     red          nothing ready.
+
+    A reduced devPreview outranks a developed ImageCache entry: that entry may itself
+    have been decoded from the reduced preview, and DevPreviewReady is the only place
+    that knows the size. Was four colors (green, orange, purple, red) until 2026-11-27.
+*/
+    bool reduced = false;
+    const bool ready = dm->devPreviewReady->isReady(rowKey, baseKey, &reduced);
+    if (ready && reduced) return PreviewTier::Partial;
+    if (ready || cacheSource == G::CacheDeveloped) return PreviewTier::Full;
+    if (cacheSource == G::CacheOriginal)
+        return dm->isRawKey(rowKey) ? PreviewTier::Partial : PreviewTier::Full;
+    return PreviewTier::None;
 }
 
 void IconViewDelegate::paint(QPainter *painter,
@@ -1025,32 +1053,22 @@ textRect         = a rectangle below itemRect
     if (isCombineRawJpg) painter->drawImage(combineRawJpgRect.translated(origin), combineRawJpgSymbol);
     if (!isReadWrite) lockRenderer->render(painter, lockRect.translated(origin));
 
-    /* Cache badge: what the loupe can show for this image without a decode. Red =
-       nothing ready; purple = ImageCache holds the file's own pixels (a raw's embedded
-       JPG or an unedited original); green = a developed picture, either in ImageCache
-       (devPreview, sensor-decoded raw, edited non-raw) or a built devPreview on disk.
-       ONE RULE IN BOTH OPERATION MODES: the badge describes the image, not the mode, so
-       a built devPreview reads green in Browse as well as Develop, and switching modes
-       never repaints the grid in different colors (Develop trims ImageCache to the
-       current image, so without the devPreview test every other thumbnail read red).
-       The tooltip shows the legend. */
-    /* ORANGE = developed, but the devPreview is a REDUCED stand-in (an Auto-settings
-       batch writes 2560 px; MW::requestReducedDevPreviewRebuild replaces it at the size
-       preference, and the dot turns green when it lands). Asked of DevPreviewReady even
-       when ImageCache holds a developed picture: it is the only place that knows the
-       entry's size. */
+    /* Cache badge: how good a picture the loupe can show for this image without a
+       decode -- green full size, dark purple reduced or embedded, red none. The rule
+       is previewTier, shared with the tooltip. ONE RULE IN BOTH OPERATION MODES: the
+       badge describes the image, not the mode, so a built devPreview reads green in
+       Browse as well as Develop, and switching modes never repaints the grid in
+       different colors (Develop trims ImageCache to the current image, so without the
+       devPreview test every other thumbnail read red). */
     if (showCacheBadge && !isVideo && metaLoaded && !G::isSlideShow) {
         const QString baseKey = index.model()->index(sfRow, G::DevPreviewKeyColumn)
                                     .data().toString();
-        bool reduced = false;
-        const bool ready = dm->devPreviewReady->isReady(rowKey, baseKey, &reduced);
-        const bool developed = cacheSource == G::CacheDeveloped || ready;
+        const PreviewTier tier = previewTier(rowKey, baseKey, cacheSource);
         const QRectF r = QRectF(cacheRect.translated(origin));
         painter->setPen(cacheBorderColor);
-        painter->setBrush(developed && reduced ? reducedPreviewColor
-                          : developed ? devPreviewColor
-                          : cacheSource == G::CacheOriginal ? rawPreviewColor
-                                                            : uncachedColor);
+        painter->setBrush(tier == PreviewTier::Full      ? devPreviewColor
+                          : tier == PreviewTier::Partial ? partialPreviewColor
+                                                         : uncachedColor);
         painter->drawEllipse(r);
     }
     if (isSidecar && !G::isSlideShow) {

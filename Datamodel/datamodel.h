@@ -1078,6 +1078,9 @@ public slots:
     int proxyRowFromKey(QString key, QString src = "");
     QString keyFromProxyRow(int sfRow);
     QString sourcePathFromProxyRow(int sfRow);
+    /*  Is key (a path or a version key) a raw file -- a format whose picture without
+        a decode is the camera's embedded preview? Suffix only, no I/O: safe in paint. */
+    bool isRawKey(const QString &key) const;
     QString folderPathFromProxyRow(int sfRow);
     QString folderPathFromModelRow(int dmRow);
 

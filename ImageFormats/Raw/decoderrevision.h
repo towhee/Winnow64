@@ -37,11 +37,16 @@ namespace RawDecoder {
                                 XTransDirectional (Demosaic). Bumped here, not
                                 kDemosaicRevision, to rebuild only Fuji previews (an
                                 X-Trans DNG keeps its old preview until re-edited).
+      nef 1         2026-11-27  uncompressed NEF decoded (it fell back to the embedded
+                                JPEG, and that small fallback picture was cached under
+                                the default-render key); D2X cropped to 4312 columns
+                                (8 non-image columns on the right). See nikon.cpp.
 */
 inline int revision(const QString &ext)
 {
     const QString e = ext.toLower();
     if (e == "cr2" || e == "cr3") return 1;
+    if (e == "nef") return 1;
     if (e == "dng") return 5;
     if (e == "raf") return 1;
     return 0;

@@ -669,12 +669,61 @@ void MW::cancelDevPreviewBuild()
     devPreviewBuildCancelled = true;
 }
 
+QStringList MW::visibleThumbnailKeys()
+{
+/*
+    The row keys of the thumbnails on screen now: the union of what the grid, the
+    filmstrip and the table each show (in Table mode the filmstrip and the table scroll
+    independently, so their pages can be far apart), in proxy order, without repeats.
+
+    An icon view's range is capped at one page. Its updateVisible can report a range
+    running to the end of the model (no cell under its top-left probe), and on an
+    unfiltered Library that would be every image in the catalog -- the very scope this
+    exists to avoid.
+*/
+    QSet<int> rows;
+    const int count = dm ? dm->sf->rowCount() : 0;
+    auto add = [&](int first, int last, int cap) {
+        if (first < 0 || last < first) return;
+        last = qMin(qMin(last, first + cap - 1), count - 1);
+        for (int r = first; r <= last; ++r) rows.insert(r);
+    };
+    auto addIcons = [&](IconView *v) {
+        if (!v || !v->isVisible()) return;
+        v->updateVisible("MW::visibleThumbnailKeys");
+        add(v->firstVisibleCell, v->lastVisibleCell,
+            qMax(1, v->cellsPerPageRow) * (v->rowsPerPage + 2));
+    };
+    addIcons(gridView);
+    addIcons(thumbView);
+    if (tableView && tableView->isVisible()) {
+        tableView->updateVisible("MW::visibleThumbnailKeys");
+        const int rowH = qMax(1, tableView->verticalHeader()->defaultSectionSize());
+        add(tableView->firstVisibleRow, tableView->lastVisibleRow,
+            tableView->viewport()->height() / rowH + 2);
+    }
+
+    QList<int> sorted(rows.cbegin(), rows.cend());
+    std::sort(sorted.begin(), sorted.end());
+    QStringList keys;
+    keys.reserve(sorted.size());
+    for (int r : std::as_const(sorted))
+        keys << dm->sf->index(r, 0).data(G::KeyRole).toString();
+    return keys;
+}
+
 void MW::buildDevPreviewsForSelection()
 {
 /*
-    Develop > Build Developed Previews. Acts on the selection, or on the whole folder when
-    fewer than two images are selected -- selecting one image and asking to build previews
-    almost always means "this folder", not "this one image".
+    Develop > Build Developed Previews. Acts on the selection when it holds two or more
+    images, otherwise on the thumbnails on screen (visibleThumbnailKeys).
+
+    NOT THE WHOLE VIEW. That was the fallback until 2026-11-27, and in an unfiltered
+    Library it queued every raw in the catalog (tens of thousands): hours of
+    renders, more than the cache holds, and minutes of silent "is it already built?"
+    checks before the progress row even appeared. What is on screen is what the user is
+    looking at, and scrolling on and asking again extends it. The background build
+    preference still covers a whole folder.
 */
     if (G::isLogger) G::log("MW::buildDevPreviewsForSelection");
     if (!dm || dm->rowCount() == 0) return;
@@ -685,9 +734,10 @@ void MW::buildDevPreviewsForSelection()
         for (const QModelIndex &idx : sel)
             paths << idx.data(G::KeyRole).toString();
     }
-    else {
-        for (int row = 0; row < dm->sf->rowCount(); ++row)
-            paths << dm->sf->index(row, 0).data(G::KeyRole).toString();
+    else paths = visibleThumbnailKeys();
+    if (paths.isEmpty()) {
+        if (G::popup) G::popup->showPopup("No thumbnails are showing.", 2000);
+        return;
     }
     buildDevPreviews(paths, "menu");
 }
@@ -695,10 +745,11 @@ void MW::buildDevPreviewsForSelection()
 void MW::buildEditedDevPreviews()
 {
 /*
-    Develop > Build Developed Previews (Edited Only). The same scope as
-    buildDevPreviewsForSelection -- the selection when it holds two or more images,
-    otherwise every row in the view -- keeping only images with a develop recipe.
-    Unedited raws, which the other command also renders, are left alone.
+    Develop > Build Developed Previews (Edited Only). The selection when it holds two
+    or more images, otherwise every row in the view, keeping only images with a develop
+    recipe. Unedited raws, which the other command also renders, are left alone.
+    WIDER than buildDevPreviewsForSelection, whose fallback is the thumbnails on screen:
+    edited images are a small population, so the whole view is affordable here.
 */
     if (G::isLogger) G::log("MW::buildEditedDevPreviews");
     buildEditedDevPreviewsIn(true);

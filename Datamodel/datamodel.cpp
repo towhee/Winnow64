@@ -7034,6 +7034,15 @@ QString DataModel::keyFromProxyRow(int sfRow)
     return sf->index(sfRow,0).data(G::KeyRole).toString();
 }
 
+bool DataModel::isRawKey(const QString &key) const
+{
+    if (!metadata) return false;
+    const QString src = VersionKey::sourceOf(key);   // a version is its source's format
+    const int dot = src.lastIndexOf('.');
+    if (dot < 0) return false;
+    return metadata->hasJpg.contains(src.mid(dot + 1).toLower());
+}
+
 QString DataModel::sourcePathFromProxyRow(int sfRow)
 {
     if (G::isLogger) G::log("DataModel::sourcePathFromProxyRow");

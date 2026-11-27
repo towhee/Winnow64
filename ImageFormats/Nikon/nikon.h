@@ -38,7 +38,9 @@ private:
     from the Nikon type-3 MakerNote (tag 0x96), and decodes Nikon's compressed raw -- Huffman-
     coded differences against dual (vertical + horizontal) predictors, mapped through a
     linearization curve. Ported from dcraw's nikon_load_raw and validated byte-identical to
-    libraw on 12-bit and 14-bit lossless NEF.
+    libraw on 12-bit and 14-bit lossless NEF. UNCOMPRESSED NEF (Compression 1: packed
+    12-bit, or one 16-bit word per photosite) is read straight from its strips; see
+    unpackUncompressed in nikon.cpp.
 
     Color matrix comes from the shared per-model table (cameramatrix.cpp). The as-shot white
     balance is read from the UNENCRYPTED MakerNote tag 0x0C (WhiteBalanceRBLevels) -- the

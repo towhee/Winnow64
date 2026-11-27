@@ -2701,6 +2701,7 @@ private:
        developPixelSource. Never runs unasked. */
     void buildDevPreviews(const QStringList &paths, const QString &src);
     void buildDevPreviewsForSelection();
+    QStringList visibleThumbnailKeys();
     void buildEditedDevPreviews();
     void buildEditedDevPreviewsFiltered();
     void buildEditedDevPreviewsIn(bool honourSelection);

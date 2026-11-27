@@ -888,9 +888,8 @@ Q_NAMESPACE
     extern QColor ingestedColor;                    // thumb: ingested
     extern QColor thumbSelectedColor;               // thumb: selected border
     extern QColor thumbUncachedColor;               // thumb: not in ImageCache
-    extern QColor thumbRawPreviewColor;             // thumb: cached, the file's own pixels
-    extern QColor thumbDevPreviewColor;             // thumb: cached, developed pixels
-    extern QColor thumbReducedPreviewColor;         // thumb: developed, reduced size
+    extern QColor thumbPartialPreviewColor;         // thumb: reduced or embedded preview
+    extern QColor thumbDevPreviewColor;             // thumb: full-size preview
     extern QColor sidecarColor;                     // thumb: has a sidecar
     extern QColor offlineColor;                     // thumb: volume not mounted
     extern QColor missingColor;                     // thumb: file gone

@@ -1,11 +1,11 @@
 WHAT'S NEW
 - Thumb size slider on status bar
+- Slide show
 
 BUGS / TO DO
 - Renaming a keyword in the keyword list does not update the current image in the image tags.
-- Tweak main menu (Library, Develop...)
-- Slideshow needs to cache ahead, often not displaying next image.
-  Shouldn't develop image - use best available preview.
+- Tweak main menu (Library, Develop...) Slideshow
+-
 - Redo Develop help
 - Add Actions (record, list, replay a series of steps)
 - Catalog management: import/export, Set catalog location

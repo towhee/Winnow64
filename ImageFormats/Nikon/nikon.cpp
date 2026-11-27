@@ -1043,6 +1043,11 @@ bool Nikon::parse(MetadataParameters &p,
                 m.offsetFull = m.offsetThumb;
                 m.lengthFull = m.lengthThumb;
                 p.offset = m.offsetFull;
+                /* The preview's REAL size. The SubIFD1 branch above set it to the
+                   sensor's (2496x1648 on a D2H) for want of anything better, so the
+                   Metadata panel's "Preview dim" claimed a full-size preview for a
+                   570x375 JPEG (2026-11-27). */
+                jpeg->getWidthHeight(p, m.widthOrigPreview, m.heightOrigPreview);
             }
 //            if (lengthSmallJPG) verifyEmbeddedJpg(offsetSmallJPG, lengthSmallJPG);
         }
@@ -1138,6 +1143,73 @@ struct NBits {
     }
 };
 
+/*
+    UNCOMPRESSED NEF (Compression 1). The camera's "uncompressed" setting, and the only
+    choice on some early bodies (the D2H and D100 mostly shot it). Two layouts, told apart
+    by the strip's bytes per row; both validated byte-identical to libraw's raw_image
+    (rawpy) on a D2H, a D100, a D2X and a D810:
+
+      packed      rowBytes = W * bps / 8. One MSB-first bit stream, no row padding, in
+                  either file byte order (the D2H is MM, the D100 II): 12-bit pixel pairs
+                  are AB CD EF -> ABC, DEF. dcraw's packed_load_raw with no load_flags.
+      words       rowBytes >= W * 2. One 16-bit word per photosite in the file's byte
+                  order, value in the low bits (the D810 stores 14-bit this way).
+
+    Strips are read in order and may be scattered; each holds RowsPerStrip rows (the last
+    one fewer). lo is the running minimum, for the black fallback in UnpackCfa.
+*/
+bool unpackUncompressed(QFile &file, TiffWalk::Reader &r, const TiffWalk::Ifd &ifd,
+                        int W, int H, int bps, RawImage &raw, uint16_t &lo, QString &err)
+{
+    const QVector<quint32> offs = r.u32s(ifd[273]);
+    const QVector<quint32> cnts = r.u32s(ifd[279]);
+    if (offs.isEmpty() || offs.size() != cnts.size()) {
+        err = "NEF: bad uncompressed strip tables."; return false;
+    }
+    const int rps = ifd.contains(278) ? int(qMin<quint32>(r.scalar(ifd[278]), quint32(H)))
+                                      : H;
+    if (rps <= 0) { err = "NEF: bad RowsPerStrip."; return false; }
+    const qint64 rowBytes = qint64(cnts[0]) / rps;
+    const bool words = rowBytes >= qint64(W) * 2;
+    if (!words && (rowBytes * 8 < qint64(W) * bps || bps != 12)) {
+        err = QString("NEF: uncompressed %1-bit layout not handled (%2 bytes per row).")
+                  .arg(bps).arg(rowBytes);
+        return false;
+    }
+
+    QByteArray data;
+    data.reserve(int(rowBytes * H));
+    for (int i = 0; i < offs.size() && data.size() < rowBytes * H; ++i) {
+        if (!file.seek(offs[i])) { err = "NEF: seek to raw strip failed."; return false; }
+        data.append(file.read(cnts[i]));
+    }
+    if (data.size() < rowBytes * H) { err = "NEF: uncompressed raw data short."; return false; }
+
+    raw.width = W;
+    raw.height = H;
+    raw.cfa.assign(size_t(W) * size_t(H), 0);
+    const uchar *d = reinterpret_cast<const uchar *>(data.constData());
+    const bool big = r.big();
+    const uint16_t mask = uint16_t((1u << bps) - 1);
+    for (int row = 0; row < H; ++row) {
+        const uchar *s = d + qint64(row) * rowBytes;
+        uint16_t *out = &raw.cfa[size_t(row) * W];
+        if (words) {
+            for (int col = 0; col < W; ++col, s += 2)
+                out[col] = uint16_t((big ? (s[0] << 8) | s[1] : (s[1] << 8) | s[0]) & mask);
+        }
+        else {
+            for (int col = 0; col + 1 < W; col += 2, s += 3) {
+                out[col]     = uint16_t((s[0] << 4) | (s[1] >> 4));
+                out[col + 1] = uint16_t(((s[1] & 0x0F) << 8) | s[2]);
+            }
+            if (W & 1) out[W - 1] = uint16_t((s[0] << 4) | (s[1] >> 4));
+        }
+        for (int col = 0; col < W; ++col) if (out[col] < lo) lo = out[col];
+    }
+    return true;
+}
+
 } // namespace
 
 bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
@@ -1147,11 +1219,13 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     Reader r;
     if (!r.init(&file)) { errMsg = "NEF: not a TIFF file."; return false; }
 
-    /* Find the CFA SubIFD (Compression 34713 = Nikon NEF compressed). */
+    /* Find the CFA SubIFD: Compression 34713 (Nikon NEF compressed) or 1 (uncompressed,
+       PhotometricInterpretation 32803 = CFA, which tells it apart from an uncompressed
+       RGB preview strip). */
     QList<quint32> queue { r.firstIfd() };
     QSet<quint32> seen;
     Ifd ifd0, rawIfd;
-    bool haveIfd0 = false, haveRaw = false;
+    bool haveIfd0 = false, haveRaw = false, compressed = true;
     quint64 bestArea = 0;
     while (!queue.isEmpty()) {
         const quint32 off = queue.takeFirst();
@@ -1162,17 +1236,21 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
         if (!haveIfd0) { ifd0 = tags; haveIfd0 = true; }
         for (quint32 s : subs) queue << s;
         if (next) queue << next;
-        if (tags.contains(259) && r.scalar(tags[259]) == 34713 &&
+        const quint32 comp = tags.contains(259) ? r.scalar(tags[259]) : 0;
+        const bool isCfa = tags.contains(262) && r.scalar(tags[262]) == 32803;
+        if ((comp == 34713 || (comp == 1 && isCfa && tags.contains(279))) &&
             tags.contains(256) && tags.contains(257) && tags.contains(273)) {
             /* Some bodies (e.g. Z9) expose several NEF-compressed SubIFDs -- the full-resolution
                sensor frame alongside smaller or placeholder ones (including a 0x0 entry). Keep the
                largest valid candidate rather than the last seen, which would otherwise land on the
                0x0 IFD and fail the geometry check (UnpackCfa returns false -> preview fallback). */
             const quint64 area = quint64(r.scalar(tags[256])) * quint64(r.scalar(tags[257]));
-            if (area > bestArea) { rawIfd = tags; haveRaw = true; bestArea = area; }
+            if (area > bestArea) {
+                rawIfd = tags; haveRaw = true; bestArea = area; compressed = comp == 34713;
+            }
         }
     }
-    if (!haveRaw) { errMsg = "NEF: no compressed CFA SubIFD (uncompressed NEF not handled)."; return false; }
+    if (!haveRaw) { errMsg = "NEF: no CFA SubIFD."; return false; }
 
     const int W = int(r.scalar(rawIfd[256]));
     const int H = int(r.scalar(rawIfd[257]));
@@ -1180,9 +1258,9 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     const quint32 dataOff = r.scalar(rawIfd[273]);
     if (W <= 0 || H <= 0 || (bps != 12 && bps != 14)) { errMsg = "NEF: bad CFA geometry/bps."; return false; }
 
-    /* Navigate the Nikon type-3 MakerNote: IFD0 -> ExifIFD (0x8769) -> MakerNote (0x927C).
-       Its data is "Nikon\0" + 2 version bytes + "\0\0" + an embedded TIFF whose offsets are
-       relative to that embedded header (base = makerNote + 10). */
+    /* Navigate the Nikon type-3 MakerNote: IFD0 -> ExifIFD (0x8769) -> MakerNote
+       (0x927C). Its data is "Nikon\0" + 2 version bytes + "\0\0" + an embedded TIFF
+       whose offsets are relative to that embedded header (base = makerNote + 10). */
     if (!haveIfd0 || !ifd0.contains(0x8769)) { errMsg = "NEF: no ExifIFD."; return false; }
     Ifd exif; QList<quint32> es; quint32 en = 0;
     if (!r.readIfd(r.ifdPointer(ifd0[0x8769]), exif, es, en) || !exif.contains(0x927C)) {
@@ -1192,80 +1270,88 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
     Reader mr;
     if (!mr.init(&file, mnBase)) { errMsg = "NEF: bad MakerNote header."; return false; }
     Ifd mn; QList<quint32> ms; quint32 mnn = 0;
-    if (!mr.readIfd(mr.firstIfd(), mn, ms, mnn) || !mn.contains(0x96)) {
-        errMsg = "NEF: no linearization table (0x96)."; return false;
+    if (!mr.readIfd(mr.firstIfd(), mn, ms, mnn)) {
+        errMsg = "NEF: bad MakerNote IFD."; return false;
     }
 
-    /* The 0x96 linearization/Huffman metadata. Read enough to cover the optional curve+split. */
-    const quint32 metaAbs = mnBase + mr.ifdPointer(mn[0x96]);
-    if (!file.seek(metaAbs)) { errMsg = "NEF: seek to 0x96 failed."; return false; }
-    const QByteArray meta = file.read(2048);
-    if (meta.size() < 14) { errMsg = "NEF: short 0x96."; return false; }
-    const bool mbig = mr.big();
-    auto mg16 = [&](int o) -> int {
-        const uchar a = uchar(meta[o]), b = uchar(meta[o + 1]);
-        return mbig ? ((a << 8) | b) : ((b << 8) | a);
-    };
-
-    const int ver0 = uchar(meta[0]), ver1 = uchar(meta[1]);
-    int p = 2;
-    if (ver0 == 0x49 || ver1 == 0x58) p += 2110;        // (some bodies) skip to vpred
-    int huff = 0;
-    if (ver0 == 0x46) huff = 2;
-    if (bps == 14) huff += 3;
-
-    int vpred[2][2];
-    for (int i = 0; i < 4; ++i) vpred[i >> 1][i & 1] = mg16(p + 2 * i);
-    p += 8;
-
-    int maxv = (1 << bps) & 0x7fff;
-    std::vector<int> curve(0x10000);
-    for (int i = 0; i < 0x10000; ++i) curve[i] = i;     // identity by default
-    const int csize = mg16(p); p += 2;
-    const int step = (csize > 1) ? maxv / (csize - 1) : 0;
-    int split = 0;
-    if (ver0 == 0x44 && ver1 == 0x20 && step > 0) {
-        for (int i = 0; i < csize; ++i) curve[i * step] = mg16(p + 2 * i);
-        for (int i = 0; i < maxv; ++i) {
-            const int rmd = i % step;
-            curve[i] = (curve[i - rmd] * (step - rmd) + curve[i - rmd + step] * rmd) / step;
+    uint16_t lo = 0xFFFF;                     // running min for the black estimate
+    if (compressed) {
+        if (!mn.contains(0x96)) {
+            errMsg = "NEF: no linearization table (0x96)."; return false;
         }
-        split = mg16(562);                               // offset 562 within the 0x96 block
-    } else if (ver0 != 0x46 && csize <= 0x4001) {
-        for (int i = 0; i < csize; ++i) curve[i] = mg16(p + 2 * i);
-        maxv = csize;
-    }
-    while (maxv > 1 && curve[maxv - 2] == curve[maxv - 1]) --maxv;
 
-    /* Read the compressed raw data and decode. */
-    if (!file.seek(dataOff)) { errMsg = "NEF: seek to raw data failed."; return false; }
-    const QByteArray data = file.readAll();
-    NBits br{ reinterpret_cast<const uchar *>(data.constData()), data.size(), 0 };
+        /* The 0x96 linearization/Huffman metadata. Read enough to cover the optional
+           curve+split. */
+        const quint32 metaAbs = mnBase + mr.ifdPointer(mn[0x96]);
+        if (!file.seek(metaAbs)) { errMsg = "NEF: seek to 0x96 failed."; return false; }
+        const QByteArray meta = file.read(2048);
+        if (meta.size() < 14) { errMsg = "NEF: short 0x96."; return false; }
+        const bool mbig = mr.big();
+        auto mg16 = [&](int o) -> int {
+            const uchar a = uchar(meta[o]), b = uchar(meta[o + 1]);
+            return mbig ? ((a << 8) | b) : ((b << 8) | a);
+        };
 
-    NHuff h; h.build(kNikonTree[huff]);
+        const int ver0 = uchar(meta[0]), ver1 = uchar(meta[1]);
+        int p = 2;
+        if (ver0 == 0x49 || ver1 == 0x58) p += 2110;        // (some bodies) skip to vpred
+        int huff = 0;
+        if (ver0 == 0x46) huff = 2;
+        if (bps == 14) huff += 3;
 
-    raw.width = W;
-    raw.height = H;
-    raw.cfa.assign(size_t(W) * size_t(H), 0);
-    int hpred[2] = { 0, 0 };
-    uint16_t lo = 0xFFFF;                                // running min for the black estimate
+        int vpred[2][2];
+        for (int i = 0; i < 4; ++i) vpred[i >> 1][i & 1] = mg16(p + 2 * i);
+        p += 8;
 
-    for (int row = 0; row < H; ++row) {
-        if (split && row == split) { h.build(kNikonTree[huff + 1]); maxv += 16 << 1; }
-        for (int col = 0; col < W; ++col) {
-            const int i = br.huff(h);
-            const int len = i & 15, shl = i >> 4;
-            int diff = ((int(br.bits(len - shl)) << 1) + 1) << shl >> 1;
-            if (len > 0 && (diff & (1 << (len - 1))) == 0) diff -= (1 << len) - (shl ? 0 : 1);
-            if ((col & ~1) == 0) { vpred[row & 1][col] += diff; hpred[col] = vpred[row & 1][col]; }
-            else                   hpred[col & 1] += diff;
-            int val = hpred[col & 1];
-            if (val < 0) val = 0;
-            const uint16_t out = uint16_t(curve[val & 0x3FFF]);
-            raw.cfa[size_t(row) * W + col] = out;
-            if (out < lo) lo = out;
+        int maxv = (1 << bps) & 0x7fff;
+        std::vector<int> curve(0x10000);
+        for (int i = 0; i < 0x10000; ++i) curve[i] = i;     // identity by default
+        const int csize = mg16(p); p += 2;
+        const int step = (csize > 1) ? maxv / (csize - 1) : 0;
+        int split = 0;
+        if (ver0 == 0x44 && ver1 == 0x20 && step > 0) {
+            for (int i = 0; i < csize; ++i) curve[i * step] = mg16(p + 2 * i);
+            for (int i = 0; i < maxv; ++i) {
+                const int rmd = i % step;
+                curve[i] = (curve[i - rmd] * (step - rmd) + curve[i - rmd + step] * rmd) / step;
+            }
+            split = mg16(562);                    // offset 562 within the 0x96 block
+        } else if (ver0 != 0x46 && csize <= 0x4001) {
+            for (int i = 0; i < csize; ++i) curve[i] = mg16(p + 2 * i);
+            maxv = csize;
+        }
+        while (maxv > 1 && curve[maxv - 2] == curve[maxv - 1]) --maxv;
+
+        /* Read the compressed raw data and decode. */
+        if (!file.seek(dataOff)) { errMsg = "NEF: seek to raw data failed."; return false; }
+        const QByteArray data = file.readAll();
+        NBits br{ reinterpret_cast<const uchar *>(data.constData()), data.size(), 0 };
+
+        NHuff h; h.build(kNikonTree[huff]);
+
+        raw.width = W;
+        raw.height = H;
+        raw.cfa.assign(size_t(W) * size_t(H), 0);
+        int hpred[2] = { 0, 0 };
+
+        for (int row = 0; row < H; ++row) {
+            if (split && row == split) { h.build(kNikonTree[huff + 1]); maxv += 16 << 1; }
+            for (int col = 0; col < W; ++col) {
+                const int i = br.huff(h);
+                const int len = i & 15, shl = i >> 4;
+                int diff = ((int(br.bits(len - shl)) << 1) + 1) << shl >> 1;
+                if (len > 0 && (diff & (1 << (len - 1))) == 0) diff -= (1 << len) - (shl ? 0 : 1);
+                if ((col & ~1) == 0) { vpred[row & 1][col] += diff; hpred[col] = vpred[row & 1][col]; }
+                else                   hpred[col & 1] += diff;
+                int val = hpred[col & 1];
+                if (val < 0) val = 0;
+                const uint16_t out = uint16_t(curve[val & 0x3FFF]);
+                raw.cfa[size_t(row) * W + col] = out;
+                if (out < lo) lo = out;
+            }
         }
     }
+    else if (!unpackUncompressed(file, r, rawIfd, W, H, bps, raw, lo, errMsg)) return false;
 
     /* CFA phase. Most Nikon bodies are RGGB, but older sensors start the active area on a
        different Bayer phase (D100 is GRBG, D2H is GBRG); decoding those as RGGB swaps the
@@ -1302,7 +1388,11 @@ bool NikonRaw::UnpackCfa(QFile &file, const ImageMetadata &m, RawImage &raw)
    showed a single magenta stripe down the right side. */
     {
         int left = 0, top = 0, cw = W, ch = H;
-        if (model == "NIKON D2H" && W == 2496 && H == 1648) { left = 6; cw = 2482; }  // libraw margins
+        // libraw margins
+        if (model == "NIKON D2H" && W == 2496 && H == 1648) { left = 6; cw = 2482; }
+        /* D2X: 8 non-image columns on the right (libraw width 4312), the same in a
+           compressed and an uncompressed file; measured 2026-11-27. */
+        if (model == "NIKON D2X" && W == 4320 && H == 2868) cw = 4312;
         /* libraw trims 46 columns off the right for the D3200/D600/D800/D800E; only the D800E is
            verified here against a real file, so add the others when a sample turns up. */
         if ((model == "NIKON D800" || model == "NIKON D800E") && W == 7424 && H == 4924) cw = 7378;

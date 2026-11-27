@@ -1409,9 +1409,10 @@ void MW::createUtilActions()
     connect(buildDevPreviewsAction, &QAction::triggered,
             this, &MW::buildDevPreviewsForSelection);
 
-    /* The same build limited to EDITED images. Build Developed Previews also renders the
-       default look of every unedited raw, which across a Library is many hours of decodes
-       and more than the cache can hold; this is the way to refresh only the edits. */
+    /* The same build limited to EDITED images, over the whole view rather than the
+       thumbnails on screen. Build Developed Previews also renders the default look of
+       every unedited raw, which across a Library is many hours of decodes and more than
+       the cache can hold; this is the way to refresh only the edits. */
     buildEditedDevPreviewsAction =
         new QAction(tr("Build Developed Previews (Edited Only)"), this);
     buildEditedDevPreviewsAction->setObjectName("buildEditedDevPreviews");

@@ -139,9 +139,8 @@ private:
     QColor rejectColor;
     QColor ingestedColor;
     QColor uncachedColor;
-    QColor rawPreviewColor;
+    QColor partialPreviewColor;
     QColor devPreviewColor;
-    QColor reducedPreviewColor;
     QColor sidecarColor;
     QColor developColor;
     QColor offlineColor;
@@ -190,11 +189,16 @@ private:
     int textHeight = 0;
     int badgeSize = 0;
     int iconNumberSize = 0;
-    /*  The cache badge (preview status light, bottom-right dot) is SET ASIDE: still
-        computed, never drawn, and its tooltip is off. Flip to reinstate, and restore
-        item 13 in Docs/images/ThumbnailSchematic.svg + thumbNailSchematic.html and the
-        cache circle section of pictureshelp.html. */
-    static constexpr bool showCacheBadge = false;
+    /*  The cache badge (preview status light, bottom-right dot). Set aside 2026-11-25,
+        reinstated 2026-11-27: it is the only place a built devPreview shows. Turning it
+        off again also means removing item 13 from Docs/images/ThumbnailSchematic.svg +
+        thumbNailSchematic.html and the cache circle section of pictureshelp.html. */
+    static constexpr bool showCacheBadge = true;
+    /*  The cache badge's three tiers, one rule for paint() and helpEvent(). See
+        previewTier in iconviewdelegate.cpp. */
+    enum class PreviewTier { None, Partial, Full };
+    PreviewTier previewTier(const QString &rowKey, const QString &baseKey,
+                            int cacheSource) const;
     int cacheDiam = 6;
     int cacheOffset = 3;
     int ratingDiam = 0;

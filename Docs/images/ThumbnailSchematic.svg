@@ -11,6 +11,7 @@
 <circle cx="298" cy="442.0" r="9" fill="#055238" stroke="#464646" stroke-width="1.5"/>
 <circle cx="361" cy="442.0" r="9" fill="#966e14" stroke="#464646" stroke-width="1.5"/>
 <circle cx="424" cy="442.0" r="9" fill="#5a82aa" stroke="#464646" stroke-width="1.5"/>
+<circle cx="712" cy="442.0" r="9" fill="#00c800" stroke="#464646" stroke-width="1.5"/>
 <rect x="316" y="440.5" width="24" height="18" rx="3" fill="#d0d0d0"/>
 <path d="M 320.5 440.5 L 320.5 434.5 A 7.5 7.5 0 0 1 335.5 434.5 L 335.5 440.5" fill="none" stroke="#d0d0d0" stroke-width="4.199999999999999"/>
 <circle cx="676" cy="442.0" r="9" fill="#3c9be6" stroke="#464646" stroke-width="1.5"/>
@@ -80,14 +81,19 @@
 <circle cx="800" cy="340" r="14" fill="#02b0cf"/>
 <text x="798.5" y="345" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">12</text>
 <text x="822" y="345" font-family="Helvetica" font-size="15" fill="#c0c0c0">Rating</text>
+<line x1="786" y1="420" x2="712" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
+<circle cx="712" cy="442.0" r="3.5" fill="#cccccc"/>
+<circle cx="800" cy="420" r="14" fill="#02b0cf"/>
+<text x="798.5" y="425" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">13</text>
+<text x="822" y="425" font-family="Helvetica" font-size="15" fill="#c0c0c0">Cache status</text>
 <line x1="786" y1="470" x2="676" y2="442.0" stroke="#cccccc" stroke-width="1.5"/>
 <circle cx="676" cy="442.0" r="3.5" fill="#cccccc"/>
 <circle cx="800" cy="470" r="14" fill="#02b0cf"/>
-<text x="798.5" y="475" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">13</text>
+<text x="798.5" y="475" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">14</text>
 <text x="822" y="475" font-family="Helvetica" font-size="15" fill="#c0c0c0">RAW+JPG pair</text>
 <line x1="786" y1="545" x2="619.0" y2="496" stroke="#cccccc" stroke-width="1.5"/>
 <circle cx="619.0" cy="496" r="3.5" fill="#cccccc"/>
 <circle cx="800" cy="545" r="14" fill="#02b0cf"/>
-<text x="798.5" y="550" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">14</text>
+<text x="798.5" y="550" font-family="Helvetica" font-weight="bold" font-size="14" fill="#1a1a1a" text-anchor="middle">15</text>
 <text x="822" y="550" font-family="Helvetica" font-size="15" fill="#c0c0c0">Label</text>
 </svg>
