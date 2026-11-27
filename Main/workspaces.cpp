@@ -2179,7 +2179,7 @@ void MW::syncWorkflowWorkspaceMenus()
               ? tr("the %1 layout Winnow ships with").arg(name)
               : tr("your %1 layout").arg(name);
     resetLayoutAction->setToolTip(
-        tr("Put the panels back the way %1 has them: a panel left open, moved, or \n"
+        tr("Put the panels back the way %1 has them: a panel left open, moved, or "
            "stranded on a monitor that is gone.  Nothing is saved or deleted.")
             .arg(inUse));
 

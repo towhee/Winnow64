@@ -21,6 +21,7 @@
 #include "ImageFormats/Raw/rawcolor.h"
 #include "Metadata/metadata.h"
 #include "Utilities/screenfit.h"
+#include "Utilities/tipwrap.h"
 #ifdef Q_OS_MAC
 #include "Utilities/mac.h"
 #include <QAccessibleWidget>
@@ -496,6 +497,9 @@ int main(int argc, char *argv[])
     // Only the family is set here; text size is driven by the per-widget
     // font-size in G::css (G::fontSize).
     instance.setFont(QFontDatabase::systemFont(QFontDatabase::GeneralFont));
+
+    // Wrap every tooltip at TipWrap::maxChars characters (Utilities/tipwrap.h).
+    TipWrap::install();
 
     /*  WINNOW_NO_A11Y=1 TURNS THE ACCESSIBILITY BRIDGE OFF, to confirm what a sample of a
         stalled process pointed at: 94% of the main thread's time during a 42-second

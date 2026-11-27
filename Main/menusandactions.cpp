@@ -1904,7 +1904,7 @@ void MW::createViewActions()
     resetLayoutAction->setShortcutVisibleInContextMenu(true);
     /* Names the layout once the Workspace menu is shown (syncWorkflowWorkspaceMenus). */
     resetLayoutAction->setToolTip(
-        tr("Put the panels back the way the current layout has them.  \n"
+        tr("Put the panels back the way the current layout has them.  "
            "Nothing is saved or deleted."));
     addAction(resetLayoutAction);
     connect(resetLayoutAction, &QAction::triggered, this, &MW::resetLayout);
@@ -1918,8 +1918,8 @@ void MW::createViewActions()
     syncBrowseDevelopAction->setChecked(
         !isSettings || settings->value("syncBrowseDevelopWidths", true).toBool());
     syncBrowseDevelopAction->setToolTip(
-        tr("Give Browse and Develop the same left and right panel widths (the wider of \n"
-           "the two layouts) and the same film strip (the taller), so the image keeps its \n"
+        tr("Give Browse and Develop the same left and right panel widths (the wider of "
+           "the two layouts) and the same film strip (the taller), so the image keeps its "
            "size and place when you switch between them."));
     connect(syncBrowseDevelopAction, &QAction::toggled, this, [this](bool on) {
         settings->setValue("syncBrowseDevelopWidths", on);

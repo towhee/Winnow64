@@ -77,6 +77,7 @@
     - [2.15.6 File Operations (P3)](#2156-file-operations-p3)
     - [2.15.7 Catalog-Wide Keyword Rewrites (P4)](#2157-catalog-wide-keyword-rewrites-p4)
   - [2.16 Investigations and Fixes](#216-investigations-and-fixes)
+  - [2.17 Tooltip Width](#217-tooltip-width)
     - [2.16.1 Two Aborts From Holding What the Model Threw Away](#2161-two-aborts-from-holding-what-the-model-threw-away)
       - [2.16.1.1 A Proxy Index Does Not Survive a Filter Change](#21611-a-proxy-index-does-not-survive-a-filter-change)
       - [2.16.1.2 An Invalid QVariant Is Not Equal to 0](#21612-an-invalid-qvariant-is-not-equal-to-0)
@@ -2046,6 +2047,21 @@ MW::folderChangeCompleted measured 809 ms on a 3,404-row card folder, although a
 Fix: TableView's constructor sets the precision to 50 (Views/tableview.cpp).
 
 Not verified headlessly: an offscreen --selftest run reports folderChangeCompleted at 3-4 ms with or without the change, because the table is never laid out there. Confirming it needs a real session with the Table view configured.
+
+### 2.17 Tooltip Width
+
+Every tooltip wraps at about 55 average characters per line (TipWrap::maxChars, Utilities/tipwrap.h), roughly 45-60 characters being the comfortable range for text read in a glance. Write tooltips as plain sentences; do not insert "\n" to wrap them by hand. A "\n" is still honored as a hard break, so keep it only for a real break (a list, a second paragraph).
+
+TipWrap is one application-wide event filter, installed in main() right after the app font is set. It acts only on Qt's tooltip window (QTipLabel), so it covers setToolTip() on widgets and actions, .ui tooltips, model ToolTipRole and direct QToolTip::showText() calls alike. Qt itself never wraps a plain-text tooltip until it is wider than the screen, and wraps rich text at its own QLabel heuristic (often ~80 characters).
+
+How it hooks in (Qt 6.11 qtooltip.cpp), because QToolTip::showText has two paths:
+
+- A tip already showing gets new text: QTipLabel::updateSize resizes the visible label, the Resize event arrives synchronously, TipWrap narrows it there, and Qt's placeTip then positions the narrow tip.
+- A new tip: the label is sized and placed while hidden, so TipWrap acts on its Show event and re-places it itself, keeping the left or right edge and the top or bottom edge depending on which side of the cursor Qt put it, then keeping it on screen.
+
+The tooltip TEXT is never changed, only the label's word wrap and size. QToolTip decides whether a tip "changed" by comparing the label text with the next request; altered text would re-place the tip on every mouse move.
+
+The width scales with the tooltip font (G::fontSize via WidgetCSS::toolTip), since it is measured in average character widths of that font.
 
 ## 3 Folder Loading
 

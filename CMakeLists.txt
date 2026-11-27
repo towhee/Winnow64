@@ -478,6 +478,7 @@ set(WINNOW_SOURCES
     Utilities/titlebar.cpp
     Utilities/collapsiblesections.cpp
     Utilities/screenfit.cpp
+    Utilities/tipwrap.cpp
     Utilities/usbutil.cpp
     Utilities/appinstaller.cpp
     Utilities/volumeinfo.cpp
@@ -816,6 +817,7 @@ set(WINNOW_HEADERS
     Utilities/titlebar.h
     Utilities/collapsiblesections.h
     Utilities/screenfit.h
+    Utilities/tipwrap.h
     Utilities/progress.h
     Utilities/renamefile.h
     Utilities/reportdialog.h
