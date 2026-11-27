@@ -31,6 +31,7 @@
     - [2.3.7 What a Workspace Does Not Restore](#237-what-a-workspace-does-not-restore)
     - [2.3.8 Sync Browse/Develop](#238-sync-browsedevelop)
     - [2.3.9 Restore Previous Size and Position](#239-restore-previous-size-and-position)
+    - [2.3.10 Resize to Exact Dimensions](#2310-resize-to-exact-dimensions)
   - [2.4 Dock Window State (Versioning)](#24-dock-window-state-versioning)
     - [2.4.1 Migration, Not Rejection](#241-migration-not-rejection)
     - [2.4.2 Keep the Fallback Layout Sane](#242-keep-the-fallback-layout-sane)
@@ -65,6 +66,7 @@
     - [2.13.3 Guarding Platform Code](#2133-guarding-platform-code)
     - [2.13.4 Packaging (AppImage)](#2134-packaging-appimage)
     - [2.13.5 Not Yet Done on Linux](#2135-not-yet-done-on-linux)
+    - [2.13.6 Audio Device Disconnect Crash (macOS, Qt 6.11)](#2136-audio-device-disconnect-crash-macos-qt-611)
   - [2.14 Above/Below Sliders](#214-abovebelow-sliders)
   - [2.15 Undo (Edit > Undo / Redo)](#215-undo-edit--undo--redo)
     - [2.15.1 Routing by Mode](#2151-routing-by-mode)
@@ -1386,6 +1388,16 @@ Window > Restore Previous Size and Position (MW::restorePreviousWindowAction, ad
 - A workspace that restores the window position and size (2.3.6) moves the window like any other move, so the item takes the window back to where it was before the workspace was applied.
 - Disabled with a reason (disabledReason and the tooltip, MW::refreshRestoreWindowAction) until the window has moved, and in full screen. Refreshed when a placement settles and when the Window menu opens. Session only, no shortcut.
 
+#### 2.3.10 Resize to Exact Dimensions
+
+Window > Resize to Exact Dimensions... (MW::resizeWindowExactAction, MW::resizeWindowToExact in Main/workspaces.cpp, added 2026-11-26) asks for a width and height and resizes the main window to them, e.g. for screenshots and screen recordings.
+
+- UNITS: the window's CONTENT size (QWidget::size, inside the title bar and frame) in Qt logical pixels. On a scaled display the dialog's note gives the capture size in screen pixels (x devicePixelRatio).
+- The spin boxes are floored at the window's minimum size and capped at what fits the screen's usable area with the frame, so the size asked for is normally the size given. The last values asked for persist (settings ExactWindowWidth / ExactWindowHeight).
+- A maximised window is restored first. The top-left stays put unless the new frame would run off the usable area, where it is moved inside.
+- 250 ms later a popup confirms the size, or says what the window actually is when the window manager or the panels' minimum sizes would not allow it.
+- Disabled with a reason in full screen (refreshRestoreWindowAction, on Window aboutToShow). The resize is an ordinary resize, so Restore Previous Size and Position (2.3.9) undoes it.
+
 ### 2.4 Dock Window State (Versioning)
 
 The QMainWindow dock layout is persisted with saveState() / restoreState() under the QSettings key "WindowState" (MW::settings writes it; MW::showEvent restores it). Both calls pass MW::winnowStateVersion (Main/mainwindow.h, currently 11).
@@ -1754,6 +1766,21 @@ Linux ships as one AppImage per architecture, `Winnow-<label>-x86_64.AppImage` a
 - The display color profile: Linux renders to sRGB.
 - At the root of the Folders panel, Fedora-style `/run/media` is not listed (it is under `/run`, which is hidden).
 - Qt prints "QFont::setPointSizeF: Point size <= 0" a few times at startup: a stylesheet passes a zero font size. Qt ignores it and keeps the inherited size; the source is not yet found.
+
+#### 2.13.6 Audio Device Disconnect Crash (macOS, Qt 6.11)
+
+Two crashes on 2026-11-26 (Winnow 3.0, Qt 6.11.0) had the same main-thread stack: a QFuture continuation in QCoreAudioSinkStream::addDisconnectListener ran stopAudioUnit, which called DeviceDisconnectMonitor::removeDisconnectListener, which segfaulted in objc_retain inside AudioObjectRemovePropertyListenerBlock. The system log showed the default output being reset to the built-in speakers and a Bluetooth link dropping just before.
+
+The cause is in Qt (qtmultimedia/src/multimedia/darwin/qdarwinaudiodevices.mm). addDisconnectListener converts a C++ lambda to an AudioObjectPropertyListenerBlock and keeps it in a std::shared_ptr without retaining it, and the file is not built with -fobjc-arc, so only CoreAudio's reference keeps the block alive. When the device dies CoreAudio drops its listeners, the block is freed, and Qt's removal call retains a dangling pointer. A normal stop does not crash because CoreAudio still holds the block. This is the likely mechanism, read from the source; it has not been confirmed in a debugger.
+
+Any open QAudioSink is exposed, so Winnow holds an audio stream only while sound plays:
+
+- **Pick click.** Qt 6.11's QSoundEffect opens its audio stream as soon as a source is set and holds it until the source is cleared or the effect is destroyed. Winnow used to create MW::pickClick at startup, so a stream ran for the whole session. MW::playPickClick (Main/pick.cpp) now creates the QSoundEffect on demand and deletes it 3 s after the last play (pickClickReleaseTimer). MW::pickClickvolume holds the volume between instances.
+- **Video.** VideoWidget::attachAudioWhilePlaying attaches the QAudioOutput to the QMediaPlayer only in PlayingState and detaches it on pause, stop and end of media. VideoWidget::play attaches it before calling play so playback does not start silent.
+
+This narrows the exposure but does not remove it: a device that disconnects during a click or a playing video can still crash. The fix is in Qt (Block_copy/Block_release the listener block, or compile the file with ARC), reported as [QTBUG-152859](https://bugreports.qt.io/browse/QTBUG-152859). Revisit these workarounds when Qt ships that fix.
+
+To reproduce: play a video or pick an image with the click sound on, then disconnect or switch the Bluetooth output within a few seconds.
 
 ### 2.14 Above/Below Sliders
 
@@ -10447,6 +10474,7 @@ Lightroom's target collection (2026-10-29). One collection is the TARGET; Edit >
 - Chosen from the Collections panel's context menu (Set as Target Collection, checkable; choosing it on the target clears it) or Edit > Set target collection, a submenu of every collection in tree order (a depth-first walk: CollectionStore::nodes lists parents before children but not depth-first, so indenting its order put children under the wrong parent), indented by depth, filled on aboutToShow (MW::fillTargetCollectionMenu). Add to Target Collection is also on the thumbnail context menu (createThumbViewContextMenu).
 - The id lives in CollectionTree (targetId / setTargetId; the row is drawn bold, its glyph magenta, G::targetCollectionColor (a lighter violet was too subtle), with a tooltip) and is persisted by MW in settings "TargetCollection" (MW::setTargetCollection). A deleted target is dropped at the tree's next reload (CollectionTree::targetChanged(0)); one deleted between sessions is not restored.
 - MW::updateTargetCollectionActions: in Folders both items are disabled with the Library-only tooltip. In the Library with no target, Add to Target Collection stays ENABLED and B shows a popup saying there is no target and where to choose one (user decision 2026-10-29: a key that silently does nothing reads as broken). The item's text names the target by its tree path, so what B does can be read from the menu. Refreshed on scope change (updateLibraryOnlyActions), on any collection tree change, and when the target changes.
+- REMOVE SELECTED FROM COLLECTION (2026-11-26): MW::removeFromCollectionAction, in the Edit menu under Set target collection and in the thumbnail context menu beside Add to Target Collection (the two form their own section there, after Rating/Color label and the duplicate items). VISIBLE only while the grid is filtered to a collection (CollectionTree::checkedIds non-empty, Library scope), the same rule as the Collections panel's own "Remove Selected Images from ..." item; hidden otherwise. Text names the collection by tree path when one is checked, "Remove Selected from Checked Collections" for several, where each selected image leaves every checked collection holding it directly (MW::removeSelectionFromShownCollections; one undo step per collection). Visibility is refreshed in updateTargetCollectionActions, which syncCollectionTreeFromFilters now calls after every filter change.
 - THE KEY. B was Toggle Pan to Predicted Focus; it went to the target collection for Lightroom parity and pan-to-focus moved to Shift+Z, beside Z (Zoom To). There is no saved-shortcuts migration to make: nothing writes the "Shortcuts" settings group, so loadShortcuts always applies the defaults.
 
 ### 17.6 Queries and the Query Builder

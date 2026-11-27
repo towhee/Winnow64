@@ -53,6 +53,7 @@ public:
 
 private:
     QAudioOutput *audioOutput = nullptr;
+    void attachAudioWhilePlaying();
 #ifndef Q_OS_WIN
     QVideoFrame currentFrame;
 #endif

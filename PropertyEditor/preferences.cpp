@@ -157,9 +157,9 @@ void Preferences::itemChange(QModelIndex idx)
 
     if (source == "pickAudioVolume") {
         int value = v.toInt();
-        mw->pickClick->setVolume(value * 1.0 / 100);
+        mw->pickClickvolume = value * 1.0 / 100;
+        if (mw->pickClick) mw->pickClick->setVolume(mw->pickClickvolume);
         mw->settings->setValue("pickAudioVolume", value);
-        qDebug() << "Preferences::itemChange pickClick->volume() =" << mw->pickClick->volume();
     }
 
     if (source == "loadOnlyVisibleIcons") {

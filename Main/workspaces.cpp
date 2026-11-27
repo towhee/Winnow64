@@ -3,6 +3,10 @@
 #include "Utilities/titlebar.h"
 #include "Utilities/screenfit.h"
 #include <QDataStream>
+#include <QDialogButtonBox>
+#include <QFormLayout>
+#include <QLabel>
+#include <QSpinBox>
 
 /*  *******************************************************************************************
 
@@ -2175,7 +2179,7 @@ void MW::syncWorkflowWorkspaceMenus()
               ? tr("the %1 layout Winnow ships with").arg(name)
               : tr("your %1 layout").arg(name);
     resetLayoutAction->setToolTip(
-        tr("Put the panels back the way %1 has them: a panel left open, moved, or "
+        tr("Put the panels back the way %1 has them: a panel left open, moved, or \n"
            "stranded on a monitor that is gone.  Nothing is saved or deleted.")
             .arg(inUse));
 
@@ -2770,4 +2774,110 @@ void MW::refreshRestoreWindowAction()
              "Choose it again to go back.")
         : tr("Unavailable: %1.").arg(why));
     restorePreviousWindowAction->setEnabled(why.isEmpty());
+
+    if (resizeWindowExactAction) {
+        const QString fullWhy = isFullScreen() ? tr("not available in full screen")
+                                               : QString();
+        resizeWindowExactAction->setProperty("disabledReason", fullWhy);
+        resizeWindowExactAction->setToolTip(fullWhy.isEmpty()
+            ? tr("Set the window's width and height in pixels, e.g. for a screenshot.")
+            : tr("Unavailable: %1.").arg(fullWhy));
+        resizeWindowExactAction->setEnabled(fullWhy.isEmpty());
+    }
+}
+
+void MW::resizeWindowToExact()
+{
+/*
+    Window > Resize to Exact Dimensions. The size is the window's CONTENT (QWidget::size,
+    the area inside the title bar and frame) in Qt's logical pixels, the units Qt and
+    the OS window manager use. On a scaled display (Retina, Windows 150%) a capture is
+    that times the scale factor, so the dialog says what it will be in screen pixels.
+    The spin boxes are capped at what fits in the screen's usable area with the frame,
+    and floored at the window's minimum size, so the size asked for is the size given.
+    A maximised window is restored first (a maximised window cannot be resized). The
+    top-left stays put unless the new size would run off the screen.
+*/
+    if (G::isLogger) G::log("MW::resizeWindowToExact");
+    if (isFullScreen()) return;
+
+    QScreen *scr = screen();
+    const QRect avail = scr ? scr->availableGeometry() : QRect(0, 0, 4096, 4096);
+    const QSize frame = frameGeometry().size() - size();
+    const QSize maxSize(avail.width() - frame.width(), avail.height() - frame.height());
+    const QSize minSize = minimumSizeHint().expandedTo(minimumSize());
+    const qreal dpr = scr ? scr->devicePixelRatio() : 1.0;
+
+    QDialog dlg(this);
+    dlg.setWindowTitle(tr("Resize to Exact Dimensions"));
+    QFormLayout *form = new QFormLayout(&dlg);
+    auto makeSpin = [&](int lo, int hi, int value) {
+        QSpinBox *s = new QSpinBox(&dlg);
+        s->setRange(lo, hi);
+        s->setValue(qBound(lo, value, hi));
+        s->setSuffix(tr(" px"));
+        s->setAccelerated(true);
+        return s;
+    };
+    const int savedW = settings->value("ExactWindowWidth", width()).toInt();
+    const int savedH = settings->value("ExactWindowHeight", height()).toInt();
+    QSpinBox *wSpin = makeSpin(minSize.width(), maxSize.width(), savedW);
+    QSpinBox *hSpin = makeSpin(minSize.height(), maxSize.height(), savedH);
+    form->addRow(tr("Width:"), wSpin);
+    form->addRow(tr("Height:"), hSpin);
+
+    QLabel *note = new QLabel(&dlg);
+    note->setWordWrap(true);
+    auto updateNote = [=] {
+        QString t = tr("The window's content, inside the title bar. Current: %1 x %2. "
+                       "Largest that fits this screen: %3 x %4.")
+                        .arg(width()).arg(height())
+                        .arg(maxSize.width()).arg(maxSize.height());
+        if (!qFuzzyCompare(dpr, 1.0))
+            t += tr(" This display is scaled %1x, so a screenshot will be %2 x %3 "
+                    "screen pixels.")
+                     .arg(dpr).arg(qRound(wSpin->value() * dpr))
+                     .arg(qRound(hSpin->value() * dpr));
+        note->setText(t);
+    };
+    updateNote();
+    connect(wSpin, &QSpinBox::valueChanged, &dlg, updateNote);
+    connect(hSpin, &QSpinBox::valueChanged, &dlg, updateNote);
+    form->addRow(note);
+
+    QDialogButtonBox *buttons =
+        new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel, &dlg);
+    connect(buttons, &QDialogButtonBox::accepted, &dlg, &QDialog::accept);
+    connect(buttons, &QDialogButtonBox::rejected, &dlg, &QDialog::reject);
+    form->addRow(buttons);
+    dlg.setMinimumWidth(360);
+    if (dlg.exec() != QDialog::Accepted) return;
+
+    const QSize want(wSpin->value(), hSpin->value());
+    settings->setValue("ExactWindowWidth", want.width());
+    settings->setValue("ExactWindowHeight", want.height());
+
+    if (isMaximized()) showNormal();
+    resize(want);
+    /*  Keep the top-left unless that runs the frame off the usable area. */
+    QRect f(frameGeometry().topLeft(), want + frame);
+    if (f.right() > avail.right()) f.moveRight(avail.right());
+    if (f.bottom() > avail.bottom()) f.moveBottom(avail.bottom());
+    if (f.left() < avail.left()) f.moveLeft(avail.left());
+    if (f.top() < avail.top()) f.moveTop(avail.top());
+    if (f.topLeft() != frameGeometry().topLeft()) move(f.topLeft());
+
+    /*  The window manager has the last word (a minimum size a dock imposes after the
+        layout settles, a tiling WM); say so rather than claim a size not given. */
+    QTimer::singleShot(250, this, [this, want] {
+        if (!G::popup) return;
+        if (size() == want)
+            G::popup->showPopup(tr("Window resized to %1 x %2.")
+                                    .arg(want.width()).arg(want.height()), 1500);
+        else
+            G::popup->showPopup(tr("Asked for %1 x %2; the window is %3 x %4 (its "
+                                   "panels or the window manager need that much).")
+                                    .arg(want.width()).arg(want.height())
+                                    .arg(width()).arg(height()), 4000);
+    });
 }

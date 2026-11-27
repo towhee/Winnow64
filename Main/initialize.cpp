@@ -102,12 +102,6 @@ void MW::initialize()
     slideShowStatusLabel->setToolTip("Slideshow is active");
     slideCount = 0;
 
-    QString path = ":/Sounds/ingest.wav";
-    // pickClick = new QSoundEffect();
-    pickClick->setSource(QUrl::fromLocalFile(path));
-    pickClick->setLoopCount(10);
-    pickClick->setVolume(pickClickvolume);   // default value overridden in loadSettings
-
     prevCentralView = 0;
     slideshowRandomHistoryStack = new QStack<QString>;
     scrollRow = 0;

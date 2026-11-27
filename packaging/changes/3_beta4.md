@@ -1,12 +1,17 @@
+- Add support for Linux platform.
 - Add blur effect.
 - Add lens blur.
 - Add pattern effects.
 - Add clear picks.
+- Add target collection.
 - Develop presets and Copy/Paste Settings can carry Auto tone and Auto white balance, solved per image.
-- Add Auto to develop basic adjustments.
+- Add Auto tone to develop basic adjustments.
 - User adjust app text brightness.
-- Fix corrupted thumbnail rotation.
-- Fix incorrect WB for some files, including CR3.
-- Add support for Linux platform.
+- Fix corrupted thumbnail rotation from several older image editors.
+- WB for some files, including CR3, was being read incorrectly.
 - Tweak keyword edge cases.
 - Prevent Filters 'blanking' during refresh.
+- Export camera previews.
+- Prevent Winnow extending under the Windows task bar.
+- Assign default develop preset that runs on undeveloped raw images.
+- Show the cropped dimensions in the metadata panel

@@ -1094,6 +1094,8 @@ public slots:
     void noteWindowPlacement();
     void restorePreviousWindowPlacement();
     void refreshRestoreWindowAction();
+    /*  Window > Resize to Exact Dimensions...: asks for a width and height. */
+    void resizeWindowToExact();
     bool writeWorkflowDefaultsJson(QString &path, QString &err) const;
     void requestView(int view);
     void invokeBrowseWorkflow();
@@ -2277,6 +2279,8 @@ private:
     QActionGroup *zoomGroupAction;
     QAction *panFocusToggleAction;
     QAction *addToTargetCollectionAction = nullptr;
+    /* Edit menu and thumbnail context menu: see removeSelectionFromShownCollections. */
+    QAction *removeFromCollectionAction = nullptr;
     /* Library duplicates: okay (or un-okay) the selected ones. See mwduplicates.cpp. */
     QAction *duplicateOkAction = nullptr;
     /* A duplicate and its twins, as a filter (showDuplicateTwins). */
@@ -2330,6 +2334,7 @@ private:
     WindowPlacement previousWindowPlacement;
     QTimer *windowSettleTimer = nullptr;
     QAction *restorePreviousWindowAction = nullptr;
+    QAction *resizeWindowExactAction = nullptr;
     QAction *showLibrarySourceAction = nullptr;     // Source = Library
     QAction *showFoldersSourceAction = nullptr;     // Source = Folders
 
@@ -2957,6 +2962,9 @@ private:
     void addPathsToCollection(qint64 id, const QStringList &paths);
     void addSelectionToCollection(qint64 id);
     void removeSelectionFromCollection(qint64 id);
+    /*  Edit > Remove Selected from Collection: the selection out of every collection
+        checked in the Collections panel, i.e. the ones the grid is showing. */
+    void removeSelectionFromShownCollections();
     /*  OPEN THE VERSION GROUPS A NEWLY CHOSEN COLLECTION HOLDS, so a collection shows
         every member -- a version is one in its own right -- rather than a master with
         a "1 >" badge. Called by filterChange; acts only when the collections filtered
@@ -3564,8 +3572,15 @@ private:
 
     QStandardItemModel *imageModel;
 
-    QSoundEffect *pickClick = new QSoundEffect();
+    /* Pick/reject click.  Created on demand by playPickClick() and released a few
+       seconds after the last play.  Qt 6.11 keeps a QSoundEffect's audio stream
+       running for as long as a source is set, and on macOS a running stream crashes
+       when its output device disconnects (Bluetooth headphones, device switch).
+       See 2.13.6 in notes/Documentation.md. */
+    QSoundEffect *pickClick = nullptr;
+    QTimer *pickClickReleaseTimer = nullptr;
     float pickClickvolume = 0.25;
+    void playPickClick();
 
     QHash<QString, bool> stopped;
     bool allIdle() const;

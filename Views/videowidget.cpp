@@ -16,7 +16,7 @@ VideoWidget::VideoWidget(QWidget *parent) : QVideoWidget(parent)
     if (G::isLogger || isDebug) G::log("VideoWidget::VideoWidget");
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
-    mediaPlayer->setAudioOutput(audioOutput);
+    attachAudioWhilePlaying();
     mediaPlayer->setVideoOutput(this);
     if (QWidget *child = findChild<QWidget *>()) {
         child->installEventFilter(this);
@@ -87,7 +87,7 @@ VideoWidget::VideoWidget(QWidget *parent) : QWidget{parent}
 
     mediaPlayer = new QMediaPlayer(this);
     audioOutput = new QAudioOutput(this);
-    mediaPlayer->setAudioOutput(audioOutput);
+    attachAudioWhilePlaying();
 
     // Manually create the sink to capture frames
     QVideoSink *sink = new QVideoSink(this);
@@ -164,7 +164,34 @@ VideoWidget::PlayState VideoWidget::playOrPause()
 //  Shared
 //=============================================================================
 
-void VideoWidget::play() { mediaPlayer->play(); }
+void VideoWidget::attachAudioWhilePlaying()
+{
+/*
+    The QAudioOutput is attached to the player only while it plays.  An attached
+    output holds an open audio stream even when paused or stopped, and on macOS (Qt
+    6.11) an open stream crashes when its output device disconnects (Bluetooth
+    headphones, device switch) in QCoreAudioSinkStream::removeDisconnectListener.
+    Detaching on pause/stop/end limits the exposure to actual playback.  This covers
+    every route into PlayingState, including the Windows setPosition() replay.
+*/
+    connect(mediaPlayer, &QMediaPlayer::playbackStateChanged, this,
+            [this](QMediaPlayer::PlaybackState state) {
+        if (state == QMediaPlayer::PlayingState) {
+            if (mediaPlayer->audioOutput() != audioOutput)
+                mediaPlayer->setAudioOutput(audioOutput);
+        }
+        else if (mediaPlayer->audioOutput()) {
+            mediaPlayer->setAudioOutput(nullptr);
+        }
+    });
+}
+
+void VideoWidget::play()
+{
+    // attach before play() so the first frames are not silent
+    if (mediaPlayer->audioOutput() != audioOutput) mediaPlayer->setAudioOutput(audioOutput);
+    mediaPlayer->play();
+}
 void VideoWidget::pause() { mediaPlayer->pause(); }
 void VideoWidget::stop() { mediaPlayer->stop(); }
 

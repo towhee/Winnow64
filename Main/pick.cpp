@@ -364,14 +364,7 @@ void MW::togglePickMouseOverItem(QModelIndex idx)
     thumbView->refreshIcons("MW::togglePickMouseOverItem");
     gridView->refreshIcons("MW::togglePickMouseOverItem");
 
-    if (settings->value("playPickAudio").toBool()) {
-        qDebug() << "MW::togglePickMouseOverItem pickClick"
-                 << pickClick->source() << pickClick->status()
-                 << "volume =" << pickClick->volume()
-                 << "loopCount =" << pickClick->loopCount()
-            ;
-        pickClick->play();
-    }
+    if (settings->value("playPickAudio").toBool()) playPickClick();
 
     pickMemSize = Utilities::formatMemory(memoryReqdForPicks());
     updatePickDependentActions();
@@ -426,15 +419,7 @@ void MW::togglePick()
     }
     foundFalse ? pickStatus = "Picked" : pickStatus = "Unpicked";
 
-    if (settings->value("playPickAudio").toBool()) {
-        /*
-        qDebug() << "MW::togglePick pickClick"
-                 << pickClick->source() << pickClick->status()
-                 << "volume =" << pickClick->volume()
-                 << "loopCount =" << pickClick->loopCount()
-            ; //*/
-        pickClick->play();
-    }
+    if (settings->value("playPickAudio").toBool()) playPickClick();
 
     // set pick status for selection, recording each change for Edit > Undo
     PathValues before, after;
@@ -512,14 +497,7 @@ void MW::toggleReject()
     }
     foundFalse ? pickStatus = "Rejected" : pickStatus = "Unpicked";
 
-    if (settings->value("playPickAudio").toBool()) {
-        qDebug() << "MW::toggleReject pickClick"
-                 << pickClick->source() << pickClick->status()
-                 << "volume =" << pickClick->volume()
-                 << "loopCount =" << pickClick->loopCount()
-            ;
-        pickClick->play();
-    }
+    if (settings->value("playPickAudio").toBool()) playPickClick();
 
     /*  set pick status for selection, recording each change for Edit > Undo. By KEY,
         captured before any write: setValSf re-filters the proxy as it goes, so a proxy
@@ -654,3 +632,37 @@ qulonglong MW::memoryReqdForSelection()
     return memTot;
 }
 
+
+void MW::playPickClick()
+{
+/*
+    Plays the pick/reject click.  The QSoundEffect is created here, not at startup,
+    and deleted 3 s after the last play (pickClickReleaseTimer).  Qt 6.11 holds an open
+    audio stream for the life of a QSoundEffect with a source set, and on macOS that
+    stream crashes (QCoreAudioSinkStream::removeDisconnectListener, freed listener
+    block) when its output device disconnects.  Holding the stream only around a
+    click narrows that window from the whole session to a few seconds.
+*/
+    if (!pickClickReleaseTimer) {
+        pickClickReleaseTimer = new QTimer(this);
+        pickClickReleaseTimer->setSingleShot(true);
+        pickClickReleaseTimer->setInterval(3000);
+        connect(pickClickReleaseTimer, &QTimer::timeout, this, [this]() {
+            if (!pickClick) return;
+            if (pickClick->isPlaying()) {
+                pickClickReleaseTimer->start();
+                return;
+            }
+            pickClick->deleteLater();
+            pickClick = nullptr;
+        });
+    }
+    if (!pickClick) {
+        pickClick = new QSoundEffect(this);
+        pickClick->setSource(QUrl::fromLocalFile(":/Sounds/ingest.wav"));
+        pickClick->setLoopCount(10);
+    }
+    pickClick->setVolume(pickClickvolume);
+    pickClick->play();      // plays once loaded if the sample is still loading
+    pickClickReleaseTimer->start();
+}

@@ -549,6 +549,7 @@ void MW::syncCollectionTreeFromFilters()
         tree->syncFromFilter(ids);
         syncSetCancel(k);
     }
+    updateTargetCollectionActions();    // Remove shows only while a collection is checked
 }
 
 void MW::syncSetCancel(Kind kind)
@@ -879,6 +880,37 @@ void MW::removeSelectionFromCollection(qint64 id)
                             2000);
 }
 
+void MW::removeSelectionFromShownCollections()
+{
+/*
+    The menu twin of the Collections panel's "Remove Selected Images from ...": the same
+    rule (only while filtering by a collection, so "the selected images" are some of its
+    images), but it needs no right-click on the collection. With several collections
+    checked, each selected image leaves every one of them that holds it directly. One
+    undo step per collection (CollectionStore::removeMembers records each).
+*/
+    if (G::isLogger) G::log("MW::removeSelectionFromShownCollections");
+    if (G::scope != G::Scope::Catalog || !collectionTree) return;
+    const QVector<qint64> ids = collectionTree->checkedIds();
+    if (ids.isEmpty()) return;
+    if (ids.size() == 1) {
+        removeSelectionFromCollection(ids.first());
+        return;
+    }
+    const QStringList paths = selectedKeys(dm);
+    if (paths.isEmpty()) {
+        if (G::popup) G::popup->showPopup(tr("Select the thumbnails to remove first."),
+                                          2000);
+        return;
+    }
+    CollectionStore &store = CollectionStore::instance();
+    int removed = 0;
+    for (qint64 id : ids) removed += store.removeMembers(id, paths);
+    if (G::popup)
+        G::popup->showPopup(tr("Removed %n image(s) from the checked collections.", "",
+                               removed), 2000);
+}
+
 static QString noTargetCollectionText()
 {
     return QObject::tr("There is no target collection. Choose one from Edit > Set target "
@@ -963,6 +995,20 @@ void MW::updateTargetCollectionActions()
         addToTargetCollectionAction->setToolTip(
             tr("Add the selected images to \"%1\", or take them out if they are all in "
                "it already.").arg(name));
+
+    /*  REMOVE: shown only while the grid is filtered to a collection (one checked in
+        the Collections panel), as the panel's own Remove item is enabled only then.
+        Named after the collection when there is one. */
+    if (removeFromCollectionAction) {
+        const QVector<qint64> shown = library && collectionTree
+            ? collectionTree->checkedIds() : QVector<qint64>();
+        removeFromCollectionAction->setVisible(!shown.isEmpty());
+        removeFromCollectionAction->setText(shown.size() == 1
+            ? tr("Remove Selected from \"%1\"").arg(collectionTree->pathOf(shown.first()))
+            : tr("Remove Selected from Checked Collections"));
+        removeFromCollectionAction->setToolTip(
+            tr("The images stay in the Library; only the collection changes."));
+    }
 }
 
 void MW::toggleSelectionInTargetCollection()

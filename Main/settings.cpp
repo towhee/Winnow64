@@ -614,7 +614,6 @@ bool MW::loadSettings()
 
     if (settings->contains("pickAudioVolume")) {
         pickClickvolume = settings->value("pickAudioVolume").toFloat() / 100;
-        pickClick->setVolume(pickClickvolume);
     }
 
     lastFileIfCrash = settings->value("lastFileSelection").toString();

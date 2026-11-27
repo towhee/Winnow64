@@ -711,6 +711,15 @@ void MW::createEditActions()
     connect(addToTargetCollectionAction, &QAction::triggered,
             this, &MW::toggleSelectionInTargetCollection);
 
+    /* The selection out of the collection(s) the grid is filtered to. Shown only while
+       a collection is checked in the Collections panel (updateTargetCollectionActions). */
+    removeFromCollectionAction = new QAction(tr("Remove Selected from Collection"), this);
+    removeFromCollectionAction->setObjectName("removeFromCollection");
+    removeFromCollectionAction->setVisible(false);
+    addAction(removeFromCollectionAction);
+    connect(removeFromCollectionAction, &QAction::triggered,
+            this, &MW::removeSelectionFromShownCollections);
+
     /* Library duplicates: "these are meant to be here". Checked, enabled and its reason
        from updateDuplicateOkAction; see Main/mwduplicates.cpp. */
     duplicateOkAction = new QAction(tr("Duplicate Okay"), this);
@@ -1895,8 +1904,8 @@ void MW::createViewActions()
     resetLayoutAction->setShortcutVisibleInContextMenu(true);
     /* Names the layout once the Workspace menu is shown (syncWorkflowWorkspaceMenus). */
     resetLayoutAction->setToolTip(
-        tr("Put the panels back the way the current layout has them.  Nothing is "
-           "saved or deleted."));
+        tr("Put the panels back the way the current layout has them.  \n"
+           "Nothing is saved or deleted."));
     addAction(resetLayoutAction);
     connect(resetLayoutAction, &QAction::triggered, this, &MW::resetLayout);
 
@@ -1909,8 +1918,8 @@ void MW::createViewActions()
     syncBrowseDevelopAction->setChecked(
         !isSettings || settings->value("syncBrowseDevelopWidths", true).toBool());
     syncBrowseDevelopAction->setToolTip(
-        tr("Give Browse and Develop the same left and right panel widths (the wider of "
-           "the two layouts) and the same film strip (the taller), so the image keeps its "
+        tr("Give Browse and Develop the same left and right panel widths (the wider of \n"
+           "the two layouts) and the same film strip (the taller), so the image keeps its \n"
            "size and place when you switch between them."));
     connect(syncBrowseDevelopAction, &QAction::toggled, this, [this](bool on) {
         settings->setValue("syncBrowseDevelopWidths", on);
@@ -2045,6 +2054,13 @@ void MW::createWindowActions()
     addAction(restorePreviousWindowAction);
     connect(restorePreviousWindowAction, &QAction::triggered,
             this, &MW::restorePreviousWindowPlacement);
+    /*  An exact window size, for screenshots and screen recordings. MW::resizeWindowToExact
+        asks for it; greyed with the reason in full screen (refreshRestoreWindowAction). */
+    resizeWindowExactAction = new QAction(tr("Resize to Exact Dimensions..."), this);
+    resizeWindowExactAction->setObjectName("resizeWindowExact");
+    addAction(resizeWindowExactAction);
+    connect(resizeWindowExactAction, &QAction::triggered,
+            this, &MW::resizeWindowToExact);
     windowSettleTimer = new QTimer(this);
     windowSettleTimer->setSingleShot(true);
     windowSettleTimer->setInterval(500);
@@ -2920,6 +2936,7 @@ void MW::createEditMenu()
     targetCollectionMenu = editMenu->addMenu(tr("Set target collection"));
     targetCollectionMenu->setToolTipsVisible(true);
     connect(targetCollectionMenu, &QMenu::aboutToShow, this, &MW::fillTargetCollectionMenu);
+    editMenu->addAction(removeFromCollectionAction);
     editMenu->addSeparator();
     editMenu->addAction(duplicateOkAction);
     editMenu->addAction(showDuplicateTwinsAction);
@@ -3322,6 +3339,7 @@ void MW::createWindowMenu()
     syncWorkflowWorkspaceMenus();
 
     windowMenu->addAction(restorePreviousWindowAction);
+    windowMenu->addAction(resizeWindowExactAction);
     connect(windowMenu, &QMenu::aboutToShow, this, &MW::refreshRestoreWindowAction);
 
     windowMenu->addSeparator();
@@ -3624,6 +3642,8 @@ void MW::createThumbViewContextMenu()
     separatorAction0->setSeparator(true);
     QAction *separatorActionA = new QAction(this);
     separatorActionA->setSeparator(true);
+    QAction *separatorCollections = new QAction(this);
+    separatorCollections->setSeparator(true);
 
     QAction *openWithGroupAct = new QAction(tr("Open with..."), this);
     openWithGroupAct->setMenu(openWithMenu);
@@ -3644,11 +3664,16 @@ void MW::createThumbViewContextMenu()
     thumbViewActions->append(separatorAction);
     thumbViewActions->append(ratingGroupAct);
     thumbViewActions->append(labelGroupAct);
-    /* Lightroom's B. Disabled with the reason in Folders (updateTargetCollectionActions). */
-    thumbViewActions->append(addToTargetCollectionAction);
     /* Shown only when a selected image is a Library duplicate (updateDuplicateOkAction). */
     thumbViewActions->append(duplicateOkContextAction);
     thumbViewActions->append(showDuplicateTwinsContextAction);
+
+    /* COLLECTIONS, a section of their own. Lightroom's B is disabled with the reason in
+       Folders; Remove shows only while a collection is checked
+       (updateTargetCollectionActions). */
+    thumbViewActions->append(separatorCollections);
+    thumbViewActions->append(addToTargetCollectionAction);
+    thumbViewActions->append(removeFromCollectionAction);
 
     thumbViewActions->append(separatorAction1);
     thumbViewActions->append(revealFileAction);
