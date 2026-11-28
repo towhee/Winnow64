@@ -886,6 +886,12 @@ const Entry *findEntry(const QString &model)
 
 } // namespace
 
+const char *cameraMatrixKey(const QString &model)
+{
+    const Entry *best = findEntry(model);
+    return best ? best->model : nullptr;
+}
+
 bool xyzToCamForModel(const QString &model, float m[3][3])
 {
     const Entry *best = findEntry(model);

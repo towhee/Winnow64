@@ -11,6 +11,7 @@
 #include "Develop/inputtransform.h"
 #include "Develop/outputtransform.h"
 #include "Develop/workingimagecache.h"
+#include "Main/devpreviewpolicy.h"
 #include <memory>
 
 #ifdef Q_OS_MAC
@@ -19,6 +20,8 @@ bool macImageIOImage(const QString &fPath, QImage &out);
 // Defined in Image/thumb_mac.mm — largest embedded preview only (no raw render).
 bool macImageIOEmbeddedPreview(const QString &fPath, QImage &out);
 #endif
+
+ImageDecoder::HarvestHook ImageDecoder::harvestHook;
 
 /*
    This class decouples the asyncronous image reading (in CacheImage) from the synchronous
@@ -264,6 +267,8 @@ void ImageDecoder::decode(int row, int instance, QString key)
         if (!loadedFromDevPreview) {
             if (metadata->rotateFormats.contains(ext) && !abort.loadAcquire()) rotate();
             if (!abort.loadAcquire()) applyDevelop();
+            /* Oriented, still in the file's own space: what a harvest keeps. */
+            if (!abort.loadAcquire()) offerHarvest(t.elapsed());
         }
         if (!abort.loadAcquire()) colorManage();     // always on (2026-10-26)
         if (loadedFromDevPreview && !image.isNull()) tagDevPreviewDisplaySize();
@@ -338,14 +343,21 @@ bool ImageDecoder::loadDevPreview()
     The pixels arrive already EXIF-rotated, cropped and developed (developCompositeStack
     applies all three), in sRGB, so the caller must not rotate or develop them again --
     loadedFromDevPreview says so.
+
+    A HARVESTED preview ('S' key, MW::harvestDevPreview) is the exception to two of those
+    rules. It is the file's OWN picture, kept because the file is slow to decode, so it
+    is served whatever Show Edits says (Original and Developed are the same picture), and
+    it is in Display P3, not sRGB -- colorManage reads that from the JPEG's profile.
 */
     if (isIndependent) return false;
     if (modeDevelop) return false;
-    if (!previewDeveloped) return false;
+    if (!previewDeveloped && !DevPreviewPolicy::sourceRenderFormat(ext)) return false;
 
     const QString key = devPreviewKeyFor(dmVal(G::DevPreviewKeyColumn).toString(),
                                          rowKey, fPath, ext);
     if (key.isEmpty()) return false;
+    const bool harvested = key.startsWith('S');
+    if (!previewDeveloped && !harvested) return false;
 
     /* By row KEY, the default render included: an unedited version's default render is
        its own entry, not the source's. The cache holds ONE entry per path, so once the
@@ -357,8 +369,15 @@ bool ImageDecoder::loadDevPreview()
 
     if (!image.loadFromData(jpg, "JPG") || image.isNull()) return false;
 
+    /* A harvest is written in Display P3 with the profile embedded; should the profile
+       ever not survive the JPEG round trip, the key still says what the space is. */
+    if (harvested && !image.colorSpace().isValid())
+        image.setColorSpace(QColorSpace(QColorSpace::DisplayP3));
+
     loadedFromDevPreview = true;
-    developApplied = true;                    // the recipe is already in these pixels
+    /* The recipe is already in these pixels -- for a developed preview. A harvest has
+       no recipe: it is the original picture (G::CacheOriginal for the badge). */
+    developApplied = !harvested;
     decoderToUse = DevPreview;
     status = Status::Success;
     return true;
@@ -393,6 +412,10 @@ QString ImageDecoder::devPreviewKeyFor(const QString &baseKey, const QString &ro
            serving pixels built under the old setting.
 
            Any other format has none: its file already IS the default render. */
+        /* A slow non-raw may have a HARVESTED preview (MW::harvestDevPreview): its own
+           pixels, kept so the next visit is a JPEG decode. */
+        if (DevPreviewPolicy::sourceRenderFormat(ext))
+            return Metadata::sourceRenderKey(fPath);
         if (!RawFormat::HasSensorDecoder(ext)) return QString();
         return Metadata::defaultRenderKey(fPath);
     }
@@ -1240,6 +1263,11 @@ void ImageDecoder::colorManage()
     if (abort.loadAcquire()) return;
     if (image.isNull()) return;
 
+    /* A devPreview says what space it is in: none or sRGB for a developed one, Display
+       P3 for a harvest (loadDevPreview). Read before the format conversion below. */
+    const QColorSpace previewSpace = loadedFromDevPreview ? image.colorSpace()
+                                                          : QColorSpace();
+
     // ICC::transform assumes TYPE_BGRA_8 (4 bytes/pixel). Convert if needed so
     // lcms2's packer does not walk past a narrower buffer (crash site).
     if (image.format() != QImage::Format_ARGB32 &&
@@ -1260,9 +1288,44 @@ void ImageDecoder::colorManage()
        again as though it were still AdobeRGB. Note the RAW path that falls back to the
        EMBEDDED PREVIEW deliberately does not set the flag: that image really is in the
        file's own space and does need the profile. */
+    /* A HARVESTED devPreview is the one route where neither rule above holds: it is the
+       file's picture (developApplied false) but no longer in the file's space -- it was
+       converted to Display P3 when it was harvested. Its own profile is the source. */
     QByteArray iccBuf;
-    if (!developApplied) iccBuf = sourceIcc();
+    if (loadedFromDevPreview) {
+        if (previewSpace.isValid() && previewSpace != QColorSpace(QColorSpace::SRgb))
+            iccBuf = previewSpace.iccProfile();
+    }
+    else if (!developApplied) iccBuf = sourceIcc();
     ICC::transform(iccBuf, image);
+    // display-referred now; a P3 tag left on them would claim otherwise
+    if (loadedFromDevPreview && iccBuf.size()) image.setColorSpace(QColorSpace());
+}
+
+void ImageDecoder::offerHarvest(qint64 ms)
+{
+/*
+    Offer this decode to the devPreview HARVEST (MW::harvestDevPreview) when it is an
+    unedited, slow non-raw: a 16-bit LZW TIFF measured over a second. The ImageCache's
+    read-ahead decodes the neighbors nearest the current image anyway, so keeping the
+    result costs a color conversion and a JPEG encode on a background thread -- never
+    a second decode. The pixels handed over are oriented and still in the file's space.
+
+    Cheap tests only, on this decoder thread: the measured time, the format, and two
+    model reads. MW makes the rest of the decision on the GUI thread (the folder's
+    catalog scope, the cache's fill, whether a harvest is already pending).
+
+    The QImage is implicitly shared: colorManage() detaches this decoder's copy when it
+    converts, so the pixels are copied once, and MW holds at most two at a time.
+*/
+    if (!harvestHook || !G::autoDevPreviews) return;
+    if (isIndependent || modeDevelop || loadedFromDevPreview || developApplied) return;
+    if (image.isNull() || !DevPreviewPolicy::sourceRenderFormat(ext)) return;
+    if (VersionKey::isVersion(rowKey)) return;
+    if (dmVal(G::DevelopColumn).toBool()) return;       // edited: a recipe preview
+    if (!dmVal(G::DevPreviewKeyColumn).toString().isEmpty()) return;
+    if (!DevPreviewPolicy::slowDecode(ms, image.width(), image.height())) return;
+    harvestHook(rowKey, image, sourceIcc(), ms);
 }
 
 QByteArray ImageDecoder::sourceIcc() const

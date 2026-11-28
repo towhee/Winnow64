@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Develop/greycard.h"
 #include "Main/thumbsizecontrol.h"
 #ifdef Q_OS_LINUX
 #include "Utilities/linux.h"
@@ -1758,6 +1759,12 @@ void MW::createStatusBar()
     statusBar()->addWidget(rawJpgStatusBtn);
     slideShowStatusLabel->setPixmap(QPixmap(":/images/icon16/slideshow.png"));
     statusBar()->addWidget(slideShowStatusLabel);
+    /* Greycard trials badge (Develop/greycard.h): says which side of the A/B is on
+       screen, so a screenshot records it. Hidden unless isRory has trials on. */
+    greycardStatusLabel = new QLabel;
+    greycardStatusLabel->setObjectName("greycardStatusLabel");
+    statusBar()->addWidget(greycardStatusLabel);
+    updateGreycardBadge();
 
     setThreadRunStatusInactive();
 
@@ -2744,6 +2751,10 @@ void MW::createDevelopDock()
         }, Qt::QueuedConnection);
     });
 
+    /* autoDevPreviews: timers, the harvest pool and ImageDecoder's harvest hook, which
+       must be in place before the first decoder runs. */
+    initAutoDevPreviews();
+
     /* A Develop preset's Auto settings, for images whose base is not in memory: decode
        and solve off the GUI thread, one image at a time (DevelopProperties queues). */
     developProperties->setAutoSolver(
@@ -3054,6 +3065,12 @@ void MW::createDevelopDock()
     G::autoRemoveCA = settings->value("Develop/autoRemoveCA", G::autoRemoveCA).toBool();
     G::autoLensProfile =
         settings->value("Develop/autoLensProfile", G::autoLensProfile).toBool();
+    /* Greycard trials (Develop/greycard.h). Read for everyone, but active() also needs
+       G::isRory, so a stored "on" can never reach another user's renders. */
+    G::greycard.enabled = settings->value("Greycard/enabled", false).toBool();
+    G::greycard.standardColor = static_cast<G::Greycard::StandardColor>(
+        qBound(0, settings->value("Greycard/standardColor",
+                                  int(G::greycard.standardColor)).toInt(), 2));
     /* The remembered "Denoise raw" amounts.  Factory settings (see MW::loadSettings) for
        a NEW user, written at once: an existing user without the key keeps the legacy
        EditParams::kDefaultDenoise* amounts instead, because every image they never
@@ -4289,6 +4306,12 @@ void MW::setOperationMode(G::OperationMode mode)
     /* A Browse loupe compare ("\") is put back before either mode change: Develop
        paints its own render, and leaving Develop reloads the cached picture. */
     endBrowseCompare();
+
+    /* autoDevPreviews: Develop needs the builder's one render thread for the image being
+       edited, so an auto render in flight gives way now; back in Browse a pass starts
+       after the usual pause (the gate reads G::operationMode then, not now). */
+    if (mode == G::OperationMode::Develop) interruptAutoDevPreviews("entering Develop");
+    else autoDevPreviewNudge("leaving Develop");
 
     /* LEAVING DEVELOP CANCELS THE ACTIVE TOOL. A tool armed in Develop (spot brush, WB
        dropper, Detail picker, mask tool, Curves sampler, Transform) changes the loupe

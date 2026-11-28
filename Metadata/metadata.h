@@ -213,6 +213,10 @@ public:
     /* devPreview key for a raw with no recipe (the default render); hashes the renderer,
        not the recipe, plus fPath's decoder revision. See the .cpp. */
     static QString defaultRenderKey(const QString &fPath);
+    /* devPreview key for an unedited NON-raw whose preview was harvested from a slow
+       loupe decode (DevPreviewPolicy::sourceRenderFormat): 'S'-prefixed, so disjoint
+       from the recipe and default-render key spaces. See the .cpp. */
+    static QString sourceRenderKey(const QString &fPath);
 
 
     QFile file;

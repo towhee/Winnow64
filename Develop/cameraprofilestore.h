@@ -102,6 +102,11 @@ public:
     /* An image whose DEFAULT profile is its embedded one. */
     static bool defaultsToEmbedded(const CameraColor &cam);
 
+    /* Winnow Standard as a synthesised ColorMatrix-only profile, for the greycard trial
+       C1/C2 (Develop/greycard.h). nullptr while the trial is off -- the built-in path --
+       and for a camera with no matrix. What resolve() returns for Winnow Standard. */
+    static std::shared_ptr<const Dcp::Profile> winnowStandard(const CameraColor &cam);
+
     /* The folders swept, in order. Public so the preferences page and a diagnostic can
        show the user where profiles are looked for. */
     static QStringList roots();

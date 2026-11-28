@@ -1,4 +1,5 @@
 #include "Main/mainwindow.h"
+#include "Develop/greycard.h"
 #include "Main/thumbsizecontrol.h"
 
 /*
@@ -262,6 +263,7 @@ void MW::updateStatusBar()
     // subfolderStatusLabel->setVisible(dm->subFolderImagesLoaded);
 
     slideShowStatusLabel->setVisible(G::isSlideShow);
+    updateGreycardBadge();
 
     /* The metadata and image cache running lights report background caching, which is a
        Preview mode activity (read-ahead over the folder).  Develop works on the single
@@ -286,6 +288,8 @@ int MW::availableSpaceForProgressBar()
     if (filterStatusLabel->isVisible()) w += s + filterStatusLabel->width();
     if (subfolderStatusLabel->isVisible()) w += s + subfolderStatusLabel->width();
     if (slideShowStatusLabel->isVisible()) w += s + slideShowStatusLabel->width();
+    if (greycardStatusLabel && greycardStatusLabel->isVisible())
+        w += s + greycardStatusLabel->width();
     if (statusLabel->isVisible()) w += s + statusLabel->width();
     if (metadataThreadRunningLabel->isVisible()) w += s + metadataThreadRunningLabel->width();
     if (imageThreadRunningLabel->isVisible()) w += s + imageThreadRunningLabel->width();

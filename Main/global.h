@@ -737,6 +737,12 @@ Q_NAMESPACE
        image that has no current devPreview. OFF by default: building one means decoding
        and rendering the image, which is exactly the work the byproduct rule avoids. */
     extern bool buildDevPreviewsInBackground;
+    /* autoDevPreviews (Main/autodevpreviews.cpp): build devPreviews for the THUMBNAILS ON
+       SCREEN, nearest the current image first, whenever the user pauses, and harvest
+       slow non-raw decodes. ON by default: the scope is what is on screen, it waits for
+       the read-ahead, and it gives way to any input. Read on decoder threads
+       (ImageDecoder::offerHarvest) as a plain flag, like the other preferences. */
+    extern bool autoDevPreviews;
     /* Run mode for the heavy PMRID raw denoise (the Develop dock's "Auto run" checkbox).
        true: run automatically on select / entering Develop / a denoise-param settle.
        false: only when "Denoise" is ticked by hand. Persisted to QSettings

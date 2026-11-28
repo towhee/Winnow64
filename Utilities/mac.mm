@@ -228,6 +228,13 @@ int Mac::memoryPressureLevel() {
     return 0;                                                // NORMAL
 }
 
+/* The system's thermal state (NSProcessInfoThermalState): 0 nominal, 1 fair, 2 serious,
+   3 critical. autoDevPreviews pauses from serious: the machine is already throttling,
+   and speculative renders would only make the user's own work slower. */
+int Mac::thermalState() {
+    return int([[NSProcessInfo processInfo] thermalState]);
+}
+
 // 4) Async pressure notifications (call once during app init)
 void Mac::startMemoryPressureMonitor(void (^handler)(int level)) {
     dispatch_source_t src = dispatch_source_create(DISPATCH_SOURCE_TYPE_MEMORYPRESSURE, 0,

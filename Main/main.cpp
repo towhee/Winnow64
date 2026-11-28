@@ -17,6 +17,9 @@
 #include "Develop/develop.h"
 #include "Develop/inputtransform.h"
 #include "Develop/workingdump.h"
+#include "Develop/greycard.h"
+#include "Develop/whitebalance.h"
+#include "Develop/workingimagecache.h"
 #include "ImageFormats/Raw/rawformat.h"
 #include "ImageFormats/Raw/rawcolor.h"
 #include "Metadata/metadata.h"
@@ -127,7 +130,8 @@ static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list 
 }
 
 /*
-    Winnow --dumpworking <image> <out.wkg> [engine=apple]
+    Winnow --dumpworking <image> <out.wkg> [engine=apple] [temp=<K>] [tint=<t>]
+                         [greycard=1] [gc.<trial>=<value> ...]
 
     HEADLESS CALIBRATION DUMP: decode one raw's sensor image with the in-house decoder
     (the same decodeRawWorking path the export's denoise base uses; engine=apple takes
@@ -139,13 +143,48 @@ static void winnowTiffErrorHandler(const char *module, const char *fmt, va_list 
     the calibration loop without the UI: dump once per raw, render any recipe, compare
     against Lightroom. A JPEG / HEIC / TIFF is dumped as the display-referred image
     Develop builds from it. Returns 0 on success.
+
+    THE INPUT STAGE IS DECIDED HERE, not in developrender: the dump is written after the
+    camera matrix and the white balance, and carries no camera characterisation, so
+    developrender cannot change either. Hence two kinds of option on this command:
+
+      temp=<K> tint=<t>  the white balance, as the Basic panel's Temp/Tint (temp 0 = as
+                         shot). Applied as the app applies it: inside the matrix under a
+                         camera profile, else as working-space gains after it
+                         (Develop::buildPointCoeffs). Raws only.
+      greycard=1 gc.sc=off|camwb|dual
+                         the greycard input-stage trials (Develop/greycard.h,
+                         G::parseToolArg), so C1/C2 can be scored headless: dump the
+                         same raw with gc.sc=off and gc.sc=dual, render both with the
+                         same developrender recipe, compare.
 */
-static int runDumpWorking(int argc, char *argv[], const QString &raw, const QString &out,
-                          bool appleEngine)
+static int runDumpWorking(int argc, char *argv[], const QString &raw, const QString &out)
 {
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app(argc, argv);
     G::isAutomatedRun = true;
+
+    bool appleEngine = false;
+    float temp = 0.0f, tint = 0.0f;
+    for (int i = 4; i < argc; ++i) {
+        const QString kv = QString::fromLocal8Bit(argv[i]);
+        const QString k = kv.section('=', 0, 0), v = kv.section('=', 1);
+        QString err;
+        bool inputStage = false;
+        const int gc = G::parseToolArg(G::greycard, k, v, err, inputStage);
+        if (gc < 0) {
+            std::fprintf(stderr, "dumpworking: %s\n", qPrintable(err));
+            return 2;
+        }
+        if (gc > 0) continue;
+        if (kv == "engine=apple") { appleEngine = true; continue; }
+        bool ok = false;
+        if (k == "temp") { temp = v.toFloat(&ok); if (ok) continue; }
+        if (k == "tint") { tint = v.toFloat(&ok); if (ok) continue; }
+        std::fprintf(stderr, "dumpworking: unknown or malformed option %s\n",
+                     qPrintable(kv));
+        return 2;
+    }
     /* The engine is a Develop-dock setting, not a launch default; calibration wants the
        in-house decoder (full sensor area, the pipeline Winnow owns) unless told otherwise. */
     G::decodeRawEngine = appleEngine ? G::DecodeRawEngine::appleDecodeRawEngine
@@ -200,7 +239,29 @@ static int runDumpWorking(int argc, char *argv[], const QString &raw, const QStr
     }
 
     WorkingImage w = *work;
-    Develop::ToWorkingSpace(w, &identity);
+    /* The white balance rides in the params; nothing else in them is read here. */
+    EditParams wb;
+    wb.temp = temp;
+    wb.tint = tint;
+    /* A greycard input trial attaches its profile exactly as a render does (only while a
+       trial is active, so a plain dump stays what it always was -- no profile attached,
+       not even a ProRAW's default one). ToWorkingSpace then puts the white balance
+       inside the matrix. */
+    if (G::greycard.active()) WorkingImageCache::AttachProfile(w, wb);
+    Develop::ToWorkingSpace(w, &wb);
+    /* No profile: the matrix used the as-shot balance, and the app applies a Temp/Tint
+       move as working-space gains relative to it (buildPointCoeffs). Same here. */
+    if ((temp > 0.0f || tint != 0.0f) && w.cam.valid && !w.cam.profile) {
+        float k = 0.0f, t = 0.0f;
+        WhiteBalance::resolve(w.cam, temp, tint, k, t);
+        float g[3] = {1.0f, 1.0f, 1.0f};
+        WhiteBalance::relativeGains(w.cam, k, t, g);
+        for (size_t i = 0; i + 2 < w.rgb.size(); i += 3) {
+            w.rgb[i] *= g[0];
+            w.rgb[i + 1] *= g[1];
+            w.rgb[i + 2] *= g[2];
+        }
+    }
     /* The loupe's rotation, as developOrientationDegrees reads it from the model. */
     const int degrees = m.orientation == 3 ? 180 : m.orientation == 6 ? 90
                       : m.orientation == 8 ? 270 : 0;
@@ -208,8 +269,13 @@ static int runDumpWorking(int argc, char *argv[], const QString &raw, const QStr
         std::fprintf(stderr, "dumpworking: cannot write %s\n", qPrintable(out));
         return 1;
     }
-    std::fprintf(stdout, "dumpworking: %s -> %s (%dx%d, %d deg)\n", qPrintable(raw),
-                 qPrintable(out), w.width, w.height, degrees);
+    std::fprintf(stdout, "dumpworking: %s -> %s (%dx%d, %d deg%s)\n", qPrintable(raw),
+                 qPrintable(out), w.width, w.height, degrees,
+                 G::greycard.active()
+                     ? qPrintable(QString(", greycard sc=%1, profile %2")
+                                      .arg(int(G::greycard.standardColor))
+                                      .arg(w.cam.profile ? "attached" : "none"))
+                     : "");
     return 0;
 }
 
@@ -273,8 +339,7 @@ int main(int argc, char *argv[])
 
     if (argc >= 4 && QString::fromLocal8Bit(argv[1]) == "--dumpworking")
         return runDumpWorking(argc, argv, QString::fromLocal8Bit(argv[2]),
-                              QString::fromLocal8Bit(argv[3]),
-                              argc >= 5 && QString::fromLocal8Bit(argv[4]) == "engine=apple");
+                              QString::fromLocal8Bit(argv[3]));
     if (argc >= 3 && QString::fromLocal8Bit(argv[1]) == "--dumpwb")
         return runDumpWb(argc, argv);
 

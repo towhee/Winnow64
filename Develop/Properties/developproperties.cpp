@@ -7,6 +7,7 @@
 #include "Develop/cameraprofilestore.h"
 #include "ImageFormats/Dng/dng.h"
 #include "Develop/cameraprofile.h"
+#include "Develop/greycard.h"
 #include "Cache/devpreviewcache.h"
 #include "Develop/editrotate.h"
 #include "Develop/Properties/scopeheader.h"
@@ -5287,6 +5288,7 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
        ENDS in the working space, so an unconverted sample would be solved against the
        wrong space and hand back the wrong temperature. Converting the AVERAGE rather than
        each of the 25 samples is exact -- the transform is linear. No-op for non-raw. */
+    const float camR = sr, camG = sg, camB = sb;    // camera-native, for the trial below
     toWorkingColor(*work, sr, sg, sb);
 
     float k = 0.0f, t = 0.0f;
@@ -5317,6 +5319,33 @@ void DevelopProperties::onWbSampled(double nx, double ny, bool skin)
             G::popup->showPopup("Cannot set white balance from that spot -- it is black "
                                 "or clipped. Pick a lighter neutral area.", 2000);
         return;
+    }
+
+    /*
+        GREYCARD TRIAL C2 (Develop/greycard.h): solve the neutral against the PROFILE the
+        render uses, not against the built-in D65 chain solve() runs. Under any camera
+        profile -- a DCP, or the trial's synthesised Winnow Standard -- the white balance
+        lives in the profile's matrix, so the answer that makes the picked pixel render
+        neutral is the profile's own NeutralToXY of that pixel's camera value. That is
+        exactly CameraProfile::resolveAsShot with the sample as the "as-shot" neutral.
+        solve() above still runs first: it is what rejects a black or clipped sample.
+    */
+    if (!skin && G::greycard.active() &&
+        work->space == ColorSpaceMath::ColorSpace::CameraNative &&
+        camR > 0.0f && camG > 0.0f && camB > 0.0f) {
+        const EditStack es = stackCache.value(currentImagePath);
+        const QString name = es.scopes.isEmpty() ? QString()
+                                                 : es.scopes[0].params.cameraProfile;
+        if (const auto prof = CameraProfileStore::instance().resolve(work->cam, name)) {
+            CameraColor c = work->cam;
+            c.asShotMul[0] = camG / camR;
+            c.asShotMul[1] = 1.0f;
+            c.asShotMul[2] = camG / camB;
+            if (CameraProfile::resolveAsShot(*prof, c)) {
+                k = c.asShotK;
+                t = c.asShotTint;
+            }
+        }
     }
 
     EditParams &p = activeParams();
@@ -11657,6 +11686,9 @@ bool DevelopProperties::renderMatchesStoredRecipe() const
     image looks like". So does Point Color's Visualize Range, which greys most of it.
 */
     if (previewActive) return false;
+    /* The greycard hold-to-compare's A side (MW::setGreycardHold) is a view, not this
+       image's render with trials on. */
+    if (G::Greycard::holdA.load()) return false;
     if (pointColorVisualize) return false;
     if (!spotsShown) return false;
     if (currentImagePath.isEmpty()) return false;

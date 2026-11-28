@@ -34,6 +34,7 @@ public:
     static uint64_t processFootprintMB();
     static uint64_t aggressiveAvailMB();
     static int memoryPressureLevel();
+    static int thermalState();      // 0 nominal, 1 fair, 2 serious, 3 critical
     static void startMemoryPressureMonitor(void (^handler)(int level));
 
     static void joinAllSpaces(WId wId);

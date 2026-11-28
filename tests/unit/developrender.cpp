@@ -25,6 +25,11 @@
              so key=value overrides of them are ignored; any other key still applies.
     long=<px> shrink the OUTPUT to this long edge (the render itself is full size, so
              it is exact, only smaller). For tone comparisons that need no 300 MB TIFF.
+    greycard=1 gc.<trial>=<value>
+             the greycard trials (Develop/greycard.h, G::parseToolArg) that act at the
+             develop or output stage, so each can be scored on a dump. An INPUT-stage
+             trial (gc.sc, C1/C2) is refused: the dump was written after that stage, so
+             give it to Winnow --dumpworking instead and render the two dumps here.
 
     The output is a 16-bit sRGB TIFF, rotated by the dump's orientation so it lines up
     with an export of the same raw. An out path of "-" skips the render (autotone only).
@@ -42,6 +47,7 @@
 #include "Develop/develop.h"
 #include "Develop/editparams.h"
 #include "Develop/editstack.h"
+#include "Develop/greycard.h"
 #include "Develop/outputtransform.h"
 #include "Develop/workingdump.h"
 #include "Develop/workingimage.h"
@@ -52,7 +58,7 @@ int main(int argc, char *argv[])
     if (argc < 3) {
         std::fprintf(stderr, "usage: developrender <in.wkg> <out.tif> "
                              "[recipe=<file.json>] [autotone] [long=<px>] "
-                             "[key=value ...]\n");
+                             "[greycard=1 gc.<trial>=<v> ...] [key=value ...]\n");
         return 2;
     }
 
@@ -72,6 +78,21 @@ int main(int argc, char *argv[])
         const QString kv = QString::fromLocal8Bit(argv[i]);
         const QString k = kv.section('=', 0, 0), v = kv.section('=', 1);
         if (k == "autotone") { autoTone = true; continue; }
+        {
+            QString err;
+            bool inputStage = false;
+            const int gc = G::parseToolArg(G::greycard, k, v, err, inputStage);
+            if (gc > 0 && inputStage) {
+                err = QString("%1 is an input-stage trial (camera matrix / white "
+                              "balance), which a .wkg dump has already passed; give it "
+                              "to Winnow --dumpworking").arg(k);
+            }
+            if (gc < 0 || (gc > 0 && inputStage)) {
+                std::fprintf(stderr, "developrender: %s\n", qPrintable(err));
+                return 2;
+            }
+            if (gc > 0) continue;
+        }
         if (k == "long")     { longEdge = v.toInt(); continue; }
         if (k == "recipe") {
             QFile rf(v);

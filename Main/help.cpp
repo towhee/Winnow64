@@ -43,3 +43,15 @@ void MW::helpPictures()
                    ":/Docs/pictureshelp.html",
                    QSize(600, 620), r, window());
 }
+
+void MW::helpCaching()
+{
+/*
+    How Winnow caches thumbnails, images in memory and developed previews, which images
+    get a preview made in the background, and what the cache limits mean. Help menu.
+*/
+    if (G::isLogger) G::log("MW::helpCaching");
+    QRect r = QRect(mapToGlobal(QPoint(0, 0)), size());
+    new HtmlWindow("Winnow - Caching", ":/Docs/cachinghelp.html",
+                   QSize(640, 700), r, window());
+}

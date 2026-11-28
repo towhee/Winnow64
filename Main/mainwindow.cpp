@@ -1,6 +1,8 @@
 ﻿#include "Main/mainwindow.h"
+#include "Develop/greycard.h"
 #include "Main/thumbsizecontrol.h"
 #include "Utilities/waitcursor.h"
+#include "Utilities/backgroundpriority.h"
 #include "Datamodel/savedpicks.h"
 #include "Datamodel/duplicateok.h"
 #include "Cache/duplicates.h"
@@ -2525,6 +2527,40 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
         }
     }
 
+    /* GREYCARD HOLD-TO-COMPARE (MW::setGreycardHold): ` held in Develop shows the
+       shipping render. Only for isRory with trials on, so ` stays Toggle Pick for
+       everyone else (P still picks here). Ahead of the Develop arbiter, which would
+       otherwise pass ` on to pickAction. Press and the override need Develop, no dialog
+       and no text field; a RELEASE always ends a hold, wherever the focus went. */
+    if (!G::isInitializing
+        && (event->type() == QEvent::ShortcutOverride || event->type() == QEvent::KeyPress
+            || event->type() == QEvent::KeyRelease)) {
+        QKeyEvent *e = static_cast<QKeyEvent *>(event);
+        if (e->key() == Qt::Key_QuoteLeft
+            && (e->modifiers() & ~Qt::KeypadModifier) == Qt::NoModifier) {
+            if (event->type() == QEvent::KeyRelease) {
+                if (G::Greycard::holdA.load() && !e->isAutoRepeat()) {
+                    setGreycardHold(false);
+                    return true;
+                }
+            }
+            else if (G::greycard.trialsOn()
+                     && G::operationMode == G::OperationMode::Develop) {
+                QWidget *fw = QApplication::focusWidget();
+                QWidget *win = fw ? fw->window() : nullptr;
+                const bool inDialog = win && win != this && qobject_cast<QDialog *>(win);
+                if (!inDialog && !isTextEntryWidget(fw)) {
+                    if (event->type() == QEvent::ShortcutOverride) {
+                        event->accept();
+                        return true;
+                    }
+                    if (!e->isAutoRepeat()) setGreycardHold(true);
+                    return true;
+                }
+            }
+        }
+    }
+
     /* DEVELOP MODE LOCAL SHORTCUTS
        The ShortcutOverride pass runs before Qt's shortcut system, so a Develop key beats
        the global action bound to it; the KeyPress pass does the work (and swallows the
@@ -2706,6 +2742,8 @@ bool MW::eventFilter(QObject *obj, QEvent *event)
        release delivered to another app would otherwise leave the override stuck on. */
     if (event->type() == QEvent::ApplicationDeactivate && imageView)
         imageView->setSpacePanOverride(false);
+    /* Same for the greycard hold-to-compare key. */
+    if (event->type() == QEvent::ApplicationDeactivate) setGreycardHold(false);
 
     /* A modifier released while another app had the focus never reaches us, which would
        leave the overlay previewing Subtract for ever; re-read it on the way back in. */
@@ -6690,6 +6728,10 @@ void MW::fileSelectionChange(QModelIndex current, QModelIndex previous, bool cle
         return;
     }
 
+    /* autoDevPreviews gives way at once: queued work for the old position is dropped,
+       the render in flight cancelled, and the pause starts again. */
+    autoDevPreviewNudge("selection");
+
     /*  The ingest probe's record of this selection opens here -- after the two guards
         that mean "there is no selection", and before the first thing that costs
         anything, so the whole keypress is inside it. Closed by ~SelectPhaseProbe. */
@@ -7317,6 +7359,7 @@ void MW::stop(QString src)
     cancelDevPreviewBuild();
     devPreviewBuildDeferred.clear();
     devPreviewReducedPending.clear();
+    interruptAutoDevPreviews("stop");
 
     // initialize stopped state for MetaRead, ImageCache, BuildFilters
     stopped.clear();
@@ -9126,6 +9169,8 @@ void MW::metadataComplete(QString src)
        image, which is the work the byproduct rule exists to avoid. Queued here, after the
        load, for the same reason as the sweep above. */
     queueBackgroundDevPreviewBuild();
+    // the thumbnails now on screen, once the user pauses
+    autoDevPreviewNudge("load complete");
 
     // req'd when rememberLastDir == true and loading folder at startup
     fsTree->scrollToCurrent();
@@ -9402,6 +9447,7 @@ void MW::thumbHasScrolled()
     icons within the cache range.
 */
     QString fun = "MW::thumbHasScrolled";
+    autoDevPreviewNudge("scroll");      // what is on screen is changing
     if (G::isLogger || G::isFlowLogger)
         G::log(fun,
                "G::ignoreScrollSignal = " + QVariant(G::ignoreScrollSignal).toString()
@@ -9465,6 +9511,7 @@ void MW::gridHasScrolled()
     icons within the cache range.
 */
     QString fun = "MW::gridHasScrolled";
+    autoDevPreviewNudge("scroll");      // what is on screen is changing
     if (G::isLogger || G::isFlowLogger)
         G::log(fun, "isVisible = " +
                QVariant(gridView->isVisible()).toString());
@@ -9513,6 +9560,7 @@ void MW::tableHasScrolled()
 */
     if (G::isLogger || G::isFlowLogger)
         G::log("MW::tableHasScrolled");
+    autoDevPreviewNudge("scroll");      // what is on screen is changing
     if (G::isInitializing) return;
 
     if (G::ignoreScrollSignal == false) {
@@ -15502,6 +15550,72 @@ void MW::invalidateDevelopAfterRotation(const QString &fPath)
        paint the old recipe on the new frame for one pass. */
 }
 
+void MW::invalidateDevelopRenderer()
+{
+/*
+    Something that changes HOW every recipe renders changed while no recipe did -- today a
+    greycard trial switch in Preferences (Develop/greycard.h). The persistent caches need
+    nothing: devPreview and sidecar-thumbnail keys fold the trial state
+    (Metadata::renderKey), so they simply miss. What does need clearing is Develop's own
+    in-memory state, which is keyed on the recipe and would otherwise be served as-is:
+    the stack intermediates (the developed base IS the prefix entry) and the frames the
+    sharpening preview and devPreview encode derive from. Then re-render.
+*/
+    if (G::isLogger) G::log("MW::invalidateDevelopRenderer");
+    developStackCache.clear();
+    developFrame = QImage();
+    developFramePath.clear();
+    developFrameFaithful = false;
+    developFrameRecipe.clear();
+    developFullFrame = QImage();
+    developFullFramePath.clear();
+    developFullFrameFaithful = false;
+    developFullFrameRecipe.clear();
+    ++developParamsGen;                 // discard any in-flight render of the old state
+    if (developProperties) emit developProperties->paramsChanged();
+}
+
+void MW::setGreycardHold(bool hold)
+{
+/*
+    GREYCARD HOLD-TO-COMPARE. Holding ` in Develop shows every greycard trial as A -- the
+    shipping behavior -- and releasing shows B again, on the same frame and zoom.
+
+    It flips G::Greycard::holdA, which makes G::Greycard::active() false, and re-renders
+    through invalidateDevelopRenderer: the same path a Preferences toggle takes, so
+    there is no second preview path to drift. Held long enough, the full-resolution
+    settle lands too, so the comparison is crisp at 1:1.
+
+    The A frame is kept out of the devPreview cache (DevelopProperties::
+    renderMatchesStoredRecipe), as Before/After's Before is: it is not what the image
+    looks like with trials on. Released by the key, or by the application losing focus
+    (a release delivered to another app would leave A stuck on).
+*/
+    if (G::Greycard::holdA.load() == hold) return;
+    if (hold && !G::greycard.trialsOn()) return;
+    if (G::isLogger) G::log("MW::setGreycardHold", hold ? "A" : "B");
+    G::Greycard::holdA.store(hold);
+    updateGreycardBadge();
+    invalidateDevelopRenderer();
+    if (G::popup)
+        G::popup->showPopup(hold ? "greycard A  (shipping)" : "greycard B  (trials)", 500,
+                            true, 0.75, Qt::AlignHCenter, Qt::AlignBottom | Qt::AlignRight);
+}
+
+void MW::updateGreycardBadge()
+{
+    if (!greycardStatusLabel) return;
+    const bool on = G::greycard.trialsOn();
+    greycardStatusLabel->setVisible(on);
+    if (!on) return;
+    const bool a = G::Greycard::holdA.load();
+    greycardStatusLabel->setText(a ? "greycard A" : "greycard B");
+    greycardStatusLabel->setToolTip(
+        a ? "Showing A: the shipping render, while ` is held."
+          : "Greycard trials are on (Preferences > Greycard trials). Hold ` in Develop "
+            "to compare with the shipping render.");
+}
+
 int MW::developOrientationDegrees(const WorkingImage &work, const QString &fPath) const
 {
 /*
@@ -17293,7 +17407,9 @@ void MW::toggleBrowseCompare()
     const QString ext = dm->sf->index(row, G::TypeColumn).data().toString().toLower();
     const QString key = ImageDecoder::devPreviewKeyFor(baseKey, fPath,
                                                        VersionKey::sourceOf(fPath), ext);
-    const bool hasDev = !key.isEmpty()
+    /* A HARVESTED preview ('S') is the file's own picture, not a developed one: there is
+       nothing to compare it with. */
+    const bool hasDev = !key.isEmpty() && !key.startsWith('S')
                         && DevPreviewCache::instance().contains(fPath, key.toLatin1(),
                                                                 /*acceptReduced*/true);
     const bool showingDev = hasDev && G::previewSource == G::PreviewSource::Developed;
@@ -17747,7 +17863,7 @@ bool MW::developWantsSensor(const ImageMetadata &m, bool requireSensor) const
 bool MW::developBaseFor(const QString &fPath, ImageMetadata &m,
                         const RawRender::Choice &render, bool sensorRaw,
                         bool requireSensor, std::shared_ptr<const WorkingImage> &work,
-                        bool &decodedHere)
+                        bool &decodedHere, const std::atomic<bool> *cancel)
 {
 /*
     The pre-develop WorkingImage a full render of fPath starts from: the cached one when
@@ -17776,13 +17892,24 @@ bool MW::developBaseFor(const QString &fPath, ImageMetadata &m,
         if (qMax(work->width, work->height) * 2 < sensorEdge) work.reset();
     }
     if (!work) {
+        auto cancelled = [cancel] { return cancel && cancel->load(); };
+        if (cancelled()) return false;
         ImageDecoder dec(0, dm, metadata);
         dec.forceSensorDecode = sensorRaw;
         /* An identity recipe still renders from a WorkingImage here, and it has to be
            built from the file's pixels: img below has been through colorManage(). */
         dec.buildWork = true;
         QImage img;
-        dec.decodeIndependent(img, metadata, m, nullptr, &render);
+        /* AN autoDevPreviews STEP CAN BE CANCELLED MID-DECODE. The demosaic reports
+           each tile through this callback; a cancel turns it into the decoder's own
+           abort, which RawFormat::Decode honours at the next tile. The decode is the
+           long pole (seconds on a 60 MP raw), so this is where a cancel saves the
+           most. Other formats decode in one call and are checked after it. */
+        std::function<void(int, int)> prog;
+        if (cancel)
+            prog = [&dec, cancelled](int, int) { if (cancelled()) dec.abortProcessing(); };
+        dec.decodeIndependent(img, metadata, m, prog, &render);
+        if (cancelled()) return false;
         work = WorkingImageCache::instance().get(fPath, render.tag());
         decodedHere = true;
         /* The sensor decode failed and decodeIndependent fell back to the embedded
@@ -17932,7 +18059,8 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                             OutputTransform::Space space,
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap, int degreesSnap,
-                            bool requireSensor, int maxEdge, bool reportTime)
+                            bool requireSensor, int maxEdge, bool reportTime,
+                            std::shared_ptr<std::atomic<bool>> cancel)
 {
 /*
     Render one image's FULL develop recipe for the exporter.
@@ -18033,10 +18161,13 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                              [this, fPath, m, mj, depth, space, outSpace, wantDenoise,
                               pmridCached, degreesSnap, sensorRaw, requireSensor,
                               lensShot, render, maxEdge, done, times,
-                              reportTime]() mutable {
+                              reportTime, cancel]() mutable {
+        /* An autoDevPreviews step (cancel set) runs below the user's own work. */
+        BackgroundPriority lowered(cancel != nullptr);
         std::shared_ptr<const WorkingImage> work;
         bool decodedHere = false;
-        if (!developBaseFor(fPath, m, render, sensorRaw, requireSensor, work, decodedHere)) {
+        if (!developBaseFor(fPath, m, render, sensorRaw, requireSensor, work, decodedHere,
+                            cancel.get())) {
             QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
             return;
         }
@@ -18088,12 +18219,20 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
         }
 
         times->denoise = times->t.restart();
+        /* Cancelled (an auto step the user moved past): skip the masks and the
+           composite. The base stays cached, so the next pass starts from it. */
+        if (cancel && cancel->load()) {
+            QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
+            return;
+        }
 
         /* Step 2 (GUI thread): orientation + the mask prerequisites, which must not run
            concurrently with the live session's use of the same path-keyed caches. */
         QMetaObject::invokeMethod(this, [this, fPath, work, src, mj, depth, space, outSpace,
                                          decodedHere, degreesSnap, lensShot, maxEdge,
-                                         done, times, reportTime, wantDenoise]() {
+                                         done, times, reportTime, wantDenoise,
+                                         cancel]() {
+            if (cancel && cancel->load()) { done(false, QImage()); return; }
             times->t.restart();          // the hop's queue wait is not the masks' cost
             const int degrees = !work->sceneReferred ? 0
                               : degreesSnap >= 0     ? degreesSnap
@@ -18138,7 +18277,12 @@ void MW::developPixelSource(const QString &fPath, bool want16Bit,
                                                 "MW::developPixelSource", fPath,
                                      [this, fPath, work, src, mj, degrees, depth, space,
                                       outSpace, decodedHere, lensShot, maxEdge,
-                                      done, times, reportTime, wantDenoise]() {
+                                      done, times, reportTime, wantDenoise, cancel]() {
+                if (cancel && cancel->load()) {
+                    QMetaObject::invokeMethod(this, [done]() { done(false, QImage()); });
+                    return;
+                }
+                BackgroundPriority lowered(cancel != nullptr);
                 times->t.restart();
                 std::shared_ptr<const WorkingImage> lensSrc =
                     lensCorrectedSource(fPath, src, mj.global, src.get(), lensShot);

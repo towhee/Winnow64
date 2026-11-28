@@ -7,6 +7,7 @@
 #include <QDebug>
 #include "Cache/devpreviewcache.h"
 #include "Develop/rawrender.h"
+#include "Develop/greycard.h"
 #ifdef Q_OS_MAC
 #include "ImageFormats/Raw/applerawdecode.h"
 #endif
@@ -275,6 +276,14 @@ void Preferences::itemChange(QModelIndex idx)
                                G::buildDevPreviewsInBackground);
     }
 
+    if (source == "autoDevPreviews") {
+        G::autoDevPreviews = v.toBool();
+        mw->settings->setValue("autoDevPreviews", G::autoDevPreviews);
+        // off: stop at once; on: start after the usual pause
+        if (G::autoDevPreviews) mw->autoDevPreviewNudge("preference");
+        else mw->interruptAutoDevPreviews("preference off");
+    }
+
     if (source == "autoRemoveCA") {
         G::autoRemoveCA = v.toBool();
         mw->settings->setValue("Develop/autoRemoveCA", G::autoRemoveCA);
@@ -306,6 +315,25 @@ void Preferences::itemChange(QModelIndex idx)
             }
             break;
         }
+    }
+
+    /* Greycard trials (Develop/greycard.h; isRory only). Nothing in a recipe changes, so
+       Develop's in-memory frames are dropped and re-rendered; persisted previews fold
+       the trial state into their keys and miss by themselves. */
+    if (source == "greycardEnabled" || source == "greycardStandardColor") {
+        if (source == "greycardEnabled") {
+            G::greycard.enabled = v.toBool();
+            mw->settings->setValue("Greycard/enabled", G::greycard.enabled);
+        }
+        else {
+            const int sc = greycardStandardColorLabels().indexOf(v.toString());
+            if (sc >= 0) {
+                G::greycard.standardColor = static_cast<G::Greycard::StandardColor>(sc);
+                mw->settings->setValue("Greycard/standardColor", sc);
+            }
+        }
+        mw->updateGreycardBadge();
+        mw->invalidateDevelopRenderer();
     }
 
     if (source == "autoLensProfile") {
@@ -665,7 +693,66 @@ void Preferences::addItems()
     addFullScreen();
     addMetadataPanel();
     addTableView();
+    if (G::isRory) addGreycard();
     if (G::isRory) addUtilities();
+}
+
+QStringList Preferences::greycardStandardColorLabels()
+{
+    /* In G::Greycard::StandardColor order: the index IS the enum value. */
+    return {"Off (shipping)", "Camera-space WB, D65 matrix", "Dual illuminant, StdA + D65"};
+}
+
+void Preferences::addGreycard()
+{
+/*
+    GREYCARD TRIALS -- isRory only, pre-release. Every change ported or derived from
+    greycard sits behind these until it is adopted or dropped (Develop/greycard.h,
+    notes/GreycardPlan.md). Toggle to A/B on the same frame.
+*/
+    i.name = "GreycardHeader";
+    i.parentName = "???";
+    i.isHeader = true;
+    i.isDecoration = true;
+    i.decorateGradient = true;
+    i.captionText = "Greycard trials";
+    i.tooltip = "Experimental changes from the greycard review, for A/B comparison. "
+                "Pre-release; shown only in the Rory build.";
+    i.hasValue = false;
+    i.captionIsEditable = false;
+    i.delegateType = DT_None;
+    addItem(i);
+
+    i.name = "greycardEnabled";
+    i.parentName = "GreycardHeader";
+    i.captionText = "Enable greycard trials";
+    i.tooltip = "Master switch. Off renders exactly as the shipping build, whatever "
+                "the trials below are set to.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::greycard.enabled;
+    i.key = "greycardEnabled";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
+    i.name = "greycardStandardColor";
+    i.parentName = "GreycardHeader";
+    i.captionText = "Winnow Standard color (C1, C2)";
+    i.tooltip = "How a raw with no camera profile selected is converted to color. "
+                "Off: one D65 matrix with white balance as working-space gains. "
+                "Camera-space WB: the white balance moves inside the matrix, as a "
+                "DNG profile does. Dual illuminant: also blends a tungsten (StdA) "
+                "matrix with the D65 one by temperature. The WB dropper solves "
+                "against the profile in use while trials are on.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = greycardStandardColorLabels().value(int(G::greycard.standardColor));
+    i.key = "greycardStandardColor";
+    i.delegateType = DT_Combo;
+    i.type = "QString";
+    i.dropList = greycardStandardColorLabels();
+    addItem(i);
 }
 
 QWidget *Preferences::addSlider(ItemInfo &i)
@@ -1660,14 +1747,32 @@ void Preferences::addDevPreviews()
     i.fixedWidth = 50;
     addItem(i);
 
+    // autoDevPreviews: the thumbnails on screen, nearest first, while the user pauses
+    i.name = "autoDevPreviews";
+    i.parentName = "DevPreviewHeader";
+    i.captionText = "Build previews for thumbnails on screen";
+    i.tooltip = "While you pause, make fast previews for the thumbnails on screen, "
+                "nearest the current image first: edited images, raw files whose "
+                "built-in preview is too small for the screen, and files that are slow "
+                "to open (a large 16-bit TIFF). Stops the moment you move on or the "
+                "computer is busy. See Help > About Caching.";
+    i.hasValue = true;
+    i.captionIsEditable = false;
+    i.value = G::autoDevPreviews;
+    i.key = "autoDevPreviews";
+    i.delegateType = DT_Checkbox;
+    i.type = "bool";
+    addItem(i);
+
     // Build devPreviews in the background
     i.name = "buildDevPreviewsInBackground";
     i.parentName = "DevPreviewHeader";
     i.captionText = "Build developed previews in background";
-    i.tooltip = "Make a developed preview for every raw file and edited image\n"
-                "in the background, so they open as fast as JPEGs.\n\n"
-                "In the Library this covers the whole Library and can take\n"
-                "many hours. Camera cards are never included.";
+    i.tooltip = "Make a developed preview in the background for every edited image in "
+                "the folder, and for every raw file whose built-in preview is too small "
+                "for the screen, so they open as fast as JPEGs. In the Library this "
+                "covers the whole Library and can take many hours. Camera cards are "
+                "never included. See Help > About Caching.";
     i.hasValue = true;
     i.captionIsEditable = false;
     i.value = G::buildDevPreviewsInBackground;

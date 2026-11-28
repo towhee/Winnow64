@@ -1175,7 +1175,9 @@ bool Develop::Apply(WorkingImage &img, const EditParams &p, StageTimings *t)
     if (p.isIdentity()) {                                // see the note below
         /* A profile attached under an identity recipe can only be a file's DEFAULT one
            (isIdentity() requires an empty name; CameraProfileStore::resolve gives an
-           iPhone ProRAW its embedded profile). Its matrix is in the pixels already
+           iPhone ProRAW its embedded profile, and with the greycard trial C1/C2 on, any
+           raw its synthesised Winnow Standard -- matrix only, no look). Its matrix is in
+           the pixels already
            (ToWorkingSpace); its look must still reach the output stage, or the file's
            curve would appear only once something was edited. No profile: no look. */
         img.look.reset();

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<link rel="stylesheet" href="help.css">
+</head>
+<body>
+
+<h1>Caching: Thumbnails and Previews</h1>
+
+<p>Winnow keeps copies of your pictures so that browsing stays fast. None of them
+changes your image files or your edits, and every one can be rebuilt.</p>
+
+<h2>What Winnow keeps</h2>
+
+<p><b>Thumbnails.</b> The small pictures in the grid and the film strip. Winnow reads
+them from each file (most cameras embed one) and keeps a copy in its thumbnail cache,
+so a folder opens at once the second time you visit it. Its limit is
+Preferences &gt; Caching &gt; Thumbnail cache size.</p>
+
+<p><b>Developed thumbnails.</b> When you edit an image, a small thumbnail of the edited
+picture is saved in the image's sidecar (its .xmp file), beside your edits. The grid
+then shows your edits wherever the file goes.</p>
+
+<p><b>The image cache.</b> Full-size pictures held in memory for the images around the
+one you are looking at, read ahead in the direction you are moving. This is what makes
+the next image appear at once. It is emptied when you leave the folder. Its size is
+Preferences &gt; Caching &gt; Image cache size.</p>
+
+<p><b>Developed previews.</b> Full-size pictures saved on your computer, in Winnow's
+own folder rather than beside your files. When an image has one, Winnow shows it
+instead of opening the file, which is much faster for raw files and large TIFFs. Its
+limit is Preferences &gt; Caching &gt; Developed preview cache size.</p>
+
+<p>Develop also keeps the image you are editing in memory at full precision while you
+work on it. That is not something you need to manage.</p>
+
+<h2>Which images get a developed preview</h2>
+
+<p><b>Edited images, always.</b> Without one, browsing would show the image without
+your edits until you opened it in Develop again.</p>
+
+<p><b>Raw files with a small built-in preview.</b> When browsing, Winnow shows the
+preview your camera built into the raw file. Some cameras build in a small one (many
+Sony cameras use 1616 pixels), which looks soft on a large screen. For those, Winnow
+renders the raw file itself and keeps the result.</p>
+
+<p><b>Files that are slow to open.</b> A file that takes a long time to open, such as
+a large 16-bit TIFF, is kept as a preview the first time Winnow opens it, so later
+visits are quick. It is the same picture as the file, with the file's wide color
+kept, and it is shown whether or not edits are shown.</p>
+
+<p>Raw files whose built-in preview is already large, and ordinary JPEGs, do not need
+one: they already browse quickly.</p>
+
+<h2>Previews for the thumbnails on screen</h2>
+
+<p>When you pause, Winnow makes previews for the thumbnails you can see, starting with
+the ones nearest the current image.</p>
+
+<p>It waits about a second and a half after you stop moving, and starts only once the
+images around the current one are ready to show. It stops the moment you select
+another image or scroll.</p>
+
+<p>It also stops when the computer is busy: when memory is short, when the computer is
+running hot, or when Winnow is slow to respond. It then waits longer before trying
+again.</p>
+
+<p>It never changes the picture you are looking at. A new preview is used the next
+time you go to that image.</p>
+
+<p>A green circle on a thumbnail means its preview is ready.</p>
+
+<p>Turn it on or off with Preferences &gt; Develop &gt; Build previews for thumbnails
+on screen. It is on unless you turn it off.</p>
+
+<h2>Building more at once</h2>
+
+<p>Preferences &gt; Develop &gt; Build developed previews in background makes previews
+for the whole folder, or the whole Library, using the same rules. On a large folder
+this takes hours, so it is off unless you turn it on.</p>
+
+<p>Develop &gt; Build Developed Previews makes previews now for the selected images, or
+for the thumbnails on screen. It includes every raw file, whatever the size of its
+built-in preview.</p>
+
+<h2>Camera cards</h2>
+
+<p>Previews are made in the background only for folders that are part of your
+Library. If you have not set up a Library, they are made for folders on your
+computer's own drives.</p>
+
+<p>Camera cards are skipped: their files move when you import them, so a preview made
+before the import would be thrown away.</p>
+
+<h2>When the preview cache is full</h2>
+
+<p>When the developed preview cache is nearly full (90% of its limit), Winnow tells you
+once. It shows the limit, how much is used, how much free space the disk has, and a
+larger limit to choose if the disk has room for it.</p>
+
+<p>From then on, the previews made in the background pause, so they do not remove
+previews you already have.</p>
+
+<p>Previews saved while you edit, and Develop &gt; Build Developed Previews, still go
+in. To make room, the previews you have not looked at for the longest time are
+removed.</p>
+
+<p>A removed preview loses nothing. Your edits are stored with each image, and the
+preview is made again the next time it is needed.</p>
+
+<p>Develop &gt; Clear Developed Preview Cache deletes every developed preview.</p>
+
+</body>
+</html>

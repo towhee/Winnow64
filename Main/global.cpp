@@ -1,4 +1,5 @@
 #include "Main/global.h"
+#include "Develop/greycard.h"
 #include <algorithm>
 
 #ifdef Q_OS_MAC
@@ -17,7 +18,7 @@ namespace G
 {
 
 // Rory version (expanded cache pref, focus stack pref, update default workspace)
-bool isRory = false;
+bool isRory = true;
 
 QSettings *settings;
 
@@ -87,6 +88,7 @@ bool useDWCollapse = false;         // master switch for dock collapse/expand/so
 bool useDockTitleGraphic = true;    // master switch: show a graphic instead of text on dock tabs (TEST: on for folders tab)
 bool useMultimedia = true;
 bool useLamaSpotFill = true;        // TEST: spot heals with LaMa (GPU); false -> MI-GAN
+Greycard greycard;                  // greycard trials, isRory only (Develop/greycard.h)
 bool useFilterPanel = true;
 /* Brush/Object "erase from this stroke" (Opt while painting removes from the stroke)
    CANCELLED 2026-08-08. It existed because the developed effect only appeared on stroke
@@ -380,6 +382,7 @@ int autoScanCatalogMinutes = 60; // one automatic scan an hour at most
 bool cacheThumbnails = true;                 // write thumbnails to the index as icons load
 qint64 thumbCacheMaxBytes = 5LL * 1024 * 1024 * 1024;    // 5 GB ~ 250k thumbnails
 bool buildDevPreviewsInBackground = false;
+bool autoDevPreviews = true;
 bool autoRunDenoise = true;
 bool autoRemoveCA = false;
 bool autoLensProfile = false;

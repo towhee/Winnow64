@@ -4,6 +4,8 @@
 #include "Develop/editparams.h"
 
 #include "ImageFormats/Raw/cameramodel.h"
+#include "ImageFormats/Raw/cameramatrix.h"
+#include "Develop/greycard.h"
 
 #include <QtConcurrent/QtConcurrent>
 #include <QDir>
@@ -13,6 +15,7 @@
 #include <QStandardPaths>
 #include <QMap>
 #include <QSet>
+#include <cmath>
 
 CameraProfileStore &CameraProfileStore::instance()
 {
@@ -401,11 +404,109 @@ std::shared_ptr<const Dcp::Profile> CameraProfileStore::profile(const QString &c
 std::shared_ptr<const Dcp::Profile> CameraProfileStore::resolve(const CameraColor &cam,
                                                                 const QString &profileName)
 {
-    if (profileName == QLatin1String(EditParams::kBuiltInProfile)) return nullptr;
+    /* Winnow Standard is nullptr -- the built-in matrix -- unless the greycard trial
+       C1/C2 replaces it with a synthesised profile (winnowStandard; nullptr when off).
+       That includes a name that no longer resolves, which renders as Winnow Standard. */
+    if (profileName == QLatin1String(EditParams::kBuiltInProfile)) return winnowStandard(cam);
     if (profileName == QLatin1String(EditParams::kEmbeddedProfile)) return cam.embeddedProfile;
     if (profileName.isEmpty())
-        return defaultsToEmbedded(cam) ? cam.embeddedProfile : nullptr;
-    return profile(cam.cameraModel, profileName);
+        return defaultsToEmbedded(cam) ? cam.embeddedProfile : winnowStandard(cam);
+    if (auto p = profile(cam.cameraModel, profileName)) return p;
+    return winnowStandard(cam);
+}
+
+std::shared_ptr<const Dcp::Profile> CameraProfileStore::winnowStandard(const CameraColor &cam)
+{
+/*
+    GREYCARD TRIAL C1 + C2 (Develop/greycard.h, notes/GreycardPlan.md): Winnow Standard
+    as an in-memory DNG camera profile -- ColorMatrix only, no ForwardMatrix, no tables,
+    no curve -- so it renders through CameraProfile::camToWorking like any DCP:
+
+      C2  the white balance is INSIDE the matrix, re-derived per temperature (the
+          chosen white's camera neutral, then the DNG no-ForwardMatrix chain: invert the
+          color matrix, adapt that white to D50), instead of libraw's fixed matrix with
+          working-space gains in front of it.
+      C1  two calibrations, StdA and D65, interpolated in mired at that temperature.
+
+    The matrices are the ones Winnow Standard already uses, so the two renderings differ
+    only in HOW they are applied: a raw's D65 matrix is cam.xyzToCam (cameramatrix.cpp),
+    paired with its StdA partner from cameramatrixa.cpp; a DNG's are its own
+    ColorMatrix1/2 (and AnalogBalance / CameraCalibration) from IFD 0.
+
+    Riding the profile path is what makes everything downstream agree for free: the
+    as-shot re-solve (CameraProfile::resolveAsShot), buildPointCoeffs skipping the
+    working-space gains, the mask layers getting theirs back once stage 0 is spent, and
+    the Temp readout. nullptr -- the shipping built-in path -- when the trial is off, or
+    for a camera with no matrix to build from.
+
+    Built per call: a handful of 3x3 copies, against a render. Not cached, so a toggle in
+    Preferences can never meet a stale entry.
+*/
+    using SC = G::Greycard::StandardColor;
+    const SC mode = G::greycard.effectiveStandardColor();
+    if (mode == SC::Off || !cam.valid) return nullptr;
+    const bool dual = mode == SC::DualIlluminant;
+
+    auto p = std::make_shared<Dcp::Profile>();
+    p->uniqueCameraModel = cam.cameraModel;
+    p->name = QStringLiteral("Winnow Standard (greycard trial)");
+
+    if (cam.embeddedProfile) {
+        /* A DNG. Winnow Standard reads ColorMatrix2 (else 1) and AnalogBalance from the
+           file (dng.cpp), so the file's own pair is the dual-illuminant version of it. */
+        const Dcp::Profile &e = *cam.embeddedProfile;
+        for (int i = 0; i < 3; ++i) p->analogBalance[i] = e.analogBalance[i];
+        auto copyCal = [](const Dcp::Calibration &from, Dcp::Calibration &to) {
+            to.illuminant = from.illuminant;
+            to.haveColor = from.haveColor;
+            to.color = from.color;
+            to.haveCalibration = from.haveCalibration;
+            to.calibration = from.calibration;
+        };
+        if (dual && e.dual()) {
+            copyCal(e.cal[0], p->cal[0]);
+            copyCal(e.cal[1], p->cal[1]);
+        }
+        else {
+            copyCal(e.cal[1].haveColor ? e.cal[1] : e.cal[0], p->cal[0]);
+        }
+    }
+    else {
+        /* A proprietary raw: cam.xyzToCam IS the libraw D65 matrix (every decoder fills it
+           from xyzToCamForModel), unless the model has none -- then there is nothing
+           to characterise and the shipping path stands. */
+        float table[3][3];
+        if (!xyzToCamForModel(cam.cameraModel, table)) return nullptr;
+        Dcp::Calibration &d65 = p->cal[dual ? 1 : 0];
+        d65.illuminant = 21;                                        // D65
+        d65.haveColor = true;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j) d65.color.m[i][j] = cam.xyzToCam[i][j];
+
+        /* The StdA partner only where it was published WITH this D65 matrix (the
+           generator checks), and only if the decoder really used the table's matrix. A
+           body without one renders single-illuminant (CameraWb) -- still the trial's
+           chain, minus the interpolation. */
+        bool sameD65 = true;
+        for (int i = 0; i < 3; ++i)
+            for (int j = 0; j < 3; ++j)
+                if (std::fabs(table[i][j] - cam.xyzToCam[i][j]) > 2e-4f) sameD65 = false;
+        float a[3][3];
+        if (dual && sameD65 && xyzToCamStdAForModel(cam.cameraModel, a)) {
+            Dcp::Calibration &stdA = p->cal[0];
+            stdA.illuminant = 17;                                   // Standard light A
+            stdA.haveColor = true;
+            for (int i = 0; i < 3; ++i)
+                for (int j = 0; j < 3; ++j) stdA.color.m[i][j] = a[i][j];
+        }
+        else if (dual) {
+            p->cal[0] = d65;
+            p->cal[1] = Dcp::Calibration();
+        }
+    }
+    if (!p->cal[0].haveColor) return nullptr;
+    p->valid = true;
+    return p;
 }
 
 bool CameraProfileStore::defaultsToEmbedded(const CameraColor &cam)

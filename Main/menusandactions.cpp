@@ -2433,6 +2433,11 @@ void MW::createHelpActions()
     addAction(helpPicturesAction);
     connect(helpPicturesAction, &QAction::triggered, this, &MW::helpPictures);
 
+    helpCachingAction = new QAction(tr("About Caching..."), this);
+    helpCachingAction->setObjectName("helpCaching");
+    addAction(helpCachingAction);
+    connect(helpCachingAction, &QAction::triggered, this, &MW::helpCaching);
+
     // Help menu and the bottom of the thumbnail context menu
     helpThumbnailSchematicAction = new QAction(tr("Thumbnail schematic help"), this);
     helpThumbnailSchematicAction->setObjectName("helpThumbnailSchematic");
@@ -3392,6 +3397,7 @@ void MW::createHelpMenu()
     helpMenu->addAction(helpPerformanceTipsAction);
     helpMenu->addAction(helpFocusStackingTipsAction);
     helpMenu->addAction(helpPicturesAction);
+    helpMenu->addAction(helpCachingAction);
     helpMenu->addAction(helpThumbnailSchematicAction);
     helpMenu->addSeparator();
     helpMenu->addAction(reportIssueAction);

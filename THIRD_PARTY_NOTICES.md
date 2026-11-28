@@ -108,6 +108,12 @@ OpenCV and ONNX Runtime pull these in, and they ship inside the macOS applicatio
   corrections. CC BY-SA 3.0: [CC-BY-SA-3.0](licenses/CC-BY-SA-3.0.txt).
   Lens profiles from the lensfun project (lensfun.github.io), CC BY-SA 3.0.
 
+- **[rawler](https://github.com/dnglab/dnglab/tree/main/rawler) camera definitions**
+  (dnglab project), data only, compiled in. The illuminant-A color matrices in
+  `ImageFormats/Raw/cameramatrixa.cpp`, generated from `rawler/data/cameras` by
+  `tools/gen_cameramatrix_a.py`. Authors Daniel Vogelbacher and Pedro Côrte-Real.
+  LGPL-2.1: [LGPL-2.1](licenses/LGPL-2.1.txt).
+
 Winnow does not ship Adobe camera profiles (.dcp). It reads them only where the user
 already has them installed.
 

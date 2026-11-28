@@ -270,6 +270,7 @@ set(WINNOW_SOURCES
     ImageFormats/Panasonic/panasonic.cpp
     ImageFormats/Png/png.cpp
     ImageFormats/Raw/cameramatrix.cpp
+    ImageFormats/Raw/cameramatrixa.cpp
     ImageFormats/Raw/cameramodel.cpp
     ImageFormats/Raw/demosaic.cpp
     ImageFormats/Raw/hotpixel.cpp
@@ -332,6 +333,7 @@ set(WINNOW_SOURCES
     Main/catalogenumerate.cpp
     Main/catalogscanner.cpp
     Main/devpreviewbuilder.cpp
+    Main/autodevpreviews.cpp
     Main/selftestmutation.cpp
     Main/selftestpark.cpp
     Main/diagnostics.cpp
@@ -566,6 +568,7 @@ set(WINNOW_HEADERS
     Develop/cameracurvedata.h
     Develop/cameraprofile.h
     Develop/cameraprofilestore.h
+    Develop/greycard.h
     Develop/lensdb.h
     Develop/lensprofile.h
     Develop/develop.h
@@ -830,6 +833,7 @@ set(WINNOW_HEADERS
     Utilities/appinstaller.h
     Utilities/appupdate.h
     Utilities/volumeinfo.h
+    Utilities/backgroundpriority.h
     Utilities/dragintent.h
     Utilities/fileops.h
     Utilities/foldertree.h

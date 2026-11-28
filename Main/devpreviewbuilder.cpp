@@ -202,16 +202,48 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
         sync = true;            // the only kind devPreviewBuildNext renders in Develop
     }
 
+    /* AN autoDevPreviews PASS (src "auto") is for the position the user paused at. A
+       nudge since it was queued (the user moved, so the timer is running again), or the
+       preference going off, makes it stale: drop it rather than build for the old spot. */
+    const bool isAuto = (src == "auto");
+    const bool isBackground = (src == "background");
+    if (isAuto && (!G::autoDevPreviews
+                   || (autoDevPreviewTimer && autoDevPreviewTimer->isActive())))
+        return;
+
+    /* Auto work goes AHEAD of a background run (what is on screen beats the rest of the
+       folder) but BEHIND anything the user asked for (a menu build, an edit target). */
+    int at = 0;
+    if (isAuto)
+        while (at < devPreviewBuildQueue.count()
+               && !devPreviewBackgroundPaths.contains(devPreviewBuildQueue.at(at)))
+            ++at;
     for (const QString &fPath : std::as_const(build)) {
         if (sync) devPreviewBuildSyncPaths.insert(fPath);
         if (devPreviewBuildQueue.contains(fPath)) continue;
         if (fPath == devPreviewBuildCurrent && !sync) continue;
-        devPreviewBuildQueue.append(fPath);
+        if (isAuto) {
+            devPreviewBuildQueue.insert(at++, fPath);
+            autoDevPreviewPaths.insert(fPath);
+        }
+        else {
+            devPreviewBuildQueue.append(fPath);
+            if (isBackground) devPreviewBackgroundPaths.insert(fPath);
+        }
     }
     if (devPreviewBuildQueue.isEmpty()) return;
+
+    /* A QUIET run (auto only) shows no progress row. Anything else joining it is work
+       the user can see the row for, so it turns the row on. */
+    const bool running = devPreviewBuildTotal > 0;
+    if (!isAuto && running && devPreviewBuildQuiet) {
+        devPreviewBuildQuiet = false;
+        if (progress) progress->showRow(progressDevPreviewRow, true);
+    }
+
     /* A run is already going: it picks the new paths up in turn. Restarting it here would
        dispatch a second render beside the one in flight. */
-    if (devPreviewBuildTotal > 0 && !devPreviewBuildCurrent.isEmpty()) {
+    if (running && !devPreviewBuildCurrent.isEmpty()) {
         devPreviewBuildTotal = devPreviewBuildQueue.count() + devPreviewBuildDone + 1;
         updateDevPreviewBuildProgress();
         return;
@@ -219,10 +251,11 @@ void MW::startDevPreviewBuild(const QStringList &paths, const QString &src, int 
 
     devPreviewBuildTotal = devPreviewBuildQueue.count() + devPreviewBuildDone;
     devPreviewBuildFromMenu = (src == "menu");
+    if (!running) devPreviewBuildQuiet = isAuto;
     /* Reveal the row EMPTY. updateProgress paints FromStart, so calling it here with
        item 0 would fill the first cell before anything has been rendered (and the whole
        bar when there is one image). devPreviewBuildNext paints each item as it starts. */
-    if (progress) progress->showRow(progressDevPreviewRow, true);
+    if (progress && !devPreviewBuildQuiet) progress->showRow(progressDevPreviewRow, true);
     devPreviewBuildNext();
 }
 
@@ -306,6 +339,9 @@ void MW::devPreviewBuildNext()
         if (keep.count() != devPreviewBuildQueue.count()) {
             devPreviewBuildTotal -= devPreviewBuildQueue.count() - keep.count();
             devPreviewBuildQueue = keep;
+            const QSet<QString> kept(keep.cbegin(), keep.cend());
+            autoDevPreviewPaths.intersect(kept);
+            devPreviewBackgroundPaths.intersect(kept);
         }
         if (devPreviewBuildQueue.isEmpty()) {
             devPreviewBuildFinish("paused while you are in Develop mode");
@@ -313,9 +349,60 @@ void MW::devPreviewBuildNext()
         }
     }
 
+    /* SPECULATIVE WORK RE-CHECKS ITS CONDITIONS BEFORE EVERY IMAGE. An auto image needs
+       the whole autoDevPreviews gate (the user may have started something since the pass
+       was queued); a background image needs room in the cache, because from
+       DevPreviewPolicy::nearlyFull on, speculative work stops rather than evicting. A
+       refusal drops every queued image of that kind -- the next pass rebuilds the list
+       from what is still missing -- and goes on with whatever else is queued. */
+    {
+        const QString next = devPreviewBuildQueue.first();
+        QString why;
+        bool retry = false;
+        QSet<QString> *drop = nullptr;
+        if (autoDevPreviewPaths.contains(next) && !autoDevPreviewGate(&why, &retry))
+            drop = &autoDevPreviewPaths;
+        else if (devPreviewBackgroundPaths.contains(next) && adviseDevPreviewCacheFull()) {
+            why = "cache nearly full";
+            drop = &devPreviewBackgroundPaths;
+        }
+        if (drop) {
+            const bool wasAuto = (drop == &autoDevPreviewPaths);
+            int n = 0;
+            for (const QString &p : std::as_const(*drop)) n += devPreviewBuildQueue.removeAll(p);
+            drop->clear();
+            devPreviewBuildTotal = qMax(devPreviewBuildDone, devPreviewBuildTotal - n);
+            if (G::isLogger)
+                G::log("MW::devPreviewBuildNext", QString("%1 %2 dropped: %3")
+                           .arg(n).arg(wasAuto ? "auto" : "background", why));
+            if (wasAuto && retry && G::autoDevPreviews && autoDevPreviewTimer)
+                autoDevPreviewTimer->start(qMax(DevPreviewPolicy::kAutoDelayMs,
+                                                autoDevPreviewBackoffMs));
+            if (devPreviewBuildQueue.isEmpty()) devPreviewBuildFinish();
+            else devPreviewBuildNext();
+            return;
+        }
+    }
+
     devPreviewBuildCurrent = devPreviewBuildQueue.takeFirst();
     devPreviewBuildSyncPaths.remove(devPreviewBuildCurrent);
+    devPreviewBackgroundPaths.remove(devPreviewBuildCurrent);
     const QString fPath = devPreviewBuildCurrent;
+    /* An auto step carries a cancel token: input or the performance watch stops it at
+       the decode's next tile (autoDevPreviewWatchTick, interruptAutoDevPreviews). */
+    std::shared_ptr<std::atomic<bool>> cancel;
+    if (autoDevPreviewPaths.remove(fPath)) {
+        cancel = std::make_shared<std::atomic<bool>>(false);
+        autoDevPreviewCancel = cancel;
+        autoDevPreviewCancelWhy.clear();
+        autoDevPreviewCurrent = fPath;
+        autoDevPreviewBusyTicks = 0;
+        autoDevPreviewStepClock.start();
+        autoDevPreviewWatchClock.start();
+        if (autoDevPreviewWatch) autoDevPreviewWatch->start();
+        if (G::isPerfProbe)
+            qDebug().noquote() << "[AutoDevPreview] start" << QFileInfo(fPath).fileName();
+    }
     /* The key this render is ABOUT to depict, captured before it starts. devPreviewStore
        re-derives it on the way out and writes only if the two agree, so an edit made while
        the image rendered cannot stamp the pre-edit pixels with the post-edit key. */
@@ -331,7 +418,13 @@ void MW::devPreviewBuildNext()
     const bool reduced = fPath == presetAutoThumbPath &&
                          (cap == G::kDevPreviewSizeFull || cap > kAutoBatchPreviewEdge);
     developPixelSource(fPath, /*want16Bit*/false, OutputTransform::Space::sRGB,
-        [this, fPath, expectKey, reduced](bool ok, const QImage &out) {
+        [this, fPath, expectKey, reduced, cancel](bool ok, const QImage &out) {
+            /* A cancelled auto step: nothing to store and nothing to warn about. */
+            if (cancel && cancel->load()) {
+                autoDevPreviewStepEnded(fPath, /*cancelled*/true);
+                devPreviewBuildStepDone();
+                return;
+            }
             /*  devPreviewStore OWNS THE ADVANCE now. It encodes on a pool thread, so it
                 returns long before the step is finished and the counters cannot be
                 bumped here -- doing so would start the next render while this one was
@@ -343,7 +436,8 @@ void MW::devPreviewBuildNext()
                               "MW::devPreviewBuildNext", -1, fPath);
                 devPreviewBuildStepDone();
             }
-        }, nullptr, -1, /*requireSensor*/false, reduced ? kAutoBatchPreviewEdge : 0);
+        }, nullptr, -1, /*requireSensor*/false, reduced ? kAutoBatchPreviewEdge : 0,
+        /*reportTime*/false, cancel);
 }
 
 void MW::requestReducedDevPreviewRebuild()
@@ -380,6 +474,9 @@ void MW::devPreviewBuildStepDone()
     ++devPreviewBuildDone;
     const QString finished = devPreviewBuildCurrent;
     devPreviewBuildCurrent.clear();
+    // an auto step that completed (a cancelled one has already said so)
+    if (!finished.isEmpty() && finished == autoDevPreviewCurrent)
+        autoDevPreviewStepEnded(finished, /*cancelled*/false);
     /* An Auto-settings batch image whose decoded base was held for THIS render (see
        developPresetAutoSolve): drop it and let the batch's next solve start. Before
        devPreviewBuildNext, so the solve is queued ahead of the builder's next render. */
@@ -603,7 +700,7 @@ void MW::updateDevPreviewBuildProgress()
     the 0-based index of the image now rendering, so the bar includes the one in flight --
     the same reading as the other sequential rows (Raw Denoise, Demosaicing).
 */
-    if (!devPreviewBuildTotal || !progress) return;
+    if (!devPreviewBuildTotal || !progress || devPreviewBuildQuiet) return;
     progress->updateProgress(progressDevPreviewRow, devPreviewBuildDone,
                              devPreviewBuildTotal);
 }
@@ -631,6 +728,16 @@ void MW::devPreviewBuildFinish(const QString &reason)
     devPreviewBuildQueue.clear();
     devPreviewBuildCurrent.clear();
     devPreviewBuildSyncPaths.clear();
+    autoDevPreviewPaths.clear();
+    devPreviewBackgroundPaths.clear();
+    devPreviewBuildQuiet = false;
+    /* An auto render still in flight belongs to the run being ended: cancel it, so its
+       callback takes the cancelled path, and free the pass so the next tick can start. */
+    if (!autoDevPreviewCurrent.isEmpty()) {
+        if (autoDevPreviewCancel) autoDevPreviewCancel->store(true);
+        autoDevPreviewCurrent.clear();
+        if (autoDevPreviewWatch) autoDevPreviewWatch->stop();
+    }
     releaseHeldDevelopIcons();          // nothing queued is coming now
     devPreviewBuildTotal = 0;
     devPreviewBuildDone = 0;
@@ -813,8 +920,11 @@ void MW::queueBackgroundDevPreviewBuild()
       o every EDITED image with no current preview -- the original purpose. Cheap to find
         (G::DevelopColumn came from the sidecar during the metadata read) and usually a
         handful of images.
-      o every RAW with a sensor decoder, edited or not, so its DEFAULT RENDER is cached and
-        the loupe never has to demosaic it again.
+      o every RAW whose embedded preview is too small for the loupe (devPreviewWanted,
+        DevPreviewPolicy::smallPreviewRaw), so its DEFAULT RENDER is cached. Until
+        2026-11-28 this was every raw with a sensor decoder; a raw with a good embedded
+        preview already browses at JPEG speed, so building it only changed the look and
+        spent the cache. The rule is shared with autoDevPreviews.
 
     The second is a different order of magnitude: a thousand-raw folder is a thousand full
     sensor decodes and composites, run strictly one at a time, so hours rather than seconds.
@@ -854,6 +964,8 @@ void MW::queueBackgroundDevPreviewBuild()
     if (G::isLogger) G::log("MW::queueBackgroundDevPreviewBuild");
     if (!G::buildDevPreviewsInBackground) return;
     if (!dm || dm->rowCount() == 0) return;
+    /* Speculative work stops, never evicts, once the cache is nearly full. */
+    if (adviseDevPreviewCacheFull()) return;
 
     /*  Per FOLDER, not per volume: a recursive load routinely spans folders that are in
         scope and folders that are not. Memoised for this pass only -- a verdict about
@@ -883,11 +995,9 @@ void MW::queueBackgroundDevPreviewBuild()
         /* absoluteDir().path() is the spelling the catalog's folder column uses
            (DataModel::catalogRows), so the two cannot disagree about the same folder. */
         if (!folderAllowed(info.absoluteDir().path())) continue;
-        const bool edited = dm->index(row, G::DevelopColumn).data().toBool();
-        /* Extension test only -- no file is opened here. buildDevPreviews makes the real
+        /* Model reads only -- no file is opened here. buildDevPreviews makes the real
            (and more expensive) per-path decision, on a worker thread. */
-        if (!edited && !RawFormat::HasSensorDecoder(info.suffix().toLower()))
-            continue;
+        if (!devPreviewWanted(fPath)) continue;
         paths << fPath;
     }
     if (paths.isEmpty()) return;

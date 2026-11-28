@@ -6,6 +6,7 @@
 #include <QtConcurrent>
 #include <QJsonObject>
 #include <memory>
+#include <atomic>
 #include <QJsonArray>
 #include <QJsonDocument>
 // #include <QThread>
@@ -1338,6 +1339,14 @@ private slots:
        the sort/filter model, so it MUST run on the GUI thread. */
     int developOrientationDegrees(const WorkingImage &work, const QString &fPath) const;
     void invalidateDevelopAfterRotation(const QString &fPath);
+    /* A renderer-wide setting changed without any recipe changing (a greycard trial):
+       drop Develop's in-memory frames and intermediates, then re-render. */
+    void invalidateDevelopRenderer();
+    /* Greycard hold-to-compare (`, Develop, isRory with trials on): true renders every
+       trial as A (shipping) until released; see G::Greycard::holdA. */
+    void setGreycardHold(bool hold);
+    /* The status-bar badge: "greycard B" while trials are on, "greycard A" while held. */
+    void updateGreycardBadge();
     /* Refresh the Develop scopes (histogram + vectorscope) from the image currently shown: the
        develop preview after a render, else the decoded image. One strided sample pass feeds both
        scopes; no-op (cheap) while the scopes are hidden. A null image clears the scopes. */
@@ -1892,15 +1901,17 @@ private:
                             std::function<void(bool, const QImage &)> done,
                             const ImageMetadata *mSnap = nullptr, int degreesSnap = -1,
                             bool requireSensor = false, int maxEdge = 0,
-                            bool reportTime = false);
+                            bool reportTime = false,
+                            std::shared_ptr<std::atomic<bool>> cancel = {});
     /* developPixelSource's pieces, shared with the preset Auto-settings batch:
        developWantsSensor decides (GUI thread) whether the render starts from the sensor
-       decode; developBaseFor fetches or decodes that base (WORKER thread). */
+       decode; developBaseFor fetches or decodes that base (WORKER thread). cancel (an
+       autoDevPreviews step) aborts the decode at its next tile and returns false. */
     bool developWantsSensor(const ImageMetadata &m, bool requireSensor) const;
     bool developBaseFor(const QString &fPath, ImageMetadata &m,
                         const RawRender::Choice &render, bool sensorRaw,
                         bool requireSensor, std::shared_ptr<const WorkingImage> &work,
-                        bool &decodedHere);
+                        bool &decodedHere, const std::atomic<bool> *cancel = nullptr);
     /* DevelopProperties' AutoSolver: decode + solve one image of a preset's Auto
        settings off the GUI thread (see developproperties.h). */
     void developPresetAutoSolve(const QString &fPath, const EditParams &base, bool wb,
@@ -2394,6 +2405,7 @@ private:
     QAction *helpPerformanceTipsAction;
     QAction *helpFocusStackingTipsAction;
     QAction *helpPicturesAction = nullptr;  // Developed / Original / Camera explained
+    QAction *helpCachingAction = nullptr;   // how thumbnails and previews are cached
     QAction *helpThumbnailSchematicAction = nullptr;  // Thumbnail Anatomy: badges, outlines
     QAction *helpFilmStripAction;  // to be removed, not used
     QAction *helpRevealLogFileAction;
@@ -2525,6 +2537,7 @@ private:
     QLabel *subfolderStatusLabel;
     BarBtn *rawJpgStatusBtn;
     QLabel *slideShowStatusLabel;
+    QLabel *greycardStatusLabel = nullptr;  // greycard trials badge (isRory only)
     QLabel *cacheStatusLabel;
     Progress *progress = nullptr;    // created in createDataModel, before any row driver runs
     /* Progress rows added at runtime (ImageCache is owned by Progress itself).
@@ -2735,7 +2748,9 @@ private:
     void dropQueuedDevPreviews(const QSet<QString> &paths);
     void updateDevPreviewBuildProgress();
     QStringList devPreviewBuildQueue;
-    QString devPreviewBuildCurrent;      // the render in flight; not abortable
+    /* The render in flight. Not abortable, except an AUTO step's decode
+       (autoDevPreviewCancel). */
+    QString devPreviewBuildCurrent;
     /* Queued by a multi-image edit (src "sync"): the only paths the builder renders while
        Develop is open. See devPreviewBuildNext. */
     QSet<QString> devPreviewBuildSyncPaths;
@@ -2760,6 +2775,61 @@ private:
        row), but only a run the user ASKED for reports its result in a popup -- a
        background build that announces itself is the noise this row replaced. */
     bool devPreviewBuildFromMenu = false;
+
+    /* autoDevPreviews (Main/autodevpreviews.cpp). Builds devPreviews for the thumbnails
+       ON SCREEN, nearest the current image first, once the user has left the selection
+       and the scroll alone for DevPreviewPolicy::kAutoDelayMs, and gives way to any input
+       or load. Rides the builder above as src "auto": queued ahead of a background run,
+       quiet (no progress row), one image per gate check. G::autoDevPreviews. */
+    void initAutoDevPreviews();
+    /* The user did something (selection, scroll, mode change, a load finished): drop the
+       auto work queued, cancel the auto render in flight, and start the wait again. */
+    void autoDevPreviewNudge(const QString &why);
+    /* Drop the queued auto work and cancel the auto render in flight; no restart. */
+    void interruptAutoDevPreviews(const QString &why);
+    void autoDevPreviewTick();                  // the wait is over: queue a pass
+    /* Every condition an auto step needs (Browse, read-ahead done, no memory or thermal
+       pressure, room in the cache). why says which failed; retry says whether waiting
+       another pause could change the answer (busy) or only an event can (Develop, a
+       full cache). */
+    bool autoDevPreviewGate(QString *why = nullptr, bool *retry = nullptr);
+    void autoDevPreviewWatchTick();             // the performance watch, during a step
+    void autoDevPreviewStepEnded(const QString &fPath, bool cancelled);
+    /* Does this unedited row deserve a speculative build? (small-preview raws only;
+       edited rows always do). GUI thread: reads the model and the screen. */
+    bool devPreviewWanted(const QString &fPath) const;
+    /* The loupe screen's long edge in device pixels, for the small-preview rule. */
+    int devPreviewScreenEdge() const;
+    /* HARVEST: keep a slow non-raw decode as its devPreview (ImageDecoder::harvestHook
+       lands here, queued). Converts to Display P3 and encodes on
+       devPreviewHarvestPool. */
+    void harvestDevPreview(const QString &rowKey, const QImage &image,
+                           const QByteArray &icc, qint64 ms);
+    /* The cache is too full for speculative work: say so ONCE per session (the limit,
+       the space used, the free disk and a suggested limit) and return true. */
+    bool adviseDevPreviewCacheFull();
+    QTimer *autoDevPreviewTimer = nullptr;
+    QTimer *autoDevPreviewWatch = nullptr;
+    QElapsedTimer autoDevPreviewWatchClock;
+    QElapsedTimer autoDevPreviewStepClock;      // the step's own time, for the log
+    int autoDevPreviewBusyTicks = 0;            // consecutive watch ticks, read-ahead busy
+    QSet<QString> autoDevPreviewPaths;          // queued by "auto", not yet started
+    QSet<QString> devPreviewBackgroundPaths;    // queued by "background", not started
+    QString autoDevPreviewCurrent;              // the auto render in flight
+    /* Cancels the auto render in flight at its next check (developPixelSource: before
+       and during the decode, before the composite). New per step. */
+    std::shared_ptr<std::atomic<bool>> autoDevPreviewCancel;
+    QString autoDevPreviewCancelWhy;            // perf reason, or empty for input
+    QHash<QString, int> autoDevPreviewPerfMisses;   // per path, this session
+    int autoDevPreviewBackoffMs = 0;            // grows after a performance cancel
+    bool devPreviewBuildQuiet = false;          // an auto-only run: no progress row
+    bool devPreviewCacheAdvised = false;        // the nearly-full dialog, once a session
+    QThreadPool *devPreviewHarvestPool = nullptr;
+    /* Images held by the harvest, at most 2. Reserved on the DECODER thread (the hook)
+       before the pixels are queued to the GUI thread, so a riffle through a folder of
+       TIFFs cannot pile full-size images up in the event queue. */
+    std::atomic<int> devPreviewHarvestPending{0};
+    QSet<QString> devPreviewHarvestPaths;       // pending: never kept twice
     void togglePreviewSource();
     /* Develop mode always shows the developed image, so the Original / Developed control
        is disabled there (and reads Developed). Called by setOperationMode and
@@ -4265,6 +4335,7 @@ private:
     void helpPerformanceTips();
     void helpFocusStackingTips();
     void helpPictures();          // Developed / Original / Camera, Show Edits, Compare
+    void helpCaching();           // thumbnails, devPreviews, the image cache, the limits
     void helpKeywordList();       // the Keyword list, for someone new to keywords
 
     void mediaReadSpeed();

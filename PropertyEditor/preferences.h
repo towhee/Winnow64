@@ -47,6 +47,8 @@ private:
     void addMetadataPanel();
     void addTableView();
     void addUtilities();
+    void addGreycard();                         // isRory only
+    static QStringList greycardStandardColorLabels();
 
     /* items we will want to modify dynamically in itemChange (returned from addItem)
        ie static_cast<LabelEditor*>(availMBMsgWidget)->setValue(availMBMsg);    */

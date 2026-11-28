@@ -79,11 +79,19 @@ static QImage decodeFull(const Job &j, bool *fromDevPreview)
     if (!j.valid) return QImage();
     QImage image;
 
-    // 1. the devPreview: oriented, cropped and developed already, in sRGB
+    /* 1. the devPreview: oriented, cropped and developed already, in sRGB -- or, for a
+          HARVESTED one ('S' key), the file's own picture in Display P3, the profile
+          embedded (see ImageDecoder::colorManage, the same rule). */
     if (!j.devKey.isEmpty()) {
         const QByteArray jpg = DevPreviewCache::instance().get(j.rowKey, j.devKey.toLatin1());
         if (!jpg.isEmpty() && image.loadFromData(jpg, "JPG") && !image.isNull()) {
-            if (j.colorManage) toDisplay(image, QByteArray());     // empty = sRGB
+            QColorSpace cs = image.colorSpace();
+            if (!cs.isValid() && j.devKey.startsWith('S'))
+                cs = QColorSpace(QColorSpace::DisplayP3);
+            const QByteArray icc = cs.isValid() && cs != QColorSpace(QColorSpace::SRgb)
+                                       ? cs.iccProfile() : QByteArray();   // empty = sRGB
+            if (j.colorManage) toDisplay(image, icc);
+            if (!icc.isEmpty()) image.setColorSpace(QColorSpace());
             DevPreviewCache::tagDisplaySize(image, j.displayDims);
             if (fromDevPreview) *fromDevPreview = true;
             return image;

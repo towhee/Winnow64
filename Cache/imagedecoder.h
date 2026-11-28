@@ -67,6 +67,15 @@ public:
     static QString devPreviewKeyFor(const QString &baseKey, const QString &rowKey,
                                     const QString &fPath, const QString &ext);
 
+    /*  HARVEST (autoDevPreviews). A cache decode of an unedited slow non-raw (a 16-bit
+        TIFF) offers its pixels -- oriented, before colorManage, in the file's own space
+        (icc, empty = sRGB) -- so MW can keep them as a devPreview and the next visit is
+        a JPEG decode. ms is what the decode took. Called on a DECODER thread; set once
+        by MW at startup, before any decoder runs, and never changed. See offerHarvest. */
+    using HarvestHook = std::function<void(const QString &rowKey, const QImage &image,
+                                           const QByteArray &icc, qint64 ms)>;
+    static HarvestHook harvestHook;
+
     bool isRunning() const;
     void setIdle();
     void setBusy();
@@ -197,6 +206,7 @@ private:
     void applyDevelop();
     void colorManage();
     QByteArray sourceIcc() const;
+    void offerHarvest(qint64 ms);   // see harvestHook
     bool idle = true;
     QAtomicInt abort {0};
     DataModel *dm;

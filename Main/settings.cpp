@@ -121,6 +121,7 @@ void MW::writeSettings()
     settings->setValue("autoScanCatalogMinutes", G::autoScanCatalogMinutes);
     settings->setValue("thumbCacheMaxBytes", G::thumbCacheMaxBytes);
     settings->setValue("buildDevPreviewsInBackground", G::buildDevPreviewsInBackground);
+    settings->setValue("autoDevPreviews", G::autoDevPreviews);
 
     /* ingest (moved to MW::ingest)
     */
@@ -485,6 +486,7 @@ bool MW::loadSettings()
                    5LL * 1024 * 1024 * 1024, isNew);
     factorySetting(G::buildDevPreviewsInBackground, "buildDevPreviewsInBackground", false,
                    isNew);
+    factorySetting(G::autoDevPreviews, "autoDevPreviews", true, isNew);
 
     // ingest
     factorySetting(autoIngestFolderPath, "autoIngestFolderPath", false, isNew);
@@ -795,6 +797,8 @@ bool MW::loadSettings()
     if (settings->contains("buildDevPreviewsInBackground"))
         G::buildDevPreviewsInBackground =
             settings->value("buildDevPreviewsInBackground").toBool();
+    if (settings->contains("autoDevPreviews"))
+        G::autoDevPreviews = settings->value("autoDevPreviews").toBool();
     /* The cache reads its index lazily, on first use, so applying the cap here (before any
        folder loads) is early enough and does not force a load. */
     DevPreviewCache::instance().setMaxBytes(G::devPreviewCacheMaxBytes);

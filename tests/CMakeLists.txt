@@ -8,7 +8,8 @@
 # Unit tests link the production sources directly (no copy of the code under
 # test). Because each .cpp is one translation unit, testing any Utilities
 # function pulls in utilities.cpp's link closure. That closure is small and
-# bounded (global.cpp includes only global.h + <algorithm>; no spiral into
+# bounded (global.cpp includes only global.h, Develop/greycard.h (header-only)
+# and <algorithm>; no spiral into
 # MainWindow). Expand WINNOW_CORE_TEST_SOURCES only if the linker asks for more.
 # =============================================================================
 
@@ -136,6 +137,9 @@ add_library(winnow_test_color STATIC
     ${CMAKE_SOURCE_DIR}/Develop/outputtransform.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofile.cpp
     ${CMAKE_SOURCE_DIR}/Develop/cameraprofilestore.cpp
+    # the store synthesises the greycard trial's Winnow Standard from the matrix tables
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramatrix.cpp
+    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramatrixa.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramodel.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Dcp/dcp.cpp
     ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/tiffwalk.cpp)
@@ -489,8 +493,7 @@ target_link_libraries(tst_cameraprofilestore PRIVATE winnow_test_color)
 # sample body end to end: against the compiled-in matrix table always, and against the
 # installed profiles when there are any -- which is the only form the original defect
 # would have shown up in. Hence the profile-store + DCP closure.
-winnow_add_unit_test(tst_cameramodel  unit/tst_cameramodel.cpp
-    ${CMAKE_SOURCE_DIR}/ImageFormats/Raw/cameramatrix.cpp)
+winnow_add_unit_test(tst_cameramodel  unit/tst_cameramodel.cpp)
 target_link_libraries(tst_cameramodel PRIVATE winnow_test_color)
 
 winnow_add_unit_test(tst_huesatmap  unit/tst_huesatmap.cpp)
@@ -498,6 +501,13 @@ target_link_libraries(tst_huesatmap PRIVATE winnow_test_color)
 
 winnow_add_unit_test(tst_cameraprofile  unit/tst_cameraprofile.cpp)
 target_link_libraries(tst_cameraprofile PRIVATE winnow_test_color)
+
+# tst_greycardstandard pins the greycard trial C1 + C2 (Develop/greycard.h): absent unless
+# G::isRory AND enabled; the StdA table pairs only with the D65 row the render uses; the
+# as-shot neutral still renders to (1,1,1); dual == single at D65; a DNG keeps only its
+# ColorMatrix pair.
+winnow_add_unit_test(tst_greycardstandard  unit/tst_greycardstandard.cpp)
+target_link_libraries(tst_greycardstandard PRIVATE winnow_test_color)
 # tst_heicboxes compiles the HEIC container walk plus the closure it reads Exif with
 # (ifd + exif + gps + metareport). It pins the two box-header defects that made every
 # iPhone HEIC look unreadable: a largesize (size == 1) mdat treated as "rest of file",

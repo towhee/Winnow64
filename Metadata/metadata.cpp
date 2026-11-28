@@ -15,6 +15,7 @@
 #include "Utilities/versionkey.h"
 #include "ImageFormats/Raw/decoderrevision.h"
 #include "Develop/developrevision.h"
+#include "Develop/greycard.h"
 #include "ImageFormats/Raw/applerawdecode.h"
 #include "Metadata/versions.h"
 #include "Metadata/colorspaces.h"
@@ -808,8 +809,11 @@ QString Metadata::renderKey(const QString &baseKey, const QString &fPath)
     /* The develop maths revision (Develop/developrevision.h) folds in the same way: a
        retuned op misses the previews it rendered. Empty while never bumped. */
     const QString dev = DevelopRevision::keyPart(baseKey);
-    if (rev == 0 && dev.isEmpty()) return baseKey;
-    const QString d = baseKey + (rev ? QString("|decoder=%1").arg(rev) : QString()) + dev;
+    /* Greycard trials (Develop/greycard.h) likewise: a preview rendered with a trial on
+       misses with it off. Empty unless a trial is active (isRory only). */
+    const QString gc = G::greycard.key();
+    if (rev == 0 && dev.isEmpty() && gc.isEmpty()) return baseKey;
+    const QString d = baseKey + (rev ? QString("|decoder=%1").arg(rev) : QString()) + dev + gc;
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return baseKey.startsWith('R') ? "R" + QString::fromLatin1(h.toHex().left(11))
                                    : QString::fromLatin1(h.toHex().left(12));
@@ -852,6 +856,30 @@ QString Metadata::defaultRenderKey(const QString &fPath)
                     + RawRender::appleKeyPart(render);
     const QByteArray h = QCryptographicHash::hash(d.toLatin1(), QCryptographicHash::Sha1);
     return renderKey("R" + QString::fromLatin1(h.toHex().left(11)), fPath);
+}
+
+QString Metadata::sourceRenderKey(const QString &fPath)
+{
+/*
+    The devPreview key for an unedited non-raw file (a 16-bit TIFF, a large PNG) whose
+    preview was HARVESTED from the loupe's own decode (MW::harvestDevPreview). There is
+    no recipe and no renderer to hash: the pixels are the file's, converted from its
+    embedded profile to Display P3. So the key names only what could make an existing
+    harvest wrong -- the conversion's target and a version to bump when the harvest
+    changes. Which FILE it depicts is the source stamp's job (DevPreviewCache records the
+    file's size and mtime), exactly as for every other entry.
+
+    Prefixed 'S' -- not a hex digit, not 'R' -- so the three key spaces are disjoint, and
+    ImageDecoder::loadDevPreview can tell a harvested preview (same picture as the file,
+    served whatever Show Edits says) from a developed one.
+
+    fPath is unused today; it is taken so the signature matches defaultRenderKey and a
+    per-format revision can be folded in later without touching the callers.
+*/
+    Q_UNUSED(fPath)
+    const QByteArray h = QCryptographicHash::hash("sourceRender|v1|space=DisplayP3",
+                                                  QCryptographicHash::Sha1);
+    return "S" + QString::fromLatin1(h.toHex().left(11));
 }
 
 void Metadata::writeDevelopSidecar(QString fPath, QString blob, QString previewB64)
