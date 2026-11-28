@@ -21,7 +21,7 @@
 
 namespace {
 
-constexpr int kSchemaVersion = 33;
+constexpr int kSchemaVersion = 34;
 
 /*
     One connection per thread, closed when the thread ends.
@@ -2036,6 +2036,23 @@ bool CacheDb::migrate(QSqlDatabase &db)
             while (q.next()) if (q.value(1).toString() == "number") has = true;
         if (!has && !q.exec("ALTER TABLE image_version"
                             " ADD COLUMN number INTEGER NOT NULL DEFAULT 0")) {
+            gMigrateError = q.lastError().text();
+            db.rollback();
+            return false;
+        }
+    }
+
+    if (version < 34) {
+    /*
+        A CACHE REPAIR: a TIFF's embedded thumbnail (Lightroom's SubIFD, Photoshop's IRB
+        JPEG) is sRGB, but since version 29 it was converted from the file's profile as if
+        it were the main image (Thumb::sourceColorSpace, embeddedThumbSrgb). A ProPhoto
+        TIFF's icon showed oversaturated, blue water turning cyan. Every TIFF thumbnail
+        is dropped so the next view rebuilds it; matched on the thumb row's own path, so
+        TIFFs outside the catalog are repaired too. LIKE is case-insensitive for ASCII.
+        Re-runnable.
+    */
+        if (!q.exec("DELETE FROM thumb WHERE path LIKE '%.tif' OR path LIKE '%.tiff'")) {
             gMigrateError = q.lastError().text();
             db.rollback();
             return false;

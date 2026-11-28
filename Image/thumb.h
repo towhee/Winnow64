@@ -91,6 +91,10 @@ private:
     /* Set by a loader whose platform framework already color-converted the pixels
        (macOS ImageIO draws into a device-RGB context). Reset per loadThumb. */
     bool decodeConverted = false;
+    /* Set when a TIFF's icon came from its EMBEDDED thumbnail (IRB JPEG, IFD or SubIFD),
+       which writers store in sRGB; the file's profile describes only the main image.
+       Reset per loadThumb. */
+    bool embeddedThumbSrgb = false;
 
     // status flags
     bool isPresetOffset = false;

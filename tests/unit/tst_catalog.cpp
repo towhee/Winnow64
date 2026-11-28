@@ -278,8 +278,11 @@ void tst_catalog::schemaIsCurrentAndBothTenantsCoexist()
         impossible size (schema31RepairsBinaryTitles). Version 32 adds no table either:
         image.pixelhash and image.duration_ms, the Library duplicates fingerprint
         (Cache/duplicates.h), filled lazily, plus the image_dupkey and
-        image_fingerprinted indexes (tst_duplicates::schema32IsRerunnable). */
-    QCOMPARE(CacheDb::schemaVersion(), 33);
+        image_fingerprinted indexes (tst_duplicates::schema32IsRerunnable). Version 33
+        adds image_version.number. Version 34 adds no table either: it drops every TIFF
+        thumbnail, whose embedded sRGB thumbnail was converted from the main image's
+        profile (Thumb::embeddedThumbSrgb). */
+    QCOMPARE(CacheDb::schemaVersion(), 34);
     QVERIFY(Catalog::instance().isAvailable());
 
     /* The catalog's tables were ADDED to the preview index's database, so both tenants

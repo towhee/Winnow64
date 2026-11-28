@@ -401,6 +401,7 @@ Thumb::Status Thumb::loadFromTiff(QString &fPath, QImage &image, int dmRow,
             G::issue("Error", errMsg, "Thumb::loadFromTiff", dmRow, fPath);
             return Status::Fail;
         }
+        embeddedThumbSrgb = true;           // see sourceColorSpace
     }
 
     image = image.scaled(G::maxIconSize, G::maxIconSize, Qt::KeepAspectRatio, Qt::FastTransformation);
@@ -542,11 +543,18 @@ QColorSpace Thumb::sourceColorSpace(const QImage &image, const QString &fPath,
          THIS file's. On an icon-only read Reader::readIcon hands over whatever m it
          last had, which can be the previous row's. Then the model row, found by path
          (RowStore reads are locked, so this is safe on a Reader thread).
+      3. EXCEPT A TIFF'S EMBEDDED THUMBNAIL (embeddedThumbSrgb). The TIFF's profile
+         (tag 34675 in IFD0) describes the main image only; Lightroom's 256 px SubIFD
+         and Photoshop's IRB JPEG thumbnail are written in sRGB. Converting one from a
+         ProPhoto profile converted it twice: a Lightroom ProPhoto TIFF of blue water
+         showed cyan in the grid and deep blue in the loupe. A sampled main image
+         (isEmbeddedThumbMissing) still takes the file's profile.
 */
     if (decodeConverted) return QColorSpace();
     if (image.colorSpace().isValid())
         return image.colorSpace() == QColorSpace(QColorSpace::SRgb) ? QColorSpace()
                                                                      : image.colorSpace();
+    if (embeddedThumbSrgb) return QColorSpace();
     if (!metadata || !metadata->iccFormats.contains(ext)) return QColorSpace();
 
     QByteArray icc;
@@ -761,6 +769,7 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
 
     Status status = Status::None;
     decodeConverted = false;
+    embeddedThumbSrgb = false;
     int attempts = 0;
     int maxAttempts = 10;
 
@@ -817,7 +826,11 @@ bool Thumb::loadThumb(QString &fPath, int dmRow , QImage &image, int instance,
                     emit staleEmbeddedThumb(fPath);
                 }
             }
-            if (status == Status::Success) break;
+            if (status == Status::Success) {
+                // a TIFF's IRB JPEG thumbnail is sRGB (see sourceColorSpace)
+                if (ext == "tif" || ext == "tiff") embeddedThumbSrgb = true;
+                break;
+            }
         }
 
         /* Canon CR3 shot in HDR PQ mode stores its embedded preview as a

@@ -9755,10 +9755,13 @@ Thumb::loadThumb now converts to sRGB after the scale (so it works on a 256 px i
 1. A decode Qt tagged (its JPEG, PNG and TIFF readers read the embedded profile) says what it is.
 2. Otherwise the pixels are the file's own (its embedded EXIF thumbnail, Winnow's TIFF reader, libheif on Windows), so they are in the file's space. That is m.iccBuf, but ONLY when m.fPath is this file: on an icon-only read, Reader::readIcon hands over whatever m it last had, which can be the previous row's. Failing that, the model row's G::ICCBufColumn, found by path (RowStore reads are locked).
 3. Never for the macOS ImageIO loaders (loadFromHeic's fast path, loadFromImageIO). They draw into a CoreGraphics device-RGB context, which has already converted; Thumb::decodeConverted records it.
+4. Never for a TIFF's EMBEDDED thumbnail (Thumb::embeddedThumbSrgb): Lightroom's 256 px SubIFD and Photoshop's IRB JPEG thumbnail are written in sRGB, and the TIFF's profile (tag 34675 in IFD0) describes the main image only. Rule 2 converted them from the main image's profile, so the 2026-11-01 change oversaturated every wide-gamut TIFF icon: a Lightroom ProPhoto TIFF of blue water showed cyan in the grid and deep blue in the loupe (2026-11-28; the SubIFD's raw pixels shown as sRGB match ColorSync's ProPhoto-to-sRGB conversion of the main image). A TIFF with no embedded thumbnail is sampled from the main image (isEmbeddedThumbMissing) and still takes the file's profile.
 
 The stored thumbnail is untagged sRGB, the same as the developed thumbnails in sidecars and the devPreviews. Display conversion of icons, sRGB to the monitor, is a separate question and is not done.
 
 Schema 29 (Cache/cachedb.cpp) drops the cached thumbnail of every catalogued image whose color space is known and neither sRGB nor profile-less (colorspace NOT IN 0, 1, 9), so it is rebuilt converted the next time it is viewed. Thumbnails of images outside the catalog are not reached: they correct when the file changes or the thumbnail cache is cleared. Pinned by tst_catalog::schema29DropsWideGamutThumbs.
+
+Schema 34 drops the cached thumbnail of every .tif/.tiff (matched on thumb.path, so files outside the catalog are reached too), repairing rule 4's victims.
 
 ## 16 Keywords
 
